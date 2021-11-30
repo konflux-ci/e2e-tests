@@ -27,12 +27,17 @@ func init() {
 }
 
 // Kube returns the clientset for Kubernetes upstream.
-func (c *K8sClient) Kube() kubernetes.Interface {
+func (c *K8sClient) KubeInterface() kubernetes.Interface {
 	return c.kubeClient
 }
 
+// Kube returns the clientset for Kubernetes upstream.
+func (c *K8sClient) KubeRest() crclient.Client {
+	return c.crClient
+}
+
 // NewHASClient creates kubernetes client wrapper
-func NewHASClient() (*K8sClient, error) {
+func NewK8SClient() (*K8sClient, error) {
 	cfg, err := config.GetConfig()
 	if err != nil {
 		return nil, err

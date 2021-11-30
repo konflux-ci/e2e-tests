@@ -8,6 +8,7 @@ import (
 	"github.com/onsi/ginkgo/reporters"
 	"github.com/onsi/gomega"
 	_ "github.com/redhat-appstudio/e2e-tests/pkg/framework/application-service"
+	_ "github.com/redhat-appstudio/e2e-tests/pkg/framework/common"
 )
 
 var (

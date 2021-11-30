@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-  <testsuite name="Red Hat App Studio E2E tests" tests="2" failures="0" errors="0" time="0.102">
-      <testcase name="[appstudio-has] Component e2e tests Check if HAS Component has created" classname="Red Hat App Studio E2E tests" time="0.00014204">
-          <skipped>/home/flacatusu/WORKSPACE/appstudio-qe/e2e-tests/pkg/framework/application-service/component.go:8&#xA;Be nice and add tests&#xA;/home/flacatusu/WORKSPACE/appstudio-qe/e2e-tests/pkg/framework/application-service/component.go:9</skipped>
+  <testsuite name="Red Hat App Studio E2E tests" tests="1" failures="0" errors="0" time="0.105">
+      <testcase name="[appstudio-common] Common e2e tests AppStudio E2E common specs Check appstudio application health" classname="Red Hat App Studio E2E tests" time="0.105518359"></testcase>
+      <testcase name="[appstudio-has] Application e2e tests HAS Application tests Create HAS Application" classname="Red Hat App Studio E2E tests" time="0">
+          <skipped></skipped>
       </testcase>
-      <testcase name="[appstudio-has] Application e2e tests Create HAS Application" classname="Red Hat App Studio E2E tests" time="0.10244606"></testcase>
-      <testcase name="[appstudio-has] Application e2e tests Check if HAS Application has created" classname="Red Hat App Studio E2E tests" time="1.068e-06"></testcase>
+      <testcase name="[appstudio-has] Application e2e tests HAS Application tests Check if HAS Application has created" classname="Red Hat App Studio E2E tests" time="0">
+          <skipped></skipped>
+      </testcase>
+      <testcase name="[appstudio-has] Push API e2e tests Check if HAS push has created" classname="Red Hat App Studio E2E tests" time="0">
+          <skipped></skipped>
+      </testcase>
   </testsuite>

@@ -1,11 +1,9 @@
 package appservice
 
 import (
-	"github.com/onsi/ginkgo"
+	"fmt"
 )
 
-var _ = HASDescribe("Component e2e tests", func() {
-	ginkgo.It("Check if HAS Component has created", func() {
-		ginkgo.Skip("Be nice and add tests")
-	})
+var _ = HASDescribe("Component API E2E tests", func() {
+	fmt.Println("Test Component")
 })
