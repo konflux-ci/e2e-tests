@@ -2,12 +2,13 @@ package appservice
 
 import (
 	"github.com/argoproj/gitops-engine/pkg/health"
-	g "github.com/onsi/ginkgo"
+	g "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
+	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	hController "github.com/redhat-appstudio/e2e-tests/pkg/framework/application-service/controller"
 )
 
-var _ = HASDescribe("Application e2e tests", func() {
+var _ = framework.HASSuiteDescribe("Application e2e tests", func() {
 	defer g.GinkgoRecover()
 	hasController, err := hController.NewHasSuiteController()
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())

@@ -6,11 +6,10 @@ require (
 	github.com/argoproj/argo-cd/v2 v2.1.7
 	github.com/argoproj/gitops-engine v0.4.1
 	github.com/google/go-cmp v0.5.6 // indirect
-	github.com/onsi/ginkgo v1.16.5
+	github.com/onsi/ginkgo/v2 v2.0.0-rc2
 	github.com/onsi/gomega v1.17.0
 	github.com/redhat-appstudio/application-service v0.0.0-20211117223714-9b9dcc98c5e9
 	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d // indirect
-	k8s.io/api v0.22.2 // indirect
 	k8s.io/apimachinery v0.22.3
 	k8s.io/client-go v11.0.1-0.20190816222228-6d55c1b1f1ca+incompatible
 	sigs.k8s.io/controller-runtime v0.10.3
