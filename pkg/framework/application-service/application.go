@@ -30,7 +30,8 @@ var _ = framework.HASSuiteDescribe("Application e2e tests", func() {
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
 		g.It("Check if HAS Application has ben deleted", func() {
-			gomega.Expect(hasController.DeleteHasApplication(HASApplicationName, HASApplicationNamespace)).NotTo(gomega.HaveOccurred())
+			err := hasController.DeleteHasApplication(HASApplicationName, HASApplicationNamespace)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
 	})
 })

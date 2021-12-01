@@ -12,7 +12,8 @@ Testing framework solution written in golang using ginkgo framework to cover Red
 
 # Setup
 
-Before executing the e2e suites you need to have deployed App Studio component/s to your cluster.
+Before executing the e2e suites you need to have deployed App Studio component/s to your cluster. Find more infor about how to deploy
+Red Hat App Studio at: <https://github.com/redhat-appstudio/infra-deployments>
 
 Log into your openshift cluster, using `oc login -u <user> -p <password> <oc_api_url>.`
 
@@ -31,8 +32,7 @@ $ make build
 
 ## The `e2e-appstudio` command
 
-The `e2e-appstudio` command is the root command that executes all test functionality. To obtain all available flags for the binary please use `--help` flags. All ginkgo
-flags and go tests are available in `e2e-appstudio` binary.
+The `e2e-appstudio` command is the root command that executes all test functionality. To obtain all available flags for the binary please use `--help` flags. All ginkgo flags and go tests are available in `e2e-appstudio` binary.
 
 # Develop new tests
 
