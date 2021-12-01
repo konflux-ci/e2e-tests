@@ -9,6 +9,6 @@ import (
 
 var _ = framework.HASSuiteDescribe("Push API e2e tests", func() {
 	ginkgo.It("Check if HAS push has created", func() {
-		fmt.Println("Test Component")
+		fmt.Println("Test Me")
 	})
 })

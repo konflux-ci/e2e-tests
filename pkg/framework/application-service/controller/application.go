@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 
-	app "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	applicationservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -40,15 +39,13 @@ func (h *HASSuiteController) CreateHasApplication(name, namespace string) (*appl
 	return &application, nil
 }
 
-func (h *HASSuiteController) GetArgoApplicationStatus(name string, namespace string) (*app.ApplicationStatus, error) {
-	namespacedName := types.NamespacedName{
-		Name:      name,
-		Namespace: namespace,
+// DeleteHasApplication delete an has application from a given name and namespace
+func (h *HASSuiteController) DeleteHasApplication(name, namespace string) error {
+	application := applicationservice.Application{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
 	}
-	application := &app.Application{}
-
-	if err := h.KubeRest().Get(context.TODO(), namespacedName, application); err != nil {
-		return nil, err
-	}
-	return &application.Status, nil
+	return h.KubeRest().Delete(context.TODO(), &application)
 }

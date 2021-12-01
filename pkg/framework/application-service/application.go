@@ -1,11 +1,15 @@
 package appservice
 
 import (
-	"github.com/argoproj/gitops-engine/pkg/health"
 	g "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	hController "github.com/redhat-appstudio/e2e-tests/pkg/framework/application-service/controller"
+)
+
+const (
+	HASApplicationName      = "test-app"
+	HASApplicationNamespace = "application-service"
 )
 
 var _ = framework.HASSuiteDescribe("Application e2e tests", func() {
@@ -15,20 +19,18 @@ var _ = framework.HASSuiteDescribe("Application e2e tests", func() {
 
 	g.Context("HAS Application tests", func() {
 		g.It("Create HAS Application", func() {
-			_, err := hasController.CreateHasApplication("test-app", "application-service")
+			_, err := hasController.CreateHasApplication(HASApplicationName, HASApplicationNamespace)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
-			argo, err := hasController.GetArgoApplicationStatus("all-components-staging", "openshift-gitops")
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(argo.Health.Status).To(gomega.Equal(health.HealthStatusHealthy))
 		})
 		g.It("Check if HAS Application has created", func() {
-			status, err := hasController.GetHasApplicationStatus("test-app", "application-service")
+			status, err := hasController.GetHasApplicationStatus(HASApplicationName, HASApplicationNamespace)
 			for _, status := range status.Conditions {
 				gomega.Expect(string(status.Status)).To(gomega.Equal("True"))
 			}
-
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		})
+		g.It("Check if HAS Application has ben deleted", func() {
+			gomega.Expect(hasController.DeleteHasApplication(HASApplicationName, HASApplicationNamespace)).NotTo(gomega.HaveOccurred())
 		})
 	})
 })

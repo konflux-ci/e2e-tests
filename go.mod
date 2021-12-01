@@ -9,8 +9,8 @@ require (
 	github.com/onsi/ginkgo/v2 v2.0.0-rc2
 	github.com/onsi/gomega v1.17.0
 	github.com/redhat-appstudio/application-service v0.0.0-20211117223714-9b9dcc98c5e9
-	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d // indirect
-	k8s.io/apimachinery v0.22.3
+	golang.org/x/net v0.0.0-20211123203042-d83791d6bcd9 // indirect
+	k8s.io/apimachinery v0.22.4
 	k8s.io/client-go v11.0.1-0.20190816222228-6d55c1b1f1ca+incompatible
 	sigs.k8s.io/controller-runtime v0.10.3
 )
