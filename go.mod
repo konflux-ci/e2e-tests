@@ -9,7 +9,11 @@ require (
 	github.com/onsi/ginkgo/v2 v2.0.0-rc2
 	github.com/onsi/gomega v1.17.0
 	github.com/redhat-appstudio/application-service v0.0.0-20211117223714-9b9dcc98c5e9
+	github.com/securego/gosec/v2 v2.9.3 // indirect
+	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
+	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/net v0.0.0-20211123203042-d83791d6bcd9 // indirect
+	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
 	k8s.io/apimachinery v0.22.4
 	k8s.io/client-go v11.0.1-0.20190816222228-6d55c1b1f1ca+incompatible
 	sigs.k8s.io/controller-runtime v0.10.3
