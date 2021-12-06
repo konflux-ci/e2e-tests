@@ -9,6 +9,14 @@ jobs:
       - uses: actions/checkout@v2
       - name: Setup Golang
         uses: actions/setup-go@v2
+      - name: Debugging info
+        run: |
+          echo "env:"
+          env
+          echo "go env"
+          go env
+        env:
+          CGO_ENABLED: 0
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
