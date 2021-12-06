@@ -5,8 +5,6 @@ jobs:
   static_checks:
     name: lint
     runs-on: ubuntu-latest
-    env: 
-      CGO_ENABLED: 0
     steps:
       - uses: actions/checkout@v2
       - name: Setup Golang
@@ -16,6 +14,8 @@ jobs:
         with:
           version: v1.42.1
           args: --timeout=3m
+        env: 
+          CGO_ENABLED: 0
       - name: "Install gosec"
         run: |
           go get -u github.com/securego/gosec/v2/cmd/gosec
