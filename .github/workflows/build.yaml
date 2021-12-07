@@ -1,0 +1,25 @@
+name: Container build & push
+
+# Controls when the workflow will run
+on:
+  push:
+    branches: [main]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build-image:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout application-service source code
+        uses: actions/checkout@v2
+      - name: Docker Build & Push - application-service Operator Image
+        uses: docker/build-push-action@v1.1.0
+        with:
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_TOKEN }}
+          registry: quay.io
+          repository: redhat-appstudio/e2e-test
+          dockerfile: Dockerfile
+          tags: next
+          tag_with_sha: true
