@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func (h *HASSuiteController) GetAppStudioStatus(name string, namespace string) (*app.ApplicationStatus, error) {
+func (h *CommonSuiteController) GetAppStudioComponentStatus(name string, namespace string) (*app.ApplicationStatus, error) {
 	namespacedName := types.NamespacedName{
 		Name:      name,
 		Namespace: namespace,

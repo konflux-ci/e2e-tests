@@ -12,24 +12,24 @@ const (
 	HASApplicationNamespace = "application-service"
 )
 
-var _ = framework.HASSuiteDescribe("Application e2e tests", func() {
+var _ = framework.HASSuiteDescribe("Application E2E tests", func() {
 	defer g.GinkgoRecover()
 	hasController, err := hController.NewHasSuiteController()
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	g.Context("HAS Application tests", func() {
-		g.It("Create HAS Application", func() {
+	g.Context("Crud operation:", func() {
+		g.It("Create application", func() {
 			_, err := hasController.CreateHasApplication(HASApplicationName, HASApplicationNamespace)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
-		g.It("Check if HAS Application has created", func() {
+		g.It("Get application", func() {
 			status, err := hasController.GetHasApplicationStatus(HASApplicationName, HASApplicationNamespace)
 			for _, status := range status.Conditions {
 				gomega.Expect(string(status.Status)).To(gomega.Equal("True"))
 			}
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
-		g.It("Check if HAS Application has ben deleted", func() {
+		g.It("Delete application", func() {
 			err := hasController.DeleteHasApplication(HASApplicationName, HASApplicationNamespace)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})

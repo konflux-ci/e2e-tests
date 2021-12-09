@@ -15,6 +15,7 @@ jobs:
           args: --timeout=3m
       - name: "Install gosec"
         run: |
+          GO111MODULE=on
           go get -u github.com/securego/gosec/v2/cmd/gosec
       - name: "Run go-sec"
         run: gosec ./...

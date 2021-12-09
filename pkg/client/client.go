@@ -3,6 +3,7 @@ package client
 import (
 	argo "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	applicationservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
+	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -24,6 +25,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(applicationservice.AddToScheme(scheme))
 	utilruntime.Must(argo.AddToScheme(scheme))
+	utilruntime.Must(tekton.AddToScheme(scheme))
 }
 
 // Kube returns the clientset for Kubernetes upstream.
@@ -31,7 +33,7 @@ func (c *K8sClient) KubeInterface() kubernetes.Interface {
 	return c.kubeClient
 }
 
-// Kube returns the clientset for Kubernetes upstream.
+// Return a rest client to perform CRUD operations on Kubernetes objects
 func (c *K8sClient) KubeRest() crclient.Client {
 	return c.crClient
 }
