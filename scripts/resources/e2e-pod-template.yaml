@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: e2e-appstudio-__ID__
+  namespace: __NAMESPACE__
+spec:
+  volumes:
+    - name: test-run-results
+    - name: kubeconfig
+      configMap:
+        name: e2e-appstudio-kubeconfig
+  containers:
+    # container containing the tests
+    - name: e2e-test
+      image: quay.io/redhat-appstudio/e2e-tests:latest
+      args:
+        - "--ginkgo.junit-report=/test-run-results/report.xml"
+      imagePullPolicy: Always
+      env:
+        - name: CODEREADY_NAMESPACE
+          value: __CODEREADY_NAMESPACE__
+        - name: KUBECONFIG
+          value: /tmp/kubeconfig/config
+      volumeMounts:
+        - name: test-run-results
+          mountPath: /test-run-results
+        - name: kubeconfig
+          mountPath: /tmp/kubeconfig
+    # the container used to download the test results
+    - name: download
+      image: quay.io/crw_pr/rsync:latest
+      volumeMounts:
+        - name: test-run-results
+          mountPath: /test-run-results
+      command: ["sh"]
+      args:
+        [
+          "-c",
+          "while true; if [[ -f /tmp/done ]]; then exit 0; fi; do sleep 1; done",
+        ]
+  restartPolicy: Never

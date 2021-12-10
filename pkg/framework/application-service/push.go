@@ -1,14 +1,16 @@
 package appservice
 
 import (
-	"fmt"
-
-	"github.com/onsi/ginkgo/v2"
+	g "github.com/onsi/ginkgo/v2"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 )
 
-var _ = framework.HASSuiteDescribe("Push API e2e tests", func() {
-	ginkgo.It("Check if HAS push has created", func() {
-		fmt.Println("Test Me")
+var _ = framework.HASSuiteDescribe("Push E2E tests", func() {
+	defer g.GinkgoRecover()
+
+	g.Context("Crud operation:", func() {
+		g.It("Create Push", func() {
+			g.Skip("Skipped. No tests detected")
+		})
 	})
 })
