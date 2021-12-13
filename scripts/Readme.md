@@ -1,4 +1,4 @@
-# Run E2E tests as a pod in
+# Run E2E tests as a pod in kubernetes cluster
 
 1. Deploy Red Hat App Studio from [infra-deployments](https://github.com/redhat-appstudio/infra-deployments) repository
 
