@@ -10,7 +10,7 @@ import (
 
 var (
 	// Pipelines names from https://github.com/redhat-appstudio/infra-deployments/tree/main/components/build/build-templates
-	AppStudioPipelinesNames      = []string{"devfile-build", "java-builder", "docker-build", "nodejs-builder", "noop"}
+	AppStudioPipelinesNames      = []string{"analyze-devfile", "appstudio-utils"}
 	AppStudioComponents          = []string{"all-components-staging", "authentication", "build", "gitops", "has"}
 	AppStudioComponentsNamespace = "openshift-gitops"
 	PipelinesNamespace           = "build-templates"
@@ -32,10 +32,10 @@ var _ = framework.CommonSuiteDescribe("Red Hat App Studio common E2E", func() {
 		}
 	})
 
-	g.Context("Pipelines:", func() {
+	g.Context("ClusterTasks:", func() {
 		for _, pipelineName := range AppStudioPipelinesNames {
-			g.It("Check if "+pipelineName+" pipeline is pre-created", func() {
-				p, err := commonController.GetPipeline(pipelineName, PipelinesNamespace)
+			g.It("Check if "+pipelineName+" clustertask is pre-created", func() {
+				p, err := commonController.GetClusterTask(pipelineName, PipelinesNamespace)
 				gomega.Expect(err).NotTo(gomega.HaveOccurred())
 				gomega.Expect(p.Name).To(gomega.Equal(pipelineName))
 			})

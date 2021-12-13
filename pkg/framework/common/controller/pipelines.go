@@ -7,16 +7,16 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// GetPipeline return a pipeline from cluster and if don't exist returns an error
-func (h *CommonSuiteController) GetPipeline(name string, namespace string) (*v1beta1.Pipeline, error) {
+// GetClusterTask return a clustertask object from cluster and if don't exist returns an error
+func (h *CommonSuiteController) GetClusterTask(name string, namespace string) (*v1beta1.ClusterTask, error) {
 	namespacedName := types.NamespacedName{
 		Name:      name,
 		Namespace: namespace,
 	}
-	pipeline := &v1beta1.Pipeline{}
+	clusterTask := &v1beta1.ClusterTask{}
 
-	if err := h.KubeRest().Get(context.TODO(), namespacedName, pipeline); err != nil {
+	if err := h.KubeRest().Get(context.TODO(), namespacedName, clusterTask); err != nil {
 		return nil, err
 	}
-	return pipeline, nil
+	return clusterTask, nil
 }
