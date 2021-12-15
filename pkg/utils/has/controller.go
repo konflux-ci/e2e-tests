@@ -1,15 +1,31 @@
-package controller
+package has
 
 import (
 	"context"
-
+	"fmt"
 	applicationservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/redhat-appstudio/e2e-tests/pkg/client"
 )
 
+type SuiteController struct {
+	*client.K8sClient
+}
+
+func NewSuiteController() (*SuiteController, error) {
+	client, err := client.NewK8SClient()
+	if err != nil {
+		return nil, fmt.Errorf("error creating client-go")
+	}
+	return &SuiteController{
+		client,
+	}, nil
+}
+
 //GetHasApplicationStatus return the status from the Application Custom Resource object
-func (h *HASSuiteController) GetHasApplicationStatus(name, namespace string) (*applicationservice.ApplicationStatus, error) {
+func (h *SuiteController) GetHasApplicationStatus(name, namespace string) (*applicationservice.ApplicationStatus, error) {
 	namespacedName := types.NamespacedName{
 		Name:      name,
 		Namespace: namespace,
@@ -24,7 +40,7 @@ func (h *HASSuiteController) GetHasApplicationStatus(name, namespace string) (*a
 }
 
 //CreateHasApplication create an application Custom Resource object
-func (h *HASSuiteController) CreateHasApplication(name, namespace string) (*applicationservice.Application, error) {
+func (h *SuiteController) CreateHasApplication(name, namespace string) (*applicationservice.Application, error) {
 	application := applicationservice.Application{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      name,
@@ -40,7 +56,7 @@ func (h *HASSuiteController) CreateHasApplication(name, namespace string) (*appl
 }
 
 // DeleteHasApplication delete an has application from a given name and namespace
-func (h *HASSuiteController) DeleteHasApplication(name, namespace string) error {
+func (h *SuiteController) DeleteHasApplication(name, namespace string) error {
 	application := applicationservice.Application{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      name,
