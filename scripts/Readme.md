@@ -13,10 +13,11 @@
 4. Run the test from your machine
 
    ```
-   ./run-tests-in-k8s.sh <namespace> <report-dir>
+   ./run-tests-in-k8s.sh --namespace <namespace> --report <report-dir> --suites <suites>
    ```
 
 Where are:
 
 - `namespace` - Namespace where you want to deploy the e2e tests. Optional. by default the tests will run in `appstudio-e2e` dir.
 - `report-dir` - Directory where you want to download the results of tests from pods. Optional. By default will be saved in `$ROOT_REPO/tmp`
+- `suites` - A regex string with ginkgo suites to execute ``
