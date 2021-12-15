@@ -5,7 +5,7 @@ import (
 	g "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	commonCtrl "github.com/redhat-appstudio/e2e-tests/pkg/framework/common/controller"
+	commonCtrl "github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 )
 
 var (
@@ -18,7 +18,7 @@ var (
 
 var _ = framework.CommonSuiteDescribe("Red Hat App Studio common E2E", func() {
 	defer g.GinkgoRecover()
-	commonController, err := commonCtrl.NewCommonSuiteController()
+	commonController, err := commonCtrl.NewSuiteController()
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	g.Context("Argo CD", func() {

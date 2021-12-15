@@ -1,4 +1,4 @@
-package appservice
+package has
 
 import (
 	g "github.com/onsi/ginkgo/v2"

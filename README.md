@@ -8,7 +8,7 @@ Testing framework solution written in golang using ginkgo framework to cover Red
 * Use client-go to connect to Openshift Cluster.
 * Ability to run the E2E tests everywhere; locally, Openshift Cluster, OSD...
 * Writes out a junit XML/JSON file with tests results to a custom directory by using `--ginkgo.junit(or json)-report` flag.
-* Ability to run test suites separetly.
+* Ability to run test suites separately.
 
 # Setup
 
@@ -46,7 +46,7 @@ package common
 
 import (
 	// ensure these packages are scanned by ginkgo for e2e tests
-	_ "github.com/redhat-appstudio/e2e-tests/pkg/framework/application-service"
-	_ "github.com/redhat-appstudio/e2e-tests/pkg/framework/common"
+	_ "github.com/redhat-appstudio/e2e-tests/pkg/tests/common"
+	_ "github.com/redhat-appstudio/e2e-tests/pkg/tests/has"
 )
 ```

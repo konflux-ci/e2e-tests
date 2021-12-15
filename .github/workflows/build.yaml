@@ -11,7 +11,7 @@ jobs:
   build-image:
     runs-on: ubuntu-20.04
     steps:
-      - name: Checkout application-service source code
+      - name: Checkout source code
         uses: actions/checkout@v2
       - name: Build Image
         id: build-image
