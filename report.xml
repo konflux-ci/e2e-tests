@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+  <testsuites tests="13" disabled="2" errors="0" failures="1" time="1.7004026749999999">
+      <testsuite name="Red Hat App Studio E2E tests" package="/home/flacatusu/WORKSPACE/appstudio-qe/e2e-tests" tests="13" disabled="0" skipped="2" errors="0" failures="1" time="1.7004026749999999" timestamp="2022-01-04T09:15:02">
+          <properties>
+              <property name="SuiteSucceeded" value="false"></property>
+              <property name="SuiteHasProgrammaticFocus" value="false"></property>
+              <property name="SpecialSuiteFailureReason" value=""></property>
+              <property name="SuiteLabels" value="[]"></property>
+              <property name="RandomSeed" value="1641284096"></property>
+              <property name="RandomizeAllSpecs" value="false"></property>
+              <property name="LabelFilter" value=""></property>
+              <property name="FocusStrings" value=""></property>
+              <property name="SkipStrings" value=""></property>
+              <property name="FocusFiles" value=""></property>
+              <property name="SkipFiles" value=""></property>
+              <property name="FailOnPending" value="false"></property>
+              <property name="FailFast" value="false"></property>
+              <property name="FlakeAttempts" value="0"></property>
+              <property name="EmitSpecProgress" value="false"></property>
+              <property name="DryRun" value="false"></property>
+              <property name="ParallelTotal" value="1"></property>
+              <property name="OutputInterceptorMode" value=""></property>
+          </properties>
+          <testcase name="[SynchronizedBeforeSuite]" classname="Red Hat App Studio E2E tests" status="passed" time="1.4217e-05"></testcase>
+          <testcase name="[It] [has-suite Component E2E tests] Crud operation: Create Component" classname="Red Hat App Studio E2E tests" status="skipped" time="9.6228e-05">
+              <skipped message="skipped - Skipped. No tests detected"></skipped>
+          </testcase>
+          <testcase name="[It] [has-suite Application E2E tests] Crud operation: Create application" classname="Red Hat App Studio E2E tests" status="passed" time="0.145473508"></testcase>
+          <testcase name="[It] [has-suite Application E2E tests] Crud operation: Get application" classname="Red Hat App Studio E2E tests" status="passed" time="0.137176369"></testcase>
+          <testcase name="[It] [has-suite Application E2E tests] Crud operation: Delete application" classname="Red Hat App Studio E2E tests" status="passed" time="0.138766789"></testcase>
+          <testcase name="[It] [common-suite Red Hat App Studio common E2E] Argo CD all-components-staging status" classname="Red Hat App Studio E2E tests" status="passed" time="0.137940477"></testcase>
+          <testcase name="[It] [common-suite Red Hat App Studio common E2E] Argo CD authentication status" classname="Red Hat App Studio E2E tests" status="passed" time="0.142482464"></testcase>
+          <testcase name="[It] [common-suite Red Hat App Studio common E2E] Argo CD build status" classname="Red Hat App Studio E2E tests" status="passed" time="0.136405148"></testcase>
+          <testcase name="[It] [common-suite Red Hat App Studio common E2E] Argo CD gitops status" classname="Red Hat App Studio E2E tests" status="passed" time="0.138873376"></testcase>
+          <testcase name="[It] [common-suite Red Hat App Studio common E2E] Argo CD has status" classname="Red Hat App Studio E2E tests" status="passed" time="0.14026885"></testcase>
+          <testcase name="[It] [common-suite Red Hat App Studio common E2E] ClusterTasks: Check if AppStudio ClusterTasks are precreated" classname="Red Hat App Studio E2E tests" status="passed" time="0.425065149"></testcase>
+          <testcase name="[It] [common-suite Red Hat App Studio common E2E] ClusterTasks: Check clusterTasks list" classname="Red Hat App Studio E2E tests" status="failed" time="0.156838356">
+              <failure message="E2E tests don&#39;t contain all AppStudio clusterTasks&#xA;Expected&#xA;    &lt;int&gt;: 4&#xA;to equal&#xA;    &lt;int&gt;: 3" type="failed">/home/flacatusu/WORKSPACE/appstudio-qe/e2e-tests/pkg/tests/common/appstudio.go:57&#xA;github.com/redhat-appstudio/e2e-tests/pkg/tests/common.glob..func1.2.2()&#xA;&#x9;/home/flacatusu/WORKSPACE/appstudio-qe/e2e-tests/pkg/tests/common/appstudio.go:57 +0x130</failure>
+          </testcase>
+          <testcase name="[It] [has-suite Push E2E tests] Crud operation: Create Push" classname="Red Hat App Studio E2E tests" status="skipped" time="0.000174199">
+              <skipped message="skipped - Skipped. No tests detected"></skipped>
+          </testcase>
+      </testsuite>
+  </testsuites>

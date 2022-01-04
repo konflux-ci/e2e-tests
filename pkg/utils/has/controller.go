@@ -3,6 +3,7 @@ package has
 import (
 	"context"
 	"fmt"
+
 	applicationservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -17,7 +18,7 @@ type SuiteController struct {
 func NewSuiteController() (*SuiteController, error) {
 	client, err := client.NewK8SClient()
 	if err != nil {
-		return nil, fmt.Errorf("error creating client-go")
+		return nil, fmt.Errorf("error creating client-go %v", err)
 	}
 	return &SuiteController{
 		client,
