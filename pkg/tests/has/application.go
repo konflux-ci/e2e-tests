@@ -1,6 +1,7 @@
 package has
 
 import (
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/has"
 
 	g "github.com/onsi/ginkgo/v2"
@@ -9,17 +10,23 @@ import (
 )
 
 const (
-	ApplicationName      = "test-app"
-	ApplicationNamespace = "application-service"
+	ApplicationName        = "test-app"
+	HASArgoApplicationName = "has"
+	ApplicationNamespace   = "application-service"
 )
 
 var _ = framework.HASSuiteDescribe("Application E2E tests", func() {
-
 	defer g.GinkgoRecover()
 	hasController, err := has.NewSuiteController()
 	Expect(err).NotTo(HaveOccurred())
+	commonController, err := common.NewSuiteController()
+	Expect(err).NotTo(HaveOccurred())
 
 	g.Context("Crud operation:", func() {
+		g.It("HAS Application is healthy", func() {
+			err := commonController.WaitForArgoCDApplicationToBeReady(HASArgoApplicationName, "openshift-gitops")
+			Expect(err).NotTo(HaveOccurred(), "HAS Argo application didn't start in 5 minutes")
+		})
 		g.It("Create application", func() {
 			_, err := hasController.CreateHasApplication(ApplicationName, ApplicationNamespace)
 			Expect(err).NotTo(HaveOccurred())

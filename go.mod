@@ -7,7 +7,7 @@ require (
 	github.com/argoproj/gitops-engine v0.4.1
 	github.com/onsi/ginkgo/v2 v2.0.0-rc2
 	github.com/onsi/gomega v1.17.0
-	github.com/redhat-appstudio/application-service v0.0.0-20211202175550-0f7b9c8fcc7d
+	github.com/redhat-appstudio/application-service v0.0.0-20220106201253-98d082511fd2
 	github.com/tektoncd/pipeline v0.30.0
 	golang.org/x/net v0.0.0-20211123203042-d83791d6bcd9 // indirect
 	k8s.io/apimachinery v0.22.4
