@@ -28,12 +28,10 @@ var _ = framework.HASSuiteDescribe("Application E2E tests", func() {
 			Expect(err).NotTo(HaveOccurred(), "HAS Argo application didn't start in 5 minutes")
 		})
 		g.It("Create application", func() {
-			g.Skip("")
 			_, err := hasController.CreateHasApplication(ApplicationName, ApplicationNamespace)
 			Expect(err).NotTo(HaveOccurred())
 		})
 		g.It("Get application", func() {
-			g.Skip("")
 			status, err := hasController.GetHasApplicationStatus(ApplicationName, ApplicationNamespace)
 			for _, status := range status.Conditions {
 				Expect(string(status.Status)).To(Equal("True"))
@@ -41,7 +39,6 @@ var _ = framework.HASSuiteDescribe("Application E2E tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 		g.It("Delete application", func() {
-			g.Skip("")
 			err := hasController.DeleteHasApplication(ApplicationName, ApplicationNamespace)
 			Expect(err).NotTo(HaveOccurred())
 		})
