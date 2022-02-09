@@ -9,7 +9,7 @@ import (
 
 var (
 	// Pipelines names from https://github.com/redhat-appstudio/infra-deployments/tree/main/components/build/build-templates
-	AppStudioComponents          = []string{"all-components-staging", "authentication", "build", "gitops"}
+	AppStudioComponents          = []string{"all-components-staging", "authentication", "build"}
 	AppStudioComponentsNamespace = "openshift-gitops"
 	PipelinesNamespace           = "build-templates"
 )
@@ -22,6 +22,7 @@ var _ = framework.CommonSuiteDescribe("Red Hat App Studio common E2E", func() {
 	g.Context("Argo CD", func() {
 		for _, component := range AppStudioComponents {
 			g.It(component+" status", func() {
+				g.Skip("")
 				err := commonController.WaitForArgoCDApplicationToBeReady(component, AppStudioComponentsNamespace)
 				Expect(err).NotTo(HaveOccurred(), "AppStudio application "+component+" didn't start in 5 minutes")
 			})
