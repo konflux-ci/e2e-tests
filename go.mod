@@ -10,9 +10,11 @@ require (
 	github.com/redhat-appstudio/application-service v0.0.0-20220203211657-23636f8c86f7
 	github.com/tektoncd/pipeline v0.30.0
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	k8s.io/api v0.22.2
 	k8s.io/apimachinery v0.22.4
 	k8s.io/client-go v11.0.1-0.20190816222228-6d55c1b1f1ca+incompatible
 	k8s.io/klog/v2 v2.8.0
+	knative.dev/pkg v0.0.0-20211101212339-96c0204a70dc // indirect
 	sigs.k8s.io/controller-runtime v0.10.3
 	sigs.k8s.io/kustomize/kyaml v0.10.17 // indirect
 )

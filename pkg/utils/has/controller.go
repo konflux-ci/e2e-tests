@@ -5,8 +5,11 @@ import (
 	"fmt"
 
 	v1alpha1 "github.com/redhat-appstudio/application-service/api/v1alpha1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/client"
 )
@@ -71,22 +74,22 @@ func (h *SuiteController) DeleteHasApplication(name, namespace string) error {
 	return h.KubeRest().Delete(context.TODO(), &application)
 }
 
-func (h *SuiteController) CreateComponent(name string, namespace string) (*v1alpha1.Component, error) {
+func (h *SuiteController) CreateComponent(applicationName string, componentName string, namespace string, sourceDevfile string) (*v1alpha1.Component, error) {
 	component := v1alpha1.Component{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      "e2e-tests-component",
+			Name:      componentName,
 			Namespace: namespace,
 		},
 		Spec: v1alpha1.ComponentSpec{
-			Application:   name,
-			ComponentName: "component-a",
+			Application:   applicationName,
+			ComponentName: componentName,
 			Build: v1alpha1.Build{
-				ContainerImage: "quay.io/flacatus/quarkus:next",
+				ContainerImage: "quay.io/flacatus/quarkus:1.0.0",
 			},
 			Source: v1alpha1.ComponentSource{
 				v1alpha1.ComponentSourceUnion{
 					GitSource: &v1alpha1.GitSource{
-						URL: "https://github.com/redhat-appstudio-qe/devfile-sample-code-with-quarkus",
+						URL: sourceDevfile,
 					},
 				},
 			},
@@ -97,4 +100,17 @@ func (h *SuiteController) CreateComponent(name string, namespace string) (*v1alp
 		return nil, err
 	}
 	return &component, nil
+}
+
+func (h *SuiteController) GetComponentPipeline(componentName string, applicationName string) (v1beta1.PipelineRun, error) {
+	pipelineRunLabels := map[string]string{"build.appstudio.openshift.io/component": componentName, "build.appstudio.openshift.io/application": applicationName}
+	list := &v1beta1.PipelineRunList{}
+	err := h.KubeRest().List(context.TODO(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels)})
+
+	if len(list.Items) > 0 {
+		return list.Items[0], nil
+	} else if len(list.Items) == 0 {
+		return v1beta1.PipelineRun{}, fmt.Errorf("no pipelinerun found for component %s", componentName)
+	}
+	return v1beta1.PipelineRun{}, err
 }
