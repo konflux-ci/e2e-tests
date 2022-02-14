@@ -5,16 +5,17 @@ go 1.16
 require (
 	github.com/argoproj/argo-cd/v2 v2.1.7
 	github.com/argoproj/gitops-engine v0.4.1
+	github.com/google/uuid v1.3.0
 	github.com/onsi/ginkgo/v2 v2.1.1
 	github.com/onsi/gomega v1.18.1
-	github.com/redhat-appstudio/application-service v0.0.0-20220203211657-23636f8c86f7
+	github.com/openshift/api v0.0.0-20200930075302-db52bc4ef99f
+	github.com/redhat-appstudio/application-service v0.0.0-20220209224245-a3c147c351d4
 	github.com/tektoncd/pipeline v0.30.0
-	gopkg.in/yaml.v2 v2.4.0 // indirect
+	k8s.io/api v0.22.2
 	k8s.io/apimachinery v0.22.4
 	k8s.io/client-go v11.0.1-0.20190816222228-6d55c1b1f1ca+incompatible
 	k8s.io/klog/v2 v2.8.0
-	sigs.k8s.io/controller-runtime v0.10.3
-	sigs.k8s.io/kustomize/kyaml v0.10.17 // indirect
+	sigs.k8s.io/controller-runtime v0.9.5
 )
 
 replace (
