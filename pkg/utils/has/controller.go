@@ -87,6 +87,7 @@ func (h *SuiteController) DeleteHasComponent(name string, namespace string) erro
 	return h.KubeRest().Delete(context.TODO(), &component)
 }
 
+// CreateComponent create an has component from a given name, namespace, application, devfile and a container image
 func (h *SuiteController) CreateComponent(applicationName string, componentName string, namespace string, sourceDevfile string, containerImage string) (*v1alpha1.Component, error) {
 	component := v1alpha1.Component{
 		ObjectMeta: v1.ObjectMeta{
@@ -116,6 +117,7 @@ func (h *SuiteController) CreateComponent(applicationName string, componentName 
 	return &component, nil
 }
 
+// GetComponentPipeline returns the pipeline for a given component labels
 func (h *SuiteController) GetComponentPipeline(componentName string, applicationName string) (v1beta1.PipelineRun, error) {
 	pipelineRunLabels := map[string]string{"build.appstudio.openshift.io/component": componentName, "build.appstudio.openshift.io/application": applicationName}
 	list := &v1beta1.PipelineRunList{}
@@ -129,6 +131,7 @@ func (h *SuiteController) GetComponentPipeline(componentName string, application
 	return v1beta1.PipelineRun{}, err
 }
 
+// GetComponentRoute returns the route for a given component name
 func (h *SuiteController) GetComponentRoute(componentName string, componentNamespace string) (*routev1.Route, error) {
 	namespacedName := types.NamespacedName{
 		Name:      fmt.Sprintf("el%s", componentName),
@@ -143,6 +146,7 @@ func (h *SuiteController) GetComponentRoute(componentName string, componentNames
 	return route, nil
 }
 
+// GetComponentDeployment returns the deployment for a given component name
 func (h *SuiteController) GetComponentDeployment(componentName string, componentNamespace string) (*appsv1.Deployment, error) {
 	namespacedName := types.NamespacedName{
 		Name:      fmt.Sprintf("el-%s", componentName),
@@ -157,6 +161,7 @@ func (h *SuiteController) GetComponentDeployment(componentName string, component
 	return deployment, nil
 }
 
+// GetComponentService returns the service for a given component name
 func (h *SuiteController) GetComponentService(componentName string, componentNamespace string) (*corev1.Service, error) {
 	namespacedName := types.NamespacedName{
 		Name:      fmt.Sprintf("el-%s", componentName),
