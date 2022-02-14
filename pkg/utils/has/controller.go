@@ -6,6 +6,7 @@ import (
 
 	routev1 "github.com/openshift/api/route/v1"
 	v1alpha1 "github.com/redhat-appstudio/application-service/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
 	"github.com/redhat-appstudio/e2e-tests/pkg/client"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -18,6 +19,7 @@ import (
 
 type SuiteController struct {
 	*client.K8sClient
+	Github *github.API
 }
 
 func NewSuiteController() (*SuiteController, error) {
@@ -25,8 +27,11 @@ func NewSuiteController() (*SuiteController, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error creating client-go %v", err)
 	}
+
+	gh := github.NewGitubClient("redhat-appstudio-qe")
 	return &SuiteController{
 		client,
+		gh,
 	}, nil
 }
 

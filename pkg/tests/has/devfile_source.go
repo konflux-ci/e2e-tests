@@ -2,11 +2,13 @@ package has
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/redhat-appstudio/application-service/api/v1alpha1"
+	"github.com/redhat-appstudio/application-service/pkg/devfile"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/has"
 	"k8s.io/klog/v2"
@@ -26,7 +28,7 @@ const (
 	QuarkusDevfileSource   string = "https://github.com/redhat-appstudio-qe/devfile-sample-code-with-quarkus"
 )
 
-var ComponentContainerImage string = fmt.Sprintf("quay.io/flacatus/quarkus:%s", strings.Replace(uuid.New().String(), "-", "", -1))
+var ComponentContainerImage string = fmt.Sprintf("quay.io/redhat-appstudio-qe/quarkus:%s", strings.Replace(uuid.New().String(), "-", "", -1))
 
 var _ = framework.HASSuiteDescribe("devfile source", func() {
 	defer GinkgoRecover()
@@ -37,8 +39,8 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 	application := &v1alpha1.Application{}
 
 	BeforeAll(func() {
-		klog.Info("Checking HAS Argo application health before starting the tests")
 		Expect(commonController.WaitForArgoCDApplicationToBeReady(HASArgoApplicationName, GitOpsNamespace)).NotTo(HaveOccurred(), "HAS Argo application didn't start in 5 minutes")
+		klog.Info("HAS Argo CD application is ready")
 	})
 
 	It("Create Red Hat AppStudio Application", func() {
@@ -54,7 +56,21 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			return application.Status.Devfile
-		}, 3*time.Minute, 100*time.Millisecond).Should(Not(BeEmpty()))
+		}, 3*time.Minute, 100*time.Millisecond).Should(Not(BeEmpty()), "Error creating gitOps repository")
+
+		gitOpsRepository := ObtainGitUrlFromDevfile(application.Status.Devfile)
+		Expect(gitOpsRepository).NotTo(BeEmpty())
+
+		// Extract repository name from the github url
+		parseUrl, err := url.Parse(gitOpsRepository)
+		Expect(err).NotTo(HaveOccurred())
+		repoParsed := strings.Split(parseUrl.Path, "/")
+		Expect(repoParsed[len(repoParsed)-1]).To(Not(BeEmpty()))
+
+		exists := hasController.Github.CheckIfRepositoryExist(repoParsed[len(repoParsed)-1])
+		Expect(exists).To(BeTrue())
+
+		klog.Infof("GitOpsRepository generated: %s", gitOpsRepository)
 	})
 
 	It("Create Red Hat AppStudio Quarkus component", func() {
@@ -120,15 +136,12 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 		schemaVersion: 2.1.0
 	The ObtainGitUrlFromDevfile extract from the string the git url associated with a application
 */
-func ObtainGitUrlFromDevfile(devfile string) string {
-	devfileLines := strings.Split(devfile, "\n")
-	for _, line := range devfileLines {
-		if strings.Contains(line, "appModelRepository.url") {
-			gitUrl := strings.Split(line, "url: ")
-			if len(gitUrl) == 2 {
-				return strings.TrimSpace(gitUrl[1])
-			}
-		}
+func ObtainGitUrlFromDevfile(devfileStatus string) string {
+	appDevfile, err := devfile.ParseDevfileModel(devfileStatus)
+	if err != nil {
+		err = fmt.Errorf("Error parsing devfile: %v", err)
 	}
-	return ""
+	// Get the devfile attributes from the parsed object
+	devfileAttributes := appDevfile.GetMetadata().Attributes
+	return devfileAttributes.GetString("gitOpsRepository.url", &err)
 }

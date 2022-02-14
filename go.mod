@@ -9,7 +9,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.1.1
 	github.com/onsi/gomega v1.18.1
 	github.com/openshift/api v0.0.0-20200930075302-db52bc4ef99f
-	github.com/redhat-appstudio/application-service v0.0.0-20220209224245-a3c147c351d4
+	github.com/redhat-appstudio/application-service v0.0.0-20220214183410-574ea7a76a0d
 	github.com/tektoncd/pipeline v0.30.0
 	k8s.io/api v0.22.2
 	k8s.io/apimachinery v0.22.4

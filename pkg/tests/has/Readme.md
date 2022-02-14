@@ -8,6 +8,7 @@ Currently to create an application in Red Hat App Studio it is possible to creat
 ### Devfile source
 
 Simple tests where:
+
 * The framework create an `Application` CR.
 * Verify if the application was created successfully.
 * Create a Quarkus component. [See Quarkus devfile sample](https://github.com/redhat-appstudio-qe/devfile-sample-code-with-quarkus).
