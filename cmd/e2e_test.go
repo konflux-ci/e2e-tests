@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	APPLICATION_SERVICE_NAMESPACE = "application-service"
-	APPLICATION_SERVICE_NAME      = "has-github-token"
+	APPLICATION_SERVICE_GITHUB_TOKEN_SECRET = "has-github-token"
+	APPLICATION_SERVICE_NAMESPACE           = "application-service"
 )
 
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
@@ -23,7 +23,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	Expect(err).To(BeNil(), "Error when trying to start a new K8S client")
 	klog.Info("New K8S client has been created successfully")
 
-	secret, err := KubeClient.KubeInterface().CoreV1().Secrets(APPLICATION_SERVICE_NAMESPACE).Get(context.TODO(), APPLICATION_SERVICE_NAME, metav1.GetOptions{})
+	secret, err := KubeClient.KubeInterface().CoreV1().Secrets(APPLICATION_SERVICE_NAMESPACE).Get(context.TODO(), APPLICATION_SERVICE_GITHUB_TOKEN_SECRET, metav1.GetOptions{})
 	Expect(err).To(BeNil(), "Error when trying to retrieve information from kube-api")
 	klog.Info("Secret information successfully gathered")
 
