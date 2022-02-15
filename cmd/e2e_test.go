@@ -13,12 +13,17 @@ import (
 	"k8s.io/klog/v2"
 )
 
+const (
+	APPLICATION_SERVICE_NAMESPACE = "application-service"
+	APPLICATION_SERVICE_NAME      = "has-github-token"
+)
+
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	KubeClient, err := client.NewK8SClient()
 	Expect(err).To(BeNil(), "Error when trying to start a new K8S client")
 	klog.Info("New K8S client has been created successfully")
 
-	secret, err := KubeClient.KubeInterface().CoreV1().Secrets("application-service").Get(context.TODO(), "has-github-token", metav1.GetOptions{})
+	secret, err := KubeClient.KubeInterface().CoreV1().Secrets(APPLICATION_SERVICE_NAMESPACE).Get(context.TODO(), APPLICATION_SERVICE_NAME, metav1.GetOptions{})
 	Expect(err).To(BeNil(), "Error when trying to retrieve information from kube-api")
 	klog.Info("Secret information successfully gathered")
 
