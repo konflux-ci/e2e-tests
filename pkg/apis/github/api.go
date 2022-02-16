@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -35,12 +36,12 @@ func (c *API) Do(req *http.Request) (*http.Response, error) {
 }
 
 func (c *API) Get(ctx context.Context, contentType string, body io.Reader, repository string) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", c.githubAPIURL+c.organization+"/"+repository, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s%s/%s", c.githubAPIURL, c.organization, repository), nil)
 	if err != nil {
 		return nil, err
 	}
 	// We need to set the Authorization header because the application-service create private repositories.
-	req.Header.Set("Authorization", "token "+os.Getenv("GITHUB_TOKEN"))
+	req.Header.Set("Authorization", fmt.Sprintf("token %s", os.Getenv("GITHUB_TOKEN")))
 	req.Header.Set("Content-Type", contentType)
 
 	return c.Do(req)

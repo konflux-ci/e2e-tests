@@ -94,7 +94,7 @@ func (h *SuiteController) DeleteHasComponent(name string, namespace string) erro
 
 // CreateComponent create an has component from a given name, namespace, application, devfile and a container image
 func (h *SuiteController) CreateComponent(applicationName string, componentName string, namespace string, sourceDevfile string, containerImage string) (*v1alpha1.Component, error) {
-	component := v1alpha1.Component{
+	component := &v1alpha1.Component{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      componentName,
 			Namespace: namespace,
@@ -104,8 +104,9 @@ func (h *SuiteController) CreateComponent(applicationName string, componentName 
 			Application:   applicationName,
 			Source: v1alpha1.ComponentSource{
 				v1alpha1.ComponentSourceUnion{
-					GitSource:   &v1alpha1.GitSource{URL: sourceDevfile},
-					ImageSource: &v1alpha1.ImageSource{},
+					GitSource: &v1alpha1.GitSource{
+						URL: sourceDevfile,
+					},
 				}},
 			Replicas:   1,
 			TargetPort: 8081,
@@ -115,11 +116,11 @@ func (h *SuiteController) CreateComponent(applicationName string, componentName 
 			},
 		},
 	}
-	err := h.KubeRest().Create(context.TODO(), &component)
+	err := h.KubeRest().Create(context.TODO(), component)
 	if err != nil {
 		return nil, err
 	}
-	return &component, nil
+	return component, nil
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels

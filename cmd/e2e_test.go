@@ -7,10 +7,17 @@ import (
 	"github.com/onsi/gomega"
 	_ "github.com/redhat-appstudio/e2e-tests/pkg/tests/common"
 	_ "github.com/redhat-appstudio/e2e-tests/pkg/tests/has"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"k8s.io/klog/v2"
 )
 
+const (
+	GITHUB_TOKEN_ENV = "GITHUB_TOKEN"
+)
+
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
+	gomega.Expect(utils.CheckIfEnvironmentExists(GITHUB_TOKEN_ENV)).To(gomega.BeTrue(), "GITHUB_TOKEN environment variable is not set")
+
 	return nil
 }, func(data []byte) {})
 

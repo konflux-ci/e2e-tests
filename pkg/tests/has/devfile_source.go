@@ -58,19 +58,12 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 			return application.Status.Devfile
 		}, 3*time.Minute, 100*time.Millisecond).Should(Not(BeEmpty()), "Error creating gitOps repository")
 
-		gitOpsRepository := ObtainGitUrlFromDevfile(application.Status.Devfile)
-		Expect(gitOpsRepository).NotTo(BeEmpty())
+		Eventually(func() bool {
+			// application info should be stored even after deleting the application in application variable
+			gitOpsRepository := ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-		// Extract repository name from the github url
-		parseUrl, err := url.Parse(gitOpsRepository)
-		Expect(err).NotTo(HaveOccurred())
-		repoParsed := strings.Split(parseUrl.Path, "/")
-		Expect(repoParsed[len(repoParsed)-1]).To(Not(BeEmpty()))
-
-		exists := hasController.Github.CheckIfRepositoryExist(repoParsed[len(repoParsed)-1])
-		Expect(exists).To(BeTrue())
-
-		klog.Infof("GitOpsRepository generated: %s", gitOpsRepository)
+			return hasController.Github.CheckIfRepositoryExist(gitOpsRepository)
+		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
 	})
 
 	It("Create Red Hat AppStudio Quarkus component", func() {
@@ -124,6 +117,15 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 		err := hasController.DeleteHasApplication(ApplicationName, ApplicationNamespace)
 		Expect(err).NotTo(HaveOccurred())
 	})
+
+	It("Make sure that gitops repository was deleted", func() {
+		Eventually(func() bool {
+			// application info should be stored even after deleting the application in application variable
+			gitOpsRepository := ObtainGitOpsRepositoryName(application.Status.Devfile)
+
+			return hasController.Github.CheckIfRepositoryExist(gitOpsRepository)
+		}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
+	})
 })
 
 /*
@@ -136,12 +138,17 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 		schemaVersion: 2.1.0
 	The ObtainGitUrlFromDevfile extract from the string the git url associated with a application
 */
-func ObtainGitUrlFromDevfile(devfileStatus string) string {
+func ObtainGitOpsRepositoryName(devfileStatus string) string {
 	appDevfile, err := devfile.ParseDevfileModel(devfileStatus)
 	if err != nil {
 		err = fmt.Errorf("Error parsing devfile: %v", err)
 	}
 	// Get the devfile attributes from the parsed object
 	devfileAttributes := appDevfile.GetMetadata().Attributes
-	return devfileAttributes.GetString("gitOpsRepository.url", &err)
+	gitOpsRepository := devfileAttributes.GetString("gitOpsRepository.url", &err)
+	parseUrl, err := url.Parse(gitOpsRepository)
+	Expect(err).NotTo(HaveOccurred())
+	repoParsed := strings.Split(parseUrl.Path, "/")
+
+	return repoParsed[len(repoParsed)-1]
 }
