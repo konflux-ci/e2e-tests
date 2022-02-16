@@ -1,6 +1,7 @@
 package has
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"strings"
@@ -17,15 +18,17 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	ApplicationName        string = "pet-clinic"
-	HASArgoApplicationName string = "has"
-	ApplicationNamespace   string = "application-service"
-	GitOpsNamespace        string = "openshift-gitops"
-	QuarkusComponentName   string = "quarkus-component-e2e"
-	QuarkusDevfileSource   string = "https://github.com/redhat-appstudio-qe/devfile-sample-code-with-quarkus"
+	ApplicationName                         string = "pet-clinic"
+	HASArgoApplicationName                  string = "has"
+	ApplicationNamespace                    string = "application-service"
+	GitOpsNamespace                         string = "openshift-gitops"
+	QuarkusComponentName                    string = "quarkus-component-e2e"
+	QuarkusDevfileSource                    string = "https://github.com/redhat-appstudio-qe/devfile-sample-code-with-quarkus"
+	APPLICATION_SERVICE_GITHUB_TOKEN_SECRET string = "has-github-token"
 )
 
 var ComponentContainerImage string = fmt.Sprintf("quay.io/redhat-appstudio-qe/quarkus:%s", strings.Replace(uuid.New().String(), "-", "", -1))
@@ -40,6 +43,9 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 
 	BeforeAll(func() {
 		Expect(commonController.WaitForArgoCDApplicationToBeReady(HASArgoApplicationName, GitOpsNamespace)).NotTo(HaveOccurred(), "HAS Argo application didn't start in 5 minutes")
+		_, err := hasController.KubeInterface().CoreV1().Secrets(ApplicationNamespace).Get(context.TODO(), APPLICATION_SERVICE_GITHUB_TOKEN_SECRET, metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
+
 		klog.Info("HAS Argo CD application is ready")
 	})
 
