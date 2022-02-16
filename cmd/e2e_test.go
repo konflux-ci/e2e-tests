@@ -20,14 +20,12 @@ const (
 
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	KubeClient, err := client.NewK8SClient()
-	gomega.Expect(err).To(gomega.BeNil(), "Error when trying to start a new K8S client")
+	gomega.Expect(err).ShouldNot(gomega.HaveOcurred(), "Error when trying to start a new K8S client")
 	klog.Info("New K8S client has been created successfully")
 
 	secret, err := KubeClient.KubeInterface().CoreV1().Secrets(APPLICATION_SERVICE_NAMESPACE).Get(context.TODO(), APPLICATION_SERVICE_GITHUB_TOKEN_SECRET, metav1.GetOptions{})
-	gomega.Expect(err).To(gomega.BeNil(), "Error when trying to retrieve information from kube-api")
-	klog.Info("Secret information successfully gathered")
-
-	gomega.Expect(secret).NotTo(gomega.BeNil())
+	gomega.Expect(err).ShouldNot(gomega.HaveOcurred(), "Error when trying to retrieve secret information")
+	klog.Infof("Secret %s information successfully gathered", secret.Name)
 
 	return nil
 }, func(data []byte) {})
