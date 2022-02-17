@@ -5,13 +5,15 @@ import (
 	"fmt"
 
 	routev1 "github.com/openshift/api/route/v1"
-	v1alpha1 "github.com/redhat-appstudio/application-service/api/v1alpha1"
+	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
 	"github.com/redhat-appstudio/e2e-tests/pkg/client"
+	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,7 +30,8 @@ func NewSuiteController() (*SuiteController, error) {
 		return nil, fmt.Errorf("error creating client-go %v", err)
 	}
 
-	gh := github.NewGitubClient("redhat-appstudio-qe")
+	// Check if a github organization env var is set, if not use by default the redhat-appstudio-qe org. See: https://github.com/redhat-appstudio-qe
+	gh := github.NewGitubClient(utils.GetEnv(framework.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"))
 	return &SuiteController{
 		client,
 		gh,
@@ -36,14 +39,14 @@ func NewSuiteController() (*SuiteController, error) {
 }
 
 // GetHasApplicationStatus return the status from the Application Custom Resource object
-func (h *SuiteController) GetHasApplication(name, namespace string) (*v1alpha1.Application, error) {
+func (h *SuiteController) GetHasApplication(name, namespace string) (*appservice.Application, error) {
 	namespacedName := types.NamespacedName{
 		Name:      name,
 		Namespace: namespace,
 	}
 
-	application := v1alpha1.Application{
-		Spec: v1alpha1.ApplicationSpec{},
+	application := appservice.Application{
+		Spec: appservice.ApplicationSpec{},
 	}
 	err := h.KubeRest().Get(context.TODO(), namespacedName, &application)
 	if err != nil {
@@ -53,13 +56,13 @@ func (h *SuiteController) GetHasApplication(name, namespace string) (*v1alpha1.A
 }
 
 // CreateHasApplication create an application Custom Resource object
-func (h *SuiteController) CreateHasApplication(name, namespace string) (*v1alpha1.Application, error) {
-	application := v1alpha1.Application{
-		ObjectMeta: v1.ObjectMeta{
+func (h *SuiteController) CreateHasApplication(name, namespace string) (*appservice.Application, error) {
+	application := appservice.Application{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: v1alpha1.ApplicationSpec{
+		Spec: appservice.ApplicationSpec{
 			DisplayName: name,
 		},
 	}
@@ -72,8 +75,8 @@ func (h *SuiteController) CreateHasApplication(name, namespace string) (*v1alpha
 
 // DeleteHasApplication delete an has application from a given name and namespace
 func (h *SuiteController) DeleteHasApplication(name, namespace string) error {
-	application := v1alpha1.Application{
-		ObjectMeta: v1.ObjectMeta{
+	application := appservice.Application{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
@@ -83,8 +86,8 @@ func (h *SuiteController) DeleteHasApplication(name, namespace string) error {
 
 // DeleteHasComponent delete an has component from a given name and namespace
 func (h *SuiteController) DeleteHasComponent(name string, namespace string) error {
-	component := v1alpha1.Component{
-		ObjectMeta: v1.ObjectMeta{
+	component := appservice.Component{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
@@ -93,25 +96,25 @@ func (h *SuiteController) DeleteHasComponent(name string, namespace string) erro
 }
 
 // CreateComponent create an has component from a given name, namespace, application, devfile and a container image
-func (h *SuiteController) CreateComponent(applicationName string, componentName string, namespace string, sourceDevfile string, containerImage string) (*v1alpha1.Component, error) {
-	component := &v1alpha1.Component{
-		ObjectMeta: v1.ObjectMeta{
+func (h *SuiteController) CreateComponent(applicationName string, componentName string, namespace string, sourceDevfile string, containerImage string) (*appservice.Component, error) {
+	component := &appservice.Component{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      componentName,
 			Namespace: namespace,
 		},
-		Spec: v1alpha1.ComponentSpec{
+		Spec: appservice.ComponentSpec{
 			ComponentName: componentName,
 			Application:   applicationName,
-			Source: v1alpha1.ComponentSource{
-				v1alpha1.ComponentSourceUnion{
-					GitSource: &v1alpha1.GitSource{
+			Source: appservice.ComponentSource{
+				appservice.ComponentSourceUnion{
+					GitSource: &appservice.GitSource{
 						URL: sourceDevfile,
 					},
 				}},
 			Replicas:   1,
 			TargetPort: 8081,
 			Route:      "",
-			Build: v1alpha1.Build{
+			Build: appservice.Build{
 				ContainerImage: containerImage,
 			},
 		},

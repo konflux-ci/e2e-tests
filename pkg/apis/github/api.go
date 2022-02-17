@@ -2,11 +2,12 @@ package github
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
+
+	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 )
 
 type API struct {
@@ -21,11 +22,7 @@ func NewGitubClient(organization string) *API {
 		organization: organization,
 	}
 	api.httpClient = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		},
+		Transport: &http.Transport{},
 	}
 	return &api
 }
@@ -40,8 +37,9 @@ func (c *API) Get(ctx context.Context, contentType string, body io.Reader, repos
 	if err != nil {
 		return nil, err
 	}
-	// We need to set the Authorization header because the application-service create private repositories.
-	req.Header.Set("Authorization", fmt.Sprintf("token %s", os.Getenv("GITHUB_TOKEN")))
+
+	// We need to set the Authorization header because the application-service create private repositories. The github token is already checked if exists in before tests suites
+	req.Header.Set("Authorization", fmt.Sprintf("token %s", utils.GetEnv(framework.GITHUB_TOKEN_ENV, "")))
 	req.Header.Set("Content-Type", contentType)
 
 	return c.Do(req)

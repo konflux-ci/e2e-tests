@@ -9,7 +9,7 @@ import (
 
 var (
 	// Pipelines names from https://github.com/redhat-appstudio/infra-deployments/tree/main/components/build/build-templates
-	AppStudioComponents          = []string{"all-components-staging", "authentication", "build"}
+	AppStudioComponents          = []string{"all-components-staging", "authentication", "build", "gitops"}
 	AppStudioComponentsNamespace = "openshift-gitops"
 	PipelinesNamespace           = "build-templates"
 )
