@@ -3,8 +3,8 @@ module github.com/redhat-appstudio/e2e-tests
 go 1.16
 
 require (
-	github.com/argoproj/argo-cd/v2 v2.1.7
-	github.com/argoproj/gitops-engine v0.4.1
+	github.com/argoproj/argo-cd/v2 v2.1.9
+	github.com/argoproj/gitops-engine v0.4.2
 	github.com/google/uuid v1.3.0
 	github.com/onsi/ginkgo/v2 v2.1.1
 	github.com/onsi/gomega v1.18.1
