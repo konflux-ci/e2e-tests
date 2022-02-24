@@ -5,18 +5,21 @@ go 1.16
 require (
 	github.com/argoproj/argo-cd/v2 v2.1.7
 	github.com/argoproj/gitops-engine v0.4.1
-	github.com/onsi/ginkgo/v2 v2.0.0-rc2
-	github.com/onsi/gomega v1.17.0
-	github.com/redhat-appstudio/application-service v0.0.0-20220106201253-98d082511fd2
+	github.com/google/uuid v1.3.0
+	github.com/onsi/ginkgo/v2 v2.1.1
+	github.com/onsi/gomega v1.18.1
+	github.com/openshift/api v0.0.0-20200930075302-db52bc4ef99f
+	github.com/redhat-appstudio/application-service v0.0.0-20220214183410-574ea7a76a0d
 	github.com/tektoncd/pipeline v0.30.0
-	golang.org/x/net v0.0.0-20211123203042-d83791d6bcd9 // indirect
+	k8s.io/api v0.22.2
 	k8s.io/apimachinery v0.22.4
 	k8s.io/client-go v11.0.1-0.20190816222228-6d55c1b1f1ca+incompatible
 	k8s.io/klog/v2 v2.8.0
-	sigs.k8s.io/controller-runtime v0.10.3
+	sigs.k8s.io/controller-runtime v0.9.5
 )
 
 replace (
+	github.com/go-redis/redis/v8 => github.com/go-redis/redis/v8 v8.11.4 // indirect
 	k8s.io/api => k8s.io/api v0.21.4
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.4
 	k8s.io/apimachinery => k8s.io/apimachinery v0.21.4

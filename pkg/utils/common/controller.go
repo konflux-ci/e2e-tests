@@ -9,7 +9,6 @@ import (
 	"github.com/argoproj/gitops-engine/pkg/health"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -62,12 +61,17 @@ func (s *SuiteController) GetClusterTask(name string, namespace string) (*v1beta
 }
 
 // ListClusterTask return a list of ClusterTasks with a specific label selectors
-func (s *SuiteController) ListClusterTask(labelSelector map[string]string) ([]v1beta1.ClusterTask, error) {
+func (s *SuiteController) CheckIfClusterTaskExists(name string) bool {
 	clusterTasks := &v1beta1.ClusterTaskList{}
-	if err := s.KubeRest().List(context.TODO(), clusterTasks, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(labelSelector)}); err != nil {
-		return nil, err
+	if err := s.KubeRest().List(context.TODO(), clusterTasks, &rclient.ListOptions{}); err != nil {
+		return false
 	}
-	return clusterTasks.Items, nil
+	for _, ctasks := range clusterTasks.Items {
+		if ctasks.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *SuiteController) WaitForArgoCDApplicationToBeReady(argoComponent string, componentNamespace string) error {
