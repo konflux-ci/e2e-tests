@@ -70,6 +70,13 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 	})
 
+	// Necessary for component pipeline
+	It("Check if 'git-clone' cluster tasks exists", func() {
+		Eventually(func() bool {
+			return commonController.CheckIfClusterTaskExists("git-clone")
+		}, 5*time.Minute, 45*time.Second).Should(BeTrue(), "'git-clone' cluster task don't exist in cluster. Component cannot be created")
+	})
+
 	It("Create Red Hat AppStudio Quarkus component", func() {
 		component, err := hasController.CreateComponent(application.Name, QuarkusComponentName, RedHatAppStudioApplicationNamespace, QuarkusDevfileSource, ComponentContainerImage)
 		Expect(err).NotTo(HaveOccurred())
