@@ -11,7 +11,6 @@ export WORKSPACE=$(dirname $(dirname $(readlink -f "$0")));
 
 command -v yq >/dev/null 2>&1 || { echo "yq is not installed. Aborting."; exit 1; }
 command -v kubectl >/dev/null 2>&1 || { echo "kubectl is not installed. Aborting."; exit 1; }
-command -v kustomize >/dev/null 2>&1 || { echo "kustomize is not installed. Aborting."; exit 1; }
 
 # catch and stop execution on any error
 trap "catchFinishedCode" EXIT SIGINT
