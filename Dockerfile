@@ -1,6 +1,7 @@
-FROM golang:1.17 AS builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.16.12-4 AS builder
 
 WORKDIR /github.com/redhat-appstudio/e2e-tests
+USER root
 COPY . .
 RUN GOOS=linux make build
 
