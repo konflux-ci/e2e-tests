@@ -33,7 +33,7 @@ function installRedHatAppStudio() {
 
 function runE2ETests() {
     make build
-    make run
+    make run E2E_ARGS_EXEC="--ginkgo.junit-report tests-report.xml"
 }
 
 installRedHatAppStudio
