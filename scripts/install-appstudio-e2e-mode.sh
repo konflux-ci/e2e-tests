@@ -14,7 +14,8 @@ export MY_GIT_FORK_REMOTE="qe"
 export MY_GITHUB_ORG=${MY_GITHUB_ORG:-"redhat-appstudio-qe"}
 export MY_GITHUB_TOKEN="${GITHUB_TOKEN}"
 export TEST_BRANCH_ID=$(date +%s)
-export WORKSPACE=$(dirname $(dirname $(readlink -f "$0")));
+export ROOT_E2E=$(dirname $(dirname $(readlink -f "$0")));
+export WORKSPACE=${WORKSPACE:-${ROOT_E2E}}
 
 # Download gitops repository to install AppStudio in e2e mode.
 function cloneInfraDeployments() {
