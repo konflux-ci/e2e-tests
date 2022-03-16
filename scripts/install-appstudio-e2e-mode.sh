@@ -50,7 +50,7 @@ function createApplicationServiceSecrets() {
 while [[ $# -gt 0 ]]
 do
     case "$1" in
-        --install)
+        install)
             cloneInfraDeployments
             addQERemoteForkAndInstallAppstudio
             createApplicationServiceSecrets

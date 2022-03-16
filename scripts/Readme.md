@@ -11,9 +11,9 @@
 3. Run the test from your machine
 
    ```
-   $ROOT_DIR/scripts/install-appstudio-e2e-mode.sh --install
+   $ROOT_DIR/scripts/install-appstudio-e2e-mode.sh install
    ```
 
 Where are:
 
-- `--install` - Flag to indicate the installation. If the flag will not be present you can ````source``` the script and use the bash functions.
+- `install` - Flag to indicate the installation. If the flag will not be present you can ````source``` the script and use the bash functions.
