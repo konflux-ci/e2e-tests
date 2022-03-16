@@ -13,3 +13,7 @@ func HASSuiteDescribe(text string, body func()) bool {
 func CommonSuiteDescribe(text string, body func()) bool {
 	return Describe("[common-suite "+text+"]", Ordered, body)
 }
+
+func ChainsSuiteDescribe(text string, body func()) bool {
+	return g.Describe("[chains-suite "+text+"]", g.Ordered, body)
+}

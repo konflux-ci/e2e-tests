@@ -3,6 +3,7 @@ package cmd
 import (
 	"testing"
 
+	_ "../pkg/tests/build"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	_ "github.com/redhat-appstudio/e2e-tests/pkg/tests/has"
