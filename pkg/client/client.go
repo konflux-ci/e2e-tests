@@ -4,6 +4,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	applicationservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipelineclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -13,8 +14,9 @@ import (
 )
 
 type K8sClient struct {
-	kubeClient *kubernetes.Clientset
-	crClient   crclient.Client
+	kubeClient     *kubernetes.Clientset
+	crClient       crclient.Client
+	pipelineClient pipelineclientset.Interface
 }
 
 var (
@@ -38,6 +40,10 @@ func (c *K8sClient) KubeRest() crclient.Client {
 	return c.crClient
 }
 
+func (c *K8sClient) PipelineClient() pipelineclientset.Interface {
+	return c.pipelineClient
+}
+
 // NewHASClient creates kubernetes client wrapper
 func NewK8SClient() (*K8sClient, error) {
 	cfg, err := config.GetConfig()
@@ -56,8 +62,15 @@ func NewK8SClient() (*K8sClient, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	pipelineClient, err := pipelineclientset.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	return &K8sClient{
-		kubeClient: client,
-		crClient:   crClient,
+		kubeClient:     client,
+		crClient:       crClient,
+		pipelineClient: pipelineClient,
 	}, nil
 }

@@ -12,9 +12,10 @@ var _ = framework.ChainsSuiteDescribe("Application E2E tests", func() {
 	defer g.GinkgoRecover()
 	commonController, err := common.NewSuiteController()
 	Expect(err).NotTo(HaveOccurred())
+	ns := "tekton-chains"
 
-	g.Context("Crud operation:", func() {
-		g.It("Verify the chains controller is running", func() {
+	g.Context("infrastructure is running", func() {
+		g.It("verify the chains controller is running", func() {
 			err := commonController.WaitForPodToBeReady("app", "tekton-chains-controller", "tekton-chains")
 			Expect(err).NotTo(HaveOccurred())
 		})
