@@ -24,7 +24,7 @@ type SuiteController struct {
 func NewSuiteController() (*SuiteController, error) {
 	client, err := client.NewK8SClient()
 	if err != nil {
-		return nil, fmt.Errorf("Error creating client-go %v", err)
+		return nil, fmt.Errorf("error creating client-go %v", err)
 	}
 	return &SuiteController{
 		client,
