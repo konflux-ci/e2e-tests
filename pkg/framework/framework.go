@@ -15,5 +15,5 @@ func CommonSuiteDescribe(text string, body func()) bool {
 }
 
 func ChainsSuiteDescribe(text string, body func()) bool {
-	return g.Describe("[chains-suite "+text+"]", g.Ordered, body)
+	return Describe("[chains-suite "+text+"]", Ordered, body)
 }

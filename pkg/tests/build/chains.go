@@ -16,15 +16,17 @@ var _ = framework.ChainsSuiteDescribe("Application E2E tests", func() {
 
 	g.Context("infrastructure is running", func() {
 		g.It("verify the chains controller is running", func() {
-			err := commonController.WaitForPodToBeReady("app", "tekton-chains-controller", "tekton-chains")
+			err := commonController.WaitForPodSelector(common.IsPodRunning, ns, "app", "tekton-chains-controller", 60)
+			Expect(err).NotTo(HaveOccurred())
+		})
+		g.It("verify the chains certs are installed", func() {
+			err := commonController.WaitForPodSelector(common.IsPodSuccessful, ns, "job-name", "chains-certs-configuration", 60)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 	g.It("verify the correct secrets have been created", func() {
 		_, caErr := commonController.VerifySecretExists(ns, "chains-ca-cert")
 		Expect(caErr).NotTo(HaveOccurred())
-		_, signErr := commonController.VerifySecretExists(ns, "signing-secrets")
-		Expect(signErr).NotTo(HaveOccurred())
 	})
 
 })

@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/client"
+	"k8s.io/kubernetes/pkg/client/conditions"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -85,4 +86,76 @@ func (s *SuiteController) VerifySecretExists(ns string, name string) (*corev1.Se
 	}
 
 	return secret, nil
+}
+
+func (s *SuiteController) GetPod(namespace, podName string) (*corev1.Pod, error) {
+	pod, err := s.KubeInterface().CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return pod, nil
+}
+
+func IsPodRunning(pod *corev1.Pod, namespace string) wait.ConditionFunc {
+	return func() (bool, error) {
+		fmt.Printf(".")
+		switch pod.Status.Phase {
+		case corev1.PodRunning:
+			return true, nil
+		case corev1.PodFailed, corev1.PodSucceeded:
+			return false, conditions.ErrPodCompleted
+		}
+		return false, nil
+	}
+}
+
+func IsPodSuccessful(pod *corev1.Pod, namespace string) wait.ConditionFunc {
+	return func() (bool, error) {
+		fmt.Printf(".")
+		switch pod.Status.Phase {
+		case corev1.PodSucceeded:
+			return true, nil
+		case corev1.PodFailed:
+			return false, conditions.ErrPodCompleted
+		}
+		return false, nil
+	}
+}
+
+func (s *SuiteController) ListPods(namespace, labelKey, labelValue string) (*corev1.PodList, error) {
+	labelSelector := metav1.LabelSelector{MatchLabels: map[string]string{labelKey: labelValue}}
+	listOptions := metav1.ListOptions{
+		LabelSelector: labels.Set(labelSelector.MatchLabels).String(),
+		Limit:         100,
+	}
+	podList, err := s.KubeInterface().CoreV1().Pods(namespace).List(context.TODO(), listOptions)
+
+	if err != nil {
+		return nil, err
+	}
+	return podList, nil
+}
+
+func (s *SuiteController) waitForPod(cond wait.ConditionFunc, timeout time.Duration) error {
+	return wait.PollImmediate(time.Second, timeout, cond)
+}
+
+func (s *SuiteController) WaitForPodSelector(
+	fn func(pod *corev1.Pod, namespace string) wait.ConditionFunc, namespace, labelKey string, labelValue string,
+	timeout int) error {
+	podList, err := s.ListPods(namespace, labelKey, labelValue)
+	if err != nil {
+		return err
+	}
+	if len(podList.Items) == 0 {
+		return fmt.Errorf("no pods in %s with label key %s and label value %s", namespace, labelKey, labelValue)
+	}
+
+	for _, pod := range podList.Items {
+		if err := s.waitForPod(fn(&pod, namespace), time.Duration(timeout)*time.Second); err != nil {
+			return err
+		}
+	}
+	return nil
 }
