@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/client"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/kubernetes/pkg/client/conditions"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -158,4 +159,22 @@ func (s *SuiteController) WaitForPodSelector(
 		}
 	}
 	return nil
+}
+
+func (s *SuiteController) GetRole(roleName, namespace string) (*rbacv1.Role, error) {
+	role, err := s.KubeInterface().RbacV1().Roles(namespace).Get(context.TODO(), roleName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return role, nil
+}
+
+func (s *SuiteController) GetRoleBinding(rolebindingName, namespace string) (*rbacv1.RoleBinding, error) {
+	roleBinding, err := s.KubeInterface().RbacV1().RoleBindings(namespace).Get(context.TODO(), rolebindingName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return roleBinding, nil
 }

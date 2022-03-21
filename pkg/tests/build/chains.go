@@ -23,10 +23,21 @@ var _ = framework.ChainsSuiteDescribe("Application E2E tests", func() {
 			err := commonController.WaitForPodSelector(common.IsPodSuccessful, ns, "job-name", "chains-certs-configuration", 60)
 			Expect(err).NotTo(HaveOccurred())
 		})
+		g.It("verify the correct secrets have been created", func() {
+			_, err := commonController.VerifySecretExists(ns, "chains-ca-cert")
+			Expect(err).NotTo(HaveOccurred())
+		})
+		g.It("Verify the correct roles are created", func() {
+			_, csaErr := commonController.GetRole("chains-secret-admin", ns)
+			Expect(csaErr).NotTo(HaveOccurred())
+			_, srErr := commonController.GetRole("secret-reader", "openshift-ingress-operator")
+			Expect(srErr).NotTo(HaveOccurred())
+		})
+		g.It("Verify the correct rolebindings are created", func() {
+			_, csaErr := commonController.GetRoleBinding("chains-secret-admin", ns)
+			Expect(csaErr).NotTo(HaveOccurred())
+			_, csrErr := commonController.GetRoleBinding("chains-secret-reader", "openshift-ingress-operator")
+			Expect(csrErr).NotTo(HaveOccurred())
+		})
 	})
-	g.It("verify the correct secrets have been created", func() {
-		_, caErr := commonController.VerifySecretExists(ns, "chains-ca-cert")
-		Expect(caErr).NotTo(HaveOccurred())
-	})
-
 })
