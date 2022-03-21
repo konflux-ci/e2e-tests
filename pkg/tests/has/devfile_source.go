@@ -27,7 +27,7 @@ var ComponentContainerImage string = fmt.Sprintf("quay.io/%s/quarkus:%s", GetQua
 
 /*
  * Component: application-service
- * Description:
+ * Description: Contains tests about creating an application and a quarkus component from a source devfile
  */
 
 var _ = framework.HASSuiteDescribe("devfile source", func() {

@@ -19,7 +19,7 @@ export WORKSPACE=${WORKSPACE:-${ROOT_E2E}}
 
 # Download gitops repository to install AppStudio in e2e mode.
 function cloneInfraDeployments() {
-    git clone https://github.com/redhat-appstudio/infra-deployments.git ./tmp/infra-deployments
+    git clone https://github.com/redhat-appstudio/infra-deployments.git "$WORKSPACE"/tmp/infra-deployments
 }
 
 # Add a custom remote for infra-deployments repository.
@@ -61,3 +61,5 @@ do
     esac
     shift
 done
+
+e2e-appstudio
