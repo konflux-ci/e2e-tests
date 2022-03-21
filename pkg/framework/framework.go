@@ -1,6 +1,8 @@
 package framework
 
-import . "github.com/onsi/ginkgo/v2"
+import (
+	. "github.com/onsi/ginkgo/v2"
+)
 
 // HASSuiteDescribe annotates the application service tests with the application label.
 func HASSuiteDescribe(text string, body func()) bool {

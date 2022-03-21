@@ -1,7 +1,6 @@
 package client
 
 import (
-	argo "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	routev1 "github.com/openshift/api/route/v1"
 	applicationservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -25,7 +24,6 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(applicationservice.AddToScheme(scheme))
-	utilruntime.Must(argo.AddToScheme(scheme))
 	utilruntime.Must(tekton.AddToScheme(scheme))
 	utilruntime.Must(routev1.AddToScheme(scheme))
 }

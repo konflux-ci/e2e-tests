@@ -20,9 +20,15 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 var ComponentContainerImage string = fmt.Sprintf("quay.io/%s/quarkus:%s", GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
+
+/*
+ * Component: application-service
+ * Description: Contains tests about creating an application and a quarkus component from a source devfile
+ */
 
 var _ = framework.HASSuiteDescribe("devfile source", func() {
 	defer GinkgoRecover()
@@ -30,6 +36,7 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 	// Initialize the tests controllers
 	hasController, err := has.NewSuiteController()
 	Expect(err).NotTo(HaveOccurred())
+
 	commonController, err := common.NewSuiteController()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -38,7 +45,6 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 
 	BeforeAll(func() {
 		// Checks to see if the application already exists, a github token was provided and 'has-github-token' is present in the test cluster
-		Expect(commonController.WaitForArgoCDApplicationToBeReady(HASArgoApplicationName, GitOpsNamespace)).NotTo(HaveOccurred(), "HAS Argo application didn't start in 5 minutes")
 		Expect(utils.CheckIfEnvironmentExists(framework.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", framework.GITHUB_TOKEN_ENV)
 
 		_, err := hasController.KubeInterface().CoreV1().Secrets(RedHatAppStudioApplicationNamespace).Get(context.TODO(), ApplicationServiceGHTokenSecrName, metav1.GetOptions{})
@@ -84,18 +90,23 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 	})
 
 	It("Wait for component pipeline to be completed", func() {
-		Eventually(func() corev1.ConditionStatus {
+		err := wait.PollImmediate(20*time.Second, 10*time.Minute, func() (done bool, err error) {
 			pipelineRun, _ := hasController.GetComponentPipeline(QuarkusComponentName, RedHatAppStudioApplicationName)
 
 			for _, condition := range pipelineRun.Status.Conditions {
 				klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)
 
+				if condition.Reason == "Failed" {
+					return false, fmt.Errorf("Component %s pipeline failed", pipelineRun.Name)
+				}
+
 				if condition.Status == corev1.ConditionTrue {
-					return corev1.ConditionTrue
+					return true, nil
 				}
 			}
-			return corev1.ConditionFalse
-		}, 10*time.Minute, 10*time.Second).Should(Equal(corev1.ConditionTrue))
+			return false, nil
+		})
+		Expect(err).NotTo(HaveOccurred(), "Failed component pipeline %v", err)
 	})
 
 	It("Check component deployment health", func() {
