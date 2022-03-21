@@ -20,4 +20,11 @@ var _ = framework.ChainsSuiteDescribe("Application E2E tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
+	g.It("verify the correct secrets have been created", func() {
+		_, caErr := commonController.VerifySecretExists(ns, "chains-ca-cert")
+		Expect(caErr).NotTo(HaveOccurred())
+		_, signErr := commonController.VerifySecretExists(ns, "signing-secrets")
+		Expect(signErr).NotTo(HaveOccurred())
+	})
+
 })

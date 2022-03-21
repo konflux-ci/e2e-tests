@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -74,4 +75,14 @@ func (s *SuiteController) WaitForPodToBeReady(labelKey string, labelValue string
 		}
 		return false, nil
 	})
+}
+
+// Check if a secret exists, return secret and error
+func (s *SuiteController) VerifySecretExists(ns string, name string) (*corev1.Secret, error) {
+	secret, err := s.KubeInterface().CoreV1().Secrets(ns).Get(context.TODO(), name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return secret, nil
 }

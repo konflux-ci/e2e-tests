@@ -26,13 +26,3 @@ func NewSuiteController() (*SuiteController, error) {
 func VerifyTaskSignature(taskRun *v1beta1.TaskRun) bool {
 	return taskRun.Annotations["chains.tekton.dev/signed"] == "true"
 }
-
-func (s *SuiteController) VerifyAttestation(taskRun *v1beta1.TaskRun) error {
-	return nil
-
-}
-
-func (s *SuiteController) VerifyImageSignature(taskRun *v1beta1.TaskRun) error {
-	return nil
-
-}
