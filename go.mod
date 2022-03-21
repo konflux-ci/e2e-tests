@@ -3,20 +3,18 @@ module github.com/redhat-appstudio/e2e-tests
 go 1.16
 
 require (
-	github.com/fatih/color v1.9.0 // indirect
 	github.com/google/uuid v1.3.0
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/onsi/ginkgo/v2 v2.0.0-rc2
 	github.com/onsi/gomega v1.17.0
 	github.com/openshift/api v0.0.0-20200930075302-db52bc4ef99f
 	github.com/redhat-appstudio/application-service v0.0.0-20220106201253-98d082511fd2
-	github.com/tektoncd/pipeline v0.30.0
-	golang.org/x/net v0.0.0-20211123203042-d83791d6bcd9 // indirect
+	github.com/tektoncd/pipeline v0.32.1
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
-	k8s.io/api v0.22.2
-	k8s.io/apimachinery v0.22.4
-	k8s.io/client-go v11.0.1-0.20190816222228-6d55c1b1f1ca+incompatible
-	k8s.io/klog/v2 v2.8.0
+	k8s.io/api v0.22.5
+	k8s.io/apimachinery v0.22.5
+	k8s.io/client-go v0.22.5
+	k8s.io/klog/v2 v2.9.0
 	k8s.io/kubernetes v1.21.0
 	sigs.k8s.io/controller-runtime v0.10.3
 )

@@ -61,41 +61,13 @@ func (s *SuiteController) CheckIfClusterTaskExists(name string) bool {
 	return false
 }
 
-func (s *SuiteController) WaitForPodToBeReady(labelKey string, labelValue string, componentNamespace string) error {
-	return wait.PollImmediate(100*time.Millisecond, 5*time.Minute, func() (done bool, err error) {
-		labelSelector := metav1.LabelSelector{MatchLabels: map[string]string{labelKey: labelValue}}
-		listOptions := metav1.ListOptions{
-			LabelSelector: labels.Set(labelSelector.MatchLabels).String(),
-			Limit:         100,
-		}
-		pods, err := s.KubeInterface().CoreV1().Pods(componentNamespace).List(context.TODO(), listOptions)
-		if err != nil {
-			return false, nil
-		}
-		if len(pods.Items) > 0 {
-			return true, nil
-		}
-		return false, nil
-	})
-}
-
 // Check if a secret exists, return secret and error
 func (s *SuiteController) VerifySecretExists(ns string, name string) (*corev1.Secret, error) {
-	secret, err := s.KubeInterface().CoreV1().Secrets(ns).Get(context.TODO(), name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	return secret, nil
+	return s.KubeInterface().CoreV1().Secrets(ns).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
 func (s *SuiteController) GetPod(namespace, podName string) (*corev1.Pod, error) {
-	pod, err := s.KubeInterface().CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	return pod, nil
+	return s.KubeInterface().CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 }
 
 func IsPodRunning(pod *corev1.Pod, namespace string) wait.ConditionFunc {
@@ -130,12 +102,7 @@ func (s *SuiteController) ListPods(namespace, labelKey, labelValue string) (*cor
 		LabelSelector: labels.Set(labelSelector.MatchLabels).String(),
 		Limit:         100,
 	}
-	podList, err := s.KubeInterface().CoreV1().Pods(namespace).List(context.TODO(), listOptions)
-
-	if err != nil {
-		return nil, err
-	}
-	return podList, nil
+	return s.KubeInterface().CoreV1().Pods(namespace).List(context.TODO(), listOptions)
 }
 
 func (s *SuiteController) waitForPod(cond wait.ConditionFunc, timeout time.Duration) error {
@@ -162,19 +129,13 @@ func (s *SuiteController) WaitForPodSelector(
 }
 
 func (s *SuiteController) GetRole(roleName, namespace string) (*rbacv1.Role, error) {
-	role, err := s.KubeInterface().RbacV1().Roles(namespace).Get(context.TODO(), roleName, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	return role, nil
+	return s.KubeInterface().RbacV1().Roles(namespace).Get(context.TODO(), roleName, metav1.GetOptions{})
 }
 
 func (s *SuiteController) GetRoleBinding(rolebindingName, namespace string) (*rbacv1.RoleBinding, error) {
-	roleBinding, err := s.KubeInterface().RbacV1().RoleBindings(namespace).Get(context.TODO(), rolebindingName, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
+	return s.KubeInterface().RbacV1().RoleBindings(namespace).Get(context.TODO(), rolebindingName, metav1.GetOptions{})
+}
 
-	return roleBinding, nil
+func (s *SuiteController) GetServiceAccount(saName, namespace string) (*corev1.ServiceAccount, error) {
+	return s.KubeInterface().CoreV1().ServiceAccounts(namespace).Get(context.TODO(), saName, metav1.GetOptions{})
 }
