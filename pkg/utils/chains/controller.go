@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/client"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
 // Create the struct for kubernetes clients
@@ -21,8 +20,4 @@ func NewSuiteController() (*SuiteController, error) {
 	return &SuiteController{
 		client,
 	}, nil
-}
-
-func VerifyTaskSignature(taskRun *v1beta1.TaskRun) bool {
-	return taskRun.Annotations["chains.tekton.dev/signed"] == "true"
 }

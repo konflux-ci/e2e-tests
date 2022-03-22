@@ -71,7 +71,6 @@ func (s *SuiteController) GetPod(namespace, podName string) (*corev1.Pod, error)
 
 func IsPodRunning(pod *corev1.Pod, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		fmt.Printf(".")
 		switch pod.Status.Phase {
 		case corev1.PodRunning:
 			return true, nil
@@ -84,7 +83,6 @@ func IsPodRunning(pod *corev1.Pod, namespace string) wait.ConditionFunc {
 
 func IsPodSuccessful(pod *corev1.Pod, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		fmt.Printf(".")
 		switch pod.Status.Phase {
 		case corev1.PodSucceeded:
 			return true, nil
