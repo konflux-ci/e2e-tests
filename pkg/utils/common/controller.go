@@ -14,7 +14,6 @@ import (
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/client"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/kubernetes/pkg/client/conditions"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -77,7 +76,7 @@ func IsPodRunning(pod *corev1.Pod, namespace string) wait.ConditionFunc {
 		case corev1.PodRunning:
 			return true, nil
 		case corev1.PodFailed, corev1.PodSucceeded:
-			return false, conditions.ErrPodCompleted
+			return false, fmt.Errorf("pod ran to completion")
 		}
 		return false, nil
 	}
@@ -90,7 +89,7 @@ func IsPodSuccessful(pod *corev1.Pod, namespace string) wait.ConditionFunc {
 		case corev1.PodSucceeded:
 			return true, nil
 		case corev1.PodFailed:
-			return false, conditions.ErrPodCompleted
+			return false, fmt.Errorf("pod ran to completion")
 		}
 		return false, nil
 	}
