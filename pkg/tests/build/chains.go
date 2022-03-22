@@ -16,7 +16,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 
 	g.Context("infrastructure is running", func() {
 		g.It("verify the chains controller is running", func() {
-			err := commonController.WaitForPodSelector(common.IsPodRunning, ns, "app", "tekton-chains-controller", 60, 100)
+			err := commonController.WaitForPodSelector(commonController.IsPodRunning, ns, "app", "tekton-chains-controller", 60, 100)
 			Expect(err).NotTo(HaveOccurred())
 		})
 		g.It("verify the correct secrets have been created", func() {

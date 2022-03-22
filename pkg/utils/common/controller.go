@@ -69,8 +69,12 @@ func (s *SuiteController) GetPod(namespace, podName string) (*corev1.Pod, error)
 	return s.KubeInterface().CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 }
 
-func IsPodRunning(pod *corev1.Pod, namespace string) wait.ConditionFunc {
+func (s *SuiteController) IsPodRunning(podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
+		pod, err := s.GetPod(namespace, podName)
+		if err != nil {
+			return false, nil
+		}
 		switch pod.Status.Phase {
 		case corev1.PodRunning:
 			return true, nil
@@ -81,8 +85,12 @@ func IsPodRunning(pod *corev1.Pod, namespace string) wait.ConditionFunc {
 	}
 }
 
-func IsPodSuccessful(pod *corev1.Pod, namespace string) wait.ConditionFunc {
+func (s *SuiteController) IsPodSuccessful(podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
+		pod, err := s.GetPod(namespace, podName)
+		if err != nil {
+			return false, nil
+		}
 		switch pod.Status.Phase {
 		case corev1.PodSucceeded:
 			return true, nil
@@ -107,7 +115,7 @@ func (s *SuiteController) waitForPod(cond wait.ConditionFunc, timeout time.Durat
 }
 
 func (s *SuiteController) WaitForPodSelector(
-	fn func(pod *corev1.Pod, namespace string) wait.ConditionFunc, namespace, labelKey string, labelValue string,
+	fn func(podName, namespace string) wait.ConditionFunc, namespace, labelKey string, labelValue string,
 	timeout int, selectionLimit int64) error {
 	podList, err := s.ListPods(namespace, labelKey, labelValue, selectionLimit)
 	if err != nil {
@@ -118,7 +126,7 @@ func (s *SuiteController) WaitForPodSelector(
 	}
 
 	for i := range podList.Items {
-		if err := s.waitForPod(fn(&podList.Items[i], namespace), time.Duration(timeout)*time.Second); err != nil {
+		if err := s.waitForPod(fn(podList.Items[i].Name, namespace), time.Duration(timeout)*time.Second); err != nil {
 			return err
 		}
 	}
