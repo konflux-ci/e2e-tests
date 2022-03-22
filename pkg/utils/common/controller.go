@@ -117,8 +117,8 @@ func (s *SuiteController) WaitForPodSelector(
 		return fmt.Errorf("no pods in %s with label key %s and label value %s", namespace, labelKey, labelValue)
 	}
 
-	for _, pod := range podList.Items {
-		if err := s.waitForPod(fn(&pod, namespace), time.Duration(timeout)*time.Second); err != nil {
+	for i := range podList.Items {
+		if err := s.waitForPod(fn(&podList.Items[i], namespace), time.Duration(timeout)*time.Second); err != nil {
 			return err
 		}
 	}
