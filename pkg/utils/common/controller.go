@@ -75,7 +75,7 @@ func IsPodRunning(pod *corev1.Pod, namespace string) wait.ConditionFunc {
 		case corev1.PodRunning:
 			return true, nil
 		case corev1.PodFailed, corev1.PodSucceeded:
-			return false, fmt.Errorf("pod ran to completion")
+			return false, fmt.Errorf("pod %q ran to completion", pod.Name)
 		}
 		return false, nil
 	}
@@ -87,17 +87,17 @@ func IsPodSuccessful(pod *corev1.Pod, namespace string) wait.ConditionFunc {
 		case corev1.PodSucceeded:
 			return true, nil
 		case corev1.PodFailed:
-			return false, fmt.Errorf("pod ran to completion")
+			return false, fmt.Errorf("pod %q has failed", pod.Name)
 		}
 		return false, nil
 	}
 }
 
-func (s *SuiteController) ListPods(namespace, labelKey, labelValue string) (*corev1.PodList, error) {
+func (s *SuiteController) ListPods(namespace, labelKey, labelValue string, selectionLimit int64) (*corev1.PodList, error) {
 	labelSelector := metav1.LabelSelector{MatchLabels: map[string]string{labelKey: labelValue}}
 	listOptions := metav1.ListOptions{
 		LabelSelector: labels.Set(labelSelector.MatchLabels).String(),
-		Limit:         100,
+		Limit:         selectionLimit,
 	}
 	return s.KubeInterface().CoreV1().Pods(namespace).List(context.TODO(), listOptions)
 }
@@ -108,8 +108,8 @@ func (s *SuiteController) waitForPod(cond wait.ConditionFunc, timeout time.Durat
 
 func (s *SuiteController) WaitForPodSelector(
 	fn func(pod *corev1.Pod, namespace string) wait.ConditionFunc, namespace, labelKey string, labelValue string,
-	timeout int) error {
-	podList, err := s.ListPods(namespace, labelKey, labelValue)
+	timeout int, selectionLimit int64) error {
+	podList, err := s.ListPods(namespace, labelKey, labelValue, selectionLimit)
 	if err != nil {
 		return err
 	}
