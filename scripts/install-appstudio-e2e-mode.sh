@@ -61,5 +61,3 @@ do
     esac
     shift
 done
-
-e2e-appstudio
