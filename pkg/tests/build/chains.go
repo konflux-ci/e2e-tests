@@ -2,6 +2,7 @@ package build
 
 import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 
 	g "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -11,6 +12,8 @@ import (
 var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 	defer g.GinkgoRecover()
 	commonController, err := common.NewSuiteController()
+	Expect(err).NotTo(HaveOccurred())
+	tektonController, err := tekton.NewSuiteController()
 	Expect(err).NotTo(HaveOccurred())
 	ns := "tekton-chains"
 
@@ -38,6 +41,33 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 		g.It("verify the correct service account is created", func() {
 			_, err := commonController.GetServiceAccount("chains-secrets-admin", ns)
 			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+	g.Context("test creating and signing an image and task", func() {
+		image := "image-registry.openshift-image-registry.svc:5000/tekton-chains/kaniko-chains"
+		taskTimeout := 60
+		kubeController := tekton.KubeController{
+			C: *commonController,
+			T: *tektonController,
+		}
+		// create a task, get the pod that it's running in, wait for the pod to finish, then verify it was successful
+		g.It("run demo tasks", func() {
+			tr, waitTrErr := kubeController.RunKanikoTask(image, ns, taskTimeout)
+			Expect(waitTrErr).NotTo(HaveOccurred())
+			waitErr := kubeController.WatchTaskPod(tr.Name, ns, taskTimeout)
+			Expect(waitErr).NotTo(HaveOccurred())
+		})
+		g.It("verify image attestation", func() {
+			tr, waitTrErr := kubeController.RunVerifyTask("cosign-verify-attestation", image, ns, taskTimeout)
+			Expect(waitTrErr).NotTo(HaveOccurred())
+			waitErr := kubeController.WatchTaskPod(tr.Name, ns, taskTimeout)
+			Expect(waitErr).NotTo(HaveOccurred())
+		})
+		g.It("cosign verify", func() {
+			tr, waitTrErr := kubeController.RunVerifyTask("cosign-verify", image, ns, taskTimeout)
+			Expect(waitTrErr).NotTo(HaveOccurred())
+			waitErr := kubeController.WatchTaskPod(tr.Name, ns, taskTimeout)
+			Expect(waitErr).NotTo(HaveOccurred())
 		})
 	})
 })

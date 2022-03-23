@@ -101,6 +101,15 @@ func (s *SuiteController) IsPodSuccessful(podName, namespace string) wait.Condit
 	}
 }
 
+func TaskPodExists(tr *v1beta1.TaskRun) wait.ConditionFunc {
+	return func() (bool, error) {
+		if tr.Status.PodName != "" {
+			return true, nil
+		}
+		return false, nil
+	}
+}
+
 func (s *SuiteController) ListPods(namespace, labelKey, labelValue string, selectionLimit int64) (*corev1.PodList, error) {
 	labelSelector := metav1.LabelSelector{MatchLabels: map[string]string{labelKey: labelValue}}
 	listOptions := metav1.ListOptions{
@@ -110,7 +119,7 @@ func (s *SuiteController) ListPods(namespace, labelKey, labelValue string, selec
 	return s.KubeInterface().CoreV1().Pods(namespace).List(context.TODO(), listOptions)
 }
 
-func (s *SuiteController) waitForPod(cond wait.ConditionFunc, timeout time.Duration) error {
+func (s *SuiteController) WaitForPod(cond wait.ConditionFunc, timeout time.Duration) error {
 	return wait.PollImmediate(time.Second, timeout, cond)
 }
 
@@ -126,7 +135,7 @@ func (s *SuiteController) WaitForPodSelector(
 	}
 
 	for i := range podList.Items {
-		if err := s.waitForPod(fn(podList.Items[i].Name, namespace), time.Duration(timeout)*time.Second); err != nil {
+		if err := s.WaitForPod(fn(podList.Items[i].Name, namespace), time.Duration(timeout)*time.Second); err != nil {
 			return err
 		}
 	}
