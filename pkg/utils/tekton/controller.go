@@ -3,13 +3,21 @@ package tekton
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/client"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
+
+type KubeController struct {
+	Commonctrl common.SuiteController
+	Tektonctrl SuiteController
+	Namespace  string
+}
 
 // Create the struct for kubernetes clients
 type SuiteController struct {
@@ -61,4 +69,25 @@ func (s *SuiteController) ListTaskRuns(ns string, labelKey string, labelValue st
 		Limit:         selectorLimit,
 	}
 	return s.PipelineClient().TektonV1beta1().TaskRuns(ns).List(context.TODO(), listOptions)
+}
+
+func (k KubeController) RunKanikoTask(image string, taskTimeout int) (*v1beta1.TaskRun, error) {
+	tr := kanikoTaskRun(image)
+	return k.createAndWait(tr, taskTimeout)
+}
+
+func (k KubeController) WatchTaskPod(tr string, taskTimeout int) error {
+	trUpdated, _ := k.Tektonctrl.GetTaskRun(tr, k.Namespace)
+	pod, _ := k.Commonctrl.GetPod(k.Namespace, trUpdated.Status.PodName)
+	return k.Commonctrl.WaitForPod(k.Commonctrl.IsPodSuccessful(pod.Name, k.Namespace), time.Duration(taskTimeout)*time.Second)
+}
+
+func (k KubeController) RunVerifyTask(taskName, image string, taskTimeout int) (*v1beta1.TaskRun, error) {
+	tr := verifyTaskRun(image, taskName)
+	return k.createAndWait(tr, taskTimeout)
+}
+
+func (k KubeController) createAndWait(tr *v1beta1.TaskRun, taskTimeout int) (*v1beta1.TaskRun, error) {
+	taskRun, _ := k.Tektonctrl.CreateTaskRun(tr, k.Namespace)
+	return taskRun, k.Commonctrl.WaitForPod(k.Tektonctrl.CheckTaskPodExists(taskRun.Name, k.Namespace), time.Duration(taskTimeout)*time.Second)
 }

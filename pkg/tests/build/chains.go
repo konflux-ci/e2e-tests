@@ -47,26 +47,27 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 		image := "image-registry.openshift-image-registry.svc:5000/tekton-chains/kaniko-chains"
 		taskTimeout := 60
 		kubeController := tekton.KubeController{
-			C: *commonController,
-			T: *tektonController,
+			Commonctrl: *commonController,
+			Tektonctrl: *tektonController,
+			Namespace:  ns,
 		}
 		// create a task, get the pod that it's running in, wait for the pod to finish, then verify it was successful
 		g.It("run demo tasks", func() {
-			tr, waitTrErr := kubeController.RunKanikoTask(image, ns, taskTimeout)
+			tr, waitTrErr := kubeController.RunKanikoTask(image, taskTimeout)
 			Expect(waitTrErr).NotTo(HaveOccurred())
-			waitErr := kubeController.WatchTaskPod(tr.Name, ns, taskTimeout)
+			waitErr := kubeController.WatchTaskPod(tr.Name, taskTimeout)
 			Expect(waitErr).NotTo(HaveOccurred())
 		})
 		g.It("verify image attestation", func() {
-			tr, waitTrErr := kubeController.RunVerifyTask("cosign-verify-attestation", image, ns, taskTimeout)
+			tr, waitTrErr := kubeController.RunVerifyTask("cosign-verify-attestation", image, taskTimeout)
 			Expect(waitTrErr).NotTo(HaveOccurred())
-			waitErr := kubeController.WatchTaskPod(tr.Name, ns, taskTimeout)
+			waitErr := kubeController.WatchTaskPod(tr.Name, taskTimeout)
 			Expect(waitErr).NotTo(HaveOccurred())
 		})
 		g.It("cosign verify", func() {
-			tr, waitTrErr := kubeController.RunVerifyTask("cosign-verify", image, ns, taskTimeout)
+			tr, waitTrErr := kubeController.RunVerifyTask("cosign-verify", image, taskTimeout)
 			Expect(waitTrErr).NotTo(HaveOccurred())
-			waitErr := kubeController.WatchTaskPod(tr.Name, ns, taskTimeout)
+			waitErr := kubeController.WatchTaskPod(tr.Name, taskTimeout)
 			Expect(waitErr).NotTo(HaveOccurred())
 		})
 	})
