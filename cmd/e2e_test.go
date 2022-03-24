@@ -23,3 +23,5 @@ func TestE2E(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	ginkgo.RunSpecs(t, "Red Hat App Studio E2E tests")
 }
+
+/**/
