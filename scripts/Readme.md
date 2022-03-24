@@ -16,4 +16,4 @@
 
 Where are:
 
-- `install` - Flag to indicate the installation. If the flag will not be present you can ````source``` the script and use the bash functions.
+- `install` - Flag to indicate the installation. If the flag will not be present you can `source` the script and use the bash functions.
