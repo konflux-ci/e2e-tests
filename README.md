@@ -55,3 +55,4 @@ import (
 	_ "github.com/redhat-appstudio/e2e-tests/pkg/tests/has"
 )
 ```
+##############
