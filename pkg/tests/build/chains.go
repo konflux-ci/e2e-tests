@@ -45,7 +45,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 	})
 	g.Context("test creating and signing an image and task", func() {
 		image := "image-registry.openshift-image-registry.svc:5000/tekton-chains/kaniko-chains"
-		taskTimeout := 60
+		taskTimeout := 120
 		kubeController := tekton.KubeController{
 			Commonctrl: *commonController,
 			Tektonctrl: *tektonController,
