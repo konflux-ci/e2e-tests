@@ -6,8 +6,8 @@ Contain E2E tests related with [Hybrid Application Service Operator](https://git
 
 Steps to run 'has-suite':
 
-1) Follow the instructions from scripts [Readme](../../../scripts/Readme.md) to install AppStudio in e2e mode
-6) Run the e2e suite: `./bin/e2e-appstudio --ginkgo.focus="has-suite"`
+1) Follow the instructions from the [Readme](../../../scripts/Readme.md) scripts to install AppStudio in e2e mode
+2) Run the e2e suite: `./bin/e2e-appstudio --ginkgo.focus="has-suite"`
 
 ## Tests Containers
 
