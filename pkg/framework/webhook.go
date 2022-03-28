@@ -6,6 +6,8 @@ import (
 
 	"github.com/averageflow/gohooks/v2/gohooks"
 	"gopkg.in/yaml.v2"
+
+	"path/filepath"
 )
 
 func SendWebhook(webhookConfig string) {
@@ -40,11 +42,11 @@ func LoadConfig(configPath string) (*Config, error) {
 	config := &Config{}
 
 	// Open config file
+	configPath = filepath.Clean(configPath)
 	file, err := os.Open(configPath)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
 
 	// Init new YAML decode
 	d := yaml.NewDecoder(file)
@@ -52,6 +54,10 @@ func LoadConfig(configPath string) (*Config, error) {
 	// Start YAML decoding from file
 	if err := d.Decode(&config); err != nil {
 		return nil, err
+	}
+
+	if err := file.Close(); err != nil {
+		log.Printf("Error closing file: %s\n", err)
 	}
 
 	return config, nil
