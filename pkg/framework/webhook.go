@@ -1,23 +1,45 @@
 package framework
 
 import (
-	"log"
 	"os"
 
 	"github.com/averageflow/gohooks/v2/gohooks"
 	"gopkg.in/yaml.v2"
+	"k8s.io/klog/v2"
 
 	"path/filepath"
 )
 
+// Config struct for webhook config
+type Config struct {
+	WebhookConfig struct {
+		SaltSecret    string `yaml:"saltSecret"`
+		WebhookTarget string `yaml:"webhookTarget"`
+		RepositoryURL string `yaml:"repositoryURL"`
+		Repository    struct {
+			FullName string `yaml:"fullName"`
+		} `yaml:"repository"`
+	} `yaml:"webhookConfig"`
+}
+
+// Webhook struct for sending
+type Webhook struct {
+	Path          string `json:"path"`
+	RepositoryURL string `json:"repository_url"`
+	Repository    struct {
+		FullName string `json:"full_name"`
+	}
+}
+
+// Send webhook
 func SendWebhook(webhookConfig string) {
 	cfg, err := LoadConfig(webhookConfig)
 	if err != nil {
-		log.Fatal(err)
+		klog.Fatal(err)
 	}
 	path, err := os.Executable()
 	if err != nil {
-		log.Println(err)
+		klog.Info(err)
 	}
 
 	//Create webhook
@@ -31,9 +53,9 @@ func SendWebhook(webhookConfig string) {
 	//Send webhook
 	resp, err := hook.Send(cfg.WebhookConfig.WebhookTarget)
 	if err != nil {
-		log.Fatal("Error sending webhook: ", err)
+		klog.Fatal("Error sending webhook: ", err)
 	}
-	log.Println("Webhook response: ", resp)
+	klog.Info("Webhook response: ", resp)
 }
 
 // LoadConfig returns a decoded Config struct
@@ -56,29 +78,8 @@ func LoadConfig(configPath string) (*Config, error) {
 	}
 
 	if err := file.Close(); err != nil {
-		log.Printf("Error closing file: %s\n", err)
+		klog.Fatal("Error closing file: %s\n", err)
 	}
 
 	return config, nil
-}
-
-// Config struct for webhook config
-type Config struct {
-	WebhookConfig struct {
-		SaltSecret    string `yaml:"saltSecret"`
-		WebhookTarget string `yaml:"webhookTarget"`
-		RepositoryURL string `yaml:"repositoryURL"`
-		Repository    struct {
-			FullName string `yaml:"fullName"`
-		} `yaml:"repository"`
-	} `yaml:"webhookConfig"`
-}
-
-// Webhook struct for sending
-type Webhook struct {
-	Path          string `json:"path"`
-	RepositoryURL string `json:"repository_url"`
-	Repository    struct {
-		FullName string `json:"full_name"`
-	}
 }
