@@ -11,7 +11,7 @@ command -v kubectl >/dev/null 2>&1 || { echo "kubectl is not installed. Aborting
 command -v oc >/dev/null 2>&1 || { echo "oc cli is not installed. Aborting."; exit 1; }
 
 export MY_GIT_FORK_REMOTE="qe"
-export MY_GITHUB_ORG=${MY_GITHUB_ORG:-"redhat-appstudio-qe"}
+export MY_GITHUB_ORG=${GITHUB_E2E_ORGANIZATION:-"redhat-appstudio-qe"}
 export MY_GITHUB_TOKEN="${GITHUB_TOKEN}"
 export TEST_BRANCH_ID=$(date +%s)
 export ROOT_E2E=$(dirname $(dirname $(readlink -f "$0")));
