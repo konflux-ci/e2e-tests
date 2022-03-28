@@ -42,8 +42,7 @@ func LoadConfig(configPath string) (*Config, error) {
 	config := &Config{}
 
 	// Open config file
-	configPath = filepath.Clean(configPath)
-	file, err := os.Open(configPath)
+	file, err := os.Open(filepath.Clean(configPath))
 	if err != nil {
 		return nil, err
 	}
