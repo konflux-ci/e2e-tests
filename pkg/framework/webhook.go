@@ -12,23 +12,32 @@ import (
 
 // Config struct for webhook config
 type Config struct {
-	WebhookConfig struct {
-		SaltSecret    string `yaml:"saltSecret"`
-		WebhookTarget string `yaml:"webhookTarget"`
-		RepositoryURL string `yaml:"repositoryURL"`
-		Repository    struct {
-			FullName string `yaml:"fullName"`
-		} `yaml:"repository"`
-	} `yaml:"webhookConfig"`
+	WebhookConfig `yaml:"webhookConfig"`
+}
+
+// Webhook config struct
+type WebhookConfig struct {
+	SaltSecret        string `yaml:"saltSecret"`
+	WebhookTarget     string `yaml:"webhookTarget"`
+	RepositoryURL     string `yaml:"repositoryURL"`
+	RepositoryWebhook `yaml:"repository"`
+}
+
+// RepositoryWebhook config struct
+type RepositoryWebhook struct {
+	FullName string `yaml:"fullName"`
 }
 
 // Webhook struct for sending
 type Webhook struct {
 	Path          string `json:"path"`
 	RepositoryURL string `json:"repository_url"`
-	Repository    struct {
-		FullName string `json:"full_name"`
-	}
+	Repository    `json:"repository"`
+}
+
+// Repository struct for sending
+type Repository struct {
+	FullName string `json:"full_name"`
 }
 
 // Send webhook
@@ -46,7 +55,7 @@ func SendWebhook(webhookConfig string) {
 	hook := &gohooks.GoHook{}
 	w := Webhook{Path: path}
 	w.RepositoryURL = cfg.WebhookConfig.RepositoryURL
-	w.Repository.FullName = cfg.WebhookConfig.Repository.FullName
+	w.Repository.FullName = cfg.WebhookConfig.RepositoryWebhook.FullName
 	saltSecret := cfg.WebhookConfig.SaltSecret
 	hook.Create(w, path, saltSecret)
 
