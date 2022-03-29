@@ -33,7 +33,7 @@ func kanikoTaskRun(image string) *v1beta1.TaskRun {
 			TaskRef: &v1beta1.TaskRef{
 				Kind:   v1beta1.NamespacedTaskKind,
 				Name:   "kaniko-chains",
-				Bundle: "quay.io/redhat-appstudio/appstudio-tasks:a6fea8de3e3285ec7675245958db3e3673243d59-1",
+				Bundle: "quay.io/jstuart/appstudio-tasks:latest-1",
 			},
 			Workspaces: []v1beta1.WorkspaceBinding{
 				{
@@ -77,7 +77,7 @@ func verifyTaskRun(image, taskName string) *v1beta1.TaskRun {
 			TaskRef: &v1beta1.TaskRef{
 				Kind:   v1beta1.NamespacedTaskKind,
 				Name:   taskName,
-				Bundle: "quay.io/redhat-appstudio/appstudio-tasks:a6fea8de3e3285ec7675245958db3e3673243d59-1",
+				Bundle: "quay.io/jstuart/appstudio-tasks:latest-1",
 			},
 		},
 	}

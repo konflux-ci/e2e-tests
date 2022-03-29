@@ -61,7 +61,7 @@ func (s *SuiteController) CheckIfClusterTaskExists(name string) bool {
 }
 
 // Check if a secret exists, return secret and error
-func (s *SuiteController) VerifySecretExists(ns string, name string) (*corev1.Secret, error) {
+func (s *SuiteController) GetSecret(ns string, name string) (*corev1.Secret, error) {
 	return s.KubeInterface().CoreV1().Secrets(ns).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
