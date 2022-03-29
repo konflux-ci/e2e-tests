@@ -21,7 +21,7 @@ A properly setup Go workspace using **Go 1.17 is required**.
 
 Install dependencies:
 
-```
+``` bash
 # Install dependencies
 $ go mod tidy
 # Copy the dependencies to vendor folder
