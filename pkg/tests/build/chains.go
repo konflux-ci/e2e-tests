@@ -23,7 +23,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 		g.It("verify the correct secrets have been created", func() {
-			_, err := commonController.VerifySecretExists(ns, "chains-ca-cert")
+			_, err := commonController.GetSecret(ns, "chains-ca-cert")
 			Expect(err).NotTo(HaveOccurred())
 		})
 		g.It("verify the correct roles are created", func() {
@@ -44,8 +44,8 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 		})
 	})
 	g.Context("test creating and signing an image and task", func() {
-		image := "image-registry.openshift-image-registry.svc:5000/tekton-chains/kaniko-chains"
-		taskTimeout := 120
+		image := "image-registry.openshift-image-registry.svc:5000/tekton-chains/buildah-demo"
+		taskTimeout := 180
 		kubeController := tekton.KubeController{
 			Commonctrl: *commonController,
 			Tektonctrl: *tektonController,
@@ -53,7 +53,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 		}
 		// create a task, get the pod that it's running in, wait for the pod to finish, then verify it was successful
 		g.It("run demo tasks", func() {
-			tr, waitTrErr := kubeController.RunKanikoTask(image, taskTimeout)
+			tr, waitTrErr := kubeController.RunBuildahDemoTask(image, taskTimeout)
 			Expect(waitTrErr).NotTo(HaveOccurred())
 			waitErr := kubeController.WatchTaskPod(tr.Name, taskTimeout)
 			Expect(waitErr).NotTo(HaveOccurred())

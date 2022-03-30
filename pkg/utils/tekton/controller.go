@@ -71,8 +71,8 @@ func (s *SuiteController) ListTaskRuns(ns string, labelKey string, labelValue st
 	return s.PipelineClient().TektonV1beta1().TaskRuns(ns).List(context.TODO(), listOptions)
 }
 
-func (k KubeController) RunKanikoTask(image string, taskTimeout int) (*v1beta1.TaskRun, error) {
-	tr := kanikoTaskRun(image)
+func (k KubeController) RunBuildahDemoTask(image string, taskTimeout int) (*v1beta1.TaskRun, error) {
+	tr := buildahDemoTaskRun(image)
 	return k.createAndWait(tr, taskTimeout)
 }
 

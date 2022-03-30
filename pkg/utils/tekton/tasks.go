@@ -10,14 +10,14 @@ import (
 )
 
 // This is a demo task to create test image and task signing
-func kanikoTaskRun(image string) *v1beta1.TaskRun {
+func buildahDemoTaskRun(image string) *v1beta1.TaskRun {
 	imageInfo := strings.Split(image, "/")
 	namespace := imageInfo[1]
 	imageName := imageInfo[2]
 
 	return &v1beta1.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("kaniko-taskrun-%s", imageName),
+			GenerateName: fmt.Sprintf("buildah-demo-taskrun-%s", imageName),
 			Namespace:    namespace,
 		},
 		Spec: v1beta1.TaskRunSpec{
@@ -32,8 +32,8 @@ func kanikoTaskRun(image string) *v1beta1.TaskRun {
 			},
 			TaskRef: &v1beta1.TaskRef{
 				Kind:   v1beta1.NamespacedTaskKind,
-				Name:   "kaniko-chains",
-				Bundle: "quay.io/jstuart/appstudio-tasks:latest-1",
+				Name:   "buildah-demo",
+				Bundle: "quay.io/hacbs-contract/ci-tasks:latest",
 			},
 			Workspaces: []v1beta1.WorkspaceBinding{
 				{
@@ -46,7 +46,7 @@ func kanikoTaskRun(image string) *v1beta1.TaskRun {
 }
 
 // image is full url to the image
-// Example image: image-registry.openshift-image-registry.svc:5000/tekton-chains/kaniko-chains
+// Example image: image-registry.openshift-image-registry.svc:5000/tekton-chains/buildah-demo
 func verifyTaskRun(image, taskName string) *v1beta1.TaskRun {
 	imageInfo := strings.Split(image, "/")
 	namespace := imageInfo[1]
@@ -77,7 +77,7 @@ func verifyTaskRun(image, taskName string) *v1beta1.TaskRun {
 			TaskRef: &v1beta1.TaskRef{
 				Kind:   v1beta1.NamespacedTaskKind,
 				Name:   taskName,
-				Bundle: "quay.io/jstuart/appstudio-tasks:latest-1",
+				Bundle: "quay.io/redhat-appstudio/appstudio-tasks:b2cb5d5b21dc59d172379e639b336533bd8a8bf6-1",
 			},
 		},
 	}
