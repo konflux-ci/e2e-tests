@@ -8,7 +8,7 @@
     oc login -u <user> -p <password> --server=<oc_api_url>
    ```
 
-3. Run the test from your machine
+3. Install Red Hat App Studio in e2e mode
 
    ```bash
     $ROOT_DIR/scripts/install-appstudio-e2e-mode.sh install

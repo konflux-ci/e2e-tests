@@ -32,11 +32,6 @@ function addQERemoteForkAndInstallAppstudio() {
     cd "$WORKSPACE"
 }
 
-# See https://github.com/redhat-appstudio/infra-deployments#bootstrap-app-studio to get more info about preview
-function installAppStudioE2EMode() {
-    /bin/bash "$WORKSPACE"/tmp/infra-deployments/hack/bootstrap-cluster.sh preview
-}
-
 # Secrets used by pipelines to push component containers to quay.io
 function createApplicationServiceSecrets() {
     echo -e "[INFO] Creating application-service related secrets"
