@@ -180,7 +180,3 @@ func InitControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 		JvmbuildserviceController: jvmbuildserviceController,
 	}, nil
 }
-
-func ChainsSuiteDescribe(text string, body func()) bool {
-	return g.Describe("[chains-suite "+text+"]", g.Ordered, body)
-}
