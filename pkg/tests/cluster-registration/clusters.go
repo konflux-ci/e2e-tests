@@ -19,10 +19,6 @@ var _ = framework.ClusterRegistrationSuiteDescribe("Cluster Registration E2E tes
 			err := commonController.WaitForPodSelector(commonController.IsPodRunning, ns, "cluster-registration-antiaffinity-selector", "cluster-registration-installer-controller", 60, 100)
 			Expect(err).NotTo(HaveOccurred())
 		})
-		// g.It("verify the correct secrets have been created", func() {
-		// 	_, err := commonController.GetSecret(ns, "")
-		// 	Expect(err).NotTo(HaveOccurred())
-		// })
 		g.It("verify the correct roles are created", func() {
 			_, csaErr := commonController.GetRole("cluster-registration-installer-leader-election-role", ns)
 			Expect(csaErr).NotTo(HaveOccurred())
