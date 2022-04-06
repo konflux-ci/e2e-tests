@@ -3,14 +3,19 @@ package tekton
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/client"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
+	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type KubeController struct {
@@ -85,6 +90,63 @@ func (k KubeController) WatchTaskPod(tr string, taskTimeout int) error {
 func (k KubeController) RunVerifyTask(taskName, image string, taskTimeout int) (*v1beta1.TaskRun, error) {
 	tr := verifyTaskRun(image, taskName)
 	return k.createAndWait(tr, taskTimeout)
+}
+
+func (k KubeController) AwaitAttestationAndSignature(image string, timeout time.Duration) error {
+	imageInfo := strings.Split(image, "/")
+	namespace := imageInfo[1]
+	imageName := imageInfo[2]
+	latestImageName := imageName + ":latest"
+
+	tags := &unstructured.UnstructuredList{}
+	tags.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "image.openshift.io",
+		Kind:    "ImageStreamTag",
+		Version: "v1",
+	})
+
+	return wait.PollImmediate(time.Second, timeout, func() (done bool, err error) {
+		err = k.Commonctrl.KubeRest().List(context.TODO(), tags, &k8sclient.ListOptions{Namespace: namespace})
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return false, nil
+			} else {
+				return true, err
+			}
+		}
+
+		// search for the resulting task image's hash from the name in the metadata
+		var hash string
+		for _, tag := range tags.Items {
+			if tag.GetName() == latestImageName {
+				if name, found, err := unstructured.NestedString(tag.Object, "image", "metadata", "name"); err == nil && found {
+					hash = imageName + ":" + strings.Replace(name, ":", "-", 1)
+					break
+				}
+			}
+		}
+
+		// we didn't find the image from the task, should we err instead?
+		if hash == "" {
+			return false, nil
+		}
+
+		// loop again to see if .att and .sig tags are present
+		found := 0
+		for _, tag := range tags.Items {
+			tagName := tag.GetName()
+			if strings.HasPrefix(tagName, hash) && (strings.HasSuffix(tagName, ".sig") || strings.HasSuffix(tagName, ".att")) {
+				found++
+			}
+		}
+
+		// we found both
+		if found == 2 {
+			return true, nil
+		}
+
+		return false, nil
+	})
 }
 
 func (k KubeController) createAndWait(tr *v1beta1.TaskRun, taskTimeout int) (*v1beta1.TaskRun, error) {
