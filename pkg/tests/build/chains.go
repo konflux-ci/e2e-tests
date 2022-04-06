@@ -59,12 +59,14 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 			Expect(waitErr).NotTo(HaveOccurred())
 		})
 		g.It("verify image attestation", func() {
+			g.Skip("Temporarily disabling due to a race condition in the test")
 			tr, waitTrErr := kubeController.RunVerifyTask("cosign-verify-attestation", image, taskTimeout)
 			Expect(waitTrErr).NotTo(HaveOccurred())
 			waitErr := kubeController.WatchTaskPod(tr.Name, taskTimeout)
 			Expect(waitErr).NotTo(HaveOccurred())
 		})
 		g.It("cosign verify", func() {
+			g.Skip("Temporarily disabling due to a race condition in the test")
 			tr, waitTrErr := kubeController.RunVerifyTask("cosign-verify", image, taskTimeout)
 			Expect(waitTrErr).NotTo(HaveOccurred())
 			waitErr := kubeController.WatchTaskPod(tr.Name, taskTimeout)
