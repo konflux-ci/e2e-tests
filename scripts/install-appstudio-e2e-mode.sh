@@ -14,7 +14,7 @@ export MY_GIT_FORK_REMOTE="qe"
 export MY_GITHUB_ORG=${GITHUB_E2E_ORGANIZATION:-"redhat-appstudio-qe"}
 export MY_GITHUB_TOKEN="${GITHUB_TOKEN}"
 export TEST_BRANCH_ID=$(date +%s)
-export ROOT_E2E=$(dirname $(dirname $(readlink -f "$0")));
+export ROOT_E2E="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"/..
 export WORKSPACE=${WORKSPACE:-${ROOT_E2E}}
 
 # Download gitops repository to install AppStudio in e2e mode.
