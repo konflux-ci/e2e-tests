@@ -154,17 +154,12 @@ func findCosignResultsForImage(imageRef string, client crclient.Client) (*Cosign
 
 	// search for the resulting task image's cosignImagePrefix from the name in the metadata
 	var cosignImagePrefix string
-	for _, tag := range tags.Items {
-		if tag.GetName() == latestImageName {
-			if name, found, err := unstructured.NestedString(tag.Object, "image", "metadata", "name"); err == nil && found {
-				cosignImagePrefix = imageName + ":" + strings.Replace(name, ":", "-", 1)
-				break
-			}
+	if tag := findTagWithName(tags, latestImageName); tag != nil {
+		if name, found, err := unstructured.NestedString(tag.Object, "image", "metadata", "name"); err == nil && found {
+			cosignImagePrefix = imageName + ":" + strings.Replace(name, ":", "-", 1)
 		}
-	}
-
-	// we didn't find the image from the task, should we err instead?
-	if cosignImagePrefix == "" {
+	} else {
+		// we didn't find the image from the task, should we err instead?
 		return nil, errors.NewNotFound(schema.GroupResource{
 			Group:    "image.openshift.io",
 			Resource: "ImageStreamTag",
@@ -172,16 +167,14 @@ func findCosignResultsForImage(imageRef string, client crclient.Client) (*Cosign
 	}
 
 	// loop again to see if .att and .sig tags are present
-	var results CosignResult
-	for _, tag := range tags.Items {
-		tagName := tag.GetName()
-		if strings.HasPrefix(tagName, cosignImagePrefix) {
-			if strings.HasSuffix(tagName, ".sig") {
-				results.signatureImageRef = tagName
-			} else if strings.HasSuffix(tagName, ".att") {
-				results.attestationImageRef = tagName
-			}
-		}
+	results := CosignResult{}
+
+	if signatureTag := findTagWithName(tags, cosignImagePrefix+".sig"); signatureTag != nil {
+		results.signatureImageRef = signatureTag.GetName()
+	}
+
+	if attestationTag := findTagWithName(tags, cosignImagePrefix+".att"); attestationTag != nil {
+		results.attestationImageRef = attestationTag.GetName()
 	}
 
 	// we found both
@@ -193,4 +186,14 @@ func findCosignResultsForImage(imageRef string, client crclient.Client) (*Cosign
 		Group:    "image.openshift.io",
 		Resource: "ImageStreamTag",
 	}, results.Missing(cosignImagePrefix))
+}
+
+func findTagWithName(tags *unstructured.UnstructuredList, name string) *unstructured.Unstructured {
+	for _, tag := range tags.Items {
+		if tag.GetName() == name {
+			return &tag
+		}
+	}
+
+	return nil
 }
