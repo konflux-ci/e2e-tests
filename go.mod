@@ -9,6 +9,7 @@ require (
 	github.com/onsi/gomega v1.18.1
 	github.com/openshift/api v0.0.0-20200930075302-db52bc4ef99f
 	github.com/redhat-appstudio/application-service v0.0.0-20220312031926-2976522a9052
+	github.com/stretchr/testify v1.7.1
 	github.com/tektoncd/pipeline v0.32.1
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.22.5

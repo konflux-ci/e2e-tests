@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
-	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type KubeController struct {
@@ -27,6 +27,28 @@ type KubeController struct {
 // Create the struct for kubernetes clients
 type SuiteController struct {
 	*client.K8sClient
+}
+
+type CosignResult struct {
+	signatureImageRef   string
+	attestationImageRef string
+}
+
+func (c CosignResult) IsPresent() bool {
+	return c.signatureImageRef != "" && c.attestationImageRef != ""
+}
+
+func (c CosignResult) Missing(prefix string) string {
+	var ret []string = make([]string, 0, 2)
+	if c.signatureImageRef == "" {
+		ret = append(ret, prefix+".sig")
+	}
+
+	if c.attestationImageRef == "" {
+		ret = append(ret, prefix+".att")
+	}
+
+	return strings.Join(ret, " and ")
 }
 
 // Create controller for Application/Component crud operations
@@ -93,10 +115,31 @@ func (k KubeController) RunVerifyTask(taskName, image string, taskTimeout int) (
 }
 
 func (k KubeController) AwaitAttestationAndSignature(image string, timeout time.Duration) error {
-	imageInfo := strings.Split(image, "/")
+	return wait.PollImmediate(time.Second, timeout, func() (done bool, err error) {
+		if _, err := k.FindCosignResultsForImage(image); err != nil && !errors.IsNotFound(err) {
+			return false, err
+		}
+
+		return true, nil
+	})
+}
+
+func (k KubeController) createAndWait(tr *v1beta1.TaskRun, taskTimeout int) (*v1beta1.TaskRun, error) {
+	taskRun, _ := k.Tektonctrl.CreateTaskRun(tr, k.Namespace)
+	return taskRun, k.Commonctrl.WaitForPod(k.Tektonctrl.CheckTaskPodExists(taskRun.Name, k.Namespace), time.Duration(taskTimeout)*time.Second)
+}
+
+// FindCosignResultsForImage looks for .sig and .att image tags in the OpenShift image stream for the provided image reference.
+// If none can be found errors.IsNotFound(err) is true, when err is nil CosignResult contains image references for signature and attestation images, otherwise other errors could be returned.
+func (k KubeController) FindCosignResultsForImage(imageRef string) (*CosignResult, error) {
+	return findCosignResultsForImage(imageRef, k.Commonctrl.KubeRest())
+}
+
+func findCosignResultsForImage(imageRef string, client crclient.Client) (*CosignResult, error) {
+	imageInfo := strings.Split(imageRef, "/")
 	namespace := imageInfo[1]
 	imageName := imageInfo[2]
-	latestImageName := imageName + ":latest"
+	latestImageName := imageName + ":latest" // tag added by default when building on OpenShift
 
 	tags := &unstructured.UnstructuredList{}
 	tags.SetGroupVersionKind(schema.GroupVersionKind{
@@ -105,51 +148,49 @@ func (k KubeController) AwaitAttestationAndSignature(image string, timeout time.
 		Version: "v1",
 	})
 
-	return wait.PollImmediate(time.Second, timeout, func() (done bool, err error) {
-		err = k.Commonctrl.KubeRest().List(context.TODO(), tags, &k8sclient.ListOptions{Namespace: namespace})
-		if err != nil {
-			if errors.IsNotFound(err) {
-				return false, nil
-			} else {
-				return true, err
+	if err := client.List(context.TODO(), tags, &crclient.ListOptions{Namespace: namespace}); err != nil {
+		return nil, err
+	}
+
+	// search for the resulting task image's cosignImagePrefix from the name in the metadata
+	var cosignImagePrefix string
+	for _, tag := range tags.Items {
+		if tag.GetName() == latestImageName {
+			if name, found, err := unstructured.NestedString(tag.Object, "image", "metadata", "name"); err == nil && found {
+				cosignImagePrefix = imageName + ":" + strings.Replace(name, ":", "-", 1)
+				break
 			}
 		}
+	}
 
-		// search for the resulting task image's hash from the name in the metadata
-		var hash string
-		for _, tag := range tags.Items {
-			if tag.GetName() == latestImageName {
-				if name, found, err := unstructured.NestedString(tag.Object, "image", "metadata", "name"); err == nil && found {
-					hash = imageName + ":" + strings.Replace(name, ":", "-", 1)
-					break
-				}
+	// we didn't find the image from the task, should we err instead?
+	if cosignImagePrefix == "" {
+		return nil, errors.NewNotFound(schema.GroupResource{
+			Group:    "image.openshift.io",
+			Resource: "ImageStreamTag",
+		}, latestImageName)
+	}
+
+	// loop again to see if .att and .sig tags are present
+	var results CosignResult
+	for _, tag := range tags.Items {
+		tagName := tag.GetName()
+		if strings.HasPrefix(tagName, cosignImagePrefix) {
+			if strings.HasSuffix(tagName, ".sig") {
+				results.signatureImageRef = tagName
+			} else if strings.HasSuffix(tagName, ".att") {
+				results.attestationImageRef = tagName
 			}
 		}
+	}
 
-		// we didn't find the image from the task, should we err instead?
-		if hash == "" {
-			return false, nil
-		}
+	// we found both
+	if results.IsPresent() {
+		return &results, nil
+	}
 
-		// loop again to see if .att and .sig tags are present
-		found := 0
-		for _, tag := range tags.Items {
-			tagName := tag.GetName()
-			if strings.HasPrefix(tagName, hash) && (strings.HasSuffix(tagName, ".sig") || strings.HasSuffix(tagName, ".att")) {
-				found++
-			}
-		}
-
-		// we found both
-		if found == 2 {
-			return true, nil
-		}
-
-		return false, nil
-	})
-}
-
-func (k KubeController) createAndWait(tr *v1beta1.TaskRun, taskTimeout int) (*v1beta1.TaskRun, error) {
-	taskRun, _ := k.Tektonctrl.CreateTaskRun(tr, k.Namespace)
-	return taskRun, k.Commonctrl.WaitForPod(k.Tektonctrl.CheckTaskPodExists(taskRun.Name, k.Namespace), time.Duration(taskTimeout)*time.Second)
+	return nil, errors.NewNotFound(schema.GroupResource{
+		Group:    "image.openshift.io",
+		Resource: "ImageStreamTag",
+	}, results.Missing(cosignImagePrefix))
 }
