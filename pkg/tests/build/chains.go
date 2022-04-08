@@ -61,7 +61,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 			waitErr := kubeController.WatchTaskPod(tr.Name, taskTimeout)
 			Expect(waitErr).NotTo(HaveOccurred())
 		})
-		g.It("creates attestation", func() {
+		g.It("creates signature and attestation", func() {
 			err := kubeController.AwaitAttestationAndSignature(image, attestationTimeout)
 			Expect(err).NotTo(HaveOccurred(), "Could not find .att or .sig ImageStreamTags within the %s timeout. Most likely the chains-controller did not create those in time. Look at the chains-controller and buildah task logs.", attestationTimeout.String())
 		})

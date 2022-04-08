@@ -116,8 +116,12 @@ func (k KubeController) RunVerifyTask(taskName, image string, taskTimeout int) (
 
 func (k KubeController) AwaitAttestationAndSignature(image string, timeout time.Duration) error {
 	return wait.PollImmediate(time.Second, timeout, func() (done bool, err error) {
-		if _, err := k.FindCosignResultsForImage(image); err != nil && !errors.IsNotFound(err) {
-			return false, err
+		if _, err := k.FindCosignResultsForImage(image); err != nil {
+			if errors.IsNotFound(err) {
+				return false, nil
+			}
+
+			return true, err
 		}
 
 		return true, nil
