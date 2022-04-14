@@ -1,6 +1,8 @@
 package build
 
 import (
+	"time"
+
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 
@@ -46,6 +48,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 	g.Context("test creating and signing an image and task", func() {
 		image := "image-registry.openshift-image-registry.svc:5000/tekton-chains/buildah-demo"
 		taskTimeout := 180
+		attestationTimeout := time.Duration(60) * time.Second
 		kubeController := tekton.KubeController{
 			Commonctrl: *commonController,
 			Tektonctrl: *tektonController,
@@ -58,15 +61,17 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 			waitErr := kubeController.WatchTaskPod(tr.Name, taskTimeout)
 			Expect(waitErr).NotTo(HaveOccurred())
 		})
+		g.It("creates signature and attestation", func() {
+			err := kubeController.AwaitAttestationAndSignature(image, attestationTimeout)
+			Expect(err).NotTo(HaveOccurred(), "Could not find .att or .sig ImageStreamTags within the %s timeout. Most likely the chains-controller did not create those in time. Look at the chains-controller and buildah task logs.", attestationTimeout.String())
+		})
 		g.It("verify image attestation", func() {
-			g.Skip("Temporarily disabling due to a race condition in the test")
 			tr, waitTrErr := kubeController.RunVerifyTask("cosign-verify-attestation", image, taskTimeout)
 			Expect(waitTrErr).NotTo(HaveOccurred())
 			waitErr := kubeController.WatchTaskPod(tr.Name, taskTimeout)
 			Expect(waitErr).NotTo(HaveOccurred())
 		})
 		g.It("cosign verify", func() {
-			g.Skip("Temporarily disabling due to a race condition in the test")
 			tr, waitTrErr := kubeController.RunVerifyTask("cosign-verify", image, taskTimeout)
 			Expect(waitTrErr).NotTo(HaveOccurred())
 			waitErr := kubeController.WatchTaskPod(tr.Name, taskTimeout)
