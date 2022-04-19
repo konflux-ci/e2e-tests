@@ -2,11 +2,10 @@ package tekton
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/client"
+	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -26,7 +25,7 @@ type KubeController struct {
 
 // Create the struct for kubernetes clients
 type SuiteController struct {
-	*client.K8sClient
+	*kubeCl.K8sClient
 }
 
 type CosignResult struct {
@@ -52,13 +51,10 @@ func (c CosignResult) Missing(prefix string) string {
 }
 
 // Create controller for Application/Component crud operations
-func NewSuiteController() (*SuiteController, error) {
-	client, err := client.NewK8SClient()
-	if err != nil {
-		return nil, fmt.Errorf("error creating client-go %v", err)
-	}
+func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
+
 	return &SuiteController{
-		client,
+		kube,
 	}, nil
 }
 

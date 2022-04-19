@@ -13,6 +13,10 @@ import (
 
 var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 	defer g.GinkgoRecover()
+
+	framework, err := framework.NewControllersInterface()
+	Expect(err).NotTo(HaveOccurred())
+
 	commonController, err := common.NewSuiteController()
 	Expect(err).NotTo(HaveOccurred())
 	tektonController, err := tekton.NewSuiteController()

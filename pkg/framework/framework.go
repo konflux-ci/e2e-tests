@@ -1,23 +1,38 @@
 package framework
 
 import (
-	. "github.com/onsi/ginkgo/v2"
+	"fmt"
+
+	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/has"
 )
 
-// HASSuiteDescribe annotates the application service tests with the application label.
-func HASSuiteDescribe(text string, body func()) bool {
-	return Describe("[has-suite "+text+"]", Ordered, body)
+//struct holding all controllers
+type Framework struct {
+	HasController    *has.SuiteController
+	CommonController *common.SuiteController
 }
 
-// CommonSuiteDescribe annotates the common tests with the application label.
-func CommonSuiteDescribe(text string, body func()) bool {
-	return Describe("[common-suite "+text+"]", Ordered, body)
-}
+//initiate all controllers
+func NewControllersInterface() (*Framework, error) {
+	kubeClient, err := kubeCl.NewK8SClient()
+	if err != nil {
+		return nil, fmt.Errorf("error creating client-go %v", err)
+	}
 
-func ChainsSuiteDescribe(text string, body func()) bool {
-	return Describe("[chains-suite "+text+"]", Ordered, body)
-}
+	commonCtrl, err := common.NewSuiteController(kubeClient)
+	if err != nil {
+		return nil, err
+	}
 
-func ClusterRegistrationSuiteDescribe(text string, body func()) bool {
-	return Describe("[cluster-registration-suite "+text+"]", Ordered, body)
+	hasController, err := has.NewSuiteController(kubeClient)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Framework{
+		CommonController: commonCtrl,
+		HasController:    hasController,
+	}, nil
 }

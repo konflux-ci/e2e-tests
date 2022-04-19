@@ -10,9 +10,8 @@ import (
 	"github.com/google/uuid"
 	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
 	"github.com/redhat-appstudio/application-service/pkg/devfile"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/has"
 	"k8s.io/klog/v2"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -34,10 +33,7 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 	defer GinkgoRecover()
 
 	// Initialize the tests controllers
-	hasController, err := has.NewSuiteController()
-	Expect(err).NotTo(HaveOccurred())
-
-	commonController, err := common.NewSuiteController()
+	framework, err := framework.NewControllersInterface()
 	Expect(err).NotTo(HaveOccurred())
 
 	// Initialize the application struct
@@ -45,31 +41,31 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 
 	BeforeAll(func() {
 		// Checks to see if the application already exists, a github token was provided and 'has-github-token' is present in the test cluster
-		Expect(utils.CheckIfEnvironmentExists(framework.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", framework.GITHUB_TOKEN_ENV)
+		Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
 
-		_, err := hasController.KubeInterface().CoreV1().Secrets(RedHatAppStudioApplicationNamespace).Get(context.TODO(), ApplicationServiceGHTokenSecrName, metav1.GetOptions{})
+		_, err := framework.HasController.KubeInterface().CoreV1().Secrets(RedHatAppStudioApplicationNamespace).Get(context.TODO(), ApplicationServiceGHTokenSecrName, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
 
 		klog.Info("HAS Argo CD application is ready")
 	})
 
 	AfterAll(func() {
-		err := hasController.DeleteHasComponent(QuarkusComponentName, RedHatAppStudioApplicationNamespace)
+		err := framework.HasController.DeleteHasComponent(QuarkusComponentName, RedHatAppStudioApplicationNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = hasController.DeleteHasApplication(RedHatAppStudioApplicationName, RedHatAppStudioApplicationNamespace)
+		err = framework.HasController.DeleteHasApplication(RedHatAppStudioApplicationName, RedHatAppStudioApplicationNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
 			gitOpsRepository := ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return hasController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			return framework.HasController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
 	})
 
 	It("Create Red Hat AppStudio Application", func() {
-		createdApplication, err := hasController.CreateHasApplication(RedHatAppStudioApplicationName, RedHatAppStudioApplicationNamespace)
+		createdApplication, err := framework.HasController.CreateHasApplication(RedHatAppStudioApplicationName, RedHatAppStudioApplicationNamespace)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createdApplication.Spec.DisplayName).To(Equal(RedHatAppStudioApplicationName))
 		Expect(createdApplication.Namespace).To(Equal(RedHatAppStudioApplicationNamespace))
@@ -77,7 +73,7 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 
 	It("Check Red Hat AppStudio Application health", func() {
 		Eventually(func() string {
-			application, err = hasController.GetHasApplication(RedHatAppStudioApplicationName, RedHatAppStudioApplicationNamespace)
+			application, err = framework.HasController.GetHasApplication(RedHatAppStudioApplicationName, RedHatAppStudioApplicationNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
 			return application.Status.Devfile
@@ -87,26 +83,26 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 			// application info should be stored even after deleting the application in application variable
 			gitOpsRepository := ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return hasController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			return framework.HasController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 	})
 
 	// Necessary for component pipeline
 	It("Check if 'git-clone' cluster tasks exists", func() {
 		Eventually(func() bool {
-			return commonController.CheckIfClusterTaskExists("git-clone")
+			return framework.CommonController.CheckIfClusterTaskExists("git-clone")
 		}, 5*time.Minute, 45*time.Second).Should(BeTrue(), "'git-clone' cluster task don't exist in cluster. Component cannot be created")
 	})
 
 	It("Create Red Hat AppStudio Quarkus component", func() {
-		component, err := hasController.CreateComponent(application.Name, QuarkusComponentName, RedHatAppStudioApplicationNamespace, QuarkusDevfileSource, ComponentContainerImage)
+		component, err := framework.HasController.CreateComponent(application.Name, QuarkusComponentName, RedHatAppStudioApplicationNamespace, QuarkusDevfileSource, ComponentContainerImage)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(component.Name).To(Equal(QuarkusComponentName))
 	})
 
 	It("Wait for component pipeline to be completed", func() {
 		err := wait.PollImmediate(20*time.Second, 10*time.Minute, func() (done bool, err error) {
-			pipelineRun, _ := hasController.GetComponentPipeline(QuarkusComponentName, RedHatAppStudioApplicationName)
+			pipelineRun, _ := framework.HasController.GetComponentPipeline(QuarkusComponentName, RedHatAppStudioApplicationName)
 
 			for _, condition := range pipelineRun.Status.Conditions {
 				klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)
@@ -126,7 +122,7 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 
 	It("Check component deployment health", func() {
 		Eventually(func() bool {
-			deployment, _ := hasController.GetComponentDeployment(QuarkusComponentName, RedHatAppStudioApplicationNamespace)
+			deployment, _ := framework.HasController.GetComponentDeployment(QuarkusComponentName, RedHatAppStudioApplicationNamespace)
 			if deployment.Status.AvailableReplicas == 1 {
 				klog.Infof("Deployment %s is ready", deployment.Name)
 				return true
@@ -138,14 +134,14 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 	})
 
 	It("Check component service health", func() {
-		service, err := hasController.GetComponentService(QuarkusComponentName, RedHatAppStudioApplicationNamespace)
+		service, err := framework.HasController.GetComponentService(QuarkusComponentName, RedHatAppStudioApplicationNamespace)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(service.Name).NotTo(BeEmpty())
 		klog.Infof("Service %s is ready", service.Name)
 	})
 
 	It("Verify component route health", func() {
-		route, err := hasController.GetComponentRoute(QuarkusComponentName, RedHatAppStudioApplicationNamespace)
+		route, err := framework.HasController.GetComponentRoute(QuarkusComponentName, RedHatAppStudioApplicationNamespace)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(route.Spec.Host).To(Not(BeEmpty()))
 		klog.Infof("Component route host: %s", route.Spec.Host)
@@ -178,5 +174,5 @@ func ObtainGitOpsRepositoryName(devfileStatus string) string {
 }
 
 func GetQuayIOOrganization() string {
-	return utils.GetEnv(framework.QUAY_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
+	return utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
 }

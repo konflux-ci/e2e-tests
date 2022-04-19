@@ -1,4 +1,4 @@
-package framework
+package constants
 
 // Global constants
 const (

@@ -7,8 +7,8 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
-	"github.com/redhat-appstudio/e2e-tests/pkg/client"
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -20,20 +20,15 @@ import (
 )
 
 type SuiteController struct {
-	*client.K8sClient
+	*kubeCl.K8sClient
 	Github *github.API
 }
 
-func NewSuiteController() (*SuiteController, error) {
-	client, err := client.NewK8SClient()
-	if err != nil {
-		return nil, fmt.Errorf("error creating client-go %v", err)
-	}
-
+func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
 	// Check if a github organization env var is set, if not use by default the redhat-appstudio-qe org. See: https://github.com/redhat-appstudio-qe
-	gh := github.NewGitubClient(utils.GetEnv(framework.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"))
+	gh := github.NewGitubClient(utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"))
 	return &SuiteController{
-		client,
+		kube,
 		gh,
 	}, nil
 }
