@@ -53,6 +53,21 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 		klog.Info("HAS Argo CD application is ready")
 	})
 
+	AfterAll(func() {
+		err := hasController.DeleteHasComponent(QuarkusComponentName, RedHatAppStudioApplicationNamespace)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = hasController.DeleteHasApplication(RedHatAppStudioApplicationName, RedHatAppStudioApplicationNamespace)
+		Expect(err).NotTo(HaveOccurred())
+
+		Eventually(func() bool {
+			// application info should be stored even after deleting the application in application variable
+			gitOpsRepository := ObtainGitOpsRepositoryName(application.Status.Devfile)
+
+			return hasController.Github.CheckIfRepositoryExist(gitOpsRepository)
+		}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
+	})
+
 	It("Create Red Hat AppStudio Application", func() {
 		createdApplication, err := hasController.CreateHasApplication(RedHatAppStudioApplicationName, RedHatAppStudioApplicationNamespace)
 		Expect(err).NotTo(HaveOccurred())
@@ -134,25 +149,6 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(route.Spec.Host).To(Not(BeEmpty()))
 		klog.Infof("Component route host: %s", route.Spec.Host)
-	})
-
-	It("Remove Red Hat AppStudio component", func() {
-		err := hasController.DeleteHasComponent(QuarkusComponentName, RedHatAppStudioApplicationNamespace)
-		Expect(err).NotTo(HaveOccurred())
-	})
-
-	It("Delete Red Hat AppStudio Application CR", func() {
-		err := hasController.DeleteHasApplication(RedHatAppStudioApplicationName, RedHatAppStudioApplicationNamespace)
-		Expect(err).NotTo(HaveOccurred())
-	})
-
-	It("Make sure that gitops repository was deleted", func() {
-		Eventually(func() bool {
-			// application info should be stored even after deleting the application in application variable
-			gitOpsRepository := ObtainGitOpsRepositoryName(application.Status.Devfile)
-
-			return hasController.Github.CheckIfRepositoryExist(gitOpsRepository)
-		}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
 	})
 })
 

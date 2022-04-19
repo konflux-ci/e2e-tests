@@ -6,7 +6,7 @@ import (
 
 // HASSuiteDescribe annotates the application service tests with the application label.
 func HASSuiteDescribe(text string, body func()) bool {
-	return Describe("[has-suite "+text+"]", body)
+	return Describe("[has-suite "+text+"]", Ordered, body)
 }
 
 // CommonSuiteDescribe annotates the common tests with the application label.
