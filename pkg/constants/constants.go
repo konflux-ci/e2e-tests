@@ -10,4 +10,7 @@ const (
 
 	// The github organization is used to create the gitops repositories in Red Hat Appstudio.
 	QUAY_E2E_ORGANIZATION_ENV string = "QUAY_E2E_ORGANIZATION" // #nosec
+
+	//The Tekton namespace
+	TEKTON_CHAINS_NS string = "tekton-chains" // #nosec
 )

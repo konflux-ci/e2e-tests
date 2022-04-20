@@ -3,6 +3,7 @@ package build
 import (
 	"time"
 
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 
 	g "github.com/onsi/ginkgo/v2"
@@ -17,31 +18,29 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 	framework, err := framework.NewFramweork()
 	Expect(err).NotTo(HaveOccurred())
 
-	ns := "tekton-chains"
-
 	g.Context("infrastructure is running", func() {
 		g.It("verify the chains controller is running", func() {
-			err := framework.CommonController.WaitForPodSelector(framework.CommonController.IsPodRunning, ns, "app", "tekton-chains-controller", 60, 100)
+			err := framework.CommonController.WaitForPodSelector(framework.CommonController.IsPodRunning, constants.TEKTON_CHAINS_NS, "app", "tekton-chains-controller", 60, 100)
 			Expect(err).NotTo(HaveOccurred())
 		})
 		g.It("verify the correct secrets have been created", func() {
-			_, err := framework.CommonController.GetSecret(ns, "chains-ca-cert")
+			_, err := framework.CommonController.GetSecret(constants.TEKTON_CHAINS_NS, "chains-ca-cert")
 			Expect(err).NotTo(HaveOccurred())
 		})
 		g.It("verify the correct roles are created", func() {
-			_, csaErr := framework.CommonController.GetRole("chains-secret-admin", ns)
+			_, csaErr := framework.CommonController.GetRole("chains-secret-admin", constants.TEKTON_CHAINS_NS)
 			Expect(csaErr).NotTo(HaveOccurred())
 			_, srErr := framework.CommonController.GetRole("secret-reader", "openshift-ingress-operator")
 			Expect(srErr).NotTo(HaveOccurred())
 		})
 		g.It("verify the correct rolebindings are created", func() {
-			_, csaErr := framework.CommonController.GetRoleBinding("chains-secret-admin", ns)
+			_, csaErr := framework.CommonController.GetRoleBinding("chains-secret-admin", constants.TEKTON_CHAINS_NS)
 			Expect(csaErr).NotTo(HaveOccurred())
 			_, csrErr := framework.CommonController.GetRoleBinding("chains-secret-reader", "openshift-ingress-operator")
 			Expect(csrErr).NotTo(HaveOccurred())
 		})
 		g.It("verify the correct service account is created", func() {
-			_, err := framework.CommonController.GetServiceAccount("chains-secrets-admin", ns)
+			_, err := framework.CommonController.GetServiceAccount("chains-secrets-admin", constants.TEKTON_CHAINS_NS)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -52,7 +51,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 		kubeController := tekton.KubeController{
 			Commonctrl: *framework.CommonController,
 			Tektonctrl: *framework.TektonController,
-			Namespace:  ns,
+			Namespace:  constants.TEKTON_CHAINS_NS,
 		}
 		// create a task, get the pod that it's running in, wait for the pod to finish, then verify it was successful
 		g.It("run demo tasks", func() {
