@@ -6,12 +6,14 @@ import (
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/has"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
 //struct holding all controllers
 type Framework struct {
 	HasController    *has.SuiteController
 	CommonController *common.SuiteController
+	TektonController *tekton.SuiteController
 }
 
 //initiate all controllers
@@ -31,8 +33,14 @@ func NewControllersInterface() (*Framework, error) {
 		return nil, err
 	}
 
+	tektonController, err := tekton.NewSuiteController(kubeClient)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Framework{
 		CommonController: commonCtrl,
 		HasController:    hasController,
+		TektonController: tektonController,
 	}, nil
 }
