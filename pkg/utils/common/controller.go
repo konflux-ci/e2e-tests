@@ -23,9 +23,9 @@ type SuiteController struct {
 }
 
 // Create controller for Application/Component crud operations
-func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
+func NewSuiteController(kubeC *kubeCl.K8sClient) (*SuiteController, error) {
 	return &SuiteController{
-		kube,
+		kubeC,
 	}, nil
 }
 
