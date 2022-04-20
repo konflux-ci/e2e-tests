@@ -33,7 +33,7 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 	defer GinkgoRecover()
 
 	// Initialize the tests controllers
-	framework, err := framework.NewControllersInterface()
+	framework, err := framework.NewFramweork()
 	Expect(err).NotTo(HaveOccurred())
 
 	// Initialize the application struct

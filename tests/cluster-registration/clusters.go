@@ -8,7 +8,9 @@ import (
 
 var _ = framework.ClusterRegistrationSuiteDescribe("Cluster Registration E2E tests", func() {
 	defer g.GinkgoRecover()
-	framework, err := framework.NewControllersInterface()
+
+	// Initialize the tests controllers
+	framework, err := framework.NewFramweork()
 	Expect(err).NotTo(HaveOccurred())
 
 	ns := "cluster-reg-config"

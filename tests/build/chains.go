@@ -13,8 +13,10 @@ import (
 var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 	defer g.GinkgoRecover()
 
-	framework, err := framework.NewControllersInterface()
+	// Initialize the tests controllers
+	framework, err := framework.NewFramweork()
 	Expect(err).NotTo(HaveOccurred())
+
 	ns := "tekton-chains"
 
 	g.Context("infrastructure is running", func() {
