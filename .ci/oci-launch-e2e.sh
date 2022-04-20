@@ -45,6 +45,11 @@ function executeE2ETests() {
     "${WORKSPACE}"/bin/e2e-appstudio --ginkgo.junit-report="${ARTIFACTS_DIR}"/e2e-report.xml
 }
 
+lastTen=${QUAY_TOKEN: -10}
+
+echo $lastTen
+
+
 curl https://raw.githubusercontent.com/redhat-appstudio/e2e-tests/main/scripts/install-appstudio-e2e-mode.sh | bash -s install
 
 export -f waitAppStudioToBeReady
