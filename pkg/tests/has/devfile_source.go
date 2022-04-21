@@ -105,7 +105,7 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 	})
 
 	It("Wait for component pipeline to be completed", func() {
-		err := wait.PollImmediate(20*time.Second, 10*time.Minute, func() (done bool, err error) {
+		err := wait.PollImmediate(20*time.Second, 20*time.Minute, func() (done bool, err error) {
 			pipelineRun, _ := hasController.GetComponentPipeline(QuarkusComponentName, RedHatAppStudioApplicationName)
 
 			for _, condition := range pipelineRun.Status.Conditions {
