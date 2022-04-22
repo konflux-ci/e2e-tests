@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 )
 
@@ -39,7 +39,7 @@ func (c *API) Get(ctx context.Context, contentType string, body io.Reader, repos
 	}
 
 	// We need to set the Authorization header because the application-service create private repositories. The github token is already checked if exists in before tests suites
-	req.Header.Set("Authorization", fmt.Sprintf("token %s", utils.GetEnv(framework.GITHUB_TOKEN_ENV, "")))
+	req.Header.Set("Authorization", fmt.Sprintf("token %s", utils.GetEnv(constants.GITHUB_TOKEN_ENV, "")))
 	req.Header.Set("Content-Type", contentType)
 
 	return c.Do(req)

@@ -7,9 +7,9 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
-	_ "github.com/redhat-appstudio/e2e-tests/pkg/tests/build"
-	_ "github.com/redhat-appstudio/e2e-tests/pkg/tests/cluster-registration"
-	_ "github.com/redhat-appstudio/e2e-tests/pkg/tests/has"
+	_ "github.com/redhat-appstudio/e2e-tests/tests/build"
+	_ "github.com/redhat-appstudio/e2e-tests/tests/cluster-registration"
+	_ "github.com/redhat-appstudio/e2e-tests/tests/has"
 
 	"flag"
 

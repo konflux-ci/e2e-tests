@@ -41,8 +41,8 @@ The instructions about every test suite can be found in the [tests folder](https
 
 # Develop new tests
 
-* Create test folder under framework folder: `pkg/framework/[<application-name>]...`, e.g.
-  * `pkg/framework/application-service` - all tests used owned by App Studio application team
+* Create test folder under tests folder: `tests/[<application-name>]...`, e.g.
+  * `tests/application-service` - all tests used owned by App Studio application team
 * Every test package should be imported to `cmd/e2e_test.go`, e.g.
 
 ```golang
@@ -51,7 +51,7 @@ package common
 
 import (
 	// ensure these packages are scanned by ginkgo for e2e tests
-	_ "github.com/redhat-appstudio/e2e-tests/pkg/tests/common"
-	_ "github.com/redhat-appstudio/e2e-tests/pkg/tests/has"
+	_ "github.com/redhat-appstudio/e2e-tests/tests/common"
+	_ "github.com/redhat-appstudio/e2e-tests/tests/has"
 )
 ```

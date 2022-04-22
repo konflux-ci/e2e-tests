@@ -12,24 +12,20 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/client"
+	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Create the struct for kubernetes clients
 type SuiteController struct {
-	*client.K8sClient
+	*kubeCl.K8sClient
 }
 
 // Create controller for Application/Component crud operations
-func NewSuiteController() (*SuiteController, error) {
-	client, err := client.NewK8SClient()
-	if err != nil {
-		return nil, fmt.Errorf("error creating client-go %v", err)
-	}
+func NewSuiteController(kubeC *kubeCl.K8sClient) (*SuiteController, error) {
 	return &SuiteController{
-		client,
+		kubeC,
 	}, nil
 }
 
