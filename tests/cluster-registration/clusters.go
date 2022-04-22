@@ -17,7 +17,7 @@ var _ = framework.ClusterRegistrationSuiteDescribe("Cluster Registration E2E tes
 
 	g.Context("infrastructure is running", func() {
 		g.It("verify the cluster-registration-installer-controller-manager is running", func() {
-			err := framework.CommonController.WaitForPodSelector(framework.CommonController.IsPodRunning, constants.CLUSTER_REG_NS, "cluster-registration-antiaffinity-selector", "cluster-registration-iconstants.CLUSTER_REG_NStaller-controller", 60, 100)
+			err := framework.CommonController.WaitForPodSelector(framework.CommonController.IsPodRunning, constants.CLUSTER_REG_NS, "cluster-registration-antiaffinity-selector", "cluster-registration-installer-controller", 60, 100)
 			Expect(err).NotTo(HaveOccurred())
 		})
 		g.It("verify the correct roles are created", func() {
