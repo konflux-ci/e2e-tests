@@ -22,7 +22,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-var ComponentContainerImage string = fmt.Sprintf("quay.io/%s/quarkus:%s", GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
+var (
+	ComponentContainerImage             string = fmt.Sprintf("quay.io/%s/quarkus:%s", GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
+	RedHatAppStudioApplicationNamespace string = utils.GetEnv(constants.HAS_BUILD_NAMESPACE_ENV, "application-service")
+)
 
 /*
  * Component: application-service
@@ -40,11 +43,13 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 	application := &appservice.Application{}
 
 	BeforeAll(func() {
-		// Checks to see if the application already exists, a github token was provided and 'has-github-token' is present in the test cluster
+		// Check to see if the github token was provided
 		Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
-
-		_, err := framework.HasController.KubeInterface().CoreV1().Secrets(RedHatAppStudioApplicationNamespace).Get(context.TODO(), ApplicationServiceGHTokenSecrName, metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
+		// Check if 'has-github-token' is present, unless SKIP_HAS_SECRET_CHECK env var is set
+		if !utils.CheckIfEnvironmentExists(constants.SKIP_HAS_SECRET_CHECK_ENV) {
+			_, err := framework.HasController.KubeInterface().CoreV1().Secrets(RedHatAppStudioApplicationNamespace).Get(context.TODO(), ApplicationServiceGHTokenSecrName, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
+		}
 
 		klog.Info("HAS Argo CD application is ready")
 	})
@@ -102,7 +107,7 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 
 	It("Wait for component pipeline to be completed", func() {
 		err := wait.PollImmediate(20*time.Second, 10*time.Minute, func() (done bool, err error) {
-			pipelineRun, _ := framework.HasController.GetComponentPipeline(QuarkusComponentName, RedHatAppStudioApplicationName)
+			pipelineRun, _ := framework.HasController.GetComponentPipeline(QuarkusComponentName, RedHatAppStudioApplicationName, RedHatAppStudioApplicationNamespace)
 
 			for _, condition := range pipelineRun.Status.Conditions {
 				klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)

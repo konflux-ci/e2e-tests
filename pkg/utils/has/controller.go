@@ -122,10 +122,10 @@ func (h *SuiteController) CreateComponent(applicationName string, componentName 
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels
-func (h *SuiteController) GetComponentPipeline(componentName string, applicationName string) (v1beta1.PipelineRun, error) {
+func (h *SuiteController) GetComponentPipeline(componentName string, applicationName string, namespace string) (v1beta1.PipelineRun, error) {
 	pipelineRunLabels := map[string]string{"build.appstudio.openshift.io/component": componentName, "build.appstudio.openshift.io/application": applicationName}
 	list := &v1beta1.PipelineRunList{}
-	err := h.KubeRest().List(context.TODO(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels)})
+	err := h.KubeRest().List(context.TODO(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
 
 	if len(list.Items) > 0 {
 		return list.Items[0], nil
