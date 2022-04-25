@@ -100,8 +100,14 @@ func (k KubeController) RunBuildahDemoTask(image string, taskTimeout int) (*v1be
 }
 
 func (k KubeController) WatchTaskPod(tr string, taskTimeout int) error {
-	trUpdated, _ := k.Tektonctrl.GetTaskRun(tr, k.Namespace)
-	pod, _ := k.Commonctrl.GetPod(k.Namespace, trUpdated.Status.PodName)
+	trUpdated, err := k.Tektonctrl.GetTaskRun(tr, k.Namespace)
+	if err != nil {
+		return err
+	}
+	pod, err := k.Commonctrl.GetPod(k.Namespace, trUpdated.Status.PodName)
+	if err != nil {
+		return err
+	}
 	return k.Commonctrl.WaitForPod(k.Commonctrl.IsPodSuccessful(pod.Name, k.Namespace), time.Duration(taskTimeout)*time.Second)
 }
 
@@ -125,7 +131,10 @@ func (k KubeController) AwaitAttestationAndSignature(image string, timeout time.
 }
 
 func (k KubeController) createAndWait(tr *v1beta1.TaskRun, taskTimeout int) (*v1beta1.TaskRun, error) {
-	taskRun, _ := k.Tektonctrl.CreateTaskRun(tr, k.Namespace)
+	taskRun, err := k.Tektonctrl.CreateTaskRun(tr, k.Namespace)
+	if err != nil {
+		return nil, err
+	}
 	return taskRun, k.Commonctrl.WaitForPod(k.Tektonctrl.CheckTaskPodExists(taskRun.Name, k.Namespace), time.Duration(taskTimeout)*time.Second)
 }
 
