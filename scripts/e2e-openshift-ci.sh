@@ -29,17 +29,16 @@ if [[ -n ${CLONEREFS_OPTIONS} ]]; then
     GITHUB_REPO=$(jq -r '.refs[0].repo' <<< ${CLONEREFS_OPTIONS} | tr -d '[:space:]')
 
     PR_BRANCH_REF=$(curl -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/repos/"${GITHUB_ORGANIZATION}"/"${GITHUB_REPO}"/pulls/"${PULL_NUMBER}" | jq --raw-output .head.ref)
-    AUTHOR_E2E_BRANCH=$(curl "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/repos/"${AUTHOR}"/e2e-tests/branches | jq '.[] | select(.name=="'${PR_BRANCH_REF}'")')
+    AUTHOR_E2E_BRANCH=$(curl -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/repos/"${AUTHOR}"/e2e-tests/branches | jq '.[] | select(.name=="'${PR_BRANCH_REF}'")')
 
     if [ -z "${AUTHOR_E2E_BRANCH}" ]; then
-        echo "[INFO] ${PR_BRANCH_REF} not exists in ${AUTHOR_LINK}/e2e-tests. Using ${E2E_CLONE_BRANCH} to clone the e2e-tests"
     else
-        echo "[INFO] Cloning e2e-tests from branch ${PR_BRANCH_REF} repository ${AUTHOR_LINK}/e2e-tests"
         E2E_CLONE_BRANCH=${PR_BRANCH_REF}
         E2E_REPO_LINK="${AUTHOR_LINK}/e2e-tests.git"
     fi
 fi
 
+echo "[INFO] Cloning e2e-tests from branch ${PR_BRANCH_REF} repository ${AUTHOR_LINK}/e2e-tests"
 git clone -b "${E2E_CLONE_BRANCH}" "${E2E_REPO_LINK}" "$WORKSPACE"/tmp/e2e-tests
 
 cd "$WORKSPACE"/tmp/e2e-tests
