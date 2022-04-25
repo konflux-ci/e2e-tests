@@ -203,11 +203,9 @@ func (h *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 			return nil, fmt.Errorf("error when getting the '%s' namespace: %v", name, err)
 		}
 	} else {
-		// Check whether the test namespace contains correct labels
-		for k, v := range ns.Labels {
-			if k == constants.ArgoCDLabelKey && v == constants.ArgoCDLabelValue {
-				return ns, nil
-			}
+		// Check whether the test namespace contains correct label
+		if val, ok := ns.Labels[constants.ArgoCDLabelKey]; ok && val == constants.ArgoCDLabelValue {
+			return ns, nil
 		}
 		// Update test namespace labels in case they are missing argoCD label
 		ns.Labels[constants.ArgoCDLabelKey] = constants.ArgoCDLabelValue
