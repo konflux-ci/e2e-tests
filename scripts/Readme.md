@@ -36,6 +36,7 @@ The following environments are used to launch the Red Hat AppStudio installation
 | `QUAY_TOKEN` | yes | A quay token to push components images to quay.io. Note the quay token must be in base 64 format `ewogI3dJhdXRocyI6I...` | '' |
 | `GITHUB_E2E_ORGANIZATION` | no | GitHub Organization where to create/push Red Hat AppStudio Applications  | `redhat-appstudio-qe`  |
 | `QUAY_E2E_ORGANIZATION` | no | Quay organization where to push components containers | `redhat-appstudio-qe` |
+| `E2E_APPLICATIONS_NAMESPACE` | no | Name of the namespace used for running HAS E2E tests | `appstudio-e2e-test` |
 
 * NOTE: Make sure that your Github Token have the following rights in the github organization where you will run the e2e tests.
     - `repo`
