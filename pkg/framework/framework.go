@@ -17,7 +17,7 @@ type Framework struct {
 }
 
 // Initialize all test controllers and return them in a Framework
-func NewFramweork() (*Framework, error) {
+func NewFramework() (*Framework, error) {
 
 	// Initialize a common kubernetes client to be passed to the test controllers
 	kubeClient, err := kubeCl.NewK8SClient()

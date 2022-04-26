@@ -13,6 +13,7 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -122,10 +123,10 @@ func (h *SuiteController) CreateComponent(applicationName string, componentName 
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels
-func (h *SuiteController) GetComponentPipeline(componentName string, applicationName string) (v1beta1.PipelineRun, error) {
+func (h *SuiteController) GetComponentPipeline(componentName string, applicationName string, namespace string) (v1beta1.PipelineRun, error) {
 	pipelineRunLabels := map[string]string{"build.appstudio.openshift.io/component": componentName, "build.appstudio.openshift.io/application": applicationName}
 	list := &v1beta1.PipelineRunList{}
-	err := h.KubeRest().List(context.TODO(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels)})
+	err := h.KubeRest().List(context.TODO(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
 
 	if len(list.Items) > 0 {
 		return list.Items[0], nil
@@ -178,4 +179,41 @@ func (h *SuiteController) GetComponentService(componentName string, componentNam
 		return &corev1.Service{}, err
 	}
 	return service, nil
+}
+
+// CreateTestNamespace creates a namespace where Application and Component CR will be created
+func (h *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, error) {
+
+	// Check if the E2E test namespace already exists
+	ns, err := h.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), name, metav1.GetOptions{})
+
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			// Create the E2E test namespace if it doesn't exist
+			nsTemplate := corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   name,
+					Labels: map[string]string{constants.ArgoCDLabelKey: constants.ArgoCDLabelValue},
+				}}
+			ns, err = h.KubeInterface().CoreV1().Namespaces().Create(context.TODO(), &nsTemplate, metav1.CreateOptions{})
+			if err != nil {
+				return nil, fmt.Errorf("error when creating %s namespace: %v", name, err)
+			}
+		} else {
+			return nil, fmt.Errorf("error when getting the '%s' namespace: %v", name, err)
+		}
+	} else {
+		// Check whether the test namespace contains correct label
+		if val, ok := ns.Labels[constants.ArgoCDLabelKey]; ok && val == constants.ArgoCDLabelValue {
+			return ns, nil
+		}
+		// Update test namespace labels in case they are missing argoCD label
+		ns.Labels[constants.ArgoCDLabelKey] = constants.ArgoCDLabelValue
+		ns, err = h.KubeInterface().CoreV1().Namespaces().Update(context.TODO(), ns, metav1.UpdateOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("error when updating labels in '%s' namespace: %v", name, err)
+		}
+	}
+
+	return ns, nil
 }

@@ -14,6 +14,16 @@ const (
 	//The Tekton namespace
 	TEKTON_CHAINS_NS string = "tekton-chains" // #nosec
 
-	//Cluster Registration namespace 
+	//Cluster Registration namespace
 	CLUSTER_REG_NS string = "cluster-reg-config" // #nosec
+
+	// E2E test namespace where the app and component CRs will be created
+	E2E_APPLICATIONS_NAMESPACE_ENV string = "E2E_APPLICATIONS_NAMESPACE"
+
+	// Skip checking "ApplicationServiceGHTokenSecrName" secret
+	SKIP_HAS_SECRET_CHECK_ENV string = "SKIP_HAS_SECRET_CHECK"
+
+	// Test namespace's required labels
+	ArgoCDLabelKey   string = "argocd.argoproj.io/managed-by"
+	ArgoCDLabelValue string = "gitops-service-argocd"
 )

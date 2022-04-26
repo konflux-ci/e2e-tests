@@ -22,7 +22,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-var ComponentContainerImage string = fmt.Sprintf("quay.io/%s/quarkus:%s", GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
+var (
+	ComponentContainerImage           string = fmt.Sprintf("quay.io/%s/quarkus:%s", GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
+	AppStudioE2EApplicationsNamespace string = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "appstudio-e2e-test")
+)
 
 /*
  * Component: application-service
@@ -33,27 +36,31 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 	defer GinkgoRecover()
 
 	// Initialize the tests controllers
-	framework, err := framework.NewFramweork()
+	framework, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
 
 	// Initialize the application struct
 	application := &appservice.Application{}
 
 	BeforeAll(func() {
-		// Checks to see if the application already exists, a github token was provided and 'has-github-token' is present in the test cluster
+		// Check to see if the github token was provided
 		Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
+		// Check if 'has-github-token' is present, unless SKIP_HAS_SECRET_CHECK env var is set
+		if !utils.CheckIfEnvironmentExists(constants.SKIP_HAS_SECRET_CHECK_ENV) {
+			_, err := framework.HasController.KubeInterface().CoreV1().Secrets(RedHatAppStudioApplicationNamespace).Get(context.TODO(), ApplicationServiceGHTokenSecrName, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
+		}
 
-		_, err := framework.HasController.KubeInterface().CoreV1().Secrets(RedHatAppStudioApplicationNamespace).Get(context.TODO(), ApplicationServiceGHTokenSecrName, metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
+		_, err := framework.HasController.CreateTestNamespace(AppStudioE2EApplicationsNamespace)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", AppStudioE2EApplicationsNamespace, err)
 
-		klog.Info("HAS Argo CD application is ready")
 	})
 
 	AfterAll(func() {
-		err := framework.HasController.DeleteHasComponent(QuarkusComponentName, RedHatAppStudioApplicationNamespace)
+		err := framework.HasController.DeleteHasComponent(QuarkusComponentName, AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = framework.HasController.DeleteHasApplication(RedHatAppStudioApplicationName, RedHatAppStudioApplicationNamespace)
+		err = framework.HasController.DeleteHasApplication(RedHatAppStudioApplicationName, AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func() bool {
@@ -65,15 +72,15 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 	})
 
 	It("Create Red Hat AppStudio Application", func() {
-		createdApplication, err := framework.HasController.CreateHasApplication(RedHatAppStudioApplicationName, RedHatAppStudioApplicationNamespace)
+		createdApplication, err := framework.HasController.CreateHasApplication(RedHatAppStudioApplicationName, AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createdApplication.Spec.DisplayName).To(Equal(RedHatAppStudioApplicationName))
-		Expect(createdApplication.Namespace).To(Equal(RedHatAppStudioApplicationNamespace))
+		Expect(createdApplication.Namespace).To(Equal(AppStudioE2EApplicationsNamespace))
 	})
 
 	It("Check Red Hat AppStudio Application health", func() {
 		Eventually(func() string {
-			application, err = framework.HasController.GetHasApplication(RedHatAppStudioApplicationName, RedHatAppStudioApplicationNamespace)
+			application, err = framework.HasController.GetHasApplication(RedHatAppStudioApplicationName, AppStudioE2EApplicationsNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
 			return application.Status.Devfile
@@ -95,14 +102,14 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 	})
 
 	It("Create Red Hat AppStudio Quarkus component", func() {
-		component, err := framework.HasController.CreateComponent(application.Name, QuarkusComponentName, RedHatAppStudioApplicationNamespace, QuarkusDevfileSource, ComponentContainerImage)
+		component, err := framework.HasController.CreateComponent(application.Name, QuarkusComponentName, AppStudioE2EApplicationsNamespace, QuarkusDevfileSource, ComponentContainerImage)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(component.Name).To(Equal(QuarkusComponentName))
 	})
 
 	It("Wait for component pipeline to be completed", func() {
 		err := wait.PollImmediate(20*time.Second, 10*time.Minute, func() (done bool, err error) {
-			pipelineRun, _ := framework.HasController.GetComponentPipeline(QuarkusComponentName, RedHatAppStudioApplicationName)
+			pipelineRun, _ := framework.HasController.GetComponentPipeline(QuarkusComponentName, RedHatAppStudioApplicationName, AppStudioE2EApplicationsNamespace)
 
 			for _, condition := range pipelineRun.Status.Conditions {
 				klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)
@@ -122,7 +129,7 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 
 	It("Check component deployment health", func() {
 		Eventually(func() bool {
-			deployment, _ := framework.HasController.GetComponentDeployment(QuarkusComponentName, RedHatAppStudioApplicationNamespace)
+			deployment, _ := framework.HasController.GetComponentDeployment(QuarkusComponentName, AppStudioE2EApplicationsNamespace)
 			if deployment.Status.AvailableReplicas == 1 {
 				klog.Infof("Deployment %s is ready", deployment.Name)
 				return true
@@ -134,14 +141,14 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 	})
 
 	It("Check component service health", func() {
-		service, err := framework.HasController.GetComponentService(QuarkusComponentName, RedHatAppStudioApplicationNamespace)
+		service, err := framework.HasController.GetComponentService(QuarkusComponentName, AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(service.Name).NotTo(BeEmpty())
 		klog.Infof("Service %s is ready", service.Name)
 	})
 
 	It("Verify component route health", func() {
-		route, err := framework.HasController.GetComponentRoute(QuarkusComponentName, RedHatAppStudioApplicationNamespace)
+		route, err := framework.HasController.GetComponentRoute(QuarkusComponentName, AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(route.Spec.Host).To(Not(BeEmpty()))
 		klog.Infof("Component route host: %s", route.Spec.Host)

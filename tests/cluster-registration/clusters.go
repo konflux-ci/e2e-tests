@@ -11,7 +11,7 @@ var _ = framework.ClusterRegistrationSuiteDescribe("Cluster Registration E2E tes
 	defer g.GinkgoRecover()
 
 	// Initialize the tests controllers
-	framework, err := framework.NewFramweork()
+	framework, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
 
 

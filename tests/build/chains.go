@@ -15,7 +15,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 	defer g.GinkgoRecover()
 
 	// Initialize the tests controllers
-	framework, err := framework.NewFramweork()
+	framework, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
 
 	g.Context("infrastructure is running", func() {
