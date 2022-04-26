@@ -13,4 +13,7 @@ const (
 
 	//The Tekton namespace
 	TEKTON_CHAINS_NS string = "tekton-chains" // #nosec
+
+	//Cluster Registration namespace 
+	CLUSTER_REG_NS string = "cluster-reg-config" // #nosec
 )
