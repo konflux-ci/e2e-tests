@@ -9,6 +9,7 @@ import (
 func (g *API) CheckIfRepositoryExist(repository string) bool {
 	repoRequest, err := g.Get(context.TODO(), "application/json", nil, repository)
 	if err != nil {
+		klog.Errorf("Error when sending request to Github API: %v", err)
 		return false
 	}
 	klog.Infof("Repository %s status request to github: %d", repository, repoRequest.StatusCode)
