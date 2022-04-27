@@ -5,7 +5,7 @@ USER root
 COPY . .
 RUN GOOS=linux make build
 
-FROM scratch
+FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 
 WORKDIR /root/
 COPY --from=builder /github.com/redhat-appstudio/e2e-tests/bin/e2e-appstudio ./
