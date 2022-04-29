@@ -4,7 +4,7 @@ This document overviews the workflow for onboarding new public Red Hat App Studi
 
 ## Steps to create an openshift-ci jobs
 
-In Red Hat Appstudio github organization it is installed globally the openshift-ci app and openshift-ci-robot and openshift-merge-robot are invited as collaborators.
+Openshift-ci is already enabled for all repositories in [Red Hat Appstudio organization](https://github.com/redhat-appstudio). For adding new jobs you need to create job configuration in [openshift/release](https://github.com/openshift/release) repo as described in following steps.
 
 ### Bootstrapping Configuration for a new Repository
 
