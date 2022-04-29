@@ -213,7 +213,7 @@ func setup(cmd *cobra.Command, args []string) {
 	
 
 	// Todo add cleanup functions that will delete user signups 
-	
+
 	wg.Wait()
 	uip.Stop()
 	defer close(stopMetrics)
