@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -11,6 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	// b64 "encoding/base64"
 
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -148,4 +151,24 @@ func (s *SuiteController) GetRoleBinding(rolebindingName, namespace string) (*rb
 
 func (s *SuiteController) GetServiceAccount(saName, namespace string) (*corev1.ServiceAccount, error) {
 	return s.KubeInterface().CoreV1().ServiceAccounts(namespace).Get(context.TODO(), saName, metav1.GetOptions{})
+}
+
+func (s *SuiteController) CreateRegistryAuthSecret(secretName, namespace, secretData string) (*corev1.Secret, error){
+	rawDecodedText, err := base64.StdEncoding.DecodeString(secretData)
+    if err != nil {
+        panic(err)
+    }
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: namespace,
+		},
+		Type: "kubernetes.io/dockerconfigjson",
+		StringData: map[string]string{".dockerconfigjson": string(rawDecodedText)},
+	}
+	er := s.KubeRest().Create(context.TODO(), secret)
+	if er != nil {
+		return nil, er
+	}
+	return secret, nil
 }

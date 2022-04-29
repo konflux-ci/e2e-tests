@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	ComponentContainerImage           string = fmt.Sprintf("quay.io/%s/quarkus:%s", GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
+	ComponentContainerImage           string = fmt.Sprintf("quay.io/%s/quarkus:%s", constants.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 	AppStudioE2EApplicationsNamespace string = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "appstudio-e2e-test")
 )
 
@@ -180,6 +180,4 @@ func ObtainGitOpsRepositoryName(devfileStatus string) string {
 	return repoParsed[len(repoParsed)-1]
 }
 
-func GetQuayIOOrganization() string {
-	return utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
-}
+
