@@ -17,7 +17,6 @@ export ROOT_E2E="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd
 export WORKSPACE=${WORKSPACE:-${ROOT_E2E}}
 export E2E_CLONE_BRANCH="main"
 export E2E_REPO_LINK="https://github.com/redhat-appstudio/e2e-tests.git"
-export FORK_EXISTS="false"
 
 function exists_public_github_repo() {
     local pr_author=$1

@@ -32,12 +32,12 @@ $ make build
 
 ## Install App Studio in e2e mode
 
-To install Red Hat App Studio in e2e mode you can found the instructions in [scripts folder](https://github.com/redhat-appstudio/e2e-tests/tree/main/scripts)
+To install Red Hat App Studio in e2e mode you can found the instructions in [docs folder](https://github.com/redhat-appstudio/e2e-tests/tree/main/docs)
 
 ## The `e2e-appstudio` command
 
 The `e2e-appstudio` command is the root command that executes all test functionality. To obtain all available flags for the binary please use `--help` flags. All ginkgo flags and go tests are available in `e2e-appstudio` binary.
-The instructions about every test suite can be found in the [tests folder](https://github.com/redhat-appstudio/e2e-tests/tree/main/tests).
+The instructions about every test suite can be found in the [tests folder](https://github.com/redhat-appstudio/e2e-tests/tree/main/tests). Find more information about how to install the e2e binary in openshift-ci in [docs folder](https://github.com/redhat-appstudio/e2e-tests/tree/main/docs)
 
 # Develop new tests
 
