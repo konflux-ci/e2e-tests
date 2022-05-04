@@ -48,8 +48,8 @@ while [[ $# -gt 0 ]]
 do
     case "$1" in
         install)
-            #cloneInfraDeployments
-            #addQERemoteForkAndInstallAppstudio
+            cloneInfraDeployments
+            addQERemoteForkAndInstallAppstudio
             createApplicationServiceSecrets
             ;;
         *)
