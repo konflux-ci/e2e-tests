@@ -17,6 +17,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog"
 )
 
 var (
@@ -54,7 +55,10 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 	})
 
 	AfterAll(func() {
-		err := framework.HasController.DeleteHasComponent(QuarkusComponentName, AppStudioE2EApplicationsNamespace)
+		err := framework.GitOpsController.DeleteGitOpsDeployment(GitOpsDeploymentName, AppStudioE2EApplicationsNamespace)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = framework.HasController.DeleteHasComponent(QuarkusComponentName, AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
 		err = framework.HasController.DeleteHasApplication(RedHatAppStudioApplicationName, AppStudioE2EApplicationsNamespace)
@@ -66,6 +70,7 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 
 			return framework.HasController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
+
 	})
 
 	It("Create Red Hat AppStudio Application", func() {
@@ -103,6 +108,81 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(component.Name).To(Equal(QuarkusComponentName))
 	})
+
+	It("Create GitOps Deployment", func() {
+		gitOpsRepository := ObtainGitOpsRepositoryUrl(application.Status.Devfile)
+		gitOpsRepositoryPath := fmt.Sprintf("components/%s/base", QuarkusComponentName)
+
+		deployment, err := framework.GitOpsController.CreateGitOpsDeployment(GitOpsDeploymentName, AppStudioE2EApplicationsNamespace, gitOpsRepository, gitOpsRepositoryPath, GitOpsRepositoryRevision)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(deployment.Name).To(Equal(GitOpsDeploymentName))
+	})
+
+	It("Check component deployment health", func() {
+		Eventually(func() bool {
+			deployment, _ := framework.HasController.GetComponentDeployment(QuarkusComponentName, AppStudioE2EApplicationsNamespace)
+			if deployment.Status.AvailableReplicas == 1 {
+				klog.Infof("Deployment %s is ready", deployment.Name)
+				return true
+			}
+
+			return false
+		}, 3*time.Minute, 10*time.Second).Should(BeTrue(), "Component deployment didn't become ready")
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("Check component service health", func() {
+		service, err := framework.HasController.GetComponentService(QuarkusComponentName, AppStudioE2EApplicationsNamespace)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(service.Name).NotTo(BeEmpty())
+		klog.Infof("Service %s is ready", service.Name)
+	})
+
+	It("Verify component route health", func() {
+		route, err := framework.HasController.GetComponentRoute(QuarkusComponentName, AppStudioE2EApplicationsNamespace)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(route.Spec.Host).To(Not(BeEmpty()))
+		klog.Infof("Component route host: %s", route.Spec.Host)
+	})
+
+	It("Check GitOpsDeployment component deployment health", func() {
+		Eventually(func() bool {
+			deployment, _ := framework.GitOpsController.GetComponentDeployment(QuarkusComponentName, AppStudioE2EApplicationsNamespace)
+			if deployment.Status.AvailableReplicas == 1 {
+				klog.Infof("Deployment %s is ready", deployment.Name)
+				return true
+			}
+
+			return false
+		}, 15*time.Minute, 10*time.Second).Should(BeTrue(), "Component deployment didn't become ready")
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("Check GitOpsDeployment image deployed is correct", func() {
+		depoyedImage, err := framework.GitOpsController.GetGitOpsDeployedImage(QuarkusComponentName, AppStudioE2EApplicationsNamespace)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(depoyedImage).To(Equal(ComponentContainerImage))
+		klog.Infof("Component deployed image: %s", depoyedImage)
+	})
+
+	It("Check GitOpsDeployment component service health", func() {
+		service, err := framework.GitOpsController.GetComponentService(QuarkusComponentName, AppStudioE2EApplicationsNamespace)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(service.Name).NotTo(BeEmpty())
+		klog.Infof("Service %s is ready", service.Name)
+	})
+
+	It("Check GitOpsDeployment component route health", func() {
+		route, err := framework.GitOpsController.GetComponentRoute(QuarkusComponentName, AppStudioE2EApplicationsNamespace)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(route.Spec.Host).To(Not(BeEmpty()))
+		klog.Infof("Component route host: %s", route.Spec.Host)
+	})
+
+	It("Check GitOpsDeployment backend is working porperly", func() {
+		err := framework.GitOpsController.CheckGitOpsEndpoint(QuarkusComponentName, AppStudioE2EApplicationsNamespace)
+		Expect(err).NotTo(HaveOccurred())
+	})
 })
 
 /*
@@ -128,6 +208,18 @@ func ObtainGitOpsRepositoryName(devfileStatus string) string {
 	repoParsed := strings.Split(parseUrl.Path, "/")
 
 	return repoParsed[len(repoParsed)-1]
+}
+
+func ObtainGitOpsRepositoryUrl(devfileStatus string) string {
+	appDevfile, err := devfile.ParseDevfileModel(devfileStatus)
+	if err != nil {
+		err = fmt.Errorf("Error parsing devfile: %v", err)
+	}
+	// Get the devfile attributes from the parsed object
+	devfileAttributes := appDevfile.GetMetadata().Attributes
+	gitOpsRepository := devfileAttributes.GetString("gitOpsRepository.url", &err)
+
+	return gitOpsRepository
 }
 
 func GetQuayIOOrganization() string {

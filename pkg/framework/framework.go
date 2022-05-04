@@ -5,6 +5,7 @@ import (
 
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/gitops"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
@@ -14,6 +15,7 @@ type Framework struct {
 	HasController    *has.SuiteController
 	CommonController *common.SuiteController
 	TektonController *tekton.SuiteController
+	GitOpsController *gitops.SuiteController
 }
 
 // Initialize all test controllers and return them in a Framework
@@ -43,9 +45,16 @@ func NewFramework() (*Framework, error) {
 		return nil, err
 	}
 
+	// Initialize GitOps controller
+	gitopsController, err := gitops.NewSuiteController(kubeClient)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Framework{
 		CommonController: commonCtrl,
 		HasController:    hasController,
 		TektonController: tektonController,
+		GitOpsController: gitopsController,
 	}, nil
 }
