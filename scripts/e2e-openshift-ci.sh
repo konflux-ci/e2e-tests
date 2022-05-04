@@ -22,11 +22,11 @@ export AUTHOR_E2E_BRANCH=""
 function exists_public_github_repo() {
     local pr_author=$1
 
-    if curl -fsS "https://api.github.com/repos/${pr_author}/e2e-tests" >/dev/null; then
-        echo -e "[INFO] The GitHub repo ${pr_author}/e2e-tests exists."
+    if curl -fsS "https://api.github.com/repos/${pr_author}" >/dev/null; then
+        echo -e "[INFO] The GitHub repo ${pr_author} exists."
         return 0
     else
-        echo -e "[ERROR] No GitHub repo ${pr_author}/e2e-tests found."
+        echo -e "[ERROR] No GitHub repo ${pr_author} found."
         return 1
     fi
 }
