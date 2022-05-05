@@ -18,6 +18,10 @@ func ChainsSuiteDescribe(text string, body func()) bool {
 	return Describe("[chains-suite "+text+"]", Ordered, body)
 }
 
+func BuildSuiteDescribe(text string, body func()) bool {
+	return Describe("[build-service-suite "+text+"]", Ordered, body)
+}
+
 func ClusterRegistrationSuiteDescribe(text string, body func()) bool {
 	return Describe("[cluster-registration-suite "+text+"]", Ordered, body)
 }
