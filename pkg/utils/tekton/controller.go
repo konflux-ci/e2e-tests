@@ -2,12 +2,14 @@ package tekton
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -111,8 +113,33 @@ func (k KubeController) WatchTaskPod(tr string, taskTimeout int) error {
 	return k.Commonctrl.WaitForPod(k.Commonctrl.IsPodSuccessful(pod.Name, k.Namespace), time.Duration(taskTimeout)*time.Second)
 }
 
+func (k KubeController) GetTaskRunResult(tr *v1beta1.TaskRun, result string) (string, error) {
+	for _, trResult := range tr.Status.TaskRunResults {
+		if trResult.Name == result {
+			return trResult.Value, nil
+		}
+	}
+	return "", fmt.Errorf(
+		"result %q not found in TaskRun %s/%s", result, tr.ObjectMeta.Namespace, tr.ObjectMeta.Name)
+}
+
 func (k KubeController) RunVerifyTask(taskName, image string, taskTimeout int) (*v1beta1.TaskRun, error) {
 	tr := verifyTaskRun(image, taskName)
+	return k.createAndWait(tr, taskTimeout)
+}
+
+type VerifyECTaskParams struct {
+	TaskName     string
+	ImageRef     string
+	PublicSecret string
+	PipelineName string
+	RekorHost    string
+	SslCertDir   string
+	StrictPolicy string
+}
+
+func (k KubeController) RunVerifyECTask(params VerifyECTaskParams, taskTimeout int) (*v1beta1.TaskRun, error) {
+	tr := verifyEnterpriseContractTaskRun(params)
 	return k.createAndWait(tr, taskTimeout)
 }
 
@@ -147,8 +174,10 @@ func (k KubeController) FindCosignResultsForImage(imageRef string) (*CosignResul
 func findCosignResultsForImage(imageRef string, client crclient.Client) (*CosignResult, error) {
 	imageInfo := strings.Split(imageRef, "/")
 	namespace := imageInfo[1]
-	imageName := imageInfo[2]
-	latestImageName := imageName + ":latest" // tag added by default when building on OpenShift
+	// When using the integrated OpenShift registry, the name of the repository corresponds to
+	// an ImageStream resource of the same name. We use this name to easily find the tags later.
+	imageNameInfo := strings.Split(imageInfo[2], "@")
+	imageStreamName, imageDigest := imageNameInfo[0], imageNameInfo[1]
 
 	tags := &unstructured.UnstructuredList{}
 	tags.SetGroupVersionKind(schema.GroupVersionKind{
@@ -161,21 +190,12 @@ func findCosignResultsForImage(imageRef string, client crclient.Client) (*Cosign
 		return nil, err
 	}
 
-	// search for the resulting task image's cosignImagePrefix from the name in the metadata
-	var cosignImagePrefix string
-	if tag := findTagWithName(tags, latestImageName); tag != nil {
-		if name, found, err := unstructured.NestedString(tag.Object, "image", "metadata", "name"); err == nil && found {
-			cosignImagePrefix = imageName + ":" + strings.Replace(name, ":", "-", 1)
-		}
-	} else {
-		// we didn't find the image from the task, should we err instead?
-		return nil, errors.NewNotFound(schema.GroupResource{
-			Group:    "image.openshift.io",
-			Resource: "ImageStreamTag",
-		}, latestImageName)
-	}
+	// Cosign creates tags for attestation and signature based on the image digest. Compute
+	// the expected prefix for later usage: sha256:abcd... -> sha256-abcd...
+	// Also, this prefix is really the prefix of the ImageStreamTag resource which follows the
+	// format: <image stream name>:<tag-name>
+	cosignImagePrefix := fmt.Sprintf("%s:%s", imageStreamName, strings.Replace(imageDigest, ":", "-", 1))
 
-	// loop again to see if .att and .sig tags are present
 	results := CosignResult{}
 
 	if signatureTag := findTagWithName(tags, cosignImagePrefix+".sig"); signatureTag != nil {
@@ -205,4 +225,88 @@ func findTagWithName(tags *unstructured.UnstructuredList, name string) *unstruct
 	}
 
 	return nil
+}
+
+func (k KubeController) CreateOrUpdateSigningSecret(publicKey []byte, name, namespace string) (err error) {
+	api := k.Tektonctrl.K8sClient.KubeInterface().CoreV1().Secrets(namespace)
+	ctx := context.TODO()
+
+	expectedSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Data:       map[string][]byte{"cosign.pub": publicKey},
+	}
+
+	s, err := api.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return
+		}
+		if _, err = api.Create(ctx, expectedSecret, metav1.CreateOptions{}); err != nil {
+			return
+		}
+	} else {
+		if string(s.Data["cosign.pub"]) != string(publicKey) {
+			if _, err = api.Update(ctx, expectedSecret, metav1.UpdateOptions{}); err != nil {
+				return
+			}
+		}
+	}
+	return
+}
+
+func (k KubeController) GetPublicKey(name, namespace string) (publicKey []byte, err error) {
+	api := k.Tektonctrl.K8sClient.KubeInterface().CoreV1().Secrets(namespace)
+	ctx := context.TODO()
+
+	secret, err := api.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return
+	}
+
+	publicKey = secret.Data["cosign.pub"]
+	return
+}
+
+func (k KubeController) CreateOrUpdateConfigPolicy(namespace string, policy string) (err error) {
+	api := k.Tektonctrl.K8sClient.KubeInterface().CoreV1().ConfigMaps(namespace)
+	ctx := context.TODO()
+
+	configPolicyName := "ec-policy"
+	expectedConfigMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: configPolicyName},
+		Data:       map[string]string{"policy.json": policy},
+	}
+
+	cm, err := api.Get(ctx, configPolicyName, metav1.GetOptions{})
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return
+		}
+		if _, err = api.Create(ctx, expectedConfigMap, metav1.CreateOptions{}); err != nil {
+			return
+		}
+	} else {
+		if cm.Data["policy.json"] != policy {
+			if _, err = api.Update(ctx, expectedConfigMap, metav1.UpdateOptions{}); err != nil {
+				return
+			}
+		}
+	}
+	return
+}
+
+func (k KubeController) GetRekorHost() (rekorHost string, err error) {
+	api := k.Tektonctrl.K8sClient.KubeInterface().CoreV1().ConfigMaps("tekton-chains")
+	ctx := context.TODO()
+
+	cm, err := api.Get(ctx, "chains-config", metav1.GetOptions{})
+	if err != nil {
+		return
+	}
+
+	rekorHost, ok := cm.Data["transparency.url"]
+	if !ok || rekorHost == "" {
+		rekorHost = "https://rekor.sigstore.dev"
+	}
+	return
 }
