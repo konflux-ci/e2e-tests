@@ -52,7 +52,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 			componentName = "build-suite-test-component-image-source"
 			outputContainerImage = ""
 			timeout = time.Second * 10
-			interval = time.Millisecond * 200
+			interval = time.Second * 1
 			// Create a component with containerImageSource being defined
 			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, "", containerImageSource, outputContainerImage)
 			Expect(err).ShouldNot(HaveOccurred())
@@ -65,7 +65,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 				Expect(pipelineRun.Name).To(BeEmpty())
 
 				return strings.Contains(err.Error(), "no pipelinerun found")
-			}, timeout, interval).Should(BeTrue())
+			}, timeout, interval).Should(BeTrue(), "expected the PipelineRun not to be triggered")
 		})
 	})
 	When("component with git source is created", func() {
@@ -84,11 +84,11 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 			Eventually(func() bool {
 				pipelineRun, err := f.HasController.GetComponentPipeline(componentName, applicationName, appStudioE2EApplicationsNamespace)
 				if err != nil {
-					GinkgoWriter.Println("pipelinerun has not been created yet")
+					GinkgoWriter.Println("PipelineRun has not been created yet")
 					return false
 				}
 				return pipelineRun.HasStarted()
-			}, timeout, interval).Should(BeTrue())
+			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 		})
 		Context("the PipelineRun is running", func() {
 			BeforeAll(func() {
@@ -108,7 +108,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 						}
 					}
 					return pipelineRun.IsDone()
-				}, timeout, interval).Should(BeTrue())
+				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
 			})
 
 		})
