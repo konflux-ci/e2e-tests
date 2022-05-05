@@ -12,7 +12,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	routev1 "github.com/openshift/api/route/v1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	appsv1 "k8s.io/api/apps/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -148,4 +150,49 @@ func (s *SuiteController) GetRoleBinding(rolebindingName, namespace string) (*rb
 
 func (s *SuiteController) GetServiceAccount(saName, namespace string) (*corev1.ServiceAccount, error) {
 	return s.KubeInterface().CoreV1().ServiceAccounts(namespace).Get(context.TODO(), saName, metav1.GetOptions{})
+}
+
+// GetOpenshiftRoute returns the route for a given component name
+func (h *SuiteController) GetOpenshiftRoute(componentName string, componentNamespace string) (*routev1.Route, error) {
+	namespacedName := types.NamespacedName{
+		Name:      componentName,
+		Namespace: componentNamespace,
+	}
+
+	route := &routev1.Route{}
+	err := h.KubeRest().Get(context.TODO(), namespacedName, route)
+	if err != nil {
+		return &routev1.Route{}, err
+	}
+	return route, nil
+}
+
+// GetAppDeploymentByName returns the deployment for a given component name
+func (h *SuiteController) GetAppDeploymentByName(componentName string, componentNamespace string) (*appsv1.Deployment, error) {
+	namespacedName := types.NamespacedName{
+		Name:      componentName,
+		Namespace: componentNamespace,
+	}
+
+	deployment := &appsv1.Deployment{}
+	err := h.KubeRest().Get(context.TODO(), namespacedName, deployment)
+	if err != nil {
+		return &appsv1.Deployment{}, err
+	}
+	return deployment, nil
+}
+
+// GetServiceByName returns the service for a given component name
+func (h *SuiteController) GetServiceByName(componentName string, componentNamespace string) (*corev1.Service, error) {
+	namespacedName := types.NamespacedName{
+		Name:      componentName,
+		Namespace: componentNamespace,
+	}
+
+	service := &corev1.Service{}
+	err := h.KubeRest().Get(context.TODO(), namespacedName, service)
+	if err != nil {
+		return &corev1.Service{}, err
+	}
+	return service, nil
 }
