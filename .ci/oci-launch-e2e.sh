@@ -42,7 +42,7 @@ function waitBuildToBeReady() {
 
 function executeE2ETests() {
     make build
-    "${WORKSPACE}"/bin/e2e-appstudio --ginkgo.junit-report="${ARTIFACTS_DIR}"/e2e-report.xml
+    "${WORKSPACE}"/bin/e2e-appstudio --ginkgo.junit-report="${ARTIFACTS_DIR}"/e2e-report.xml --ginkgo.progress --ginkgo.v
 }
 
 curl "https://raw.githubusercontent.com/redhat-appstudio/e2e-tests/${PULL_PULL_SHA}/scripts/install-appstudio-e2e-mode.sh" | bash -s install
