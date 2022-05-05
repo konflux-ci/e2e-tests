@@ -21,9 +21,9 @@ const (
 	// See more info: https://github.com/redhat-appstudio/application-service#creating-a-github-secret-for-has
 	ApplicationServiceGHTokenSecrName string = "has-github-token" // #nosec
 
-	//Name for the GitOps Deployment resource
+	// Name for the GitOps Deployment resource
 	GitOpsDeploymentName string = "gitops-deployment-e2e"
 
-	//GitOps repository branch to use
+	// GitOps repository branch to use
 	GitOpsRepositoryRevision string = "main"
 )
