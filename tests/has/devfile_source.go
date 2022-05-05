@@ -17,9 +17,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 var (
@@ -105,53 +103,6 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 		component, err := framework.HasController.CreateComponent(application.Name, QuarkusComponentName, AppStudioE2EApplicationsNamespace, QuarkusDevfileSource, ComponentContainerImage)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(component.Name).To(Equal(QuarkusComponentName))
-	})
-
-	It("Wait for component pipeline to be completed", func() {
-		err := wait.PollImmediate(20*time.Second, 10*time.Minute, func() (done bool, err error) {
-			pipelineRun, _ := framework.HasController.GetComponentPipeline(QuarkusComponentName, RedHatAppStudioApplicationName, AppStudioE2EApplicationsNamespace)
-
-			for _, condition := range pipelineRun.Status.Conditions {
-				klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)
-
-				if condition.Reason == "Failed" {
-					return false, fmt.Errorf("Component %s pipeline failed", pipelineRun.Name)
-				}
-
-				if condition.Status == corev1.ConditionTrue {
-					return true, nil
-				}
-			}
-			return false, nil
-		})
-		Expect(err).NotTo(HaveOccurred(), "Failed component pipeline %v", err)
-	})
-
-	It("Check component deployment health", func() {
-		Eventually(func() bool {
-			deployment, _ := framework.HasController.GetComponentDeployment(QuarkusComponentName, AppStudioE2EApplicationsNamespace)
-			if deployment.Status.AvailableReplicas == 1 {
-				klog.Infof("Deployment %s is ready", deployment.Name)
-				return true
-			}
-
-			return false
-		}, 3*time.Minute, 10*time.Second).Should(BeTrue(), "Component deployment didn't become ready")
-		Expect(err).NotTo(HaveOccurred())
-	})
-
-	It("Check component service health", func() {
-		service, err := framework.HasController.GetComponentService(QuarkusComponentName, AppStudioE2EApplicationsNamespace)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(service.Name).NotTo(BeEmpty())
-		klog.Infof("Service %s is ready", service.Name)
-	})
-
-	It("Verify component route health", func() {
-		route, err := framework.HasController.GetComponentRoute(QuarkusComponentName, AppStudioE2EApplicationsNamespace)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(route.Spec.Host).To(Not(BeEmpty()))
-		klog.Infof("Component route host: %s", route.Spec.Host)
 	})
 })
 
