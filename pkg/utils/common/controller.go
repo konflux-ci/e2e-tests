@@ -153,10 +153,10 @@ func (s *SuiteController) GetServiceAccount(saName, namespace string) (*corev1.S
 }
 
 // GetOpenshiftRoute returns the route for a given component name
-func (h *SuiteController) GetOpenshiftRoute(componentName string, componentNamespace string) (*routev1.Route, error) {
+func (h *SuiteController) GetOpenshiftRoute(routeName string, routeNamespace string) (*routev1.Route, error) {
 	namespacedName := types.NamespacedName{
-		Name:      componentName,
-		Namespace: componentNamespace,
+		Name:      routeName,
+		Namespace: routeNamespace,
 	}
 
 	route := &routev1.Route{}
@@ -168,10 +168,10 @@ func (h *SuiteController) GetOpenshiftRoute(componentName string, componentNames
 }
 
 // GetAppDeploymentByName returns the deployment for a given component name
-func (h *SuiteController) GetAppDeploymentByName(componentName string, componentNamespace string) (*appsv1.Deployment, error) {
+func (h *SuiteController) GetAppDeploymentByName(deploymentName string, deploymentNamespace string) (*appsv1.Deployment, error) {
 	namespacedName := types.NamespacedName{
-		Name:      componentName,
-		Namespace: componentNamespace,
+		Name:      deploymentName,
+		Namespace: deploymentNamespace,
 	}
 
 	deployment := &appsv1.Deployment{}
@@ -183,10 +183,10 @@ func (h *SuiteController) GetAppDeploymentByName(componentName string, component
 }
 
 // GetServiceByName returns the service for a given component name
-func (h *SuiteController) GetServiceByName(componentName string, componentNamespace string) (*corev1.Service, error) {
+func (h *SuiteController) GetServiceByName(serviceName string, serviceNamespace string) (*corev1.Service, error) {
 	namespacedName := types.NamespacedName{
-		Name:      componentName,
-		Namespace: componentNamespace,
+		Name:      serviceName,
+		Namespace: serviceNamespace,
 	}
 
 	service := &corev1.Service{}
