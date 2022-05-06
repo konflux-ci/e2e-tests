@@ -69,7 +69,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 			// At a bare minimum, each spec within this context relies on the existence of
 			// an image that has been signed by Tekton Chains. Trigger a demo task to fulfill
 			// this purpose.
-			tr, err := kubeController.RunBuildahDemoTask(image, taskTimeout)
+			tr, err := kubeController.RunTask(tekton.BuildahDemoTask{Image: image}, taskTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			// Verify that the build task was created as expected.
 			Expect(buildTaskRunName).To(Equal(tr.ObjectMeta.Name))
@@ -100,20 +100,28 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 			)
 		})
 		g.It("verify image attestation", func() {
-			tr, waitTrErr := kubeController.RunVerifyTask("cosign-verify-attestation", imageWithDigest, taskTimeout)
+			taskGenerator := tekton.CosignVerifyTask{
+				TaskName: "cosign-verify-attestation",
+				Image:    imageWithDigest,
+			}
+			tr, waitTrErr := kubeController.RunTask(taskGenerator, taskTimeout)
 			Expect(waitTrErr).NotTo(HaveOccurred())
 			waitErr := kubeController.WatchTaskPod(tr.Name, taskTimeout)
 			Expect(waitErr).NotTo(HaveOccurred())
 		})
 		g.It("cosign verify", func() {
-			tr, waitTrErr := kubeController.RunVerifyTask("cosign-verify", imageWithDigest, taskTimeout)
+			taskGenerator := tekton.CosignVerifyTask{
+				TaskName: "cosign-verify",
+				Image:    imageWithDigest,
+			}
+			tr, waitTrErr := kubeController.RunTask(taskGenerator, taskTimeout)
 			Expect(waitTrErr).NotTo(HaveOccurred())
 			waitErr := kubeController.WatchTaskPod(tr.Name, taskTimeout)
 			Expect(waitErr).NotTo(HaveOccurred())
 		})
 
 		g.Context("verify-enterprise-contract task", func() {
-			var taskParams tekton.VerifyECTaskParams
+			var taskGenerator tekton.VerifyEnterpriseContractTask
 			var rekorHost string
 			publicSecretName := "cosign-public-key"
 
@@ -131,7 +139,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 			})
 
 			g.BeforeEach(func() {
-				taskParams = tekton.VerifyECTaskParams{
+				taskGenerator = tekton.VerifyEnterpriseContractTask{
 					TaskName:     "verify-enterprise-contract",
 					ImageRef:     imageWithDigest,
 					PublicSecret: fmt.Sprintf("k8s://%s/%s", namespace, publicSecretName),
@@ -151,7 +159,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 				// Setup a policy config to ignore the policy check for tests
 				Expect(kubeController.CreateOrUpdateConfigPolicy(
 					namespace, `{"non_blocking_checks":["not_useful", "test"]}`)).To(Succeed())
-				tr, err := kubeController.RunVerifyECTask(taskParams, taskTimeout)
+				tr, err := kubeController.RunTask(taskGenerator, taskTimeout)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeController.WatchTaskPod(tr.Name, taskTimeout)).To(Succeed())
 
@@ -165,8 +173,8 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 			})
 
 			g.It("does not pass when tests are not satisfied on non-strict mode", func() {
-				taskParams.StrictPolicy = "0"
-				tr, err := kubeController.RunVerifyECTask(taskParams, taskTimeout)
+				taskGenerator.StrictPolicy = "0"
+				tr, err := kubeController.RunTask(taskGenerator, taskTimeout)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeController.WatchTaskPod(tr.Name, taskTimeout)).To(Succeed())
 
@@ -180,7 +188,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 			})
 
 			g.It("fails when tests are not satisfied on strict mode", func() {
-				tr, err := kubeController.RunVerifyECTask(taskParams, taskTimeout)
+				tr, err := kubeController.RunTask(taskGenerator, taskTimeout)
 				Expect(err).NotTo(HaveOccurred())
 				err = kubeController.WatchTaskPod(tr.Name, taskTimeout)
 				Expect(err).To(HaveOccurred())
@@ -199,9 +207,9 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 					"BQWcmJD/7pcMDEmBcmk8O1yUPIiFj5TMZqabjS9CQQN+jKHG+Bfi0BYlHg==\n" +
 					"-----END PUBLIC KEY-----")
 				Expect(kubeController.CreateOrUpdateSigningSecret(publicKey, secretName, namespace)).To(Succeed())
-				taskParams.PublicSecret = fmt.Sprintf("k8s://%s/%s", namespace, secretName)
+				taskGenerator.PublicSecret = fmt.Sprintf("k8s://%s/%s", namespace, secretName)
 
-				tr, err := kubeController.RunVerifyECTask(taskParams, taskTimeout)
+				tr, err := kubeController.RunTask(taskGenerator, taskTimeout)
 				Expect(err).NotTo(HaveOccurred())
 				err = kubeController.WatchTaskPod(tr.Name, taskTimeout)
 				Expect(err).To(HaveOccurred())

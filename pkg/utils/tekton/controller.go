@@ -96,11 +96,6 @@ func (s *SuiteController) ListTaskRuns(ns string, labelKey string, labelValue st
 	return s.PipelineClient().TektonV1beta1().TaskRuns(ns).List(context.TODO(), listOptions)
 }
 
-func (k KubeController) RunBuildahDemoTask(image string, taskTimeout int) (*v1beta1.TaskRun, error) {
-	tr := buildahDemoTaskRun(image)
-	return k.createAndWait(tr, taskTimeout)
-}
-
 func (k KubeController) WatchTaskPod(tr string, taskTimeout int) error {
 	trUpdated, err := k.Tektonctrl.GetTaskRun(tr, k.Namespace)
 	if err != nil {
@@ -123,23 +118,8 @@ func (k KubeController) GetTaskRunResult(tr *v1beta1.TaskRun, result string) (st
 		"result %q not found in TaskRun %s/%s", result, tr.ObjectMeta.Namespace, tr.ObjectMeta.Name)
 }
 
-func (k KubeController) RunVerifyTask(taskName, image string, taskTimeout int) (*v1beta1.TaskRun, error) {
-	tr := verifyTaskRun(image, taskName)
-	return k.createAndWait(tr, taskTimeout)
-}
-
-type VerifyECTaskParams struct {
-	TaskName     string
-	ImageRef     string
-	PublicSecret string
-	PipelineName string
-	RekorHost    string
-	SslCertDir   string
-	StrictPolicy string
-}
-
-func (k KubeController) RunVerifyECTask(params VerifyECTaskParams, taskTimeout int) (*v1beta1.TaskRun, error) {
-	tr := verifyEnterpriseContractTaskRun(params)
+func (k KubeController) RunTask(g TaskRunGenerator, taskTimeout int) (*v1beta1.TaskRun, error) {
+	tr := g.Generate()
 	return k.createAndWait(tr, taskTimeout)
 }
 
