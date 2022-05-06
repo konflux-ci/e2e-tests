@@ -1252,8 +1252,8 @@ github.com/rcrowley/go-metrics v0.0.0-20190706150252-9beb055b7962/go.mod h1:bCqn
 github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/redhat-appstudio/application-service v0.0.0-20220312031926-2976522a9052 h1:bwwXKr+zlHH+JCIINvU/jeBDwCd3g6Qa3D3VjpyrGEg=
 github.com/redhat-appstudio/application-service v0.0.0-20220312031926-2976522a9052/go.mod h1:ymCXvj4jNZLIKU48/hdcLupnNLrclAEiBCssxtNNAD8=
-github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220502103946-fc9ab66e2b52 h1:59gUsarqPo9WwsXDIdlCpmnrKbGfChXezR5k3uZqfX4=
-github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220502103946-fc9ab66e2b52/go.mod h1:FJwLhfaxwnpqit10r03otoDYuvbGSJakmGDvMafuTY8=
+github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001 h1:dHYSaZ8slDW27YrbAYj59Zd82Oml3oTj9ieICLtzk8Y=
+github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001/go.mod h1:jqTuNQDL/xf+LsxWg1RuhJiMvMWnoRZcpcHRhX8Z12s=
 github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20220506042230-3a79f373a001/go.mod h1:5GV2vv5Eu8yiwTgQcnnvyk0TEE9URL3zSB0aGVfEnFk=
 github.com/redhat-appstudio/service-provider-integration-operator v0.2.3/go.mod h1:Ps5dMLwMKz4vGFcyNVDUI36KuWLz+yNGMBjZL2MQLPg=
 github.com/redhat-appstudio/service-provider-integration-scm-file-retriever v0.2.5/go.mod h1:qfhT18cEND3j+LlHfUQd1HDcjTMFY7JhDIj6QmCSfxg=
@@ -1835,7 +1835,6 @@ golang.org/x/sys v0.0.0-20210915083310-ed5796bab164/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.0.0-20210917161153-d61c044b1678/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20210923061019-b8560ed6a9b7/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20210927094055-39ccf1dd6fa6/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-golang.org/x/sys v0.0.0-20211007075335-d3039528d8ac/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20211013075003-97ac67df715c/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20211019181941-9d821ace8654/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20211124211545-fe61309f8881/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
