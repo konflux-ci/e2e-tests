@@ -12,11 +12,14 @@ import (
 	"github.com/redhat-appstudio/application-service/pkg/devfile"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 )
 
@@ -109,6 +112,26 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 		Expect(component.Name).To(Equal(QuarkusComponentName))
 	})
 
+	It("Wait for component pipeline to be completed", func() {
+		err := wait.PollImmediate(20*time.Second, 10*time.Minute, func() (done bool, err error) {
+			pipelineRun, _ := framework.HasController.GetComponentPipeline(QuarkusComponentName, RedHatAppStudioApplicationName, AppStudioE2EApplicationsNamespace)
+
+			for _, condition := range pipelineRun.Status.Conditions {
+				klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)
+
+				if condition.Reason == "Failed" {
+					return false, fmt.Errorf("Component %s pipeline failed", pipelineRun.Name)
+				}
+
+				if condition.Status == corev1.ConditionTrue {
+					return true, nil
+				}
+			}
+			return false, nil
+		})
+		Expect(err).NotTo(HaveOccurred(), "Failed component pipeline %v", err)
+	})
+
 	It("Create GitOps Deployment", func() {
 		gitOpsRepository := ObtainGitOpsRepositoryUrl(application.Status.Devfile)
 		gitOpsRepositoryPath := fmt.Sprintf("components/%s/base", QuarkusComponentName)
@@ -148,6 +171,9 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 	It("Check GitOpsDeployment component deployment health", func() {
 		Eventually(func() bool {
 			deployment, _ := framework.CommonController.GetAppDeploymentByName(QuarkusComponentName, AppStudioE2EApplicationsNamespace)
+			if err != nil && !errors.IsNotFound(err) {
+				return false
+			}
 			if deployment.Status.AvailableReplicas == 1 {
 				klog.Infof("Deployment %s is ready", deployment.Name)
 				return true
