@@ -7,7 +7,7 @@ require (
 	github.com/devfile/library v1.2.0
 	github.com/google/uuid v1.3.0
 	github.com/onsi/ginkgo/v2 v2.1.3
-	github.com/onsi/gomega v1.18.1
+	github.com/onsi/gomega v1.19.0
 	github.com/openshift/api v0.0.0-20200930075302-db52bc4ef99f
 	github.com/redhat-appstudio/application-service v0.0.0-20220312031926-2976522a9052
 	github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220502103946-fc9ab66e2b52
@@ -21,4 +21,4 @@ require (
 	sigs.k8s.io/controller-runtime v0.10.3
 )
 
-replace github.com/redhat-appstudio/managed-gitops/backend-shared => github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20220422082552-1a27f1719d52
+replace github.com/redhat-appstudio/managed-gitops/backend-shared => github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20220506042230-3a79f373a001
