@@ -21,19 +21,67 @@ func buildahDemoTaskRun(image string) *v1beta1.TaskRun {
 			Namespace:    namespace,
 		},
 		Spec: v1beta1.TaskRunSpec{
-			Params: []v1beta1.Param{
-				{
-					Name: "IMAGE",
-					Value: v1beta1.ArrayOrString{
-						Type:      v1beta1.ParamTypeString,
-						StringVal: image,
+			TaskSpec: &v1beta1.TaskSpec{
+				Results: []v1beta1.TaskResult{
+					{Name: "IMAGE_DIGEST"},
+					{Name: "IMAGE_URL"},
+				},
+				Steps: []v1beta1.Step{
+					{
+						Container: corev1.Container{
+							Image:      "registry.access.redhat.com/ubi8:latest",
+							Name:       "add-dockerfile",
+							WorkingDir: "$(workspaces.source.path)",
+						},
+						Script: "set -e\necho \"FROM scratch\" | tee ./Dockerfile\n",
+					},
+					{
+						Container: corev1.Container{
+							Image: "registry.access.redhat.com/ubi8/buildah:latest",
+							Name:  "build",
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									MountPath: "/var/lib/containers",
+									Name:      "varlibcontainers",
+								},
+							},
+							WorkingDir: "$(workspaces.source.path)",
+						},
+						Script: "buildah --storage-driver=vfs bud \\\n  --format=oci \\\n  --no-cache \\\n  -t " + image + " .\n",
+					},
+					{
+						Container: corev1.Container{
+							Image: "registry.access.redhat.com/ubi8/buildah:latest",
+							Name:  "push",
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									MountPath: "/var/lib/containers",
+									Name:      "varlibcontainers",
+								},
+							},
+							WorkingDir: "$(workspaces.source.path)",
+						},
+						Script: "buildah --storage-driver=vfs push \\\n  --digestfile $(workspaces.source.path)/image-digest " + image + " \\\n  docker://" + image + "\n",
+					},
+					{
+						Container: corev1.Container{
+							Image: "registry.access.redhat.com/ubi8/buildah:latest",
+							Name:  "digest-to-results",
+						},
+						Script: "cat \"$(workspaces.source.path)\"/image-digest | tee $(results.IMAGE_DIGEST.path)\necho \"" + image + "\" | tee $(results.IMAGE_URL.path)\n",
 					},
 				},
-			},
-			TaskRef: &v1beta1.TaskRef{
-				Kind:   v1beta1.NamespacedTaskKind,
-				Name:   "buildah-demo",
-				Bundle: "quay.io/hacbs-contract/ci-tasks:latest",
+				Workspaces: []v1beta1.WorkspaceDeclaration{
+					{Name: "source"},
+				},
+				Volumes: []corev1.Volume{
+					{
+						Name: "varlibcontainers",
+						VolumeSource: corev1.VolumeSource{
+							EmptyDir: &corev1.EmptyDirVolumeSource{},
+						},
+					},
+				},
 			},
 			Workspaces: []v1beta1.WorkspaceBinding{
 				{
