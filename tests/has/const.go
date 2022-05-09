@@ -18,6 +18,11 @@ const (
 	// Sample devfile created redhat-appstudio-qe repository with the following content:
 	QuarkusDevfileSource string = "https://github.com/redhat-appstudio-qe/devfile-sample-code-with-quarkus"
 
+	PrivateQuarkusDevfileSource string = "https://github.com/johnmcollier/devfile-sample-private"
+
 	// See more info: https://github.com/redhat-appstudio/application-service#creating-a-github-secret-for-has
 	ApplicationServiceGHTokenSecrName string = "has-github-token" // #nosec
+
+	SPIAccessTokenBindingName string = "has-private-git-repo-binding" // #nosec
+	SPIAccessTokenSecretName  string = "has-private-git-repo-secret"  // #nosec
 )
