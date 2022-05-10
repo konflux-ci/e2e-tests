@@ -22,6 +22,14 @@ Simple tests where:
 * Verify if HAS operator create gitops resources in the cluster(routes, deployments, services...).
 * Remove kubernetes objects created by the framework.
 
+### Private Devfile source
+
+Similar as above, except a private git repository is used for the test, to validate HAS' interactions with private repositories, using secrets generated from SPI.
+
+* Before the test runs, the framework creates an `SPIAccessTokenBinding` resource and manually injects the GitHub token (stored in the `GITHUB_TOKEN` variable) into the resource
+   * The token is injected via SPI's `/token/<namespace>/<generated-access-token>` endpoint
+* Once the token has been successfully injected, the same steps as above run to validate that the private devfile sample flow works in HAS
+
 ### Container Image source
 
 ```IN PROGRESS```
