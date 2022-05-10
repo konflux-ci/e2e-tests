@@ -140,6 +140,7 @@ func createAndInjectTokenToSPI(framework *framework.Framework, token string, spi
 		// Get the oauth url and linkedAccessTokenName from the spiaccesstokenbinding resource
 		oauthURL := spiAccessTokenBinding.Status.OAuthUrl
 		parsedOAuthURL, err := url.Parse(oauthURL)
+		Expect(err).NotTo(HaveOccurred())
 		oauthHost := parsedOAuthURL.Host
 		linkedAccessTokenName := spiAccessTokenBinding.Status.LinkedAccessTokenName
 
@@ -155,6 +156,7 @@ func createAndInjectTokenToSPI(framework *framework.Framework, token string, spi
 		var jsonStr = []byte(`{"access_token":"` + token + `"}`)
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		req, err := http.NewRequest("POST", "https://"+oauthHost+"/token/"+namespace+"/"+linkedAccessTokenName, bytes.NewBuffer(jsonStr))
+		Expect(err).NotTo(HaveOccurred())
 		req.Header.Add("Authorization", bearer)
 		req.Header.Set("Content-Type", "application/json")
 
