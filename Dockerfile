@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/go-toolset:1.16.12-4 AS builder
+FROM registry.ci.openshift.org/openshift/release:golang-1.17 AS builder
 
 WORKDIR /github.com/redhat-appstudio/e2e-tests
 USER root
