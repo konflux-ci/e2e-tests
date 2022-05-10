@@ -18,7 +18,7 @@ const (
 	// Sample devfile created redhat-appstudio-qe repository with the following content:
 	QuarkusDevfileSource string = "https://github.com/redhat-appstudio-qe/devfile-sample-code-with-quarkus"
 
-	PrivateQuarkusDevfileSource string = "https://github.com/johnmcollier/devfile-sample-private"
+	PrivateQuarkusDevfileSource string = "https://github.com/redhat-appstudio-qe/private-quarkus-devfile-sample"
 
 	// See more info: https://github.com/redhat-appstudio/application-service#creating-a-github-secret-for-has
 	ApplicationServiceGHTokenSecrName string = "has-github-token" // #nosec

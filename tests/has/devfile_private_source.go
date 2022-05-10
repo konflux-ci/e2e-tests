@@ -43,58 +43,7 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 	application := &appservice.Application{}
 
 	BeforeAll(func() {
-		// Get the token for the current openshift user
-		/*tokenBytes, err := exec.Command("oc", "whoami", "--show-token").Output()
-		Expect(err).NotTo(HaveOccurred())
-		token := strings.TrimSuffix(string(tokenBytes), "\n")
-
-		// Create the SPI Access Token Binding resource and upload the token for the private repository
-		_, err = framework.SPIController.CreateSPIAccessTokenBinding(RedHatAppStudioApplicationName, AppStudioE2EApplicationsNamespace, PrivateQuarkusDevfileSource, "token-secret")
-		Expect(err).NotTo(HaveOccurred())
-
-		// Wait for the resource to be in the "AwaitingTokenData" phase
-		var spiAccessTokenBinding *v1beta1.SPIAccessTokenBinding
-		Eventually(func() bool {
-			// application info should be stored even after deleting the application in application variable
-			spiAccessTokenBinding, err = framework.SPIController.GetSPIAccessTokenBinding(RedHatAppStudioApplicationName, AppStudioE2EApplicationsNamespace)
-			return err == nil && spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData && spiAccessTokenBinding.Status.OAuthUrl != ""
-		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to AwaitingTokenData")
-
-		// Get the oauth url and linkedAccessTokenName from the spiaccesstokenbinding resource
-		oauthURL := spiAccessTokenBinding.Status.OAuthUrl
-		parsedOAuthURL, err := url.Parse(oauthURL)
-		oauthHost := parsedOAuthURL.Host
-		linkedAccessTokenName := spiAccessTokenBinding.Status.LinkedAccessTokenName
-
-		// Before injecting the token, validate that the linkedaccesstoken resource exists, otherwise injecting will return a 404 error code
-		Eventually(func() bool {
-			// application info should be stored even after deleting the application in application variable
-			_, err := framework.SPIController.GetSPIAccessToken(linkedAccessTokenName, AppStudioE2EApplicationsNamespace)
-			return err == nil
-		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't create the SPIAccessToken")
-
-		// Now that the spiaccesstokenbinding is in the AwaitingTokenData phase, inject the GitHub token
-		var bearer = "Bearer " + string(token)
-		var jsonStr = []byte(`{"access_token":"` + utils.GetEnv(constants.GITHUB_TOKEN_ENV, "") + `"}`)
-		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-		req, err := http.NewRequest("POST", "https://"+oauthHost+"/token/"+AppStudioE2EApplicationsNamespace+"/"+linkedAccessTokenName, bytes.NewBuffer(jsonStr))
-		req.Header.Add("Authorization", bearer)
-		req.Header.Set("Content-Type", "application/json")
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(resp.StatusCode).Should(Equal(204))
-		defer resp.Body.Close()
-
-		// Check to see if the token was successfully injected
-		Eventually(func() bool {
-			// application info should be stored even after deleting the application in application variable
-			spiAccessTokenBinding, err = framework.SPIController.GetSPIAccessTokenBinding(RedHatAppStudioApplicationName, AppStudioE2EApplicationsNamespace)
-			return err == nil && spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected
-		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to Injected")*/
-
-		createAndInjectTokenToSPI(framework, utils.GetEnv(constants.GITHUB_TOKEN_ENV, ""), SPIAccessTokenBindingName, SPIAccessTokenSecretName)
+		createAndInjectTokenToSPI(framework, utils.GetEnv(constants.GITHUB_TOKEN_ENV, ""), SPIAccessTokenBindingName, AppStudioE2EApplicationsNamespace, SPIAccessTokenSecretName)
 
 		// Check to see if the github token was provided
 		Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
@@ -116,7 +65,7 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 		err = framework.HasController.DeleteHasApplication(RedHatAppStudioApplicationName, AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = framework.SPIController.DeleteSPIAccessTokenBinding(RedHatAppStudioApplicationName, AppStudioE2EApplicationsNamespace)
+		err = framework.SPIController.DeleteSPIAccessTokenBinding(SPIAccessTokenBindingName, AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func() bool {
@@ -165,55 +114,62 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 })
 
 // createAndInjectTokenToSPI creates the specified SPIAccessTokenBinding resource and injects the specified token into it.
-func createAndInjectTokenToSPI(framework *framework.Framework, token string, spiAccessTokenBindingName string, secretName string) {
+func createAndInjectTokenToSPI(framework *framework.Framework, token string, spiAccessTokenBindingName string, namespace string, secretName string) {
 	// Get the token for the current openshift user
 	tokenBytes, err := exec.Command("oc", "whoami", "--show-token").Output()
 	Expect(err).NotTo(HaveOccurred())
 	bearerToken := strings.TrimSuffix(string(tokenBytes), "\n")
 
 	// Create the SPI Access Token Binding resource and upload the token for the private repository
-	_, err = framework.SPIController.CreateSPIAccessTokenBinding(spiAccessTokenBindingName, AppStudioE2EApplicationsNamespace, PrivateQuarkusDevfileSource, secretName)
+	_, err = framework.SPIController.CreateSPIAccessTokenBinding(spiAccessTokenBindingName, namespace, PrivateQuarkusDevfileSource, secretName)
 	Expect(err).NotTo(HaveOccurred())
 
 	// Wait for the resource to be in the "AwaitingTokenData" phase
 	var spiAccessTokenBinding *v1beta1.SPIAccessTokenBinding
 	Eventually(func() bool {
 		// application info should be stored even after deleting the application in application variable
-		spiAccessTokenBinding, err = framework.SPIController.GetSPIAccessTokenBinding(RedHatAppStudioApplicationName, AppStudioE2EApplicationsNamespace)
-		return err == nil && spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData && spiAccessTokenBinding.Status.OAuthUrl != ""
-	}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to AwaitingTokenData")
+		spiAccessTokenBinding, err = framework.SPIController.GetSPIAccessTokenBinding(spiAccessTokenBindingName, namespace)
+		if err != nil {
+			return false
+		}
+		return spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected || (spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData && spiAccessTokenBinding.Status.OAuthUrl != "")
+	}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to AwaitingTokenData/Injected")
 
-	// Get the oauth url and linkedAccessTokenName from the spiaccesstokenbinding resource
-	oauthURL := spiAccessTokenBinding.Status.OAuthUrl
-	parsedOAuthURL, err := url.Parse(oauthURL)
-	oauthHost := parsedOAuthURL.Host
-	linkedAccessTokenName := spiAccessTokenBinding.Status.LinkedAccessTokenName
+	if spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData {
+		// If the phase is AwaitingTokenData then manually inject the git token
+		// Get the oauth url and linkedAccessTokenName from the spiaccesstokenbinding resource
+		oauthURL := spiAccessTokenBinding.Status.OAuthUrl
+		parsedOAuthURL, err := url.Parse(oauthURL)
+		oauthHost := parsedOAuthURL.Host
+		linkedAccessTokenName := spiAccessTokenBinding.Status.LinkedAccessTokenName
 
-	// Before injecting the token, validate that the linkedaccesstoken resource exists, otherwise injecting will return a 404 error code
-	Eventually(func() bool {
-		// application info should be stored even after deleting the application in application variable
-		_, err := framework.SPIController.GetSPIAccessToken(linkedAccessTokenName, AppStudioE2EApplicationsNamespace)
-		return err == nil
-	}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't create the SPIAccessToken")
+		// Before injecting the token, validate that the linkedaccesstoken resource exists, otherwise injecting will return a 404 error code
+		Eventually(func() bool {
+			// application info should be stored even after deleting the application in application variable
+			_, err := framework.SPIController.GetSPIAccessToken(linkedAccessTokenName, namespace)
+			return err == nil
+		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't create the SPIAccessToken")
 
-	// Now that the spiaccesstokenbinding is in the AwaitingTokenData phase, inject the GitHub token
-	var bearer = "Bearer " + string(bearerToken)
-	var jsonStr = []byte(`{"access_token":"` + token + `"}`)
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	req, err := http.NewRequest("POST", "https://"+oauthHost+"/token/"+AppStudioE2EApplicationsNamespace+"/"+linkedAccessTokenName, bytes.NewBuffer(jsonStr))
-	req.Header.Add("Authorization", bearer)
-	req.Header.Set("Content-Type", "application/json")
+		// Now that the spiaccesstokenbinding is in the AwaitingTokenData phase, inject the GitHub token
+		var bearer = "Bearer " + string(bearerToken)
+		var jsonStr = []byte(`{"access_token":"` + token + `"}`)
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		req, err := http.NewRequest("POST", "https://"+oauthHost+"/token/"+namespace+"/"+linkedAccessTokenName, bytes.NewBuffer(jsonStr))
+		req.Header.Add("Authorization", bearer)
+		req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(resp.StatusCode).Should(Equal(204))
-	defer resp.Body.Close()
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp.StatusCode).Should(Equal(204))
+		defer resp.Body.Close()
 
-	// Check to see if the token was successfully injected
-	Eventually(func() bool {
-		// application info should be stored even after deleting the application in application variable
-		spiAccessTokenBinding, err = framework.SPIController.GetSPIAccessTokenBinding(RedHatAppStudioApplicationName, AppStudioE2EApplicationsNamespace)
-		return err == nil && spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected
-	}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to Injected")
+		// Check to see if the token was successfully injected
+		Eventually(func() bool {
+			// application info should be stored even after deleting the application in application variable
+			spiAccessTokenBinding, err = framework.SPIController.GetSPIAccessTokenBinding(RedHatAppStudioApplicationName, namespace)
+			return err == nil && spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected
+		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to Injected")
+	}
+
 }
