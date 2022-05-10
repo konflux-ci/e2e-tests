@@ -41,9 +41,10 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 
 	// Initialize the application struct
 	application := &appservice.Application{}
+	privateGitRepository := utils.GetEnv(constants.PRIVATE_DEVFILE_SAMPLE, PrivateQuarkusDevfileSource)
 
 	BeforeAll(func() {
-		createAndInjectTokenToSPI(framework, utils.GetEnv(constants.GITHUB_TOKEN_ENV, ""), SPIAccessTokenBindingName, AppStudioE2EApplicationsNamespace, SPIAccessTokenSecretName)
+		createAndInjectTokenToSPI(framework, utils.GetEnv(constants.GITHUB_TOKEN_ENV, ""), privateGitRepository, SPIAccessTokenBindingName, AppStudioE2EApplicationsNamespace, SPIAccessTokenSecretName)
 
 		// Check to see if the github token was provided
 		Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
@@ -107,14 +108,14 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 	})
 
 	It("Create Red Hat AppStudio Quarkus component", func() {
-		component, err := framework.HasController.CreateComponent(application.Name, QuarkusComponentName, AppStudioE2EApplicationsNamespace, PrivateQuarkusDevfileSource, "", ComponentContainerImage, SPIAccessTokenSecretName)
+		component, err := framework.HasController.CreateComponent(application.Name, QuarkusComponentName, AppStudioE2EApplicationsNamespace, privateGitRepository, "", ComponentContainerImage, SPIAccessTokenSecretName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(component.Name).To(Equal(QuarkusComponentName))
 	})
 })
 
 // createAndInjectTokenToSPI creates the specified SPIAccessTokenBinding resource and injects the specified token into it.
-func createAndInjectTokenToSPI(framework *framework.Framework, token string, spiAccessTokenBindingName string, namespace string, secretName string) {
+func createAndInjectTokenToSPI(framework *framework.Framework, token, repoURL, spiAccessTokenBindingName, namespace, secretName string) {
 	// Get the token for the current openshift user
 	tokenBytes, err := exec.Command("oc", "whoami", "--show-token").Output()
 	Expect(err).NotTo(HaveOccurred())
