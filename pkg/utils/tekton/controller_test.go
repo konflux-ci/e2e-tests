@@ -89,7 +89,7 @@ func TestFindingCosignResults(t *testing.T) {
 		{"missing signature and attestation", []unstructured.Unstructured{
 			newTag("test-image:latest", "sha256:hash"),
 		}, "ImageStreamTag.image.openshift.io \"test-image:sha256-hash.sig and test-image:sha256-hash.att\" not found", nil},
-		{"everything missing", []unstructured.Unstructured{}, "ImageStreamTag.image.openshift.io \"test-image:latest\" not found", nil},
+		{"everything missing", []unstructured.Unstructured{}, "ImageStreamTag.image.openshift.io \"test-image:sha256-hash.sig and test-image:sha256-hash.att\" not found", nil},
 	}
 
 	for _, cse := range cases {
@@ -100,7 +100,7 @@ func TestFindingCosignResults(t *testing.T) {
 
 			client := fake.NewClientBuilder().WithLists(&tags).Build()
 
-			result, err := findCosignResultsForImage("image-registry.openshift-image-registry.svc:5000/test-namespace/test-image", client)
+			result, err := findCosignResultsForImage("image-registry.openshift-image-registry.svc:5000/test-namespace/test-image@sha256-hash", client)
 
 			if err != nil || cse.ExpectedError != "" {
 				assert.EqualError(t, err, cse.ExpectedError)
