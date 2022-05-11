@@ -95,7 +95,7 @@ func (h *SuiteController) DeleteHasComponent(name string, namespace string) erro
 func (h *SuiteController) CreateComponent(applicationName, componentName, namespace, gitSourceURL, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
 	var containerImage string
 	if outputContainerImage != "" {
-		containerImage = containerImageSource
+		containerImage = outputContainerImage
 	} else {
 		containerImage = containerImageSource
 	}
