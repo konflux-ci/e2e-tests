@@ -3,6 +3,7 @@ package client
 import (
 	routev1 "github.com/openshift/api/route/v1"
 	applicationservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
+	managedgitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend/apis/managed-gitops/v1alpha1"
 	spi "github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	pipelineclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
@@ -29,6 +30,7 @@ func init() {
 	utilruntime.Must(applicationservice.AddToScheme(scheme))
 	utilruntime.Must(tekton.AddToScheme(scheme))
 	utilruntime.Must(routev1.AddToScheme(scheme))
+	utilruntime.Must(managedgitopsv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(spi.AddToScheme(scheme))
 }
 

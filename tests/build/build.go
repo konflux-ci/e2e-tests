@@ -72,7 +72,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 		BeforeAll(func() {
 			componentName = "build-suite-test-component-git-source"
 			outputContainerImage = fmt.Sprintf("quay.io/%s/pipeline-build-test-image:%s", has.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-			timeout = time.Second * 10
+			timeout = time.Second * 60
 			interval = time.Second * 1
 			// Create a component with Git Source URL being defined
 			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", outputContainerImage, "")

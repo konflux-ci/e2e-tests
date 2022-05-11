@@ -34,3 +34,13 @@ jobs:
           fetch-depth: 0
       - name: Check if dockerimage build is working
         run: docker build -f ./Dockerfile .
+
+  unit_tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Golang
+        uses: actions/setup-go@v2
+      - name: Run unit tests
+        run: go test -v ./pkg/...
