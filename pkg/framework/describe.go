@@ -9,6 +9,11 @@ func HASSuiteDescribe(text string, body func()) bool {
 	return Describe("[has-suite "+text+"]", Ordered, body)
 }
 
+// E2ESuiteDescribe annotates the e2e scenarios tests with the e2e-scenarios label.
+func E2ESuiteDescribe(text string, body func()) bool {
+	return Describe("[e2e-scenarios-suite "+text+"]", Ordered, body)
+}
+
 // CommonSuiteDescribe annotates the common tests with the application label.
 func CommonSuiteDescribe(text string, body func()) bool {
 	return Describe("[common-suite "+text+"]", Ordered, body)
