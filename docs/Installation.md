@@ -62,6 +62,22 @@ The following environments are used to launch the Red Hat AppStudio installation
 | `QUAY_E2E_ORGANIZATION` | no | Quay organization where to push components containers | `redhat-appstudio-qe` |
 | `E2E_APPLICATIONS_NAMESPACE` | no | Name of the namespace used for running HAS E2E tests | `appstudio-e2e-test` |
 
+
+### Setting up the required tokens
+
+#### GitHub token
+
+[Instructions for creating a Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token)
+
+Make sure to give the token the permissions listed in [Prerequisites](#prerequisites).
+
+Copy the resulting token (should look similar to `ghp_Iq...`) and save it off somewhere as you'll be using it for the GITHUB_TOKEN environment variable whenever you want to run the e2e suite.
+
+#### Quay token
+
+Go to your profile (in Quay click your username in the upper right, click Account Settings). From your profile, look for CLI Password and click the Generate Encrypted Password link. Click on Kubernetes Secret in the left pane. Click on the link for View username-secret.yml. Copy the string listed after `.dockerconfigjson` (should look similar to `ewogI3...`). Save the string off somewhere as you'll be using it for the QUAY_TOKEN environment variable whenever you want to run the e2e suite.
+
+
 ## Install e2e binary in openshift-ci and use pairing PRs feature
 
 The e2e tests are executed against almost all App Studio repositories.
