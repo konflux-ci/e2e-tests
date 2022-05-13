@@ -29,7 +29,7 @@ Before starting the deployment steps of appstudio in e2e mode in Openshift CI yo
     oc login -u <user> -p <password> --server=<oc_api_url>
    ```
 
-3. Install Red Hat App Studio in e2e mode. The e2e framework by default will use the `redhat-appstudio-qe` github organization by default. If u want to change the github org you should define `GITHUB_E2E_ORGANIZATION` environment with your custom github organization
+3. Install Red Hat App Studio in e2e mode. The e2e framework by default will use the `redhat-appstudio-qe` github organization by default. If you want to change the github org you should define `GITHUB_E2E_ORGANIZATION` environment with your custom github organization
 
    ```bash
       # In Openshift CI there are some example about how to use the installation script. See infra-deployments script https://github.com/redhat-appstudio/application-service/blob/main/.ci/oci-e2e-has.sh#L59
