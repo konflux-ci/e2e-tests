@@ -7,4 +7,8 @@ RUN wget https://github.com/mikefarah/yq/releases/download/v4.20.2/yq_linux_amd6
     chmod +x /usr/local/bin/yq && yq --version && \
     curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && \
     chmod +x ./kubectl && \
-    mv ./kubectl /usr/local/bin
+    mv ./kubectl /usr/local/bin && \
+    curl -LO https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable/openshift-client-linux.tar.gz && \
+    tar -xz openshift-client-linux.tar.gz && \
+    chmod +x ./oc && \
+    mv ./oc /usr/local/bin
