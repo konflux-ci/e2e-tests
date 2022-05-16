@@ -9,11 +9,11 @@ import (
 	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/tests/e2e-scenarios"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"github.com/redhat-appstudio/e2e-tests/tests/e2e-scenarios"
 )
 
 const (
@@ -71,7 +71,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 	When("component with git source is created", func() {
 		BeforeAll(func() {
 			componentName = "build-suite-test-component-git-source"
-			outputContainerImage = fmt.Sprintf("quay.io/%s/pipeline-build-test-image:%s", e2e.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
+			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", e2e.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 			timeout = time.Second * 60
 			interval = time.Second * 1
 			// Create a component with Git Source URL being defined
