@@ -170,7 +170,7 @@ func createAndInjectTokenToSPI(framework *framework.Framework, token, repoURL, s
 		// Check to see if the token was successfully injected
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
-			spiAccessTokenBinding, err = framework.SPIController.GetSPIAccessTokenBinding(RedHatAppStudioApplicationName, namespace)
+			spiAccessTokenBinding, err = framework.SPIController.GetSPIAccessTokenBinding(spiAccessTokenBindingName, namespace)
 			return err == nil && spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to Injected")
 	}
