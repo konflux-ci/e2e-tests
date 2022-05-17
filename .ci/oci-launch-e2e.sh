@@ -23,16 +23,18 @@ spec:
           name: htpass-secret
 '
 echo "Waiting for authentication cluster operator to get in state Progressing==True"
-timeout 60s bash -x -c -- 'while [ $(oc get co authentication -o jsonpath="{.status.conditions[?(@.type==\\"Progressing\\")].status}") != "True" ]; do echo "Condition (status != true) failed. Waiting 2sec."; sleep 5; done'
+timeout 60s bash -x -c -- 'while [ $(oc get co authentication -o jsonpath="{.status.conditions[?(@.type=="Progressing")].status}") != "True" ]; do echo "Condition (status != true) failed. Waiting 2sec."; sleep 5; done'
 
 echo "Waiting for authentication cluster operator to get in state Progressing==False"
-timeout 600s bash -x -c -- 'while [ $(oc get co authentication -o jsonpath="{.status.conditions[?(@.type==\\"Progressing\\")].status}") != "False" ]; do echo "Condition (status != false) failed. Waiting 2sec."; sleep 20; done'
+timeout 600s bash -x -c -- 'while [ $(oc get co authentication -o jsonpath="{.status.conditions[?(@.type=="Progressing")].status}") != "False" ]; do echo "Condition (status != false) failed. Waiting 2sec."; sleep 20; done'
+
+oc adm policy add-cluster-role-to-user cluster-admin appstudio
 
 echo -e "[INFO] Waiting for htpasswd auth to be working up to 5 minutes"
 CURRENT_TIME=$(date +%s)
 ENDTIME=$(($CURRENT_TIME + 300))
 while [ $(date +%s) -lt $ENDTIME ]; do
-    if oc login -u appstudio -p appstudio --insecure-skip-tls-verify=false; then
+    if oc login -u appstudio -p appstudio; then
         break
     fi
     sleep 10
