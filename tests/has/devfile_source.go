@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	ComponentContainerImage           string = fmt.Sprintf("quay.io/%s/quarkus:%s", GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
+	ComponentContainerImage           string = fmt.Sprintf("quay.io/%s/test-images:%s", GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 	AppStudioE2EApplicationsNamespace string = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "appstudio-e2e-test")
 )
 
