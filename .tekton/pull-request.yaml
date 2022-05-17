@@ -1,0 +1,24 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: e2e-on-pull-request
+  annotations:
+    pipelinesascode.tekton.dev/on-event: "[pull_request]"
+    pipelinesascode.tekton.dev/on-target-branch: "[main]"
+    pipelinesascode.tekton.dev/max-keep-runs: "2"
+spec:
+  params:
+    - name: git-url
+      value: "{{repo_url}}"
+    - name: revision
+      value: "{{revision}}"
+    - name: output-image
+      value: "quay.io/redhat-appstudio/pull-request-builds:e2e-{{revision}}"
+  pipelineRef:
+    name: docker-build
+    bundle: quay.io/redhat-appstudio/hacbs-core-service-templates-bundle:latest
+  workspaces:
+    - name: workspace
+      persistentVolumeClaim:
+        claimName: app-studio-default-workspace
+      subPath: e2e-tests-check-{{ revision }}
