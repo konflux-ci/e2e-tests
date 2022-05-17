@@ -64,6 +64,7 @@ export -f waitSPIToBeReady
 # Install AppStudio Controllers and wait for HAS and other AppStudio application to be running.
 timeout --foreground 10m bash -c waitAppStudioToBeReady
 timeout --foreground 10m bash -c waitBuildToBeReady
+timeout --foreground 10m bash -c waitHASApplicationToBeReady
 timeout --foreground 10m bash -c waitSPIToBeReady
 
 executeE2ETests
