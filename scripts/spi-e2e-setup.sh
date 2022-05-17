@@ -39,5 +39,7 @@ oc apply -f -
 
 rm "$tmpfile"
 
+curl https://raw.githubusercontent.com/redhat-appstudio/service-provider-integration-operator/main/hack/vault-init.sh | bash -s
+
 oc rollout restart  deployment/spi-controller-manager -n spi-system
 oc rollout restart  deployment/spi-oauth-service -n spi-system
