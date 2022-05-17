@@ -1,6 +1,7 @@
 export ROOT_E2E="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"/..
 export WORKSPACE=${WORKSPACE:-${ROOT_E2E}}
 
+oc create user user
 oc create secret generic htpass-secret --from-file=htpasswd="${WORKSPACE}"/scripts/resources/users.htpasswd -n openshift-config
 oc apply -f "${WORKSPACE}"/scripts/resources/htpasswdProvider.yaml
 oc adm policy add-cluster-role-to-user cluster-admin user
