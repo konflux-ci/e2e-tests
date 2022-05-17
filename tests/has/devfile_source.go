@@ -120,7 +120,29 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 				klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)
 
 				if condition.Reason == "Failed" {
-					return false, fmt.Errorf("Component %s pipeline failed", pipelineRun.Name)
+					// Get the pipelinerun pod logs
+					var logPod corev1.Pod
+					podList, err := framework.CommonController.ListPods(AppStudioE2EApplicationsNamespace, "build.appstudio.openshift.io/component", QuarkusComponentName, 100)
+					if err != nil {
+						return false, fmt.Errorf("component %s pipeline failed", pipelineRun.Name)
+					}
+					for _, pod := range podList.Items {
+						if pod.GetObjectMeta().GetLabels()["tekton.dev/task"] == "buildah" {
+							logPod = pod
+						}
+					}
+					if logPod.Name == "" {
+						return false, fmt.Errorf("component %s pipeline failed", pipelineRun.Name)
+					}
+					podLogOpts := corev1.PodLogOptions{
+						Container: "step-build",
+					}
+					str, err := framework.CommonController.GetPodLogs(AppStudioE2EApplicationsNamespace, logPod.Name, &podLogOpts)
+					if err != nil {
+						return false, fmt.Errorf("component %s pipeline failed", pipelineRun.Name)
+					}
+					klog.Info("PipelineRun Logs: %s", str)
+					return false, fmt.Errorf("component %s pipeline failed", pipelineRun.Name)
 				}
 
 				if condition.Status == corev1.ConditionTrue {

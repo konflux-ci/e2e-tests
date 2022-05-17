@@ -1,8 +1,10 @@
 package common
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -65,6 +67,23 @@ func (s *SuiteController) GetSecret(ns string, name string) (*corev1.Secret, err
 
 func (s *SuiteController) GetPod(namespace, podName string) (*corev1.Pod, error) {
 	return s.KubeInterface().CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+}
+
+func (s *SuiteController) GetPodLogs(namespace, podName string, opts *corev1.PodLogOptions) (string, error) {
+	req := s.KubeInterface().CoreV1().Pods(namespace).GetLogs(podName, opts)
+	podLogs, err := req.Stream(context.Background())
+	if err != nil {
+		return "", err
+	}
+	defer podLogs.Close()
+
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, podLogs)
+	if err != nil {
+		return "", fmt.Errorf("error in copy information from podLogs to buf")
+	}
+	str := buf.String()
+	return str, nil
 }
 
 func (s *SuiteController) IsPodRunning(podName, namespace string) wait.ConditionFunc {
