@@ -24,7 +24,7 @@ spec:
           name: htpass-secret
 '
 
-timeout 120s bash -x -c -- "while [ $(oc get co authentication -o jsonpath='{.status.conditions[?(@.type=="Progressing")].status}') != True ]; do echo 'Condition (status != true) failed. Waiting 2sec.'; sleep 5; done"
+timeout 120s bash -x -c -- "while [[ $(oc get co authentication -o jsonpath='{.status.conditions[?(@.type=="Progressing")].status}') != True ]]; do echo 'Condition (status != true) failed. Waiting 2sec.'; sleep 5; done"
 timeout 600s bash -x -c -- "while [[ $(oc get co authentication -o jsonpath='{.status.conditions[?(@.type=="Progressing")].status}') != False ]]; do echo 'Condition (status != False) failed. Waiting 5 secs.'; sleep 5; done"
 
 oc adm policy add-cluster-role-to-user cluster-admin appstudio
