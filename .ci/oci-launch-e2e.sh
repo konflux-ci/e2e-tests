@@ -24,11 +24,6 @@ spec:
         fileData:
           name: htpass-secret
 '
-echo "Waiting for authentication cluster operator to get in state Progressing==True"
-timeout 60s bash -x -c -- while [ $(oc get co authentication -o jsonpath="{.status.conditions[?(@.type=="Progressing")].status}") != "True" ]; do echo "Condition (status != true) failed. Waiting 2sec."; sleep 5; done
-
-echo "Waiting for authentication cluster operator to get in state Progressing==False"
-timeout 600s bash -x -c -- while [ $(oc get co authentication -o jsonpath="{.status.conditions[?(@.type=="Progressing")].status}") != "False" ]; do echo "Condition (status != false) failed. Waiting 2sec."; sleep 20; done
 
 oc adm policy add-cluster-role-to-user cluster-admin appstudio
 
