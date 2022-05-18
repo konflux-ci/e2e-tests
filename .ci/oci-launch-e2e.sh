@@ -1,7 +1,9 @@
 export ROOT_E2E="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"/..
 export WORKSPACE=${WORKSPACE:-${ROOT_E2E}}
 
-oc whoami
+user=$(oc whoami)
+oc adm policy add-cluster-role-to-user cluster-admin user
+oc whoami --show-token || true
 
 cat <<EOF | oc apply -f -
 apiVersion: v1
@@ -23,11 +25,11 @@ spec:
         fileData:
           name: htpass-secret
 '
+timeout 120 bash -x -c -- "while [[ $(oc get co authentication -o jsonpath='{.status.conditions[?(@.type=="Progressing")].status}') != False ]]; do echo 'Condition (status != False) failed. Waiting 5 secs.'; sleep 5; done"
 
-timeout 120s bash -x -c -- "while [[ $(oc get co authentication -o jsonpath='{.status.conditions[?(@.type=="Progressing")].status}') != True ]]; do echo 'Condition (status != true) failed. Waiting 2sec.'; sleep 5; done"
-timeout 600s bash -x -c -- "while [[ $(oc get co authentication -o jsonpath='{.status.conditions[?(@.type=="Progressing")].status}') != False ]]; do echo 'Condition (status != False) failed. Waiting 5 secs.'; sleep 5; done"
+timeout 180s bash -x -c -- "while [[ $(oc get co authentication -o jsonpath='{.status.conditions[?(@.type=="Progressing")].status}') != True ]]; do echo 'Condition (status != true) failed. Waiting 2sec.'; sleep 5; done"
 
-oc adm policy add-cluster-role-to-user cluster-admin appstudio
+oc adm policy add-cluster-role-to-user cluster-admin appstudioci
 
 echo -e "[INFO] Waiting for htpasswd auth to be working up to 5 minutes"
 CURRENT_TIME=$(date +%s)
@@ -39,4 +41,3 @@ while [ $(date +%s) -lt $ENDTIME ]; do
     sleep 10
 done
 
-oc whoami --show-token
