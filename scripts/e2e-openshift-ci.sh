@@ -58,7 +58,7 @@ function pairPullRequests() {
 }
 
 pairPullRequests
-echo "[INFO] Cloning tests from branch ${PR_BRANCH_REF} repository ${E2E_REPO_LINK}"
+echo "[INFO] Cloning tests from branch ${E2E_CLONE_BRANCH} repository ${E2E_REPO_LINK}"
 git clone -b "${E2E_CLONE_BRANCH}" "${E2E_REPO_LINK}" "$WORKSPACE"/tmp/e2e-tests
 
 cd "$WORKSPACE"/tmp/e2e-tests
