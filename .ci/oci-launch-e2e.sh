@@ -10,7 +10,7 @@ metadata:
   name: htpass-secret
   namespace: openshift-config
 data: 
-  htpasswd: YXBwc3R1ZGlvOiQyeSQwNSREY3pLblNydExBZzF0SGhWZHpTczhPWUFURFViU1NkL2wuTWRQTDFIZWtjYWtTTE1CWTFCRw==
+  htpasswd: YXBwc3R1ZGlvY2k6JDJ5JDA1JEF3M0k4TFIyemVROG8yazBrb1d2dXVDSmRwL3F5ZkJLdnp0cks4MFZveEpiZFJvQlAxYy51
 EOF
 
 oc patch oauths cluster --type merge -p '
@@ -23,14 +23,14 @@ spec:
         fileData:
           name: htpass-secret
 '
-
+sleep 5m
 oc adm policy add-cluster-role-to-user cluster-admin appstudio
 
 echo -e "[INFO] Waiting for htpasswd auth to be working up to 5 minutes"
 CURRENT_TIME=$(date +%s)
 ENDTIME=$(($CURRENT_TIME + 300))
 while [ $(date +%s) -lt $ENDTIME ]; do
-    if oc login -u appstudio -p appstudio --insecure-skip-tls-verify; then
+    if oc login -u appstudioci -p appstudioci --insecure-skip-tls-verify; then
         break
     fi
     sleep 10
