@@ -42,6 +42,8 @@ while [ $(date +%s) -lt $ENDTIME ]; do
     fi
     sleep 10
 done
+
+cat ~/.kube/config || true
 rm -rf ~/.kube/config
 oc whoami
 oc whoami --show-token || true
