@@ -23,21 +23,11 @@ spec:
         fileData:
           name: htpass-secret
 '
-function waitToStartAuthProgress() {
-    while [ $(oc get co authentication -o jsonpath="{.status.conditions[?(@.type=='Progressing')].status}") != "True" ]; do echo "Condition (status != true) failed. Waiting 2sec."; sleep 5; done
-}
 
-function waitToFinishAuthProgress() {
-    while [ $(oc get co authentication -o jsonpath="{.status.conditions[?(@.type=='Progressing')].status}") != "False" ]; do echo "Condition (status != false) failed. Waiting 2sec."; sleep 20; done
-}
+timeout 120s bash -x -c -- "while [ $(oc get co authentication -o jsonpath='{.status.conditions[?(@.type=="Progressing")].status}') != True ]; do echo 'Condition (status != true) failed. Waiting 2sec.'; sleep 5; done"
+timeout 600s bash -x -c -- "while [[ $(oc get co authentication -o jsonpath='{.status.conditions[?(@.type=="Progressing")].status}') != False ]]; do echo 'Condition (status != False) failed. Waiting 5 secs.'; sleep 5; done"
 
-export -f waitToStartAuthProgress
-export -f waitToFinishAuthProgress
-
-timeout --foreground 2m bash -c waitToStartAuthProgress
-timeout --foreground 5m bash -c waitToFinishAuthProgress
-
-oc adm policy add-cluster-role-to-user cluster-admin appstudioci
+oc adm policy add-cluster-role-to-user cluster-admin appstudio
 
 echo -e "[INFO] Waiting for htpasswd auth to be working up to 5 minutes"
 CURRENT_TIME=$(date +%s)
