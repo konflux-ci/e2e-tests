@@ -21,9 +21,9 @@ spec:
         fileData:
           name: htpass-secret
 '
-timeout 120 bash -x -c -- "while [[ $(oc get co authentication -o jsonpath='{.status.conditions[?(@.type=="Progressing")].status}') != False ]]; do echo 'Condition (status != False) failed. Waiting 5 secs.'; sleep 5; done"
+#timeout 120 bash -x -c -- "while [[ $(oc get co authentication -o jsonpath='{.status.conditions[?(@.type=="Progressing")].status}') != False ]]; do echo 'Condition (status != False) failed. Waiting 5 secs.'; sleep 5; done"
 
-timeout 180s bash -x -c -- "while [[ $(oc get co authentication -o jsonpath='{.status.conditions[?(@.type=="Progressing")].status}') != True ]]; do echo 'Condition (status != true) failed. Waiting 2sec.'; sleep 5; done"
+#timeout 180s bash -x -c -- "while [[ $(oc get co authentication -o jsonpath='{.status.conditions[?(@.type=="Progressing")].status}') != True ]]; do echo 'Condition (status != true) failed. Waiting 2sec.'; sleep 5; done"
 
 oc adm policy add-cluster-role-to-user cluster-admin appstudioci
 
@@ -36,12 +36,8 @@ cluster=$(oc config view -ojsonpath="{.contexts[?(@.name == \"$ctx\")].context.c
 server=$(oc config view -ojsonpath="{.clusters[?(@.name == \"$cluster\")].cluster.server}")
 echo "Login against: $server"
 
-while [ $(date +%s) -lt $ENDTIME ]; do
-    if oc login --kubeconfig=/tmp/new.file --certificate-authority /var/run/secrets/kubernetes.io/serviceaccount/ca.crt --insecure-skip-tls-verify=true --username=appstudioci --password=appstudioci $server; then
-        break
-    fi
-    sleep 10
-done
+export name="appstudioci"
+cp "${KUBECONFIG}" "$name.kubeconfig"
+occmd="bash -c '! oc login --kubeconfig=${name}.kubeconfig --username=${name} --password=appstudioci > /dev/null'"
+timeout 180 "${occmd}"
 
-occmd="bash -c '! oc login --kubeconfig=/tmp/new.file --certificate-authority /var/run/secrets/kubernetes.io/serviceaccount/ca.crt --insecure-skip-tls-verify=true --username=appstudioci --password=appstudioci $server'"
-echo $occmd
