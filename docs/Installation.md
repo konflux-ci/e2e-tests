@@ -29,7 +29,7 @@ Before starting the deployment steps of appstudio in e2e mode in Openshift CI yo
     oc login -u <user> -p <password> --server=<oc_api_url>
    ```
 
-3. Install Red Hat App Studio in e2e mode. The e2e framework by default will use the `redhat-appstudio-qe` github organization by default. If u want to change the github org you should define `GITHUB_E2E_ORGANIZATION` environment with your custom github organization
+3. Install Red Hat App Studio in e2e mode. The e2e framework by default will use the `redhat-appstudio-qe` github organization by default. If you want to change the github org you should define `GITHUB_E2E_ORGANIZATION` environment with your custom github organization
 
    ```bash
       # In Openshift CI there are some example about how to use the installation script. See infra-deployments script https://github.com/redhat-appstudio/application-service/blob/main/.ci/oci-e2e-has.sh#L59
@@ -61,6 +61,22 @@ The following environments are used to launch the Red Hat AppStudio installation
 | `GITHUB_E2E_ORGANIZATION` | no | GitHub Organization where to create/push Red Hat AppStudio Applications  | `redhat-appstudio-qe`  |
 | `QUAY_E2E_ORGANIZATION` | no | Quay organization where to push components containers | `redhat-appstudio-qe` |
 | `E2E_APPLICATIONS_NAMESPACE` | no | Name of the namespace used for running HAS E2E tests | `appstudio-e2e-test` |
+
+
+### Setting up the required tokens
+
+#### GitHub token
+
+[Instructions for creating a Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token)
+
+Make sure to give the token the permissions listed in [Prerequisites](#prerequisites).
+
+Copy the resulting token (should look similar to `ghp_Iq...`) and save it off somewhere as you'll be using it for the GITHUB_TOKEN environment variable whenever you want to run the e2e suite.
+
+#### Quay token
+
+Go to your profile (in Quay click your username in the upper right, click Account Settings). From your profile, look for CLI Password and click the Generate Encrypted Password link. Click on Kubernetes Secret in the left pane. Click on the link for View username-secret.yml. Copy the string listed after `.dockerconfigjson` (should look similar to `ewogI3...`). Save the string off somewhere as you'll be using it for the QUAY_TOKEN environment variable whenever you want to run the e2e suite.
+
 
 ## Install e2e binary in openshift-ci and use pairing PRs feature
 
