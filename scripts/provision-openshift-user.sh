@@ -35,13 +35,13 @@ spec:
 
 oc adm policy add-cluster-role-to-user cluster-admin appstudioci
 
-CURRENT_TIME=$(date +%s)
-ENDTIME=$(($CURRENT_TIME + 700))
-while [ $(date +%s) -lt $ENDTIME ]; do
-    if oc login --kubeconfig=/tmp/kubeconfig --server $API_SERVER --username="${TMP_CI_USER}" --password=${TMP_CI_USER} --insecure-skip-tls-verify; then
-        break
-    fi
-    sleep 10
-done
+function waitForNewLogin() {
+    while [ ! oc login --kubeconfig=/tmp/kubeconfig --server $API_SERVER --username="${TMP_CI_USER}" --password=${TMP_CI_USER} --insecure-skip-tls-verify ]; do
+        sleep 10
+    done
+}
+
+export -f waitForNewLogin
+timeout --foreground 6m bash -c waitForNewLogin
 
 export KUBECONFIG="/tmp/kubeconfig"
