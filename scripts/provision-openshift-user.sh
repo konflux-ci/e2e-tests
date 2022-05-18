@@ -11,6 +11,7 @@ export TMP_CI_USER="appstudioci"
 export CONTEXT=$(oc config current-context)
 export OC_CLUSTER=$(oc config view -ojsonpath="{.contexts[?(@.name == \"$CONTEXT\")].context.cluster}")
 export API_SERVER=$(oc config view -ojsonpath="{.clusters[?(@.name == \"$OC_CLUSTER\")].cluster.server}")
+export KUBECONFIG_TEST=${KUBECONFIG_TEST:-"/tmp/kubeconfig"}
 
 cat <<EOF | oc apply -f -
 apiVersion: v1
@@ -35,13 +36,11 @@ spec:
 
 oc adm policy add-cluster-role-to-user cluster-admin appstudioci
 
-function waitForNewLogin() {
-    while [ ! oc login --kubeconfig=/tmp/kubeconfig --server $API_SERVER --username="${TMP_CI_USER}" --password=${TMP_CI_USER} --insecure-skip-tls-verify ]; do
+function waitForNewOCPLogin() {
+    while ! oc login --kubeconfig="${KUBECONFIG_TEST}" --server $API_SERVER --username="${TMP_CI_USER}" --password=${TMP_CI_USER} --insecure-skip-tls-verify; do
         sleep 10
     done
 }
 
-export -f waitForNewLogin
-timeout --foreground 6m bash -c waitForNewLogin
-
-export KUBECONFIG="/tmp/kubeconfig"
+export -f waitForNewOCPLogin
+timeout --foreground 6m bash -c waitForNewOCPLogin

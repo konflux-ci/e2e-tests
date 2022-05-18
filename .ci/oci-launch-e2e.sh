@@ -55,7 +55,13 @@ function executeE2ETests() {
 
 # Initiate openshift ci users
 echo -e "[INFO] Provisioning openshift user..."
-/bin/bash "$WORKSPACE"/scripts/provision-openshift-user.sh
+export KUBECONFIG_TEST="/tmp/kubeconfig"
+/bin/bash "$WORKSPACE"/scripts/provision-openshift-user.sh 
+
+export KUBECONFIG="${KUBECONFIG_TEST}"
+
+env
+oc whoami --show-token
 
 /bin/bash "$WORKSPACE"/scripts/install-appstudio-e2e-mode.sh install 
 /bin/bash "$WORKSPACE"/scripts/spi-e2e-setup.sh
