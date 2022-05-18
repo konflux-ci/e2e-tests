@@ -43,7 +43,6 @@ while [ $(date +%s) -lt $ENDTIME ]; do
     sleep 10
 done
 
-cat ~/.kube/config || true
-rm -rf ~/.kube/config
+export KUBECONFIG="/tmp/new.files"
 oc whoami
 oc whoami --show-token || true
