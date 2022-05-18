@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/devfile/library/pkg/util"
 	"github.com/google/uuid"
 	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
@@ -34,7 +35,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	BeforeAll(func() {
-		applicationName = "build-suite-test-application"
+		applicationName = fmt.Sprintf("build-suite-test-application-%s", util.GenerateRandomString(10))
 		appStudioE2EApplicationsNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "appstudio-e2e-test")
 
 		_, err := f.HasController.CreateTestNamespace(appStudioE2EApplicationsNamespace)
@@ -49,7 +50,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 
 	When("component with container image source is created", func() {
 		BeforeAll(func() {
-			componentName = "build-suite-test-component-image-source"
+			componentName = fmt.Sprintf("build-suite-test-component-image-source-%s", util.GenerateRandomString(10))
 			outputContainerImage = ""
 			timeout = time.Second * 10
 			interval = time.Second * 1
@@ -70,7 +71,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 	})
 	When("component with git source is created", func() {
 		BeforeAll(func() {
-			componentName = "build-suite-test-component-git-source"
+			componentName = fmt.Sprintf("build-suite-test-component-git-source-%s", util.GenerateRandomString(10))
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", has.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 			timeout = time.Second * 60
 			interval = time.Second * 1
