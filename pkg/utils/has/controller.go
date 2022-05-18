@@ -92,7 +92,13 @@ func (h *SuiteController) DeleteHasComponent(name string, namespace string) erro
 }
 
 // CreateComponent create an has component from a given name, namespace, application, devfile and a container image
-func (h *SuiteController) CreateComponent(applicationName, componentName, namespace, gitSourceURL, containerImageSource, outputContainerImage string) (*appservice.Component, error) {
+func (h *SuiteController) CreateComponent(applicationName, componentName, namespace, gitSourceURL, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
+	var containerImage string
+	if outputContainerImage != "" {
+		containerImage = outputContainerImage
+	} else {
+		containerImage = containerImageSource
+	}
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      componentName,
@@ -106,17 +112,13 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 					GitSource: &appservice.GitSource{
 						URL: gitSourceURL,
 					},
-					ImageSource: &appservice.ImageSource{
-						ContainerImage: containerImageSource,
-					},
 				},
 			},
-			Replicas:   1,
-			TargetPort: 8081,
-			Route:      "",
-			Build: appservice.Build{
-				ContainerImage: outputContainerImage,
-			},
+			Secret:         secret,
+			ContainerImage: containerImage,
+			Replicas:       1,
+			TargetPort:     8081,
+			Route:          "",
 		},
 	}
 	err := h.KubeRest().Create(context.TODO(), component)
