@@ -1,36 +1,36 @@
 export ROOT_E2E="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"/..
 export WORKSPACE=${WORKSPACE:-${ROOT_E2E}}
 
-touch htpasswd
+oc whoami
 
-htpasswd -Bb htpasswd appstudioci appstudioci
-
-oc --user=admin create secret generic htpasswd \
-    --from-file=htpasswd \ 
-    -n openshift-config
-
-oc replace -f - <<API
-apiVersion: config.openshift.io/v1
-kind: OAuth
+cat <<EOF | oc apply -f -
+apiVersion: v1
+kind: Secret
 metadata:
-  name: cluster
+  name: htpass-secret
+  namespace: openshift-config
+data: 
+  htpasswd: YXBwc3R1ZGlvOiQyeSQwNSREY3pLblNydExBZzF0SGhWZHpTczhPWUFURFViU1NkL2wuTWRQTDFIZWtjYWtTTE1CWTFCRw==
+EOF
+
+oc patch oauths cluster --type merge -p '
 spec:
   identityProviders:
-  - name: Local Password
-    mappingMethod: claim
-    type: HTPasswd
-    htpasswd:
-      fileData:
-        name: htpasswd
-API
+    - name: htpasswd
+      mappingMethod: claim
+      type: HTPasswd
+      htpasswd:
+        fileData:
+          name: htpass-secret
+'
 
-oc adm policy add-cluster-role-to-user cluster-admin appstudioci
+oc adm policy add-cluster-role-to-user cluster-admin appstudio
 
 echo -e "[INFO] Waiting for htpasswd auth to be working up to 5 minutes"
 CURRENT_TIME=$(date +%s)
 ENDTIME=$(($CURRENT_TIME + 300))
 while [ $(date +%s) -lt $ENDTIME ]; do
-    if oc login -u appstudioci -p appstudioci --insecure-skip-tls-verify; then
+    if oc login -u appstudio -p appstudio --insecure-skip-tls-verify; then
         break
     fi
     sleep 10
