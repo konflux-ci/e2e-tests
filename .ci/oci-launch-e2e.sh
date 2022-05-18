@@ -1,10 +1,6 @@
 export ROOT_E2E="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"/..
 export WORKSPACE=${WORKSPACE:-${ROOT_E2E}}
 
-user=$(oc whoami)
-oc adm policy add-cluster-role-to-user cluster-admin user
-oc whoami --show-token || true
-
 cat <<EOF | oc apply -f -
 apiVersion: v1
 kind: Secret
@@ -38,7 +34,7 @@ ENDTIME=$(($CURRENT_TIME + 300))
 ctx=$(oc config current-context)
 cluster=$(oc config view -ojsonpath="{.contexts[?(@.name == \"$ctx\")].context.cluster}")
 server=$(oc config view -ojsonpath="{.clusters[?(@.name == \"$cluster\")].cluster.server}")
-logger.info "Login against: $server"
+echo "Login against: $server"
 
 while [ $(date +%s) -lt $ENDTIME ]; do
     if oc login --kubeconfig=/tmp/new.files --server $server --username=appstudioci --password=appstudioci --insecure-skip-tls-verify; then
@@ -46,3 +42,5 @@ while [ $(date +%s) -lt $ENDTIME ]; do
     fi
     sleep 10
 done
+
+oc whoami --show-token || true
