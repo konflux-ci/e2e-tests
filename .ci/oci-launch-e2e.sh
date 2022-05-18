@@ -1,10 +1,6 @@
 export ROOT_E2E="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"/..
 export WORKSPACE=${WORKSPACE:-${ROOT_E2E}}
 
-user=$(oc whoami)
-oc adm policy add-cluster-role-to-user cluster-admin user
-oc whoami --show-token || true
-
 cat <<EOF | oc apply -f -
 apiVersion: v1
 kind: Secret
