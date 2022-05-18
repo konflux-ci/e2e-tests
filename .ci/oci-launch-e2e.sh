@@ -53,6 +53,10 @@ function executeE2ETests() {
     "${WORKSPACE}"/bin/e2e-appstudio --ginkgo.junit-report="${ARTIFACTS_DIR}"/e2e-report.xml --ginkgo.progress --ginkgo.v
 }
 
+# Initiate openshift ci users
+echo -e "[INFO] Provisioning openshift user..."
+/bin/bash "$WORKSPACE"/scripts/provision-openshift-user.sh
+
 /bin/bash "$WORKSPACE"/scripts/install-appstudio-e2e-mode.sh install 
 /bin/bash "$WORKSPACE"/scripts/spi-e2e-setup.sh
 
