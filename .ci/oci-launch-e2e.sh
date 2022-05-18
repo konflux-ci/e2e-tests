@@ -17,6 +17,51 @@ export ARTIFACTS_DIR=${ARTIFACT_DIR:-"/tmp/appstudio"}
 command -v yq >/dev/null 2>&1 || { echo "yq is not installed. Aborting."; exit 1; }
 command -v kubectl >/dev/null 2>&1 || { echo "kubectl is not installed. Aborting."; exit 1; }
 
+# Create admin user inside of openshift ci cluster and login
+function setupOpenshiftUser() {
+    echo -e "[INFO] Starting provisioning openshift user..."
+
+    cat <<EOF | oc apply -f -
+apiVersion: v1
+kind: Secret
+metadata:
+  name: htpass-secret
+  namespace: openshift-config
+data: 
+  htpasswd: YXBwc3R1ZGlvY2k6JDJ5JDA1JEF3M0k4TFIyemVROG8yazBrb1d2dXVDSmRwL3F5ZkJLdnp0cks4MFZveEpiZFJvQlAxYy51
+EOF
+
+    oc patch oauths cluster --type merge -p '
+spec:
+  identityProviders:
+    - name: htpasswd
+      mappingMethod: claim
+      type: HTPasswd
+      htpasswd:
+        fileData:
+          name: htpass-secret
+'
+    timeout 60 bash -x -c -- "while [[ $(oc get co authentication -o jsonpath='{.status.conditions[?(@.type=="Progressing")].status}') != False ]]; do echo 'Condition (status != False) failed. Waiting 5 secs.'; sleep 5; done"
+    timeout 300 bash -x -c -- "while [[ $(oc get co authentication -o jsonpath='{.status.conditions[?(@.type=="Progressing")].status}') != True ]]; do echo 'Condition (status != true) failed. Waiting 2sec.'; sleep 5; done"
+
+    oc adm policy add-cluster-role-to-user cluster-admin appstudioci
+
+    ctx=$(oc config current-context)
+    cluster=$(oc config view -ojsonpath="{.contexts[?(@.name == \"$ctx\")].context.cluster}")
+    server=$(oc config view -ojsonpath="{.clusters[?(@.name == \"$cluster\")].cluster.server}")
+
+    CURRENT_TIME=$(date +%s)
+    ENDTIME=$(($CURRENT_TIME + 300))
+    while [ $(date +%s) -lt $ENDTIME ]; do
+        if oc login --kubeconfig=/tmp/kubeconfig --server $server --username=appstudioci --password=appstudioci --insecure-skip-tls-verify; then
+            break
+        fi
+        sleep 10
+    done
+
+    export KUBECONFIG="/tmp/kubeconfig"
+}
+
 function waitHASApplicationToBeReady() {
     while [ "$(kubectl get applications.argoproj.io has -n openshift-gitops -o jsonpath='{.status.health.status}')" != "Healthy" ]; do
         sleep 30s
@@ -53,11 +98,10 @@ function executeE2ETests() {
     "${WORKSPACE}"/bin/e2e-appstudio --ginkgo.junit-report="${ARTIFACTS_DIR}"/e2e-report.xml --ginkgo.progress --ginkgo.v
 }
 
+setupOpenshiftUser
+
 oc whoami
 oc whoami --show-token || true
-
-source "$WORKSPACE"/scripts/e2e-openshift-ci.sh
-setupOpenshiftUser
 
 /bin/bash "$WORKSPACE"/scripts/install-appstudio-e2e-mode.sh install 
 /bin/bash "$WORKSPACE"/scripts/spi-e2e-setup.sh
@@ -72,7 +116,5 @@ timeout --foreground 10m bash -c waitAppStudioToBeReady
 timeout --foreground 10m bash -c waitBuildToBeReady
 timeout --foreground 10m bash -c waitHASApplicationToBeReady
 timeout --foreground 10m bash -c waitSPIToBeReady
-
-
 
 executeE2ETests
