@@ -38,7 +38,7 @@ ENDTIME=$(($CURRENT_TIME + 300))
 ctx=$(oc config current-context)
 cluster=$(oc config view -ojsonpath="{.contexts[?(@.name == \"$ctx\")].context.cluster}")
 server=$(oc config view -ojsonpath="{.clusters[?(@.name == \"$cluster\")].cluster.server}")
-logger.info "Login against: $server"
+echo "Login against: $server"
 
 while [ $(date +%s) -lt $ENDTIME ]; do
     if oc login --kubeconfig=/tmp/new.file --certificate-authority /var/run/secrets/kubernetes.io/serviceaccount/ca.crt --insecure-skip-tls-verify=true --username=appstudioci --password=appstudioci $server; then
