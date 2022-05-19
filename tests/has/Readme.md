@@ -11,8 +11,6 @@ Steps to run 'has-suite':
 
 Currently to create an application in Red Hat App Studio it is possible to create from a sample devfile or from already gitops repository created from HAS operator.
 
-<<<<<<< HEAD
-=======
 ### Devfile source
 
 Simple tests where:
@@ -24,7 +22,6 @@ Simple tests where:
 * Verify if HAS operator create gitops resources in the cluster(routes, deployments, services...).
 * Remove kubernetes objects created by the framework.
 
->>>>>>> main
 ### Container Image source
 
 ```IN PROGRESS```

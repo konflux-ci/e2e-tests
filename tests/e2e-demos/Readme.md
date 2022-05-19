@@ -1,11 +1,11 @@
-# E2E SCENARIOS
+# E2E DEMOS
 
 Contains E2E tests.
 
-Steps to run 'e2e-scenarios-suite':
+Steps to run 'e2e-demos-suite':
 
 1) Follow the instructions from the [Readme](../../docs/Installation.md) scripts to install AppStudio in e2e mode
-2) Run the e2e suite: `./bin/e2e-appstudio --ginkgo.focus="e2e-scenarios-suite"`
+2) Run the e2e suite: `./bin/e2e-appstudio --ginkgo.focus="e2e-demos-suite"`
 
 ## Tests
 
