@@ -1,4 +1,4 @@
-package has
+package e2e
 
 const (
 	RedHatAppStudioApplicationName string = "pet-clinic-e2e"

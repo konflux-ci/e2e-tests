@@ -10,7 +10,6 @@ import (
 	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/tests/has"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

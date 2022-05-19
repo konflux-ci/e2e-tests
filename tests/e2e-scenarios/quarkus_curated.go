@@ -1,4 +1,4 @@
-package has
+package e2e
 
 import (
 	"context"
@@ -33,7 +33,7 @@ var (
  * Description: Contains tests about creating an application and a quarkus component from a source devfile
  */
 
-var _ = framework.HASSuiteDescribe("devfile source", func() {
+var _ = framework.E2ESuiteDescribe("E2E Quarkus deployment tests", func() {
 	defer GinkgoRecover()
 
 	// Initialize the tests controllers
