@@ -58,8 +58,8 @@ function pairPullRequests() {
 }
 
 # Initiate openshift ci users
-echo -e "[INFO] Provisioning openshift user..."
-/bin/bash "$WORKSPACE"/scripts/provision-openshift-user.sh
+#echo -e "[INFO] Provisioning openshift user..."
+#/bin/bash "$WORKSPACE"/scripts/provision-openshift-user.sh
 
 pairPullRequests
 echo "[INFO] Cloning tests from branch ${E2E_CLONE_BRANCH} repository ${E2E_REPO_LINK}"
