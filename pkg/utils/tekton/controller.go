@@ -11,11 +11,14 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
+	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -25,9 +28,39 @@ type KubeController struct {
 	Namespace  string
 }
 
+type Bundles struct {
+	BuildTemplatesBundle            string
+	HACBSTemplatesBundle            string
+	HACBSCoreServiceTemplatesBundle string
+}
+
+// quay.io/redhat-appstudio/hacbs-core-service-templates-bundle is available only with the `latest` tag
+func coreServiceBundleName(defaultBuildBundle string) string {
+	parts := strings.SplitN(strings.Replace(defaultBuildBundle, "/build-", "/hacbs-core-service-", 1), ":", 2)
+
+	return parts[0] + ":latest"
+}
+
+func newBundles(client kubernetes.Interface) (*Bundles, error) {
+	buildPipelineDefaults, err := client.CoreV1().ConfigMaps("build-templates").Get(context.TODO(), "build-pipelines-defaults", metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	bundle := buildPipelineDefaults.Data["default_build_bundle"]
+
+	return &Bundles{
+		BuildTemplatesBundle:            bundle,
+		HACBSTemplatesBundle:            strings.Replace(bundle, "/build-", "/hacbs-", 1),
+		HACBSCoreServiceTemplatesBundle: coreServiceBundleName(bundle),
+	}, nil
+}
+
 // Create the struct for kubernetes clients
 type SuiteController struct {
 	*kubeCl.K8sClient
+
+	Bundles Bundles
 }
 
 type CosignResult struct {
@@ -55,22 +88,41 @@ func (c CosignResult) Missing(prefix string) string {
 // Create controller for Application/Component crud operations
 func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
 
+	bundles, err := newBundles(kube.KubeInterface())
+	if err != nil {
+		return nil, err
+	}
+
 	return &SuiteController{
 		kube,
+		*bundles,
 	}, nil
 }
 
-func (s *SuiteController) GetTaskRun(taskName, namespace string) (*v1beta1.TaskRun, error) {
-	return s.PipelineClient().TektonV1beta1().TaskRuns(namespace).Get(context.TODO(), taskName, metav1.GetOptions{})
+func (s *SuiteController) GetPipelineRun(pipelineRunName, namespace string) (*v1beta1.PipelineRun, error) {
+	return s.PipelineClient().TektonV1beta1().PipelineRuns(namespace).Get(context.TODO(), pipelineRunName, metav1.GetOptions{})
 }
 
-func (s *SuiteController) CheckTaskPodExists(taskName, namespace string) wait.ConditionFunc {
+func (s *SuiteController) CheckPipelineRunStarted(pipelineRunName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		tr, err := s.GetTaskRun(taskName, namespace)
+		pr, err := s.GetPipelineRun(pipelineRunName, namespace)
 		if err != nil {
 			return false, nil
 		}
-		if tr.Status.PodName != "" {
+		if pr.Status.StartTime != nil {
+			return true, nil
+		}
+		return false, nil
+	}
+}
+
+func (s *SuiteController) CheckPipelineRunFinished(pipelineRunName, namespace string) wait.ConditionFunc {
+	return func() (bool, error) {
+		pr, err := s.GetPipelineRun(pipelineRunName, namespace)
+		if err != nil {
+			return false, nil
+		}
+		if pr.Status.CompletionTime != nil {
 			return true, nil
 		}
 		return false, nil
@@ -83,8 +135,8 @@ func (s *SuiteController) CreateTask(task *v1beta1.Task, ns string) (*v1beta1.Ta
 }
 
 // Create a tekton taskRun and return the taskRun or error
-func (s *SuiteController) CreateTaskRun(taskRun *v1beta1.TaskRun, ns string) (*v1beta1.TaskRun, error) {
-	return s.PipelineClient().TektonV1beta1().TaskRuns(ns).Create(context.TODO(), taskRun, metav1.CreateOptions{})
+func (s *SuiteController) CreatePipelineRun(pipelineRun *v1beta1.PipelineRun, ns string) (*v1beta1.PipelineRun, error) {
+	return s.PipelineClient().TektonV1beta1().PipelineRuns(ns).Create(context.TODO(), pipelineRun, metav1.CreateOptions{})
 }
 
 func (s *SuiteController) ListTaskRuns(ns string, labelKey string, labelValue string, selectorLimit int64) (*v1beta1.TaskRunList, error) {
@@ -96,31 +148,81 @@ func (s *SuiteController) ListTaskRuns(ns string, labelKey string, labelValue st
 	return s.PipelineClient().TektonV1beta1().TaskRuns(ns).List(context.TODO(), listOptions)
 }
 
-func (k KubeController) WatchTaskPod(tr string, taskTimeout int) error {
-	trUpdated, err := k.Tektonctrl.GetTaskRun(tr, k.Namespace)
-	if err != nil {
-		return err
-	}
-	pod, err := k.Commonctrl.GetPod(k.Namespace, trUpdated.Status.PodName)
-	if err != nil {
-		return err
-	}
-	return k.Commonctrl.WaitForPod(k.Commonctrl.IsPodSuccessful(pod.Name, k.Namespace), time.Duration(taskTimeout)*time.Second)
+func (k KubeController) WatchPipelineRun(pipelineRunName string, taskTimeout int) error {
+	return k.Commonctrl.WaitUntil(k.Tektonctrl.CheckPipelineRunFinished(pipelineRunName, k.Namespace), time.Duration(taskTimeout)*time.Second)
 }
 
-func (k KubeController) GetTaskRunResult(tr *v1beta1.TaskRun, result string) (string, error) {
-	for _, trResult := range tr.Status.TaskRunResults {
-		if trResult.Name == result {
-			return trResult.Value, nil
+func (k KubeController) GetTaskRunResult(pr *v1beta1.PipelineRun, pipelineTaskName string, result string) (string, error) {
+	for _, tr := range pr.Status.TaskRuns {
+		if tr.PipelineTaskName != pipelineTaskName {
+			continue
+		}
+
+		for _, trResult := range tr.Status.TaskRunResults {
+			if trResult.Name == result {
+				// for some reason the result might contain \n suffix
+				return strings.TrimSuffix(trResult.Value, "\n"), nil
+			}
 		}
 	}
 	return "", fmt.Errorf(
-		"result %q not found in TaskRun %s/%s", result, tr.ObjectMeta.Namespace, tr.ObjectMeta.Name)
+		"result %q not found in TaskRuns of PipelineRun %s/%s", result, pr.ObjectMeta.Namespace, pr.ObjectMeta.Name)
 }
 
-func (k KubeController) RunTask(g TaskRunGenerator, taskTimeout int) (*v1beta1.TaskRun, error) {
-	tr := g.Generate()
-	return k.createAndWait(tr, taskTimeout)
+func (k KubeController) GetTaskRunStatus(pr *v1beta1.PipelineRun, pipelineTaskName string) (*v1beta1.PipelineRunTaskRunStatus, error) {
+	for _, tr := range pr.Status.TaskRuns {
+		if tr.PipelineTaskName == pipelineTaskName {
+			return tr, nil
+		}
+	}
+	return nil, fmt.Errorf(
+		"TaskRun status for pipeline task name %q not found in the status of PipelineRun %s/%s", pipelineTaskName, pr.ObjectMeta.Namespace, pr.ObjectMeta.Name)
+}
+
+func (k KubeController) RunPipeline(g PipelineRunGenerator, taskTimeout int) (*v1beta1.PipelineRun, error) {
+	pr := g.Generate()
+	pvcs := k.Commonctrl.KubeInterface().CoreV1().PersistentVolumeClaims(pr.Namespace)
+	for _, w := range pr.Spec.Workspaces {
+		if w.PersistentVolumeClaim != nil {
+			pvcName := w.PersistentVolumeClaim.ClaimName
+			if _, err := pvcs.Get(context.TODO(), pvcName, metav1.GetOptions{}); err != nil {
+				if errors.IsNotFound(err) {
+					err := createPVC(pvcs, pvcName)
+					if err != nil {
+						return nil, err
+					}
+				} else {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	return k.createAndWait(pr, taskTimeout)
+}
+
+func createPVC(pvcs v1.PersistentVolumeClaimInterface, pvcName string) error {
+	pvc := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: pvcName,
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{
+				corev1.ReadWriteOnce,
+			},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: resource.MustParse("1Gi"),
+				},
+			},
+		},
+	}
+
+	if _, err := pvcs.Create(context.TODO(), pvc, metav1.CreateOptions{}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (k KubeController) AwaitAttestationAndSignature(image string, timeout time.Duration) error {
@@ -137,12 +239,12 @@ func (k KubeController) AwaitAttestationAndSignature(image string, timeout time.
 	})
 }
 
-func (k KubeController) createAndWait(tr *v1beta1.TaskRun, taskTimeout int) (*v1beta1.TaskRun, error) {
-	taskRun, err := k.Tektonctrl.CreateTaskRun(tr, k.Namespace)
+func (k KubeController) createAndWait(pr *v1beta1.PipelineRun, taskTimeout int) (*v1beta1.PipelineRun, error) {
+	pipelineRun, err := k.Tektonctrl.CreatePipelineRun(pr, k.Namespace)
 	if err != nil {
 		return nil, err
 	}
-	return taskRun, k.Commonctrl.WaitForPod(k.Tektonctrl.CheckTaskPodExists(taskRun.Name, k.Namespace), time.Duration(taskTimeout)*time.Second)
+	return pipelineRun, k.Commonctrl.WaitUntil(k.Tektonctrl.CheckPipelineRunStarted(pipelineRun.Name, k.Namespace), time.Duration(taskTimeout)*time.Second)
 }
 
 // FindCosignResultsForImage looks for .sig and .att image tags in the OpenShift image stream for the provided image reference.
