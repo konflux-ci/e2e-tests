@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	PrivateComponentContainerImage string = fmt.Sprintf("quay.io/%s/quarkus:%s", GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
+	PrivateComponentContainerImage string = fmt.Sprintf("quay.io/%s/quarkus:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 )
 
 /*
@@ -71,7 +71,7 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
-			gitOpsRepository := ObtainGitOpsRepositoryName(application.Status.Devfile)
+			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
 			return framework.HasController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
@@ -94,7 +94,7 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
-			gitOpsRepository := ObtainGitOpsRepositoryName(application.Status.Devfile)
+			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
 			return framework.HasController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
@@ -108,7 +108,7 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 	})
 
 	It("Create Red Hat AppStudio Quarkus component", func() {
-		component, err := framework.HasController.CreateComponent(application.Name, QuarkusComponentName, AppStudioE2EApplicationsNamespace, privateGitRepository, ComponentContainerImage, SPIAccessTokenSecretName)
+		component, err := framework.HasController.CreateComponent(application.Name, QuarkusComponentName, AppStudioE2EApplicationsNamespace, privateGitRepository, ComponentContainerImage, "", SPIAccessTokenSecretName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(component.Name).To(Equal(QuarkusComponentName))
 	})
