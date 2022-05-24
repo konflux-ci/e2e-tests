@@ -10,14 +10,11 @@ import (
 	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/klog/v2"
 )
 
 var (
@@ -105,26 +102,6 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 		component, err := framework.HasController.CreateComponent(application.Name, QuarkusComponentName, AppStudioE2EApplicationsNamespace, QuarkusDevfileSource, "", ComponentContainerImage, "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(component.Name).To(Equal(QuarkusComponentName))
-	})
-
-	It("Wait for component pipeline to be completed", func() {
-		err := wait.PollImmediate(20*time.Second, 10*time.Minute, func() (done bool, err error) {
-			pipelineRun, _ := framework.HasController.GetComponentPipeline(QuarkusComponentName, RedHatAppStudioApplicationName, AppStudioE2EApplicationsNamespace)
-
-			for _, condition := range pipelineRun.Status.Conditions {
-				klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)
-
-				if condition.Reason == "Failed" {
-					return false, fmt.Errorf("component %s pipeline failed", pipelineRun.Name)
-				}
-
-				if condition.Status == corev1.ConditionTrue {
-					return true, nil
-				}
-			}
-			return false, nil
-		})
-		Expect(err).NotTo(HaveOccurred(), "Failed component pipeline %v", err)
 	})
 
 })
