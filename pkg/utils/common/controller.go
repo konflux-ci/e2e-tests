@@ -196,3 +196,15 @@ func (h *SuiteController) GetServiceByName(serviceName string, serviceNamespace 
 	}
 	return service, nil
 }
+
+func (s *SuiteController) CreateConfigMap(cm *corev1.ConfigMap, namespace string) (*corev1.ConfigMap, error) {
+	return s.KubeInterface().CoreV1().ConfigMaps(namespace).Create(context.TODO(), cm, metav1.CreateOptions{})
+}
+
+func (s *SuiteController) GetConfigMap(name, namespace string) (*corev1.ConfigMap, error) {
+	return s.KubeInterface().CoreV1().ConfigMaps(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+}
+
+func (s *SuiteController) DeleteConfigMap(name, namespace string) error {
+	return s.KubeInterface().CoreV1().ConfigMaps(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+}

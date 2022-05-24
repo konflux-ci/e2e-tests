@@ -18,6 +18,7 @@ export WORKSPACE=${WORKSPACE:-${ROOT_E2E}}
 export E2E_CLONE_BRANCH="main"
 export E2E_REPO_LINK="https://github.com/redhat-appstudio/e2e-tests.git"
 export AUTHOR_E2E_BRANCH=""
+export PULL_NUMBER=${PULL_NUMBER:-"periodic"}
 
 function exists_public_github_repo() {
     local pr_author=$1
@@ -31,12 +32,14 @@ function exists_public_github_repo() {
     fi
 }
 
+echo -e "PULL_NUMBER is ${PULL_NUMBER}"
+
 function pairPullRequests() {
     # Example: CLONEREFS_OPTIONS={"src_root":"/go","log":"/dev/null","git_user_name":"ci-robot","git_user_email":"ci-robot@openshift.io","refs":[{"org":"redhat-appstudio","repo":"application-service","repo_link":"https://github.com/redhat-appstudio/application-service","base_ref":"main","base_sha":"75a4c79e49ab5c1a4c15d844256d1e4419da63e3","base_link":"https://github.com/redhat-appstudio/application-service/commit/75a4c79e49ab5c1a4c15d844256d1e4419da63e3","pulls":[{"number":91,"author":"flacatus","sha":"47b9fe555e27cc65c5ebfcf51c2d26a036fab235","link":"https://github.com/redhat-appstudio/application-service/pull/91","commit_link":"https://github.com/redhat-appstudio/application-service/pull/91/commits/47b9fe555e27cc65c5ebfcf51c2d26a036fab235","author_link":"https://github.com/flacatus"}]}],"fail":true}
     # Checking if CLONEREFS_OPTIONS openshift ci env exists and extract PR information to pair the PR
     # Pairing the PR with the e2e tests: Check the PR branch with the author of PR fork of e2e-tests. For example user Bill open a PR in application-service, the script check if 
     # exists a branch in the e2e-tests with the same name of PR branch.
-    if [[ -n ${CLONEREFS_OPTIONS} ]]; then
+    if [[ -n ${CLONEREFS_OPTIONS} && $PULL_NUMBER != "periodic" ]]; then
         AUTHOR=$(jq -r '.refs[0].pulls[0].author' <<< ${CLONEREFS_OPTIONS} | tr -d '[:space:]')
         AUTHOR_LINK=$(jq -r '.refs[0].pulls[0].author_link' <<< ${CLONEREFS_OPTIONS} | tr -d '[:space:]')
         GITHUB_ORGANIZATION=$(jq -r '.refs[0].org' <<< ${CLONEREFS_OPTIONS} | tr -d '[:space:]')
@@ -57,8 +60,12 @@ function pairPullRequests() {
     fi
 }
 
+# Initiate openshift ci users
+#echo -e "[INFO] Provisioning openshift user..."
+#/bin/bash "$WORKSPACE"/scripts/provision-openshift-user.sh
+
 pairPullRequests
-echo "[INFO] Cloning tests from branch ${PR_BRANCH_REF} repository ${E2E_REPO_LINK}"
+echo "[INFO] Cloning tests from branch ${E2E_CLONE_BRANCH} repository ${E2E_REPO_LINK}"
 git clone -b "${E2E_CLONE_BRANCH}" "${E2E_REPO_LINK}" "$WORKSPACE"/tmp/e2e-tests
 
 cd "$WORKSPACE"/tmp/e2e-tests

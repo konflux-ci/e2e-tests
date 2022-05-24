@@ -6,7 +6,7 @@ require (
 	github.com/averageflow/gohooks/v2 v2.1.0
 	github.com/devfile/library v1.2.1-0.20211104222135-49d635cb492f
 	github.com/google/uuid v1.3.0
-	github.com/onsi/ginkgo/v2 v2.1.3
+	github.com/onsi/ginkgo/v2 v2.1.4
 	github.com/onsi/gomega v1.19.0
 	github.com/openshift/api v0.0.0-20200930075302-db52bc4ef99f
 	github.com/redhat-appstudio/application-service v0.0.0-20220509130137-3bdbc6eecda4

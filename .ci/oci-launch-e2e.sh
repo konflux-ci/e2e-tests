@@ -40,20 +40,37 @@ function waitBuildToBeReady() {
     done
 }
 
+function waitSPIToBeReady() {
+    while [ "$(kubectl get applications.argoproj.io spi -n ${APPLICATION_NAMESPACE} -o jsonpath='{.status.health.status}')" != "Healthy" ] ||
+          [ "$(kubectl get applications.argoproj.io spi -n ${APPLICATION_NAMESPACE} -o jsonpath='{.status.sync.status}')" != "Synced" ]; do
+        sleep 1m
+        echo "[INFO] Waiting for spi to be ready."
+    done
+}
+
 function executeE2ETests() {
     make build
     "${WORKSPACE}"/bin/e2e-appstudio --ginkgo.junit-report="${ARTIFACTS_DIR}"/e2e-report.xml --ginkgo.progress --ginkgo.v
 }
 
-curl "https://raw.githubusercontent.com/redhat-appstudio/e2e-tests/${PULL_PULL_SHA}/scripts/install-appstudio-e2e-mode.sh" | bash -s install
+# Initiate openshift ci users
+export KUBECONFIG_TEST="/tmp/kubeconfig"
+/bin/bash "$WORKSPACE"/scripts/provision-openshift-user.sh
+
+export KUBECONFIG="${KUBECONFIG_TEST}"
+
+/bin/bash "$WORKSPACE"/scripts/install-appstudio-e2e-mode.sh install 
+/bin/bash "$WORKSPACE"/scripts/spi-e2e-setup.sh
 
 export -f waitAppStudioToBeReady
 export -f waitBuildToBeReady
 export -f waitHASApplicationToBeReady
+export -f waitSPIToBeReady
 
 # Install AppStudio Controllers and wait for HAS and other AppStudio application to be running.
 timeout --foreground 10m bash -c waitAppStudioToBeReady
 timeout --foreground 10m bash -c waitBuildToBeReady
 timeout --foreground 10m bash -c waitHASApplicationToBeReady
+timeout --foreground 10m bash -c waitSPIToBeReady
 
 executeE2ETests

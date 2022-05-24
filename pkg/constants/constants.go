@@ -29,4 +29,7 @@ const (
 	// Test namespace's required labels
 	ArgoCDLabelKey   string = "argocd.argoproj.io/managed-by"
 	ArgoCDLabelValue string = "gitops-service-argocd"
+
+	BuildPipelinesConfigMapName             = "build-pipelines-defaults"
+	BuildPipelinesConfigMapDefaultNamespace = "build-templates"
 )

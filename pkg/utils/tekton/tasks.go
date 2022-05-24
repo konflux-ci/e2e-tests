@@ -138,7 +138,7 @@ func (t CosignVerifyTask) Generate() *v1beta1.TaskRun {
 			TaskRef: &v1beta1.TaskRef{
 				Kind:   v1beta1.NamespacedTaskKind,
 				Name:   t.TaskName,
-				Bundle: "quay.io/redhat-appstudio/appstudio-tasks:b2cb5d5b21dc59d172379e639b336533bd8a8bf6-1",
+				Bundle: "quay.io/redhat-appstudio/appstudio-tasks:861e28f4eb2380fd1531ee30a9e74fb6ce496b9f-1",
 			},
 		},
 	}
@@ -212,7 +212,7 @@ func (t VerifyEnterpriseContractTask) Generate() *v1beta1.TaskRun {
 				// TODO: Use the most up to date bundle, https://issues.redhat.com/browse/HACBS-424
 				Kind:   v1beta1.NamespacedTaskKind,
 				Name:   t.TaskName,
-				Bundle: "quay.io/redhat-appstudio/appstudio-tasks:a6e49b65cbbfdd9673a79318fc74a85b2ce0b960-2",
+				Bundle: "quay.io/redhat-appstudio/appstudio-tasks:861e28f4eb2380fd1531ee30a9e74fb6ce496b9f-2",
 			},
 		},
 	}
