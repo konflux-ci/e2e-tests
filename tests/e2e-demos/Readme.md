@@ -1,6 +1,6 @@
 # E2E DEMOS
 
-Contains E2E tests.
+The e2e-demos suite contains a set of tests that covers AppStudio demos.
 
 Steps to run 'e2e-demos-suite':
 
