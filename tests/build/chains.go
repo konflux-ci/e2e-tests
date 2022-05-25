@@ -182,7 +182,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 				tr, err = kubeController.Tektonctrl.GetTaskRun(tr.Name, tr.Namespace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(tr.Status.TaskRunResults).To(Equal([]v1beta1.TaskRunResult{
-					{Name: "OUTPUT", Value: "[\n  {\n    \"msg\": \"Empty test data provided\"\n  }\n]\n"},
+					{Name: "OUTPUT", Value: "[\n  {\n    \"code\": \"test_data_empty\",\n    \"msg\": \"Empty test data provided\"\n  }\n]\n"},
 					{Name: "PASSED", Value: "false\n"},
 				}))
 			})
