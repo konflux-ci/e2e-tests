@@ -15,7 +15,7 @@ type SuiteController struct {
 }
 
 func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
-	// Check if a github organization env var is set, if not use by default the redhat-appstudio-qe org. See: https://github.com/redhat-appstudio-qe
+	// Initialize a new SPI controller with just the kube client
 	return &SuiteController{
 		kube,
 	}, nil
