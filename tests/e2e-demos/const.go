@@ -1,7 +1,7 @@
 package e2e
 
 const (
-	RedHatAppStudioApplicationName string = "pet-clinic-e2e"
+	RedHatAppStudioApplicationName string = "e2e-demo-application"
 
 	// Argo CD Application service name: https://github.com/redhat-appstudio/infra-deployments/blob/main/argo-cd-apps/base/has.yaml#L4
 	HASArgoApplicationName string = "has"
