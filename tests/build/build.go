@@ -95,7 +95,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 			timeout = time.Second * 60
 			interval = time.Second * 1
 			// Create a component with Git Source URL being defined
-			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", outputContainerImage, "")
+			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, defaultGitSourceURL, "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			DeferCleanup(f.HasController.DeleteHasComponent, componentName, appStudioE2EApplicationsNamespace)
 
