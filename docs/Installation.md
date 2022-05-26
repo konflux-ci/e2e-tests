@@ -57,10 +57,11 @@ The following environments are used to launch the Red Hat AppStudio installation
 | Variable | Required | Explanation | Default Value |
 |---|---|---|---|
 | `GITHUB_TOKEN` | yes | A github token used to create AppStudio applications in github  | ''  |
-| `QUAY_TOKEN` | yes | A quay token to push components images to quay.io. Note the quay token must be in base 64 format `ewogI3dJhdXRocyI6I...` | '' |
+| `QUAY_TOKEN` | yes | A quay token to push components images to quay.io. Note the quay token must be your dockerconfigjson encoded in base64 format, e.g. `ewogI3dJhdXRocyI6I...` | '' |
 | `GITHUB_E2E_ORGANIZATION` | no | GitHub Organization where to create/push Red Hat AppStudio Applications  | `redhat-appstudio-qe`  |
 | `QUAY_E2E_ORGANIZATION` | no | Quay organization where to push components containers | `redhat-appstudio-qe` |
 | `E2E_APPLICATIONS_NAMESPACE` | no | Name of the namespace used for running HAS E2E tests | `appstudio-e2e-test` |
+| `PRIVATE_DEVFILE_SAMPLE` | no | The name of the private git repository used in HAS E2E tests. Your GITHUB_TOKEN should be able to read from it. | `https://github.com/redhat-appstudio-qe/private-quarkus-devfile-sample` |
 
 
 ### Setting up the required tokens

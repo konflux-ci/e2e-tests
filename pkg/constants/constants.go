@@ -11,6 +11,9 @@ const (
 	// The github organization is used to create the gitops repositories in Red Hat Appstudio.
 	QUAY_E2E_ORGANIZATION_ENV string = "QUAY_E2E_ORGANIZATION" // #nosec
 
+	// The private devfile sample git repository to use in certain HAS e2e tests
+	PRIVATE_DEVFILE_SAMPLE string = "PRIVATE_DEVFILE_SAMPLE" // #nosec
+
 	//The Tekton namespace
 	TEKTON_CHAINS_NS string = "tekton-chains" // #nosec
 
