@@ -15,13 +15,13 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	klog "k8s.io/klog/v2"
 
 	routev1 "github.com/openshift/api/route/v1"
@@ -99,27 +99,41 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			DeferCleanup(f.HasController.DeleteHasComponent, componentName, appStudioE2EApplicationsNamespace)
 
-			customBundleConfigMap, err = f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, appStudioE2EApplicationsNamespace)
-			if err != nil {
-				if errors.IsNotFound(err) {
-					klog.Infof("configmap with custom pipeline bundle not found in %s namespace\n", appStudioE2EApplicationsNamespace)
+			for _, comp := range createdComponents { //multiple urls
+				componentName = fmt.Sprintf("%s-%s", comp.Name, util.GenerateRandomString(10))
+				outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
+				timeout = time.Second * 60
+				interval = time.Second * 1
+				// Create a component with Git Source URL being defined
+				component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, defaultGitSourceURL, "", outputContainerImage, "")
+				Expect(err).ShouldNot(HaveOccurred())
+				DeferCleanup(f.HasController.DeleteHasComponent, componentName, appStudioE2EApplicationsNamespace)
+
+				customBundleConfigMap, err = f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, appStudioE2EApplicationsNamespace)
+				if err != nil {
+					if errors.IsNotFound(err) {
+						klog.Infof("configmap with custom pipeline bundle not found in %s namespace\n", appStudioE2EApplicationsNamespace)
+					} else {
+						Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, appStudioE2EApplicationsNamespace, err))
+					}
 				} else {
-					Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, appStudioE2EApplicationsNamespace, err))
+					customBundleRef = customBundleConfigMap.Data["default_build_bundle"]
 				}
-			} else {
-				customBundleRef = customBundleConfigMap.Data["default_build_bundle"]
+
+				defaultBundleConfigMap, err = f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace)
+				if err != nil {
+					if errors.IsForbidden(err) {
+						klog.Infof("don't have enough permissions to get a configmap with default pipeline in %s namespace\n", constants.BuildPipelinesConfigMapDefaultNamespace)
+					} else {
+						Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace, err))
+					}
+				} else {
+					defaultBundleRef = defaultBundleConfigMap.Data["default_build_bundle"]
+				}
+				createdComponents = append(createdComponents, component) //collected created components
 			}
 
-			defaultBundleConfigMap, err = f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace)
-			if err != nil {
-				if errors.IsForbidden(err) {
-					klog.Infof("don't have enough permissions to get a configmap with default pipeline in %s namespace\n", constants.BuildPipelinesConfigMapDefaultNamespace)
-				} else {
-					Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace, err))
-				}
-			} else {
-				defaultBundleRef = defaultBundleConfigMap.Data["default_build_bundle"]
-			}
+			Expect(createdComponents).ShouldNot(BeEmpty())
 
 		})
 		It("triggers a PipelineRun", Label("build-templates-e2e"), func() {
@@ -140,15 +154,14 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			Expect(pipelineRun.Spec.PipelineRef.Bundle).To(Equal(customBundleRef))
-		})
+					pipelineRun, err := f.HasController.GetComponentPipeline(comp.Name, applicationName, appStudioE2EApplicationsNamespace)
+					if err != nil {
+						klog.Infoln("PipelineRun has not been created yet")
+						return false
+					}
+					return pipelineRun.HasStarted()
+				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the %s PipelineRun to start", comp.Name)
 
-		It("should reference the default pipeline bundle in a PipelineRun", func() {
-			if customBundleRef != "" {
-				Skip("skipping - custom pipeline bundle bundle (that overrides the default one) is defined")
-			}
-			if defaultBundleRef == "" {
-				Skip("skipping - default pipeline bundle cannot be fetched")
 			}
 			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false)
 			Expect(err).ShouldNot(HaveOccurred())
@@ -165,15 +178,39 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false)
 					Expect(err).ShouldNot(HaveOccurred())
 
-					for _, condition := range pipelineRun.Status.Conditions {
-						klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
+			It("should reference the default pipeline bundle in a PipelineRun", func() {
+				if customBundleRef != "" {
+					Skip("skipping - custom pipeline bundle bundle (that overrides the default one) is defined")
+				}
+				if defaultBundleRef == "" {
+					Skip("skipping - default pipeline bundle cannot be fetched")
+				}
+				pipelineRun, err := f.HasController.GetComponentPipeline(comp.Name, applicationName, appStudioE2EApplicationsNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(pipelineRun.Spec.PipelineRef.Bundle).To(Equal(defaultBundleRef))
+			})
 
-						if condition.Reason == "Failed" {
-							Fail(fmt.Sprintf("Pipelinerun %s has failed", pipelineRun.Name))
+			When("the PipelineRun has started", func() {
+				BeforeAll(func() {
+					timeout = time.Second * 600
+					interval = time.Second * 10
+				})
+				It("should eventually finish successfully", func() {
+					Eventually(func() bool {
+						pipelineRun, err := f.HasController.GetComponentPipeline(comp.Name, applicationName, appStudioE2EApplicationsNamespace)
+						Expect(err).ShouldNot(HaveOccurred())
+
+						for _, condition := range pipelineRun.Status.Conditions {
+							klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
+
+							if condition.Reason == "Failed" {
+								Fail(fmt.Sprintf("Pipelinerun %s has failed", pipelineRun.Name))
+							}
 						}
-					}
-					return pipelineRun.IsDone()
-				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
+						return pipelineRun.IsDone()
+					}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
+				})
+
 			})
 		})
 
