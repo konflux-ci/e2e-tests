@@ -9,7 +9,7 @@ set -u
 echo '[INFO] Deploying SPI OAuth2 config'
 
 export OAUTH_URL='spi-oauth-route-spi-system.'$( oc get ingresses.config/cluster -o jsonpath={.spec.domain})
-export tmpfile=tmp/config.yaml
+export tmpfile=$(mktemp -d)/config.yaml
 
 # We are injecting the token manually for the e2e. No need a real secret for now
 export SPI_GITHUB_CLIENT_ID="app-client-id"
