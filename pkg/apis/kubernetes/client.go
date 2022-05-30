@@ -1,15 +1,18 @@
 package client
 
 import (
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	routev1 "github.com/openshift/api/route/v1"
 	applicationservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
 	managedgitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend/apis/managed-gitops/v1alpha1"
+	singaporev1alpha1 "github.com/stolostron/cluster-registration-operator/api/singapore/v1alpha1"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	pipelineclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	ocmv1alpha1 "open-cluster-management.io/api/cluster/v1alpha1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
@@ -30,6 +33,9 @@ func init() {
 	utilruntime.Must(tekton.AddToScheme(scheme))
 	utilruntime.Must(routev1.AddToScheme(scheme))
 	utilruntime.Must(managedgitopsv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(singaporev1alpha1.AddToScheme(scheme))
+	utilruntime.Must(toolchainv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(ocmv1alpha1.AddToScheme(scheme))
 }
 
 // Kube returns the clientset for Kubernetes upstream.

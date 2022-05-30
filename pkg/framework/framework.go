@@ -7,15 +7,17 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/gitops"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/has"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/singapore"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
 // Framework struct to store all controllers
 type Framework struct {
-	HasController    *has.SuiteController
-	CommonController *common.SuiteController
-	TektonController *tekton.SuiteController
-	GitOpsController *gitops.SuiteController
+	HasController       *has.SuiteController
+	CommonController    *common.SuiteController
+	TektonController    *tekton.SuiteController
+	GitOpsController    *gitops.SuiteController
+	SingaporeController *singapore.SuiteController
 }
 
 // Initialize all test controllers and return them in a Framework
@@ -51,10 +53,16 @@ func NewFramework() (*Framework, error) {
 		return nil, err
 	}
 
+	singaporeController, err := singapore.NewSuiteController(kubeClient)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Framework{
-		CommonController: commonCtrl,
-		HasController:    hasController,
-		TektonController: tektonController,
-		GitOpsController: gitopsController,
+		CommonController:    commonCtrl,
+		HasController:       hasController,
+		TektonController:    tektonController,
+		GitOpsController:    gitopsController,
+		SingaporeController: singaporeController,
 	}, nil
 }
