@@ -18,6 +18,21 @@ const (
 	// Sample devfile created redhat-appstudio-qe repository with the following content:
 	QuarkusDevfileSource string = "https://github.com/redhat-appstudio-qe/devfile-sample-code-with-quarkus"
 
+	// The default private devfile sample to use if none is passed in via the PRIVATE_DEVFILE_SAMPLE env variable.
+	PrivateQuarkusDevfileSource string = "https://github.com/redhat-appstudio-qe/private-quarkus-devfile-sample"
+
 	// See more info: https://github.com/redhat-appstudio/application-service#creating-a-github-secret-for-has
 	ApplicationServiceGHTokenSecrName string = "has-github-token" // #nosec
+
+	// Name for the GitOps Deployment resource
+	GitOpsDeploymentName string = "gitops-deployment-e2e"
+
+	// GitOps repository branch to use
+	GitOpsRepositoryRevision string = "main"
+
+	// The name of the SPIAccessTokenBinding resource that the HAS e2e tests will create
+	SPIAccessTokenBindingName string = "has-private-git-repo-binding" // #nosec
+
+	// The name of the secret to be created by the SPIAccessTokenBinding resource
+	SPIAccessTokenSecretName string = "has-private-git-repo-secret" // #nosec
 )

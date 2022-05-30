@@ -11,6 +11,7 @@ require (
 	github.com/openshift/api v0.0.0-20220315184754-d7c10d0b647e
 	github.com/redhat-appstudio/application-service v0.0.0-20220509130137-3bdbc6eecda4
 	github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001
+	github.com/redhat-appstudio/service-provider-integration-operator v0.5.0
 	github.com/stretchr/testify v1.7.1
 	github.com/tektoncd/pipeline v0.33.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -122,11 +123,11 @@ require (
 	golang.org/x/time v0.0.0-20220224211638-0e9765cccd65 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
-	google.golang.org/api v0.67.0 // indirect
+	google.golang.org/api v0.74.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20220317150908-0efb43f6373e // indirect
+	google.golang.org/genproto v0.0.0-20220413183235-5e96e2839df9 // indirect
 	google.golang.org/grpc v1.45.0 // indirect
-	google.golang.org/protobuf v1.27.1 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect

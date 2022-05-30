@@ -8,6 +8,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/gitops"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/singapore"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/spi"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
@@ -18,6 +19,7 @@ type Framework struct {
 	TektonController    *tekton.SuiteController
 	GitOpsController    *gitops.SuiteController
 	SingaporeController *singapore.SuiteController
+	SPIController       *spi.SuiteController
 }
 
 // Initialize all test controllers and return them in a Framework
@@ -54,6 +56,8 @@ func NewFramework() (*Framework, error) {
 	}
 
 	singaporeController, err := singapore.NewSuiteController(kubeClient)
+	// Initialize SPI controller
+	spiController, err := spi.NewSuiteController(kubeClient)
 	if err != nil {
 		return nil, err
 	}
@@ -64,5 +68,6 @@ func NewFramework() (*Framework, error) {
 		TektonController:    tektonController,
 		GitOpsController:    gitopsController,
 		SingaporeController: singaporeController,
+		SPIController:       spiController,
 	}, nil
 }

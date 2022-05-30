@@ -33,6 +33,11 @@ function addQERemoteForkAndInstallAppstudio() {
     cd "$WORKSPACE"
 }
 
+# Add a custom remote for infra-deployments repository.
+function initializeSPIVault() {
+   curl https://raw.githubusercontent.com/redhat-appstudio/e2e-tests/main/scripts/spi-e2e-setup.sh | bash -s
+}
+
 # Secrets used by pipelines to push component containers to quay.io
 function createApplicationServiceSecrets() {
     echo -e "[INFO] Creating application-service related secrets in $E2E_APPLICATIONS_NAMESPACE namespace"
@@ -67,6 +72,7 @@ do
             createApplicationServiceSecrets
             installToolchainSandboxOperators
             installMultiClusterEngine
+            initializeSPIVault
             ;;
         *)
             ;;
