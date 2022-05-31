@@ -49,6 +49,19 @@ function createApplicationServiceSecrets() {
     rm docker.config
 }
 
+# Install Toolchain (Sandbox) Operators
+function installToolchainSandboxOperators() {
+    cd "$WORKSPACE"/tmp/infra-deployments
+    /bin/bash hack/sandbox-development-mode.sh
+    cd "$WORKSPACE"
+}
+
+# Install MultiCluster Engine
+function installMultiClusterEngine() {
+    cd "$WORKSPACE"
+    /bin/bash scripts/singapore-setup.sh
+    cd "$WORKSPACE"
+}
 
 while [[ $# -gt 0 ]]
 do
@@ -58,6 +71,8 @@ do
             addQERemoteForkAndInstallAppstudio
             createApplicationServiceSecrets
             initializeSPIVault
+            installToolchainSandboxOperators
+            installMultiClusterEngine
             ;;
         *)
             ;;
