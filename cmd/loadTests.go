@@ -249,7 +249,7 @@ func setup(cmd *cobra.Command, args []string) {
 				DefaultRetryInterval := time.Millisecond * 200
 				DefaultTimeout       := time.Minute * 17
 				//klog.Info("i am here!")
-				k8swait.Poll(DefaultRetryInterval, DefaultTimeout, func() (done bool, err error) {
+				error := k8swait.Poll(DefaultRetryInterval, DefaultTimeout, func() (done bool, err error) {
 					pipelineRun, err := framework.HasController.GetComponentPipeline(ComponentName, ApplicationName, username)
 					if err != nil {
 						return false, err
@@ -260,6 +260,9 @@ func setup(cmd *cobra.Command, args []string) {
 					}
 					return pipelineRun.IsDone(), nil
 				})
+				if error != nil {
+					klog.Fatalf("Error when waiting for component: %v", err)
+				}
 			}
 			wg.Done()
 		}()
