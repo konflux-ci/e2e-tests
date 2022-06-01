@@ -47,7 +47,5 @@ const (
 
 	OSAPIServerNamespace string = "openshift-apiserver"
 	OSAPIServerWorkload string = "apiserver"
-
-	
-
 )
+

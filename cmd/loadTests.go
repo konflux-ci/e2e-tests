@@ -1,7 +1,3 @@
-/*
-Maintained by Meer Sawood <msawood@redhat.com>
-*/
-
 package cmd
 
 import (
@@ -157,11 +153,13 @@ func setup(cmd *cobra.Command, args []string) {
 	AppStudioUsersBar := uip.AddBar(numberOfUsers).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
 		return strutil.PadLeft(fmt.Sprintf("Creating AppStudio Users (%d/%d)", b.Current(), numberOfUsers), userBatches, ' ')
 	})
+	
 	if waitPipelines{
 		wg.Add(3)
 	} else{
 		wg.Add(2)
 	} 
+	
 	go func(){
 		for AppStudioUsersBar.Incr(){
 			startTime := time.Now()
@@ -268,8 +266,6 @@ func setup(cmd *cobra.Command, args []string) {
 		}()
 	}
 	
-	
-
 	// Todo add cleanup functions that will delete user signups 
 	
 	wg.Wait()
@@ -281,6 +277,5 @@ func setup(cmd *cobra.Command, args []string) {
 	klog.Infof("Average Time taken to Create Resources: %.2f s", AverageResourceCreationTimePerUser.Seconds()/float64(numberOfUsers))
 	klog.Infof("Average Time taken to Run Pipelines: %.2f s", AveragePipelineRunTimePerUser.Seconds()/float64(numberOfUsers))
 	metricsInstance.PrintResults()
-	
 
 }
