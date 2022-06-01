@@ -56,7 +56,7 @@ function executeE2ETests() {
 # test install kind 
 curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.14.0/kind-linux-amd64
 chmod +x ./kind
-mv ./kind /some-dir-in-your-PATH/kind
+mv ./kind /bin/kind
 
 kind create cluster --name="kind-cluster"
 
