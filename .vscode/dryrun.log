@@ -1,0 +1,6 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory `/Users/sawood/work/temp-e2e/e2e-tests'
+go mod vendor && CGO_ENABLED=0 go test -v -c -o ./bin/e2e-appstudio ./cmd/e2e_test.go
+ 
+make: Leaving directory `/Users/sawood/work/temp-e2e/e2e-tests'
+ 

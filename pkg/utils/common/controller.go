@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -207,4 +208,24 @@ func (s *SuiteController) GetConfigMap(name, namespace string) (*corev1.ConfigMa
 
 func (s *SuiteController) DeleteConfigMap(name, namespace string) error {
 	return s.KubeInterface().CoreV1().ConfigMaps(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+}
+
+func (s *SuiteController) CreateRegistryAuthSecret(secretName, namespace, secretData string) (*corev1.Secret, error){
+	rawDecodedText, err := base64.StdEncoding.DecodeString(secretData)
+    if err != nil {
+        return nil , err
+    }
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: namespace,
+		},
+		Type: "kubernetes.io/dockerconfigjson",
+		StringData: map[string]string{".dockerconfigjson": string(rawDecodedText)},
+	}
+	er := s.KubeRest().Create(context.TODO(), secret)
+	if er != nil {
+		return nil, er
+	}
+	return secret, nil
 }

@@ -11,6 +11,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
@@ -30,6 +31,7 @@ func init() {
 	utilruntime.Must(tekton.AddToScheme(scheme))
 	utilruntime.Must(routev1.AddToScheme(scheme))
 	utilruntime.Must(managedgitopsv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(toolchainv1alpha1.AddToScheme(scheme))
 }
 
 // Kube returns the clientset for Kubernetes upstream.

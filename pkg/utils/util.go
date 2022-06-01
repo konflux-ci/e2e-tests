@@ -66,3 +66,7 @@ func ObtainGitOpsRepositoryUrl(devfileStatus string) string {
 func GetQuayIOOrganization() string {
 	return GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
 }
+
+func GetDockerConfigJson() string {
+	return GetEnv(constants.DOCKER_CONFIG_JSON, "")
+}
