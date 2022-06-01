@@ -1,3 +1,3 @@
-export DOCKER_CONFIG_JSON=ewogICJhdXRocyI6IHsKICAgICJxdWF5LmlvIjogewogICAgICAiYXV0aCI6ICJiWE5oZDI5dlpEcEVPRGRaT0hrcldWRk5WR1kwZUVjMmJFUTFiSEpWYzBjMlNsQllXRXBFYlVWVmJWVXliQzlvVVVFMU4yMTJSMG8yY21scmFtNTZSSGszWjNCck5qSngiLAogICAgICAiZW1haWwiOiAiIgogICAgfQogIH0KfQ==
+export DOCKER_CONFIG_JSON=<Insert-Here>
 
 go run loadtest.go --username testuser-app --users 5 --batch 5
