@@ -19,11 +19,16 @@ var _ = framework.SingaporeSuiteDescribe("Cluster Registration tests", func() {
 	BeforeAll(func() {
 		// Check to see if the kubeconfig was provided for a cluster to be imported in appstudio
 		Expect(utils.CheckIfEnvironmentExists(AppstudioImpoterdClusterKubeconfigEnv)).Should(BeTrue(), "%s environment variable is not set", "APPSTUDIO_KUBECONFIG")
+
+		// Ensure Kind cluster has been created
+
+		// and a kubeconfig is created
+
 	})
 
 	AfterAll(func() {
 
-		// delete UserSingup: it will clear all space resources automagically
+		// delete UserSingup: it will clear all space resources automatically
 		err := framework.SingaporeController.DeleteAppstudioSandboxWorkspaceUserSignUp(UserAccountName, UserAccountNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -60,10 +65,9 @@ var _ = framework.SingaporeSuiteDescribe("Cluster Registration tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	// TDB
+	// Import cluster into AppStudio:
 	// run oc get configmap -n <your_namespace> <name_of_cluster_to_import>-import -o jsonpath='{.data.importCommand}'
 	// and run the command in the cluster you want to import
-	// possibile other way, create a pod that will: recieve KUBECONFIG via env variable; you set the kubeconfig; you run the command targeting the cluster; you reset the kubeconfig
 	It("Importing cluster in AppStudio", func() {
 		configmapName := ImportedUserClusterName + "-import"
 
@@ -74,18 +78,17 @@ var _ = framework.SingaporeSuiteDescribe("Cluster Registration tests", func() {
 
 		configmap, _ := framework.CommonController.GetConfigMap(configmapName, ImportedUserClusterNamespace)
 		importCommand := configmap.Data["importCommand"]
-		Expect(importCommand).NotTo(BeEmpty())
+		Expect(importCommand).NotTo(BeEmpty(), "importCommand data is empty")
 
 		err = framework.SingaporeController.ExecuteImportCommand(AppstudioImpoterdClusterKubeconfigEnv, importCommand)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	// TDB
-	// check the cluster has been imported
+	// Check the cluster has been imported:
 	// Watch the status.conditions of the RegisteredCluster CR. After several minutes the cluster should be successfully imported.
-	// oc get registeredcluster -n <your_namespace> -oyaml
+	//  oc get registeredcluster -n <your_namespace> -oyaml
 	// The staus.clusterSecretRef will point to the Secret, <name_of_cluster_to_import>-cluster-secret ,containing the kubeconfig of the user cluster in data.kubeconfig.
-	// oc get secrets <name_of_cluster_to_import>-cluster-secret -n <your_namespace> -ojsonpath='{.data.kubeconfig}' | base64 -d
+	//  oc get secrets <name_of_cluster_to_import>-cluster-secret -n <your_namespace> -ojsonpath='{.data.kubeconfig}' | base64 -d
 	It("Checking imported cluster health", func() {
 		Eventually(func() bool {
 			return framework.SingaporeController.CheckIfRegisteredClusterHasJoined(ImportedUserClusterName, ImportedUserClusterNamespace)

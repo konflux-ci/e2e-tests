@@ -53,6 +53,13 @@ function executeE2ETests() {
     "${WORKSPACE}"/bin/e2e-appstudio --ginkgo.junit-report="${ARTIFACTS_DIR}"/e2e-report.xml --ginkgo.progress --ginkgo.v --ginkgo.focus="singapore-suite"
 }
 
+# test install kind 
+curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.14.0/kind-linux-amd64
+chmod +x ./kind
+mv ./kind /some-dir-in-your-PATH/kind
+
+kind create cluster --name="kind-cluster"
+
 # Initiate openshift ci users
 export KUBECONFIG_TEST="/tmp/kubeconfig"
 /bin/bash "$WORKSPACE"/scripts/provision-openshift-user.sh
