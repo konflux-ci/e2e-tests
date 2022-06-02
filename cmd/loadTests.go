@@ -26,15 +26,12 @@ import (
 
 var (
 	usernamePrefix       = "appstudio-user"
-	// kubeconfig           string
 	numberOfUsers        int
 	userBatches          int
-	token 				 string
 	waitPipelines        bool 
 	verbose 		     bool
 	QuarkusDevfileSource string = "https://github.com/redhat-appstudio-qe/devfile-sample-code-with-quarkus"
-	
-	
+	token 				 string
 )
 
 var (
@@ -136,7 +133,6 @@ func setup(cmd *cobra.Command, args []string) {
 		queries.QueryWorkloadCPUUsage(prometheusClient, "application-service", "application-service-controller-manager"),
 		queries.QueryWorkloadMemoryUsage(prometheusClient, "application-service", "application-service-controller-manager"),
 	)
-	
 
 	klog.Infof("🍿 provisioning users...\n")
 
