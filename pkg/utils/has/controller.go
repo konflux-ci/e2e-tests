@@ -3,6 +3,7 @@ package has
 import (
 	"context"
 	"fmt"
+	"time"
 
 	routev1 "github.com/openshift/api/route/v1"
 	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
@@ -17,6 +18,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -222,4 +225,24 @@ func (h *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 	}
 
 	return ns, nil
+}
+
+func (h *SuiteController) WaitForComponentPipelineToBeFinished(componentName string, applicationName string, componentNamespace string) error {
+	return wait.PollImmediate(20*time.Second, 10*time.Minute, func() (done bool, err error) {
+		pipelineRun, _ := h.GetComponentPipeline(componentName, applicationName, componentNamespace)
+
+		for _, condition := range pipelineRun.Status.Conditions {
+			klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)
+
+			if condition.Reason == "Failed" {
+				return false, fmt.Errorf("component %s pipeline failed", pipelineRun.Name)
+			}
+
+			if condition.Status == corev1.ConditionTrue {
+				return true, nil
+			}
+		}
+		return false, nil
+	})
+
 }

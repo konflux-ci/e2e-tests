@@ -1,5 +1,10 @@
 package e2e
 
+import (
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+)
+
 const (
 	RedHatAppStudioApplicationName string = "e2e-demo-application"
 
@@ -27,3 +32,5 @@ const (
 	// GitOps repository branch to use
 	GitOpsRepositoryRevision string = "main"
 )
+
+var AppStudioE2EApplicationsNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "appstudio-e2e-test")
