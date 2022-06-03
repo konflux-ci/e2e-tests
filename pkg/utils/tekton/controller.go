@@ -20,6 +20,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	g "github.com/onsi/ginkgo/v2"
 )
 
 type KubeController struct {
@@ -149,6 +151,7 @@ func (s *SuiteController) ListTaskRuns(ns string, labelKey string, labelValue st
 }
 
 func (k KubeController) WatchPipelineRun(pipelineRunName string, taskTimeout int) error {
+	g.GinkgoWriter.Printf("Waiting for pipeline %q to finish\n", pipelineRunName)
 	return k.Commonctrl.WaitUntil(k.Tektonctrl.CheckPipelineRunFinished(pipelineRunName, k.Namespace), time.Duration(taskTimeout)*time.Second)
 }
 
@@ -244,6 +247,7 @@ func (k KubeController) createAndWait(pr *v1beta1.PipelineRun, taskTimeout int) 
 	if err != nil {
 		return nil, err
 	}
+	g.GinkgoWriter.Printf("Creating Pipeline %q\n", pipelineRun.Name)
 	return pipelineRun, k.Commonctrl.WaitUntil(k.Tektonctrl.CheckPipelineRunStarted(pipelineRun.Name, k.Namespace), time.Duration(taskTimeout)*time.Second)
 }
 
