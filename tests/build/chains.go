@@ -178,13 +178,14 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 				tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(tr.Status.TaskRunResults).Should(ContainElements(
-					tekton.MatchTaskRunResultWithJSONValue("OUTPUT", `[
-						{
-							"filename": "/shared/ec-work-dir/input/input.json",
-							"namespace": "release.main",
-							"successes": 2
-						}
-					]`),
+
+					//	The task result contains the conftest output which looks like this:
+					//	[{ "filename": "/shared/ec-work-dir/input/input.json", "namespace": "release.main", "successes": 2 }]
+					//
+					// Check the important values rather than match the whole thing
+					tekton.MatchTaskRunResultWithTemplate("OUTPUT",
+						"{{ (index . 0).successes }} {{ (index . 0).failures }}", "2 <no value>"),
+
 					tekton.MatchTaskRunResult("PASSED", "true"),
 				))
 			})
@@ -204,22 +205,17 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 				tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(tr.Status.TaskRunResults).Should(ContainElements(
-					tekton.MatchTaskRunResultWithJSONValue("OUTPUT", `[
-						{
-							"filename": "/shared/ec-work-dir/input/input.json",
-							"namespace": "release.main",
-							"successes": 1,
-							"failures": [
-								{
-									"msg": "No test data found",
-									"metadata": {
-										"code": "test_data_missing",
-										"effective_on": "2022-01-01T00:00:00Z"
-									}
-								}
-							]
-						}
-					]`),
+
+					// The task result contains the conftest output which looks like this:
+					// [{ "filename": "/shared/ec-work-dir/input/input.json", "namespace": "release.main",
+					//   "successes": 1, "failures": [{ "msg": "No test data found", "metadata": {
+					//     "code": "test_data_missing", "effective_on": "2022-01-01T00:00:00Z" }}] }]
+					//
+					// Check the important values rather than match the whole thing
+					tekton.MatchTaskRunResultWithTemplate("OUTPUT",
+						"{{ (index . 0).successes }} {{ len (index . 0).failures }} {{ (index (index . 0).failures 0).metadata.code }}",
+						"1 1 test_data_missing"),
+
 					tekton.MatchTaskRunResult("PASSED", "false"),
 				))
 			})

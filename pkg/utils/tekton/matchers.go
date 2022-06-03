@@ -1,8 +1,11 @@
 package tekton
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
+	"text/template"
 
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -11,9 +14,30 @@ import (
 
 type TaskRunResultMatcher struct {
 	name        string
+	template    string
 	value       *string
 	jsonValue   *interface{}
 	jsonMatcher types.GomegaMatcher
+}
+
+func applyTemplateToJson(jsonInput string, tmplString string) (string, error) {
+	// Convert the json input to data
+	var inputData interface{}
+	err := json.Unmarshal([]byte(jsonInput), &inputData)
+	if err != nil {
+		return "", err
+	}
+
+	// Prepare the template
+	tmpl, err := template.New("").Parse(tmplString)
+	if err != nil {
+		return "", err
+	}
+
+	// Apply the template to the input data and return the result
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, inputData)
+	return buf.String(), err
 }
 
 func (matcher *TaskRunResultMatcher) FailureMessage(actual interface{}) (message string) {
@@ -36,7 +60,18 @@ func (matcher *TaskRunResultMatcher) Match(actual interface{}) (success bool, er
 		}
 
 		if matcher.value != nil {
-			return strings.TrimSpace(tr.Value) == *matcher.value, nil
+			if matcher.template != "" {
+				// If a template is provided then apply it to the task run result
+				// value before doing the comparison
+				valueForComparison, err := applyTemplateToJson(tr.Value, matcher.template)
+				if err != nil {
+					return false, err
+				}
+				return valueForComparison == *matcher.value, nil
+			} else {
+				return strings.TrimSpace(tr.Value) == *matcher.value, nil
+			}
+
 		} else {
 			matcher.jsonMatcher = gomega.MatchJSON(*matcher.jsonValue)
 			return matcher.jsonMatcher.Match(tr.Value)
@@ -61,4 +96,8 @@ func MatchTaskRunResult(name, value string) types.GomegaMatcher {
 
 func MatchTaskRunResultWithJSONValue(name string, json interface{}) types.GomegaMatcher {
 	return &TaskRunResultMatcher{name: name, jsonValue: &json}
+}
+
+func MatchTaskRunResultWithTemplate(name string, template string, value string) types.GomegaMatcher {
+	return &TaskRunResultMatcher{name: name, template: template, value: &value}
 }
