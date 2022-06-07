@@ -50,7 +50,7 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 			Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
 		}
 
-		_, err := framework.HasController.CreateTestNamespace(AppStudioE2EApplicationsNamespace)
+		_, err := framework.CommonController.CreateTestNamespace(AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", AppStudioE2EApplicationsNamespace, err)
 
 	})

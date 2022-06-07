@@ -1,0 +1,9 @@
+apiVersion: appstudio.redhat.com/v1alpha1
+kind: ComponentDetectionQuery
+metadata:
+  name: componentdetectionquery-sample
+  namespace: appstudio-e2e-test
+spec:
+  secret: has-private-git-repo-secret
+  git:
+    url: https://github.com/redhat-appstudio-qe/devfile-sample-code-with-quarkus

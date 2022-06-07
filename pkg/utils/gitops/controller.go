@@ -26,8 +26,8 @@ func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
 func (h *SuiteController) CreateGitOpsCR(name string, namespace string, repoUrl string, repoPath string, repoRevision string) (*managedgitopsv1alpha1.GitOpsDeployment, error) {
 	gitOpsDeployment := &managedgitopsv1alpha1.GitOpsDeployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+			GenerateName: name,
+			Namespace:    namespace,
 		},
 		Spec: managedgitopsv1alpha1.GitOpsDeploymentSpec{
 			Source: managedgitopsv1alpha1.ApplicationSource{

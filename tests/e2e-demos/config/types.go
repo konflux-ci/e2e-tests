@@ -11,15 +11,10 @@ type TestSpec struct {
 	Components      []ComponentSpec `yaml:"components"`
 }
 
-/*
-   - name: "component-a"
-     type: "private"
-     devfileSample: "https://somewhere"
-     quayImage: "quay://"
-     language: "java"
-
-*/
 type ComponentSpec struct {
-	Name string `yaml:"name"`
-	Type string `yaml:"type"`
+	Name             string `yaml:"name"`
+	Type             string `yaml:"type"`
+	DevfileSample    string `yaml:"devfileSample,omitempty"`
+	ContainerSource  string `yaml:"containerSource,omitempty"`
+	DockerFileSource string `yaml:"dockerFileSource,omitempty"`
 }
