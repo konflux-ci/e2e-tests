@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -28,9 +27,9 @@ import (
 )
 
 const (
-	containerImageSource   = "quay.io/psturc/busybox-loop:latest"
-	gitSourceRepoName      = "devfile-sample-python-basic"
-	gitSourceURL           = "https://github.com/psturc-org/devfile-sample-python-basic"
+	containerImageSource   = "quay.io/redhat-appstudio-qe/busybox-loop:latest"
+	gitSourceRepoName      = "devfile-sample-hello-world"
+	gitSourceURL           = "https://github.com/redhat-appstudio-qe/" + gitSourceRepoName
 	dummyPipelineBundleRef = "quay.io/redhat-appstudio-qe/dummy-pipeline-bundle:latest"
 )
 
@@ -91,8 +90,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 
 		BeforeAll(func() {
 			componentName = fmt.Sprintf("build-suite-test-component-git-source-%s", util.GenerateRandomString(4))
-			//outputContainerImage = "quay.io/redhat-appstudio/user-workload:"
-			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:123-%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
+			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 			timeout = time.Second * 60
 			interval = time.Second * 1
 			// Create a component with Git Source URL being defined
@@ -228,7 +226,6 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 						return false
 					}
 					return true
-
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the event listener to be ready")
 			})
 		})
@@ -238,7 +235,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 			var webhookID int64
 
 			BeforeAll(func() {
-				if isPrivateHostname(webhookRoute.Spec.Host) {
+				if utils.IsPrivateHostname(webhookRoute.Spec.Host) {
 					Skip("Using private cluster (not reachable from Github), skipping...")
 				}
 
@@ -409,21 +406,3 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 	})
 
 })
-
-func isPrivateHostname(url string) bool {
-	// https://www.ibm.com/docs/en/networkmanager/4.2.0?topic=translation-private-address-ranges
-	privateIPAddressPrefixes := []string{"10.", "172.1", "172.2", "172.3", "192.168"}
-	addr, err := net.LookupIP(url)
-	if err != nil {
-		klog.Infof("Unknown host: %v", err)
-		return true
-	}
-
-	ip := addr[0]
-	for _, ipPrefix := range privateIPAddressPrefixes {
-		if strings.HasPrefix(ip.String(), ipPrefix) {
-			return true
-		}
-	}
-	return false
-}
