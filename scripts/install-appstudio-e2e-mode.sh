@@ -17,6 +17,7 @@ export TEST_BRANCH_ID=$(date +%s)
 export ROOT_E2E="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"/..
 export WORKSPACE=${WORKSPACE:-${ROOT_E2E}}
 export E2E_APPLICATIONS_NAMESPACE=${E2E_APPLICATIONS_NAMESPACE:-appstudio-e2e-test}
+export SHARED_SECRET_NAMESPACE="build-templates"
 
 # Download gitops repository to install AppStudio in e2e mode.
 function cloneInfraDeployments() {
@@ -40,12 +41,10 @@ function initializeSPIVault() {
 
 # Secrets used by pipelines to push component containers to quay.io
 function createApplicationServiceSecrets() {
-    echo -e "[INFO] Creating application-service related secrets in $E2E_APPLICATIONS_NAMESPACE namespace"
+    echo -e "[INFO] Creating application-service related secrets in $SHARED_SECRET_NAMESPACE namespace"
 
     echo "$QUAY_TOKEN" | base64 --decode > docker.config
-    oc create namespace "$E2E_APPLICATIONS_NAMESPACE" --dry-run=client -o yaml | oc apply -f - || true
-    kubectl create secret docker-registry redhat-appstudio-registry-pull-secret -n  "$E2E_APPLICATIONS_NAMESPACE" --from-file=.dockerconfigjson=docker.config || true
-    kubectl create secret docker-registry redhat-appstudio-staginguser-pull-secret -n "$E2E_APPLICATIONS_NAMESPACE" --from-file=.dockerconfigjson=docker.config || true
+    kubectl create secret docker-registry redhat-appstudio-user-workload -n $SHARED_SECRET_NAMESPACE --from-file=.dockerconfigjson=docker.config || true
     rm docker.config
 }
 

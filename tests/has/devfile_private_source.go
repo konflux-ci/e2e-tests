@@ -81,7 +81,7 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 			// application info should be stored even after deleting the application in application variable
 			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return framework.HasController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
 	})
 
@@ -104,7 +104,7 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 			// application info should be stored even after deleting the application in application variable
 			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return framework.HasController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 	})
 
