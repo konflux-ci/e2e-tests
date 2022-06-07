@@ -5,6 +5,7 @@ import (
 
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	release "github.com/redhat-appstudio/release-service/api/v1alpha1"
+	v1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -119,4 +120,16 @@ func (s *SuiteController) CreateApplicationSnapshot(name string, namespace strin
 	}
 	err := s.KubeRest().Create(context.TODO(), applicationSnapshotObj)
 	return applicationSnapshotObj, err
+}
+
+// Get Pipeline run in a given namespace
+func (s *SuiteController) GetPipelineRunInNamespace(namespace string) (*v1beta1.PipelineRun, error) {
+
+	pipelineruns := &v1beta1.PipelineRunList{}
+
+	err := s.KubeRest().List(context.TODO(), pipelineruns, rclient.InNamespace(namespace))
+	if len(pipelineruns.Items) >= 1 {
+		return &pipelineruns.Items[0], nil
+	}
+	return nil, err
 }

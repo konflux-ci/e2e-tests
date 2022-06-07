@@ -1,6 +1,8 @@
 package release
 
 import (
+	"strings"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
@@ -45,13 +47,9 @@ var _ = framework.ReleaseStrategyDescribe("test-demo", func() {
 	AfterAll(func() {
 
 		_, err := framework.HasController.DeleteTestNamespace(DemoNamespace)
-		klog.Info("NameSpace '%s' is deleted!': ", DemoNamespace)
-		// Expect(err).NotTo(HaveOccurred(), "Error when deleting '%s' namespace: %v", DemoNamespace, err)
 
 		_, err = framework.HasController.DeleteTestNamespace(ManagedNamespace)
-		klog.Info("NameSpace '%s' is deleted!': ", ManagedNamespace)
-		// Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", ManagedNamespace, err)
-		klog.Info("AfetrAll is Done!: '%v'", err)
+		klog.Info("AfetrAll is Done!: ", err)
 	})
 
 	// Create resources for Happy Path demo
@@ -83,13 +81,30 @@ var _ = framework.ReleaseStrategyDescribe("test-demo", func() {
 		})
 	})
 
-	// 1-The release succeeded
-	// 2-The reason is succeeded
+	// 1-The release Succeeded True
+	// 2-The release Reason is Succeeded
 	// 3-There's a PR in the managed workspace
 	// 4-The ReleasePipelineRun in the release status points to an existing PR (you can leave this for M5)
 	//
 	// Verification of test resources: Demo
 	var _ = Describe("Happy-path Test Verification", func() {
+
+		// Check if there is a Pipelinerun in managed namespace
+		It("Test if a PipelineRun in managed namespace", func() {
+			pr, err := framework.ReleaseController.GetPipelineRunInNamespace(ManagedNamespace)
+			Expect(err).NotTo(HaveOccurred())
+			currentrelease, err := framework.ReleaseController.GetRelease(DemoNamespace)
+			if err != nil {
+				klog.Info("Release has not been created yet.")
+				Expect(err).NotTo(HaveOccurred())
+			}
+			split := strings.Split(currentrelease.Status.ReleasePipelineRun, "/")
+			releaseNamespace, releasePr := split[0], split[1]
+			klog.Info("Pipeline in Release: ", releasePr)
+			klog.Info("NameSpace from Release: ", releaseNamespace)
+			Expect(releasePr).Should(Equal(pr.Name))
+			Expect(releaseNamespace).Should(Equal(ManagedNamespace))
+		})
 
 		// Verify the release Status we expect it be True
 		It("Status of Release created should be true ", func() {
@@ -103,7 +118,6 @@ var _ = framework.ReleaseStrategyDescribe("test-demo", func() {
 				klog.Info("Release Sataus: ", string(releaseStatus))
 				return string(releaseStatus)
 			}, timeout, interval).Should(Equal("True"), "timed out when waiting for the Release Status to be True")
-
 		})
 
 		// Verify Release Reason, we expect it be Succeeded
