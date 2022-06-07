@@ -8,16 +8,24 @@ import (
 )
 
 const (
-	DemoNamespace       = "demo"
-	ManagedNamespace    = "managed"
-	ApplicationSnapshot = "m5-snapshot"
-	ReleaseLinkDemo     = "m5-release-link-demo"
-	ReleaseLinkManaged  = "m5-release-link-managed"
-	ReleaseName         = "m5-release"
-	ComponentName       = "m4-component"
-	ApplicationName     = "m4-app"
+	DemoNamespace         = "demo"
+	ManagedNamespace      = "managed"
+	ApplicationSnapshot   = "m5-snapshot"
+	ReleaseLinkDemo       = "m5-release-link-demo"
+	ReleaseLinkManaged    = "m5-release-link-managed"
+	ReleaseStrategy       = "m5-strategy"
+	ReleaseName           = "m5-release"
+	ComponentName         = "m4-component"
+	Pipeline              = "release-pipeline"
+	ApplicationName       = "m5-app"
+	ReleaseStrategyBundle = "quay.io/hacbs-release/demo:m5-alpine"
+	Image_1               = "quay.io/redhat-appstudio/component1@sha256:d5e85e49c89df42b221d972f5b96c6507a8124717a6e42e83fd3caae1031d514"
+	Image_2               = "quay.io/redhat-appstudio/component2@sha256:a01dfd18cf8ca8b68770b09a9b6af0fd7c6d1f8644c7ab97f0e06c34dfc5860e"
+	Image_3               = "quay.io/redhat-appstudio/component3@sha256:d90a0a33e4c5a1daf5877f8dd989a570bfae4f94211a8143599245e503775b1f"
 )
 
+var timeout = 600
+var interval = 1
 var _ = framework.ReleaseStrategyDescribe("test-demo", func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
@@ -27,41 +35,45 @@ var _ = framework.ReleaseStrategyDescribe("test-demo", func() {
 	// Create required resources before Test
 	BeforeAll(func() {
 		demo, err := framework.HasController.CreateTestNamespace(DemoNamespace)
-		klog.Info("NameSpace created: ", demo.Name)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", DemoNamespace, err)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", demo.Name, err)
 
 		namespace, err := framework.HasController.CreateTestNamespace(ManagedNamespace)
-		klog.Info("NameSpace created: ", namespace.Name)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", ManagedNamespace, err)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", namespace.Name, err)
 	})
 
 	// teardown after test is ened
-	// AfterAll(func() {
+	AfterAll(func() {
 
-	// 	_, err := framework.HasController.DeleteTestNamespace(DemoNamespace)
-	// 	klog.Info("NameSpace '%s' is deleted!': ", DemoNamespace)
-	// 	// Expect(err).NotTo(HaveOccurred(), "Error when deleting '%s' namespace: %v", DemoNamespace, err)
+		_, err := framework.HasController.DeleteTestNamespace(DemoNamespace)
+		klog.Info("NameSpace '%s' is deleted!': ", DemoNamespace)
+		// Expect(err).NotTo(HaveOccurred(), "Error when deleting '%s' namespace: %v", DemoNamespace, err)
 
-	// 	_, err = framework.HasController.DeleteTestNamespace(ManagedNamespace)
-	// 	klog.Info("NameSpace '%s' is deleted!': ", ManagedNamespace)
-	// 	// Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", ManagedNamespace, err)
-	// 	klog.Info("AfetrAll is Done!: '%v'", err)
-	// })
+		_, err = framework.HasController.DeleteTestNamespace(ManagedNamespace)
+		klog.Info("NameSpace '%s' is deleted!': ", ManagedNamespace)
+		// Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", ManagedNamespace, err)
+		klog.Info("AfetrAll is Done!: '%v'", err)
+	})
 
 	// Create resources for Happy Path demo
 	var _ = Describe("Happy-path test", func() {
-		It("Create Release Link in namespace demo", func() {
-			_, err := framework.ReleaseController.CreateReleaseLink("demo", "demo", "Users's ReleaseLink", "m4-app", "managed", "")
-			Expect(err).NotTo(HaveOccurred())
-		})
 
-		It("Create Release Link in namespace managed", func() {
-			_, err := framework.ReleaseController.CreateReleaseLink("managed", "managed", "Managed Workspace's ReleaseLink", "m4-app", "demo", "m4-strategy")
+		It("Create a an ApplicationSnapshot for M5", func() {
+			_, err := framework.ReleaseController.CreateApplicationSnapshot(ApplicationSnapshot, DemoNamespace, Image_1, Image_2, Image_3, ApplicationName)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("Create Release Strategy", func() {
-			_, err := framework.ReleaseController.CreateReleaseStrategy("m4-strategy", "managed", "m4-release-pipeline", "quay.io/hacbs-release/m4:0.1-alpine")
+			_, err := framework.ReleaseController.CreateReleaseStrategy(ReleaseStrategy, ManagedNamespace, Pipeline, ReleaseStrategyBundle)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Create Release Link in namespace demo", func() {
+			_, err := framework.ReleaseController.CreateReleaseLink(ReleaseLinkDemo, DemoNamespace, "Users's ReleaseLink", ApplicationName, ManagedNamespace, "")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Create Release Link in namespace managed", func() {
+			_, err := framework.ReleaseController.CreateReleaseLink(ReleaseLinkManaged, ManagedNamespace, "Managed Workspace's ReleaseLink", ApplicationName, DemoNamespace, ReleaseStrategy)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -79,12 +91,34 @@ var _ = framework.ReleaseStrategyDescribe("test-demo", func() {
 	// Verification of test resources: Demo
 	var _ = Describe("Happy-path Test Verification", func() {
 
-		// Verify the release
-		It("Test the release ", func() {
-			currentrelease, err := framework.ReleaseController.GetRelease(DemoNamespace)
-			klog.Info("Release is %s : %s", currentrelease, err)
-			Expect(err).NotTo(HaveOccurred())
-			// TODO u got release, need to test status and reason
+		// Verify the release Status we expect it be True
+		It("Status of Release created should be true ", func() {
+			Eventually(func() string {
+				currentrelease, err := framework.ReleaseController.GetRelease(DemoNamespace)
+				if err != nil {
+					klog.Info("Release has not been created yet.")
+					return "Unknown"
+				}
+				releaseStatus := currentrelease.Status.Conditions[0].Status
+				klog.Info("Release Sataus: ", string(releaseStatus))
+				return string(releaseStatus)
+			}, timeout, interval).Should(Equal("True"), "timed out when waiting for the Release Status to be True")
+
 		})
+
+		// Verify Release Reason, we expect it be Succeeded
+		It("Test Release Reason expexted to be Succeeded", func() {
+			Eventually(func() string {
+				currentrelease, err := framework.ReleaseController.GetRelease(DemoNamespace)
+				if err != nil {
+					klog.Info("Release has not been created yet.")
+					return "Unknown"
+				}
+				releaseReason := currentrelease.Status.Conditions[0].Reason
+				klog.Info("Release Reason: ", releaseReason)
+				return releaseReason
+			}, timeout, interval).Should(Equal("Succeeded"), "timed out when waiting for the Release Reason be Succeeded")
+		})
+
 	})
 })

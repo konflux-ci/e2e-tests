@@ -3,8 +3,6 @@ package release
 import (
 	"context"
 
-	"k8s.io/klog"
-
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	release "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -67,10 +65,9 @@ func (s *SuiteController) GetRelease(namespace string) (*release.Release, error)
 
 	err := s.KubeRest().List(context.TODO(), releases, rclient.InNamespace(namespace))
 	if len(releases.Items) == 1 {
-		klog.Info("Release is %s : %s", releases.Items[0].Name, err)
 		return &releases.Items[0], nil
 	}
-	return nil, nil
+	return nil, err
 }
 
 // Creats a realse  resource (M5)
@@ -95,7 +92,7 @@ func (s *SuiteController) CreateRelease(name string, namespace string, applicati
 }
 
 // Create a ApplicationSnapshot in Release
-func (s *SuiteController) CreateApplicationSnapshot(name string, namespace string, components map[string]string) (*release.ApplicationSnapshot, error) {
+func (s *SuiteController) CreateApplicationSnapshot(name string, namespace string, image_1 string, image_2 string, image_3 string, app_name string) (*release.ApplicationSnapshot, error) {
 
 	applicationSnapshotObj := &release.ApplicationSnapshot{
 		ObjectMeta: metav1.ObjectMeta{
@@ -103,22 +100,23 @@ func (s *SuiteController) CreateApplicationSnapshot(name string, namespace strin
 			Namespace: namespace,
 		},
 		Spec: release.ApplicationSnapshotSpec{
-			Application: "app-name",
+			Application: app_name,
 			Images: []release.Image{
 				{
 					Component: "component1",
-					PullSpec:  "image1",
+					PullSpec:  image_1,
 				},
 				{
 					Component: "component2",
-					PullSpec:  "image2",
+					PullSpec:  image_2,
 				},
 				{
 					Component: "component3",
-					PullSpec:  "image3",
+					PullSpec:  image_3,
 				},
 			},
 		},
 	}
-	return applicationSnapshotObj, nil
+	err := s.KubeRest().Create(context.TODO(), applicationSnapshotObj)
+	return applicationSnapshotObj, err
 }
