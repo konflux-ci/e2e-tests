@@ -7,7 +7,4 @@ set -o pipefail
 # error on unset variables
 set -u
 
-curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.14.0/kind-linux-amd64
-chmod +x ./kind
-
-./kind create cluster
+curl -sfL https://get.k3s.io | sh -
