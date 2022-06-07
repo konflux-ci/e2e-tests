@@ -136,8 +136,8 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 		// Get the stub CDQ and validate its content
 		for _, compDetected = range cdq.Status.ComponentDetected {
 			Expect(compDetected.DevfileFound).To(BeTrue(), "DevfileFound was not set to true")
-			Expect(compDetected.Language).To(Equal("Java"), "Detected language was not Java")
-			Expect(compDetected.ProjectType).To(Equal("Quarkus"), "Detected framework was not Quarkus")
+			Expect(compDetected.Language).To(Equal("java"), "Detected language was not java")
+			Expect(compDetected.ProjectType).To(Equal("quarkus"), "Detected framework was not quarkus")
 		}
 	})
 
