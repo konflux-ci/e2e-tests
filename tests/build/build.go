@@ -86,7 +86,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 			}, timeout, interval).Should(BeTrue(), "expected the PipelineRun not to be triggered")
 		})
 	})
-	When("component with git source is created", func() {
+	When("component with git source is created", Label("slow"), func() {
 
 		BeforeAll(func() {
 			componentName = fmt.Sprintf("build-suite-test-component-git-source-%s", util.GenerateRandomString(4))
@@ -121,7 +121,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 			}
 
 		})
-		It("triggers a PipelineRun", func() {
+		It("triggers a PipelineRun", Label("build-templates-e2e"), func() {
 			Eventually(func() bool {
 				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false)
 				if err != nil {
@@ -132,7 +132,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 		})
 
-		It("should reference the custom pipeline bundle in a PipelineRun", func() {
+		It("should reference the custom pipeline bundle in a PipelineRun", Label("build-templates-e2e"), func() {
 			if customBundleRef == "" {
 				Skip("skipping the specs - custom pipeline bundle is not defined")
 			}
@@ -154,7 +154,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 			Expect(pipelineRun.Spec.PipelineRef.Bundle).To(Equal(defaultBundleRef))
 		})
 
-		When("the PipelineRun has started", func() {
+		When("the PipelineRun has started", Label("build-templates-e2e"), func() {
 			BeforeAll(func() {
 				timeout = time.Second * 600
 				interval = time.Second * 10
@@ -394,6 +394,8 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 		})
 
 		It("should not be possible to push to quay.io repo (PipelineRun should fail)", func() {
+			timeout = time.Minute * 5
+			interval = time.Second * 5
 			Eventually(func() bool {
 				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false)
 				Expect(err).ShouldNot(HaveOccurred())
