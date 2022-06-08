@@ -180,8 +180,8 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 			var webhookName string
 
 			BeforeAll(func() {
-				timeout = time.Minute * 2
-				interval = time.Second * 5
+				timeout = time.Minute * 5
+				interval = time.Second * 10
 				webhookName = "el" + componentName
 
 			})
@@ -316,6 +316,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			componentName = "build-suite-test-component-pipeline-reference"
+			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -362,6 +363,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			componentName = "build-suite-test-secret-overriding"
+			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -402,6 +404,48 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 				}
 				return false
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to fail")
+		})
+	})
+
+	When("creating a component with a specific container image URL", Label("image repository protection"), func() {
+		BeforeEach(func() {
+			componentName = fmt.Sprintf("build-suite-test-component-image-url-%s", util.GenerateRandomString(4))
+			timeout = time.Second * 10
+
+			DeferCleanup(f.HasController.DeleteHasComponent, componentName, appStudioE2EApplicationsNamespace)
+		})
+		It("should fail for ContainerImage field set to a protected repository (without an image tag)", func() {
+			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected", utils.GetQuayIOOrganization())
+			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", outputContainerImage, "")
+			Expect(err).ShouldNot(HaveOccurred())
+			Eventually(func() (string, error) {
+				return f.HasController.GetHasComponentConditionStatusMessage(componentName, appStudioE2EApplicationsNamespace)
+			}, timeout).Should(ContainSubstring("create failed"), "timed out waiting for the component creation to fail")
+
+		})
+		It("should fail for ContainerImage field set to a protected repository followed by a random tag", func() {
+			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
+			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", outputContainerImage, "")
+			Expect(err).ShouldNot(HaveOccurred())
+			Eventually(func() (string, error) {
+				return f.HasController.GetHasComponentConditionStatusMessage(componentName, appStudioE2EApplicationsNamespace)
+			}, timeout).Should(ContainSubstring("create failed"), "timed out waiting for the component creation to fail")
+		})
+		It("should succeed for ContainerImage field set to a protected repository followed by a namespace prefix + dash + string", func() {
+			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected:%s-%s", utils.GetQuayIOOrganization(), appStudioE2EApplicationsNamespace, strings.Replace(uuid.New().String(), "-", "", -1))
+			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", outputContainerImage, "")
+			Expect(err).ShouldNot(HaveOccurred())
+			Eventually(func() (string, error) {
+				return f.HasController.GetHasComponentConditionStatusMessage(componentName, appStudioE2EApplicationsNamespace)
+			}, timeout).Should(ContainSubstring("successfully created"), "timed out waiting for the component creation to succeed")
+		})
+		It("should succeed for ContainerImage field set to a custom (unprotected) repository without a tag being specified", func() {
+			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images", utils.GetQuayIOOrganization())
+			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", outputContainerImage, "")
+			Expect(err).ShouldNot(HaveOccurred())
+			Eventually(func() (string, error) {
+				return f.HasController.GetHasComponentConditionStatusMessage(componentName, appStudioE2EApplicationsNamespace)
+			}, timeout).Should(ContainSubstring("successfully created"), "timed out waiting for the component creation to succeed")
 		})
 	})
 

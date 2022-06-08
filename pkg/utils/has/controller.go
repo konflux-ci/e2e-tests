@@ -303,3 +303,14 @@ func (h *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 
 	return ns, nil
 }
+
+func (h *SuiteController) GetHasComponentConditionStatusMessage(name, namespace string) (string, error) {
+	c, err := h.GetHasComponent(name, namespace)
+	if err != nil {
+		return "", fmt.Errorf("error getting HAS component: %v", err)
+	}
+	if len(c.Status.Conditions) > 0 {
+		return c.Status.Conditions[0].Message, nil
+	}
+	return "", nil
+}
