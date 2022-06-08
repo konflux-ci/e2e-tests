@@ -17,6 +17,13 @@ export ARTIFACTS_DIR=${ARTIFACT_DIR:-"/tmp/appstudio"}
 command -v yq >/dev/null 2>&1 || { echo "yq is not installed. Aborting."; exit 1; }
 command -v kubectl >/dev/null 2>&1 || { echo "kubectl is not installed. Aborting."; exit 1; }
 
+function waitReleaseApplicationToBeReady() {
+    while [ "$(kubectl get applications.argoproj.io release -n openshift-gitops -o jsonpath='{.status.health.status}')" != "Healthy" ]; do
+        sleep 30s
+        echo "[INFO] Waiting for Release service to be ready."
+    done
+}
+
 function waitHASApplicationToBeReady() {
     while [ "$(kubectl get applications.argoproj.io has -n openshift-gitops -o jsonpath='{.status.health.status}')" != "Healthy" ]; do
         sleep 30s
@@ -64,12 +71,14 @@ export KUBECONFIG="${KUBECONFIG_TEST}"
 export -f waitAppStudioToBeReady
 export -f waitBuildToBeReady
 export -f waitHASApplicationToBeReady
+export -f waitReleaseApplicationToBeReady
 export -f waitSPIToBeReady
 
-# Install AppStudio Controllers and wait for HAS and other AppStudio application to be running.
+# Install AppStudio Controllers and wait for HAS and other AppStudio applications to be running.
 timeout --foreground 10m bash -c waitAppStudioToBeReady
 timeout --foreground 10m bash -c waitBuildToBeReady
 timeout --foreground 10m bash -c waitHASApplicationToBeReady
+timeout --foreground 10m bash -c waitReleaseApplicationToBeReady
 timeout --foreground 10m bash -c waitSPIToBeReady
 
 executeE2ETests
