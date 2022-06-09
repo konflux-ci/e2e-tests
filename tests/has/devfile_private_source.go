@@ -44,6 +44,8 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 
 	// Initialize the application struct
 	application := &appservice.Application{}
+	cdq := &appservice.ComponentDetectionQuery{}
+	compDetected := appservice.ComponentDetectionDescription{}
 	privateGitRepository := utils.GetEnv(constants.PRIVATE_DEVFILE_SAMPLE, PrivateQuarkusDevfileSource)
 
 	BeforeAll(func() {
@@ -113,8 +115,34 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 		}, 5*time.Minute, 45*time.Second).Should(BeTrue(), "'git-clone' cluster task don't exist in cluster. Component cannot be created")
 	})
 
+	It("Create Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
+		cdq, err := framework.HasController.CreateComponentDetectionQuery(componentName, AppStudioE2EApplicationsNamespace, QuarkusDevfileSource, "", false)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(cdq.Name).To(Equal(componentName))
+
+	})
+
+	It("Check Red Hat AppStudio ComponentDetectionQuery status", func() {
+		// Validate that the CDQ completes successfully
+		Eventually(func() bool {
+			// application info should be stored even after deleting the application in application variable
+			cdq, err = framework.HasController.GetComponentDetectionQuery(componentName, AppStudioE2EApplicationsNamespace)
+			return err == nil && len(cdq.Status.ComponentDetected) > 0
+		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "ComponentDetectionQuery did not complete successfully")
+
+		// Validate that the completed CDQ only has one detected component
+		Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+
+		// Get the stub CDQ and validate its content
+		for _, compDetected = range cdq.Status.ComponentDetected {
+			Expect(compDetected.DevfileFound).To(BeTrue(), "DevfileFound was not set to true")
+			Expect(compDetected.Language).To(Equal("java"), "Detected language was not java")
+			Expect(compDetected.ProjectType).To(Equal("quarkus"), "Detected framework was not quarkus")
+		}
+	})
+
 	It("Create Red Hat AppStudio Quarkus component", func() {
-		component, err := framework.HasController.CreateComponent(application.Name, componentName, AppStudioE2EApplicationsNamespace, privateGitRepository, ComponentContainerImage, "", SPIAccessTokenSecretName)
+		component, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, AppStudioE2EApplicationsNamespace, SPIAccessTokenSecretName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(component.Name).To(Equal(componentName))
 	})
