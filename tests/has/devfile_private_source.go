@@ -65,7 +65,7 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 
 	})
 
-	/*AfterAll(func() {
+	AfterAll(func() {
 		err := framework.HasController.DeleteHasComponent(componentName, AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -81,7 +81,7 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 
 			return framework.HasController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
-	})*/
+	})
 
 	It("Create Red Hat AppStudio Application", func() {
 		createdApplication, err := framework.HasController.CreateHasApplication(applicationName, AppStudioE2EApplicationsNamespace)
