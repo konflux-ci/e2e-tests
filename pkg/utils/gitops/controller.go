@@ -67,9 +67,9 @@ func (h *SuiteController) GetGitOpsDeployedImage(deployment *appsv1.Deployment) 
 }
 
 // Checks that the deployed backend component is actually reachable and returns 200
-func (h *SuiteController) CheckGitOpsEndpoint(route *routev1.Route) error {
+func (h *SuiteController) CheckGitOpsEndpoint(route *routev1.Route, endpoint string) error {
 	if len(route.Spec.Host) > 0 {
-		routeUrl := "http://" + route.Spec.Host + "/hello-resteasy"
+		routeUrl := "https://" + route.Spec.Host + endpoint
 
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		resp, err := http.Get(routeUrl)

@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -283,4 +284,14 @@ func (h *SuiteController) WaitForComponentPipelineToBeFinished(componentName str
 		return false, nil
 	})
 
+}
+
+// Remove all components from a given repository. Usefull when create a lot of resources and want to remove all of them
+func (h *SuiteController) DeleteAllComponentsInASpecificNamespace(namespace string) error {
+	return h.KubeRest().DeleteAllOf(context.TODO(), &appservice.Component{}, client.InNamespace(namespace))
+}
+
+// Remove all applications from a given repository. Usefull when create a lot of resources and want to remove all of them
+func (h *SuiteController) DeleteAllApplicationsInASpecificNamespace(namespace string) error {
+	return h.KubeRest().DeleteAllOf(context.TODO(), &appservice.Application{}, client.InNamespace(namespace))
 }

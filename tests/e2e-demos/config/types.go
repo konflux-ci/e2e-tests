@@ -1,8 +1,7 @@
 package config
 
 type WorkflowSpec struct {
-	PolarionID string     `yaml:"polarionId,omitempty"`
-	Tests      []TestSpec `yaml:"tests"`
+	Tests []TestSpec `yaml:"tests"`
 }
 
 type TestSpec struct {

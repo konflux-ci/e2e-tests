@@ -1,14 +1,9 @@
 package e2e
 
 import (
-	"bytes"
 	"context"
-	"crypto/tls"
 	"fmt"
-	"net/http"
-	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -21,7 +16,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
-	"github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
+	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,17 +34,20 @@ const (
 	containerImageSource = "quay.io/redhat-appstudio-qe/test-images:7ac98d2c0ff64671baa54d4a94675601"
 )
 
-var _ = framework.E2ESuiteDescribe("magic", func() {
+var _ = framework.E2ESuiteDescribe("test-generator", func() {
 	defer GinkgoRecover()
 
 	// Initialize the application struct
 	application := &appservice.Application{}
 	component := &appservice.Component{}
 
+	configTestFile := viper.GetString("config-suites")
+	klog.Infof("Starting e2e-demo test suites from config: %s", configTestFile)
+
 	// Initialize the tests controllers /home/flacatusu/WORKSPACE/appstudio-qe/e2e-tests/tests/e2e-demos/config
 	framework, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
-	configTest, err := LoadTestGeneratorConfig()
+	configTest, err := LoadTestGeneratorConfig(configTestFile)
 	Expect(err).NotTo(HaveOccurred())
 
 	BeforeAll(func() {
@@ -65,18 +63,23 @@ var _ = framework.E2ESuiteDescribe("magic", func() {
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", AppStudioE2EApplicationsNamespace, err)
 	})
 
+	AfterAll(func() {
+		Expect(framework.HasController.DeleteAllComponentsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).NotTo(HaveOccurred())
+		Expect(framework.HasController.DeleteAllApplicationsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).NotTo(HaveOccurred())
+	})
+
 	for _, appTest := range configTest.Tests {
 		appTest := appTest
 
 		When(fmt.Sprintf(appTest.Name), func() {
-			It(fmt.Sprintf("application %s is created", appTest.Name), func() {
+			It(fmt.Sprintf("%s is created", appTest.Name), func() {
 				createdApplication, err := framework.HasController.CreateHasApplication(appTest.ApplicationName, AppStudioE2EApplicationsNamespace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(createdApplication.Spec.DisplayName).To(Equal(appTest.ApplicationName))
 				Expect(createdApplication.Namespace).To(Equal(AppStudioE2EApplicationsNamespace))
 			})
 
-			It(fmt.Sprintf("application %s is healthy", appTest.Name), func() {
+			It(fmt.Sprintf("%s is healthy", appTest.Name), func() {
 				Eventually(func() string {
 					appstudioApp, err := framework.HasController.GetHasApplication(appTest.ApplicationName, AppStudioE2EApplicationsNamespace)
 					Expect(err).NotTo(HaveOccurred())
@@ -155,15 +158,22 @@ var _ = framework.E2ESuiteDescribe("magic", func() {
 					}, 15*time.Minute, 10*time.Second).Should(BeTrue(), "Component deployment didn't become ready")
 					Expect(err).NotTo(HaveOccurred())
 				})
+
+				It(fmt.Sprintf("check component %s health", componentTest.Name), func() {
+					gitOpsRoute, err := framework.CommonController.GetOpenshiftRoute(componentTest.Name, AppStudioE2EApplicationsNamespace)
+					Expect(err).NotTo(HaveOccurred())
+					err = framework.GitOpsController.CheckGitOpsEndpoint(gitOpsRoute, componentTest.HealthEndpoint)
+					Expect(err).NotTo(HaveOccurred())
+				})
 			}
 		})
 	}
 })
 
-func LoadTestGeneratorConfig() (config.WorkflowSpec, error) {
+func LoadTestGeneratorConfig(configPath string) (config.WorkflowSpec, error) {
 	c := config.WorkflowSpec{}
 	// Open config file
-	file, err := os.Open(filepath.Clean("/home/flacatusu/WORKSPACE/appstudio-qe/e2e-tests/tests/e2e-demos/config/default.yaml"))
+	file, err := os.Open(filepath.Clean(configPath))
 	if err != nil {
 		return c, err
 	}
@@ -176,66 +186,4 @@ func LoadTestGeneratorConfig() (config.WorkflowSpec, error) {
 		return c, err
 	}
 	return c, nil
-}
-
-// createAndInjectTokenToSPI creates the specified SPIAccessTokenBinding resource and injects the specified token into it.
-func createAndInjectTokenToSPI(framework *framework.Framework, token, repoURL, spiAccessTokenBindingName, namespace, secretName string) {
-	// Get the token for the current openshift user
-	tokenBytes, err := exec.Command("oc", "whoami", "--show-token").Output()
-	Expect(err).NotTo(HaveOccurred())
-	bearerToken := strings.TrimSuffix(string(tokenBytes), "\n")
-
-	// Create the SPI Access Token Binding resource and upload the token for the private repository
-	_, err = framework.SPIController.CreateSPIAccessTokenBinding(spiAccessTokenBindingName, namespace, repoURL, secretName)
-	Expect(err).NotTo(HaveOccurred())
-
-	// Wait for the resource to be in the "AwaitingTokenData" phase
-	var spiAccessTokenBinding *v1beta1.SPIAccessTokenBinding
-	Eventually(func() bool {
-		// application info should be stored even after deleting the application in application variable
-		spiAccessTokenBinding, err = framework.SPIController.GetSPIAccessTokenBinding(spiAccessTokenBindingName, namespace)
-		if err != nil {
-			return false
-		}
-		return spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected || (spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData && spiAccessTokenBinding.Status.OAuthUrl != "")
-	}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to AwaitingTokenData/Injected")
-
-	if spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData {
-		// If the phase is AwaitingTokenData then manually inject the git token
-		// Get the oauth url and linkedAccessTokenName from the spiaccesstokenbinding resource
-		oauthURL := spiAccessTokenBinding.Status.OAuthUrl
-		parsedOAuthURL, err := url.Parse(oauthURL)
-		Expect(err).NotTo(HaveOccurred())
-		oauthHost := parsedOAuthURL.Host
-		linkedAccessTokenName := spiAccessTokenBinding.Status.LinkedAccessTokenName
-
-		// Before injecting the token, validate that the linkedaccesstoken resource exists, otherwise injecting will return a 404 error code
-		Eventually(func() bool {
-			// application info should be stored even after deleting the application in application variable
-			_, err := framework.SPIController.GetSPIAccessToken(linkedAccessTokenName, namespace)
-			return err == nil
-		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't create the SPIAccessToken")
-
-		// Now that the spiaccesstokenbinding is in the AwaitingTokenData phase, inject the GitHub token
-		var bearer = "Bearer " + string(bearerToken)
-		var jsonStr = []byte(`{"access_token":"` + token + `"}`)
-		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-		req, err := http.NewRequest("POST", "https://"+oauthHost+"/token/"+namespace+"/"+linkedAccessTokenName, bytes.NewBuffer(jsonStr))
-		Expect(err).NotTo(HaveOccurred())
-		req.Header.Add("Authorization", bearer)
-		req.Header.Set("Content-Type", "application/json")
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(resp.StatusCode).Should(Equal(204))
-		defer resp.Body.Close()
-
-		// Check to see if the token was successfully injected
-		Eventually(func() bool {
-			// application info should be stored even after deleting the application in application variable
-			spiAccessTokenBinding, err = framework.SPIController.GetSPIAccessTokenBinding(spiAccessTokenBindingName, namespace)
-			return err == nil && spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected
-		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to Injected")
-	}
 }
