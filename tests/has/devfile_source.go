@@ -56,7 +56,6 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 	})
 
 	AfterAll(func() {
-
 		err = framework.HasController.DeleteHasComponent(componentName, AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
 

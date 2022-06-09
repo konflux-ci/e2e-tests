@@ -12,9 +12,10 @@ type TestSpec struct {
 }
 
 type ComponentSpec struct {
-	Name             string `yaml:"name"`
-	Type             string `yaml:"type"`
-	DevfileSample    string `yaml:"devfileSample,omitempty"`
-	ContainerSource  string `yaml:"containerSource,omitempty"`
-	DockerFileSource string `yaml:"dockerFileSource,omitempty"`
+	Name            string `yaml:"name"`
+	Type            string `yaml:"type"`
+	ContainerSource string `yaml:"containerSource,omitempty"`
+	Devfilesource   string `yaml:"devfileSource,omitempty"`
+	GitSourceUrl    string `yaml:"gitSourceUrl,omitempty"`
+	HealthEndpoint  string `yaml:"healthz"`
 }
