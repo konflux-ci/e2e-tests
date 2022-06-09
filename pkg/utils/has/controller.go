@@ -207,7 +207,7 @@ func (h *SuiteController) GetComponentDetectionQuery(name, namespace string) (*a
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels
-func (h *SuiteController) GetComponentPipeline(componentName, applicationName, namespace string, triggeredViaWebhook bool) (v1beta1.PipelineRun, error) {
+func (h *SuiteController) GetComponentPipelineRun(componentName, applicationName, namespace string, triggeredViaWebhook bool) (v1beta1.PipelineRun, error) {
 	pipelineRunLabels := map[string]string{"build.appstudio.openshift.io/component": componentName, "build.appstudio.openshift.io/application": applicationName}
 	if triggeredViaWebhook {
 		pipelineRunLabels["triggers.tekton.dev/eventlistener"] = componentName
