@@ -23,7 +23,7 @@ export SHARED_SECRET_NAMESPACE="build-templates"
 # https://github.com/redhat-appstudio/application-service/blob/6b9d21b8f835263b2e92f1e9343a1453caa2e561/gitops/generate_build.go#L50
 # Users are allowed to push images to this repo only in case the image contains a tag that consists of "<USER'S_NAMESPACE_NAME>-<CUSTOM-TAG>"
 # For example: "quay.io/redhat-appstudio-qe/test-images-protected:appstudio-e2e-test-mytag123"
-export HAS_DEFAULT_IMAGE_REPOSITORY="quay.io/${QUAY_E2E_ORGANIZATION:-'redhat-appstudio-qe'}/test-images-protected"
+export HAS_DEFAULT_IMAGE_REPOSITORY="quay.io/${QUAY_E2E_ORGANIZATION:-redhat-appstudio-qe}/test-images-protected"
 
 # Download gitops repository to install AppStudio in e2e mode.
 function cloneInfraDeployments() {
