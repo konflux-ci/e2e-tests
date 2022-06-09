@@ -16,7 +16,7 @@ import (
 	//"knative.dev/pkg/apis"
 )
 
-var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", func() {
+var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jvm-build"), func() {
 	defer GinkgoRecover()
 
 	//var appStudioE2EApplicationsNamespace, prGeneratedName string
