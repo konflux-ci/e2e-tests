@@ -41,10 +41,11 @@ var _ = framework.E2ESuiteDescribe("test-generator", func() {
 	application := &appservice.Application{}
 	component := &appservice.Component{}
 
+	// Initialize the e2e demo configuration
 	configTestFile := viper.GetString("config-suites")
 	klog.Infof("Starting e2e-demo test suites from config: %s", configTestFile)
 
-	// Initialize the tests controllers /home/flacatusu/WORKSPACE/appstudio-qe/e2e-tests/tests/e2e-demos/config
+	// Initialize the tests controllers
 	framework, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
 	configTest, err := LoadTestGeneratorConfig(configTestFile)
@@ -63,6 +64,7 @@ var _ = framework.E2ESuiteDescribe("test-generator", func() {
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", AppStudioE2EApplicationsNamespace, err)
 	})
 
+	// Remove all resources created by the tests
 	AfterAll(func() {
 		Expect(framework.HasController.DeleteAllComponentsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).NotTo(HaveOccurred())
 		Expect(framework.HasController.DeleteAllApplicationsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).NotTo(HaveOccurred())
@@ -72,6 +74,7 @@ var _ = framework.E2ESuiteDescribe("test-generator", func() {
 		appTest := appTest
 
 		When(fmt.Sprintf(appTest.Name), func() {
+			// Create an application in a specific namespace
 			It(fmt.Sprintf("%s is created", appTest.Name), func() {
 				createdApplication, err := framework.HasController.CreateHasApplication(appTest.ApplicationName, AppStudioE2EApplicationsNamespace)
 				Expect(err).NotTo(HaveOccurred())
@@ -79,6 +82,7 @@ var _ = framework.E2ESuiteDescribe("test-generator", func() {
 				Expect(createdApplication.Namespace).To(Equal(AppStudioE2EApplicationsNamespace))
 			})
 
+			// Check the application health and check if a devfile was generated in the status
 			It(fmt.Sprintf("%s is healthy", appTest.Name), func() {
 				Eventually(func() string {
 					appstudioApp, err := framework.HasController.GetHasApplication(appTest.ApplicationName, AppStudioE2EApplicationsNamespace)
@@ -99,11 +103,13 @@ var _ = framework.E2ESuiteDescribe("test-generator", func() {
 			for _, componentTest := range appTest.Components {
 				componentTest := componentTest
 				var containerIMG = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
+				// Fail all private tests
 				if componentTest.Type == "private" {
 					defer GinkgoRecover()
 					Fail("Component creation from private repo is not supported. Jira issue: https://issues.redhat.com/browse/SVPI-135")
 				}
 
+				// Components for now can be imported from gitUrl, container image or a devfile
 				if componentTest.ContainerSource != "" {
 					It(fmt.Sprintf("create component %s from container source", componentTest.Name), func() {
 						var outputContainerImage = ""
@@ -137,6 +143,7 @@ var _ = framework.E2ESuiteDescribe("test-generator", func() {
 					Expect(framework.HasController.WaitForComponentPipelineToBeFinished(component.Name, application.Name, AppStudioE2EApplicationsNamespace)).NotTo(HaveOccurred(), "Failed component pipeline %v", err)
 				})
 
+				// Deploy the component using gitops and check for the health
 				It(fmt.Sprintf("deploy component %s using gitops", componentTest.Name), func() {
 					gitOpsRepository := utils.ObtainGitOpsRepositoryUrl(application.Status.Devfile)
 					gitOpsRepositoryPath := fmt.Sprintf("components/%s/base", componentTest.Name)

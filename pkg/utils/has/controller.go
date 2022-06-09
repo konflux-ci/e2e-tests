@@ -132,44 +132,6 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 }
 
 // CreateComponent create an has component from a given name, namespace, application, devfile and a container image
-func (h *SuiteController) CreateComponentFromDockerfile(applicationName, componentName, namespace, gitSourceURL, dockerFile, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
-	var containerImage string
-	if outputContainerImage != "" {
-		containerImage = outputContainerImage
-	} else {
-		containerImage = containerImageSource
-	}
-	component := &appservice.Component{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      componentName,
-			Namespace: namespace,
-		},
-		Spec: appservice.ComponentSpec{
-			ComponentName: componentName,
-			Application:   applicationName,
-			Source: appservice.ComponentSource{
-				ComponentSourceUnion: appservice.ComponentSourceUnion{
-					GitSource: &appservice.GitSource{
-						URL:           gitSourceURL,
-						DockerfileURL: dockerFile,
-					},
-				},
-			},
-			Secret:         secret,
-			ContainerImage: containerImage,
-			Replicas:       1,
-			TargetPort:     8081,
-			Route:          "",
-		},
-	}
-	err := h.KubeRest().Create(context.TODO(), component)
-	if err != nil {
-		return nil, err
-	}
-	return component, nil
-}
-
-// CreateComponent create an has component from a given name, namespace, application, devfile and a container image
 func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentName, namespace, gitSourceURL, devfile, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
 	var containerImage string
 	if outputContainerImage != "" {
