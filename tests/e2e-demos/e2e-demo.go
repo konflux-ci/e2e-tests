@@ -23,6 +23,8 @@ import (
 	"k8s.io/klog/v2"
 )
 
+var AppStudioE2EApplicationsNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "appstudio-e2e-test")
+
 var _ = framework.E2ESuiteDescribe("test-generator", func() {
 	defer GinkgoRecover()
 
@@ -55,14 +57,14 @@ var _ = framework.E2ESuiteDescribe("test-generator", func() {
 
 	// Remove all resources created by the tests
 	AfterAll(func() {
-		Expect(framework.HasController.DeleteAllComponentsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).NotTo(HaveOccurred())
-		Expect(framework.HasController.DeleteAllApplicationsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).NotTo(HaveOccurred())
+		Expect(framework.HasController.DeleteAllComponentsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
+		Expect(framework.HasController.DeleteAllApplicationsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
 	})
 
 	for _, appTest := range configTest.Tests {
 		appTest := appTest
 
-		When(fmt.Sprintf(appTest.Name), func() {
+		When(appTest.Name, func() {
 			// Create an application in a specific namespace
 			It(fmt.Sprintf("%s is created", appTest.Name), func() {
 				createdApplication, err := framework.HasController.CreateHasApplication(appTest.ApplicationName, AppStudioE2EApplicationsNamespace)
@@ -82,7 +84,6 @@ var _ = framework.E2ESuiteDescribe("test-generator", func() {
 				}, 3*time.Minute, 100*time.Millisecond).Should(Not(BeEmpty()), "Error creating gitOps repository")
 
 				Eventually(func() bool {
-					// application info should be stored even after deleting the application in application variable
 					gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
 					return framework.HasController.Github.CheckIfRepositoryExist(gitOpsRepository)
@@ -129,7 +130,7 @@ var _ = framework.E2ESuiteDescribe("test-generator", func() {
 					if componentTest.ContainerSource != "" {
 						Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skiping pipelinerun check.", componentTest.Name))
 					}
-					Expect(framework.HasController.WaitForComponentPipelineToBeFinished(component.Name, application.Name, AppStudioE2EApplicationsNamespace)).NotTo(HaveOccurred(), "Failed component pipeline %v", err)
+					Expect(framework.HasController.WaitForComponentPipelineToBeFinished(component.Name, application.Name, AppStudioE2EApplicationsNamespace)).To(Succeed(), "Failed component pipeline %v", err)
 				})
 
 				// Deploy the component using gitops and check for the health
@@ -141,7 +142,7 @@ var _ = framework.E2ESuiteDescribe("test-generator", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Eventually(func() bool {
-						deployment, _ := framework.CommonController.GetAppDeploymentByName(componentTest.Name, AppStudioE2EApplicationsNamespace)
+						deployment, err := framework.CommonController.GetAppDeploymentByName(componentTest.Name, AppStudioE2EApplicationsNamespace)
 						if err != nil && !errors.IsNotFound(err) {
 							return false
 						}

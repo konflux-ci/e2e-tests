@@ -9,7 +9,7 @@ Steps to run 'e2e-demos-suite':
 
 ## Test Generator
 
-The test suites in e2e-demo-suite are generated dinamycally using ginkgo specs. To run the demo you need to use the default
+The test specs in e2e-demo-suite are generated dynamically using ginkgo specs. To run the demo you need to use the default
 yaml located in `$ROOT_DIR/tests/e2e-demos/config/default.yaml`.
 
 Also it is possible to create your own yaml following the next structure:

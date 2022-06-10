@@ -8,7 +8,7 @@ type WorkflowSpec struct {
 
 // Set of tests to run in appstudio
 type TestSpec struct {
-	// The test name corresponging to an application
+	// The test name corresponding to an application
 	Name string `yaml:"name"`
 	// Name of the application created in the cluster
 	ApplicationName string `yaml:"applicationName"`

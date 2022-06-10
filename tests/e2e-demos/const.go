@@ -1,10 +1,5 @@
 package e2e
 
-import (
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-)
-
 const (
 	// Argo CD Application service name: https://github.com/redhat-appstudio/infra-deployments/blob/main/argo-cd-apps/base/has.yaml#L4
 	HASArgoApplicationName string = "has"
@@ -24,5 +19,3 @@ const (
 	// GitOps repository branch to use
 	GitOpsRepositoryRevision string = "main"
 )
-
-var AppStudioE2EApplicationsNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "appstudio-e2e-test")
