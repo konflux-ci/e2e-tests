@@ -157,10 +157,15 @@ var _ = framework.E2ESuiteDescribe("test-generator", func() {
 				})
 
 				It(fmt.Sprintf("check component %s health", componentTest.Name), func() {
-					gitOpsRoute, err := framework.CommonController.GetOpenshiftRoute(componentTest.Name, AppStudioE2EApplicationsNamespace)
-					Expect(err).NotTo(HaveOccurred())
-					err = framework.GitOpsController.CheckGitOpsEndpoint(gitOpsRoute, componentTest.HealthEndpoint)
-					Expect(err).NotTo(HaveOccurred())
+					Eventually(func() bool {
+						gitOpsRoute, err := framework.CommonController.GetOpenshiftRoute(componentTest.Name, AppStudioE2EApplicationsNamespace)
+						Expect(err).NotTo(HaveOccurred())
+						err = framework.GitOpsController.CheckGitOpsEndpoint(gitOpsRoute, componentTest.HealthEndpoint)
+						if err != nil {
+							klog.Info("Failed to request component endpoint. retrying...")
+						}
+						return true
+					}, 5*time.Minute, 10*time.Second).Should(BeTrue())
 				})
 			}
 		})

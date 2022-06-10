@@ -1,5 +1,5 @@
 tests: 
-  - name: "create an application with nodejs component"
+  - name: "RHDP-466: create an application with nodejs component"
     applicationName: "e2e-nodejs"
     components:
       - name: "nodejs-component"
@@ -8,7 +8,7 @@ tests:
         devfileSource: "https://raw.githubusercontent.com/jduimovich/appstudio-e2e-demos/main/demos/single-nodejs-app/devfiles/devfile.yaml"
         language: "nodejs"
         healthz: "/"
-  - name: "create an application with DotNet component"
+  - name: "RHDP-476: create an application with DotNet component"
     applicationName: "e2e-dotnet"
     components:
       - name: "dotnet-component"
@@ -16,7 +16,7 @@ tests:
         gitSourceUrl: "https://github.com/redhat-appstudio-qe/devfile-sample-dotnet60-basic"
         language: "dotNet"
         healthz: "/"
-  - name: "create an application with multiple components"
+  - name: "RHDP-478: create an application with multiple components"
     applicationName: "e2e-multiple-components"
     components:
       - name: "component-python"
@@ -29,7 +29,7 @@ tests:
         gitSourceUrl: "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic"
         language: "go"
         healthz: "/"
-  - name: "create an application with a component from quay.io image"
+  - name: "RHDP-467: create an application with a component from quay.io image"
     applicationName: "e2e-quayio"
     components:
       - name: "quay-component"
@@ -37,7 +37,7 @@ tests:
         containerSource: "quay.io/redhat-appstudio-qe/test-images:b545caa0de0c4e3ba3a5ad1ad7a1f1b6"
         language: "java"
         healthz: "/hello-resteasy"
-  - name: "create application from GIT with automatic build and deploy"
+  - name: "RHDP-477: create application from Git with automatic build and deploy"
     applicationName: "e2e-build-deploy"
     components:
       - name: "build-deploy-component"
