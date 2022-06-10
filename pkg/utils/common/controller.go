@@ -118,7 +118,7 @@ func (s *SuiteController) ListPods(namespace, labelKey, labelValue string, selec
 	return s.KubeInterface().CoreV1().Pods(namespace).List(context.TODO(), listOptions)
 }
 
-func (s *SuiteController) WaitForPod(cond wait.ConditionFunc, timeout time.Duration) error {
+func (s *SuiteController) WaitUntil(cond wait.ConditionFunc, timeout time.Duration) error {
 	return wait.PollImmediate(time.Second, timeout, cond)
 }
 
@@ -134,7 +134,7 @@ func (s *SuiteController) WaitForPodSelector(
 	}
 
 	for i := range podList.Items {
-		if err := s.WaitForPod(fn(podList.Items[i].Name, namespace), time.Duration(timeout)*time.Second); err != nil {
+		if err := s.WaitUntil(fn(podList.Items[i].Name, namespace), time.Duration(timeout)*time.Second); err != nil {
 			return err
 		}
 	}

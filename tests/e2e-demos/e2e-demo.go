@@ -23,17 +23,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-const (
-	// The name of the SPIAccessTokenBinding resource that the HAS e2e tests will create
-	SPIAccessTokenBindingName string = "has-private-git-repo-binding" // #nosec
-
-	// The name of the secret to be created by the SPIAccessTokenBinding resource
-	SPIAccessTokenSecretName string = "has-private-git-repo-secret" // #nosec
-
-	// Valid container with a quarkus image to import in appstudio.Using to test a component imported from quay.io
-	containerImageSource = "quay.io/redhat-appstudio-qe/test-images:7ac98d2c0ff64671baa54d4a94675601"
-)
-
 var _ = framework.E2ESuiteDescribe("test-generator", func() {
 	defer GinkgoRecover()
 
@@ -113,7 +102,7 @@ var _ = framework.E2ESuiteDescribe("test-generator", func() {
 				if componentTest.ContainerSource != "" {
 					It(fmt.Sprintf("create component %s from container source", componentTest.Name), func() {
 						var outputContainerImage = ""
-						_, err := framework.HasController.CreateComponent(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace, "", containerImageSource, outputContainerImage, "")
+						_, err := framework.HasController.CreateComponent(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace, "", componentTest.ContainerSource, outputContainerImage, "")
 						Expect(err).NotTo(HaveOccurred())
 					})
 

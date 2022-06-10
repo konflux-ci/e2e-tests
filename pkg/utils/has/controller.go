@@ -131,42 +131,73 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 	return component, nil
 }
 
-// CreateComponent create an has component from a given name, namespace, application, devfile and a container image
-func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentName, namespace, gitSourceURL, devfile, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
-	var containerImage string
-	if outputContainerImage != "" {
-		containerImage = outputContainerImage
-	} else {
-		containerImage = containerImageSource
-	}
+// CreateComponentFromCDQ create a HAS Component resource from a Completed CDQ resource, which includes a stub Component CR
+func (h *SuiteController) CreateComponentFromStub(compDetected appservice.ComponentDetectionDescription, componentName, namespace, secret string) (*appservice.Component, error) {
+	// The Component from the CDQ is only a template, and needs things like name filled in
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      componentName,
 			Namespace: namespace,
 		},
-		Spec: appservice.ComponentSpec{
-			ComponentName: componentName,
-			Application:   applicationName,
-			Source: appservice.ComponentSource{
-				ComponentSourceUnion: appservice.ComponentSourceUnion{
-					GitSource: &appservice.GitSource{
-						URL:        gitSourceURL,
-						DevfileURL: devfile,
-					},
-				},
-			},
-			Secret:         secret,
-			ContainerImage: containerImage,
-			Replicas:       1,
-			TargetPort:     8080,
-			Route:          "",
-		},
+		Spec: compDetected.ComponentStub,
 	}
+	component.Spec.Secret = secret
 	err := h.KubeRest().Create(context.TODO(), component)
 	if err != nil {
 		return nil, err
 	}
 	return component, nil
+}
+
+// DeleteHasComponent delete an has component from a given name and namespace
+func (h *SuiteController) DeleteHasComponentDetectionQuery(name string, namespace string) error {
+	component := appservice.ComponentDetectionQuery{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+	return h.KubeRest().Delete(context.TODO(), &component)
+}
+
+// CreateComponentDetectionQuery create a has componentdetectionquery from a given name, namespace, and git source
+func (h *SuiteController) CreateComponentDetectionQuery(cdqName, namespace, gitSourceURL, secret string, isMultiComponent bool) (*appservice.ComponentDetectionQuery, error) {
+
+	componentDetectionQuery := &appservice.ComponentDetectionQuery{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cdqName,
+			Namespace: namespace,
+		},
+		Spec: appservice.ComponentDetectionQuerySpec{
+			GitSource: appservice.GitSource{
+				URL: gitSourceURL,
+			},
+			IsMultiComponent: isMultiComponent,
+			Secret:           secret,
+		},
+	}
+	err := h.KubeRest().Create(context.TODO(), componentDetectionQuery)
+	if err != nil {
+		return nil, err
+	}
+	return componentDetectionQuery, nil
+}
+
+// GetComponentDetectionQuery return the status from the ComponentDetectionQuery Custom Resource object
+func (h *SuiteController) GetComponentDetectionQuery(name, namespace string) (*appservice.ComponentDetectionQuery, error) {
+	namespacedName := types.NamespacedName{
+		Name:      name,
+		Namespace: namespace,
+	}
+
+	componentDetectionQuery := appservice.ComponentDetectionQuery{
+		Spec: appservice.ComponentDetectionQuerySpec{},
+	}
+	err := h.KubeRest().Get(context.TODO(), namespacedName, &componentDetectionQuery)
+	if err != nil {
+		return nil, err
+	}
+	return &componentDetectionQuery, nil
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels
@@ -246,6 +277,44 @@ func (h *SuiteController) WaitForComponentPipelineToBeFinished(componentName str
 		return false, nil
 	})
 
+}
+
+// CreateComponent create an has component from a given name, namespace, application, devfile and a container image
+func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentName, namespace, gitSourceURL, devfile, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
+	var containerImage string
+	if outputContainerImage != "" {
+		containerImage = outputContainerImage
+	} else {
+		containerImage = containerImageSource
+	}
+	component := &appservice.Component{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      componentName,
+			Namespace: namespace,
+		},
+		Spec: appservice.ComponentSpec{
+			ComponentName: componentName,
+			Application:   applicationName,
+			Source: appservice.ComponentSource{
+				ComponentSourceUnion: appservice.ComponentSourceUnion{
+					GitSource: &appservice.GitSource{
+						URL:        gitSourceURL,
+						DevfileURL: devfile,
+					},
+				},
+			},
+			Secret:         secret,
+			ContainerImage: containerImage,
+			Replicas:       1,
+			TargetPort:     8080,
+			Route:          "",
+		},
+	}
+	err := h.KubeRest().Create(context.TODO(), component)
+	if err != nil {
+		return nil, err
+	}
+	return component, nil
 }
 
 // Remove all components from a given repository. Usefull when create a lot of resources and want to remove all of them
