@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -222,4 +223,37 @@ func (h *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 	}
 
 	return ns, nil
+}
+
+// DeleteTestNamespace deletes a namespace where Application and Component
+func (h *SuiteController) DeleteTestNamespace(name string) (*corev1.Namespace, error) {
+
+	// Check if the E2E test namespace already exists
+	ns, err := h.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), name, metav1.GetOptions{})
+
+	if err != nil {
+		if k8sErrors.IsNotFound((err)) {
+			klog.Info("namespace does not exist in cluster!: ", ns.Name)
+			return nil, fmt.Errorf("namespace '%s' is not on cluster ", ns.Name)
+			// return h.KubeInterface().CoreV1().Namespaces().Delete(context.TODO(), ns.Name, metav1.DeleteOptions{})
+		}
+		// klog.Error("error when trying to get namespace '%s' namespace: %v", name, err)
+	} else {
+		klog.Info("namespace is deleted!: ", ns.Name)
+		return nil, h.KubeInterface().CoreV1().Namespaces().Delete(context.TODO(), ns.Name, metav1.DeleteOptions{})
+	}
+	return nil, fmt.Errorf("error when deleting'%s' namespace: %v", name, err)
+}
+
+func (h *SuiteController) CheckIfNamespaceExists(name string) bool {
+
+	// Check if the E2E test namespace already exists
+	ns, err := h.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), name, metav1.GetOptions{})
+
+	if err != nil {
+		return false
+	}
+
+	klog.Info("namespace %s status: %s \n", ns.Name, ns.Status.Phase)
+	return true
 }

@@ -2,17 +2,13 @@ package release
 
 import (
 	"context"
-	"fmt"
-	"io/ioutil"
 
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	release "github.com/redhat-appstudio/release-service/api/v1alpha1"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"gopkg.in/yaml.v2"
-	corev1 "k8s.io/api/core/v1"
+	v1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
+	types "k8s.io/apimachinery/pkg/types"
+	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type SuiteController struct {
@@ -23,42 +19,6 @@ func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
 	return &SuiteController{
 		kube,
 	}, nil
-}
-
-// DeleteTestNamespace deletes a namespace
-func (h *SuiteController) DeleteTestNamespace(name string) error {
-
-	// Check if the E2E test namespace already exists
-	_, err := h.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), name, metav1.GetOptions{})
-
-	if err != nil {
-
-		fmt.Printf("error while querying for the %s namespace : %v\n", name, err)
-		return err
-
-	} else {
-		err = h.KubeInterface().CoreV1().Namespaces().Delete(context.TODO(), name, metav1.DeleteOptions{})
-
-		if err != nil {
-			fmt.Printf("error while deleting the %s namespace : %v\n", name, err)
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (h *SuiteController) CheckIfNamespaceExists(name string) bool {
-
-	// Check if the E2E test namespace already exists
-	ns, err := h.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), name, metav1.GetOptions{})
-
-	if err != nil {
-		return false
-	}
-
-	fmt.Printf("namespace %s status: %s \n", ns.Name, ns.Status.Phase)
-	return true
 }
 
 // // GetHasApplicationStatus return the status from the Application Custom Resource object
@@ -78,51 +38,7 @@ func (h *SuiteController) CheckIfNamespaceExists(name string) bool {
 // 	return &application, nil
 // }
 
-func (s *SuiteController) GetReleaseStrategy(name string, namespace string) (*release.ReleaseStrategy, error) {
-
-	namespacedName := types.NamespacedName{
-		Name:      name,
-		Namespace: namespace,
-	}
-
-	releaseStrategy := &release.ReleaseStrategy{}
-	if err := s.KubeRest().Get(context.TODO(), namespacedName, releaseStrategy); err != nil {
-		return nil, err
-	}
-	return releaseStrategy, nil
-
-}
-
-func (s *SuiteController) GetRelease(name string, namespace string) (*release.Release, error) {
-
-	namespacedName := types.NamespacedName{
-		Name:      name,
-		Namespace: namespace,
-	}
-
-	release := &release.Release{}
-	if err := s.KubeRest().Get(context.TODO(), namespacedName, release); err != nil {
-		return nil, err
-	}
-	return release, nil
-
-}
-
-func (s *SuiteController) GetPipelineRun(name string, namespace string) (*v1beta1.PipelineRun, error) {
-
-	namespacedName := types.NamespacedName{
-		Name:      name,
-		Namespace: namespace,
-	}
-
-	pipelineRun := &v1beta1.PipelineRun{}
-	if err := s.KubeRest().Get(context.TODO(), namespacedName, pipelineRun); err != nil {
-		return nil, err
-	}
-	return pipelineRun, nil
-
-}
-
+// Get ReleaseLink
 func (s *SuiteController) GetReleaseLink(name string, namespace string) (*release.ReleaseLink, error) {
 
 	namespacedName := types.NamespacedName{
@@ -138,6 +54,7 @@ func (s *SuiteController) GetReleaseLink(name string, namespace string) (*releas
 
 }
 
+// Creats a ReleaseLink resource
 func (s *SuiteController) CreateReleaseLink(name string, namespace string, displayName string, application string, target string, releaseStrategy string) (*release.ReleaseLink, error) {
 	releaseLinkObj := release.ReleaseLink{
 		ObjectMeta: metav1.ObjectMeta{
@@ -160,6 +77,23 @@ func (s *SuiteController) CreateReleaseLink(name string, namespace string, displ
 	return &releaseLinkObj, err
 }
 
+// Get a ReleaseStrategy, return ReleaseStrategy and error
+func (s *SuiteController) GetReleaseStrategy(name string, namespace string) (*release.ReleaseStrategy, error) {
+
+	namespacedName := types.NamespacedName{
+		Name:      name,
+		Namespace: namespace,
+	}
+
+	releaseStrategy := &release.ReleaseStrategy{}
+	if err := s.KubeRest().Get(context.TODO(), namespacedName, releaseStrategy); err != nil {
+		return nil, err
+	}
+	return releaseStrategy, nil
+
+}
+
+// Create a ReleaseStrategy, return ReleaseStrategy and error
 func (s *SuiteController) CreateReleaseStrategy(name string, namespace string, pipelineName string, bundle string) (*release.ReleaseStrategy, error) {
 	releaseStrObj := release.ReleaseStrategy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -175,83 +109,110 @@ func (s *SuiteController) CreateReleaseStrategy(name string, namespace string, p
 	return &releaseStrObj, err
 }
 
-// Create a secret, return secret and error
-func (s *SuiteController) CreateSecretV2(secret_yaml_file_path string) (*corev1.Secret, error) {
+// Get Release resource in a given state [This is for the demo4 and will be changed in demo 5 and ahead]
+func (s *SuiteController) GetRelease(namespace string) (*release.Release, error) {
 
-	decode := scheme.Codecs.UniversalDeserializer().Decode
-	stream, _ := ioutil.ReadFile(secret_yaml_file_path)
-	obj, gKV, _ := decode(stream, nil, nil)
-	if gKV.Kind == "Secret" {
-		secret := obj.(*corev1.Secret)
-		fmt.Printf("Secret: %s for namespace: %s was created \n", secret, gKV)
+	releases := &release.ReleaseList{}
+
+	err := s.KubeRest().List(context.TODO(), releases, rclient.InNamespace(namespace))
+	if len(releases.Items) == 1 {
+		return &releases.Items[0], err
 	}
-
-	return nil, nil
+	return nil, err
 }
 
-// Create a secret, return secret and error
-func (s *SuiteController) CreateSecretV3(name string, namespace string) (*corev1.Secret, error) {
+// Get a Release resource
+func (s *SuiteController) GetReleaseWithName(name string, namespace string) (*release.Release, error) {
 
-	secretType := corev1.SecretTypeDockerConfigJson
-	secretData := map[string][]byte{".dockerconfigjson": []byte("ewogICJhdXRocyI6IHsKICAgICJxdWF5LmlvIjogewogICAgICAiYXV0aCI6ICJjbVZzWldGelpTMWxNbVVyY21Wc1pXRnpaVjlsTW1VNlVUTkNRa1JOTWtaTk4waFNUVWxHVWxsR09GaFNOVWROTlZkUlFqWklXVXRKTjBwWVJrbzJTMXBQVUV4WFJVOVVWamxUUVVOVk9WRkZXRGxTU2pCRlJ3PT0iLAogICAgICAiZW1haWwiOiAiIgogICAgfQogIH0KfQ==")}
+	namespacedName := types.NamespacedName{
+		Name:      name,
+		Namespace: namespace,
+	}
 
-	secretStrObj := corev1.Secret{
+	release := &release.Release{}
+	if err := s.KubeRest().Get(context.TODO(), namespacedName, release); err != nil {
+		return nil, err
+	}
+	return release, nil
+
+}
+
+// Creats a Release resource (M5)
+func (s *SuiteController) CreateRelease(name string, namespace string, applicationSnapshot string, releaseLink string) (*release.Release, error) {
+	releaseObj := release.Release{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-
-		Type: secretType,
-		Data: secretData,
+		Spec: release.ReleaseSpec{
+			ApplicationSnapshot: applicationSnapshot,
+			ReleaseLink:         releaseLink,
+		},
 	}
 
-	err := s.KubeRest().Create(context.TODO(), &secretStrObj)
-
-	if err == nil {
-		fmt.Printf("Secret: %s for namespace: %s was created \n", name, namespace)
-	} else {
-		fmt.Printf("Secret: %s for namespace: %s creation has failed \n", name, namespace)
+	if applicationSnapshot != "" {
+		releaseObj.Spec.ApplicationSnapshot = applicationSnapshot
 	}
 
-	return &secretStrObj, err
+	err := s.KubeRest().Create(context.TODO(), &releaseObj)
+	return &releaseObj, err
 }
 
-// Create a secret, return secret and error
-func (s *SuiteController) CreateSecret(secret_yaml_file_path string) (*corev1.Secret, error) {
+// Create a ApplicationSnapshot in Release
+func (s *SuiteController) CreateApplicationSnapshot(name string, namespace string, image_1 string, image_2 string, image_3 string, app_name string) (*release.ApplicationSnapshot, error) {
 
-	// Read secret specification from YAML file
-
-	bytes, err := ioutil.ReadFile(secret_yaml_file_path)
-	if err != nil {
-		return nil, err
-	}
-
-	var secretSpec corev1.Secret
-	err = yaml.Unmarshal(bytes, &secretSpec)
-	if err != nil {
-		return nil, err
-	}
-
-	namespace := secretSpec.GetNamespace()
-	name := secretSpec.GetName()
-
-	secretStrObj := corev1.Secret{
+	applicationSnapshotObj := &release.ApplicationSnapshot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
+		Spec: release.ApplicationSnapshotSpec{
+			Application: app_name,
+			Images: []release.Image{
+				{
+					Component: "component1",
+					PullSpec:  image_1,
+				},
+				{
+					Component: "component2",
+					PullSpec:  image_2,
+				},
+				{
+					Component: "component3",
+					PullSpec:  image_3,
+				},
+			},
+		},
+	}
+	err := s.KubeRest().Create(context.TODO(), applicationSnapshotObj)
+	return applicationSnapshotObj, err
+}
 
-		Type: secretSpec.Type,
-		Data: secretSpec.Data,
+// Get Pipeline run in a given namespace
+func (s *SuiteController) GetPipelineRunInNamespaceWithName(name string, namespace string) (*v1beta1.PipelineRun, error) {
+
+	namespacedName := types.NamespacedName{
+		Name:      name,
+		Namespace: namespace,
 	}
 
-	err = s.KubeRest().Create(context.TODO(), &secretStrObj)
-
-	if err == nil {
-		fmt.Printf("Secret: %s for namespace: %s was created \n", name, namespace)
-	} else {
-		fmt.Printf("Secret: %s for namespace: %s creation has failed \n", name, namespace)
+	pipelineRun := &v1beta1.PipelineRun{}
+	if err := s.KubeRest().Get(context.TODO(), namespacedName, pipelineRun); err != nil {
+		return nil, err
 	}
+	return pipelineRun, nil
 
-	return &secretStrObj, err
+}
+
+// Get Pipeline run in a given namespace
+func (s *SuiteController) GetPipelineRunInNamespace(namespace string) (*v1beta1.PipelineRun, error) {
+
+	pipelineruns := &v1beta1.PipelineRunList{}
+
+	err := s.KubeRest().List(context.TODO(), pipelineruns, rclient.InNamespace(namespace))
+
+	if len(pipelineruns.Items) >= 1 {
+		return &pipelineruns.Items[0], err
+	}
+	return nil, err
 }
