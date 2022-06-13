@@ -17,18 +17,32 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	routev1 "github.com/openshift/api/route/v1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
+	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	appsv1 "k8s.io/api/apps/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Create the struct for kubernetes clients
 type SuiteController struct {
 	*kubeCl.K8sClient
+	Github *github.Github
 }
 
 // Create controller for Application/Component crud operations
 func NewSuiteController(kubeC *kubeCl.K8sClient) (*SuiteController, error) {
+	// Check if a github organization env var is set, if not use by default the redhat-appstudio-qe org. See: https://github.com/redhat-appstudio-qe
+	org := utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
+	token := utils.GetEnv(constants.GITHUB_TOKEN_ENV, "")
+	gh := github.NewGithubClient(token, org)
 	return &SuiteController{
 		kubeC,
+		gh,
 	}, nil
 }
 
@@ -59,9 +73,19 @@ func (s *SuiteController) CheckIfClusterTaskExists(name string) bool {
 	return false
 }
 
+// Creates a new secret in a specified namespace
+func (s *SuiteController) CreateSecret(ns string, secret *corev1.Secret) (*corev1.Secret, error) {
+	return s.KubeInterface().CoreV1().Secrets(ns).Create(context.TODO(), secret, metav1.CreateOptions{})
+}
+
 // Check if a secret exists, return secret and error
 func (s *SuiteController) GetSecret(ns string, name string) (*corev1.Secret, error) {
 	return s.KubeInterface().CoreV1().Secrets(ns).Get(context.TODO(), name, metav1.GetOptions{})
+}
+
+// Deleted a secret in a specified namespace
+func (s *SuiteController) DeleteSecret(ns string, name string) error {
+	return s.KubeInterface().CoreV1().Secrets(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
 func (s *SuiteController) GetPod(namespace, podName string) (*corev1.Pod, error) {
