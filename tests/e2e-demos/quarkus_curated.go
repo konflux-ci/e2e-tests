@@ -69,7 +69,7 @@ var _ = framework.E2ESuiteDescribe("E2E Quarkus deployment tests", func() {
 			// application info should be stored even after deleting the application in application variable
 			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return framework.HasController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
 
 	})
@@ -93,7 +93,7 @@ var _ = framework.E2ESuiteDescribe("E2E Quarkus deployment tests", func() {
 			// application info should be stored even after deleting the application in application variable
 			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return framework.HasController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 	})
 
@@ -112,7 +112,7 @@ var _ = framework.E2ESuiteDescribe("E2E Quarkus deployment tests", func() {
 
 	It("Wait for component pipeline to be completed", func() {
 		err := wait.PollImmediate(20*time.Second, 10*time.Minute, func() (done bool, err error) {
-			pipelineRun, _ := framework.HasController.GetComponentPipeline(QuarkusComponentName, RedHatAppStudioApplicationName, AppStudioE2EApplicationsNamespace)
+			pipelineRun, _ := framework.HasController.GetComponentPipelineRun(QuarkusComponentName, RedHatAppStudioApplicationName, AppStudioE2EApplicationsNamespace, false)
 
 			for _, condition := range pipelineRun.Status.Conditions {
 				klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)

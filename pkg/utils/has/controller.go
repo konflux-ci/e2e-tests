@@ -6,10 +6,8 @@ import (
 
 	routev1 "github.com/openshift/api/route/v1"
 	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
-	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,15 +20,11 @@ import (
 
 type SuiteController struct {
 	*kubeCl.K8sClient
-	Github *github.API
 }
 
 func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
-	// Check if a github organization env var is set, if not use by default the redhat-appstudio-qe org. See: https://github.com/redhat-appstudio-qe
-	gh := github.NewGitubClient(utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"))
 	return &SuiteController{
 		kube,
-		gh,
 	}, nil
 }
 
@@ -78,6 +72,21 @@ func (h *SuiteController) DeleteHasApplication(name, namespace string) error {
 		},
 	}
 	return h.KubeRest().Delete(context.TODO(), &application)
+}
+
+// GetHasComponent returns the Appstudio Component Custom Resource object
+func (h *SuiteController) GetHasComponent(name, namespace string) (*appservice.Component, error) {
+	namespacedName := types.NamespacedName{
+		Name:      name,
+		Namespace: namespace,
+	}
+
+	component := appservice.Component{}
+	err := h.KubeRest().Get(context.TODO(), namespacedName, &component)
+	if err != nil {
+		return nil, err
+	}
+	return &component, nil
 }
 
 // DeleteHasComponent delete an has component from a given name and namespace
@@ -198,8 +207,11 @@ func (h *SuiteController) GetComponentDetectionQuery(name, namespace string) (*a
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels
-func (h *SuiteController) GetComponentPipeline(componentName string, applicationName string, namespace string) (v1beta1.PipelineRun, error) {
+func (h *SuiteController) GetComponentPipelineRun(componentName, applicationName, namespace string, triggeredViaWebhook bool) (v1beta1.PipelineRun, error) {
 	pipelineRunLabels := map[string]string{"build.appstudio.openshift.io/component": componentName, "build.appstudio.openshift.io/application": applicationName}
+	if triggeredViaWebhook {
+		pipelineRunLabels["triggers.tekton.dev/eventlistener"] = componentName
+	}
 	list := &v1beta1.PipelineRunList{}
 	err := h.KubeRest().List(context.TODO(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
 
@@ -211,13 +223,12 @@ func (h *SuiteController) GetComponentPipeline(componentName string, application
 	return v1beta1.PipelineRun{}, err
 }
 
-// GetComponentRoute returns the route for a given component name
-func (h *SuiteController) GetComponentRoute(componentName string, componentNamespace string) (*routev1.Route, error) {
+// GetEventListenerRoute returns the route for a given component name's event listener
+func (h *SuiteController) GetEventListenerRoute(componentName string, componentNamespace string) (*routev1.Route, error) {
 	namespacedName := types.NamespacedName{
 		Name:      fmt.Sprintf("el%s", componentName),
 		Namespace: componentNamespace,
 	}
-
 	route := &routev1.Route{}
 	err := h.KubeRest().Get(context.TODO(), namespacedName, route)
 	if err != nil {
@@ -291,4 +302,15 @@ func (h *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 	}
 
 	return ns, nil
+}
+
+func (h *SuiteController) GetHasComponentConditionStatusMessage(name, namespace string) (string, error) {
+	c, err := h.GetHasComponent(name, namespace)
+	if err != nil {
+		return "", fmt.Errorf("error getting HAS component: %v", err)
+	}
+	if len(c.Status.Conditions) > 0 {
+		return c.Status.Conditions[0].Message, nil
+	}
+	return "", nil
 }
