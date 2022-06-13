@@ -27,4 +27,4 @@ tests:
         healthz: "/"
 ```
 
-To run the e2e-demos with a custom yaml use: `./bin/e2e-appstudio --ginkgo.focus="e2e-demos-suite" config-suites=$PATH_TO_YOUR_CONFIG_YAML`
+To run the e2e-demos with a custom yaml use: `./bin/e2e-appstudio --ginkgo.focus="e2e-demos-suite" -config-suites=$PATH_TO_YOUR_CONFIG_YAML`
