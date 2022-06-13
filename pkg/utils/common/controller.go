@@ -5,13 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	routev1 "github.com/openshift/api/route/v1"
-	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"

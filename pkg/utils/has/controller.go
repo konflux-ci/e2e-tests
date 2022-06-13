@@ -8,7 +8,6 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -272,7 +271,7 @@ func (h *SuiteController) GetComponentService(componentName string, componentNam
 
 func (h *SuiteController) WaitForComponentPipelineToBeFinished(componentName string, applicationName string, componentNamespace string) error {
 	return wait.PollImmediate(20*time.Second, 10*time.Minute, func() (done bool, err error) {
-		pipelineRun, _ := h.GetComponentPipeline(componentName, applicationName, componentNamespace)
+		pipelineRun, _ := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, false)
 
 		for _, condition := range pipelineRun.Status.Conditions {
 			klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)

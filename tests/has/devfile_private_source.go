@@ -53,7 +53,7 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 		applicationName = fmt.Sprintf(RedHatAppStudioApplicationName+"-%s", util.GenerateRandomString(10))
 		componentName = fmt.Sprintf(QuarkusComponentName+"-%s", util.GenerateRandomString(10))
 
-		_, err = framework.HasController.CreateTestNamespace(AppStudioE2EApplicationsNamespace)
+		_, err = framework.CommonController.CreateTestNamespace(AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", AppStudioE2EApplicationsNamespace, err)
 
 		createAndInjectTokenToSPI(framework, utils.GetEnv(constants.GITHUB_TOKEN_ENV, ""), privateGitRepository, SPIAccessTokenBindingName, AppStudioE2EApplicationsNamespace, SPIAccessTokenSecretName)

@@ -86,7 +86,7 @@ var _ = framework.E2ESuiteDescribe("test-generator", func() {
 				Eventually(func() bool {
 					gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-					return framework.HasController.Github.CheckIfRepositoryExist(gitOpsRepository)
+					return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 				}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 			})
 
