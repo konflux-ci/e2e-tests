@@ -34,7 +34,7 @@ var snapshotImages = []v1alpha1.Image{
 	{"component-3", "quay.io/redhat-appstudio/component3@sha256:d90a0a33e4c5a1daf5877f8dd989a570bfae4f94211a8143599245e503775b1f"},
 }
 
-var _ = framework.ReleaseStrategyDescribe("test-demo", func() {
+var _ = framework.ReleaseSuiteDescribe("test-demo", func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	framework, err := framework.NewFramework()
@@ -60,7 +60,7 @@ var _ = framework.ReleaseStrategyDescribe("test-demo", func() {
 	})
 
 	var _ = Describe("Creation of the 'Happy path' resources", func() {
-		It("Create a an snapshotName for M5", func() {
+		It("Create an ApplicationSnapshot.", func() {
 			_, err := framework.ReleaseController.CreateApplicationSnapshot(snapshotName, devNamespace, applicationName, snapshotImages)
 			Expect(err).NotTo(HaveOccurred())
 		})
