@@ -134,7 +134,7 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 		Expect(component.Name).To(Equal(componentName))
 	})
 
-	It("Check a Component gets deleted when its Application is deleted", func() {
+	It("Check a Component gets deleted when its application is deleted", func() {
 		err = framework.HasController.DeleteHasApplication(applicationName, AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(func() bool {
