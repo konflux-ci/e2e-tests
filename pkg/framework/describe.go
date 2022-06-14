@@ -30,3 +30,7 @@ func BuildSuiteDescribe(text string, body func()) bool {
 func ClusterRegistrationSuiteDescribe(text string, body func()) bool {
 	return Describe("[cluster-registration-suite "+text+"]", Ordered, body)
 }
+
+func ReleaseSuiteDescribe(text string, body func()) bool {
+	return Describe("[release-suite "+text+"]", Ordered, body)
+}
