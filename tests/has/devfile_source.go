@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -58,11 +59,6 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 	})
 
 	AfterAll(func() {
-		err = framework.HasController.DeleteHasComponent(componentName, AppStudioE2EApplicationsNamespace)
-		Expect(err).NotTo(HaveOccurred())
-
-		err = framework.HasController.DeleteHasApplication(applicationName, AppStudioE2EApplicationsNamespace)
-		Expect(err).NotTo(HaveOccurred())
 
 		err = framework.HasController.DeleteHasComponentDetectionQuery(componentName, AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
@@ -133,9 +129,23 @@ var _ = framework.HASSuiteDescribe("devfile source", func() {
 	})
 
 	It("Create Red Hat AppStudio Quarkus component", func() {
-		component, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, AppStudioE2EApplicationsNamespace, "")
+		component, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, AppStudioE2EApplicationsNamespace, "", applicationName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(component.Name).To(Equal(componentName))
 	})
 
+	It("Check a Component gets deleted when its application is deleted", func() {
+
+		err = framework.HasController.DeleteHasApplication(applicationName, AppStudioE2EApplicationsNamespace)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(func() bool {
+			_, err := framework.HasController.GetHasComponent(componentName, AppStudioE2EApplicationsNamespace)
+			if err != nil && errors.IsNotFound(err) {
+				return true
+			}
+
+			return false
+		}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "Component didn't get get deleted with its Application")
+		Expect(err).NotTo(HaveOccurred())
+	})
 })
