@@ -21,9 +21,6 @@ func ValidateSbomFilesPresentInImage(image string) error {
 	if err != nil {
 		return fmt.Errorf("error when creating a temp directory for extracting files: %+v", err)
 	}
-	if err != nil {
-		return fmt.Errorf("error: %+v", err)
-	}
 	klog.Infof("extracting contents of container image %s to dir: %s", image, tmpDir)
 	eMapping := extract.Mapping{
 		ImageRef: imagesource.TypedImageReference{Type: "docker", Ref: dockerImageRef},
