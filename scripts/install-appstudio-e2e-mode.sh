@@ -38,7 +38,7 @@ function installCITools() {
 
 # Download gitops repository to install AppStudio in e2e mode.
 function cloneInfraDeployments() {
-    git clone https://github.com/redhat-appstudio/infra-deployments.git "$WORKSPACE"/tmp/infra-deployments
+    git clone https://$GITHUB_TOKEN@github.com/redhat-appstudio/infra-deployments.git "$WORKSPACE"/tmp/infra-deployments
 }
 
 # Add a custom remote for infra-deployments repository.
