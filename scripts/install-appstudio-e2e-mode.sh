@@ -25,9 +25,20 @@ export SHARED_SECRET_NAMESPACE="build-templates"
 # For example: "quay.io/redhat-appstudio-qe/test-images-protected:appstudio-e2e-test-mytag123"
 export HAS_DEFAULT_IMAGE_REPOSITORY="quay.io/${QUAY_E2E_ORGANIZATION:-redhat-appstudio-qe}/test-images-protected"
 
+# Path to install openshift-ci tools
+export PATH=$PATH:/tmp/bin
+mkdir -p /tmp/bin
+
+function installCITools() {
+    curl -H "Authorization: token $GITHUB_TOKEN" -LO https://github.com/mikefarah/yq/releases/download/v4.20.2/yq_linux_amd64 && \
+    chmod +x ./yq_linux_amd64 && \
+    mv ./yq_linux_amd64 /tmp/bin/yq && \
+    yq --version
+}
+
 # Download gitops repository to install AppStudio in e2e mode.
 function cloneInfraDeployments() {
-    git clone https://github.com/redhat-appstudio/infra-deployments.git "$WORKSPACE"/tmp/infra-deployments
+    git clone https://$GITHUB_TOKEN@github.com/redhat-appstudio/infra-deployments.git "$WORKSPACE"/tmp/infra-deployments
 }
 
 # Add a custom remote for infra-deployments repository.
@@ -59,6 +70,7 @@ while [[ $# -gt 0 ]]
 do
     case "$1" in
         install)
+            installCITools
             cloneInfraDeployments
             addQERemoteForkAndInstallAppstudio
             createApplicationServiceSecrets

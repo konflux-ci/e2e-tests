@@ -24,7 +24,7 @@ const (
 	applicationName       = "application"
 	releasePipelineBundle = "quay.io/hacbs-release/demo:m5-alpine"
 
-	avgPipelineCompletionTime = 2 * time.Minute
+	avgPipelineCompletionTime = 5 * time.Minute
 	defaultInterval           = 100 * time.Millisecond
 )
 
