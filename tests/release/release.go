@@ -45,18 +45,18 @@ var _ = framework.ReleaseSuiteDescribe("test-demo", func() {
 
 	BeforeAll(func() {
 		// Create the dev namespace
-		demo, err := framework.HasController.CreateTestNamespace(devNamespace)
+		demo, err := framework.CommonController.CreateTestNamespace(devNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", demo.Name, err)
 
 		// Create the managed namespace
-		namespace, err := framework.HasController.CreateTestNamespace(managedNamespace)
+		namespace, err := framework.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", namespace.Name, err)
 	})
 
 	AfterAll(func() {
 		// Delete the dev and managed namespaces with all the resources created in them
-		Expect(framework.ReleaseController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
-		Expect(framework.ReleaseController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+		Expect(framework.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
+		Expect(framework.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
 	})
 
 	var _ = Describe("Creation of the 'Happy path' resources", func() {
