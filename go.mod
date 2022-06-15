@@ -14,7 +14,7 @@ require (
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
 	github.com/redhat-appstudio/application-service v0.0.0-20220509130137-3bdbc6eecda4
 	github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001
-	github.com/redhat-appstudio/release-service v0.0.0-20220531154750-e855e4dd7dcb
+	github.com/redhat-appstudio/release-service v0.0.0-20220615125956-86a62e5324ec
 	github.com/redhat-appstudio/service-provider-integration-operator v0.5.0
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.7.1
@@ -29,6 +29,19 @@ require (
 	k8s.io/klog/v2 v2.60.1
 	knative.dev/pkg v0.0.0-20220131144930-f4b57aef0006
 	sigs.k8s.io/controller-runtime v0.11.1
+)
+
+require (
+	cloud.google.com/go/compute v1.5.0 // indirect
+	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
+	github.com/Azure/go-autorest/autorest v0.11.24 // indirect
+	github.com/Azure/go-autorest/autorest/adal v0.9.18 // indirect
+	github.com/Azure/go-autorest/autorest/date v0.3.0 // indirect
+	github.com/Azure/go-autorest/logger v0.2.1 // indirect
+	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
+	github.com/go-logr/zapr v1.2.0 // indirect
+	github.com/golang-jwt/jwt/v4 v4.3.0 // indirect
+	github.com/operator-framework/operator-lib v0.10.0 // indirect
 )
 
 require (
@@ -146,6 +159,7 @@ require (
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/prometheus/statsd_exporter v0.21.0 // indirect
+	github.com/redhat-appstudio/managed-gitops/appstudio-shared v0.0.0-20220614142506-d6cdfb25d83d
 	github.com/redhat-developer/alizer/go v0.0.0-20220215154256-33df7feef4ae // indirect
 	github.com/russross/blackfriday v1.6.0 // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect
