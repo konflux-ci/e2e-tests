@@ -32,4 +32,6 @@ const (
 
 	BuildPipelinesConfigMapName             = "build-pipelines-defaults"
 	BuildPipelinesConfigMapDefaultNamespace = "build-templates"
+
+	RegistryAuthSecretName = "redhat-appstudio-registry-pull-secret"
 )
