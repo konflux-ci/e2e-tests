@@ -25,7 +25,7 @@ import (
 
 var AppStudioE2EApplicationsNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "appstudio-e2e-test")
 
-var _ = framework.E2ESuiteDescribe("test-generator", func() {
+var _ = framework.E2ESuiteDescribe(func() {
 	defer GinkgoRecover()
 
 	// Initialize the application struct
@@ -66,7 +66,7 @@ var _ = framework.E2ESuiteDescribe("test-generator", func() {
 
 		When(appTest.Name, func() {
 			// Create an application in a specific namespace
-			It(fmt.Sprintf("%s is created", appTest.Name), func() {
+			It("application is created", func() {
 				createdApplication, err := framework.HasController.CreateHasApplication(appTest.ApplicationName, AppStudioE2EApplicationsNamespace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(createdApplication.Spec.DisplayName).To(Equal(appTest.ApplicationName))
@@ -74,7 +74,7 @@ var _ = framework.E2ESuiteDescribe("test-generator", func() {
 			})
 
 			// Check the application health and check if a devfile was generated in the status
-			It(fmt.Sprintf("%s is healthy", appTest.Name), func() {
+			It("application is healthy", func() {
 				Eventually(func() string {
 					appstudioApp, err := framework.HasController.GetHasApplication(appTest.ApplicationName, AppStudioE2EApplicationsNamespace)
 					Expect(err).NotTo(HaveOccurred())
