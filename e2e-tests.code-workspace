@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../e2e-tests-release-d5-hp"
+		}
+	],
+	"settings": {}
+}

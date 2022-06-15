@@ -245,15 +245,3 @@ func (h *SuiteController) DeleteTestNamespace(name string) (*corev1.Namespace, e
 	return nil, fmt.Errorf("error when deleting'%s' namespace: %v", name, err)
 }
 
-func (h *SuiteController) CheckIfNamespaceExists(name string) bool {
-
-	// Check if the E2E test namespace already exists
-	ns, err := h.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), name, metav1.GetOptions{})
-
-	if err != nil {
-		return false
-	}
-
-	klog.Info("namespace %s status: %s \n", ns.Name, ns.Status.Phase)
-	return true
-}

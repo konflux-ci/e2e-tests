@@ -2,13 +2,15 @@ package release
 
 import (
 	"context"
+	"fmt"
 
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
-	release "github.com/redhat-appstudio/release-service/api/v1alpha1"
-	v1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/redhat-appstudio/release-service/api/v1alpha1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
-	rclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type SuiteController struct {
@@ -21,32 +23,77 @@ func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
 	}, nil
 }
 
-// // GetHasApplicationStatus return the status from the Application Custom Resource object
-// func (h *SuiteController) GetHasApplication(name, namespace string) (*appservice.Application, error) {
-// 	namespacedName := types.NamespacedName{
-// 		Name:      name,
-// 		Namespace: namespace,
-// 	}
+// CreateApplicationSnapshot creates a new ApplicationSnapshot using the given parameters.
+func (s *SuiteController) CreateApplicationSnapshot(name, namespace, applicationName string, snapshotImages []v1alpha1.Image) (*v1alpha1.ApplicationSnapshot, error) {
+	applicationSnapshot := &v1alpha1.ApplicationSnapshot{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: v1alpha1.ApplicationSnapshotSpec{
+			Application: applicationName,
+			Images:      snapshotImages,
+		},
+	}
 
-// 	application := appservice.Application{
-// 		Spec: appservice.ApplicationSpec{},
-// 	}
-// 	err := h.KubeRest().Get(context.TODO(), namespacedName, &application)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return &application, nil
-// }
+	return applicationSnapshot, s.KubeRest().Create(context.TODO(), applicationSnapshot)
+}
+
+// CreateRelease creates a new Release using the given parameters.
+func (s *SuiteController) CreateRelease(name, namespace, snapshot, sourceReleaseLink string) (*v1alpha1.Release, error) {
+	release := &v1alpha1.Release{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: v1alpha1.ReleaseSpec{
+			ApplicationSnapshot: snapshot,
+			ReleaseLink:         sourceReleaseLink,
+		},
+	}
+
+	return release, s.KubeRest().Create(context.TODO(), release)
+}
+
+// GetRelease returns the release with the given name in the given namespace.
+func (s *SuiteController) GetRelease(releaseName, releaseNamespace string) (*v1alpha1.Release, error) {
+	release := &v1alpha1.Release{}
+
+	err := s.KubeRest().Get(context.TODO(), types.NamespacedName{
+		Name:      releaseName,
+		Namespace: releaseNamespace,
+	}, release)
+
+	return release, err
+}
+
+// CreateReleaseLink creates a new ReleaseLink using the given parameters.
+func (s *SuiteController) CreateReleaseLink(name, namespace, application, targetNamespace, releaseStrategy string) (*v1alpha1.ReleaseLink, error) {
+	releaseLink := &v1alpha1.ReleaseLink{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: v1alpha1.ReleaseLinkSpec{
+			DisplayName:     name,
+			Application:     application,
+			Target:          targetNamespace,
+			ReleaseStrategy: releaseStrategy,
+		},
+	}
+
+	return releaseLink, s.KubeRest().Create(context.TODO(), releaseLink)
+}
 
 // Get ReleaseLink
-func (s *SuiteController) GetReleaseLink(name string, namespace string) (*release.ReleaseLink, error) {
+func (s *SuiteController) GetReleaseLink(name string, namespace string) (*v1alpha1.ReleaseLink, error) {
 
 	namespacedName := types.NamespacedName{
 		Name:      name,
 		Namespace: namespace,
 	}
 
-	releaseLink := &release.ReleaseLink{}
+	releaseLink := &v1alpha1.ReleaseLink{}
 	if err := s.KubeRest().Get(context.TODO(), namespacedName, releaseLink); err != nil {
 		return nil, err
 	}
@@ -54,38 +101,31 @@ func (s *SuiteController) GetReleaseLink(name string, namespace string) (*releas
 
 }
 
-// Creats a ReleaseLink resource
-func (s *SuiteController) CreateReleaseLink(name string, namespace string, displayName string, application string, target string, releaseStrategy string) (*release.ReleaseLink, error) {
-	releaseLinkObj := release.ReleaseLink{
+// CreateReleaseStrategy creates a new ReleaseStrategy using the given parameters.
+func (s *SuiteController) CreateReleaseStrategy(name, namespace, pipelineName, bundle string) (*v1alpha1.ReleaseStrategy, error) {
+	releaseStrategy := &v1alpha1.ReleaseStrategy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: release.ReleaseLinkSpec{
-			DisplayName:     displayName,
-			Application:     application,
-			Target:          target,
-			ReleaseStrategy: releaseStrategy,
+		Spec: v1alpha1.ReleaseStrategySpec{
+			Pipeline: pipelineName,
+			Bundle:   bundle,
 		},
 	}
 
-	if releaseStrategy != "" {
-		releaseLinkObj.Spec.ReleaseStrategy = releaseStrategy
-	}
-
-	err := s.KubeRest().Create(context.TODO(), &releaseLinkObj)
-	return &releaseLinkObj, err
+	return releaseStrategy, s.KubeRest().Create(context.TODO(), releaseStrategy)
 }
 
 // Get a ReleaseStrategy, return ReleaseStrategy and error
-func (s *SuiteController) GetReleaseStrategy(name string, namespace string) (*release.ReleaseStrategy, error) {
+func (s *SuiteController) GetReleaseStrategy(name string, namespace string) (*v1alpha1.ReleaseStrategy, error) {
 
 	namespacedName := types.NamespacedName{
 		Name:      name,
 		Namespace: namespace,
 	}
 
-	releaseStrategy := &release.ReleaseStrategy{}
+	releaseStrategy := &v1alpha1.ReleaseStrategy{}
 	if err := s.KubeRest().Get(context.TODO(), namespacedName, releaseStrategy); err != nil {
 		return nil, err
 	}
@@ -93,126 +133,46 @@ func (s *SuiteController) GetReleaseStrategy(name string, namespace string) (*re
 
 }
 
-// Create a ReleaseStrategy, return ReleaseStrategy and error
-func (s *SuiteController) CreateReleaseStrategy(name string, namespace string, pipelineName string, bundle string) (*release.ReleaseStrategy, error) {
-	releaseStrObj := release.ReleaseStrategy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: release.ReleaseStrategySpec{
-			Pipeline: pipelineName,
-			Bundle:   bundle,
-		},
+// DeleteNamespace deletes the give namespace.
+func (s *SuiteController) DeleteNamespace(namespace string) error {
+	_, err := s.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
+
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return fmt.Errorf("could not check for namespace existence")
 	}
-	err := s.KubeRest().Create(context.TODO(), &releaseStrObj)
-	return &releaseStrObj, err
+
+	return s.KubeInterface().CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
 }
 
-// Get Release resource in a given state [This is for the demo4 and will be changed in demo 5 and ahead]
-func (s *SuiteController) GetRelease(namespace string) (*release.Release, error) {
+func (h *SuiteController) CheckIfNamespaceExists(name string) bool {
 
-	releases := &release.ReleaseList{}
+	// Check if the E2E test namespace already exists
+	_, err := h.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), name, metav1.GetOptions{})
 
-	err := s.KubeRest().List(context.TODO(), releases, rclient.InNamespace(namespace))
-	if len(releases.Items) == 1 {
-		return &releases.Items[0], err
+	if err != nil {
+		return false
 	}
-	return nil, err
+
+	// klog.Info("namespace %s status: %s \n", ns.Name, ns.Status.Phase)
+	return true
 }
 
-// Get a Release resource
-func (s *SuiteController) GetReleaseWithName(name string, namespace string) (*release.Release, error) {
-
-	namespacedName := types.NamespacedName{
-		Name:      name,
-		Namespace: namespace,
-	}
-
-	release := &release.Release{}
-	if err := s.KubeRest().Get(context.TODO(), namespacedName, release); err != nil {
-		return nil, err
-	}
-	return release, nil
-
-}
-
-// Creats a Release resource (M5)
-func (s *SuiteController) CreateRelease(name string, namespace string, applicationSnapshot string, releaseLink string) (*release.Release, error) {
-	releaseObj := release.Release{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+// GetPipelineRunInNamespace returns the Release PipelineRun referencing the given release.
+func (s *SuiteController) GetPipelineRunInNamespace(namespace, releaseName, releaseNamespace string) (*v1beta1.PipelineRun, error) {
+	pipelineRuns := &v1beta1.PipelineRunList{}
+	opts := []client.ListOption{
+		client.MatchingLabels{
+			"release.appstudio.openshift.io/name":      releaseName,
+			"release.appstudio.openshift.io/workspace": releaseNamespace,
 		},
-		Spec: release.ReleaseSpec{
-			ApplicationSnapshot: applicationSnapshot,
-			ReleaseLink:         releaseLink,
-		},
+		client.InNamespace(namespace),
 	}
 
-	if applicationSnapshot != "" {
-		releaseObj.Spec.ApplicationSnapshot = applicationSnapshot
+	err := s.KubeRest().List(context.TODO(), pipelineRuns, opts...)
+
+	if err == nil && len(pipelineRuns.Items) > 0 {
+		return &pipelineRuns.Items[0], nil
 	}
 
-	err := s.KubeRest().Create(context.TODO(), &releaseObj)
-	return &releaseObj, err
-}
-
-// Create a ApplicationSnapshot in Release
-func (s *SuiteController) CreateApplicationSnapshot(name string, namespace string, image_1 string, image_2 string, image_3 string, app_name string) (*release.ApplicationSnapshot, error) {
-
-	applicationSnapshotObj := &release.ApplicationSnapshot{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: release.ApplicationSnapshotSpec{
-			Application: app_name,
-			Images: []release.Image{
-				{
-					Component: "component1",
-					PullSpec:  image_1,
-				},
-				{
-					Component: "component2",
-					PullSpec:  image_2,
-				},
-				{
-					Component: "component3",
-					PullSpec:  image_3,
-				},
-			},
-		},
-	}
-	err := s.KubeRest().Create(context.TODO(), applicationSnapshotObj)
-	return applicationSnapshotObj, err
-}
-
-// Get Pipeline run in a given namespace
-func (s *SuiteController) GetPipelineRunInNamespaceWithName(name string, namespace string) (*v1beta1.PipelineRun, error) {
-
-	namespacedName := types.NamespacedName{
-		Name:      name,
-		Namespace: namespace,
-	}
-
-	pipelineRun := &v1beta1.PipelineRun{}
-	if err := s.KubeRest().Get(context.TODO(), namespacedName, pipelineRun); err != nil {
-		return nil, err
-	}
-	return pipelineRun, nil
-
-}
-
-// Get Pipeline run in a given namespace
-func (s *SuiteController) GetPipelineRunInNamespace(namespace string) (*v1beta1.PipelineRun, error) {
-
-	pipelineruns := &v1beta1.PipelineRunList{}
-
-	err := s.KubeRest().List(context.TODO(), pipelineruns, rclient.InNamespace(namespace))
-
-	if len(pipelineruns.Items) >= 1 {
-		return &pipelineruns.Items[0], err
-	}
 	return nil, err
 }
