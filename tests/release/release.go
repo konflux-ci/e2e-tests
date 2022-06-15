@@ -190,7 +190,10 @@ var _ = framework.ReleaseSuiteDescribe("test-demo", func() {
 				After running the commands above, you should expect to find:
 				a ReleaseLink test-releaselink in the matching-scenario-user namespace;
 				a Release test-release in the matching-scenario-user namespace and failed;
-				the REASON field of the test-release Release set to Error.
+				The following fields are set as follows:
+				Status="False"
+				REASON="ReleaseValidationError"
+				Message="no ReleaseLink found in target workspace 'matching-scenario-managed' with target 'matching-scenario-user' and application 'test'"
 		*/
 
 		var _ = Describe("Failure test #1 - create resources", func() {
@@ -223,6 +226,7 @@ var _ = framework.ReleaseSuiteDescribe("test-demo", func() {
 		var _ = Describe("Failure test #1 Verification", func() {
 
 			release := &v1alpha1.Release{}
+			releaseReason := ""
 
 			// Check if there is a ReleaseLink in managed namespace
 			It("Test if a ReleaseLink test-releaselink has been created in the Failure1SourceNamespace ", func() {
@@ -233,7 +237,7 @@ var _ = framework.ReleaseSuiteDescribe("test-demo", func() {
 				}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
 			})
 
-			It("The Release have been created and failed", func() {
+			It("The Release have been created and failed with the REASON field set to ReleaseValidationError", func() {
 				Eventually(func() bool {
 					release, err = framework.ReleaseController.GetRelease(Failure1ReleaseName, Failure1SourceNamespace)
 
@@ -241,27 +245,13 @@ var _ = framework.ReleaseSuiteDescribe("test-demo", func() {
 						return false
 					}
 
-					return release != nil && release.IsDone() && meta.IsStatusConditionFalse(release.Status.Conditions, "Succeeded")
-				}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
-			})
-
-			// Check if a Release test-release created in the matching-scenario-user namespace
-			// It("The Release should have failed with the REASON field set to Error", func() {
-			// 	releaseReason := release.Status.Conditions[0].Reason
-
-			// 	Expect(releaseReason).To(Equal("Error"))
-			// })
-
-			// Check if a Release test-release created in the matching-scenario-user namespace
-			It("The Release should have been created and failed with the REASON field set to Error", func() {
-				Eventually(func() bool {
-					release, err := framework.ReleaseController.GetRelease(Failure1ReleaseName, Failure1SourceNamespace)
-
-					if err != nil {
+					if release != nil {
+						releaseReason = release.Status.Conditions[0].Reason
+					} else {
 						return false
 					}
 
-					return release != nil && release.IsDone() && meta.IsStatusConditionFalse(release.Status.Conditions, "Succeeded") && meta.IsStatusConditionPresentAndEqual(release.Status.Conditions, "Reason", "Error")
+					return release.IsDone() && meta.IsStatusConditionFalse(release.Status.Conditions, "Succeeded") && Expect(releaseReason).To(Equal("ReleaseValidationError"))
 				}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
 			})
 
