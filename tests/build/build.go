@@ -56,7 +56,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 		applicationName = fmt.Sprintf("build-suite-test-application-%s", util.GenerateRandomString(4))
 		appStudioE2EApplicationsNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "appstudio-e2e-test")
 
-		_, err := f.HasController.CreateTestNamespace(appStudioE2EApplicationsNamespace)
+		_, err := f.CommonController.CreateTestNamespace(appStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", appStudioE2EApplicationsNamespace, err)
 
 		_, err = f.HasController.CreateHasApplication(applicationName, appStudioE2EApplicationsNamespace)
