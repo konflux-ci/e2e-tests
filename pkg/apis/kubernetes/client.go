@@ -4,6 +4,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	applicationservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
 	managedgitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend/apis/managed-gitops/v1alpha1"
+	release "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	spi "github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	pipelineclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
@@ -34,6 +35,7 @@ func init() {
 	utilruntime.Must(managedgitopsv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(spi.AddToScheme(scheme))
 	utilruntime.Must(toolchainv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(release.AddToScheme(scheme))
 }
 
 // Kube returns the clientset for Kubernetes upstream.

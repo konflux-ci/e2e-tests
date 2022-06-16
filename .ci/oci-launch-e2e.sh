@@ -14,9 +14,6 @@ export APPLICATION_NAME="all-components-staging"
 # Available openshift ci environments https://docs.ci.openshift.org/docs/architecture/step-registry/#available-environment-variables
 export ARTIFACTS_DIR=${ARTIFACT_DIR:-"/tmp/appstudio"}
 
-command -v yq >/dev/null 2>&1 || { echo "yq is not installed. Aborting."; exit 1; }
-command -v kubectl >/dev/null 2>&1 || { echo "kubectl is not installed. Aborting."; exit 1; }
-
 function waitHASApplicationToBeReady() {
     while [ "$(kubectl get applications.argoproj.io has -n openshift-gitops -o jsonpath='{.status.health.status}')" != "Healthy" ]; do
         sleep 30s

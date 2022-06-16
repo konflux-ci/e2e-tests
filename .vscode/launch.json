@@ -1,0 +1,31 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch demo suites",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "program": "${workspaceFolder}/cmd/e2e_test.go",
+            "args": [
+                "--ginkgo.focus=e2e-demos-suite",
+                "--ginkgo.junit-report=report.xml"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "GITHUB_TOKEN": "${input:ghToken}"
+            }
+        }
+    ],
+    "inputs": [
+        {
+            "id": "ghToken",
+            "type": "promptString",
+            "description": "Github token",
+            "password": true
+        }
+    ]
+}

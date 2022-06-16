@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/onsi/gomega"
 	"github.com/redhat-appstudio/application-service/pkg/devfile"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"k8s.io/klog/v2"
 )
 
 // CheckIfEnvironmentExists return true/false if the environment variable exists
@@ -67,6 +69,25 @@ func GetQuayIOOrganization() string {
 	return GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
 }
 
+
 func GetDockerConfigJson() string {
 	return GetEnv(constants.DOCKER_CONFIG_JSON, "")
+}
+
+func IsPrivateHostname(url string) bool {
+	// https://www.ibm.com/docs/en/networkmanager/4.2.0?topic=translation-private-address-ranges
+	privateIPAddressPrefixes := []string{"10.", "172.1", "172.2", "172.3", "192.168"}
+	addr, err := net.LookupIP(url)
+	if err != nil {
+		klog.Infof("Unknown host: %v", err)
+		return true
+	}
+
+	ip := addr[0]
+	for _, ipPrefix := range privateIPAddressPrefixes {
+		if strings.HasPrefix(ip.String(), ipPrefix) {
+			return true
+		}
+	}
+	return false
 }

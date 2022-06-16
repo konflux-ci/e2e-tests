@@ -36,6 +36,7 @@ const (
 	BuildPipelinesConfigMapName             = "build-pipelines-defaults"
 	BuildPipelinesConfigMapDefaultNamespace = "build-templates"
 
+
 	HostOperatorNamespace  string = "toolchain-host-operator"
 	MemberOperatorNamespace  string = "toolchain-member-operator"
 
@@ -47,5 +48,8 @@ const (
 
 	OSAPIServerNamespace string = "openshift-apiserver"
 	OSAPIServerWorkload string = "apiserver"
+
+	RegistryAuthSecretName = "redhat-appstudio-registry-pull-secret"
+
 )
 
