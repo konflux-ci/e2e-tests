@@ -7,6 +7,7 @@ import (
 
 	testutils "github.com/kudobuilder/kuttl/pkg/test/utils"
 	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/build"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/cluster-registration"
@@ -99,7 +100,7 @@ func newKind(kindContext string, explicitPath string, logger testutils.Logger) k
 }
 
 const (
-	kindTestContext = "test"
+	kindTestContext = "test1"
 	testImage       = "docker.io/library/busybox:latest"
 )
 
@@ -128,9 +129,8 @@ func TestE2E(t *testing.T) {
 	if err := kind.Run(&config); err != nil {
 		fmt.Println(err)
 	}
-
-	//gomega.RegisterFailHandler(ginkgo.Fail)
-	//ginkgo.RunSpecs(t, "Red Hat App Studio E2E tests")
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	ginkgo.RunSpecs(t, "Red Hat App Studio E2E tests")
 }
 
 var _ = ginkgo.SynchronizedAfterSuite(func() {}, func() {
@@ -149,20 +149,4 @@ func (k *kind) Run(config *v1alpha4.Cluster) error {
 		cluster.CreateWithKubeconfigPath(k.explicitPath),
 		cluster.CreateWithRetain(true),
 	)
-}
-
-// IsRunning checks if a KIND cluster is already running for the current context.
-func (k *kind) IsRunning() bool {
-	contexts, err := k.Provider.List()
-	if err != nil {
-		panic(err)
-	}
-
-	for _, context := range contexts {
-		if context == k.context {
-			return true
-		}
-	}
-
-	return false
 }
