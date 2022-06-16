@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
@@ -15,6 +17,8 @@ import (
 
 	"flag"
 
+	"github.com/spf13/viper"
+
 	"k8s.io/klog/v2"
 )
 
@@ -25,13 +29,19 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 }, func(data []byte) {})
 
 var webhookConfigPath string
+var demoSuitesPath string
 
 func init() {
+	rootDir, _ := os.Getwd()
+
 	flag.StringVar(&webhookConfigPath, "webhookConfigPath", "", "path to webhook config file")
+	flag.StringVar(&demoSuitesPath, "config-suites", fmt.Sprintf(rootDir+"/tests/e2e-demos/config/default.yaml"), "path to e2e demo suites definition")
 }
 
 func TestE2E(t *testing.T) {
 	klog.Info("Starting Red Hat App Studio e2e tests...")
+	// Setting viper configurations in cache
+	viper.Set("config-suites", demoSuitesPath)
 
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	ginkgo.RunSpecs(t, "Red Hat App Studio E2E tests")

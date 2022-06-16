@@ -1,0 +1,33 @@
+package config
+
+// Define the basic specs for the configuration
+type WorkflowSpec struct {
+	// All tests configurations
+	Tests []TestSpec `yaml:"tests"`
+}
+
+// Set of tests to run in appstudio
+type TestSpec struct {
+	// The test name corresponding to an application
+	Name string `yaml:"name"`
+	// Name of the application created in the cluster
+	ApplicationName string `yaml:"applicationName"`
+	// Set of components with own specs
+	Components []ComponentSpec `yaml:"components"`
+}
+
+// Specs for a specific component to create in AppStudio
+type ComponentSpec struct {
+	// The component name which will be created
+	Name string `yaml:"name"`
+	// The type indicate if the component comes from a private source like quay or github. Posible values: "private" or "public"
+	Type string `yaml:"type"`
+	// Indicate the container value
+	ContainerSource string `yaml:"containerSource,omitempty"`
+	// Indicate the devfile value
+	Devfilesource string `yaml:"devfileSource,omitempty"`
+	// Repository URL from where component will be created
+	GitSourceUrl string `yaml:"gitSourceUrl,omitempty"`
+	// An endpoint where the framework can ping to see if a component was deployed successfully
+	HealthEndpoint string `yaml:"healthz"`
+}
