@@ -248,6 +248,7 @@ func (s *SuiteController) CreateRegistryAuthSecret(secretName, namespace, secret
 		return nil, er
 	}
 	return secret, nil
+}
 
 // DeleteNamespace deletes the give namespace.
 func (s *SuiteController) DeleteNamespace(namespace string) error {
