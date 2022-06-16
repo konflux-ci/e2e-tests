@@ -7,7 +7,6 @@ import (
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -20,6 +19,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -229,8 +229,20 @@ func (s *SuiteController) DeleteConfigMap(name, namespace string) error {
 	return s.KubeInterface().CoreV1().ConfigMaps(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
+// DeleteNamespace deletes the give namespace.
+func (s *SuiteController) DeleteNamespace(namespace string) error {
+	_, err := s.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
+
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return fmt.Errorf("could not check for namespace existence")
+	}
+
+	return s.KubeInterface().CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
+}
+
 // CreateTestNamespace creates a namespace where Application and Component CR will be created
 func (h *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, error) {
+
 	// Check if the E2E test namespace already exists
 	ns, err := h.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), name, metav1.GetOptions{})
 

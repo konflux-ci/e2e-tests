@@ -2,11 +2,10 @@ package release
 
 import (
 	"context"
-	"fmt"
+
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/release-service/api/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -86,17 +85,6 @@ func (s *SuiteController) CreateReleaseStrategy(name, namespace, pipelineName, b
 	}
 
 	return releaseStrategy, s.KubeRest().Create(context.TODO(), releaseStrategy)
-}
-
-// DeleteNamespace deletes the give namespace.
-func (s *SuiteController) DeleteNamespace(namespace string) error {
-	_, err := s.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
-
-	if err != nil && !k8sErrors.IsNotFound(err) {
-		return fmt.Errorf("could not check for namespace existence")
-	}
-
-	return s.KubeInterface().CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
 }
 
 // GetPipelineRunInNamespace returns the Release PipelineRun referencing the given release.

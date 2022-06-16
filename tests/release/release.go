@@ -24,7 +24,7 @@ const (
 	applicationName       = "application"
 	releasePipelineBundle = "quay.io/hacbs-release/demo:m5-alpine"
 
-	avgPipelineCompletionTime = 2 * time.Minute
+	avgPipelineCompletionTime = 10 * time.Minute
 	defaultInterval           = 100 * time.Millisecond
 )
 
@@ -55,8 +55,8 @@ var _ = framework.ReleaseSuiteDescribe("test-demo", func() {
 
 	AfterAll(func() {
 		// Delete the dev and managed namespaces with all the resources created in them
-		Expect(framework.ReleaseController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
-		Expect(framework.ReleaseController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+		Expect(framework.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
+		Expect(framework.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
 	})
 
 	var _ = Describe("Creation of the 'Happy path' resources", func() {
