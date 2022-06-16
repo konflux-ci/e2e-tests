@@ -73,3 +73,5 @@ timeout --foreground 10m bash -c waitHASApplicationToBeReady
 timeout --foreground 10m bash -c waitSPIToBeReady
 
 executeE2ETests
+
+cat kubeconfig
