@@ -132,6 +132,8 @@ func setup(cmd *cobra.Command, args []string) {
 		queries.QueryWorkloadMemoryUsage(prometheusClient, constants.MemberOperatorNamespace, constants.MemberOperatorWorkload),
 		queries.QueryWorkloadCPUUsage(prometheusClient, "application-service", "application-service-controller-manager"),
 		queries.QueryWorkloadMemoryUsage(prometheusClient, "application-service", "application-service-controller-manager"),
+		queries.QueryWorkloadCPUUsage(prometheusClient, "build-service", "build-service-controller-manager"),
+		queries.QueryWorkloadMemoryUsage(prometheusClient, "build-service", "build-service-controller-manager"),
 	)
 
 	klog.Infof("🍿 provisioning users...\n")
@@ -139,8 +141,7 @@ func setup(cmd *cobra.Command, args []string) {
 	uip := uiprogress.New()
 	uip.Start()
 	var wg sync.WaitGroup
-	ch := make(chan bool)
-	ch1 := make(chan bool)
+	chFirstStep := make(chan bool)
 	stopMetrics := metricsInstance.StartGathering()
 
 	klog.Infof("Sleeping till all metrics queries gets init")
@@ -176,13 +177,13 @@ func setup(cmd *cobra.Command, args []string) {
 			AverageUserCreationTime += UserCreationTime
 		}
 		wg.Done()
-		ch <- true
+		chFirstStep <- true
 	}()
 	ResourcesBar := uip.AddBar(numberOfUsers).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
 		return strutil.PadLeft(fmt.Sprintf("Creating AppStudio User Resources (%d/%d)", b.Current(), numberOfUsers), userBatches, ' ')
 	})
 	go func(){
-		<-ch
+		<-chFirstStep
 		for ResourcesBar.Incr(){
 			startTime := time.Now()
 			username := fmt.Sprintf("%s-%04d", usernamePrefix, ResourcesBar.Current())
@@ -227,22 +228,18 @@ func setup(cmd *cobra.Command, args []string) {
 			AverageResourceCreationTimePerUser += ResourceCreationTime
 		}
 		wg.Done()
-		ch1 <- true
 	}()
 	if waitPipelines {
-		//<- ch1
 		PipelinesBar := uip.AddBar(numberOfUsers).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
 			return strutil.PadLeft(fmt.Sprintf("Pipelines running (%d/%d)", b.Current(), numberOfUsers), userBatches, ' ')
 		})
 		go func(){
-			<- ch1
 			for PipelinesBar.Incr(){
 				username := fmt.Sprintf("%s-%04d", usernamePrefix, ResourcesBar.Current())
 				ComponentName := fmt.Sprintf("%s-component", username)
 				ApplicationName := fmt.Sprintf("%s-app", username)
 				DefaultRetryInterval := time.Millisecond * 200
 				DefaultTimeout       := time.Minute * 17
-				//klog.Info("i am here!")
 				error := k8swait.Poll(DefaultRetryInterval, DefaultTimeout, func() (done bool, err error) {
 					pipelineRun, err := framework.HasController.GetComponentPipeline(ComponentName, ApplicationName, username)
 					if err != nil {
@@ -250,7 +247,7 @@ func setup(cmd *cobra.Command, args []string) {
 					}
 					if pipelineRun.IsDone(){
 						AveragePipelineRunTimePerUser += time.Since(pipelineRun.GetCreationTimestamp().Time)
-						klog.Info("Pipeline has Completed for component in time %s", ComponentName)
+						klog.Info("Pipleine completed! %s", ComponentName)
 					}
 					return pipelineRun.IsDone(), nil
 				})

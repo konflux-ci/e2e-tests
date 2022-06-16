@@ -1,3 +1,7 @@
-export DOCKER_CONFIG_JSON=<Insert_token_here>
+export DOCKER_CONFIG_JSON=
 
-go run loadtest.go --username testuser --users 100 --batch 10 --w
+if [ -z ${DOCKER_CONFIG_JSON+x} ]; then echo "env DOCKER_CONFIG_JSON need to be defined"; exit 1;  else echo "DOCKER_CONFIG_JSON is set"; fi
+
+go run loadtest.go --username testuser --users 50 --batch 10 -w && ./clear.sh
+
+

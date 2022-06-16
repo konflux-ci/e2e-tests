@@ -141,7 +141,7 @@ require (
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
-	golang.org/x/mod v0.5.1 // indirect
+	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
 	golang.org/x/net v0.0.0-20220420153159-1850ba15e1be // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20220422013727-9388b58f7150 // indirect
@@ -162,11 +162,10 @@ require (
 	k8s.io/apiextensions-apiserver v0.23.1 // indirect
 	k8s.io/component-base v0.23.1 // indirect
 	k8s.io/klog v1.0.0 // indirect
-	k8s.io/kube-openapi v0.0.0-20220114203427-a0453230fd26 // indirect
+	k8s.io/kube-openapi v0.0.0-20220328201542-3ee0da9b0b42 // indirect
 	k8s.io/kubectl v0.22.7 // indirect
 	k8s.io/metrics v0.22.7 // indirect
-	k8s.io/utils v0.0.0-20211208161948-7d6a63dca704 // indirect
-	knative.dev/pkg v0.0.0-20220131144930-f4b57aef0006 // indirect
+	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9 // indirect
 	oras.land/oras-go v0.4.0 // indirect
 	sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
