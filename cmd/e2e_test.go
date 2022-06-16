@@ -5,7 +5,6 @@ import (
 	"os"
 	"testing"
 
-	testutils "github.com/kudobuilder/kuttl/pkg/test/utils"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
@@ -36,61 +35,9 @@ type kind struct {
 	explicitPath string
 }
 
-// kindLogger lets KIND log to the kuttl logger.
-// KIND log level N corresponds to kuttl log level N+1, such that
-// using the default 0 kuttl log level produces no KIND output.
-type kindLogger struct {
-	l testutils.Logger
-}
+func newKind(kindContext string, explicitPath string) kind {
 
-func (k kindLogger) V(level log.Level) log.InfoLogger {
-	if int(level) >= int(verbosity) {
-		return &nopLogger{}
-	}
-	return k
-}
-
-func (k kindLogger) Warn(message string) {
-	k.l.Log(message)
-}
-
-func (k kindLogger) Warnf(format string, args ...interface{}) {
-	k.l.Logf(format, args...)
-}
-
-func (k kindLogger) Error(message string) {
-	k.l.Log(message)
-}
-
-func (k kindLogger) Errorf(format string, args ...interface{}) {
-	k.l.Logf(format, args...)
-}
-
-func (k kindLogger) Info(message string) {
-	k.l.Log(message)
-}
-
-func (k kindLogger) Infof(format string, args ...interface{}) {
-	k.l.Logf(format, args...)
-}
-
-func (k kindLogger) Enabled() bool {
-	return true
-}
-
-type nopLogger struct{}
-
-func (n *nopLogger) Enabled() bool {
-	return false
-}
-
-func (n *nopLogger) Info(message string) {}
-
-func (n *nopLogger) Infof(format string, args ...interface{}) {}
-
-func newKind(kindContext string, explicitPath string, logger testutils.Logger) kind {
-
-	provider := cluster.NewProvider(cluster.ProviderWithLogger(&kindLogger{logger}))
+	provider := cluster.NewProvider(cluster.ProviderWithLogger(log.NoopLogger{}))
 
 	return kind{
 		Provider:     provider,
@@ -122,7 +69,7 @@ func TestE2E(t *testing.T) {
 	klog.Info("Starting Red Hat App Studio e2e tests...")
 	// Setting viper configurations in cache
 	viper.Set("config-suites", demoSuitesPath)
-	kind := newKind(kindTestContext, "kubeconfig", testutils.NewTestLogger(t, ""))
+	kind := newKind(kindTestContext, "kubeconfig")
 
 	config := v1alpha4.Cluster{}
 
