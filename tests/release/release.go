@@ -229,7 +229,7 @@ var _ = framework.ReleaseSuiteDescribe("test-demo", func() {
 			releaseReason := ""
 
 			// Check if there is a ReleaseLink in managed namespace
-			It("Test if a ReleaseLink test-releaselink has been created in the Failure1SourceNamespace ", func() {
+			It("The ReleaseLink test-releaselink has been created in the failure#1 source namespace ", func() {
 				Eventually(func() bool {
 					releaseLink, err := framework.ReleaseController.GetReleaseLink(Failure1SourceReleaseLinkName, Failure1SourceNamespace)
 
