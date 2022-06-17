@@ -12,14 +12,14 @@ import (
 	"k8s.io/klog"
 )
 
-func ValidateSbomFilesPresentInImage(image string) error {
+func GetParsedSbomFilesContentFromImage(image string) (*SbomPurl, *SbomCyclonedx, error) {
 	dockerImageRef, err := reference.Parse(image)
 	if err != nil {
-		return fmt.Errorf("cannot parse docker pull spec (image) %s, error: %+v", image, err)
+		return nil, nil, fmt.Errorf("cannot parse docker pull spec (image) %s, error: %+v", image, err)
 	}
 	tmpDir, err := os.MkdirTemp(os.TempDir(), "sbom")
 	if err != nil {
-		return fmt.Errorf("error when creating a temp directory for extracting files: %+v", err)
+		return nil, nil, fmt.Errorf("error when creating a temp directory for extracting files: %+v", err)
 	}
 	klog.Infof("extracting contents of container image %s to dir: %s", image, tmpDir)
 	eMapping := extract.Mapping{
@@ -30,17 +30,19 @@ func ValidateSbomFilesPresentInImage(image string) error {
 	e.Mappings = []extract.Mapping{eMapping}
 
 	if err := e.Run(); err != nil {
-		return fmt.Errorf("error: %+v", err)
+		return nil, nil, fmt.Errorf("error: %+v", err)
 	}
 
-	if err := verifySbomPurl(tmpDir); err != nil {
-		return fmt.Errorf("failed to verify sbom purl: %+v", err)
+	purl, err := getSbomPurlContent(tmpDir)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get sbom purl content: %+v", err)
 	}
 
-	if err := verifySbomCyclonedx(tmpDir); err != nil {
-		return fmt.Errorf("failed to verify sbom cyclonedx: %+v", err)
+	cyclonedx, err := getSbomCyclonedxContent(tmpDir)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get sbom cyclonedx content: %+v", err)
 	}
-	return nil
+	return purl, cyclonedx, nil
 }
 
 type SbomPurl struct {
@@ -57,46 +59,46 @@ type SbomCyclonedx struct {
 	} `json:"components"`
 }
 
-func verifySbomPurl(rootDir string) error {
+func getSbomPurlContent(rootDir string) (*SbomPurl, error) {
 	sbomPurlFilePath := rootDir + "/root/buildinfo/content_manifests/sbom-purl.json"
 	file, err := os.Stat(sbomPurlFilePath)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("sbom file not found in path %s", sbomPurlFilePath)
 	}
 	if file.Size() == 0 {
-		return fmt.Errorf("sbom file %s is empty", sbomPurlFilePath)
+		return nil, fmt.Errorf("sbom file %s is empty", sbomPurlFilePath)
 	}
 
 	b, err := os.ReadFile(sbomPurlFilePath)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("error when reading sbom file %s: %v", sbomPurlFilePath, err)
 	}
-	p := &SbomPurl{}
-	if err := json.Unmarshal(b, p); err != nil {
-		return fmt.Errorf("error when parsing sbom purl json: %v", err)
+	sbom := &SbomPurl{}
+	if err := json.Unmarshal(b, sbom); err != nil {
+		return nil, fmt.Errorf("error when parsing sbom PURL json: %v", err)
 	}
 
-	return nil
+	return sbom, nil
 }
 
-func verifySbomCyclonedx(rootDir string) error {
+func getSbomCyclonedxContent(rootDir string) (*SbomCyclonedx, error) {
 	sbomCyclonedxFilePath := rootDir + "/root/buildinfo/content_manifests/sbom-cyclonedx.json"
 	file, err := os.Stat(sbomCyclonedxFilePath)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("sbom file not found in path %s", sbomCyclonedxFilePath)
 	}
 	if file.Size() == 0 {
-		return fmt.Errorf("sbom file %s is empty", sbomCyclonedxFilePath)
+		return nil, fmt.Errorf("sbom file %s is empty", sbomCyclonedxFilePath)
 	}
 
 	b, err := os.ReadFile(sbomCyclonedxFilePath)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("error when reading sbom file %s: %v", sbomCyclonedxFilePath, err)
 	}
-	p := &SbomCyclonedx{}
-	if err := json.Unmarshal(b, p); err != nil {
-		return fmt.Errorf("error when parsing sbom purl json: %v", err)
+	sbom := &SbomCyclonedx{}
+	if err := json.Unmarshal(b, sbom); err != nil {
+		return nil, fmt.Errorf("error when parsing sbom CycloneDX json: %v", err)
 	}
 
-	return nil
+	return sbom, nil
 }

@@ -201,12 +201,13 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 		})
 
 		When("the container image is created and pushed to container registry", func() {
-
 			It("contains non-empty sbom files", Label("build-templates-e2e", "sbom", "slow"), func() {
 				component, err := f.HasController.GetHasComponent(componentName, appStudioE2EApplicationsNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(build.ValidateSbomFilesPresentInImage(component.Spec.ContainerImage)).To(Succeed())
-
+				purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(component.Spec.ContainerImage)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(purl.ImageContents.Dependencies).ToNot(BeEmpty())
+				Expect(cyclonedx.Components).ToNot(BeEmpty())
 			})
 		})
 		When("the component event listener is created", Label("webhook", "slow"), func() {
