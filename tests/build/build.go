@@ -13,6 +13,7 @@ import (
 	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -176,7 +177,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 			})
 		})
 
-		When("the PipelineRun is finished", Label("webhook", "slow"), func() {
+		When("the PipelineRun is finished", func() {
 			var webhookName string
 
 			BeforeAll(func() {
@@ -186,7 +187,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 
 			})
 
-			It("eventually leads to a creation of a component webhook (event listener)", func() {
+			It("eventually leads to a creation of a component webhook (event listener)", Label("webhook", "slow"), func() {
 				Eventually(func() bool {
 					_, err := f.HasController.GetEventListenerRoute(componentName, appStudioE2EApplicationsNamespace)
 					if err != nil {
@@ -196,6 +197,17 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 					return true
 
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the component webhook to be created")
+			})
+		})
+
+		When("the container image is created and pushed to container registry", func() {
+			It("contains non-empty sbom files", Label("build-templates-e2e", "sbom", "slow"), func() {
+				component, err := f.HasController.GetHasComponent(componentName, appStudioE2EApplicationsNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+				purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(component.Spec.ContainerImage)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(purl.ImageContents.Dependencies).ToNot(BeEmpty())
+				Expect(cyclonedx.Components).ToNot(BeEmpty())
 			})
 		})
 		When("the component event listener is created", Label("webhook", "slow"), func() {

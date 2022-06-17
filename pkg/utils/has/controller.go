@@ -3,6 +3,7 @@ package has
 import (
 	"context"
 	"fmt"
+	"time"
 
 	routev1 "github.com/openshift/api/route/v1"
 	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
@@ -13,6 +14,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -263,6 +267,74 @@ func (h *SuiteController) GetComponentService(componentName string, componentNam
 		return &corev1.Service{}, err
 	}
 	return service, nil
+}
+
+func (h *SuiteController) WaitForComponentPipelineToBeFinished(componentName string, applicationName string, componentNamespace string) error {
+	return wait.PollImmediate(20*time.Second, 10*time.Minute, func() (done bool, err error) {
+		pipelineRun, _ := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, false)
+
+		for _, condition := range pipelineRun.Status.Conditions {
+			klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)
+
+			if condition.Reason == "Failed" {
+				return false, fmt.Errorf("component %s pipeline failed", pipelineRun.Name)
+			}
+
+			if condition.Status == corev1.ConditionTrue {
+				return true, nil
+			}
+		}
+		return false, nil
+	})
+
+}
+
+// CreateComponent create an has component from a given name, namespace, application, devfile and a container image
+func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentName, namespace, gitSourceURL, devfile, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
+	var containerImage string
+	if outputContainerImage != "" {
+		containerImage = outputContainerImage
+	} else {
+		containerImage = containerImageSource
+	}
+	component := &appservice.Component{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      componentName,
+			Namespace: namespace,
+		},
+		Spec: appservice.ComponentSpec{
+			ComponentName: componentName,
+			Application:   applicationName,
+			Source: appservice.ComponentSource{
+				ComponentSourceUnion: appservice.ComponentSourceUnion{
+					GitSource: &appservice.GitSource{
+						URL:        gitSourceURL,
+						DevfileURL: devfile,
+					},
+				},
+			},
+			Secret:         secret,
+			ContainerImage: containerImage,
+			Replicas:       1,
+			TargetPort:     8080,
+			Route:          "",
+		},
+	}
+	err := h.KubeRest().Create(context.TODO(), component)
+	if err != nil {
+		return nil, err
+	}
+	return component, nil
+}
+
+// Remove all components from a given repository. Usefull when create a lot of resources and want to remove all of them
+func (h *SuiteController) DeleteAllComponentsInASpecificNamespace(namespace string) error {
+	return h.KubeRest().DeleteAllOf(context.TODO(), &appservice.Component{}, client.InNamespace(namespace))
+}
+
+// Remove all applications from a given repository. Usefull when create a lot of resources and want to remove all of them
+func (h *SuiteController) DeleteAllApplicationsInASpecificNamespace(namespace string) error {
+	return h.KubeRest().DeleteAllOf(context.TODO(), &appservice.Application{}, client.InNamespace(namespace))
 }
 
 func (h *SuiteController) GetHasComponentConditionStatusMessage(name, namespace string) (string, error) {

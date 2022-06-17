@@ -26,8 +26,8 @@ func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
 func (h *SuiteController) CreateGitOpsCR(name string, namespace string, repoUrl string, repoPath string, repoRevision string) (*managedgitopsv1alpha1.GitOpsDeployment, error) {
 	gitOpsDeployment := &managedgitopsv1alpha1.GitOpsDeployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+			GenerateName: name,
+			Namespace:    namespace,
 		},
 		Spec: managedgitopsv1alpha1.GitOpsDeploymentSpec{
 			Source: managedgitopsv1alpha1.ApplicationSource{
@@ -67,9 +67,9 @@ func (h *SuiteController) GetGitOpsDeployedImage(deployment *appsv1.Deployment) 
 }
 
 // Checks that the deployed backend component is actually reachable and returns 200
-func (h *SuiteController) CheckGitOpsEndpoint(route *routev1.Route) error {
+func (h *SuiteController) CheckGitOpsEndpoint(route *routev1.Route, endpoint string) error {
 	if len(route.Spec.Host) > 0 {
-		routeUrl := "http://" + route.Spec.Host + "/hello-resteasy"
+		routeUrl := "https://" + route.Spec.Host + endpoint
 
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		resp, err := http.Get(routeUrl)
