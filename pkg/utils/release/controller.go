@@ -149,7 +149,7 @@ func (h *SuiteController) CheckIfNamespaceExists(name string) bool {
 	// Check if the E2E test namespace already exists
 	_, err := h.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), name, metav1.GetOptions{})
 
-	if err != nil {
+	if err != nil && !k8sErrors.IsNotFound(err) {
 		return false
 	}
 
