@@ -17,7 +17,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 	defer g.GinkgoRecover()
 
 	// Set this to true to skip contract tests
-	var skipContract bool = true
+	var skipContract bool = false
 	var skipContractMsg string = "Temporarily disabling until the EC task definition is updated"
 
 	// Initialize the tests controllers
@@ -181,8 +181,8 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 					tekton.MatchTaskRunResultWithJSONValue("OUTPUT", `[
 						{
 							"filename": "/shared/ec-work-dir/input/input.json",
-							"namespace": "main",
-							"successes": 1
+							"namespace": "release.main",
+							"successes": 2
 						}
 					]`),
 					tekton.MatchTaskRunResult("PASSED", "true"),
@@ -207,14 +207,15 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 					tekton.MatchTaskRunResultWithJSONValue("OUTPUT", `[
 						{
 							"filename": "/shared/ec-work-dir/input/input.json",
-							"namespace": "main",
-							"successes": 0,
+							"namespace": "release.main",
+							"successes": 1,
 							"failures": [
 								{
 									"msg": "No test data found",
 									"metadata": {
-										"code": "test_data_missing"
-									}					
+										"code": "test_data_missing",
+										"effective_on": "2022-01-01T00:00:00Z"
+									}
 								}
 							]
 						}
