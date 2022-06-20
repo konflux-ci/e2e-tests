@@ -8,6 +8,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/gitops"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/integration"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/spi"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
@@ -20,6 +21,7 @@ type Framework struct {
 	GitOpsController  *gitops.SuiteController
 	SPIController     *spi.SuiteController
 	ReleaseController *release.SuiteController
+	IntegrationController *integration.SuiteController
 }
 
 // Initialize all test controllers and return them in a Framework
@@ -67,6 +69,12 @@ func NewFramework() (*Framework, error) {
 		return nil, err
 	}
 
+	// Initialize Integration Controller
+	integrationController, err := integration.NewSuiteController(kubeClient)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Framework{
 		CommonController:  commonCtrl,
 		HasController:     hasController,
@@ -74,5 +82,6 @@ func NewFramework() (*Framework, error) {
 		GitOpsController:  gitopsController,
 		SPIController:     spiController,
 		ReleaseController: releaseController,
+		IntegrationController: integrationController,
 	}, nil
 }
