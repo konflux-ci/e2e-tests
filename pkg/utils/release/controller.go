@@ -120,3 +120,19 @@ func (s *SuiteController) GetRelease(releaseName, releaseNamespace string) (*v1a
 
 	return release, err
 }
+
+// Get ReleaseLink
+func (s *SuiteController) GetReleaseLink(name string, namespace string) (*v1alpha1.ReleaseLink, error) {
+
+	namespacedName := types.NamespacedName{
+		Name:      name,
+		Namespace: namespace,
+	}
+
+	releaseLink := &v1alpha1.ReleaseLink{}
+	if err := s.KubeRest().Get(context.TODO(), namespacedName, releaseLink); err != nil {
+		return nil, err
+	}
+	return releaseLink, nil
+
+}

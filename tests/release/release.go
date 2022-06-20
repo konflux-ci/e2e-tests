@@ -27,6 +27,12 @@ const (
 
 	avgPipelineCompletionTime = 10 * time.Minute
 	defaultInterval           = 100 * time.Millisecond
+
+	Failure1ApplicationName       = "test"
+	Failure1SourceNamespace       = "matching-scenario-user"
+	Failure1ManagedNamespace      = "matching-scenario-managed"
+	Failure1SourceReleaseLinkName = "test-releaselink"
+	Failure1ReleaseName           = "test-release"
 )
 
 var snapshotComponents = []gitopsv1alpha1.ApplicationSnapshotComponent{
@@ -134,4 +140,132 @@ var _ = framework.ReleaseSuiteDescribe("test-demo", func() {
 			Expect(release.Status.ReleasePipelineRun).Should(Equal(fmt.Sprintf("%s/%s", pipelineRun.Namespace, pipelineRun.Name)))
 		})
 	})
+
+	var _ = Describe("Failure test #1", func() {
+
+		BeforeAll(func() {
+			// Create the dev namespace
+			sourceNamespace, err := framework.CommonController.CreateTestNamespace(Failure1SourceNamespace)
+			Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", sourceNamespace.Name, err)
+
+			// Create the managed namespace
+			managedNamespace, err := framework.CommonController.CreateTestNamespace(Failure1ManagedNamespace)
+			Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", managedNamespace.Name, err)
+
+			// wait until both namespaces have been created
+			Eventually(func() bool {
+				// demo and managed namespaces should not exist
+				ret1 := framework.CommonController.CheckIfNamespaceExists(Failure1SourceNamespace)
+				ret2 := framework.CommonController.CheckIfNamespaceExists(Failure1ManagedNamespace)
+
+				// return True if only one namespace still exists
+				// return False if both demo and managed namespaces don't exist
+				return ret1 && ret2
+			}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue(), "Timedout creating namespaces")
+		})
+
+		AfterAll(func() {
+			// Delete the dev and managed namespaces with all the resources created in them
+			Expect(framework.CommonController.DeleteNamespace(Failure1SourceNamespace)).NotTo(HaveOccurred())
+			Expect(framework.CommonController.DeleteNamespace(Failure1ManagedNamespace)).NotTo(HaveOccurred())
+		})
+
+		// ***
+		// Create resources for Failure test #1
+		// Missing matching ReleaseLink in managed workspace
+		/*
+			   Missing matching ReleaseLink in managed workspace
+			   A Release cannot be executed unless there is a ReleaseLink in the managed workspace which matches the one in the user workspace.
+			   Two ReleaseLinks are considered matching if they both specify the same application and each of them target the other's workspace.
+			   This scenario shows the situation where a Release is created in the user workspace with a ReleaseLink to a managed workspace,
+			   but there is no matching ReleaseLink in the managed workspace.
+
+			   Tests Prereq
+
+				$ git clone https://github.com/redhat-appstudio/release-service.git
+				$ cd release-service/demo/m4/failures
+				$ oc apply -f missing_matching_release_link.yaml
+
+			   	What to expect -
+
+				After running the commands above, you should expect to find:
+				a ReleaseLink test-releaselink in the matching-scenario-user namespace;
+				a Release test-release in the matching-scenario-user namespace and failed;
+				The following fields are set as follows:
+				Status="False"
+				REASON="ReleaseValidationError"
+				Message="no ReleaseLink found in target workspace 'matching-scenario-managed' with target 'matching-scenario-user' and application 'test'"
+		*/
+
+		var _ = Describe("Failure test #1 - create resources", func() {
+			It("Create a an ApplicationSnapshot for M5 failure#1 application", func() {
+				_, err := framework.ReleaseController.CreateApplicationSnapshot(snapshotName, Failure1SourceNamespace, Failure1ApplicationName, snapshotImages)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("Create Release Link in failure#1 source namespace", func() {
+				_, err := framework.ReleaseController.CreateReleaseLink(Failure1SourceReleaseLinkName, Failure1SourceNamespace, Failure1ApplicationName, Failure1ManagedNamespace, "")
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("Create a Release in failure#1 source namespace", func() {
+				_, err := framework.ReleaseController.CreateRelease(Failure1ReleaseName, Failure1SourceNamespace, snapshotName, Failure1SourceReleaseLinkName)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+		})
+
+		// Verification of test failures
+		/* What to expect -
+
+		After running the commands above, you should expect to find:
+		a ReleaseLink test-releaselink in the matching-scenario-user namespace;
+		a Release test-release in the matching-scenario-user namespace and failed;
+		the REASON field of the test-release Release set to Error.
+
+		*/
+		var _ = Describe("Failure test #1 Verification", func() {
+
+			release := &v1alpha1.Release{}
+			releaseReason := ""
+			releaseMessage := ""
+
+			// Check if there is a ReleaseLink in managed namespace
+			It("The ReleaseLink test-releaselink has been created in the failure#1 source namespace ", func() {
+				Eventually(func() bool {
+					releaseLink, err := framework.ReleaseController.GetReleaseLink(Failure1SourceReleaseLinkName, Failure1SourceNamespace)
+
+					return releaseLink != nil && err == nil
+				}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
+			})
+
+			It("The Release have been created and failed with the REASON field set to ReleaseValidationError", func() {
+				Eventually(func() bool {
+					release, err = framework.ReleaseController.GetRelease(Failure1ReleaseName, Failure1SourceNamespace)
+
+					if err != nil {
+						return false
+					}
+
+					if release != nil {
+						releaseReason = release.Status.Conditions[0].Reason
+					} else {
+						return false
+					}
+
+					return release.IsDone() && meta.IsStatusConditionFalse(release.Status.Conditions, "Succeeded") && Expect(releaseReason).To(Equal("ReleaseValidationError"))
+				}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
+			})
+
+			It("The Release have failed because no ReleaseLink found in target workspace", func() {
+				if release != nil {
+					releaseMessage = release.Status.Conditions[0].Message
+					Expect(releaseMessage).Should(ContainSubstring("no ReleaseLink found in target workspace"))
+				}
+			})
+
+		})
+
+	})
+
 })
