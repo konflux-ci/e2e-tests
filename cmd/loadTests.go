@@ -68,14 +68,10 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.e2e-tests.yaml)")
-
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().StringVar(&usernamePrefix, "username", usernamePrefix, "the prefix used for usersignup names")
 	// TODO use a custom kubeconfig and introduce debug logging and trace
-	// rootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "absolute path to the kubeconfig file")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "if 'debug' traces should be displayed in the console")
 	rootCmd.Flags().IntVarP(&numberOfUsers, "users", "u", 5, "the number of user accounts to provision")
 	rootCmd.Flags().IntVarP(&userBatches, "batch", "b", 5, "create user accounts in batches of N, increasing batch size may cause performance problems")
@@ -84,7 +80,6 @@ func init() {
 
 
 func setup(cmd *cobra.Command, args []string) {
-
 	cmd.SilenceUsage = true
 	term := terminal.New(cmd.InOrStdin, cmd.OutOrStdout, verbose)
 	if numberOfUsers%userBatches != 0{
