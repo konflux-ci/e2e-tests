@@ -14,6 +14,7 @@ import (
 	"knative.dev/pkg/apis"
 )
 
+// testing integration github with jira
 const (
 	snapshotName          = "snapshot"
 	sourceReleaseLinkName = "source-release-link"
