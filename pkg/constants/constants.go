@@ -17,6 +17,9 @@ const (
 	//The Tekton namespace
 	TEKTON_CHAINS_NS string = "tekton-chains" // #nosec
 
+	//base64 Encoded docker config json value to create registry pull secret
+	DOCKER_CONFIG_JSON string = "DOCKER_CONFIG_JSON"
+
 	//Cluster Registration namespace
 	CLUSTER_REG_NS string = "cluster-reg-config" // #nosec
 
@@ -33,5 +36,20 @@ const (
 	BuildPipelinesConfigMapName             = "build-pipelines-defaults"
 	BuildPipelinesConfigMapDefaultNamespace = "build-templates"
 
+
+	HostOperatorNamespace  string = "toolchain-host-operator"
+	MemberOperatorNamespace  string = "toolchain-member-operator"
+
+	HostOperatorWorkload string = "host-operator-controller-manager"
+	MemberOperatorWorkload string = "member-operator-controller-manager"
+
+	OLMOperatorNamespace string = "openshift-operator-lifecycle-manager"
+	OLMOperatorWorkload string = "olm-operator"
+
+	OSAPIServerNamespace string = "openshift-apiserver"
+	OSAPIServerWorkload string = "apiserver"
+
 	RegistryAuthSecretName = "redhat-appstudio-registry-pull-secret"
+
 )
+
