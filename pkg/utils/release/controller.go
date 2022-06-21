@@ -4,6 +4,7 @@ import (
 	"context"
 
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
 	"github.com/redhat-appstudio/release-service/api/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,15 +23,15 @@ func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
 }
 
 // CreateApplicationSnapshot creates a new ApplicationSnapshot using the given parameters.
-func (s *SuiteController) CreateApplicationSnapshot(name, namespace, applicationName string, snapshotImages []v1alpha1.Image) (*v1alpha1.ApplicationSnapshot, error) {
-	applicationSnapshot := &v1alpha1.ApplicationSnapshot{
+func (s *SuiteController) CreateApplicationSnapshot(name string, namespace string, applicationName string, snapshotComponents []gitopsv1alpha1.ApplicationSnapshotComponent) (*gitopsv1alpha1.ApplicationSnapshot, error) {
+	applicationSnapshot := &gitopsv1alpha1.ApplicationSnapshot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: v1alpha1.ApplicationSnapshotSpec{
+		Spec: gitopsv1alpha1.ApplicationSnapshotSpec{
 			Application: applicationName,
-			Images:      snapshotImages,
+			Components:  snapshotComponents,
 		},
 	}
 
@@ -72,7 +73,7 @@ func (s *SuiteController) CreateReleaseLink(name, namespace, application, target
 }
 
 // CreateReleaseStrategy creates a new ReleaseStrategy using the given parameters.
-func (s *SuiteController) CreateReleaseStrategy(name, namespace, pipelineName, bundle string) (*v1alpha1.ReleaseStrategy, error) {
+func (s *SuiteController) CreateReleaseStrategy(name, namespace, pipelineName, bundle string, policy string) (*v1alpha1.ReleaseStrategy, error) {
 	releaseStrategy := &v1alpha1.ReleaseStrategy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -81,6 +82,7 @@ func (s *SuiteController) CreateReleaseStrategy(name, namespace, pipelineName, b
 		Spec: v1alpha1.ReleaseStrategySpec{
 			Pipeline: pipelineName,
 			Bundle:   bundle,
+			Policy:   policy,
 		},
 	}
 
