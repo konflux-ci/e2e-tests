@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
+	"github.com/redhat-appstudio/release-service/api/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"knative.dev/pkg/apis"
@@ -199,7 +200,7 @@ var _ = framework.ReleaseSuiteDescribe("test-demo", func() {
 
 		var _ = Describe("Failure test #1 - create resources", func() {
 			It("Create a an ApplicationSnapshot for M5 failure#1 application", func() {
-				_, err := framework.ReleaseController.CreateApplicationSnapshot(snapshotName, Failure1SourceNamespace, Failure1ApplicationName, snapshotImages)
+				_, err := framework.ReleaseController.CreateApplicationSnapshot(snapshotName, Failure1SourceNamespace, Failure1ApplicationName, snapshotComponents)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
