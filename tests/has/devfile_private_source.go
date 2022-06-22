@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -157,7 +158,7 @@ func createAndInjectTokenToSPI(framework *framework.Framework, token, repoURL, s
 	bearerToken := strings.TrimSuffix(string(tokenBytes), "\n")
 
 	// Create the SPI Access Token Binding resource and upload the token for the private repository
-	_, err = framework.SPIController.CreateSPIAccessTokenBinding(spiAccessTokenBindingName, namespace, PrivateQuarkusDevfileSource, secretName)
+	_, err = framework.SPIController.CreateSPIAccessTokenBinding(spiAccessTokenBindingName, namespace, PrivateQuarkusDevfileSource, secretName, v1.SecretTypeBasicAuth)
 	Expect(err).NotTo(HaveOccurred())
 
 	// Wait for the resource to be in the "AwaitingTokenData" phase

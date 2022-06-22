@@ -18,6 +18,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
@@ -27,26 +28,24 @@ var AppStudioE2EApplicationsNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_
 
 var _ = framework.E2ESuiteDescribe(func() {
 	defer GinkgoRecover()
+	var outputContainerImage = ""
+	var oauthSecretName = ""
 
 	// Initialize the application struct
 	application := &appservice.Application{}
 	component := &appservice.Component{}
 
-	var fw *framework.Framework
-	var configTest config.WorkflowSpec
-
 	// Initialize the e2e demo configuration
 	configTestFile := viper.GetString("config-suites")
 	klog.Infof("Starting e2e-demo test suites from config: %s", configTestFile)
 
-	BeforeAll(func() {
-		// Initialize the tests controllers
-		var err error
-		fw, err = framework.NewFramework()
-		Expect(err).NotTo(HaveOccurred())
-		configTest, err = LoadTestGeneratorConfig(configTestFile)
-		Expect(err).NotTo(HaveOccurred())
+	// Initialize the tests controllers
+	fw, err := framework.NewFramework()
+	Expect(err).NotTo(HaveOccurred())
+	configTest, err := LoadTestGeneratorConfig(configTestFile)
+	Expect(err).NotTo(HaveOccurred())
 
+	BeforeAll(func() {
 		// Check to see if the github token was provided
 		Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
 		// Check if 'has-github-token' is present, unless SKIP_HAS_SECRET_CHECK env var is set
@@ -55,7 +54,7 @@ var _ = framework.E2ESuiteDescribe(func() {
 			Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
 		}
 
-		_, err = fw.CommonController.CreateTestNamespace(AppStudioE2EApplicationsNamespace)
+		_, err := fw.CommonController.CreateTestNamespace(AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", AppStudioE2EApplicationsNamespace, err)
 	})
 
@@ -63,12 +62,16 @@ var _ = framework.E2ESuiteDescribe(func() {
 	AfterAll(func() {
 		Expect(fw.HasController.DeleteAllComponentsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
 		Expect(fw.HasController.DeleteAllApplicationsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
+		Expect(fw.SPIController.DeleteAllBindingTokensInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
+		Expect(fw.GitOpsController.DeleteAllGitOpsDeploymentInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
 	})
 
 	for _, appTest := range configTest.Tests {
 		appTest := appTest
 
 		When(appTest.Name, func() {
+			defer GinkgoRecover()
+
 			// Create an application in a specific namespace
 			It("application is created", func() {
 				createdApplication, err := fw.HasController.CreateHasApplication(appTest.ApplicationName, AppStudioE2EApplicationsNamespace)
@@ -97,30 +100,35 @@ var _ = framework.E2ESuiteDescribe(func() {
 			for _, componentTest := range appTest.Components {
 				componentTest := componentTest
 				var containerIMG = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-				// Fail all private tests
+
 				if componentTest.Type == "private" {
-					defer GinkgoRecover()
-					Fail("Component creation from private repo is not supported. Jira issue: https://issues.redhat.com/browse/SVPI-135")
+					It("Inject manually SPI token", func() {
+						// Inject spi tokens to work with private components
+						if componentTest.ContainerSource != "" {
+							oauthSecretName = fw.SPIController.InjectManualSPIToken(AppStudioE2EApplicationsNamespace, componentTest.ContainerSource, utils.GetSPIOauthCredentials(), v1.SecretTypeBasicAuth)
+						} else if componentTest.GitSourceUrl != "" {
+							oauthSecretName = fw.SPIController.InjectManualSPIToken(AppStudioE2EApplicationsNamespace, componentTest.GitSourceUrl, utils.GetSPIOauthCredentials(), v1.SecretTypeBasicAuth)
+						}
+					})
 				}
 
 				// Components for now can be imported from gitUrl, container image or a devfile
 				if componentTest.ContainerSource != "" {
 					It(fmt.Sprintf("create component %s from container source", componentTest.Name), func() {
-						var outputContainerImage = ""
-						_, err := fw.HasController.CreateComponent(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace, "", componentTest.ContainerSource, outputContainerImage, "")
+						_, err := fw.HasController.CreateComponent(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace, "", componentTest.ContainerSource, outputContainerImage, oauthSecretName)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
 				} else if componentTest.GitSourceUrl != "" && componentTest.Devfilesource != "" {
 					It(fmt.Sprintf("create component %s from git source %s and devfile %s", componentTest.Name, componentTest.GitSourceUrl, componentTest.Devfilesource), func() {
-						_, err := fw.HasController.CreateComponentFromDevfile(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace,
+						component, err = fw.HasController.CreateComponentFromDevfile(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace,
 							componentTest.GitSourceUrl, componentTest.Devfilesource, "", containerIMG, "")
 						Expect(err).NotTo(HaveOccurred())
 					})
 
 				} else if componentTest.GitSourceUrl != "" {
 					It(fmt.Sprintf("create component %s from git source %s", componentTest.Name, componentTest.GitSourceUrl), func() {
-						_, err := fw.HasController.CreateComponent(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace,
+						component, err = fw.HasController.CreateComponent(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace,
 							componentTest.GitSourceUrl, "", containerIMG, "")
 						Expect(err).NotTo(HaveOccurred())
 					})
@@ -134,7 +142,7 @@ var _ = framework.E2ESuiteDescribe(func() {
 					if componentTest.ContainerSource != "" {
 						Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skiping pipelinerun check.", componentTest.Name))
 					}
-					Expect(fw.HasController.WaitForComponentPipelineToBeFinished(component.Name, application.Name, AppStudioE2EApplicationsNamespace)).To(Succeed(), "Error when waiting for a component pipeline to finish")
+					Expect(fw.HasController.WaitForComponentPipelineToBeFinished(component.Name, application.Name, AppStudioE2EApplicationsNamespace)).To(Succeed(), "Failed component pipeline %v", err)
 				})
 
 				// Deploy the component using gitops and check for the health

@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/onsi/gomega"
@@ -69,6 +70,10 @@ func GetQuayIOOrganization() string {
 	return GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
 }
 
+func GetSPIOauthCredentials() string {
+	return GetEnv(constants.SPI_OAUTH_CREDENTIALS, "")
+}
+
 func IsPrivateHostname(url string) bool {
 	// https://www.ibm.com/docs/en/networkmanager/4.2.0?topic=translation-private-address-ranges
 	privateIPAddressPrefixes := []string{"10.", "172.1", "172.2", "172.3", "192.168"}
@@ -85,4 +90,13 @@ func IsPrivateHostname(url string) bool {
 		}
 	}
 	return false
+}
+
+func GetOpenshiftToken() (token string, err error) {
+	// Get the token for the current openshift user
+	tokenBytes, err := exec.Command("oc", "whoami", "--show-token").Output()
+	if err != nil {
+		return "", fmt.Errorf("Error obtainig oc token %s", err.Error())
+	}
+	return strings.TrimSuffix(string(tokenBytes), "\n"), nil
 }
