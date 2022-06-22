@@ -26,9 +26,8 @@ const (
 	releasePipelineBundle = "quay.io/hacbs-release/demo:m5-alpine"
 	releaseStrategyPolicy = "policy"
 
-	avgPipelineCompletionTime = 10 * time.Minute
-	defaultInterval           = 100 * time.Millisecond
-
+	avgPipelineCompletionTime     = 10 * time.Minute
+	defaultInterval               = 100 * time.Millisecond
 	failure1ApplicationName       = "test"
 	failure1SourceReleaseLinkName = "test-releaselink"
 	failure1ReleaseName           = "test-release"
@@ -49,8 +48,8 @@ var _ = framework.ReleaseSuiteDescribe("test-demo", func() {
 	var devNamespace = uuid.New().String()
 	var managedNamespace = uuid.New().String()
 
-	var failure1SourceNamespace = "user-" + uuid.New().String()
-	var failure1ManagedNamespace = "managed-" + uuid.New().String()
+	var failureDevNamespace = "user-" + uuid.New().String()
+	var failureManagedNamespace = "managed-" + uuid.New().String()
 
 	BeforeAll(func() {
 		// Create the dev namespace
@@ -79,12 +78,12 @@ var _ = framework.ReleaseSuiteDescribe("test-demo", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Create Release Link in dev namespace", func() {
+		It("Create ReleaseLink in dev namespace", func() {
 			_, err := framework.ReleaseController.CreateReleaseLink(sourceReleaseLinkName, devNamespace, applicationName, managedNamespace, "")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Create Release Link in managed namespace", func() {
+		It("Create ReleaseLink in managed namespace", func() {
 			_, err := framework.ReleaseController.CreateReleaseLink(targetReleaseLinkName, managedNamespace, applicationName, devNamespace, releaseStrategyName)
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -143,48 +142,36 @@ var _ = framework.ReleaseSuiteDescribe("test-demo", func() {
 		})
 	})
 
-	var _ = Describe("Failure- Missing matching release link", func() {
+	var _ = Describe("Failure- Missing matching ReleaseLink", func() {
 		BeforeAll(func() {
 			// Create the dev namespace
-			sourceNamespace, err := framework.CommonController.CreateTestNamespace(failure1SourceNamespace)
+			sourceNamespace, err := framework.CommonController.CreateTestNamespace(failureDevNamespace)
 			Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", sourceNamespace.Name, err)
 
 			// Create the managed namespace
-			managedNamespace, err := framework.CommonController.CreateTestNamespace(failure1ManagedNamespace)
+			managedNamespace, err := framework.CommonController.CreateTestNamespace(failureManagedNamespace)
 			Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", managedNamespace.Name, err)
-
-			// wait until both namespaces have been created
-			// 	Eventually(func() bool {
-			// 		// demo and managed namespaces should not exist and status = active
-			// 		ret1 := framework.CommonController.CheckIfNamespaceExists(failure1SourceNamespace)
-			// 		ret2 := framework.CommonController.CheckIfNamespaceExists(failure1ManagedNamespace)
-
-			// 		// return True if only one namespace still exists
-			// 		// return False if both demo and managed namespaces don't exist
-			// 		return ret1 && ret2
-
-			// 	}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue(), "Timedout creating namespaces")
 		})
 
 		AfterAll(func() {
 			// Delete the dev and managed namespaces with all the resources created in them
-			Expect(framework.CommonController.DeleteNamespace(failure1SourceNamespace)).NotTo(HaveOccurred())
-			Expect(framework.CommonController.DeleteNamespace(failure1ManagedNamespace)).NotTo(HaveOccurred())
+			Expect(framework.CommonController.DeleteNamespace(failureDevNamespace)).NotTo(HaveOccurred())
+			Expect(framework.CommonController.DeleteNamespace(failureManagedNamespace)).NotTo(HaveOccurred())
 		})
 
 		var _ = Describe("All required resources are created successfully", func() {
-			It("Create a an ApplicationSnapshot for M5 application", func() {
-				_, err := framework.ReleaseController.CreateApplicationSnapshot(snapshotName, failure1SourceNamespace, failure1ApplicationName, snapshotComponents)
+			It("Create an ApplicationSnapshot for M5 application", func() {
+				_, err := framework.ReleaseController.CreateApplicationSnapshot(snapshotName, failureDevNamespace, failure1ApplicationName, snapshotComponents)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("Create Release Link in source namespace", func() {
-				_, err := framework.ReleaseController.CreateReleaseLink(failure1SourceReleaseLinkName, failure1SourceNamespace, failure1ApplicationName, failure1ManagedNamespace, "")
+			It("Create ReleaseLink in source namespace", func() {
+				_, err := framework.ReleaseController.CreateReleaseLink(failure1SourceReleaseLinkName, failureDevNamespace, failure1ApplicationName, failureManagedNamespace, "")
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("Create a Release in source namespace", func() {
-				_, err := framework.ReleaseController.CreateRelease(failure1ReleaseName, failure1SourceNamespace, snapshotName, failure1SourceReleaseLinkName)
+				_, err := framework.ReleaseController.CreateRelease(failure1ReleaseName, failureDevNamespace, snapshotName, failure1SourceReleaseLinkName)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -196,7 +183,7 @@ var _ = framework.ReleaseSuiteDescribe("test-demo", func() {
 
 			It("The Release have failed with the REASON field set to ReleaseValidationError", func() {
 				Eventually(func() bool {
-					release, err = framework.ReleaseController.GetRelease(failure1ReleaseName, failure1SourceNamespace)
+					release, err = framework.ReleaseController.GetRelease(failure1ReleaseName, failureDevNamespace)
 
 					if err != nil || release == nil {
 						return false
@@ -210,7 +197,7 @@ var _ = framework.ReleaseSuiteDescribe("test-demo", func() {
 
 			It("Condition message describes an error finding a matching ReleaseLink", func() {
 				Eventually(func() bool {
-					release, err = framework.ReleaseController.GetRelease(failure1ReleaseName, failure1SourceNamespace)
+					release, err = framework.ReleaseController.GetRelease(failure1ReleaseName, failureDevNamespace)
 
 					if err != nil || release == nil {
 						return false
