@@ -2009,6 +2009,8 @@ github.com/redhat-appstudio/application-service v0.0.0-20220509130137-3bdbc6eecd
 github.com/redhat-appstudio/application-service v0.0.0-20220509130137-3bdbc6eecda4/go.mod h1:QzlBejIgkmnzM/tiKzJKK86IXil/6j8KxmxaDInqtmU=
 github.com/redhat-appstudio/managed-gitops/appstudio-shared v0.0.0-20220621142927-1679e6e22836 h1:H7x+XLPW+Or3Wn5hvrqWEE/n60gSQefqw24BGFKpKSk=
 github.com/redhat-appstudio/managed-gitops/appstudio-shared v0.0.0-20220621142927-1679e6e22836/go.mod h1:zI6l6177ZbAu4MNovCWinVq3Ii3qpD9svV7t9a58b/s=
+github.com/redhat-appstudio/managed-gitops/appstudio-shared v0.0.0-20220623041404-010a781bb3fb h1:w0yj4jUZotnRVa3TFmaNBQj2pgZmgUOvSjinQrC2wxk=
+github.com/redhat-appstudio/managed-gitops/appstudio-shared v0.0.0-20220623041404-010a781bb3fb/go.mod h1:zI6l6177ZbAu4MNovCWinVq3Ii3qpD9svV7t9a58b/s=
 github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001 h1:dHYSaZ8slDW27YrbAYj59Zd82Oml3oTj9ieICLtzk8Y=
 github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001/go.mod h1:jqTuNQDL/xf+LsxWg1RuhJiMvMWnoRZcpcHRhX8Z12s=
 github.com/redhat-appstudio/release-service v0.0.0-20220615125956-86a62e5324ec h1:iw0UbZvsKw09F6ehKxXxXEDHybpoa6Afp787Xgmyn0Q=

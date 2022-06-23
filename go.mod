@@ -36,7 +36,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.11.1
 )
 
-require github.com/redhat-appstudio/managed-gitops/appstudio-shared v0.0.0-20220621142927-1679e6e22836
+require github.com/redhat-appstudio/managed-gitops/appstudio-shared v0.0.0-20220623041404-010a781bb3fb
 
 require (
 	contrib.go.opencensus.io/exporter/ocagent v0.7.1-0.20200907061046-05415f1de66d // indirect
