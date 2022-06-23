@@ -47,7 +47,18 @@ function waitSPIToBeReady() {
 
 function executeE2ETests() {
     make build
-    "${WORKSPACE}"/bin/e2e-appstudio --ginkgo.junit-report="${ARTIFACTS_DIR}"/e2e-report.xml --ginkgo.progress --ginkgo.v
+    "${WORKSPACE}"/bin/e2e-appstudio --ginkgo.junit-report="${ARTIFACTS_DIR}"/e2e-report.xml --ginkgo.progress --ginkgo.v  -webhookConfigPath="./webhookConfig.yml"
+}
+
+function prepareWebhookVariables() {
+    #Export variables
+    export webhook_salt=123456789
+    export webhook_target=https://smee.io/JgVqn2oYFPY1CF
+    export webhook_repositoryURL=https://github.com/redhat-appstudio/e2e-tests
+    export webhook_repositoryFullName=redhat-appstudio/e2e-tests
+    export webhook_pullNumber="$PULL_NUMBER"
+    # Rewrite variables in webhookConfig.yml
+    curl https://raw.githubusercontent.com/jkopriva/e2e-tests/RHDP-442/webhookConfig.yml | envsubst > webhookConfig.yml
 }
 
 # Initiate openshift ci users
@@ -69,4 +80,5 @@ timeout --foreground 10m bash -c waitBuildToBeReady
 timeout --foreground 10m bash -c waitHASApplicationToBeReady
 timeout --foreground 10m bash -c waitSPIToBeReady
 
+prepareWebhookVariables
 executeE2ETests

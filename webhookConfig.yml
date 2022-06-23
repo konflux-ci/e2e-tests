@@ -6,3 +6,4 @@ webhookConfig:
   repositoryURL: "${webhook_repositoryURL}"
   repository:
     fullName: "${webhook_repositoryFullName}"
+    pullNumber: "${webhook_pullNumber}"
