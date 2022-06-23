@@ -71,4 +71,3 @@ git clone -b "${E2E_CLONE_BRANCH}" "${E2E_REPO_LINK}" "$WORKSPACE"/tmp/e2e-tests
 cd "$WORKSPACE"/tmp/e2e-tests
 make build
 chmod 755 "$WORKSPACE"/tmp/e2e-tests/bin/e2e-appstudio
-cd "$WORKSPACE"

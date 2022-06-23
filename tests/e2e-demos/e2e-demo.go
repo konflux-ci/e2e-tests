@@ -32,21 +32,17 @@ var _ = framework.E2ESuiteDescribe(func() {
 	application := &appservice.Application{}
 	component := &appservice.Component{}
 
-	var fw *framework.Framework
-	var configTest config.WorkflowSpec
-
 	// Initialize the e2e demo configuration
 	configTestFile := viper.GetString("config-suites")
 	klog.Infof("Starting e2e-demo test suites from config: %s", configTestFile)
 
-	BeforeAll(func() {
-		// Initialize the tests controllers
-		var err error
-		fw, err = framework.NewFramework()
-		Expect(err).NotTo(HaveOccurred())
-		configTest, err = LoadTestGeneratorConfig(configTestFile)
-		Expect(err).NotTo(HaveOccurred())
+	// Initialize the tests controllers
+	fw, err := framework.NewFramework()
+	Expect(err).NotTo(HaveOccurred())
+	configTest, err := LoadTestGeneratorConfig(configTestFile)
+	Expect(err).NotTo(HaveOccurred())
 
+	BeforeAll(func() {
 		// Check to see if the github token was provided
 		Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
 		// Check if 'has-github-token' is present, unless SKIP_HAS_SECRET_CHECK env var is set
@@ -55,7 +51,7 @@ var _ = framework.E2ESuiteDescribe(func() {
 			Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
 		}
 
-		_, err = fw.CommonController.CreateTestNamespace(AppStudioE2EApplicationsNamespace)
+		_, err := fw.CommonController.CreateTestNamespace(AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", AppStudioE2EApplicationsNamespace, err)
 	})
 
@@ -113,14 +109,14 @@ var _ = framework.E2ESuiteDescribe(func() {
 
 				} else if componentTest.GitSourceUrl != "" && componentTest.Devfilesource != "" {
 					It(fmt.Sprintf("create component %s from git source %s and devfile %s", componentTest.Name, componentTest.GitSourceUrl, componentTest.Devfilesource), func() {
-						_, err := fw.HasController.CreateComponentFromDevfile(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace,
+						component, err = fw.HasController.CreateComponentFromDevfile(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace,
 							componentTest.GitSourceUrl, componentTest.Devfilesource, "", containerIMG, "")
 						Expect(err).NotTo(HaveOccurred())
 					})
 
 				} else if componentTest.GitSourceUrl != "" {
 					It(fmt.Sprintf("create component %s from git source %s", componentTest.Name, componentTest.GitSourceUrl), func() {
-						_, err := fw.HasController.CreateComponent(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace,
+						component, err = fw.HasController.CreateComponent(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace,
 							componentTest.GitSourceUrl, "", containerIMG, "")
 						Expect(err).NotTo(HaveOccurred())
 					})
@@ -134,7 +130,7 @@ var _ = framework.E2ESuiteDescribe(func() {
 					if componentTest.ContainerSource != "" {
 						Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skiping pipelinerun check.", componentTest.Name))
 					}
-					Expect(fw.HasController.WaitForComponentPipelineToBeFinished(component.Name, application.Name, AppStudioE2EApplicationsNamespace)).To(Succeed(), "Error when waiting for a component pipeline to finish")
+					Expect(fw.HasController.WaitForComponentPipelineToBeFinished(component.Name, application.Name, AppStudioE2EApplicationsNamespace)).To(Succeed(), "Failed component pipeline %v", err)
 				})
 
 				// Deploy the component using gitops and check for the health
