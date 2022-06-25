@@ -25,7 +25,8 @@ type WebhookConfig struct {
 
 // RepositoryWebhook config struct
 type RepositoryWebhook struct {
-	FullName string `yaml:"fullName"`
+	FullName   string `yaml:"fullName"`
+	PullNumber string `yaml:"pullNumber"`
 }
 
 // Webhook struct for sending
@@ -37,7 +38,8 @@ type Webhook struct {
 
 // Repository struct for sending
 type Repository struct {
-	FullName string `json:"full_name"`
+	FullName   string `json:"full_name"`
+	PullNumber string `json:"pull_number"`
 }
 
 // Send webhook
@@ -56,6 +58,7 @@ func SendWebhook(webhookConfig string) {
 	w := Webhook{Path: path}
 	w.RepositoryURL = cfg.WebhookConfig.RepositoryURL
 	w.Repository.FullName = cfg.WebhookConfig.RepositoryWebhook.FullName
+	w.Repository.PullNumber = cfg.WebhookConfig.RepositoryWebhook.PullNumber
 	saltSecret := cfg.WebhookConfig.SaltSecret
 	hook.Create(w, path, saltSecret)
 
