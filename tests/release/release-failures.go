@@ -24,7 +24,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 	var devNamespace = "user-" + uuid.New().String()
 	var managedNamespace = "managed-" + uuid.New().String()
 
-	var _ = Describe("Failure- Missing matching ReleaseLink", func() {
+	var _ = Describe("Failure - Missing matching ReleaseLink", func() {
 		BeforeAll(func() {
 			// Create the dev namespace
 			sourceNamespace, err := framework.CommonController.CreateTestNamespace(devNamespace)
@@ -42,7 +42,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 		})
 
 		var _ = Describe("All required resources are created successfully", func() {
-			It("Create an ApplicationSnapshot for M5 application", func() {
+			It("Create an ApplicationSnapshot", func() {
 				_, err := framework.ReleaseController.CreateApplicationSnapshot(snapshotName, devNamespace, failureApplicationName, snapshotComponents)
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -72,7 +72,6 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 					}
 
 					releaseReason = release.Status.Conditions[0].Reason
-
 					return release.IsDone() && meta.IsStatusConditionFalse(release.Status.Conditions, "Succeeded") && Expect(releaseReason).To(Equal("ReleaseValidationError"))
 				}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
 			})
@@ -86,7 +85,6 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 					}
 
 					releaseMessage = release.Status.Conditions[0].Message
-
 					return Expect(releaseMessage).Should(ContainSubstring("no ReleaseLink found in target workspace"))
 				}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
 			})
