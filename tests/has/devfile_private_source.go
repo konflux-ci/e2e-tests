@@ -199,7 +199,7 @@ func createAndInjectTokenToSPI(framework *framework.Framework, token, repoURL, s
 		client := &http.Client{}
 		resp, err := client.Do(req)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(resp.StatusCode).Should(Equal(204))
+		Expect(resp.StatusCode).Should(Or(Equal(http.StatusAccepted), Equal(http.StatusNoContent)))
 		defer resp.Body.Close()
 
 		// Check to see if the token was successfully injected
