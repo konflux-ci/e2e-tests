@@ -8,12 +8,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 )
 
-const (
-	ApplicationName       = "test"
-	SourceReleaseLinkName = "test-releaselink"
-	ReleaseName           = "test-release"
-)
-
 var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
@@ -42,17 +36,17 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 
 		var _ = Describe("All required resources are created successfully", func() {
 			It("Create an ApplicationSnapshot", func() {
-				_, err := framework.ReleaseController.CreateApplicationSnapshot(snapshotName, devNamespace, ApplicationName, snapshotComponents)
+				_, err := framework.ReleaseController.CreateApplicationSnapshot(snapshotName, devNamespace, applicationName, snapshotComponents)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("Create ReleaseLink in source namespace", func() {
-				_, err := framework.ReleaseController.CreateReleaseLink(SourceReleaseLinkName, devNamespace, ApplicationName, managedNamespace, "")
+				_, err := framework.ReleaseController.CreateReleaseLink(sourceReleaseLinkName, devNamespace, applicationName, managedNamespace, "")
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("Create a Release in source namespace", func() {
-				_, err := framework.ReleaseController.CreateRelease(ReleaseName, devNamespace, snapshotName, SourceReleaseLinkName)
+				_, err := framework.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, sourceReleaseLinkName)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -60,7 +54,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 		var _ = Describe("A ReleaseLink has to have a matching one in a managed workspace", func() {
 			It("The Release have failed with the REASON field set to ReleaseValidationError", func() {
 				Eventually(func() bool {
-					release, err := framework.ReleaseController.GetRelease(ReleaseName, devNamespace)
+					release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
 
 					if err != nil || release == nil {
 						return false
@@ -73,7 +67,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 
 			It("Condition message describes an error finding a matching ReleaseLink", func() {
 				Eventually(func() bool {
-					release, err := framework.ReleaseController.GetRelease(ReleaseName, devNamespace)
+					release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
 
 					if err != nil || release == nil {
 						return false
