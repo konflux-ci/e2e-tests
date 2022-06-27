@@ -8,6 +8,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 )
 
+const (
+	missingPipelineName = "missing-release-pipeline"
+)
+
 var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
@@ -106,27 +110,27 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 
 		var _ = Describe("All required resources are created successfully", func() {
 			It("Create an ApplicationSnapshot", func() {
-				_, err := framework.ReleaseController.CreateApplicationSnapshot(failureSnapshotName, devNamespace, failureApplicationName, snapshotComponents)
+				_, err := framework.ReleaseController.CreateApplicationSnapshot(snapshotName, devNamespace, applicationName, snapshotComponents)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("Create ReleaseLink in source namespace", func() {
-				_, err := framework.ReleaseController.CreateReleaseLink(failureSourceReleaseLinkName, devNamespace, failureApplicationName, managedNamespace, "")
+				_, err := framework.ReleaseController.CreateReleaseLink(sourceReleaseLinkName, devNamespace, applicationName, managedNamespace, "")
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("Create ReleaseLink in managed namespace", func() {
-				_, err := framework.ReleaseController.CreateReleaseLink(failureManagedReleaseLinkName, managedNamespace, failureApplicationName, devNamespace, failureStrategyName)
+				_, err := framework.ReleaseController.CreateReleaseLink(targetReleaseLinkName, managedNamespace, applicationName, devNamespace, releaseStrategyName)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("Create ReleaseStrategy in managed namespace", func() {
-				_, err := framework.ReleaseController.CreateReleaseStrategy(failureStrategyName, managedNamespace, failureMissingPipelineName, releasePipelineBundle, releaseStrategyPolicy)
+				_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, missingPipelineName, releasePipelineBundle, releaseStrategyPolicy)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("Create a Release in source namespace", func() {
-				_, err := framework.ReleaseController.CreateRelease(failureReleaseName, devNamespace, failureSnapshotName, failureSourceReleaseLinkName)
+				_, err := framework.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, sourceReleaseLinkName)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -134,7 +138,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 		var _ = Describe("A Release must relate to an existing pipeline in the managed workspace", func() {
 			It("The Release have failed with the REASON field set to ReleasePipelineFailed", func() {
 				Eventually(func() bool {
-					release, err := framework.ReleaseController.GetRelease(failureReleaseName, devNamespace)
+					release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
 
 					if err != nil || release == nil {
 						return false
@@ -147,13 +151,13 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 
 			It("Condition message describes an error retrieving pipeline", func() {
 				Eventually(func() bool {
-					release, err := framework.ReleaseController.GetRelease(failureReleaseName, devNamespace)
+					release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
 
 					if err != nil || release == nil {
 						return false
 					}
 
-					tmpMessage := "could not find object in image with kind: pipeline and name: " + failureMissingPipelineName
+					tmpMessage := "could not find object in image with kind: pipeline and name: " + missingPipelineName
 					releaseMessage := release.Status.Conditions[0].Message
 					return Expect(releaseMessage).Should(ContainSubstring("Error retrieving pipeline")) && Expect(releaseMessage).Should(ContainSubstring(tmpMessage))
 				}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
