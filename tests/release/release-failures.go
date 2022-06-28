@@ -140,7 +140,8 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 				Eventually(func() bool {
 					release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
 
-					if err != nil || release == nil {
+					// Avoiding race condition where release.Status.Conditions field didn't have time to get data
+					if err != nil || release == nil || len(release.Status.Conditions) == 0 {
 						return false
 					}
 
@@ -153,12 +154,14 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 				Eventually(func() bool {
 					release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
 
-					if err != nil || release == nil {
+					// Avoiding race condition where release.Status.Conditions field didn't have time to get data
+					if err != nil || release == nil || len(release.Status.Conditions) == 0 {
 						return false
 					}
 
 					tmpMessage := "could not find object in image with kind: pipeline and name: " + missingPipelineName
 					releaseMessage := release.Status.Conditions[0].Message
+					// could not find object in image with kind: pipeline and name: missing-release-pipeline
 					return Expect(releaseMessage).Should(ContainSubstring("Error retrieving pipeline")) && Expect(releaseMessage).Should(ContainSubstring(tmpMessage))
 				}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
 			})
