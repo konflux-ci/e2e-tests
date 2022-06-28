@@ -17,12 +17,16 @@ function executeE2ETests() {
     "${WORKSPACE}"/bin/e2e-appstudio --ginkgo.junit-report="${ARTIFACTS_DIR}"/e2e-report.xml --ginkgo.progress --ginkgo.v
 }
 
-# Initiate openshift ci users
-export KUBECONFIG_TEST="/tmp/kubeconfig"
-/bin/bash "$WORKSPACE"/scripts/provision-openshift-user.sh
+function prepareWebhookVariables() {
+    #Export variables
+    export webhook_salt=123456789
+    export webhook_target=https://smee.io/JgVqn2oYFPY1CF
+    export webhook_repositoryURL=https://github.com/$REPO_OWNER/$REPO_NAME
+    export webhook_repositoryFullName=$REPO_OWNER/$REPO_NAME
+    export webhook_pullNumber=$PULL_NUMBER
+    # Rewrite variables in webhookConfig.yml
+    curl https://raw.githubusercontent.com/redhat-appstudio/e2e-tests/main/webhookConfig.yml | envsubst > webhookConfig.yml
+}
 
-export KUBECONFIG="${KUBECONFIG_TEST}"
-
-/bin/bash "$WORKSPACE"/scripts/install-appstudio-e2e-mode.sh install
-
+prepareWebhookVariables
 executeE2ETests
