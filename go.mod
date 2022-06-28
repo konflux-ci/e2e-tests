@@ -18,7 +18,7 @@ require (
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
 	github.com/redhat-appstudio/application-service v0.0.0-20220509130137-3bdbc6eecda4
 	github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001
-	github.com/redhat-appstudio/release-service v0.0.0-20220615125956-86a62e5324ec
+	github.com/redhat-appstudio/release-service v0.0.0-20220620143459-53c2f4bcc510
 	github.com/redhat-appstudio/service-provider-integration-operator v0.5.0
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.12.0
@@ -36,7 +36,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.11.1
 )
 
-require github.com/redhat-appstudio/managed-gitops/appstudio-shared v0.0.0-20220614142506-d6cdfb25d83d
+require github.com/redhat-appstudio/managed-gitops/appstudio-shared v0.0.0-20220623041404-010a781bb3fb
 
 require (
 	contrib.go.opencensus.io/exporter/ocagent v0.7.1-0.20200907061046-05415f1de66d // indirect

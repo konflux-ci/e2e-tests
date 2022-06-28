@@ -35,7 +35,7 @@ var snapshotComponents = []gitopsv1alpha1.ApplicationSnapshotComponent{
 	{"component-3", "quay.io/redhat-appstudio/component3@sha256:d90a0a33e4c5a1daf5877f8dd989a570bfae4f94211a8143599245e503775b1f"},
 }
 
-var _ = framework.ReleaseSuiteDescribe("test-demo", func() {
+var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	framework, err := framework.NewFramework()
@@ -71,12 +71,12 @@ var _ = framework.ReleaseSuiteDescribe("test-demo", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Create Release Link in dev namespace", func() {
+		It("Create ReleaseLink in dev namespace", func() {
 			_, err := framework.ReleaseController.CreateReleaseLink(sourceReleaseLinkName, devNamespace, applicationName, managedNamespace, "")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Create Release Link in managed namespace", func() {
+		It("Create ReleaseLink in managed namespace", func() {
 			_, err := framework.ReleaseController.CreateReleaseLink(targetReleaseLinkName, managedNamespace, applicationName, devNamespace, releaseStrategyName)
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -134,4 +134,5 @@ var _ = framework.ReleaseSuiteDescribe("test-demo", func() {
 			Expect(release.Status.ReleasePipelineRun).Should(Equal(fmt.Sprintf("%s/%s", pipelineRun.Namespace, pipelineRun.Name)))
 		})
 	})
+
 })
