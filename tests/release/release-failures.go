@@ -155,7 +155,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 					release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
 
 					// Avoiding race condition where release.Status.Conditions field didn't have time to get data
-					if err != nil || release == nil || len(release.Status.Conditions) == 0 {
+					if err != nil || release == nil || len(release.Status.Conditions) == 0 || release.Status.Conditions[0].Message == "" {
 						return false
 					}
 
