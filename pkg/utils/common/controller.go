@@ -240,7 +240,7 @@ func (s *SuiteController) CreateRegistryAuthSecret(secretName, namespace, secret
 			Name:      secretName,
 			Namespace: namespace,
 		},
-		Type:       "kubernetes.io/dockerconfigjson",
+		Type: "kubernetes.io/dockerconfigjson",
 		StringData: map[string]string{".dockerconfigjson": string(rawDecodedText)},
 	}
 	er := s.KubeRest().Create(context.TODO(), secret)
