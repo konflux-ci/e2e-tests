@@ -502,8 +502,8 @@ var _ = framework.BuildSuiteDescribe("A secret with dummy quay.io credentials is
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace)
 
-		timeout = time.Minute * 1
-		interval = time.Second * 5
+		timeout = time.Minute * 2
+		interval = time.Second * 1
 
 		dummySecret := &v1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Name: constants.RegistryAuthSecretName},
