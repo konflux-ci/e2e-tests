@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	missingPipelineName = "missing-release-pipeline"
+	missingPipelineName    = "missing-release-pipeline"
+	missingReleaseStrategy = "missing-release-strategy"
 )
 
 var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
@@ -163,6 +164,80 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 					releaseMessage := release.Status.Conditions[0].Message
 					// could not find object in image with kind: pipeline and name: missing-release-pipeline
 					return Expect(releaseMessage).Should(ContainSubstring("Error retrieving pipeline")) && Expect(releaseMessage).Should(ContainSubstring(tmpMessage))
+				}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
+			})
+		})
+	})
+
+	var _ = Describe("Failure - Missing ReleaseStrategy", func() {
+		BeforeAll(func() {
+			devNamespace = "user-" + uuid.New().String()
+			managedNamespace = "managed-" + uuid.New().String()
+
+			// Create the dev namespace
+			_, err := framework.CommonController.CreateTestNamespace(devNamespace)
+			Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", devNamespace, err)
+
+			// Create the managed namespace
+			_, err = framework.CommonController.CreateTestNamespace(managedNamespace)
+			Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", managedNamespace, err)
+		})
+
+		AfterAll(func() {
+			// Delete the dev and managed namespaces with all the resources created in them
+			Expect(framework.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
+			Expect(framework.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+		})
+
+		var _ = Describe("All required resources are created successfully", func() {
+			It("Create an ApplicationSnapshot", func() {
+				_, err := framework.ReleaseController.CreateApplicationSnapshot(snapshotName, devNamespace, applicationName, snapshotComponents)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("Create ReleaseLink in source namespace", func() {
+				_, err := framework.ReleaseController.CreateReleaseLink(sourceReleaseLinkName, devNamespace, applicationName, managedNamespace, "")
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("Create ReleaseLink in managed namespace", func() {
+				_, err := framework.ReleaseController.CreateReleaseLink(targetReleaseLinkName, managedNamespace, applicationName, devNamespace, missingReleaseStrategy)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("Create a Release in source namespace", func() {
+				_, err := framework.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, sourceReleaseLinkName)
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		var _ = Describe("A Release must relate to an existing ReleaseStrategy in the managed workspace", func() {
+			It("The Release have failed with the REASON field set to ReleaseValidationError", func() {
+				Eventually(func() bool {
+					release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
+
+					// Avoiding race condition where release.Status.Conditions field didn't have time to get data
+					if err != nil || release == nil || len(release.Status.Conditions) == 0 {
+						return false
+					}
+
+					releaseReason := release.Status.Conditions[0].Reason
+					return release.IsDone() && meta.IsStatusConditionFalse(release.Status.Conditions, "Succeeded") && Expect(releaseReason).To(Equal("ReleaseValidationError"))
+				}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
+			})
+
+			It("Condition message describes an error retrieving ReleaseStrategy", func() {
+				Eventually(func() bool {
+					release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
+
+					// Avoiding race condition where release.Status.Conditions field didn't have time to get data
+					if err != nil || release == nil || len(release.Status.Conditions) == 0 || release.Status.Conditions[0].Message == "" {
+						return false
+					}
+
+					tmpMessage := "\"" + missingReleaseStrategy + "\"" + " not found"
+					releaseMessage := release.Status.Conditions[0].Message
+					return Expect(releaseMessage).Should(ContainSubstring(tmpMessage))
 				}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
 			})
 		})
