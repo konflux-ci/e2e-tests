@@ -64,7 +64,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 				Eventually(func() bool {
 					release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
 
-					if err != nil || release == nil {
+					if err != nil || release == nil || len(release.Status.Conditions) == 0 {
 						return false
 					}
 
@@ -77,7 +77,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 				Eventually(func() bool {
 					release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
 
-					if err != nil || release == nil {
+					if err != nil || release == nil || len(release.Status.Conditions) == 0 {
 						return false
 					}
 
