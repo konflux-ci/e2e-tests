@@ -129,8 +129,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", func() {
 			})
 		})
 
-		When("the container image is created and pushed to container registry", func() {
-			It("contains non-empty sbom files", Label("build-templates-e2e", "sbom", "slow"), func() {
+		When("the container image is created and pushed to container registry", Label("sbom", "slow"), func() {
+			It("contains non-empty sbom files", func() {
 				component, err := f.HasController.GetHasComponent(componentName, testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 				purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(component.Spec.ContainerImage)
@@ -399,7 +399,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", func() {
 			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
 		})
 
-		It("should not trigger a PipelineRun", Label("build-templates-e2e"), func() {
+		It("should not trigger a PipelineRun", func() {
 			Consistently(func() bool {
 				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
 				Expect(pipelineRun.Name).To(BeEmpty())
