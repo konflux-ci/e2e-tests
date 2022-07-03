@@ -262,10 +262,10 @@ func (s *SuiteController) DeleteNamespace(namespace string) error {
 }
 
 // CreateTestNamespace creates a namespace where Application and Component CR will be created
-func (h *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, error) {
+func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, error) {
 
 	// Check if the E2E test namespace already exists
-	ns, err := h.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), name, metav1.GetOptions{})
+	ns, err := s.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), name, metav1.GetOptions{})
 
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
@@ -275,7 +275,7 @@ func (h *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 					Name:   name,
 					Labels: map[string]string{constants.ArgoCDLabelKey: constants.ArgoCDLabelValue},
 				}}
-			ns, err = h.KubeInterface().CoreV1().Namespaces().Create(context.TODO(), &nsTemplate, metav1.CreateOptions{})
+			ns, err = s.KubeInterface().CoreV1().Namespaces().Create(context.TODO(), &nsTemplate, metav1.CreateOptions{})
 			if err != nil {
 				return nil, fmt.Errorf("error when creating %s namespace: %v", name, err)
 			}
@@ -289,11 +289,26 @@ func (h *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 		}
 		// Update test namespace labels in case they are missing argoCD label
 		ns.Labels[constants.ArgoCDLabelKey] = constants.ArgoCDLabelValue
-		ns, err = h.KubeInterface().CoreV1().Namespaces().Update(context.TODO(), ns, metav1.UpdateOptions{})
+		ns, err = s.KubeInterface().CoreV1().Namespaces().Update(context.TODO(), ns, metav1.UpdateOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("error when updating labels in '%s' namespace: %v", name, err)
 		}
 	}
 
+	// "pipeline" service account needs to be present in the namespace before we start with creating tekton resources
+	if err := s.WaitUntil(s.ServiceaccountPresent("pipeline", name), time.Second*30); err != nil {
+		return nil, err
+	}
+
 	return ns, nil
+}
+
+func (s *SuiteController) ServiceaccountPresent(saName, namespace string) wait.ConditionFunc {
+	return func() (bool, error) {
+		_, err := s.GetServiceAccount(saName, namespace)
+		if err != nil {
+			return false, nil
+		}
+		return true, nil
+	}
 }
