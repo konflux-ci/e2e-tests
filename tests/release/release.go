@@ -11,6 +11,7 @@ import (
 	gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	klog "k8s.io/klog/v2"
 	"knative.dev/pkg/apis"
 )
 
@@ -52,6 +53,16 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", func()
 		// Create the managed namespace
 		namespace, err := framework.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", namespace.Name, err)
+
+		// Wait until the "pipeline" SA is created and ready with secrets by the openshift-pipelines operator
+		klog.Infof("Wait until the %s SA is created in %s namespace \n", "pipeline", managedNamespace)
+		Eventually(func() bool {
+			sa, err := framework.CommonController.GetServiceAccount("pipeline", managedNamespace)
+			if sa == nil || err != nil || len(sa.Secrets) == 0 || len(sa.ImagePullSecrets) == 0 {
+				return false
+			}
+			return true
+		}, 1*time.Minute, defaultInterval).Should(BeTrue(), "timed out when waiting for the \"pipeline\" SA to be created")
 	})
 
 	AfterAll(func() {
