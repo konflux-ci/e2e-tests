@@ -27,7 +27,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 
 	var _ = Describe("Failure - Missing matching ReleaseLink", func() {
 		BeforeAll(func() {
-			// Recreate random namespaces names per each test because if using same namespaces names, the next test will not be able to create the namespaces as they are terminating
+			// Recreate random namespaces names per each test because if using same namespace names, the next test will not be able to create the namespaces as they are terminating
 			devNamespace = "user-" + uuid.New().String()
 			managedNamespace = "managed-" + uuid.New().String()
 
@@ -62,19 +62,19 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("Create ReleaseLink in source namespace", func() {
+			It("Create ReleaseLink in dev namespace", func() {
 				_, err := framework.ReleaseController.CreateReleaseLink(sourceReleaseLinkName, devNamespace, applicationName, managedNamespace, "")
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("Create a Release in source namespace", func() {
+			It("Create a Release in dev namespace", func() {
 				_, err := framework.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, sourceReleaseLinkName)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
 		var _ = Describe("A ReleaseLink has to have a matching one in a managed workspace", func() {
-			It("The Release have failed with the REASON field set to ReleaseValidationError", func() {
+			It("The Release has failed with the REASON field set to ReleaseValidationError", func() {
 				Eventually(func() bool {
 					release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
 
@@ -128,7 +128,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("Create ReleaseLink in source namespace", func() {
+			It("Create ReleaseLink in dev namespace", func() {
 				_, err := framework.ReleaseController.CreateReleaseLink(sourceReleaseLinkName, devNamespace, applicationName, managedNamespace, "")
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -143,18 +143,18 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("Create a Release in source namespace", func() {
+			It("Create a Release in dev namespace", func() {
 				_, err := framework.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, sourceReleaseLinkName)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
 		var _ = Describe("A Release must relate to an existing pipeline in the managed workspace", func() {
-			It("The Release have failed with the REASON field set to ReleasePipelineFailed", func() {
+			It("The Release has failed with the REASON field set to ReleasePipelineFailed", func() {
 				Eventually(func() bool {
 					release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
 
-					// Avoiding race condition where release.Status.Conditions field didn't have time to get data
+					// Avoid race condition where release.Status.Conditions field didn't have time to get data
 					if err != nil || release == nil || len(release.Status.Conditions) == 0 {
 						return false
 					}
@@ -168,7 +168,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 				Eventually(func() bool {
 					release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
 
-					// Avoiding race condition where release.Status.Conditions field didn't have time to get data
+					// Avoid race condition where release.Status.Conditions field didn't have time to get data
 					if err != nil || release == nil || len(release.Status.Conditions) == 0 || release.Status.Conditions[0].Message == "" {
 						return false
 					}
@@ -208,7 +208,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("Create ReleaseLink in source namespace", func() {
+			It("Create ReleaseLink in dev namespace", func() {
 				_, err := framework.ReleaseController.CreateReleaseLink(sourceReleaseLinkName, devNamespace, applicationName, managedNamespace, "")
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -218,18 +218,18 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("Create a Release in source namespace", func() {
+			It("Create a Release in dev namespace", func() {
 				_, err := framework.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, sourceReleaseLinkName)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
 		var _ = Describe("A Release must relate to an existing ReleaseStrategy in the managed workspace", func() {
-			It("The Release have failed with the REASON field set to ReleaseValidationError", func() {
+			It("The Release has failed with the REASON field set to ReleaseValidationError", func() {
 				Eventually(func() bool {
 					release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
 
-					// Avoiding race condition where release.Status.Conditions field didn't have time to get data
+					// Avoid race condition where release.Status.Conditions field didn't have time to get data
 					if err != nil || release == nil || len(release.Status.Conditions) == 0 {
 						return false
 					}
@@ -243,7 +243,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 				Eventually(func() bool {
 					release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
 
-					// Avoiding race condition where release.Status.Conditions field didn't have time to get data
+					// Avoid race condition where release.Status.Conditions field didn't have time to get data
 					if err != nil || release == nil || len(release.Status.Conditions) == 0 || release.Status.Conditions[0].Message == "" {
 						return false
 					}
