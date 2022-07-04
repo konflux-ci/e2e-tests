@@ -16,12 +16,6 @@ const (
 	missingReleaseStrategy string = "missing-release-strategy"
 )
 
-// var releaseStartegyParams = []v1beta1.Params{
-// 	{Name: "extraConfigGitUrl", Value: ""},
-// 	{Name: "extraConfigPath", Value: ""},
-// 	{Name: "extraConfigRevision", Value: ""},
-// }
-
 var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
@@ -142,7 +136,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 			})
 
 			It("Create ReleaseStrategy in managed namespace", func() {
-				_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, missingPipelineName, releasePipelineBundle, releaseStrategyPolicy, emptyReleaseStartegyParams, "")
+				_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, missingPipelineName, releasePipelineBundle, releaseStrategyPolicy, "", emptyReleaseStartegyParams)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
