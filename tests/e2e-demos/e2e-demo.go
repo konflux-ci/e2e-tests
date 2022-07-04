@@ -3,8 +3,6 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -15,9 +13,8 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
+	e2eConfig "github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +39,7 @@ var _ = framework.E2ESuiteDescribe(func() {
 	// Initialize the tests controllers
 	fw, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
-	configTest, err := LoadTestGeneratorConfig(configTestFile)
+	configTest, err := e2eConfig.LoadTestGeneratorConfig(configTestFile)
 	Expect(err).NotTo(HaveOccurred())
 
 	BeforeAll(func() {
@@ -105,29 +102,32 @@ var _ = framework.E2ESuiteDescribe(func() {
 					It("Inject manually SPI token", func() {
 						// Inject spi tokens to work with private components
 						if componentTest.ContainerSource != "" {
-							oauthSecretName = fw.SPIController.InjectManualSPIToken(AppStudioE2EApplicationsNamespace, componentTest.ContainerSource, utils.GetSPIOauthCredentials(), v1.SecretTypeBasicAuth)
+							// More info about manual token upload for quay.io here: https://github.com/redhat-appstudio/service-provider-integration-operator/pull/115
+							oauthCredentials := `{"access_token":"` + utils.GetEnv("QUAY_OAUTH_TOKEN", "") + `", "username":"` + utils.GetEnv("QUAY_OAUTH_USER", "") + `"}`
+
+							oauthSecretName = fw.SPIController.InjectManualSPIToken(AppStudioE2EApplicationsNamespace, componentTest.ContainerSource, oauthCredentials, v1.SecretTypeDockerConfigJson)
 						} else if componentTest.GitSourceUrl != "" {
-							oauthSecretName = fw.SPIController.InjectManualSPIToken(AppStudioE2EApplicationsNamespace, componentTest.GitSourceUrl, utils.GetSPIOauthCredentials(), v1.SecretTypeBasicAuth)
+							Fail("Component creation from private git repo is not supported. Jira issue: https://issues.redhat.com/browse/SVPI-135")
 						}
 					})
 				}
 
 				// Components for now can be imported from gitUrl, container image or a devfile
 				if componentTest.ContainerSource != "" {
-					It(fmt.Sprintf("create component %s from container source", componentTest.Name), func() {
+					It(fmt.Sprintf("create %s component %s from container source", componentTest.Type, componentTest.Name), func() {
 						_, err := fw.HasController.CreateComponent(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace, "", componentTest.ContainerSource, outputContainerImage, oauthSecretName)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
 				} else if componentTest.GitSourceUrl != "" && componentTest.Devfilesource != "" {
-					It(fmt.Sprintf("create component %s from git source %s and devfile %s", componentTest.Name, componentTest.GitSourceUrl, componentTest.Devfilesource), func() {
+					It(fmt.Sprintf("create %s component %s from git source %s and devfile %s", componentTest.Type, componentTest.Name, componentTest.GitSourceUrl, componentTest.Devfilesource), func() {
 						component, err = fw.HasController.CreateComponentFromDevfile(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace,
 							componentTest.GitSourceUrl, componentTest.Devfilesource, "", containerIMG, "")
 						Expect(err).NotTo(HaveOccurred())
 					})
 
 				} else if componentTest.GitSourceUrl != "" {
-					It(fmt.Sprintf("create component %s from git source %s", componentTest.Name, componentTest.GitSourceUrl), func() {
+					It(fmt.Sprintf("create %s component %s from git source %s", componentTest.Type, componentTest.Name, componentTest.GitSourceUrl), func() {
 						component, err = fw.HasController.CreateComponent(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace,
 							componentTest.GitSourceUrl, "", containerIMG, "")
 						Expect(err).NotTo(HaveOccurred())
@@ -138,7 +138,7 @@ var _ = framework.E2ESuiteDescribe(func() {
 					Fail("Please Provide a valid test configuration")
 				}
 
-				It(fmt.Sprintf("wait component %s pipeline to be finished", componentTest.Name), func() {
+				It(fmt.Sprintf("wait %s component %s pipeline to be finished", componentTest.Type, componentTest.Name), func() {
 					if componentTest.ContainerSource != "" {
 						Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skiping pipelinerun check.", componentTest.Name))
 					}
@@ -146,7 +146,7 @@ var _ = framework.E2ESuiteDescribe(func() {
 				})
 
 				// Deploy the component using gitops and check for the health
-				It(fmt.Sprintf("deploy component %s using gitops", componentTest.Name), func() {
+				It(fmt.Sprintf("deploy %s component %s using gitops", componentTest.Type, componentTest.Name), func() {
 					gitOpsRepository := utils.ObtainGitOpsRepositoryUrl(application.Status.Devfile)
 					gitOpsRepositoryPath := fmt.Sprintf("components/%s/base", componentTest.Name)
 
@@ -183,21 +183,3 @@ var _ = framework.E2ESuiteDescribe(func() {
 		})
 	}
 })
-
-func LoadTestGeneratorConfig(configPath string) (config.WorkflowSpec, error) {
-	c := config.WorkflowSpec{}
-	// Open config file
-	file, err := os.Open(filepath.Clean(configPath))
-	if err != nil {
-		return c, err
-	}
-
-	// Init new YAML decode
-	d := yaml.NewDecoder(file)
-
-	// Start YAML decoding from file
-	if err := d.Decode(&c); err != nil {
-		return c, err
-	}
-	return c, nil
-}

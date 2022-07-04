@@ -1,21 +1,8 @@
 tests: 
-  - name: "RHDP-476: create an application with DotNet component"
-    applicationName: "e2e-dotnet"
-    components:
-      - name: "quarkus-component"
-        type: "private"
-        gitSourceUrl: "https://github.com/redhat-appstudio-qe/private-quarkus-devfile-sample"
-        language: "quarkus"
-        healthz: "/"
   - name: "RHDP-467: create an application with a component from quay.io image"
     applicationName: "e2e-quayio"
     components:
-      - name: "public-quay-component"
-        type: "public"
-        containerSource: "quay.io/redhat-appstudio-qe/test-images:b545caa0de0c4e3ba3a5ad1ad7a1f1b6"
-        language: "java"
-        healthz: "/hello-resteasy"
-      - name: "private-quay-component"
+      - name: "quay-component"
         type: "private"
         containerSource: "quay.io/redhat-appstudio-qe/private-image:go"
         language: "go"

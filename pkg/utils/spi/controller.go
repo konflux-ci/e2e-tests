@@ -57,8 +57,8 @@ func (s *SuiteController) GetSPIAccessTokenBinding(name, namespace string) (*spi
 func (s *SuiteController) CreateSPIAccessTokenBinding(name, namespace, repoURL, secretName string, secretType v1.SecretType) (*spi.SPIAccessTokenBinding, error) {
 	spiAccessTokenBinding := spi.SPIAccessTokenBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+			GenerateName: name,
+			Namespace:    namespace,
 		},
 		Spec: spi.SPIAccessTokenBindingSpec{
 			Permissions: spi.Permissions{
@@ -125,10 +125,11 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 	Eventually(func() bool {
 		// application info should be stored even after deleting the application in application variable
 		spiAccessTokenBinding, err = s.GetSPIAccessTokenBinding(spiAccessTokenBindingName.Name, namespace)
+
 		if err != nil {
 			return false
 		}
-		return spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected || (spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData && spiAccessTokenBinding.Status.OAuthUrl != "")
+		return spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData || (spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData && spiAccessTokenBinding.Status.OAuthUrl != "")
 	}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to AwaitingTokenData/Injected")
 
 	if spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData {
