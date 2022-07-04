@@ -71,7 +71,7 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 		err = framework.HasController.DeleteHasApplication(applicationName, AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = framework.SPIController.DeleteSPIAccessTokenBinding(SPIAccessTokenBindingName, AppStudioE2EApplicationsNamespace)
+		err = framework.SPIController.DeleteAllBindingTokensInASpecificNamespace(AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func() bool {
@@ -139,8 +139,7 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 	})
 
 	It("Create Red Hat AppStudio Quarkus component", func() {
-		compDetected.ComponentStub.Application = applicationName
-		component, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, AppStudioE2EApplicationsNamespace, oauthSecretName)
+		component, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, AppStudioE2EApplicationsNamespace, oauthSecretName, applicationName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(component.Name).To(Equal(componentName))
 		time.Sleep(5 * time.Minute)

@@ -58,7 +58,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 		buildPipelineRunName := fmt.Sprintf("buildah-demo-%s", util.GenerateRandomString(10))
 		image := fmt.Sprintf("image-registry.openshift-image-registry.svc:5000/%s/%s", namespace, buildPipelineRunName)
 
-		pipelineRunTimeout := 180
+		pipelineRunTimeout := 360
 		attestationTimeout := time.Duration(60) * time.Second
 		kubeController := tekton.KubeController{
 			Commonctrl: *framework.CommonController,

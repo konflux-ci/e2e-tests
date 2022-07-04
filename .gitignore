@@ -18,3 +18,6 @@ bin/
 .idea/
 tmp/
 .DS_Store
+.vscode/configurationCache.log
+.vscode/dryrun.log
+.vscode/targets.log

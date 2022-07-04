@@ -140,7 +140,7 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 }
 
 // CreateComponentFromCDQ create a HAS Component resource from a Completed CDQ resource, which includes a stub Component CR
-func (h *SuiteController) CreateComponentFromStub(compDetected appservice.ComponentDetectionDescription, componentName, namespace, secret string) (*appservice.Component, error) {
+func (h *SuiteController) CreateComponentFromStub(compDetected appservice.ComponentDetectionDescription, componentName, namespace, secret, applicationName string) (*appservice.Component, error) {
 	// The Component from the CDQ is only a template, and needs things like name filled in
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
@@ -150,6 +150,7 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 		Spec: compDetected.ComponentStub,
 	}
 	component.Spec.Secret = secret
+	component.Spec.Application = applicationName
 	err := h.KubeRest().Create(context.TODO(), component)
 	if err != nil {
 		return nil, err

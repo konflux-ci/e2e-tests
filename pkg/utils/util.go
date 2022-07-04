@@ -70,8 +70,8 @@ func GetQuayIOOrganization() string {
 	return GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
 }
 
-func GetSPIOauthCredentials() string {
-	return GetEnv(constants.SPI_OAUTH_CREDENTIALS, "")
+func GetDockerConfigJson() string {
+	return GetEnv(constants.DOCKER_CONFIG_JSON, "")
 }
 
 func IsPrivateHostname(url string) bool {

@@ -60,5 +60,6 @@ import (
 ## In vscode
 There is launch configuration in `.vscode/launch.json` called `Launch demo suites`. 
 Running this configuration, you'll be asked for github token and then e2e-demos suite will run with default configuration.
-
 If you want to run/debug different suite, change `-ginkgo.focus` parameter in `.vscode/launch.json`.
+# Load tests 
+[Refer this](https://github.com/redhat-appstudio/e2e-tests/blob/main/docs/LoadTests.md)
