@@ -40,13 +40,10 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 			Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", managedNamespace, err)
 
 			// Wait until the "pipeline" SA is created and ready with secrets by the openshift-pipelines operator
-			klog.Infof("Wait until the %s SA is created in %s namespace \n", "pipeline", managedNamespace)
+			klog.Infof("Wait until the 'pipeline' SA is created in %s namespace \n", managedNamespace)
 			Eventually(func() bool {
 				sa, err := framework.CommonController.GetServiceAccount("pipeline", managedNamespace)
-				if sa == nil || err != nil || len(sa.Secrets) == 0 || len(sa.ImagePullSecrets) == 0 {
-					return false
-				}
-				return true
+				return sa != nil && err == nil && len(sa.Secrets) > 0 && len(sa.ImagePullSecrets) > 0
 			}, 1*time.Minute, defaultInterval).Should(BeTrue(), "timed out when waiting for the \"pipeline\" SA to be created")
 		})
 
