@@ -43,7 +43,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 			klog.Infof("Wait until the 'pipeline' SA is created in %s namespace \n", managedNamespace)
 			Eventually(func() bool {
 				sa, err := framework.CommonController.GetServiceAccount("pipeline", managedNamespace)
-				return sa != nil && err == nil && len(sa.Secrets) > 0 && len(sa.ImagePullSecrets) > 0
+				return sa != nil && err == nil
 			}, 1*time.Minute, defaultInterval).Should(BeTrue(), "timed out when waiting for the \"pipeline\" SA to be created")
 		})
 
