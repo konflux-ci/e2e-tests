@@ -8,42 +8,33 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
 	"github.com/redhat-appstudio/release-service/api/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
-	klog "k8s.io/klog/v2"
 	"knative.dev/pkg/apis"
 )
 
 const (
-	snapshotName          = "snapshot"
-	sourceReleaseLinkName = "source-release-link"
-	targetReleaseLinkName = "target-release-link"
-	releaseStrategyName   = "strategy"
-	releaseName           = "release"
-	releasePipelineName   = "release-pipeline"
-	applicationName       = "application"
-	releasePipelineBundle = "quay.io/hacbs-release/demo:m5-alpine"
-	releaseStrategyPolicy = "policy"
-
-	avgPipelineCompletionTime = 10 * time.Minute
-	defaultInterval           = 100 * time.Millisecond
+	releasePvcName          = "release-pvc"
+	serviceAccountName      = "m5-service-account"
+	secretName              = "hacbs-release-tests-token"
+	volumeAccessModeForTest = "ReadWriteMany"
 )
 
-var snapshotComponents = []gitopsv1alpha1.ApplicationSnapshotComponent{
-	{"component-1", "quay.io/redhat-appstudio/component1@sha256:d5e85e49c89df42b221d972f5b96c6507a8124717a6e42e83fd3caae1031d514"},
-	{"component-2", "quay.io/redhat-appstudio/component2@sha256:a01dfd18cf8ca8b68770b09a9b6af0fd7c6d1f8644c7ab97f0e06c34dfc5860e"},
-	{"component-3", "quay.io/redhat-appstudio/component3@sha256:d90a0a33e4c5a1daf5877f8dd989a570bfae4f94211a8143599245e503775b1f"},
+var releaseStartegyParams = []v1alpha1.Params{
+	{Name: "extraConfigGitUrl", Value: "https://github.com/davidmogar/strategy-configs.git"},
+	{Name: "extraConfigPath", Value: "m5.yaml"},
+	{Name: "extraConfigRevision", Value: "main"},
 }
 
-var emptyReleaseStartegyParams = []v1alpha1.Params{
-	{Name: "extraConfigGitUrl", Value: ""},
-	{Name: "extraConfigPath", Value: ""},
-	{Name: "extraConfigRevision", Value: ""},
+var serviceAccountSecretList = []corev1.ObjectReference{
+	{
+		Name: serviceAccountName,
+	},
 }
 
-var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", func() {
+var _ = framework.ReleaseSuiteDescribe("test-demo", func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	framework, err := framework.NewFramework()
@@ -60,13 +51,6 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", func()
 		// Create the managed namespace
 		namespace, err := framework.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", namespace.Name, err)
-
-		// Wait until the "pipeline" SA is created and ready with secrets by the openshift-pipelines operator
-		klog.Infof("Wait until the 'pipeline' SA is created in %s namespace \n", managedNamespace)
-		Eventually(func() bool {
-			sa, err := framework.CommonController.GetServiceAccount("pipeline", managedNamespace)
-			return sa != nil && err == nil
-		}, 1*time.Minute, defaultInterval).Should(BeTrue(), "timed out when waiting for the \"pipeline\" SA to be created")
 	})
 
 	AfterAll(func() {
@@ -75,29 +59,30 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", func()
 		Expect(framework.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
 	})
 
-	var _ = Describe("Creation of the 'Happy path' resources", func() {
-		It("Create an ApplicationSnapshot.", func() {
-			_, err := framework.ReleaseController.CreateApplicationSnapshot(snapshotName, devNamespace, applicationName, snapshotComponents)
+	var _ = Describe("Creation of the 'tekton test-bundle e2e-test' resources", func() {
+		It("Create PVC in", func() {
+			pvcs := framework.TektonController.KubeInterface().CoreV1().PersistentVolumeClaims(managedNamespace)
+			_, err := framework.TektonController.CreatePVC(pvcs, releaseName, volumeAccessModeForTest, "")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("Create Release Strategy", func() {
-			_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, emptyReleaseStartegyParams, "")
+			_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, releaseStartegyParams, serviceAccountName)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Create ReleaseLink in dev namespace", func() {
+		It("Create Release Link in dev namespace", func() {
 			_, err := framework.ReleaseController.CreateReleaseLink(sourceReleaseLinkName, devNamespace, applicationName, managedNamespace, "")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Create ReleaseLink in managed namespace", func() {
+		It("Create Release Link in managed namespace", func() {
 			_, err := framework.ReleaseController.CreateReleaseLink(targetReleaseLinkName, managedNamespace, applicationName, devNamespace, releaseStrategyName)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("Create a Release", func() {
-			_, err := framework.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, sourceReleaseLinkName)
+			_, err := framework.CommonController.CreateServiceAccount(serviceAccountName, managedNamespace, serviceAccountSecretList)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
