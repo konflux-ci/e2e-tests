@@ -105,7 +105,7 @@ var _ = framework.E2ESuiteDescribe(func() {
 							// More info about manual token upload for quay.io here: https://github.com/redhat-appstudio/service-provider-integration-operator/pull/115
 							oauthCredentials := `{"access_token":"` + utils.GetEnv("QUAY_OAUTH_TOKEN", "") + `", "username":"` + utils.GetEnv("QUAY_OAUTH_USER", "") + `"}`
 
-							oauthSecretName = fw.SPIController.InjectManualSPIToken(AppStudioE2EApplicationsNamespace, componentTest.ContainerSource, oauthCredentials, v1.SecretTypeDockerConfigJson)
+							oauthSecretName = fw.SPIController.InjectManualSPIToken(AppStudioE2EApplicationsNamespace, fmt.Sprintf("quay.io/%s", utils.GetQuayIOOrganization()), oauthCredentials, v1.SecretTypeDockerConfigJson)
 						} else if componentTest.GitSourceUrl != "" {
 							Fail("Component creation from private git repo is not supported. Jira issue: https://issues.redhat.com/browse/SVPI-135")
 						}
@@ -114,20 +114,22 @@ var _ = framework.E2ESuiteDescribe(func() {
 
 				// Components for now can be imported from gitUrl, container image or a devfile
 				if componentTest.ContainerSource != "" {
-					It(fmt.Sprintf("create %s component %s from container source", componentTest.Type, componentTest.Name), func() {
+					It(fmt.Sprintf("create component %s from %s container source", componentTest.Name, componentTest.Type), func() {
 						_, err := fw.HasController.CreateComponent(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace, "", componentTest.ContainerSource, outputContainerImage, oauthSecretName)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
+					// User can define a git url and a devfile at the same time if multiple devfile exists into a repo
 				} else if componentTest.GitSourceUrl != "" && componentTest.Devfilesource != "" {
-					It(fmt.Sprintf("create %s component %s from git source %s and devfile %s", componentTest.Type, componentTest.Name, componentTest.GitSourceUrl, componentTest.Devfilesource), func() {
+					It(fmt.Sprintf("create component %s from %s git source %s and devfile %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl, componentTest.Devfilesource), func() {
 						component, err = fw.HasController.CreateComponentFromDevfile(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace,
 							componentTest.GitSourceUrl, componentTest.Devfilesource, "", containerIMG, "")
 						Expect(err).NotTo(HaveOccurred())
 					})
 
+					// If component have only a git source application-service will start to fetch the devfile from the git root directory
 				} else if componentTest.GitSourceUrl != "" {
-					It(fmt.Sprintf("create %s component %s from git source %s", componentTest.Type, componentTest.Name, componentTest.GitSourceUrl), func() {
+					It(fmt.Sprintf("create component %s from %s git source %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl), func() {
 						component, err = fw.HasController.CreateComponent(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace,
 							componentTest.GitSourceUrl, "", containerIMG, "")
 						Expect(err).NotTo(HaveOccurred())
@@ -138,6 +140,7 @@ var _ = framework.E2ESuiteDescribe(func() {
 					Fail("Please Provide a valid test configuration")
 				}
 
+				// Start to watch the pipeline until is finished
 				It(fmt.Sprintf("wait %s component %s pipeline to be finished", componentTest.Type, componentTest.Name), func() {
 					if componentTest.ContainerSource != "" {
 						Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skiping pipelinerun check.", componentTest.Name))

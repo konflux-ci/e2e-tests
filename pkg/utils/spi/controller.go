@@ -148,7 +148,7 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 			return err == nil
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't create the SPIAccessToken")
 
-		//Format for quay.io `{"access_token":"tokenToInject","username":"redhat-appstudio-qe+redhat_appstudio_qe_bot"}`
+		// Format for quay.io token injection: `{"access_token":"tokenToInject","username":"redhat-appstudio-qe+redhat_appstudio_qe_bot"}`
 		// Now that the spiaccesstokenbinding is in the AwaitingTokenData phase, inject the GitHub token
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		req, err := http.NewRequest("POST", "https://"+oauthHost+"/token/"+namespace+"/"+linkedAccessTokenName, bytes.NewBuffer([]byte(oauthCredentials)))
