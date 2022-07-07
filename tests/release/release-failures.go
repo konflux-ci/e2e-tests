@@ -11,11 +11,6 @@ import (
 	klog "k8s.io/klog/v2"
 )
 
-const (
-	missingPipelineName    = "missing-release-pipeline"
-	missingReleaseStrategy = "missing-release-strategy"
-)
-
 var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers

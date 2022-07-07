@@ -15,21 +15,6 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-const (
-	snapshotName          = "snapshot"
-	sourceReleaseLinkName = "source-release-link"
-	targetReleaseLinkName = "target-release-link"
-	releaseStrategyName   = "strategy"
-	releaseName           = "release"
-	releasePipelineName   = "release-pipeline"
-	applicationName       = "application"
-	releasePipelineBundle = "quay.io/hacbs-release/demo:m5-alpine"
-	releaseStrategyPolicy = "policy"
-
-	avgPipelineCompletionTime = 10 * time.Minute
-	defaultInterval           = 100 * time.Millisecond
-)
-
 var snapshotComponents = []gitopsv1alpha1.ApplicationSnapshotComponent{
 	{"component-1", "quay.io/redhat-appstudio/component1@sha256:d5e85e49c89df42b221d972f5b96c6507a8124717a6e42e83fd3caae1031d514"},
 	{"component-2", "quay.io/redhat-appstudio/component2@sha256:a01dfd18cf8ca8b68770b09a9b6af0fd7c6d1f8644c7ab97f0e06c34dfc5860e"},
