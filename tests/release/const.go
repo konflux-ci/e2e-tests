@@ -17,7 +17,4 @@ const (
 
 	avgPipelineCompletionTime = 10 * time.Minute
 	defaultInterval           = 100 * time.Millisecond
-
-	missingPipelineName    = "missing-release-pipeline"
-	missingReleaseStrategy = "missing-release-strategy"
 )
