@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
@@ -32,10 +31,8 @@ var webhookConfigPath string
 var demoSuitesPath string
 
 func init() {
-	rootDir, _ := os.Getwd()
-
 	flag.StringVar(&webhookConfigPath, "webhookConfigPath", "", "path to webhook config file")
-	flag.StringVar(&demoSuitesPath, "config-suites", fmt.Sprintf(rootDir+"/tests/e2e-demos/config/default.yaml"), "path to e2e demo suites definition")
+	flag.StringVar(&demoSuitesPath, "config-suites", fmt.Sprintf("/home/flacatusu/WORKSPACE/appstudio-qe/e2e-tests/tests/e2e-demos/config/default.yaml"), "path to e2e demo suites definition")
 }
 
 func TestE2E(t *testing.T) {

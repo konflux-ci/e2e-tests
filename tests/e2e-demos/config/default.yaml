@@ -1,4 +1,3 @@
-
 tests: 
   - name: "RHDP-466: create an application with nodejs component"
     applicationName: "e2e-nodejs"
@@ -33,17 +32,16 @@ tests:
   - name: "RHDP-467: create an application with a component from quay.io image"
     applicationName: "e2e-quayio"
     components:
-      - name: "quay-component"
+      - name: "quay-public-component"
         type: "public"
         containerSource: "quay.io/redhat-appstudio-qe/test-images:b545caa0de0c4e3ba3a5ad1ad7a1f1b6"
         language: "java"
         healthz: "/hello-resteasy"
-      - name: "quay-component"
+      - name: "quay-private-component"
         type: "private"
         containerSource: "quay.io/redhat-appstudio-qe/private-image:go"
         language: "go"
         healthz: "/"
-
   - name: "RHDP-477: create application from Git with automatic build and deploy"
     applicationName: "e2e-build-deploy"
     components:

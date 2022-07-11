@@ -38,7 +38,6 @@ func GetEnv(key, defaultVal string) string {
 		schemaVersion: 2.1.0
 	The ObtainGitUrlFromDevfile extract from the string the git url associated with a application
 */
-
 func ObtainGitOpsRepositoryName(devfileStatus string) string {
 	appDevfile, err := devfile.ParseDevfileModel(devfileStatus)
 	if err != nil {

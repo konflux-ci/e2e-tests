@@ -51,7 +51,7 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 		_, err = framework.CommonController.CreateTestNamespace(AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", AppStudioE2EApplicationsNamespace, err)
 
-		credentials := `{"access_token":"` + utils.GetEnv("GITHUB_TOKEN", "") + `"}`
+		credentials := `{"access_token":"` + utils.GetEnv(constants.GITHUB_TOKEN_ENV, "") + `"}`
 		oauthSecretName = framework.SPIController.InjectManualSPIToken(AppStudioE2EApplicationsNamespace, privateGitRepository, credentials, v1.SecretTypeBasicAuth)
 
 		// Check to see if the github token was provided
@@ -142,6 +142,5 @@ var _ = framework.HASSuiteDescribe("private devfile source", func() {
 		component, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, AppStudioE2EApplicationsNamespace, oauthSecretName, applicationName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(component.Name).To(Equal(componentName))
-		time.Sleep(5 * time.Minute)
 	})
 })

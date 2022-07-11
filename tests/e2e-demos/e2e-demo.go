@@ -60,6 +60,8 @@ var _ = framework.E2ESuiteDescribe(func() {
 		Expect(fw.HasController.DeleteAllComponentsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
 		Expect(fw.HasController.DeleteAllApplicationsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
 		Expect(fw.SPIController.DeleteAllBindingTokensInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
+		Expect(fw.SPIController.DeleteAllAccessTokenDataInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
+		Expect(fw.SPIController.DeleteAllAccessTokensInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
 		Expect(fw.GitOpsController.DeleteAllGitOpsDeploymentInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
 	})
 
@@ -105,7 +107,7 @@ var _ = framework.E2ESuiteDescribe(func() {
 							// More info about manual token upload for quay.io here: https://github.com/redhat-appstudio/service-provider-integration-operator/pull/115
 							oauthCredentials := `{"access_token":"` + utils.GetEnv("QUAY_OAUTH_TOKEN", "") + `", "username":"` + utils.GetEnv("QUAY_OAUTH_USER", "") + `"}`
 
-							oauthSecretName = fw.SPIController.InjectManualSPIToken(AppStudioE2EApplicationsNamespace, fmt.Sprintf("quay.io/%s", utils.GetQuayIOOrganization()), oauthCredentials, v1.SecretTypeDockerConfigJson)
+							oauthSecretName = fw.SPIController.InjectManualSPIToken(AppStudioE2EApplicationsNamespace, componentTest.ContainerSource, oauthCredentials, v1.SecretTypeDockerConfigJson)
 						} else if componentTest.GitSourceUrl != "" {
 							Fail("Component creation from private git repo is not supported. Jira issue: https://issues.redhat.com/browse/SVPI-135")
 						}
