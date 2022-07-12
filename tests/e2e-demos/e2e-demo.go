@@ -21,7 +21,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-var AppStudioE2EApplicationsNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "appstudio-e2e-test")
+var AppStudioE2EApplicationsNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "e2e-tests")
 
 var _ = framework.E2ESuiteDescribe(func() {
 	defer GinkgoRecover()
