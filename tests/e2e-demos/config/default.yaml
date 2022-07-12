@@ -37,11 +37,3 @@ tests:
         containerSource: "quay.io/redhat-appstudio-qe/test-images:b545caa0de0c4e3ba3a5ad1ad7a1f1b6"
         language: "java"
         healthz: "/hello-resteasy"
-  - name: "RHDP-477: create application from Git with automatic build and deploy"
-    applicationName: "e2e-build-deploy"
-    components:
-      - name: "build-deploy-component"
-        type: "public"
-        gitSourceUrl: "https://github.com/redhat-appstudio-qe/devfile-sample-code-with-quarkus"
-        language: "java"
-        healthz: "/hello-resteasy"
