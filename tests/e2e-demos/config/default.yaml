@@ -4,10 +4,10 @@ tests:
     components:
       - name: "nodejs-component"
         type: "public"
-        gitSourceUrl: "https://github.com/jduimovich/single-nodejs-app"
-        devfileSource: "https://raw.githubusercontent.com/jduimovich/appstudio-e2e-demos/main/demos/single-nodejs-app/devfiles/devfile.yaml"
+        gitSourceUrl: "https://github.com/redhat-appstudio-qe/simple-nodejs-app"
+        devfileSource: "https://raw.githubusercontent.com/redhat-appstudio-qe/simple-nodejs-app/main/devfiles/devfile.yaml"
         language: "nodejs"
-        healthz: "/"
+        healthz: "/users"
   - name: "RHDP-476: create an application with DotNet component"
     applicationName: "e2e-dotnet"
     components:
@@ -32,7 +32,7 @@ tests:
   - name: "RHDP-467: create an application with a component from quay.io image"
     applicationName: "e2e-quayio"
     components:
-      - name: "quay-component"
+      - name: "quay-public-component"
         type: "public"
         containerSource: "quay.io/redhat-appstudio-qe/test-images:b545caa0de0c4e3ba3a5ad1ad7a1f1b6"
         language: "java"
