@@ -4,11 +4,10 @@ tests:
     components:
       - name: "nodejs-component"
         type: "public"
-        gitSourceUrl: "https://github.com/jduimovich/single-nodejs-app"
-        devfileSource: "https://raw.githubusercontent.com/jduimovich/appstudio-e2e-demos/main/demos/single-nodejs-app/devfiles/devfile.yaml"
+        gitSourceUrl: "https://github.com/redhat-appstudio-qe/simple-nodejs-app"
+        devfileSource: "https://raw.githubusercontent.com/redhat-appstudio-qe/simple-nodejs-app/main/devfiles/devfile.yaml"
         language: "nodejs"
-        healthz: "/"
-
+        healthz: "/users"
   - name: "RHDP-476: create an application with DotNet component"
     applicationName: "e2e-dotnet"
     components:
@@ -17,7 +16,6 @@ tests:
         gitSourceUrl: "https://github.com/redhat-appstudio-qe/devfile-sample-dotnet60-basic"
         language: "dotNet"
         healthz: "/"
-
   - name: "RHDP-478: create an application with multiple components"
     applicationName: "e2e-multiple-components"
     components:
@@ -31,7 +29,6 @@ tests:
         gitSourceUrl: "https://github.com/redhat-appstudio-qe/private-quarkus-devfile-sample"
         language: "quarkus"
         healthz: "/hello-resteasy"
-
   - name: "RHDP-467: create an application with a component from quay.io image"
     applicationName: "e2e-quayio"
     components:
@@ -45,7 +42,6 @@ tests:
         containerSource: "quay.io/redhat-appstudio-qe/private-image:go"
         language: "go"
         healthz: "/"
-
   - name: "RHDP-477: create application from Git with automatic build and deploy"
     applicationName: "e2e-build-deploy"
     components:
