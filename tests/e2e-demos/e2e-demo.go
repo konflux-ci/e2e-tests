@@ -100,6 +100,7 @@ var _ = framework.E2ESuiteDescribe(func() {
 				componentTest := componentTest
 				var containerIMG = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 
+				// TODO: In the future when HAS support creating private applications should push the containers from private repos to a private quay.io repo
 				if componentTest.Type == "private" {
 					It("Inject manually SPI token", func() {
 						// Inject spi tokens to work with private components
@@ -109,7 +110,10 @@ var _ = framework.E2ESuiteDescribe(func() {
 
 							oauthSecretName = fw.SPIController.InjectManualSPIToken(AppStudioE2EApplicationsNamespace, componentTest.ContainerSource, oauthCredentials, v1.SecretTypeDockerConfigJson)
 						} else if componentTest.GitSourceUrl != "" {
-							Fail("Component creation from private git repo is not supported. Jira issue: https://issues.redhat.com/browse/SVPI-135")
+							// More info about manual token upload for github.com
+							oauthCredentials := `{"access_token":"` + utils.GetEnv(constants.GITHUB_TOKEN_ENV, "") + `"}`
+
+							oauthSecretName = fw.SPIController.InjectManualSPIToken(AppStudioE2EApplicationsNamespace, componentTest.GitSourceUrl, oauthCredentials, v1.SecretTypeBasicAuth)
 						}
 					})
 				}
@@ -125,7 +129,7 @@ var _ = framework.E2ESuiteDescribe(func() {
 				} else if componentTest.GitSourceUrl != "" && componentTest.Devfilesource != "" {
 					It(fmt.Sprintf("create component %s from %s git source %s and devfile %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl, componentTest.Devfilesource), func() {
 						component, err = fw.HasController.CreateComponentFromDevfile(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace,
-							componentTest.GitSourceUrl, componentTest.Devfilesource, "", containerIMG, "")
+							componentTest.GitSourceUrl, componentTest.Devfilesource, "", containerIMG, oauthSecretName)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -133,7 +137,7 @@ var _ = framework.E2ESuiteDescribe(func() {
 				} else if componentTest.GitSourceUrl != "" {
 					It(fmt.Sprintf("create component %s from %s git source %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl), func() {
 						component, err = fw.HasController.CreateComponent(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace,
-							componentTest.GitSourceUrl, "", containerIMG, "")
+							componentTest.GitSourceUrl, "", containerIMG, oauthSecretName)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
