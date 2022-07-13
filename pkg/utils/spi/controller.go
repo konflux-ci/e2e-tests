@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/devfile/library/pkg/util"
 	. "github.com/onsi/gomega"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -22,7 +23,6 @@ import (
 
 const (
 	SPIAccessTokenBindingPrefixName = "e2e-access-token-binding"
-	AccessTokenSecret               = "e2e-access-token"
 )
 
 type SuiteController struct {
@@ -114,12 +114,13 @@ func (s *SuiteController) GetSPIAccessToken(name, namespace string) (*spi.SPIAcc
 // Inject manually access tokens using spi API
 func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string, oauthCredentials string, secretType v1.SecretType) string {
 	var spiAccessTokenBinding *v1beta1.SPIAccessTokenBinding
+	var accessTokenSecret = util.GenerateRandomString(10)
 
 	// Get the token for the current openshift user
 	bearerToken, err := utils.GetOpenshiftToken()
 	Expect(err).NotTo(HaveOccurred())
 
-	spiAccessTokenBindingName, err := s.CreateSPIAccessTokenBinding(SPIAccessTokenBindingPrefixName, namespace, repoUrl, AccessTokenSecret, secretType)
+	spiAccessTokenBindingName, err := s.CreateSPIAccessTokenBinding(SPIAccessTokenBindingPrefixName, namespace, repoUrl, accessTokenSecret, secretType)
 	Expect(err).NotTo(HaveOccurred())
 
 	Eventually(func() bool {
@@ -170,7 +171,7 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 			return err == nil && spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to Injected")
 	}
-	return AccessTokenSecret
+	return accessTokenSecret
 }
 
 // Remove all tokens from a given repository. Usefull when create a lot of resources and want to remove all of them

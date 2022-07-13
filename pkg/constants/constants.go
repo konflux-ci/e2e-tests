@@ -8,8 +8,14 @@ const (
 	// The github organization is used to create the gitops repositories in Red Hat Appstudio.
 	GITHUB_E2E_ORGANIZATION_ENV string = "GITHUB_E2E_ORGANIZATION" // #nosec
 
-	// The github organization is used to create the gitops repositories in Red Hat Appstudio.
+	// The quay organization is used to push container images using Red Hat Appstudio pipelines.
 	QUAY_E2E_ORGANIZATION_ENV string = "QUAY_E2E_ORGANIZATION" // #nosec
+
+	// The quay.io username to perform container builds and puush
+	QUAY_OAUTH_USER_ENV string = "QUAY_OAUTH_USER" // #nosec
+
+	// The quay.io token to perform container builds and puush. The token must be corelated with the QUAY_OAUTH_USER environment
+	QUAY_OAUTH_TOKEN_ENV string = "QUAY_OAUTH_TOKEN" // #nosec
 
 	// The private devfile sample git repository to use in certain HAS e2e tests
 	PRIVATE_DEVFILE_SAMPLE string = "PRIVATE_DEVFILE_SAMPLE" // #nosec

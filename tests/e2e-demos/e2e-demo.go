@@ -21,12 +21,25 @@ import (
 	"k8s.io/klog/v2"
 )
 
-var AppStudioE2EApplicationsNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "e2e-tests")
+const (
+	// Application Service controller is deployed the namespace: https://github.com/redhat-appstudio/infra-deployments/blob/main/argo-cd-apps/base/has.yaml#L14
+	RedHatAppStudioApplicationNamespace string = "application-service"
+
+	// See more info: https://github.com/redhat-appstudio/application-service#creating-a-github-secret-for-has
+	ApplicationServiceGHTokenSecrName string = "has-github-token" // #nosec
+
+	// Name for the GitOps Deployment resource
+	GitOpsDeploymentName string = "gitops-deployment-e2e"
+
+	// GitOps repository branch to use
+	GitOpsRepositoryRevision string = "main"
+)
+
+var AppStudioE2EApplicationsNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, fmt.Sprintf("appstudio-e2e-demo"))
 
 var _ = framework.E2ESuiteDescribe(func() {
 	defer GinkgoRecover()
 	var outputContainerImage = ""
-	var oauthSecretName = ""
 
 	// Initialize the application struct
 	application := &appservice.Application{}
@@ -97,6 +110,8 @@ var _ = framework.E2ESuiteDescribe(func() {
 			})
 
 			for _, componentTest := range appTest.Components {
+				var oauthSecretName = ""
+
 				componentTest := componentTest
 				var containerIMG = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 
@@ -106,7 +121,7 @@ var _ = framework.E2ESuiteDescribe(func() {
 						// Inject spi tokens to work with private components
 						if componentTest.ContainerSource != "" {
 							// More info about manual token upload for quay.io here: https://github.com/redhat-appstudio/service-provider-integration-operator/pull/115
-							oauthCredentials := `{"access_token":"` + utils.GetEnv("QUAY_OAUTH_TOKEN", "") + `", "username":"` + utils.GetEnv("QUAY_OAUTH_USER", "") + `"}`
+							oauthCredentials := `{"access_token":"` + utils.GetEnv(constants.QUAY_OAUTH_TOKEN_ENV, "") + `", "username":"` + utils.GetEnv(constants.QUAY_OAUTH_USER_ENV, "") + `"}`
 
 							oauthSecretName = fw.SPIController.InjectManualSPIToken(AppStudioE2EApplicationsNamespace, componentTest.ContainerSource, oauthCredentials, v1.SecretTypeDockerConfigJson)
 						} else if componentTest.GitSourceUrl != "" {
