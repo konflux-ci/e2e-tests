@@ -18,6 +18,7 @@ require (
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
 	github.com/redhat-appstudio/application-service v0.0.0-20220509201208-86571e38f52e
 	github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2cad2
+	github.com/redhat-appstudio/jvm-build-service v0.0.0-20220714212008-d1b637f56c4d
 	github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001
 	github.com/redhat-appstudio/release-service v0.0.0-20220620143459-53c2f4bcc510
 	github.com/redhat-appstudio/service-provider-integration-operator v0.5.0

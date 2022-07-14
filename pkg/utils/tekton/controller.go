@@ -3,6 +3,7 @@ package tekton
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"strings"
 	"time"
 
@@ -105,6 +106,55 @@ func (s *SuiteController) GetPipelineRun(pipelineRunName, namespace string) (*v1
 	return s.PipelineClient().TektonV1beta1().PipelineRuns(namespace).Get(context.TODO(), pipelineRunName, metav1.GetOptions{})
 }
 
+func (s *SuiteController) fetchContainerLog(podName, containerName, namespace string) (string, error) {
+	podClient := s.K8sClient.KubeInterface().CoreV1().Pods(namespace)
+	req := podClient.GetLogs(podName, &corev1.PodLogOptions{Container: containerName})
+	readCloser, err := req.Stream(context.TODO())
+	log := ""
+	if err != nil {
+		return log, err
+	}
+	defer readCloser.Close()
+	b, err := ioutil.ReadAll(readCloser)
+	if err != nil {
+		return log, err
+	}
+	return string(b[:]), nil
+}
+
+func (s *SuiteController) GetPipelineRunLogs(pipelineRunName, namespace string) (string, error) {
+	podClient := s.K8sClient.KubeInterface().CoreV1().Pods(namespace)
+	podList, err := podClient.List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return "", err
+	}
+	podLog := ""
+	for _, pod := range podList.Items {
+		if !strings.HasPrefix(pod.Name, pipelineRunName) {
+			continue
+		}
+		for _, c := range pod.Spec.InitContainers {
+			var err error
+			var cLog string
+			cLog, err = s.fetchContainerLog(pod.Name, c.Name, namespace)
+			podLog = podLog + fmt.Sprintf("\ninit container %s: \n", c.Name) + cLog
+			if err != nil {
+				return podLog, err
+			}
+		}
+		for _, c := range pod.Spec.Containers {
+			var err error
+			var cLog string
+			cLog, err = s.fetchContainerLog(pod.Name, c.Name, namespace)
+			podLog = podLog + fmt.Sprintf("\ncontainer %s: \n", c.Name) + cLog
+			if err != nil {
+				return podLog, err
+			}
+		}
+	}
+	return podLog, nil
+}
+
 func (s *SuiteController) CheckPipelineRunStarted(pipelineRunName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
 		pr, err := s.GetPipelineRun(pipelineRunName, namespace)
@@ -136,9 +186,26 @@ func (s *SuiteController) CreateTask(task *v1beta1.Task, ns string) (*v1beta1.Ta
 	return s.PipelineClient().TektonV1beta1().Tasks(ns).Create(context.TODO(), task, metav1.CreateOptions{})
 }
 
-// Create a tekton taskRun and return the taskRun or error
+func (s *SuiteController) DeleteTask(name, ns string) error {
+	return s.PipelineClient().TektonV1beta1().Tasks(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
+}
+
+// Create a tekton pipelineRun and return the pipelineRun or error
 func (s *SuiteController) CreatePipelineRun(pipelineRun *v1beta1.PipelineRun, ns string) (*v1beta1.PipelineRun, error) {
 	return s.PipelineClient().TektonV1beta1().PipelineRuns(ns).Create(context.TODO(), pipelineRun, metav1.CreateOptions{})
+}
+
+func (s *SuiteController) DeletePipelineRun(name, ns string) error {
+	return s.PipelineClient().TektonV1beta1().PipelineRuns(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
+}
+
+// Create a tekton pipeline and return the pipeline or error
+func (s *SuiteController) CreatePipeline(pipeline *v1beta1.Pipeline, ns string) (*v1beta1.Pipeline, error) {
+	return s.PipelineClient().TektonV1beta1().Pipelines(ns).Create(context.TODO(), pipeline, metav1.CreateOptions{})
+}
+
+func (s *SuiteController) DeletePipeline(name, ns string) error {
+	return s.PipelineClient().TektonV1beta1().Pipelines(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
 func (s *SuiteController) ListTaskRuns(ns string, labelKey string, labelValue string, selectorLimit int64) (*v1beta1.TaskRunList, error) {
@@ -148,6 +215,43 @@ func (s *SuiteController) ListTaskRuns(ns string, labelKey string, labelValue st
 		Limit:         selectorLimit,
 	}
 	return s.PipelineClient().TektonV1beta1().TaskRuns(ns).List(context.TODO(), listOptions)
+}
+
+func (s *SuiteController) ListAllTaskRuns(ns string) (*v1beta1.TaskRunList, error) {
+	return s.PipelineClient().TektonV1beta1().TaskRuns(ns).List(context.TODO(), metav1.ListOptions{})
+}
+
+func (s *SuiteController) DeleteTaskRun(name, ns string) error {
+	return s.PipelineClient().TektonV1beta1().TaskRuns(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
+}
+
+func (s *SuiteController) GetTaskRunLogs(name, ns string) (string, error) {
+	podLog := ""
+	podClient := s.K8sClient.KubeInterface().CoreV1().Pods(ns)
+	podList, err := podClient.List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return "", err
+	}
+	for _, pod := range podList.Items {
+		if !strings.HasPrefix(pod.Name, name) {
+			continue
+		}
+		for _, c := range pod.Spec.InitContainers {
+			var err error
+			podLog, err = s.fetchContainerLog(pod.Name, c.Name, ns)
+			if err != nil {
+				return podLog, err
+			}
+		}
+		for _, c := range pod.Spec.Containers {
+			var err error
+			podLog, err = s.fetchContainerLog(pod.Name, c.Name, ns)
+			if err != nil {
+				return podLog, err
+			}
+		}
+	}
+	return podLog, nil
 }
 
 func (k KubeController) WatchPipelineRun(pipelineRunName string, taskTimeout int) error {

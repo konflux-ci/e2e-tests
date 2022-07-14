@@ -27,6 +27,10 @@ func BuildSuiteDescribe(text string, body func()) bool {
 	return Describe("[build-service-suite "+text+"]", body)
 }
 
+func JVMBuildSuiteDescribe(text string, body func()) bool {
+	return Describe("[jvm-build-service-suite "+text+"]", Ordered, body)
+}
+
 func ClusterRegistrationSuiteDescribe(text string, body func()) bool {
 	return Describe("[cluster-registration-suite "+text+"]", Ordered, body)
 }
@@ -38,4 +42,3 @@ func ReleaseSuiteDescribe(text string, body func()) bool {
 func IntegrationServiceSuiteDescribe(text string, body func()) bool {
 	return Describe("[integration-service-suite "+text+"]", Ordered, body)
 }
-
