@@ -5,12 +5,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/devfile/library/pkg/util"
 	"github.com/google/uuid"
-	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
@@ -28,103 +28,55 @@ import (
 )
 
 const (
-	containerImageSource   = "quay.io/redhat-appstudio-qe/busybox-loop:latest"
-	gitSourceRepoName      = "devfile-sample-hello-world"
-	gitSourceURL           = "https://github.com/redhat-appstudio-qe/" + gitSourceRepoName
-	dummyPipelineBundleRef = "quay.io/redhat-appstudio-qe/dummy-pipeline-bundle:latest"
+	containerImageSource                 = "quay.io/redhat-appstudio-qe/busybox-loop:latest"
+	helloWorldComponentGitSourceRepoName = "devfile-sample-hello-world"
+	helloWorldComponentGitSourceURL      = "https://github.com/redhat-appstudio-qe/" + helloWorldComponentGitSourceRepoName
+	pythonComponentGitSourceURL          = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic"
+	dummyPipelineBundleRef               = "quay.io/redhat-appstudio-qe/dummy-pipeline-bundle:latest"
 )
 
-var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
+var (
+	componentUrls  = strings.Split(utils.GetEnv(COMPONENT_REPO_URLS_ENV, pythonComponentGitSourceURL), ",") //multiple urls
+	componentNames []string
+)
 
-	defer GinkgoRecover()
+var _ = framework.BuildSuiteDescribe("Build service E2E tests", func() {
 
-	var applicationName, componentName, appStudioE2EApplicationsNamespace, outputContainerImage string
-	var pipelineRun v1beta1.PipelineRun
-	var component *appservice.Component
-	var timeout, interval time.Duration
-
-	var customBundleConfigMap, defaultBundleConfigMap *v1.ConfigMap
-	var defaultBundleRef, customBundleRef string
-
-	var webhookRoute *routev1.Route
-	var webhookURL string
-
-	// Initialize the tests controllers
 	f, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
 
-	BeforeAll(func() {
-		applicationName = fmt.Sprintf("build-suite-test-application-%s", util.GenerateRandomString(4))
-		appStudioE2EApplicationsNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "appstudio-e2e-test")
+	Describe("Component with git source is created", Ordered, func() {
+		var applicationName, componentName, testNamespace, outputContainerImage string
 
-		_, err := f.CommonController.CreateTestNamespace(appStudioE2EApplicationsNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", appStudioE2EApplicationsNamespace, err)
+		var timeout, interval time.Duration
 
-		_, err = f.HasController.CreateHasApplication(applicationName, appStudioE2EApplicationsNamespace)
-		Expect(err).NotTo(HaveOccurred())
-		DeferCleanup(f.HasController.DeleteHasApplication, applicationName, appStudioE2EApplicationsNamespace)
-
-	})
-
-	When("component with container image source is created", func() {
-		BeforeAll(func() {
-			componentName = fmt.Sprintf("build-suite-test-component-image-source-%s", util.GenerateRandomString(4))
-			outputContainerImage = ""
-			timeout = time.Second * 10
-			interval = time.Second * 1
-			// Create a component with containerImageSource being defined
-			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, "", containerImageSource, outputContainerImage, "")
-			Expect(err).ShouldNot(HaveOccurred())
-
-			DeferCleanup(f.HasController.DeleteHasComponent, componentName, appStudioE2EApplicationsNamespace)
-		})
-		It("should not trigger a PipelineRun", func() {
-			Consistently(func() bool {
-				pipelineRun, err = f.HasController.GetComponentPipelineRun(component.Name, applicationName, appStudioE2EApplicationsNamespace, false)
-				Expect(pipelineRun.Name).To(BeEmpty())
-
-				return strings.Contains(err.Error(), "no pipelinerun found")
-			}, timeout, interval).Should(BeTrue(), "expected the PipelineRun not to be triggered")
-		})
-	})
-	When("component with git source is created", Label("slow"), func() {
+		var webhookRoute *routev1.Route
+		var webhookURL string
 
 		BeforeAll(func() {
+
+			applicationName = fmt.Sprintf("build-suite-test-application-%s", util.GenerateRandomString(4))
+			testNamespace = fmt.Sprintf("e2e-test-%s", util.GenerateRandomString(4))
+
+			_, err = f.CommonController.CreateTestNamespace(testNamespace)
+			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
+
+			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
+			Expect(err).NotTo(HaveOccurred())
+
 			componentName = fmt.Sprintf("build-suite-test-component-git-source-%s", util.GenerateRandomString(4))
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-			timeout = time.Second * 60
+			timeout = time.Second * 120
 			interval = time.Second * 1
 			// Create a component with Git Source URL being defined
-			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", outputContainerImage, "")
+			_, err := f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
-			DeferCleanup(f.HasController.DeleteHasComponent, componentName, appStudioE2EApplicationsNamespace)
-
-			customBundleConfigMap, err = f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, appStudioE2EApplicationsNamespace)
-			if err != nil {
-				if errors.IsNotFound(err) {
-					klog.Infof("configmap with custom pipeline bundle not found in %s namespace\n", appStudioE2EApplicationsNamespace)
-				} else {
-					Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, appStudioE2EApplicationsNamespace, err))
-				}
-			} else {
-				customBundleRef = customBundleConfigMap.Data["default_build_bundle"]
-			}
-
-			defaultBundleConfigMap, err = f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace)
-			if err != nil {
-				if errors.IsForbidden(err) {
-					klog.Infof("don't have enough permissions to get a configmap with default pipeline in %s namespace\n", constants.BuildPipelinesConfigMapDefaultNamespace)
-				} else {
-					Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace, err))
-				}
-			} else {
-				defaultBundleRef = defaultBundleConfigMap.Data["default_build_bundle"]
-			}
-
+			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
 		})
-		It("triggers a PipelineRun", Label("build-templates-e2e"), func() {
+
+		It("triggers a PipelineRun", func() {
 			Eventually(func() bool {
-				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false)
+				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
 				if err != nil {
 					klog.Infoln("PipelineRun has not been created yet")
 					return false
@@ -133,36 +85,14 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 		})
 
-		It("should reference the custom pipeline bundle in a PipelineRun", Label("build-templates-e2e"), func() {
-			if customBundleRef == "" {
-				Skip("skipping the specs - custom pipeline bundle is not defined")
-			}
-			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			Expect(pipelineRun.Spec.PipelineRef.Bundle).To(Equal(customBundleRef))
-		})
-
-		It("should reference the default pipeline bundle in a PipelineRun", func() {
-			if customBundleRef != "" {
-				Skip("skipping - custom pipeline bundle bundle (that overrides the default one) is defined")
-			}
-			if defaultBundleRef == "" {
-				Skip("skipping - default pipeline bundle cannot be fetched")
-			}
-			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(pipelineRun.Spec.PipelineRef.Bundle).To(Equal(defaultBundleRef))
-		})
-
-		When("the PipelineRun has started", Label("build-templates-e2e"), func() {
+		When("the PipelineRun has started", func() {
 			BeforeAll(func() {
 				timeout = time.Second * 600
 				interval = time.Second * 10
 			})
 			It("should eventually finish successfully", func() {
 				Eventually(func() bool {
-					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false)
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, condition := range pipelineRun.Status.Conditions {
@@ -189,9 +119,9 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 
 			It("eventually leads to a creation of a component webhook (event listener)", Label("webhook", "slow"), func() {
 				Eventually(func() bool {
-					_, err := f.HasController.GetEventListenerRoute(componentName, appStudioE2EApplicationsNamespace)
+					_, err := f.HasController.GetEventListenerRoute(componentName, testNamespace)
 					if err != nil {
-						klog.Infof("component webhook %s has not been created yet in %s namespace\n", webhookName, appStudioE2EApplicationsNamespace)
+						klog.Infof("component webhook %s has not been created yet in %s namespace\n", webhookName, testNamespace)
 						return false
 					}
 					return true
@@ -200,9 +130,9 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 			})
 		})
 
-		When("the container image is created and pushed to container registry", func() {
-			It("contains non-empty sbom files", Label("build-templates-e2e", "sbom", "slow"), func() {
-				component, err := f.HasController.GetHasComponent(componentName, appStudioE2EApplicationsNamespace)
+		When("the container image is created and pushed to container registry", Label("sbom", "slow"), func() {
+			It("contains non-empty sbom files", func() {
+				component, err := f.HasController.GetHasComponent(componentName, testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 				purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(component.Spec.ContainerImage)
 				Expect(err).NotTo(HaveOccurred())
@@ -215,7 +145,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 				timeout = time.Minute * 1
 				interval = time.Second * 1
 
-				webhookRoute, err = f.HasController.GetEventListenerRoute(componentName, appStudioE2EApplicationsNamespace)
+				webhookRoute, err = f.HasController.GetEventListenerRoute(componentName, testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(webhookRoute.Spec.Host).ShouldNot(BeEmpty())
 
@@ -248,6 +178,8 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 
 			BeforeAll(func() {
 				if utils.IsPrivateHostname(webhookRoute.Spec.Host) {
+					// Workaround for cleanup is needed because of the issue in ginkgo: https://github.com/onsi/ginkgo/issues/980
+					DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
 					Skip("Using private cluster (not reachable from Github), skipping...")
 				}
 
@@ -255,20 +187,20 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 				interval = time.Second * 5
 
 				// Get Component CR to check the current value of Container Image
-				component, err := f.HasController.GetHasComponent(componentName, appStudioE2EApplicationsNamespace)
+				component, err := f.HasController.GetHasComponent(componentName, testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 				initialContainerImageURL = component.Spec.ContainerImage
 
-				webhookID, err = f.CommonController.Github.CreateWebhook(gitSourceRepoName, webhookURL)
+				webhookID, err = f.CommonController.Github.CreateWebhook(helloWorldComponentGitSourceRepoName, webhookURL)
 				Expect(err).ShouldNot(HaveOccurred())
-				DeferCleanup(f.CommonController.Github.DeleteWebhook, gitSourceRepoName, webhookID)
+				DeferCleanup(f.CommonController.Github.DeleteWebhook, helloWorldComponentGitSourceRepoName, webhookID)
 
 				// Wait until EventListener's pod is ready to receive events
-				err = f.CommonController.WaitForPodSelector(f.CommonController.IsPodRunning, appStudioE2EApplicationsNamespace, "eventlistener", componentName, 60, 100)
+				err = f.CommonController.WaitForPodSelector(f.CommonController.IsPodRunning, testNamespace, "eventlistener", componentName, 60, 100)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Update a file in Component source Github repo to trigger a push event
-				updatedFile, err := f.CommonController.Github.UpdateFile(gitSourceRepoName, "README.md", "test")
+				updatedFile, err := f.CommonController.Github.UpdateFile(helloWorldComponentGitSourceRepoName, "README.md", "test")
 				Expect(err).NotTo(HaveOccurred())
 
 				// A new output container image URL should contain the suffix with the latest commit SHA
@@ -277,7 +209,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 
 			It("eventually leads to triggering another PipelineRun", func() {
 				Eventually(func() bool {
-					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, true)
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true)
 					if err != nil {
 						klog.Infoln("PipelineRun has not been created yet")
 						return false
@@ -288,7 +220,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 			It("PipelineRun should eventually finish", func() {
 				timeout = time.Minute * 5
 				Eventually(func() bool {
-					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, true)
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true)
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, condition := range pipelineRun.Status.Conditions {
@@ -303,7 +235,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 			})
 			It("ContainerImage field should be updated with the SHA of the commit that was pushed to the Component source repo", func() {
 				Eventually(func() bool {
-					component, err := f.HasController.GetHasComponent(componentName, appStudioE2EApplicationsNamespace)
+					component, err := f.HasController.GetHasComponent(componentName, testNamespace)
 					if err != nil {
 						klog.Infoln("component was not updated yet")
 						return false
@@ -312,32 +244,235 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the Component CR to get updated with a new container image URL")
 			})
 		})
-
 	})
 
-	When("a configmap with 'dummy' custom pipeline bundle is created in the testing namespace", func() {
+	Describe("HACBS pipelines", Ordered, func() {
+
+		var applicationName, componentName, testNamespace, outputContainerImage string
+		var defaultBundleConfigMap *v1.ConfigMap
+		var defaultBundleRef, customBundleRef string
+
 		BeforeAll(func() {
-			if customBundleRef != "" {
-				Skip("skipping the specs - a custom pipeline bundle (that overrides the default one) is defined")
+			applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
+			testNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, fmt.Sprintf("e2e-test-pipelines-%s", util.GenerateRandomString(4)))
+
+			_, err := f.CommonController.CreateTestNamespace(testNamespace)
+			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
+
+			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace)
+
+			if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) == "" {
+				DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
 			}
+
+			customBundleConfigMap, err := f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, testNamespace)
+			if err != nil {
+				if errors.IsNotFound(err) {
+					defaultBundleConfigMap, err = f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace)
+					Expect(err).ToNot(HaveOccurred())
+
+					bundlePullSpec := defaultBundleConfigMap.Data["default_build_bundle"]
+					hacbsBundleConfigMap := &v1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: constants.BuildPipelinesConfigMapName},
+						Data:       map[string]string{"default_build_bundle": strings.Replace(bundlePullSpec, "build-", "hacbs-", 1)},
+					}
+					_, err = f.CommonController.CreateConfigMap(hacbsBundleConfigMap, testNamespace)
+					Expect(err).ToNot(HaveOccurred())
+					DeferCleanup(f.CommonController.DeleteConfigMap, constants.BuildPipelinesConfigMapName, testNamespace)
+				} else {
+					Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, testNamespace, err))
+				}
+			} else {
+				bundlePullSpec := customBundleConfigMap.Data["default_build_bundle"]
+				hacbsBundleConfigMap := &v1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: constants.BuildPipelinesConfigMapName},
+					Data:       map[string]string{"default_build_bundle": strings.Replace(bundlePullSpec, "build-", "hacbs-", 1)},
+				}
+
+				_, err = f.CommonController.UpdateConfigMap(hacbsBundleConfigMap, testNamespace)
+				Expect(err).ToNot(HaveOccurred())
+				DeferCleanup(func() error {
+					hacbsBundleConfigMap.Data = customBundleConfigMap.Data
+					_, err := f.CommonController.UpdateConfigMap(hacbsBundleConfigMap, testNamespace)
+					if err != nil {
+						return err
+					}
+					return nil
+				})
+			}
+
+			for _, gitUrl := range componentUrls {
+				gitUrl := gitUrl
+				componentName = fmt.Sprintf("%s-%s", "test-component-", util.GenerateRandomString(4))
+				componentNames = append(componentNames, componentName)
+				outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
+				// Create a component with Git Source URL being defined
+				_, err := f.HasController.CreateComponent(applicationName, componentName, testNamespace, gitUrl, "", outputContainerImage, "")
+				Expect(err).ShouldNot(HaveOccurred())
+				DeferCleanup(f.HasController.DeleteHasComponent, componentName, testNamespace)
+			}
+		})
+
+		for i, gitUrl := range componentUrls {
+			gitUrl := gitUrl
+			It(fmt.Sprintf("triggers PipelineRun for component with source URL %s", gitUrl), Label("build-templates-e2e"), func() {
+				timeout := time.Second * 60
+				interval := time.Second * 1
+
+				Eventually(func() bool {
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, false)
+					if err != nil {
+						klog.Infoln("PipelineRun has not been created yet")
+						return false
+					}
+					return pipelineRun.HasStarted()
+				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the %s PipelineRun to start", componentNames[i])
+			})
+		}
+
+		It("should reference the custom pipeline bundle in a PipelineRun", Label("build-templates-e2e"), func() {
+			customBundleConfigMap, err := f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, testNamespace)
+			if err != nil {
+				if errors.IsNotFound(err) {
+					klog.Infof("configmap with custom pipeline bundle not found in %s namespace\n", testNamespace)
+				} else {
+					Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, testNamespace, err))
+				}
+			} else {
+				customBundleRef = customBundleConfigMap.Data["default_build_bundle"]
+			}
+
+			if customBundleRef == "" {
+				Skip("skipping the specs - custom pipeline bundle is not defined")
+			}
+			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, false)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(pipelineRun.Spec.PipelineRef.Bundle).To(Equal(customBundleRef))
+		})
+
+		It("should reference the default pipeline bundle in a PipelineRun", func() {
+			defaultBundleConfigMap, err = f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace)
+			if err != nil {
+				if errors.IsForbidden(err) {
+					klog.Infof("don't have enough permissions to get a configmap with default pipeline in %s namespace\n", constants.BuildPipelinesConfigMapDefaultNamespace)
+				} else {
+					Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace, err))
+				}
+			} else {
+				defaultBundleRef = defaultBundleConfigMap.Data["default_build_bundle"]
+			}
+
+			if customBundleRef != "" {
+				Skip("skipping - custom pipeline bundle bundle (that overrides the default one) is defined")
+			}
+			if defaultBundleRef == "" {
+				Skip("skipping - default pipeline bundle cannot be fetched")
+			}
+			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, false)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(pipelineRun.Spec.PipelineRef.Bundle).To(Equal(defaultBundleRef))
+		})
+
+		for i, gitUrl := range componentUrls {
+			gitUrl := gitUrl
+
+			It(fmt.Sprintf("should eventually finish successfully for component with source URL %s", gitUrl), Label("build-templates-e2e"), func() {
+				timeout := time.Second * 600
+				interval := time.Second * 10
+				Eventually(func() bool {
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, false)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					for _, condition := range pipelineRun.Status.Conditions {
+						klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
+
+						if condition.Reason == "Failed" {
+							Fail(fmt.Sprintf("Pipelinerun %s has failed", pipelineRun.Name))
+						}
+					}
+					return pipelineRun.IsDone()
+				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
+			})
+		}
+	})
+
+	Describe("Creating component with container image source", Ordered, func() {
+
+		var applicationName, componentName, testNamespace string
+		var timeout, interval time.Duration
+
+		BeforeAll(func() {
+
+			applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
+			testNamespace = fmt.Sprintf("e2e-test-%s", util.GenerateRandomString(4))
+
+			_, err = f.CommonController.CreateTestNamespace(testNamespace)
+			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
+
+			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace)
+
+			componentName = fmt.Sprintf("build-suite-test-component-image-source-%s", util.GenerateRandomString(4))
+			outputContainerImage := ""
+			timeout = time.Second * 10
+			interval = time.Second * 1
+			// Create a component with containerImageSource being defined
+			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, "", containerImageSource, outputContainerImage, "")
+			Expect(err).ShouldNot(HaveOccurred())
+
+			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
+		})
+
+		It("should not trigger a PipelineRun", func() {
+			Consistently(func() bool {
+				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
+				Expect(pipelineRun.Name).To(BeEmpty())
+
+				return strings.Contains(err.Error(), "no pipelinerun found")
+			}, timeout, interval).Should(BeTrue(), "expected the PipelineRun not to be triggered")
+		})
+	})
+
+	Describe("Creating a configmap with 'dummy' custom pipeline bundle in the testing namespace", Ordered, func() {
+		var timeout, interval time.Duration
+
+		var componentName, applicationName, testNamespace string
+
+		BeforeAll(func() {
+
+			testNamespace := fmt.Sprintf("e2e-test-%s", util.GenerateRandomString(4))
+			applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
+
+			_, err = f.CommonController.CreateTestNamespace(testNamespace)
+			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
+
+			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
+			Expect(err).NotTo(HaveOccurred())
+
 			cm := &v1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{Name: constants.BuildPipelinesConfigMapName},
 				Data:       map[string]string{"default_build_bundle": dummyPipelineBundleRef},
 			}
-			_, err = f.CommonController.CreateConfigMap(cm, appStudioE2EApplicationsNamespace)
+			_, err = f.CommonController.CreateConfigMap(cm, testNamespace)
 			Expect(err).ToNot(HaveOccurred())
 
-			componentName = "build-suite-test-component-pipeline-reference"
-			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", outputContainerImage, "")
+			componentName = "build-suite-test-bundle-overriding"
+			outputContainerImage := fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
+			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
 
-			DeferCleanup(f.HasController.DeleteHasComponent, componentName, appStudioE2EApplicationsNamespace)
-			DeferCleanup(f.CommonController.DeleteConfigMap, constants.BuildPipelinesConfigMapName, appStudioE2EApplicationsNamespace)
+			timeout = time.Second * 120
+			interval = time.Second * 1
+
+			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
 		})
-		It("should be referenced in another PipelineRun", func() {
+		It("should be referenced in a PipelineRun", Label("build-bundle-overriding"), func() {
 			Eventually(func() bool {
-				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false)
+				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
 				if err != nil {
 					klog.Infoln("PipelineRun has not been created yet")
 					return false
@@ -345,16 +480,25 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 				return pipelineRun.HasStarted()
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 
-			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false)
+			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(pipelineRun.Spec.PipelineRef.Bundle).To(Equal(dummyPipelineBundleRef))
 		})
 	})
 
-	When("a secret with dummy quay.io credentials is created in the testing namespace", Label("build-secret", "slow"), func() {
+	Describe("A secret with dummy quay.io credentials is created in the testing namespace", Ordered, func() {
+
+		var applicationName, componentName, testNamespace, outputContainerImage string
+		var timeout, interval time.Duration
+
 		BeforeAll(func() {
 
-			_, err := f.CommonController.GetSecret(appStudioE2EApplicationsNamespace, constants.RegistryAuthSecretName)
+			testNamespace = fmt.Sprintf("e2e-test-%s", util.GenerateRandomString(4))
+
+			_, err = f.CommonController.CreateTestNamespace(testNamespace)
+			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
+
+			_, err := f.CommonController.GetSecret(testNamespace, constants.RegistryAuthSecretName)
 			if err != nil {
 				// If we have an error when getting RegistryAuthSecretName, it should be IsNotFound err
 				Expect(errors.IsNotFound(err)).To(BeTrue())
@@ -362,8 +506,14 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 				Skip("a registry auth secret is already created in testing namespace - skipping....")
 			}
 
-			timeout = time.Minute * 1
-			interval = time.Second * 5
+			applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
+
+			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace)
+
+			timeout = time.Minute * 2
+			interval = time.Second * 1
 
 			dummySecret := &v1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: constants.RegistryAuthSecretName},
@@ -371,21 +521,20 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 				Data:       map[string][]byte{".dockerconfigjson": []byte("{\"auths\":{\"quay.io\":{\"username\":\"test\",\"password\":\"test\",\"auth\":\"dGVzdDp0ZXN0\",\"email\":\"\"}}}")},
 			}
 
-			_, err = f.CommonController.CreateSecret(appStudioE2EApplicationsNamespace, dummySecret)
+			_, err = f.CommonController.CreateSecret(testNamespace, dummySecret)
 			Expect(err).ToNot(HaveOccurred())
 
 			componentName = "build-suite-test-secret-overriding"
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", outputContainerImage, "")
+			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
 
-			DeferCleanup(f.HasController.DeleteHasComponent, componentName, appStudioE2EApplicationsNamespace)
-			DeferCleanup(f.CommonController.DeleteSecret, appStudioE2EApplicationsNamespace, constants.RegistryAuthSecretName)
+			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
 		})
 
 		It("should override the shared secret", func() {
 			Eventually(func() bool {
-				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false)
+				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
 				if err != nil {
 					klog.Infoln("PipelineRun has not been created yet")
 					return false
@@ -393,7 +542,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 				return pipelineRun.HasStarted()
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 
-			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false)
+			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(pipelineRun.Spec.Workspaces).To(HaveLen(2))
 			registryAuthWorkspace := &v1beta1.WorkspaceBinding{
@@ -409,7 +558,7 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 			timeout = time.Minute * 5
 			interval = time.Second * 5
 			Eventually(func() bool {
-				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false)
+				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				for _, condition := range pipelineRun.Status.Conditions {
@@ -421,46 +570,65 @@ var _ = framework.BuildSuiteDescribe("Build Service E2E tests", func() {
 		})
 	})
 
-	When("creating a component with a specific container image URL", Label("image repository protection"), func() {
-		BeforeEach(func() {
+	Describe("Creating a component with a specific container image URL", Ordered, func() {
+
+		var applicationName, componentName, testNamespace, outputContainerImage string
+		var timeout time.Duration
+
+		BeforeAll(func() {
+
+			applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
+			testNamespace = fmt.Sprintf("e2e-test-%s", util.GenerateRandomString(4))
+
+			_, err = f.CommonController.CreateTestNamespace(testNamespace)
+			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
+
+			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
+			Expect(err).NotTo(HaveOccurred())
+
+			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
+		})
+
+		JustBeforeEach(func() {
+
 			componentName = fmt.Sprintf("build-suite-test-component-image-url-%s", util.GenerateRandomString(4))
 			timeout = time.Second * 10
 
-			DeferCleanup(f.HasController.DeleteHasComponent, componentName, appStudioE2EApplicationsNamespace)
+			DeferCleanup(f.HasController.DeleteHasComponent, componentName, testNamespace)
 		})
 		It("should fail for ContainerImage field set to a protected repository (without an image tag)", func() {
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected", utils.GetQuayIOOrganization())
-			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", outputContainerImage, "")
+			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			Eventually(func() (string, error) {
-				return f.HasController.GetHasComponentConditionStatusMessage(componentName, appStudioE2EApplicationsNamespace)
+				return f.HasController.GetHasComponentConditionStatusMessage(componentName, testNamespace)
 			}, timeout).Should(ContainSubstring("create failed"), "timed out waiting for the component creation to fail")
 
 		})
 		It("should fail for ContainerImage field set to a protected repository followed by a random tag", func() {
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", outputContainerImage, "")
+			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			Eventually(func() (string, error) {
-				return f.HasController.GetHasComponentConditionStatusMessage(componentName, appStudioE2EApplicationsNamespace)
+				return f.HasController.GetHasComponentConditionStatusMessage(componentName, testNamespace)
 			}, timeout).Should(ContainSubstring("create failed"), "timed out waiting for the component creation to fail")
 		})
 		It("should succeed for ContainerImage field set to a protected repository followed by a namespace prefix + dash + string", func() {
-			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected:%s-%s", utils.GetQuayIOOrganization(), appStudioE2EApplicationsNamespace, strings.Replace(uuid.New().String(), "-", "", -1))
-			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", outputContainerImage, "")
+			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected:%s-%s", utils.GetQuayIOOrganization(), testNamespace, strings.Replace(uuid.New().String(), "-", "", -1))
+			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			Eventually(func() (string, error) {
-				return f.HasController.GetHasComponentConditionStatusMessage(componentName, appStudioE2EApplicationsNamespace)
+				return f.HasController.GetHasComponentConditionStatusMessage(componentName, testNamespace)
 			}, timeout).Should(ContainSubstring("successfully created"), "timed out waiting for the component creation to succeed")
 		})
 		It("should succeed for ContainerImage field set to a custom (unprotected) repository without a tag being specified", func() {
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images", utils.GetQuayIOOrganization())
-			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", outputContainerImage, "")
+			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			Eventually(func() (string, error) {
-				return f.HasController.GetHasComponentConditionStatusMessage(componentName, appStudioE2EApplicationsNamespace)
+				return f.HasController.GetHasComponentConditionStatusMessage(componentName, testNamespace)
 			}, timeout).Should(ContainSubstring("successfully created"), "timed out waiting for the component creation to succeed")
 		})
-	})
 
+	})
 })

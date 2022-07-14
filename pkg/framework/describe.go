@@ -24,7 +24,7 @@ func ChainsSuiteDescribe(text string, body func()) bool {
 }
 
 func BuildSuiteDescribe(text string, body func()) bool {
-	return Describe("[build-service-suite "+text+"]", Ordered, body)
+	return Describe("[build-service-suite "+text+"]", body)
 }
 
 func ClusterRegistrationSuiteDescribe(text string, body func()) bool {
