@@ -98,8 +98,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", func() {
 					for _, condition := range pipelineRun.Status.Conditions {
 						klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 
-						if condition.Reason == "Failed" {
-							Fail(fmt.Sprintf("Pipelinerun %s has failed", pipelineRun.Name))
+						if condition.Reason == string(v1beta1.PipelineRunReasonFailed) {
+							d := utils.GetFailedPipelineRunDetails(pipelineRun)
+							logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
+							Fail(fmt.Sprintf("Pipelinerun '%s' has failed. Logs from failed container '%s': \n%s", pipelineRun.Name, d.FailedContainerName, logs))
 						}
 					}
 					return pipelineRun.IsDone()
@@ -226,8 +228,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", func() {
 					for _, condition := range pipelineRun.Status.Conditions {
 						klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 
-						if condition.Reason == "Failed" {
-							Fail(fmt.Sprintf("Pipelinerun %s has failed", pipelineRun.Name))
+						if condition.Reason == string(v1beta1.PipelineRunReasonFailed) {
+							d := utils.GetFailedPipelineRunDetails(pipelineRun)
+							logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
+							Fail(fmt.Sprintf("Pipelinerun '%s' has failed. Logs from failed container '%s': \n%s", pipelineRun.Name, d.FailedContainerName, logs))
 						}
 					}
 					return pipelineRun.IsDone()
@@ -253,19 +257,27 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", func() {
 		var defaultBundleRef, customBundleRef string
 
 		BeforeAll(func() {
-			applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
+			if os.Getenv("APP_SUFFIX") != "" {
+				applicationName = fmt.Sprintf("test-app-%s", os.Getenv("APP_SUFFIX"))
+			} else {
+				applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
+			}
 			testNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, fmt.Sprintf("e2e-test-pipelines-%s", util.GenerateRandomString(4)))
 
 			_, err := f.CommonController.CreateTestNamespace(testNamespace)
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
 
+			_, err = f.HasController.GetHasApplication(applicationName, testNamespace)
+			// In case the app with the same name exist in the selected namespace, delete it first
+			if err == nil {
+				Expect(f.HasController.DeleteHasApplication(applicationName, testNamespace)).To(Succeed())
+				Eventually(func() bool {
+					_, err := f.HasController.GetHasApplication(applicationName, testNamespace)
+					return errors.IsNotFound(err)
+				}, time.Minute*1, time.Second*1).Should(BeTrue(), "timed out when waiting for the app %s to be deleted in %s namespace", applicationName, testNamespace)
+			}
 			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace)
-
-			if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) == "" {
-				DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
-			}
 
 			customBundleConfigMap, err := f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, testNamespace)
 			if err != nil {
@@ -311,7 +323,26 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", func() {
 				// Create a component with Git Source URL being defined
 				_, err := f.HasController.CreateComponent(applicationName, componentName, testNamespace, gitUrl, "", outputContainerImage, "")
 				Expect(err).ShouldNot(HaveOccurred())
-				DeferCleanup(f.HasController.DeleteHasComponent, componentName, testNamespace)
+			}
+		})
+
+		AfterAll(func() {
+			// Do cleanup only in case the test succeeded
+			if !CurrentSpecReport().Failed() {
+				// Clean up only Application CR (Component and Pipelines are included) in case we are targeting specific namespace
+				// Used e.g. in build-defintions e2e tests, where we are targeting build-templates-e2e namespace
+				if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) != "" {
+					DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace)
+				} else {
+					Expect(f.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
+				}
+			} else {
+				// Workaround: We cannot keep applications/components present in the specific namespace due to
+				// an issue reported here: https://issues.redhat.com/browse/PLNSRVCE-484
+				// TODO: delete the whole 'else' block after the issue is resolved
+				if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) != "" {
+					DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace)
+				}
 			}
 		})
 
@@ -389,8 +420,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", func() {
 					for _, condition := range pipelineRun.Status.Conditions {
 						klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 
-						if condition.Reason == "Failed" {
-							Fail(fmt.Sprintf("Pipelinerun %s has failed", pipelineRun.Name))
+						if condition.Reason == string(v1beta1.PipelineRunReasonFailed) {
+							d := utils.GetFailedPipelineRunDetails(pipelineRun)
+							logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
+							Fail(fmt.Sprintf("Pipelinerun '%s' has failed. Logs from failed container '%s': \n%s", pipelineRun.Name, d.FailedContainerName, logs))
 						}
 					}
 					return pipelineRun.IsDone()
