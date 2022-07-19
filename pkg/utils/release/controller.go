@@ -3,6 +3,7 @@ package release
 import (
 	"context"
 
+	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
 	"github.com/redhat-appstudio/release-service/api/v1alpha1"
@@ -135,4 +136,43 @@ func (s *SuiteController) CreateReleaseStrategy(name, namespace, pipelineName, b
 		},
 	}
 	return releaseStrategy, s.KubeRest().Create(context.TODO(), releaseStrategy)
+}
+
+// Kasem TODO
+// CreateComponent create an has component from a given name, namespace, application, devfile and a container image
+func (h *SuiteController) CreateComponentKas(applicationName, componentName, namespace, gitSourceURL, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
+	// var containerImage string
+	// if outputContainerImage != "" {
+	// 	containerImage = outputContainerImage
+	// } else {
+	// 	containerImage = containerImageSource
+	// }
+	component := &appservice.Component{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      componentName,
+			Namespace: namespace,
+		},
+		Spec: appservice.ComponentSpec{
+			ComponentName: componentName,
+			Application:   applicationName,
+			Source: appservice.ComponentSource{
+				ComponentSourceUnion: appservice.ComponentSourceUnion{
+					GitSource: &appservice.GitSource{
+						URL:           gitSourceURL,
+						DockerfileURL: containerImageSource,
+					},
+				},
+			},
+			Secret:         secret,
+			ContainerImage: outputContainerImage,
+			Replicas:       1,
+			TargetPort:     8081,
+			Route:          "",
+		},
+	}
+	err := h.KubeRest().Create(context.TODO(), component)
+	if err != nil {
+		return nil, err
+	}
+	return component, nil
 }

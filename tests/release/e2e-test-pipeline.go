@@ -7,17 +7,23 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/release-service/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
 )
 
 const (
+	releasePipelineDefault     = "m5-release-pipeline"
 	releasePvcName             = "release-pvc"
 	serviceAccountName         = "m5-service-account"
 	secretName                 = "hacbs-release-tests-token"
 	appNamePipelineTest        = "m5-application"
-	componenetNamePipelineTest = "component-pipeline-test"
-	componentUrl               = "https://github.com/redhat-appstudio/application-service"
-	componentDockerFileUrl     = "https://github.com/redhat-appstudio/application-service/blob/main/Dockerfile"
+	componenetNamePipelineTest = "helloworld"
+	componentUrl               = "https://github.com/scoheb/go-hello-world.git"
+	componentDockerFileUrl     = "https://github.com/scoheb/go-hello-world/blob/main/Dockerfile"
+	buildBundleName            = "build-pipelines-defaults"
+	defaultBuildBundle         = "quay.io/redhat-appstudio/hacbs-templates-bundle:latest"
+	releasePolicyDefault       = "m5-policy"
+	releaseStrategyDefaultName = "m5-strategy"
 )
 
 var releaseStartegyParams = []v1alpha1.Params{
@@ -49,7 +55,7 @@ var _ = framework.ReleaseSuiteDescribe("release-suite-e2e-tekton-pipeline", func
 
 		// Create the managed namespace
 		namespace, err := framework.CommonController.CreateTestNamespace(managedNamespace)
-		klog.Info("Dev namespace:", managedNamespace)
+		klog.Info("Release namespace:", managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", namespace.Name, err)
 	})
 
@@ -66,17 +72,17 @@ var _ = framework.ReleaseSuiteDescribe("release-suite-e2e-tekton-pipeline", func
 		})
 
 		It("Create Release Strategy", func() {
-			_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, serviceAccountName, releaseStartegyParams)
+			_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineDefault, defaultBuildBundle, releasePolicyDefault, serviceAccountName, releaseStartegyParams)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("Create Release Link in dev namespace", func() {
-			_, err := framework.ReleaseController.CreateReleaseLink(sourceReleaseLinkName, devNamespace, applicationName, managedNamespace, "")
+			_, err := framework.ReleaseController.CreateReleaseLink(sourceReleaseLinkName, devNamespace, appNamePipelineTest, managedNamespace, "")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("Create Release Link in managed namespace", func() {
-			_, err := framework.ReleaseController.CreateReleaseLink(targetReleaseLinkName, managedNamespace, applicationName, devNamespace, releaseStrategyName)
+			_, err := framework.ReleaseController.CreateReleaseLink(targetReleaseLinkName, managedNamespace, appNamePipelineTest, devNamespace, "m5-strategy") //releaseStrategyName)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -85,13 +91,23 @@ var _ = framework.ReleaseSuiteDescribe("release-suite-e2e-tekton-pipeline", func
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		It("Create ConfigMap ", func() {
+			cm := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: buildBundleName},
+				Data:       map[string]string{"default_build_bundle": defaultBuildBundle},
+			}
+			_, err = framework.CommonController.CreateConfigMap(cm, devNamespace)
+			Expect(err).ToNot(HaveOccurred())
+
+		})
+
 		It("Create an application", func() {
-			_, err := framework.HasController.CreateHasApplication(appNamePipelineTest, managedNamespace)
+			_, err := framework.HasController.CreateHasApplication(appNamePipelineTest, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("Create componenet", func() {
-			_, err := framework.HasController.CreateComponent(appNamePipelineTest, componenetNamePipelineTest, managedNamespace, componentUrl, componentDockerFileUrl, "", "")
+			_, err := framework.HasController.CreateComponent(appNamePipelineTest, componenetNamePipelineTest, devNamespace, componentUrl, componentDockerFileUrl, "", "")
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
