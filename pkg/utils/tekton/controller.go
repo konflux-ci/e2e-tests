@@ -3,6 +3,7 @@ package tekton
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -31,16 +32,8 @@ type KubeController struct {
 }
 
 type Bundles struct {
-	BuildTemplatesBundle            string
-	HACBSTemplatesBundle            string
-	HACBSCoreServiceTemplatesBundle string
-}
-
-// quay.io/redhat-appstudio/hacbs-core-service-templates-bundle is available only with the `latest` tag
-func coreServiceBundleName(defaultBuildBundle string) string {
-	parts := strings.SplitN(strings.Replace(defaultBuildBundle, "/build-", "/hacbs-core-service-", 1), ":", 2)
-
-	return parts[0] + ":latest"
+	BuildTemplatesBundle string
+	HACBSTemplatesBundle string
 }
 
 func newBundles(client kubernetes.Interface) (*Bundles, error) {
@@ -51,10 +44,11 @@ func newBundles(client kubernetes.Interface) (*Bundles, error) {
 
 	bundle := buildPipelineDefaults.Data["default_build_bundle"]
 
+	r := regexp.MustCompile(`([/:])(?:build|base)-`)
+
 	return &Bundles{
-		BuildTemplatesBundle:            bundle,
-		HACBSTemplatesBundle:            strings.Replace(bundle, "/build-", "/hacbs-", 1),
-		HACBSCoreServiceTemplatesBundle: coreServiceBundleName(bundle),
+		BuildTemplatesBundle: bundle,
+		HACBSTemplatesBundle: r.ReplaceAllString(bundle, "${1}hacbs-"),
 	}, nil
 }
 
