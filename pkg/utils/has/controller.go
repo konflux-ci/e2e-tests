@@ -338,13 +338,13 @@ func (h *SuiteController) DeleteAllApplicationsInASpecificNamespace(namespace st
 	return h.KubeRest().DeleteAllOf(context.TODO(), &appservice.Application{}, client.InNamespace(namespace))
 }
 
-func (h *SuiteController) GetHasComponentConditionStatusMessage(name, namespace string) (string, error) {
+func (h *SuiteController) GetHasComponentConditionStatusMessages(name, namespace string) (messages []string, err error) {
 	c, err := h.GetHasComponent(name, namespace)
 	if err != nil {
-		return "", fmt.Errorf("error getting HAS component: %v", err)
+		return messages, fmt.Errorf("error getting HAS component: %v", err)
 	}
-	if len(c.Status.Conditions) > 0 {
-		return c.Status.Conditions[0].Message, nil
+	for _, condition := range c.Status.Conditions {
+		messages = append(messages, condition.Message)
 	}
-	return "", nil
+	return
 }

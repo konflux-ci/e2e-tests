@@ -600,34 +600,34 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", func() {
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected", utils.GetQuayIOOrganization())
 			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
-			Eventually(func() (string, error) {
-				return f.HasController.GetHasComponentConditionStatusMessage(componentName, testNamespace)
-			}, timeout).Should(ContainSubstring("create failed"), "timed out waiting for the component creation to fail")
+			Eventually(func() ([]string, error) {
+				return f.HasController.GetHasComponentConditionStatusMessages(componentName, testNamespace)
+			}, timeout).Should(ContainElement(ContainSubstring("create failed")))
 
 		})
 		It("should fail for ContainerImage field set to a protected repository followed by a random tag", func() {
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
-			Eventually(func() (string, error) {
-				return f.HasController.GetHasComponentConditionStatusMessage(componentName, testNamespace)
-			}, timeout).Should(ContainSubstring("create failed"), "timed out waiting for the component creation to fail")
+			Eventually(func() ([]string, error) {
+				return f.HasController.GetHasComponentConditionStatusMessages(componentName, testNamespace)
+			}, timeout).Should(ContainElement(ContainSubstring("create failed")))
 		})
 		It("should succeed for ContainerImage field set to a protected repository followed by a namespace prefix + dash + string", func() {
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected:%s-%s", utils.GetQuayIOOrganization(), testNamespace, strings.Replace(uuid.New().String(), "-", "", -1))
 			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
-			Eventually(func() (string, error) {
-				return f.HasController.GetHasComponentConditionStatusMessage(componentName, testNamespace)
-			}, timeout).Should(ContainSubstring("successfully created"), "timed out waiting for the component creation to succeed")
+			Eventually(func() ([]string, error) {
+				return f.HasController.GetHasComponentConditionStatusMessages(componentName, testNamespace)
+			}, timeout).Should(ContainElement(ContainSubstring("successfully created")))
 		})
 		It("should succeed for ContainerImage field set to a custom (unprotected) repository without a tag being specified", func() {
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images", utils.GetQuayIOOrganization())
 			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
-			Eventually(func() (string, error) {
-				return f.HasController.GetHasComponentConditionStatusMessage(componentName, testNamespace)
-			}, timeout).Should(ContainSubstring("successfully created"), "timed out waiting for the component creation to succeed")
+			Eventually(func() ([]string, error) {
+				return f.HasController.GetHasComponentConditionStatusMessages(componentName, testNamespace)
+			}, timeout).Should(ContainElement(ContainSubstring("successfully created")))
 		})
 
 	})
