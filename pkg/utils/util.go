@@ -104,7 +104,7 @@ func GetFailedPipelineRunDetails(pipelineRun v1beta1.PipelineRun) *FailedPipelin
 		for _, c := range trs.Status.Conditions {
 			if c.Reason == "Failed" {
 				d.FailedTaskRunName = trName
-				d.PodName = trName + "-pod"
+				d.PodName = trs.Status.PodName
 				for _, s := range trs.Status.TaskRunStatusFields.Steps {
 					if s.Terminated.Reason == "Error" {
 						d.FailedContainerName = s.ContainerName
