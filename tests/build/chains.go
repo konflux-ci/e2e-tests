@@ -105,28 +105,6 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 			)
 			g.GinkgoWriter.Println("Cosign verify pass with .att and .sig ImageStreamTags found")
 		})
-		g.It("verify image attestation", func() {
-			generator := tekton.CosignVerify{
-				PipelineRunName: "cosign-verify-attestation",
-				Image:           imageWithDigest,
-				Bundle:          framework.TektonController.Bundles.HACBSTemplatesBundle,
-			}
-			pr, waitTrErr := kubeController.RunPipeline(generator, pipelineRunTimeout)
-			Expect(waitTrErr).NotTo(HaveOccurred())
-			waitErr := kubeController.WatchPipelineRun(pr.Name, pipelineRunTimeout)
-			Expect(waitErr).NotTo(HaveOccurred())
-		})
-		g.It("cosign verify", func() {
-			generator := tekton.CosignVerify{
-				PipelineRunName: "cosign-verify",
-				Image:           imageWithDigest,
-				Bundle:          framework.TektonController.Bundles.HACBSTemplatesBundle,
-			}
-			pr, waitTrErr := kubeController.RunPipeline(generator, pipelineRunTimeout)
-			Expect(waitTrErr).NotTo(HaveOccurred())
-			waitErr := kubeController.WatchPipelineRun(pr.Name, pipelineRunTimeout)
-			Expect(waitErr).NotTo(HaveOccurred())
-		})
 
 		g.Context("verify-enterprise-contract task", func() {
 			var generator tekton.VerifyEnterpriseContract
