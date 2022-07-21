@@ -1,9 +1,11 @@
 package common
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -136,6 +138,26 @@ func (s *SuiteController) ListPods(namespace, labelKey, labelValue string, selec
 		Limit:         selectionLimit,
 	}
 	return s.KubeInterface().CoreV1().Pods(namespace).List(context.TODO(), listOptions)
+}
+
+func (s *SuiteController) GetContainerLogs(podName, containerName, namespace string) (string, error) {
+	podLogOpts := corev1.PodLogOptions{
+		Container: containerName,
+	}
+
+	req := s.KubeInterface().CoreV1().Pods(namespace).GetLogs(podName, &podLogOpts)
+	podLogs, err := req.Stream(context.TODO())
+	if err != nil {
+		return "", fmt.Errorf("error in opening the stream: %v", err)
+	}
+	defer podLogs.Close()
+
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, podLogs)
+	if err != nil {
+		return "", fmt.Errorf("error in copying logs to buf, %v", err)
+	}
+	return buf.String(), nil
 }
 
 func (s *SuiteController) WaitUntil(cond wait.ConditionFunc, timeout time.Duration) error {

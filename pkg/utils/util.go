@@ -10,8 +10,15 @@ import (
 	"github.com/onsi/gomega"
 	"github.com/redhat-appstudio/application-service/pkg/devfile"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/klog/v2"
 )
+
+type FailedPipelineRunDetails struct {
+	FailedTaskRunName   string
+	PodName             string
+	FailedContainerName string
+}
 
 // CheckIfEnvironmentExists return true/false if the environment variable exists
 func CheckIfEnvironmentExists(env string) bool {
@@ -69,7 +76,6 @@ func GetQuayIOOrganization() string {
 	return GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
 }
 
-
 func GetDockerConfigJson() string {
 	return GetEnv(constants.DOCKER_CONFIG_JSON, "")
 }
@@ -90,4 +96,23 @@ func IsPrivateHostname(url string) bool {
 		}
 	}
 	return false
+}
+
+func GetFailedPipelineRunDetails(pipelineRun v1beta1.PipelineRun) *FailedPipelineRunDetails {
+	d := &FailedPipelineRunDetails{}
+	for trName, trs := range pipelineRun.Status.PipelineRunStatusFields.TaskRuns {
+		for _, c := range trs.Status.Conditions {
+			if c.Reason == "Failed" {
+				d.FailedTaskRunName = trName
+				d.PodName = trs.Status.PodName
+				for _, s := range trs.Status.TaskRunStatusFields.Steps {
+					if s.Terminated.Reason == "Error" {
+						d.FailedContainerName = s.ContainerName
+						return d
+					}
+				}
+			}
+		}
+	}
+	return d
 }
