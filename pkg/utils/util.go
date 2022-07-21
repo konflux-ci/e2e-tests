@@ -11,8 +11,15 @@ import (
 	"github.com/onsi/gomega"
 	"github.com/redhat-appstudio/application-service/pkg/devfile"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/klog/v2"
 )
+
+type FailedPipelineRunDetails struct {
+	FailedTaskRunName   string
+	PodName             string
+	FailedContainerName string
+}
 
 // CheckIfEnvironmentExists return true/false if the environment variable exists
 func CheckIfEnvironmentExists(env string) bool {
@@ -98,4 +105,23 @@ func GetOpenshiftToken() (token string, err error) {
 		return "", fmt.Errorf("Error obtainig oc token %s", err.Error())
 	}
 	return strings.TrimSuffix(string(tokenBytes), "\n"), nil
+}
+
+func GetFailedPipelineRunDetails(pipelineRun v1beta1.PipelineRun) *FailedPipelineRunDetails {
+	d := &FailedPipelineRunDetails{}
+	for trName, trs := range pipelineRun.Status.PipelineRunStatusFields.TaskRuns {
+		for _, c := range trs.Status.Conditions {
+			if c.Reason == "Failed" {
+				d.FailedTaskRunName = trName
+				d.PodName = trs.Status.PodName
+				for _, s := range trs.Status.TaskRunStatusFields.Steps {
+					if s.Terminated.Reason == "Error" {
+						d.FailedContainerName = s.ContainerName
+						return d
+					}
+				}
+			}
+		}
+	}
+	return d
 }

@@ -14,7 +14,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
-          args: --timeout=3m
+          args: --timeout=5m
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
         with:

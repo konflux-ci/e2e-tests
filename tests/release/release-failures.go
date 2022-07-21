@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	missingPipelineName    = "missing-release-pipeline"
-	missingReleaseStrategy = "missing-release-strategy"
+	missingPipelineName    string = "missing-release-pipeline"
+	missingReleaseStrategy string = "missing-release-strategy"
 )
 
 var _ = framework.ReleaseSuiteDescribe("test-release-service-failures", func() {
