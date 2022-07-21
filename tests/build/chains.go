@@ -17,7 +17,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 	defer g.GinkgoRecover()
 
 	// Set this to true to skip contract tests
-	var skipContract bool = false
+	var skipContract bool = true
 	var skipContractMsg string = "Temporarily disabling until the EC task definition is updated"
 
 	// Initialize the tests controllers
@@ -106,6 +106,9 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 			g.GinkgoWriter.Println("Cosign verify pass with .att and .sig ImageStreamTags found")
 		})
 		g.It("verify image attestation", func() {
+			if skipContract {
+				g.Skip(skipContractMsg)
+			}
 			generator := tekton.CosignVerify{
 				PipelineRunName: "cosign-verify-attestation",
 				Image:           imageWithDigest,
@@ -117,6 +120,9 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 			Expect(waitErr).NotTo(HaveOccurred())
 		})
 		g.It("cosign verify", func() {
+			if skipContract {
+				g.Skip(skipContractMsg)
+			}
 			generator := tekton.CosignVerify{
 				PipelineRunName: "cosign-verify",
 				Image:           imageWithDigest,
