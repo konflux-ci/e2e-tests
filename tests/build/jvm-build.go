@@ -14,7 +14,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -99,16 +98,6 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", func() {
 		if err != nil {
 			klog.Infof("error deleting task git-clone", err.Error())
 		}
-		trList, err := f.TektonController.ListAllTaskRuns(appStudioE2EApplicationsNamespace)
-		if err != nil {
-			klog.Infof("got error fetching TR list: %s", err.Error())
-		}
-		for _, tr := range trList.Items {
-			err := f.TektonController.DeleteTaskRun(tr.Name, tr.Namespace)
-			if err != nil {
-				klog.Infof("got error deleting TR %s: %s", tr.Name, err.Error())
-			}
-		}
 	})
 
 	BeforeAll(func() {
@@ -120,7 +109,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", func() {
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", appStudioE2EApplicationsNamespace, err)
 
 		timeout = time.Minute * 10
-		interval = time.Minute * 1
+		interval = time.Second * 10
 
 		decodingScheme := runtime.NewScheme()
 		utilruntime.Must(v1beta1.AddToScheme(decodingScheme))
@@ -228,12 +217,6 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", func() {
 					klog.Infof("pipeline run %s not done", pr.Name)
 					return false
 				}
-				prLogs, err := f.TektonController.GetPipelineRunLogs(pr.Name, pr.Namespace)
-				if err != nil {
-					klog.Infof("only partial logs at best for pipeline run %s: err: %s logs: %s", pr.Name, err.Error(), prLogs)
-				} else {
-					klog.Infof("pipeline run logs for %s: %s", pr.Name, prLogs)
-				}
 				if !pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
 					// just because the condition succeeded is not set does not mean it won't be soon
 					prBytes, err := json.MarshalIndent(pr, "", "  ")
@@ -247,103 +230,103 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", func() {
 				return true
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the pipeline run to complete")
 		})
+		// Blocked by https://issues.redhat.com/browse/PLNSRVCE-519
+		// It("that artifactbuilds and dependencybuilds are generated", func() {
+		// 	Eventually(func() bool {
+		// 		abList, err := f.JvmbuildserviceController.ListArtifactBuilds(appStudioE2EApplicationsNamespace)
+		// 		if err != nil {
+		// 			klog.Infof("error listing artifactbuilds: %s", err.Error())
+		// 			return false
+		// 		}
+		// 		gotABs := false
+		// 		if len(abList.Items) > 0 {
+		// 			gotABs = true
+		// 		}
+		// 		dbList, err := f.JvmbuildserviceController.ListDependencyBuilds(appStudioE2EApplicationsNamespace)
+		// 		if err != nil {
+		// 			klog.Infof("error listing dependencybuilds: %s", err.Error())
+		// 			return false
+		// 		}
+		// 		gotDBs := false
+		// 		if len(dbList.Items) > 0 {
+		// 			gotDBs = true
+		// 		}
+		// 		if gotABs && gotDBs {
+		// 			return true
+		// 		}
+		// 		return false
+		// 	}, timeout, interval).Should(BeTrue(), "timed out when waiting for the generation of artifactbuilds and dependencybuilds")
+		// })
 
-		It("that artifactbuilds and dependencybuilds are generated", func() {
-			Eventually(func() bool {
-				abList, err := f.JvmbuildserviceController.ListArtifactBuilds(appStudioE2EApplicationsNamespace)
-				if err != nil {
-					klog.Infof("error listing artifactbuilds: %s", err.Error())
-					return false
-				}
-				gotABs := false
-				if len(abList.Items) > 0 {
-					gotABs = true
-				}
-				dbList, err := f.JvmbuildserviceController.ListDependencyBuilds(appStudioE2EApplicationsNamespace)
-				if err != nil {
-					klog.Infof("error listing dependencybuilds: %s", err.Error())
-					return false
-				}
-				gotDBs := false
-				if len(dbList.Items) > 0 {
-					gotDBs = true
-				}
-				if gotABs && gotDBs {
-					return true
-				}
-				return false
-			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the generation of artifactbuilds and dependencybuilds")
-		})
+		// It("that pipelinerun generates task runs related to artifactbuilds and dependencybuilds", func() {
+		// 	Eventually(func() bool {
+		// 		// as the values of the jvm build service labels are volatile, we'll just fetch all of them
+		// 		// and validate label keys
+		// 		taskRuns, err := f.TektonController.ListAllTaskRuns(appStudioE2EApplicationsNamespace)
+		// 		if err != nil {
+		// 			klog.Infof("list on label taskruns returned error: %s", err.Error())
+		// 			return false
+		// 		}
+		// 		if len(taskRuns.Items) == 0 {
+		// 			klog.Infof("list 0 length")
+		// 			return false
+		// 		}
+		// 		foundGenericLabel := false
+		// 		foundABRLabel := false
+		// 		foundDBLabel := false
+		// 		for _, taskRun := range taskRuns.Items {
+		// 			klog.Infof("taskrun %s has label map of len %d", taskRun.Name, len(taskRun.Labels))
+		// 			for k := range taskRun.Labels {
+		// 				klog.Infof("taskrun %s has label %s", taskRun.Name, k)
+		// 				if k == "jvmbuildservice.io/taskrun" {
+		// 					foundGenericLabel = true
+		// 				}
+		// 				if k == "jvmbuildservice.io/abr-id" {
+		// 					foundABRLabel = true
+		// 				}
+		// 				if k == "jvmbuildservice.io/dependencybuild-id" {
+		// 					foundDBLabel = true
+		// 				}
+		// 				if foundGenericLabel && foundABRLabel && foundDBLabel {
+		// 					return true
+		// 				}
+		// 			}
+		// 		}
 
-		It("that pipelinerun generates task runs related to artifactbuilds and dependencybuilds", func() {
-			Eventually(func() bool {
-				// as the values of the jvm build service labels are volatile, we'll just fetch all of them
-				// and validate label keys
-				taskRuns, err := f.TektonController.ListAllTaskRuns(appStudioE2EApplicationsNamespace)
-				if err != nil {
-					klog.Infof("list on label taskruns returned error: %s", err.Error())
-					return false
-				}
-				if len(taskRuns.Items) == 0 {
-					klog.Infof("list 0 length")
-					return false
-				}
-				foundGenericLabel := false
-				foundABRLabel := false
-				foundDBLabel := false
-				for _, taskRun := range taskRuns.Items {
-					klog.Infof("taskrun %s has label map of len %d", taskRun.Name, len(taskRun.Labels))
-					for k := range taskRun.Labels {
-						klog.Infof("taskrun %s has label %s", taskRun.Name, k)
-						if k == "jvmbuildservice.io/taskrun" {
-							foundGenericLabel = true
-						}
-						if k == "jvmbuildservice.io/abr-id" {
-							foundABRLabel = true
-						}
-						if k == "jvmbuildservice.io/dependencybuild-id" {
-							foundDBLabel = true
-						}
-						if foundGenericLabel && foundABRLabel && foundDBLabel {
-							return true
-						}
-					}
-				}
-
-				return false
-			}, timeout, interval).Should(BeTrue(), "timed out waiting for artifactbuild/dependencybuild tekton objexts")
-		})
-		It("that some artifactbuilds and dependencybuilds complete", func() {
-			Eventually(func() bool {
-				abList, err := f.JvmbuildserviceController.ListArtifactBuilds(appStudioE2EApplicationsNamespace)
-				if err != nil {
-					klog.Infof("error listing artifactbuilds: %s", err.Error())
-					return false
-				}
-				abComplete := false
-				for _, ab := range abList.Items {
-					if ab.Status.State == v1alpha1.ArtifactBuildStateComplete {
-						abComplete = true
-						break
-					}
-				}
-				dbList, err := f.JvmbuildserviceController.ListDependencyBuilds(appStudioE2EApplicationsNamespace)
-				if err != nil {
-					klog.Infof("error listing dependencybuilds: %s", err.Error())
-					return false
-				}
-				dbComplete := false
-				for _, db := range dbList.Items {
-					if db.Status.State == v1alpha1.DependencyBuildStateComplete {
-						dbComplete = true
-						break
-					}
-				}
-				if abComplete && dbComplete {
-					return true
-				}
-				return false
-			}, 2*timeout, interval).Should(BeTrue(), "timed out waiting for some artifactbuilds/dependencybuilds to complete")
-		})
+		// 		return false
+		// 	}, timeout, interval).Should(BeTrue(), "timed out waiting for artifactbuild/dependencybuild tekton objexts")
+		// })
+		// It("that some artifactbuilds and dependencybuilds complete", func() {
+		// 	Eventually(func() bool {
+		// 		abList, err := f.JvmbuildserviceController.ListArtifactBuilds(appStudioE2EApplicationsNamespace)
+		// 		if err != nil {
+		// 			klog.Infof("error listing artifactbuilds: %s", err.Error())
+		// 			return false
+		// 		}
+		// 		abComplete := false
+		// 		for _, ab := range abList.Items {
+		// 			if ab.Status.State == v1alpha1.ArtifactBuildStateComplete {
+		// 				abComplete = true
+		// 				break
+		// 			}
+		// 		}
+		// 		dbList, err := f.JvmbuildserviceController.ListDependencyBuilds(appStudioE2EApplicationsNamespace)
+		// 		if err != nil {
+		// 			klog.Infof("error listing dependencybuilds: %s", err.Error())
+		// 			return false
+		// 		}
+		// 		dbComplete := false
+		// 		for _, db := range dbList.Items {
+		// 			if db.Status.State == v1alpha1.DependencyBuildStateComplete {
+		// 				dbComplete = true
+		// 				break
+		// 			}
+		// 		}
+		// 		if abComplete && dbComplete {
+		// 			return true
+		// 		}
+		// 		return false
+		// 	}, 2*timeout, interval).Should(BeTrue(), "timed out waiting for some artifactbuilds/dependencybuilds to complete")
+		// })
 	})
 })
