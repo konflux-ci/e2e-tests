@@ -22,36 +22,42 @@ import (
 var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 	defer GinkgoRecover()
 
-	// Initialize the tests controllers
-	framework, err := framework.NewFramework()
-	Expect(err).NotTo(HaveOccurred())
+	var fwk *framework.Framework
+
+	BeforeAll(func() {
+		// Initialize the tests controllers
+		var err error
+		fwk, err = framework.NewFramework()
+		Expect(err).NotTo(HaveOccurred())
+	})
 
 	Context("infrastructure is running", func() {
 		It("verify the chains controller is running", func() {
-			err := framework.CommonController.WaitForPodSelector(framework.CommonController.IsPodRunning, constants.TEKTON_CHAINS_NS, "app", "tekton-chains-controller", 60, 100)
+			err := fwk.CommonController.WaitForPodSelector(fwk.CommonController.IsPodRunning, constants.TEKTON_CHAINS_NS, "app", "tekton-chains-controller", 60, 100)
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("verify the correct secrets have been created", func() {
-			_, err := framework.CommonController.GetSecret(constants.TEKTON_CHAINS_NS, "chains-ca-cert")
+			_, err := fwk.CommonController.GetSecret(constants.TEKTON_CHAINS_NS, "chains-ca-cert")
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("verify the correct roles are created", func() {
-			_, csaErr := framework.CommonController.GetRole("chains-secret-admin", constants.TEKTON_CHAINS_NS)
+			_, csaErr := fwk.CommonController.GetRole("chains-secret-admin", constants.TEKTON_CHAINS_NS)
 			Expect(csaErr).NotTo(HaveOccurred())
-			_, srErr := framework.CommonController.GetRole("secret-reader", "openshift-ingress-operator")
+			_, srErr := fwk.CommonController.GetRole("secret-reader", "openshift-ingress-operator")
 			Expect(srErr).NotTo(HaveOccurred())
 		})
 		It("verify the correct rolebindings are created", func() {
-			_, csaErr := framework.CommonController.GetRoleBinding("chains-secret-admin", constants.TEKTON_CHAINS_NS)
+			_, csaErr := fwk.CommonController.GetRoleBinding("chains-secret-admin", constants.TEKTON_CHAINS_NS)
 			Expect(csaErr).NotTo(HaveOccurred())
-			_, csrErr := framework.CommonController.GetRoleBinding("chains-secret-reader", "openshift-ingress-operator")
+			_, csrErr := fwk.CommonController.GetRoleBinding("chains-secret-reader", "openshift-ingress-operator")
 			Expect(csrErr).NotTo(HaveOccurred())
 		})
 		It("verify the correct service account is created", func() {
-			_, err := framework.CommonController.GetServiceAccount("chains-secrets-admin", constants.TEKTON_CHAINS_NS)
+			_, err := fwk.CommonController.GetServiceAccount("chains-secrets-admin", constants.TEKTON_CHAINS_NS)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
+
 	Context("test creating and signing an image and task", func() {
 		// Make the TaskRun name and namespace predictable. For convenience, the name of the
 		// TaskRun that builds an image, is the same as the repository where the image is
@@ -59,42 +65,46 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 		namespace := "tekton-chains"
 		buildPipelineRunName := fmt.Sprintf("buildah-demo-%s", util.GenerateRandomString(10))
 		image := fmt.Sprintf("image-registry.openshift-image-registry.svc:5000/%s/%s", namespace, buildPipelineRunName)
+		var imageWithDigest string
 
 		pipelineRunTimeout := 360
 		attestationTimeout := time.Duration(60) * time.Second
-		kubeController := tekton.KubeController{
-			Commonctrl: *framework.CommonController,
-			Tektonctrl: *framework.TektonController,
-			Namespace:  constants.TEKTON_CHAINS_NS,
-		}
 
-		// the default policy source
-		rev := "main"
-		policySource := ecp.GitPolicySource{
-			Repository: "https://github.com/hacbs-contract/ec-policies.git",
-			Revision:   &rev,
-		}
+		var kubeController tekton.KubeController
 
-		// if there is a ConfigMap e2e-tests/ec-config with keys `revision` and
-		// `repository` values from those will replace the default policy source
-		// this gives us a way to set the tests to use a different policy if we
-		// break the tests in the default policy source
-		if config, err := framework.CommonController.K8sClient.KubeInterface().CoreV1().ConfigMaps("e2e-tests").Get(context.TODO(), "ec-config", v1.GetOptions{}); err != nil {
-			if v, ok := config.Data["revision"]; ok {
-				policySource.Revision = &v
-			}
-			if v, ok := config.Data["repository"]; ok {
-				policySource.Repository = v
-			}
-		}
-
-		var imageWithDigest string
+		var policySource ecp.GitPolicySource
 
 		BeforeAll(func() {
+			kubeController = tekton.KubeController{
+				Commonctrl: *fwk.CommonController,
+				Tektonctrl: *fwk.TektonController,
+				Namespace:  constants.TEKTON_CHAINS_NS,
+			}
+
+			// the default policy source
+			rev := "main"
+			policySource = ecp.GitPolicySource{
+				Repository: "https://github.com/hacbs-contract/ec-policies.git",
+				Revision:   &rev,
+			}
+
+			// if there is a ConfigMap e2e-tests/ec-config with keys `revision` and
+			// `repository` values from those will replace the default policy source
+			// this gives us a way to set the tests to use a different policy if we
+			// break the tests in the default policy source
+			if config, err := fwk.CommonController.K8sClient.KubeInterface().CoreV1().ConfigMaps("e2e-tests").Get(context.TODO(), "ec-config", v1.GetOptions{}); err != nil {
+				if v, ok := config.Data["revision"]; ok {
+					policySource.Revision = &v
+				}
+				if v, ok := config.Data["repository"]; ok {
+					policySource.Repository = v
+				}
+			}
+
 			// At a bare minimum, each spec within this context relies on the existence of
 			// an image that has been signed by Tekton Chains. Trigger a demo task to fulfill
 			// this purpose.
-			pr, err := kubeController.RunPipeline(tekton.BuildahDemo{Image: image, Bundle: framework.TektonController.Bundles.BuildTemplatesBundle}, pipelineRunTimeout)
+			pr, err := kubeController.RunPipeline(tekton.BuildahDemo{Image: image, Bundle: fwk.TektonController.Bundles.BuildTemplatesBundle}, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			// Verify that the build task was created as expected.
 			Expect(pr.ObjectMeta.Name).To(Equal(buildPipelineRunName))
@@ -120,7 +130,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 		})
 
 		It("creates signature and attestation", func() {
-			err = kubeController.AwaitAttestationAndSignature(imageWithDigest, attestationTimeout)
+			err := kubeController.AwaitAttestationAndSignature(imageWithDigest, attestationTimeout)
 			Expect(err).NotTo(
 				HaveOccurred(),
 				"Could not find .att or .sig ImageStreamTags within the %s timeout. "+
@@ -160,7 +170,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 					RekorHost:       rekorHost,
 					SslCertDir:      "/var/run/secrets/kubernetes.io/serviceaccount",
 					StrictPolicy:    "1",
-					Bundle:          framework.TektonController.Bundles.HACBSTemplatesBundle,
+					Bundle:          fwk.TektonController.Bundles.HACBSTemplatesBundle,
 				}
 
 				// Since specs could update the config policy, make sure it has a consistent
@@ -202,7 +212,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract")
 				Expect(err).NotTo(HaveOccurred())
-				printTaskRunStatus(tr, namespace, *framework.CommonController)
+				printTaskRunStatus(tr, namespace, *fwk.CommonController)
 				GinkgoWriter.Printf("Make sure TaskRun of PipelineRun %s suceeded\n", pr.Name)
 				Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
 				GinkgoWriter.Printf("Make sure EC results for PipelineRun %s are passing\n", pr.Name)
@@ -222,7 +232,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract")
 				Expect(err).NotTo(HaveOccurred())
-				printTaskRunStatus(tr, namespace, *framework.CommonController)
+				printTaskRunStatus(tr, namespace, *fwk.CommonController)
 				GinkgoWriter.Printf("Make sure TaskRun %q has not suceeded\n", pr.Name)
 				Expect(tekton.DidTaskSucceed(tr)).To(BeFalse())
 			})
