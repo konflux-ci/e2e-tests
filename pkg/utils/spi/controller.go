@@ -114,25 +114,36 @@ func (s *SuiteController) GetSPIAccessToken(name, namespace string) (*spi.SPIAcc
 // Inject manually access tokens using spi API
 func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string, oauthCredentials string, secretType v1.SecretType) string {
 	var spiAccessTokenBinding *v1beta1.SPIAccessTokenBinding
-	var accessTokenSecret = util.GenerateRandomString(10)
+	var secretName = util.GenerateRandomString(10)
 
 	// Get the token for the current openshift user
 	bearerToken, err := utils.GetOpenshiftToken()
 	Expect(err).NotTo(HaveOccurred())
 
-	spiAccessTokenBindingName, err := s.CreateSPIAccessTokenBinding(SPIAccessTokenBindingPrefixName, namespace, repoUrl, accessTokenSecret, secretType)
+	spiAccessTokenBinding, err = s.CreateSPIAccessTokenBinding(SPIAccessTokenBindingPrefixName, namespace, repoUrl, secretName, secretType)
 	Expect(err).NotTo(HaveOccurred())
 
 	Eventually(func() bool {
 		// application info should be stored even after deleting the application in application variable
-		spiAccessTokenBinding, err = s.GetSPIAccessTokenBinding(spiAccessTokenBindingName.Name, namespace)
+		spiAccessTokenBinding, err = s.GetSPIAccessTokenBinding(spiAccessTokenBinding.Name, namespace)
 
 		if err != nil {
 			return false
 		}
 
-		return spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected || (spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData && spiAccessTokenBinding.Status.OAuthUrl != "")
+		return spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected || spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData
 	}, 2*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to AwaitingTokenData/Injected")
+
+	Eventually(func() bool {
+		// application info should be stored even after deleting the application in application variable
+		spiAccessTokenBinding, err = s.GetSPIAccessTokenBinding(spiAccessTokenBinding.Name, namespace)
+
+		if err != nil {
+			return false
+		}
+
+		return spiAccessTokenBinding.Status.OAuthUrl != ""
+	}, 2*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI oauth url not set. Please check if spi oauth-config configmap contain all necessary providers for tests.")
 
 	if spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData {
 		// If the phase is AwaitingTokenData then manually inject the git token
@@ -167,11 +178,11 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 		// Check to see if the token was successfully injected
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
-			spiAccessTokenBinding, err = s.GetSPIAccessTokenBinding(spiAccessTokenBindingName.Name, namespace)
+			spiAccessTokenBinding, err = s.GetSPIAccessTokenBinding(spiAccessTokenBinding.Name, namespace)
 			return err == nil && spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to Injected")
 	}
-	return accessTokenSecret
+	return secretName
 }
 
 // Remove all tokens from a given repository. Usefull when create a lot of resources and want to remove all of them
