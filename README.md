@@ -63,3 +63,7 @@ Running this configuration, you'll be asked for github token and then e2e-demos 
 If you want to run/debug different suite, change `-ginkgo.focus` parameter in `.vscode/launch.json`.
 # Load tests 
 [Refer this](https://github.com/redhat-appstudio/e2e-tests/blob/main/docs/LoadTests.md)
+
+
+# Updates
+Checked and validated Check-Correct-Naming for the release service related E2E tests to be correct
