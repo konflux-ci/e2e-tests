@@ -11,6 +11,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/gosuri/uiprogress v0.0.1
 	github.com/gosuri/uitable v0.0.4
+	github.com/hacbs-contract/enterprise-contract-controller v0.0.0-20220608144538-7d47a3f5da49
 	github.com/onsi/ginkgo/v2 v2.1.4
 	github.com/onsi/gomega v1.19.0
 	github.com/openshift/api v0.0.0-20220525145417-ee5b62754c68
@@ -19,6 +20,7 @@ require (
 	github.com/redhat-appstudio/application-service v0.0.0-20220509201208-86571e38f52e
 	github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2cad2
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20220714212008-d1b637f56c4d
+	github.com/redhat-appstudio/managed-gitops/appstudio-shared v0.0.0-20220623041404-010a781bb3fb
 	github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001
 	github.com/redhat-appstudio/release-service v0.0.0-20220620143459-53c2f4bcc510
 	github.com/redhat-appstudio/service-provider-integration-operator v0.5.0
@@ -36,9 +38,8 @@ require (
 	k8s.io/klog/v2 v2.60.1
 	knative.dev/pkg v0.0.0-20220329144915-0a1ec2e0d46c
 	sigs.k8s.io/controller-runtime v0.12.1
+	sigs.k8s.io/yaml v1.3.0
 )
-
-require github.com/redhat-appstudio/managed-gitops/appstudio-shared v0.0.0-20220623041404-010a781bb3fb
 
 require (
 	contrib.go.opencensus.io/exporter/ocagent v0.7.1-0.20200907061046-05415f1de66d // indirect
@@ -222,7 +223,6 @@ require (
 	sigs.k8s.io/kustomize/api v0.11.4 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.13.6 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
 replace github.com/redhat-appstudio/managed-gitops/backend-shared => github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20220506042230-3a79f373a001
