@@ -224,35 +224,6 @@ func (s *SuiteController) DeleteTaskRun(name, ns string) error {
 	return s.PipelineClient().TektonV1beta1().TaskRuns(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
-func (s *SuiteController) GetTaskRunLogs(name, ns string) (string, error) {
-	podLog := ""
-	podClient := s.K8sClient.KubeInterface().CoreV1().Pods(ns)
-	podList, err := podClient.List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return "", err
-	}
-	for _, pod := range podList.Items {
-		if !strings.HasPrefix(pod.Name, name) {
-			continue
-		}
-		for _, c := range pod.Spec.InitContainers {
-			var err error
-			podLog, err = s.fetchContainerLog(pod.Name, c.Name, ns)
-			if err != nil {
-				return podLog, err
-			}
-		}
-		for _, c := range pod.Spec.Containers {
-			var err error
-			podLog, err = s.fetchContainerLog(pod.Name, c.Name, ns)
-			if err != nil {
-				return podLog, err
-			}
-		}
-	}
-	return podLog, nil
-}
-
 func (k KubeController) WatchPipelineRun(pipelineRunName string, taskTimeout int) error {
 	g.GinkgoWriter.Printf("Waiting for pipeline %q to finish\n", pipelineRunName)
 	return k.Commonctrl.WaitUntil(k.Tektonctrl.CheckPipelineRunFinished(pipelineRunName, k.Namespace), time.Duration(taskTimeout)*time.Second)
