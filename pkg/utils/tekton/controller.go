@@ -3,9 +3,12 @@ package tekton
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"regexp"
 	"strings"
 	"time"
 
+	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -31,16 +34,8 @@ type KubeController struct {
 }
 
 type Bundles struct {
-	BuildTemplatesBundle            string
-	HACBSTemplatesBundle            string
-	HACBSCoreServiceTemplatesBundle string
-}
-
-// quay.io/redhat-appstudio/hacbs-core-service-templates-bundle is available only with the `latest` tag
-func coreServiceBundleName(defaultBuildBundle string) string {
-	parts := strings.SplitN(strings.Replace(defaultBuildBundle, "/build-", "/hacbs-core-service-", 1), ":", 2)
-
-	return parts[0] + ":latest"
+	BuildTemplatesBundle string
+	HACBSTemplatesBundle string
 }
 
 func newBundles(client kubernetes.Interface) (*Bundles, error) {
@@ -51,10 +46,11 @@ func newBundles(client kubernetes.Interface) (*Bundles, error) {
 
 	bundle := buildPipelineDefaults.Data["default_build_bundle"]
 
+	r := regexp.MustCompile(`([/:])(?:build|base)-`)
+
 	return &Bundles{
-		BuildTemplatesBundle:            bundle,
-		HACBSTemplatesBundle:            strings.Replace(bundle, "/build-", "/hacbs-", 1),
-		HACBSCoreServiceTemplatesBundle: coreServiceBundleName(bundle),
+		BuildTemplatesBundle: bundle,
+		HACBSTemplatesBundle: r.ReplaceAllString(bundle, "${1}hacbs-"),
 	}, nil
 }
 
@@ -105,6 +101,55 @@ func (s *SuiteController) GetPipelineRun(pipelineRunName, namespace string) (*v1
 	return s.PipelineClient().TektonV1beta1().PipelineRuns(namespace).Get(context.TODO(), pipelineRunName, metav1.GetOptions{})
 }
 
+func (s *SuiteController) fetchContainerLog(podName, containerName, namespace string) (string, error) {
+	podClient := s.K8sClient.KubeInterface().CoreV1().Pods(namespace)
+	req := podClient.GetLogs(podName, &corev1.PodLogOptions{Container: containerName})
+	readCloser, err := req.Stream(context.TODO())
+	log := ""
+	if err != nil {
+		return log, err
+	}
+	defer readCloser.Close()
+	b, err := ioutil.ReadAll(readCloser)
+	if err != nil {
+		return log, err
+	}
+	return string(b[:]), nil
+}
+
+func (s *SuiteController) GetPipelineRunLogs(pipelineRunName, namespace string) (string, error) {
+	podClient := s.K8sClient.KubeInterface().CoreV1().Pods(namespace)
+	podList, err := podClient.List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return "", err
+	}
+	podLog := ""
+	for _, pod := range podList.Items {
+		if !strings.HasPrefix(pod.Name, pipelineRunName) {
+			continue
+		}
+		for _, c := range pod.Spec.InitContainers {
+			var err error
+			var cLog string
+			cLog, err = s.fetchContainerLog(pod.Name, c.Name, namespace)
+			podLog = podLog + fmt.Sprintf("\ninit container %s: \n", c.Name) + cLog
+			if err != nil {
+				return podLog, err
+			}
+		}
+		for _, c := range pod.Spec.Containers {
+			var err error
+			var cLog string
+			cLog, err = s.fetchContainerLog(pod.Name, c.Name, namespace)
+			podLog = podLog + fmt.Sprintf("\ncontainer %s: \n", c.Name) + cLog
+			if err != nil {
+				return podLog, err
+			}
+		}
+	}
+	return podLog, nil
+}
+
 func (s *SuiteController) CheckPipelineRunStarted(pipelineRunName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
 		pr, err := s.GetPipelineRun(pipelineRunName, namespace)
@@ -136,9 +181,26 @@ func (s *SuiteController) CreateTask(task *v1beta1.Task, ns string) (*v1beta1.Ta
 	return s.PipelineClient().TektonV1beta1().Tasks(ns).Create(context.TODO(), task, metav1.CreateOptions{})
 }
 
-// Create a tekton taskRun and return the taskRun or error
+func (s *SuiteController) DeleteTask(name, ns string) error {
+	return s.PipelineClient().TektonV1beta1().Tasks(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
+}
+
+// Create a tekton pipelineRun and return the pipelineRun or error
 func (s *SuiteController) CreatePipelineRun(pipelineRun *v1beta1.PipelineRun, ns string) (*v1beta1.PipelineRun, error) {
 	return s.PipelineClient().TektonV1beta1().PipelineRuns(ns).Create(context.TODO(), pipelineRun, metav1.CreateOptions{})
+}
+
+func (s *SuiteController) DeletePipelineRun(name, ns string) error {
+	return s.PipelineClient().TektonV1beta1().PipelineRuns(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
+}
+
+// Create a tekton pipeline and return the pipeline or error
+func (s *SuiteController) CreatePipeline(pipeline *v1beta1.Pipeline, ns string) (*v1beta1.Pipeline, error) {
+	return s.PipelineClient().TektonV1beta1().Pipelines(ns).Create(context.TODO(), pipeline, metav1.CreateOptions{})
+}
+
+func (s *SuiteController) DeletePipeline(name, ns string) error {
+	return s.PipelineClient().TektonV1beta1().Pipelines(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
 func (s *SuiteController) ListTaskRuns(ns string, labelKey string, labelValue string, selectorLimit int64) (*v1beta1.TaskRunList, error) {
@@ -148,6 +210,43 @@ func (s *SuiteController) ListTaskRuns(ns string, labelKey string, labelValue st
 		Limit:         selectorLimit,
 	}
 	return s.PipelineClient().TektonV1beta1().TaskRuns(ns).List(context.TODO(), listOptions)
+}
+
+func (s *SuiteController) ListAllTaskRuns(ns string) (*v1beta1.TaskRunList, error) {
+	return s.PipelineClient().TektonV1beta1().TaskRuns(ns).List(context.TODO(), metav1.ListOptions{})
+}
+
+func (s *SuiteController) DeleteTaskRun(name, ns string) error {
+	return s.PipelineClient().TektonV1beta1().TaskRuns(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
+}
+
+func (s *SuiteController) GetTaskRunLogs(name, ns string) (string, error) {
+	podLog := ""
+	podClient := s.K8sClient.KubeInterface().CoreV1().Pods(ns)
+	podList, err := podClient.List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return "", err
+	}
+	for _, pod := range podList.Items {
+		if !strings.HasPrefix(pod.Name, name) {
+			continue
+		}
+		for _, c := range pod.Spec.InitContainers {
+			var err error
+			podLog, err = s.fetchContainerLog(pod.Name, c.Name, ns)
+			if err != nil {
+				return podLog, err
+			}
+		}
+		for _, c := range pod.Spec.Containers {
+			var err error
+			podLog, err = s.fetchContainerLog(pod.Name, c.Name, ns)
+			if err != nil {
+				return podLog, err
+			}
+		}
+	}
+	return podLog, nil
 }
 
 func (k KubeController) WatchPipelineRun(pipelineRunName string, taskTimeout int) error {
@@ -353,32 +452,43 @@ func (k KubeController) GetPublicKey(name, namespace string) (publicKey []byte, 
 	return
 }
 
-func (k KubeController) CreateOrUpdateConfigPolicy(namespace string, policy string) (err error) {
-	api := k.Tektonctrl.K8sClient.KubeInterface().CoreV1().ConfigMaps(namespace)
-	ctx := context.TODO()
-
-	configPolicyName := "ec-policy"
-	expectedConfigMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{Name: configPolicyName},
-		Data:       map[string]string{"policy.json": policy},
+func (k KubeController) CreateOrUpdatePolicyConfiguration(namespace string, policy ecp.EnterpriseContractPolicySpec) error {
+	ecPolicy := ecp.EnterpriseContractPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ec-policy",
+			Namespace: namespace,
+		},
 	}
 
-	cm, err := api.Get(ctx, configPolicyName, metav1.GetOptions{})
+	// fetch to see if it exists
+	err := k.Tektonctrl.K8sClient.KubeRest().Get(context.TODO(), crclient.ObjectKey{
+		Namespace: namespace,
+		Name:      "ec-policy",
+	}, &ecPolicy)
+
+	exists := true
 	if err != nil {
-		if !errors.IsNotFound(err) {
-			return
+		if errors.IsNotFound(err) {
+			exists = false
+		} else {
+			return err
 		}
-		if _, err = api.Create(ctx, expectedConfigMap, metav1.CreateOptions{}); err != nil {
-			return
+	}
+
+	ecPolicy.Spec = policy
+	if !exists {
+		// it doesn't, so create
+		if err := k.Tektonctrl.K8sClient.KubeRest().Create(context.TODO(), &ecPolicy); err != nil {
+			return err
 		}
 	} else {
-		if cm.Data["policy.json"] != policy {
-			if _, err = api.Update(ctx, expectedConfigMap, metav1.UpdateOptions{}); err != nil {
-				return
-			}
+		// it does, so update
+		if err := k.Tektonctrl.K8sClient.KubeRest().Update(context.TODO(), &ecPolicy); err != nil {
+			return err
 		}
 	}
-	return
+
+	return nil
 }
 
 func (k KubeController) GetRekorHost() (rekorHost string, err error) {
