@@ -1,6 +1,7 @@
 package build
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,7 +17,10 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -45,6 +49,27 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 	// got panics in DeferCleanup when I tried to do multi param invocations, so following the pattern we used in openshift/origin
 	AfterAll(func() {
 		if CurrentSpecReport().Failed() {
+			// get jvm-build-service logs
+			jvmPodList, jerr := f.CommonController.K8sClient.KubeInterface().CoreV1().Pods("jvm-build-service").List(context.TODO(), metav1.ListOptions{})
+			if jerr != nil {
+				klog.Infof("error listing jvm-build-service pods: %s", jerr.Error())
+			}
+			klog.Infof("found %d pods in jvm-build-service namespace", len(jvmPodList.Items))
+			for _, pod := range jvmPodList.Items {
+				podLog := fmt.Sprintf("jvm-build-service namespace pod %s:\n", pod.Name)
+				containers := []corev1.Container{}
+				containers = append(containers, pod.Spec.InitContainers...)
+				containers = append(containers, pod.Spec.Containers...)
+				for _, c := range containers {
+					cLog, cerr := f.CommonController.GetContainerLogs(pod.Name, c.Name, pod.Namespace)
+					if cerr != nil {
+						klog.Infof("error getting logs for pod/container %s/%s: %s", pod.Name, c.Name, cerr.Error())
+						continue
+					}
+					podLog = fmt.Sprintf("%s\n%s\n", podLog, cLog)
+				}
+				klog.Info(podLog)
+			}
 			// let's make sure and print the pr that starts the analysis first
 			logs, err := f.TektonController.GetPipelineRunLogs(prGeneratedName, appStudioE2EApplicationsNamespace)
 			if err != nil {
