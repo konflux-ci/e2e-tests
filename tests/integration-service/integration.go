@@ -33,7 +33,7 @@ const (
 	gitSourceURL         = "https://github.com/redhat-appstudio-qe/" + gitSourceRepoName
 )
 
-var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests", Label("integration"), func() {
+var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests", Label("integration-service"), func() {
 
 	defer GinkgoRecover()
 
