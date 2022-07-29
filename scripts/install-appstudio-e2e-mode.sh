@@ -51,12 +51,6 @@ function addQERemoteForkAndInstallAppstudio() {
     cd "$WORKSPACE"
 }
 
-# Add a custom remote for infra-deployments repository.
-function initializeSPIVault() {
-   # The env var NAMESPACE is exported by openshift-ci and breaks the vault-init script. It has to be set to an empty string.
-   curl https://raw.githubusercontent.com/redhat-appstudio/e2e-tests/main/scripts/spi-e2e-setup.sh | NAMESPACE="" bash -s
-}
-
 # Secrets used by pipelines to push component containers to quay.io
 function createApplicationServiceSecrets() {
     echo -e "[INFO] Creating application-service related secrets in $SHARED_SECRET_NAMESPACE namespace"
@@ -74,7 +68,6 @@ do
             cloneInfraDeployments
             addQERemoteForkAndInstallAppstudio
             createApplicationServiceSecrets
-            initializeSPIVault
             ;;
         *)
             ;;
