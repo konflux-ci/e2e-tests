@@ -115,12 +115,12 @@ func (h *SuiteController) DeleteHasComponent(name string, namespace string) erro
 
 // CreateComponent create an has component from a given name, namespace, application, devfile and a container image
 func (h *SuiteController) CreateComponent(applicationName, componentName, namespace, gitSourceURL, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
-	// var containerImage string
-	// if outputContainerImage != "" {
-	// 	containerImage = outputContainerImage
-	// } else {
-	// 	containerImage = containerImageSource
-	// }
+	var containerImage string
+	if outputContainerImage != "" {
+		containerImage = outputContainerImage
+	} else {
+		containerImage = containerImageSource
+	}
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      componentName,
@@ -132,13 +132,12 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 			Source: appservice.ComponentSource{
 				ComponentSourceUnion: appservice.ComponentSourceUnion{
 					GitSource: &appservice.GitSource{
-						URL:           gitSourceURL,
-						DockerfileURL: containerImageSource,
+						URL: gitSourceURL,
 					},
 				},
 			},
 			Secret:         secret,
-			ContainerImage: outputContainerImage,
+			ContainerImage: containerImage,
 			Replicas:       1,
 			TargetPort:     8081,
 			Route:          "",

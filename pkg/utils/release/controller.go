@@ -140,13 +140,7 @@ func (s *SuiteController) CreateReleaseStrategy(name, namespace, pipelineName, b
 
 // Kasem TODO
 // CreateComponent create an has component from a given name, namespace, application, devfile and a container image
-func (h *SuiteController) CreateComponentKas(applicationName, componentName, namespace, gitSourceURL, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
-	// var containerImage string
-	// if outputContainerImage != "" {
-	// 	containerImage = outputContainerImage
-	// } else {
-	// 	containerImage = containerImageSource
-	// }
+func (h *SuiteController) CreateComponentWןithDockerSource(applicationName, componentName, namespace, gitSourceURL, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      componentName,
