@@ -38,7 +38,7 @@ const (
 
 var AppStudioE2EApplicationsNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "appstudio-e2e-demo")
 
-var _ = framework.E2ESuiteDescribe(func() {
+var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	defer GinkgoRecover()
 	var outputContainerImage = ""
 
@@ -171,12 +171,7 @@ var _ = framework.E2ESuiteDescribe(func() {
 				})
 
 				// Deploy the component using gitops and check for the health
-				It(fmt.Sprintf("deploy %s component %s using gitops", componentTest.Type, componentTest.Name), func() {
-					gitOpsRepository := utils.ObtainGitOpsRepositoryUrl(application.Status.Devfile)
-					gitOpsRepositoryPath := fmt.Sprintf("components/%s/base", componentTest.Name)
-
-					_, err := fw.GitOpsController.CreateGitOpsCR(GitOpsDeploymentName, AppStudioE2EApplicationsNamespace, gitOpsRepository, gitOpsRepositoryPath, GitOpsRepositoryRevision)
-					Expect(err).NotTo(HaveOccurred())
+				It(fmt.Sprintf("deploy component %s using gitops", componentTest.Name), func() {
 
 					Eventually(func() bool {
 						deployment, err := fw.CommonController.GetAppDeploymentByName(componentTest.Name, AppStudioE2EApplicationsNamespace)
