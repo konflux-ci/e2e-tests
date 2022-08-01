@@ -11,6 +11,7 @@ import (
 	managedgitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend/apis/managed-gitops/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type SuiteController struct {
@@ -55,6 +56,12 @@ func (h *SuiteController) DeleteGitOpsCR(name string, namespace string) error {
 		},
 	}
 	return h.KubeRest().Delete(context.TODO(), gitOpsDeployment)
+}
+
+// Remove all components from a given repository. Usefull when create a lot of resources and want to remove all of them
+func (h *SuiteController) DeleteAllGitOpDeploymentsCRsInASpecificNamespace(namespace string) error {
+
+	return h.KubeRest().DeleteAllOf(context.TODO(), &managedgitopsv1alpha1.GitOpsDeployment{}, client.InNamespace(namespace))
 }
 
 // GetGitOpsDeployedImage return the image used by the given component deployment
