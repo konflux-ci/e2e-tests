@@ -59,6 +59,7 @@ var _ = framework.E2ESuiteDescribe(func() {
 	AfterAll(func() {
 		Expect(fw.HasController.DeleteAllComponentsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
 		Expect(fw.HasController.DeleteAllApplicationsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
+		Expect(fw.GitOpsController.DeleteAllGitOpDeploymentsCRsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
 	})
 
 	for _, appTest := range configTest.Tests {
@@ -135,11 +136,6 @@ var _ = framework.E2ESuiteDescribe(func() {
 
 				// Deploy the component using gitops and check for the health
 				It(fmt.Sprintf("deploy component %s using gitops", componentTest.Name), func() {
-					gitOpsRepository := utils.ObtainGitOpsRepositoryUrl(application.Status.Devfile)
-					gitOpsRepositoryPath := fmt.Sprintf("components/%s/base", componentTest.Name)
-
-					_, err := fw.GitOpsController.CreateGitOpsCR(GitOpsDeploymentName, AppStudioE2EApplicationsNamespace, gitOpsRepository, gitOpsRepositoryPath, GitOpsRepositoryRevision)
-					Expect(err).NotTo(HaveOccurred())
 
 					Eventually(func() bool {
 						deployment, err := fw.CommonController.GetAppDeploymentByName(componentTest.Name, AppStudioE2EApplicationsNamespace)
