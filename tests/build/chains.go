@@ -62,7 +62,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec"), fu
 		// Make the TaskRun name and namespace predictable. For convenience, the name of the
 		// TaskRun that builds an image, is the same as the repository where the image is
 		// pushed to.
-		namespace := "tekton-chains"
+		namespace := constants.TEKTON_CHAINS_NS
 		buildPipelineRunName := fmt.Sprintf("buildah-demo-%s", util.GenerateRandomString(10))
 		image := fmt.Sprintf("image-registry.openshift-image-registry.svc:5000/%s/%s", namespace, buildPipelineRunName)
 		var imageWithDigest string
