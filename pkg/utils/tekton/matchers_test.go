@@ -26,3 +26,23 @@ func TestTaskRunResultMatcherJSONValue(t *testing.T) {
 	assert.True(t, match)
 	assert.Nil(t, err)
 }
+
+func TestMatchTaskRunResultWithJSONPathValue(t *testing.T) {
+	match, err := MatchTaskRunResultWithJSONPathValue("a", "{$.c[0].d}", "[2]").Match(v1beta1.TaskRunResult{
+		Name:  "a",
+		Value: `{"b":1, "c": [{"d": 2}]}`,
+	})
+
+	assert.True(t, match)
+	assert.Nil(t, err)
+}
+
+func TestMatchTaskRunResultWithJSONPathValueMultiple(t *testing.T) {
+	match, err := MatchTaskRunResultWithJSONPathValue("a", "{$.c[*].d}", "[2, 1]").Match(v1beta1.TaskRunResult{
+		Name:  "a",
+		Value: `{"b":1, "c": [{"d": 2}, {"d": 1}]}`,
+	})
+
+	assert.True(t, match)
+	assert.Nil(t, err)
+}
