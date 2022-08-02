@@ -91,9 +91,6 @@ func (Local) PrepareCluster() error {
 		return fmt.Errorf("error when configuring SPI: %v", err)
 	}
 
-	if err := RunAppstudioHealthChecks(); err != nil {
-		return fmt.Errorf("error when running appstudio healthchecks: %v", err)
-	}
 	return nil
 }
 
@@ -125,10 +122,6 @@ func (ci CI) TestE2E() error {
 
 	if err := ConfigureSPI(); err != nil {
 		return fmt.Errorf("error when configuring SPI: %v", err)
-	}
-
-	if err := RunAppstudioHealthChecks(); err != nil {
-		return fmt.Errorf("error when running appstudio healthchecks: %v", err)
 	}
 
 	if err := RunE2ETests(); err != nil {
@@ -220,10 +213,6 @@ func BootstrapCluster() error {
 
 func ConfigureSPI() error {
 	return sh.Run("./scripts/spi-e2e-setup.sh")
-}
-
-func RunAppstudioHealthChecks() error {
-	return sh.Run("./scripts/run-appstudio-healthchecks.sh")
 }
 
 func (CI) isPRPairingRequired() bool {
