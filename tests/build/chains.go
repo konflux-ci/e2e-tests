@@ -169,7 +169,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec"), fu
 					PipelineName:    "pipeline-run-that-does-not-exist",
 					RekorHost:       rekorHost,
 					SslCertDir:      "/var/run/secrets/kubernetes.io/serviceaccount",
-					StrictPolicy:    "1",
+					StrictPolicy:    true,
 					Bundle:          fwk.TektonController.Bundles.HACBSTemplatesBundle,
 				}
 
@@ -222,7 +222,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec"), fu
 			})
 
 			It("does not pass when tests are not satisfied on non-strict mode", func() {
-				generator.StrictPolicy = "0"
+				generator.StrictPolicy = false
 				pr, err := kubeController.RunPipeline(generator, pipelineRunTimeout)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeController.WatchPipelineRun(pr.Name, pipelineRunTimeout)).To(Succeed())
