@@ -373,17 +373,6 @@ func findCosignResultsForImage(imageRef string, client crclient.Client) (*Cosign
 	imageNameInfo := strings.Split(imageInfo[2], "@")
 	imageStreamName, imageDigest := imageNameInfo[0], imageNameInfo[1]
 
-	tags := &unstructured.UnstructuredList{}
-	tags.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "image.openshift.io",
-		Kind:    "ImageStreamTag",
-		Version: "v1",
-	})
-
-	if err := client.List(context.TODO(), tags, &crclient.ListOptions{Namespace: namespace}); err != nil {
-		return nil, err
-	}
-
 	// Cosign creates tags for attestation and signature based on the image digest. Compute
 	// the expected prefix for later usage: sha256:abcd... -> sha256-abcd...
 	// Also, this prefix is really the prefix of the ImageStreamTag resource which follows the
@@ -392,12 +381,26 @@ func findCosignResultsForImage(imageRef string, client crclient.Client) (*Cosign
 
 	results := CosignResult{}
 
-	if signatureTag := findTagWithName(tags, cosignImagePrefix+".sig"); signatureTag != nil {
+	if signatureTag, err := findTagWithName(client, namespace, cosignImagePrefix+".sig"); err == nil {
 		results.signatureImageRef = signatureTag.GetName()
 	}
 
-	if attestationTag := findTagWithName(tags, cosignImagePrefix+".att"); attestationTag != nil {
-		results.attestationImageRef = attestationTag.GetName()
+	if attestationTag, err := findTagWithName(client, namespace, cosignImagePrefix+".att"); err == nil {
+		// we want two layers, one for TaskRun and one for PipelineRun
+		// attestations, i.e. that the Chains controller reconcilled both and
+		// uploaded them as layers
+		img, ok := attestationTag.Object["image"]
+		if ok {
+			img, ok = img.(map[string]interface{})
+		}
+		var layers []interface{}
+		if ok {
+			layers, ok = img.(map[string]interface{})["dockerImageLayers"].([]interface{})
+		}
+		// this needs to change if/when Chains controller does not produce two layers
+		if ok && len(layers) == 2 {
+			results.attestationImageRef = attestationTag.GetName()
+		}
 	}
 
 	// we found both
@@ -411,14 +414,20 @@ func findCosignResultsForImage(imageRef string, client crclient.Client) (*Cosign
 	}, results.Missing(cosignImagePrefix))
 }
 
-func findTagWithName(tags *unstructured.UnstructuredList, name string) *unstructured.Unstructured {
-	for _, tag := range tags.Items {
-		if tag.GetName() == name {
-			return &tag
-		}
+func findTagWithName(client crclient.Client, namespace, name string) (*unstructured.Unstructured, error) {
+	tag := unstructured.Unstructured{}
+	tag.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "image.openshift.io",
+		Kind:    "ImageStreamTag",
+		Version: "v1",
+	})
+	tag.SetName(name)
+	tag.SetNamespace(namespace)
+	if err := client.Get(context.TODO(), crclient.ObjectKeyFromObject(&tag), &tag); err != nil {
+		return nil, err
 	}
 
-	return nil
+	return &tag, nil
 }
 
 func (k KubeController) CreateOrUpdateSigningSecret(publicKey []byte, name, namespace string) (err error) {
