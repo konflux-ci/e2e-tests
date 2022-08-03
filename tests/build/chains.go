@@ -234,7 +234,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec"), fu
 				Expect(err).NotTo(HaveOccurred())
 				printTaskRunStatus(tr, namespace, *fwk.CommonController)
 				GinkgoWriter.Printf("Make sure TaskRun %q has not suceeded\n", pr.Name)
-				Expect(tekton.DidTaskSucceed(tr)).To(BeFalse())
+				Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
 			})
 
 			It("fails when tests are not satisfied on strict mode", func() {
