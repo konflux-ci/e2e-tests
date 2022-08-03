@@ -58,7 +58,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		_, err = f.HasController.CreateHasApplication(applicationName, appStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
-		DeferCleanup(f.HasController.DeleteHasApplication, applicationName, appStudioE2EApplicationsNamespace)
+		DeferCleanup(f.HasController.DeleteHasApplication, applicationName, appStudioE2EApplicationsNamespace, false)
 
 	})
 

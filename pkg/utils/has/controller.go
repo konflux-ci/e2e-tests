@@ -11,12 +11,12 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -65,15 +65,21 @@ func (h *SuiteController) CreateHasApplication(name, namespace string) (*appserv
 	return &application, nil
 }
 
-// DeleteHasApplication delete an has application from a given name and namespace
-func (h *SuiteController) DeleteHasApplication(name, namespace string) error {
+// DeleteHasApplication delete a HAS Application resource from the namespace.
+// Optionally, it can avoid returning an error if the resource did not exist:
+// - specify 'false', if it's likely the Application has already been deleted (for example, because the Namespace was deleted)
+func (h *SuiteController) DeleteHasApplication(name, namespace string, reportErrorOnNotFound bool) error {
 	application := appservice.Application{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
 	}
-	return h.KubeRest().Delete(context.TODO(), &application)
+	err := h.KubeRest().Delete(context.TODO(), &application)
+	if err != nil && !reportErrorOnNotFound && k8sErrors.IsNotFound(err) {
+		err = nil
+	}
+	return err
 }
 
 // GetHasComponent returns the Appstudio Component Custom Resource object
@@ -341,12 +347,12 @@ func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentN
 
 // Remove all components from a given repository. Usefull when create a lot of resources and want to remove all of them
 func (h *SuiteController) DeleteAllComponentsInASpecificNamespace(namespace string) error {
-	return h.KubeRest().DeleteAllOf(context.TODO(), &appservice.Component{}, client.InNamespace(namespace))
+	return h.KubeRest().DeleteAllOf(context.TODO(), &appservice.Component{}, rclient.InNamespace(namespace))
 }
 
 // Remove all applications from a given repository. Usefull when create a lot of resources and want to remove all of them
 func (h *SuiteController) DeleteAllApplicationsInASpecificNamespace(namespace string) error {
-	return h.KubeRest().DeleteAllOf(context.TODO(), &appservice.Application{}, client.InNamespace(namespace))
+	return h.KubeRest().DeleteAllOf(context.TODO(), &appservice.Application{}, rclient.InNamespace(namespace))
 }
 
 func (h *SuiteController) GetHasComponentConditionStatusMessages(name, namespace string) (messages []string, err error) {

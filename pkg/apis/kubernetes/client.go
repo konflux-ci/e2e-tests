@@ -17,6 +17,7 @@ import (
 	pipelineclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,9 +25,10 @@ import (
 )
 
 type K8sClient struct {
-	kubeClient     *kubernetes.Clientset
-	crClient       crclient.Client
-	pipelineClient pipelineclientset.Interface
+	kubeClient            *kubernetes.Clientset
+	crClient              crclient.Client
+	pipelineClient        pipelineclientset.Interface
+	dynamicClient         dynamic.Interface
 	jvmbuildserviceClient jvmbuildserviceclientset.Interface
 }
 
@@ -67,6 +69,12 @@ func (c *K8sClient) JvmbuildserviceClient() jvmbuildserviceclientset.Interface {
 	return c.jvmbuildserviceClient
 }
 
+// Returns a DynamicClient interface.
+// Note: other client interfaces are likely preferred, except in rare cases.
+func (c *K8sClient) DynamicClient() dynamic.Interface {
+	return c.dynamicClient
+}
+
 // NewHASClient creates kubernetes client wrapper
 func NewK8SClient() (*K8sClient, error) {
 	cfg, err := config.GetConfig()
@@ -75,6 +83,11 @@ func NewK8SClient() (*K8sClient, error) {
 	}
 
 	client, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	dynamicClient, err := dynamic.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -97,9 +110,10 @@ func NewK8SClient() (*K8sClient, error) {
 	}
 
 	return &K8sClient{
-		kubeClient:     client,
-		crClient:       crClient,
-		pipelineClient: pipelineClient,
+		kubeClient:            client,
+		crClient:              crClient,
+		pipelineClient:        pipelineClient,
 		jvmbuildserviceClient: jvmbildserviceClient,
+		dynamicClient:         dynamicClient,
 	}, nil
 }
