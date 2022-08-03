@@ -72,7 +72,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 		err := framework.HasController.DeleteHasComponent(componentName, AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = framework.HasController.DeleteHasApplication(applicationName, AppStudioE2EApplicationsNamespace)
+		err = framework.HasController.DeleteHasApplication(applicationName, AppStudioE2EApplicationsNamespace, false)
 		Expect(err).NotTo(HaveOccurred())
 
 		err = framework.SPIController.DeleteSPIAccessTokenBinding(SPIAccessTokenBindingName, AppStudioE2EApplicationsNamespace)
@@ -84,6 +84,8 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 
 			return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
+
+		Expect(framework.CommonController.DeleteNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
 	})
 
 	It("Create Red Hat AppStudio Application", func() {

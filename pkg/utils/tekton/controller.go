@@ -216,6 +216,10 @@ func (s *SuiteController) ListAllTaskRuns(ns string) (*v1beta1.TaskRunList, erro
 	return s.PipelineClient().TektonV1beta1().TaskRuns(ns).List(context.TODO(), metav1.ListOptions{})
 }
 
+func (s *SuiteController) ListAllPipelineRuns(ns string) (*v1beta1.PipelineRunList, error) {
+	return s.PipelineClient().TektonV1beta1().PipelineRuns(ns).List(context.TODO(), metav1.ListOptions{})
+}
+
 func (s *SuiteController) DeleteTaskRun(name, ns string) error {
 	return s.PipelineClient().TektonV1beta1().TaskRuns(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
@@ -301,6 +305,40 @@ func (k KubeController) RunPipeline(g PipelineRunGenerator, taskTimeout int) (*v
 	}
 
 	return k.createAndWait(pr, taskTimeout)
+}
+
+// DeleteAllPipelineRunsInASpecificNamespace deletes all PipelineRuns in a given namespace (removing the finalizers field, first)
+func (s *SuiteController) DeleteAllPipelineRunsInASpecificNamespace(ns string) error {
+
+	pipelineRunList, err := s.ListAllPipelineRuns(ns)
+	if err != nil || pipelineRunList == nil {
+		return fmt.Errorf("unable to delete all PipelineRuns in '%s': %v", ns, err)
+	}
+
+	for _, pipelineRun := range pipelineRunList.Items {
+		pipelineRunCR := v1beta1.PipelineRun{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      pipelineRun.Name,
+				Namespace: ns,
+			},
+		}
+		if err := s.K8sClient.KubeRest().Get(context.TODO(), crclient.ObjectKeyFromObject(&pipelineRunCR), &pipelineRunCR); err != nil {
+			return fmt.Errorf("unable to retrieve PipelineRun '%s' in '%s': %v", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
+		}
+
+		// Remove the finalizer, so that it can be deleted.
+		pipelineRunCR.Finalizers = []string{}
+		if err := s.K8sClient.KubeRest().Update(context.TODO(), &pipelineRunCR); err != nil {
+			return fmt.Errorf("unable to remove finalizers from PipelineRun '%s' in '%s': %v", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
+		}
+
+		if err := s.K8sClient.KubeRest().Delete(context.TODO(), &pipelineRunCR); err != nil {
+			return fmt.Errorf("unable to delete PipelineRun '%s' in '%s': %v", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
+		}
+
+	}
+
+	return nil
 }
 
 func createPVC(pvcs v1.PersistentVolumeClaimInterface, pvcName string) error {
