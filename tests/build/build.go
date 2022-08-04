@@ -626,20 +626,19 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 			_, err = f.CommonController.CreateTestNamespace(testNamespace)
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
-			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
-
 			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			DeferCleanup(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace, testNamespace)
 
 		})
 
-		JustBeforeEach(func() {
+		AfterAll(func() {
+			f.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)
+			f.CommonController.DeleteNamespace(testNamespace)
+		})
 
+		JustBeforeEach(func() {
 			componentName = fmt.Sprintf("build-suite-test-component-image-url-%s", util.GenerateRandomString(4))
 			timeout = time.Second * 10
-
-			DeferCleanup(f.HasController.DeleteHasComponent, componentName, testNamespace)
 		})
 		It("should fail for ContainerImage field set to a protected repository (without an image tag)", func() {
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected", utils.GetQuayIOOrganization())
