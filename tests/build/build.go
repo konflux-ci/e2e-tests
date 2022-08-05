@@ -632,8 +632,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 		})
 
 		AfterAll(func() {
-			f.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)
-			f.CommonController.DeleteNamespace(testNamespace)
+			Expect(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+			Expect(f.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
 		})
 
 		JustBeforeEach(func() {
