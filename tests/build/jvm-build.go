@@ -29,7 +29,7 @@ const (
 	testProjectDevfileUrl = "https://raw.githubusercontent.com/psturc/shaded-java-app/main/devfile.yaml"
 )
 
-var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jvm-build"), func() {
+var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Pending, Label("jvm-build"), func() {
 	defer GinkgoRecover()
 
 	var testNamespace, prGeneratedName, applicationName, componentName, outputContainerImage string
