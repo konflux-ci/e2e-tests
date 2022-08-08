@@ -27,8 +27,8 @@ func BuildSuiteDescribe(text string, args interface{}, body func()) bool {
 	return Describe("[build-service-suite "+text+"]", args, Ordered, body)
 }
 
-func JVMBuildSuiteDescribe(text string, args interface{}, body func()) bool {
-	return Describe("[jvm-build-service-suite "+text+"]", args, Ordered, body)
+func JVMBuildSuiteDescribe(text string, args ...interface{}) bool {
+	return Describe("[jvm-build-service-suite "+text+"]", args, Ordered)
 }
 
 func ClusterRegistrationSuiteDescribe(text string, args interface{}, body func()) bool {
