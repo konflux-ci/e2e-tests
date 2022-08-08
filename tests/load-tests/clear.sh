@@ -7,6 +7,4 @@ do
     -H "Accept: application/vnd.github.v3+json" \
     -H "Authorization: token $GITHUB_TOKEN" \
     https://api.github.com/repos/app-studio-test/${REPO}
-
-    echo $REPO
 done
