@@ -60,6 +60,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 			_, err = f.CommonController.CreateTestNamespace(testNamespace)
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
+			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
 
 			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
@@ -71,7 +72,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			// Create a component with Git Source URL being defined
 			_, err := f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
-			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
+
+			DeferCleanup(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace, testNamespace)
 		})
 
 		It("triggers a PipelineRun", func() {
@@ -270,7 +272,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			_, err = f.HasController.GetHasApplication(applicationName, testNamespace)
 			// In case the app with the same name exist in the selected namespace, delete it first
 			if err == nil {
-				Expect(f.HasController.DeleteHasApplication(applicationName, testNamespace)).To(Succeed())
+				Expect(f.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
 				Eventually(func() bool {
 					_, err := f.HasController.GetHasApplication(applicationName, testNamespace)
 					return errors.IsNotFound(err)
@@ -292,7 +294,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 					}
 					_, err = f.CommonController.CreateConfigMap(hacbsBundleConfigMap, testNamespace)
 					Expect(err).ToNot(HaveOccurred())
-					DeferCleanup(f.CommonController.DeleteConfigMap, constants.BuildPipelinesConfigMapName, testNamespace)
+					DeferCleanup(f.CommonController.DeleteConfigMap, constants.BuildPipelinesConfigMapName, testNamespace, false)
 				} else {
 					Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, testNamespace, err))
 				}
@@ -332,8 +334,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 				// Clean up only Application CR (Component and Pipelines are included) in case we are targeting specific namespace
 				// Used e.g. in build-defintions e2e tests, where we are targeting build-templates-e2e namespace
 				if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) != "" {
-					DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace)
+					DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace, false)
 				} else {
+					Expect(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 					Expect(f.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
 				}
 			} else {
@@ -341,9 +344,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 				// an issue reported here: https://issues.redhat.com/browse/PLNSRVCE-484
 				// TODO: delete the whole 'else' block after the issue is resolved
 				if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) != "" {
-					DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace)
+					DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace, false)
 				}
 			}
+
 		})
 
 		for i, gitUrl := range componentUrls {
@@ -444,10 +448,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 			_, err = f.CommonController.CreateTestNamespace(testNamespace)
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
+			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
 
 			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace)
+			DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace, false)
 
 			componentName = fmt.Sprintf("build-suite-test-component-image-source-%s", util.GenerateRandomString(4))
 			outputContainerImage := ""
@@ -456,8 +461,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			// Create a component with containerImageSource being defined
 			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, "", containerImageSource, outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
-
-			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
+			DeferCleanup(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace, testNamespace)
 		})
 
 		It("should not trigger a PipelineRun", func() {
@@ -482,6 +486,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 			_, err = f.CommonController.CreateTestNamespace(testNamespace)
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
+			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
 
 			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
@@ -497,12 +502,17 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			outputContainerImage := fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
+			DeferCleanup(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace, testNamespace)
 
 			timeout = time.Second * 120
 			interval = time.Second * 1
 
-			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
 		})
+
+		// AfterAll(func() {
+		// 	f.CommonController.DeleteNamespace(testNamespace)
+		// })
+
 		It("should be referenced in a PipelineRun", Label("build-bundle-overriding"), func() {
 			Eventually(func() bool {
 				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
@@ -530,6 +540,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 			_, err = f.CommonController.CreateTestNamespace(testNamespace)
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
+			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
 
 			_, err := f.CommonController.GetSecret(testNamespace, constants.RegistryAuthSecretName)
 			if err != nil {
@@ -543,7 +554,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace)
+			DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace, false)
 
 			timeout = time.Minute * 2
 			interval = time.Second * 1
@@ -561,8 +572,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
+			DeferCleanup(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace, testNamespace)
 
-			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
 		})
 
 		It("should override the shared secret", func() {
@@ -615,19 +626,19 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 			_, err = f.CommonController.CreateTestNamespace(testNamespace)
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
-
 			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
+		})
+
+		AfterAll(func() {
+			Expect(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+			Expect(f.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
 		})
 
 		JustBeforeEach(func() {
-
 			componentName = fmt.Sprintf("build-suite-test-component-image-url-%s", util.GenerateRandomString(4))
 			timeout = time.Second * 10
-
-			DeferCleanup(f.HasController.DeleteHasComponent, componentName, testNamespace)
 		})
 		It("should fail for ContainerImage field set to a protected repository (without an image tag)", func() {
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected", utils.GetQuayIOOrganization())

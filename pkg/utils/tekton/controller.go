@@ -3,7 +3,7 @@ package tekton
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"regexp"
 	"strings"
 	"time"
@@ -110,7 +110,7 @@ func (s *SuiteController) fetchContainerLog(podName, containerName, namespace st
 		return log, err
 	}
 	defer readCloser.Close()
-	b, err := ioutil.ReadAll(readCloser)
+	b, err := io.ReadAll(readCloser)
 	if err != nil {
 		return log, err
 	}
@@ -216,37 +216,12 @@ func (s *SuiteController) ListAllTaskRuns(ns string) (*v1beta1.TaskRunList, erro
 	return s.PipelineClient().TektonV1beta1().TaskRuns(ns).List(context.TODO(), metav1.ListOptions{})
 }
 
-func (s *SuiteController) DeleteTaskRun(name, ns string) error {
-	return s.PipelineClient().TektonV1beta1().TaskRuns(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
+func (s *SuiteController) ListAllPipelineRuns(ns string) (*v1beta1.PipelineRunList, error) {
+	return s.PipelineClient().TektonV1beta1().PipelineRuns(ns).List(context.TODO(), metav1.ListOptions{})
 }
 
-func (s *SuiteController) GetTaskRunLogs(name, ns string) (string, error) {
-	podLog := ""
-	podClient := s.K8sClient.KubeInterface().CoreV1().Pods(ns)
-	podList, err := podClient.List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return "", err
-	}
-	for _, pod := range podList.Items {
-		if !strings.HasPrefix(pod.Name, name) {
-			continue
-		}
-		for _, c := range pod.Spec.InitContainers {
-			var err error
-			podLog, err = s.fetchContainerLog(pod.Name, c.Name, ns)
-			if err != nil {
-				return podLog, err
-			}
-		}
-		for _, c := range pod.Spec.Containers {
-			var err error
-			podLog, err = s.fetchContainerLog(pod.Name, c.Name, ns)
-			if err != nil {
-				return podLog, err
-			}
-		}
-	}
-	return podLog, nil
+func (s *SuiteController) DeleteTaskRun(name, ns string) error {
+	return s.PipelineClient().TektonV1beta1().TaskRuns(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
 func (k KubeController) WatchPipelineRun(pipelineRunName string, taskTimeout int) error {
@@ -301,6 +276,40 @@ func (k KubeController) RunPipeline(g PipelineRunGenerator, taskTimeout int) (*v
 	}
 
 	return k.createAndWait(pr, taskTimeout)
+}
+
+// DeleteAllPipelineRunsInASpecificNamespace deletes all PipelineRuns in a given namespace (removing the finalizers field, first)
+func (s *SuiteController) DeleteAllPipelineRunsInASpecificNamespace(ns string) error {
+
+	pipelineRunList, err := s.ListAllPipelineRuns(ns)
+	if err != nil || pipelineRunList == nil {
+		return fmt.Errorf("unable to delete all PipelineRuns in '%s': %v", ns, err)
+	}
+
+	for _, pipelineRun := range pipelineRunList.Items {
+		pipelineRunCR := v1beta1.PipelineRun{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      pipelineRun.Name,
+				Namespace: ns,
+			},
+		}
+		if err := s.K8sClient.KubeRest().Get(context.TODO(), crclient.ObjectKeyFromObject(&pipelineRunCR), &pipelineRunCR); err != nil {
+			return fmt.Errorf("unable to retrieve PipelineRun '%s' in '%s': %v", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
+		}
+
+		// Remove the finalizer, so that it can be deleted.
+		pipelineRunCR.Finalizers = []string{}
+		if err := s.K8sClient.KubeRest().Update(context.TODO(), &pipelineRunCR); err != nil {
+			return fmt.Errorf("unable to remove finalizers from PipelineRun '%s' in '%s': %v", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
+		}
+
+		if err := s.K8sClient.KubeRest().Delete(context.TODO(), &pipelineRunCR); err != nil {
+			return fmt.Errorf("unable to delete PipelineRun '%s' in '%s': %v", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
+		}
+
+	}
+
+	return nil
 }
 
 func createPVC(pvcs v1.PersistentVolumeClaimInterface, pvcName string) error {
@@ -364,17 +373,6 @@ func findCosignResultsForImage(imageRef string, client crclient.Client) (*Cosign
 	imageNameInfo := strings.Split(imageInfo[2], "@")
 	imageStreamName, imageDigest := imageNameInfo[0], imageNameInfo[1]
 
-	tags := &unstructured.UnstructuredList{}
-	tags.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "image.openshift.io",
-		Kind:    "ImageStreamTag",
-		Version: "v1",
-	})
-
-	if err := client.List(context.TODO(), tags, &crclient.ListOptions{Namespace: namespace}); err != nil {
-		return nil, err
-	}
-
 	// Cosign creates tags for attestation and signature based on the image digest. Compute
 	// the expected prefix for later usage: sha256:abcd... -> sha256-abcd...
 	// Also, this prefix is really the prefix of the ImageStreamTag resource which follows the
@@ -383,12 +381,26 @@ func findCosignResultsForImage(imageRef string, client crclient.Client) (*Cosign
 
 	results := CosignResult{}
 
-	if signatureTag := findTagWithName(tags, cosignImagePrefix+".sig"); signatureTag != nil {
+	if signatureTag, err := findTagWithName(client, namespace, cosignImagePrefix+".sig"); err == nil {
 		results.signatureImageRef = signatureTag.GetName()
 	}
 
-	if attestationTag := findTagWithName(tags, cosignImagePrefix+".att"); attestationTag != nil {
-		results.attestationImageRef = attestationTag.GetName()
+	if attestationTag, err := findTagWithName(client, namespace, cosignImagePrefix+".att"); err == nil {
+		// we want two layers, one for TaskRun and one for PipelineRun
+		// attestations, i.e. that the Chains controller reconcilled both and
+		// uploaded them as layers
+		img, ok := attestationTag.Object["image"]
+		if ok {
+			img, ok = img.(map[string]interface{})
+		}
+		var layers []interface{}
+		if ok {
+			layers, ok = img.(map[string]interface{})["dockerImageLayers"].([]interface{})
+		}
+		// this needs to change if/when Chains controller does not produce two layers
+		if ok && len(layers) == 2 {
+			results.attestationImageRef = attestationTag.GetName()
+		}
 	}
 
 	// we found both
@@ -402,14 +414,20 @@ func findCosignResultsForImage(imageRef string, client crclient.Client) (*Cosign
 	}, results.Missing(cosignImagePrefix))
 }
 
-func findTagWithName(tags *unstructured.UnstructuredList, name string) *unstructured.Unstructured {
-	for _, tag := range tags.Items {
-		if tag.GetName() == name {
-			return &tag
-		}
+func findTagWithName(client crclient.Client, namespace, name string) (*unstructured.Unstructured, error) {
+	tag := unstructured.Unstructured{}
+	tag.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "image.openshift.io",
+		Kind:    "ImageStreamTag",
+		Version: "v1",
+	})
+	tag.SetName(name)
+	tag.SetNamespace(namespace)
+	if err := client.Get(context.TODO(), crclient.ObjectKeyFromObject(&tag), &tag); err != nil {
+		return nil, err
 	}
 
-	return nil
+	return &tag, nil
 }
 
 func (k KubeController) CreateOrUpdateSigningSecret(publicKey []byte, name, namespace string) (err error) {

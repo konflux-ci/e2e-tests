@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	kfake "k8s.io/client-go/kubernetes/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -47,7 +48,7 @@ func TestCosignResultMissingFormat(t *testing.T) {
 	}.Missing("prefix"))
 }
 
-func newTag(name string, hash string) unstructured.Unstructured {
+func newTag(name string, hash string, noLayers int) client.Object {
 	tag := unstructured.Unstructured{}
 	tag.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   "image.openshift.io",
@@ -56,6 +57,10 @@ func newTag(name string, hash string) unstructured.Unstructured {
 	})
 	tag.SetNamespace("test-namespace")
 	tag.SetName(name)
+	layers := make([]interface{}, noLayers)
+	tag.Object["image"] = map[string]interface{}{
+		"dockerImageLayers": layers,
+	}
 
 	if hash != "" {
 		if err := unstructured.SetNestedField(tag.Object, hash, "image", "metadata", "name"); err != nil {
@@ -63,45 +68,46 @@ func newTag(name string, hash string) unstructured.Unstructured {
 		}
 	}
 
-	return tag
+	return &tag
 }
 
 func TestFindingCosignResults(t *testing.T) {
 	cases := []struct {
 		Name          string
-		Tags          []unstructured.Unstructured
+		Tags          []client.Object
 		ExpectedError string
 		Result        *CosignResult
 	}{
-		{"happy day", []unstructured.Unstructured{
-			newTag("test-image:latest", "sha256:hash"),
-			newTag("test-image:sha256-hash.sig", ""),
-			newTag("test-image:sha256-hash.att", ""),
+		{"happy day", []client.Object{
+			newTag("test-image:latest", "sha256:hash", 1),
+			newTag("test-image:sha256-hash.sig", "", 1),
+			newTag("test-image:sha256-hash.att", "", 2),
 		}, "", &CosignResult{
 			signatureImageRef:   "test-image:sha256-hash.sig",
 			attestationImageRef: "test-image:sha256-hash.att",
 		}},
-		{"missing signature", []unstructured.Unstructured{
-			newTag("test-image:latest", "sha256:hash"),
-			newTag("test-image:sha256-hash.att", ""),
+		{"missing signature", []client.Object{
+			newTag("test-image:latest", "sha256:hash", 1),
+			newTag("test-image:sha256-hash.att", "", 2),
 		}, "ImageStreamTag.image.openshift.io \"test-image:sha256-hash.sig\" not found", nil},
-		{"missing attestation", []unstructured.Unstructured{
-			newTag("test-image:latest", "sha256:hash"),
-			newTag("test-image:sha256-hash.sig", ""),
+		{"missing attestation", []client.Object{
+			newTag("test-image:latest", "sha256:hash", 1),
+			newTag("test-image:sha256-hash.sig", "", 1),
 		}, "ImageStreamTag.image.openshift.io \"test-image:sha256-hash.att\" not found", nil},
-		{"missing signature and attestation", []unstructured.Unstructured{
-			newTag("test-image:latest", "sha256:hash"),
+		{"missing signature and attestation", []client.Object{
+			newTag("test-image:latest", "sha256:hash", 1),
 		}, "ImageStreamTag.image.openshift.io \"test-image:sha256-hash.sig and test-image:sha256-hash.att\" not found", nil},
-		{"everything missing", []unstructured.Unstructured{}, "ImageStreamTag.image.openshift.io \"test-image:sha256-hash.sig and test-image:sha256-hash.att\" not found", nil},
+		{"everything missing", []client.Object{}, "ImageStreamTag.image.openshift.io \"test-image:sha256-hash.sig and test-image:sha256-hash.att\" not found", nil},
+		{"missing layer in attestation", []client.Object{
+			newTag("test-image:latest", "sha256:hash", 1),
+			newTag("test-image:sha256-hash.sig", "", 1),
+			newTag("test-image:sha256-hash.att", "", 1),
+		}, "ImageStreamTag.image.openshift.io \"test-image:sha256-hash.att\" not found", nil},
 	}
 
 	for _, cse := range cases {
 		t.Run(cse.Name, func(t *testing.T) {
-			tags := unstructured.UnstructuredList{
-				Items: cse.Tags,
-			}
-
-			client := fake.NewClientBuilder().WithLists(&tags).Build()
+			client := fake.NewClientBuilder().WithObjects(cse.Tags...).Build()
 
 			result, err := findCosignResultsForImage("image-registry.openshift-image-registry.svc:5000/test-namespace/test-image@sha256-hash", client)
 

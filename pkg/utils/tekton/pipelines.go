@@ -2,6 +2,7 @@ package tekton
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -68,13 +69,21 @@ type VerifyEnterpriseContract struct {
 	PipelineName    string
 	RekorHost       string
 	SslCertDir      string
-	StrictPolicy    string
+	StrictPolicy    bool
 	Bundle          string
 }
 
 func (t VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
 	imageInfo := strings.Split(t.ImageRef, "/")
 	namespace := imageInfo[1]
+
+	// make sure that we have either "0" or "1" for the v1 task
+	strictZeroOrOneValue := "0"
+	if t.StrictPolicy {
+		strictZeroOrOneValue = "1"
+	}
+	// make sure that we have either `true` or `false` for the v2 task
+	strictBooleanValue := strconv.FormatBool(t.StrictPolicy)
 
 	return &v1beta1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
@@ -122,7 +131,30 @@ func (t VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
 					Name: "STRICT_POLICY",
 					Value: v1beta1.ArrayOrString{
 						Type:      v1beta1.ParamTypeString,
-						StringVal: t.StrictPolicy,
+						StringVal: strictZeroOrOneValue,
+					},
+				},
+				// needed for the v2 task
+				{
+					Name: "STRICT",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: strictBooleanValue,
+					},
+				},
+				{
+					Name: "IMAGES",
+					Value: v1beta1.ArrayOrString{
+						Type: v1beta1.ParamTypeString,
+						StringVal: `{
+							"application": "test",
+							"components": [
+							  {
+								"name": "component1",
+								"containerImage": "` + t.ImageRef + `"
+							  }
+							]
+						  }`,
 					},
 				},
 			},
