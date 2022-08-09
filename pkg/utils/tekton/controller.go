@@ -3,7 +3,7 @@ package tekton
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"regexp"
 	"strings"
 	"time"
@@ -110,7 +110,7 @@ func (s *SuiteController) fetchContainerLog(podName, containerName, namespace st
 		return log, err
 	}
 	defer readCloser.Close()
-	b, err := ioutil.ReadAll(readCloser)
+	b, err := io.ReadAll(readCloser)
 	if err != nil {
 		return log, err
 	}
