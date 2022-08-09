@@ -14,7 +14,7 @@ export ARTIFACTS_DIR=${ARTIFACT_DIR:-"/tmp/appstudio"}
 
 function executeE2ETests() {
     make build
-    "${WORKSPACE}"/bin/e2e-appstudio --ginkgo.junit-report="${ARTIFACTS_DIR}"/e2e-report.xml --ginkgo.progress --ginkgo.v --ginkgo.label-filter='!ec'
+    "${WORKSPACE}"/bin/e2e-appstudio --ginkgo.junit-report="${ARTIFACTS_DIR}"/e2e-report.xml --ginkgo.progress --ginkgo.v
 }
 
 # Initiate openshift ci users
