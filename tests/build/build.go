@@ -140,8 +140,30 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 				Expect(err).ShouldNot(HaveOccurred())
 				purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(component.Spec.ContainerImage)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(purl.ImageContents.Dependencies).ToNot(BeEmpty())
+
+				Expect(cyclonedx.BomFormat).To(Equal("CycloneDX"))
+				Expect(cyclonedx.SpecVersion).ToNot(BeEmpty())
+				Expect(cyclonedx.Version).ToNot(BeZero())
 				Expect(cyclonedx.Components).ToNot(BeEmpty())
+
+				numberOfLibraryComponents := 0
+				for _, component := range cyclonedx.Components {
+					Expect(component.Name).ToNot(BeEmpty())
+					Expect(component.Type).ToNot(BeEmpty())
+					Expect(component.Version).ToNot(BeEmpty())
+
+					if component.Type == "library" {
+						Expect(component.Purl).ToNot(BeEmpty())
+						numberOfLibraryComponents++
+					}
+				}
+
+				Expect(purl.ImageContents.Dependencies).ToNot(BeEmpty())
+				Expect(len(purl.ImageContents.Dependencies)).To(Equal(numberOfLibraryComponents))
+
+				for _, dependency := range purl.ImageContents.Dependencies {
+					Expect(dependency.Purl).ToNot(BeEmpty())
+				}
 			})
 		})
 		When("the component event listener is created", Label("webhook", "slow"), func() {
