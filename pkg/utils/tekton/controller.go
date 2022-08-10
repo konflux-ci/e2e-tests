@@ -287,24 +287,38 @@ func (s *SuiteController) DeleteAllPipelineRunsInASpecificNamespace(ns string) e
 	}
 
 	for _, pipelineRun := range pipelineRunList.Items {
-		pipelineRunCR := v1beta1.PipelineRun{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      pipelineRun.Name,
-				Namespace: ns,
-			},
-		}
-		if err := s.K8sClient.KubeRest().Get(context.TODO(), crclient.ObjectKeyFromObject(&pipelineRunCR), &pipelineRunCR); err != nil {
-			return fmt.Errorf("unable to retrieve PipelineRun '%s' in '%s': %v", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
-		}
+		err := wait.PollImmediate(time.Second, 30*time.Second, func() (done bool, err error) {
+			pipelineRunCR := v1beta1.PipelineRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      pipelineRun.Name,
+					Namespace: ns,
+				},
+			}
+			if err := s.K8sClient.KubeRest().Get(context.TODO(), crclient.ObjectKeyFromObject(&pipelineRunCR), &pipelineRunCR); err != nil {
+				if errors.IsNotFound(err) {
+					// PipelinerRun CR is already removed
+					return true, nil
+				}
+				g.GinkgoWriter.Printf("unable to retrieve PipelineRun '%s' in '%s': %v", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
+				return false, nil
 
-		// Remove the finalizer, so that it can be deleted.
-		pipelineRunCR.Finalizers = []string{}
-		if err := s.K8sClient.KubeRest().Update(context.TODO(), &pipelineRunCR); err != nil {
-			return fmt.Errorf("unable to remove finalizers from PipelineRun '%s' in '%s': %v", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
-		}
+			}
 
-		if err := s.K8sClient.KubeRest().Delete(context.TODO(), &pipelineRunCR); err != nil {
-			return fmt.Errorf("unable to delete PipelineRun '%s' in '%s': %v", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
+			// Remove the finalizer, so that it can be deleted.
+			pipelineRunCR.Finalizers = []string{}
+			if err := s.K8sClient.KubeRest().Update(context.TODO(), &pipelineRunCR); err != nil {
+				g.GinkgoWriter.Printf("unable to remove finalizers from PipelineRun '%s' in '%s': %v", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
+				return false, nil
+			}
+
+			if err := s.K8sClient.KubeRest().Delete(context.TODO(), &pipelineRunCR); err != nil {
+				g.GinkgoWriter.Printf("unable to delete PipelineRun '%s' in '%s': %v", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
+				return false, nil
+			}
+			return true, nil
+		})
+		if err != nil {
+			return fmt.Errorf("deletion of PipelineRun '%s' in '%s' timed out", pipelineRun.Name, ns)
 		}
 
 	}
