@@ -1,6 +1,6 @@
 # Red Hat AppStudio Load Test Scripts
 
-This Test Section Provides Performance Testing Scripts for Red Hat AppStudio 
+This Test Section Provides Load Testing Scripts for Red Hat AppStudio 
 
 ## Requirements 
 
@@ -9,7 +9,7 @@ This Test Section Provides Performance Testing Scripts for Red Hat AppStudio
 - Encode your docker config json to a base64 encoded string 
 
 ## Running the script
-1. Change your directory to `tests/load_tests` 
+1. Change your directory to `tests/load-tests` 
 2. Open `run.sh` and add your encoded docker config json:
 ```bash
   DOCKER_CONFIG_JSON=<PLEASE_ENTER_BASE64_ENCODED_CONFIG>
@@ -29,5 +29,5 @@ The Script works in Steps
 - Creating the Component will start the pipelines , if the `-w` flag is given it will wait for the pipelines to finish then print results 
 - Then after the tests are completed it will dump the results / stats , on error the stats will still get dumped along with the trace
 
-## How to contrubite 
+## How to contrubute 
 Just edit the file `cmd/loadTests.go` 

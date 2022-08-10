@@ -1,7 +1,7 @@
 # Red Hat AppStudio E2E Tests and Testing Framework
 
 Testing framework and E2E tests are written in [Go](https://go.dev/) using [Ginkgo](https://onsi.github.io/ginkgo/) and [Gomega](https://onsi.github.io/gomega/) frameworks to cover Red Hat AppStudio.
-It is recommended to install AppStudio in E2E mode, but the E2E suite can be also usable in [development and preview modes](https://github.com/redhat-appstudio/infra-deployments#development-modes-for-your-own-clusters).
+It is recommended to install AppStudio in E2E mode, but the E2E suite can be also usable in [development and preview modes](https://github.com/redhat-appstudio/infra-deployments#preview-mode-for-your-clusters).
 
 # Features
 
@@ -24,7 +24,6 @@ Requirements for installing AppStudio in E2E mode and running the E2E tests:
   * yq
   * jq
   * git
-  * ginkgo on Path (if you want to run the tests using scripts)
 * Tokens
   * Github Token with the following permissions
     * `repo`
@@ -105,7 +104,7 @@ The `e2e-appstudio` command is the root command that executes all test functiona
    ```bash
     `./bin/e2e-appstudio`
    ```
-   
+
 The instructions for every test suite can be found in the [tests folder](tests), e.g. [has Readme.md](tests/has/README.md). 
 You can also specify hich tests you want to run using [labels](docs/LabelsNaming.md) or [Ginkgo Focus](docs/DeveloperFocus.md).
 
@@ -115,7 +114,7 @@ Load tests for AppStudio are also in this repository. More information about loa
 
 # Running Red Hat AppStudio Tests in OpenShift CI
 
-Overviow for OpenShift CI and AppStudio E2E tests is in [OpenshiftCI.md](docs/OpenShiftCI.md). How to install E2E binary is in [Installation.md](docs/Installation.md).
+Overview for OpenShift CI and AppStudio E2E tests is in [OpenshiftCI.md](docs/OpenShiftCI.md). How to install E2E binary is in [Installation.md](docs/Installation.md).
 
 # Develop new tests
 

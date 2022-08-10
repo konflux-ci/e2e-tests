@@ -11,8 +11,8 @@ potentially could exists in the developer's fork of the e2e repository
 
 For example, if a developer with GH account `cooljohn` opens a PR (for application-service repo) from a branch `new-feature`, then the logic checks if there is a branch `new-feature` also in the `cooljohn/e2e-tests` fork and if exists will start to install the e2e framework from those branch
 
-Pairing PRs is handled automatically by running:
+Pairing PRs is handled automatically by running this command from a root directory of this repository:
 
 ```bash
-   $ROOT_DIR/make ci/test/e2e
+   make ci/test/e2e
 ```

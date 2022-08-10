@@ -4,7 +4,7 @@
 
 [Instructions for creating a Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token)
 
-Make sure to give the token the permissions listed in [Prerequisites](#prerequisites).
+Make sure to give the token the permissions listed in [Requirements](/README.md#requirements).
 
 Copy the resulting token (should look similar to `ghp_Iq...`) and save it off somewhere as you'll be using it for the GITHUB_TOKEN environment variable whenever you want to run the e2e suite(e.g `export GITHUB_TOKEN=ghp_Iq...`).
 
