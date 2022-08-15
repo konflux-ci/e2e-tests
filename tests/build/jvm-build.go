@@ -33,7 +33,6 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Pending, 
 
 	var appStudioE2EApplicationsNamespace, prGeneratedName string
 	var timeout, interval time.Duration
-	var userConfigMapName = "jvm-build-config"
 
 	var streamTektonYaml = func(url string) []byte {
 		resp, err := http.Get(url)
@@ -129,10 +128,6 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Pending, 
 		if err != nil {
 			klog.Infof("error deleting task git-clone", err.Error())
 		}
-		err = f.CommonController.DeleteConfigMap(userConfigMapName, appStudioE2EApplicationsNamespace, true)
-		if err != nil {
-			klog.Infof("error deleting user configmap", err.Error())
-		}
 	})
 
 	BeforeAll(func() {
@@ -150,19 +145,6 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Pending, 
 		utilruntime.Must(v1beta1.AddToScheme(decodingScheme))
 		decoderCodecFactory := serializer.NewCodecFactory(decodingScheme)
 		decoder := decoderCodecFactory.UniversalDecoder(v1beta1.SchemeGroupVersion)
-
-		userConfigMap := corev1.ConfigMap{
-			Data: map[string]string{
-				"enable-rebuilds": "true",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: userConfigMapName,
-			},
-		}
-		_, err = f.CommonController.CreateConfigMap(&userConfigMap, appStudioE2EApplicationsNamespace)
-		if err != nil {
-			Expect(err).NotTo(HaveOccurred(), "error creating the user configmap")
-		}
 
 		gitCloneTaskBytes := streamTektonYaml("https://raw.githubusercontent.com/redhat-appstudio/build-definitions/main/tasks/git-clone.yaml")
 		gitClone := &v1beta1.Task{}
