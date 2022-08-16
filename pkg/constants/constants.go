@@ -14,8 +14,11 @@ const (
 	// The private devfile sample git repository to use in certain HAS e2e tests
 	PRIVATE_DEVFILE_SAMPLE string = "PRIVATE_DEVFILE_SAMPLE" // #nosec
 
-	//The Tekton namespace
+	// The Tekton Chains namespace
 	TEKTON_CHAINS_NS string = "tekton-chains" // #nosec
+
+	// Namespace for running the end-to-end Tekton Chains tests
+	TEKTON_CHAINS_E2E_NS string = "tekton-chains-e2e"
 
 	//base64 Encoded docker config json value to create registry pull secret
 	DOCKER_CONFIG_JSON string = "DOCKER_CONFIG_JSON"
