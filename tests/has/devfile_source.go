@@ -147,4 +147,29 @@ var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), 
 		}, 5*time.Minute, 10*time.Second).Should(BeTrue(), "Component didn't get get deleted with its Application")
 		Expect(err).NotTo(HaveOccurred())
 	})
+
+	When("Component deletion test", func() {
+		It("Create Application", func() {
+			applicationName = fmt.Sprintf(RedHatAppStudioApplicationName+"-%s", util.GenerateRandomString(10))
+			application, err = framework.HasController.CreateHasApplication(applicationName, AppStudioE2EApplicationsNamespace)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Create and delete component", func() {
+			component, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, AppStudioE2EApplicationsNamespace, "", applicationName)
+			Expect(err).NotTo(HaveOccurred())
+			err = framework.HasController.DeleteHasComponentDetectionQuery(component.Name, AppStudioE2EApplicationsNamespace)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("The component git source repo should not be deleted", func() {
+			fmt.Println(application.Status)
+			Eventually(func() bool {
+				// application info should be stored even after deleting the application in application variable
+				gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
+
+				return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "Repo deleted after component was deleted")
+		})
+	})
 })
