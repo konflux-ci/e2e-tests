@@ -24,12 +24,11 @@ import (
 )
 
 const (
-	testProjectGitUrl = "https://github.com/stuartwdouglas/hacbs-test-project"
-	// TODO update this
-	testProjectDevfileUrl = "https://raw.githubusercontent.com/psturc/shaded-java-app/main/devfile.yaml"
+	testProjectGitUrl     = "https://github.com/stuartwdouglas/hacbs-test-project"
+	testProjectDevfileUrl = "https://raw.githubusercontent.com/stuartwdouglas/hacbs-test-project/main/devfile.yaml"
 )
 
-var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Pending, Label("jvm-build"), func() {
+var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jvm-build"), func() {
 	defer GinkgoRecover()
 
 	var testNamespace, prGeneratedName, applicationName, componentName, outputContainerImage string
@@ -38,7 +37,6 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Pending, 
 	f, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
 
-	// got panics in DeferCleanup when I tried to do multi param invocations, so following the pattern we used in openshift/origin
 	AfterAll(func() {
 		if CurrentSpecReport().Failed() {
 			// get jvm-build-service logs
