@@ -18,6 +18,8 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	klog "k8s.io/klog/v2"
 	"knative.dev/pkg/apis"
@@ -127,6 +129,42 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 		_, err := f.CommonController.CreateTestNamespace(testNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
+
+		customBundleConfigMap, err := f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, testNamespace)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				defaultBundleConfigMap, err := f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace)
+				Expect(err).ToNot(HaveOccurred())
+
+				bundlePullSpec := defaultBundleConfigMap.Data["default_build_bundle"]
+				hacbsBundleConfigMap := &v1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: constants.BuildPipelinesConfigMapName},
+					Data:       map[string]string{"default_build_bundle": strings.Replace(bundlePullSpec, "build-", "hacbs-", 1)},
+				}
+				_, err = f.CommonController.CreateConfigMap(hacbsBundleConfigMap, testNamespace)
+				Expect(err).ToNot(HaveOccurred())
+				DeferCleanup(f.CommonController.DeleteConfigMap, constants.BuildPipelinesConfigMapName, testNamespace, false)
+			} else {
+				Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, testNamespace, err))
+			}
+		} else {
+			bundlePullSpec := customBundleConfigMap.Data["default_build_bundle"]
+			hacbsBundleConfigMap := &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: constants.BuildPipelinesConfigMapName},
+				Data:       map[string]string{"default_build_bundle": strings.Replace(bundlePullSpec, "build-", "hacbs-", 1)},
+			}
+
+			_, err = f.CommonController.UpdateConfigMap(hacbsBundleConfigMap, testNamespace)
+			Expect(err).ToNot(HaveOccurred())
+			DeferCleanup(func() error {
+				hacbsBundleConfigMap.Data = customBundleConfigMap.Data
+				_, err := f.CommonController.UpdateConfigMap(hacbsBundleConfigMap, testNamespace)
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+		}
 
 		timeout = time.Minute * 10
 		interval = time.Second * 10
