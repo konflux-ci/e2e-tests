@@ -18,24 +18,32 @@ import (
 )
 
 const (
-	releasePipelineDefault     = "m5-release-pipeline"
-	releasePvcName             = "release-pvc"
-	serviceAccountName         = "m5-service-account"
-	secretName                 = "hacbs-release-tests-token"
-	appNamePipelineTest        = "m5-application"
-	componenetNamePipelineTest = "helloworld"
-	componentUrl               = "https://github.com/scoheb/go-hello-world.git"
-	componentDockerFileUrl     = "https://github.com/scoheb/go-hello-world/blob/main/Dockerfile"
-	buildBundleName            = "build-pipelines-defaults"
-	defaultBuildBundle         = "quay.io/redhat-appstudio/hacbs-templates-bundle:latest"
-	releaseBundle              = "quay.io/hacbs-release/m5-release-pipeline:main"
-	releasePolicyDefault       = "m5-policy"
-	releaseStrategyDefaultName = "m5-strategy"
+	releasePipelineDefault         = "m6-release-pipeline"
+	releasePvcName                 = "release-pvc"
+	serviceAccountName             = "m6-service-account"
+	secretName                     = "hacbs-release-tests-token"
+	appNamePipelineTest            = "appstudio"
+	componenetNamePipelineTest     = "java-springboot"
+	componentUrl                   = "https://github.com/scoheb/devfile-sample-java-springboot-basic"
+	componentDockerFileUrl         = "https://github.com/scoheb/go-hello-world/blob/main/Dockerfile"
+	buildBundleName                = "build-pipelines-defaults"
+	defaultBuildBundle2            = "quay.io/redhat-appstudio/hacbs-templates-bundle:latest"
+	defaultBuildBundle             = "quay.io/jsztuka/hacbs-templates-bundle:latest"
+	releaseBundle                  = "quay.io/hacbs-release/m6-release-pipeline:main"
+	releasePolicyDefault           = "m6-policy"
+	releaseStrategyDefaultName     = "m6-strategy"
+	enterpriseContractPolicyUrl    = "https://github.com/hacbs-contract/ec-policies"
+	enterpriseContractPolicyName   = "m6-policy"
+	enterpriseContractPlicyRevisin = "m6-demo-test"
+	roleName					   = "role-m6-service-account"
+	apiGroupsList                  = {{"kjj"},{"hj"}}
+	roleResources                  = {"secrets"}
+	roleVerbs                      = {"get", "list", "watch"}
 )
 
 var releaseStartegyParams = []v1alpha1.Params{
-	{Name: "extraConfigGitUrl", Value: "https://github.com/davidmogar/strategy-configs.git"},
-	{Name: "extraConfigPath", Value: "m5.yaml"},
+	{Name: "extraConfigGitUrl", Value: "https://github.com/scoheb/strategy-configs.git"},
+	{Name: "extraConfigPath", Value: "m6.yaml"},
 	{Name: "extraConfigRevision", Value: "main"},
 }
 
@@ -73,10 +81,6 @@ var _ = framework.ReleaseSuiteDescribe("release-suite-e2e-tekton-pipeline", func
 	// })
 
 	var _ = Describe("Creation of the 'tekton test-bundle e2e-test' resources", func() {
-		It("Create PVC in", func() {
-			err := framework.CommonController.CreatePVC(releasePvcName, managedNamespace, corev1.ReadWriteOnce)
-			Expect(err).NotTo(HaveOccurred())
-		})
 
 		It("Create Release Strategy", func() {
 			_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineDefault, releaseBundle, releasePolicyDefault, serviceAccountName, releaseStartegyParams)
@@ -93,20 +97,38 @@ var _ = framework.ReleaseSuiteDescribe("release-suite-e2e-tekton-pipeline", func
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		It("Create PVC in", func() {
+			err := framework.CommonController.CreatePVC(releasePvcName, managedNamespace, corev1.ReadWriteOnce)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 		It("Create Service account", func() {
 			_, err := framework.CommonController.CreateServiceAccount(serviceAccountName, managedNamespace, serviceAccountSecretList)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		It("Create EnterpriseContractPolicy", func() {
+			_, err := framework.ReleaseController.CreatePolicyConfiguration(enterpriseContractPolicyName, managedNamespace, enterpriseContractPolicyUrl, enterpriseContractPlicyRevisin)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Create Role", func() {
+			_, err := framework.CommonController.CreateRole(roleName, managedNamespace, apiGroups, roleResources, roleVerbs)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+
 		It("Create ConfigMap ", func() {
 			cm := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{Name: buildBundleName},
-				Data:       map[string]string{"default_build_bundle": defaultBuildBundle},
+				Data: map[string]string{"default_build_bundle2": defaultBuildBundle2,
+					"default_build_bundle": defaultBuildBundle},
 			}
 			_, err = framework.CommonController.CreateConfigMap(cm, devNamespace)
 			Expect(err).ToNot(HaveOccurred())
-
 		})
+
+		// Create a secret-role
 
 		It("Create an application", func() {
 			_, err := framework.HasController.CreateHasApplication(appNamePipelineTest, devNamespace)
@@ -114,7 +136,7 @@ var _ = framework.ReleaseSuiteDescribe("release-suite-e2e-tekton-pipeline", func
 		})
 
 		It("Create componenet", func() {
-			_, err := framework.ReleaseController.CreateComponentWןithDockerSource(appNamePipelineTest, componenetNamePipelineTest, devNamespace, componentUrl, componentDockerFileUrl, "", "")
+			_, err := framework.HasController.CreateComponent(appNamePipelineTest, componenetNamePipelineTest, devNamespace, componentUrl, "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

@@ -3,6 +3,7 @@ package release
 import (
 	"context"
 
+	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
 	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
@@ -169,4 +170,31 @@ func (h *SuiteController) CreateComponentWןithDockerSource(applicationName, com
 		return nil, err
 	}
 	return component, nil
+}
+
+func (k *SuiteController) CreatePolicyConfiguration(enterpriseContractPolicyName string, managedNamespace string, enterpriseContractPolicyUrl string, enterpriseContractPlicyRevisin string) (*ecp.EnterpriseContractPolicy, error) {
+	policy_test := &ecp.EnterpriseContractPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      enterpriseContractPolicyName,
+			Namespace: managedNamespace,
+		},
+		Spec: ecp.EnterpriseContractPolicySpec{
+			Sources: []ecp.PolicySource{
+				{
+					GitRepository: &ecp.GitPolicySource{
+						Repository: enterpriseContractPolicyUrl,
+						Revision:   enterpriseContractPlicyRevisin,
+					},
+				},
+			},
+			Exceptions: &ecp.EnterpriseContractPolicyExceptions{
+				NonBlocking: []string{"not_useful", "test:conftest-clair"},
+			},
+		},
+	}
+	err := k.K8sClient.KubeRest().Create(context.TODO(), policy_test)
+	if err != nil {
+		return nil, err
+	}
+	return policy_test, nil
 }

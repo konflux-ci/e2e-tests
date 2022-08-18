@@ -374,6 +374,63 @@ func (s *SuiteController) CreatePVCWithSize(name, namespace, volumeSize string, 
 	}
 
 	_, err := s.KubeInterface().CoreV1().PersistentVolumeClaims(namespace).Create(context.TODO(), pvc, metav1.CreateOptions{})
-
+	if err != nil {
+		return nil
+	}
 	return err
+}
+
+func (s *SuiteController) CreateRole(roleName, namespace string, apiGroupList []string, roleResourcesList []string, roleVerbsList []string) (*rbacv1.Role, error) {
+
+	rules := &rbacv1.PolicyRule{
+		APIGroups: apiGroupList,
+		Resources: roleResourcesList,
+		Verbs:     roleVerbsList,
+	}
+	role := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      roleName,
+			Namespace: namespace,
+		},
+		Rules: []rbacv1.PolicyRule{
+			*rules,
+		},
+	}
+	createdRole, err := s.KubeInterface().RbacV1().Roles(namespace).Create(context.TODO(), role, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return createdRole, nil
+}
+
+func (s *SuiteController) CreateRoleBinding(roleBindingName, namespace string, subjectKind string, serviceAccountName string, roleRefKind string, roleRefName, roleRefApiGroup string) (*rbacv1.RoleBinding, error) {
+
+	roleBindingSubjects := []rbacv1.Subject{
+		{
+			Kind:      subjectKind,
+			Name:      serviceAccountName,
+			Namespace: namespace,
+		},
+	}
+
+	roleBindingRoleRef := rbacv1.RoleRef{
+		Kind:     roleRefKind,
+		Name:     roleRefName,
+		APIGroup: roleRefApiGroup,
+	}
+
+	roleBinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      roleBindingName,
+			Namespace: namespace,
+		},
+		Subjects: roleBindingSubjects,
+		RoleRef:  roleBindingRoleRef,
+	}
+
+	createdRoleBinding, err := s.KubeInterface().RbacV1().RoleBindings(namespace).Create(context.TODO(), roleBinding, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return createdRoleBinding, nil
 }
