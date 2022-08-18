@@ -183,7 +183,7 @@ func (k *SuiteController) CreatePolicyConfiguration(enterpriseContractPolicyName
 				{
 					GitRepository: &ecp.GitPolicySource{
 						Repository: enterpriseContractPolicyUrl,
-						Revision:   enterpriseContractPlicyRevisin,
+						Revision:   &enterpriseContractPlicyRevisin,
 					},
 				},
 			},
