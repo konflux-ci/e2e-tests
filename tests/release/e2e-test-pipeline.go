@@ -35,12 +35,19 @@ const (
 	enterpriseContractPolicyUrl    = "https://github.com/hacbs-contract/ec-policies"
 	enterpriseContractPolicyName   = "m6-policy"
 	enterpriseContractPlicyRevisin = "m6-demo-test"
-	roleName					   = "role-m6-service-account"
-	apiGroupsList                  = {{"kjj"},{"hj"}}
-	roleResources                  = {"secrets"}
-	roleVerbs                      = {"get", "list", "watch"}
+	roleName                       = "role-m6-service-account"
+	roleBindingName                = "role-m6-service-account-binding"
+	subjectKind                    = "ServiceAccount"
+	roleRefKind                    = "Role"
+	roleRefName                    = "role-m6-service-account"
+	roleRefApiGroup                = "rbac.authorization.k8s.io"
 )
 
+var roleRules = map[string][]string{
+	"apiGroupsList": {""},
+	"roleResources": {"secrets"},
+	"roleVerbs":     {"get", "list", "watch"},
+}
 var releaseStartegyParams = []v1alpha1.Params{
 	{Name: "extraConfigGitUrl", Value: "https://github.com/scoheb/strategy-configs.git"},
 	{Name: "extraConfigPath", Value: "m6.yaml"},
@@ -113,10 +120,15 @@ var _ = framework.ReleaseSuiteDescribe("release-suite-e2e-tekton-pipeline", func
 		})
 
 		It("Create Role", func() {
-			_, err := framework.CommonController.CreateRole(roleName, managedNamespace, apiGroups, roleResources, roleVerbs)
+			_, err := framework.CommonController.CreateRole(roleName, managedNamespace, roleRules)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		// CreateRoleBinding(roleBindingName, namespace string, subjectKind string, serviceAccountName string, roleRefKind string, roleRefName, roleRefApiGroup string) (*rbacv1.RoleBinding, error) {
+		It("Create RoleBinding", func() {
+			_, err := framework.CommonController.CreateRoleBinding(roleBindingName, managedNamespace, subjectKind, serviceAccountName, roleRefKind, roleRefName, roleRefApiGroup)
+			Expect(err).NotTo(HaveOccurred())
+		})
 
 		It("Create ConfigMap ", func() {
 			cm := &corev1.ConfigMap{

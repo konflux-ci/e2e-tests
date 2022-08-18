@@ -380,12 +380,12 @@ func (s *SuiteController) CreatePVCWithSize(name, namespace, volumeSize string, 
 	return err
 }
 
-func (s *SuiteController) CreateRole(roleName, namespace string, apiGroupList []string, roleResourcesList []string, roleVerbsList []string) (*rbacv1.Role, error) {
+func (s *SuiteController) CreateRole(roleName, namespace string, roleRules map[string][]string) (*rbacv1.Role, error) {
 
 	rules := &rbacv1.PolicyRule{
-		APIGroups: apiGroupList,
-		Resources: roleResourcesList,
-		Verbs:     roleVerbsList,
+		APIGroups: roleRules["apiGroupsList"],
+		Resources: roleRules["roleResources"],
+		Verbs:     roleRules["roleVerbs"],
 	}
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
