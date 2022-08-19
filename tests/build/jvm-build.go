@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"os"
 	"strings"
 	"time"
 
@@ -21,7 +23,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	klog "k8s.io/klog/v2"
+	"k8s.io/klog/v2"
 	"knative.dev/pkg/apis"
 )
 
@@ -49,7 +51,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			klog.Infof("found %d pods in jvm-build-service namespace", len(jvmPodList.Items))
 			for _, pod := range jvmPodList.Items {
 				podLog := fmt.Sprintf("jvm-build-service namespace pod %s:\n", pod.Name)
-				containers := []corev1.Container{}
+				var containers []corev1.Container
 				containers = append(containers, pod.Spec.InitContainers...)
 				containers = append(containers, pod.Spec.Containers...)
 				for _, c := range containers {
@@ -193,6 +195,73 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				}
 				return pipelineRun.HasStarted()
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
+		})
+
+		It("the build-container task from component PipelineRun references a correct sidecar image", func() {
+			ciSidecarImage := os.Getenv("JVM_BUILD_SERVICE_SIDECAR_IMAGE")
+			if ciSidecarImage == "" {
+				Skip("JVM_BUILD_SERVICE_SIDECAR_IMAGE env var is not exported, skipping the test...")
+			}
+
+			err = wait.PollImmediate(interval, timeout, func() (done bool, err error) {
+				pr, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
+				if err != nil {
+					klog.Infof("get pr for component %s produced err: %s", componentName, err.Error())
+					return false, nil
+				}
+
+				for _, tr := range pr.Status.TaskRuns {
+					if tr.PipelineTaskName == "build-container" && tr.Status != nil && tr.Status.TaskSpec != nil && tr.Status.TaskSpec.Sidecars != nil {
+						for _, sc := range tr.Status.TaskSpec.Sidecars {
+							if sc.Name == "proxy" {
+								if sc.Image != ciSidecarImage {
+									Fail(fmt.Sprintf("the build-container task from component pipelinerun doesn't contain correct sidecar image. expected: %v, actual: %v", ciSidecarImage, sc.Image))
+								} else {
+									return true, nil
+								}
+							}
+						}
+					}
+				}
+				return false, nil
+			})
+			if err != nil {
+				Fail(fmt.Sprintf("failure occured when verifying the sidecar image reference in pipelinerun: %v", err))
+			}
+		})
+
+		It("the build-container task from component pipelinerun references a correct analyzer image", func() {
+			ciAnalyzerImage := os.Getenv("JVM_BUILD_SERVICE_ANALYZER_IMAGE")
+
+			if ciAnalyzerImage == "" {
+				Skip("JVM_BUILD_SERVICE_ANALYZER_IMAGE env var is not exported, skipping the test...")
+			}
+
+			err = wait.PollImmediate(interval, timeout, func() (done bool, err error) {
+				pr, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
+				if err != nil {
+					klog.Infof("get pr for the component %s produced err: %s", componentName, err.Error())
+					return false, nil
+				}
+
+				for _, tr := range pr.Status.TaskRuns {
+					if tr.PipelineTaskName == "build-container" && tr.Status != nil && tr.Status.TaskSpec != nil && tr.Status.TaskSpec.Steps != nil {
+						for _, step := range tr.Status.TaskSpec.Steps {
+							if step.Name == "analyse-dependencies-java-sbom" {
+								if step.Image != ciAnalyzerImage {
+									Fail(fmt.Sprintf("the build-container task from component pipelinerun doesn't reference the correct analyzer image. expected: %v, actual: %v", ciAnalyzerImage, step.Image))
+								} else {
+									return true, nil
+								}
+							}
+						}
+					}
+				}
+				return false, nil
+			})
+			if err != nil {
+				Fail(fmt.Sprintf("failure occured when verifying the analyzer image reference in pipelinerun: %v", err))
+			}
 		})
 
 		It("that PipelineRun completes successfully", func() {
