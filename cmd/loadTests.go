@@ -20,31 +20,31 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/spf13/cobra"
-	"k8s.io/klog/v2"
 	k8swait "k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog/v2"
 )
 
 var (
 	usernamePrefix       = "appstudio-user"
 	numberOfUsers        int
 	userBatches          int
-	waitPipelines        bool 
-	verbose 		     bool
+	waitPipelines        bool
+	verbose              bool
 	QuarkusDevfileSource string = "https://github.com/redhat-appstudio-qe/devfile-sample-code-with-quarkus"
-	token 				 string
+	token                string
 )
 
 var (
-	AverageUserCreationTime time.Duration
-	AverageResourceCreationTimePerUser  time.Duration
-	AveragePipelineRunTimePerUser time.Duration
+	AverageUserCreationTime            time.Duration
+	AverageResourceCreationTimePerUser time.Duration
+	AveragePipelineRunTimePerUser      time.Duration
 )
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "load-test",
 	Short: "Used to Generate Users and Run Load Tests on AppStudio.",
-	Long: `Used to Generate Users and Run Load Tests on AppStudio.`,
+	Long:  `Used to Generate Users and Run Load Tests on AppStudio.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
@@ -63,7 +63,6 @@ func Execute() {
 	}
 }
 
-
 func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
@@ -78,15 +77,14 @@ func init() {
 	rootCmd.Flags().BoolVarP(&waitPipelines, "waitpipelines", "w", false, "if you want to wait for pipelines to finish")
 }
 
-
 func setup(cmd *cobra.Command, args []string) {
 	cmd.SilenceUsage = true
 	term := terminal.New(cmd.InOrStdin, cmd.OutOrStdout, verbose)
-	if numberOfUsers%userBatches != 0{
+	if numberOfUsers%userBatches != 0 {
 		klog.Fatalf("Please Provide Correct Batches!")
 		os.Exit(1)
 	}
-	
+
 	klog.Infof("Number of users: %d", numberOfUsers)
 	klog.Infof("Batch Size: %d", userBatches)
 
@@ -99,7 +97,7 @@ func setup(cmd *cobra.Command, args []string) {
 	if len(token) == 0 {
 		token, err = auth.GetTokenFromOC()
 		if err != nil {
-			tokenRequestURI, err :=  auth.GetTokenRequestURI(framework.CommonController.KubeRest()) // authorization.FindTokenRequestURI(framework.CommonController.KubeRest())
+			tokenRequestURI, err := auth.GetTokenRequestURI(framework.CommonController.KubeRest()) // authorization.FindTokenRequestURI(framework.CommonController.KubeRest())
 			if err != nil {
 				klog.Fatalf("a token is required to capture metrics, use oc login to log into the cluster: %v", err)
 			}
@@ -145,18 +143,18 @@ func setup(cmd *cobra.Command, args []string) {
 	AppStudioUsersBar := uip.AddBar(numberOfUsers).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
 		return strutil.PadLeft(fmt.Sprintf("Creating AppStudio Users (%d/%d)", b.Current(), numberOfUsers), userBatches, ' ')
 	})
-	
-	if waitPipelines{
+
+	if waitPipelines {
 		wg.Add(3)
-	} else{
+	} else {
 		wg.Add(2)
-	} 
-	
-	go func(){
-		for AppStudioUsersBar.Incr(){
+	}
+
+	go func() {
+		for AppStudioUsersBar.Incr() {
 			startTime := time.Now()
 			username := fmt.Sprintf("%s-%04d", usernamePrefix, AppStudioUsersBar.Current())
-			if err := users.Create(framework.CommonController.KubeRest(), username,constants.HostOperatorNamespace, constants.MemberOperatorNamespace); err != nil {
+			if err := users.Create(framework.CommonController.KubeRest(), username, constants.HostOperatorNamespace, constants.MemberOperatorNamespace); err != nil {
 				klog.Fatalf("failed to provision user '%s'", username)
 				klog.Errorf(err.Error())
 			}
@@ -177,9 +175,9 @@ func setup(cmd *cobra.Command, args []string) {
 	ResourcesBar := uip.AddBar(numberOfUsers).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
 		return strutil.PadLeft(fmt.Sprintf("Creating AppStudio User Resources (%d/%d)", b.Current(), numberOfUsers), userBatches, ' ')
 	})
-	go func(){
+	go func() {
 		<-chFirstStep
-		for ResourcesBar.Incr(){
+		for ResourcesBar.Incr() {
 			startTime := time.Now()
 			username := fmt.Sprintf("%s-%04d", usernamePrefix, ResourcesBar.Current())
 			_, errors := framework.CommonController.CreateRegistryAuthSecret(
@@ -193,16 +191,17 @@ func setup(cmd *cobra.Command, args []string) {
 			// time.Sleep(time.Second * 2)
 			ApplicationName := fmt.Sprintf("%s-app", username)
 			_, err := framework.HasController.CreateHasApplication(ApplicationName, username)
-			if err != nil{
+			if err != nil {
 				klog.Fatalf("Problem Creating the Application: %v", err)
 			}
 			ComponentName := fmt.Sprintf("%s-component", username)
 			ComponentContainerImage := fmt.Sprintf("image-registry.openshift-image-registry.svc:5000/%s/devfile-sample-code-with-quarkus:%s", username, strings.Replace(uuid.New().String(), "-", "", -1))
-			component, err :=  framework.HasController.CreateComponent(
+			component, err := framework.HasController.CreateComponent(
 				ApplicationName,
 				ComponentName,
 				username,
 				QuarkusDevfileSource,
+				"",
 				"",
 				ComponentContainerImage,
 				"",
@@ -210,7 +209,7 @@ func setup(cmd *cobra.Command, args []string) {
 			if component.Name != ComponentName {
 				klog.Fatalf("Component Name Does not Match: %v", err)
 			}
-			if err != nil{
+			if err != nil {
 				klog.Fatalf("Problem Creating the Component: %v", err)
 			}
 			if ResourcesBar.Current()%userBatches == 0 {
@@ -228,19 +227,19 @@ func setup(cmd *cobra.Command, args []string) {
 		PipelinesBar := uip.AddBar(numberOfUsers).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
 			return strutil.PadLeft(fmt.Sprintf("Pipelines running (%d/%d)", b.Current(), numberOfUsers), userBatches, ' ')
 		})
-		go func(){
-			for PipelinesBar.Incr(){
+		go func() {
+			for PipelinesBar.Incr() {
 				username := fmt.Sprintf("%s-%04d", usernamePrefix, ResourcesBar.Current())
 				ComponentName := fmt.Sprintf("%s-component", username)
 				ApplicationName := fmt.Sprintf("%s-app", username)
 				DefaultRetryInterval := time.Millisecond * 200
-				DefaultTimeout       := time.Minute * 17
+				DefaultTimeout := time.Minute * 17
 				error := k8swait.Poll(DefaultRetryInterval, DefaultTimeout, func() (done bool, err error) {
 					pipelineRun, err := framework.HasController.GetComponentPipelineRun(ComponentName, ApplicationName, username, false)
 					if err != nil {
 						return false, err
 					}
-					if pipelineRun.IsDone(){
+					if pipelineRun.IsDone() {
 						AveragePipelineRunTimePerUser += time.Since(pipelineRun.GetCreationTimestamp().Time)
 						klog.Info("Pipleine completed! %s", ComponentName)
 					}
@@ -253,9 +252,9 @@ func setup(cmd *cobra.Command, args []string) {
 			wg.Done()
 		}()
 	}
-	
-	// Todo add cleanup functions that will delete user signups 
-	
+
+	// Todo add cleanup functions that will delete user signups
+
 	wg.Wait()
 	uip.Stop()
 	defer close(stopMetrics)

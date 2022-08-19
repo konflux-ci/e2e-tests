@@ -104,7 +104,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				if componentTest.ContainerSource != "" {
 					It(fmt.Sprintf("create component %s from container source", componentTest.Name), func() {
 						var outputContainerImage = ""
-						_, err := fw.HasController.CreateComponent(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace, "", componentTest.ContainerSource, outputContainerImage, "")
+						_, err := fw.HasController.CreateComponent(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace, "", "", componentTest.ContainerSource, outputContainerImage, "")
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -118,7 +118,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				} else if componentTest.GitSourceUrl != "" {
 					It(fmt.Sprintf("create component %s from git source %s", componentTest.Name, componentTest.GitSourceUrl), func() {
 						component, err = fw.HasController.CreateComponent(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace,
-							componentTest.GitSourceUrl, "", containerIMG, "")
+							componentTest.GitSourceUrl, "", "", containerIMG, "")
 						Expect(err).NotTo(HaveOccurred())
 					})
 

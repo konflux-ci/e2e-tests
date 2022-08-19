@@ -25,9 +25,9 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-const (
-	testProjectGitUrl     = "https://github.com/stuartwdouglas/hacbs-test-project"
-	testProjectDevfileUrl = "https://raw.githubusercontent.com/stuartwdouglas/hacbs-test-project/main/devfile.yaml"
+var (
+	testProjectGitUrl   = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_URL", "https://github.com/stuartwdouglas/hacbs-test-project")
+	testProjectRevision = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_REVISION", "main")
 )
 
 var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jvm-build"), func() {
@@ -177,7 +177,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 
 		// Create a component with Git Source URL being defined
-		_, err = f.HasController.CreateComponentFromDevfile(applicationName, componentName, testNamespace, testProjectGitUrl, testProjectDevfileUrl, "", outputContainerImage, "")
+		_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, testProjectGitUrl, testProjectRevision, "", outputContainerImage, "")
 		Expect(err).ShouldNot(HaveOccurred())
 
 		DeferCleanup(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace, testNamespace)
