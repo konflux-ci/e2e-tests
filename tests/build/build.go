@@ -70,7 +70,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			timeout = time.Second * 120
 			interval = time.Second * 1
 			// Create a component with Git Source URL being defined
-			_, err := f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
+			_, err := f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			DeferCleanup(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace, testNamespace)
@@ -345,7 +345,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 				componentNames = append(componentNames, componentName)
 				outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 				// Create a component with Git Source URL being defined
-				_, err := f.HasController.CreateComponent(applicationName, componentName, testNamespace, gitUrl, "", outputContainerImage, "")
+				_, err := f.HasController.CreateComponent(applicationName, componentName, testNamespace, gitUrl, "", "", outputContainerImage, "")
 				Expect(err).ShouldNot(HaveOccurred())
 			}
 		})
@@ -481,7 +481,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			timeout = time.Second * 10
 			interval = time.Second * 1
 			// Create a component with containerImageSource being defined
-			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, "", containerImageSource, outputContainerImage, "")
+			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, "", "", containerImageSource, outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			DeferCleanup(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace, testNamespace)
 		})
@@ -522,7 +522,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 			componentName = "build-suite-test-bundle-overriding"
 			outputContainerImage := fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
+			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			DeferCleanup(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace, testNamespace)
 
@@ -592,7 +592,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 			componentName = "build-suite-test-secret-overriding"
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
+			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			DeferCleanup(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace, testNamespace)
 
@@ -664,7 +664,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 		})
 		It("should fail for ContainerImage field set to a protected repository (without an image tag)", func() {
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected", utils.GetQuayIOOrganization())
-			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
+			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			Eventually(func() ([]string, error) {
 				return f.HasController.GetHasComponentConditionStatusMessages(componentName, testNamespace)
@@ -673,7 +673,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 		})
 		It("should fail for ContainerImage field set to a protected repository followed by a random tag", func() {
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
+			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			Eventually(func() ([]string, error) {
 				return f.HasController.GetHasComponentConditionStatusMessages(componentName, testNamespace)
@@ -681,7 +681,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 		})
 		It("should succeed for ContainerImage field set to a protected repository followed by a namespace prefix + dash + string", func() {
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected:%s-%s", utils.GetQuayIOOrganization(), testNamespace, strings.Replace(uuid.New().String(), "-", "", -1))
-			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
+			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			Eventually(func() ([]string, error) {
 				return f.HasController.GetHasComponentConditionStatusMessages(componentName, testNamespace)
@@ -689,7 +689,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 		})
 		It("should succeed for ContainerImage field set to a custom (unprotected) repository without a tag being specified", func() {
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images", utils.GetQuayIOOrganization())
-			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage, "")
+			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			Eventually(func() ([]string, error) {
 				return f.HasController.GetHasComponentConditionStatusMessages(componentName, testNamespace)
