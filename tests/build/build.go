@@ -88,7 +88,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			}
 
 			for _, file := range pacInitTestFiles {
-				f.CommonController.Github.DeleteFile(helloWorldComponentGitSourceRepoName, file, "main")
+				err := f.CommonController.Github.DeleteFile(helloWorldComponentGitSourceRepoName, file, "main")
 				if err != nil {
 					Expect(err.Error()).To(ContainSubstring("404 Not Found"))
 				}
@@ -171,7 +171,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PaC PR comment about the pipelinerun status to appear in the component repo")
 
 				Expect(comments).To(HaveLen(1), fmt.Sprintf("the initial PR has more than 1 comment after a single pipelinerun. repo: %s, pr number: %d, comments content: %v", helloWorldComponentGitSourceURL, prNumber, comments))
-				Expect(comments[0]).To(ContainSubstring("success"), fmt.Sprintf("the initial PR doesn't contain the info about successful pipelinerun"))
+				Expect(comments[0]).To(ContainSubstring("success"), "the initial PR doesn't contain the info about successful pipelinerun")
 			})
 		})
 
@@ -239,7 +239,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PaC PR comment about the pipelinerun status to appear in the component repo")
 
 				Expect(comments).To(HaveLen(1), fmt.Sprintf("the updated PaC PR has more than 1 comment after a single branch update. repo: %s, pr number: %d, comments content: %v", helloWorldComponentGitSourceURL, prNumber, comments))
-				Expect(comments[0]).To(ContainSubstring("success"), fmt.Sprintf("the updated PR doesn't contain the info about successful pipelinerun"))
+				Expect(comments[0]).To(ContainSubstring("success"), "the updated PR doesn't contain the info about successful pipelinerun")
 			})
 
 		})
