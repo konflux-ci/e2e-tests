@@ -38,7 +38,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	defer GinkgoRecover()
 
 	var applicationName, componentName, appStudioE2EApplicationsNamespace, outputContainerImage string
-	var pipelineRun v1beta1.PipelineRun
+	var pipelineRun *v1beta1.PipelineRun
 	var component *appservice.Component
 	var timeout, interval time.Duration
 	//	var applicationSnapshots *[]appstudioshared.ApplicationSnapshot
@@ -76,7 +76,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 		It("should not trigger a PipelineRun", func() {
 			Consistently(func() bool {
-				pipelineRun, err = f.HasController.GetComponentPipelineRun(component.Name, applicationName, appStudioE2EApplicationsNamespace, false)
+				pipelineRun, err = f.HasController.GetComponentPipelineRun(component.Name, applicationName, appStudioE2EApplicationsNamespace, false, "")
 				Expect(pipelineRun.Name).To(BeEmpty())
 
 				return strings.Contains(err.Error(), "no pipelinerun found")
@@ -109,7 +109,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 		It("triggers a PipelineRun", func() {
 			Eventually(func() bool {
-				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false)
+				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false, "")
 				if err != nil {
 					klog.Infoln("PipelineRun has not been created yet")
 					return false
@@ -125,7 +125,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 			It("should eventually finish successfully", func() {
 				Eventually(func() bool {
-					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false)
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false, "")
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, condition := range pipelineRun.Status.Conditions {
