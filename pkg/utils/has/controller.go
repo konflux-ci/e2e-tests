@@ -278,12 +278,11 @@ func (h *SuiteController) GetComponentPipelineRun(componentName, applicationName
 		return nil, fmt.Errorf("error listing pipelineruns in %s namespace", namespace)
 	}
 
-	res := &v1beta1.PipelineRun{}
 	if len(list.Items) > 0 {
-		res = &list.Items[0]
+		return &list.Items[0], nil
 	}
 
-	return res, nil
+	return &v1beta1.PipelineRun{}, fmt.Errorf("no pipelinerun found for component %s", componentName)
 }
 
 // GetEventListenerRoute returns the route for a given component name's event listener
