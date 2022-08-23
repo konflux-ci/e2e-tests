@@ -300,6 +300,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 					return errors.IsNotFound(err)
 				}, time.Minute*1, time.Second*1).Should(BeTrue(), "timed out when waiting for the app %s to be deleted in %s namespace", applicationName, testNamespace)
 
+				_, err = f.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, outputContainerImage)
+
 			})
 
 			It("should no longer lead to a creation of a PaC PR", func() {
