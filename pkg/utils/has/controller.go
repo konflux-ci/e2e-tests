@@ -157,6 +157,36 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 	return component, nil
 }
 
+// CreateComponentWithPaCEnabled creates a component with "pipelinesascode: '1'" annotation that is used for triggering PaC builds
+func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, componentName, namespace, gitSourceURL, outputContainerImage string) (*appservice.Component, error) {
+	component := &appservice.Component{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"pipelinesascode": "1",
+			},
+			Name:      componentName,
+			Namespace: namespace,
+		},
+		Spec: appservice.ComponentSpec{
+			ComponentName: componentName,
+			Application:   applicationName,
+			Source: appservice.ComponentSource{
+				ComponentSourceUnion: appservice.ComponentSourceUnion{
+					GitSource: &appservice.GitSource{
+						URL: gitSourceURL,
+					},
+				},
+			},
+			ContainerImage: outputContainerImage,
+		},
+	}
+	err := h.KubeRest().Create(context.TODO(), component)
+	if err != nil {
+		return nil, err
+	}
+	return component, nil
+}
+
 // CreateComponentFromCDQ create a HAS Component resource from a Completed CDQ resource, which includes a stub Component CR
 func (h *SuiteController) CreateComponentFromStub(compDetected appservice.ComponentDetectionDescription, componentName, namespace, secret, applicationName string) (*appservice.Component, error) {
 	// The Component from the CDQ is only a template, and needs things like name filled in
@@ -228,20 +258,32 @@ func (h *SuiteController) GetComponentDetectionQuery(name, namespace string) (*a
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels
-func (h *SuiteController) GetComponentPipelineRun(componentName, applicationName, namespace string, triggeredViaWebhook bool) (v1beta1.PipelineRun, error) {
-	pipelineRunLabels := map[string]string{"build.appstudio.openshift.io/component": componentName, "build.appstudio.openshift.io/application": applicationName}
-	if triggeredViaWebhook {
-		pipelineRunLabels["triggers.tekton.dev/eventlistener"] = componentName
+func (h *SuiteController) GetComponentPipelineRun(componentName, applicationName, namespace string, pacBuild bool, sha string) (*v1beta1.PipelineRun, error) {
+	var pipelineRunLabels map[string]string
+
+	if pacBuild {
+		pipelineRunLabels = map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName}
+	} else {
+		pipelineRunLabels = map[string]string{"build.appstudio.openshift.io/component": componentName, "build.appstudio.openshift.io/application": applicationName}
 	}
+
+	if sha != "" {
+		pipelineRunLabels["pipelinesascode.tekton.dev/sha"] = sha
+	}
+
 	list := &v1beta1.PipelineRunList{}
 	err := h.KubeRest().List(context.TODO(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
 
-	if len(list.Items) > 0 {
-		return list.Items[0], nil
-	} else if len(list.Items) == 0 {
-		return v1beta1.PipelineRun{}, fmt.Errorf("no pipelinerun found for component %s", componentName)
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error listing pipelineruns in %s namespace", namespace)
 	}
-	return v1beta1.PipelineRun{}, err
+
+	res := &v1beta1.PipelineRun{}
+	if len(list.Items) > 0 {
+		res = &list.Items[0]
+	}
+
+	return res, nil
 }
 
 // GetEventListenerRoute returns the route for a given component name's event listener
@@ -290,7 +332,7 @@ func (h *SuiteController) GetComponentService(componentName string, componentNam
 
 func (h *SuiteController) WaitForComponentPipelineToBeFinished(componentName string, applicationName string, componentNamespace string) error {
 	return wait.PollImmediate(20*time.Second, 15*time.Minute, func() (done bool, err error) {
-		pipelineRun, _ := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, false)
+		pipelineRun, _ := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, false, "")
 
 		for _, condition := range pipelineRun.Status.Conditions {
 			klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)
@@ -308,7 +350,7 @@ func (h *SuiteController) WaitForComponentPipelineToBeFinished(componentName str
 
 }
 
-// CreateComponent create an has component from a given name, namespace, application, devfile and a container image
+// CreateComponentFromDevfile creates a has component from a given name, namespace, application, devfile and a container image
 func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentName, namespace, gitSourceURL, devfile, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
 	var containerImage string
 	if outputContainerImage != "" {

@@ -37,14 +37,16 @@ func GetEnv(key, defaultVal string) string {
 }
 
 /*
-	Right now DevFile status in HAS is a string:
-	metadata:
-		attributes:
-			appModelRepository.url: https://github.com/redhat-appstudio-qe/pet-clinic-application-service-establish-danger
-			gitOpsRepository.url: https://github.com/redhat-appstudio-qe/pet-clinic-application-service-establish-danger
-		name: pet-clinic
-		schemaVersion: 2.1.0
-	The ObtainGitUrlFromDevfile extract from the string the git url associated with a application
+Right now DevFile status in HAS is a string:
+metadata:
+
+	attributes:
+		appModelRepository.url: https://github.com/redhat-appstudio-qe/pet-clinic-application-service-establish-danger
+		gitOpsRepository.url: https://github.com/redhat-appstudio-qe/pet-clinic-application-service-establish-danger
+	name: pet-clinic
+	schemaVersion: 2.1.0
+
+The ObtainGitUrlFromDevfile extract from the string the git url associated with a application
 */
 func ObtainGitOpsRepositoryName(devfileStatus string) string {
 	appDevfile, err := devfile.ParseDevfileModel(devfileStatus)
@@ -108,7 +110,7 @@ func GetOpenshiftToken() (token string, err error) {
 	return strings.TrimSuffix(string(tokenBytes), "\n"), nil
 }
 
-func GetFailedPipelineRunDetails(pipelineRun v1beta1.PipelineRun) *FailedPipelineRunDetails {
+func GetFailedPipelineRunDetails(pipelineRun *v1beta1.PipelineRun) *FailedPipelineRunDetails {
 	d := &FailedPipelineRunDetails{}
 	for trName, trs := range pipelineRun.Status.PipelineRunStatusFields.TaskRuns {
 		for _, c := range trs.Status.Conditions {

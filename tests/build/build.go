@@ -1,10 +1,9 @@
 package build
 
 import (
-	"bytes"
-	"context"
 	"fmt"
-	"net/http"
+	"github.com/google/go-github/v44/github"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	"os"
 	"strings"
 	"time"
@@ -13,7 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -22,15 +20,13 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	klog "k8s.io/klog/v2"
-
-	routev1 "github.com/openshift/api/route/v1"
+	"k8s.io/klog/v2"
 )
 
 const (
 	containerImageSource                 = "quay.io/redhat-appstudio-qe/busybox-loop:latest"
 	helloWorldComponentGitSourceRepoName = "devfile-sample-hello-world"
-	helloWorldComponentGitSourceURL      = "https://github.com/redhat-appstudio-qe/" + helloWorldComponentGitSourceRepoName
+	helloWorldComponentGitSourceURL      = "https://github.com/psturc-org/" + helloWorldComponentGitSourceRepoName
 	pythonComponentGitSourceURL          = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic"
 	dummyPipelineBundleRef               = "quay.io/redhat-appstudio-qe/dummy-pipeline-bundle:latest"
 )
@@ -45,15 +41,22 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 	f, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
 
-	Describe("Component with git source is created", Ordered, func() {
-		var applicationName, componentName, testNamespace, outputContainerImage string
+	Describe("the component with git source (GitHub) is created", Ordered, Label("github-webhook"), func() {
+		var applicationName, componentName, pacBranchName, testNamespace, outputContainerImage string
 
 		var timeout, interval time.Duration
 
-		var webhookRoute *routev1.Route
-		var webhookURL string
+		var prNumber int
+		var prCreationTime time.Time
 
 		BeforeAll(func() {
+
+			consoleRoute, err := f.CommonController.GetOpenshiftRoute("console", "openshift-console")
+			Expect(err).ShouldNot(HaveOccurred())
+
+			if utils.IsPrivateHostname(consoleRoute.Spec.Host) {
+				Skip("Using private cluster (not reachable from Github), skipping...")
+			}
 
 			applicationName = fmt.Sprintf("build-suite-test-application-%s", util.GenerateRandomString(4))
 			testNamespace = utils.GetGeneratedNamespace("build-e2e")
@@ -65,20 +68,43 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			componentName = fmt.Sprintf("build-suite-test-component-git-source-%s", util.GenerateRandomString(4))
-			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-			timeout = time.Second * 120
-			interval = time.Second * 1
+			componentName = fmt.Sprintf("%s-%s", "test-component-pac", util.GenerateRandomString(4))
+			pacBranchName = fmt.Sprintf("appstudio-%s", componentName)
+			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images", utils.GetQuayIOOrganization())
+			// TODO: test image naming with provided image tag
+			// outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
+
 			// Create a component with Git Source URL being defined
-			_, err := f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "")
+			_, err = f.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, outputContainerImage)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			DeferCleanup(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace, testNamespace)
 		})
 
+		AfterAll(func() {
+			pacInitTestFiles := []string{
+				fmt.Sprintf(".tekton/%s-pull-request.yaml", componentName),
+				fmt.Sprintf(".tekton/%s-push.yaml", componentName),
+			}
+
+			for _, file := range pacInitTestFiles {
+				f.CommonController.Github.DeleteFile(helloWorldComponentGitSourceRepoName, file, "main")
+				if err != nil {
+					Expect(err.Error()).To(ContainSubstring("404 Not Found"))
+				}
+			}
+
+			err = f.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, pacBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+		})
+
 		It("triggers a PipelineRun", func() {
+			timeout = time.Second * 120
+			interval = time.Second * 1
 			Eventually(func() bool {
-				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
+				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true, "")
 				if err != nil {
 					klog.Infoln("PipelineRun has not been created yet")
 					return false
@@ -88,13 +114,32 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 		})
 
 		When("the PipelineRun has started", func() {
-			BeforeAll(func() {
+			It("should lead to a PaC init PR creation", func() {
+				timeout = time.Second * 60
+				interval = time.Second * 1
+
+				Eventually(func() bool {
+					prs, err := f.CommonController.Github.ListPullRequests(helloWorldComponentGitSourceRepoName)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					for _, pr := range prs {
+						if pr.Head.GetRef() == pacBranchName {
+							prNumber = pr.GetNumber()
+							prCreationTime = pr.GetCreatedAt()
+							return true
+						}
+					}
+					return false
+				}, timeout, interval).Should(BeTrue(), "timed out when waiting for init PaC PR to be created")
+
+			})
+
+			It("the PipelineRun should eventually finish successfully", func() {
 				timeout = time.Second * 600
 				interval = time.Second * 10
-			})
-			It("should eventually finish successfully", func() {
 				Eventually(func() bool {
-					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
+
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true, "")
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, condition := range pipelineRun.Status.Conditions {
@@ -112,130 +157,46 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 		})
 
 		When("the PipelineRun is finished", func() {
-			var webhookName string
 
-			BeforeAll(func() {
+			It("eventually leads to a creation of a PR comment with the PipelineRun status report", func() {
+				var comments []*github.IssueComment
 				timeout = time.Minute * 5
 				interval = time.Second * 10
-				webhookName = "el" + componentName
 
-			})
-
-			It("eventually leads to a creation of a component webhook (event listener)", Label("webhook", "slow"), func() {
 				Eventually(func() bool {
-					_, err := f.HasController.GetEventListenerRoute(componentName, testNamespace)
-					if err != nil {
-						klog.Infof("component webhook %s has not been created yet in %s namespace\n", webhookName, testNamespace)
-						return false
-					}
-					return true
+					comments, err = f.CommonController.Github.ListPullRequestCommentsSince(helloWorldComponentGitSourceRepoName, prNumber, prCreationTime)
+					Expect(err).ShouldNot(HaveOccurred())
 
-				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the component webhook to be created")
+					return len(comments) != 0
+				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PaC PR comment about the pipelinerun status to appear in the component repo")
+
+				Expect(comments).To(HaveLen(1), fmt.Sprintf("the initial PR has more than 1 comment after a single pipelinerun. repo: %s, pr number: %d, comments content: %v", helloWorldComponentGitSourceURL, prNumber, comments))
+				Expect(comments[0]).To(ContainSubstring("success"), fmt.Sprintf("the initial PR doesn't contain the info about successful pipelinerun"))
 			})
 		})
 
-		When("the container image is created and pushed to container registry", Label("sbom", "slow"), func() {
-			It("contains non-empty sbom files", func() {
-				component, err := f.HasController.GetHasComponent(componentName, testNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-				purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(component.Spec.ContainerImage)
-				Expect(err).NotTo(HaveOccurred())
+		When("the PaC init branch is updated", func() {
 
-				Expect(cyclonedx.BomFormat).To(Equal("CycloneDX"))
-				Expect(cyclonedx.SpecVersion).ToNot(BeEmpty())
-				Expect(cyclonedx.Version).ToNot(BeZero())
-				Expect(cyclonedx.Components).ToNot(BeEmpty())
-
-				numberOfLibraryComponents := 0
-				for _, component := range cyclonedx.Components {
-					Expect(component.Name).ToNot(BeEmpty())
-					Expect(component.Type).ToNot(BeEmpty())
-					Expect(component.Version).ToNot(BeEmpty())
-
-					if component.Type == "library" {
-						Expect(component.Purl).ToNot(BeEmpty())
-						numberOfLibraryComponents++
-					}
-				}
-
-				Expect(purl.ImageContents.Dependencies).ToNot(BeEmpty())
-				Expect(len(purl.ImageContents.Dependencies)).To(Equal(numberOfLibraryComponents))
-
-				for _, dependency := range purl.ImageContents.Dependencies {
-					Expect(dependency.Purl).ToNot(BeEmpty())
-				}
-			})
-		})
-		When("the component event listener is created", Label("webhook", "slow"), func() {
-			BeforeAll(func() {
-				timeout = time.Minute * 5
-				interval = time.Second * 1
-
-				webhookRoute, err = f.HasController.GetEventListenerRoute(componentName, testNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(webhookRoute.Spec.Host).ShouldNot(BeEmpty())
-
-				if webhookRoute.Spec.TLS != nil {
-					webhookURL = fmt.Sprintf("https://%s", webhookRoute.Spec.Host)
-				} else {
-					webhookURL = fmt.Sprintf("http://%s", webhookRoute.Spec.Host)
-				}
-			})
-
-			It("should be eventually ready to receive events from Github", func() {
-				Eventually(func() bool {
-					c := http.Client{}
-					req, err := http.NewRequestWithContext(context.Background(), "GET", webhookURL, bytes.NewReader([]byte("{}")))
-					if err != nil {
-						return false
-					}
-					resp, err := c.Do(req)
-					if err != nil || resp.StatusCode > 299 {
-						return false
-					}
-					return true
-				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the event listener to be ready")
-			})
-		})
-
-		When("the component webhook is configured on Github repository for 'push' events and a change is pushed", Label("webhook", "slow"), func() {
-			var initialContainerImageURL, newContainerImageURL string
-			var webhookID int64
+			var branchUpdateTimestamp time.Time
+			var updatedFileSHA string
 
 			BeforeAll(func() {
-				if utils.IsPrivateHostname(webhookRoute.Spec.Host) {
-					// Workaround for cleanup is needed because of the issue in ginkgo: https://github.com/onsi/ginkgo/issues/980
-					DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
-					Skip("Using private cluster (not reachable from Github), skipping...")
-				}
 
-				timeout = time.Minute * 5
-				interval = time.Second * 5
-
-				// Get Component CR to check the current value of Container Image
-				component, err := f.HasController.GetHasComponent(componentName, testNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-				initialContainerImageURL = component.Spec.ContainerImage
-
-				webhookID, err = f.CommonController.Github.CreateWebhook(helloWorldComponentGitSourceRepoName, webhookURL)
-				Expect(err).ShouldNot(HaveOccurred())
-				DeferCleanup(f.CommonController.Github.DeleteWebhook, helloWorldComponentGitSourceRepoName, webhookID)
-
-				// Wait until EventListener's pod is ready to receive events
-				err = f.CommonController.WaitForPodSelector(f.CommonController.IsPodRunning, testNamespace, "eventlistener", componentName, 60, 100)
+				branchUpdateTimestamp = time.Now()
+				updatedFile, err := f.CommonController.Github.UpdateFile(helloWorldComponentGitSourceRepoName, "README.md", fmt.Sprintf("test PaC branch %s update", pacBranchName), pacBranchName)
 				Expect(err).NotTo(HaveOccurred())
 
-				// Update a file in Component source Github repo to trigger a push event
-				updatedFile, err := f.CommonController.Github.UpdateFile(helloWorldComponentGitSourceRepoName, "README.md", "test")
-				Expect(err).NotTo(HaveOccurred())
+				updatedFileSHA = updatedFile.GetSHA()
+				klog.Infoln("updated file sha:", updatedFileSHA)
 
-				// A new output container image URL should contain the suffix with the latest commit SHA
-				newContainerImageURL = fmt.Sprintf("%s-%s", initialContainerImageURL, updatedFile.GetSHA())
 			})
 
 			It("eventually leads to triggering another PipelineRun", func() {
+				timeout = time.Minute * 2
+				interval = time.Second * 1
+
 				Eventually(func() bool {
-					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true)
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true, updatedFileSHA)
 					if err != nil {
 						klog.Infoln("PipelineRun has not been created yet")
 						return false
@@ -245,8 +206,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			})
 			It("PipelineRun should eventually finish", func() {
 				timeout = time.Minute * 5
+				interval = time.Second * 10
+
 				Eventually(func() bool {
-					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true)
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true, updatedFileSHA)
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, condition := range pipelineRun.Status.Conditions {
@@ -261,15 +224,98 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 					return pipelineRun.IsDone()
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
 			})
-			It("ContainerImage field should be updated with the SHA of the commit that was pushed to the Component source repo", func() {
+
+			It("eventually leads to another update of a PR with a comment about the PipelineRun status report", func() {
+				var comments []*github.IssueComment
+
+				timeout = time.Minute * 5
+				interval = time.Second * 5
+
 				Eventually(func() bool {
-					component, err := f.HasController.GetHasComponent(componentName, testNamespace)
+					comments, err = f.CommonController.Github.ListPullRequestCommentsSince(helloWorldComponentGitSourceRepoName, prNumber, branchUpdateTimestamp)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					return len(comments) != 0
+				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PaC PR comment about the pipelinerun status to appear in the component repo")
+
+				Expect(comments).To(HaveLen(1), fmt.Sprintf("the updated PaC PR has more than 1 comment after a single branch update. repo: %s, pr number: %d, comments content: %v", helloWorldComponentGitSourceURL, prNumber, comments))
+				Expect(comments[0]).To(ContainSubstring("success"), fmt.Sprintf("the updated PR doesn't contain the info about successful pipelinerun"))
+			})
+
+		})
+
+		When("the PaC init branch is merged", func() {
+			var mergeResultSha string
+
+			BeforeAll(func() {
+				mergeResult, err := f.CommonController.Github.MergePullRequest(helloWorldComponentGitSourceRepoName, prNumber)
+				Expect(err).NotTo(HaveOccurred())
+
+				mergeResultSha = mergeResult.GetSHA()
+				klog.Infoln("merged result sha:", mergeResultSha)
+
+			})
+
+			It("eventually leads to triggering another PipelineRun", func() {
+				timeout = time.Minute * 2
+				interval = time.Second * 1
+
+				Eventually(func() bool {
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true, mergeResultSha)
 					if err != nil {
-						klog.Infoln("component was not updated yet")
+						klog.Infoln("PipelineRun has not been created yet")
 						return false
 					}
-					return component.Spec.ContainerImage == newContainerImageURL
-				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the Component CR to get updated with a new container image URL")
+					return pipelineRun.HasStarted()
+				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
+			})
+			It("PipelineRun should eventually finish", func() {
+				timeout = time.Minute * 5
+				interval = time.Second * 10
+
+				Eventually(func() bool {
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true, mergeResultSha)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					for _, condition := range pipelineRun.Status.Conditions {
+						klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
+
+						if condition.Reason == string(v1beta1.PipelineRunReasonFailed) {
+							d := utils.GetFailedPipelineRunDetails(pipelineRun)
+							logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
+							Fail(fmt.Sprintf("Pipelinerun '%s' has failed. Logs from failed container '%s': \n%s", pipelineRun.Name, d.FailedContainerName, logs))
+						}
+					}
+					return pipelineRun.IsDone()
+				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
+			})
+		})
+
+		When("the component is removed and recreated (with the same name in the same namespace)", func() {
+			BeforeAll(func() {
+				Expect(f.HasController.DeleteHasComponent(componentName, testNamespace)).To(Succeed())
+
+				Eventually(func() bool {
+					_, err := f.HasController.GetHasComponent(componentName, testNamespace)
+					return errors.IsNotFound(err)
+				}, time.Minute*1, time.Second*1).Should(BeTrue(), "timed out when waiting for the app %s to be deleted in %s namespace", applicationName, testNamespace)
+
+			})
+
+			It("should no longer lead to a creation of a PaC PR", func() {
+				timeout = time.Second * 10
+				interval = time.Second * 2
+				Consistently(func() bool {
+					prs, err := f.CommonController.Github.ListPullRequests(helloWorldComponentGitSourceRepoName)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					for _, pr := range prs {
+						if pr.Head.GetRef() == pacBranchName {
+							return true
+						}
+					}
+					return false
+				}, timeout, interval).Should(BeFalse(), "did not expect a new PR created after initial PaC configuration was already merged for the same component name and a namespace")
 			})
 		})
 	})
@@ -379,7 +425,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 				interval := time.Second * 1
 
 				Eventually(func() bool {
-					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, false)
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, false, "")
 					if err != nil {
 						klog.Infoln("PipelineRun has not been created yet")
 						return false
@@ -404,7 +450,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			if customBundleRef == "" {
 				Skip("skipping the specs - custom pipeline bundle is not defined")
 			}
-			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, false)
+			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, false, "")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Expect(pipelineRun.Spec.PipelineRef.Bundle).To(Equal(customBundleRef))
@@ -428,7 +474,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			if defaultBundleRef == "" {
 				Skip("skipping - default pipeline bundle cannot be fetched")
 			}
-			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, false)
+			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, false, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(pipelineRun.Spec.PipelineRef.Bundle).To(Equal(defaultBundleRef))
 		})
@@ -440,7 +486,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 				timeout := time.Second * 600
 				interval := time.Second * 10
 				Eventually(func() bool {
-					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, false)
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, false, "")
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, condition := range pipelineRun.Status.Conditions {
@@ -454,6 +500,39 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 					}
 					return pipelineRun.IsDone()
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
+			})
+
+			When("the container image is created and pushed to container registry", Label("sbom", "slow"), func() {
+				It("contains non-empty sbom files", func() {
+					component, err := f.HasController.GetHasComponent(componentName, testNamespace)
+					Expect(err).ShouldNot(HaveOccurred())
+					purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(component.Spec.ContainerImage)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(cyclonedx.BomFormat).To(Equal("CycloneDX"))
+					Expect(cyclonedx.SpecVersion).ToNot(BeEmpty())
+					Expect(cyclonedx.Version).ToNot(BeZero())
+					Expect(cyclonedx.Components).ToNot(BeEmpty())
+
+					numberOfLibraryComponents := 0
+					for _, component := range cyclonedx.Components {
+						Expect(component.Name).ToNot(BeEmpty())
+						Expect(component.Type).ToNot(BeEmpty())
+						Expect(component.Version).ToNot(BeEmpty())
+
+						if component.Type == "library" {
+							Expect(component.Purl).ToNot(BeEmpty())
+							numberOfLibraryComponents++
+						}
+					}
+
+					Expect(purl.ImageContents.Dependencies).ToNot(BeEmpty())
+					Expect(len(purl.ImageContents.Dependencies)).To(Equal(numberOfLibraryComponents))
+
+					for _, dependency := range purl.ImageContents.Dependencies {
+						Expect(dependency.Purl).ToNot(BeEmpty())
+					}
+				})
 			})
 		}
 	})
@@ -488,7 +567,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 		It("should not trigger a PipelineRun", func() {
 			Consistently(func() bool {
-				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
+				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				Expect(pipelineRun.Name).To(BeEmpty())
 
 				return strings.Contains(err.Error(), "no pipelinerun found")
@@ -537,7 +616,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 		It("should be referenced in a PipelineRun", Label("build-bundle-overriding"), func() {
 			Eventually(func() bool {
-				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
+				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				if err != nil {
 					klog.Infoln("PipelineRun has not been created yet")
 					return false
@@ -545,7 +624,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 				return pipelineRun.HasStarted()
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 
-			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
+			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(pipelineRun.Spec.PipelineRef.Bundle).To(Equal(dummyPipelineBundleRef))
 		})
@@ -600,7 +679,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 		It("should override the shared secret", func() {
 			Eventually(func() bool {
-				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
+				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				if err != nil {
 					klog.Infoln("PipelineRun has not been created yet")
 					return false
@@ -608,7 +687,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 				return pipelineRun.HasStarted()
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 
-			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
+			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(pipelineRun.Spec.Workspaces).To(HaveLen(2))
 			registryAuthWorkspace := &v1beta1.WorkspaceBinding{
@@ -624,7 +703,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			timeout = time.Minute * 5
 			interval = time.Second * 5
 			Eventually(func() bool {
-				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
+				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				Expect(err).ShouldNot(HaveOccurred())
 
 				for _, condition := range pipelineRun.Status.Conditions {

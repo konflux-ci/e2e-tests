@@ -18,8 +18,12 @@ func (g *Github) CheckIfRepositoryExist(repository string) bool {
 	return resp.StatusCode == 200
 }
 
-func (g *Github) UpdateFile(repository, pathToFile, newContent string) (*github.RepositoryContentResponse, error) {
-	file, _, _, err := g.client.Repositories.GetContents(context.Background(), g.organization, repository, pathToFile, &github.RepositoryContentGetOptions{})
+func (g *Github) UpdateFile(repository, pathToFile, newContent, branchName string) (*github.RepositoryContentResponse, error) {
+	opts := &github.RepositoryContentGetOptions{}
+	if branchName != "" {
+		opts.Ref = fmt.Sprintf("heads/%s", branchName)
+	}
+	file, _, _, err := g.client.Repositories.GetContents(context.Background(), g.organization, repository, pathToFile, opts)
 	if err != nil {
 		return nil, fmt.Errorf("error when listing file contents: %v", err)
 	}
@@ -28,6 +32,7 @@ func (g *Github) UpdateFile(repository, pathToFile, newContent string) (*github.
 		Message: github.String("e2e test commit message"),
 		SHA:     github.String(fileSha),
 		Content: []byte(newContent),
+		Branch:  github.String(branchName),
 	}
 	updatedFile, _, err := g.client.Repositories.UpdateFile(context.Background(), g.organization, repository, pathToFile, newFileContent)
 	if err != nil {
@@ -35,4 +40,29 @@ func (g *Github) UpdateFile(repository, pathToFile, newContent string) (*github.
 	}
 
 	return updatedFile, nil
+}
+
+func (g *Github) DeleteFile(repository, pathToFile, branchName string) error {
+	getOpts := &github.RepositoryContentGetOptions{}
+	deleteOpts := &github.RepositoryContentFileOptions{}
+
+	if branchName != "" {
+		getOpts.Ref = fmt.Sprintf("heads/%s", branchName)
+		deleteOpts.Branch = github.String(branchName)
+	}
+	file, _, _, err := g.client.Repositories.GetContents(context.Background(), g.organization, repository, pathToFile, getOpts)
+	if err != nil {
+		return fmt.Errorf("error when listing file contents on github: %v", err)
+	}
+
+	deleteOpts = &github.RepositoryContentFileOptions{
+		Message: github.String("delete test files"),
+		SHA:     github.String(file.GetSHA()),
+	}
+
+	_, _, err = g.client.Repositories.DeleteFile(context.Background(), g.organization, repository, pathToFile, deleteOpts)
+	if err != nil {
+		return fmt.Errorf("error when deleting file on github: %v", err)
+	}
+	return nil
 }
