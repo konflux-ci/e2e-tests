@@ -87,10 +87,6 @@ func (Local) PrepareCluster() error {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
 	}
 
-	if err := ConfigureSPI(); err != nil {
-		return fmt.Errorf("error when configuring SPI: %v", err)
-	}
-
 	return nil
 }
 
