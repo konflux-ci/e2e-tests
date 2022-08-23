@@ -32,6 +32,8 @@ var (
 	testProjectRevision = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_REVISION", "main")
 )
 
+// do not merge temp pr for cross repo PR coupling 
+
 var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jvm-build"), func() {
 	defer GinkgoRecover()
 
