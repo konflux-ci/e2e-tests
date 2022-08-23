@@ -428,7 +428,7 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 
 	// "pipeline" service account needs to be present in the namespace before we start with creating tekton resources
 	if err := s.WaitUntil(s.ServiceaccountPresent("pipeline", name), time.Second*30); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("'pipeline' service account wasn't created in %s namespace: %+v", name, err)
 	}
 
 	// Argo CD role/rolebinding need to be present in the namespace before we create GitOpsDeployments.
@@ -451,8 +451,8 @@ func (s *SuiteController) ServiceaccountPresent(saName, namespace string) wait.C
 }
 
 // argoCDNamespaceRBACPresent returns a condition which waits for the Argo CD role/rolebindings to be set on the namespace.
-// - This Role/RoleBinding allows Argo cd to deploy into the namespace (which is referred to as 'managing the namespace'), and
-//   is created by the GitOps Operator.
+//   - This Role/RoleBinding allows Argo cd to deploy into the namespace (which is referred to as 'managing the namespace'), and
+//     is created by the GitOps Operator.
 func (s *SuiteController) argoCDNamespaceRBACPresent(namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
 
