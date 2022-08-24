@@ -26,7 +26,7 @@ import (
 const (
 	containerImageSource                 = "quay.io/redhat-appstudio-qe/busybox-loop:latest"
 	helloWorldComponentGitSourceRepoName = "devfile-sample-hello-world"
-	helloWorldComponentGitSourceURL      = "https://github.com/psturc-org/" + helloWorldComponentGitSourceRepoName
+	helloWorldComponentGitSourceURL      = "https://github.com/redhat-appstudio-qe/" + helloWorldComponentGitSourceRepoName
 	pythonComponentGitSourceURL          = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic"
 	dummyPipelineBundleRef               = "quay.io/redhat-appstudio-qe/dummy-pipeline-bundle:latest"
 )
