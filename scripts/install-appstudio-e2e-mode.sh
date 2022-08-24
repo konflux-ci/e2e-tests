@@ -67,6 +67,12 @@ function createApplicationServiceSecrets() {
     rm docker.config
 }
 
+# Setup Sandbox Operator
+function setupSandboxOperator() {
+    cd "$WORKSPACE"/tmp/infra-deployments
+    /bin/bash hack/sandbox-development-mode.sh
+    cd "$WORKSPACE"
+}
 
 while [[ $# -gt 0 ]]
 do
@@ -76,6 +82,7 @@ do
             cloneInfraDeployments
             addQERemoteForkAndInstallAppstudio
             createApplicationServiceSecrets
+            setupSandboxOperator
             ;;
         *)
             ;;
