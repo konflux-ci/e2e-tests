@@ -86,7 +86,8 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 						klog.Infof("error getting logs for pod/container %s/%s: %s", pod.Name, c.Name, cerr.Error())
 						continue
 					}
-					toDebug["jvm-build-service-pod-"+pod.Name+"-"+c.Name+".log"] = cLog
+					filename := fmt.Sprintf("%s-pod-%s-%s.log", pod.Namespace, pod.Name, c.Name)
+					toDebug[filename] = cLog
 				}
 			}
 			// let's make sure and print the pr that starts the analysis first
@@ -95,7 +96,8 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			if err != nil {
 				klog.Infof("got error fetching PR logs: %s", err.Error())
 			}
-			toDebug[testNamespace+"-pr-"+componentPipelineRun.Name+".log"] = logs
+			filename := fmt.Sprintf("%s-pr-%s.log", testNamespace, componentPipelineRun.Name)
+			toDebug[filename] = logs
 
 			prList, err := f.TektonController.ListAllPipelineRuns(testNamespace)
 			if err != nil {
@@ -110,7 +112,8 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				if err != nil {
 					klog.Infof("got error fetching PR logs for %s: %s", pr.Name, err.Error())
 				}
-				toDebug[pr.Namespace+"-pr-"+pr.Name+".log"] = prLog
+				filename := fmt.Sprintf("%s-pr-%s.log", pr.Namespace, pr.Name)
+				toDebug[filename] = prLog
 			}
 
 			for _, ab := range abList.Items {
@@ -118,7 +121,8 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				if err != nil {
 					klog.Infof("error when marshalling content of %s from %s namespace: %+v", ab.Name, ab.Namespace, err)
 				} else {
-					toDebug[ab.Namespace+"-ab-"+ab.Name+".yaml"] = string(v)
+					filename := fmt.Sprintf("%s-ab-%s.yaml", ab.Namespace, ab.Name)
+					toDebug[filename] = string(v)
 				}
 			}
 			for _, db := range dbList.Items {
@@ -126,7 +130,8 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				if err != nil {
 					klog.Infof("error when marshalling content of %s from %s namespace: %+v", db.Name, db.Namespace, err)
 				} else {
-					toDebug[db.Namespace+"-db-"+db.Name+".yaml"] = string(v)
+					filename := fmt.Sprintf("%s-db-%s.yaml", db.Namespace, db.Name)
+					toDebug[filename] = string(v)
 				}
 			}
 
