@@ -39,6 +39,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 	var testNamespace, applicationName, componentName, outputContainerImage string
 	var componentPipelineRun v1beta1.PipelineRun
 	var timeout, interval time.Duration
+	var doCollectLogs bool
 
 	f, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
@@ -54,7 +55,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			klog.Infof("got error fetching dependencybuilds: %s", err.Error())
 		}
 
-		if CurrentSpecReport().Failed() {
+		if CurrentSpecReport().Failed() || doCollectLogs {
 			var testLogsDir string
 			artifactDir := os.Getenv("ARTIFACT_DIR")
 			var storeLogsInFiles bool
@@ -349,11 +350,11 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		})
 
 		It("some artifactbuilds and dependencybuilds complete", func() {
-			Eventually(func() bool {
+			err = wait.PollImmediate(interval, 2*timeout, func() (done bool, err error) {
 				abList, err := f.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
 				if err != nil {
 					klog.Infof("error listing artifactbuilds: %s", err.Error())
-					return false
+					return false, nil
 				}
 				abComplete := false
 				for _, ab := range abList.Items {
@@ -365,7 +366,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				dbList, err := f.JvmbuildserviceController.ListDependencyBuilds(testNamespace)
 				if err != nil {
 					klog.Infof("error listing dependencybuilds: %s", err.Error())
-					return false
+					return false, nil
 				}
 				dbComplete := false
 				for _, db := range dbList.Items {
@@ -375,10 +376,20 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 					}
 				}
 				if abComplete && dbComplete {
-					return true
+					return true, nil
 				}
-				return false
-			}, 2*timeout, interval).Should(BeTrue(), "timed out waiting for some artifactbuilds/dependencybuilds to complete")
+				return false, nil
+			})
+			if err != nil {
+				ciRepoName := os.Getenv("REPO_NAME")
+				// Fail only in case the test was run from jvm-build-service repo or locally
+				if ciRepoName == "jvm-build-service" || ciRepoName == "" {
+					Fail("timed out waiting for some artifactbuilds/dependencybuilds to complete")
+				} else {
+					doCollectLogs = true
+					Skip("SKIPPING: unstable feature: timed-out when waiting for some artifactbuilds and dependencybuilds complete")
+				}
+			}
 		})
 	})
 })
