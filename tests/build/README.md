@@ -18,4 +18,3 @@ Steps to run tests within `build` directory:
 
 ## Tekton chains suite specs
 TBD
-
