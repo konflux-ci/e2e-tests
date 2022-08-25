@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"os"
 	"strings"
@@ -35,22 +36,47 @@ var (
 var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jvm-build"), func() {
 	defer GinkgoRecover()
 
-	var testNamespace, prGeneratedName, applicationName, componentName, outputContainerImage string
+	var testNamespace, applicationName, componentName, outputContainerImage string
+	var componentPipelineRun v1beta1.PipelineRun
 	var timeout, interval time.Duration
 
 	f, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
 
 	AfterAll(func() {
+		abList, err := f.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
+		if err != nil {
+			klog.Infof("got error fetching artifactbuilds: %s", err.Error())
+		}
+
+		dbList, err := f.JvmbuildserviceController.ListDependencyBuilds(testNamespace)
+		if err != nil {
+			klog.Infof("got error fetching dependencybuilds: %s", err.Error())
+		}
+
 		if CurrentSpecReport().Failed() {
+			var testLogsDir string
+			artifactDir := os.Getenv("ARTIFACT_DIR")
+			var storeLogsInFiles bool
+
+			if artifactDir != "" {
+				testLogsDir = fmt.Sprintf("%s/jvm-build-service-test", artifactDir)
+				err := os.MkdirAll(testLogsDir, 0755)
+				if err != nil && !os.IsExist(err) {
+					klog.Infof("cannot create a folder %s for storing test logs/resources: %+v", testLogsDir, err)
+				} else {
+					storeLogsInFiles = true
+				}
+			}
 			// get jvm-build-service logs
+			toDebug := map[string]string{}
+
 			jvmPodList, jerr := f.CommonController.K8sClient.KubeInterface().CoreV1().Pods("jvm-build-service").List(context.TODO(), metav1.ListOptions{})
 			if jerr != nil {
 				klog.Infof("error listing jvm-build-service pods: %s", jerr.Error())
 			}
 			klog.Infof("found %d pods in jvm-build-service namespace", len(jvmPodList.Items))
 			for _, pod := range jvmPodList.Items {
-				podLog := fmt.Sprintf("jvm-build-service namespace pod %s:\n", pod.Name)
 				var containers []corev1.Container
 				containers = append(containers, pod.Spec.InitContainers...)
 				containers = append(containers, pod.Spec.Containers...)
@@ -60,45 +86,69 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 						klog.Infof("error getting logs for pod/container %s/%s: %s", pod.Name, c.Name, cerr.Error())
 						continue
 					}
-					podLog = fmt.Sprintf("%s\n%s\n", podLog, cLog)
+					toDebug["jvm-build-service-pod-"+pod.Name+"-"+c.Name+".log"] = cLog
 				}
-				klog.Info(podLog)
 			}
 			// let's make sure and print the pr that starts the analysis first
-			logs, err := f.TektonController.GetPipelineRunLogs(prGeneratedName, testNamespace)
+
+			logs, err := f.TektonController.GetPipelineRunLogs(componentPipelineRun.Name, testNamespace)
 			if err != nil {
 				klog.Infof("got error fetching PR logs: %s", err.Error())
 			}
-			klog.Infof("failed PR logs: %s", logs)
+			toDebug[testNamespace+"-pr-"+componentPipelineRun.Name+".log"] = logs
+
 			prList, err := f.TektonController.ListAllPipelineRuns(testNamespace)
 			if err != nil {
 				klog.Infof("got error fetching PR list: %s", err.Error())
 			}
 			klog.Infof("total number of pipeline runs not pruned: %d", len(prList.Items))
 			for _, pr := range prList.Items {
-				if pr.Name == prGeneratedName {
+				if pr.Name == componentPipelineRun.Name {
 					continue
 				}
 				prLog, err := f.TektonController.GetPipelineRunLogs(pr.Name, pr.Namespace)
 				if err != nil {
 					klog.Infof("got error fetching PR logs for %s: %s", pr.Name, err.Error())
 				}
-				klog.Infof("pipeline run log for %s: %s", pr.Name, prLog)
+				toDebug[pr.Namespace+"-pr-"+pr.Name+".log"] = prLog
+			}
+
+			for _, ab := range abList.Items {
+				v, err := json.MarshalIndent(ab, "", "  ")
+				if err != nil {
+					klog.Infof("error when marshalling content of %s from %s namespace: %+v", ab.Name, ab.Namespace, err)
+				} else {
+					toDebug[ab.Namespace+"-ab-"+ab.Name+".yaml"] = string(v)
+				}
+			}
+			for _, db := range dbList.Items {
+				v, err := json.MarshalIndent(db, "", "  ")
+				if err != nil {
+					klog.Infof("error when marshalling content of %s from %s namespace: %+v", db.Name, db.Namespace, err)
+				} else {
+					toDebug[db.Namespace+"-db-"+db.Name+".yaml"] = string(v)
+				}
+			}
+
+			for file, content := range toDebug {
+				if storeLogsInFiles {
+					filename := fmt.Sprintf("%s/%s", testLogsDir, file)
+					if err := os.WriteFile(filename, []byte(content), 0644); err != nil {
+						klog.Infof("cannot write to %s: %+v", filename, err)
+					} else {
+						continue
+					}
+				} else {
+					klog.Infof("%s\n%s", file, content)
+				}
 			}
 		}
-		abList, err := f.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
-		if err != nil {
-			klog.Infof("got error fetching artifactbuilds: %s", err.Error())
-		}
+		// Cleanup
 		for _, ab := range abList.Items {
 			err := f.JvmbuildserviceController.DeleteArtifactBuild(ab.Name, ab.Namespace)
 			if err != nil {
 				klog.Infof("got error deleting AB %s: %s", ab.Name, err.Error())
 			}
-		}
-		dbList, err := f.JvmbuildserviceController.ListDependencyBuilds(testNamespace)
-		if err != nil {
-			klog.Infof("got error fetching dependencybuilds: %s", err.Error())
 		}
 		for _, db := range dbList.Items {
 			err := f.JvmbuildserviceController.DeleteDependencyBuild(db.Name, db.Namespace)
@@ -106,22 +156,9 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				klog.Infof("got error deleting DB %s: %s", db.Name, err.Error())
 			}
 		}
-		err = f.TektonController.DeletePipelineRun(prGeneratedName, testNamespace)
-		if err != nil {
-			klog.Infof("error deleting pr %s: %s", prGeneratedName, err.Error())
-		}
-		err = f.TektonController.DeletePipeline("sample-component-build", testNamespace)
-		if err != nil {
-			klog.Infof("error deleting pipeline sample-component-build: %s", err.Error())
-		}
-		err = f.TektonController.DeleteTask("maven", testNamespace)
-		if err != nil {
-			klog.Infof("error deleting task maven: %s", err.Error())
-		}
-		err = f.TektonController.DeleteTask("git-clone", testNamespace)
-		if err != nil {
-			klog.Infof("error deleting task git-clone", err.Error())
-		}
+		Expect(f.HasController.DeleteHasComponent(componentName, testNamespace)).To(Succeed())
+		Expect(f.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
+		Expect(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 	})
 
 	BeforeAll(func() {
@@ -181,19 +218,17 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		// Create a component with Git Source URL being defined
 		_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, testProjectGitUrl, testProjectRevision, "", outputContainerImage, "")
 		Expect(err).ShouldNot(HaveOccurred())
-
-		DeferCleanup(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace, testNamespace)
 	})
 
 	When("the Component with s2i-java component is created", func() {
 		It("a PipelineRun is triggered", func() {
 			Eventually(func() bool {
-				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
+				componentPipelineRun, err = f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
 				if err != nil {
 					klog.Infoln("PipelineRun has not been created yet")
 					return false
 				}
-				return pipelineRun.HasStarted()
+				return componentPipelineRun.HasStarted()
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 		})
 
@@ -268,7 +303,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			Eventually(func() bool {
 				pr, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
 				if err != nil {
-					klog.Infof("get of pr %s returned error: %s", prGeneratedName, err.Error())
+					klog.Infof("get of pr %s returned error: %s", pr.Name, err.Error())
 					return false
 				}
 				if !pr.IsDone() {
@@ -276,14 +311,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 					return false
 				}
 				if !pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-					// just because the condition succeeded is not set does not mean it won't be soon
-					prBytes, err := json.MarshalIndent(pr, "", "  ")
-					if err != nil {
-						klog.Infof("problem marshalling failed pipelinerun to bytes: %s", err.Error())
-						return false
-					}
-					klog.Infof("not yet successful pipeline run: %s", string(prBytes))
-					return false
+					Fail("component pipeline run did not succeed")
 				}
 				return true
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the pipeline run to complete")
