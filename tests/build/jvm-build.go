@@ -121,7 +121,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				if err != nil {
 					klog.Infof("error when marshalling content of %s from %s namespace: %+v", ab.Name, ab.Namespace, err)
 				} else {
-					filename := fmt.Sprintf("%s-ab-%s.yaml", ab.Namespace, ab.Name)
+					filename := fmt.Sprintf("%s-ab-%s.json", ab.Namespace, ab.Name)
 					toDebug[filename] = string(v)
 				}
 			}
@@ -130,7 +130,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				if err != nil {
 					klog.Infof("error when marshalling content of %s from %s namespace: %+v", db.Name, db.Namespace, err)
 				} else {
-					filename := fmt.Sprintf("%s-db-%s.yaml", db.Namespace, db.Name)
+					filename := fmt.Sprintf("%s-db-%s.json", db.Namespace, db.Name)
 					toDebug[filename] = string(v)
 				}
 			}
