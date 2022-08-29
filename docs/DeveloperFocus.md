@@ -1,22 +1,4 @@
-# Running the e2e suite from a developer perspective
-
-## Prerequisites
-
-For setting up your cluster to run the e2e tests locally against, follow the [Installation guide](./Installation.md).
-
-Note that it is recommended to install AppStudio in e2e mode, but the e2e suite should also be usable in development and preview modes.
-
-## Building the e2e suite
-
-Whenever changes are made to the underlying e2e code, a new e2e suite binary needs to be built. From the e2e-tests directory run:
-
-   ```bash
-      make build
-   ```
-
-The resulting e2e-appstudio binary is located in the bin folder.
-
-## Focused testing
+# Focused testing
 
 The e2e suite is written using the [Ginkgo test framework](https://onsi.github.io/ginkgo/) and, therefore, benefits from all the default flags Ginkgo provides.
 

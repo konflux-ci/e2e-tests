@@ -133,6 +133,22 @@ var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), 
 		Expect(component.Name).To(Equal(componentName))
 	})
 
+	It("Gitops Repository should not be deleted when component gets deleted", func() {
+		componentName2 := fmt.Sprintf(QuarkusComponentName+"-%s", util.GenerateRandomString(10))
+		component2, err := framework.HasController.CreateComponentFromStub(compDetected, componentName2, AppStudioE2EApplicationsNamespace, "", applicationName)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = framework.HasController.DeleteHasComponent(component2.Name, AppStudioE2EApplicationsNamespace)
+		Expect(err).NotTo(HaveOccurred())
+
+		Eventually(func() bool {
+			// application info should be stored even after deleting the application in application variable
+			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
+
+			return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "Gitops repository deleted after component was deleted")
+	})
+
 	It("Check a Component gets deleted when its application is deleted", func() {
 		err = framework.HasController.DeleteHasApplication(applicationName, AppStudioE2EApplicationsNamespace, false)
 		Expect(err).NotTo(HaveOccurred())

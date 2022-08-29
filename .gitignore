@@ -22,3 +22,4 @@ tmp/
 .vscode/dryrun.log
 .vscode/targets.log
 .cache/
+.tmp/

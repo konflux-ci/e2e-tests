@@ -137,7 +137,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				// Components for now can be imported from gitUrl, container image or a devfile
 				if componentTest.ContainerSource != "" {
 					It(fmt.Sprintf("create component %s from %s container source", componentTest.Name, componentTest.Type), func() {
-						_, err := fw.HasController.CreateComponent(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace, "", componentTest.ContainerSource, outputContainerImage, oauthSecretName)
+						_, err := fw.HasController.CreateComponent(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace, "", "", componentTest.ContainerSource, outputContainerImage, oauthSecretName)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -153,7 +153,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				} else if componentTest.GitSourceUrl != "" {
 					It(fmt.Sprintf("create component %s from %s git source %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl), func() {
 						component, err = fw.HasController.CreateComponent(application.Name, componentTest.Name, AppStudioE2EApplicationsNamespace,
-							componentTest.GitSourceUrl, "", containerIMG, oauthSecretName)
+							componentTest.GitSourceUrl, "", "", containerIMG, oauthSecretName)
 						Expect(err).NotTo(HaveOccurred())
 					})
 

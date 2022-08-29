@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/devfile/library/pkg/util"
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
@@ -16,49 +19,66 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	klog "k8s.io/klog/v2"
+	"k8s.io/klog/v2"
 	"knative.dev/pkg/apis"
 )
 
-var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Pending, Label("jvm-build"), func() {
+var (
+	testProjectGitUrl   = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_URL", "https://github.com/stuartwdouglas/hacbs-test-project")
+	testProjectRevision = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_REVISION", "main")
+)
+
+var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jvm-build"), func() {
 	defer GinkgoRecover()
 
-	var appStudioE2EApplicationsNamespace, prGeneratedName string
+	var testNamespace, applicationName, componentName, outputContainerImage string
+	var componentPipelineRun v1beta1.PipelineRun
 	var timeout, interval time.Duration
-	var userConfigMapName = "jvm-build-config"
-
-	var streamTektonYaml = func(url string) []byte {
-		resp, err := http.Get(url)
-		Expect(err).NotTo(HaveOccurred(), "error getting %s", url)
-		defer resp.Body.Close()
-		bytes, err := io.ReadAll(resp.Body)
-		Expect(err).NotTo(HaveOccurred(), "error getting bytes")
-		return bytes
-	}
+	var doCollectLogs bool
 
 	f, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
 
-	// got panics in DeferCleanup when I tried to do multi param invocations, so following the pattern we used in openshift/origin
 	AfterAll(func() {
-		if CurrentSpecReport().Failed() {
+		abList, err := f.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
+		if err != nil {
+			klog.Infof("got error fetching artifactbuilds: %s", err.Error())
+		}
+
+		dbList, err := f.JvmbuildserviceController.ListDependencyBuilds(testNamespace)
+		if err != nil {
+			klog.Infof("got error fetching dependencybuilds: %s", err.Error())
+		}
+
+		if CurrentSpecReport().Failed() || doCollectLogs {
+			var testLogsDir string
+			artifactDir := os.Getenv("ARTIFACT_DIR")
+			var storeLogsInFiles bool
+
+			if artifactDir != "" {
+				testLogsDir = fmt.Sprintf("%s/jvm-build-service-test", artifactDir)
+				err := os.MkdirAll(testLogsDir, 0755)
+				if err != nil && !os.IsExist(err) {
+					klog.Infof("cannot create a folder %s for storing test logs/resources: %+v", testLogsDir, err)
+				} else {
+					storeLogsInFiles = true
+				}
+			}
 			// get jvm-build-service logs
+			toDebug := map[string]string{}
+
 			jvmPodList, jerr := f.CommonController.K8sClient.KubeInterface().CoreV1().Pods("jvm-build-service").List(context.TODO(), metav1.ListOptions{})
 			if jerr != nil {
 				klog.Infof("error listing jvm-build-service pods: %s", jerr.Error())
 			}
 			klog.Infof("found %d pods in jvm-build-service namespace", len(jvmPodList.Items))
 			for _, pod := range jvmPodList.Items {
-				podLog := fmt.Sprintf("jvm-build-service namespace pod %s:\n", pod.Name)
-				containers := []corev1.Container{}
+				var containers []corev1.Container
 				containers = append(containers, pod.Spec.InitContainers...)
 				containers = append(containers, pod.Spec.Containers...)
 				for _, c := range containers {
@@ -67,45 +87,74 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Pending, 
 						klog.Infof("error getting logs for pod/container %s/%s: %s", pod.Name, c.Name, cerr.Error())
 						continue
 					}
-					podLog = fmt.Sprintf("%s\n%s\n", podLog, cLog)
+					filename := fmt.Sprintf("%s-pod-%s-%s.log", pod.Namespace, pod.Name, c.Name)
+					toDebug[filename] = cLog
 				}
-				klog.Info(podLog)
 			}
 			// let's make sure and print the pr that starts the analysis first
-			logs, err := f.TektonController.GetPipelineRunLogs(prGeneratedName, appStudioE2EApplicationsNamespace)
+
+			logs, err := f.TektonController.GetPipelineRunLogs(componentPipelineRun.Name, testNamespace)
 			if err != nil {
 				klog.Infof("got error fetching PR logs: %s", err.Error())
 			}
-			klog.Infof("failed PR logs: %s", logs)
-			prList, err := f.TektonController.ListAllPipelineRuns(appStudioE2EApplicationsNamespace)
+			filename := fmt.Sprintf("%s-pr-%s.log", testNamespace, componentPipelineRun.Name)
+			toDebug[filename] = logs
+
+			prList, err := f.TektonController.ListAllPipelineRuns(testNamespace)
 			if err != nil {
 				klog.Infof("got error fetching PR list: %s", err.Error())
 			}
 			klog.Infof("total number of pipeline runs not pruned: %d", len(prList.Items))
 			for _, pr := range prList.Items {
-				if pr.Name == prGeneratedName {
+				if pr.Name == componentPipelineRun.Name {
 					continue
 				}
 				prLog, err := f.TektonController.GetPipelineRunLogs(pr.Name, pr.Namespace)
 				if err != nil {
 					klog.Infof("got error fetching PR logs for %s: %s", pr.Name, err.Error())
 				}
-				klog.Infof("pipeline run log for %s: %s", pr.Name, prLog)
+				filename := fmt.Sprintf("%s-pr-%s.log", pr.Namespace, pr.Name)
+				toDebug[filename] = prLog
+			}
+
+			for _, ab := range abList.Items {
+				v, err := json.MarshalIndent(ab, "", "  ")
+				if err != nil {
+					klog.Infof("error when marshalling content of %s from %s namespace: %+v", ab.Name, ab.Namespace, err)
+				} else {
+					filename := fmt.Sprintf("%s-ab-%s.json", ab.Namespace, ab.Name)
+					toDebug[filename] = string(v)
+				}
+			}
+			for _, db := range dbList.Items {
+				v, err := json.MarshalIndent(db, "", "  ")
+				if err != nil {
+					klog.Infof("error when marshalling content of %s from %s namespace: %+v", db.Name, db.Namespace, err)
+				} else {
+					filename := fmt.Sprintf("%s-db-%s.json", db.Namespace, db.Name)
+					toDebug[filename] = string(v)
+				}
+			}
+
+			for file, content := range toDebug {
+				if storeLogsInFiles {
+					filename := fmt.Sprintf("%s/%s", testLogsDir, file)
+					if err := os.WriteFile(filename, []byte(content), 0644); err != nil {
+						klog.Infof("cannot write to %s: %+v", filename, err)
+					} else {
+						continue
+					}
+				} else {
+					klog.Infof("%s\n%s", file, content)
+				}
 			}
 		}
-		abList, err := f.JvmbuildserviceController.ListArtifactBuilds(appStudioE2EApplicationsNamespace)
-		if err != nil {
-			klog.Infof("got error fetching artifactbuilds: %s", err.Error())
-		}
+		// Cleanup
 		for _, ab := range abList.Items {
 			err := f.JvmbuildserviceController.DeleteArtifactBuild(ab.Name, ab.Namespace)
 			if err != nil {
 				klog.Infof("got error deleting AB %s: %s", ab.Name, err.Error())
 			}
-		}
-		dbList, err := f.JvmbuildserviceController.ListDependencyBuilds(appStudioE2EApplicationsNamespace)
-		if err != nil {
-			klog.Infof("got error fetching dependencybuilds: %s", err.Error())
 		}
 		for _, db := range dbList.Items {
 			err := f.JvmbuildserviceController.DeleteDependencyBuild(db.Name, db.Namespace)
@@ -113,152 +162,154 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Pending, 
 				klog.Infof("got error deleting DB %s: %s", db.Name, err.Error())
 			}
 		}
-		err = f.TektonController.DeletePipelineRun(prGeneratedName, appStudioE2EApplicationsNamespace)
-		if err != nil {
-			klog.Infof("error deleting pr %s: %s", prGeneratedName, err.Error())
-		}
-		err = f.TektonController.DeletePipeline("sample-component-build", appStudioE2EApplicationsNamespace)
-		if err != nil {
-			klog.Infof("error deleting pipeline sample-component-build: %s", err.Error())
-		}
-		err = f.TektonController.DeleteTask("maven", appStudioE2EApplicationsNamespace)
-		if err != nil {
-			klog.Infof("error deleting task maven: %s", err.Error())
-		}
-		err = f.TektonController.DeleteTask("git-clone", appStudioE2EApplicationsNamespace)
-		if err != nil {
-			klog.Infof("error deleting task git-clone", err.Error())
-		}
-		err = f.CommonController.DeleteConfigMap(userConfigMapName, appStudioE2EApplicationsNamespace, true)
-		if err != nil {
-			klog.Infof("error deleting user configmap", err.Error())
-		}
+		Expect(f.HasController.DeleteHasComponent(componentName, testNamespace)).To(Succeed())
+		Expect(f.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
+		Expect(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 	})
 
 	BeforeAll(func() {
-		appStudioE2EApplicationsNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "appstudio-e2e-test")
+		testNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "appstudio-e2e-test")
 
-		klog.Infof("Test namespace: %s", appStudioE2EApplicationsNamespace)
+		klog.Infof("Test namespace: %s", testNamespace)
 
-		_, err := f.CommonController.CreateTestNamespace(appStudioE2EApplicationsNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", appStudioE2EApplicationsNamespace, err)
+		_, err := f.CommonController.CreateTestNamespace(testNamespace)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
+
+		customBundleConfigMap, err := f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, testNamespace)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				defaultBundleConfigMap, err := f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace)
+				Expect(err).ToNot(HaveOccurred())
+
+				bundlePullSpec := defaultBundleConfigMap.Data["default_build_bundle"]
+				hacbsBundleConfigMap := &v1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: constants.BuildPipelinesConfigMapName},
+					Data:       map[string]string{"default_build_bundle": strings.Replace(bundlePullSpec, "build-", "hacbs-", 1)},
+				}
+				_, err = f.CommonController.CreateConfigMap(hacbsBundleConfigMap, testNamespace)
+				Expect(err).ToNot(HaveOccurred())
+				DeferCleanup(f.CommonController.DeleteConfigMap, constants.BuildPipelinesConfigMapName, testNamespace, false)
+			} else {
+				Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, testNamespace, err))
+			}
+		} else {
+			bundlePullSpec := customBundleConfigMap.Data["default_build_bundle"]
+			hacbsBundleConfigMap := &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: constants.BuildPipelinesConfigMapName},
+				Data:       map[string]string{"default_build_bundle": strings.Replace(bundlePullSpec, "build-", "hacbs-", 1)},
+			}
+
+			_, err = f.CommonController.UpdateConfigMap(hacbsBundleConfigMap, testNamespace)
+			Expect(err).ToNot(HaveOccurred())
+			DeferCleanup(func() error {
+				hacbsBundleConfigMap.Data = customBundleConfigMap.Data
+				_, err := f.CommonController.UpdateConfigMap(hacbsBundleConfigMap, testNamespace)
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+		}
 
 		timeout = time.Minute * 10
 		interval = time.Second * 10
 
-		decodingScheme := runtime.NewScheme()
-		utilruntime.Must(v1beta1.AddToScheme(decodingScheme))
-		decoderCodecFactory := serializer.NewCodecFactory(decodingScheme)
-		decoder := decoderCodecFactory.UniversalDecoder(v1beta1.SchemeGroupVersion)
+		applicationName = fmt.Sprintf("jvm-build-suite-application-%s", util.GenerateRandomString(4))
+		_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
+		Expect(err).NotTo(HaveOccurred())
 
-		userConfigMap := corev1.ConfigMap{
-			Data: map[string]string{
-				"enable-rebuilds": "true",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: userConfigMapName,
-			},
-		}
-		_, err = f.CommonController.CreateConfigMap(&userConfigMap, appStudioE2EApplicationsNamespace)
-		if err != nil {
-			Expect(err).NotTo(HaveOccurred(), "error creating the user configmap")
-		}
+		componentName = fmt.Sprintf("jvm-build-suite-component-%s", util.GenerateRandomString(4))
+		outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 
-		gitCloneTaskBytes := streamTektonYaml("https://raw.githubusercontent.com/redhat-appstudio/build-definitions/main/tasks/git-clone.yaml")
-		gitClone := &v1beta1.Task{}
-		err = runtime.DecodeInto(decoder, gitCloneTaskBytes, gitClone)
-		Expect(err).NotTo(HaveOccurred(), "error converting git clone yaml to task obj")
-		err = f.TektonController.DeleteTask(gitClone.Name, appStudioE2EApplicationsNamespace)
-		if err != nil && !errors.IsNotFound(err) {
-			Expect(err).NotTo(HaveOccurred(), "error deleting git-clone task")
-		}
-		_, err = f.TektonController.CreateTask(gitClone, appStudioE2EApplicationsNamespace)
-		Expect(err).NotTo(HaveOccurred(), "error creating git clone task")
-
-		mavenLocation := "https://raw.githubusercontent.com/redhat-appstudio/jvm-build-service/main/deploy/base/maven-v0.2.yaml"
-		prOwner := os.Getenv("JVM_BUILD_SERVICE_PR_OWNER")
-		prCommit := os.Getenv("JVM_BUILD_SERVICE_PR_SHA")
-		if len(prOwner) > 0 && len(prCommit) > 0 {
-			mavenLocation = fmt.Sprintf("https://raw.githubusercontent.com/%s/jvm-build-service/%s/deploy/base/maven-v0.2.yaml", prOwner, prCommit)
-		}
-		klog.Infof("fetching maven def from %s", mavenLocation)
-		mavenData := streamTektonYaml(mavenLocation)
-		maven := &v1beta1.Task{}
-		err = runtime.DecodeInto(decoder, mavenData, maven)
-		Expect(err).NotTo(HaveOccurred(), "error creating maven task")
-		// override images if needed
-		analyserImage := os.Getenv("JVM_BUILD_SERVICE_ANALYZER_IMAGE")
-		if len(analyserImage) > 0 {
-			klog.Infof("PR analyzer image: %s", analyserImage)
-			for _, step := range maven.Spec.Steps {
-				if step.Name != "analyse-dependencies" {
-					continue
-				}
-				klog.Infof("Updating analyse-dependencies step with image %s", analyserImage)
-				step.Image = analyserImage
-			}
-		}
-		sidecarImage := os.Getenv("JVM_BUILD_SERVICE_SIDECAR_IMAGE")
-		if len(sidecarImage) > 0 {
-			klog.Infof("PR sidecar image: %s", sidecarImage)
-			for _, sidecar := range maven.Spec.Sidecars {
-				if sidecar.Name != "proxy" {
-					continue
-				}
-				klog.Infof("Updating proxy sidecar with image %s", sidecarImage)
-				sidecar.Image = sidecarImage
-			}
-		}
-
-		err = f.TektonController.DeleteTask("maven", appStudioE2EApplicationsNamespace)
-		if err != nil && !errors.IsNotFound(err) {
-			Expect(err).NotTo(HaveOccurred(), "error cleaning up maven task before create")
-		}
-		_, err = f.TektonController.CreateTask(maven, appStudioE2EApplicationsNamespace)
-		Expect(err).NotTo(HaveOccurred(), "error creating maven task")
-
-		pipelineLocation := "https://raw.githubusercontent.com/redhat-appstudio/jvm-build-service/main/hack/examples/pipeline.yaml"
-		if len(prOwner) > 0 && len(prCommit) > 0 {
-			pipelineLocation = fmt.Sprintf("https://raw.githubusercontent.com/%s/jvm-build-service/%s/hack/examples/pipeline.yaml", prOwner, prCommit)
-		}
-		klog.Infof("fetching pipeline def from %s", pipelineLocation)
-		pipelineData := streamTektonYaml(pipelineLocation)
-		pipeline := &v1beta1.Pipeline{}
-		err = runtime.DecodeInto(decoder, pipelineData, pipeline)
-		Expect(err).NotTo(HaveOccurred(), "error decoding pipeline")
-
-		err = f.TektonController.DeletePipeline(pipeline.Name, appStudioE2EApplicationsNamespace)
-		if err != nil && !errors.IsNotFound(err) {
-			Expect(err).NotTo(HaveOccurred(), "error cleaning up build pipeline before create")
-		}
-		_, err = f.TektonController.CreatePipeline(pipeline, appStudioE2EApplicationsNamespace)
-		Expect(err).NotTo(HaveOccurred(), "error creating build pipeline")
-
-		runLocation := "https://raw.githubusercontent.com/redhat-appstudio/jvm-build-service/main/hack/examples/run-e2e-shaded-app.yaml"
-		if len(prOwner) > 0 && len(prCommit) > 0 {
-			runLocation = fmt.Sprintf("https://raw.githubusercontent.com/%s/jvm-build-service/%s/hack/examples/run-e2e-shaded-app.yaml", prOwner, prCommit)
-		}
-		klog.Infof("fetching pipelinerun def from %s", runLocation)
-		runData := streamTektonYaml(runLocation)
-		run := &v1beta1.PipelineRun{}
-		err = runtime.DecodeInto(decoder, runData, run)
-		Expect(err).NotTo(HaveOccurred(), "error decoding build pipelinerun")
-
-		// since we use generated name no need to cleanup before create
-		run, err = f.TektonController.CreatePipelineRun(run, appStudioE2EApplicationsNamespace)
-		Expect(err).NotTo(HaveOccurred(), "error creating build pipelinerun")
-		prGeneratedName = run.Name
-
-		klog.Infof("Generated pipeline run %s", prGeneratedName)
+		// Create a component with Git Source URL being defined
+		_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, testProjectGitUrl, testProjectRevision, "", outputContainerImage, "")
+		Expect(err).ShouldNot(HaveOccurred())
 	})
 
-	When("pipelinerun with the appropriate jvm-build-service repository analysis are launched", func() {
-
-		It("those pipeline runs complete successfully", func() {
+	When("the Component with s2i-java component is created", func() {
+		It("a PipelineRun is triggered", func() {
 			Eventually(func() bool {
-				pr, err := f.TektonController.GetPipelineRun(prGeneratedName, appStudioE2EApplicationsNamespace)
+				componentPipelineRun, err = f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
 				if err != nil {
-					klog.Infof("get of pr %s returned error: %s", prGeneratedName, err.Error())
+					klog.Infoln("PipelineRun has not been created yet")
+					return false
+				}
+				return componentPipelineRun.HasStarted()
+			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
+		})
+
+		It("the build-container task from component PipelineRun references a correct sidecar image", func() {
+			ciSidecarImage := os.Getenv("JVM_BUILD_SERVICE_SIDECAR_IMAGE")
+			if ciSidecarImage == "" {
+				Skip("JVM_BUILD_SERVICE_SIDECAR_IMAGE env var is not exported, skipping the test...")
+			}
+
+			err = wait.PollImmediate(interval, timeout, func() (done bool, err error) {
+				pr, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
+				if err != nil {
+					klog.Infof("get pr for component %s produced err: %s", componentName, err.Error())
+					return false, nil
+				}
+
+				for _, tr := range pr.Status.TaskRuns {
+					if tr.PipelineTaskName == "build-container" && tr.Status != nil && tr.Status.TaskSpec != nil && tr.Status.TaskSpec.Sidecars != nil {
+						for _, sc := range tr.Status.TaskSpec.Sidecars {
+							if sc.Name == "proxy" {
+								if sc.Image != ciSidecarImage {
+									Fail(fmt.Sprintf("the build-container task from component pipelinerun doesn't contain correct sidecar image. expected: %v, actual: %v", ciSidecarImage, sc.Image))
+								} else {
+									return true, nil
+								}
+							}
+						}
+					}
+				}
+				return false, nil
+			})
+			if err != nil {
+				Fail(fmt.Sprintf("failure occured when verifying the sidecar image reference in pipelinerun: %v", err))
+			}
+		})
+
+		It("the build-container task from component pipelinerun references a correct analyzer image", func() {
+			ciAnalyzerImage := os.Getenv("JVM_BUILD_SERVICE_ANALYZER_IMAGE")
+
+			if ciAnalyzerImage == "" {
+				Skip("JVM_BUILD_SERVICE_ANALYZER_IMAGE env var is not exported, skipping the test...")
+			}
+
+			err = wait.PollImmediate(interval, timeout, func() (done bool, err error) {
+				pr, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
+				if err != nil {
+					klog.Infof("get pr for the component %s produced err: %s", componentName, err.Error())
+					return false, nil
+				}
+
+				for _, tr := range pr.Status.TaskRuns {
+					if tr.PipelineTaskName == "build-container" && tr.Status != nil && tr.Status.TaskSpec != nil && tr.Status.TaskSpec.Steps != nil {
+						for _, step := range tr.Status.TaskSpec.Steps {
+							if step.Name == "analyse-dependencies-java-sbom" {
+								if step.Image != ciAnalyzerImage {
+									Fail(fmt.Sprintf("the build-container task from component pipelinerun doesn't reference the correct analyzer image. expected: %v, actual: %v", ciAnalyzerImage, step.Image))
+								} else {
+									return true, nil
+								}
+							}
+						}
+					}
+				}
+				return false, nil
+			})
+			if err != nil {
+				Fail(fmt.Sprintf("failure occured when verifying the analyzer image reference in pipelinerun: %v", err))
+			}
+		})
+
+		It("that PipelineRun completes successfully", func() {
+			Eventually(func() bool {
+				pr, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
+				if err != nil {
+					klog.Infof("get of pr %s returned error: %s", pr.Name, err.Error())
 					return false
 				}
 				if !pr.IsDone() {
@@ -266,21 +317,14 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Pending, 
 					return false
 				}
 				if !pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-					// just because the condition succeeded is not set does not mean it won't be soon
-					prBytes, err := json.MarshalIndent(pr, "", "  ")
-					if err != nil {
-						klog.Infof("problem marshalling failed pipelinerun to bytes: %s", err.Error())
-						return false
-					}
-					klog.Infof("not yet successful pipeline run: %s", string(prBytes))
-					return false
+					Fail("component pipeline run did not succeed")
 				}
 				return true
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the pipeline run to complete")
 		})
-		It("that artifactbuilds and dependencybuilds are generated", func() {
+		It("artifactbuilds and dependencybuilds are generated", func() {
 			Eventually(func() bool {
-				abList, err := f.JvmbuildserviceController.ListArtifactBuilds(appStudioE2EApplicationsNamespace)
+				abList, err := f.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
 				if err != nil {
 					klog.Infof("error listing artifactbuilds: %s", err.Error())
 					return false
@@ -289,7 +333,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Pending, 
 				if len(abList.Items) > 0 {
 					gotABs = true
 				}
-				dbList, err := f.JvmbuildserviceController.ListDependencyBuilds(appStudioE2EApplicationsNamespace)
+				dbList, err := f.JvmbuildserviceController.ListDependencyBuilds(testNamespace)
 				if err != nil {
 					klog.Infof("error listing dependencybuilds: %s", err.Error())
 					return false
@@ -305,12 +349,12 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Pending, 
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the generation of artifactbuilds and dependencybuilds")
 		})
 
-		It("that some artifactbuilds and dependencybuilds complete", func() {
-			Eventually(func() bool {
-				abList, err := f.JvmbuildserviceController.ListArtifactBuilds(appStudioE2EApplicationsNamespace)
+		It("some artifactbuilds and dependencybuilds complete", func() {
+			err = wait.PollImmediate(interval, 2*timeout, func() (done bool, err error) {
+				abList, err := f.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
 				if err != nil {
 					klog.Infof("error listing artifactbuilds: %s", err.Error())
-					return false
+					return false, nil
 				}
 				abComplete := false
 				for _, ab := range abList.Items {
@@ -319,10 +363,10 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Pending, 
 						break
 					}
 				}
-				dbList, err := f.JvmbuildserviceController.ListDependencyBuilds(appStudioE2EApplicationsNamespace)
+				dbList, err := f.JvmbuildserviceController.ListDependencyBuilds(testNamespace)
 				if err != nil {
 					klog.Infof("error listing dependencybuilds: %s", err.Error())
-					return false
+					return false, nil
 				}
 				dbComplete := false
 				for _, db := range dbList.Items {
@@ -332,10 +376,20 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Pending, 
 					}
 				}
 				if abComplete && dbComplete {
-					return true
+					return true, nil
 				}
-				return false
-			}, 2*timeout, interval).Should(BeTrue(), "timed out waiting for some artifactbuilds/dependencybuilds to complete")
+				return false, nil
+			})
+			if err != nil {
+				ciRepoName := os.Getenv("REPO_NAME")
+				// Fail only in case the test was run from jvm-build-service repo or locally
+				if ciRepoName == "jvm-build-service" || ciRepoName == "" {
+					Fail("timed out waiting for some artifactbuilds/dependencybuilds to complete")
+				} else {
+					doCollectLogs = true
+					Skip("SKIPPING: unstable feature: timed-out when waiting for some artifactbuilds and dependencybuilds complete")
+				}
+			}
 		})
 	})
 })
