@@ -34,7 +34,6 @@ var demoSuitesPath string
 
 func init() {
 	rootDir, _ := os.Getwd()
-
 	flag.StringVar(&webhookConfigPath, "webhookConfigPath", "", "path to webhook config file")
 	flag.StringVar(&demoSuitesPath, "config-suites", fmt.Sprintf(rootDir+"/tests/e2e-demos/config/default.yaml"), "path to e2e demo suites definition")
 }

@@ -24,5 +24,6 @@ export KUBECONFIG_TEST="/tmp/kubeconfig"
 export KUBECONFIG="${KUBECONFIG_TEST}"
 
 /bin/bash "$WORKSPACE"/scripts/install-appstudio-e2e-mode.sh install
+/bin/bash "$WORKSPACE"/scripts/spi-e2e-setup.sh
 
 executeE2ETests

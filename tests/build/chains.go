@@ -298,7 +298,6 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec"), fu
 				// Because the task fails, no results are created
 			})
 		})
-
 	})
 })
 

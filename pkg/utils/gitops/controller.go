@@ -58,12 +58,6 @@ func (h *SuiteController) DeleteGitOpsCR(name string, namespace string) error {
 	return h.KubeRest().Delete(context.TODO(), gitOpsDeployment)
 }
 
-// Remove all components from a given repository. Usefull when create a lot of resources and want to remove all of them
-func (h *SuiteController) DeleteAllGitOpDeploymentsCRsInASpecificNamespace(namespace string) error {
-
-	return h.KubeRest().DeleteAllOf(context.TODO(), &managedgitopsv1alpha1.GitOpsDeployment{}, client.InNamespace(namespace))
-}
-
 // GetGitOpsDeployedImage return the image used by the given component deployment
 func (h *SuiteController) GetGitOpsDeployedImage(deployment *appsv1.Deployment) (string, error) {
 	if len(deployment.Spec.Template.Spec.Containers) > 0 {
@@ -91,4 +85,9 @@ func (h *SuiteController) CheckGitOpsEndpoint(route *routev1.Route, endpoint str
 	}
 
 	return nil
+}
+
+// Remove all tokens from a given repository. Usefull when create a lot of resources and want to remove all of them
+func (h *SuiteController) DeleteAllGitOpsDeploymentInASpecificNamespace(namespace string) error {
+	return h.KubeRest().DeleteAllOf(context.TODO(), &managedgitopsv1alpha1.GitOpsDeployment{}, client.InNamespace(namespace))
 }

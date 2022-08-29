@@ -21,6 +21,9 @@ serviceProviders:
   - type: GitHub
     clientId: $SPI_GITHUB_CLIENT_ID
     clientSecret: $SPI_GITHUB_CLIENT_SECRET
+  - type: Quay
+    clientId: $SPI_GITHUB_CLIENT_ID
+    clientSecret: $SPI_GITHUB_CLIENT_SECRET
 baseUrl: https://spi-oauth-route-spi-system.$( oc get ingresses.config/cluster -o jsonpath={.spec.domain})
 EOF
 )
@@ -42,5 +45,5 @@ rm "$tmpfile"
 # The env var NAMESPACE is exported by openshift-ci and breaks the vault-init script. It has to be set to an empty string.
 curl https://raw.githubusercontent.com/redhat-appstudio/service-provider-integration-operator/main/hack/vault-init.sh | NAMESPACE="" bash -s
 
-oc rollout restart  deployment/spi-controller-manager -n spi-system
-oc rollout restart  deployment/spi-oauth-service -n spi-system
+oc rollout restart deployment/spi-controller-manager -n spi-system
+oc rollout restart deployment/spi-oauth-service -n spi-system
