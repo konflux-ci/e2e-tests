@@ -35,7 +35,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 	framework, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
 	var oauthSecretName = ""
-	var applicationName, componentName string
+	var applicationName, componentName, testNamespace string
 
 	// Initialize the application struct
 	application := &appservice.Application{}
@@ -44,15 +44,16 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 	privateGitRepository := utils.GetEnv(constants.PRIVATE_DEVFILE_SAMPLE, PrivateQuarkusDevfileSource)
 
 	BeforeAll(func() {
+		testNamespace = utils.GetGeneratedNamespace()
 		// Generate names for the application and component resources
 		applicationName = fmt.Sprintf(RedHatAppStudioApplicationName+"-%s", util.GenerateRandomString(10))
 		componentName = fmt.Sprintf(QuarkusComponentName+"-%s", util.GenerateRandomString(10))
 
-		_, err = framework.CommonController.CreateTestNamespace(AppStudioE2EApplicationsNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", AppStudioE2EApplicationsNamespace, err)
+		_, err = framework.CommonController.CreateTestNamespace(testNamespace)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
 
 		credentials := `{"access_token":"` + utils.GetEnv(constants.GITHUB_TOKEN_ENV, "") + `"}`
-		oauthSecretName = framework.SPIController.InjectManualSPIToken(AppStudioE2EApplicationsNamespace, privateGitRepository, credentials, v1.SecretTypeBasicAuth)
+		oauthSecretName = framework.SPIController.InjectManualSPIToken(testNamespace, privateGitRepository, credentials, v1.SecretTypeBasicAuth)
 
 		// Check to see if the github token was provided
 		Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
@@ -65,13 +66,13 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 	})
 
 	AfterAll(func() {
-		err := framework.HasController.DeleteHasComponent(componentName, AppStudioE2EApplicationsNamespace)
+		err := framework.HasController.DeleteHasComponent(componentName, testNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = framework.HasController.DeleteHasApplication(applicationName, AppStudioE2EApplicationsNamespace, false)
+		err = framework.HasController.DeleteHasApplication(applicationName, testNamespace, false)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = framework.SPIController.DeleteAllBindingTokensInASpecificNamespace(AppStudioE2EApplicationsNamespace)
+		err = framework.SPIController.DeleteAllBindingTokensInASpecificNamespace(testNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func() bool {
@@ -81,19 +82,19 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 			return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
 
-		Expect(framework.CommonController.DeleteNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
+		Expect(framework.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
 	})
 
 	It("Create Red Hat AppStudio Application", func() {
-		createdApplication, err := framework.HasController.CreateHasApplication(applicationName, AppStudioE2EApplicationsNamespace)
+		createdApplication, err := framework.HasController.CreateHasApplication(applicationName, testNamespace)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createdApplication.Spec.DisplayName).To(Equal(applicationName))
-		Expect(createdApplication.Namespace).To(Equal(AppStudioE2EApplicationsNamespace))
+		Expect(createdApplication.Namespace).To(Equal(testNamespace))
 	})
 
 	It("Check Red Hat AppStudio Application health", func() {
 		Eventually(func() string {
-			application, err = framework.HasController.GetHasApplication(applicationName, AppStudioE2EApplicationsNamespace)
+			application, err = framework.HasController.GetHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
 			return application.Status.Devfile
@@ -115,7 +116,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 	})
 
 	It("Create Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
-		cdq, err := framework.HasController.CreateComponentDetectionQuery(componentName, AppStudioE2EApplicationsNamespace, QuarkusDevfileSource, "", false)
+		cdq, err := framework.HasController.CreateComponentDetectionQuery(componentName, testNamespace, QuarkusDevfileSource, "", false)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cdq.Name).To(Equal(componentName))
 
@@ -125,7 +126,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 		// Validate that the CDQ completes successfully
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
-			cdq, err = framework.HasController.GetComponentDetectionQuery(componentName, AppStudioE2EApplicationsNamespace)
+			cdq, err = framework.HasController.GetComponentDetectionQuery(componentName, testNamespace)
 			return err == nil && len(cdq.Status.ComponentDetected) > 0
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "ComponentDetectionQuery did not complete successfully")
 
@@ -141,7 +142,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 	})
 
 	It("Create Red Hat AppStudio Quarkus component", func() {
-		component, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, AppStudioE2EApplicationsNamespace, oauthSecretName, applicationName)
+		component, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, oauthSecretName, applicationName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(component.Name).To(Equal(componentName))
 	})

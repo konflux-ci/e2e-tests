@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/onsi/gomega"
 	"github.com/redhat-appstudio/application-service/pkg/devfile"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
@@ -124,4 +125,9 @@ func GetFailedPipelineRunDetails(pipelineRun v1beta1.PipelineRun) *FailedPipelin
 		}
 	}
 	return d
+}
+
+func GetGeneratedNamespace() string {
+	newId, _ := uuid.NewRandom()
+	return newId.String()
 }

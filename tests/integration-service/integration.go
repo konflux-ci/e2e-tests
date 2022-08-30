@@ -51,7 +51,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 	BeforeAll(func() {
 		applicationName = fmt.Sprintf("integration-suite-test-application-%s", util.GenerateRandomString(4))
-		appStudioE2EApplicationsNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "integration-test-namespace")
+		appStudioE2EApplicationsNamespace = utils.GetGeneratedNamespace()
 
 		_, err := f.CommonController.CreateTestNamespace(appStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", appStudioE2EApplicationsNamespace, err)
