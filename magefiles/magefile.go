@@ -116,10 +116,6 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
 	}
 
-	if err := ConfigureSPI(); err != nil {
-		return fmt.Errorf("error when configuring SPI: %v", err)
-	}
-
 	if err := RunE2ETests(); err != nil {
 		return fmt.Errorf("error when running e2e tests: %v", err)
 	}
@@ -130,7 +126,7 @@ func (ci CI) TestE2E() error {
 func RunE2ETests() error {
 	cwd, _ := os.Getwd()
 
-	return sh.RunV("ginkgo", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "-p", "--progress", "./cmd", "--", fmt.Sprintf("--config-suites=%s/tests/e2e-demos/config/default.yaml", cwd))
+	return sh.RunV("ginkgo", "-p", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "--v", "--progress", "--focus=$E2E_TEST_SUITE", "./cmd", "--", fmt.Sprintf("--config-suites=%s/tests/e2e-demos/config/default.yaml", cwd))
 }
 
 func PreflightChecks() error {
@@ -204,10 +200,6 @@ func (CI) createOpenshiftUser() error {
 
 func BootstrapCluster() error {
 	return sh.Run("./scripts/install-appstudio.sh")
-}
-
-func ConfigureSPI() error {
-	return sh.Run("./scripts/spi-e2e-setup.sh")
 }
 
 func (CI) isPRPairingRequired() bool {
