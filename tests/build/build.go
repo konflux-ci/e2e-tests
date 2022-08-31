@@ -37,7 +37,7 @@ var (
 )
 
 var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), func() {
-
+	defer GinkgoRecover()
 	f, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -65,8 +65,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
 			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
 
-			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
+			app, err := f.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(utils.WaitUntil(f.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
+				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
+			)
 
 			componentName = fmt.Sprintf("%s-%s", "test-component-pac", util.GenerateRandomString(4))
 			pacBranchName = fmt.Sprintf("appstudio-%s", componentName)
@@ -348,8 +351,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 					return errors.IsNotFound(err)
 				}, time.Minute*5, time.Second*1).Should(BeTrue(), "timed out when waiting for the app %s to be deleted in %s namespace", applicationName, testNamespace)
 			}
-			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
+			app, err := f.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(utils.WaitUntil(f.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
+				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
+			)
 
 			customBundleConfigMap, err := f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, testNamespace)
 			if err != nil {
@@ -389,7 +395,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 			for _, gitUrl := range componentUrls {
 				gitUrl := gitUrl
-				componentName = fmt.Sprintf("%s-%s", "test-component-", util.GenerateRandomString(4))
+				componentName = fmt.Sprintf("%s-%s", "test-component", util.GenerateRandomString(4))
 				componentNames = append(componentNames, componentName)
 				outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 				// Create a component with Git Source URL being defined
@@ -553,8 +559,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
 			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
 
-			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
+			app, err := f.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(utils.WaitUntil(f.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
+				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
+			)
 			DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace, false)
 
 			componentName = fmt.Sprintf("build-suite-test-component-image-source-%s", util.GenerateRandomString(4))
@@ -591,8 +600,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
 			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
 
-			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
+			app, err := f.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(utils.WaitUntil(f.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
+				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
+			)
 
 			cm := &v1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{Name: constants.BuildPipelinesConfigMapName},
@@ -655,8 +667,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 			applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
 
-			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
+			app, err := f.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(utils.WaitUntil(f.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
+				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
+			)
 			DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace, false)
 
 			timeout = time.Minute * 5
@@ -702,7 +717,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 		})
 
 		It("should not be possible to push to quay.io repo (PipelineRun should fail)", func() {
-			timeout = time.Minute * 5
+			timeout = time.Minute * 10
 			interval = time.Second * 5
 			Eventually(func() bool {
 				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
@@ -729,8 +744,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 			_, err = f.CommonController.CreateTestNamespace(testNamespace)
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
-			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
+			app, err := f.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(utils.WaitUntil(f.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
+				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
+			)
 
 		})
 
@@ -741,7 +759,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 		JustBeforeEach(func() {
 			componentName = fmt.Sprintf("build-suite-test-component-image-url-%s", util.GenerateRandomString(4))
-			timeout = time.Second * 10
+			timeout = time.Second * 20
 		})
 		It("should fail for ContainerImage field set to a protected repository (without an image tag)", func() {
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected", utils.GetQuayIOOrganization())

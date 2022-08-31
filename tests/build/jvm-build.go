@@ -216,8 +216,11 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		interval = time.Second * 10
 
 		applicationName = fmt.Sprintf("jvm-build-suite-application-%s", util.GenerateRandomString(4))
-		_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
+		app, err := f.HasController.CreateHasApplication(applicationName, testNamespace)
 		Expect(err).NotTo(HaveOccurred())
+		Expect(utils.WaitUntil(f.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
+			Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
+		)
 
 		componentName = fmt.Sprintf("jvm-build-suite-component-%s", util.GenerateRandomString(4))
 		outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
@@ -351,7 +354,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		})
 
 		It("some artifactbuilds and dependencybuilds complete", func() {
-			err = wait.PollImmediate(interval, 2*timeout, func() (done bool, err error) {
+			err = wait.PollImmediate(interval, timeout, func() (done bool, err error) {
 				abList, err := f.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
 				if err != nil {
 					klog.Infof("error listing artifactbuilds: %s", err.Error())

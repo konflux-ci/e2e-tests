@@ -190,9 +190,12 @@ func setup(cmd *cobra.Command, args []string) {
 			}
 			// time.Sleep(time.Second * 2)
 			ApplicationName := fmt.Sprintf("%s-app", username)
-			_, err := framework.HasController.CreateHasApplication(ApplicationName, username)
+			app, err := framework.HasController.CreateHasApplication(ApplicationName, username)
 			if err != nil {
 				klog.Fatalf("Problem Creating the Application: %v", err)
+			}
+			if err := utils.WaitUntil(framework.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second); err != nil {
+				klog.Fatalf("timed out waiting for application gitops repo to be created: %v", err)
 			}
 			ComponentName := fmt.Sprintf("%s-component", username)
 			ComponentContainerImage := fmt.Sprintf("image-registry.openshift-image-registry.svc:5000/%s/devfile-sample-code-with-quarkus:%s", username, strings.Replace(uuid.New().String(), "-", "", -1))

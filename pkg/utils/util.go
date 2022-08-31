@@ -2,11 +2,13 @@ package utils
 
 import (
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"net"
 	"net/url"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/devfile/library/pkg/util"
 	"github.com/onsi/gomega"
@@ -131,4 +133,8 @@ func GetFailedPipelineRunDetails(pipelineRun *v1beta1.PipelineRun) *FailedPipeli
 
 func GetGeneratedNamespace(name string) string {
 	return name + "-" + util.GenerateRandomString(4)
+}
+
+func WaitUntil(cond wait.ConditionFunc, timeout time.Duration) error {
+	return wait.PollImmediate(time.Second, timeout, cond)
 }

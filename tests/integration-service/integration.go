@@ -56,8 +56,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		_, err := f.CommonController.CreateTestNamespace(appStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", appStudioE2EApplicationsNamespace, err)
 
-		_, err = f.HasController.CreateHasApplication(applicationName, appStudioE2EApplicationsNamespace)
+		app, err := f.HasController.CreateHasApplication(applicationName, appStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
+		Expect(utils.WaitUntil(f.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
+			Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
+		)
 		DeferCleanup(f.HasController.DeleteHasApplication, applicationName, appStudioE2EApplicationsNamespace, false)
 
 	})

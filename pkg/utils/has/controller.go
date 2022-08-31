@@ -3,6 +3,7 @@ package has
 import (
 	"context"
 	"fmt"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"time"
 
 	routev1 "github.com/openshift/api/route/v1"
@@ -30,7 +31,7 @@ func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
 	}, nil
 }
 
-// GetHasApplicationStatus return the status from the Application Custom Resource object
+// GetHasApplication return the Application Custom Resource object
 func (h *SuiteController) GetHasApplication(name, namespace string) (*appservice.Application, error) {
 	namespacedName := types.NamespacedName{
 		Name:      name,
@@ -49,7 +50,7 @@ func (h *SuiteController) GetHasApplication(name, namespace string) (*appservice
 
 // CreateHasApplication create an application Custom Resource object
 func (h *SuiteController) CreateHasApplication(name, namespace string) (*appservice.Application, error) {
-	application := appservice.Application{
+	application := &appservice.Application{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -58,11 +59,27 @@ func (h *SuiteController) CreateHasApplication(name, namespace string) (*appserv
 			DisplayName: name,
 		},
 	}
-	err := h.KubeRest().Create(context.TODO(), &application)
+	err := h.KubeRest().Create(context.TODO(), application)
 	if err != nil {
 		return nil, err
 	}
-	return &application, nil
+
+	if err := utils.WaitUntil(h.ApplicationDevfilePresent(application), time.Second*30); err != nil {
+		return nil, fmt.Errorf("timed out when waiting for devfile content creation for application %s in %s namespace: %+v", name, namespace, err)
+	}
+
+	return application, nil
+}
+
+func (h *SuiteController) ApplicationDevfilePresent(application *appservice.Application) wait.ConditionFunc {
+	return func() (bool, error) {
+		app, err := h.GetHasApplication(application.Name, application.Namespace)
+		if err != nil {
+			return false, nil
+		}
+		application.Status = app.Status
+		return application.Status.Devfile != "", nil
+	}
 }
 
 // DeleteHasApplication delete a HAS Application resource from the namespace.
