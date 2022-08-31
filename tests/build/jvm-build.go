@@ -169,7 +169,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 	})
 
 	BeforeAll(func() {
-		testNamespace = utils.GetGeneratedNamespace()
+		testNamespace = utils.GetGeneratedNamespace("jvm-build")
 
 		klog.Infof("Test namespace: %s", testNamespace)
 
@@ -212,7 +212,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			})
 		}
 
-		timeout = time.Minute * 10
+		timeout = time.Minute * 20
 		interval = time.Second * 10
 
 		applicationName = fmt.Sprintf("jvm-build-suite-application-%s", util.GenerateRandomString(4))

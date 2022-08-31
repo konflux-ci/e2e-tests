@@ -42,7 +42,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), 
 	compDetected := appservice.ComponentDetectionDescription{}
 
 	BeforeAll(func() {
-		testNamespace = utils.GetGeneratedNamespace()
+		testNamespace = utils.GetGeneratedNamespace("has-e2e")
 		applicationName = fmt.Sprintf(RedHatAppStudioApplicationName+"-%s", util.GenerateRandomString(10))
 		componentName = fmt.Sprintf(QuarkusComponentName+"-%s", util.GenerateRandomString(10))
 		// Check to see if the github token was provided

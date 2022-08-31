@@ -57,7 +57,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	for _, appTest := range configTest.Tests {
 		appTest := appTest
 		Describe(appTest.Name, Ordered, func() {
-			var namespace = utils.GetGeneratedNamespace()
+			var namespace = utils.GetGeneratedNamespace("e2e-demo")
 			BeforeAll(func() {
 				suiteConfig, _ := GinkgoConfiguration()
 				fmt.Printf("Parallel processes: %d", suiteConfig.ParallelTotal)
