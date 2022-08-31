@@ -134,8 +134,7 @@ func (ci CI) TestE2E() error {
 func RunE2ETests() error {
 	cwd, _ := os.Getwd()
 
-	// TODO add "-p" flag to run tests in parallel once our tests are prepared for it
-	return sh.RunV("ginkgo", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "--v", "--progress", "--focus=$E2E_TEST_SUITE", "./cmd", "--", fmt.Sprintf("--config-suites=%s/tests/e2e-demos/config/default.yaml", cwd))
+	return sh.RunV("ginkgo", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "-p", "--progress", "./cmd", "--", fmt.Sprintf("--config-suites=%s/tests/e2e-demos/config/default.yaml", cwd))
 }
 
 func PreflightChecks() error {

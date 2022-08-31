@@ -20,8 +20,7 @@ import (
 )
 
 var (
-	ComponentContainerImage           string = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-	AppStudioE2EApplicationsNamespace        = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "appstudio-e2e-test")
+	ComponentContainerImage string = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 )
 
 /*
@@ -32,7 +31,7 @@ var (
 var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), func() {
 	defer GinkgoRecover()
 
-	var applicationName, componentName string
+	var applicationName, componentName, testNamespace string
 	// Initialize the tests controllers
 	framework, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
@@ -43,6 +42,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), 
 	compDetected := appservice.ComponentDetectionDescription{}
 
 	BeforeAll(func() {
+		testNamespace = utils.GetGeneratedNamespace("has-e2e")
 		applicationName = fmt.Sprintf(RedHatAppStudioApplicationName+"-%s", util.GenerateRandomString(10))
 		componentName = fmt.Sprintf(QuarkusComponentName+"-%s", util.GenerateRandomString(10))
 		// Check to see if the github token was provided
@@ -53,14 +53,14 @@ var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), 
 			Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
 		}
 
-		_, err := framework.CommonController.CreateTestNamespace(AppStudioE2EApplicationsNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", AppStudioE2EApplicationsNamespace, err)
+		_, err := framework.CommonController.CreateTestNamespace(testNamespace)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
 
 	})
 
 	AfterAll(func() {
 
-		err = framework.HasController.DeleteHasComponentDetectionQuery(componentName, AppStudioE2EApplicationsNamespace)
+		err = framework.HasController.DeleteHasComponentDetectionQuery(componentName, testNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func() bool {
@@ -72,15 +72,15 @@ var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), 
 	})
 
 	It("Create Red Hat AppStudio Application", func() {
-		createdApplication, err := framework.HasController.CreateHasApplication(applicationName, AppStudioE2EApplicationsNamespace)
+		createdApplication, err := framework.HasController.CreateHasApplication(applicationName, testNamespace)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createdApplication.Spec.DisplayName).To(Equal(applicationName))
-		Expect(createdApplication.Namespace).To(Equal(AppStudioE2EApplicationsNamespace))
+		Expect(createdApplication.Namespace).To(Equal(testNamespace))
 	})
 
 	It("Check Red Hat AppStudio Application health", func() {
 		Eventually(func() string {
-			application, err = framework.HasController.GetHasApplication(applicationName, AppStudioE2EApplicationsNamespace)
+			application, err = framework.HasController.GetHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
 			return application.Status.Devfile
@@ -102,7 +102,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), 
 	})
 
 	It("Create Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
-		cdq, err := framework.HasController.CreateComponentDetectionQuery(componentName, AppStudioE2EApplicationsNamespace, QuarkusDevfileSource, "", false)
+		cdq, err := framework.HasController.CreateComponentDetectionQuery(componentName, testNamespace, QuarkusDevfileSource, "", false)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cdq.Name).To(Equal(componentName))
 
@@ -112,7 +112,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), 
 		// Validate that the CDQ completes successfully
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
-			cdq, err = framework.HasController.GetComponentDetectionQuery(componentName, AppStudioE2EApplicationsNamespace)
+			cdq, err = framework.HasController.GetComponentDetectionQuery(componentName, testNamespace)
 			return err == nil && len(cdq.Status.ComponentDetected) > 0
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "ComponentDetectionQuery did not complete successfully")
 
@@ -128,17 +128,17 @@ var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), 
 	})
 
 	It("Create Red Hat AppStudio Quarkus component", func() {
-		component, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, AppStudioE2EApplicationsNamespace, "", applicationName)
+		component, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, "", applicationName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(component.Name).To(Equal(componentName))
 	})
 
 	It("Gitops Repository should not be deleted when component gets deleted", func() {
 		componentName2 := fmt.Sprintf(QuarkusComponentName+"-%s", util.GenerateRandomString(10))
-		component2, err := framework.HasController.CreateComponentFromStub(compDetected, componentName2, AppStudioE2EApplicationsNamespace, "", applicationName)
+		component2, err := framework.HasController.CreateComponentFromStub(compDetected, componentName2, testNamespace, "", applicationName)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = framework.HasController.DeleteHasComponent(component2.Name, AppStudioE2EApplicationsNamespace)
+		err = framework.HasController.DeleteHasComponent(component2.Name, testNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func() bool {
@@ -150,10 +150,10 @@ var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), 
 	})
 
 	It("Check a Component gets deleted when its application is deleted", func() {
-		err = framework.HasController.DeleteHasApplication(applicationName, AppStudioE2EApplicationsNamespace, false)
+		err = framework.HasController.DeleteHasApplication(applicationName, testNamespace, false)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(func() bool {
-			_, err := framework.HasController.GetHasComponent(componentName, AppStudioE2EApplicationsNamespace)
+			_, err := framework.HasController.GetHasComponent(componentName, testNamespace)
 			if err != nil && errors.IsNotFound(err) {
 				return true
 			}

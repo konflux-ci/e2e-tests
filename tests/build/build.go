@@ -56,7 +56,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 		BeforeAll(func() {
 
 			applicationName = fmt.Sprintf("build-suite-test-application-%s", util.GenerateRandomString(4))
-			testNamespace = fmt.Sprintf("e2e-test-%s", util.GenerateRandomString(4))
+			testNamespace = utils.GetGeneratedNamespace("build-e2e")
 
 			_, err = f.CommonController.CreateTestNamespace(testNamespace)
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
@@ -168,7 +168,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 		})
 		When("the component event listener is created", Label("webhook", "slow"), func() {
 			BeforeAll(func() {
-				timeout = time.Minute * 1
+				timeout = time.Minute * 5
 				interval = time.Second * 1
 
 				webhookRoute, err = f.HasController.GetEventListenerRoute(componentName, testNamespace)
@@ -209,7 +209,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 					Skip("Using private cluster (not reachable from Github), skipping...")
 				}
 
-				timeout = time.Minute * 2
+				timeout = time.Minute * 5
 				interval = time.Second * 5
 
 				// Get Component CR to check the current value of Container Image
@@ -298,7 +298,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 				Eventually(func() bool {
 					_, err := f.HasController.GetHasApplication(applicationName, testNamespace)
 					return errors.IsNotFound(err)
-				}, time.Minute*1, time.Second*1).Should(BeTrue(), "timed out when waiting for the app %s to be deleted in %s namespace", applicationName, testNamespace)
+				}, time.Minute*5, time.Second*1).Should(BeTrue(), "timed out when waiting for the app %s to be deleted in %s namespace", applicationName, testNamespace)
 			}
 			_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
@@ -375,7 +375,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 		for i, gitUrl := range componentUrls {
 			gitUrl := gitUrl
 			It(fmt.Sprintf("triggers PipelineRun for component with source URL %s", gitUrl), Label("build-templates-e2e"), func() {
-				timeout := time.Second * 60
+				timeout := time.Minute * 5
 				interval := time.Second * 1
 
 				Eventually(func() bool {
@@ -478,7 +478,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 			componentName = fmt.Sprintf("build-suite-test-component-image-source-%s", util.GenerateRandomString(4))
 			outputContainerImage := ""
-			timeout = time.Second * 10
+			timeout = time.Second * 180
 			interval = time.Second * 1
 			// Create a component with containerImageSource being defined
 			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, "", "", containerImageSource, outputContainerImage, "")
@@ -526,7 +526,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			Expect(err).ShouldNot(HaveOccurred())
 			DeferCleanup(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace, testNamespace)
 
-			timeout = time.Second * 120
+			timeout = time.Second * 360
 			interval = time.Second * 1
 
 		})
@@ -578,7 +578,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace, false)
 
-			timeout = time.Minute * 2
+			timeout = time.Minute * 5
 			interval = time.Second * 1
 
 			dummySecret := &v1.Secret{

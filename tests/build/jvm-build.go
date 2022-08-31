@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/devfile/library/pkg/util"
 	"github.com/google/uuid"
@@ -168,7 +169,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 	})
 
 	BeforeAll(func() {
-		testNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "appstudio-e2e-test")
+		testNamespace = utils.GetGeneratedNamespace("jvm-build")
 
 		klog.Infof("Test namespace: %s", testNamespace)
 
@@ -211,7 +212,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			})
 		}
 
-		timeout = time.Minute * 10
+		timeout = time.Minute * 20
 		interval = time.Second * 10
 
 		applicationName = fmt.Sprintf("jvm-build-suite-application-%s", util.GenerateRandomString(4))

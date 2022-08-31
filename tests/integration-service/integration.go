@@ -51,7 +51,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 	BeforeAll(func() {
 		applicationName = fmt.Sprintf("integration-suite-test-application-%s", util.GenerateRandomString(4))
-		appStudioE2EApplicationsNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, "integration-test-namespace")
+		appStudioE2EApplicationsNamespace = utils.GetGeneratedNamespace("integration-e2e")
 
 		_, err := f.CommonController.CreateTestNamespace(appStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", appStudioE2EApplicationsNamespace, err)
@@ -66,7 +66,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		BeforeAll(func() {
 			componentName = fmt.Sprintf("integration-suite-test-component-image-source-%s", util.GenerateRandomString(4))
 			outputContainerImage = ""
-			timeout = time.Second * 10
+			timeout = time.Minute * 5
 			interval = time.Second * 1
 			// Create a component with containerImageSource being defined
 			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, "", "", containerImageSource, outputContainerImage, "")
@@ -89,7 +89,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			componentName = fmt.Sprintf("integration-suite-test-component-git-source-%s", util.GenerateRandomString(4))
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-			timeout = time.Second * 60
+			timeout = time.Minute * 4
 			interval = time.Second * 1
 			// Create a component with Git Source URL being defined
 			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", "", outputContainerImage, "")

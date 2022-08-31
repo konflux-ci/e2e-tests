@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/devfile/library/pkg/util"
 	"github.com/onsi/gomega"
 	"github.com/redhat-appstudio/application-service/pkg/devfile"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
@@ -124,4 +125,8 @@ func GetFailedPipelineRunDetails(pipelineRun v1beta1.PipelineRun) *FailedPipelin
 		}
 	}
 	return d
+}
+
+func GetGeneratedNamespace(name string) string {
+	return name + "-" + util.GenerateRandomString(4)
 }
