@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"strings"
 	"time"
 
 	routev1 "github.com/openshift/api/route/v1"
@@ -171,7 +172,25 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 	if err != nil {
 		return nil, err
 	}
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*10); err != nil {
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
+	}
 	return component, nil
+}
+
+func (h *SuiteController) ComponentReady(component *appservice.Component) wait.ConditionFunc {
+	return func() (bool, error) {
+		messages, err := h.GetHasComponentConditionStatusMessages(component.Name, component.Namespace)
+		if err != nil {
+			return false, nil
+		}
+		for _, m := range messages {
+			if strings.Contains(m, "success") {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
 }
 
 // CreateComponentWithPaCEnabled creates a component with "pipelinesascode: '1'" annotation that is used for triggering PaC builds
@@ -201,6 +220,9 @@ func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, compone
 	if err != nil {
 		return nil, err
 	}
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*10); err != nil {
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
+	}
 	return component, nil
 }
 
@@ -219,6 +241,9 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 	err := h.KubeRest().Create(context.TODO(), component)
 	if err != nil {
 		return nil, err
+	}
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*10); err != nil {
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
 	}
 	return component, nil
 }
@@ -400,6 +425,9 @@ func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentN
 	err := h.KubeRest().Create(context.TODO(), component)
 	if err != nil {
 		return nil, err
+	}
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*10); err != nil {
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
 	}
 	return component, nil
 }
