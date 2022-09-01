@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/magefile/mage/sh"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -108,11 +109,10 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when setting up required env vars: %v", err)
 	}
 
-	if err := ci.createOpenshiftUser(); err != nil {
+	if err := retry(ci.createOpenshiftUser, 3, 10*time.Second); err != nil {
 		return fmt.Errorf("error when creating openshift user: %v", err)
 	}
-
-	if err := BootstrapCluster(); err != nil {
+	if err := retry(BootstrapCluster, 2, 10*time.Second); err != nil {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
 	}
 
