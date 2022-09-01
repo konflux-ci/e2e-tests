@@ -26,14 +26,14 @@ import (
 const (
 	containerImageSource                 = "quay.io/redhat-appstudio-qe/busybox-loop:latest"
 	helloWorldComponentGitSourceRepoName = "devfile-sample-hello-world"
-	helloWorldComponentGitSourceURL      = "https://github.com/redhat-appstudio-qe/" + helloWorldComponentGitSourceRepoName
 	pythonComponentGitSourceURL          = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic"
 	dummyPipelineBundleRef               = "quay.io/redhat-appstudio-qe/dummy-pipeline-bundle:latest"
 )
 
 var (
-	componentUrls  = strings.Split(utils.GetEnv(COMPONENT_REPO_URLS_ENV, pythonComponentGitSourceURL), ",") //multiple urls
-	componentNames []string
+	componentUrls                   = strings.Split(utils.GetEnv(COMPONENT_REPO_URLS_ENV, pythonComponentGitSourceURL), ",") //multiple urls
+	componentNames                  []string
+	helloWorldComponentGitSourceURL = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv("GITHUB_E2E_ORGANIZATION", "redhat-appstudio-qe"), helloWorldComponentGitSourceRepoName)
 )
 
 var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), func() {
@@ -337,7 +337,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			} else {
 				applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
 			}
-			testNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, fmt.Sprintf("e2e-test-pipelines-%s", util.GenerateRandomString(4)))
+			testNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, fmt.Sprintf("build-e2e-hacbs-%s", util.GenerateRandomString(4)))
 
 			_, err := f.CommonController.CreateTestNamespace(testNamespace)
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
@@ -553,7 +553,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 		BeforeAll(func() {
 
 			applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
-			testNamespace = fmt.Sprintf("e2e-test-%s", util.GenerateRandomString(4))
+			testNamespace = fmt.Sprintf("build-e2e-container-image-source-%s", util.GenerateRandomString(4))
 
 			_, err = f.CommonController.CreateTestNamespace(testNamespace)
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
@@ -593,7 +593,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 		BeforeAll(func() {
 
-			testNamespace := fmt.Sprintf("e2e-test-%s", util.GenerateRandomString(4))
+			testNamespace := fmt.Sprintf("build-e2e-dummy-custom-pipeline-%s", util.GenerateRandomString(4))
 			applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
 
 			_, err = f.CommonController.CreateTestNamespace(testNamespace)
@@ -651,7 +651,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 		BeforeAll(func() {
 
-			testNamespace = fmt.Sprintf("e2e-test-%s", util.GenerateRandomString(4))
+			testNamespace = fmt.Sprintf("build-e2e-dummy-quay-creds-%s", util.GenerateRandomString(4))
 
 			_, err = f.CommonController.CreateTestNamespace(testNamespace)
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
@@ -740,7 +740,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 		BeforeAll(func() {
 
 			applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
-			testNamespace = fmt.Sprintf("e2e-test-%s", util.GenerateRandomString(4))
+			testNamespace = fmt.Sprintf("build-e2e-specific-image-url-%s", util.GenerateRandomString(4))
 
 			_, err = f.CommonController.CreateTestNamespace(testNamespace)
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
