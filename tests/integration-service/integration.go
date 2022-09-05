@@ -38,7 +38,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	defer GinkgoRecover()
 
 	var applicationName, componentName, appStudioE2EApplicationsNamespace, outputContainerImage string
-	var pipelineRun v1beta1.PipelineRun
+	var pipelineRun *v1beta1.PipelineRun
 	var component *appservice.Component
 	var timeout, interval time.Duration
 	//	var applicationSnapshots *[]appstudioshared.ApplicationSnapshot
@@ -56,8 +56,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		_, err := f.CommonController.CreateTestNamespace(appStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", appStudioE2EApplicationsNamespace, err)
 
-		_, err = f.HasController.CreateHasApplication(applicationName, appStudioE2EApplicationsNamespace)
+		app, err := f.HasController.CreateHasApplication(applicationName, appStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
+		Expect(utils.WaitUntil(f.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
+			Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
+		)
 		DeferCleanup(f.HasController.DeleteHasApplication, applicationName, appStudioE2EApplicationsNamespace, false)
 
 	})
@@ -76,7 +79,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 		It("should not trigger a PipelineRun", func() {
 			Consistently(func() bool {
-				pipelineRun, err = f.HasController.GetComponentPipelineRun(component.Name, applicationName, appStudioE2EApplicationsNamespace, false)
+				pipelineRun, err = f.HasController.GetComponentPipelineRun(component.Name, applicationName, appStudioE2EApplicationsNamespace, false, "")
 				Expect(pipelineRun.Name).To(BeEmpty())
 
 				return strings.Contains(err.Error(), "no pipelinerun found")
@@ -109,7 +112,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 		It("triggers a PipelineRun", func() {
 			Eventually(func() bool {
-				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false)
+				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false, "")
 				if err != nil {
 					klog.Infoln("PipelineRun has not been created yet")
 					return false
@@ -125,7 +128,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 			It("should eventually finish successfully", func() {
 				Eventually(func() bool {
-					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false)
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false, "")
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, condition := range pipelineRun.Status.Conditions {

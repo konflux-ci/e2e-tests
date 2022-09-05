@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"k8s.io/klog/v2"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/magefile/mage/sh"
 )
@@ -62,4 +64,21 @@ func sendHttpRequestAndParseResponse(url, method string, v interface{}) error {
 	}
 
 	return nil
+}
+
+func retry(f func() error, attempts int, delay time.Duration) error {
+	var err error
+	for i := 0; i < attempts; i++ {
+		if i > 0 {
+			klog.Infof("got an error: %+v - will retry in %v", err, delay)
+			time.Sleep(delay)
+		}
+		err = f()
+		if err != nil {
+			continue
+		} else {
+			return nil
+		}
+	}
+	return fmt.Errorf("reached maximum number of attempts (%d). error: %+v", attempts, err)
 }

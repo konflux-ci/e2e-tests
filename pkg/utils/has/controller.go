@@ -3,6 +3,8 @@ package has
 import (
 	"context"
 	"fmt"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"strings"
 	"time"
 
 	routev1 "github.com/openshift/api/route/v1"
@@ -30,7 +32,7 @@ func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
 	}, nil
 }
 
-// GetHasApplicationStatus return the status from the Application Custom Resource object
+// GetHasApplication return the Application Custom Resource object
 func (h *SuiteController) GetHasApplication(name, namespace string) (*appservice.Application, error) {
 	namespacedName := types.NamespacedName{
 		Name:      name,
@@ -49,7 +51,7 @@ func (h *SuiteController) GetHasApplication(name, namespace string) (*appservice
 
 // CreateHasApplication create an application Custom Resource object
 func (h *SuiteController) CreateHasApplication(name, namespace string) (*appservice.Application, error) {
-	application := appservice.Application{
+	application := &appservice.Application{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -58,11 +60,27 @@ func (h *SuiteController) CreateHasApplication(name, namespace string) (*appserv
 			DisplayName: name,
 		},
 	}
-	err := h.KubeRest().Create(context.TODO(), &application)
+	err := h.KubeRest().Create(context.TODO(), application)
 	if err != nil {
 		return nil, err
 	}
-	return &application, nil
+
+	if err := utils.WaitUntil(h.ApplicationDevfilePresent(application), time.Second*30); err != nil {
+		return nil, fmt.Errorf("timed out when waiting for devfile content creation for application %s in %s namespace: %+v", name, namespace, err)
+	}
+
+	return application, nil
+}
+
+func (h *SuiteController) ApplicationDevfilePresent(application *appservice.Application) wait.ConditionFunc {
+	return func() (bool, error) {
+		app, err := h.GetHasApplication(application.Name, application.Namespace)
+		if err != nil {
+			return false, nil
+		}
+		application.Status = app.Status
+		return application.Status.Devfile != "", nil
+	}
 }
 
 // DeleteHasApplication delete a HAS Application resource from the namespace.
@@ -154,6 +172,57 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 	if err != nil {
 		return nil, err
 	}
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*10); err != nil {
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
+	}
+	return component, nil
+}
+
+func (h *SuiteController) ComponentReady(component *appservice.Component) wait.ConditionFunc {
+	return func() (bool, error) {
+		messages, err := h.GetHasComponentConditionStatusMessages(component.Name, component.Namespace)
+		if err != nil {
+			return false, nil
+		}
+		for _, m := range messages {
+			if strings.Contains(m, "success") {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
+}
+
+// CreateComponentWithPaCEnabled creates a component with "pipelinesascode: '1'" annotation that is used for triggering PaC builds
+func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, componentName, namespace, gitSourceURL, outputContainerImage string) (*appservice.Component, error) {
+	component := &appservice.Component{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"pipelinesascode": "1",
+			},
+			Name:      componentName,
+			Namespace: namespace,
+		},
+		Spec: appservice.ComponentSpec{
+			ComponentName: componentName,
+			Application:   applicationName,
+			Source: appservice.ComponentSource{
+				ComponentSourceUnion: appservice.ComponentSourceUnion{
+					GitSource: &appservice.GitSource{
+						URL: gitSourceURL,
+					},
+				},
+			},
+			ContainerImage: outputContainerImage,
+		},
+	}
+	err := h.KubeRest().Create(context.TODO(), component)
+	if err != nil {
+		return nil, err
+	}
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*10); err != nil {
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
+	}
 	return component, nil
 }
 
@@ -172,6 +241,9 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 	err := h.KubeRest().Create(context.TODO(), component)
 	if err != nil {
 		return nil, err
+	}
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*10); err != nil {
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
 	}
 	return component, nil
 }
@@ -228,20 +300,31 @@ func (h *SuiteController) GetComponentDetectionQuery(name, namespace string) (*a
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels
-func (h *SuiteController) GetComponentPipelineRun(componentName, applicationName, namespace string, triggeredViaWebhook bool) (v1beta1.PipelineRun, error) {
-	pipelineRunLabels := map[string]string{"build.appstudio.openshift.io/component": componentName, "build.appstudio.openshift.io/application": applicationName}
-	if triggeredViaWebhook {
-		pipelineRunLabels["triggers.tekton.dev/eventlistener"] = componentName
+func (h *SuiteController) GetComponentPipelineRun(componentName, applicationName, namespace string, pacBuild bool, sha string) (*v1beta1.PipelineRun, error) {
+	var pipelineRunLabels map[string]string
+
+	if pacBuild {
+		pipelineRunLabels = map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName}
+	} else {
+		pipelineRunLabels = map[string]string{"build.appstudio.openshift.io/component": componentName, "build.appstudio.openshift.io/application": applicationName}
 	}
+
+	if sha != "" {
+		pipelineRunLabels["pipelinesascode.tekton.dev/sha"] = sha
+	}
+
 	list := &v1beta1.PipelineRunList{}
 	err := h.KubeRest().List(context.TODO(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
 
-	if len(list.Items) > 0 {
-		return list.Items[0], nil
-	} else if len(list.Items) == 0 {
-		return v1beta1.PipelineRun{}, fmt.Errorf("no pipelinerun found for component %s", componentName)
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error listing pipelineruns in %s namespace", namespace)
 	}
-	return v1beta1.PipelineRun{}, err
+
+	if len(list.Items) > 0 {
+		return &list.Items[0], nil
+	}
+
+	return &v1beta1.PipelineRun{}, fmt.Errorf("no pipelinerun found for component %s", componentName)
 }
 
 // GetEventListenerRoute returns the route for a given component name's event listener
@@ -290,7 +373,7 @@ func (h *SuiteController) GetComponentService(componentName string, componentNam
 
 func (h *SuiteController) WaitForComponentPipelineToBeFinished(componentName string, applicationName string, componentNamespace string) error {
 	return wait.PollImmediate(20*time.Second, 15*time.Minute, func() (done bool, err error) {
-		pipelineRun, _ := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, false)
+		pipelineRun, _ := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, false, "")
 
 		for _, condition := range pipelineRun.Status.Conditions {
 			klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)
@@ -308,7 +391,7 @@ func (h *SuiteController) WaitForComponentPipelineToBeFinished(componentName str
 
 }
 
-// CreateComponent create an has component from a given name, namespace, application, devfile and a container image
+// CreateComponentFromDevfile creates a has component from a given name, namespace, application, devfile and a container image
 func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentName, namespace, gitSourceURL, devfile, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
 	var containerImage string
 	if outputContainerImage != "" {
@@ -342,6 +425,9 @@ func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentN
 	err := h.KubeRest().Create(context.TODO(), component)
 	if err != nil {
 		return nil, err
+	}
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*10); err != nil {
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
 	}
 	return component, nil
 }

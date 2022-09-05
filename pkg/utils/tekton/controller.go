@@ -3,6 +3,7 @@ package tekton
 import (
 	"context"
 	"fmt"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"io"
 	"regexp"
 	"strings"
@@ -226,7 +227,7 @@ func (s *SuiteController) DeleteTaskRun(name, ns string) error {
 
 func (k KubeController) WatchPipelineRun(pipelineRunName string, taskTimeout int) error {
 	g.GinkgoWriter.Printf("Waiting for pipeline %q to finish\n", pipelineRunName)
-	return k.Commonctrl.WaitUntil(k.Tektonctrl.CheckPipelineRunFinished(pipelineRunName, k.Namespace), time.Duration(taskTimeout)*time.Second)
+	return utils.WaitUntil(k.Tektonctrl.CheckPipelineRunFinished(pipelineRunName, k.Namespace), time.Duration(taskTimeout)*time.Second)
 }
 
 func (k KubeController) GetTaskRunResult(pr *v1beta1.PipelineRun, pipelineTaskName string, result string) (string, error) {
@@ -370,7 +371,7 @@ func (k KubeController) createAndWait(pr *v1beta1.PipelineRun, taskTimeout int) 
 		return nil, err
 	}
 	g.GinkgoWriter.Printf("Creating Pipeline %q\n", pipelineRun.Name)
-	return pipelineRun, k.Commonctrl.WaitUntil(k.Tektonctrl.CheckPipelineRunStarted(pipelineRun.Name, k.Namespace), time.Duration(taskTimeout)*time.Second)
+	return pipelineRun, utils.WaitUntil(k.Tektonctrl.CheckPipelineRunStarted(pipelineRun.Name, k.Namespace), time.Duration(taskTimeout)*time.Second)
 }
 
 // FindCosignResultsForImage looks for .sig and .att image tags in the OpenShift image stream for the provided image reference.
