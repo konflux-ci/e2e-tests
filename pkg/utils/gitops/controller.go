@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"net/http"
+	"time"
 
 	routev1 "github.com/openshift/api/route/v1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
@@ -87,7 +89,17 @@ func (h *SuiteController) CheckGitOpsEndpoint(route *routev1.Route, endpoint str
 	return nil
 }
 
-// Remove all tokens from a given repository. Usefull when create a lot of resources and want to remove all of them
-func (h *SuiteController) DeleteAllGitOpsDeploymentInASpecificNamespace(namespace string) error {
-	return h.KubeRest().DeleteAllOf(context.TODO(), &managedgitopsv1alpha1.GitOpsDeployment{}, client.InNamespace(namespace))
+// Remove all gitopsdeployments from a given namespace. Useful when creating a lot of resources and want to remove all of them
+func (h *SuiteController) DeleteAllGitOpsDeploymentInASpecificNamespace(namespace string, timeout time.Duration) error {
+	if err := h.KubeRest().DeleteAllOf(context.TODO(), &managedgitopsv1alpha1.GitOpsDeployment{}, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("error when deleting gitopsdeployments in %s namespace: %+v", namespace, err)
+	}
+
+	gdList := &managedgitopsv1alpha1.GitOpsDeploymentList{}
+	return utils.WaitUntil(func() (done bool, err error) {
+		if err = h.KubeRest().List(context.Background(), gdList, client.InNamespace(namespace)); err != nil {
+			return false, nil
+		}
+		return len(gdList.Items) == 0, nil
+	}, timeout)
 }

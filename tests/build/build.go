@@ -770,8 +770,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 		})
 
 		AfterAll(func() {
-			Expect(f.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace)).To(Succeed())
-			Expect(f.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace)).To(Succeed())
+			Expect(f.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, 30*time.Second)).To(Succeed())
+			Expect(f.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, 30*time.Second)).To(Succeed())
 			Expect(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 			Expect(f.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
 		})
