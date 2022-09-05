@@ -176,10 +176,6 @@ func (s *SuiteController) GetContainerLogs(podName, containerName, namespace str
 	return buf.String(), nil
 }
 
-func (s *SuiteController) WaitUntil(cond wait.ConditionFunc, timeout time.Duration) error {
-	return wait.PollImmediate(time.Second, timeout, cond)
-}
-
 func (s *SuiteController) WaitForPodSelector(
 	fn func(podName, namespace string) wait.ConditionFunc, namespace, labelKey string, labelValue string,
 	timeout int, selectionLimit int64) error {
@@ -192,7 +188,7 @@ func (s *SuiteController) WaitForPodSelector(
 	}
 
 	for i := range podList.Items {
-		if err := s.WaitUntil(fn(podList.Items[i].Name, namespace), time.Duration(timeout)*time.Second); err != nil {
+		if err := utils.WaitUntil(fn(podList.Items[i].Name, namespace), time.Duration(timeout)*time.Second); err != nil {
 			return err
 		}
 	}
@@ -313,7 +309,7 @@ func (s *SuiteController) DeleteNamespace(namespace string) error {
 	// Wait for the namespace to no longer exist. The namespace may remain stuck in 'Terminating' state
 	// if it contains with finalizers that are not handled. We detect this case here, and report any resources still
 	// in the Namespace.
-	if err := s.WaitUntil(s.namespaceDoesNotExist(namespace), time.Minute*10); err != nil {
+	if err := utils.WaitUntil(s.namespaceDoesNotExist(namespace), time.Minute*10); err != nil {
 
 		// On failure to delete, list all namespace-scoped resources still in the namespace.
 		resourcesInNamespace := s.ListNamespaceScopedResourcesAsString(namespace, s.KubeInterface(), s.DynamicClient())
@@ -427,13 +423,13 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 	}
 
 	// "pipeline" service account needs to be present in the namespace before we start with creating tekton resources
-	if err := s.WaitUntil(s.ServiceaccountPresent("pipeline", name), time.Second*30); err != nil {
+	if err := utils.WaitUntil(s.ServiceaccountPresent("pipeline", name), time.Second*30); err != nil {
 		return nil, fmt.Errorf("'pipeline' service account wasn't created in %s namespace: %+v", name, err)
 	}
 
 	// Argo CD role/rolebinding need to be present in the namespace before we create GitOpsDeployments.
 	// - These role bindings are created in namespaces labeled with 'argocd.argoproj.io/managed-by' (see above)
-	if err := s.WaitUntil(s.argoCDNamespaceRBACPresent(name), time.Second*60); err != nil {
+	if err := utils.WaitUntil(s.argoCDNamespaceRBACPresent(name), time.Second*120); err != nil {
 		return nil, fmt.Errorf("argo CD Namespace RBAC was never present in '%s': %v", name, err)
 	}
 
@@ -495,5 +491,12 @@ func (s *SuiteController) namespaceDoesNotExist(namespace string) wait.Condition
 		_, err := s.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
 
 		return err != nil && k8sErrors.IsNotFound(err), nil
+	}
+}
+
+func (s *SuiteController) ApplicationGitopsRepoExists(devfileContent string) wait.ConditionFunc {
+	return func() (bool, error) {
+		gitOpsRepoURL := utils.ObtainGitOpsRepositoryName(devfileContent)
+		return s.Github.CheckIfRepositoryExist(gitOpsRepoURL), nil
 	}
 }

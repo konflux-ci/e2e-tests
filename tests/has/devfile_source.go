@@ -134,8 +134,13 @@ var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), 
 	})
 
 	It("Gitops Repository should not be deleted when component gets deleted", func() {
-		componentName2 := fmt.Sprintf(QuarkusComponentName+"-%s", util.GenerateRandomString(10))
-		component2, err := framework.HasController.CreateComponentFromStub(compDetected, componentName2, testNamespace, "", applicationName)
+		comp2Detected := appservice.ComponentDetectionDescription{}
+
+		for _, comp2Detected = range cdq.Status.ComponentDetected {
+			comp2Detected.ComponentStub.ComponentName = "java-quarkus2"
+		}
+		component2Name := fmt.Sprintf(QuarkusComponentName+"-%s", util.GenerateRandomString(10))
+		component2, err := framework.HasController.CreateComponentFromStub(comp2Detected, component2Name, testNamespace, "", applicationName)
 		Expect(err).NotTo(HaveOccurred())
 
 		err = framework.HasController.DeleteHasComponent(component2.Name, testNamespace)

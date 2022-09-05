@@ -38,7 +38,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 	defer GinkgoRecover()
 
 	var testNamespace, applicationName, componentName, outputContainerImage string
-	var componentPipelineRun v1beta1.PipelineRun
+	var componentPipelineRun *v1beta1.PipelineRun
 	var timeout, interval time.Duration
 	var doCollectLogs bool
 
@@ -216,8 +216,11 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		interval = time.Second * 10
 
 		applicationName = fmt.Sprintf("jvm-build-suite-application-%s", util.GenerateRandomString(4))
-		_, err = f.HasController.CreateHasApplication(applicationName, testNamespace)
+		app, err := f.HasController.CreateHasApplication(applicationName, testNamespace)
 		Expect(err).NotTo(HaveOccurred())
+		Expect(utils.WaitUntil(f.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
+			Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
+		)
 
 		componentName = fmt.Sprintf("jvm-build-suite-component-%s", util.GenerateRandomString(4))
 		outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
@@ -230,7 +233,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 	When("the Component with s2i-java component is created", func() {
 		It("a PipelineRun is triggered", func() {
 			Eventually(func() bool {
-				componentPipelineRun, err = f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
+				componentPipelineRun, err = f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				if err != nil {
 					klog.Infoln("PipelineRun has not been created yet")
 					return false
@@ -246,7 +249,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			}
 
 			err = wait.PollImmediate(interval, timeout, func() (done bool, err error) {
-				pr, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
+				pr, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				if err != nil {
 					klog.Infof("get pr for component %s produced err: %s", componentName, err.Error())
 					return false, nil
@@ -280,7 +283,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			}
 
 			err = wait.PollImmediate(interval, timeout, func() (done bool, err error) {
-				pr, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
+				pr, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				if err != nil {
 					klog.Infof("get pr for the component %s produced err: %s", componentName, err.Error())
 					return false, nil
@@ -308,7 +311,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 		It("that PipelineRun completes successfully", func() {
 			Eventually(func() bool {
-				pr, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false)
+				pr, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				if err != nil {
 					klog.Infof("get of pr %s returned error: %s", pr.Name, err.Error())
 					return false
@@ -351,7 +354,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		})
 
 		It("some artifactbuilds and dependencybuilds complete", func() {
-			err = wait.PollImmediate(interval, 2*timeout, func() (done bool, err error) {
+			err = wait.PollImmediate(interval, timeout, func() (done bool, err error) {
 				abList, err := f.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
 				if err != nil {
 					klog.Infof("error listing artifactbuilds: %s", err.Error())
