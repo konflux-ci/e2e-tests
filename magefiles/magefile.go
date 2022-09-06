@@ -17,6 +17,7 @@ var (
 	artifactDir      = utils.GetEnv("ARTIFACT_DIR", ".")
 	openshiftJobSpec = &OpenshiftJobSpec{}
 	pr               = &PullRequestMetadata{}
+	jobName          = utils.GetEnv("JOB_NAME", "")
 	// can be periodic, presubmit or postsubmit
 	jobType = utils.GetEnv("JOB_TYPE", "")
 )
@@ -126,7 +127,7 @@ func (ci CI) TestE2E() error {
 func RunE2ETests() error {
 	cwd, _ := os.Getwd()
 
-	return sh.RunV("ginkgo", "-p", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "--v", "--progress", "--focus=$E2E_TEST_SUITE", "./cmd", "--", fmt.Sprintf("--config-suites=%s/tests/e2e-demos/config/default.yaml", cwd))
+	return sh.RunV("ginkgo", "-p", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "--v", "--progress", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", fmt.Sprintf("--config-suites=%s/tests/e2e-demos/config/default.yaml", cwd))
 }
 
 func PreflightChecks() error {
@@ -152,34 +153,38 @@ func (CI) setRequiredEnvVars() error {
 	if openshiftJobSpec.Refs.Repo != "e2e-tests" {
 
 		if strings.Contains(openshiftJobSpec.Refs.Repo, "-service") {
-			var envVarPrefix, imageTagSuffix, testSuiteName string
+			var envVarPrefix, imageTagSuffix, testSuiteLabel string
 			sp := strings.Split(os.Getenv("COMPONENT_IMAGE"), "@")
 
 			switch openshiftJobSpec.Refs.Repo {
 			case "application-service":
 				envVarPrefix = "HAS"
 				imageTagSuffix = "has-image"
-				testSuiteName = "has-suite"
+				testSuiteLabel = "has"
 			case "build-service":
 				envVarPrefix = "BUILD_SERVICE"
 				imageTagSuffix = "build-service-image"
-				testSuiteName = "build-service-suite"
+				testSuiteLabel = "build"
 			case "jvm-build-service":
 				envVarPrefix = "JVM_BUILD_SERVICE"
 				imageTagSuffix = "jvm-build-service-image"
-				testSuiteName = "jvm-build-service-suite"
+				testSuiteLabel = "jvm-build"
 			}
 
 			os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", envVarPrefix), sp[0])
 			os.Setenv(fmt.Sprintf("%s_IMAGE_TAG", envVarPrefix), fmt.Sprintf("redhat-appstudio-%s", imageTagSuffix))
 			os.Setenv(fmt.Sprintf("%s_PR_OWNER", envVarPrefix), openshiftJobSpec.Refs.Pulls[0].Author)
 			os.Setenv(fmt.Sprintf("%s_PR_SHA", envVarPrefix), openshiftJobSpec.Refs.Pulls[0].SHA)
-			os.Setenv("E2E_TEST_SUITE", testSuiteName)
+			os.Setenv("E2E_TEST_SUITE_LABEL", testSuiteLabel)
 
 		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
 
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.Organization)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
+		}
+
+		if strings.Contains(jobName, "hacbs-e2e-periodic") {
+			os.Setenv("E2E_TEST_SUITE_LABEL", "hacbs")
 		}
 
 	}

@@ -36,7 +36,7 @@ var (
 	helloWorldComponentGitSourceURL = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv("GITHUB_E2E_ORGANIZATION", "redhat-appstudio-qe"), helloWorldComponentGitSourceRepoName)
 )
 
-var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), func() {
+var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "HACBS"), func() {
 	defer GinkgoRecover()
 	f, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
