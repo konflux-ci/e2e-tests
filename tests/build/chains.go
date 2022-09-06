@@ -233,6 +233,16 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec"), fu
 			})
 
 			It("does not pass when tests are not satisfied on non-strict mode", func() {
+				// Setup a policy config to minimize the amount of policy violations. Otherwise,
+				// the report may exceed the 4k max and Tekton does not create the task result.
+				policy := ecp.EnterpriseContractPolicySpec{
+					Sources: []ecp.PolicySource{{GitRepository: &policySource}},
+					Exceptions: &ecp.EnterpriseContractPolicyExceptions{
+						NonBlocking: []string{"tasks", "attestation_task_bundle"},
+					},
+				}
+				Expect(kubeController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
+				printPolicyConfiguration(policy)
 				generator.StrictPolicy = false
 				pr, err := kubeController.RunPipeline(generator, pipelineRunTimeout)
 				Expect(err).NotTo(HaveOccurred())
