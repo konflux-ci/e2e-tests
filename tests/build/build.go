@@ -42,7 +42,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 	Expect(err).NotTo(HaveOccurred())
 
 	Describe("the component with git source (GitHub) is created", Ordered, Label("github-webhook"), func() {
-		var applicationName, componentName, pacBranchName, testNamespace, outputContainerImage string
+		var applicationName, componentName, pacBranchName, testNamespace, outputContainerImage, pacControllerHost string
 
 		var timeout, interval time.Duration
 
@@ -50,7 +50,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 		var prCreationTime time.Time
 
 		BeforeAll(func() {
-
 			consoleRoute, err := f.CommonController.GetOpenshiftRoute("console", "openshift-console")
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -58,12 +57,16 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 				Skip("Using private cluster (not reachable from Github), skipping...")
 			}
 
+			// Used for identifying related webhook on GitHub - in order to delete it
+			pacControllerRoute, err := f.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "pipelines-as-code")
+			Expect(err).ShouldNot(HaveOccurred())
+			pacControllerHost = pacControllerRoute.Spec.Host
+
 			applicationName = fmt.Sprintf("build-suite-test-application-%s", util.GenerateRandomString(4))
 			testNamespace = utils.GetGeneratedNamespace("build-e2e")
 
 			_, err = f.CommonController.CreateTestNamespace(testNamespace)
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
-			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
 
 			app, err := f.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
@@ -81,10 +84,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			_, err = f.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, outputContainerImage)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			DeferCleanup(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace, testNamespace)
 		})
 
 		AfterAll(func() {
+			Expect(f.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
+			Expect(f.HasController.DeleteHasComponent(componentName, testNamespace)).To(Succeed())
 			pacInitTestFiles := []string{
 				fmt.Sprintf(".tekton/%s-pull-request.yaml", componentName),
 				fmt.Sprintf(".tekton/%s-push.yaml", componentName),
@@ -101,6 +105,20 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 			}
+
+			// Delete created webhook from GitHub
+			hooks, err := f.CommonController.Github.ListRepoWebhooks(helloWorldComponentGitSourceRepoName)
+			Expect(err).NotTo(HaveOccurred())
+
+			for _, h := range hooks {
+				hookUrl := h.Config["url"].(string)
+				klog.Infoln(hookUrl, pacControllerHost)
+				if strings.Contains(hookUrl, pacControllerHost) {
+					Expect(f.CommonController.Github.DeleteWebhook(helloWorldComponentGitSourceRepoName, h.GetID())).To(Succeed())
+					break
+				}
+			}
+
 		})
 
 		It("triggers a PipelineRun", func() {
