@@ -28,7 +28,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	fw, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
 
-	var testSpeicification = config.WorkflowSpec{
+	var testSpecification = config.WorkflowSpec{
 		Tests: []config.TestSpec{
 			{
 				Name:            "multi-component-application",
@@ -44,8 +44,8 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 		},
 	}
 
-	var compNameGo = testSpeicification.Tests[0].Components[0].Name + "-go"
-	var compNameNode = testSpeicification.Tests[0].Components[0].Name + "-nodejs"
+	var compNameGo string
+	var compNameNode string
 
 	BeforeAll(func() {
 		// Check to see if the github token was provided
@@ -58,23 +58,29 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 		_, err := fw.CommonController.CreateTestNamespace(AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", AppStudioE2EApplicationsNamespace, err)
+
+		// Check test specification has at least one test defined
+		Expect(len(testSpecification.Tests)).To(BeNumerically(">", 0))
+		compNameGo = testSpecification.Tests[0].Components[0].Name + "-go"
+		compNameNode = testSpecification.Tests[0].Components[0].Name + "-nodejs"
 	})
 
 	// Remove all resources created by the tests
 	AfterAll(func() {
-
+		Expect(fw.HasController.DeleteAllComponentsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
+		Expect(fw.HasController.DeleteAllApplicationsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
 	})
 
 	It("Create Red Hat AppStudio Application", func() {
-		createdApplication, err := fw.HasController.CreateHasApplication(testSpeicification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)
+		createdApplication, err := fw.HasController.CreateHasApplication(testSpecification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(createdApplication.Spec.DisplayName).To(Equal(testSpeicification.Tests[0].ApplicationName))
+		Expect(createdApplication.Spec.DisplayName).To(Equal(testSpecification.Tests[0].ApplicationName))
 		Expect(createdApplication.Namespace).To(Equal(AppStudioE2EApplicationsNamespace))
 	})
 
 	It("Check Red Hat AppStudio Application health", func() {
 		Eventually(func() string {
-			application, err = fw.HasController.GetHasApplication(testSpeicification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)
+			application, err = fw.HasController.GetHasApplication(testSpecification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
 			return application.Status.Devfile
@@ -89,16 +95,16 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	})
 
 	It("Create Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
-		cdq, err := fw.HasController.CreateComponentDetectionQuery(testSpeicification.Tests[0].Components[0].Name, AppStudioE2EApplicationsNamespace, testSpeicification.Tests[0].Components[0].GitSourceUrl, "", false)
+		cdq, err := fw.HasController.CreateComponentDetectionQuery(testSpecification.Tests[0].Components[0].Name, AppStudioE2EApplicationsNamespace, testSpecification.Tests[0].Components[0].GitSourceUrl, "", false)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(cdq.Name).To(Equal(testSpeicification.Tests[0].Components[0].Name))
+		Expect(cdq.Name).To(Equal(testSpecification.Tests[0].Components[0].Name))
 	})
 
 	It("Check Red Hat AppStudio ComponentDetectionQuery status", func() {
 		// Validate that the CDQ completes successfully
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
-			cdq, err = fw.HasController.GetComponentDetectionQuery(testSpeicification.Tests[0].Components[0].Name, AppStudioE2EApplicationsNamespace)
+			cdq, err = fw.HasController.GetComponentDetectionQuery(testSpecification.Tests[0].Components[0].Name, AppStudioE2EApplicationsNamespace)
 			return err == nil && len(cdq.Status.ComponentDetected) > 0
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "ComponentDetectionQuery did not complete successfully")
 
@@ -115,13 +121,13 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 		// Create Golang component from CDQ result
 		Expect(cdq.Status.ComponentDetected["go"].DevfileFound).To(BeTrue(), "DevfileFound was not set to true")
-		componentGo, err := fw.HasController.CreateComponentFromStub(cdq.Status.ComponentDetected["go"], compNameGo, AppStudioE2EApplicationsNamespace, "", testSpeicification.Tests[0].ApplicationName)
+		componentGo, err := fw.HasController.CreateComponentFromStub(cdq.Status.ComponentDetected["go"], compNameGo, AppStudioE2EApplicationsNamespace, "", testSpecification.Tests[0].ApplicationName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(componentGo.Name).To(Equal(compNameGo))
 
 		// Create NodeJS component from CDQ result
 		Expect(cdq.Status.ComponentDetected["nodejs"].DevfileFound).To(BeTrue(), "DevfileFound was not set to true")
-		componentNode, err := fw.HasController.CreateComponentFromStub(cdq.Status.ComponentDetected["nodejs"], compNameNode, AppStudioE2EApplicationsNamespace, "", testSpeicification.Tests[0].ApplicationName)
+		componentNode, err := fw.HasController.CreateComponentFromStub(cdq.Status.ComponentDetected["nodejs"], compNameNode, AppStudioE2EApplicationsNamespace, "", testSpecification.Tests[0].ApplicationName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(componentNode.Name).To(Equal(compNameNode))
 
@@ -130,8 +136,8 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	// Start to watch the pipeline until is finished
 	It("Wait for all pipelines to be finished", func() {
 
-		Expect(fw.HasController.WaitForComponentPipelineToBeFinished(compNameGo, testSpeicification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)).To(Succeed(), "Failed component pipeline %v", err)
-		Expect(fw.HasController.WaitForComponentPipelineToBeFinished(compNameNode, testSpeicification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)).To(Succeed(), "Failed component pipeline %v", err)
+		Expect(fw.HasController.WaitForComponentPipelineToBeFinished(compNameGo, testSpecification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)).To(Succeed(), "Failed component pipeline %v", err)
+		Expect(fw.HasController.WaitForComponentPipelineToBeFinished(compNameNode, testSpecification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)).To(Succeed(), "Failed component pipeline %v", err)
 
 	})
 
@@ -157,5 +163,4 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 		}, 15*time.Minute, 10*time.Second).Should(BeTrue(), "Component deployment didn't become ready")
 		Expect(err).NotTo(HaveOccurred())
 	})
-
 })
