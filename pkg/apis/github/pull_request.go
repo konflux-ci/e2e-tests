@@ -19,7 +19,9 @@ func (g *Github) ListPullRequests(repository string) ([]*github.PullRequest, err
 
 func (g *Github) ListPullRequestCommentsSince(repository string, prNumber int, since time.Time) ([]*github.IssueComment, error) {
 	comments, _, err := g.client.Issues.ListComments(context.Background(), g.organization, repository, prNumber, &github.IssueListCommentsOptions{
-		Since: &since,
+		Since:     &since,
+		Sort:      github.String("created"),
+		Direction: github.String("asc"),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error when listing pull requests comments for the repo %s: %v", repository, err)
