@@ -143,7 +143,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), 
 		component2, err := framework.HasController.CreateComponentFromStub(comp2Detected, component2Name, testNamespace, "", applicationName)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = framework.HasController.DeleteHasComponent(component2.Name, testNamespace)
+		err = framework.HasController.DeleteHasComponent(component2.Name, testNamespace, false)
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func() bool {
