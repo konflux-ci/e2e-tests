@@ -15,7 +15,9 @@ export tmpfile=$(mktemp -d)/config.yaml
 export SPI_GITHUB_CLIENT_ID="app-client-id"
 export SPI_GITHUB_CLIENT_SECRET="app-secret"
 
-spiConfig=$(cat <<EOF
+# The legacy stuff can be removed once https://github.com/redhat-appstudio/infra-deployments/pull/638 is merged
+# in infra-deployments
+legacySpiConfig=$(cat <<EOF
 sharedSecret: $(openssl rand -hex 20)
 serviceProviders:
   - type: GitHub
@@ -28,12 +30,35 @@ baseUrl: https://spi-oauth-route-spi-system.$( oc get ingresses.config/cluster -
 EOF
 )
 
+spiConfig=$(cat <<EOF
+sharedSecret: $(openssl rand -hex 20)
+serviceProviders:
+  - type: GitHub
+    clientId: $SPI_GITHUB_CLIENT_ID
+    clientSecret: $SPI_GITHUB_CLIENT_SECRET
+  - type: Quay
+    clientId: $SPI_GITHUB_CLIENT_ID
+    clientSecret: $SPI_GITHUB_CLIENT_SECRET
+EOF
+)
+
 echo "Please go to https://github.com/settings/developers."
 echo "And register new Github OAuth application for callback https://"$OAUTH_URL"/github/callback"
 
-echo "$spiConfig" > "$tmpfile"
 oc create namespace spi-system --dry-run=client -o yaml | oc apply -f -
+
+# legacy config file
+echo "$legacySpiConfig" > "$tmpfile"
 oc create secret generic oauth-config \
+    --save-config --dry-run=client \
+    --from-file="$tmpfile" \
+    -n spi-system \
+    -o yaml |
+oc apply -f -
+
+# new-form config file
+echo "$spiConfig" > "$tmpfile"
+oc create secret generic shared-configuration-file \
     --save-config --dry-run=client \
     --from-file="$tmpfile" \
     -n spi-system \
