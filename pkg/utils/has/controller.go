@@ -93,9 +93,10 @@ func (h *SuiteController) DeleteHasApplication(name, namespace string, reportErr
 			Namespace: namespace,
 		},
 	}
-	err := h.KubeRest().Delete(context.TODO(), &application)
-	if err != nil && !reportErrorOnNotFound && k8sErrors.IsNotFound(err) {
-		err = nil
+	if err := h.KubeRest().Delete(context.TODO(), &application); err != nil {
+		if !k8sErrors.IsNotFound(err) || (k8sErrors.IsNotFound(err) && reportErrorOnNotFound) {
+			return err
+		}
 	}
 	return utils.WaitUntil(h.ApplicationDeleted(&application), 1*time.Minute)
 }
