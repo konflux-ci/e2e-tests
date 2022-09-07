@@ -88,7 +88,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 		AfterAll(func() {
 			Expect(f.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
-			Expect(f.HasController.DeleteHasComponent(componentName, testNamespace)).To(Succeed())
+			Expect(f.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
 			pacInitTestFiles := []string{
 				fmt.Sprintf(".tekton/%s-pull-request.yaml", componentName),
 				fmt.Sprintf(".tekton/%s-push.yaml", componentName),
@@ -314,7 +314,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 		When("the component is removed and recreated (with the same name in the same namespace)", func() {
 			BeforeAll(func() {
-				Expect(f.HasController.DeleteHasComponent(componentName, testNamespace)).To(Succeed())
+				Expect(f.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
 
 				Eventually(func() bool {
 					_, err := f.HasController.GetHasComponent(componentName, testNamespace)

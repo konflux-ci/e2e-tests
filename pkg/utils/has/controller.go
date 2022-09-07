@@ -95,7 +95,7 @@ func (h *SuiteController) DeleteHasApplication(name, namespace string, reportErr
 	}
 	if err := h.KubeRest().Delete(context.TODO(), &application); err != nil {
 		if !k8sErrors.IsNotFound(err) || (k8sErrors.IsNotFound(err) && reportErrorOnNotFound) {
-			return err
+			return fmt.Errorf("error deleting an application: %+v", err)
 		}
 	}
 	return utils.WaitUntil(h.ApplicationDeleted(&application), 1*time.Minute)
@@ -135,7 +135,7 @@ func (h *SuiteController) ScaleComponentReplicas(component *appservice.Component
 }
 
 // DeleteHasComponent delete an has component from a given name and namespace
-func (h *SuiteController) DeleteHasComponent(name string, namespace string) error {
+func (h *SuiteController) DeleteHasComponent(name string, namespace string, reportErrorOnNotFound bool) error {
 	component := appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -143,7 +143,9 @@ func (h *SuiteController) DeleteHasComponent(name string, namespace string) erro
 		},
 	}
 	if err := h.KubeRest().Delete(context.TODO(), &component); err != nil {
-		return fmt.Errorf("error deleting a component: %+v", err)
+		if !k8sErrors.IsNotFound(err) || (k8sErrors.IsNotFound(err) && reportErrorOnNotFound) {
+			return fmt.Errorf("error deleting a component: %+v", err)
+		}
 	}
 
 	return utils.WaitUntil(h.ComponentDeleted(&component), 1*time.Minute)
