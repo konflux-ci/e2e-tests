@@ -184,9 +184,9 @@ func (CI) setRequiredEnvVars() error {
 		}
 
 		if strings.Contains(jobName, "hacbs-e2e-periodic") {
-			os.Setenv("E2E_TEST_SUITE_LABEL", "hacbs")
+			os.Setenv("E2E_TEST_SUITE_LABEL", "HACBS")
 		} else if strings.Contains(jobName, "appstudio-e2e-deployment-periodic") {
-			os.Setenv("E2E_TEST_SUITE_LABEL", "!hacbs")
+			os.Setenv("E2E_TEST_SUITE_LABEL", "!HACBS")
 		}
 
 	}
