@@ -186,7 +186,7 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 	if err != nil {
 		return nil, err
 	}
-	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*10); err != nil {
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*30); err != nil {
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
 	}
 	return component, nil
@@ -241,7 +241,7 @@ func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, compone
 	if err != nil {
 		return nil, err
 	}
-	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*10); err != nil {
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*30); err != nil {
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
 	}
 	return component, nil
@@ -263,7 +263,7 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 	if err != nil {
 		return nil, err
 	}
-	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*10); err != nil {
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*30); err != nil {
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
 	}
 	return component, nil
@@ -447,7 +447,7 @@ func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentN
 	if err != nil {
 		return nil, err
 	}
-	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*10); err != nil {
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*30); err != nil {
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
 	}
 	return component, nil
