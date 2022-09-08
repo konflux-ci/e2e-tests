@@ -58,4 +58,7 @@ const (
 	OSAPIServerWorkload  string = "apiserver"
 
 	RegistryAuthSecretName = "redhat-appstudio-registry-pull-secret"
+
+	JVMUserConfigMapName = "jvm-build-config"
+	JVMEnableRebuilds    = "enable-rebuilds"
 )
