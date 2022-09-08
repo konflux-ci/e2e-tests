@@ -212,6 +212,31 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			})
 		}
 
+		//enable artifact rebuilds
+		jvmConfigMap := &v1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: constants.JVMUserConfigMapName},
+			Data:       map[string]string{constants.JVMEnableRebuilds: "true"},
+		}
+		existingJvmConfigMap, err := f.CommonController.GetConfigMap(constants.JVMUserConfigMapName, testNamespace)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				_, err = f.CommonController.CreateConfigMap(jvmConfigMap, testNamespace)
+				Expect(err).ToNot(HaveOccurred())
+				DeferCleanup(f.CommonController.DeleteConfigMap, constants.JVMUserConfigMapName, testNamespace, false)
+			} else {
+				Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.JVMUserConfigMapName, testNamespace, err))
+			}
+		} else {
+			_, err = f.CommonController.UpdateConfigMap(jvmConfigMap, testNamespace)
+			Expect(err).ToNot(HaveOccurred())
+			DeferCleanup(func() error {
+				_, err := f.CommonController.UpdateConfigMap(existingJvmConfigMap, testNamespace)
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+		}
 		timeout = time.Minute * 20
 		interval = time.Second * 10
 
