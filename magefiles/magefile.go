@@ -34,7 +34,7 @@ func (CI) parseJobSpec() error {
 func (ci CI) init() error {
 	var err error
 
-	if jobType == "periodic" {
+	if jobType == "periodic" || strings.Contains(jobName, "rehearse") {
 		return nil
 	}
 
@@ -58,7 +58,7 @@ func (ci CI) init() error {
 }
 
 func (ci CI) PrepareE2EBranch() error {
-	if jobType == "periodic" {
+	if jobType == "periodic" || strings.Contains(jobName, "rehearse") {
 		return nil
 	}
 
@@ -150,6 +150,14 @@ func PreflightChecks() error {
 
 func (CI) setRequiredEnvVars() error {
 
+	if strings.Contains(jobName, "hacbs-e2e-periodic") {
+		os.Setenv("E2E_TEST_SUITE_LABEL", "HACBS")
+		return nil
+	} else if strings.Contains(jobName, "appstudio-e2e-deployment-periodic") {
+		os.Setenv("E2E_TEST_SUITE_LABEL", "!HACBS")
+		return nil
+	}
+
 	if openshiftJobSpec.Refs.Repo != "e2e-tests" {
 
 		if strings.Contains(openshiftJobSpec.Refs.Repo, "-service") {
@@ -181,12 +189,6 @@ func (CI) setRequiredEnvVars() error {
 
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.Organization)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
-		}
-
-		if strings.Contains(jobName, "hacbs-e2e-periodic") {
-			os.Setenv("E2E_TEST_SUITE_LABEL", "HACBS")
-		} else if strings.Contains(jobName, "appstudio-e2e-deployment-periodic") {
-			os.Setenv("E2E_TEST_SUITE_LABEL", "!HACBS")
 		}
 
 	}
