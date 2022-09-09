@@ -97,7 +97,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec"), fu
 			// the default policy source
 			rev := "main"
 			policySource = ecp.GitPolicySource{
-				Repository: "https://github.com/hacbs-contract/ec-policies.git",
+				Repository: "https://github.com/hacbs-contract/ec-policies/policy",
 				Revision:   &rev,
 			}
 
