@@ -66,7 +66,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 	})
 
 	AfterAll(func() {
-		err := framework.HasController.DeleteHasComponent(componentName, testNamespace)
+		err := framework.HasController.DeleteHasComponent(componentName, testNamespace, false)
 		Expect(err).NotTo(HaveOccurred())
 
 		err = framework.HasController.DeleteHasApplication(applicationName, testNamespace, false)
