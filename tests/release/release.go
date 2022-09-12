@@ -64,23 +64,9 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Create ReleaseLink in dev namespace", func() {
-			_, err := framework.ReleaseController.CreateReleaseLink(sourceReleaseLinkName, devNamespace, applicationName, managedNamespace, "")
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("Create ReleaseLink in managed namespace", func() {
-			_, err := framework.ReleaseController.CreateReleaseLink(targetReleaseLinkName, managedNamespace, applicationName, devNamespace, releaseStrategyName)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("Create a Release", func() {
-			_, err := framework.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, sourceReleaseLinkName)
-			Expect(err).NotTo(HaveOccurred())
-		})
 	})
 
-	var _ = Describe("Post-release verification", func() {
+	var _ = Describe("Post-release verification", Pending, func() {
 		It("A PipelineRun should have been created in the managed namespace", func() {
 			Eventually(func() error {
 				_, err := framework.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseName, devNamespace)
