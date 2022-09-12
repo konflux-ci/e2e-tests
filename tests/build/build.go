@@ -36,7 +36,7 @@ var (
 	helloWorldComponentGitSourceURL = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv("GITHUB_E2E_ORGANIZATION", "redhat-appstudio-qe"), helloWorldComponentGitSourceRepoName)
 )
 
-var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), func() {
+var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "HACBS"), func() {
 	defer GinkgoRecover()
 	f, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
@@ -268,15 +268,17 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 		})
 
 		When("the PaC init branch is merged", func() {
+			var mergeResult *github.PullRequestMergeResult
 			var mergeResultSha string
 
 			BeforeAll(func() {
-				mergeResult, err := f.CommonController.Github.MergePullRequest(helloWorldComponentGitSourceRepoName, prNumber)
-				Expect(err).NotTo(HaveOccurred())
+				Eventually(func() error {
+					mergeResult, err = f.CommonController.Github.MergePullRequest(helloWorldComponentGitSourceRepoName, prNumber)
+					return err
+				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request: %+v", err))
 
 				mergeResultSha = mergeResult.GetSHA()
 				klog.Infoln("merged result sha:", mergeResultSha)
-
 			})
 
 			It("eventually leads to triggering another PipelineRun", func() {
