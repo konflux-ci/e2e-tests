@@ -1,20 +1,33 @@
 package release
 
-import (
-	"time"
-)
+// "time"
 
 const (
-	snapshotName          string = "snapshot"
-	sourceReleaseLinkName string = "source-release-link"
-	targetReleaseLinkName string = "target-release-link"
-	releaseStrategyName   string = "strategy"
-	releaseName           string = "release"
-	releasePipelineName   string = "release-pipeline"
-	applicationName       string = "application"
-	releasePipelineBundle string = "quay.io/hacbs-release/demo:m5-alpine"
-	releaseStrategyPolicy string = "policy"
-
-	avgPipelineCompletionTime = 10 * time.Minute
-	defaultInterval           = 100 * time.Millisecond
+	releasePipelineDefault                = "m7-release-pipeline"
+	releasePvcName                        = "release-pvc"
+	serviceAccountName                    = "m7-service-account"
+	secretName                            = "hacbs-release-tests-token"
+	appNamePipelineTest                   = "appstudio"
+	componenetNamePipelineTest            = "java-springboot"
+	componentUrl                          = "https://github.com/scoheb/devfile-sample-java-springboot-basic"
+	componentDockerFileUrl                = "https://github.com/scoheb/go-hello-world/blob/main/Dockerfile"
+	buildBundleName                       = "build-pipelines-defaults"
+	defaultBuildBundle2                   = "quay.io/redhat-appstudio/hacbs-templates-bundle:bd950114df56457dcef19b6151c528011af9d9b2"
+	defaultBuildBundle                    = "quay.io/redhat-appstudio/hacbs-templates-bundle:bd950114df56457dcef19b6151c528011af9d9b2"
+	releaseBundle                         = "quay.io/hacbs-release/m7-release-pipeline:main"
+	releasePolicyDefault                  = "m7-policy"
+	releaseStrategyDefaultName            = "m7-strategy"
+	enterpriseContractPolicyUrl           = "https://github.com/hacbs-contract/ec-policies"
+	enterpriseContractPolicyName          = "m7-policy"
+	enterpriseContractPlicyRevisin        = "m7-demo-test"
+	roleName                              = "role-m7-service-account"
+	roleBindingName                       = "role-m7-service-account-binding"
+	subjectKind                           = "ServiceAccount"
+	roleRefKind                           = "Role"
+	roleRefName                           = "role-m7-service-account"
+	roleRefApiGroup                       = "rbac.authorization.k8s.io"
+	cosignSecret                   string = "cosign-public-key"
+	cosignSecretNamespace          string = "tekton-chains"
+	buildRegistrySecretName               = "redhat-appstudio-user-workload"
+	releaseRegistrySecretName             = "hacbs-release-tests-token"
 )
