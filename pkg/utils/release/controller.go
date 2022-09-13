@@ -227,7 +227,7 @@ func (s *SuiteController) DeleteReleasePlanAdmission(releasePlanAdmissionName, d
 
 
 // CreateReleaseStrategy creates a new ReleaseStrategy using the given parameters.
-func (s *SuiteController) CreateReleaseStrategy(name, target_namespace, pipelineName, bundle string, policy string) (*appstudiov1alpha1.ReleaseStrategy, error) {
+func (s *SuiteController) CreateReleaseStrategy(name, target_namespace, pipelineName, bundle string, policy string, service_account string) (*appstudiov1alpha1.ReleaseStrategy, error) {
 	releaseStrategy := &appstudiov1alpha1.ReleaseStrategy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -244,7 +244,7 @@ func (s *SuiteController) CreateReleaseStrategy(name, target_namespace, pipeline
 			},
 
 			// 		PersistentVolumeClaim: "test-pvc",
-			ServiceAccount: "m6-service-account",
+			ServiceAccount: service_account,
 		},
 	}
 
