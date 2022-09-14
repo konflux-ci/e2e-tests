@@ -23,8 +23,8 @@ require (
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20220714212008-d1b637f56c4d
 	github.com/redhat-appstudio/managed-gitops/appstudio-shared v0.0.0-20220826075641-33705d2bf7fa
 	github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001
-	github.com/redhat-appstudio/release-service v0.0.0-20220620143459-53c2f4bcc510
-	github.com/redhat-appstudio/service-provider-integration-operator v0.8.2
+	github.com/redhat-appstudio/release-service v0.0.0-20220909134141-6d395e5c26f4
+	github.com/redhat-appstudio/service-provider-integration-operator v0.5.0
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.8.0

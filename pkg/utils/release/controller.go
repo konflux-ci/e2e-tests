@@ -48,7 +48,7 @@ func (s *SuiteController) CreateRelease(name, namespace, snapshot, releasePlan s
 	release := &appstudiov1alpha1.Release{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: namespace,
+			Namespace: source_namespace,
 		},
 		Spec: v1alpha1.ReleaseSpec{
 			ApplicationSnapshot: snapshot,
@@ -64,7 +64,7 @@ func (s *SuiteController) CreateReleaseStrategy(name, namespace, pipelineName, b
 	releaseStrategy := &appstudiov1alpha1.ReleaseStrategy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: namespace,
+			Namespace: target_namespace,
 		},
 		Spec: v1alpha1.ReleaseStrategySpec{
 			Pipeline:       pipelineName,

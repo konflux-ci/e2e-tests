@@ -37,6 +37,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 	BeforeAll(func() {
 		// Create the dev namespace
 		demo, err := framework.CommonController.CreateTestNamespace(devNamespace)
+		klog.Info("Demo - Error  : ", demo, err)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", demo.Name, err)
 		klog.Info("Dev Namespace :", demo.Name)
 
@@ -48,9 +49,10 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 		// Wait until the "pipeline" SA is created and ready with secrets by the openshift-pipelines operator
 		klog.Infof("Wait until the 'pipeline' SA is created in %s namespace \n", managedNamespace)
 		Eventually(func() bool {
-			sa, err := framework.CommonController.GetServiceAccount("pipeline", managedNamespace)
+			sa, err := framework.CommonController.GetServiceAccount(releaseStrategyServiceAccount, managedNamespace)
 			return sa != nil && err == nil
 		}, 1*time.Minute, defaultInterval).Should(BeTrue(), "timed out when waiting for the \"pipeline\" SA to be created")
+
 	})
 
 	AfterAll(func() {
