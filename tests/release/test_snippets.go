@@ -25,7 +25,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-test-snippets", Lab
 		})
 
 		var _ = Describe("Create dev and managed namespaces", func() {
-			// CreateTestNamespace function in common/cntroller.go file
+			// CreateTestNamespace function in common/controller.go file
 			//  tests for the creation of pipeline SA (utils.WaitUntil(s.ServiceaccountPresent("pipeline", name))
 
 			It("Create dev namespace.", func() {
@@ -36,7 +36,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-test-snippets", Lab
 			})
 
 			It("Create managed namespace.", func() {
-				// Create the dev namespace
+				// Create the managed namespace
 				_, err := framework.CommonController.CreateTestNamespace(managedNamespace)
 				Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", managedNamespace, err)
 			})
@@ -44,13 +44,13 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-test-snippets", Lab
 
 		var _ = Describe("Delete dev and managed namespaces", func() {
 			It("Delete dev namespace.", func() {
-				// Create the dev namespace
+				// Delete the dev namespace
 				err := framework.CommonController.DeleteNamespace(devNamespace)
 				Expect(err).NotTo(HaveOccurred(), "Error when deleting namespace '%s': %v", devNamespace, err)
 			})
 
 			It("Delete managed namespace.", func() {
-				// Create the dev namespace
+				// Delete the managed namespace
 				err := framework.CommonController.DeleteNamespace(managedNamespace)
 				Expect(err).NotTo(HaveOccurred(), "Error when deleting namespace '%s': %v", managedNamespace, err)
 			})
