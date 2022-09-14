@@ -92,6 +92,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			pacInitTestFiles := []string{
 				fmt.Sprintf(".tekton/%s-pull-request.yaml", componentName),
 				fmt.Sprintf(".tekton/%s-push.yaml", componentName),
+				fmt.Sprintf(".tekton/%s-readme.md", componentName),
 			}
 
 			for _, file := range pacInitTestFiles {
@@ -200,16 +201,16 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		When("the PaC init branch is updated", func() {
 
 			var branchUpdateTimestamp time.Time
-			var updatedFileSHA string
+			var createdFileSHA string
 
 			BeforeAll(func() {
-
+				fileToCreatePath := fmt.Sprintf(".tekton/%s-readme.md", componentName)
 				branchUpdateTimestamp = time.Now()
-				updatedFile, err := f.CommonController.Github.UpdateFile(helloWorldComponentGitSourceRepoName, "README.md", fmt.Sprintf("test PaC branch %s update", pacBranchName), pacBranchName)
+				createdFile, err := f.CommonController.Github.CreateFile(helloWorldComponentGitSourceRepoName, fileToCreatePath, fmt.Sprintf("test PaC branch %s update", pacBranchName), pacBranchName)
 				Expect(err).NotTo(HaveOccurred())
 
-				updatedFileSHA = updatedFile.GetSHA()
-				klog.Infoln("updated file sha:", updatedFileSHA)
+				createdFileSHA = createdFile.GetSHA()
+				klog.Infoln("created file sha:", createdFileSHA)
 
 			})
 
@@ -218,7 +219,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				interval = time.Second * 1
 
 				Eventually(func() bool {
-					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true, updatedFileSHA)
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true, createdFileSHA)
 					if err != nil {
 						klog.Infoln("PipelineRun has not been created yet")
 						return false
@@ -231,7 +232,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				interval = time.Second * 10
 
 				Eventually(func() bool {
-					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true, updatedFileSHA)
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true, createdFileSHA)
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, condition := range pipelineRun.Status.Conditions {
