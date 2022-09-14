@@ -33,21 +33,36 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 	BeforeAll(func() {
 		// Create the dev namespace
 		demo, err := framework.CommonController.CreateTestNamespace(devNamespace)
+		klog.Info("Demo - Error  : ", demo, err)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", demo.Name, err)
+		klog.Info("Dev Namespace created: ", demo.Name)
 
 		// Create the managed namespace
 		namespace, err := framework.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", namespace.Name, err)
+		klog.Info("Managed Namespace created: ", namespace.Name)
 
 		// Wait until the "pipeline" SA is created and ready with secrets by the openshift-pipelines operator
 		klog.Infof("Wait until the 'pipeline' SA is created in %s namespace \n", managedNamespace)
 		Eventually(func() bool {
-			sa, err := framework.CommonController.GetServiceAccount("pipeline", managedNamespace)
+			sa, err := framework.CommonController.GetServiceAccount(releaseStrategyServiceAccount, managedNamespace)
 			return sa != nil && err == nil
 		}, 1*time.Minute, defaultInterval).Should(BeTrue(), "timed out when waiting for the \"pipeline\" SA to be created")
+
 	})
 
 	AfterAll(func() {
+
+		// Expect(framework.HasController.DeleteAllComponentsInASpecificNamespace(devNamespace, 30*time.Second)).To(Succeed())
+		// Expect(framework.HasController.DeleteAllApplicationsInASpecificNamespace(devNamespace, 30*time.Second)).To(Succeed())
+		// Expect(framework.TektonController.DeleteAllPipelineRunsInASpecificNamespace(devNamespace)).To(Succeed())
+		// Expect(framework.CommonController.DeleteNamespace(devNamespace)).To(Succeed())
+
+		// Expect(framework.HasController.DeleteAllComponentsInASpecificNamespace(managedNamespace, 30*time.Second)).To(Succeed())
+		// Expect(framework.HasController.DeleteAllApplicationsInASpecificNamespace(managedNamespace, 30*time.Second)).To(Succeed())
+		// Expect(framework.TektonController.DeleteAllPipelineRunsInASpecificNamespace(managedNamespace)).To(Succeed())
+		// Expect(framework.CommonController.DeleteNamespace(managedNamespace)).To(Succeed())
+
 		// Delete the dev and managed namespaces with all the resources created in them
 		Expect(framework.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
 		Expect(framework.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
@@ -60,13 +75,29 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 		})
 
 		It("Create Release Strategy", func() {
-			_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy)
+			_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, releaseStrategyServiceAccount)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		It("Create ReleasePlan in dev namespace", func() {
+			AutoReleaseLabel := ""
+			_, err := framework.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationName, managedNamespace, AutoReleaseLabel)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Create ReleasePlanAdmission in managed namespace", func() {
+			AutoReleaseLabel := ""
+			_, err := framework.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationName, managedNamespace, AutoReleaseLabel, releaseStrategyName)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Create a Release", func() {
+			_, err := framework.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, sourceReleasePlanName)
+			Expect(err).NotTo(HaveOccurred())
+		})
 	})
 
-	var _ = Describe("Post-release verification", Pending, func() {
+	var _ = Describe("Post-release verification", func() {
 		It("A PipelineRun should have been created in the managed namespace", func() {
 			Eventually(func() error {
 				_, err := framework.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseName, devNamespace)
@@ -82,7 +113,13 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 				if pipelineRun == nil || err != nil {
 					return false
 				}
-
+				// Debug
+				klog.Info("**********************************************")
+				klog.Info("Pipeline in managed is : ", pipelineRun.Name)
+				klog.Info("Pipeline HasStarted : ", pipelineRun.HasStarted())
+				klog.Info("Pipeline IsDone : ", pipelineRun.IsDone())
+				klog.Info("Pipeline Status Get Condition is succeded : ", pipelineRun.Status.GetCondition(apis.ConditionSucceeded))
+				klog.Info("**********************************************")
 				return pipelineRun.HasStarted() && pipelineRun.IsDone() && pipelineRun.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 			}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
 		})
