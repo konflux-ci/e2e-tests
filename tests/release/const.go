@@ -1,22 +1,22 @@
 package release
 
-// import (
-// 	"time"
-// )
+import (
+	"time"
+)
 
-// const (
-// 	snapshotName          string = "snapshot"
-// 	sourceReleaseLinkName string = "source-release-link"
-// 	targetReleaseLinkName string = "target-release-link"
-// 	releaseStrategyName   string = "strategy"
-// 	releaseName           string = "release"
-// 	releasePipelineName   string = "release-pipeline"
-// 	applicationName       string = "application"
-// 	releasePipelineBundle string = "quay.io/hacbs-release/demo:m5-alpine"
-// 	releaseStrategyPolicy string = "policy"
+const (
+	snapshotName                   string = "snapshot"
+	sourceReleasePlanName          string = "source-releaseplan"
+	targetReleasePlanAdmissionName string = "target-releaseplanadmission"
+	releaseStrategyName            string = "m7-strategy"
+	releaseName                    string = "release"
+	releasePipelineName            string = "m6-release-pipeline"
+	applicationName                string = "application"
+	releasePipelineBundle          string = "quay.io/hacbs-release/m6-release-pipeline:main"
+	releaseStrategyPolicy          string = "m7-policy"
+	releaseStrategyServiceAccount  string = "m7-service-account"
 
-// 	avgPipelineCompletionTime = 10 * time.Minute
-// 	defaultInterval           = 100 * time.Millisecond
-// )
+	avgPipelineCompletionTime = 10 * time.Minute
+	defaultInterval           = 100 * time.Millisecond
+)
 
-// Comment
