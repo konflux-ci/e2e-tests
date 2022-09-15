@@ -85,7 +85,7 @@ func (s *SuiteController) CreateReleaseStrategy(name, target_namespace, pipeline
 				{Name: "extraConfigRevision", Value: "main", Values: []string{}},
 			},
 
-			// 		PersistentVolumeClaim: "test-pvc",
+			// PersistentVolumeClaim: "test-pvc",
 			ServiceAccount: service_account,
 		},
 	}
@@ -115,53 +115,33 @@ func (s *SuiteController) GetPipelineRunInNamespace(namespace, releaseName, rele
 
 // CreateReleasePlan creates a new ReleasePlan using the given parameters.
 func (s *SuiteController) CreateReleasePlan(name, source_namespace, application, target_namespace, AutoReleaseLabel string) (*appstudiov1alpha1.ReleasePlan, error) {
-	var releasePlan *appstudiov1alpha1.ReleasePlan
+	var releasePlan *appstudiov1alpha1.ReleasePlan = &appstudiov1alpha1.ReleasePlan{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: source_namespace,
+		},
+		Spec: appstudiov1alpha1.ReleasePlanSpec{
+			DisplayName: name,
+			Application: application,
+			Target: kcp.NamespaceReference{
+				Namespace: target_namespace,
+			},
+		},
+	}
 
 	if AutoReleaseLabel != "" { // AutoReleaseLabel in ReleasePlan is not missing
-		releasePlan = &appstudiov1alpha1.ReleasePlan{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: name,
-				Name:         name,
-				Namespace:    source_namespace,
-				Labels: map[string]string{
-					appstudiov1alpha1.AutoReleaseLabel: AutoReleaseLabel,
-				},
-			},
-			Spec: appstudiov1alpha1.ReleasePlanSpec{
-				DisplayName: name,
-				Application: application,
-				Target: kcp.NamespaceReference{
-					Namespace: target_namespace,
-				},
-			},
-		}
-	} else { // AutoReleaseLabel in ReleasePlanAdmission is missing
-		releasePlan = &appstudiov1alpha1.ReleasePlan{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: name,
-				Name:         name,
-				Namespace:    source_namespace,
-				Labels:       map[string]string{},
-			},
-			Spec: appstudiov1alpha1.ReleasePlanSpec{
-				DisplayName: name,
-				Application: application,
-				Target: kcp.NamespaceReference{
-					Namespace: target_namespace,
-				},
-			},
-		}
+		releasePlan.ObjectMeta.Labels[appstudiov1alpha1.AutoReleaseLabel] = AutoReleaseLabel
 	}
 	return releasePlan, s.KubeRest().Create(context.TODO(), releasePlan)
 }
 
 // GetReleasePlan returns the releasePlan with the given name in the given namespace.
-func (s *SuiteController) GetReleasePlan(releasePlanName, devNamespace string) (*appstudiov1alpha1.ReleasePlan, error) {
+func (s *SuiteController) GetReleasePlan(releasePlanName, source_namespace string) (*appstudiov1alpha1.ReleasePlan, error) {
 	releasePlan := &appstudiov1alpha1.ReleasePlan{}
 
 	err := s.KubeRest().Get(context.TODO(), types.NamespacedName{
 		Name:      releasePlanName,
-		Namespace: devNamespace,
+		Namespace: source_namespace,
 	}, releasePlan)
 
 	return releasePlan, err
@@ -169,12 +149,12 @@ func (s *SuiteController) GetReleasePlan(releasePlanName, devNamespace string) (
 
 // DeleteReleasePlan deletes the releasePlan resource with the given name from the given namespace.
 // Optionally, it can avoid returning an error if the resource did not exist:
-//  specify 'false', if it's likely the ReleasePlan has already been deleted (for example, because the Namespace was deleted)
-func (s *SuiteController) DeleteReleasePlan(releasePlanName, devNamespace string, reportErrorOnNotFound bool) error {
+//  specify 'false', if it's likely the ReleasePlan has already been deleted (for example, because the Namespace was deleted).
+func (s *SuiteController) DeleteReleasePlan(releasePlanName, source_namespace string, reportErrorOnNotFound bool) error {
 	releasePlan := appstudiov1alpha1.ReleasePlan{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      releasePlanName,
-			Namespace: devNamespace,
+			Namespace: source_namespace,
 		},
 	}
 	err := s.KubeRest().Delete(context.TODO(), &releasePlan)
@@ -186,55 +166,36 @@ func (s *SuiteController) DeleteReleasePlan(releasePlanName, devNamespace string
 
 // CreateReleasePlanAdmission creates a new ReleasePlanAdmission using the given parameters.
 func (s *SuiteController) CreateReleasePlanAdmission(name, source_namespace, application, target_namespace, AutoReleaseLabel string, releaseStrategy string) (*appstudiov1alpha1.ReleasePlanAdmission, error) {
-	var releasePlanAdmission *appstudiov1alpha1.ReleasePlanAdmission
 
-	if AutoReleaseLabel != "" { // AutoReleaseLabel in ReleasePlanAdmission is not missing
-		releasePlanAdmission = &appstudiov1alpha1.ReleasePlanAdmission{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: target_namespace,
-				Labels: map[string]string{
-					appstudiov1alpha1.AutoReleaseLabel: AutoReleaseLabel,
-				},
+	var releasePlanAdmission *appstudiov1alpha1.ReleasePlanAdmission = &appstudiov1alpha1.ReleasePlanAdmission{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: target_namespace,
+		},
+		Spec: appstudiov1alpha1.ReleasePlanAdmissionSpec{
+			DisplayName: name,
+			Application: application,
+			Origin: kcp.NamespaceReference{
+				Namespace: source_namespace,
 			},
-			Spec: appstudiov1alpha1.ReleasePlanAdmissionSpec{
-				DisplayName: name,
-				Application: application,
-				Origin: kcp.NamespaceReference{
-					Namespace: source_namespace,
-				},
-				Environment:     "test-environment",
-				ReleaseStrategy: releaseStrategy,
-			},
-		}
-	} else { // AutoReleaseLabel in ReleasePlanAdmission is missing
-		releasePlanAdmission = &appstudiov1alpha1.ReleasePlanAdmission{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: target_namespace,
-				Labels:    map[string]string{},
-			},
-			Spec: appstudiov1alpha1.ReleasePlanAdmissionSpec{
-				DisplayName: name,
-				Application: application,
-				Origin: kcp.NamespaceReference{
-					Namespace: source_namespace,
-				},
-				Environment:     "test-environment",
-				ReleaseStrategy: releaseStrategy,
-			},
-		}
+			Environment:     "test-environment",
+			ReleaseStrategy: releaseStrategy,
+		},
+	}
+
+	if AutoReleaseLabel != "" { // AutoReleaseLabel in ReleasePlan is not missing
+		releasePlanAdmission.ObjectMeta.Labels[appstudiov1alpha1.AutoReleaseLabel] = AutoReleaseLabel
 	}
 	return releasePlanAdmission, s.KubeRest().Create(context.TODO(), releasePlanAdmission)
 }
 
 // GetReleasePlan returns the releasePlan with the given name in the given namespace.
-func (s *SuiteController) GetReleasePlanAdmission(releasePlanAdmissionName, devNamespace string) (*appstudiov1alpha1.ReleasePlanAdmission, error) {
+func (s *SuiteController) GetReleasePlanAdmission(releasePlanAdmissionName, source_namespace string) (*appstudiov1alpha1.ReleasePlanAdmission, error) {
 	releasePlanAdmission := &appstudiov1alpha1.ReleasePlanAdmission{}
 
 	err := s.KubeRest().Get(context.TODO(), types.NamespacedName{
 		Name:      releasePlanAdmissionName,
-		Namespace: devNamespace,
+		Namespace: source_namespace,
 	}, releasePlanAdmission)
 
 	return releasePlanAdmission, err
@@ -243,11 +204,11 @@ func (s *SuiteController) GetReleasePlanAdmission(releasePlanAdmissionName, devN
 // DeleteReleasePlan deletes the releasePlan resource with the given name from the given namespace.
 // Optionally, it can avoid returning an error if the resource did not exist:
 //  specify 'false', if it's likely the ReleasePlan has already been deleted (for example, because the Namespace was deleted)
-func (s *SuiteController) DeleteReleasePlanAdmission(releasePlanAdmissionName, devNamespace string, reportErrorOnNotFound bool) error {
+func (s *SuiteController) DeleteReleasePlanAdmission(releasePlanAdmissionName, source_namespace string, reportErrorOnNotFound bool) error {
 	releasePlanAdmission := appstudiov1alpha1.ReleasePlan{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      releasePlanAdmissionName,
-			Namespace: devNamespace,
+			Namespace: source_namespace,
 		},
 	}
 	err := s.KubeRest().Delete(context.TODO(), &releasePlanAdmission)
