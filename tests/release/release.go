@@ -61,13 +61,13 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("Create ReleasePlan in dev namespace", func() {
+			It("Create a ReleasePlan in dev namespace", func() {
 				AutoReleaseLabel := ""
 				_, err := framework.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationName, managedNamespace, AutoReleaseLabel)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("Create ReleasePlanAdmission in managed namespace", func() {
+			It("Create a ReleasePlanAdmission in managed namespace", func() {
 				AutoReleaseLabel := ""
 				_, err := framework.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationName, managedNamespace, AutoReleaseLabel, releaseStrategyName)
 				Expect(err).NotTo(HaveOccurred())
@@ -88,7 +88,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 				}, 1*time.Minute, defaultInterval).Should(BeNil())
 			})
 
-			It("The PipelineRun should exist and succeed", func() {
+			It("The PipelineRun has started, was done, and succeeded", func() {
 				Eventually(func() bool {
 					pipelineRun, err := framework.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseName, devNamespace)
 
