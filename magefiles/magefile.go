@@ -7,8 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/averageflow/gohooks/v2/gohooks"
 	"github.com/magefile/mage/sh"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+
 	"k8s.io/klog/v2"
 )
 
@@ -97,6 +99,7 @@ func (Local) TestE2E() error {
 }
 
 func (ci CI) TestE2E() error {
+	var testFailure bool
 
 	if err := ci.init(); err != nil {
 		return fmt.Errorf("error when running ci init: %v", err)
@@ -118,7 +121,15 @@ func (ci CI) TestE2E() error {
 	}
 
 	if err := RunE2ETests(); err != nil {
-		return fmt.Errorf("error when running e2e tests: %v", err)
+		testFailure = true
+	}
+
+	if err := ci.sendWebhook(); err != nil {
+		klog.Infof("error when sending webhook: %v", err)
+	}
+
+	if testFailure {
+		return fmt.Errorf("error when running e2e tests - see the log above for more details")
 	}
 
 	return nil
@@ -230,4 +241,54 @@ func (CI) isPRPairingRequired() bool {
 	}
 
 	return false
+}
+
+func (CI) sendWebhook() error {
+	// TODO we will need to distinguish between webhookTargets for AppStudio QE and HACBS QE
+	const saltSecret = "123456789"
+	const webhookTarget = "https://smee.io/JgVqn2oYFPY1CF"
+
+	var repoURL string
+
+	var repoOwner = os.Getenv("REPO_OWNER")
+	var repoName = os.Getenv("REPO_NAME")
+	var prNumber = os.Getenv("PULL_NUMBER")
+
+	if strings.Contains(jobName, "hacbs-e2e-periodic") {
+		// TODO configure webhook channel for sending HACBS test results
+		klog.Infof("not sending webhook for HACBS periodic job yet")
+		return nil
+	}
+
+	if jobType == "periodic" {
+		repoURL = "https://github.com/redhat-appstudio/infra-deployments"
+		repoOwner = "redhat-appstudio"
+		repoName = "infra-deployments"
+		prNumber = "periodic"
+	} else if repoName == "e2e-tests" || repoName == "infra-deployments" {
+		repoURL = openshiftJobSpec.Refs.RepoLink
+	} else {
+		klog.Infof("sending webhook for jobType %s, jobName %s is not supported", jobType, jobName)
+		return nil
+	}
+
+	path, err := os.Executable()
+	if err != nil {
+		klog.Info(err)
+	}
+
+	hook := &gohooks.GoHook{}
+	w := Webhook{Path: path}
+	w.RepositoryURL = repoURL
+	w.Repository.FullName = fmt.Sprintf("%s/%s", repoOwner, repoName)
+	w.Repository.PullNumber = prNumber
+	hook.Create(w, path, saltSecret)
+
+	resp, err := hook.Send(webhookTarget)
+	if err != nil {
+		return fmt.Errorf("error sending webhook: %+v", err)
+	}
+	klog.Infof("webhook response: %+v", resp)
+
+	return nil
 }

@@ -9,6 +9,7 @@ type OpenshiftJobSpec struct {
 	Refs Refs `json:"refs"`
 }
 type Refs struct {
+	RepoLink     string `json:"repo_link"`
 	Repo         string `json:"repo"`
 	Organization string `json:"org"`
 	Pulls        []Pull `json:"pulls"`
@@ -46,4 +47,17 @@ type PullRequestMetadata struct {
 	CommitSHA    string
 	Number       int
 	RemoteName   string
+}
+
+// Webhook struct used for sending webhooks to https://smee.io/
+type Webhook struct {
+	Path          string `json:"path"`
+	RepositoryURL string `json:"repository_url"`
+	Repository    `json:"repository"`
+}
+
+// Repository struct - part of Webhook struct
+type Repository struct {
+	FullName   string `json:"full_name"`
+	PullNumber string `json:"pull_number"`
 }
