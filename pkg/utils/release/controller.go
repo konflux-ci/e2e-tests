@@ -5,7 +5,6 @@ import (
 
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
-	"github.com/redhat-appstudio/release-service/api/v1alpha1"
 	appstudiov1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	kcp "github.com/redhat-appstudio/release-service/kcp"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -58,8 +57,8 @@ func (s *SuiteController) CreateRelease(name, source_namespace, snapshot, source
 }
 
 // GetRelease returns the release with the given name in the given namespace.
-func (s *SuiteController) GetRelease(releaseName, releaseNamespace string) (*v1alpha1.Release, error) {
-	release := &v1alpha1.Release{}
+func (s *SuiteController) GetRelease(releaseName, releaseNamespace string) (*appstudiov1alpha1.Release, error) {
+	release := &appstudiov1alpha1.Release{}
 
 	err := s.KubeRest().Get(context.TODO(), types.NamespacedName{
 		Name:      releaseName,
