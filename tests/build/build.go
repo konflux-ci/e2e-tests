@@ -2,11 +2,12 @@ package build
 
 import (
 	"fmt"
-	"github.com/google/go-github/v44/github"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/google/go-github/v44/github"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 
 	"github.com/devfile/library/pkg/util"
 	"github.com/google/uuid"
@@ -36,7 +37,7 @@ var (
 	helloWorldComponentGitSourceURL = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv("GITHUB_E2E_ORGANIZATION", "redhat-appstudio-qe"), helloWorldComponentGitSourceRepoName)
 )
 
-var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "HACBS"), func() {
+var _ = framework.BuildSuiteDescribe("[test_id:03] Build service E2E tests", Label("build", "HACBS"), func() {
 	defer GinkgoRecover()
 	f, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())

@@ -19,7 +19,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
-var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HACBS"), func() {
+var _ = framework.ChainsSuiteDescribe("[test_id:04] Tekton Chains E2E tests", Label("ec", "HACBS"), func() {
 	defer GinkgoRecover()
 
 	var fwk *framework.Framework

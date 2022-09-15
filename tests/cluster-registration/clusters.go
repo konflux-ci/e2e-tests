@@ -7,7 +7,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 )
 
-var _ = framework.ClusterRegistrationSuiteDescribe("Cluster Registration E2E tests", g.Label("cluster-registration"), func() {
+var _ = framework.ClusterRegistrationSuiteDescribe("[test_id:06] Cluster Registration E2E tests", g.Label("cluster-registration"), func() {
 	defer g.GinkgoRecover()
 
 	// Initialize the tests controllers
