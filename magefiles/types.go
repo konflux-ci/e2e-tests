@@ -48,16 +48,3 @@ type PullRequestMetadata struct {
 	Number       int
 	RemoteName   string
 }
-
-// Webhook struct used for sending webhooks to https://smee.io/
-type Webhook struct {
-	Path          string `json:"path"`
-	RepositoryURL string `json:"repository_url"`
-	Repository    `json:"repository"`
-}
-
-// Repository struct - part of Webhook struct
-type Repository struct {
-	FullName   string `json:"full_name"`
-	PullNumber string `json:"pull_number"`
-}

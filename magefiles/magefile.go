@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/averageflow/gohooks/v2/gohooks"
 	"github.com/magefile/mage/sh"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
@@ -274,17 +273,18 @@ func (CI) sendWebhook() error {
 
 	path, err := os.Executable()
 	if err != nil {
-		klog.Info(err)
+		return fmt.Errorf("error when sending webhook: %+v", err)
 	}
 
-	hook := &gohooks.GoHook{}
-	w := Webhook{Path: path}
-	w.RepositoryURL = repoURL
-	w.Repository.FullName = fmt.Sprintf("%s/%s", repoOwner, repoName)
-	w.Repository.PullNumber = prNumber
-	hook.Create(w, path, saltSecret)
-
-	resp, err := hook.Send(webhookTarget)
+	wh := Webhook{
+		Path: path,
+		Repository: Repository{
+			FullName:   fmt.Sprintf("%s/%s", repoOwner, repoName),
+			PullNumber: prNumber,
+		},
+		RepositoryURL: repoURL,
+	}
+	resp, err := wh.CreateAndSend(saltSecret, webhookTarget)
 	if err != nil {
 		return fmt.Errorf("error sending webhook: %+v", err)
 	}
