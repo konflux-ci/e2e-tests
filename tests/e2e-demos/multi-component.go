@@ -67,8 +67,8 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 	// Remove all resources created by the tests
 	AfterAll(func() {
-		Expect(fw.HasController.DeleteAllComponentsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
-		Expect(fw.HasController.DeleteAllApplicationsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
+		Expect(fw.HasController.DeleteAllComponentsInASpecificNamespace(AppStudioE2EApplicationsNamespace, 30*time.Second)).To(Succeed())
+		Expect(fw.HasController.DeleteAllApplicationsInASpecificNamespace(AppStudioE2EApplicationsNamespace, 30*time.Second)).To(Succeed())
 	})
 
 	It("Create Red Hat AppStudio Application", func() {
