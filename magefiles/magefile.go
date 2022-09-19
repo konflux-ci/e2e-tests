@@ -208,7 +208,12 @@ func (CI) createOpenshiftUser() error {
 }
 
 func BootstrapCluster() error {
-	return sh.Run("./scripts/install-appstudio.sh")
+	envVars := map[string]string{
+		// Some scripts in infra-deployments repo are referencing scripts/utils in e2e-tests repo
+		// This env var allows to test changes introduced in "e2e-tests" repo PRs in CI
+		"E2E_TESTS_COMMIT_SHA": utils.GetEnv("PULL_PULL_SHA", "main"),
+	}
+	return sh.RunWith(envVars, "./scripts/install-appstudio.sh")
 }
 
 func (CI) isPRPairingRequired() bool {
