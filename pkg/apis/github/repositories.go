@@ -18,7 +18,22 @@ func (g *Github) CheckIfRepositoryExist(repository string) bool {
 	return resp.StatusCode == 200
 }
 
-func (g *Github) UpdateFile(repository, pathToFile, newContent, branchName string) (*github.RepositoryContentResponse, error) {
+func (g *Github) CreateFile(repository, pathToFile, fileContent, branchName string) (*github.RepositoryContentResponse, error) {
+	opts := &github.RepositoryContentFileOptions{
+		Message: github.String("e2e test commit message"),
+		Content: []byte(fileContent),
+		Branch:  github.String(branchName),
+	}
+
+	file, _, err := g.client.Repositories.CreateFile(context.Background(), g.organization, repository, pathToFile, opts)
+	if err != nil {
+		return nil, fmt.Errorf("error when creating file contents: %v", err)
+	}
+
+	return file, nil
+}
+
+func (g *Github) GetFile(repository, pathToFile, branchName string) (*github.RepositoryContent, error) {
 	opts := &github.RepositoryContentGetOptions{}
 	if branchName != "" {
 		opts.Ref = fmt.Sprintf("heads/%s", branchName)
@@ -27,10 +42,18 @@ func (g *Github) UpdateFile(repository, pathToFile, newContent, branchName strin
 	if err != nil {
 		return nil, fmt.Errorf("error when listing file contents: %v", err)
 	}
-	fileSha := file.GetSHA()
+
+	return file, nil
+}
+
+func (g *Github) UpdateFile(repository, pathToFile, newContent, branchName, fileSHA string) (*github.RepositoryContentResponse, error) {
+	opts := &github.RepositoryContentGetOptions{}
+	if branchName != "" {
+		opts.Ref = fmt.Sprintf("heads/%s", branchName)
+	}
 	newFileContent := &github.RepositoryContentFileOptions{
 		Message: github.String("e2e test commit message"),
-		SHA:     github.String(fileSha),
+		SHA:     github.String(fileSHA),
 		Content: []byte(newContent),
 		Branch:  github.String(branchName),
 	}

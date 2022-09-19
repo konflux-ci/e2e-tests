@@ -36,7 +36,7 @@ var (
 	helloWorldComponentGitSourceURL = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv("GITHUB_E2E_ORGANIZATION", "redhat-appstudio-qe"), helloWorldComponentGitSourceRepoName)
 )
 
-var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), func() {
+var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "HACBS"), func() {
 	defer GinkgoRecover()
 	f, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
@@ -88,10 +88,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 		AfterAll(func() {
 			Expect(f.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
-			Expect(f.HasController.DeleteHasComponent(componentName, testNamespace)).To(Succeed())
+			Expect(f.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
 			pacInitTestFiles := []string{
 				fmt.Sprintf(".tekton/%s-pull-request.yaml", componentName),
 				fmt.Sprintf(".tekton/%s-push.yaml", componentName),
+				fmt.Sprintf(".tekton/%s-readme.md", componentName),
 			}
 
 			for _, file := range pacInitTestFiles {
@@ -191,24 +192,25 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 					return len(comments) != 0
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PaC PR comment about the pipelinerun status to appear in the component repo")
 
-				Expect(comments).To(HaveLen(1), fmt.Sprintf("the initial PR has more than 1 comment after a single pipelinerun. repo: %s, pr number: %d, comments content: %v", helloWorldComponentGitSourceURL, prNumber, comments))
-				Expect(comments[0]).To(ContainSubstring("success"), "the initial PR doesn't contain the info about successful pipelinerun")
+				// TODO uncomment once https://issues.redhat.com/browse/SRVKP-2471 is sorted
+				//Expect(comments).To(HaveLen(1), fmt.Sprintf("the initial PR has more than 1 comment after a single pipelinerun. repo: %s, pr number: %d, comments content: %v", helloWorldComponentGitSourceURL, prNumber, comments))
+				Expect(comments[len(comments)-1]).To(ContainSubstring("success"), "the initial PR doesn't contain the info about successful pipelinerun")
 			})
 		})
 
 		When("the PaC init branch is updated", func() {
 
 			var branchUpdateTimestamp time.Time
-			var updatedFileSHA string
+			var createdFileSHA string
 
 			BeforeAll(func() {
-
+				fileToCreatePath := fmt.Sprintf(".tekton/%s-readme.md", componentName)
 				branchUpdateTimestamp = time.Now()
-				updatedFile, err := f.CommonController.Github.UpdateFile(helloWorldComponentGitSourceRepoName, "README.md", fmt.Sprintf("test PaC branch %s update", pacBranchName), pacBranchName)
+				createdFile, err := f.CommonController.Github.CreateFile(helloWorldComponentGitSourceRepoName, fileToCreatePath, fmt.Sprintf("test PaC branch %s update", pacBranchName), pacBranchName)
 				Expect(err).NotTo(HaveOccurred())
 
-				updatedFileSHA = updatedFile.GetSHA()
-				klog.Infoln("updated file sha:", updatedFileSHA)
+				createdFileSHA = createdFile.GetSHA()
+				klog.Infoln("created file sha:", createdFileSHA)
 
 			})
 
@@ -217,7 +219,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 				interval = time.Second * 1
 
 				Eventually(func() bool {
-					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true, updatedFileSHA)
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true, createdFileSHA)
 					if err != nil {
 						klog.Infoln("PipelineRun has not been created yet")
 						return false
@@ -230,7 +232,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 				interval = time.Second * 10
 
 				Eventually(func() bool {
-					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true, updatedFileSHA)
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true, createdFileSHA)
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, condition := range pipelineRun.Status.Conditions {
@@ -259,22 +261,25 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 					return len(comments) != 0
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PaC PR comment about the pipelinerun status to appear in the component repo")
 
-				Expect(comments).To(HaveLen(1), fmt.Sprintf("the updated PaC PR has more than 1 comment after a single branch update. repo: %s, pr number: %d, comments content: %v", helloWorldComponentGitSourceURL, prNumber, comments))
-				Expect(comments[0]).To(ContainSubstring("success"), "the updated PR doesn't contain the info about successful pipelinerun")
+				// TODO uncomment once https://issues.redhat.com/browse/SRVKP-2471 is sorted
+				//Expect(comments).To(HaveLen(1), fmt.Sprintf("the updated PaC PR has more than 1 comment after a single branch update. repo: %s, pr number: %d, comments content: %v", helloWorldComponentGitSourceURL, prNumber, comments))
+				Expect(comments[len(comments)-1]).To(ContainSubstring("success"), "the updated PR doesn't contain the info about successful pipelinerun")
 			})
 
 		})
 
 		When("the PaC init branch is merged", func() {
+			var mergeResult *github.PullRequestMergeResult
 			var mergeResultSha string
 
 			BeforeAll(func() {
-				mergeResult, err := f.CommonController.Github.MergePullRequest(helloWorldComponentGitSourceRepoName, prNumber)
-				Expect(err).NotTo(HaveOccurred())
+				Eventually(func() error {
+					mergeResult, err = f.CommonController.Github.MergePullRequest(helloWorldComponentGitSourceRepoName, prNumber)
+					return err
+				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request: %+v", err))
 
 				mergeResultSha = mergeResult.GetSHA()
 				klog.Infoln("merged result sha:", mergeResultSha)
-
 			})
 
 			It("eventually leads to triggering another PipelineRun", func() {
@@ -314,7 +319,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 
 		When("the component is removed and recreated (with the same name in the same namespace)", func() {
 			BeforeAll(func() {
-				Expect(f.HasController.DeleteHasComponent(componentName, testNamespace)).To(Succeed())
+				Expect(f.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
 
 				Eventually(func() bool {
 					_, err := f.HasController.GetHasComponent(componentName, testNamespace)
@@ -770,8 +775,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build"), 
 		})
 
 		AfterAll(func() {
-			Expect(f.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace)).To(Succeed())
-			Expect(f.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace)).To(Succeed())
+			Expect(f.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, 30*time.Second)).To(Succeed())
+			Expect(f.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, 30*time.Second)).To(Succeed())
 			Expect(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 			Expect(f.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
 		})

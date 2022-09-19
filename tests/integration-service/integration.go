@@ -33,7 +33,7 @@ const (
 	gitSourceURL         = "https://github.com/redhat-appstudio-qe/" + gitSourceRepoName
 )
 
-var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests", Label("integration-service"), func() {
+var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests", Label("integration-service", "HACBS"), func() {
 
 	defer GinkgoRecover()
 
@@ -75,7 +75,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, "", "", containerImageSource, outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
 
-			DeferCleanup(f.HasController.DeleteHasComponent, componentName, appStudioE2EApplicationsNamespace)
+			DeferCleanup(f.HasController.DeleteHasComponent, componentName, appStudioE2EApplicationsNamespace, false)
 		})
 		It("should not trigger a PipelineRun", func() {
 			Consistently(func() bool {
@@ -97,7 +97,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			// Create a component with Git Source URL being defined
 			component, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", "", outputContainerImage, "")
 			Expect(err).ShouldNot(HaveOccurred())
-			DeferCleanup(f.HasController.DeleteHasComponent, componentName, appStudioE2EApplicationsNamespace)
+			DeferCleanup(f.HasController.DeleteHasComponent, componentName, appStudioE2EApplicationsNamespace, false)
 
 			defaultBundleConfigMap, err = f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace)
 			if err != nil {

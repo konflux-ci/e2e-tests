@@ -34,7 +34,7 @@ var (
 	testProjectRevision = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_REVISION", "main")
 )
 
-var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jvm-build"), func() {
+var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jvm-build", "HACBS"), func() {
 	defer GinkgoRecover()
 
 	var testNamespace, applicationName, componentName, outputContainerImage string
@@ -163,7 +163,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				klog.Infof("got error deleting DB %s: %s", db.Name, err.Error())
 			}
 		}
-		Expect(f.HasController.DeleteHasComponent(componentName, testNamespace)).To(Succeed())
+		Expect(f.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
 		Expect(f.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
 		Expect(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 	})

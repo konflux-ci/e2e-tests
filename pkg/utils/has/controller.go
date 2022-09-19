@@ -93,11 +93,19 @@ func (h *SuiteController) DeleteHasApplication(name, namespace string, reportErr
 			Namespace: namespace,
 		},
 	}
-	err := h.KubeRest().Delete(context.TODO(), &application)
-	if err != nil && !reportErrorOnNotFound && k8sErrors.IsNotFound(err) {
-		err = nil
+	if err := h.KubeRest().Delete(context.TODO(), &application); err != nil {
+		if !k8sErrors.IsNotFound(err) || (k8sErrors.IsNotFound(err) && reportErrorOnNotFound) {
+			return fmt.Errorf("error deleting an application: %+v", err)
+		}
 	}
-	return err
+	return utils.WaitUntil(h.ApplicationDeleted(&application), 1*time.Minute)
+}
+
+func (h *SuiteController) ApplicationDeleted(application *appservice.Application) wait.ConditionFunc {
+	return func() (bool, error) {
+		_, err := h.GetHasApplication(application.Name, application.Namespace)
+		return err != nil && k8sErrors.IsNotFound(err), nil
+	}
 }
 
 // GetHasComponent returns the Appstudio Component Custom Resource object
@@ -127,14 +135,20 @@ func (h *SuiteController) ScaleComponentReplicas(component *appservice.Component
 }
 
 // DeleteHasComponent delete an has component from a given name and namespace
-func (h *SuiteController) DeleteHasComponent(name string, namespace string) error {
+func (h *SuiteController) DeleteHasComponent(name string, namespace string, reportErrorOnNotFound bool) error {
 	component := appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
 	}
-	return h.KubeRest().Delete(context.TODO(), &component)
+	if err := h.KubeRest().Delete(context.TODO(), &component); err != nil {
+		if !k8sErrors.IsNotFound(err) || (k8sErrors.IsNotFound(err) && reportErrorOnNotFound) {
+			return fmt.Errorf("error deleting a component: %+v", err)
+		}
+	}
+
+	return utils.WaitUntil(h.ComponentDeleted(&component), 1*time.Minute)
 }
 
 // CreateComponent create an has component from a given name, namespace, application, devfile and a container image
@@ -172,7 +186,7 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 	if err != nil {
 		return nil, err
 	}
-	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*10); err != nil {
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*30); err != nil {
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
 	}
 	return component, nil
@@ -190,6 +204,13 @@ func (h *SuiteController) ComponentReady(component *appservice.Component) wait.C
 			}
 		}
 		return false, nil
+	}
+}
+
+func (h *SuiteController) ComponentDeleted(component *appservice.Component) wait.ConditionFunc {
+	return func() (bool, error) {
+		_, err := h.GetHasComponent(component.Name, component.Namespace)
+		return err != nil && k8sErrors.IsNotFound(err), nil
 	}
 }
 
@@ -220,7 +241,7 @@ func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, compone
 	if err != nil {
 		return nil, err
 	}
-	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*10); err != nil {
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*30); err != nil {
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
 	}
 	return component, nil
@@ -242,7 +263,7 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 	if err != nil {
 		return nil, err
 	}
-	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*10); err != nil {
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*30); err != nil {
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
 	}
 	return component, nil
@@ -426,20 +447,40 @@ func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentN
 	if err != nil {
 		return nil, err
 	}
-	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*10); err != nil {
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*30); err != nil {
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
 	}
 	return component, nil
 }
 
-// Remove all components from a given repository. Usefull when create a lot of resources and want to remove all of them
-func (h *SuiteController) DeleteAllComponentsInASpecificNamespace(namespace string) error {
-	return h.KubeRest().DeleteAllOf(context.TODO(), &appservice.Component{}, rclient.InNamespace(namespace))
+// DeleteAllComponentsInASpecificNamespace removes all component CRs from a specific namespace. Useful when creating a lot of resources and want to remove all of them
+func (h *SuiteController) DeleteAllComponentsInASpecificNamespace(namespace string, timeout time.Duration) error {
+	if err := h.KubeRest().DeleteAllOf(context.TODO(), &appservice.Component{}, rclient.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("error deleting components from the namespace %s: %+v", namespace, err)
+	}
+
+	componentList := &appservice.ComponentList{}
+	return utils.WaitUntil(func() (done bool, err error) {
+		if err := h.KubeRest().List(context.Background(), componentList, &rclient.ListOptions{Namespace: namespace}); err != nil {
+			return false, nil
+		}
+		return len(componentList.Items) == 0, nil
+	}, timeout)
 }
 
-// Remove all applications from a given repository. Usefull when create a lot of resources and want to remove all of them
-func (h *SuiteController) DeleteAllApplicationsInASpecificNamespace(namespace string) error {
-	return h.KubeRest().DeleteAllOf(context.TODO(), &appservice.Application{}, rclient.InNamespace(namespace))
+// DeleteAllApplicationsInASpecificNamespace removes all application CRs from a specific namespace. Useful when creating a lot of resources and want to remove all of them
+func (h *SuiteController) DeleteAllApplicationsInASpecificNamespace(namespace string, timeout time.Duration) error {
+	if err := h.KubeRest().DeleteAllOf(context.TODO(), &appservice.Application{}, rclient.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("error deleting applications from the namespace %s: %+v", namespace, err)
+	}
+
+	applicationList := &appservice.ApplicationList{}
+	return utils.WaitUntil(func() (done bool, err error) {
+		if err := h.KubeRest().List(context.Background(), applicationList, &rclient.ListOptions{Namespace: namespace}); err != nil {
+			return false, nil
+		}
+		return len(applicationList.Items) == 0, nil
+	}, timeout)
 }
 
 func (h *SuiteController) GetHasComponentConditionStatusMessages(name, namespace string) (messages []string, err error) {
