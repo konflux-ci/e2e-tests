@@ -243,15 +243,17 @@ func (CI) isPRPairingRequired() bool {
 }
 
 func (CI) sendWebhook() error {
-	// TODO we will need to distinguish between webhookTargets for AppStudio QE and HACBS QE
-	const saltSecret = "123456789"
-	const webhookTarget = "https://smee.io/JgVqn2oYFPY1CF"
+	// AppStudio QE webhook configuration values will be used by default (if none are provided via env vars)
+	const appstudioQESaltSecret = "123456789"
+	const appstudioQEWebhookTargetURL = "https://smee.io/JgVqn2oYFPY1CF"
 
 	var repoURL string
 
 	var repoOwner = os.Getenv("REPO_OWNER")
 	var repoName = os.Getenv("REPO_NAME")
 	var prNumber = os.Getenv("PULL_NUMBER")
+	var saltSecret = utils.GetEnv("WEBHOOK_SALT_SECRET", appstudioQESaltSecret)
+	var webhookTargetURL = utils.GetEnv("WEBHOOK_TARGET_URL", appstudioQEWebhookTargetURL)
 
 	if strings.Contains(jobName, "hacbs-e2e-periodic") {
 		// TODO configure webhook channel for sending HACBS test results
@@ -284,7 +286,7 @@ func (CI) sendWebhook() error {
 		},
 		RepositoryURL: repoURL,
 	}
-	resp, err := wh.CreateAndSend(saltSecret, webhookTarget)
+	resp, err := wh.CreateAndSend(saltSecret, webhookTargetURL)
 	if err != nil {
 		return fmt.Errorf("error sending webhook: %+v", err)
 	}
