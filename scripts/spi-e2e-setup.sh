@@ -67,8 +67,7 @@ oc apply -f -
 
 rm "$tmpfile"
 
-# The env var NAMESPACE is exported by openshift-ci and breaks the vault-init script. It has to be set to an empty string.
-curl https://raw.githubusercontent.com/redhat-appstudio/service-provider-integration-operator/main/hack/vault-init.sh | NAMESPACE="" bash -s
+curl https://raw.githubusercontent.com/redhat-appstudio/service-provider-integration-operator/main/hack/vault-init.sh | VAULT_PODNAME=spi-vault-0 VAULT_NAMESPACE="spi-system" bash -s
 
 oc rollout restart deployment/spi-controller-manager -n spi-system
 oc rollout restart deployment/spi-oauth-service -n spi-system
