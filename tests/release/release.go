@@ -56,7 +56,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("Create Release Strategy", func() {
+			It("Create a Release Strategy", func() {
 				_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, releaseStrategyServiceAccount)
 				Expect(err).NotTo(HaveOccurred())
 			})
