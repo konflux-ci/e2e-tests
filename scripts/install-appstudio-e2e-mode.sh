@@ -7,77 +7,80 @@ set -o pipefail
 # error on unset variables
 set -u
 
-#!/bin/bash
+command -v kubectl >/dev/null 2>&1 || { echo "kubectl is not installed. Aborting."; exit 1; }
+command -v oc >/dev/null 2>&1 || { echo "oc cli is not installed. Aborting."; exit 1; }
 
-# exit immediately when a command fails
-set -e
-# only exit with zero if all commands of the pipeline exit successfully
-set -o pipefail
-# error on unset variables
-set -u
-
-export WORKSPACE=$(dirname $(dirname $(readlink -f "$0")));
-
-# Available openshift ci environments https://docs.ci.openshift.org/docs/architecture/step-registry/#available-environment-variables
-export ARTIFACTS_DIR=${ARTIFACT_DIR:-"/tmp/appstudio"}
-
-export OFFLINE_TOKEN=$(cat /usr/local/ci-secrets/redhat-appstudio-qe/offline_sso_token)
-export KCP_KUBECONFIG_SECRET="/usr/local/ci-secrets/redhat-appstudio-qe/kcp_kubeconfig"
-export GITHUB_TOKEN=$(cat /usr/local/ci-secrets/redhat-appstudio-qe/github-token)
-export APPSTUDIO_WORKSPACE=ci-ap-752387ds
-
-mkdir -p $HOME/.configs
-cp "/usr/local/ci-secrets/redhat-appstudio-qe/kcp_kubeconfig" $HOME/.configs
-chmod -R 755 $HOME/.configs
-ls -larth $HOME/.configs
-export KCP_KUBECONFIG="$HOME/.configs/kcp_kubeconfig"
-
-(
-set -x; cd "$(mktemp -d)" &&
-OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
-ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
-KREW="krew-${OS}_${ARCH}" &&
-curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
-tar zxvf "${KREW}.tar.gz" &&
-./"${KREW}" install krew
-)
-
-export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
-kubectl krew install oidc-login
-
-git clone -b v0.8.2 https://github.com/kcp-dev/kcp
-cd kcp
-go version
-go mod vendor
-make install WHAT='./cmd/kubectl-kcp ./cmd/kubectl-workspaces ./cmd/kubectl-ws'
-bash <(curl -s https://gist.githubusercontent.com/flacatus/30f9f2b64676421e676c9448d2fd9b0b/raw/9592ccfb18dd80b47bc9d255ed3ed57b2ab1e1ab/CLOUD_SERVICES%2520oauth%2520token%2520robot)
-cd ..
-export CLUSTER_KUBECONFIG=$KUBECONFIG
-export KUBECONFIG=$KCP_KUBECONFIG
-
-kubectl config get-contexts
-kubectl kcp workspace use '~'
-APPSTUDIO_ROOT=$(kubectl kcp workspace . --short)
-
-export WORKSPACE_ID=$(date +%s)
-
-cat > hack/preview.env << EOF
 export MY_GIT_FORK_REMOTE="qe"
-export CLUSTER_KUBECONFIG="$CLUSTER_KUBECONFIG"
-export KCP_KUBECONFIG="$KCP_KUBECONFIG"
-export MY_GITHUB_ORG="redhat-appstudio-qe"
-export MY_GITHUB_TOKEN=$GITHUB_TOKEN
-export COMPUTE="appstudio-0123"
-export ROOT_WORKSPACE=$APPSTUDIO_ROOT
-export APPSTUDIO_WORKSPACE=ci-$WORKSPACE_ID
-EOF
+export MY_GITHUB_ORG=${GITHUB_E2E_ORGANIZATION:-"redhat-appstudio-qe"}
+export MY_GITHUB_TOKEN="${GITHUB_TOKEN}"
+export MY_QUAY_TOKEN="${QUAY_TOKEN}"
+export TEST_BRANCH_ID=$(date +%s)
+export ROOT_E2E="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"/..
+export WORKSPACE=${WORKSPACE:-${ROOT_E2E}}
+export E2E_APPLICATIONS_NAMESPACE=${E2E_APPLICATIONS_NAMESPACE:-appstudio-e2e-test}
+export SHARED_SECRET_NAMESPACE="build-templates"
 
-git clone https://$GITHUB_TOKEN@github.com/redhat-appstudio/infra-deployments.git "$WORKSPACE"/tmp/infra-deployments
-cd "$WORKSPACE"/tmp/infra-deployments
+# Environment variable used to override the default "protected" image repository in HAS
+# https://github.com/redhat-appstudio/application-service/blob/6b9d21b8f835263b2e92f1e9343a1453caa2e561/gitops/generate_build.go#L50
+# Users are allowed to push images to this repo only in case the image contains a tag that consists of "<USER'S_NAMESPACE_NAME>-<CUSTOM-TAG>"
+# For example: "quay.io/redhat-appstudio-qe/test-images-protected:appstudio-e2e-test-mytag123"
+export HAS_DEFAULT_IMAGE_REPOSITORY="quay.io/${QUAY_E2E_ORGANIZATION:-redhat-appstudio-qe}/test-images-protected"
 
+# Path to install openshift-ci tools
+export PATH=$PATH:/tmp/bin
+mkdir -p /tmp/bin
 
-cat hack/preview.env
-echo "End"
-/bin/bash hack/bootstrap.sh -m preview
+function installCITools() {
+    curl -H "Authorization: token $GITHUB_TOKEN" -LO https://github.com/mikefarah/yq/releases/download/v4.20.2/yq_linux_amd64 && \
+    chmod +x ./yq_linux_amd64 && \
+    mv ./yq_linux_amd64 /tmp/bin/yq && \
+    yq --version
+}
 
-/bin/bash hack/destroy.sh --kcp-kubeconfig $KCP_KUBECONFIG --cluster-kubeconfig $CLUSTER_KUBECONFIG
+# Download gitops repository to install AppStudio in e2e mode.
+function cloneInfraDeployments() {
+    if [ -d $WORKSPACE"/tmp/infra-deployments" ] 
+    then
+        echo "Temp directory exists - deleting." 
+        rm -rf $WORKSPACE"/tmp/infra-deployments"
+    fi
+
+    git clone https://$GITHUB_TOKEN@github.com/redhat-appstudio/infra-deployments.git "$WORKSPACE"/tmp/infra-deployments
+    cd "$WORKSPACE"/tmp/infra-deployments
+    # TODO remove this once CI is ready to run with kcp (main branch)
+    # Allow dependent services (like jvm-build-service/build-service) to still use CI for testing features/bugfixes
+    git checkout pre-kcp
+}
+
+# Add a custom remote for infra-deployments repository.
+function addQERemoteForkAndInstallAppstudio() {
+    git remote add "${MY_GIT_FORK_REMOTE}" https://github.com/"${MY_GITHUB_ORG}"/infra-deployments.git
+
+    # Start AppStudio installation
+    /bin/bash hack/bootstrap-cluster.sh preview
+    cd "$WORKSPACE"
+}
+
+# Secrets used by pipelines to push component containers to quay.io
+function createApplicationServiceSecrets() {
+    echo -e "[INFO] Creating application-service related secrets in $SHARED_SECRET_NAMESPACE namespace"
+
+    echo "$MY_QUAY_TOKEN" | base64 --decode > docker.config
+    kubectl create secret docker-registry redhat-appstudio-user-workload -n $SHARED_SECRET_NAMESPACE --from-file=.dockerconfigjson=docker.config || true
+    rm docker.config
+}
+
+while [[ $# -gt 0 ]]
+do
+    case "$1" in
+        install)
+            installCITools
+            cloneInfraDeployments
+            addQERemoteForkAndInstallAppstudio
+            createApplicationServiceSecrets
+            ;;
+        *)
+            ;;
+    esac
+    shift
+done
