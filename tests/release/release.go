@@ -57,19 +57,17 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 			})
 
 			It("Create a Release Strategy", func() {
-				_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, releaseStrategyServiceAccount)
+				_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, ReleaseStrategySpecParams_extraConfigGitUrl, ReleaseStrategySpecParams_extraConfigPath, ReleaseStrategySpecParams_extraConfigRevision, releaseStrategyServiceAccount)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("Create a ReleasePlan in dev namespace", func() {
-				AutoReleaseLabel := ""
-				_, err := framework.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationName, managedNamespace, AutoReleaseLabel)
+				_, err := framework.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationName, managedNamespace, "")
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("Create a ReleasePlanAdmission in managed namespace", func() {
-				AutoReleaseLabel := ""
-				_, err := framework.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationName, managedNamespace, AutoReleaseLabel, releaseStrategyName)
+				_, err := framework.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationName, managedNamespace, "", releaseStrategyName)
 				Expect(err).NotTo(HaveOccurred())
 			})
 

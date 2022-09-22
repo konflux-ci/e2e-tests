@@ -69,7 +69,7 @@ func (s *SuiteController) GetRelease(releaseName, releaseNamespace string) (*app
 }
 
 // CreateReleaseStrategy creates a new ReleaseStrategy using the given parameters.
-func (s *SuiteController) CreateReleaseStrategy(name, managedNamespace, pipelineName, bundle, policy, service_account string) (*appstudiov1alpha1.ReleaseStrategy, error) {
+func (s *SuiteController) CreateReleaseStrategy(name, managedNamespace, pipelineName, bundle, policy, extraConfigGitUrl, extraConfigPath, extraConfigRevision, service_account string) (*appstudiov1alpha1.ReleaseStrategy, error) {
 	releaseStrategy := &appstudiov1alpha1.ReleaseStrategy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -80,11 +80,10 @@ func (s *SuiteController) CreateReleaseStrategy(name, managedNamespace, pipeline
 			Bundle:   bundle,
 			Policy:   policy,
 			Params: []appstudiov1alpha1.Params{
-				{Name: "extraConfigGitUrl", Value: "https://github.com/scoheb/strategy-configs.git", Values: []string{}},
-				{Name: "extraConfigPath", Value: "m6.yaml", Values: []string{}},
-				{Name: "extraConfigRevision", Value: "main", Values: []string{}},
+				{Name: "extraConfigGitUrl", Value: extraConfigGitUrl, Values: []string{}},
+				{Name: "extraConfigPath", Value: extraConfigPath, Values: []string{}},
+				{Name: "extraConfigRevision", Value: extraConfigRevision, Values: []string{}},
 			},
-
 			// PersistentVolumeClaim: "test-pvc",
 			ServiceAccount: service_account,
 		},
@@ -149,7 +148,7 @@ func (s *SuiteController) GetReleasePlan(releasePlanName, devNamespace string) (
 
 // DeleteReleasePlan deletes the releasePlan resource with the given name from the given namespace.
 // Optionally, it can avoid returning an error if the resource did not exist:
-//  specify 'false', if it's likely the ReleasePlan has already been deleted (for example, because the Namespace was deleted).
+// specify 'false', if it's likely the ReleasePlan has already been deleted (for example, because the Namespace was deleted).
 func (s *SuiteController) DeleteReleasePlan(releasePlanName, devNamespace string, reportErrorOnNotFound bool) error {
 	releasePlan := appstudiov1alpha1.ReleasePlan{
 		ObjectMeta: metav1.ObjectMeta{
