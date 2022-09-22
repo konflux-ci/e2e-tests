@@ -25,9 +25,6 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-test-snippets", Lab
 		})
 
 		var _ = Describe("Create dev and managed namespaces", func() {
-			// CreateTestNamespace function in common/controller.go file
-			//  tests for the creation of pipeline SA (utils.WaitUntil(s.ServiceaccountPresent("pipeline", name))
-
 			It("Create dev namespace.", func() {
 				// Create the dev namespace
 				_, err := framework.CommonController.CreateTestNamespace(devNamespace)
