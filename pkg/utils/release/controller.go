@@ -41,11 +41,11 @@ func (s *SuiteController) CreateApplicationSnapshot(name, namespace, application
 }
 
 // CreateRelease creates a new Release using the given parameters.
-func (s *SuiteController) CreateRelease(name, devNamespace, snapshot, sourceReleasePlan string) (*appstudiov1alpha1.Release, error) {
+func (s *SuiteController) CreateRelease(name, namespace, snapshot, sourceReleasePlan string) (*appstudiov1alpha1.Release, error) {
 	release := &appstudiov1alpha1.Release{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: devNamespace,
+			Namespace: namespace,
 		},
 		Spec: appstudiov1alpha1.ReleaseSpec{
 			ApplicationSnapshot: snapshot,
@@ -69,11 +69,11 @@ func (s *SuiteController) GetRelease(releaseName, releaseNamespace string) (*app
 }
 
 // CreateReleaseStrategy creates a new ReleaseStrategy using the given parameters.
-func (s *SuiteController) CreateReleaseStrategy(name, managedNamespace, pipelineName, bundle, policy, extraConfigGitUrl, extraConfigPath, extraConfigRevision, service_account string) (*appstudiov1alpha1.ReleaseStrategy, error) {
+func (s *SuiteController) CreateReleaseStrategy(name, namespace, pipelineName, bundle, policy, extraConfigGitUrl, extraConfigPath, extraConfigRevision, service_account string) (*appstudiov1alpha1.ReleaseStrategy, error) {
 	releaseStrategy := &appstudiov1alpha1.ReleaseStrategy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: managedNamespace,
+			Namespace: namespace,
 		},
 		Spec: appstudiov1alpha1.ReleaseStrategySpec{
 			Pipeline: pipelineName,
@@ -135,12 +135,12 @@ func (s *SuiteController) CreateReleasePlan(name, devNamespace, application, man
 }
 
 // GetReleasePlan returns the releasePlan with the given name in the given namespace.
-func (s *SuiteController) GetReleasePlan(releasePlanName, devNamespace string) (*appstudiov1alpha1.ReleasePlan, error) {
+func (s *SuiteController) GetReleasePlan(releasePlanName, namespace string) (*appstudiov1alpha1.ReleasePlan, error) {
 	releasePlan := &appstudiov1alpha1.ReleasePlan{}
 
 	err := s.KubeRest().Get(context.TODO(), types.NamespacedName{
 		Name:      releasePlanName,
-		Namespace: devNamespace,
+		Namespace: namespace,
 	}, releasePlan)
 
 	return releasePlan, err
@@ -149,11 +149,11 @@ func (s *SuiteController) GetReleasePlan(releasePlanName, devNamespace string) (
 // DeleteReleasePlan deletes the releasePlan resource with the given name from the given namespace.
 // Optionally, it can avoid returning an error if the resource did not exist:
 // specify 'false', if it's likely the ReleasePlan has already been deleted (for example, because the Namespace was deleted).
-func (s *SuiteController) DeleteReleasePlan(releasePlanName, devNamespace string, reportErrorOnNotFound bool) error {
+func (s *SuiteController) DeleteReleasePlan(releasePlanName, namespace string, reportErrorOnNotFound bool) error {
 	releasePlan := appstudiov1alpha1.ReleasePlan{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      releasePlanName,
-			Namespace: devNamespace,
+			Namespace: namespace,
 		},
 	}
 	err := s.KubeRest().Delete(context.TODO(), &releasePlan)
