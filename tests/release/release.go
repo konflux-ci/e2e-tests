@@ -86,7 +86,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 				}, 1*time.Minute, defaultInterval).Should(BeNil())
 			})
 
-			It("The PipelineRun has started, was done, and succeeded", func() {
+			It("The PipelineRun has started, finished, and succeeded", func() {
 				Eventually(func() bool {
 					pipelineRun, err := framework.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseName, devNamespace)
 

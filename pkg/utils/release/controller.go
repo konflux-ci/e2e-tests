@@ -57,12 +57,12 @@ func (s *SuiteController) CreateRelease(name, namespace, snapshot, sourceRelease
 }
 
 // GetRelease returns the release with the given name in the given namespace.
-func (s *SuiteController) GetRelease(releaseName, releaseNamespace string) (*appstudiov1alpha1.Release, error) {
+func (s *SuiteController) GetRelease(releaseName, namespace string) (*appstudiov1alpha1.Release, error) {
 	release := &appstudiov1alpha1.Release{}
 
 	err := s.KubeRest().Get(context.TODO(), types.NamespacedName{
 		Name:      releaseName,
-		Namespace: releaseNamespace,
+		Namespace: namespace,
 	}, release)
 
 	return release, err
@@ -189,12 +189,12 @@ func (s *SuiteController) CreateReleasePlanAdmission(name, devNamespace, applica
 }
 
 // GetReleasePlanAdmission returns the releasePlan with the given name in the given namespace.
-func (s *SuiteController) GetReleasePlanAdmission(releasePlanAdmissionName, managedNamespace string) (*appstudiov1alpha1.ReleasePlanAdmission, error) {
+func (s *SuiteController) GetReleasePlanAdmission(releasePlanAdmissionName, namespace string) (*appstudiov1alpha1.ReleasePlanAdmission, error) {
 	releasePlanAdmission := &appstudiov1alpha1.ReleasePlanAdmission{}
 
 	err := s.KubeRest().Get(context.TODO(), types.NamespacedName{
 		Name:      releasePlanAdmissionName,
-		Namespace: managedNamespace,
+		Namespace: namespace,
 	}, releasePlanAdmission)
 
 	return releasePlanAdmission, err
@@ -203,11 +203,11 @@ func (s *SuiteController) GetReleasePlanAdmission(releasePlanAdmissionName, mana
 // DeleteReleasePlanAdmission deletes the releasePlanAdmission resource with the given name from the given namespace.
 // Optionally, it can avoid returning an error if the resource did not exist:
 //  specify 'false', if it's likely the ReleasePlan has already been deleted (for example, because the Namespace was deleted)
-func (s *SuiteController) DeleteReleasePlanAdmission(releasePlanAdmissionName, managedNamespace string, reportErrorOnNotFound bool) error {
+func (s *SuiteController) DeleteReleasePlanAdmission(releasePlanAdmissionName, namespace string, reportErrorOnNotFound bool) error {
 	releasePlanAdmission := appstudiov1alpha1.ReleasePlan{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      releasePlanAdmissionName,
-			Namespace: managedNamespace,
+			Namespace: namespace,
 		},
 	}
 	err := s.KubeRest().Delete(context.TODO(), &releasePlanAdmission)
