@@ -218,11 +218,14 @@ func (CI) createOpenshiftUser() error {
 }
 
 func BootstrapCluster() error {
-	envVars := map[string]string{
+	envVars := map[string]string{}
+
+	if os.Getenv("CI") == "true" && os.Getenv("REPO_NAME") == "e2e-tests" {
 		// Some scripts in infra-deployments repo are referencing scripts/utils in e2e-tests repo
 		// This env var allows to test changes introduced in "e2e-tests" repo PRs in CI
-		"E2E_TESTS_COMMIT_SHA": utils.GetEnv("PULL_PULL_SHA", "main"),
+		envVars["E2E_TESTS_COMMIT_SHA"] = os.Getenv("PULL_PULL_SHA")
 	}
+
 	return sh.RunWith(envVars, "./scripts/install-appstudio.sh")
 }
 
