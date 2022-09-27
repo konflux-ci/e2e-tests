@@ -34,7 +34,7 @@ var (
 	testProjectRevision = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_REVISION", "main")
 )
 
-var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jvm-build", "HACBS"), func() {
+var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jvm-build", "HACBS"), Pending, func() {
 	defer GinkgoRecover()
 
 	var testNamespace, applicationName, componentName, outputContainerImage string
