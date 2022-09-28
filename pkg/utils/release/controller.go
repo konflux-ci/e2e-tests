@@ -84,7 +84,6 @@ func (s *SuiteController) CreateReleaseStrategy(name, namespace, pipelineName, b
 				{Name: "extraConfigPath", Value: extraConfigPath, Values: []string{}},
 				{Name: "extraConfigRevision", Value: extraConfigRevision, Values: []string{}},
 			},
-			// PersistentVolumeClaim: "test-pvc",
 			ServiceAccount: service_account,
 		},
 	}
@@ -165,7 +164,6 @@ func (s *SuiteController) DeleteReleasePlan(releasePlanName, namespace string, r
 
 // CreateReleasePlanAdmission creates a new ReleasePlanAdmission using the given parameters.
 func (s *SuiteController) CreateReleasePlanAdmission(name, devNamespace, application, managedNamespace, AutoReleaseLabel, releaseStrategy string) (*appstudiov1alpha1.ReleasePlanAdmission, error) {
-
 	var releasePlanAdmission *appstudiov1alpha1.ReleasePlanAdmission = &appstudiov1alpha1.ReleasePlanAdmission{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -188,7 +186,7 @@ func (s *SuiteController) CreateReleasePlanAdmission(name, devNamespace, applica
 	return releasePlanAdmission, s.KubeRest().Create(context.TODO(), releasePlanAdmission)
 }
 
-// GetReleasePlanAdmission returns the releasePlan with the given name in the given namespace.
+// GetReleasePlanAdmission returns the releasePlanAdmission with the given name in the given namespace.
 func (s *SuiteController) GetReleasePlanAdmission(releasePlanAdmissionName, namespace string) (*appstudiov1alpha1.ReleasePlanAdmission, error) {
 	releasePlanAdmission := &appstudiov1alpha1.ReleasePlanAdmission{}
 
@@ -202,9 +200,9 @@ func (s *SuiteController) GetReleasePlanAdmission(releasePlanAdmissionName, name
 
 // DeleteReleasePlanAdmission deletes the releasePlanAdmission resource with the given name from the given namespace.
 // Optionally, it can avoid returning an error if the resource did not exist:
-//  specify 'false', if it's likely the ReleasePlan has already been deleted (for example, because the Namespace was deleted)
+//  specify 'false', if it's likely the ReleasePlanAdmission has already been deleted (for example, because the Namespace was deleted)
 func (s *SuiteController) DeleteReleasePlanAdmission(releasePlanAdmissionName, namespace string, reportErrorOnNotFound bool) error {
-	releasePlanAdmission := appstudiov1alpha1.ReleasePlan{
+	releasePlanAdmission := appstudiov1alpha1.ReleasePlanAdmission{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      releasePlanAdmissionName,
 			Namespace: namespace,
