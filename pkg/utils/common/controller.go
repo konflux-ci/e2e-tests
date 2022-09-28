@@ -499,3 +499,15 @@ func (s *SuiteController) ApplicationGitopsRepoExists(devfileContent string) wai
 		return s.Github.CheckIfRepositoryExist(gitOpsRepoURL), nil
 	}
 }
+
+func (s *SuiteController) CreateServiceAccount(saName string, namespace string, secrets []corev1.ObjectReference) (*corev1.ServiceAccount, error) {
+	serviceAccount := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      saName,
+			Namespace: namespace,
+		},
+		Secrets: secrets,
+	}
+
+	return s.KubeInterface().CoreV1().ServiceAccounts(namespace).Create(context.TODO(), serviceAccount, metav1.CreateOptions{})
+}

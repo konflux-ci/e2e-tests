@@ -2,6 +2,7 @@ package release
 
 import (
 	"context"
+	"fmt"
 
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
@@ -9,6 +10,7 @@ import (
 	appstudiov1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	kcp "github.com/redhat-appstudio/release-service/kcp"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -69,8 +71,8 @@ func (s *SuiteController) CreateReleaseStrategy(name, target_namespace, pipeline
 			Bundle:   bundle,
 			Policy:   policy,
 			Params: []appstudiov1alpha1.Params{
-				{Name: "extraConfigGitUrl", Value: "https://github.com/scoheb/strategy-configs.git", Values: []string{}},
-				{Name: "extraConfigPath", Value: "m6.yaml", Values: []string{}},
+				{Name: "extraConfigGitUrl", Value: "https://github.com/ralphbean/strategy-configs.git", Values: []string{}},
+				{Name: "extraConfigPath", Value: "m7.yaml", Values: []string{}},
 				{Name: "extraConfigRevision", Value: "main", Values: []string{}},
 			},
 
@@ -92,7 +94,6 @@ func (s *SuiteController) GetPipelineRunInNamespace(namespace, releaseName, rele
 		},
 		client.InNamespace(namespace),
 	}
-
 	err := s.KubeRest().List(context.TODO(), pipelineRuns, opts...)
 
 	if err == nil && len(pipelineRuns.Items) > 0 {
@@ -144,7 +145,7 @@ func (s *SuiteController) DeleteReleasePlanAdmission(releasePlanAdmissionName, d
 }
 
 // CreateReleasePlan creates a new ReleasePlan using the given parameters.
-func (s *SuiteController) CreateReleasePlan(name, source_namespace, application, target_namespace, AutoReleaseLabel string) (*appstudiov1alpha1.ReleasePlan, error) {
+func (s *SuiteController) CreateReleasePlan(name, devNamespace, application, managedNamespace, AutoReleaseLabel string) (*appstudiov1alpha1.ReleasePlan, error) {
 	var releasePlan *appstudiov1alpha1.ReleasePlan
 
 	if AutoReleaseLabel != "" { // AutoReleaseLabel in ReleasePlan is not missing
@@ -152,7 +153,7 @@ func (s *SuiteController) CreateReleasePlan(name, source_namespace, application,
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: name,
 				Name:         name,
-				Namespace:    source_namespace,
+				Namespace:    devNamespace,
 				Labels: map[string]string{
 					appstudiov1alpha1.AutoReleaseLabel: AutoReleaseLabel,
 				},
@@ -161,7 +162,7 @@ func (s *SuiteController) CreateReleasePlan(name, source_namespace, application,
 				DisplayName: name,
 				Application: application,
 				Target: kcp.NamespaceReference{
-					Namespace: target_namespace,
+					Namespace: managedNamespace,
 				},
 			},
 		}
@@ -170,14 +171,14 @@ func (s *SuiteController) CreateReleasePlan(name, source_namespace, application,
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: name,
 				Name:         name,
-				Namespace:    source_namespace,
+				Namespace:    devNamespace,
 				Labels:       map[string]string{},
 			},
 			Spec: appstudiov1alpha1.ReleasePlanSpec{
 				DisplayName: name,
 				Application: application,
 				Target: kcp.NamespaceReference{
-					Namespace: target_namespace,
+					Namespace: managedNamespace,
 				},
 			},
 		}
@@ -213,14 +214,14 @@ func (s *SuiteController) DeleteReleasePlan(releasePlanName, devNamespace string
 }
 
 // CreateReleasePlanAdmission creates a new ReleasePlanAdmission using the given parameters.
-func (s *SuiteController) CreateReleasePlanAdmission(name, source_namespace, application, target_namespace, AutoReleaseLabel string, releaseStrategy string) (*appstudiov1alpha1.ReleasePlanAdmission, error) {
+func (s *SuiteController) CreateReleasePlanAdmission(name, devNamespace, application, managedNamespace, environment, AutoReleaseLabel string, releaseStrategy string) (*appstudiov1alpha1.ReleasePlanAdmission, error) {
 	var releasePlanAdmission *appstudiov1alpha1.ReleasePlanAdmission
 
 	if AutoReleaseLabel != "" { // AutoReleaseLabel in ReleasePlanAdmission is not missing
 		releasePlanAdmission = &appstudiov1alpha1.ReleasePlanAdmission{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
-				Namespace: target_namespace,
+				Namespace: managedNamespace,
 				Labels: map[string]string{
 					appstudiov1alpha1.AutoReleaseLabel: AutoReleaseLabel,
 				},
@@ -229,9 +230,9 @@ func (s *SuiteController) CreateReleasePlanAdmission(name, source_namespace, app
 				DisplayName: name,
 				Application: application,
 				Origin: kcp.NamespaceReference{
-					Namespace: source_namespace,
+					Namespace: devNamespace,
 				},
-				Environment:     "test-environment",
+				Environment:     environment,
 				ReleaseStrategy: releaseStrategy,
 			},
 		}
@@ -239,19 +240,35 @@ func (s *SuiteController) CreateReleasePlanAdmission(name, source_namespace, app
 		releasePlanAdmission = &appstudiov1alpha1.ReleasePlanAdmission{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
-				Namespace: target_namespace,
+				Namespace: managedNamespace,
 				Labels:    map[string]string{},
 			},
 			Spec: appstudiov1alpha1.ReleasePlanAdmissionSpec{
 				DisplayName: name,
 				Application: application,
 				Origin: kcp.NamespaceReference{
-					Namespace: source_namespace,
+					Namespace: devNamespace,
 				},
-				Environment:     "test-environment",
+				Environment:     environment,
 				ReleaseStrategy: releaseStrategy,
 			},
 		}
 	}
 	return releasePlanAdmission, s.KubeRest().Create(context.TODO(), releasePlanAdmission)
+}
+
+// CreateRegistryJsonSecret creates a secret for registry repositry in namespace given with key passed
+func (s *SuiteController) CreateRegistryJsonSecret(name string, namespace string, authKey string, keytName string) (*corev1.Secret, error) {
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+		Type:       corev1.SecretTypeDockerConfigJson,
+		Data:       map[string][]byte{".dockerconfigjson": []byte(fmt.Sprintf("{\"auths\":{\"quay.io\":{\"username\":\"%s\",\"password\":\"%s\",\"auth\":\"dGVzdDp0ZXN0\",\"email\":\"\"}}}", keytName, authKey))},
+	}
+
+	err := s.KubeRest().Create(context.TODO(), secret)
+	if err != nil {
+		return nil, err
+	}
+	return secret, nil
 }
