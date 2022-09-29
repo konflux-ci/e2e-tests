@@ -131,8 +131,11 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 		It("A PipelineRun should have been created in the dev namespace", func() {
 			Eventually(func() bool {
 				pipelineRun, err := framework.TektonController.GetPipelineRunInNamespace(devNamespace)
-				myPR := &pipelineRun.Items[0]
 				if pipelineRun == nil || err != nil {
+					return false
+				}
+				myPR := &pipelineRun.Items[0]
+				if myPR == nil {
 					return false
 				}
 				return myPR.HasStarted() && myPR.IsDone() && myPR.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
@@ -143,8 +146,11 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 	It("A PipelineRun should have been created in the managed namespace", func() {
 		Eventually(func() bool {
 			pipelineRun, err := framework.TektonController.GetPipelineRunInNamespace(managedNamespace)
-			myPR := &pipelineRun.Items[0]
 			if pipelineRun == nil || err != nil {
+				return false
+			}
+			myPR := &pipelineRun.Items[0]
+			if myPR == nil {
 				return false
 			}
 			return myPR.HasStarted() && myPR.IsDone() && myPR.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
