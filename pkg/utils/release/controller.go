@@ -2,7 +2,6 @@ package release
 
 import (
 	"context"
-	"fmt"
 
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
@@ -14,6 +13,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -259,11 +259,11 @@ func (s *SuiteController) CreateReleasePlanAdmission(name, devNamespace, applica
 
 // CreateRegistryJsonSecret creates a secret for registry repositry in namespace given with key passed
 func (s *SuiteController) CreateRegistryJsonSecret(name string, namespace string, authKey string, keytName string) (*corev1.Secret, error) {
-
+	klog.Info("Key is : ", authKey)
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
 		Type:       corev1.SecretTypeDockerConfigJson,
-		Data:       map[string][]byte{".dockerconfigjson": []byte(fmt.Sprintf("{\"auths\":{\"quay.io\":{\"username\":\"%s\",\"password\":\"%s\",\"auth\":\"dGVzdDp0ZXN0\",\"email\":\"\"}}}", keytName, authKey))},
+		Data:       map[string][]byte{".dockerconfigjson": []byte(authKey)}, //[]byte(fmt.Sprintf("{\"auths\":{\"quay.io\":{\"username\":\"%s\",\"password\":\"%s\",\"auth\":\"dGVzdDp0ZXN0\",\"email\":\"\"}}}", keytName, authKey))},
 	}
 
 	err := s.KubeRest().Create(context.TODO(), secret)
