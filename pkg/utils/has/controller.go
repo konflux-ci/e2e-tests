@@ -3,9 +3,10 @@ package has
 import (
 	"context"
 	"fmt"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"strings"
 	"time"
+
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
 	routev1 "github.com/openshift/api/route/v1"
 	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
@@ -324,10 +325,9 @@ func (h *SuiteController) GetComponentDetectionQuery(name, namespace string) (*a
 func (h *SuiteController) GetComponentPipelineRun(componentName, applicationName, namespace string, pacBuild bool, sha string) (*v1beta1.PipelineRun, error) {
 	var pipelineRunLabels map[string]string
 
-	if pacBuild {
-		pipelineRunLabels = map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName}
-	} else {
-		pipelineRunLabels = map[string]string{"build.appstudio.openshift.io/component": componentName, "build.appstudio.openshift.io/application": applicationName}
+	pipelineRunLabels = map[string]string{
+		"appstudio.openshift.io/component":   componentName,
+		"appstudio.openshift.io/application": applicationName,
 	}
 
 	if sha != "" {
