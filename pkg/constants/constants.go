@@ -61,4 +61,7 @@ const (
 
 	JVMUserConfigMapName = "jvm-build-config"
 	JVMEnableRebuilds    = "enable-rebuilds"
+
+	QUAY_OAUTH_TOKEN_RELEASE_SOURCE      string = "QUAY_OAUTH_TOKEN_RELEASE_SOURCE"
+	QUAY_OAUTH_TOKEN_RELEASE_DESTINATION string = "QUAY_OAUTH_TOKEN_RELEASE_DESTINATION"
 )
