@@ -54,8 +54,10 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 			return sa != nil && err == nil
 		}, 1*time.Minute, defaultInterval).Should(BeTrue(), "timed out when waiting for the \"pipeline\" SA to be created")
 
-		sourceAuthJson := utils.GetEnv(constants.QUAY_OAUTH_TOKEN_RELEASE_SOURCE)
-		destinationAuthJson := utils.GetEnv(constants.QUAY_OAUTH_TOKEN_RELEASE_DESTINATION)
+		sourceAuthJson := utils.GetEnv(constants.QUAY_OAUTH_TOKEN_RELEASE_SOURCE, "")
+		destinationAuthJson := utils.GetEnv(constants.QUAY_OAUTH_TOKEN_RELEASE_DESTINATION, "")
+		Expect(sourceAuthJson).ToNot(BeEmpty())
+		Expect(destinationAuthJson).ToNot(BeEmpty())
 
 		_, err = framework.ReleaseController.CreateRegistryJsonSecret(redhatAppstudioUserSecret, devNamespace, sourceAuthJson, sourceKeyName)
 		Expect(err).ToNot(HaveOccurred())
