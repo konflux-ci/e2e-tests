@@ -131,11 +131,10 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 		It("A PipelineRun should have been created in the dev namespace", func() {
 			Eventually(func() bool {
 				pipelineRun, err := framework.TektonController.GetPipelineRunInNamespace(devNamespace)
-				if pipelineRun == nil || err != nil || len(pipelineRun.Items) == 0 {
+				if pipelineRun == nil || err != nil || len(pipelineRun.Items) < 1 {
 					return false
 				}
-				myPR := &pipelineRun.Items[0]
-				return myPR.HasStarted() && myPR.IsDone() && myPR.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
+				return (&pipelineRun.Items[0]).HasStarted() && (&pipelineRun.Items[0]).IsDone() && (&pipelineRun.Items[0]).Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 			}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
 		})
 	})
@@ -143,11 +142,10 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 	It("A PipelineRun should have been created in the managed namespace", func() {
 		Eventually(func() bool {
 			pipelineRun, err := framework.TektonController.GetPipelineRunInNamespace(managedNamespace)
-			if pipelineRun == nil || err != nil || len(pipelineRun.Items) == 0 {
+			if pipelineRun == nil || err != nil || len(pipelineRun.Items) < 1 {
 				return false
 			}
-			myPR := &pipelineRun.Items[0]
-			return myPR.HasStarted() && myPR.IsDone() && myPR.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
+			return (&pipelineRun.Items[0]).HasStarted() && (&pipelineRun.Items[0]).IsDone() && (&pipelineRun.Items[0]).Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 		}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
 	})
 
