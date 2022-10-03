@@ -68,6 +68,23 @@ func (s *SuiteController) GetRelease(releaseName, namespace string) (*appstudiov
 	return release, err
 }
 
+// DeleteRelease deletes the release resource with the given name from the given namespace.
+// Optionally, it can avoid returning an error if the resource did not exist:
+// specify 'false', if it's likely the ReleasePlan has already been deleted (for example, because the Namespace was deleted).
+func (s *SuiteController) DeleteRelease(releaseName, namespace string, reportErrorOnNotFound bool) error {
+	release := appstudiov1alpha1.Release{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      releaseName,
+			Namespace: namespace,
+		},
+	}
+	err := s.KubeRest().Delete(context.TODO(), &release)
+	if err != nil && !reportErrorOnNotFound && k8sErrors.IsNotFound(err) {
+		err = nil
+	}
+	return err
+}
+
 // CreateReleaseStrategy creates a new ReleaseStrategy using the given parameters.
 func (s *SuiteController) CreateReleaseStrategy(name, namespace, pipelineName, bundle, policy, extraConfigGitUrl, extraConfigPath, extraConfigRevision, service_account string) (*appstudiov1alpha1.ReleaseStrategy, error) {
 	releaseStrategy := &appstudiov1alpha1.ReleaseStrategy{
@@ -96,8 +113,11 @@ func (s *SuiteController) GetPipelineRunInNamespace(namespace, releaseName, rele
 	pipelineRuns := &v1beta1.PipelineRunList{}
 	opts := []client.ListOption{
 		client.MatchingLabels{
+			"appstudio.openshift.io/application":       "application",
+			"pipelines.appstudio.openshift.io/type":    "release",
 			"release.appstudio.openshift.io/name":      releaseName,
-			"release.appstudio.openshift.io/workspace": releaseNamespace,
+			"release.appstudio.openshift.io/namespace": releaseNamespace,
+			"release.appstudio.openshift.io/workspace": "",
 		},
 		client.InNamespace(namespace),
 	}
