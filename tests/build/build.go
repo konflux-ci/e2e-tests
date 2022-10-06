@@ -2,11 +2,12 @@ package build
 
 import (
 	"fmt"
-	"github.com/google/go-github/v44/github"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/google/go-github/v44/github"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 
 	"github.com/devfile/library/pkg/util"
 	"github.com/google/uuid"
@@ -531,6 +532,27 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					}
 					return pipelineRun.IsDone()
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
+			})
+
+			It("should validate HACBS taskrun results", func() {
+				// List Of Taskruns Expected to Get Taskrun Results
+				gatherResult := []string{"conftest-clair", "sanity-inspect-image", "sanity-label-check", "sast-go", "sast-java-sec-check"}
+				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, false, "")
+				Expect(err).ShouldNot(HaveOccurred())
+
+				for i := range gatherResult {
+					if gatherResult[i] == "sanity-inspect-image" {
+						result, err := build.FetchImageTaskRunResult(pipelineRun, gatherResult[i], "BASE_IMAGE")
+						Expect(err).ShouldNot(HaveOccurred())
+						ret := build.ValidateImageTaskRunResults(gatherResult[i], result)
+						Expect(ret).Should(BeTrue())
+					} else {
+						result, err := build.FetchTaskRunResult(pipelineRun, gatherResult[i], "HACBS_TEST_OUTPUT")
+						Expect(err).ShouldNot(HaveOccurred())
+						ret := build.ValidateTaskRunResults(gatherResult[i], result)
+						Expect(ret).Should(BeTrue())
+					}
+				}
 			})
 
 			When("the container image is created and pushed to container registry", Label("sbom", "slow"), func() {
