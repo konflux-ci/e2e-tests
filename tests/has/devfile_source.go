@@ -28,7 +28,7 @@ var (
  * Description: Contains tests about creating an application and a quarkus component from a source devfile
  */
 
-var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), func() {
+var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Label("has"), func() {
 	defer GinkgoRecover()
 
 	var applicationName, componentName, testNamespace string
