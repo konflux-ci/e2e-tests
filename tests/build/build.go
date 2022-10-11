@@ -601,11 +601,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 		It("should not trigger a PipelineRun", func() {
 			Consistently(func() bool {
-				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
-				Expect(pipelineRun.Name).To(BeEmpty())
-
+				_, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
+				Expect(err).NotTo(BeNil())
 				return strings.Contains(err.Error(), "no pipelinerun found")
-			}, timeout, interval).Should(BeTrue(), "expected the PipelineRun not to be triggered")
+			}, timeout, interval).Should(BeTrue(), fmt.Sprintf("expected no PipelineRun to be triggered for the component %s in %s namespace", componentName, testNamespace))
 		})
 	})
 

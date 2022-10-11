@@ -10,6 +10,13 @@ set -u
 command -v kubectl >/dev/null 2>&1 || { echo "kubectl is not installed. Aborting."; exit 1; }
 command -v oc >/dev/null 2>&1 || { echo "oc cli is not installed. Aborting."; exit 1; }
 
+# tr is not working by default in MacOs. Exporting LC_CTYPE=C seems like solve the problem
+case "$(uname -s)" in
+    Darwin*)    export LC_CTYPE=C;;
+    Linux*)     echo -e "Running on Linux system";;
+    *)          echo -e "UNKNOWN System."
+esac
+
 export ROOT_E2E="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"/..
 export WORKSPACE=${WORKSPACE:-${ROOT_E2E}}
 export MY_GIT_FORK_REMOTE="qe"
@@ -23,10 +30,35 @@ export KCP_KUBECONFIG=
 export CLUSTER_KUBECONFIG=
 export ROOT_WORKSPACE=
 export IS_STABLE="false"
+export APPSTUDIO_WORKSPACE="redhat-appstudio-${WORKSPACE_ID}"
+export HACBS_WORKSPACE="redhat-hacbs-${WORKSPACE_ID}"
+export USER_APPSTUDIO_WORKSPACE="appstudio-${WORKSPACE_ID}"
+
+# Display help information about this script bash
+function helpUsage() {
+    echo -e "Deploy Red Hat App Studio in preview mode for testing purposes\n"
+    echo -e "Options:"
+    echo -e "   -h,  --help                   Get more information about available flags to install Red Hat App Studio in preview mode."
+    echo -e "   -kc, --kcp-context            The name of the kubeconfig context to use."
+    echo -e "   -kk, --kcp-kubeconfig         A valid kcp kubeconfig path."
+    echo -e "   -ck, --cluster-kubeconfig     A valid kubeconfig pointing to a physical openshift cluster."
+    echo -e "   -s, --stable                  Flag to determinate if the kcp cluster is stable or not. In case if this flag is missing by default will install Red Hat App Studio in unstable kcp version.\n"
+    echo -e "Examples:\n"
+    echo -e "   # Deploy Red Hat App Studio in kcp stable version"
+    echo -e "   /bin/bash <E2E_DIR>/scripts/install-appstudio-kcp.sh -kc kcp-stable-root -kk <path-to-kcp-kubeconfig> -ck <path-to-openshift-cluster-kubeconfig> -s\n"
+    echo -e "   # Deploy Red Hat App Studio in kcp unstable version"
+    echo -e "   /bin/bash <E2E_DIR>/scripts/install-appstudio-kcp.sh -kc kcp-unstable-root -kk <path-to-kcp-kubeconfig> -ck <path-to-openshift-cluster-kubeconfig>\n"
+    echo -e "To authenticate against a KCP instance using Red Hat SSO before starting you need to get an offline token from https://console.redhat.com/openshift/token\n"
+    echo -e "   export OFFLINE_TOKEN=<token_goes_here>"
+}
 
 while [[ $# -gt 0 ]]
 do
     case "$1" in
+        -h|--help)
+            helpUsage
+            exit 0
+            ;;
         -kc|--kcp-context)
             export KCP_CONTEXT=$2
             ;;
@@ -40,8 +72,6 @@ do
             ;;
         -s|--stable)
             export IS_STABLE="true"
-            echo -e "$IS_STABLE"
-            exit 0
             ;;
         *)
             ;;
@@ -49,25 +79,28 @@ do
     shift
 done
 
-if [[ -z "$KCP_CONTEXT" ]];then
+if [[ -z "$KCP_CONTEXT" ]]; then
     echo "[ERROR] Not KCP context defined in the script. Please use flag '-kc' or '--kcp-context' to define the kcp context." 
-    exit 1
+    helpUsage & exit 1
 fi
 
-if [[ -z "$KCP_KUBECONFIG" ]];then
+if [[ -z "$KCP_KUBECONFIG" ]]; then
     echo "[ERROR] KCP kubeconfig not defined. Please use flag '-kk' or '--kcp-kubeconfig' to define the kcp kubeconfig." 
-    exit 1
+    helpUsage & exit 1
 fi
 
-if [[ -z "$CLUSTER_KUBECONFIG" ]];then
+if [[ -z "$CLUSTER_KUBECONFIG" ]]; then
     echo "[ERROR] Not cluster kubeconfig defined. Please use flag '-ck' or '--cluster-kubeconfig' to define the kcp physical cluster target kubeconfig." 
-    exit 1
+    helpUsage & exit 1
 fi
 
-if [[ -z "$OFFLINE_TOKEN" ]];then
-    echo "[ERROR] Not cluster kubeconfig defined. Please use flag '-ck' or '--cluster-kubeconfig' to define the kcp physical cluster target kubeconfig." 
-    exit 1
+if [[ -z "$OFFLINE_TOKEN" ]]; then
+    echo "[ERROR] OFFLINE_TOKEN environment is not set. You can obtain one from cloud.redhat.com." 
+    helpUsage & exit 1
 fi
+
+# Export kcp kubeconfig to start working against KCP
+export KUBECONFIG="$KCP_KUBECONFIG"
 
 # Installing oidc-login plugin for kubectl. More information about oidc-login plugin can be found here: https://github.com/int128/kubelogin.
 # oidc-login will be used to authenticate using SSO against KCP
@@ -86,15 +119,38 @@ function installKubectlOIDCLoginPlugin() {
     kubectl krew install oidc-login
 }
 
-# Some explanation
-function installKCPKubectlPlugins() {
-    echo -e "Install"
+# Will install all kcp plugins used by Red Hat App Studio installation script
+function installKubectlKcpPlugins() {
+    local kcp_clone_branch="main"
+
+    if [[ "$IS_STABLE" == "true" ]]; then
+        kcp_clone_branch=$(kubectl version -o yaml --kubeconfig ${KCP_KUBECONFIG} 2>/dev/null | yq '.serverVersion.gitVersion' | sed 's/.*kcp-\(v[[:digit:]]*\.[[:digit:]]*\.[[:digit:]]*\).*/\1/')
+        echo -e "[INFO] Cloning kcp-dev/kcp repo from '$kcp_clone_branch' branch to install kubectl kcp plugins."
+    else
+        echo -e "[INFO] Cloning kcp-dev/kcp repo from '$kcp_clone_branch' branch to install kubectl kcp plugins."
+    fi
+
+    if [ -d "$WORKSPACE"/tmp/kcp ] 
+    then
+        echo -e "[WARN] tmp/kcp already exists. Deleting..." 
+        rm -rf "$WORKSPACE""/tmp/kcp"
+    fi
+
+    git clone https://github.com/kcp-dev/kcp -b "$kcp_clone_branch" "$WORKSPACE"/tmp/kcp
+    cd "$WORKSPACE"/tmp/kcp
+
+    go mod vendor
+    make install
+
+    if ! kubectl kcp --version; then
+        echo "[ERROR] kubectl kcp plugins not installed successfully. Make sure that HOME/go/bin is in your PATH"
+    fi
+
+    cd $WORKSPACE
 }
 
-# Some explanation
+# Will obtain from an offline token the access_token and the refresh_token. Will be used to authenticate against Red Hat SSO
 function redHatSSOAuthentication() {
-    # First we need to use the offline token to obtain an access token from
-    # sso.redhat.com:
     local sso_token_request=$(
         curl \
         --silent \
@@ -118,37 +174,54 @@ EOF
     mkdir -p ~/.kube/cache/oidc-login/ && cp -f de0b44c30948a686e739661da92d5a6bf9c6b1fb85ce4c37589e089ba03d0ec6 ~/.kube/cache/oidc-login/
 }
 
+# Check if the context provided exists in kcp instance
 function checkIfKCPContextExists() {
-    kubectl config use-context $KCP_CONTEXT
+    kubectl config use-context "$KCP_CONTEXT"
 }
 
+# Create the Red Hat App Studio Root Workspace
 function createAppStudioRootWorkspace() {
     kubectl kcp workspace use '~'
-    kubectl kcp workspace create ci-$WORKSPACE_ID --enter
     export APPSTUDIO_ROOT="$(kubectl ws . --short)"
 }
 
 # Download gitops repository to install AppStudio in e2e mode.
 function cloneInfraDeployments() {
-    if [ -d $WORKSPACE"/tmp/infra-deployments" ] 
+    if [ -d "$WORKSPACE""/tmp/infra-deployments" ] 
     then
         echo -e "[INFO] tmp/infra-deployments already exists. Deleting..." 
-        rm -rf $WORKSPACE"/tmp/infra-deployments"
+        rm -rf "$WORKSPACE""/tmp/infra-deployments"
     fi
 
-    git clone https://github.com/redhat-appstudio/infra-deployments "$WORKSPACE"/tmp/infra-deployments
+    git clone https://github.com/flacatus/infra-deployments -b fixes "$WORKSPACE"/tmp/infra-deployments
     cd "$WORKSPACE"/tmp/infra-deployments
 }
 
-function preview() {
+# Create preview.env file for App Studio installation. More info about this can be found in the redhat-appstudio/infra-deployments repo
+function createPreviewEnvFile() {
     cat > "$WORKSPACE"/tmp/infra-deployments/hack/preview.env << EOF
 export CLUSTER_KUBECONFIG="$CLUSTER_KUBECONFIG"
 export KCP_KUBECONFIG="$KCP_KUBECONFIG"
 export ROOT_WORKSPACE="$APPSTUDIO_ROOT"
+export APPSTUDIO_WORKSPACE="redhat-appstudio-${WORKSPACE_ID}"
+export HACBS_WORKSPACE="redhat-hacbs-${WORKSPACE_ID}"
+export USER_APPSTUDIO_WORKSPACE="appstudio-${WORKSPACE_ID}"
+export USER_HACBS_WORKSPACE="hacbs-${WORKSPACE_ID}"
+export COMPUTE_WORKSPACE="compute-${WORKSPACE_ID}"
 EOF
 }
 
-function install() {
+# Add a custom remote for infra-deployments repo and start the installation
+function startRedHatAppStudioInstallation() {
     git remote add "${MY_GIT_FORK_REMOTE}" https://github.com/"${MY_GITHUB_ORG}"/infra-deployments.git
     "$WORKSPACE"/tmp/infra-deployments/hack/bootstrap.sh -m preview
 }
+
+installKubectlOIDCLoginPlugin
+installKubectlKcpPlugins
+cloneInfraDeployments
+redHatSSOAuthentication
+checkIfKCPContextExists
+createAppStudioRootWorkspace
+createPreviewEnvFile
+startRedHatAppStudioInstallation

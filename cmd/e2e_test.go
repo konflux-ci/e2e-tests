@@ -9,11 +9,13 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
+
 	_ "github.com/redhat-appstudio/e2e-tests/tests/build"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/cluster-registration"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/e2e-demos"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/has"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/integration-service"
+	_ "github.com/redhat-appstudio/e2e-tests/tests/kcp"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/release"
 
 	"flag"
@@ -22,8 +24,6 @@ import (
 
 	"k8s.io/klog/v2"
 )
-
-const ()
 
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	return nil

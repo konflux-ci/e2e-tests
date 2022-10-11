@@ -16,3 +16,14 @@ Pairing PRs is handled automatically by running this command from a root directo
 ```bash
    make ci/test/e2e
 ```
+
+## Install Red Hat App Studio in e2e mode in kcp
+
+The Red Hat App Studio installation scripts support kcp. To install App studio in e2e mode for kcp we need to execute the following script:
+
+```bash
+   export OFFLINE_TOKEN=<the_token_goes_here>
+   /bin/bash scripts/install-appstudio-kcp.sh -kc kcp-stable-root -kk <path-to-kcp-kubeconfig> -ck <path-to-physical-cluster-kubeconfig> -s
+```
+
+This script example will install App Studio in e2e mode into a stable KCP version. The `OFFLINE_TOKEN` it is used in case u want to authenticate against Red Hat SSO

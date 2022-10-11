@@ -16,13 +16,13 @@ import (
 
 // Framework struct to store all controllers
 type Framework struct {
-	HasController     *has.SuiteController
-	CommonController  *common.SuiteController
-	TektonController  *tekton.SuiteController
-	GitOpsController  *gitops.SuiteController
-	SPIController     *spi.SuiteController
-	ReleaseController *release.SuiteController
-	IntegrationController *integration.SuiteController
+	HasController             *has.SuiteController
+	CommonController          *common.SuiteController
+	TektonController          *tekton.SuiteController
+	GitOpsController          *gitops.SuiteController
+	SPIController             *spi.SuiteController
+	ReleaseController         *release.SuiteController
+	IntegrationController     *integration.SuiteController
 	JvmbuildserviceController *jvmbuildservice.SuiteController
 }
 
@@ -48,12 +48,12 @@ func NewFramework() (*Framework, error) {
 	}
 
 	// Initialize Tekton controller
-	tektonController, err := tekton.NewSuiteController(kubeClient)
+	/*tektonController, err := tekton.NewSuiteController(kubeClient)
 	if err != nil {
 		return nil, err
-	}
+	}*/
 
-	// Initialize GitOps controller
+	/*// Initialize GitOps controller
 	gitopsController, err := gitops.NewSuiteController(kubeClient)
 	if err != nil {
 		return nil, err
@@ -80,16 +80,16 @@ func NewFramework() (*Framework, error) {
 	jvmbuildserviceController, err := jvmbuildservice.NewSuiteControler(kubeClient)
 	if err != nil {
 		return nil, err
-	}
+	}*/
 
 	return &Framework{
-		CommonController:  commonCtrl,
-		HasController:     hasController,
-		TektonController:  tektonController,
-		GitOpsController:  gitopsController,
-		SPIController:     spiController,
-		ReleaseController: releaseController,
-		IntegrationController: integrationController,
-		JvmbuildserviceController: jvmbuildserviceController,
+		CommonController: commonCtrl,
+		HasController:    hasController,
+		//TektonController: tektonController,
+		//GitOpsController:  gitopsController,
+		//SPIController:     spiController,
+		//ReleaseController: releaseController,
+		//IntegrationController: integrationController,
+		//JvmbuildserviceController: jvmbuildserviceController,
 	}, nil
 }
