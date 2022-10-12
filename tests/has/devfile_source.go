@@ -1,7 +1,6 @@
 package has
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -16,7 +15,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -28,7 +26,7 @@ var (
  * Description: Contains tests about creating an application and a quarkus component from a source devfile
  */
 
-var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), func() {
+var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has-public"), func() {
 	defer GinkgoRecover()
 
 	var applicationName, componentName, testNamespace string
@@ -48,10 +46,10 @@ var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), 
 		// Check to see if the github token was provided
 		Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
 		// Check if 'has-github-token' is present, unless SKIP_HAS_SECRET_CHECK env var is set
-		if !utils.CheckIfEnvironmentExists(constants.SKIP_HAS_SECRET_CHECK_ENV) {
+		/*	if !utils.CheckIfEnvironmentExists(constants.SKIP_HAS_SECRET_CHECK_ENV) {
 			_, err := framework.HasController.KubeInterface().CoreV1().Secrets(RedHatAppStudioApplicationNamespace).Get(context.TODO(), ApplicationServiceGHTokenSecrName, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
-		}
+		}*/
 
 		_, err := framework.CommonController.CreateTestNamespace(testNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
@@ -92,13 +90,6 @@ var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), 
 
 			return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
-	})
-
-	// Necessary for component pipeline
-	It("Check if 'git-clone' cluster tasks exists", func() {
-		Eventually(func() bool {
-			return framework.CommonController.CheckIfClusterTaskExists("git-clone")
-		}, 5*time.Minute, 45*time.Second).Should(BeTrue(), "'git-clone' cluster task don't exist in cluster. Component cannot be created")
 	})
 
 	It("Create Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {

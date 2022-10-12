@@ -30,7 +30,7 @@ var (
 
 var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label("has"), func() {
 	defer GinkgoRecover()
-
+	Skip("No")
 	// Initialize the tests controllers
 	framework, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
