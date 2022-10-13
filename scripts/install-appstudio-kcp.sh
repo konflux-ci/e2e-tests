@@ -101,6 +101,7 @@ fi
 
 # Export kcp kubeconfig to start working against KCP
 export KUBECONFIG="$KCP_KUBECONFIG"
+kubectl config use-context "$KCP_CONTEXT"
 
 # Installing oidc-login plugin for kubectl. More information about oidc-login plugin can be found here: https://github.com/int128/kubelogin.
 # oidc-login will be used to authenticate using SSO against KCP
@@ -125,7 +126,6 @@ function installKubectlKcpPlugins() {
 
     if [[ "$IS_STABLE" == "true" ]]; then
         kcp_clone_branch=$(kubectl version -o yaml --kubeconfig ${KCP_KUBECONFIG} 2>/dev/null | yq '.serverVersion.gitVersion' | sed 's/.*kcp-\(v[[:digit:]]*\.[[:digit:]]*\.[[:digit:]]*\).*/\1/')
-        echo $kcp_clone_branch
         echo -e "[INFO] Cloning kcp-dev/kcp repo from '$kcp_clone_branch' branch to install kubectl kcp plugins."
     else
         echo -e "[INFO] Cloning kcp-dev/kcp repo from '$kcp_clone_branch' branch to install kubectl kcp plugins."
@@ -175,11 +175,6 @@ EOF
     mkdir -p ~/.kube/cache/oidc-login/ && cp -f de0b44c30948a686e739661da92d5a6bf9c6b1fb85ce4c37589e089ba03d0ec6 ~/.kube/cache/oidc-login/
 }
 
-# Check if the context provided exists in kcp instance
-function checkIfKCPContextExists() {
-    kubectl config use-context "$KCP_CONTEXT"
-}
-
 # Create the Red Hat App Studio Root Workspace
 function createAppStudioRootWorkspace() {
     kubectl kcp workspace use '~'
@@ -208,7 +203,7 @@ export APPSTUDIO_WORKSPACE="redhat-appstudio-${WORKSPACE_ID}"
 export HACBS_WORKSPACE="redhat-hacbs-${WORKSPACE_ID}"
 export USER_APPSTUDIO_WORKSPACE="appstudio-${WORKSPACE_ID}"
 export COMPUTE_WORKSPACE="compute-${WORKSPACE_ID}"
-export USER_HACBS_WORKSPACE="hacbs-${WORKSPACE_ID}"
+export USER_HACBS_WORKSPACE="appstudio-${WORKSPACE_ID}"
 EOF
 }
 
@@ -222,7 +217,6 @@ installKubectlOIDCLoginPlugin
 installKubectlKcpPlugins
 cloneInfraDeployments
 redHatSSOAuthentication
-checkIfKCPContextExists
 createAppStudioRootWorkspace
 createPreviewEnvFile
 startRedHatAppStudioInstallation

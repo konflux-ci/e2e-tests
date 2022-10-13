@@ -30,7 +30,6 @@ var (
 
 var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label("has"), func() {
 	defer GinkgoRecover()
-	Skip("No")
 	// Initialize the tests controllers
 	framework, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
@@ -44,6 +43,8 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 	privateGitRepository := utils.GetEnv(constants.PRIVATE_DEVFILE_SAMPLE, PrivateQuarkusDevfileSource)
 
 	BeforeAll(func() {
+		Skip("No")
+
 		testNamespace = utils.GetGeneratedNamespace("has-e2e")
 		// Generate names for the application and component resources
 		applicationName = fmt.Sprintf(RedHatAppStudioApplicationName+"-%s", util.GenerateRandomString(10))
