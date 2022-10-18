@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # exit immediately when a command fails
-set -ex
+set -e
 # only exit with zero if all commands of the pipeline exit successfully
 set -o pipefail
 # error on unset variables
@@ -178,7 +178,12 @@ function redHatSSOAuthentication() {
     local access_token=$(echo $sso_token_request | jq .access_token)
     local refresh_token=$(echo $sso_token_request | jq .refresh_token)
 
-    echo "{\"id_token\":${access_token},\"refresh_token\":${access_token}}" > ~/.kube/cache/oidc-login/de0b44c30948a686e739661da92d5a6bf9c6b1fb85ce4c37589e089ba03d0ec6
+    cat <<EOF > de0b44c30948a686e739661da92d5a6bf9c6b1fb85ce4c37589e089ba03d0ec6
+    {"id_token":${access_token},"refresh_token":${refresh_token}}
+EOF
+
+    mkdir -p ~/.kube/cache/oidc-login/ && cp -f de0b44c30948a686e739661da92d5a6bf9c6b1fb85ce4c37589e089ba03d0ec6 ~/.kube/cache/oidc-login/
+    rm -rf de0b44c30948a686e739661da92d5a6bf9c6b1fb85ce4c37589e089ba03d0ec6
 }
 
 # Create the Red Hat App Studio Root Workspace
@@ -239,3 +244,7 @@ redHatSSOAuthentication
 createAppStudioRootWorkspace
 createPreviewEnvFile
 startRedHatAppStudioInstallation
+
+# Switch to user workspace
+kubectl kcp workspace use '~'
+kubectl ws "${USER_APPSTUDIO_WORKSPACE}"
