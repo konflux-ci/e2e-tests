@@ -60,23 +60,17 @@ func (s *SuiteController) CreateRelease(name, source_namespace, snapshot, source
 }
 
 // CreateReleaseStrategy creates a new ReleaseStrategy using the given parameters.
-func (s *SuiteController) CreateReleaseStrategy(name, target_namespace, pipelineName, bundle string, policy string, service_account string) (*appstudiov1alpha1.ReleaseStrategy, error) {
+func (s *SuiteController) CreateReleaseStrategy(name, namespace, pipelineName, bundle string, policy string, service_account string, params []appstudiov1alpha1.Params) (*appstudiov1alpha1.ReleaseStrategy, error) {
 	releaseStrategy := &appstudiov1alpha1.ReleaseStrategy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: target_namespace,
+			Namespace: namespace,
 		},
 		Spec: v1alpha1.ReleaseStrategySpec{
-			Pipeline: pipelineName,
-			Bundle:   bundle,
-			Policy:   policy,
-			Params: []appstudiov1alpha1.Params{
-				{Name: "extraConfigGitUrl", Value: "https://github.com/ralphbean/strategy-configs.git", Values: []string{}},
-				{Name: "extraConfigPath", Value: "m7.yaml", Values: []string{}},
-				{Name: "extraConfigRevision", Value: "main", Values: []string{}},
-			},
-
-			// 		PersistentVolumeClaim: "test-pvc",
+			Pipeline:       pipelineName,
+			Bundle:         bundle,
+			Policy:         policy,
+			Params:         params,
 			ServiceAccount: service_account,
 		},
 	}
