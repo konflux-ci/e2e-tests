@@ -19,16 +19,17 @@
             ],
             "cwd": "${workspaceFolder}",
             "env": {
-                "GITHUB_TOKEN": "${input:ghToken}"
+                // "GITHUB_TOKEN": "${input:ghToken}"
+                "GITHUB_TOKEN": "${env.MY_GITHUB_TOKEN}"
             }
         }
     ],
     "inputs": [
-        {
-            "id": "ghToken",
-            "type": "promptString",
-            "description": "Github token",
-            "password": true
-        }
+        // {
+        //     "id": "ghToken",
+        //     "type": "promptString",
+        //     "description": "Github token",
+        //     "password": true
+        // }
     ]
 }

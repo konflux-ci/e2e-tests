@@ -26,7 +26,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 	var managedNamespace string
 	// var kubeController tekton.KubeController
 
-	var _ = Describe("test-release-service-happy-path", func() {
+	var _ = Describe("HACBS-1132: test-release-service-happy-path", Label("release"), func() {
 		BeforeAll(func() {
 			// Recreate random namespaces names per each test because if using same namespace names, the next test will not be able to create the namespaces as they are terminating
 			devNamespace = "user-" + uuid.New().String()
