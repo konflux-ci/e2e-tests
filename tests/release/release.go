@@ -86,25 +86,24 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 	})
 
 	var _ = Describe("Post-release verification", func() {
-		It("A PipelineRun should have been created in the managed namespace", func() {
-			Eventually(func() error {
-				_, err := framework.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseName, managedNamespace)
 
-				return err
-			}, 1*time.Minute, defaultInterval).Should(BeNil())
+		It("A PipelineRun should have been created in the managed namespace", func() {
+			Eventually(func() string {
+				prList, err := framework.TektonController.ListAllPipelineRuns(managedNamespace)
+				if err != nil {
+					return err.Error()
+				}
+				return prList.Items[0].Name
+			}, 1*time.Minute, defaultInterval).Should(ContainSubstring(releaseName))
 		})
 
 		It("The PipelineRun should exist and succeed", func() {
 			Eventually(func() bool {
-				pipelineRun, err := framework.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseName, devNamespace)
-				if pipelineRun == nil || err != nil {
+				prList, err := framework.TektonController.ListAllPipelineRuns(managedNamespace)
+				if prList == nil || err != nil {
 					return false
 				}
-				// Debug
-				klog.Info("PR in Managed NS: " + managedNamespace + " is :  " + pipelineRun.Name)
-				klog.Info("PR Has Started: ", pipelineRun.HasStarted())
-				klog.Info("PR Is Done: ", pipelineRun.IsDone())
-				klog.Info("PR status GetConditionSucceeded: ", pipelineRun.Status.GetCondition(apis.ConditionSucceeded).IsTrue())
+				pipelineRun := prList.Items[0]
 				return pipelineRun.HasStarted() && pipelineRun.IsDone() && pipelineRun.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 			}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
 		})
@@ -122,17 +121,20 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 		})
 
 		It("The Release should reference the release PipelineRun", func() {
-			var pipelineRun *v1beta1.PipelineRun
+			var pipelineRunList *v1beta1.PipelineRunList
 
 			Eventually(func() bool {
-				pipelineRun, err = framework.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseName, devNamespace)
+				pipelineRunList, err = framework.TektonController.ListAllPipelineRuns(managedNamespace)
 
-				return pipelineRun != nil && err == nil
+				return pipelineRunList != nil && err == nil
 			}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
 
 			release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(release.Status.ReleasePipelineRun).Should(Equal(fmt.Sprintf("%s/%s", pipelineRun.Namespace, pipelineRun.Name)))
+			if err != nil {
+				klog.Error(err)
+			}
+			Expect(release.Status.ReleasePipelineRun == (fmt.Sprintf("%s/%s", pipelineRunList.Items[0].Namespace, pipelineRunList.Items[0].Name))).Should(BeTrue())
 		})
+
 	})
 })
