@@ -55,7 +55,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 			})
 
 			It("Create a Release Strategy", func() {
-				_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, ReleaseStrategySpecParams_extraConfigGitUrl, ReleaseStrategySpecParams_extraConfigPath, ReleaseStrategySpecParams_extraConfigRevision, releaseStrategyServiceAccount)
+				_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, "", "", "", "")
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -78,7 +78,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 		var _ = Describe("Post-release verification", func() {
 			It("A PipelineRun should have been created in the managed namespace", func() {
 				Eventually(func() bool {
-					pipelineRun, err := framework.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseName, devNamespace)
+					pipelineRun, err := framework.ReleaseController.GetPipelineRunInNamespace(applicationName, managedNamespace, releaseName, devNamespace)
 
 					if pipelineRun == nil || err != nil {
 						return false

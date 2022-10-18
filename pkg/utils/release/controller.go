@@ -109,11 +109,11 @@ func (s *SuiteController) CreateReleaseStrategy(name, namespace, pipelineName, b
 }
 
 // GetPipelineRunInNamespace returns the Release PipelineRun referencing the given release.
-func (s *SuiteController) GetPipelineRunInNamespace(namespace, releaseName, releaseNamespace string) (*v1beta1.PipelineRun, error) {
+func (s *SuiteController) GetPipelineRunInNamespace(applicationName, namespace, releaseName, releaseNamespace string) (*v1beta1.PipelineRun, error) {
 	pipelineRuns := &v1beta1.PipelineRunList{}
 	opts := []client.ListOption{
 		client.MatchingLabels{
-			"appstudio.openshift.io/application":       "application",
+			"appstudio.openshift.io/application":       applicationName,
 			"pipelines.appstudio.openshift.io/type":    "release",
 			"release.appstudio.openshift.io/name":      releaseName,
 			"release.appstudio.openshift.io/namespace": releaseNamespace,
