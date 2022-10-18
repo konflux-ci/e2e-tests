@@ -211,7 +211,9 @@ func BootstrapCluster() error {
 		envVars["E2E_TESTS_COMMIT_SHA"] = os.Getenv("PULL_PULL_SHA")
 	}
 
-	return sh.RunWith(envVars, "echo -e NOT_SUPPORTED_YET")
+	// TODO: https://issues.redhat.com/browse/RHDP-553 .Run here the installation script.
+	//return sh.RunWith(envVars, "echo -e NOT_SUPPORTED_YET")
+	return nil
 }
 
 func (CI) isPRPairingRequired() bool {
