@@ -83,14 +83,9 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 					if pipelineRun == nil || err != nil {
 						return false
 					}
-
 					return true
 				}, 1*time.Minute, defaultInterval).Should(BeTrue())
 			})
-
-			// The pipelineRun should fail because "serviceaccounts "m7-service-account" not found"
-			// This snippet does not hold the all happy-path needed steps to succeed
-			// Therefore, I stop the "Post-release verification" here.
 		})
 	})
 })
