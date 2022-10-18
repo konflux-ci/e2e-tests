@@ -45,12 +45,6 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 		componentName = fmt.Sprintf(QuarkusComponentName+"-%s", util.GenerateRandomString(10))
 		// Check to see if the github token was provided
 		Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
-		// Check if 'has-github-token' is present, unless SKIP_HAS_SECRET_CHECK env var is set
-		/*	if !utils.CheckIfEnvironmentExists(constants.SKIP_HAS_SECRET_CHECK_ENV) {
-			_, err := framework.HasController.KubeInterface().CoreV1().Secrets(RedHatAppStudioApplicationNamespace).Get(context.TODO(), ApplicationServiceGHTokenSecrName, metav1.GetOptions{})
-			Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
-		}*/
-
 		_, err := framework.CommonController.CreateTestNamespace(testNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
 
@@ -59,6 +53,10 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 	AfterAll(func() {
 
 		err = framework.HasController.DeleteHasComponentDetectionQuery(componentName, testNamespace)
+		Expect(err).NotTo(HaveOccurred())
+		err = framework.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, 1*time.Minute)
+		Expect(err).NotTo(HaveOccurred())
+		err = framework.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, 1*time.Minute)
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func() bool {
@@ -125,6 +123,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 	})
 
 	It("Gitops Repository should not be deleted when component gets deleted", func() {
+
 		comp2Detected := appservice.ComponentDetectionDescription{}
 
 		for _, comp2Detected = range cdq.Status.ComponentDetected {
@@ -146,6 +145,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 	})
 
 	It("Check a Component gets deleted when its application is deleted", func() {
+		Skip("This feature is not available in the KCP world yet. Issue: https://issues.redhat.com/browse/DEVHAS-182")
 		err = framework.HasController.DeleteHasApplication(applicationName, testNamespace, false)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(func() bool {

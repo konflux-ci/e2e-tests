@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # exit immediately when a command fails
-set -e
+set -ex
 # only exit with zero if all commands of the pipeline exit successfully
 set -o pipefail
 # error on unset variables
@@ -21,8 +21,11 @@ export ROOT_E2E="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd
 export WORKSPACE=${WORKSPACE:-${ROOT_E2E}}
 export MY_GIT_FORK_REMOTE="qe"
 export MY_GITHUB_ORG="redhat-appstudio-qe"
+export MY_GITHUB_TOKEN="$GITHUB_TOKEN"
 export WORKSPACE_ID=$(tr -dc a-z0-9 </dev/urandom | head -c 5 ; echo '')
 export TEST_BRANCH_ID="$(date +%s)"
+export JOB_TYPE=${JOB_TYPE:-"presubmit"}
+export REPO_NAME=${REPO_NAME:-"e2e-tests"}
 
 # KCP related environments
 export KCP_CONTEXT=
@@ -33,6 +36,8 @@ export IS_STABLE="false"
 export APPSTUDIO_WORKSPACE="redhat-appstudio-${WORKSPACE_ID}"
 export HACBS_WORKSPACE="redhat-hacbs-${WORKSPACE_ID}"
 export USER_APPSTUDIO_WORKSPACE="appstudio-${WORKSPACE_ID}"
+export PIPELINE_SERVICE_SP_WORKSPACE="root:redhat-pipeline-service-compute"
+export PIPELINE_SERVICE_IDENTITY_HASH="72b2990e51b1931e9fee86e67091b721a8c32f407d762fc847d9d2316a988b52"
 
 # Display help information about this script bash
 function helpUsage() {
@@ -96,6 +101,11 @@ fi
 
 if [[ -z "$OFFLINE_TOKEN" ]]; then
     echo "[ERROR] OFFLINE_TOKEN environment is not set. You can obtain one from cloud.redhat.com." 
+    helpUsage & exit 1
+fi
+
+if [[ -z "$GITHUB_TOKEN" ]]; then
+    echo "[ERROR] GITHUB_TOKEN environment is not set." 
     helpUsage & exit 1
 fi
 
@@ -168,11 +178,7 @@ function redHatSSOAuthentication() {
     local access_token=$(echo $sso_token_request | jq .access_token)
     local refresh_token=$(echo $sso_token_request | jq .refresh_token)
 
-    cat <<EOF > de0b44c30948a686e739661da92d5a6bf9c6b1fb85ce4c37589e089ba03d0ec6
-    {"id_token":${access_token},"refresh_token":${refresh_token}}
-EOF
-
-    mkdir -p ~/.kube/cache/oidc-login/ && cp -f de0b44c30948a686e739661da92d5a6bf9c6b1fb85ce4c37589e089ba03d0ec6 ~/.kube/cache/oidc-login/
+    echo "{\"id_token\":${access_token},\"refresh_token\":${access_token}}" > ~/.kube/cache/oidc-login/de0b44c30948a686e739661da92d5a6bf9c6b1fb85ce4c37589e089ba03d0ec6
 }
 
 # Create the Red Hat App Studio Root Workspace
@@ -189,8 +195,12 @@ function cloneInfraDeployments() {
         rm -rf "$WORKSPACE""/tmp/infra-deployments"
     fi
 
-    git clone https://github.com/flacatus/infra-deployments -b fixes "$WORKSPACE"/tmp/infra-deployments
-    cd "$WORKSPACE"/tmp/infra-deployments
+    # If we are in infra-deployments jobs we don't need to clone infra-deployments. Openshift CI clones automatically
+    if [[ "$JOB_TYPE" != "periodic" ]] || [[ "$REPO_NAME" != "infra-deployments" ]]
+    then
+        echo -e "[INFO] Cloning https://github.com/redhat-appstudio/infra-deployments from main branch"
+        git clone https://github.com/redhat-appstudio/infra-deployments "$WORKSPACE"/tmp/infra-deployments
+    fi
 }
 
 # Create preview.env file for App Studio installation. More info about this can be found in the redhat-appstudio/infra-deployments repo
@@ -209,11 +219,20 @@ EOF
 
 # Add a custom remote for infra-deployments repo and start the installation
 function startRedHatAppStudioInstallation() {
-    git remote add "${MY_GIT_FORK_REMOTE}" https://github.com/"${MY_GITHUB_ORG}"/infra-deployments.git
-    "$WORKSPACE"/tmp/infra-deployments/hack/bootstrap.sh -m preview
+    # If we are in infra-deployments jobs we don't need to clone infra-deployments. Openshift CI clones automatically
+    if [[ "$JOB_TYPE" == "periodic" ]] || [[ "$REPO_NAME" == "infra-deployments" ]]
+    then
+        git remote add "${MY_GIT_FORK_REMOTE}" https://github.com/"${MY_GITHUB_ORG}"/infra-deployments.git
+        "$WORKSPACE"/hack/bootstrap.sh -m preview
+    else
+        cd "$WORKSPACE"/tmp/infra-deployments
+        git remote add "${MY_GIT_FORK_REMOTE}" https://github.com/"${MY_GITHUB_ORG}"/infra-deployments.git
+        "$WORKSPACE"/tmp/infra-deployments/hack/bootstrap.sh -m preview
+    fi
 }
 
 installKubectlOIDCLoginPlugin
+redHatSSOAuthentication
 installKubectlKcpPlugins
 cloneInfraDeployments
 redHatSSOAuthentication

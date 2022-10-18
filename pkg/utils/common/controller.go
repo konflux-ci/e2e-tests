@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -435,6 +434,7 @@ func (s *SuiteController) ServiceaccountPresent(saName, namespace string) wait.C
 	}
 }
 
+/* :TODO: This feature is not required in kcp yet. I will comment to pass the gh actions tests
 // argoCDNamespaceRBACPresent returns a condition which waits for the Argo CD role/rolebindings to be set on the namespace.
 //   - This Role/RoleBinding allows Argo cd to deploy into the namespace (which is referred to as 'managing the namespace'), and
 //     is created by the GitOps Operator.
@@ -471,7 +471,7 @@ func (s *SuiteController) argoCDNamespaceRBACPresent(namespace string) wait.Cond
 
 		return roleBindingFound, nil
 	}
-}
+}*/
 
 // namespaceDoesNotExist returns a condition that can be used to wait for the namespace to not exist
 func (s *SuiteController) namespaceDoesNotExist(namespace string) wait.ConditionFunc {

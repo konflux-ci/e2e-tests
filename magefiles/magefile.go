@@ -112,9 +112,6 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when setting up required env vars: %v", err)
 	}
 
-	if err := retry(ci.createOpenshiftUser, 3, 10*time.Second); err != nil {
-		return fmt.Errorf("error when creating openshift user: %v", err)
-	}
 	if err := retry(BootstrapCluster, 2, 10*time.Second); err != nil {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
 	}
@@ -159,7 +156,6 @@ func PreflightChecks() error {
 }
 
 func (CI) setRequiredEnvVars() error {
-
 	if strings.Contains(jobName, "hacbs-e2e-periodic") {
 		os.Setenv("E2E_TEST_SUITE_LABEL", "HACBS")
 		return nil
@@ -206,17 +202,6 @@ func (CI) setRequiredEnvVars() error {
 	return nil
 }
 
-func (CI) createOpenshiftUser() error {
-	tempKubeconfigPath := "/tmp/kubeconfig"
-	os.Setenv("KUBECONFIG_TEST", tempKubeconfigPath)
-	if err := sh.Run("./scripts/provision-openshift-user.sh"); err != nil {
-		return err
-	}
-	os.Setenv("KUBECONFIG", tempKubeconfigPath)
-
-	return nil
-}
-
 func BootstrapCluster() error {
 	envVars := map[string]string{}
 
@@ -226,7 +211,7 @@ func BootstrapCluster() error {
 		envVars["E2E_TESTS_COMMIT_SHA"] = os.Getenv("PULL_PULL_SHA")
 	}
 
-	return sh.RunWith(envVars, "./scripts/install-appstudio.sh")
+	return sh.RunWith(envVars, "echo -e NOT_SUPPORTED_YET")
 }
 
 func (CI) isPRPairingRequired() bool {

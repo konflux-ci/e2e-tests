@@ -10,6 +10,7 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 
+	// TODO: Once all controllers are working on KCP activate all the current tests.
 	_ "github.com/redhat-appstudio/e2e-tests/tests/has"
 
 	"flag"
@@ -19,12 +20,12 @@ import (
 	"k8s.io/klog/v2"
 )
 
+var webhookConfigPath string
+var demoSuitesPath string
+
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	return nil
 }, func(data []byte) {})
-
-var webhookConfigPath string
-var demoSuitesPath string
 
 func init() {
 	rootDir, _ := os.Getwd()

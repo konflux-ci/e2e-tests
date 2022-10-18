@@ -47,6 +47,12 @@ func NewFramework() (*Framework, error) {
 		return nil, err
 	}
 
+	spiController, err := spi.NewSuiteController(kubeClient)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Once all controllers are working on KCP activate all the clients.
 	// Initialize Tekton controller
 	/*tektonController, err := tekton.NewSuiteController(kubeClient)
 	if err != nil {
@@ -85,9 +91,10 @@ func NewFramework() (*Framework, error) {
 	return &Framework{
 		CommonController: commonCtrl,
 		HasController:    hasController,
+		SPIController:    spiController,
+		// TODO: Once all controllers are working on KCP activate all the clients.
 		//TektonController: tektonController,
 		//GitOpsController:  gitopsController,
-		//SPIController:     spiController,
 		//ReleaseController: releaseController,
 		//IntegrationController: integrationController,
 		//JvmbuildserviceController: jvmbuildserviceController,
