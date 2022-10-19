@@ -49,12 +49,12 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 		})
 
 		var _ = Describe("Creation of the 'Happy path' resources", func() {
-			It("Create an ApplicationSnapshot.", func() {
+			It("Create an ApplicationSnapshot in dev namespace", func() {
 				_, err := framework.ReleaseController.CreateApplicationSnapshot(snapshotName, devNamespace, applicationName, snapshotComponents)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("Create a Release Strategy", func() {
+			It("Create a Release Strategy in managed namespace", func() {
 				_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, "", "", "", "")
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -69,7 +69,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("Create a Release", func() {
+			It("Create a Release in dev namespace", func() {
 				_, err := framework.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, sourceReleasePlanName)
 				Expect(err).NotTo(HaveOccurred())
 			})
