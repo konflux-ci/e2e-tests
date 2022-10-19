@@ -57,20 +57,6 @@ func ValidateTaskRunResults(taskname string, result string) bool {
 	if err != nil {
 		Fail(fmt.Sprintf("Taskrun '%s' has failed with '%s'", taskname, err))
 	}
-	// If the test result isn't either SUCCESS or SKIPPED, the overall outcome is a failure
-	if taskname == "sast-go" {
-		if !(testOutput["result"] == "SUCCESS" || testOutput["result"] == "SKIPPED") {
-			Fail(fmt.Sprintf("Expected Result for Taskrun '%s' is SUCCESS, failed with '%s'", taskname, testOutput["failures"]))
-		}
-		return true
-	}
-	// If the test result isn't either SUCCESS or SKIPPED, the overall outcome is a failure
-	if taskname == "sast-java-sec-check" {
-		if !(testOutput["result"] == "SUCCESS" || testOutput["result"] == "SKIPPED") {
-			Fail(fmt.Sprintf("Expected Result for Taskrun '%s' is SUCCESS, failed with '%s'", taskname, testOutput["failures"]))
-		}
-		return true
-	}
 	// conftest-clair taskruns are expected to FAIL
 	if taskname == "conftest-clair" {
 		if testOutput["result"] == "FAILURE" {

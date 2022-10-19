@@ -536,7 +536,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			It("should validate HACBS taskrun results", func() {
 				// List Of Taskruns Expected to Get Taskrun Results
-				gatherResult := []string{"conftest-clair", "sanity-inspect-image", "sanity-label-check", "sast-go", "sast-java-sec-check"}
+				gatherResult := []string{"conftest-clair", "sanity-inspect-image", "sanity-label-check"}
 				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, false, "")
 				Expect(err).ShouldNot(HaveOccurred())
 
