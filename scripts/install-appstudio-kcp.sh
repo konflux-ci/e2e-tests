@@ -181,9 +181,10 @@ function redHatSSOAuthentication() {
     cat <<EOF > de0b44c30948a686e739661da92d5a6bf9c6b1fb85ce4c37589e089ba03d0ec6
     {"id_token":${access_token},"refresh_token":${refresh_token}}
 EOF
-
     mkdir -p ~/.kube/cache/oidc-login/ && cp -f de0b44c30948a686e739661da92d5a6bf9c6b1fb85ce4c37589e089ba03d0ec6 ~/.kube/cache/oidc-login/
     rm -rf de0b44c30948a686e739661da92d5a6bf9c6b1fb85ce4c37589e089ba03d0ec6
+    echo "[INFO] Success on update cache access token for kubectl oidc-login"
+
 }
 
 # Create the Red Hat App Studio Root Workspace
@@ -237,10 +238,17 @@ function startRedHatAppStudioInstallation() {
 }
 
 installKubectlOIDCLoginPlugin
+
+( # In a subshell, for isolation, protecting $!
+  while true; do
+    redHatSSOAuthentication & # in the background
+    sleep 10 ;
+  done
+)
+
 redHatSSOAuthentication
 installKubectlKcpPlugins
 cloneInfraDeployments
-redHatSSOAuthentication
 createAppStudioRootWorkspace
 createPreviewEnvFile
 startRedHatAppStudioInstallation
