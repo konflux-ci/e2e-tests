@@ -90,7 +90,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 		It("A PipelineRun should have been created in the managed namespace", func() {
 			Eventually(func() string {
 				prList, err := framework.TektonController.ListAllPipelineRuns(managedNamespace)
-				if err != nil {
+				if err != nil || prList == nil {
 					return err.Error()
 				}
 				return prList.Items[0].Name
