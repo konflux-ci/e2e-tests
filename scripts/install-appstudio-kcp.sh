@@ -22,7 +22,7 @@ export WORKSPACE=${WORKSPACE:-${ROOT_E2E}}
 export MY_GIT_FORK_REMOTE="qe"
 export MY_GITHUB_ORG="redhat-appstudio-qe"
 export MY_GITHUB_TOKEN="$GITHUB_TOKEN"
-export WORKSPACE_ID=$(tr -dc a-z0-9 </dev/urandom | head -c 5 ; echo '')
+export WORKSPACE_ID=${WORKSPACE_ID:-$(tr -dc a-z0-9 </dev/urandom | head -c 5 ; echo '')}
 export TEST_BRANCH_ID="$(date +%s)"
 export JOB_TYPE=${JOB_TYPE:-"presubmit"}
 export REPO_NAME=${REPO_NAME:-"e2e-tests"}
@@ -38,22 +38,26 @@ export APPSTUDIO_WORKSPACE="redhat-appstudio-${WORKSPACE_ID}"
 export HACBS_WORKSPACE="redhat-hacbs-${WORKSPACE_ID}"
 export USER_APPSTUDIO_WORKSPACE="appstudio-${WORKSPACE_ID}"
 export COMPUTE_WORKSPACE="compute-${WORKSPACE_ID}"
-export PIPELINE_SERVICE_SP_WORKSPACE="root:redhat-pipeline-service-compute"
-export PIPELINE_SERVICE_IDENTITY_HASH="72b2990e51b1931e9fee86e67091b721a8c32f407d762fc847d9d2316a988b52"
+export PIPELINE_SERVICE_SP_WORKSPACE=${PIPELINE_SERVICE_SP_WORKSPACE:-"root:redhat-pipeline-service-compute"}
+export PIPELINE_SERVICE_IDENTITY_HASH=${PIPELINE_SERVICE_IDENTITY_HASH:-"72b2990e51b1931e9fee86e67091b721a8c32f407d762fc847d9d2316a988b52"}
 export CI=${CI:-"false"}
 
 export TIMEOUT_PID=
 
-#Stop execution on any error
-trap "catchFinish" EXIT SIGINT
-
 function catchFinish() {
-    kubectl kcp workspace use '~'
-    kubectl delete ws "${APPSTUDIO_WORKSPACE}" "${HACBS_WORKSPACE}" "${USER_APPSTUDIO_WORKSPACE}" "${COMPUTE_WORKSPACE}"
+    # Remove workspaces only if we are in CI
+    if [[ $CI != "false" ]]
+    then
+        kubectl kcp workspace use '~' || true
+        kubectl delete ws "${APPSTUDIO_WORKSPACE}" "${HACBS_WORKSPACE}" "${USER_APPSTUDIO_WORKSPACE}" "${COMPUTE_WORKSPACE}" || true
+    fi
 
     echo "[INFO] Killing process PID=$TIMEOUT_PID"
     kill $TIMEOUT_PID
 }
+
+# Stop execution on any error
+trap "catchFinish" EXIT SIGINT SIGTERM SIGQUIT SIGABRT SIGALRM
 
 # Display help information about this script bash
 function helpUsage() {
