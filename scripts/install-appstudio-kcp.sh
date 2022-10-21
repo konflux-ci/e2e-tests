@@ -26,6 +26,7 @@ export WORKSPACE_ID=$(tr -dc a-z0-9 </dev/urandom | head -c 5 ; echo '')
 export TEST_BRANCH_ID="$(date +%s)"
 export JOB_TYPE=${JOB_TYPE:-"presubmit"}
 export REPO_NAME=${REPO_NAME:-"e2e-tests"}
+export RUN_E2E="false"
 
 # KCP related environments
 export KCP_CONTEXT=
@@ -36,8 +37,23 @@ export IS_STABLE="false"
 export APPSTUDIO_WORKSPACE="redhat-appstudio-${WORKSPACE_ID}"
 export HACBS_WORKSPACE="redhat-hacbs-${WORKSPACE_ID}"
 export USER_APPSTUDIO_WORKSPACE="appstudio-${WORKSPACE_ID}"
+export COMPUTE_WORKSPACE="compute-${WORKSPACE_ID}"
 export PIPELINE_SERVICE_SP_WORKSPACE="root:redhat-pipeline-service-compute"
 export PIPELINE_SERVICE_IDENTITY_HASH="72b2990e51b1931e9fee86e67091b721a8c32f407d762fc847d9d2316a988b52"
+export CI=${CI:-"false"}
+
+export TIMEOUT_PID=
+
+#Stop execution on any error
+trap "catchFinish" EXIT SIGINT
+
+function catchFinish() {
+    kubectl kcp workspace use '~'
+    kubectl delete ws "${APPSTUDIO_WORKSPACE}" "${HACBS_WORKSPACE}" "${USER_APPSTUDIO_WORKSPACE}" "${COMPUTE_WORKSPACE}"
+
+    echo "[INFO] Killing process PID=$TIMEOUT_PID"
+    kill $TIMEOUT_PID
+}
 
 # Display help information about this script bash
 function helpUsage() {
@@ -47,7 +63,8 @@ function helpUsage() {
     echo -e "   -kc, --kcp-context            The name of the kubeconfig context to use."
     echo -e "   -kk, --kcp-kubeconfig         A valid kcp kubeconfig path."
     echo -e "   -ck, --cluster-kubeconfig     A valid kubeconfig pointing to a physical openshift cluster."
-    echo -e "   -s, --stable                  Flag to determinate if the kcp cluster is stable or not. In case if this flag is missing by default will install Red Hat App Studio in unstable kcp version.\n"
+    echo -e "   -s, --stable                  Flag to determinate if the kcp cluster is stable or not. In case if this flag is missing by default will install Red Hat App Studio in unstable kcp version."
+    echo -e "   --e2e                         If this is used then will start to run the e2e tests.\n"
     echo -e "Examples:\n"
     echo -e "   # Deploy Red Hat App Studio in kcp stable version"
     echo -e "   /bin/bash <E2E_DIR>/scripts/install-appstudio-kcp.sh -kc kcp-stable-root -kk <path-to-kcp-kubeconfig> -ck <path-to-openshift-cluster-kubeconfig> -s\n"
@@ -77,6 +94,9 @@ do
             ;;
         -s|--stable)
             export IS_STABLE="true"
+            ;;
+        --e2e)
+            export RUN_E2E="true"
             ;;
         *)
             ;;
@@ -183,7 +203,7 @@ function redHatSSOAuthentication() {
 EOF
     mkdir -p ~/.kube/cache/oidc-login/ && cp -f de0b44c30948a686e739661da92d5a6bf9c6b1fb85ce4c37589e089ba03d0ec6 ~/.kube/cache/oidc-login/
     rm -rf de0b44c30948a686e739661da92d5a6bf9c6b1fb85ce4c37589e089ba03d0ec6
-    echo "[INFO] Success on update cache access token for kubectl oidc-login"
+    echo "[INFO] Success to update cache for kubectl oidc-login"
 
 }
 
@@ -237,16 +257,42 @@ function startRedHatAppStudioInstallation() {
     fi
 }
 
+# Start to run the tests
+function runE2Etests() {
+    # If we are in infra-deployments jobs we don't need to clone infra-deployments. Openshift CI clones automatically
+    if [[ "$REPO_NAME" == "e2e-tests" ]]
+    then
+        make local/cluster/prepare
+        make local/test/e2e
+    else
+        if [ -d "$WORKSPACE"/tmp/e2e-tests ] 
+        then
+            echo -e "[WARN] tmp/e2e-tests already exists. Deleting..." 
+            rm -rf "$WORKSPACE""tmp/e2e-tests"
+        fi
+        git clone -b kcp_scr https://github.com/flacatus/e2e-tests.git "$WORKSPACE""tmp/e2e-tests"
+        cd "$WORKSPACE""tmp/e2e-tests"
+
+        make local/cluster/prepare
+        make local/test/e2e
+        cd "$WORKSPACE"
+    fi
+}
+
+function runAuthenticationInBackground() {
+    export -f redHatSSOAuthentication
+    timeout --kill-after=110m --foreground 100m bash -c -- 'while [ true ]; do redHatSSOAuthentication; sleep 60s; done'
+}
+
+# Run the authentication SSO only if we are in Openshift CI.
+if [[ $CI == "true" ]]
+then
+    runAuthenticationInBackground &
+    BG_PID=$!
+    TIMEOUT_PID=$(ps -o pid= --ppid="${BG_PID}")
+fi
+
 installKubectlOIDCLoginPlugin
-
-( # In a subshell, for isolation, protecting $!
-  while true; do
-    redHatSSOAuthentication & # in the background
-    sleep 10 ;
-  done
-)
-
-redHatSSOAuthentication
 installKubectlKcpPlugins
 cloneInfraDeployments
 createAppStudioRootWorkspace
@@ -254,5 +300,9 @@ createPreviewEnvFile
 startRedHatAppStudioInstallation
 
 # Switch to user workspace
-kubectl kcp workspace use '~'
 kubectl ws "${USER_APPSTUDIO_WORKSPACE}"
+
+if [[ $RUN_E2E == "true" ]]
+then
+    runE2Etests
+fi

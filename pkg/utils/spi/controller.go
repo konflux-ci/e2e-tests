@@ -139,7 +139,7 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 			return false
 		}
 
-		return spiAccessTokenBinding.Status.UploadUrl != ""
+		return (spiAccessTokenBinding.Status.UploadUrl != "" && spiAccessTokenBinding.Status.OAuthUrl != "")
 	}, 2*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI upload oauth url not set. Please check if spi oauth-config configmap contain all necessary providers for tests.")
 
 	if spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData {
