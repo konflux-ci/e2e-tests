@@ -136,6 +136,5 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 			}
 			Expect(release.Status.ReleasePipelineRun == (fmt.Sprintf("%s/%s", pipelineRunList.Items[0].Namespace, pipelineRunList.Items[0].Name))).Should(BeTrue())
 		})
-
 	})
 })
