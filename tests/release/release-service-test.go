@@ -24,7 +24,6 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 
 	var devNamespace string
 	var managedNamespace string
-	// var kubeController tekton.KubeController
 
 	var _ = Describe("HACBS-1132: test-release-service-happy-path", Label("release"), func() {
 		BeforeAll(func() {
