@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         
         {
             "name": "Launch demo suites",
@@ -21,7 +22,10 @@
             "env": {
                 // "GITHUB_TOKEN": "${input:ghToken}"
                 "GITHUB_TOKEN": "${env.MY_GITHUB_TOKEN}"
-            }
+            },
+
+            "debugAdapter": "dlv-dap", 
+            "showGlobalVariables": true
         }
     ],
     "inputs": [

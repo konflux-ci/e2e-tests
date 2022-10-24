@@ -78,7 +78,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 		var _ = Describe("Post-release verification", func() {
 			It("A PipelineRun should have been created in the managed namespace", func() {
 				Eventually(func() bool {
-					pipelineRun, err := framework.ReleaseController.GetPipelineRunInNamespace(applicationName, managedNamespace, releaseName, devNamespace)
+					pipelineRun, err := framework.ReleaseController.GetPipelineRunInNamespace(releasePipelineName, managedNamespace, releaseName, devNamespace)
 
 					if pipelineRun == nil || err != nil {
 						return false
