@@ -1,3 +1,6 @@
+# debugging related files
+.vscode/launch.json
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -24,5 +27,3 @@ tmp/
 .cache/
 .tmp/
 
-# debugging related files
-.vscode/launch.json
