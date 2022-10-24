@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/klog"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	g "github.com/onsi/ginkgo/v2"
@@ -542,10 +541,11 @@ func (k KubeController) GetRekorHost() (rekorHost string, err error) {
 	return
 }
 
-func (s *SuiteController) CreatePVCAccessMode(pvcName string, namespace string, accessMode corev1.PersistentVolumeAccessMode) (*corev1.PersistentVolumeClaim, error) {
+// CreatePVCAccessMode function creates a persistent volume by the given name in a given namespace
+func (s *SuiteController) CreatePVCAccessMode(name string, namespace string, accessMode corev1.PersistentVolumeAccessMode) (*corev1.PersistentVolumeClaim, error) {
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      pvcName,
+			Name:      name,
 			Namespace: namespace,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
@@ -562,12 +562,7 @@ func (s *SuiteController) CreatePVCAccessMode(pvcName string, namespace string, 
 
 	createdPVC, err := s.K8sClient.KubeInterface().CoreV1().PersistentVolumeClaims(namespace).Create(context.TODO(), pvc, metav1.CreateOptions{})
 	if err != nil {
-		klog.Error((err))
 		return nil, err
 	}
 	return createdPVC, err
-}
-
-func (s *SuiteController) GetPipelineRunInNamespace(namespace string) (*v1beta1.PipelineRunList, error) {
-	return s.PipelineClient().TektonV1beta1().PipelineRuns(namespace).List(context.TODO(), metav1.ListOptions{}) //Get(context.TODO(), pipelineRunName, metav1.GetOptions{})
 }

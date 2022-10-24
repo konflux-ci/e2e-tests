@@ -15,6 +15,7 @@ const (
 	releasePipelineBundle    = "quay.io/hacbs-release/demo:m5-alpine"
 	serviceAccount           = "pipeline"
 	releaseStrategyPolicy    = "policy"
+	environment              = "test-environment"
 
 	avgPipelineCompletionTime = 2 * time.Minute
 	defaultInterval           = 100 * time.Millisecond

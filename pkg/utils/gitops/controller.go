@@ -10,8 +10,8 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
 	routev1 "github.com/openshift/api/route/v1"
+	gitopsv1alpha1 "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
-	gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
 	managedgitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend/apis/managed-gitops/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -106,8 +106,8 @@ func (h *SuiteController) DeleteAllGitOpsDeploymentInASpecificNamespace(namespac
 	}, timeout)
 }
 
-// CreateReleaseStrategy creates a new ReleaseStrategy using the given parameters.
-func (s *SuiteController) CreateEnvironment(name string, namespace string, deploymentStartegy gitopsv1alpha1.DeploymentStrategyType,
+// CreateEnvironment creates an Environment using the given parameters.
+func (s *SuiteController) CreateEnvironment(name, namespace string, deploymentStartegy gitopsv1alpha1.DeploymentStrategyType,
 	enviromentType gitopsv1alpha1.EnvironmentType, environmentEnv []gitopsv1alpha1.EnvVarPair) (*gitopsv1alpha1.Environment, error) {
 	environmentRelease := &gitopsv1alpha1.Environment{
 		ObjectMeta: metav1.ObjectMeta{
