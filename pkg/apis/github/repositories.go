@@ -113,7 +113,7 @@ func (g *Github) GetAllRepositories() ([]*github.Repository, error) {
 }
 
 func (g *Github) DeleteRepository(repository *github.Repository) error {
-	fmt.Printf("Deleting repository %s\n", *repository.Name)
+	klog.Infof("Deleting repository %s\n", *repository.Name)
 	_, err := g.client.Repositories.Delete(context.Background(), g.organization, *repository.Name)
 	if err != nil {
 		return err
