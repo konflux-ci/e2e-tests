@@ -91,7 +91,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 		It("A PipelineRun should have been created in the managed namespace", func() {
 			Eventually(func() string {
 				prList, err := framework.TektonController.ListAllPipelineRuns(managedNamespace)
-				if err != nil || prList == nil {
+				if err != nil || len(prList.Items) < 1 {
 					return err.Error()
 				}
 				return prList.Items[0].Name
@@ -101,7 +101,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 		It("The PipelineRun should exist and succeed", func() {
 			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(managedNamespace)
-				if prList == nil || err != nil {
+				if len(prList.Items) < 1 || err != nil {
 					return false
 				}
 				pipelineRun := prList.Items[0]
@@ -112,7 +112,6 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 		It("The Release should have succeeded", func() {
 			Eventually(func() bool {
 				release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
-
 				if err != nil {
 					return false
 				}
@@ -127,7 +126,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 			Eventually(func() bool {
 				pipelineRunList, err = framework.TektonController.ListAllPipelineRuns(managedNamespace)
 
-				return pipelineRunList != nil && err == nil
+				return len(pipelineRunList.Items) > 0 && err == nil
 			}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
 
 			release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
