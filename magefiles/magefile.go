@@ -115,20 +115,24 @@ func (Local) CleanupGithubOrg() error {
 	}
 	var reposToDelete []*gh.Repository
 
-	// Filter repos by regex
+	// Filter repos by regex & time check
 	r, _ := regexp.Compile(reposToDeleteRegexp)
 	for _, repo := range repos {
-		if r.MatchString(*repo.Name) {
-			reposToDelete = append(reposToDelete, repo)
+		// Add only repos older than 24 hours
+		dayDuration, _ := time.ParseDuration("24h")
+		if time.Since(repo.GetCreatedAt().Time) > dayDuration {
+			// Add only repos machting the regex
+			if r.MatchString(*repo.Name) {
+				reposToDelete = append(reposToDelete, repo)
+			}
 		}
 	}
 
 	// Delete repos
-	fmt.Println("Repos to delete:")
 	for _, repo := range reposToDelete {
 		err := ghClient.DeleteRepository(repo)
 		if err != nil {
-			fmt.Printf("error deleting repository: %s\n", err)
+			klog.Warningf("error deleting repository: %s\n", err)
 		}
 	}
 	return nil
