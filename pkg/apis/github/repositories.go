@@ -89,3 +89,34 @@ func (g *Github) DeleteFile(repository, pathToFile, branchName string) error {
 	}
 	return nil
 }
+
+func (g *Github) GetAllRepositories() ([]*github.Repository, error) {
+
+	opt := &github.RepositoryListByOrgOptions{
+		ListOptions: github.ListOptions{
+			PerPage: 100,
+		},
+	}
+	var allRepos []*github.Repository
+	for {
+		repos, resp, err := g.client.Repositories.ListByOrg(context.Background(), g.organization, opt)
+		if err != nil {
+			return nil, err
+		}
+		allRepos = append(allRepos, repos...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage
+	}
+	return allRepos, nil
+}
+
+func (g *Github) DeleteRepository(repository *github.Repository) error {
+	fmt.Printf("Deleting repository %s\n", *repository.Name)
+	_, err := g.client.Repositories.Delete(context.Background(), g.organization, *repository.Name)
+	if err != nil {
+		return err
+	}
+	return nil
+}
