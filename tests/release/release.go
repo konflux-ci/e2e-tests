@@ -94,7 +94,11 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 				if err != nil || len(prList.Items) < 1 {
 					return err.Error()
 				}
-				return prList.Items[0].Name
+				if len(prList.Items) < 1 {
+					return err.Error()
+				} else {
+					return prList.Items[0].Name
+				}
 			}, 1*time.Minute, defaultInterval).Should(ContainSubstring(releaseName))
 		})
 
