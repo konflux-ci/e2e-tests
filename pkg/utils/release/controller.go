@@ -142,9 +142,7 @@ func (s *SuiteController) DeleteReleasePlanAdmission(name, namespace string, fai
 
 // CreateReleasePlan creates a new ReleasePlan using the given parameters.
 func (s *SuiteController) CreateReleasePlan(name, namespace, application, targetNamespace, autoReleaseLabel string) (*appstudiov1alpha1.ReleasePlan, error) {
-	var releasePlan *appstudiov1alpha1.ReleasePlan
-
-	releasePlan = &appstudiov1alpha1.ReleasePlan{
+	var releasePlan *appstudiov1alpha1.ReleasePlan = &appstudiov1alpha1.ReleasePlan{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: name,
 			Name:         name,
