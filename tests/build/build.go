@@ -22,6 +22,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
+	"knative.dev/pkg/apis"
 )
 
 const (
@@ -168,13 +169,21 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					for _, condition := range pipelineRun.Status.Conditions {
 						klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 
-						if condition.Reason == string(v1beta1.PipelineRunReasonFailed) {
+						if !pipelineRun.IsDone() {
+							return false
+						}
+
+						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+							failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
 							d := utils.GetFailedPipelineRunDetails(pipelineRun)
-							logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
-							Fail(fmt.Sprintf("Pipelinerun '%s' has failed. Logs from failed container '%s': \n%s", pipelineRun.Name, d.FailedContainerName, logs))
+							if d.FailedContainerName != "" {
+								logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
+								failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
+							}
+							Fail(failMessage)
 						}
 					}
-					return pipelineRun.IsDone()
+					return true
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
 			})
 		})
@@ -239,13 +248,21 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					for _, condition := range pipelineRun.Status.Conditions {
 						klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 
-						if condition.Reason == string(v1beta1.PipelineRunReasonFailed) {
+						if !pipelineRun.IsDone() {
+							return false
+						}
+
+						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+							failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
 							d := utils.GetFailedPipelineRunDetails(pipelineRun)
-							logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
-							Fail(fmt.Sprintf("Pipelinerun '%s' has failed. Logs from failed container '%s': \n%s", pipelineRun.Name, d.FailedContainerName, logs))
+							if d.FailedContainerName != "" {
+								logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
+								failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
+							}
+							Fail(failMessage)
 						}
 					}
-					return pipelineRun.IsDone()
+					return true
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
 			})
 
@@ -307,13 +324,21 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					for _, condition := range pipelineRun.Status.Conditions {
 						klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 
-						if condition.Reason == string(v1beta1.PipelineRunReasonFailed) {
+						if !pipelineRun.IsDone() {
+							return false
+						}
+
+						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+							failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
 							d := utils.GetFailedPipelineRunDetails(pipelineRun)
-							logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
-							Fail(fmt.Sprintf("Pipelinerun '%s' has failed. Logs from failed container '%s': \n%s", pipelineRun.Name, d.FailedContainerName, logs))
+							if d.FailedContainerName != "" {
+								logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
+								failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
+							}
+							Fail(failMessage)
 						}
 					}
-					return pipelineRun.IsDone()
+					return true
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
 			})
 		})
@@ -524,13 +549,21 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					for _, condition := range pipelineRun.Status.Conditions {
 						klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 
-						if condition.Reason == string(v1beta1.PipelineRunReasonFailed) {
+						if !pipelineRun.IsDone() {
+							return false
+						}
+
+						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+							failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
 							d := utils.GetFailedPipelineRunDetails(pipelineRun)
-							logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
-							Fail(fmt.Sprintf("Pipelinerun '%s' has failed. Logs from failed container '%s': \n%s", pipelineRun.Name, d.FailedContainerName, logs))
+							if d.FailedContainerName != "" {
+								logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
+								failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
+							}
+							Fail(failMessage)
 						}
 					}
-					return pipelineRun.IsDone()
+					return true
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
 			})
 
