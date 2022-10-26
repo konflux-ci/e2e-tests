@@ -78,8 +78,12 @@ $ go mod vendor
    ```
    or
    ```bash
-       ./scripts/install-appstudio-e2e-mode.sh install
-    ```
+      export OFFLINE_TOKEN=<the_token_goes_here>
+      # To install on kcp stable versions
+      /bin/bash scripts/install-appstudio-kcp.sh -kc kcp-stable-root -kk <path-to-kcp-kubeconfig> -ck <path-to-physical-cluster-kubeconfig> -s
+      # To install on kcp unstable versions
+      /bin/bash scripts/install-appstudio-kcp.sh -kc kcp-unstable-root -kk <path-to-kcp-kubeconfig> -ck <path-to-physical-cluster-kubeconfig>
+   ```
 
 More information about how to deploy Red Hat AppStudio
 are in the [infra-deployments](https://github.com/redhat-appstudio/infra-deployments) repository.
