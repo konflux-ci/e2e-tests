@@ -244,6 +244,7 @@ function cloneInfraDeployments() {
     # If we are in infra-deployments jobs we don't need to clone infra-deployments. Openshift CI clones automatically
     if [[ "$REPO_NAME" != "infra-deployments" ]]
     then
+        cd $WORKSPACE
         echo -e "[INFO] Cloning https://github.com/redhat-appstudio/infra-deployments from main branch"
         git clone https://github.com/redhat-appstudio/infra-deployments "$WORKSPACE"/tmp/infra-deployments
     fi
@@ -290,7 +291,7 @@ function runE2Etests() {
             echo -e "[WARN] tmp/e2e-tests already exists. Deleting..." 
             rm -rf "$WORKSPACE""tmp/e2e-tests"
         fi
-        git clone -b kcp_scr https://github.com/flacatus/e2e-tests.git "$WORKSPACE""tmp/e2e-tests"
+        git clone https://github.com/redhat-appstudio/e2e-tests.git "$WORKSPACE""tmp/e2e-tests"
         cd "$WORKSPACE""tmp/e2e-tests"
 
         make local/cluster/prepare
