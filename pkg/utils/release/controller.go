@@ -111,7 +111,7 @@ func (s *SuiteController) GetRelease(name, namespace string) (*v1alpha1.Release,
 	return release, err
 }
 
-// GetReleasePlan returns the ReleasePlanAdmission with the given name in the given namespace.
+// GetReleasePlanAdmission returns the ReleasePlanAdmission with the given name in the given namespace.
 func (s *SuiteController) GetReleasePlanAdmission(name, namespace string) (*appstudiov1alpha1.ReleasePlanAdmission, error) {
 	releasePlanAdmission := &appstudiov1alpha1.ReleasePlanAdmission{}
 
@@ -180,7 +180,7 @@ func (s *SuiteController) GetReleasePlan(name, namespace string) (*appstudiov1al
 	return releasePlan, err
 }
 
-//  DeletetReleasePlan
+//  DeletetReleasePlan deletes a given release name in given namespace
 func (s *SuiteController) DeleteReleasePlan(name, namespace string, failOnNotFound bool) error {
 	releasePlan := &appstudiov1alpha1.ReleasePlan{
 		ObjectMeta: metav1.ObjectMeta{

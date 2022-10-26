@@ -490,7 +490,7 @@ func (s *SuiteController) ApplicationGitopsRepoExists(devfileContent string) wai
 }
 
 // CreateServiceAccount creates ServiceAccount by given name in a given namepsace
-func (s *SuiteController) CreateServiceAccount(name string, namespace string, secrets []corev1.ObjectReference) (*corev1.ServiceAccount, error) {
+func (s *SuiteController) CreateServiceAccount(name, namespace string, secrets []corev1.ObjectReference) (*corev1.ServiceAccount, error) {
 	serviceAccount := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
