@@ -37,6 +37,7 @@ export IS_STABLE="false"
 export APPSTUDIO_WORKSPACE="redhat-appstudio-${WORKSPACE_ID}"
 export HACBS_WORKSPACE="redhat-hacbs-${WORKSPACE_ID}"
 export USER_APPSTUDIO_WORKSPACE="appstudio-${WORKSPACE_ID}"
+export USER_HACBS_WORKSPACE="hacbs-${WORKSPACE_ID}"
 export COMPUTE_WORKSPACE="compute-${WORKSPACE_ID}"
 export PIPELINE_SERVICE_SP_WORKSPACE=${PIPELINE_SERVICE_SP_WORKSPACE:-"root:redhat-pipeline-service-compute"}
 export PIPELINE_SERVICE_IDENTITY_HASH=${PIPELINE_SERVICE_IDENTITY_HASH:-"72b2990e51b1931e9fee86e67091b721a8c32f407d762fc847d9d2316a988b52"}
@@ -49,7 +50,7 @@ function catchFinish() {
     if [[ $CI != "false" ]]
     then
         kubectl kcp workspace use '~' || true
-        kubectl delete ws "${APPSTUDIO_WORKSPACE}" "${HACBS_WORKSPACE}" "${USER_APPSTUDIO_WORKSPACE}" "${COMPUTE_WORKSPACE}" || true
+        kubectl delete ws "${APPSTUDIO_WORKSPACE}" "${HACBS_WORKSPACE}" "${USER_APPSTUDIO_WORKSPACE}" "${COMPUTE_WORKSPACE}" "${USER_HACBS_WORKSPACE}" || true
     fi
 
     echo "[INFO] Killing process PID=$TIMEOUT_PID"
@@ -154,34 +155,49 @@ function installKubectlOIDCLoginPlugin() {
     kubectl krew install oidc-login
 }
 
-# Will install all kcp plugins used by Red Hat App Studio installation script
-function installKubectlKcpPlugins() {
-    local kcp_clone_branch="main"
-
-    if [[ "$IS_STABLE" == "true" ]]; then
-        kcp_clone_branch=$(kubectl version -o yaml --kubeconfig ${KCP_KUBECONFIG} 2>/dev/null | yq '.serverVersion.gitVersion' | sed 's/.*kcp-\(v[[:digit:]]*\.[[:digit:]]*\.[[:digit:]]*\).*/\1/')
-        echo -e "[INFO] Cloning kcp-dev/kcp repo from '$kcp_clone_branch' branch to install kubectl kcp plugins."
-    else
-        echo -e "[INFO] Cloning kcp-dev/kcp repo from '$kcp_clone_branch' branch to install kubectl kcp plugins."
-    fi
-
-    if [ -d "$WORKSPACE"/tmp/kcp ] 
+# Download and install KCP repository
+function downloadAndInstallKCPPlugins {
+    if [ -d "${WORKSPACE}"/tmp/kcp ]
     then
         echo -e "[WARN] tmp/kcp already exists. Deleting..." 
-        rm -rf "$WORKSPACE""/tmp/kcp"
+        rm -rf "${WORKSPACE}""/tmp/kcp"
     fi
 
-    git clone https://github.com/kcp-dev/kcp -b "$kcp_clone_branch" "$WORKSPACE"/tmp/kcp
-    cd "$WORKSPACE"/tmp/kcp
+    echo -e "[INFO] Cloning kcp-dev/kcp repo from '$kcp_clone_branch' branch to install kubectl kcp plugins."
+    kcp_clone_branch=$1
+    git clone https://github.com/kcp-dev/kcp -b "$kcp_clone_branch" "${WORKSPACE}"/tmp/kcp
+    cd "${WORKSPACE}"/tmp/kcp
 
     go mod vendor
     make install
+}
 
+# Will install all kcp plugins used by Red Hat App Studio installation script
+function installKubectlKcpPlugins() {
+    local kcp_clone_branch="main"
+    local kcp_version="v0.0.0"
+
+    if [[ "${IS_STABLE}" == "true" ]]; then
+        if kubectl kcp &> /dev/null; then
+            kcp_version=$(kubectl kcp --version 2>/dev/null | sed 's/.*kcp-\(v[[:digit:]]*\.[[:digit:]]*\.[[:digit:]]*\).*/\1/')
+        fi
+
+        kcp_clone_branch=$(kubectl version -o yaml --kubeconfig ${KCP_KUBECONFIG} 2>/dev/null | yq '.serverVersion.gitVersion' | sed 's/.*kcp-\(v[[:digit:]]*\.[[:digit:]]*\.[[:digit:]]*\).*/\1/')
+        if [[ "${kcp_clone_branch}" == "${kcp_version}" ]]; then
+            echo -e "[INFO] KCP version $kcp_version already installed skiping..."
+        else
+            downloadAndInstallKCPPlugins "${kcp_clone_branch}"
+        fi
+    else
+        downloadAndInstallKCPPlugins "${kcp_clone_branch}"
+    fi
+
+    # Check if the plugins were installed.
     if ! kubectl kcp --version; then
         echo "[ERROR] kubectl kcp plugins not installed successfully. Make sure that HOME/go/bin is in your PATH"
     fi
 
-    cd $WORKSPACE
+    cd "${WORKSPACE}"
 }
 
 # Will obtain from an offline token the access_token and the refresh_token. Will be used to authenticate against Red Hat SSO
@@ -243,7 +259,7 @@ export APPSTUDIO_WORKSPACE="redhat-appstudio-${WORKSPACE_ID}"
 export HACBS_WORKSPACE="redhat-hacbs-${WORKSPACE_ID}"
 export USER_APPSTUDIO_WORKSPACE="appstudio-${WORKSPACE_ID}"
 export COMPUTE_WORKSPACE="compute-${WORKSPACE_ID}"
-export USER_HACBS_WORKSPACE="appstudio-${WORKSPACE_ID}"
+export USER_HACBS_WORKSPACE="hacbs-${WORKSPACE_ID}"
 EOF
 }
 
