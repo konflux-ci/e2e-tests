@@ -242,7 +242,7 @@ function cloneInfraDeployments() {
     fi
 
     # If we are in infra-deployments jobs we don't need to clone infra-deployments. Openshift CI clones automatically
-    if [[ "$JOB_TYPE" != "periodic" ]] || [[ "$REPO_NAME" != "infra-deployments" ]]
+    if [[ "$REPO_NAME" != "infra-deployments" ]]
     then
         echo -e "[INFO] Cloning https://github.com/redhat-appstudio/infra-deployments from main branch"
         git clone https://github.com/redhat-appstudio/infra-deployments "$WORKSPACE"/tmp/infra-deployments
@@ -266,7 +266,7 @@ EOF
 # Add a custom remote for infra-deployments repo and start the installation
 function startRedHatAppStudioInstallation() {
     # If we are in infra-deployments jobs we don't need to clone infra-deployments. Openshift CI clones automatically
-    if [[ "$JOB_TYPE" == "periodic" ]] || [[ "$REPO_NAME" == "infra-deployments" ]]
+    if [[ "$REPO_NAME" == "infra-deployments" ]]
     then
         git remote add "${MY_GIT_FORK_REMOTE}" https://github.com/"${MY_GITHUB_ORG}"/infra-deployments.git
         "$WORKSPACE"/hack/bootstrap.sh -m preview
