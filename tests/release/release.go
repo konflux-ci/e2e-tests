@@ -2,6 +2,7 @@ package release
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -89,34 +90,33 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 	var _ = Describe("Post-release verification", func() {
 
 		It("A PipelineRun should have been created in the managed namespace", func() {
-			Eventually(func() string {
+			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(managedNamespace)
-				if err != nil || len(prList.Items) < 1 {
-					return err.Error()
+				if err != nil || prList == nil || len(prList.Items) < 1 {
+					klog.Error(err)
+					return false
 				}
-				if len(prList.Items) < 1 {
-					return err.Error()
-				} else {
-					return prList.Items[0].Name
-				}
-			}, 1*time.Minute, defaultInterval).Should(ContainSubstring(releaseName))
+
+				return strings.Contains(prList.Items[0].Name, releaseName)
+			}, 1*time.Minute, defaultInterval).Should(BeTrue())
 		})
 
 		It("The PipelineRun should exist and succeed", func() {
 			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(managedNamespace)
-				if len(prList.Items) < 1 || err != nil {
+				if prList == nil || err != nil || len(prList.Items) < 1 {
+					klog.Error(err)
 					return false
 				}
-				pipelineRun := prList.Items[0]
-				return pipelineRun.HasStarted() && pipelineRun.IsDone() && pipelineRun.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
+
+				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 			}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
 		})
 
 		It("The Release should have succeeded", func() {
 			Eventually(func() bool {
 				release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
-				if err != nil {
+				if err != nil || release == nil {
 					return false
 				}
 
@@ -129,6 +129,9 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 
 			Eventually(func() bool {
 				pipelineRunList, err = framework.TektonController.ListAllPipelineRuns(managedNamespace)
+				if err != nil || pipelineRunList == nil {
+					return false
+				}
 
 				return len(pipelineRunList.Items) > 0 && err == nil
 			}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
