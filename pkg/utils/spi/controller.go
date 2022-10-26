@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/devfile/library/pkg/util"
@@ -55,7 +54,7 @@ func (s *SuiteController) GetSPIAccessTokenBinding(name, namespace string) (*spi
 
 // CreateSPIAccessTokenBinding creates an SPIAccessTokenBinding object
 func (s *SuiteController) CreateSPIAccessTokenBinding(name, namespace, repoURL, secretName string, secretType v1.SecretType) (*spi.SPIAccessTokenBinding, error) {
-	spiAccessTokenBinding := spi.SPIAccessTokenBinding{
+	spiAccessTokenBinding := &spi.SPIAccessTokenBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: name,
 			Namespace:    namespace,
@@ -76,11 +75,11 @@ func (s *SuiteController) CreateSPIAccessTokenBinding(name, namespace, repoURL, 
 			},
 		},
 	}
-	err := s.KubeRest().Create(context.TODO(), &spiAccessTokenBinding)
+	err := s.KubeRest().Create(context.TODO(), spiAccessTokenBinding)
 	if err != nil {
 		return nil, err
 	}
-	return &spiAccessTokenBinding, nil
+	return spiAccessTokenBinding, nil
 }
 
 // DeleteSPIAccessTokenBinding deletes an SPIAccessTokenBinding from a given name and namespace
@@ -116,8 +115,7 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 	var spiAccessTokenBinding *v1beta1.SPIAccessTokenBinding
 	var secretName = util.GenerateRandomString(10)
 
-	// Get the token for the current openshift user
-	bearerToken, err := utils.GetOpenshiftToken()
+	redhatSSOAccessToken, err := utils.GetRedHatSSOAccessToken()
 	Expect(err).NotTo(HaveOccurred())
 
 	spiAccessTokenBinding, err = s.CreateSPIAccessTokenBinding(SPIAccessTokenBindingPrefixName, namespace, repoUrl, secretName, secretType)
@@ -137,21 +135,14 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 	Eventually(func() bool {
 		// application info should be stored even after deleting the application in application variable
 		spiAccessTokenBinding, err = s.GetSPIAccessTokenBinding(spiAccessTokenBinding.Name, namespace)
-
 		if err != nil {
 			return false
 		}
 
-		return spiAccessTokenBinding.Status.OAuthUrl != ""
-	}, 2*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI oauth url not set. Please check if spi oauth-config configmap contain all necessary providers for tests.")
+		return (spiAccessTokenBinding.Status.UploadUrl != "" && spiAccessTokenBinding.Status.OAuthUrl != "")
+	}, 2*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI upload oauth url not set. Please check if spi oauth-config configmap contain all necessary providers for tests.")
 
 	if spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData {
-		// If the phase is AwaitingTokenData then manually inject the git token
-		// Get the oauth url and linkedAccessTokenName from the spiaccesstokenbinding resource
-		oauthURL := spiAccessTokenBinding.Status.OAuthUrl
-		parsedOAuthURL, err := url.Parse(oauthURL)
-		Expect(err).NotTo(HaveOccurred())
-		oauthHost := parsedOAuthURL.Host
 		linkedAccessTokenName := spiAccessTokenBinding.Status.LinkedAccessTokenName
 
 		// Before injecting the token, validate that the linkedaccesstoken resource exists, otherwise injecting will return a 404 error code
@@ -164,9 +155,9 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 		// Format for quay.io token injection: `{"access_token":"tokenToInject","username":"redhat-appstudio-qe+redhat_appstudio_qe_bot"}`
 		// Now that the spiaccesstokenbinding is in the AwaitingTokenData phase, inject the GitHub token
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-		req, err := http.NewRequest("POST", "https://"+oauthHost+"/token/"+namespace+"/"+linkedAccessTokenName, bytes.NewBuffer([]byte(oauthCredentials)))
+		req, err := http.NewRequest("POST", spiAccessTokenBinding.Status.UploadUrl, bytes.NewBuffer([]byte(oauthCredentials)))
 		Expect(err).NotTo(HaveOccurred())
-		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", string(bearerToken)))
+		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", redhatSSOAccessToken.AccessToken))
 		req.Header.Set("Content-Type", "application/json")
 
 		client := &http.Client{}

@@ -43,5 +43,3 @@ echo -e "[INFO] Creating application-service related secret in $SHARED_SECRET_NA
 echo "$QUAY_TOKEN" | base64 --decode > docker.config
 kubectl create secret docker-registry redhat-appstudio-user-workload -n $SHARED_SECRET_NAMESPACE --from-file=.dockerconfigjson=docker.config || true
 rm docker.config
-
-popd

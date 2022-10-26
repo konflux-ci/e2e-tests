@@ -19,7 +19,7 @@ Requirements for installing AppStudio in E2E mode and running the E2E tests:
 
 * An OpenShift 4.9 or higher Environment (If you are using CRC/OpenShift Local please also review [optional-codeready-containers-post-bootstrap-configuration](https://github.com/redhat-appstudio/infra-deployments#optional-codeready-containers-post-bootstrap-configuration))
 * A machine from which to run the install (usually your laptop) with required tools:
-  * A properly setup Go workspace using **Go 1.17 is required**
+  * A properly setup Go workspace using **Go 1.18 is required**
   * The OpenShift Command Line Tool (oc)
   * yq
   * jq
@@ -78,8 +78,12 @@ $ go mod vendor
    ```
    or
    ```bash
-       ./scripts/install-appstudio-e2e-mode.sh install
-    ```
+      export OFFLINE_TOKEN=<the_token_goes_here>
+      # To install on kcp stable versions
+      /bin/bash scripts/install-appstudio-kcp.sh -kc kcp-stable-root -kk <path-to-kcp-kubeconfig> -ck <path-to-physical-cluster-kubeconfig> -s
+      # To install on kcp unstable versions
+      /bin/bash scripts/install-appstudio-kcp.sh -kc kcp-unstable-root -kk <path-to-kcp-kubeconfig> -ck <path-to-physical-cluster-kubeconfig>
+   ```
 
 More information about how to deploy Red Hat AppStudio
 are in the [infra-deployments](https://github.com/redhat-appstudio/infra-deployments) repository.
