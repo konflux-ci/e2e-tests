@@ -21,7 +21,7 @@ require (
 	github.com/redhat-appstudio/application-service v0.0.0-20220509201208-86571e38f52e
 	github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2cad2
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20220714212008-d1b637f56c4d
-	github.com/redhat-appstudio/managed-gitops/appstudio-shared v0.0.0-20220826075641-33705d2bf7fa
+	github.com/redhat-appstudio/managed-gitops/appstudio-shared v0.0.0-20221025122517-1810897d909e
 	github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001
 	github.com/redhat-appstudio/release-service v0.0.0-20220909134141-6d395e5c26f4
 	github.com/redhat-appstudio/service-provider-integration-operator v0.5.0
@@ -33,6 +33,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.24.3
 	k8s.io/apimachinery v0.24.3
+	// k8s.io/apimachinery v0.25.3
 	k8s.io/cli-runtime v0.24.1
 	k8s.io/client-go v0.24.3
 	k8s.io/klog v1.0.0

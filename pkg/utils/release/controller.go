@@ -3,8 +3,8 @@ package release
 import (
 	"context"
 
-	applicationapiv1alpha1 "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	applicationapiv1alpha1 "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
 	"github.com/redhat-appstudio/release-service/api/v1alpha1"
 	appstudiov1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	kcp "github.com/redhat-appstudio/release-service/kcp"
