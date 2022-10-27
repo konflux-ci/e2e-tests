@@ -5,7 +5,7 @@ It is recommended to install AppStudio in E2E mode, but the E2E suite can be als
 
 # Features
 
-* Instrumented tests with Ginkgo 2.0 framework. You can find more information in [Ginkgo documentation](https://onsi.github.io/ginkgo/) or in [Ginkgo 2.0 Proposal](https://docs.google.com/document/d/1h28ZknXRsTLPNNiOjdHIO-F2toCzq4xoZDXbfYaBdoQ/edit#heading=h.ptojc6n4azyr).
+* Instrumented tests with Ginkgo 2.0 framework. You can find more information in [Ginkgo documentation](https://onsi.github.io/ginkgo/).
 * Uses client-go to connect to OpenShift Cluster.
 * Ability to run the E2E tests everywhere: locally([CRC/OpenShift local](https://developers.redhat.com/products/openshift-local/overview)), OpenShift Cluster, OSD...
 * Writes tests results in JUnit XML/JSON file to a custom directory by using `--ginkgo.junit(or json)-report` flag.
@@ -19,7 +19,7 @@ Requirements for installing AppStudio in E2E mode and running the E2E tests:
 
 * An OpenShift 4.9 or higher Environment (If you are using CRC/OpenShift Local please also review [optional-codeready-containers-post-bootstrap-configuration](https://github.com/redhat-appstudio/infra-deployments#optional-codeready-containers-post-bootstrap-configuration))
 * A machine from which to run the install (usually your laptop) with required tools:
-  * A properly setup Go workspace using **Go 1.17 is required**
+  * A properly setup Go workspace using **Go 1.18 is required**
   * The OpenShift Command Line Tool (oc)
   * yq
   * jq
@@ -78,8 +78,12 @@ $ go mod vendor
    ```
    or
    ```bash
-       ./scripts/install-appstudio-e2e-mode.sh install
-    ```
+      export OFFLINE_TOKEN=<the_token_goes_here>
+      # To install on kcp stable versions
+      /bin/bash scripts/install-appstudio-kcp.sh -kc kcp-stable-root -kk <path-to-kcp-kubeconfig> -ck <path-to-physical-cluster-kubeconfig> -s
+      # To install on kcp unstable versions
+      /bin/bash scripts/install-appstudio-kcp.sh -kc kcp-unstable-root -kk <path-to-kcp-kubeconfig> -ck <path-to-physical-cluster-kubeconfig>
+   ```
 
 More information about how to deploy Red Hat AppStudio
 are in the [infra-deployments](https://github.com/redhat-appstudio/infra-deployments) repository.
@@ -122,9 +126,11 @@ Overview for OpenShift CI and AppStudio E2E tests is in [OpenshiftCI.md](docs/Op
 # Develop new tests
 
 * Create test folder under tests folder: `tests/[<application-name>]...`, e.g. [has](tests/has).
-  * `tests/has` - all tests used owned by AppStudio application team
+  * `tests/has` - all tests used owned by AppStudio application service team
 * Every test package should be imported to `cmd/e2e_test.go`, e.g. [has](https://github.com/redhat-appstudio/e2e-tests/blob/main/cmd/e2e_test.go#L15).
 * Every new test should have correct [labels](docs/LabelsNaming.md).
+* Every test should have meaningful description with JIRA/GitHub issue key.
+* (Recommended) Use JIRA integration for linking issues and commits (just add JIRA issue key in the commit message). You can found more information about GitHub-JIRA integration [here](https://docs.engineering.redhat.com/display/JiraAid/GitHub-Jira+integration). 
 
 ```golang
 // cmd/e2e_test.go

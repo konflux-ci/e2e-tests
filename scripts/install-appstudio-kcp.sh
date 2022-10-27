@@ -48,7 +48,7 @@ export TIMEOUT_PID=
 function catchFinish() {
     local RESULT=$?
     # Remove workspaces only if we are in CI and the job was succeded
-    if [[ "$CI" != "false" ]] && [[ "$RESULT" != "0" ]]
+    if [[ "$CI" != "false" ]] && [[ "$RESULT" == "0" ]]
     then
         kubectl kcp workspace use '~' || true
         kubectl delete ws "${APPSTUDIO_WORKSPACE}" "${HACBS_WORKSPACE}" "${USER_APPSTUDIO_WORKSPACE}" "${COMPUTE_WORKSPACE}" "${USER_HACBS_WORKSPACE}" || true
