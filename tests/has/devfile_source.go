@@ -1,7 +1,6 @@
 package has
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -16,7 +15,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -28,7 +26,7 @@ var (
  * Description: Contains tests about creating an application and a quarkus component from a source devfile
  */
 
-var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), func() {
+var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Label("has"), func() {
 	defer GinkgoRecover()
 
 	var applicationName, componentName, testNamespace string
@@ -47,12 +45,6 @@ var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), 
 		componentName = fmt.Sprintf(QuarkusComponentName+"-%s", util.GenerateRandomString(10))
 		// Check to see if the github token was provided
 		Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
-		// Check if 'has-github-token' is present, unless SKIP_HAS_SECRET_CHECK env var is set
-		if !utils.CheckIfEnvironmentExists(constants.SKIP_HAS_SECRET_CHECK_ENV) {
-			_, err := framework.HasController.KubeInterface().CoreV1().Secrets(RedHatAppStudioApplicationNamespace).Get(context.TODO(), ApplicationServiceGHTokenSecrName, metav1.GetOptions{})
-			Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
-		}
-
 		_, err := framework.CommonController.CreateTestNamespace(testNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
 
@@ -61,6 +53,10 @@ var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), 
 	AfterAll(func() {
 
 		err = framework.HasController.DeleteHasComponentDetectionQuery(componentName, testNamespace)
+		Expect(err).NotTo(HaveOccurred())
+		err = framework.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, 1*time.Minute)
+		Expect(err).NotTo(HaveOccurred())
+		err = framework.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, 1*time.Minute)
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func() bool {
@@ -92,13 +88,6 @@ var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), 
 
 			return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
-	})
-
-	// Necessary for component pipeline
-	It("Check if 'git-clone' cluster tasks exists", func() {
-		Eventually(func() bool {
-			return framework.CommonController.CheckIfClusterTaskExists("git-clone")
-		}, 5*time.Minute, 45*time.Second).Should(BeTrue(), "'git-clone' cluster task don't exist in cluster. Component cannot be created")
 	})
 
 	It("Create Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
@@ -134,6 +123,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), 
 	})
 
 	It("Gitops Repository should not be deleted when component gets deleted", func() {
+
 		comp2Detected := appservice.ComponentDetectionDescription{}
 
 		for _, comp2Detected = range cdq.Status.ComponentDetected {
@@ -155,6 +145,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), 
 	})
 
 	It("Check a Component gets deleted when its application is deleted", func() {
+		Skip("This feature is not available in the KCP world yet. Issue: https://issues.redhat.com/browse/DEVHAS-182")
 		err = framework.HasController.DeleteHasApplication(applicationName, testNamespace, false)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(func() bool {

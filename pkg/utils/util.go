@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/devfile/library/pkg/util"
-	"github.com/onsi/gomega"
 	"github.com/redhat-appstudio/application-service/pkg/devfile"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -59,7 +58,9 @@ func ObtainGitOpsRepositoryName(devfileStatus string) string {
 	devfileAttributes := appDevfile.GetMetadata().Attributes
 	gitOpsRepository := devfileAttributes.GetString("gitOpsRepository.url", &err)
 	parseUrl, err := url.Parse(gitOpsRepository)
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	if err != nil {
+		err = fmt.Errorf("fatal: %v", err)
+	}
 	repoParsed := strings.Split(parseUrl.Path, "/")
 
 	return repoParsed[len(repoParsed)-1]

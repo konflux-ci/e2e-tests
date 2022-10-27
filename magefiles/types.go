@@ -9,6 +9,7 @@ type OpenshiftJobSpec struct {
 	Refs Refs `json:"refs"`
 }
 type Refs struct {
+	RepoLink     string `json:"repo_link"`
 	Repo         string `json:"repo"`
 	Organization string `json:"org"`
 	Pulls        []Pull `json:"pulls"`
