@@ -241,11 +241,15 @@ function cloneInfraDeployments() {
         rm -rf "$WORKSPACE""/tmp/infra-deployments"
     fi
 
-    # If we are in infra-deployments jobs we don't need to clone infra-deployments. Openshift CI clones automatically
-    if [[ "$JOB_TYPE" != "periodic" ]] || [[ "$REPO_NAME" != "infra-deployments" ]]
+    echo -e "[INFO] Cloning https://github.com/redhat-appstudio/infra-deployments from main branch"
+    git clone -b main https://github.com/redhat-appstudio/infra-deployments "$WORKSPACE"/tmp/infra-deployments
+
+    if [[ "$REPO_NAME" == "infra-deployments" ]] && [[ "${JOB_TYPE}" != "periodic" ]]
     then
-        echo -e "[INFO] Cloning https://github.com/redhat-appstudio/infra-deployments from main branch"
-        git clone https://github.com/redhat-appstudio/infra-deployments "$WORKSPACE"/tmp/infra-deployments
+        cd "$WORKSPACE"/tmp/infra-deployments
+        git fetch origin pull/$PULL_NUMBER/head:$PULL_NUMBER
+        git checkout $PULL_NUMBER
+        cd "${WORKSPACE}"
     fi
 }
 
@@ -266,37 +270,18 @@ EOF
 # Add a custom remote for infra-deployments repo and start the installation
 function startRedHatAppStudioInstallation() {
     # If we are in infra-deployments jobs we don't need to clone infra-deployments. Openshift CI clones automatically
-    if [[ "$JOB_TYPE" == "periodic" ]] || [[ "$REPO_NAME" == "infra-deployments" ]]
-    then
-        git remote add "${MY_GIT_FORK_REMOTE}" https://github.com/"${MY_GITHUB_ORG}"/infra-deployments.git
-        "$WORKSPACE"/hack/bootstrap.sh -m preview
-    else
-        cd "$WORKSPACE"/tmp/infra-deployments
-        git remote add "${MY_GIT_FORK_REMOTE}" https://github.com/"${MY_GITHUB_ORG}"/infra-deployments.git
-        "$WORKSPACE"/tmp/infra-deployments/hack/bootstrap.sh -m preview
-    fi
+    cd "$WORKSPACE"/tmp/infra-deployments
+    git remote add "${MY_GIT_FORK_REMOTE}" https://github.com/"${MY_GITHUB_ORG}"/infra-deployments.git
+    "$WORKSPACE"/tmp/infra-deployments/hack/bootstrap.sh -m preview
 }
 
 # Start to run the tests
 function runE2Etests() {
     # If we are in infra-deployments jobs we don't need to clone infra-deployments. Openshift CI clones automatically
-    if [[ "$REPO_NAME" == "e2e-tests" ]]
-    then
-        make local/cluster/prepare
-        make local/test/e2e
-    else
-        if [ -d "$WORKSPACE"/tmp/e2e-tests ] 
-        then
-            echo -e "[WARN] tmp/e2e-tests already exists. Deleting..." 
-            rm -rf "$WORKSPACE""tmp/e2e-tests"
-        fi
-        git clone -b kcp_scr https://github.com/flacatus/e2e-tests.git "$WORKSPACE""tmp/e2e-tests"
-        cd "$WORKSPACE""tmp/e2e-tests"
-
-        make local/cluster/prepare
-        make local/test/e2e
-        cd "$WORKSPACE"
-    fi
+    cd "${WORKSPACE}"
+    ls -larth
+    make local/cluster/prepare
+    make local/test/e2e
 }
 
 function runAuthenticationInBackground() {
