@@ -71,5 +71,12 @@ func ValidateTaskRunResults(taskname string, result string) bool {
 			return true
 		}
 	}
+	// If the test result isn't SUCCESS, the overall outcome is a failure
+	if taskname == "sbom-json-check" {
+		if testOutput["result"] == "FAILURE" {
+			Fail(fmt.Sprintf("Expected Result for Taskrun '%s' is SUCCESS, but '%d' test failed", taskname, testOutput["failures"]))
+		}
+		return true
+	}
 	return false
 }
