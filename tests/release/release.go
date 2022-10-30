@@ -36,14 +36,14 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 
 	BeforeAll(func() {
 		// Create the dev namespace
-		demo, err := framework.CommonController.CreateTestNamespace(devNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", demo.Name, err)
-		klog.Info("Dev Namespace :", demo.Name)
+		_, err := framework.CommonController.CreateTestNamespace(devNamespace)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", devNamespace, err)
+		klog.Info("Dev Namespace :", devNamespace)
 
 		// Create the managed namespace
-		namespace, err := framework.CommonController.CreateTestNamespace(managedNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", namespace.Name, err)
-		klog.Info("Managed Namespace :", namespace.Name)
+		_, err = framework.CommonController.CreateTestNamespace(managedNamespace)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", managedNamespace, err)
+		klog.Info("Managed Namespace :", managedNamespace)
 
 		// Wait until the "pipeline" SA is created and ready with secrets by the openshift-pipelines operator
 		klog.Infof("Wait until the 'pipeline' SA is created in %s namespace \n", managedNamespace)
@@ -62,35 +62,35 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 	})
 
 	var _ = Describe("Creation of the 'Happy path' resources", func() {
-		It("Create an ApplicationSnapshot.", func() {
+		It("Create an ApplicationSnapshot in dev namespace.", func() {
 			_, err := framework.ReleaseController.CreateApplicationSnapshot(snapshotName, devNamespace, applicationName, snapshotComponents)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Create Release Strategy", func() {
+		It("Create Release Strategy in managed namespace.", func() {
 			_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, serviceAccount, paramsReleaseStrategy)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Create ReleasePlan in dev namespace", func() {
+		It("Create ReleasePlan in dev namespace.", func() {
 			_, err := framework.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationName, managedNamespace, "")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Create ReleasePlanAdmission in managed namespace", func() {
-			_, err := framework.ReleaseController.CreateReleasePlanAdmission(destinationReleasePAName, devNamespace, applicationName, managedNamespace, "", "", releaseStrategyName)
+		It("Create ReleasePlanAdmission in managed namespace.", func() {
+			_, err := framework.ReleaseController.CreateReleasePlanAdmission(destinationReleasePlanAdmissionName, devNamespace, applicationName, managedNamespace, "", "", releaseStrategyName)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Create a Release", func() {
+		It("Create a Release in dev namespace.", func() {
 			_, err := framework.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, sourceReleasePlanName)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
-	var _ = Describe("Post-release verification", func() {
+	var _ = Describe("Post-release verification.", func() {
 
-		It("A PipelineRun should have been created in the managed namespace", func() {
+		It("A PipelineRun should have been created in the managed namespace.", func() {
 			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(managedNamespace)
 				if err != nil || prList == nil || len(prList.Items) < 1 {
@@ -102,7 +102,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 			}, 1*time.Minute, defaultInterval).Should(BeTrue())
 		})
 
-		It("The PipelineRun should exist and succeed", func() {
+		It("The PipelineRun should exist and succeed.", func() {
 			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(managedNamespace)
 				if prList == nil || err != nil || len(prList.Items) < 1 {
@@ -114,7 +114,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 			}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
 		})
 
-		It("The Release should have succeeded", func() {
+		It("The Release should have succeeded.", func() {
 			Eventually(func() bool {
 				release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
 				if err != nil || release == nil {
@@ -125,7 +125,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 			}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
 		})
 
-		It("The Release should reference the release PipelineRun", func() {
+		It("The Release should reference the release PipelineRun.", func() {
 			var pipelineRunList *v1beta1.PipelineRunList
 
 			Eventually(func() bool {

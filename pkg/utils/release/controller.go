@@ -180,7 +180,7 @@ func (s *SuiteController) GetReleasePlan(name, namespace string) (*appstudiov1al
 	return releasePlan, err
 }
 
-//  DeletetReleasePlan deletes a given release name in given namespace
+//  DeletetReleasePlan deletes a given releaseplan name in given namespace.
 func (s *SuiteController) DeleteReleasePlan(name, namespace string, failOnNotFound bool) error {
 	releasePlan := &appstudiov1alpha1.ReleasePlan{
 		ObjectMeta: metav1.ObjectMeta{
@@ -196,17 +196,17 @@ func (s *SuiteController) DeleteReleasePlan(name, namespace string, failOnNotFou
 }
 
 // CreateReleasePlanAdmission creates a new ReleasePlanAdmission using the given parameters.
-func (s *SuiteController) CreateReleasePlanAdmission(name, namespace, application, originNamespace, environment, autoRelease, releaseStrategy string) (*appstudiov1alpha1.ReleasePlanAdmission, error) {
+func (s *SuiteController) CreateReleasePlanAdmission(name, originNamespace, application, namespace, environment, autoRelease, releaseStrategy string) (*appstudiov1alpha1.ReleasePlanAdmission, error) {
 	var releasePlanAdmission *appstudiov1alpha1.ReleasePlanAdmission = &appstudiov1alpha1.ReleasePlanAdmission{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: originNamespace,
+			Namespace: namespace,
 		},
 		Spec: appstudiov1alpha1.ReleasePlanAdmissionSpec{
 			DisplayName: name,
 			Application: application,
 			Origin: kcp.NamespaceReference{
-				Namespace: namespace,
+				Namespace: originNamespace,
 			},
 			Environment:     environment,
 			ReleaseStrategy: releaseStrategy,
@@ -219,7 +219,7 @@ func (s *SuiteController) CreateReleasePlanAdmission(name, namespace, applicatio
 }
 
 // CreateRegistryJsonSecret creates a secret for registry repository in namespace given with key passed.
-func (s *SuiteController) CreateRegistryJsonSecret(name, namespace, authKey string, keyName string) (*corev1.Secret, error) {
+func (s *SuiteController) CreateRegistryJsonSecret(name, namespace, authKey, keyName string) (*corev1.Secret, error) {
 	klog.Info("Key is : ", authKey)
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
