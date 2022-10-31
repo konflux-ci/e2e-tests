@@ -52,27 +52,26 @@ func NewFramework() (*Framework, error) {
 		return nil, err
 	}
 
-	// TODO: Once all controllers are working on KCP activate all the clients.
-	// Initialize Tekton controller
-	/*tektonController, err := tekton.NewSuiteController(kubeClient)
+	// Initialize Release Controller
+	releaseController, err := release.NewSuiteController(kubeClient)
 	if err != nil {
 		return nil, err
-	}*/
+	}
+
+	// Initialize Tekton controller
+	tektonController, err := tekton.NewSuiteController(kubeClient)
+	if err != nil {
+		return nil, err
+	}
+	// TODO: Once all controllers are working on KCP activate all the clients.
 
 	/*// Initialize GitOps controller
 	gitopsController, err := gitops.NewSuiteController(kubeClient)
 	if err != nil {
 		return nil, err
 	}
-
 	// Initialize SPI controller
 	spiController, err := spi.NewSuiteController(kubeClient)
-	if err != nil {
-		return nil, err
-	}
-
-	// Initialize Release Controller
-	releaseController, err := release.NewSuiteController(kubeClient)
 	if err != nil {
 		return nil, err
 	}
@@ -82,20 +81,19 @@ func NewFramework() (*Framework, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	jvmbuildserviceController, err := jvmbuildservice.NewSuiteControler(kubeClient)
 	if err != nil {
 		return nil, err
 	}*/
 
 	return &Framework{
-		CommonController: commonCtrl,
-		HasController:    hasController,
-		SPIController:    spiController,
+		CommonController:  commonCtrl,
+		HasController:     hasController,
+		SPIController:     spiController,
+		ReleaseController: releaseController,
+		TektonController:  tektonController,
 		// TODO: Once all controllers are working on KCP activate all the clients.
-		//TektonController: tektonController,
 		//GitOpsController:  gitopsController,
-		//ReleaseController: releaseController,
 		//IntegrationController: integrationController,
 		//JvmbuildserviceController: jvmbuildserviceController,
 	}, nil

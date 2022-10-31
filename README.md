@@ -66,7 +66,7 @@ The following environments are used to launch the Red Hat AppStudio installation
 ``` bash
 # Install dependencies
 $ go mod tidy
-# or go mod tidy -compat=1.17
+# or go mod tidy -compat=1.18
 # Copy the dependencies to vendor folder
 $ go mod vendor
 ```
