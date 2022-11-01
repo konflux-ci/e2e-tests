@@ -427,7 +427,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				bundlePullSpec := customBundleConfigMap.Data["default_build_bundle"]
 				hacbsBundleConfigMap := &v1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{Name: constants.BuildPipelinesConfigMapName},
-					Data:       map[string]string{"default_build_bundle": strings.Replace(bundlePullSpec, "build-", "hacbs-", 1)},
+					Data:       map[string]string{"default_build_bundle": bundlePullSpec},
 				}
 
 				_, err = f.CommonController.UpdateConfigMap(hacbsBundleConfigMap, testNamespace)
