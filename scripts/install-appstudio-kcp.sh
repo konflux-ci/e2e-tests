@@ -20,7 +20,7 @@ esac
 export ROOT_E2E="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"/..
 export WORKSPACE=${WORKSPACE:-${ROOT_E2E}}
 export MY_GIT_FORK_REMOTE="qe"
-export MY_GITHUB_ORG="redhat-appstudio-qe"
+export MY_GITHUB_ORG="${GITHUB_E2E_ORGANIZATION:-redhat-appstudio-qe}"
 export MY_GITHUB_TOKEN="$GITHUB_TOKEN"
 export WORKSPACE_ID=${WORKSPACE_ID:-$(tr -dc a-z0-9 </dev/urandom | head -c 5 ; echo '')}
 export TEST_BRANCH_ID="$(date +%s)"
@@ -48,18 +48,15 @@ export TIMEOUT_PID=
 function catchFinish() {
     local RESULT=$?
     # Remove workspaces only if we are in CI and the job was succeded
-    if [[ "$CI" != "false" ]] && [[ "$RESULT" == "0" ]]
+    if [[ "$RESULT" == "0" ]]
     then
         kubectl kcp workspace use '~' || true
         kubectl delete ws "${APPSTUDIO_WORKSPACE}" "${HACBS_WORKSPACE}" "${USER_APPSTUDIO_WORKSPACE}" "${COMPUTE_WORKSPACE}" "${USER_HACBS_WORKSPACE}" || true
     fi
 
     echo "[INFO] Killing process PID=$TIMEOUT_PID"
-    kill $TIMEOUT_PID
+    kill "$TIMEOUT_PID"
 }
-
-# Stop execution on any error
-trap "catchFinish" EXIT SIGINT SIGTERM SIGQUIT SIGABRT SIGALRM
 
 # Display help information about this script bash
 function helpUsage() {
@@ -293,6 +290,9 @@ function runAuthenticationInBackground() {
 # Run the authentication SSO only if we are in Openshift CI.
 if [[ $CI == "true" ]]
 then
+    # Stop execution on any error
+    trap "catchFinish" EXIT SIGINT SIGTERM SIGQUIT SIGABRT SIGALRM
+
     runAuthenticationInBackground &
     BG_PID=$!
     TIMEOUT_PID=$(ps -o pid= --ppid="${BG_PID}")
