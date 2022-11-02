@@ -318,7 +318,7 @@ func printPolicyConfiguration(policy ecp.EnterpriseContractPolicySpec) {
 			sources += "\n"
 		}
 		if s.GitRepository != nil {
-			if &s.GitRepository.Revision != nil {
+			if s.GitRepository.Revision != "" {
 				sources += fmt.Sprintf("[%d] repository: '%s', revision: '%s'", i, s.GitRepository.Repository, s.GitRepository.Revision)
 			} else {
 				sources += fmt.Sprintf("[%d] repository: '%s'", i, s.GitRepository.Repository)
