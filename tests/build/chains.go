@@ -98,7 +98,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			rev := "main"
 			policySource = ecp.GitPolicySource{
 				Repository: "https://github.com/hacbs-contract/ec-policies/policy",
-				Revision:   &rev,
+				Revision:   rev,
 			}
 
 			// if there is a ConfigMap e2e-tests/ec-config with keys `revision` and
@@ -107,7 +107,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			// break the tests in the default policy source
 			if config, err := fwk.CommonController.K8sClient.KubeInterface().CoreV1().ConfigMaps("e2e-tests").Get(context.TODO(), "ec-config", v1.GetOptions{}); err != nil {
 				if v, ok := config.Data["revision"]; ok {
-					policySource.Revision = &v
+					policySource.Revision = v
 				}
 				if v, ok := config.Data["repository"]; ok {
 					policySource.Repository = v
@@ -318,8 +318,8 @@ func printPolicyConfiguration(policy ecp.EnterpriseContractPolicySpec) {
 			sources += "\n"
 		}
 		if s.GitRepository != nil {
-			if s.GitRepository.Revision != nil {
-				sources += fmt.Sprintf("[%d] repository: '%s', revision: '%s'", i, s.GitRepository.Repository, *s.GitRepository.Revision)
+			if &s.GitRepository.Revision != nil {
+				sources += fmt.Sprintf("[%d] repository: '%s', revision: '%s'", i, s.GitRepository.Repository, s.GitRepository.Revision)
 			} else {
 				sources += fmt.Sprintf("[%d] repository: '%s'", i, s.GitRepository.Repository)
 			}
