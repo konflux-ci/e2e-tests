@@ -297,3 +297,7 @@ func (CI) sendWebhook() error {
 
 	return nil
 }
+
+func GenerateTestCasesAppStudio() error {
+	return sh.RunV("ginkgo", "--v", "--dry-run", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", "--polarion-output-file=polarion.xml", "--generate-test-cases=true")
+}
