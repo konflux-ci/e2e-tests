@@ -30,6 +30,7 @@ const (
 	helloWorldComponentGitSourceRepoName = "devfile-sample-hello-world"
 	pythonComponentGitSourceURL          = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic"
 	dummyPipelineBundleRef               = "quay.io/redhat-appstudio-qe/dummy-pipeline-bundle:latest"
+	buildTemplatesTestLabel              = "build-templates-e2e"
 )
 
 var (
@@ -477,7 +478,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 		for i, gitUrl := range componentUrls {
 			gitUrl := gitUrl
-			It(fmt.Sprintf("triggers PipelineRun for component with source URL %s", gitUrl), Label("build-templates-e2e"), func() {
+			It(fmt.Sprintf("triggers PipelineRun for component with source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
 				timeout := time.Minute * 5
 				interval := time.Second * 1
 
@@ -492,7 +493,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 		}
 
-		It("should reference the custom pipeline bundle in a PipelineRun", Label("build-templates-e2e"), func() {
+		It("should reference the custom pipeline bundle in a PipelineRun", Label(buildTemplatesTestLabel), func() {
 			customBundleConfigMap, err := f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, testNamespace)
 			if err != nil {
 				if errors.IsNotFound(err) {
@@ -539,7 +540,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		for i, gitUrl := range componentUrls {
 			gitUrl := gitUrl
 
-			It(fmt.Sprintf("should eventually finish successfully for component with source URL %s", gitUrl), Label("build-templates-e2e"), func() {
+			It(fmt.Sprintf("should eventually finish successfully for component with source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
 				timeout := time.Second * 600
 				interval := time.Second * 10
 				Eventually(func() bool {
@@ -567,9 +568,25 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
 			})
 
-			It("should validate HACBS taskrun results", func() {
+			It("should validate HACBS taskrun results", Label(buildTemplatesTestLabel), func() {
 				// List Of Taskruns Expected to Get Taskrun Results
-				gatherResult := []string{"conftest-clair", "sanity-inspect-image", "sanity-label-check", "sbom-json-check"}
+				gatherResult := []string{"conftest-clair", "sanity-inspect-image", "sanity-label-check"}
+				/*
+				  Workaround for including "sbom-json-check" to gatherResults slice.
+
+				 "sbom-json-check" wouldn't work in e2e-tests repo's pre-kcp branch, because required
+				  updates to build templates won't be added to pre-kcp branch of infra-deployments repo
+				  (which pre-kcp branch of e2e-tests is using)
+				  This workaround allows us to use the "sbom-json-check" only in case the test is triggered
+				  from build-definitions repository's e2e-test, which always uses the latest version
+				  of build templates
+				*/
+				// TODO: once we migrate "build" e2e tests to kcp, remove this condition
+				// and add the 'sbom-json-check' taskrun to gatherResults slice
+				s, _ := GinkgoConfiguration()
+				if strings.Contains(s.LabelFilter, buildTemplatesTestLabel) {
+					gatherResult = append(gatherResult, "sbom-json-check")
+				}
 				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, false, "")
 				Expect(err).ShouldNot(HaveOccurred())
 
