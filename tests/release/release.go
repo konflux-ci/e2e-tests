@@ -25,7 +25,7 @@ var snapshotComponents = []applicationapiv1alpha1.ApplicationSnapshotComponent{
 
 var paramsReleaseStrategy = []appstudiov1alpha1.Params{}
 
-var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label("release"), func() {
+var _ = framework.ReleaseSuiteDescribe("[HACBS-1118]-test-release-service-happy-path", Label("release", "HACBS"), func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	framework, err := framework.NewFramework()
