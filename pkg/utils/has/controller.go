@@ -3,9 +3,10 @@ package has
 import (
 	"context"
 	"fmt"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"strings"
 	"time"
+
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
 	routev1 "github.com/openshift/api/route/v1"
 	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
@@ -394,7 +395,12 @@ func (h *SuiteController) GetComponentService(componentName string, componentNam
 
 func (h *SuiteController) WaitForComponentPipelineToBeFinished(componentName string, applicationName string, componentNamespace string) error {
 	return wait.PollImmediate(20*time.Second, 15*time.Minute, func() (done bool, err error) {
-		pipelineRun, _ := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, false, "")
+		pipelineRun, err := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, false, "")
+
+		if err != nil {
+			klog.Infoln("PipelineRun has not been created yet")
+			return false, nil
+		}
 
 		for _, condition := range pipelineRun.Status.Conditions {
 			klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)
