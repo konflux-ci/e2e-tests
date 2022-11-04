@@ -31,6 +31,7 @@ const (
 	pythonComponentGitSourceURL          = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic"
 	dummyPipelineBundleRef               = "quay.io/redhat-appstudio-qe/dummy-pipeline-bundle:latest"
 	buildTemplatesTestLabel              = "build-templates-e2e"
+	buildTemplatesKcpTestLabel           = "build-templates-kcp-e2e"
 )
 
 var (
@@ -568,23 +569,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
 			})
 
-			It("should validate HACBS taskrun results", Label(buildTemplatesTestLabel), func() {
+			It("should validate HACBS taskrun results", func() {
 				// List Of Taskruns Expected to Get Taskrun Results
 				gatherResult := []string{"conftest-clair", "sanity-inspect-image", "sanity-label-check"}
-				/*
-				  Workaround for including "sbom-json-check" to gatherResults slice.
-
-				 "sbom-json-check" wouldn't work in e2e-tests repo's pre-kcp branch, because required
-				  updates to build templates won't be added to pre-kcp branch of infra-deployments repo
-				  (which pre-kcp branch of e2e-tests is using)
-				  This workaround allows us to use the "sbom-json-check" only in case the test is triggered
-				  from build-definitions repository's e2e-test, which always uses the latest version
-				  of build templates
-				*/
 				// TODO: once we migrate "build" e2e tests to kcp, remove this condition
 				// and add the 'sbom-json-check' taskrun to gatherResults slice
 				s, _ := GinkgoConfiguration()
-				if strings.Contains(s.LabelFilter, buildTemplatesTestLabel) {
+				if strings.Contains(s.LabelFilter, buildTemplatesKcpTestLabel) {
 					gatherResult = append(gatherResult, "sbom-json-check")
 				}
 				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, false, "")
