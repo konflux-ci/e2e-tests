@@ -49,12 +49,6 @@ func GenerateCustomJUnitReport(report types.Report, dst string) error {
 		},
 	}
 	for _, spec := range report.SpecReports {
-		name := spec.FullText()
-		labels := spec.Labels()
-		if len(labels) > 0 {
-			name = name + " [" + strings.Join(labels, ", ") + "]"
-		}
-
 		test := JUnitTestCase{
 			Name:      shortenStringAddHash(spec),
 			Classname: getClassnameFromReport(spec),
@@ -122,11 +116,16 @@ func GenerateCustomJUnitReport(report types.Report, dst string) error {
 	if err != nil {
 		return err
 	}
-	f.WriteString(xml.Header)
+	_, err2 := f.WriteString(xml.Header)
+	if err2 != nil {
+		klog.Fatal(err2)
+	}
 	encoder := xml.NewEncoder(f)
 	encoder.Indent("  ", "    ")
-	encoder.Encode(junitReport)
-
+	err3 := encoder.Encode(junitReport)
+	if err3 != nil {
+		klog.Fatal(err3)
+	}
 	return f.Close()
 }
 
