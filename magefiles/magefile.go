@@ -284,3 +284,56 @@ func (CI) sendWebhook() error {
 
 	return nil
 }
+
+func CleanUpWorkspaces() error {
+
+	// Authenticate using Red Hat SSO to connect to CPS
+	err := redHatSSOAuthentication()
+	if err != nil {
+		return err
+	}
+
+	// Install krew systemwide. Some plugins are needed later
+	if krewExists := commandExists("kubectl-krew"); !krewExists {
+		err := installKrew()
+		if err != nil {
+			return fmt.Errorf("error installing krew %v", err)
+		}
+	} else {
+		klog.Infof("krew is already installed. skipping.")
+	}
+
+	// Install oidc-login plugin
+	err = sh.Run("kubectl", "krew", "install", "oidc-login")
+	if err != nil {
+		return err
+	}
+
+	// Initialize a kcp controller to perform actions against kcp
+	kcpController, err := initKCPController()
+	if err != nil {
+		return err
+	}
+
+	// List all workspaces
+	workspaces, err := kcpController.ListKCPWorkspaces()
+	if err != nil {
+		return err
+	}
+
+	// Check creation time is older than 24 hours from execution time; if so, delete the workspace
+	for _, workspace := range workspaces.Items {
+		currentTime := time.Now().UTC()
+		diff := currentTime.Sub(workspace.CreationTimestamp.UTC())
+		if diff.Hours() >= 24 {
+			klog.Infof("deleting workspace %s, it was created about %s hours ago", workspace.Name, fmt.Sprintf("%f", diff.Hours()))
+
+			err = kcpController.DeleteKCPWorkspace(&workspace)
+			if err != nil {
+				klog.Infof("cannot delete workspace %s", workspace.Name)
+			}
+		}
+	}
+
+	return nil
+}

@@ -1,0 +1,53 @@
+apiVersion: v1
+clusters:
+- cluster:
+    server: https://kcp-stable.apps.kcp-internal-1.52p3.p1.openshiftapps.com/clusters/root
+  name: kcp-stable-root
+- cluster:
+    server: https://kcp-unstable.apps.kcp-internal-1.52p3.p1.openshiftapps.com/clusters/root
+  name: kcp-unstable-root
+- cluster:
+    server: https://kcp-stable.apps.kcp-internal-1.52p3.p1.openshiftapps.com:443/clusters/root:users:xe:xn:rh-sso-rh-ee-abarbaro
+  name: workspace.kcp.dev/current
+- cluster:
+    server: https://kcp-stable.apps.kcp-internal-1.52p3.p1.openshiftapps.com:443/clusters/root:users:xe:xn:rh-sso-rh-ee-abarbaro:appstudio-dmab7
+  name: workspace.kcp.dev/previous
+contexts:
+- context:
+    cluster: kcp-stable-root
+    namespace: default
+    user: oidc
+  name: kcp-stable-root
+- context:
+    cluster: kcp-unstable-root
+    namespace: default
+    user: oidc
+  name: kcp-unstable-root
+- context:
+    cluster: workspace.kcp.dev/current
+    namespace: default
+    user: oidc
+  name: workspace.kcp.dev/current
+- context:
+    cluster: workspace.kcp.dev/previous
+    namespace: default
+    user: oidc
+  name: workspace.kcp.dev/previous
+current-context: workspace.kcp.dev/current
+kind: Config
+preferences: {}
+users:
+- name: oidc
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1beta1
+      args:
+      - oidc-login
+      - get-token
+      - --oidc-redirect-url-hostname=127.0.0.1
+      - --oidc-issuer-url=https://sso.redhat.com/auth/realms/redhat-external
+      - --oidc-client-id=cloud-services
+      command: kubectl
+      env: null
+      interactiveMode: IfAvailable
+      provideClusterInfo: false

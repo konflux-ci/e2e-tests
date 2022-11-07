@@ -12,6 +12,7 @@ require (
 	github.com/gosuri/uiprogress v0.0.1
 	github.com/gosuri/uitable v0.0.4
 	github.com/hacbs-contract/enterprise-contract-controller v0.0.0-20220608144538-7d47a3f5da49
+	github.com/kcp-dev/kcp/pkg/apis v0.9.0
 	github.com/magefile/mage v1.13.0
 	github.com/onsi/ginkgo/v2 v2.1.6
 	github.com/onsi/gomega v1.20.2
@@ -130,6 +131,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a // indirect
+	github.com/kcp-dev/logicalcluster/v2 v2.0.0-alpha.3 // indirect
 	github.com/kevinburke/ssh_config v0.0.0-20201106050909-4977a11b4351 // indirect
 	github.com/klauspost/compress v1.14.4 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
