@@ -44,9 +44,6 @@ func TestE2E(t *testing.T) {
 	klog.Info("Starting Red Hat App Studio e2e tests...")
 	// Setting viper configurations in cache
 	viper.Set("config-suites", demoSuitesPath)
-	viper.Set("polarion-output-file", polarionOutputFile)
-	viper.Set("project-id", polarionProjectID)
-	viper.Set("generate-test-cases", generateTestCases)
 
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	ginkgo.RunSpecs(t, "Red Hat App Studio E2E tests")
