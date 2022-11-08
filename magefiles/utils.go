@@ -191,3 +191,21 @@ func redHatSSOAuthentication() error {
 
 	return nil
 }
+
+func useKCPEnviroment(kcpEnvironment string) error {
+
+	switch kcpEnvironment {
+	case "kcp-stable":
+		if err := sh.Run("kubectl", "config", "use-context", "kcp-stable-root"); err != nil {
+			return fmt.Errorf("cannot switch context to %s", kcpEnvironment)
+		}
+	case "kcp-unstable":
+		if err := sh.Run("kubectl", "config", "use-context", "kcp-unstable-root"); err != nil {
+			return fmt.Errorf("cannot switch context to %s", kcpEnvironment)
+		}
+	default:
+		return fmt.Errorf("invalid environment. please specify stable or unstable")
+	}
+
+	return nil
+}

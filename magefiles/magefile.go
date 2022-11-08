@@ -346,10 +346,16 @@ func (CI) sendWebhook() error {
 	return nil
 }
 
-func CleanUpWorkspaces() error {
+func CleanUpWorkspaces(kcpEnvironment string) error {
+
+	// use the specified cps environment, stable or unstable
+	err := useKCPEnviroment(kcpEnvironment)
+	if err != nil {
+		return err
+	}
 
 	// Authenticate using Red Hat SSO to connect to CPS
-	err := redHatSSOAuthentication()
+	err = redHatSSOAuthentication()
 	if err != nil {
 		return err
 	}
