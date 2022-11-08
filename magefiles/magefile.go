@@ -354,20 +354,9 @@ func CleanUpWorkspaces() error {
 		return err
 	}
 
-	// Install krew systemwide. Some plugins are needed later
-	if krewExists := commandExists("kubectl-krew"); !krewExists {
-		err := installKrew()
-		if err != nil {
-			return fmt.Errorf("error installing krew %v", err)
-		}
-	} else {
-		klog.Infof("krew is already installed. skipping.")
-	}
-
-	// Install oidc-login plugin
-	err = sh.Run("kubectl", "krew", "install", "oidc-login")
-	if err != nil {
-		return err
+	// Check oidc_login is available
+	if oidc_login := commandExists("kubectl-oidc_login"); !oidc_login {
+		return fmt.Errorf("kubectl-oidc_login plugin was not found")
 	}
 
 	// Initialize a kcp controller to perform actions against kcp

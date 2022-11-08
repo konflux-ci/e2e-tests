@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 	"time"
 
@@ -93,66 +92,6 @@ func commandExists(cmd string) bool {
 	// check a command is available in the system.
 	_, err := exec.LookPath(cmd)
 	return err == nil
-}
-
-func installKrew() error {
-	// Get architecture info and download krew into a newly create temporary directory
-	OS := runtime.GOOS
-	ARCH := runtime.GOARCH
-	KREW := "krew-" + OS + "_" + ARCH
-
-	TEMPDIR := "tmp/krew"
-	err := os.MkdirAll(TEMPDIR, 0755)
-	if err != nil {
-		return err
-	}
-
-	url := "https://github.com/kubernetes-sigs/krew/releases/latest/download/" + KREW + ".tar.gz"
-
-	// Download into temp dir
-	err = sh.Run("curl", "-fsSLO", url, "--output-dir", TEMPDIR)
-	if err != nil {
-		return err
-	}
-
-	// Extract krew into temp dir
-	KREW_PATH := TEMPDIR + "/" + KREW + ".tar.gz"
-	err = sh.Run("tar", "zxvf", KREW_PATH, "-C", TEMPDIR)
-	if err != nil {
-		return err
-	}
-
-	// Run krew install
-	KREW_EXEC := TEMPDIR + "/" + KREW
-	err = sh.Run(KREW_EXEC, "install", "krew")
-	if err != nil {
-		return err
-	}
-
-	// Get homedir to append krew path to PATH env
-	// Krew has to be available system-wide
-	HOMEDIR, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-
-	f, err := os.OpenFile(HOMEDIR+"/.bash_profile", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
-	if err != nil {
-		return err
-	}
-
-	defer f.Close()
-
-	if _, err = f.WriteString("export PATH=\"$HOME/.krew/bin:$PATH\"\n"); err != nil {
-		return err
-	}
-
-	err = sh.RunV("bash", "-c", "source ~/.bash_profile")
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func initKCPController() (*kcp.SuiteController, error) {
