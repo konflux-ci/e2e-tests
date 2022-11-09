@@ -207,5 +207,10 @@ func useKCPEnviroment(kcpEnvironment string) error {
 		return fmt.Errorf("invalid environment. please specify stable or unstable")
 	}
 
+	// switch to root workspace
+	if err := sh.Run("kubectl", "kcp", "workspace", "use", "~"); err != nil {
+		return fmt.Errorf("cannot switch context to root workspace: %v", err)
+	}
+
 	return nil
 }
