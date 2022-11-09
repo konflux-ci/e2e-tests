@@ -25,7 +25,7 @@ var snapshotComponents = []applicationapiv1alpha1.ApplicationSnapshotComponent{
 
 var paramsReleaseStrategy = []appstudiov1alpha1.Params{}
 
-var _ = framework.ReleaseSuiteDescribe("[HACBS-1118]-test-release-service-happy-path", Label("release", "HACBS"), func() {
+var _ = framework.ReleaseSuiteDescribe("[HACBS-1142]-test-specific-timeouts", Label("release", "HACBS"), func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	framework, err := framework.NewFramework()
@@ -62,30 +62,30 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1118]-test-release-service-happy-
 	})
 
 	var _ = Describe("Creation of the 'Happy path' resources", func() {
-		It("Create an ApplicationSnapshot in dev namespace.", func() {
+		It("Create an ApplicationSnapshot in dev namespace.", func(ctx SpecContext) {
 			_, err := framework.ReleaseController.CreateApplicationSnapshot(snapshotName, devNamespace, applicationName, snapshotComponents)
 			Expect(err).NotTo(HaveOccurred())
-		})
+		}, SpecTimeout(applicationSnapshotCreationTimeout))
 
-		It("Create Release Strategy in managed namespace.", func() {
+		It("Create Release Strategy in managed namespace.", func(ctx SpecContext) {
 			_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, serviceAccount, paramsReleaseStrategy)
 			Expect(err).NotTo(HaveOccurred())
-		})
+		}, SpecTimeout(releaseStrategyCreationTimeout))
 
-		It("Create ReleasePlan in dev namespace.", func() {
+		It("Create ReleasePlan in dev namespace.", func(ctx SpecContext) {
 			_, err := framework.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationName, managedNamespace, "")
 			Expect(err).NotTo(HaveOccurred())
-		})
+		}, SpecTimeout(releasePlanCreationTimeout))
 
-		It("Create ReleasePlanAdmission in managed namespace.", func() {
+		It("Create ReleasePlanAdmission in managed namespace.", func(ctx SpecContext) {
 			_, err := framework.ReleaseController.CreateReleasePlanAdmission(destinationReleasePlanAdmissionName, devNamespace, applicationName, managedNamespace, "", "", releaseStrategyName)
 			Expect(err).NotTo(HaveOccurred())
-		})
+		}, SpecTimeout(releasePlanAdmissionCreationTimeout))
 
-		It("Create a Release in dev namespace.", func() {
+		It("Create a Release in dev namespace.", func(ctx SpecContext) {
 			_, err := framework.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, sourceReleasePlanName)
 			Expect(err).NotTo(HaveOccurred())
-		})
+		}, SpecTimeout(releaseCreationTimeout))
 	})
 
 	var _ = Describe("Post-release verification.", func() {
@@ -99,7 +99,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1118]-test-release-service-happy-
 				}
 
 				return strings.Contains(prList.Items[0].Name, releaseName)
-			}, 1*time.Minute, defaultInterval).Should(BeTrue())
+			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
 		It("The PipelineRun should exist and succeed.", func() {
@@ -111,7 +111,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1118]-test-release-service-happy-
 				}
 
 				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
-			}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
+			}, releasePipelineRunCompletionTimeot, defaultInterval).Should(BeTrue())
 		})
 
 		It("The Release should have succeeded.", func() {
@@ -122,7 +122,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1118]-test-release-service-happy-
 				}
 
 				return release.IsDone() && meta.IsStatusConditionTrue(release.Status.Conditions, "Succeeded")
-			}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
+			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
 		It("The Release should reference the release PipelineRun.", func() {
