@@ -52,11 +52,11 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 		Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
 		// Check if 'has-github-token' is present, unless SKIP_HAS_SECRET_CHECK env var is set
 		if !utils.CheckIfEnvironmentExists(constants.SKIP_HAS_SECRET_CHECK_ENV) {
-			_, err := fw.HasController.KubeInterface().CoreV1().Secrets(RedHatAppStudioApplicationNamespace).Get(context.TODO(), ApplicationServiceGHTokenSecrName, metav1.GetOptions{})
+			_, err := fw.AppstudioUser.HasController.KubeInterface().CoreV1().Secrets(RedHatAppStudioApplicationNamespace).Get(context.TODO(), ApplicationServiceGHTokenSecrName, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
 		}
 
-		_, err := fw.CommonController.CreateTestNamespace(AppStudioE2EApplicationsNamespace)
+		_, err := fw.AppstudioUser.CommonController.CreateTestNamespace(AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", AppStudioE2EApplicationsNamespace, err)
 
 		// Check test specification has at least one test defined
@@ -67,12 +67,12 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 	// Remove all resources created by the tests
 	AfterAll(func() {
-		Expect(fw.HasController.DeleteAllComponentsInASpecificNamespace(AppStudioE2EApplicationsNamespace, 30*time.Second)).To(Succeed())
-		Expect(fw.HasController.DeleteAllApplicationsInASpecificNamespace(AppStudioE2EApplicationsNamespace, 30*time.Second)).To(Succeed())
+		Expect(fw.AppstudioUser.HasController.DeleteAllComponentsInASpecificNamespace(AppStudioE2EApplicationsNamespace, 30*time.Second)).To(Succeed())
+		Expect(fw.AppstudioUser.HasController.DeleteAllApplicationsInASpecificNamespace(AppStudioE2EApplicationsNamespace, 30*time.Second)).To(Succeed())
 	})
 
 	It("Create Red Hat AppStudio Application", func() {
-		createdApplication, err := fw.HasController.CreateHasApplication(testSpecification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)
+		createdApplication, err := fw.AppstudioUser.HasController.CreateHasApplication(testSpecification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createdApplication.Spec.DisplayName).To(Equal(testSpecification.Tests[0].ApplicationName))
 		Expect(createdApplication.Namespace).To(Equal(AppStudioE2EApplicationsNamespace))
@@ -80,7 +80,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 	It("Check Red Hat AppStudio Application health", func() {
 		Eventually(func() string {
-			application, err = fw.HasController.GetHasApplication(testSpecification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)
+			application, err = fw.AppstudioUser.HasController.GetHasApplication(testSpecification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
 			return application.Status.Devfile
@@ -90,12 +90,12 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 			// application info should be stored even after deleting the application in application variable
 			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return fw.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			return fw.AppstudioUser.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 	})
 
 	It("Create Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
-		cdq, err := fw.HasController.CreateComponentDetectionQuery(testSpecification.Tests[0].Components[0].Name, AppStudioE2EApplicationsNamespace, testSpecification.Tests[0].Components[0].GitSourceUrl, "", false)
+		cdq, err := fw.AppstudioUser.HasController.CreateComponentDetectionQuery(testSpecification.Tests[0].Components[0].Name, AppStudioE2EApplicationsNamespace, testSpecification.Tests[0].Components[0].GitSourceUrl, "", false)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cdq.Name).To(Equal(testSpecification.Tests[0].Components[0].Name))
 	})
@@ -104,7 +104,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 		// Validate that the CDQ completes successfully
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
-			cdq, err = fw.HasController.GetComponentDetectionQuery(testSpecification.Tests[0].Components[0].Name, AppStudioE2EApplicationsNamespace)
+			cdq, err = fw.AppstudioUser.HasController.GetComponentDetectionQuery(testSpecification.Tests[0].Components[0].Name, AppStudioE2EApplicationsNamespace)
 			return err == nil && len(cdq.Status.ComponentDetected) > 0
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "ComponentDetectionQuery did not complete successfully")
 
@@ -121,13 +121,13 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 		// Create Golang component from CDQ result
 		Expect(cdq.Status.ComponentDetected["go"].DevfileFound).To(BeTrue(), "DevfileFound was not set to true")
-		componentGo, err := fw.HasController.CreateComponentFromStub(cdq.Status.ComponentDetected["go"], compNameGo, AppStudioE2EApplicationsNamespace, "", testSpecification.Tests[0].ApplicationName)
+		componentGo, err := fw.AppstudioUser.HasController.CreateComponentFromStub(cdq.Status.ComponentDetected["go"], compNameGo, AppStudioE2EApplicationsNamespace, "", testSpecification.Tests[0].ApplicationName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(componentGo.Name).To(Equal(compNameGo))
 
 		// Create NodeJS component from CDQ result
 		Expect(cdq.Status.ComponentDetected["nodejs"].DevfileFound).To(BeTrue(), "DevfileFound was not set to true")
-		componentNode, err := fw.HasController.CreateComponentFromStub(cdq.Status.ComponentDetected["nodejs"], compNameNode, AppStudioE2EApplicationsNamespace, "", testSpecification.Tests[0].ApplicationName)
+		componentNode, err := fw.AppstudioUser.HasController.CreateComponentFromStub(cdq.Status.ComponentDetected["nodejs"], compNameNode, AppStudioE2EApplicationsNamespace, "", testSpecification.Tests[0].ApplicationName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(componentNode.Name).To(Equal(compNameNode))
 
@@ -136,8 +136,8 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	// Start to watch the pipeline until is finished
 	It("Wait for all pipelines to be finished", func() {
 
-		Expect(fw.HasController.WaitForComponentPipelineToBeFinished(compNameGo, testSpecification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)).To(Succeed(), "Failed component pipeline %v", err)
-		Expect(fw.HasController.WaitForComponentPipelineToBeFinished(compNameNode, testSpecification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)).To(Succeed(), "Failed component pipeline %v", err)
+		Expect(fw.AppstudioUser.HasController.WaitForComponentPipelineToBeFinished(compNameGo, testSpecification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)).To(Succeed(), "Failed component pipeline %v", err)
+		Expect(fw.AppstudioUser.HasController.WaitForComponentPipelineToBeFinished(compNameNode, testSpecification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)).To(Succeed(), "Failed component pipeline %v", err)
 
 	})
 
@@ -145,12 +145,12 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	It("Check multiple components are deployed", func() {
 
 		Eventually(func() bool {
-			deploymentGo, err := fw.CommonController.GetAppDeploymentByName(compNameGo, AppStudioE2EApplicationsNamespace)
+			deploymentGo, err := fw.AppstudioUser.CommonController.GetAppDeploymentByName(compNameGo, AppStudioE2EApplicationsNamespace)
 			if err != nil && !errors.IsNotFound(err) {
 				return false
 			}
 
-			deploymentNode, err := fw.CommonController.GetAppDeploymentByName(compNameNode, AppStudioE2EApplicationsNamespace)
+			deploymentNode, err := fw.AppstudioUser.CommonController.GetAppDeploymentByName(compNameNode, AppStudioE2EApplicationsNamespace)
 			if err != nil && !errors.IsNotFound(err) {
 				return false
 			}

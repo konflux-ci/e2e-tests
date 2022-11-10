@@ -3,11 +3,12 @@ package tekton
 import (
 	"context"
 	"fmt"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"io"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
 	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
@@ -57,7 +58,7 @@ func newBundles(client kubernetes.Interface) (*Bundles, error) {
 
 // Create the struct for kubernetes clients
 type SuiteController struct {
-	*kubeCl.K8sClient
+	*kubeCl.CustomClient
 
 	Bundles Bundles
 }
@@ -85,7 +86,7 @@ func (c CosignResult) Missing(prefix string) string {
 }
 
 // Create controller for Application/Component crud operations
-func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
+func NewSuiteController(kube *kubeCl.CustomClient) (*SuiteController, error) {
 
 	bundles, err := newBundles(kube.KubeInterface())
 	if err != nil {
@@ -103,7 +104,7 @@ func (s *SuiteController) GetPipelineRun(pipelineRunName, namespace string) (*v1
 }
 
 func (s *SuiteController) fetchContainerLog(podName, containerName, namespace string) (string, error) {
-	podClient := s.K8sClient.KubeInterface().CoreV1().Pods(namespace)
+	podClient := s.KubeInterface().CoreV1().Pods(namespace)
 	req := podClient.GetLogs(podName, &corev1.PodLogOptions{Container: containerName})
 	readCloser, err := req.Stream(context.TODO())
 	log := ""
@@ -119,7 +120,7 @@ func (s *SuiteController) fetchContainerLog(podName, containerName, namespace st
 }
 
 func (s *SuiteController) GetPipelineRunLogs(pipelineRunName, namespace string) (string, error) {
-	podClient := s.K8sClient.KubeInterface().CoreV1().Pods(namespace)
+	podClient := s.KubeInterface().CoreV1().Pods(namespace)
 	podList, err := podClient.List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return "", err
@@ -295,7 +296,7 @@ func (s *SuiteController) DeleteAllPipelineRunsInASpecificNamespace(ns string) e
 					Namespace: ns,
 				},
 			}
-			if err := s.K8sClient.KubeRest().Get(context.TODO(), crclient.ObjectKeyFromObject(&pipelineRunCR), &pipelineRunCR); err != nil {
+			if err := s.KubeRest().Get(context.TODO(), crclient.ObjectKeyFromObject(&pipelineRunCR), &pipelineRunCR); err != nil {
 				if errors.IsNotFound(err) {
 					// PipelinerRun CR is already removed
 					return true, nil
@@ -307,12 +308,12 @@ func (s *SuiteController) DeleteAllPipelineRunsInASpecificNamespace(ns string) e
 
 			// Remove the finalizer, so that it can be deleted.
 			pipelineRunCR.Finalizers = []string{}
-			if err := s.K8sClient.KubeRest().Update(context.TODO(), &pipelineRunCR); err != nil {
+			if err := s.KubeRest().Update(context.TODO(), &pipelineRunCR); err != nil {
 				g.GinkgoWriter.Printf("unable to remove finalizers from PipelineRun '%s' in '%s': %v", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
 				return false, nil
 			}
 
-			if err := s.K8sClient.KubeRest().Delete(context.TODO(), &pipelineRunCR); err != nil {
+			if err := s.KubeRest().Delete(context.TODO(), &pipelineRunCR); err != nil {
 				g.GinkgoWriter.Printf("unable to delete PipelineRun '%s' in '%s': %v", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
 				return false, nil
 			}
@@ -446,7 +447,7 @@ func findTagWithName(client crclient.Client, namespace, name string) (*unstructu
 }
 
 func (k KubeController) CreateOrUpdateSigningSecret(publicKey []byte, name, namespace string) (err error) {
-	api := k.Tektonctrl.K8sClient.KubeInterface().CoreV1().Secrets(namespace)
+	api := k.Tektonctrl.KubeInterface().CoreV1().Secrets(namespace)
 	ctx := context.TODO()
 
 	expectedSecret := &corev1.Secret{
@@ -473,7 +474,7 @@ func (k KubeController) CreateOrUpdateSigningSecret(publicKey []byte, name, name
 }
 
 func (k KubeController) GetPublicKey(name, namespace string) (publicKey []byte, err error) {
-	api := k.Tektonctrl.K8sClient.KubeInterface().CoreV1().Secrets(namespace)
+	api := k.Tektonctrl.KubeInterface().CoreV1().Secrets(namespace)
 	ctx := context.TODO()
 
 	secret, err := api.Get(ctx, name, metav1.GetOptions{})
@@ -494,7 +495,7 @@ func (k KubeController) CreateOrUpdatePolicyConfiguration(namespace string, poli
 	}
 
 	// fetch to see if it exists
-	err := k.Tektonctrl.K8sClient.KubeRest().Get(context.TODO(), crclient.ObjectKey{
+	err := k.Tektonctrl.KubeRest().Get(context.TODO(), crclient.ObjectKey{
 		Namespace: namespace,
 		Name:      "ec-policy",
 	}, &ecPolicy)
@@ -511,12 +512,12 @@ func (k KubeController) CreateOrUpdatePolicyConfiguration(namespace string, poli
 	ecPolicy.Spec = policy
 	if !exists {
 		// it doesn't, so create
-		if err := k.Tektonctrl.K8sClient.KubeRest().Create(context.TODO(), &ecPolicy); err != nil {
+		if err := k.Tektonctrl.KubeRest().Create(context.TODO(), &ecPolicy); err != nil {
 			return err
 		}
 	} else {
 		// it does, so update
-		if err := k.Tektonctrl.K8sClient.KubeRest().Update(context.TODO(), &ecPolicy); err != nil {
+		if err := k.Tektonctrl.KubeRest().Update(context.TODO(), &ecPolicy); err != nil {
 			return err
 		}
 	}
@@ -525,7 +526,7 @@ func (k KubeController) CreateOrUpdatePolicyConfiguration(namespace string, poli
 }
 
 func (k KubeController) GetRekorHost() (rekorHost string, err error) {
-	api := k.Tektonctrl.K8sClient.KubeInterface().CoreV1().ConfigMaps("tekton-chains")
+	api := k.Tektonctrl.KubeInterface().CoreV1().ConfigMaps("tekton-chains")
 	ctx := context.TODO()
 
 	cm, err := api.Get(ctx, "chains-config", metav1.GetOptions{})

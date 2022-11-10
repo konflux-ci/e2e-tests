@@ -45,30 +45,30 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 		componentName = fmt.Sprintf(QuarkusComponentName+"-%s", util.GenerateRandomString(10))
 		// Check to see if the github token was provided
 		Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
-		_, err := framework.CommonController.CreateTestNamespace(testNamespace)
+		_, err := framework.AppstudioUser.CommonController.CreateTestNamespace(testNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
 
 	})
 
 	AfterAll(func() {
 
-		err = framework.HasController.DeleteHasComponentDetectionQuery(componentName, testNamespace)
+		err = framework.AppstudioUser.HasController.DeleteHasComponentDetectionQuery(componentName, testNamespace)
 		Expect(err).NotTo(HaveOccurred())
-		err = framework.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, 1*time.Minute)
+		err = framework.AppstudioUser.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, 1*time.Minute)
 		Expect(err).NotTo(HaveOccurred())
-		err = framework.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, 1*time.Minute)
+		err = framework.AppstudioUser.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, 1*time.Minute)
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
 			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			return framework.AppstudioUser.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
 	})
 
 	It("Create Red Hat AppStudio Application", func() {
-		createdApplication, err := framework.HasController.CreateHasApplication(applicationName, testNamespace)
+		createdApplication, err := framework.AppstudioUser.HasController.CreateHasApplication(applicationName, testNamespace)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createdApplication.Spec.DisplayName).To(Equal(applicationName))
 		Expect(createdApplication.Namespace).To(Equal(testNamespace))
@@ -76,7 +76,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 
 	It("Check Red Hat AppStudio Application health", func() {
 		Eventually(func() string {
-			application, err = framework.HasController.GetHasApplication(applicationName, testNamespace)
+			application, err = framework.AppstudioUser.HasController.GetHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
 			return application.Status.Devfile
@@ -86,12 +86,12 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 			// application info should be stored even after deleting the application in application variable
 			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			return framework.AppstudioUser.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 	})
 
 	It("Create Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
-		cdq, err := framework.HasController.CreateComponentDetectionQuery(componentName, testNamespace, QuarkusDevfileSource, "", false)
+		cdq, err := framework.AppstudioUser.HasController.CreateComponentDetectionQuery(componentName, testNamespace, QuarkusDevfileSource, "", false)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cdq.Name).To(Equal(componentName))
 
@@ -101,7 +101,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 		// Validate that the CDQ completes successfully
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
-			cdq, err = framework.HasController.GetComponentDetectionQuery(componentName, testNamespace)
+			cdq, err = framework.AppstudioUser.HasController.GetComponentDetectionQuery(componentName, testNamespace)
 			return err == nil && len(cdq.Status.ComponentDetected) > 0
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "ComponentDetectionQuery did not complete successfully")
 
@@ -117,7 +117,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 	})
 
 	It("Create Red Hat AppStudio Quarkus component", func() {
-		component, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, "", applicationName)
+		component, err := framework.AppstudioUser.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, "", applicationName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(component.Name).To(Equal(componentName))
 	})
@@ -130,26 +130,26 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 			comp2Detected.ComponentStub.ComponentName = "java-quarkus2"
 		}
 		component2Name := fmt.Sprintf(QuarkusComponentName+"-%s", util.GenerateRandomString(10))
-		component2, err := framework.HasController.CreateComponentFromStub(comp2Detected, component2Name, testNamespace, "", applicationName)
+		component2, err := framework.AppstudioUser.HasController.CreateComponentFromStub(comp2Detected, component2Name, testNamespace, "", applicationName)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = framework.HasController.DeleteHasComponent(component2.Name, testNamespace, false)
+		err = framework.AppstudioUser.HasController.DeleteHasComponent(component2.Name, testNamespace, false)
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
 			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			return framework.AppstudioUser.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "Gitops repository deleted after component was deleted")
 	})
 
 	It("Check a Component gets deleted when its application is deleted", func() {
 		Skip("This feature is not available in the KCP world yet. Issue: https://issues.redhat.com/browse/DEVHAS-182")
-		err = framework.HasController.DeleteHasApplication(applicationName, testNamespace, false)
+		err = framework.AppstudioUser.HasController.DeleteHasApplication(applicationName, testNamespace, false)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(func() bool {
-			_, err := framework.HasController.GetHasComponent(componentName, testNamespace)
+			_, err := framework.AppstudioUser.HasController.GetHasComponent(componentName, testNamespace)
 			if err != nil && errors.IsNotFound(err) {
 				return true
 			}

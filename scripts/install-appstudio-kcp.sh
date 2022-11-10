@@ -305,8 +305,8 @@ createAppStudioRootWorkspace
 createPreviewEnvFile
 startRedHatAppStudioInstallation
 
-# Switch to user workspace
-kubectl ws "${USER_APPSTUDIO_WORKSPACE}"
+# Switch to home workspace
+kubectl ws "~"
 
 if [[ $RUN_E2E == "true" ]]
 then

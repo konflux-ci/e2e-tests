@@ -2,30 +2,31 @@ package integration
 
 import (
 	"context"
-//	"fmt"
-//	"time"
+	//	"fmt"
+	//	"time"
 
-//	routev1 "github.com/openshift/api/route/v1"
-	integrationservice "github.com/redhat-appstudio/integration-service/api/v1alpha1"
+	//	routev1 "github.com/openshift/api/route/v1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	integrationservice "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	appstudioshared "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
-//	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-//	appsv1 "k8s.io/api/apps/v1"
-//	corev1 "k8s.io/api/core/v1"
-//	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-//	"k8s.io/apimachinery/pkg/labels"
-//	"k8s.io/apimachinery/pkg/types"
-//	"k8s.io/apimachinery/pkg/util/wait"
-//	"k8s.io/klog/v2"
+
+	//	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	//	appsv1 "k8s.io/api/apps/v1"
+	//	corev1 "k8s.io/api/core/v1"
+	//	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	//	"k8s.io/apimachinery/pkg/labels"
+	//	"k8s.io/apimachinery/pkg/types"
+	//	"k8s.io/apimachinery/pkg/util/wait"
+	//	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-//	rclient "sigs.k8s.io/controller-runtime/pkg/client"
+	// rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type SuiteController struct {
-	*kubeCl.K8sClient
+	*kubeCl.CustomClient
 }
 
-func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
+func NewSuiteController(kube *kubeCl.CustomClient) (*SuiteController, error) {
 	return &SuiteController{
 		kube,
 	}, nil
@@ -50,33 +51,33 @@ func (h *SuiteController) GetAllApplicationSnapshots(applicationName, namespace 
 // Get return the status from the Application Custom Resource object
 func (h *SuiteController) GetIntegrationTestScenarios(applicationName, namespace string) (*[]integrationservice.IntegrationTestScenario, error) {
 	opts := []client.ListOption{
-                client.InNamespace(namespace),
-        }
+		client.InNamespace(namespace),
+	}
 
 	integrationTestScenarioList := &integrationservice.IntegrationTestScenarioList{}
-        err := h.KubeRest().List(context.TODO(), integrationTestScenarioList, opts...)
-        if err != nil {
-                return nil, err
-        }
-        return &integrationTestScenarioList.Items, nil
+	err := h.KubeRest().List(context.TODO(), integrationTestScenarioList, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &integrationTestScenarioList.Items, nil
 }
 
 func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(testScenario *integrationservice.IntegrationTestScenario, applicationSnapshots *[]appstudioshared.ApplicationSnapshot, applicationName string, appNamespace string) error {
-//	return wait.PollImmediate(20*time.Second, 10*time.Minute, func() (done bool, err error) {
-//		pipelineRun, _ := h.GetIntegrationPipelineRun(testScenario.Name, applicationName, appNamespace, false)
+	//	return wait.PollImmediate(20*time.Second, 10*time.Minute, func() (done bool, err error) {
+	//		pipelineRun, _ := h.GetIntegrationPipelineRun(testScenario.Name, applicationName, appNamespace, false)
 
-//		for _, condition := range pipelineRun.Status.Conditions {
-//			klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)
-//
-//			if condition.Reason == "Failed" {
-//				return false, fmt.Errorf("component %s pipeline failed", pipelineRun.Name)
-//			}
-//
-//			if condition.Status == corev1.ConditionTrue {
-//				return true, nil
-//			}
-////		}
-//		return false, nil
-//	})
+	//		for _, condition := range pipelineRun.Status.Conditions {
+	//			klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)
+	//
+	//			if condition.Reason == "Failed" {
+	//				return false, fmt.Errorf("component %s pipeline failed", pipelineRun.Name)
+	//			}
+	//
+	//			if condition.Status == corev1.ConditionTrue {
+	//				return true, nil
+	//			}
+	////		}
+	//		return false, nil
+	//	})
 	return nil
 }
