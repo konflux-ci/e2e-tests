@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -348,14 +349,17 @@ func (CI) sendWebhook() error {
 
 func CleanUpWorkspaces(kcpEnvironment string) error {
 
-	// use the specified cps environment, stable or unstable
-	err := useKCPEnviroment(kcpEnvironment)
+	// Authenticate using Red Hat SSO to connect to CPS and trigger a refresh routine
+	err := redHatSSOAuthentication()
 	if err != nil {
 		return err
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	redHatSSORefresh(ctx)
 
-	// Authenticate using Red Hat SSO to connect to CPS
-	err = redHatSSOAuthentication()
+	// use the specified cps environment, stable or unstable
+	err = useKCPEnviroment(kcpEnvironment)
 	if err != nil {
 		return err
 	}
@@ -391,5 +395,6 @@ func CleanUpWorkspaces(kcpEnvironment string) error {
 		}
 	}
 
+	defer cancel()
 	return nil
 }

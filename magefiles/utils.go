@@ -188,7 +188,7 @@ func redHatSSOAuthentication() error {
 	if _, err = f.Write(token_string); err != nil {
 		return err
 	}
-
+	fmt.Println("Authenticated with SSO")
 	return nil
 }
 
@@ -213,4 +213,24 @@ func useKCPEnviroment(kcpEnvironment string) error {
 	}
 
 	return nil
+}
+
+func redHatSSORefresh(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Minute)
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				err := redHatSSOAuthentication()
+				if err != nil {
+					ctx.Done()
+					klog.Infof("error with SSO authentication refresh token: ", err)
+					return
+				}
+			}
+		}
+	}()
 }
