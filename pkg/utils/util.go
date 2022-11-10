@@ -2,13 +2,14 @@ package utils
 
 import (
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"net"
 	"net/url"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/devfile/library/pkg/util"
 	"github.com/redhat-appstudio/application-service/pkg/devfile"

@@ -375,6 +375,12 @@ func CleanUpWorkspaces(kcpEnvironment string) error {
 		return err
 	}
 
+	// Switch to root workspace
+	kcpController.SwitchToRootWorkspace()
+	if err != nil {
+		return err
+	}
+
 	// List all workspaces
 	workspaces, err := kcpController.ListKCPWorkspaces()
 	if err != nil {

@@ -216,7 +216,7 @@ func useKCPEnviroment(kcpEnvironment string) error {
 }
 
 func redHatSSORefresh(ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Minute)
+	ticker := time.NewTicker(5 * time.Second)
 
 	go func() {
 		for {
@@ -227,7 +227,7 @@ func redHatSSORefresh(ctx context.Context) {
 				err := redHatSSOAuthentication()
 				if err != nil {
 					ctx.Done()
-					klog.Infof("error with SSO authentication refresh token: ", err)
+					klog.Infof("error with SSO authentication: ", err)
 					return
 				}
 			}
