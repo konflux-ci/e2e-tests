@@ -305,9 +305,6 @@ createAppStudioRootWorkspace
 createPreviewEnvFile
 startRedHatAppStudioInstallation
 
-# Switch to home workspace
-kubectl ws "~"
-
 if [[ $RUN_E2E == "true" ]]
 then
     runE2Etests

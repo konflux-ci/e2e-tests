@@ -195,7 +195,9 @@ func (ci CI) TestE2E() error {
 
 func RunE2ETests() error {
 	cwd, _ := os.Getwd()
-
+	if err := sh.RunV("kubectl", "ws", "~"); err != nil {
+		return fmt.Errorf("error when running tests: error when trying to switch to a HOME workspace: %+v", err)
+	}
 	return sh.RunV("ginkgo", "-p", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "--v", "--progress", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", fmt.Sprintf("--config-suites=%s/tests/e2e-demos/config/default.yaml", cwd))
 }
 
