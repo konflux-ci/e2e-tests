@@ -43,10 +43,10 @@ func GeneratePolarionReport(report types.Report, outputFile string, polarionProj
 		specReport := report.SpecReports[i]
 		if specReport.LeafNodeType == types.NodeTypeIt {
 			if polarionCaseMod, found := polarionCaseMap[specReport.ContainerHierarchyTexts[0]]; found {
-				polarionCaseMod.steps = append(polarionCaseMod.steps, strings.Join(append(specReport.ContainerHierarchyTexts[1:], specReport.LeafNodeText, ","), ","))
+				polarionCaseMod.steps = append(polarionCaseMod.steps, strings.Join(append(specReport.ContainerHierarchyTexts[1:], specReport.LeafNodeText, ""), ""))
 				polarionCaseMap[specReport.ContainerHierarchyTexts[0]] = polarionCaseMod
 			} else {
-				polarionCase := PolarionCase{specReport.ContainerHierarchyTexts[0], specReport.LeafNodeLocation.FileName, strings.Join(specReport.ContainerHierarchyLabels[0], ","), append([]string{}, strings.Join(append(specReport.ContainerHierarchyTexts[1:], specReport.LeafNodeText, ","), ","))}
+				polarionCase := PolarionCase{specReport.ContainerHierarchyTexts[0], specReport.LeafNodeLocation.FileName, strings.Join(specReport.ContainerHierarchyLabels[0], ","), append([]string{}, strings.Join(append(specReport.ContainerHierarchyTexts[1:], specReport.LeafNodeText, ""), ""))}
 				polarionCaseMap[specReport.ContainerHierarchyTexts[0]] = polarionCase
 			}
 		}
