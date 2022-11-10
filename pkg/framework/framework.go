@@ -95,13 +95,13 @@ func initControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 		return nil, err
 	}
 
-	// TODO: Once all controllers are working on KCP activate all the clients.
 	// Initialize Tekton controller
-	/*tektonController, err := tekton.NewSuiteController(kubeClient)
+	tektonController, err := tekton.NewSuiteController(cc)
 	if err != nil {
 		return nil, err
-	}*/
+	}
 
+	// TODO: Once all controllers are working on KCP activate all the clients.
 	/*// Initialize GitOps controller
 	gitopsController, err := gitops.NewSuiteController(kubeClient)
 	if err != nil {
@@ -135,8 +135,8 @@ func initControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 		HasController:    hasController,
 		CommonController: commonCtrl,
 		SPIController:    spiController,
+		TektonController: tektonController,
 		// TODO: Once all controllers are working on KCP activate all the clients.
-		//TektonController: tektonController,
 		//GitOpsController:  gitopsController,
 		//ReleaseController: releaseController,
 		//IntegrationController: integrationController,

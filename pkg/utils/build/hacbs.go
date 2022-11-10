@@ -17,7 +17,7 @@ func FetchTaskRunResult(pr *v1beta1.PipelineRun, pipelineTaskName string, result
 		}
 		for _, trResult := range tr.Status.TaskRunResults {
 			if trResult.Name == result {
-				return strings.TrimSuffix(trResult.Value, "\n"), nil
+				return strings.TrimSuffix(trResult.Value.StringVal, "\n"), nil
 			}
 		}
 	}
@@ -33,7 +33,7 @@ func FetchImageTaskRunResult(pr *v1beta1.PipelineRun, pipelineTaskName string, r
 		for _, trResult := range tr.Status.TaskRunResults {
 
 			if trResult.Name == "BASE_IMAGE_REPOSITORY" || trResult.Name == result {
-				return (trResult.Value), nil
+				return trResult.Value.StringVal, nil
 			}
 		}
 	}

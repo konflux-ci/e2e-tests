@@ -42,7 +42,7 @@ type Bundles struct {
 
 func newBundles(client kubernetes.Interface) (*Bundles, error) {
 	buildPipelineDefaults, err := client.CoreV1().ConfigMaps("build-templates").Get(context.TODO(), "build-pipelines-defaults", metav1.GetOptions{})
-	if err != nil {
+	if err != nil && !errors.IsNotFound(err) {
 		return nil, err
 	}
 
@@ -87,7 +87,6 @@ func (c CosignResult) Missing(prefix string) string {
 
 // Create controller for Application/Component crud operations
 func NewSuiteController(kube *kubeCl.CustomClient) (*SuiteController, error) {
-
 	bundles, err := newBundles(kube.KubeInterface())
 	if err != nil {
 		return nil, err
@@ -240,7 +239,7 @@ func (k KubeController) GetTaskRunResult(pr *v1beta1.PipelineRun, pipelineTaskNa
 		for _, trResult := range tr.Status.TaskRunResults {
 			if trResult.Name == result {
 				// for some reason the result might contain \n suffix
-				return strings.TrimSuffix(trResult.Value, "\n"), nil
+				return strings.TrimSuffix(trResult.Value.StringVal, "\n"), nil
 			}
 		}
 	}
