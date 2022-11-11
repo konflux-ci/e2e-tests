@@ -110,15 +110,6 @@ func initKCPController() (*kcp.SuiteController, error) {
 
 func redHatSSOAuthentication() error {
 	// Authenticate to Red Hat SSO using an offline token
-	// curl \
-	//  --silent \
-	//  --header "Accept: application/json" \
-	//  --header "Content-Type: application/x-www-form-urlencoded" \
-	//  --data-urlencode "grant_type=refresh_token" \
-	//  --data-urlencode "client_id=cloud-services" \
-	//  --data-urlencode "refresh_token=${OFFLINE_TOKEN}" \
-	//  "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
-
 	// Check offline_token is set: it's required for SSO
 	OFFLINE_TOKEN := os.Getenv("OFFLINE_TOKEN")
 	if OFFLINE_TOKEN == "" {
@@ -140,7 +131,7 @@ func redHatSSOAuthentication() error {
 
 	req, err := http.NewRequest("POST", "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token", strings.NewReader(encodedData))
 	if err != nil {
-		return fmt.Errorf("can't complete Red Hat SSO: %v", err)
+		return fmt.Errorf("can't create an http request for Red Hat SSO: %v", err)
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")

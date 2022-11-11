@@ -364,7 +364,7 @@ func CleanUpWorkspaces(kcpEnvironment string) error {
 	}
 
 	// Check oidc_login is available
-	if oidc_login := commandExists("kubectl-oidc_login"); !oidc_login {
+	if !commandExists("kubectl-oidc_login") {
 		return fmt.Errorf("kubectl-oidc_login plugin was not found")
 	}
 
@@ -400,6 +400,5 @@ func CleanUpWorkspaces(kcpEnvironment string) error {
 		}
 	}
 
-	defer cancel()
 	return nil
 }
