@@ -136,23 +136,6 @@ fi
 export KUBECONFIG="$KCP_KUBECONFIG"
 kubectl config use-context "$KCP_CONTEXT"
 
-# Installing oidc-login plugin for kubectl. More information about oidc-login plugin can be found here: https://github.com/int128/kubelogin.
-# oidc-login will be used to authenticate using SSO against KCP
-function installKubectlOIDCLoginPlugin() {
-    echo -e "[INFO] Installing krew for oidc-login plugin installation."
-    (
-        set -x; cd "$(mktemp -d)" &&
-        OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
-        ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
-        KREW="krew-${OS}_${ARCH}" &&
-        curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
-        tar zxvf "${KREW}.tar.gz" &&
-        ./"${KREW}" install krew
-    )
-    export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
-    kubectl krew install oidc-login
-}
-
 # Download and install KCP repository
 function downloadAndInstallKCPPlugins {
     if [ -d "${WORKSPACE}"/tmp/kcp ]

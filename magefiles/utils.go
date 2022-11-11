@@ -193,7 +193,6 @@ func redHatSSOAuthentication() error {
 }
 
 func useKCPEnviroment(kcpEnvironment string) error {
-
 	switch kcpEnvironment {
 	case "kcp-stable":
 		if err := sh.Run("kubectl", "config", "use-context", "kcp-stable-root"); err != nil {

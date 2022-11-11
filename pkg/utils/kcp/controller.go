@@ -36,8 +36,7 @@ func (s *SuiteController) DeleteKCPWorkspace(ws *ws.Workspace) error {
 	return nil
 }
 
-func (s *SuiteController) SwitchToRootWorkspace() error {
-
+func (s *SuiteController) SwitchToHomeWorkspace() error {
 	// switch to root workspace
 	if err := sh.Run("kubectl", "kcp", "workspace", "use", "~"); err != nil {
 		return fmt.Errorf("cannot switch context to root workspace: %v", err)

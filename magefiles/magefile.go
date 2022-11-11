@@ -348,7 +348,6 @@ func (CI) sendWebhook() error {
 }
 
 func CleanUpWorkspaces(kcpEnvironment string) error {
-
 	// Authenticate using Red Hat SSO to connect to CPS and trigger a refresh routine
 	err := redHatSSOAuthentication()
 	if err != nil {
@@ -376,7 +375,7 @@ func CleanUpWorkspaces(kcpEnvironment string) error {
 	}
 
 	// Switch to root workspace
-	err = kcpController.SwitchToRootWorkspace()
+	err = kcpController.SwitchToHomeWorkspace()
 	if err != nil {
 		return err
 	}
