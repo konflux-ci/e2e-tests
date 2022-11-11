@@ -281,7 +281,6 @@ then
     TIMEOUT_PID=$(ps -o pid= --ppid="${BG_PID}")
 fi
 
-installKubectlOIDCLoginPlugin
 installKubectlKcpPlugins
 cloneInfraDeployments
 createAppStudioRootWorkspace
