@@ -3,8 +3,10 @@ package release
 import (
 	"context"
 
+	applicationapiv1alpha1 "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
-	applicationapiv1alpha1 "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
+
+	//applicationapiv1alpha1 "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
 	"github.com/redhat-appstudio/release-service/api/v1alpha1"
 	appstudiov1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	kcp "github.com/redhat-appstudio/release-service/kcp"
@@ -28,18 +30,19 @@ func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
 }
 
 // CreateApplicationSnapshot creates a new ApplicationSnapshot using the given parameters.
-func (s *SuiteController) CreateApplicationSnapshot(name string, namespace string, applicationName string, snapshotComponents []applicationapiv1alpha1.ApplicationSnapshotComponent) (*applicationapiv1alpha1.ApplicationSnapshot, error) {
-	applicationSnapshot := &applicationapiv1alpha1.ApplicationSnapshot{
+//func (s *SuiteController) CreateApplicationSnapshot(name string, namespace string, applicationName string, snapshotComponents []applicationapiv1alpha1.ApplicationSnapshotComponent) (*applicationapiv1alpha1.ApplicationSnapshot, error) {
+func (s *SuiteController) CreateSnapshot(name string, namespace string, applicationName string, snapshotComponents []applicationapiv1alpha1.SnapshotComponent) (*applicationapiv1alpha1.Snapshot, error) {
+	snapshot := &applicationapiv1alpha1.Snapshot{ //&applicationapiv1alpha1.ApplicationSnapshot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: applicationapiv1alpha1.ApplicationSnapshotSpec{
+		Spec: applicationapiv1alpha1.SnapshotSpec{ //applicationapiv1alpha1.ApplicationSnapshotSpec{
 			Application: applicationName,
 			Components:  snapshotComponents,
 		},
 	}
-	return applicationSnapshot, s.KubeRest().Create(context.TODO(), applicationSnapshot)
+	return snapshot, s.KubeRest().Create(context.TODO(), snapshot)
 }
 
 // CreateRelease creates a new Release using the given parameters.
@@ -50,8 +53,8 @@ func (s *SuiteController) CreateRelease(name, namespace, snapshot, releasePlan s
 			Namespace: namespace,
 		},
 		Spec: v1alpha1.ReleaseSpec{
-			ApplicationSnapshot: snapshot,
-			ReleasePlan:         releasePlan,
+			Snapshot:    snapshot,
+			ReleasePlan: releasePlan,
 		},
 	}
 

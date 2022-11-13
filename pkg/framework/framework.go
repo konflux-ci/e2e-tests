@@ -11,14 +11,14 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/jvmbuildservice"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/spi"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	// "github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
 // Framework struct to store all controllers
 type Framework struct {
-	HasController             *has.SuiteController
-	CommonController          *common.SuiteController
-	TektonController          *tekton.SuiteController
+	HasController    *has.SuiteController
+	CommonController *common.SuiteController
+	// TektonController          *tekton.SuiteController
 	GitOpsController          *gitops.SuiteController
 	SPIController             *spi.SuiteController
 	ReleaseController         *release.SuiteController
@@ -58,12 +58,12 @@ func NewFramework() (*Framework, error) {
 		return nil, err
 	}
 
-	// Initialize Tekton controller
-	tektonController, err := tekton.NewSuiteController(kubeClient)
-	if err != nil {
-		return nil, err
-	}
-	// TODO: Once all controllers are working on KCP activate all the clients.
+	// // Initialize Tekton controller
+	// tektonController, err := tekton.NewSuiteController(kubeClient)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// // TODO: Once all controllers are working on KCP activate all the clients.
 
 	/*// Initialize GitOps controller
 	gitopsController, err := gitops.NewSuiteController(kubeClient)
@@ -91,7 +91,7 @@ func NewFramework() (*Framework, error) {
 		HasController:     hasController,
 		SPIController:     spiController,
 		ReleaseController: releaseController,
-		TektonController:  tektonController,
+		// TektonController:  tektonController,
 		// TODO: Once all controllers are working on KCP activate all the clients.
 		//GitOpsController:  gitopsController,
 		//IntegrationController: integrationController,

@@ -11,7 +11,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/gosuri/uiprogress v0.0.1
 	github.com/gosuri/uitable v0.0.4
-	github.com/hacbs-contract/enterprise-contract-controller v0.0.0-20221014135051-0e9807ee5915
+	github.com/hacbs-contract/enterprise-contract-controller/api v0.0.0-20221103185924-f1592eae814b
 	github.com/magefile/mage v1.13.0
 	github.com/onsi/ginkgo/v2 v2.1.6
 	github.com/onsi/gomega v1.20.2
@@ -23,7 +23,7 @@ require (
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20220714212008-d1b637f56c4d
 	github.com/redhat-appstudio/managed-gitops/appstudio-shared v0.0.0-20220623041404-010a781bb3fb
 	github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001
-	github.com/redhat-appstudio/release-service v0.0.0-20221031135108-c76e100cb21c
+	github.com/redhat-appstudio/release-service v0.0.0-20221111161811-b34c7417c102
 	github.com/redhat-appstudio/service-provider-integration-operator v0.8.2
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.12.0
@@ -173,6 +173,7 @@ require (
 	github.com/prometheus/common v0.35.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/prometheus/statsd_exporter v0.21.0 // indirect
+	github.com/redhat-appstudio/application-api v0.0.0-20221110213833-fbe13a6ed375
 	github.com/redhat-cop/operator-utils v1.3.3-0.20220121120056-862ef22b8cdf // indirect
 	github.com/redhat-developer/alizer/go v0.0.0-20220215154256-33df7feef4ae // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
