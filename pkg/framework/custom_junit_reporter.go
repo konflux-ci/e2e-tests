@@ -1,6 +1,30 @@
 /*
-This is modified JUnit XML Reporter for Ginkgo.
+This is modified JUnit XML Reporter for Ginkgo framework.
 Original version is available on https://github.com/onsi/ginkgo/blob/master/reporters/junit_report.go
+
+Ginkgo project repository: https://github.com/onsi/ginkgo
+
+MIT License:
+Copyright (c) 2013-2014 Onsi Fakhouri
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 package framework
@@ -118,13 +142,13 @@ func GenerateCustomJUnitReport(report types.Report, dst string) error {
 	}
 	_, err2 := f.WriteString(xml.Header)
 	if err2 != nil {
-		klog.Fatal(err2)
+		klog.Error(err2)
 	}
 	encoder := xml.NewEncoder(f)
 	encoder.Indent("  ", "    ")
 	err3 := encoder.Encode(junitReport)
 	if err3 != nil {
-		klog.Fatal(err3)
+		klog.Error(err3)
 	}
 	return f.Close()
 }
@@ -139,7 +163,7 @@ func GenerateRPPreprocReport(report types.Report) {
 				name := getClassnameFromReport(reportSpec) + "." + shortenStringAddHash(reportSpec)
 				filePath := "rp_preproc/attachments/xunit/" + name
 				if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
-					klog.Fatal(err)
+					klog.Error(err)
 				} else {
 					writeLogInFile(filePath+"/ginkgoWriter.log", reportSpec.CapturedGinkgoWriterOutput)
 					writeLogInFile(filePath+"/stdOutErr.log", reportSpec.CapturedStdOutErr)
@@ -156,14 +180,14 @@ func writeLogInFile(filePath string, log string) {
 	if len(log) != 0 {
 		f, err := os.Create(filePath)
 		if err != nil {
-			klog.Fatal(err)
+			klog.Error(err)
 		}
 		defer f.Close()
 
 		_, err2 := f.WriteString(log)
 
 		if err2 != nil {
-			klog.Fatal(err2)
+			klog.Error(err2)
 		}
 	}
 }

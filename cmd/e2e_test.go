@@ -62,7 +62,7 @@ var _ = ginkgo.ReportAfterSuite("RP Preproc reporter", func(report types.Report)
 	if generateRPPreprocReport {
 		err := framework.GenerateCustomJUnitReport(report, "xunit.xml")
 		if err != nil {
-			klog.Fatal(err)
+			klog.Error(err)
 		}
 		framework.GenerateRPPreprocReport(report)
 	}
