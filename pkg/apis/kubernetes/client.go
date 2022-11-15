@@ -8,6 +8,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
+	ws "github.com/kcp-dev/kcp/pkg/apis/tenancy/v1beta1"
 	integrationservice "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	jvmbuildservice "github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	jvmbuildserviceclientset "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
@@ -20,6 +21,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
@@ -49,6 +51,7 @@ func init() {
 	utilruntime.Must(integrationservice.AddToScheme(scheme))
 	utilruntime.Must(jvmbuildservice.AddToScheme(scheme))
 	utilruntime.Must(ecp.AddToScheme(scheme))
+	utilruntime.Must(ws.AddToScheme(scheme))
 }
 
 // Kube returns the clientset for Kubernetes upstream.
