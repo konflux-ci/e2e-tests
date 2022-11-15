@@ -106,6 +106,7 @@ func addTestStep(testCaseSteps *polarion_xml.TestCaseSteps, content string, prep
 	}
 }
 
+// How to use these tags is described here: https://github.com/redhat-appstudio/e2e-tests/blob/main/docs/LabelsNaming.md#tests-naming
 func parseTagsFromTitle(testCase *polarion_xml.TestCase, title string, component string, projectID string) {
 	posneg := "positive"
 	caselevel := "component"
