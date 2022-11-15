@@ -159,3 +159,11 @@ Our automated tests running in CI create lot of repositories in our redhat-appst
 There is a mage target that can cleanup those repositories - `mage local:cleanupGithubOrg`.
 
 For more infor & usage, please run `mage -h local:cleanupGithubOrg`.
+
+# Cleanup of kcp workspaces
+
+Our automated tests running in CI create workspaces and some are not immediately removed if the CI job fails (for debug reasons).
+
+There is a mage target that cleans up the old workspaces (created more than 24 hours before the target is executed) - `mage cleanUpWorkspaces kcp-stable|kcp-unstable`. 
+
+A periodic job in Openshift CI is configured to run such target automatically every day. 
