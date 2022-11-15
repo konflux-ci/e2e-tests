@@ -8,8 +8,8 @@ import (
 	"github.com/devfile/library/pkg/util"
 	"github.com/google/uuid"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	appstudioshared "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
@@ -154,9 +154,20 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			It("check if all of the integrationPipelineRuns created by push event passed", Label("slow"), func() {
 				integrationTestScenarios, err := f.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
-				timeout = time.Second * 600
-				interval = time.Second * 10
+
 				for _, testScenario := range *integrationTestScenarios {
+					timeout = time.Second * 60
+					interval = time.Second * 2
+					Eventually(func() bool {
+						pipelineRun, err := f.IntegrationController.GetIntegrationPipelineRun(testScenario.Name, applicationSnapshot_push.Name, appStudioE2EApplicationsNamespace)
+						if err != nil {
+							klog.Infof("cannot get the Integration PipelineRun: %v", err)
+							return false
+						}
+						return pipelineRun.HasStarted()
+					}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
+					timeout = time.Second * 600
+					interval = time.Second * 10
 					Eventually(func() bool {
 						pipelineRun, err := f.IntegrationController.GetIntegrationPipelineRun(testScenario.Name, applicationSnapshot_push.Name, appStudioE2EApplicationsNamespace)
 						Expect(err).ShouldNot(HaveOccurred())
