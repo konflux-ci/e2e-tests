@@ -1,22 +1,13 @@
 package release
 
-// import (
-// 	"time"
-// )
+// "time"
 
-// const (
-// 	snapshotName          string = "snapshot"
-// 	sourceReleaseLinkName string = "source-release-link"
-// 	targetReleaseLinkName string = "target-release-link"
-// 	releaseStrategyName   string = "strategy"
-// 	releaseName           string = "release"
-// 	releasePipelineName   string = "release-pipeline"
-// 	applicationName       string = "application"
-// 	releasePipelineBundle string = "quay.io/hacbs-release/demo:m5-alpine"
-// 	releaseStrategyPolicy string = "policy"
-
-// 	avgPipelineCompletionTime = 10 * time.Minute
-// 	defaultInterval           = 100 * time.Millisecond
-// )
-
-// Comment
+const (
+	serviceAccountName = "m7-service-account"
+	roleName           = "role-m7-service-account"
+	roleBindingName    = "role-m7-service-account-binding"
+	subjectKind        = "ServiceAccount"
+	roleRefKind        = "Role"
+	roleRefName        = "role-m7-service-account"
+	roleRefApiGroup    = "rbac.authorization.k8s.io"
+)
