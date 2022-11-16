@@ -25,10 +25,10 @@ const (
 )
 
 type SuiteController struct {
-	*kubeCl.K8sClient
+	*kubeCl.CustomClient
 }
 
-func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
+func NewSuiteController(kube *kubeCl.CustomClient) (*SuiteController, error) {
 	// Initialize a new SPI controller with just the kube client
 	return &SuiteController{
 		kube,

@@ -15,7 +15,7 @@ import (
 )
 
 // Framework struct to store all controllers
-type Framework struct {
+type ControllerHub struct {
 	HasController             *has.SuiteController
 	CommonController          *common.SuiteController
 	TektonController          *tekton.SuiteController
@@ -26,39 +26,82 @@ type Framework struct {
 	JvmbuildserviceController *jvmbuildservice.SuiteController
 }
 
+type Framework struct {
+	AppstudioWs     *ControllerHub
+	HacbsWs         *ControllerHub
+	AppstudioUserWs *ControllerHub
+	HacbsUserWs     *ControllerHub
+	WorkloadCluster *ControllerHub
+}
+
 // Initialize all test controllers and return them in a Framework
 func NewFramework() (*Framework, error) {
 
 	// Initialize a common kubernetes client to be passed to the test controllers
-	kubeClient, err := kubeCl.NewK8SClient()
+	k, err := kubeCl.NewK8SClients()
 	if err != nil {
-		return nil, fmt.Errorf("error creating client-go %v", err)
+		return nil, fmt.Errorf("error when initializing kubernetes clients: %+v", err)
 	}
 
+	a, err := initControllerHub(k.AppstudioClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize appstudio workspace controller hub: %v", err)
+	}
+
+	h, err := initControllerHub(k.HacbsClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize hacbs workspace controller hub: %v", err)
+	}
+
+	au, err := initControllerHub(k.AppstudioUserClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize appstudio user workspace controller hub: %v", err)
+	}
+
+	hu, err := initControllerHub(k.HacbsUserClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize hacbs user workspace controller hub: %v", err)
+	}
+
+	cl, err := initControllerHub(k.ClusterClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize workload cluster controller hub: %v", err)
+	}
+
+	return &Framework{
+		AppstudioWs:     a,
+		HacbsWs:         h,
+		AppstudioUserWs: au,
+		HacbsUserWs:     hu,
+		WorkloadCluster: cl,
+	}, nil
+}
+
+func initControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 	// Initialize Common controller
-	commonCtrl, err := common.NewSuiteController(kubeClient)
+	commonCtrl, err := common.NewSuiteController(cc)
 	if err != nil {
 		return nil, err
 	}
 
 	// Initialize Has controller
-	hasController, err := has.NewSuiteController(kubeClient)
+	hasController, err := has.NewSuiteController(cc)
 	if err != nil {
 		return nil, err
 	}
 
-	spiController, err := spi.NewSuiteController(kubeClient)
+	spiController, err := spi.NewSuiteController(cc)
+	if err != nil {
+		return nil, err
+	}
+
+	// Initialize Tekton controller
+	tektonController, err := tekton.NewSuiteController(cc)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO: Once all controllers are working on KCP activate all the clients.
-	// Initialize Tekton controller
-	/*tektonController, err := tekton.NewSuiteController(kubeClient)
-	if err != nil {
-		return nil, err
-	}*/
-
 	/*// Initialize GitOps controller
 	gitopsController, err := gitops.NewSuiteController(kubeClient)
 	if err != nil {
@@ -88,12 +131,12 @@ func NewFramework() (*Framework, error) {
 		return nil, err
 	}*/
 
-	return &Framework{
-		CommonController: commonCtrl,
+	return &ControllerHub{
 		HasController:    hasController,
+		CommonController: commonCtrl,
 		SPIController:    spiController,
+		TektonController: tektonController,
 		// TODO: Once all controllers are working on KCP activate all the clients.
-		//TektonController: tektonController,
 		//GitOpsController:  gitopsController,
 		//ReleaseController: releaseController,
 		//IntegrationController: integrationController,

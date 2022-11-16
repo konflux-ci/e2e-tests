@@ -12,7 +12,7 @@ command -v oc >/dev/null 2>&1 || { echo "oc cli is not installed. Aborting."; ex
 
 # tr is not working by default in MacOs. Exporting LC_CTYPE=C seems like solve the problem
 case "$(uname -s)" in
-    Darwin*)    export LC_CTYPE=C;;
+    Darwin*)    export LC_ALL=C;;
     Linux*)     echo -e "Running on Linux system";;
     *)          echo -e "UNKNOWN System."
 esac
@@ -304,9 +304,6 @@ cloneInfraDeployments
 createAppStudioRootWorkspace
 createPreviewEnvFile
 startRedHatAppStudioInstallation
-
-# Switch to user workspace
-kubectl ws "${USER_APPSTUDIO_WORKSPACE}"
 
 if [[ $RUN_E2E == "true" ]]
 then

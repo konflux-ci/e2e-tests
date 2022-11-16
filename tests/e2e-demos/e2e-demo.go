@@ -66,23 +66,23 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
 				// Check if 'has-github-token' is present, unless SKIP_HAS_SECRET_CHECK env var is set
 				if !utils.CheckIfEnvironmentExists(constants.SKIP_HAS_SECRET_CHECK_ENV) {
-					_, err := fw.HasController.KubeInterface().CoreV1().Secrets(RedHatAppStudioApplicationNamespace).Get(context.TODO(), ApplicationServiceGHTokenSecrName, metav1.GetOptions{})
+					_, err := fw.AppstudioUserWs.HasController.KubeInterface().CoreV1().Secrets(RedHatAppStudioApplicationNamespace).Get(context.TODO(), ApplicationServiceGHTokenSecrName, metav1.GetOptions{})
 					Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
 				}
-				_, err := fw.CommonController.CreateTestNamespace(namespace)
+				_, err := fw.AppstudioUserWs.CommonController.CreateTestNamespace(namespace)
 				Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", namespace, err)
 			})
 			// Remove all resources created by the tests
 			AfterAll(func() {
-				Expect(fw.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-				Expect(fw.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-				Expect(fw.GitOpsController.DeleteAllGitOpsDeploymentInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+				Expect(fw.AppstudioUserWs.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+				Expect(fw.AppstudioUserWs.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+				Expect(fw.AppstudioUserWs.GitOpsController.DeleteAllGitOpsDeploymentInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 			})
 
 			// Create an application in a specific namespace
 			It("application is created", func() {
 				fmt.Printf("Parallel process %d", GinkgoParallelProcess())
-				createdApplication, err := fw.HasController.CreateHasApplication(appTest.ApplicationName, namespace)
+				createdApplication, err := fw.AppstudioUserWs.HasController.CreateHasApplication(appTest.ApplicationName, namespace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(createdApplication.Spec.DisplayName).To(Equal(appTest.ApplicationName))
 				Expect(createdApplication.Namespace).To(Equal(namespace))
@@ -91,7 +91,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 			// Check the application health and check if a devfile was generated in the status
 			It("application is healthy", func() {
 				Eventually(func() string {
-					appstudioApp, err := fw.HasController.GetHasApplication(appTest.ApplicationName, namespace)
+					appstudioApp, err := fw.AppstudioUserWs.HasController.GetHasApplication(appTest.ApplicationName, namespace)
 					Expect(err).NotTo(HaveOccurred())
 					application = appstudioApp
 
@@ -101,7 +101,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				Eventually(func() bool {
 					gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-					return fw.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+					return fw.AppstudioUserWs.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 				}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 			})
 
@@ -119,12 +119,12 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 							// More info about manual token upload for quay.io here: https://github.com/redhat-appstudio/service-provider-integration-operator/pull/115
 							oauthCredentials := `{"access_token":"` + utils.GetEnv(constants.QUAY_OAUTH_TOKEN_ENV, "") + `", "username":"` + utils.GetEnv(constants.QUAY_OAUTH_USER_ENV, "") + `"}`
 
-							oauthSecretName = fw.SPIController.InjectManualSPIToken(namespace, componentTest.ContainerSource, oauthCredentials, v1.SecretTypeDockerConfigJson)
+							oauthSecretName = fw.AppstudioUserWs.SPIController.InjectManualSPIToken(namespace, componentTest.ContainerSource, oauthCredentials, v1.SecretTypeDockerConfigJson)
 						} else if componentTest.GitSourceUrl != "" {
 							// More info about manual token upload for github.com
 							oauthCredentials := `{"access_token":"` + utils.GetEnv(constants.GITHUB_TOKEN_ENV, "") + `"}`
 
-							oauthSecretName = fw.SPIController.InjectManualSPIToken(namespace, componentTest.GitSourceUrl, oauthCredentials, v1.SecretTypeBasicAuth)
+							oauthSecretName = fw.AppstudioUserWs.SPIController.InjectManualSPIToken(namespace, componentTest.GitSourceUrl, oauthCredentials, v1.SecretTypeBasicAuth)
 						}
 					})
 				}
@@ -132,14 +132,14 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				// Components for now can be imported from gitUrl, container image or a devfile
 				if componentTest.ContainerSource != "" {
 					It(fmt.Sprintf("create component %s from %s container source", componentTest.Name, componentTest.Type), func() {
-						_, err := fw.HasController.CreateComponent(application.Name, componentTest.Name, namespace, "", "", componentTest.ContainerSource, outputContainerImage, oauthSecretName)
+						_, err := fw.AppstudioUserWs.HasController.CreateComponent(application.Name, componentTest.Name, namespace, "", "", componentTest.ContainerSource, outputContainerImage, oauthSecretName)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
 					// User can define a git url and a devfile at the same time if multiple devfile exists into a repo
 				} else if componentTest.GitSourceUrl != "" && componentTest.Devfilesource != "" {
 					It(fmt.Sprintf("create component %s from %s git source %s and devfile %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl, componentTest.Devfilesource), func() {
-						component, err = fw.HasController.CreateComponentFromDevfile(application.Name, componentTest.Name, namespace,
+						component, err = fw.AppstudioUserWs.HasController.CreateComponentFromDevfile(application.Name, componentTest.Name, namespace,
 							componentTest.GitSourceUrl, componentTest.Devfilesource, "", containerIMG, oauthSecretName)
 						Expect(err).NotTo(HaveOccurred())
 					})
@@ -147,7 +147,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					// If component have only a git source application-service will start to fetch the devfile from the git root directory
 				} else if componentTest.GitSourceUrl != "" {
 					It(fmt.Sprintf("create component %s from %s git source %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl), func() {
-						component, err = fw.HasController.CreateComponent(application.Name, componentTest.Name, namespace,
+						component, err = fw.AppstudioUserWs.HasController.CreateComponent(application.Name, componentTest.Name, namespace,
 							componentTest.GitSourceUrl, "", "", containerIMG, oauthSecretName)
 						Expect(err).NotTo(HaveOccurred())
 					})
@@ -162,14 +162,14 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					if componentTest.ContainerSource != "" {
 						Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skiping pipelinerun check.", componentTest.Name))
 					}
-					Expect(fw.HasController.WaitForComponentPipelineToBeFinished(component.Name, application.Name, namespace)).To(Succeed(), "Failed component pipeline %v", err)
+					Expect(fw.AppstudioUserWs.HasController.WaitForComponentPipelineToBeFinished(component.Name, application.Name, namespace)).To(Succeed(), "Failed component pipeline %v", err)
 				})
 
 				// Deploy the component using gitops and check for the health
 				It(fmt.Sprintf("deploy component %s using gitops", componentTest.Name), func() {
 
 					Eventually(func() bool {
-						deployment, err := fw.CommonController.GetAppDeploymentByName(componentTest.Name, namespace)
+						deployment, err := fw.AppstudioUserWs.CommonController.GetAppDeploymentByName(componentTest.Name, namespace)
 						if err != nil && !errors.IsNotFound(err) {
 							return false
 						}
@@ -185,9 +185,9 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 				It(fmt.Sprintf("check component %s health", componentTest.Name), func() {
 					Eventually(func() bool {
-						gitOpsRoute, err := fw.CommonController.GetOpenshiftRoute(componentTest.Name, namespace)
+						gitOpsRoute, err := fw.AppstudioUserWs.CommonController.GetOpenshiftRoute(componentTest.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())
-						err = fw.GitOpsController.CheckGitOpsEndpoint(gitOpsRoute, componentTest.HealthEndpoint)
+						err = fw.AppstudioUserWs.GitOpsController.CheckGitOpsEndpoint(gitOpsRoute, componentTest.HealthEndpoint)
 						if err != nil {
 							klog.Info("Failed to request component endpoint. retrying...")
 						}
@@ -197,13 +197,13 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 				if componentTest.K8sSpec != (config.K8sSpec{}) && *componentTest.K8sSpec.Replicas > 1 {
 					It(fmt.Sprintf("scale component %s replicas", componentTest.Name), func() {
-						component, err := fw.HasController.GetHasComponent(componentTest.Name, namespace)
+						component, err := fw.AppstudioUserWs.HasController.GetHasComponent(componentTest.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())
-						_, err = fw.HasController.ScaleComponentReplicas(component, int(*componentTest.K8sSpec.Replicas))
+						_, err = fw.AppstudioUserWs.HasController.ScaleComponentReplicas(component, int(*componentTest.K8sSpec.Replicas))
 						Expect(err).NotTo(HaveOccurred())
 
 						Eventually(func() bool {
-							deployment, _ := fw.CommonController.GetAppDeploymentByName(componentTest.Name, namespace)
+							deployment, _ := fw.AppstudioUserWs.CommonController.GetAppDeploymentByName(componentTest.Name, namespace)
 							if err != nil && !errors.IsNotFound(err) {
 								return false
 							}

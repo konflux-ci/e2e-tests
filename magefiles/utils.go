@@ -95,12 +95,12 @@ func commandExists(cmd string) bool {
 }
 
 func initKCPController() (*kcp.SuiteController, error) {
-	kubeClient, err := kubeCl.NewK8SClient()
+	kubeClients, err := kubeCl.NewK8SClients()
 	if err != nil {
 		return &kcp.SuiteController{}, fmt.Errorf("error creating client-go %v", err)
 	}
 
-	kcpController, err := kcp.NewSuiteController(kubeClient)
+	kcpController, err := kcp.NewSuiteController(kubeClients.AppstudioUserClient)
 	if err != nil {
 		return &kcp.SuiteController{}, err
 	}

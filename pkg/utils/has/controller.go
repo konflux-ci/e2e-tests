@@ -3,9 +3,10 @@ package has
 import (
 	"context"
 	"fmt"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"strings"
 	"time"
+
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
 	routev1 "github.com/openshift/api/route/v1"
 	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
@@ -23,10 +24,10 @@ import (
 )
 
 type SuiteController struct {
-	*kubeCl.K8sClient
+	*kubeCl.CustomClient
 }
 
-func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
+func NewSuiteController(kube *kubeCl.CustomClient) (*SuiteController, error) {
 	return &SuiteController{
 		kube,
 	}, nil
