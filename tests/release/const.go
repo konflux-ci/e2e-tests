@@ -16,7 +16,7 @@ const (
 	serviceAccount                      = "pipeline"
 	releaseStrategyPolicy               = "policy"
 	environment                         = "test-environment"
-	releaseStrategyServiceAccount       = "pipeline"
+	releaseStrategyServiceAccount       = "" //"pipeline"
 
 	avgPipelineCompletionTime = 2 * time.Minute
 	defaultInterval           = 100 * time.Millisecond

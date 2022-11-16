@@ -2,12 +2,13 @@ package client
 
 import (
 	routev1 "github.com/openshift/api/route/v1"
-	applicationservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
-	gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
+	// applicationservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
+	// gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
 	managedgitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend/apis/managed-gitops/v1alpha1"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
+	applicationapiv1alpha1 "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	integrationservice "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	jvmbuildservice "github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	jvmbuildserviceclientset "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
@@ -38,17 +39,18 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(applicationservice.AddToScheme(scheme))
+	// utilruntime.Must(applicationservice.AddToScheme(scheme))
 	utilruntime.Must(tekton.AddToScheme(scheme))
 	utilruntime.Must(routev1.AddToScheme(scheme))
 	utilruntime.Must(managedgitopsv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(spi.AddToScheme(scheme))
 	utilruntime.Must(toolchainv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(release.AddToScheme(scheme))
-	utilruntime.Must(gitopsv1alpha1.AddToScheme(scheme))
+	// utilruntime.Must(gitopsv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(integrationservice.AddToScheme(scheme))
 	utilruntime.Must(jvmbuildservice.AddToScheme(scheme))
 	utilruntime.Must(ecp.AddToScheme(scheme))
+	utilruntime.Must(applicationapiv1alpha1.AddToScheme(scheme))
 }
 
 // Kube returns the clientset for Kubernetes upstream.

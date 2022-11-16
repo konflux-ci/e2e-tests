@@ -199,7 +199,7 @@ func RunE2ETests() error {
 }
 
 func PreflightChecks() error {
-	if os.Getenv("GITHUB_TOKEN") == "" || os.Getenv("QUAY_TOKEN") == "" {
+	if ("GITHUB_TOKEN") == "" || os.Getenv("QUAY_TOKEN") == "" {
 		return fmt.Errorf("required env vars containing secrets (QUAY_TOKEN, GITHUB_TOKEN) not defined or empty")
 	}
 
