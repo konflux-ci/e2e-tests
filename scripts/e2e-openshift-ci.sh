@@ -15,7 +15,7 @@ mkdir -p tmp/
 
 export ROOT_E2E="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"/..
 export WORKSPACE=${WORKSPACE:-${ROOT_E2E}}
-export E2E_CLONE_BRANCH="pre-kcp"
+export E2E_CLONE_BRANCH="main"
 export E2E_REPO_LINK="https://github.com/redhat-appstudio/e2e-tests.git"
 export AUTHOR_E2E_BRANCH=""
 export PULL_NUMBER=${PULL_NUMBER:-"periodic"}
