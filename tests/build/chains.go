@@ -33,27 +33,27 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 
 	Context("infrastructure is running", func() {
 		It("verify the chains controller is running", func() {
-			err := fwk.HacbsUser.CommonController.WaitForPodSelector(fwk.HacbsUser.CommonController.IsPodRunning, constants.TEKTON_CHAINS_NS, "app", "tekton-chains-controller", 60, 100)
+			err := fwk.HacbsUserWs.CommonController.WaitForPodSelector(fwk.HacbsUserWs.CommonController.IsPodRunning, constants.TEKTON_CHAINS_NS, "app", "tekton-chains-controller", 60, 100)
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("verify the correct secrets have been created", func() {
-			_, err := fwk.HacbsUser.CommonController.GetSecret(constants.TEKTON_CHAINS_NS, "chains-ca-cert")
+			_, err := fwk.HacbsUserWs.CommonController.GetSecret(constants.TEKTON_CHAINS_NS, "chains-ca-cert")
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("verify the correct roles are created", func() {
-			_, csaErr := fwk.HacbsUser.CommonController.GetRole("chains-secret-admin", constants.TEKTON_CHAINS_NS)
+			_, csaErr := fwk.HacbsUserWs.CommonController.GetRole("chains-secret-admin", constants.TEKTON_CHAINS_NS)
 			Expect(csaErr).NotTo(HaveOccurred())
-			_, srErr := fwk.HacbsUser.CommonController.GetRole("secret-reader", "openshift-ingress-operator")
+			_, srErr := fwk.HacbsUserWs.CommonController.GetRole("secret-reader", "openshift-ingress-operator")
 			Expect(srErr).NotTo(HaveOccurred())
 		})
 		It("verify the correct rolebindings are created", func() {
-			_, csaErr := fwk.HacbsUser.CommonController.GetRoleBinding("chains-secret-admin", constants.TEKTON_CHAINS_NS)
+			_, csaErr := fwk.HacbsUserWs.CommonController.GetRoleBinding("chains-secret-admin", constants.TEKTON_CHAINS_NS)
 			Expect(csaErr).NotTo(HaveOccurred())
-			_, csrErr := fwk.HacbsUser.CommonController.GetRoleBinding("chains-secret-reader", "openshift-ingress-operator")
+			_, csrErr := fwk.HacbsUserWs.CommonController.GetRoleBinding("chains-secret-reader", "openshift-ingress-operator")
 			Expect(csrErr).NotTo(HaveOccurred())
 		})
 		It("verify the correct service account is created", func() {
-			_, err := fwk.HacbsUser.CommonController.GetServiceAccount("chains-secrets-admin", constants.TEKTON_CHAINS_NS)
+			_, err := fwk.HacbsUserWs.CommonController.GetServiceAccount("chains-secrets-admin", constants.TEKTON_CHAINS_NS)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -77,8 +77,8 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 
 		BeforeAll(func() {
 			kubeController = tekton.KubeController{
-				Commonctrl: *fwk.HacbsUser.CommonController,
-				Tektonctrl: *fwk.HacbsUser.TektonController,
+				Commonctrl: *fwk.HacbsUserWs.CommonController,
+				Tektonctrl: *fwk.HacbsUserWs.TektonController,
 				Namespace:  namespace,
 			}
 
@@ -105,7 +105,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			// `repository` values from those will replace the default policy source
 			// this gives us a way to set the tests to use a different policy if we
 			// break the tests in the default policy source
-			if config, err := fwk.HacbsUser.CommonController.KubeInterface().CoreV1().ConfigMaps("e2e-tests").Get(context.TODO(), "ec-config", v1.GetOptions{}); err != nil {
+			if config, err := fwk.HacbsUserWs.CommonController.KubeInterface().CoreV1().ConfigMaps("e2e-tests").Get(context.TODO(), "ec-config", v1.GetOptions{}); err != nil {
 				if v, ok := config.Data["revision"]; ok {
 					policySource.Revision = &v
 				}
@@ -117,7 +117,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			// At a bare minimum, each spec within this context relies on the existence of
 			// an image that has been signed by Tekton Chains. Trigger a demo task to fulfill
 			// this purpose.
-			pr, err := kubeController.RunPipeline(tekton.BuildahDemo{Image: image, Bundle: fwk.HacbsUser.TektonController.Bundles.BuildTemplatesBundle}, pipelineRunTimeout)
+			pr, err := kubeController.RunPipeline(tekton.BuildahDemo{Image: image, Bundle: fwk.HacbsUserWs.TektonController.Bundles.BuildTemplatesBundle}, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			// Verify that the build task was created as expected.
 			Expect(pr.ObjectMeta.Name).To(Equal(buildPipelineRunName))
@@ -183,7 +183,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 					RekorHost:       rekorHost,
 					SslCertDir:      "/var/run/secrets/kubernetes.io/serviceaccount",
 					StrictPolicy:    true,
-					Bundle:          fwk.HacbsUser.TektonController.Bundles.HACBSTemplatesBundle,
+					Bundle:          fwk.HacbsUserWs.TektonController.Bundles.HACBSTemplatesBundle,
 				}
 
 				// Since specs could update the config policy, make sure it has a consistent
@@ -223,7 +223,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 
 				tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract-v2")
 				Expect(err).NotTo(HaveOccurred())
-				printTaskRunStatus(tr, namespace, *fwk.HacbsUser.CommonController)
+				printTaskRunStatus(tr, namespace, *fwk.HacbsUserWs.CommonController)
 				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s suceeded\n", tr.PipelineTaskName, pr.Name)
 				Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
 				GinkgoWriter.Printf("Make sure EC-v2 results for PipelineRun %s are succeeding\n", pr.Name)
@@ -254,7 +254,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 
 				tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract-v2")
 				Expect(err).NotTo(HaveOccurred())
-				printTaskRunStatus(tr, namespace, *fwk.HacbsUser.CommonController)
+				printTaskRunStatus(tr, namespace, *fwk.HacbsUserWs.CommonController)
 				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s suceeded\n", tr.PipelineTaskName, pr.Name)
 				Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
 				GinkgoWriter.Printf("Make sure EC-v2 results for PipelineRun %s are failing\n", pr.Name)
@@ -275,7 +275,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 
 				tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract-v2")
 				Expect(err).NotTo(HaveOccurred())
-				printTaskRunStatus(tr, namespace, *fwk.HacbsUser.CommonController)
+				printTaskRunStatus(tr, namespace, *fwk.HacbsUserWs.CommonController)
 				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s failed\n", tr.PipelineTaskName, pr.Name)
 				Expect(tekton.DidTaskSucceed(tr)).To(BeFalse())
 				// Because the task fails, no results are created
@@ -302,7 +302,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 
 				tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract-v2")
 				Expect(err).NotTo(HaveOccurred())
-				printTaskRunStatus(tr, namespace, *fwk.HacbsUser.CommonController)
+				printTaskRunStatus(tr, namespace, *fwk.HacbsUserWs.CommonController)
 				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s failed\n", tr.PipelineTaskName, pr.Name)
 				Expect(tekton.DidTaskSucceed(tr)).To(BeFalse())
 				// Because the task fails, no results are created

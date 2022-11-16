@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"os"
 
 	routev1 "github.com/openshift/api/route/v1"
@@ -93,6 +94,9 @@ func (c *CustomClient) DynamicClient() dynamic.Interface {
 func NewK8SClients() (*K8sClients, error) {
 	// Init (workload) cluster client
 	clusterKubeconfigPath := os.Getenv("CLUSTER_KUBECONFIG")
+	if clusterKubeconfigPath == "" {
+		return nil, fmt.Errorf("'CLUSTER_KUBECONFIG' env var needs to be exported and has to point to a workload cluster")
+	}
 	cfgCluster, err := clientcmd.BuildConfigFromFlags("", clusterKubeconfigPath)
 	if err != nil {
 		return nil, err

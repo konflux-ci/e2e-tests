@@ -91,25 +91,13 @@ are in the [infra-deployments](https://github.com/redhat-appstudio/infra-deploym
 ## Building and running the e2e tests
 You can use scripts to build and run the tests:
    ```bash
+      export CLUSTER_KUBECONFIG=/path/to/workload/cluster/kubeconfig
+      # WORKSPACE_ID=abc assumes workspaces have the suffix -abc
+      # i.e. appstudio-abc, redhat-hacbs-abc etc.
+      # if empty, workspaces without suffix are expected, i.e. appstudio, redhat-hacbs etc.
+      export WORKSPACE_ID=<ID>
+      go mod vendor
       make local/test/e2e
-   ```
-Or build and run the tests without scripts:
-1. Install dependencies and build the tests:
-
-   ``` bash
-   # Install dependencies
-   $ go mod tidy
-   # Copy the dependencies to vendor folder
-   $ go mod vendor
-   # Create `e2e-appstudio` binary in bin folder. Please add the binary to the path or just execute `./bin/e2e-appstudio`
-   $ make build
-   ```
-
-2. Run the e2e tests:
-The `e2e-appstudio` command is the root command that executes all test functionality. To obtain all available flags for the binary please use `--help` flags. All ginkgo flags and go tests are available in `e2e-appstudio` binary.
-
-   ```bash
-    `./bin/e2e-appstudio`
    ```
 
 The instructions for every test suite can be found in the [tests folder](tests), e.g. [has Readme.md](tests/has/README.md). 

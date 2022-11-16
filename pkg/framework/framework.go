@@ -27,11 +27,11 @@ type ControllerHub struct {
 }
 
 type Framework struct {
-	Appstudio     *ControllerHub
-	Hacbs         *ControllerHub
-	AppstudioUser *ControllerHub
-	HacbsUser     *ControllerHub
-	Cluster       *ControllerHub
+	AppstudioWs     *ControllerHub
+	HacbsWs         *ControllerHub
+	AppstudioUserWs *ControllerHub
+	HacbsUserWs     *ControllerHub
+	WorkloadCluster *ControllerHub
 }
 
 // Initialize all test controllers and return them in a Framework
@@ -45,35 +45,35 @@ func NewFramework() (*Framework, error) {
 
 	a, err := initControllerHub(k.AppstudioClient)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to initialize appstudio workspace controller hub: %v", err)
 	}
 
 	h, err := initControllerHub(k.HacbsClient)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to initialize hacbs workspace controller hub: %v", err)
 	}
 
 	au, err := initControllerHub(k.AppstudioUserClient)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to initialize appstudio user workspace controller hub: %v", err)
 	}
 
 	hu, err := initControllerHub(k.HacbsUserClient)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to initialize hacbs user workspace controller hub: %v", err)
 	}
 
 	cl, err := initControllerHub(k.ClusterClient)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to initialize workload cluster controller hub: %v", err)
 	}
 
 	return &Framework{
-		Appstudio:     a,
-		Hacbs:         h,
-		AppstudioUser: au,
-		HacbsUser:     hu,
-		Cluster:       cl,
+		AppstudioWs:     a,
+		HacbsWs:         h,
+		AppstudioUserWs: au,
+		HacbsUserWs:     hu,
+		WorkloadCluster: cl,
 	}, nil
 }
 
