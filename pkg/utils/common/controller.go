@@ -206,6 +206,16 @@ func (s *SuiteController) GetServiceAccount(saName, namespace string) (*corev1.S
 	return s.KubeInterface().CoreV1().ServiceAccounts(namespace).Get(context.TODO(), saName, metav1.GetOptions{})
 }
 
+func (s *SuiteController) CreateServiceAccount(saName, namespace string) (*corev1.ServiceAccount, error) {
+	serviceAccount := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      saName,
+			Namespace: namespace,
+		},
+	}
+	return s.KubeInterface().CoreV1().ServiceAccounts(namespace).Create(context.TODO(), serviceAccount, metav1.CreateOptions{})
+}
+
 // GetOpenshiftRoute returns the route for a given component name
 func (h *SuiteController) GetOpenshiftRoute(routeName string, routeNamespace string) (*routev1.Route, error) {
 	namespacedName := types.NamespacedName{
@@ -440,12 +450,10 @@ func (s *SuiteController) ServiceaccountPresent(saName, namespace string) wait.C
 //     is created by the GitOps Operator.
 func (s *SuiteController) argoCDNamespaceRBACPresent(namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-
 		roles, err := s.ListRoles(namespace)
 		if err != nil || roles == nil {
 			return false, nil
 		}
-
 		// The namespace should contain a 'gitops-service-argocd-' Role
 		roleFound := false
 		for _, role := range roles.Items {
@@ -456,7 +464,6 @@ func (s *SuiteController) argoCDNamespaceRBACPresent(namespace string) wait.Cond
 		if !roleFound {
 			return false, nil
 		}
-
 		// The namespace should contain a 'gitops-service-argocd-' RoleBinding
 		roleBindingFound := false
 		roleBindings, err := s.ListRoleBindings(namespace)
@@ -468,7 +475,6 @@ func (s *SuiteController) argoCDNamespaceRBACPresent(namespace string) wait.Cond
 				roleBindingFound = true
 			}
 		}
-
 		return roleBindingFound, nil
 	}
 }*/
