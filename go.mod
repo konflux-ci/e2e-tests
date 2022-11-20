@@ -19,7 +19,11 @@ require (
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
 	github.com/redhat-appstudio/application-api v0.0.0-20221114151952-77cba9006505
+<<<<<<< HEAD
 	github.com/redhat-appstudio/application-service v0.0.0-20221122170733-a852feca3998
+=======
+	github.com/redhat-appstudio/application-service v0.0.0-20220509201208-86571e38f52e
+>>>>>>> 57c6472 (Fix release API)
 	github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2cad2
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20220714212008-d1b637f56c4d
 	github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001
@@ -215,7 +219,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.24.3 // indirect
 	k8s.io/component-base v0.24.3 // indirect
-	k8s.io/kube-openapi v0.0.0-20220614142933-1062c7ade5f8 // indirect
+	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
 	k8s.io/kubectl v0.24.1 // indirect
 	k8s.io/metrics v0.24.1 // indirect
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed // indirect

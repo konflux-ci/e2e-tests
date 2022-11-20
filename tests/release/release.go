@@ -24,10 +24,21 @@ var snapshotComponents = []applicationapiv1alpha1.SnapshotComponent{
 	{Name: "component-2", ContainerImage: "quay.io/redhat-appstudio/component2@sha256:a01dfd18cf8ca8b68770b09a9b6af0fd7c6d1f8644c7ab97f0e06c34dfc5860e"},
 	{Name: "component-3", ContainerImage: "quay.io/redhat-appstudio/component3@sha256:d90a0a33e4c5a1daf5877f8dd989a570bfae4f94211a8143599245e503775b1f"},
 }
+var revision = "main"
+var description = "Red Hat's enterprise requirements"
+
+var policySource = ecp.GitPolicySource{
+	Repository: "https://github.com/hacbs-contract/ec-policies",
+	Revision:   &revision,
+}
 
 var ecPolicy = ecp.EnterpriseContractPolicySpec{
-	Description: "Red Hat's enterprise requirements",
-	Sources:     []string{"https://github.com/hacbs-contract/ec-policies", "main"},
+	Description: &description,
+	Sources: []ecp.PolicySource{
+		{
+			GitRepository: &policySource,
+		},
+	},
 	Exceptions: &ecp.EnterpriseContractPolicyExceptions{
 		NonBlocking: []string{"tasks", "attestation_task_bundle", "java", "test", "not_useful"},
 	},

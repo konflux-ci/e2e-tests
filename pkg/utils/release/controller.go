@@ -1,4 +1,4 @@
-package release
+ppackage release
 
 import (
 	"context"

@@ -1347,10 +1347,22 @@ github.com/quasilyte/go-ruleguard/dsl v0.3.10/go.mod h1:KeCP03KrjuSO0H1kTuZQCWlQ
 github.com/quasilyte/go-ruleguard/rules v0.0.0-20201231183845-9e62ed36efe1/go.mod h1:7JTjp89EGyU1d6XfBiXihJNG37wB2VRkd125Q1u7Plc=
 github.com/quasilyte/go-ruleguard/rules v0.0.0-20210428214800-545e0d2e0bf7/go.mod h1:4cgAphtvu7Ftv7vOT2ZOYhC6CvBxZixcasr8qIOTA50=
 github.com/quasilyte/regex/syntax v0.0.0-20200407221936-30656e2c4a95/go.mod h1:rlzQ04UMyJXu/aOvhd8qT+hvDrFpiwqp8MRXDY9szc0=
+<<<<<<< HEAD
 github.com/redhat-appstudio/application-api v0.0.0-20221114151952-77cba9006505 h1:8x+HtXDPJ9xmQbtWMdV5ntb0T+uEXjsmzzLgxpKFR1M=
 github.com/redhat-appstudio/application-api v0.0.0-20221114151952-77cba9006505/go.mod h1:LpcTNLCDMf1CUNTw2bgTiz8M49sUsN2F9T7bOSKcJEo=
 github.com/redhat-appstudio/application-service v0.0.0-20221122170733-a852feca3998 h1:8UMnBChIcvdFa+2bh92gdL1+F8HRmtgZZF9B7/0IUWk=
 github.com/redhat-appstudio/application-service v0.0.0-20221122170733-a852feca3998/go.mod h1:1NeB0c0AXeeOAMKlhBPikA7f+cTZambH9i8z8Eg+4os=
+=======
+github.com/rabbitmq/amqp091-go v1.1.0/go.mod h1:ogQDLSOACsLPsIq0NpbtiifNZi2YOz0VTJ0kHRghqbM=
+github.com/rboyer/safeio v0.2.1/go.mod h1:Cq/cEPK+YXFn622lsQ0K4KsPZSPtaptHHEldsy7Fmig=
+github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
+github.com/rcrowley/go-metrics v0.0.0-20190706150252-9beb055b7962/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
+github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
+github.com/redhat-appstudio/application-api v0.0.0-20221114151952-77cba9006505 h1:8x+HtXDPJ9xmQbtWMdV5ntb0T+uEXjsmzzLgxpKFR1M=
+github.com/redhat-appstudio/application-api v0.0.0-20221114151952-77cba9006505/go.mod h1:LpcTNLCDMf1CUNTw2bgTiz8M49sUsN2F9T7bOSKcJEo=
+github.com/redhat-appstudio/application-service v0.0.0-20220509201208-86571e38f52e h1:Vx7tzbgpkwr2vyLoAhPi7Qrv/Pul1b4z7i4cNqhkMuo=
+github.com/redhat-appstudio/application-service v0.0.0-20220509201208-86571e38f52e/go.mod h1:QzlBejIgkmnzM/tiKzJKK86IXil/6j8KxmxaDInqtmU=
+>>>>>>> 57c6472 (Fix release API)
 github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2cad2 h1:wVpENUra8XAN2UgR09KLjyejoiHcd20P79gVx2wdIuE=
 github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2cad2/go.mod h1:FNCuALWZDRMbMKm3Vb/5E2R8ei6eFwcEhgYcFKRVZJU=
 github.com/redhat-appstudio/jvm-build-service v0.0.0-20220714212008-d1b637f56c4d h1:uDKH0bbGjQaoiTxVv2ThIfNH84IOXxwDsoWDLxlOr34=
@@ -2538,9 +2550,24 @@ k8s.io/utils v0.0.0-20210707171843-4b05e18ac7d9/go.mod h1:jPW/WVKK9YHAvNhRxK0md/
 k8s.io/utils v0.0.0-20210802155522-efc7438f0176/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
 k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
 k8s.io/utils v0.0.0-20211116205334-6203023598ed/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
+<<<<<<< HEAD
 k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
 k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed h1:jAne/RjBTyawwAy0utX5eqigAwz/lQhTmy+Hr/Cpue4=
 k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
+=======
+k8s.io/utils v0.0.0-20211208161948-7d6a63dca704/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
+k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
+k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed h1:jAne/RjBTyawwAy0utX5eqigAwz/lQhTmy+Hr/Cpue4=
+k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
+knative.dev/caching v0.0.0-20210803185815-4e553d2275a0/go.mod h1:Vs+HND39+KKaIQp9M3m3Jmt4YtznpitDQ3n53gxbDYQ=
+knative.dev/eventing v0.25.0/go.mod h1:8jIsrnSONPgv+m63OTzpwZQJiQASYl77C3llCyYlBMU=
+knative.dev/hack v0.0.0-20210622141627-e28525d8d260/go.mod h1:PHt8x8yX5Z9pPquBEfIj0X66f8iWkWfR0S/sarACJrI=
+knative.dev/hack v0.0.0-20220128200847-51a42b2eb63e/go.mod h1:PHt8x8yX5Z9pPquBEfIj0X66f8iWkWfR0S/sarACJrI=
+knative.dev/hack/schema v0.0.0-20210622141627-e28525d8d260/go.mod h1:ffjwmdcrH5vN3mPhO8RrF2KfNnbHeCE2C60A+2cv3U0=
+knative.dev/networking v0.0.0-20210803181815-acdfd41c575c/go.mod h1:UA9m1M3rGssy63gVwjSh7CYoWTKZNO8cnY9QsIu7tyo=
+knative.dev/pkg v0.0.0-20210803160015-21eb4c167cc5/go.mod h1:RPk5txNA3apR9X40D4MpUOP9/VqOG8CrtABWfOwGVS4=
+knative.dev/pkg v0.0.0-20220131144930-f4b57aef0006/go.mod h1:bZMFTPDPHV3wXuiQ09UJuEGYYQnfpe81MCxNvsMAiJk=
+>>>>>>> 57c6472 (Fix release API)
 knative.dev/pkg v0.0.0-20220329144915-0a1ec2e0d46c h1:PLzCwnuPt+bjwiyYrRrsbmiBWR8a5cIwKtTd3LK1TqU=
 knative.dev/pkg v0.0.0-20220329144915-0a1ec2e0d46c/go.mod h1:0A5D5tOLettuVoi5x+0SLGRfrvVemXXtLH247WupPJk=
 modernc.org/cc v1.0.0/go.mod h1:1Sk4//wdnYJiUIxnW8ddKpaOJCF37yAdqYnkxUpaYxw=
@@ -2590,6 +2617,10 @@ sigs.k8s.io/structured-merge-diff/v4 v4.0.1/go.mod h1:bJZC9H9iH24zzfZ/41RGcq60oK
 sigs.k8s.io/structured-merge-diff/v4 v4.0.2/go.mod h1:bJZC9H9iH24zzfZ/41RGcq60oK1F7G282QMXDPYydCw=
 sigs.k8s.io/structured-merge-diff/v4 v4.0.3/go.mod h1:bJZC9H9iH24zzfZ/41RGcq60oK1F7G282QMXDPYydCw=
 sigs.k8s.io/structured-merge-diff/v4 v4.1.2/go.mod h1:j/nl6xW8vLS49O8YvXW1ocPhZawJtm+Yrr7PPRQ0Vg4=
+<<<<<<< HEAD
+=======
+sigs.k8s.io/structured-merge-diff/v4 v4.2.0/go.mod h1:j/nl6xW8vLS49O8YvXW1ocPhZawJtm+Yrr7PPRQ0Vg4=
+>>>>>>> 57c6472 (Fix release API)
 sigs.k8s.io/structured-merge-diff/v4 v4.2.1/go.mod h1:j/nl6xW8vLS49O8YvXW1ocPhZawJtm+Yrr7PPRQ0Vg4=
 sigs.k8s.io/structured-merge-diff/v4 v4.2.3 h1:PRbqxJClWWYMNV1dhaG4NsibJbArud9kFxnAMREiWFE=
 sigs.k8s.io/structured-merge-diff/v4 v4.2.3/go.mod h1:qjx8mGObPmV2aSZepjQjbmb2ihdVs8cGKBraizNC69E=
