@@ -166,7 +166,8 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				})
 
 				// Deploy the component using gitops and check for the health
-				It(fmt.Sprintf("deploy component %s using gitops", componentTest.Name), func() {
+				// TODO re-enable once the issue with GitopsDeployment creation is resolved
+				It(fmt.Sprintf("deploy component %s using gitops", componentTest.Name), Pending, func() {
 
 					Eventually(func() bool {
 						deployment, err := fw.CommonController.GetAppDeploymentByName(componentTest.Name, namespace)
@@ -183,7 +184,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					Expect(err).NotTo(HaveOccurred())
 				})
 
-				It(fmt.Sprintf("check component %s health", componentTest.Name), func() {
+				It(fmt.Sprintf("check component %s health", componentTest.Name), Pending, func() {
 					Eventually(func() bool {
 						gitOpsRoute, err := fw.CommonController.GetOpenshiftRoute(componentTest.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())
@@ -196,7 +197,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				})
 
 				if componentTest.K8sSpec != (config.K8sSpec{}) && *componentTest.K8sSpec.Replicas > 1 {
-					It(fmt.Sprintf("scale component %s replicas", componentTest.Name), func() {
+					It(fmt.Sprintf("scale component %s replicas", componentTest.Name), Pending, func() {
 						component, err := fw.HasController.GetHasComponent(componentTest.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())
 						_, err = fw.HasController.ScaleComponentReplicas(component, int(*componentTest.K8sSpec.Replicas))
