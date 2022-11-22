@@ -1,4 +1,4 @@
-ppackage release
+package release
 
 import (
 	"context"
@@ -7,7 +7,8 @@ import (
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/release-service/api/v1alpha1"
 	appstudiov1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
-	kcp "github.com/redhat-appstudio/release-service/kcp"
+
+	//	kcp "github.com/redhat-appstudio/release-service/kcp"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
