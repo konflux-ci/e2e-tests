@@ -8,7 +8,7 @@ import (
 	"github.com/redhat-appstudio/release-service/api/v1alpha1"
 	appstudiov1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
 
-	//	kcp "github.com/redhat-appstudio/release-service/kcp"
+	// kcp "github.com/redhat-appstudio/release-service/kcp"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -29,13 +29,23 @@ func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
 }
 
 // CreateApplicationSnapshot creates a new ApplicationSnapshot using the given parameters.
+<<<<<<< HEAD
 func (s *SuiteController) CreateApplicationSnapshot(name string, namespace string, applicationName string, snapshotComponents []appstudioApi.SnapshotComponent) (*appstudioApi.Snapshot, error) {
 	applicationSnapshot := &appstudioApi.Snapshot{
+=======
+//func (s *SuiteController) CreateApplicationSnapshot(name string, namespace string, applicationName string, snapshotComponents []applicationapiv1alpha1.ApplicationSnapshotComponent) (*applicationapiv1alpha1.ApplicationSnapshot, error) {
+func (s *SuiteController) CreateSnapshot(name string, namespace string, applicationName string, snapshotComponents []applicationapiv1alpha1.SnapshotComponent) (*applicationapiv1alpha1.Snapshot, error) {
+	snapshot := &applicationapiv1alpha1.Snapshot{
+>>>>>>> ef5e726 (fix release-e2e test)
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
+<<<<<<< HEAD
 		Spec: appstudioApi.SnapshotSpec{
+=======
+		Spec: applicationapiv1alpha1.SnapshotSpec{
+>>>>>>> ef5e726 (fix release-e2e test)
 			Application: applicationName,
 			Components:  snapshotComponents,
 		},
@@ -153,9 +163,10 @@ func (s *SuiteController) CreateReleasePlan(name, namespace, application, target
 		Spec: appstudiov1alpha1.ReleasePlanSpec{
 			DisplayName: name,
 			Application: application,
-			Target: kcp.NamespaceReference{
-				Namespace: targetNamespace,
-			},
+			Target:      targetNamespace,
+			// Target: kcp.NamespaceReference{
+			// 	Namespace: targetNamespace,
+			// },
 		},
 	}
 	if autoReleaseLabel == "" || autoReleaseLabel == "true" {
@@ -204,9 +215,10 @@ func (s *SuiteController) CreateReleasePlanAdmission(name, originNamespace, appl
 		Spec: appstudiov1alpha1.ReleasePlanAdmissionSpec{
 			DisplayName: name,
 			Application: application,
-			Origin: kcp.NamespaceReference{
-				Namespace: originNamespace,
-			},
+			Origin:      originNamespace,
+			// Origin: kcp.NamespaceReference{
+			// 	Namespace: originNamespace,
+			// },
 			Environment:     environment,
 			ReleaseStrategy: releaseStrategy,
 		},

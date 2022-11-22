@@ -241,7 +241,7 @@ func (k KubeController) GetTaskRunResult(pr *v1beta1.PipelineRun, pipelineTaskNa
 		for _, trResult := range tr.Status.TaskRunResults {
 			if trResult.Name == result {
 				// for some reason the result might contain \n suffix
-				return strings.TrimSuffix(trResult.Value, "\n"), nil
+				return strings.TrimSuffix(trResult.Value.StringVal, "\n"), nil
 			}
 		}
 	}

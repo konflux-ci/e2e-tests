@@ -1,0 +1,18 @@
+apiVersion: appstudio.redhat.com/v1alpha1
+kind: EnterpriseContractPolicy
+metadata:
+  name: policy
+  namespace: 8dfe3c06-8601-4f39-b038-f454bf7be623
+spec:
+  description: Red Hat's enterprise requirements
+  exceptions:
+    nonBlocking:
+    - not_useful
+    - attestation_task_bundle
+    - java
+    - tasks
+    - test
+  sources:
+  - git:
+      repository: https://github.com/hacbs-contract/ec-policies
+      revision: main
