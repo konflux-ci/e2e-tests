@@ -29,8 +29,8 @@ export HAS_DEFAULT_IMAGE_REPOSITORY="quay.io/${QUAY_E2E_ORGANIZATION:-redhat-app
 
 pushd "${TMP_DIR}"
 
-INFRA_DEPLOYMENTS_ORG="${INFRA_DEPLOYMENTS_ORG:-"redhat-appstudio"}"
-INFRA_DEPLOYMENTS_BRANCH="${INFRA_DEPLOYMENTS_BRANCH:-"main"}"
+INFRA_DEPLOYMENTS_ORG="${INFRA_DEPLOYMENTS_ORG:-"Michkov"}"
+INFRA_DEPLOYMENTS_BRANCH="${INFRA_DEPLOYMENTS_BRANCH:-"tekton-update"}"
 git clone --no-checkout "https://${MY_GITHUB_TOKEN}@github.com/${INFRA_DEPLOYMENTS_ORG}/infra-deployments.git" .
 git checkout "${INFRA_DEPLOYMENTS_BRANCH}"
 # Add a custom remote for infra-deployments repository.
