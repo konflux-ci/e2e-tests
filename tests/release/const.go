@@ -25,7 +25,6 @@ const (
 	releaseCreationTimeout              = 2 * time.Second  // actual messured time between 0-1 seconds
 	releasePipelineRunCreationTimeout   = 30 * time.Second // actual messured time between 16-17 seconds
 	releasePipelineRunCompletionTimeot  = 10 * time.Minute // actual the test failed , this is an approximation
-	releaseCreationTimeout              = 1 * time.Minute  // actual the test failed , this is an approximation
 
 	avgPipelineCompletionTime = 2 * time.Minute
 	defaultInterval           = 100 * time.Millisecond
