@@ -11,7 +11,7 @@ import (
 	"github.com/onsi/gomega"
 
 	// TODO: Once all controllers are working on KCP activate all the current tests.
-	_ "github.com/redhat-appstudio/e2e-tests/tests/has"
+	// _ "github.com/redhat-appstudio/e2e-tests/tests/has"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/release"
 
 	"flag"

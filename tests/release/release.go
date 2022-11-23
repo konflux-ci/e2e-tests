@@ -25,17 +25,10 @@ var snapshotComponents = []applicationapiv1alpha1.SnapshotComponent{
 	{Name: "component-3", ContainerImage: "quay.io/redhat-appstudio/component3@sha256:d90a0a33e4c5a1daf5877f8dd989a570bfae4f94211a8143599245e503775b1f"},
 }
 
-var policySource = ecp.GitPolicySource{
-	Repository: "https://github.com/hacbs-contract/ec-policies",
-	Revision:   "main",
-}
-
 var ecPolicy = ecp.EnterpriseContractPolicySpec{
 	Description: "Red Hat's enterprise requirements",
-	Sources: []ecp.PolicySource{
-		{
-			GitRepository: &policySource,
-		},
+	Sources: []string{
+		"https://github.com/hacbs-contract/ec-policies",
 	},
 	Exceptions: &ecp.EnterpriseContractPolicyExceptions{
 		NonBlocking: []string{"tasks", "attestation_task_bundle", "java", "test", "not_useful"},
@@ -64,23 +57,29 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1118]-test-release-service-happy-
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", managedNamespace, err)
 		klog.Info("Managed Namespace :", managedNamespace)
 
+		// Wait until the "pipeline" SA is created and ready with secrets by the openshift-pipelines operator
+		klog.Infof("Wait until the 'pipeline' SA is created in %s namespace \n", managedNamespace)
+		Eventually(func() bool {
+			sa, err := framework.CommonController.GetServiceAccount(serviceAccount, managedNamespace)
+			return sa != nil && err == nil
+		}, 1*time.Minute, defaultInterval).Should(BeTrue(), "timed out when waiting for the \"pipeline\" SA to be created")
 	})
 
-	AfterAll(func() {
+	// AfterAll(func() {
 
-		// Delete the dev and managed namespaces with all the resources created in them
-		Expect(framework.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
-		Expect(framework.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-	})
+	// 	// Delete the dev and managed namespaces with all the resources created in them
+	// 	Expect(framework.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
+	// 	Expect(framework.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+	// })
 
 	var _ = Describe("Creation of the 'Happy path' resources", func() {
 
-		It("Create Service Account in managed namespace.", func() {
-			_, err := framework.CommonController.CreateServiceAccount(serviceAccount, managedNamespace)
-			Expect(err).NotTo(HaveOccurred())
-		})
+		// It("Create Service Account in managed namespace.", func() {
+		// 	_, err := framework.CommonController.CreateServiceAccount(serviceAccount, managedNamespace)
+		// 	Expect(err).NotTo(HaveOccurred())
+		// })
 
-		It("Create an ApplicationSnapshot in dev namespace.", func() {
+		It("Create an Snapshot in dev namespace.", func() {
 			_, err := framework.ReleaseController.CreateSnapshot(snapshotName, devNamespace, applicationName, snapshotComponents)
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -95,7 +94,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1118]-test-release-service-happy-
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		// TODO create a ec name policy in managednamespace
 		It("Create EnterpriseContractPolicy in managed namespace.", func() {
 			_, err := framework.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicy, managedNamespace, ecPolicy)
 			Expect(err).NotTo(HaveOccurred())
