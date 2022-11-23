@@ -28,7 +28,7 @@ require (
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.7.1
-	github.com/tektoncd/pipeline v0.35.0
+	github.com/tektoncd/pipeline v0.37.0
 	golang.org/x/oauth2 v0.0.0-20220608161450-d0670ef3b1eb
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.24.2

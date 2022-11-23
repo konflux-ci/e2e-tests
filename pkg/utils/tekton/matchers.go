@@ -25,7 +25,7 @@ func (matcher *TaskRunResultMatcher) FailureMessage(actual interface{}) (message
 	if matcher.value != nil {
 		return fmt.Sprintf("%v to equal %v", actual, v1beta1.TaskRunResult{
 			Name:  matcher.name,
-			Value: *matcher.value,
+			Value: *v1beta1.NewArrayOrString(*matcher.value),
 		})
 	}
 
@@ -49,7 +49,7 @@ func (matcher *TaskRunResultMatcher) Match(actual interface{}) (success bool, er
 			}
 
 			var v interface{}
-			if err := json.Unmarshal([]byte(given), &v); err != nil {
+			if err := json.Unmarshal([]byte(given.StringVal), &v); err != nil {
 				return false, err
 			}
 
@@ -74,20 +74,20 @@ func (matcher *TaskRunResultMatcher) Match(actual interface{}) (success bool, er
 				if b, err := json.Marshal(values[0]); err != nil {
 					return false, err
 				} else {
-					given = string(b)
+					given = *v1beta1.NewArrayOrString(string(b))
 				}
 			} else if b, err := json.Marshal(values); err != nil {
 				return false, err
 			} else {
-				given = string(b)
+				given = *v1beta1.NewArrayOrString(string(b))
 			}
 		}
 
 		if matcher.value != nil {
-			return strings.TrimSpace(given) == *matcher.value, nil
+			return strings.TrimSpace(given.StringVal) == *matcher.value, nil
 		} else {
 			matcher.jsonMatcher = gomega.MatchJSON(*matcher.jsonValue)
-			return matcher.jsonMatcher.Match(given)
+			return matcher.jsonMatcher.Match(given.StringVal)
 		}
 	}
 }
@@ -99,7 +99,7 @@ func (matcher *TaskRunResultMatcher) NegatedFailureMessage(actual interface{}) (
 	if matcher.value != nil {
 		return fmt.Sprintf("%v not to equal %v", actual, v1beta1.TaskRunResult{
 			Name:  matcher.name,
-			Value: strings.TrimSpace(*matcher.value),
+			Value: *v1beta1.NewArrayOrString(strings.TrimSpace(*matcher.value)),
 		})
 	}
 
