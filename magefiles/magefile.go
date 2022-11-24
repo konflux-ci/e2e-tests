@@ -196,10 +196,7 @@ func (CI) setRequiredEnvVars() error {
 			os.Setenv("E2E_TEST_SUITE_LABEL", testSuiteLabel)
 
 		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
-
-			if !strings.Contains(pr.Author, "[bot]") {
-				os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.Author)
-			}
+			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
 		}
 
