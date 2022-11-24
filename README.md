@@ -17,9 +17,9 @@ Whnen you want to run the E2E tests for AppStudio you need to have installed too
 ## Requirements
 Requirements for installing AppStudio in E2E mode and running the E2E tests:
 
-* An OpenShift 4.9 or higher Environment (If you are using CRC/OpenShift Local please also review [optional-codeready-containers-post-bootstrap-configuration](https://github.com/redhat-appstudio/infra-deployments#optional-codeready-containers-post-bootstrap-configuration))
+* An OpenShift 4.10 or higher Environment (If you are using CRC/OpenShift Local please also review [optional-codeready-containers-post-bootstrap-configuration](https://github.com/redhat-appstudio/infra-deployments#optional-codeready-containers-post-bootstrap-configuration))
 * A machine from which to run the install (usually your laptop) with required tools:
-  * A properly setup Go workspace using **Go 1.17 is required**
+  * A properly setup Go workspace using **Go 1.18 is required**
   * The OpenShift Command Line Tool (oc)
   * yq
   * jq
@@ -32,7 +32,7 @@ Requirements for installing AppStudio in E2E mode and running the E2E tests:
 
 ## Install AppStudio in E2E mode
 
-Before executing the e2e suites you need to have deployed AppStudio in E2E Mode to your cluster. 
+Before executing the e2e suites you need to have deployed AppStudio in E2E Mode to your cluster.
 
 1. Before deploying AppStudio in E2E mode you need to login to your OpenShift cluster with OpenShift Command Line Tool as `admin` (by default  `kubeadmin`):
 
@@ -108,7 +108,7 @@ The `e2e-appstudio` command is the root command that executes all test functiona
     `./bin/e2e-appstudio`
    ```
 
-The instructions for every test suite can be found in the [tests folder](tests), e.g. [has Readme.md](tests/has/README.md). 
+The instructions for every test suite can be found in the [tests folder](tests), e.g. [has Readme.md](tests/has/README.md).
 You can also specify hich tests you want to run using [labels](docs/LabelsNaming.md) or [Ginkgo Focus](docs/DeveloperFocus.md).
 
 # Red Hat AppStudio Load Tests
@@ -126,7 +126,7 @@ Overview for OpenShift CI and AppStudio E2E tests is in [OpenshiftCI.md](docs/Op
 * Every test package should be imported to `cmd/e2e_test.go`, e.g. [has](https://github.com/redhat-appstudio/e2e-tests/blob/main/cmd/e2e_test.go#L15).
 * Every new test should have correct [labels](docs/LabelsNaming.md).
 * Every test should have meaningful description with JIRA/GitHub issue key.
-* (Recommended) Use JIRA integration for linking issues and commits (just add JIRA issue key in the commit message). You can found more information about GitHub-JIRA integration [here](https://docs.engineering.redhat.com/display/JiraAid/GitHub-Jira+integration). 
+* (Recommended) Use JIRA integration for linking issues and commits (just add JIRA issue key in the commit message). You can found more information about GitHub-JIRA integration [here](https://docs.engineering.redhat.com/display/JiraAid/GitHub-Jira+integration).
 
 ```golang
 // cmd/e2e_test.go
@@ -144,7 +144,7 @@ For reporting issues with e2e tests please use [RHDP JIRA project](https://issue
 
 # Debugging tests
 ## In vscode
-There is launch configuration in `.vscode/launch.json` called `Launch demo suites`. 
+There is launch configuration in `.vscode/launch.json` called `Launch demo suites`.
 Running this configuration, you'll be asked for github token and then e2e-demos suite will run with default configuration.
 If you want to run/debug different suite, change `-ginkgo.focus` parameter in `.vscode/launch.json`.
 
