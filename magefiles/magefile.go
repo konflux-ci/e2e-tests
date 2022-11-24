@@ -230,7 +230,7 @@ func BootstrapCluster() error {
 
 func (CI) isPRPairingRequired() bool {
 	var ghBranches []GithubBranch
-	url := fmt.Sprintf("https://api.github.com/repos/%s/e2e-tests/branches", pr.Author)
+	url := fmt.Sprintf("https://api.github.com/repos/%s/e2e-tests/branches", pr.RemoteName)
 	if err := sendHttpRequestAndParseResponse(url, "GET", &ghBranches); err != nil {
 		klog.Infof("cannot determine e2e-tests Github branches for author %s: %v. will stick with the redhat-appstudio/e2e-tests main branch for running tests", pr.Author, err)
 		return false
