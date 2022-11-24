@@ -1,6 +1,6 @@
 module github.com/redhat-appstudio/e2e-tests
 
-go 1.17
+go 1.18
 
 require (
 	github.com/averageflow/gohooks/v2 v2.1.0
