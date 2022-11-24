@@ -332,7 +332,7 @@ func (h *SuiteController) GetComponentPipelineRun(componentName, applicationName
 	err := h.KubeRest().List(context.TODO(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
 
 	if err != nil && !k8sErrors.IsNotFound(err) {
-		return nil, fmt.Errorf("error listing pipelineruns in %s namespace", namespace)
+		return nil, fmt.Errorf("error listing pipelineruns in %s namespace: %v", namespace, err)
 	}
 
 	if len(list.Items) > 0 {
