@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"k8s.io/klog/v2"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"k8s.io/klog/v2"
 
 	"github.com/magefile/mage/sh"
 )

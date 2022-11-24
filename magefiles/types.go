@@ -31,11 +31,7 @@ type Head struct {
 	Label string `json:"label"`
 }
 
-type GithubBranches struct {
-	Branches []Branch
-}
-
-type Branch struct {
+type GithubBranch struct {
 	Name string `json:"name"`
 }
 
