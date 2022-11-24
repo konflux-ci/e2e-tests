@@ -5,6 +5,8 @@ set -e
 set -o pipefail
 # error on unset variables
 set -u
+VAULT_NAMESPACE=${VAULT_NAMESPACE:-spi-system}
+VAULT_PODNAME=${VAULT_PODNAME:-spi-vault-0}
 
 echo '[INFO] Deploying SPI OAuth2 config'
 
@@ -67,7 +69,7 @@ oc apply -f -
 
 rm "$tmpfile"
 
-curl https://raw.githubusercontent.com/redhat-appstudio/service-provider-integration-operator/main/hack/vault-init.sh | VAULT_PODNAME=spi-vault-0 VAULT_NAMESPACE="spi-system" bash -s
+curl https://raw.githubusercontent.com/redhat-appstudio/service-provider-integration-operator/main/hack/vault-init.sh | VAULT_PODNAME=${VAULT_PODNAME} VAULT_NAMESPACE=${VAULT_NAMESPACE} bash -s
 
 oc rollout restart deployment/spi-controller-manager -n spi-system
 oc rollout restart deployment/spi-oauth-service -n spi-system
