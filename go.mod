@@ -22,8 +22,8 @@ require (
 	github.com/redhat-appstudio/application-service v0.0.0-20221122170733-a852feca3998
 	github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2cad2
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20220714212008-d1b637f56c4d
-	github.com/redhat-appstudio/managed-gitops/appstudio-shared v0.0.0-20221117185648-a1a0900ac988
 	github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001
+	github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0
 	github.com/redhat-appstudio/release-service v0.0.0-20220620143459-53c2f4bcc510
 	github.com/redhat-appstudio/service-provider-integration-operator v0.6.9
 	github.com/spf13/cobra v1.4.0

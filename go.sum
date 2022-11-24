@@ -1347,10 +1347,10 @@ github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2ca
 github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2cad2/go.mod h1:FNCuALWZDRMbMKm3Vb/5E2R8ei6eFwcEhgYcFKRVZJU=
 github.com/redhat-appstudio/jvm-build-service v0.0.0-20220714212008-d1b637f56c4d h1:uDKH0bbGjQaoiTxVv2ThIfNH84IOXxwDsoWDLxlOr34=
 github.com/redhat-appstudio/jvm-build-service v0.0.0-20220714212008-d1b637f56c4d/go.mod h1:wmAb5bQZcUO0v0eUvJGRhggTytV1ktTHCrsx8Vqwk/E=
-github.com/redhat-appstudio/managed-gitops/appstudio-shared v0.0.0-20221117185648-a1a0900ac988 h1:NJ+LZ4tG6u3kVKzyleJGhcbyw7PBxOAJIx65BbKtP3M=
-github.com/redhat-appstudio/managed-gitops/appstudio-shared v0.0.0-20221117185648-a1a0900ac988/go.mod h1:zI6l6177ZbAu4MNovCWinVq3Ii3qpD9svV7t9a58b/s=
 github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001 h1:dHYSaZ8slDW27YrbAYj59Zd82Oml3oTj9ieICLtzk8Y=
 github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001/go.mod h1:jqTuNQDL/xf+LsxWg1RuhJiMvMWnoRZcpcHRhX8Z12s=
+github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20220506042230-3a79f373a001 h1:xjO01dcMV7mv7b0GFeEN1uLhJiLOlzglgeEO57rfdNk=
+github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20220506042230-3a79f373a001/go.mod h1:5GV2vv5Eu8yiwTgQcnnvyk0TEE9URL3zSB0aGVfEnFk=
 github.com/redhat-appstudio/release-service v0.0.0-20220620143459-53c2f4bcc510 h1:5SLfnWPQnaV1voVsuekQ5wstSp35ymYydiNlp8I3Cz0=
 github.com/redhat-appstudio/release-service v0.0.0-20220620143459-53c2f4bcc510/go.mod h1:qzyWjltIIfP1ieenpfZtiL3jqG8v1hiGDngjpqZtBK0=
 github.com/redhat-appstudio/service-provider-integration-operator v0.6.9 h1:SKPMsROcJLfJMK3pc+SrjUxjfswomUGW5Z1N7V7wlgE=

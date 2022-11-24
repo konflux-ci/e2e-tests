@@ -3,7 +3,7 @@ package client
 import (
 	routev1 "github.com/openshift/api/route/v1"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
-	gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
+	gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend-shared/apis/managed-gitops/v1alpha1"
 	managedgitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend/apis/managed-gitops/v1alpha1"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
