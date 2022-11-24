@@ -3,11 +3,12 @@ package integration
 import (
 	"context"
 	"fmt"
+	"time"
+
+	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	releasev1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
-	"time"
-	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
-	appstudioshared "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -29,8 +30,8 @@ func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
 
 // getApplicationSnapshot returns the all ApplicationSnapshots in the Application's namespace nil if it's not found.
 // In the case the List operation fails, an error will be returned.
-func (h *SuiteController) GetApplicationSnapshot(applicationName, namespace string) (*appstudioshared.ApplicationSnapshot, error) {
-	applicationSnapshots := &appstudioshared.ApplicationSnapshotList{}
+func (h *SuiteController) GetApplicationSnapshot(applicationName, namespace string) (*appstudioApi.Snapshot, error) {
+	applicationSnapshots := &appstudioApi.SnapshotList{}
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
 	}
@@ -47,7 +48,7 @@ func (h *SuiteController) GetApplicationSnapshot(applicationName, namespace stri
 	return nil, nil
 }
 
-func (h *SuiteController) GetReleasesWithApplicationSnapshot(applicationSnapshot *appstudioshared.ApplicationSnapshot) (*[]releasev1alpha1.Release, error) {
+func (h *SuiteController) GetReleasesWithApplicationSnapshot(applicationSnapshot *appstudioApi.Snapshot) (*[]releasev1alpha1.Release, error) {
 	releases := &releasev1alpha1.ReleaseList{}
 	opts := []client.ListOption{
 		client.InNamespace(applicationSnapshot.Namespace),
@@ -80,10 +81,10 @@ func (h *SuiteController) GetIntegrationTestScenarios(applicationName, namespace
 	return &integrationTestScenarioList.Items, nil
 }
 
-func (h *SuiteController) CreateApplicationSnapshot(applicationName, namespace, componentName string) (*appstudioshared.ApplicationSnapshot, error) {
+func (h *SuiteController) CreateApplicationSnapshot(applicationName, namespace, componentName string) (*appstudioApi.Snapshot, error) {
 	sample_image := "quay.io/redhat-appstudio/sample-image"
 
-	hasSnapshot := &appstudioshared.ApplicationSnapshot{
+	hasSnapshot := &appstudioApi.Snapshot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "snapshot-sample",
 			Namespace: namespace,
@@ -93,9 +94,9 @@ func (h *SuiteController) CreateApplicationSnapshot(applicationName, namespace, 
 				"pipelinesascode.tekton.dev/event-type": "push",
 			},
 		},
-		Spec: appstudioshared.ApplicationSnapshotSpec{
+		Spec: appstudioApi.SnapshotSpec{
 			Application: applicationName,
-			Components: []appstudioshared.ApplicationSnapshotComponent{
+			Components: []appstudioApi.SnapshotComponent{
 				{
 					Name:           componentName,
 					ContainerImage: sample_image,
@@ -174,7 +175,7 @@ func (h *SuiteController) CreateIntegrationTestScenario(applicationName, namespa
 	return integrationTestScenario, nil
 }
 
-func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(testScenario *integrationv1alpha1.IntegrationTestScenario, applicationSnapshot *appstudioshared.ApplicationSnapshot, applicationName string, appNamespace string) error {
+func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(testScenario *integrationv1alpha1.IntegrationTestScenario, applicationSnapshot *appstudioApi.Snapshot, applicationName string, appNamespace string) error {
 	return wait.PollImmediate(20*time.Second, 100*time.Minute, func() (done bool, err error) {
 		pipelineRun, _ := h.GetIntegrationPipelineRun(testScenario.Name, applicationSnapshot.Name, appNamespace)
 

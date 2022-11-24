@@ -2,7 +2,7 @@ package client
 
 import (
 	routev1 "github.com/openshift/api/route/v1"
-	applicationservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
+	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
 	managedgitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend/apis/managed-gitops/v1alpha1"
 
@@ -38,7 +38,7 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(applicationservice.AddToScheme(scheme))
+	utilruntime.Must(appstudioApi.AddToScheme(scheme))
 	utilruntime.Must(tekton.AddToScheme(scheme))
 	utilruntime.Must(routev1.AddToScheme(scheme))
 	utilruntime.Must(managedgitopsv1alpha1.AddToScheme(scheme))

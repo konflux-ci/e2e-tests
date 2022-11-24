@@ -3,8 +3,8 @@ package release
 import (
 	"context"
 
+	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
-	gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
 	"github.com/redhat-appstudio/release-service/api/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,13 +23,13 @@ func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
 }
 
 // CreateApplicationSnapshot creates a new ApplicationSnapshot using the given parameters.
-func (s *SuiteController) CreateApplicationSnapshot(name string, namespace string, applicationName string, snapshotComponents []gitopsv1alpha1.ApplicationSnapshotComponent) (*gitopsv1alpha1.ApplicationSnapshot, error) {
-	applicationSnapshot := &gitopsv1alpha1.ApplicationSnapshot{
+func (s *SuiteController) CreateApplicationSnapshot(name string, namespace string, applicationName string, snapshotComponents []appstudioApi.SnapshotComponent) (*appstudioApi.Snapshot, error) {
+	applicationSnapshot := &appstudioApi.Snapshot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: gitopsv1alpha1.ApplicationSnapshotSpec{
+		Spec: appstudioApi.SnapshotSpec{
 			Application: applicationName,
 			Components:  snapshotComponents,
 		},
