@@ -196,8 +196,7 @@ func (CI) setRequiredEnvVars() error {
 			os.Setenv("E2E_TEST_SUITE_LABEL", testSuiteLabel)
 
 		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
-
-			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.Organization)
+			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
 		}
 
@@ -230,13 +229,14 @@ func BootstrapCluster() error {
 }
 
 func (CI) isPRPairingRequired() bool {
-	ghBranches := &GithubBranches{}
-	if err := sendHttpRequestAndParseResponse(fmt.Sprintf("https://api.github.com/repos/%s/e2e-tests/branches", pr.Author), "GET", ghBranches); err != nil {
-		klog.Infof("cannot determine e2e-tests Github branches for author %s: %v. will stick with the redhat-appstudio/e2e-tests main branch for running testss", pr.Author, err)
+	var ghBranches []GithubBranch
+	url := fmt.Sprintf("https://api.github.com/repos/%s/e2e-tests/branches", pr.RemoteName)
+	if err := sendHttpRequestAndParseResponse(url, "GET", &ghBranches); err != nil {
+		klog.Infof("cannot determine e2e-tests Github branches for author %s: %v. will stick with the redhat-appstudio/e2e-tests main branch for running tests", pr.Author, err)
 		return false
 	}
 
-	for _, b := range ghBranches.Branches {
+	for _, b := range ghBranches {
 		if b.Name == pr.BranchName {
 			return true
 		}

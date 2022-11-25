@@ -12,7 +12,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	appstudioshared "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
+	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	klog "k8s.io/klog/v2"
 
@@ -38,8 +38,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 	var applicationName, componentName, appStudioE2EApplicationsNamespace, outputContainerImage string
 	var timeout, interval time.Duration
-	var applicationSnapshot *appstudioshared.ApplicationSnapshot
-	var applicationSnapshot_push *appstudioshared.ApplicationSnapshot
+	var applicationSnapshot *appstudioApi.Snapshot
+	var applicationSnapshot_push *appstudioApi.Snapshot
 
 	var defaultBundleConfigMap *v1.ConfigMap
 

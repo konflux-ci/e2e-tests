@@ -9,7 +9,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
 	routev1 "github.com/openshift/api/route/v1"
-	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
+	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -293,8 +293,7 @@ func (h *SuiteController) CreateComponentDetectionQuery(cdqName, namespace, gitS
 			GitSource: appservice.GitSource{
 				URL: gitSourceURL,
 			},
-			IsMultiComponent: isMultiComponent,
-			Secret:           secret,
+			Secret: secret,
 		},
 	}
 	err := h.KubeRest().Create(context.TODO(), componentDetectionQuery)
@@ -333,7 +332,7 @@ func (h *SuiteController) GetComponentPipelineRun(componentName, applicationName
 	err := h.KubeRest().List(context.TODO(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
 
 	if err != nil && !k8sErrors.IsNotFound(err) {
-		return nil, fmt.Errorf("error listing pipelineruns in %s namespace", namespace)
+		return nil, fmt.Errorf("error listing pipelineruns in %s namespace: %v", namespace, err)
 	}
 
 	if len(list.Items) > 0 {
