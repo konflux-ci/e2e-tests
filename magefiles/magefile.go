@@ -7,6 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/magefile/mage/sh"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
@@ -196,7 +199,8 @@ func (CI) setRequiredEnvVars() error {
 			os.Setenv("E2E_TEST_SUITE_LABEL", testSuiteLabel)
 
 		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
-			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
+
+			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.Organization)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
 		}
 
@@ -301,4 +305,134 @@ func (CI) sendWebhook() error {
 // Generates test cases for Polarion(polarion.xml) from test files for AppStudio project.
 func GenerateTestCasesAppStudio() error {
 	return sh.RunV("ginkgo", "--v", "--dry-run", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", "--polarion-output-file=polarion.xml", "--generate-test-cases=true")
+}
+
+// I've attached to the Local struct for now since it felt like it fit but it can be decoupled later as a standalone func.
+func (Local) GenerateTestSuiteFile() error {
+
+	var templatePackageName = utils.GetEnv("TEMPLATE_SUITE_PACKAGE_NAME", "template")
+	var templatePath = "templates/test_suite_cmd.tmpl"
+	var err error
+
+	if !utils.CheckIfEnvironmentExists("TEMPLATE_SUITE_PACKAGE_NAME") {
+		klog.Infof("TEMPLATE_SUITE_PACKAGE_NAME not set. Defaulting test suite package directory as `%s`.\n", templatePackageName)
+	}
+
+	var templatePackageFile = fmt.Sprintf("cmd/%s_test.go", templatePackageName)
+	klog.Infof("Creating new test suite file %s.\n", templatePackageFile)
+	data := TemplateData{SuiteName: templatePackageName}
+	err = renderTemplate(templatePackageFile, templatePath, data, false)
+
+	if err != nil {
+		klog.Errorf("failed to render template with: %s", err)
+		return err
+	}
+
+	err = goFmt(templatePackageFile)
+	if err != nil {
+
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	return nil
+
+}
+
+// I've attached to the Local struct for now since it felt like it fit but it can be decoupled later as a standalone func.
+func (Local) GenerateTestSpecFile() error {
+
+	var templateDirName = utils.GetEnv("TEMPLATE_SUITE_PACKAGE_NAME", "template")
+	var templateSpecName = utils.GetEnv("TEMPLATE_SPEC_FILE_NAME", templateDirName)
+	var templateAppendFrameworkDescribeBool = utils.GetEnv("TEMPLATE_APPEND_FRAMEWORK_DESCRIBE_FILE", "true")
+	var templateJoinSuiteSpecNamesBool = utils.GetEnv("TEMPLATE_JOIN_SUITE_SPEC_FILE_NAMES", "false")
+	var templatePath = "templates/test_spec_file.tmpl"
+	var templateDirPath string
+	var templateSpecFile string
+	var err error
+	var caser = cases.Title(language.English)
+
+	if !utils.CheckIfEnvironmentExists("TEMPLATE_SUITE_PACKAGE_NAME") {
+		klog.Infof("TEMPLATE_SUITE_PACKAGE_NAME not set. Defaulting test suite package directory as `%s`.\n", templateDirName)
+	}
+
+	if !utils.CheckIfEnvironmentExists("TEMPLATE_SPEC_FILE_NAME") {
+		klog.Infof("TEMPLATE_SPEC_FILE_NAME not set. Defaulting test spec file to value of as `%s`.\n", templateSpecName)
+	}
+
+	if !utils.CheckIfEnvironmentExists("TEMPLATE_APPEND_FRAMEWORK_DESCRIBE_FILE") {
+		klog.Infof("TEMPLATE_APPEND_FRAMEWORK_DESCRIBE_FILE not set. Defaulting to `%s` which will update the pkg/framework/describe.go.\n", templateAppendFrameworkDescribeBool)
+	}
+
+	if utils.CheckIfEnvironmentExists("TEMPLATE_JOIN_SUITE_SPEC_FILE_NAMES") {
+		klog.Infof("TEMPLATE_JOIN_SUITE_SPEC_FILE_NAMES is set to %s. Will join the suite package and spec file name to be used in the Describe of suites.\n", templateJoinSuiteSpecNamesBool)
+	}
+
+	templateDirPath = fmt.Sprintf("tests/%s", templateDirName)
+	err = os.Mkdir(templateDirPath, 0775)
+	if err != nil {
+		klog.Errorf("failed to create package directory, %s, template with: %v", templateDirPath, err)
+		return err
+	}
+	templateSpecFile = fmt.Sprintf("%s/%s.go", templateDirPath, templateSpecName)
+
+	klog.Infof("Creating new test package directory and spec file %s.\n", templateSpecFile)
+	if templateJoinSuiteSpecNamesBool == "true" {
+		templateSpecName = fmt.Sprintf("%s%v", caser.String(templateDirName), caser.String(templateSpecName))
+	} else {
+		templateSpecName = caser.String(templateSpecName)
+	}
+
+	data := TemplateData{SuiteName: templateDirName,
+		TestSpecName: templateSpecName}
+	err = renderTemplate(templateSpecFile, templatePath, data, false)
+	if err != nil {
+		klog.Errorf("failed to render template with: %s", err)
+		return err
+	}
+
+	err = goFmt(templateSpecFile)
+	if err != nil {
+
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	if templateAppendFrameworkDescribeBool == "true" {
+
+		err = appendFrameworkDescribeFile(templateSpecName)
+
+		if err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+
+}
+
+func appendFrameworkDescribeFile(packageName string) error {
+
+	var templatePath = "templates/framework_describe_func.tmpl"
+	var describeFile = "pkg/framework/describe.go"
+	var err error
+	var caser = cases.Title(language.English)
+
+	data := TemplateData{TestSpecName: caser.String(packageName)}
+	err = renderTemplate(describeFile, templatePath, data, true)
+	if err != nil {
+		klog.Errorf("failed to append to pkg/framework/describe.go with : %s", err)
+		return err
+	}
+	err = goFmt(describeFile)
+
+	if err != nil {
+
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	return nil
+
 }
