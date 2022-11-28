@@ -297,3 +297,8 @@ func (CI) sendWebhook() error {
 
 	return nil
 }
+
+// Generates test cases for Polarion(polarion.xml) from test files for AppStudio project.
+func GenerateTestCasesAppStudio() error {
+	return sh.RunV("ginkgo", "--v", "--dry-run", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", "--polarion-output-file=polarion.xml", "--generate-test-cases=true")
+}
