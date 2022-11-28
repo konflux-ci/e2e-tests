@@ -541,7 +541,7 @@ func (k KubeController) GetRekorHost() (rekorHost string, err error) {
 	return
 }
 
-// Create a tekton pipelineRun and return the pipelineRun or error
+// CreateEnterpriseContractPolicy creates an EnterpriseContractPolicy.
 func (s *SuiteController) CreateEnterpriseContractPolicy(name, namespace string, ecpolicy ecp.EnterpriseContractPolicySpec) (*ecp.EnterpriseContractPolicy, error) {
 	ec := &ecp.EnterpriseContractPolicy{
 		ObjectMeta: metav1.ObjectMeta{

@@ -26,7 +26,7 @@ func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
 	}, nil
 }
 
-// CreateApplicationSnapshot creates a new ApplicationSnapshot using the given parameters
+// CreateSnapshot creates a Snapshot using the given parameters.
 func (s *SuiteController) CreateSnapshot(name string, namespace string, applicationName string, snapshotComponents []appstudioApi.SnapshotComponent) (*appstudioApi.Snapshot, error) {
 	snapshot := &appstudioApi.Snapshot{
 		ObjectMeta: metav1.ObjectMeta{
@@ -163,7 +163,7 @@ func (s *SuiteController) CreateReleasePlan(name, namespace, application, target
 	return releasePlan, s.KubeRest().Create(context.TODO(), releasePlan)
 }
 
-// GetReleasePlan returns the releasePlan with the given name in the given namespace.
+// GetReleasePlan returns the ReleasePlan with the given name in the given namespace.
 func (s *SuiteController) GetReleasePlan(name, namespace string) (*appstudiov1alpha1.ReleasePlan, error) {
 	releasePlan := &appstudiov1alpha1.ReleasePlan{}
 
@@ -175,7 +175,7 @@ func (s *SuiteController) GetReleasePlan(name, namespace string) (*appstudiov1al
 	return releasePlan, err
 }
 
-//  DeletetReleasePlan deletes a given releaseplan name in given namespace.
+//  DeletetReleasePlan deletes a given ReleasePlan name in given namespace.
 func (s *SuiteController) DeleteReleasePlan(name, namespace string, failOnNotFound bool) error {
 	releasePlan := &appstudiov1alpha1.ReleasePlan{
 		ObjectMeta: metav1.ObjectMeta{
