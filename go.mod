@@ -39,6 +39,7 @@ require (
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.70.1
 	knative.dev/pkg v0.0.0-20220329144915-0a1ec2e0d46c
+	kubevirt.io/qe-tools v0.1.8
 	sigs.k8s.io/controller-runtime v0.12.1
 	sigs.k8s.io/yaml v1.3.0
 )

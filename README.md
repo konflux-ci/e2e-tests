@@ -139,6 +139,19 @@ import (
 )
 ```
 
+# Generate test cases for Polarion
+You can also generate test cases for Polarion with command:
+   ```bash
+    ` ginkgo --vv --dry-run cmd/ -- --polarion-output-file=polarion.xml --generate-test-cases=true`
+   ```
+Note: is is recommended to use `dry-mode` - it will generate the test cases without running the tests.
+Parameters:
+| Variable | Type | Explanation | Default Value |
+|---|---|---|---|
+| `generate-test-cases` | bool | Generate test cases for Polarion  | `false`  |
+| `polarion-output-file` | string | Path to polarion xml file | `polarion.xml` |
+| `project-id` | string | Polarion project ID  | `AppStudio`  |
+
 # Reporting issues
 For reporting issues with e2e tests please use [RHDP JIRA project](https://issues.redhat.com/projects/RHDP) - please use labels `appstudio` and `quality`. If the issues is also relevant to CI - for example it is blocking PRs, the also use label `appstudio-e2e-tests-known-issues`.
 
