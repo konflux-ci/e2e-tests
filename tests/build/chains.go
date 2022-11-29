@@ -1,7 +1,6 @@
 package build
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -10,7 +9,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
@@ -73,7 +71,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 
 		var kubeController tekton.KubeController
 
-		var policySource ecp.GitPolicySource
+		var policySource []string
 
 		BeforeAll(func() {
 			kubeController = tekton.KubeController{
@@ -95,24 +93,22 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				BeTrue(), "timed out when waiting for the %q SA to be created", serviceAccountName)
 
 			// the default policy source
-			rev := "main"
-			policySource = ecp.GitPolicySource{
-				Repository: "https://github.com/hacbs-contract/ec-policies/policy",
-				Revision:   &rev,
+			policySource = []string{
+				"https://github.com/hacbs-contract/ec-policies/policy",
 			}
 
 			// if there is a ConfigMap e2e-tests/ec-config with keys `revision` and
 			// `repository` values from those will replace the default policy source
 			// this gives us a way to set the tests to use a different policy if we
 			// break the tests in the default policy source
-			if config, err := fwk.CommonController.K8sClient.KubeInterface().CoreV1().ConfigMaps("e2e-tests").Get(context.TODO(), "ec-config", v1.GetOptions{}); err != nil {
-				if v, ok := config.Data["revision"]; ok {
-					policySource.Revision = &v
-				}
-				if v, ok := config.Data["repository"]; ok {
-					policySource.Repository = v
-				}
-			}
+			// if config, err := fwk.CommonController.K8sClient.KubeInterface().CoreV1().ConfigMaps("e2e-tests").Get(context.TODO(), "ec-config", v1.GetOptions{}); err != nil {
+			// 	if v, ok := config.Data["revision"]; ok {
+			// 		policySource.Revision = &v
+			// 	}
+			// 	if v, ok := config.Data["repository"]; ok {
+			// 		policySource.Repository = v
+			// 	}
+			// }
 
 			// At a bare minimum, each spec within this context relies on the existence of
 			// an image that has been signed by Tekton Chains. Trigger a demo task to fulfill
@@ -189,30 +185,22 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				// Since specs could update the config policy, make sure it has a consistent
 				// baseline at the start of each spec.
 				baselinePolicies := ecp.EnterpriseContractPolicySpec{
-					Sources: []ecp.PolicySource{
-						{
-							GitRepository: &policySource,
-						},
-					},
+					Sources: policySource,
 				}
 				Expect(kubeController.CreateOrUpdatePolicyConfiguration(namespace, baselinePolicies)).To(Succeed())
-				printPolicyConfiguration(baselinePolicies)
+				// printPolicyConfiguration(baselinePolicies)
 			})
 
 			It("succeeds when policy is met", func() {
 				// Setup a policy config to ignore the policy check for tests
 				policy := ecp.EnterpriseContractPolicySpec{
-					Sources: []ecp.PolicySource{
-						{
-							GitRepository: &policySource,
-						},
-					},
+					Sources: policySource,
 					Exceptions: &ecp.EnterpriseContractPolicyExceptions{
 						NonBlocking: []string{"not_useful", "test", "tasks", "attestation_task_bundle"}, // add more exceptions here as needed
 					},
 				}
 				Expect(kubeController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
-				printPolicyConfiguration(policy)
+				// printPolicyConfiguration(policy)
 				pr, err := kubeController.RunPipeline(generator, pipelineRunTimeout)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeController.WatchPipelineRun(pr.Name, pipelineRunTimeout)).To(Succeed())
@@ -236,13 +224,13 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				// Setup a policy config to minimize the amount of policy violations. Otherwise,
 				// the report may exceed the 4k max and Tekton does not create the task result.
 				policy := ecp.EnterpriseContractPolicySpec{
-					Sources: []ecp.PolicySource{{GitRepository: &policySource}},
+					Sources: policySource,
 					Exceptions: &ecp.EnterpriseContractPolicyExceptions{
 						NonBlocking: []string{"tasks", "attestation_task_bundle"},
 					},
 				}
 				Expect(kubeController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
-				printPolicyConfiguration(policy)
+				// printPolicyConfiguration(policy)
 				generator.StrictPolicy = false
 				pr, err := kubeController.RunPipeline(generator, pipelineRunTimeout)
 				Expect(err).NotTo(HaveOccurred())
@@ -311,26 +299,26 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 	})
 })
 
-func printPolicyConfiguration(policy ecp.EnterpriseContractPolicySpec) {
-	sources := ""
-	for i, s := range policy.Sources {
-		if i != 0 {
-			sources += "\n"
-		}
-		if s.GitRepository != nil {
-			if s.GitRepository.Revision != nil {
-				sources += fmt.Sprintf("[%d] repository: '%s', revision: '%s'", i, s.GitRepository.Repository, *s.GitRepository.Revision)
-			} else {
-				sources += fmt.Sprintf("[%d] repository: '%s'", i, s.GitRepository.Repository)
-			}
-		}
-	}
-	exceptions := "[]"
-	if policy.Exceptions != nil {
-		exceptions = fmt.Sprintf("%v", policy.Exceptions.NonBlocking)
-	}
-	GinkgoWriter.Printf("Configured sources: %s\nand non-blocking policies: %v\n", sources, exceptions)
-}
+// func printPolicyConfiguration(policy ecp.EnterpriseContractPolicySpec) {
+// 	sources := ""
+// 	for i, s := range policy.Sources {
+// 		if i != 0 {
+// 			sources += "\n"
+// 		}
+// 		if s.GitRepository != nil {
+// 			if s.GitRepository.Revision != nil {
+// 				sources += fmt.Sprintf("[%d] repository: '%s', revision: '%s'", i, s.GitRepository.Repository, *s.GitRepository.Revision)
+// 			} else {
+// 				sources += fmt.Sprintf("[%d] repository: '%s'", i, s.GitRepository.Repository)
+// 			}
+// 		}
+// 	}
+// 	exceptions := "[]"
+// 	if policy.Exceptions != nil {
+// 		exceptions = fmt.Sprintf("%v", policy.Exceptions.NonBlocking)
+// 	}
+// 	GinkgoWriter.Printf("Configured sources: %s\nand non-blocking policies: %v\n", sources, exceptions)
+// }
 
 func printTaskRunStatus(tr *v1beta1.PipelineRunTaskRunStatus, namespace string, sc common.SuiteController) {
 	if tr.Status == nil {
