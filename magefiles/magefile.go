@@ -200,7 +200,7 @@ func (CI) setRequiredEnvVars() error {
 
 		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
 
-			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.Organization)
+			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
 		}
 
@@ -310,12 +310,12 @@ func GenerateTestCasesAppStudio() error {
 // I've attached to the Local struct for now since it felt like it fit but it can be decoupled later as a standalone func.
 func (Local) GenerateTestSuiteFile() error {
 
-	var templatePackageName = utils.GetEnv("TEMPLATE_SUITE_PACKAGE_NAME", "template")
+	var templatePackageName = utils.GetEnv("TEMPLATE_SUITE_PACKAGE_NAME", "")
 	var templatePath = "templates/test_suite_cmd.tmpl"
 	var err error
 
 	if !utils.CheckIfEnvironmentExists("TEMPLATE_SUITE_PACKAGE_NAME") {
-		klog.Infof("TEMPLATE_SUITE_PACKAGE_NAME not set. Defaulting test suite package directory as `%s`.\n", templatePackageName)
+		klog.Exitf("TEMPLATE_SUITE_PACKAGE_NAME not set or is empty")
 	}
 
 	var templatePackageFile = fmt.Sprintf("cmd/%s_test.go", templatePackageName)
@@ -342,7 +342,7 @@ func (Local) GenerateTestSuiteFile() error {
 // I've attached to the Local struct for now since it felt like it fit but it can be decoupled later as a standalone func.
 func (Local) GenerateTestSpecFile() error {
 
-	var templateDirName = utils.GetEnv("TEMPLATE_SUITE_PACKAGE_NAME", "template")
+	var templateDirName = utils.GetEnv("TEMPLATE_SUITE_PACKAGE_NAME", "")
 	var templateSpecName = utils.GetEnv("TEMPLATE_SPEC_FILE_NAME", templateDirName)
 	var templateAppendFrameworkDescribeBool = utils.GetEnv("TEMPLATE_APPEND_FRAMEWORK_DESCRIBE_FILE", "true")
 	var templateJoinSuiteSpecNamesBool = utils.GetEnv("TEMPLATE_JOIN_SUITE_SPEC_FILE_NAMES", "false")
@@ -353,15 +353,15 @@ func (Local) GenerateTestSpecFile() error {
 	var caser = cases.Title(language.English)
 
 	if !utils.CheckIfEnvironmentExists("TEMPLATE_SUITE_PACKAGE_NAME") {
-		klog.Infof("TEMPLATE_SUITE_PACKAGE_NAME not set. Defaulting test suite package directory as `%s`.\n", templateDirName)
+		klog.Exitf("TEMPLATE_SUITE_PACKAGE_NAME not set or is empty")
 	}
 
 	if !utils.CheckIfEnvironmentExists("TEMPLATE_SPEC_FILE_NAME") {
-		klog.Infof("TEMPLATE_SPEC_FILE_NAME not set. Defaulting test spec file to value of as `%s`.\n", templateSpecName)
+		klog.Infof("TEMPLATE_SPEC_FILE_NAME not set. Defaulting test spec file to value of `%s`.\n", templateSpecName)
 	}
 
 	if !utils.CheckIfEnvironmentExists("TEMPLATE_APPEND_FRAMEWORK_DESCRIBE_FILE") {
-		klog.Infof("TEMPLATE_APPEND_FRAMEWORK_DESCRIBE_FILE not set. Defaulting to `%s` which will update the pkg/framework/describe.go.\n", templateAppendFrameworkDescribeBool)
+		klog.Infof("TEMPLATE_APPEND_FRAMEWORK_DESCRIBE_FILE not set. Defaulting to `%s` which will update the pkg/framework/describe.go after generating the template.\n", templateAppendFrameworkDescribeBool)
 	}
 
 	if utils.CheckIfEnvironmentExists("TEMPLATE_JOIN_SUITE_SPEC_FILE_NAMES") {
