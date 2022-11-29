@@ -28,7 +28,7 @@ import (
 const (
 	containerImageSource                 = "quay.io/redhat-appstudio-qe/busybox-loop:latest"
 	helloWorldComponentGitSourceRepoName = "devfile-sample-hello-world"
-	pythonComponentGitSourceURL          = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic"
+	pythonComponentGitSourceURL          = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic.git"
 	dummyPipelineBundleRef               = "quay.io/redhat-appstudio-qe/dummy-pipeline-bundle:latest"
 	buildTemplatesTestLabel              = "build-templates-e2e"
 	buildTemplatesKcpTestLabel           = "build-templates-kcp-e2e"
