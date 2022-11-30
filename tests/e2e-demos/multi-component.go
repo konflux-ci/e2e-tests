@@ -2,8 +2,11 @@ package e2e
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -19,9 +22,7 @@ var AppStudioE2EApplicationsNamespace = utils.GetGeneratedNamespace("e2e-demo")
 
 var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	// TODO investigate failing of Component detection
-	if true {
-		return
-	}
+
 	defer GinkgoRecover()
 
 	// Initialize the application struct
@@ -65,8 +66,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 		// Check test specification has at least one test defined
 		Expect(len(testSpecification.Tests)).To(BeNumerically(">", 0))
-		compNameGo = testSpecification.Tests[0].Components[0].Name + "-go"
-		compNameNode = testSpecification.Tests[0].Components[0].Name + "-nodejs"
 	})
 
 	// Remove all resources created by the tests
@@ -114,9 +113,20 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 		// Validate that the completed CDQ only has detected the two components (nodejs and go)
 		Expect(len(cdq.Status.ComponentDetected)).To(Equal(2), "Expected length of the detected Components was not 2")
-		_, golang := cdq.Status.ComponentDetected["go"]
+
+		// get the name of the components for future use and validate they are go and nodejs
+		for key, element := range cdq.Status.ComponentDetected {
+			if element.Language == "go" {
+				compNameGo = key
+			}
+			if element.Language == "nodejs" {
+				compNameNode = key
+			}
+		}
+
+		_, golang := cdq.Status.ComponentDetected[compNameGo]
 		Expect(golang).To(BeTrue(), "Expect Golang component to be detected")
-		_, nodejs := cdq.Status.ComponentDetected["nodejs"]
+		_, nodejs := cdq.Status.ComponentDetected[compNameNode]
 		Expect(nodejs).To(BeTrue(), "Expect NodeJS component to be detected")
 
 	})
@@ -124,14 +134,18 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	It("Create multiple components", func() {
 
 		// Create Golang component from CDQ result
-		Expect(cdq.Status.ComponentDetected["go"].DevfileFound).To(BeTrue(), "DevfileFound was not set to true")
-		componentGo, err := fw.HasController.CreateComponentFromStub(cdq.Status.ComponentDetected["go"], compNameGo, AppStudioE2EApplicationsNamespace, "", testSpecification.Tests[0].ApplicationName)
+		Expect(cdq.Status.ComponentDetected[compNameGo].DevfileFound).To(BeTrue(), "DevfileFound was not set to true")
+		componentDescritpion := cdq.Status.ComponentDetected[compNameGo]
+		componentDescritpion.ComponentStub.ContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
+		componentGo, err := fw.HasController.CreateComponentFromStub(componentDescritpion, compNameGo, AppStudioE2EApplicationsNamespace, "", testSpecification.Tests[0].ApplicationName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(componentGo.Name).To(Equal(compNameGo))
 
 		// Create NodeJS component from CDQ result
-		Expect(cdq.Status.ComponentDetected["nodejs"].DevfileFound).To(BeTrue(), "DevfileFound was not set to true")
-		componentNode, err := fw.HasController.CreateComponentFromStub(cdq.Status.ComponentDetected["nodejs"], compNameNode, AppStudioE2EApplicationsNamespace, "", testSpecification.Tests[0].ApplicationName)
+		Expect(cdq.Status.ComponentDetected[compNameNode].DevfileFound).To(BeTrue(), "DevfileFound was not set to true")
+		componentDescritpion = cdq.Status.ComponentDetected[compNameNode]
+		componentDescritpion.ComponentStub.ContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
+		componentNode, err := fw.HasController.CreateComponentFromStub(componentDescritpion, compNameNode, AppStudioE2EApplicationsNamespace, "", testSpecification.Tests[0].ApplicationName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(componentNode.Name).To(Equal(compNameNode))
 
@@ -146,7 +160,8 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	})
 
 	// Check components are deployed
-	It("Check multiple components are deployed", func() {
+	// TODO re-enable once the issue with GitopsDeployment creation is resolved
+	It("Check multiple components are deployed", Pending, func() {
 
 		Eventually(func() bool {
 			deploymentGo, err := fw.CommonController.GetAppDeploymentByName(compNameGo, AppStudioE2EApplicationsNamespace)

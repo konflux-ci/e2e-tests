@@ -5,8 +5,8 @@ set -e
 set -o pipefail
 # error on unset variables
 set -u
-VAULT_NAMESPACE=${VAULT_NAMESPACE:-spi-system}
-VAULT_PODNAME=${VAULT_PODNAME:-spi-vault-0}
+VAULT_NAMESPACE=${VAULT_NAMESPACE:-spi-vault}
+VAULT_PODNAME=${VAULT_PODNAME:-vault-0}
 
 echo '[INFO] Deploying SPI OAuth2 config'
 
