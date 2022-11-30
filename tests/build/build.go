@@ -37,7 +37,7 @@ const (
 var (
 	componentUrls                   = strings.Split(utils.GetEnv(COMPONENT_REPO_URLS_ENV, pythonComponentGitSourceURL), ",") //multiple urls
 	componentNames                  []string
-	helloWorldComponentGitSourceURL = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv("GITHUB_E2E_ORGANIZATION", "redhat-appstudio-qe"), helloWorldComponentGitSourceRepoName)
+	helloWorldComponentGitSourceURL = fmt.Sprintf("https://github.com/redhat-appstudio-qe/%s", helloWorldComponentGitSourceRepoName)
 )
 
 var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "HACBS"), func() {
