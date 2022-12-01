@@ -121,8 +121,24 @@ Overview for OpenShift CI and AppStudio E2E tests is in [OpenshiftCI.md](docs/Op
 
 # Develop new tests
 
-* Create test folder under tests folder: `tests/[<application-name>]...`, e.g. [has](tests/has).
-  * `tests/has` - all tests used owned by AppStudio application service team
+ The current structure of how tests are stored in this repo are as follows:
+
+ * The equivalent of Ginkgo Suites, `*_suite_test.go`, reside in the `cmd/` directory 
+ * The equivalent of Ginkgo Tests,  `*_test.go`, reside in the `tests/` directory
+
+We've provided some tooling to generate test suite packages and test spec files to get you up and running a little faster:
+
+```bash
+      make local/template/generate-test-spec
+      make local/template/generate-test-suite
+```
+
+For more information refer to [Generate Tests](docs/DeveloperGenerateTest.md).
+
+## Tips
+* Make sure you've implemented any required controller functionality that is required for your tests within the following files
+   * `pkg/utils/<new controller directory>` - net new controller logic for a new service or component
+   * `pkg/framework/framework.go` - import the new controller and update the `Framework` struct to be able to initialize the new controller
 * Every test package should be imported to `cmd/e2e_test.go`, e.g. [has](https://github.com/redhat-appstudio/e2e-tests/blob/main/cmd/e2e_test.go#L15).
 * Every new test should have correct [labels](docs/LabelsNaming.md).
 * Every test should have meaningful description with JIRA/GitHub issue key.

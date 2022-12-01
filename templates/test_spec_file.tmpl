@@ -1,0 +1,77 @@
+package {{.SuiteName }}
+
+/* This was generated from a template file. Please feel free to update as necessary */
+
+import (
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+    "fmt"
+	"strings"
+	"time"
+    "encoding/json"
+    "context"
+
+
+    "github.com/redhat-appstudio/e2e-tests/pkg/framework"
+    //framework imports edit as required
+    "github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+
+)
+
+var _ = framework.{{ .TestSpecName }}SuiteDescribe("{{ .TestSpecName }} tests", Label("{{ .TestSpecName }}"), func() {
+
+    /* a couple things to note:
+    - You may need to implement specific implementation of the service/domain you are trying to test if it
+    not already there in the pkg/ packages
+
+    - To include the tests as part of the E2E Test suite:
+       - Update the pkg/framework/describe.go to include the `Describe func` of this new test suite
+       - Import this new package into the cmd/e2e_test.go 
+    */
+
+	defer GinkgoRecover()
+    var err error
+    var f *framework.Framework
+    // use 'f' to access common controllers or the specific service controllers within the framework
+	BeforeAll(func() {
+		// Initialize the tests controllers
+		f, err = framework.NewFramework()
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+    /* In Gingko, "Describe", "Context", "When" are functionaly the same. They are container nodes that hierarchically 
+    organize the specs, used to make the flow read better. The core piece of the spec is the subject container, "It", 
+    this is where the meat of the test is written. 
+    
+    Ginkgo's default behavior is to only randomize the order of top-level containers -- the specs within those containers 
+    continue to run in the order in which they are specified in the test files. That being said, Ginko does provide the 
+    option to randomize ALL specs. So it is important to design and write test cases for randomization and parallelization
+    in mind. Tips to do so:
+    
+    - Declare variables in "Describe" containers, initialize in "BeforeEach/All" containers
+    - Move all setup code into "BeforeEach/All" closures 
+    - "It" containers should be independent of each other. If you require the "It" tests to be dependent on each other for 
+      complex test scenarios, append into the "Describe" the "Ordered" decorator.
+    */
+
+    Describe("{{ .TestSpecName }} scenario to test", Label("{{ .TestSpecName }}"), func() {
+        // Declare variables here.
+
+        BeforeEach(func() {
+
+        // Initialize variables here.
+        // Assert setup here.
+
+        })
+
+        It("{{ .TestSpecName }} does some test action", func() { 
+
+        // Implement test and assertions here
+        
+        })
+    
+    })
+
+})
