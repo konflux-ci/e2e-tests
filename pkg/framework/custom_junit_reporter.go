@@ -36,7 +36,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2/reporters"
 	types "github.com/onsi/ginkgo/v2/types"
@@ -44,6 +43,10 @@ import (
 )
 
 func GenerateCustomJUnitReport(report types.Report, dst string) error {
+	return GenerateCustomJUnitReportWithConfig(report, dst, JunitReportConfig{})
+}
+
+func GenerateCustomJUnitReportWithConfig(report types.Report, dst string, config JunitReportConfig) error {
 	suite := JUnitTestSuite{
 		Name:      report.SuiteDescription,
 		Package:   report.SuitePath,
@@ -65,7 +68,6 @@ func GenerateCustomJUnitReport(report types.Report, dst string) error {
 				{"FailOnPending", fmt.Sprintf("%t", report.SuiteConfig.FailOnPending)},
 				{"FailFast", fmt.Sprintf("%t", report.SuiteConfig.FailFast)},
 				{"FlakeAttempts", fmt.Sprintf("%d", report.SuiteConfig.FlakeAttempts)},
-				{"EmitSpecProgress", fmt.Sprintf("%t", report.SuiteConfig.EmitSpecProgress)},
 				{"DryRun", fmt.Sprintf("%t", report.SuiteConfig.DryRun)},
 				{"ParallelTotal", fmt.Sprintf("%d", report.SuiteConfig.ParallelTotal)},
 				{"OutputInterceptorMode", report.SuiteConfig.OutputInterceptorMode},
@@ -78,8 +80,12 @@ func GenerateCustomJUnitReport(report types.Report, dst string) error {
 			Classname: getClassnameFromReport(spec),
 			Status:    spec.State.String(),
 			Time:      spec.RunTime.Seconds(),
-			SystemOut: systemOutForUnstructuredReporters(spec),
-			SystemErr: systemErrForUnstructuredReporters(spec),
+		}
+		if !spec.State.Is(config.OmitTimelinesForSpecState) {
+			test.SystemErr = systemErrForUnstructuredReporters(spec)
+		}
+		if !config.OmitCapturedStdOutErr {
+			test.SystemOut = systemOutForUnstructuredReporters(spec)
 		}
 		suite.Tests += 1
 
@@ -154,16 +160,24 @@ func GenerateCustomJUnitReport(report types.Report, dst string) error {
 }
 
 // This function generates folder structure for the rp_preproc tool with logs for upload in Report Portal
-func GenerateRPPreprocReport(report types.Report) {
+func GenerateRPPreprocReport(report types.Report, rpPreprocDir string) {
+	//Delete directory, if existss
+	if _, err := os.Stat("/path/to/whatever"); !os.IsNotExist(err) {
+		err2 := os.RemoveAll(rpPreprocDir)
+		if err2 != nil {
+			klog.Error(err2)
+		}
+	}
+	//Generate folder structure for RPPreproc with logs
 	for i := range report.SpecReports {
 		reportSpec := report.SpecReports[i]
 		//generate folders only for failed tests
 		if !reportSpec.Failure.IsZero() {
 			if reportSpec.LeafNodeType == types.NodeTypeIt {
 				name := getClassnameFromReport(reportSpec) + "." + shortenStringAddHash(reportSpec)
-				filePath := "rp_preproc/attachments/xunit/" + name
-				if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
-					klog.Error(err)
+				filePath := rpPreprocDir + "/rp_preproc/attachments/xunit/" + name
+				if err3 := os.MkdirAll(filePath, os.ModePerm); err3 != nil {
+					klog.Error(err3)
 				} else {
 					writeLogInFile(filePath+"/ginkgoWriter.log", reportSpec.CapturedGinkgoWriterOutput)
 					writeLogInFile(filePath+"/stdOutErr.log", reportSpec.CapturedStdOutErr)
@@ -204,10 +218,10 @@ func systemErrForUnstructuredReporters(spec types.SpecReport) string {
 	gw := spec.CapturedGinkgoWriterOutput
 	cursor := 0
 	for _, pr := range spec.ProgressReports {
-		if cursor < pr.GinkgoWriterOffset {
-			if pr.GinkgoWriterOffset < len(gw) {
-				out.WriteString(gw[cursor:pr.GinkgoWriterOffset])
-				cursor = pr.GinkgoWriterOffset
+		if cursor < pr.TimelineLocation.Offset {
+			if pr.TimelineLocation.Offset < len(gw) {
+				out.WriteString(gw[cursor:pr.TimelineLocation.Offset])
+				cursor = pr.TimelineLocation.Offset
 			} else if cursor < len(gw) {
 				out.WriteString(gw[cursor:])
 				cursor = len(gw)
@@ -219,25 +233,11 @@ func systemErrForUnstructuredReporters(spec types.SpecReport) string {
 	if cursor < len(gw) {
 		out.WriteString(gw[cursor:])
 	}
-
 	return out.String()
 }
 
 func systemOutForUnstructuredReporters(spec types.SpecReport) string {
-	systemOut := spec.CapturedStdOutErr
-	if len(spec.ReportEntries) > 0 {
-		systemOut += "\nReport Entries:\n"
-		for i, entry := range spec.ReportEntries {
-			systemOut += fmt.Sprintf("%s\n%s\n%s\n", entry.Name, entry.Location, entry.Time.Format(time.RFC3339Nano))
-			if representation := entry.StringRepresentation(); representation != "" {
-				systemOut += representation + "\n"
-			}
-			if i+1 < len(spec.ReportEntries) {
-				systemOut += "--\n"
-			}
-		}
-	}
-	return systemOut
+	return spec.CapturedStdOutErr
 }
 
 func getClassnameFromReport(report types.SpecReport) string {

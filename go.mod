@@ -13,7 +13,7 @@ require (
 	github.com/gosuri/uitable v0.0.4
 	github.com/hacbs-contract/enterprise-contract-controller/api v0.0.0-20221123200519-210c9331b2e2
 	github.com/magefile/mage v1.13.0
-	github.com/onsi/ginkgo/v2 v2.5.0
+	github.com/onsi/ginkgo/v2 v2.5.1
 	github.com/onsi/gomega v1.24.0
 	github.com/openshift/api v0.0.0-20220525145417-ee5b62754c68
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
