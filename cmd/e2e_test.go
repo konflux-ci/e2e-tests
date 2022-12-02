@@ -68,11 +68,17 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {}, func() {
 
 var _ = ginkgo.ReportAfterSuite("RP Preproc reporter", func(report types.Report) {
 	if generateRPPreprocReport {
-		err := framework.GenerateCustomJUnitReport(report, "xunit.xml")
+		//Generate Logs in dirs
+		framework.GenerateRPPreprocReport(report, rpPreprocDir)
+		//Generate modified JUnit xml file
+		resultsPath := rpPreprocDir + "/rp_preproc/results/"
+		if err := os.Mkdir(resultsPath, os.ModePerm); err != nil {
+			klog.Error(err)
+		}
+		err := framework.GenerateCustomJUnitReport(report, resultsPath+"xunit.xml")
 		if err != nil {
 			klog.Error(err)
 		}
-		framework.GenerateRPPreprocReport(report, rpPreprocDir)
 	}
 })
 
