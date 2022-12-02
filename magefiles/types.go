@@ -44,3 +44,8 @@ type PullRequestMetadata struct {
 	Number       int
 	RemoteName   string
 }
+
+type TemplateData struct {
+	SuiteName    string
+	TestSpecName string
+}

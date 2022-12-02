@@ -7,6 +7,7 @@ require (
 	github.com/codeready-toolchain/api v0.0.0-20220511141428-1adfed7d17b0
 	github.com/codeready-toolchain/toolchain-e2e v0.0.0-20220525131508-60876bfb99d3
 	github.com/devfile/library v1.2.1-0.20211104222135-49d635cb492f
+	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0
 	github.com/google/go-github/v44 v44.1.0
 	github.com/google/uuid v1.3.0
 	github.com/gosuri/uiprogress v0.0.1
@@ -31,6 +32,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/tektoncd/pipeline v0.42.0
 	golang.org/x/oauth2 v0.2.0
+	golang.org/x/text v0.4.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.25.4
 	k8s.io/apimachinery v0.25.4
@@ -202,7 +204,6 @@ require (
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.2.0 // indirect
 	golang.org/x/term v0.2.0 // indirect
-	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/time v0.1.0 // indirect
 	golang.org/x/tools v0.2.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
