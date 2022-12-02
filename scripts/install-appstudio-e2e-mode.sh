@@ -12,6 +12,7 @@ command -v oc >/dev/null 2>&1 || { echo "oc cli is not installed. Aborting."; ex
 
 export MY_GIT_FORK_REMOTE="qe"
 export MY_GITHUB_ORG=${GITHUB_E2E_ORGANIZATION:-"redhat-appstudio-qe"}
+export MY_GITHUB_REPO=${GITHUB_E2E_REPO:-"infra-deployments"}
 export MY_GITHUB_TOKEN="${GITHUB_TOKEN}"
 export MY_QUAY_TOKEN="${QUAY_TOKEN}"
 export TEST_BRANCH_ID=$(date +%s)
@@ -51,7 +52,7 @@ function cloneInfraDeployments() {
 
 # Add a custom remote for infra-deployments repository.
 function addQERemoteForkAndInstallAppstudio() {
-    git remote add "${MY_GIT_FORK_REMOTE}" https://github.com/"${MY_GITHUB_ORG}"/infra-deployments.git
+    git remote add "${MY_GIT_FORK_REMOTE}" https://github.com/"${MY_GITHUB_ORG}"/"${MY_GITHUB_REPO}".git
 
     # Start AppStudio installation
     /bin/bash hack/bootstrap-cluster.sh preview

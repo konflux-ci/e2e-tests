@@ -14,6 +14,7 @@ export MY_GITHUB_TOKEN="${GITHUB_TOKEN}"
 
 # Optionally provided env vars
 export MY_GITHUB_ORG=${GITHUB_E2E_ORGANIZATION:-"redhat-appstudio-qe"}
+export MY_GITHUB_REPO=${GITHUB_E2E_REPO:-"infra-deployments"}
 export MY_GIT_FORK_REMOTE="qe"
 export E2E_APPLICATIONS_NAMESPACE=${E2E_APPLICATIONS_NAMESPACE:-appstudio-e2e-test}
 export SHARED_SECRET_NAMESPACE="build-templates"
@@ -30,11 +31,12 @@ export HAS_DEFAULT_IMAGE_REPOSITORY="quay.io/${QUAY_E2E_ORGANIZATION:-redhat-app
 pushd "${TMP_DIR}"
 
 INFRA_DEPLOYMENTS_ORG="${INFRA_DEPLOYMENTS_ORG:-"redhat-appstudio"}"
+INFRA_DEPLOYMENTS_REPO="${INFRA_DEPLOYMENTS_REPO:-"infra-deployments"}"
 INFRA_DEPLOYMENTS_BRANCH="${INFRA_DEPLOYMENTS_BRANCH:-"main"}"
-git clone --no-checkout "https://${MY_GITHUB_TOKEN}@github.com/${INFRA_DEPLOYMENTS_ORG}/infra-deployments.git" .
+git clone --no-checkout "https://${MY_GITHUB_TOKEN}@github.com/${INFRA_DEPLOYMENTS_ORG}/${INFRA_DEPLOYMENTS_REPO}.git" .
 git checkout "${INFRA_DEPLOYMENTS_BRANCH}"
 # Add a custom remote for infra-deployments repository.
-git remote add "${MY_GIT_FORK_REMOTE}" https://github.com/"${MY_GITHUB_ORG}"/infra-deployments.git
+git remote add "${MY_GIT_FORK_REMOTE}" https://github.com/"${MY_GITHUB_ORG}"/"${MY_GITHUB_REPO}".git
 # Run the bootstrap script
 ./hack/bootstrap-cluster.sh preview
 # Secret used by pipelines to push component containers to quay.io

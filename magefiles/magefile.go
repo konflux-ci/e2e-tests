@@ -201,6 +201,7 @@ func (CI) setRequiredEnvVars() error {
 		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
 
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
+			os.Setenv("INFRA_DEPLOYMENTS_REPO", pr.RepoName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
 		}
 
