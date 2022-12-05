@@ -37,7 +37,7 @@ var ecPolicy = ecp.EnterpriseContractPolicySpec{
 
 var paramsReleaseStrategy = []appstudiov1alpha1.Params{}
 
-var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-path", Label("release", "HACBS"), func() {
+var _ = framework.ReleaseSuiteDescribe("[HACBS-1142]-test-specific-timeouts", Label("release", "HACBS"), func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	framework, err := framework.NewFramework()
@@ -77,7 +77,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 		It("Create a Snapshot in dev namespace.", func(ctx SpecContext) {
 			_, err := framework.ReleaseController.CreateSnapshot(snapshotName, devNamespace, applicationName, snapshotComponents)
 			Expect(err).NotTo(HaveOccurred())
-		}, SpecTimeout(applicationSnapshotCreationTimeout))
+		}, SpecTimeout(applicationSnapshotCreationTimeout+namespaceCreationTimeout*2))
+		// Consider also the BeforeAll block creating two namespaces
 
 		It("Create Release Strategy in managed namespace.", func(ctx SpecContext) {
 			_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, serviceAccount, paramsReleaseStrategy)
@@ -128,7 +129,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 				}
 
 				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
-			}, releasePipelineRunCompletionTimeot, defaultInterval).Should(BeTrue())
+			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
 
 		It("The Release should have succeeded.", func() {
@@ -142,7 +143,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("The Release should reference the release PipelineRun.", func() {
+		It("The Release should reference the release PipelineRun.", func(ctx SpecContext) {
 			var pipelineRunList *v1beta1.PipelineRunList
 
 			Eventually(func() bool {
@@ -152,13 +153,14 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 				}
 
 				return len(pipelineRunList.Items) > 0 && err == nil
-			}, avgPipelineCompletionTime, defaultInterval).Should(BeTrue())
+			}, avgControllerQueryTimeout, defaultInterval).Should(BeTrue())
 
 			release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
 			if err != nil {
 				klog.Error(err)
 			}
 			Expect(release.Status.ReleasePipelineRun == (fmt.Sprintf("%s/%s", pipelineRunList.Items[0].Namespace, pipelineRunList.Items[0].Name))).Should(BeTrue())
-		})
+		}, SpecTimeout(avgControllerQueryTimeout*2+namespaceDeletionTimeout*2))
+		// Consider also the AfterAll block deleting two namespaces
 	})
 })
