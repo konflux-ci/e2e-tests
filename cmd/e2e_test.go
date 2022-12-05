@@ -32,6 +32,8 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 
 var webhookConfigPath string
 var demoSuitesPath string
+var generateRPPreprocReport bool
+var rpPreprocDir string
 var polarionOutputFile string
 var polarionProjectID string
 var generateTestCases bool
@@ -40,6 +42,8 @@ func init() {
 	rootDir, _ := os.Getwd()
 	flag.StringVar(&webhookConfigPath, "webhookConfigPath", "", "path to webhook config file")
 	flag.StringVar(&demoSuitesPath, "config-suites", fmt.Sprintf(rootDir+"/tests/e2e-demos/config/default.yaml"), "path to e2e demo suites definition")
+	flag.BoolVar(&generateRPPreprocReport, "generate-rppreproc-report", false, "Generate report and folders for RP Preproc")
+	flag.StringVar(&rpPreprocDir, "rp-preproc-dir", ".", "Folder for RP Preproc")
 	flag.StringVar(&polarionOutputFile, "polarion-output-file", "polarion.xml", "Generated polarion test cases")
 	flag.StringVar(&polarionProjectID, "project-id", "AppStudio", "Set the Polarion project ID")
 	flag.BoolVar(&generateTestCases, "generate-test-cases", false, "Generate Test Cases for Polarion")
@@ -59,6 +63,22 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {}, func() {
 	if len(webhookConfigPath) > 0 {
 		klog.Info("Send webhook")
 		framework.SendWebhook(webhookConfigPath)
+	}
+})
+
+var _ = ginkgo.ReportAfterSuite("RP Preproc reporter", func(report types.Report) {
+	if generateRPPreprocReport {
+		//Generate Logs in dirs
+		framework.GenerateRPPreprocReport(report, rpPreprocDir)
+		//Generate modified JUnit xml file
+		resultsPath := rpPreprocDir + "/rp_preproc/results/"
+		if err := os.Mkdir(resultsPath, os.ModePerm); err != nil {
+			klog.Error(err)
+		}
+		err := framework.GenerateCustomJUnitReport(report, resultsPath+"xunit.xml")
+		if err != nil {
+			klog.Error(err)
+		}
 	}
 })
 
