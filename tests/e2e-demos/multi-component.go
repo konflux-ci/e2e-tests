@@ -160,7 +160,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	})
 
 	// Check components are deployed
-	// TODO re-enable once the issue with GitopsDeployment creation is resolved
+	// [PENDING] TODO re-enable once the issue with GitopsDeployment creation is resolved
 	It("Check multiple components are deployed", Pending, func() {
 
 		Eventually(func() bool {
