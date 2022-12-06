@@ -72,7 +72,7 @@ var _ = ginkgo.ReportAfterSuite("RP Preproc reporter", func(report types.Report)
 		framework.GenerateRPPreprocReport(report, rpPreprocDir)
 		//Generate modified JUnit xml file
 		resultsPath := rpPreprocDir + "/rp_preproc/results/"
-		if err := os.Mkdir(resultsPath, os.ModePerm); err != nil {
+		if err := os.MkdirAll(resultsPath, os.ModePerm); err != nil {
 			klog.Error(err)
 		}
 		err := framework.GenerateCustomJUnitReport(report, resultsPath+"xunit.xml")
