@@ -20,7 +20,7 @@ const (
 
 	namespaceCreationTimeout            = 20 * time.Second // actual messured time between 11-20 seconds
 	namespaceDeletionTimeout            = 20 * time.Second // actual messured time between 11-20 seconds
-	applicationSnapshotCreationTimeout  = 2 * time.Second  // actual messured time between 1-2 seconds
+	snapshotCreationTimeout             = 2 * time.Second  // actual messured time between 1-2 seconds
 	releaseStrategyCreationTimeout      = 2 * time.Second  // actual messured time between 0-1 seconds
 	releasePlanCreationTimeout          = 2 * time.Second  // actual messured time between 0-1 seconds
 	EnterpriseContractPolicyTimeout     = 2 * time.Second  // actual messured time between 0-1 seconds

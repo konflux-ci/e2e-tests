@@ -37,7 +37,7 @@ var ecPolicy = ecp.EnterpriseContractPolicySpec{
 
 var paramsReleaseStrategy = []appstudiov1alpha1.Params{}
 
-var _ = framework.ReleaseSuiteDescribe("[HACBS-1142]-test-specific-timeouts", Label("release", "HACBS"), func() {
+var _ = framework.ReleaseSuiteDescribe("[HACBS-1142]-test-release-service-happy-path-with-granular-time-thresholds ", Label("release", "HACBS"), func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	framework, err := framework.NewFramework()
@@ -77,7 +77,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1142]-test-specific-timeouts", La
 		It("Create a Snapshot in dev namespace.", func(ctx SpecContext) {
 			_, err := framework.ReleaseController.CreateSnapshot(snapshotName, devNamespace, applicationName, snapshotComponents)
 			Expect(err).NotTo(HaveOccurred())
-		}, SpecTimeout(applicationSnapshotCreationTimeout+namespaceCreationTimeout*2))
+		}, SpecTimeout(snapshotCreationTimeout+namespaceCreationTimeout*2))
 		// Consider also the BeforeAll block creating two namespaces
 
 		It("Create Release Strategy in managed namespace.", func(ctx SpecContext) {
