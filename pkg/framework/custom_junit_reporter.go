@@ -75,6 +75,10 @@ func GenerateCustomJUnitReportWithConfig(report types.Report, dst string, config
 		},
 	}
 	for _, spec := range report.SpecReports {
+
+		if spec.LeafNodeType != types.NodeTypeIt {
+			continue
+		}
 		test := JUnitTestCase{
 			Name:      shortenStringAddHash(spec),
 			Classname: getClassnameFromReport(spec),
@@ -162,7 +166,7 @@ func GenerateCustomJUnitReportWithConfig(report types.Report, dst string, config
 // This function generates folder structure for the rp_preproc tool with logs for upload in Report Portal
 func GenerateRPPreprocReport(report types.Report, rpPreprocDir string) {
 	//Delete directory, if existss
-	if _, err := os.Stat("/path/to/whatever"); !os.IsNotExist(err) {
+	if _, err := os.Stat(rpPreprocDir); !os.IsNotExist(err) {
 		err2 := os.RemoveAll(rpPreprocDir)
 		if err2 != nil {
 			klog.Error(err2)
