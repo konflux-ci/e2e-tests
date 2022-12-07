@@ -27,7 +27,7 @@ const (
 	releasePlanAdmissionCreationTimeout = 1 * time.Second  // actual messured time between 0-1 seconds
 	releaseCreationTimeout              = 1 * time.Second  // actual messured time between 0-1 seconds
 	releasePipelineRunCreationTimeout   = 1 * time.Second  // actual messured time between 0-1 seconds
-	releasePipelineRunCompletionTimeout = 10 * time.Second // actual messured time between 6-10 seconds
+	releasePipelineRunCompletionTimeout = 20 * time.Second // actual messured time between 6-20 seconds
 	avgControllerQueryTimeout           = 1 * time.Second  // average controller query timeout, actual messured time between 0-1 seconds
 
 	defaultInterval = 100 * time.Millisecond
