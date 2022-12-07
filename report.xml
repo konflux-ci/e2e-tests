@@ -1,0 +1,393 @@
+<?xml version="1.0" encoding="UTF-8"?>
+  <testsuites tests="123" disabled="121" errors="0" failures="0" time="0.004144242">
+      <testsuite name="Red Hat App Studio E2E tests" package="/home/nshprai/Setup/App-Studio/HACBS-1142-test-specific-timeouts" tests="123" disabled="34" skipped="87" errors="0" failures="0" time="0.004144242" timestamp="2022-12-06T13:22:04">
+          <properties>
+              <property name="SuiteSucceeded" value="true"></property>
+              <property name="SuiteHasProgrammaticFocus" value="false"></property>
+              <property name="SpecialSuiteFailureReason" value=""></property>
+              <property name="SuiteLabels" value="[]"></property>
+              <property name="RandomSeed" value="1670325687"></property>
+              <property name="RandomizeAllSpecs" value="false"></property>
+              <property name="LabelFilter" value="&#34;release&#34;"></property>
+              <property name="FocusStrings" value="release-suite"></property>
+              <property name="SkipStrings" value=""></property>
+              <property name="FocusFiles" value=""></property>
+              <property name="SkipFiles" value=""></property>
+              <property name="FailOnPending" value="false"></property>
+              <property name="FailFast" value="false"></property>
+              <property name="FlakeAttempts" value="0"></property>
+              <property name="DryRun" value="false"></property>
+              <property name="ParallelTotal" value="1"></property>
+              <property name="OutputInterceptorMode" value=""></property>
+          </properties>
+          <testcase name="[It] [e2e-demos-suite] Create Red Hat AppStudio Application [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] Check Red Hat AppStudio Application health [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] Create Red Hat AppStudio ComponentDetectionQuery for Component repository [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] Check Red Hat AppStudio ComponentDetectionQuery status [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] Create multiple components [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] Wait for all pipelines to be finished [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] Check multiple components are deployed [e2e-demo]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [has-suite [test_id:02] private devfile source] Create Red Hat AppStudio Application [has]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [has-suite [test_id:02] private devfile source] Check Red Hat AppStudio Application health [has]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [has-suite [test_id:02] private devfile source] Check if &#39;git-clone&#39; cluster tasks exists [has]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [has-suite [test_id:02] private devfile source] Create Red Hat AppStudio ComponentDetectionQuery for Component repository [has]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [has-suite [test_id:02] private devfile source] Check Red Hat AppStudio ComponentDetectionQuery status [has]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [has-suite [test_id:02] private devfile source] Create Red Hat AppStudio Quarkus component [has]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [cluster-registration-suite Cluster Registration E2E tests] infrastructure is running verify the cluster-registration-installer-controller-manager is running [cluster-registration]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [cluster-registration-suite Cluster Registration E2E tests] infrastructure is running verify the correct roles are created [cluster-registration]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [cluster-registration-suite Cluster Registration E2E tests] infrastructure is running verify the correct rolebindings are created [cluster-registration]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [cluster-registration-suite Cluster Registration E2E tests] infrastructure is running verify the correct service account is created [cluster-registration]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [has-suite [test_id:01] DEVHAS-62 devfile source] Create Red Hat AppStudio Application [has]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [has-suite [test_id:01] DEVHAS-62 devfile source] Check Red Hat AppStudio Application health [has]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [has-suite [test_id:01] DEVHAS-62 devfile source] Check if &#39;git-clone&#39; cluster tasks exists [has]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [has-suite [test_id:01] DEVHAS-62 devfile source] Create Red Hat AppStudio ComponentDetectionQuery for Component repository [has]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [has-suite [test_id:01] DEVHAS-62 devfile source] Check Red Hat AppStudio ComponentDetectionQuery status [has]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [has-suite [test_id:01] DEVHAS-62 devfile source] Create Red Hat AppStudio Quarkus component [has]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [has-suite [test_id:01] DEVHAS-62 devfile source] Gitops Repository should not be deleted when component gets deleted [has]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [has-suite [test_id:01] DEVHAS-62 devfile source] Check a Component gets deleted when its application is deleted [has]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [chains-suite Tekton Chains E2E tests] infrastructure is running verify the chains controller is running [ec, HACBS]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [chains-suite Tekton Chains E2E tests] infrastructure is running verify the correct secrets have been created [ec, HACBS]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [chains-suite Tekton Chains E2E tests] infrastructure is running verify the correct roles are created [ec, HACBS]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [chains-suite Tekton Chains E2E tests] infrastructure is running verify the correct rolebindings are created [ec, HACBS]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [chains-suite Tekton Chains E2E tests] infrastructure is running verify the correct service account is created [ec, HACBS]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [chains-suite Tekton Chains E2E tests] test creating and signing an image and task creates signature and attestation [ec, HACBS]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [chains-suite Tekton Chains E2E tests] test creating and signing an image and task verify-enterprise-contract task succeeds when policy is met [ec, HACBS]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [chains-suite Tekton Chains E2E tests] test creating and signing an image and task verify-enterprise-contract task does not pass when tests are not satisfied on non-strict mode [ec, HACBS]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [chains-suite Tekton Chains E2E tests] test creating and signing an image and task verify-enterprise-contract task fails when tests are not satisfied on strict mode [ec, HACBS]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [chains-suite Tekton Chains E2E tests] test creating and signing an image and task verify-enterprise-contract task fails when unexpected signature is used [ec, HACBS]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-466: create an application with nodejs component application is created [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-466: create an application with nodejs component application is healthy [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-466: create an application with nodejs component create component nodejs-component from public git source https://github.com/redhat-appstudio-qe/simple-nodejs-app and devfile https://raw.githubusercontent.com/redhat-appstudio-qe/simple-nodejs-app/main/devfiles/devfile.yaml [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-466: create an application with nodejs component wait public component nodejs-component pipeline to be finished [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-466: create an application with nodejs component deploy component nodejs-component using gitops [e2e-demo]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-466: create an application with nodejs component check component nodejs-component health [e2e-demo]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-466: create an application with nodejs component scale component nodejs-component replicas [e2e-demo]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-476: create an application with DotNet component application is created [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-476: create an application with DotNet component application is healthy [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-476: create an application with DotNet component create component dotnet-component from public git source https://github.com/redhat-appstudio-qe/devfile-sample-dotnet60-basic [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-476: create an application with DotNet component wait public component dotnet-component pipeline to be finished [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-476: create an application with DotNet component deploy component dotnet-component using gitops [e2e-demo]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-476: create an application with DotNet component check component dotnet-component health [e2e-demo]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-478: create an application with multiple components from private and public repositories application is created [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-478: create an application with multiple components from private and public repositories application is healthy [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-478: create an application with multiple components from private and public repositories create component component-python from public git source https://github.com/redhat-appstudio-qe/devfile-sample-python-basic [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-478: create an application with multiple components from private and public repositories wait public component component-python pipeline to be finished [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-478: create an application with multiple components from private and public repositories deploy component component-python using gitops [e2e-demo]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-478: create an application with multiple components from private and public repositories check component component-python health [e2e-demo]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-478: create an application with multiple components from private and public repositories Inject manually SPI token [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-478: create an application with multiple components from private and public repositories create component private-quarkus-component from private git source https://github.com/redhat-appstudio-qe/private-quarkus-devfile-sample [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-478: create an application with multiple components from private and public repositories wait private component private-quarkus-component pipeline to be finished [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-478: create an application with multiple components from private and public repositories deploy component private-quarkus-component using gitops [e2e-demo]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-478: create an application with multiple components from private and public repositories check component private-quarkus-component health [e2e-demo]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-467: create an application with a component from private and public quay.io images application is created [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-467: create an application with a component from private and public quay.io images application is healthy [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-467: create an application with a component from private and public quay.io images create component quay-public-component from public container source [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-467: create an application with a component from private and public quay.io images wait public component quay-public-component pipeline to be finished [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-467: create an application with a component from private and public quay.io images deploy component quay-public-component using gitops [e2e-demo]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-467: create an application with a component from private and public quay.io images check component quay-public-component health [e2e-demo]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-467: create an application with a component from private and public quay.io images Inject manually SPI token [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-467: create an application with a component from private and public quay.io images create component quay-private-component from private container source [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-467: create an application with a component from private and public quay.io images wait private component quay-private-component pipeline to be finished [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-467: create an application with a component from private and public quay.io images deploy component quay-private-component using gitops [e2e-demo]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-467: create an application with a component from private and public quay.io images check component quay-private-component health [e2e-demo]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-489: create an application with a component from private and public personal repositories application is created [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-489: create an application with a component from private and public personal repositories application is healthy [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-489: create an application with a component from private and public personal repositories create component component-python-public from public git source https://github.com/redhat-appstudio-qe-bot/devfile-sample-python-basic [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-489: create an application with a component from private and public personal repositories wait public component component-python-public pipeline to be finished [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-489: create an application with a component from private and public personal repositories deploy component component-python-public using gitops [e2e-demo]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-489: create an application with a component from private and public personal repositories check component component-python-public health [e2e-demo]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-489: create an application with a component from private and public personal repositories Inject manually SPI token [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-489: create an application with a component from private and public personal repositories create component component-python-private from private git source https://github.com/redhat-appstudio-qe-bot/devfile-sample-python-basic-private [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-489: create an application with a component from private and public personal repositories wait private component component-python-private pipeline to be finished [e2e-demo]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-489: create an application with a component from private and public personal repositories deploy component component-python-private using gitops [e2e-demo]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [e2e-demos-suite] RHDP-489: create an application with a component from private and public personal repositories check component component-python-private health [e2e-demo]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] the component with git source (GitHub) is created triggers a PipelineRun [build, HACBS, github-webhook]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] the component with git source (GitHub) is created when the PipelineRun has started should lead to a PaC init PR creation [build, HACBS, github-webhook]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] the component with git source (GitHub) is created when the PipelineRun has started the PipelineRun should eventually finish successfully [build, HACBS, github-webhook]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] the component with git source (GitHub) is created when the PipelineRun is finished eventually leads to a creation of a PR comment with the PipelineRun status report [build, HACBS, github-webhook]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] the component with git source (GitHub) is created when the PaC init branch is updated eventually leads to triggering another PipelineRun [build, HACBS, github-webhook]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] the component with git source (GitHub) is created when the PaC init branch is updated PipelineRun should eventually finish [build, HACBS, github-webhook]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] the component with git source (GitHub) is created when the PaC init branch is updated eventually leads to another update of a PR with a comment about the PipelineRun status report [build, HACBS, github-webhook]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] the component with git source (GitHub) is created when the PaC init branch is merged eventually leads to triggering another PipelineRun [build, HACBS, github-webhook]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] the component with git source (GitHub) is created when the PaC init branch is merged PipelineRun should eventually finish [build, HACBS, github-webhook]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] the component with git source (GitHub) is created when the component is removed and recreated (with the same name in the same namespace) should no longer lead to a creation of a PaC PR [build, HACBS, github-webhook]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] HACBS pipelines triggers PipelineRun for component with source URL https://github.com/redhat-appstudio-qe/devfile-sample-python-basic.git [build, HACBS, build-templates-e2e]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] HACBS pipelines should reference the custom pipeline bundle in a PipelineRun [build, HACBS, build-templates-e2e]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] HACBS pipelines should reference the default pipeline bundle in a PipelineRun [build, HACBS]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] HACBS pipelines should eventually finish successfully for component with source URL https://github.com/redhat-appstudio-qe/devfile-sample-python-basic.git [build, HACBS, build-templates-e2e]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] HACBS pipelines should validate HACBS taskrun results [build, HACBS]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] HACBS pipelines when the container image is created and pushed to container registry contains non-empty sbom files [build, HACBS, sbom, slow]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] Creating component with container image source should not trigger a PipelineRun [build, HACBS]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] Creating a configmap with &#39;dummy&#39; custom pipeline bundle in the testing namespace should be referenced in a PipelineRun [build, HACBS, build-bundle-overriding]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] A secret with dummy quay.io credentials is created in the testing namespace should override the shared secret [build, HACBS]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] A secret with dummy quay.io credentials is created in the testing namespace should not be possible to push to quay.io repo (PipelineRun should fail) [build, HACBS]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] Creating a component with a specific container image URL should fail for ContainerImage field set to a protected repository (without an image tag) [build, HACBS]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] Creating a component with a specific container image URL should fail for ContainerImage field set to a protected repository followed by a random tag [build, HACBS]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] Creating a component with a specific container image URL should succeed for ContainerImage field set to a protected repository followed by a namespace prefix + dash + string [build, HACBS]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [build-service-suite Build service E2E tests] Creating a component with a specific container image URL should succeed for ContainerImage field set to a custom (unprotected) repository without a tag being specified [build, HACBS]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [jvm-build-service-suite JVM Build Service E2E tests] when the Component with s2i-java component is created a PipelineRun is triggered [jvm-build, HACBS]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [jvm-build-service-suite JVM Build Service E2E tests] when the Component with s2i-java component is created the build-container task from component PipelineRun references a correct sidecar image [jvm-build, HACBS]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [jvm-build-service-suite JVM Build Service E2E tests] when the Component with s2i-java component is created the build-container task from component pipelinerun references a correct analyzer image [jvm-build, HACBS]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [jvm-build-service-suite JVM Build Service E2E tests] when the Component with s2i-java component is created that PipelineRun completes successfully [jvm-build, HACBS]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [jvm-build-service-suite JVM Build Service E2E tests] when the Component with s2i-java component is created artifactbuilds and dependencybuilds are generated [jvm-build, HACBS]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [jvm-build-service-suite JVM Build Service E2E tests] when the Component with s2i-java component is created some artifactbuilds and dependencybuilds complete [jvm-build, HACBS]" classname="Red Hat App Studio E2E tests" status="pending" time="0">
+              <skipped message="pending"></skipped>
+          </testcase>
+          <testcase name="[It] [release-suite [HACBS-1142]-test-release-service-happy-path-with-granular-time-thresholds ] Creation of the &#39;Happy path&#39; resources Create a Snapshot in dev namespace. [release, HACBS]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [release-suite [HACBS-1142]-test-release-service-happy-path-with-granular-time-thresholds ] Creation of the &#39;Happy path&#39; resources Create Release Strategy in managed namespace. [release, HACBS]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [release-suite [HACBS-1142]-test-release-service-happy-path-with-granular-time-thresholds ] Creation of the &#39;Happy path&#39; resources Create ReleasePlan in dev namespace. [release, HACBS]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [release-suite [HACBS-1142]-test-release-service-happy-path-with-granular-time-thresholds ] Creation of the &#39;Happy path&#39; resources Create EnterpriseContractPolicy in managed namespace. [release, HACBS]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [release-suite [HACBS-1142]-test-release-service-happy-path-with-granular-time-thresholds ] Creation of the &#39;Happy path&#39; resources Create ReleasePlanAdmission in managed namespace. [release, HACBS]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [release-suite [HACBS-1142]-test-release-service-happy-path-with-granular-time-thresholds ] Creation of the &#39;Happy path&#39; resources Create a Release in dev namespace. [release, HACBS]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [release-suite [HACBS-1142]-test-release-service-happy-path-with-granular-time-thresholds ] Post-release verification. A PipelineRun should have been created in the managed namespace. [release, HACBS]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [release-suite [HACBS-1142]-test-release-service-happy-path-with-granular-time-thresholds ] Post-release verification. The PipelineRun should exist and succeed. [release, HACBS]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [release-suite [HACBS-1142]-test-release-service-happy-path-with-granular-time-thresholds ] Post-release verification. The Release should have succeeded. [release, HACBS]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[It] [release-suite [HACBS-1142]-test-release-service-happy-path-with-granular-time-thresholds ] Post-release verification. The Release should reference the release PipelineRun. [release, HACBS]" classname="Red Hat App Studio E2E tests" status="skipped" time="0">
+              <skipped message="skipped"></skipped>
+          </testcase>
+          <testcase name="[ReportAfterSuite] RP Preproc reporter" classname="Red Hat App Studio E2E tests" status="passed" time="4.304e-05">
+              <system-err>&gt; Enter [ReportAfterSuite] TOP-LEVEL - /home/nshprai/Setup/App-Studio/HACBS-1142-test-specific-timeouts/cmd/e2e_test.go:69 @ 12/06/22 13:22:04.015&#xA;&lt; Exit [ReportAfterSuite] TOP-LEVEL - /home/nshprai/Setup/App-Studio/HACBS-1142-test-specific-timeouts/cmd/e2e_test.go:69 @ 12/06/22 13:22:04.015 (0s)&#xA;</system-err>
+          </testcase>
+          <testcase name="[ReportAfterSuite] Polarion reporter" classname="Red Hat App Studio E2E tests" status="passed" time="2.0363e-05">
+              <system-err>&gt; Enter [ReportAfterSuite] TOP-LEVEL - /home/nshprai/Setup/App-Studio/HACBS-1142-test-specific-timeouts/cmd/e2e_test.go:85 @ 12/06/22 13:22:04.015&#xA;&lt; Exit [ReportAfterSuite] TOP-LEVEL - /home/nshprai/Setup/App-Studio/HACBS-1142-test-specific-timeouts/cmd/e2e_test.go:85 @ 12/06/22 13:22:04.015 (0s)&#xA;</system-err>
+          </testcase>
+      </testsuite>
+  </testsuites>
