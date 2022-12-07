@@ -78,7 +78,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1142]-test-release-service-happy-
 			_, err := framework.ReleaseController.CreateSnapshot(snapshotName, devNamespace, applicationName, snapshotComponents)
 			Expect(err).NotTo(HaveOccurred())
 		}, SpecTimeout(snapshotCreationTimeout+namespaceCreationTimeout*2))
-		// Consider also the BeforeAll block creating two namespaces
 
 		It("Create Release Strategy in managed namespace.", func(ctx SpecContext) {
 			_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, serviceAccount, paramsReleaseStrategy)
@@ -161,6 +160,5 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1142]-test-release-service-happy-
 			}
 			Expect(release.Status.ReleasePipelineRun == (fmt.Sprintf("%s/%s", pipelineRunList.Items[0].Namespace, pipelineRunList.Items[0].Name))).Should(BeTrue())
 		}, SpecTimeout(avgControllerQueryTimeout*2+namespaceDeletionTimeout*2))
-		// Consider also the AfterAll block deleting two namespaces
 	})
 })
