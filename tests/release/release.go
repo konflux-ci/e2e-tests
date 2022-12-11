@@ -74,40 +74,40 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 
 	var _ = Describe("Creation of the 'Happy path' resources", func() {
 
-		It("Create a Snapshot in dev namespace.", func(ctx SpecContext) {
+		It("creates a Snapshot in dev namespace.", func(ctx SpecContext) {
 			_, err := framework.ReleaseController.CreateSnapshot(snapshotName, devNamespace, applicationName, snapshotComponents)
 			Expect(err).NotTo(HaveOccurred())
 		}, SpecTimeout(snapshotCreationTimeout+namespaceCreationTimeout*2))
 
-		It("Create Release Strategy in managed namespace.", func(ctx SpecContext) {
+		It("creates Release Strategy in managed namespace.", func(ctx SpecContext) {
 			_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, serviceAccount, paramsReleaseStrategy)
 			Expect(err).NotTo(HaveOccurred())
 		}, SpecTimeout(releaseStrategyCreationTimeout))
 
-		It("Create ReleasePlan in dev namespace.", func(ctx SpecContext) {
+		It("creates ReleasePlan in dev namespace.", func(ctx SpecContext) {
 			_, err := framework.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationName, managedNamespace, "")
 			Expect(err).NotTo(HaveOccurred())
 		}, SpecTimeout(releasePlanCreationTimeout))
 
-		It("Create EnterpriseContractPolicy in managed namespace.", func(ctx SpecContext) {
+		It("creates EnterpriseContractPolicy in managed namespace.", func(ctx SpecContext) {
 			_, err := framework.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicy, managedNamespace, ecPolicy)
 			Expect(err).NotTo(HaveOccurred())
 		}, SpecTimeout(EnterpriseContractPolicyTimeout))
 
-		It("Create ReleasePlanAdmission in managed namespace.", func(ctx SpecContext) {
+		It("creates ReleasePlanAdmission in managed namespace.", func(ctx SpecContext) {
 			_, err := framework.ReleaseController.CreateReleasePlanAdmission(destinationReleasePlanAdmissionName, devNamespace, applicationName, managedNamespace, "", "", releaseStrategyName)
 			Expect(err).NotTo(HaveOccurred())
 		}, SpecTimeout(releasePlanAdmissionCreationTimeout))
 
-		It("Create a Release in dev namespace.", func(ctx SpecContext) {
+		It("creates a Release in dev namespace.", func(ctx SpecContext) {
 			_, err := framework.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, sourceReleasePlanName)
 			Expect(err).NotTo(HaveOccurred())
 		}, SpecTimeout(releaseCreationTimeout))
 	})
 
-	var _ = Describe("Post-release verification.", func() {
+	var _ = Describe("post-release verification.", func() {
 
-		It("A PipelineRun should have been created in the managed namespace.", func() {
+		It("a PipelineRun should have been created in the managed namespace.", func() {
 			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(managedNamespace)
 				if err != nil || prList == nil || len(prList.Items) < 1 {
@@ -119,7 +119,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("The PipelineRun should exist and succeed.", func() {
+		It("the PipelineRun should exist and succeed.", func() {
 			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(managedNamespace)
 				if prList == nil || err != nil || len(prList.Items) < 1 {
@@ -131,7 +131,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("The Release should have succeeded.", func() {
+		It("the Release should have succeeded.", func() {
 			Eventually(func() bool {
 				release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
 				if err != nil || release == nil {
@@ -142,7 +142,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("The Release should reference the release PipelineRun.", func(ctx SpecContext) {
+		It("the Release should reference the release PipelineRun.", func(ctx SpecContext) {
 			var pipelineRunList *v1beta1.PipelineRunList
 
 			Eventually(func() bool {

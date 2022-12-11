@@ -18,17 +18,17 @@ const (
 	environment                         = "test-environment"
 	releaseStrategyServiceAccount       = "pipeline"
 
-	namespaceCreationTimeout            = 20 * time.Second // actual messured time between 11-20 seconds
-	namespaceDeletionTimeout            = 20 * time.Second // actual messured time between 11-20 seconds
-	snapshotCreationTimeout             = 2 * time.Second  // actual messured time between 1-2 seconds
-	releaseStrategyCreationTimeout      = 1 * time.Second  // actual messured time between 0-1 seconds
-	releasePlanCreationTimeout          = 1 * time.Second  // actual messured time between 0-1 seconds
-	EnterpriseContractPolicyTimeout     = 1 * time.Second  // actual messured time between 0-1 seconds
-	releasePlanAdmissionCreationTimeout = 1 * time.Second  // actual messured time between 0-1 seconds
-	releaseCreationTimeout              = 1 * time.Second  // actual messured time between 0-1 seconds
-	releasePipelineRunCreationTimeout   = 1 * time.Second  // actual messured time between 0-1 seconds
-	releasePipelineRunCompletionTimeout = 20 * time.Second // actual messured time between 6-20 seconds
-	avgControllerQueryTimeout           = 1 * time.Second  // average controller query timeout, actual messured time between 0-1 seconds
+	namespaceCreationTimeout            = 20 * time.Second
+	namespaceDeletionTimeout            = 20 * time.Second
+	snapshotCreationTimeout             = 2 * time.Second
+	releaseStrategyCreationTimeout      = 1 * time.Second
+	releasePlanCreationTimeout          = 1 * time.Second
+	EnterpriseContractPolicyTimeout     = 1 * time.Second
+	releasePlanAdmissionCreationTimeout = 1 * time.Second
+	releaseCreationTimeout              = 1 * time.Second
+	releasePipelineRunCreationTimeout   = 1 * time.Second
+	releasePipelineRunCompletionTimeout = 20 * time.Second
+	avgControllerQueryTimeout           = 1 * time.Second
 
 	defaultInterval = 100 * time.Millisecond
 )
