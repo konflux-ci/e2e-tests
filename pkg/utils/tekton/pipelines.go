@@ -63,78 +63,104 @@ func (g BuildahDemo) Generate() *v1beta1.PipelineRun {
 }
 
 type VerifyEnterpriseContract struct {
-	Bundle              string
-	Image               string
-	Name                string
-	Namespace           string
-	PolicyConfiguration string
-	PublicKey           string
-	SSLCertDir          string
-	Strict              bool
+	PipelineRunName string
+	ImageRef        string
+	PublicSecret    string
+	PipelineName    string
+	RekorHost       string
+	SslCertDir      string
+	StrictPolicy    bool
+	Bundle          string
 }
 
-func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
+func (t VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
+	imageInfo := strings.Split(t.ImageRef, "/")
+	namespace := imageInfo[1]
+
+	// make sure that we have either "0" or "1" for the v1 task
+	strictZeroOrOneValue := "0"
+	if t.StrictPolicy {
+		strictZeroOrOneValue = "1"
+	}
+	// make sure that we have either `true` or `false` for the v2 task
+	strictBooleanValue := strconv.FormatBool(t.StrictPolicy)
+
 	return &v1beta1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-run-", p.Name),
-			Namespace:    p.Namespace,
+			GenerateName: fmt.Sprintf("%s-", t.PipelineRunName),
+			Namespace:    namespace,
 		},
 		Spec: v1beta1.PipelineRunSpec{
-			PipelineSpec: &v1beta1.PipelineSpec{
-				Tasks: []v1beta1.PipelineTask{
-					{
-						Name: "verify-enterprise-contract",
-						Params: []v1beta1.Param{
-							{
-								Name: "IMAGES",
-								Value: v1beta1.ArrayOrString{
-									Type: v1beta1.ParamTypeString,
-									StringVal: `{
+			Params: []v1beta1.Param{
+				{
+					Name: "IMAGE_REF",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: t.ImageRef,
+					},
+				},
+				{
+					Name: "PIPELINERUN_NAME",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: t.PipelineName,
+					},
+				},
+				{
+					Name: "PUBLIC_KEY",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: t.PublicSecret,
+					},
+				},
+				{
+					Name: "REKOR_HOST",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: t.RekorHost,
+					},
+				},
+				{
+					Name: "SSL_CERT_DIR",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: t.SslCertDir,
+					},
+				},
+				{
+					Name: "STRICT_POLICY",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: strictZeroOrOneValue,
+					},
+				},
+				// needed for the v2 task
+				{
+					Name: "STRICT",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: strictBooleanValue,
+					},
+				},
+				{
+					Name: "IMAGES",
+					Value: v1beta1.ArrayOrString{
+						Type: v1beta1.ParamTypeString,
+						StringVal: `{
 							"application": "test",
 							"components": [
 							  {
 								"name": "component1",
-								"containerImage": "` + p.Image + `"
+								"containerImage": "` + t.ImageRef + `"
 							  }
 							]
 						  }`,
-								},
-							},
-							{
-								Name: "POLICY_CONFIGURATION",
-								Value: v1beta1.ArrayOrString{
-									Type:      v1beta1.ParamTypeString,
-									StringVal: p.PolicyConfiguration,
-								},
-							},
-							{
-								Name: "PUBLIC_KEY",
-								Value: v1beta1.ArrayOrString{
-									Type:      v1beta1.ParamTypeString,
-									StringVal: p.PublicKey,
-								},
-							},
-							{
-								Name: "SSL_CERT_DIR",
-								Value: v1beta1.ArrayOrString{
-									Type:      v1beta1.ParamTypeString,
-									StringVal: p.SSLCertDir,
-								},
-							},
-							{
-								Name: "STRICT",
-								Value: v1beta1.ArrayOrString{
-									Type:      v1beta1.ParamTypeString,
-									StringVal: strconv.FormatBool(p.Strict),
-								},
-							},
-						},
-						TaskRef: &v1beta1.TaskRef{
-							Name:   "verify-enterprise-contract",
-							Bundle: p.Bundle,
-						},
 					},
 				},
+			},
+			PipelineRef: &v1beta1.PipelineRef{
+				Name:   "e2e-ec",
+				Bundle: t.Bundle,
 			},
 		},
 	}
