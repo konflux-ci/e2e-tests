@@ -119,7 +119,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("the PipelineRun should exist and succeed.", func() {
+		It("makes sure the PipelineRun exists and succeeded", func() {
 			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(managedNamespace)
 				if prList == nil || err != nil || len(prList.Items) < 1 {
@@ -131,7 +131,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("the Release should have succeeded.", func() {
+		It("makes sure that the Release should have succeeded.", func() {
 			Eventually(func() bool {
 				release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
 				if err != nil || release == nil {
