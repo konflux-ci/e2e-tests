@@ -153,6 +153,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 		Context("verify-enterprise-contract task", func() {
 			var generator tekton.VerifyEnterpriseContract
 			var rekorHost string
+			var verifyECTaskBundle string
 			publicSecretName := "cosign-public-key"
 
 			BeforeAll(func() {
@@ -168,13 +169,17 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				rekorHost, err = kubeController.GetRekorHost()
 				Expect(err).ToNot(HaveOccurred())
 				GinkgoWriter.Printf("Configured Rekor host: %s\n", rekorHost)
+
+				cm, err := kubeController.Commonctrl.GetConfigMap("ec-defaults", "enterprise-contract-service")
+				Expect(err).ToNot(HaveOccurred())
+				verifyECTaskBundle = cm.Data["verify_ec_task_bundle"]
+				Expect(verifyECTaskBundle).ToNot(BeEmpty())
+				GinkgoWriter.Printf("Using verify EC task bundle: %s\n", verifyECTaskBundle)
 			})
 
-			// TODO: See https://issues.redhat.com/browse/HACBS-1412 to remove hard coded ref
-			bundle := "quay.io/hacbs-contract/ec-task-bundle@sha256:16a933bdbcf49f6b9e922a3855d599bea688a6cfc2da1c140bdda1664b76ff5c"
 			BeforeEach(func() {
 				generator = tekton.VerifyEnterpriseContract{
-					Bundle:              bundle,
+					Bundle:              verifyECTaskBundle,
 					Image:               imageWithDigest,
 					Name:                "verify-enterprise-contract",
 					Namespace:           namespace,
