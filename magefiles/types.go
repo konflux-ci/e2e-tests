@@ -9,6 +9,7 @@ type OpenshiftJobSpec struct {
 	Refs Refs `json:"refs"`
 }
 type Refs struct {
+	RepoLink     string `json:"repo_link"`
 	Repo         string `json:"repo"`
 	Organization string `json:"org"`
 	Pulls        []Pull `json:"pulls"`
@@ -30,11 +31,7 @@ type Head struct {
 	Label string `json:"label"`
 }
 
-type GithubBranches struct {
-	Branches []Branch
-}
-
-type Branch struct {
+type GithubBranch struct {
 	Name string `json:"name"`
 }
 
@@ -46,4 +43,9 @@ type PullRequestMetadata struct {
 	CommitSHA    string
 	Number       int
 	RemoteName   string
+}
+
+type TemplateData struct {
+	SuiteName    string
+	TestSpecName string
 }

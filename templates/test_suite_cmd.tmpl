@@ -1,0 +1,62 @@
+package cmd
+
+/* This was generated from a template file. Please feel free to update as necessary */
+
+import (
+	"fmt"
+	"os"
+	"testing"
+
+	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
+	_ "github.com/redhat-appstudio/e2e-tests/tests/{{ .SuiteName }}"
+
+	"flag"
+
+	"github.com/spf13/viper"
+
+	"k8s.io/klog/v2"
+)
+
+const ()
+
+var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
+	return nil
+}, func(data []byte) {})
+
+var webhookConfigPath string
+var demoSuitesPath string
+var polarionOutputFile string
+var polarionProjectID string
+var generateTestCases bool
+
+func init() {
+	rootDir, _ := os.Getwd()
+	flag.StringVar(&webhookConfigPath, "webhookConfigPath", "", "path to webhook config file")
+	flag.StringVar(&polarionOutputFile, "polarion-output-file", "polarion.xml", "Generated polarion test cases")
+	flag.StringVar(&polarionProjectID, "project-id", "AppStudio", "Set the Polarion project ID")
+	flag.BoolVar(&generateTestCases, "generate-test-cases", false, "Generate Test Cases for Polarion")
+}
+
+func {{ .SuiteName }}Test(t *testing.T) {
+	klog.Info("Starting {{ .SuiteName }} tests...")
+
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	ginkgo.RunSpecs(t, "{{ .SuiteName }} tests")
+}
+
+var _ = ginkgo.SynchronizedAfterSuite(func() {}, func() {
+	//Send webhook only it the parameter configPath is not empty
+	if len(webhookConfigPath) > 0 {
+		klog.Info("Send webhook")
+		framework.SendWebhook(webhookConfigPath)
+	}
+})
+
+var _ = ginkgo.ReportAfterSuite("Polarion reporter", func(report types.Report) {
+	if generateTestCases {
+		framework.GeneratePolarionReport(report, polarionOutputFile, polarionProjectID)
+	}
+})

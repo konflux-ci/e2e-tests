@@ -47,9 +47,6 @@ function cloneInfraDeployments() {
 
     git clone https://$GITHUB_TOKEN@github.com/redhat-appstudio/infra-deployments.git "$WORKSPACE"/tmp/infra-deployments
     cd "$WORKSPACE"/tmp/infra-deployments
-    # TODO remove this once CI is ready to run with kcp (main branch)
-    # Allow dependent services (like jvm-build-service/build-service) to still use CI for testing features/bugfixes
-    git checkout pre-kcp
 }
 
 # Add a custom remote for infra-deployments repository.

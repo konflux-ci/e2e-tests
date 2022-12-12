@@ -5,12 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"k8s.io/klog/v2"
 	"net/http"
 	"os"
 	"strings"
+	"text/template"
 	"time"
 
+	"k8s.io/klog/v2"
+
+	sprig "github.com/go-task/slim-sprig"
 	"github.com/magefile/mage/sh"
 )
 
@@ -81,4 +84,69 @@ func retry(f func() error, attempts int, delay time.Duration) error {
 		}
 	}
 	return fmt.Errorf("reached maximum number of attempts (%d). error: %+v", attempts, err)
+}
+
+func goFmt(path string) error {
+	err := sh.RunV("go", "fmt", path)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("Could not fmt:\n%s\n", path), err)
+	}
+	return nil
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+func renderTemplate(destination, templatePath string, templateData interface{}, appendDestination bool) error {
+
+	var templateText string
+	var f *os.File
+	var err error
+
+	/* This decision logic feels a little clunky cause initially I wanted to
+	to have this func create the new file and render the template into the new
+	file. But with the updating the pkg/framework/describe.go use case
+	I wanted to reuse leveraging the txt/template package rather than
+	rendering/updating using strings/regex.
+	*/
+	if appendDestination {
+
+		f, err = os.OpenFile(destination, os.O_APPEND|os.O_WRONLY, 0664)
+		if err != nil {
+			klog.Infof("Failed to open file: %v", err)
+		}
+	} else {
+
+		if fileExists(destination) {
+			return fmt.Errorf("%s already exists", destination)
+		}
+		f, err = os.Create(destination)
+		if err != nil {
+			klog.Infof("Failed to create file: %v", err)
+		}
+	}
+
+	defer f.Close()
+
+	tpl, err := os.ReadFile(templatePath)
+	if err != nil {
+		klog.Infof("error reading file: %v", err)
+
+	}
+	var tmplText = string(tpl)
+	templateText = fmt.Sprintf("\n%s", tmplText)
+	specTemplate, err := template.New("spec").Funcs(sprig.TxtFuncMap()).Parse(templateText)
+	if err != nil {
+		klog.Infof("error parsing template file: %v", err)
+
+	}
+
+	err = specTemplate.Execute(f, templateData)
+	if err != nil {
+		klog.Infof("error rendering template file: %v", err)
+	}
+
+	return nil
 }

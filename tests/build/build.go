@@ -22,13 +22,16 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
+	"knative.dev/pkg/apis"
 )
 
 const (
 	containerImageSource                 = "quay.io/redhat-appstudio-qe/busybox-loop:latest"
 	helloWorldComponentGitSourceRepoName = "devfile-sample-hello-world"
-	pythonComponentGitSourceURL          = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic"
+	pythonComponentGitSourceURL          = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic.git"
 	dummyPipelineBundleRef               = "quay.io/redhat-appstudio-qe/dummy-pipeline-bundle:latest"
+	buildTemplatesTestLabel              = "build-templates-e2e"
+	buildTemplatesKcpTestLabel           = "build-templates-kcp-e2e"
 )
 
 var (
@@ -168,13 +171,21 @@ var _ = framework.BuildSuiteDescribe("[test_id:03] Build service E2E tests", Lab
 					for _, condition := range pipelineRun.Status.Conditions {
 						klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 
-						if condition.Reason == string(v1beta1.PipelineRunReasonFailed) {
+						if !pipelineRun.IsDone() {
+							return false
+						}
+
+						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+							failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
 							d := utils.GetFailedPipelineRunDetails(pipelineRun)
-							logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
-							Fail(fmt.Sprintf("Pipelinerun '%s' has failed. Logs from failed container '%s': \n%s", pipelineRun.Name, d.FailedContainerName, logs))
+							if d.FailedContainerName != "" {
+								logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
+								failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
+							}
+							Fail(failMessage)
 						}
 					}
-					return pipelineRun.IsDone()
+					return true
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
 			})
 		})
@@ -239,13 +250,21 @@ var _ = framework.BuildSuiteDescribe("[test_id:03] Build service E2E tests", Lab
 					for _, condition := range pipelineRun.Status.Conditions {
 						klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 
-						if condition.Reason == string(v1beta1.PipelineRunReasonFailed) {
+						if !pipelineRun.IsDone() {
+							return false
+						}
+
+						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+							failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
 							d := utils.GetFailedPipelineRunDetails(pipelineRun)
-							logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
-							Fail(fmt.Sprintf("Pipelinerun '%s' has failed. Logs from failed container '%s': \n%s", pipelineRun.Name, d.FailedContainerName, logs))
+							if d.FailedContainerName != "" {
+								logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
+								failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
+							}
+							Fail(failMessage)
 						}
 					}
-					return pipelineRun.IsDone()
+					return true
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
 			})
 
@@ -307,13 +326,21 @@ var _ = framework.BuildSuiteDescribe("[test_id:03] Build service E2E tests", Lab
 					for _, condition := range pipelineRun.Status.Conditions {
 						klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 
-						if condition.Reason == string(v1beta1.PipelineRunReasonFailed) {
+						if !pipelineRun.IsDone() {
+							return false
+						}
+
+						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+							failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
 							d := utils.GetFailedPipelineRunDetails(pipelineRun)
-							logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
-							Fail(fmt.Sprintf("Pipelinerun '%s' has failed. Logs from failed container '%s': \n%s", pipelineRun.Name, d.FailedContainerName, logs))
+							if d.FailedContainerName != "" {
+								logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
+								failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
+							}
+							Fail(failMessage)
 						}
 					}
-					return pipelineRun.IsDone()
+					return true
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
 			})
 		})
@@ -402,7 +429,7 @@ var _ = framework.BuildSuiteDescribe("[test_id:03] Build service E2E tests", Lab
 				bundlePullSpec := customBundleConfigMap.Data["default_build_bundle"]
 				hacbsBundleConfigMap := &v1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{Name: constants.BuildPipelinesConfigMapName},
-					Data:       map[string]string{"default_build_bundle": strings.Replace(bundlePullSpec, "build-", "hacbs-", 1)},
+					Data:       map[string]string{"default_build_bundle": bundlePullSpec},
 				}
 
 				_, err = f.CommonController.UpdateConfigMap(hacbsBundleConfigMap, testNamespace)
@@ -452,7 +479,7 @@ var _ = framework.BuildSuiteDescribe("[test_id:03] Build service E2E tests", Lab
 
 		for i, gitUrl := range componentUrls {
 			gitUrl := gitUrl
-			It(fmt.Sprintf("triggers PipelineRun for component with source URL %s", gitUrl), Label("build-templates-e2e"), func() {
+			It(fmt.Sprintf("triggers PipelineRun for component with source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
 				timeout := time.Minute * 5
 				interval := time.Second * 1
 
@@ -467,7 +494,7 @@ var _ = framework.BuildSuiteDescribe("[test_id:03] Build service E2E tests", Lab
 			})
 		}
 
-		It("should reference the custom pipeline bundle in a PipelineRun", Label("build-templates-e2e"), func() {
+		It("should reference the custom pipeline bundle in a PipelineRun", Label(buildTemplatesTestLabel), func() {
 			customBundleConfigMap, err := f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, testNamespace)
 			if err != nil {
 				if errors.IsNotFound(err) {
@@ -514,7 +541,7 @@ var _ = framework.BuildSuiteDescribe("[test_id:03] Build service E2E tests", Lab
 		for i, gitUrl := range componentUrls {
 			gitUrl := gitUrl
 
-			It(fmt.Sprintf("should eventually finish successfully for component with source URL %s", gitUrl), Label("build-templates-e2e"), func() {
+			It(fmt.Sprintf("should eventually finish successfully for component with source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
 				timeout := time.Second * 600
 				interval := time.Second * 10
 				Eventually(func() bool {
@@ -524,14 +551,50 @@ var _ = framework.BuildSuiteDescribe("[test_id:03] Build service E2E tests", Lab
 					for _, condition := range pipelineRun.Status.Conditions {
 						klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 
-						if condition.Reason == string(v1beta1.PipelineRunReasonFailed) {
+						if !pipelineRun.IsDone() {
+							return false
+						}
+
+						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+							failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
 							d := utils.GetFailedPipelineRunDetails(pipelineRun)
-							logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
-							Fail(fmt.Sprintf("Pipelinerun '%s' has failed. Logs from failed container '%s': \n%s", pipelineRun.Name, d.FailedContainerName, logs))
+							if d.FailedContainerName != "" {
+								logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
+								failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
+							}
+							Fail(failMessage)
 						}
 					}
-					return pipelineRun.IsDone()
+					return true
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
+			})
+
+			It("should validate HACBS taskrun results", func() {
+				// List Of Taskruns Expected to Get Taskrun Results
+				gatherResult := []string{"conftest-clair", "sanity-inspect-image", "sanity-label-check"}
+				// TODO: once we migrate "build" e2e tests to kcp, remove this condition
+				// and add the 'sbom-json-check' taskrun to gatherResults slice
+				s, _ := GinkgoConfiguration()
+				if strings.Contains(s.LabelFilter, buildTemplatesKcpTestLabel) {
+					gatherResult = append(gatherResult, "sbom-json-check")
+				}
+				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, false, "")
+				Expect(err).ShouldNot(HaveOccurred())
+
+				for i := range gatherResult {
+					if gatherResult[i] == "sanity-inspect-image" {
+						result, err := build.FetchImageTaskRunResult(pipelineRun, gatherResult[i], "BASE_IMAGE")
+						Expect(err).ShouldNot(HaveOccurred())
+						ret := build.ValidateImageTaskRunResults(gatherResult[i], result)
+						Expect(ret).Should(BeTrue())
+						// TODO conftest-clair returns SUCCESS which is not expected
+						// } else {
+						// 	result, err := build.FetchTaskRunResult(pipelineRun, gatherResult[i], "HACBS_TEST_OUTPUT")
+						// 	Expect(err).ShouldNot(HaveOccurred())
+						// 	ret := build.ValidateTaskRunResults(gatherResult[i], result)
+						// 	Expect(ret).Should(BeTrue())
+					}
+				}
 			})
 
 			When("the container image is created and pushed to container registry", Label("sbom", "slow"), func() {
@@ -602,11 +665,10 @@ var _ = framework.BuildSuiteDescribe("[test_id:03] Build service E2E tests", Lab
 
 		It("should not trigger a PipelineRun", func() {
 			Consistently(func() bool {
-				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
-				Expect(pipelineRun.Name).To(BeEmpty())
-
+				_, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
+				Expect(err).NotTo(BeNil())
 				return strings.Contains(err.Error(), "no pipelinerun found")
-			}, timeout, interval).Should(BeTrue(), "expected the PipelineRun not to be triggered")
+			}, timeout, interval).Should(BeTrue(), fmt.Sprintf("expected no PipelineRun to be triggered for the component %s in %s namespace", componentName, testNamespace))
 		})
 	})
 
@@ -755,7 +817,6 @@ var _ = framework.BuildSuiteDescribe("[test_id:03] Build service E2E tests", Lab
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to fail")
 		})
 	})
-
 	Describe("Creating a component with a specific container image URL", Ordered, func() {
 
 		var applicationName, componentName, testNamespace, outputContainerImage string

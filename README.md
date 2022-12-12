@@ -5,7 +5,7 @@ It is recommended to install AppStudio in E2E mode, but the E2E suite can be als
 
 # Features
 
-* Instrumented tests with Ginkgo 2.0 framework. You can find more information in [Ginkgo documentation](https://onsi.github.io/ginkgo/) or in [Ginkgo 2.0 Proposal](https://docs.google.com/document/d/1h28ZknXRsTLPNNiOjdHIO-F2toCzq4xoZDXbfYaBdoQ/edit#heading=h.ptojc6n4azyr).
+* Instrumented tests with Ginkgo 2.0 framework. You can find more information in [Ginkgo documentation](https://onsi.github.io/ginkgo/).
 * Uses client-go to connect to OpenShift Cluster.
 * Ability to run the E2E tests everywhere: locally([CRC/OpenShift local](https://developers.redhat.com/products/openshift-local/overview)), OpenShift Cluster, OSD...
 * Writes tests results in JUnit XML/JSON file to a custom directory by using `--ginkgo.junit(or json)-report` flag.
@@ -17,9 +17,9 @@ Whnen you want to run the E2E tests for AppStudio you need to have installed too
 ## Requirements
 Requirements for installing AppStudio in E2E mode and running the E2E tests:
 
-* An OpenShift 4.9 or higher Environment (If you are using CRC/OpenShift Local please also review [optional-codeready-containers-post-bootstrap-configuration](https://github.com/redhat-appstudio/infra-deployments#optional-codeready-containers-post-bootstrap-configuration))
+* An OpenShift 4.10 or higher Environment (If you are using CRC/OpenShift Local please also review [optional-codeready-containers-post-bootstrap-configuration](https://github.com/redhat-appstudio/infra-deployments#optional-codeready-containers-post-bootstrap-configuration))
 * A machine from which to run the install (usually your laptop) with required tools:
-  * A properly setup Go workspace using **Go 1.17 is required**
+  * A properly setup Go workspace using **Go 1.18 is required**
   * The OpenShift Command Line Tool (oc)
   * yq
   * jq
@@ -32,7 +32,7 @@ Requirements for installing AppStudio in E2E mode and running the E2E tests:
 
 ## Install AppStudio in E2E mode
 
-Before executing the e2e suites you need to have deployed AppStudio in E2E Mode to your cluster. 
+Before executing the e2e suites you need to have deployed AppStudio in E2E Mode to your cluster.
 
 1. Before deploying AppStudio in E2E mode you need to login to your OpenShift cluster with OpenShift Command Line Tool as `admin` (by default  `kubeadmin`):
 
@@ -66,7 +66,7 @@ The following environments are used to launch the Red Hat AppStudio installation
 ``` bash
 # Install dependencies
 $ go mod tidy
-# or go mod tidy -compat=1.17
+# or go mod tidy -compat=1.18
 # Copy the dependencies to vendor folder
 $ go mod vendor
 ```
@@ -108,7 +108,7 @@ The `e2e-appstudio` command is the root command that executes all test functiona
     `./bin/e2e-appstudio`
    ```
 
-The instructions for every test suite can be found in the [tests folder](tests), e.g. [has Readme.md](tests/has/README.md). 
+The instructions for every test suite can be found in the [tests folder](tests), e.g. [has Readme.md](tests/has/README.md).
 You can also specify hich tests you want to run using [labels](docs/LabelsNaming.md) or [Ginkgo Focus](docs/DeveloperFocus.md).
 
 # Red Hat AppStudio Load Tests
@@ -121,10 +121,28 @@ Overview for OpenShift CI and AppStudio E2E tests is in [OpenshiftCI.md](docs/Op
 
 # Develop new tests
 
-* Create test folder under tests folder: `tests/[<application-name>]...`, e.g. [has](tests/has).
-  * `tests/has` - all tests used owned by AppStudio application team
+ The current structure of how tests are stored in this repo are as follows:
+
+ * The equivalent of Ginkgo Suites, `*_suite_test.go`, reside in the `cmd/` directory 
+ * The equivalent of Ginkgo Tests,  `*_test.go`, reside in the `tests/` directory
+
+We've provided some tooling to generate test suite packages and test spec files to get you up and running a little faster:
+
+```bash
+      make local/template/generate-test-spec
+      make local/template/generate-test-suite
+```
+
+For more information refer to [Generate Tests](docs/DeveloperGenerateTest.md).
+
+## Tips
+* Make sure you've implemented any required controller functionality that is required for your tests within the following files
+   * `pkg/utils/<new controller directory>` - net new controller logic for a new service or component
+   * `pkg/framework/framework.go` - import the new controller and update the `Framework` struct to be able to initialize the new controller
 * Every test package should be imported to `cmd/e2e_test.go`, e.g. [has](https://github.com/redhat-appstudio/e2e-tests/blob/main/cmd/e2e_test.go#L15).
 * Every new test should have correct [labels](docs/LabelsNaming.md).
+* Every test should have meaningful description with JIRA/GitHub issue key.
+* (Recommended) Use JIRA integration for linking issues and commits (just add JIRA issue key in the commit message). You can found more information about GitHub-JIRA integration [here](https://docs.engineering.redhat.com/display/JiraAid/GitHub-Jira+integration).
 
 ```golang
 // cmd/e2e_test.go
@@ -137,12 +155,25 @@ import (
 )
 ```
 
+# Generate test cases for Polarion
+You can also generate test cases for Polarion with command:
+   ```bash
+    ` ginkgo --vv --dry-run cmd/ -- --polarion-output-file=polarion.xml --generate-test-cases=true`
+   ```
+Note: is is recommended to use `dry-mode` - it will generate the test cases without running the tests.
+Parameters:
+| Variable | Type | Explanation | Default Value |
+|---|---|---|---|
+| `generate-test-cases` | bool | Generate test cases for Polarion  | `false`  |
+| `polarion-output-file` | string | Path to polarion xml file | `polarion.xml` |
+| `project-id` | string | Polarion project ID  | `AppStudio`  |
+
 # Reporting issues
 For reporting issues with e2e tests please use [RHDP JIRA project](https://issues.redhat.com/projects/RHDP) - please use labels `appstudio` and `quality`. If the issues is also relevant to CI - for example it is blocking PRs, the also use label `appstudio-e2e-tests-known-issues`.
 
 # Debugging tests
 ## In vscode
-There is launch configuration in `.vscode/launch.json` called `Launch demo suites`. 
+There is launch configuration in `.vscode/launch.json` called `Launch demo suites`.
 Running this configuration, you'll be asked for github token and then e2e-demos suite will run with default configuration.
 If you want to run/debug different suite, change `-ginkgo.focus` parameter in `.vscode/launch.json`.
 

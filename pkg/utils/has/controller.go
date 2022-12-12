@@ -3,12 +3,13 @@ package has
 import (
 	"context"
 	"fmt"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"strings"
 	"time"
 
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+
 	routev1 "github.com/openshift/api/route/v1"
-	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
+	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -292,8 +293,7 @@ func (h *SuiteController) CreateComponentDetectionQuery(cdqName, namespace, gitS
 			GitSource: appservice.GitSource{
 				URL: gitSourceURL,
 			},
-			IsMultiComponent: isMultiComponent,
-			Secret:           secret,
+			Secret: secret,
 		},
 	}
 	err := h.KubeRest().Create(context.TODO(), componentDetectionQuery)
@@ -322,13 +322,7 @@ func (h *SuiteController) GetComponentDetectionQuery(name, namespace string) (*a
 
 // GetComponentPipeline returns the pipeline for a given component labels
 func (h *SuiteController) GetComponentPipelineRun(componentName, applicationName, namespace string, pacBuild bool, sha string) (*v1beta1.PipelineRun, error) {
-	var pipelineRunLabels map[string]string
-
-	if pacBuild {
-		pipelineRunLabels = map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName}
-	} else {
-		pipelineRunLabels = map[string]string{"build.appstudio.openshift.io/component": componentName, "build.appstudio.openshift.io/application": applicationName}
-	}
+	pipelineRunLabels := map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName}
 
 	if sha != "" {
 		pipelineRunLabels["pipelinesascode.tekton.dev/sha"] = sha
@@ -338,7 +332,7 @@ func (h *SuiteController) GetComponentPipelineRun(componentName, applicationName
 	err := h.KubeRest().List(context.TODO(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
 
 	if err != nil && !k8sErrors.IsNotFound(err) {
-		return nil, fmt.Errorf("error listing pipelineruns in %s namespace", namespace)
+		return nil, fmt.Errorf("error listing pipelineruns in %s namespace: %v", namespace, err)
 	}
 
 	if len(list.Items) > 0 {
@@ -394,7 +388,12 @@ func (h *SuiteController) GetComponentService(componentName string, componentNam
 
 func (h *SuiteController) WaitForComponentPipelineToBeFinished(componentName string, applicationName string, componentNamespace string) error {
 	return wait.PollImmediate(20*time.Second, 15*time.Minute, func() (done bool, err error) {
-		pipelineRun, _ := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, false, "")
+		pipelineRun, err := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, false, "")
+
+		if err != nil {
+			klog.Infoln("PipelineRun has not been created yet")
+			return false, nil
+		}
 
 		for _, condition := range pipelineRun.Status.Conditions {
 			klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)

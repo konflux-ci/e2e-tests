@@ -8,7 +8,7 @@ import (
 
 	"github.com/devfile/library/pkg/util"
 	"github.com/google/uuid"
-	appservice "github.com/redhat-appstudio/application-service/api/v1alpha1"
+	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
@@ -28,7 +28,7 @@ var (
  * Description: Contains tests about creating an application and a quarkus component from a source devfile
  */
 
-var _ = framework.HASSuiteDescribe("[test_id:01] devfile source", Label("has"), func() {
+var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Label("has"), func() {
 	defer GinkgoRecover()
 
 	var applicationName, componentName, testNamespace string

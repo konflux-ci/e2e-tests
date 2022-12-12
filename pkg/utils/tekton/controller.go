@@ -3,11 +3,12 @@ package tekton
 import (
 	"context"
 	"fmt"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"io"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
 	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
@@ -41,7 +42,7 @@ type Bundles struct {
 
 func newBundles(client kubernetes.Interface) (*Bundles, error) {
 	buildPipelineDefaults, err := client.CoreV1().ConfigMaps("build-templates").Get(context.TODO(), "build-pipelines-defaults", metav1.GetOptions{})
-	if err != nil {
+	if err != nil && !errors.IsNotFound(err) {
 		return nil, err
 	}
 
@@ -239,7 +240,7 @@ func (k KubeController) GetTaskRunResult(pr *v1beta1.PipelineRun, pipelineTaskNa
 		for _, trResult := range tr.Status.TaskRunResults {
 			if trResult.Name == result {
 				// for some reason the result might contain \n suffix
-				return strings.TrimSuffix(trResult.Value, "\n"), nil
+				return strings.TrimSuffix(trResult.Value.StringVal, "\n"), nil
 			}
 		}
 	}
@@ -538,4 +539,16 @@ func (k KubeController) GetRekorHost() (rekorHost string, err error) {
 		rekorHost = "https://rekor.sigstore.dev"
 	}
 	return
+}
+
+// CreateEnterpriseContractPolicy creates an EnterpriseContractPolicy.
+func (s *SuiteController) CreateEnterpriseContractPolicy(name, namespace string, ecpolicy ecp.EnterpriseContractPolicySpec) (*ecp.EnterpriseContractPolicy, error) {
+	ec := &ecp.EnterpriseContractPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: ecpolicy,
+	}
+	return ec, s.K8sClient.KubeRest().Create(context.TODO(), ec)
 }

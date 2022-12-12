@@ -7,8 +7,12 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/magefile/mage/sh"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+
 	"k8s.io/klog/v2"
 )
 
@@ -97,6 +101,7 @@ func (Local) TestE2E() error {
 }
 
 func (ci CI) TestE2E() error {
+	var testFailure bool
 
 	if err := ci.init(); err != nil {
 		return fmt.Errorf("error when running ci init: %v", err)
@@ -118,7 +123,15 @@ func (ci CI) TestE2E() error {
 	}
 
 	if err := RunE2ETests(); err != nil {
-		return fmt.Errorf("error when running e2e tests: %v", err)
+		testFailure = true
+	}
+
+	if err := ci.sendWebhook(); err != nil {
+		klog.Infof("error when sending webhook: %v", err)
+	}
+
+	if testFailure {
+		return fmt.Errorf("error when running e2e tests - see the log above for more details")
 	}
 
 	return nil
@@ -127,7 +140,7 @@ func (ci CI) TestE2E() error {
 func RunE2ETests() error {
 	cwd, _ := os.Getwd()
 
-	return sh.RunV("ginkgo", "-p", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "--v", "--progress", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", fmt.Sprintf("--config-suites=%s/tests/e2e-demos/config/default.yaml", cwd))
+	return sh.RunV("ginkgo", "-p", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "--v", "--progress", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", fmt.Sprintf("--config-suites=%s/tests/e2e-demos/config/default.yaml", cwd), "--generate-rppreproc-report=true", fmt.Sprintf("--rp-preproc-dir=%s", artifactDir))
 }
 
 func PreflightChecks() error {
@@ -187,7 +200,7 @@ func (CI) setRequiredEnvVars() error {
 
 		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
 
-			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.Organization)
+			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
 		}
 
@@ -208,21 +221,218 @@ func (CI) createOpenshiftUser() error {
 }
 
 func BootstrapCluster() error {
-	return sh.Run("./scripts/install-appstudio.sh")
+	envVars := map[string]string{}
+
+	if os.Getenv("CI") == "true" && os.Getenv("REPO_NAME") == "e2e-tests" {
+		// Some scripts in infra-deployments repo are referencing scripts/utils in e2e-tests repo
+		// This env var allows to test changes introduced in "e2e-tests" repo PRs in CI
+		envVars["E2E_TESTS_COMMIT_SHA"] = os.Getenv("PULL_PULL_SHA")
+	}
+
+	return sh.RunWith(envVars, "./scripts/install-appstudio.sh")
 }
 
 func (CI) isPRPairingRequired() bool {
-	ghBranches := &GithubBranches{}
-	if err := sendHttpRequestAndParseResponse(fmt.Sprintf("https://api.github.com/repos/%s/e2e-tests/branches", pr.Author), "GET", ghBranches); err != nil {
-		klog.Infof("cannot determine e2e-tests Github branches for author %s: %v. will stick with the redhat-appstudio/e2e-tests main branch for running testss", pr.Author, err)
+	var ghBranches []GithubBranch
+	url := fmt.Sprintf("https://api.github.com/repos/%s/e2e-tests/branches", pr.RemoteName)
+	if err := sendHttpRequestAndParseResponse(url, "GET", &ghBranches); err != nil {
+		klog.Infof("cannot determine e2e-tests Github branches for author %s: %v. will stick with the redhat-appstudio/e2e-tests main branch for running tests", pr.Author, err)
 		return false
 	}
 
-	for _, b := range ghBranches.Branches {
+	for _, b := range ghBranches {
 		if b.Name == pr.BranchName {
 			return true
 		}
 	}
 
 	return false
+}
+
+func (CI) sendWebhook() error {
+	// AppStudio QE webhook configuration values will be used by default (if none are provided via env vars)
+	const appstudioQESaltSecret = "123456789"
+	const appstudioQEWebhookTargetURL = "https://smee.io/JgVqn2oYFPY1CF"
+
+	var repoURL string
+
+	var repoOwner = os.Getenv("REPO_OWNER")
+	var repoName = os.Getenv("REPO_NAME")
+	var prNumber = os.Getenv("PULL_NUMBER")
+	var saltSecret = utils.GetEnv("WEBHOOK_SALT_SECRET", appstudioQESaltSecret)
+	var webhookTargetURL = utils.GetEnv("WEBHOOK_TARGET_URL", appstudioQEWebhookTargetURL)
+
+	if strings.Contains(jobName, "hacbs-e2e-periodic") {
+		// TODO configure webhook channel for sending HACBS test results
+		klog.Infof("not sending webhook for HACBS periodic job yet")
+		return nil
+	}
+
+	if jobType == "periodic" {
+		repoURL = "https://github.com/redhat-appstudio/infra-deployments"
+		repoOwner = "redhat-appstudio"
+		repoName = "infra-deployments"
+		prNumber = "periodic"
+	} else if repoName == "e2e-tests" || repoName == "infra-deployments" {
+		repoURL = openshiftJobSpec.Refs.RepoLink
+	} else {
+		klog.Infof("sending webhook for jobType %s, jobName %s is not supported", jobType, jobName)
+		return nil
+	}
+
+	path, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("error when sending webhook: %+v", err)
+	}
+
+	wh := Webhook{
+		Path: path,
+		Repository: Repository{
+			FullName:   fmt.Sprintf("%s/%s", repoOwner, repoName),
+			PullNumber: prNumber,
+		},
+		RepositoryURL: repoURL,
+	}
+	resp, err := wh.CreateAndSend(saltSecret, webhookTargetURL)
+	if err != nil {
+		return fmt.Errorf("error sending webhook: %+v", err)
+	}
+	klog.Infof("webhook response: %+v", resp)
+
+	return nil
+}
+
+// Generates test cases for Polarion(polarion.xml) from test files for AppStudio project.
+func GenerateTestCasesAppStudio() error {
+	return sh.RunV("ginkgo", "--v", "--dry-run", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", "--polarion-output-file=polarion.xml", "--generate-test-cases=true")
+}
+
+// I've attached to the Local struct for now since it felt like it fit but it can be decoupled later as a standalone func.
+func (Local) GenerateTestSuiteFile() error {
+
+	var templatePackageName = utils.GetEnv("TEMPLATE_SUITE_PACKAGE_NAME", "")
+	var templatePath = "templates/test_suite_cmd.tmpl"
+	var err error
+
+	if !utils.CheckIfEnvironmentExists("TEMPLATE_SUITE_PACKAGE_NAME") {
+		klog.Exitf("TEMPLATE_SUITE_PACKAGE_NAME not set or is empty")
+	}
+
+	var templatePackageFile = fmt.Sprintf("cmd/%s_test.go", templatePackageName)
+	klog.Infof("Creating new test suite file %s.\n", templatePackageFile)
+	data := TemplateData{SuiteName: templatePackageName}
+	err = renderTemplate(templatePackageFile, templatePath, data, false)
+
+	if err != nil {
+		klog.Errorf("failed to render template with: %s", err)
+		return err
+	}
+
+	err = goFmt(templatePackageFile)
+	if err != nil {
+
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	return nil
+
+}
+
+// I've attached to the Local struct for now since it felt like it fit but it can be decoupled later as a standalone func.
+func (Local) GenerateTestSpecFile() error {
+
+	var templateDirName = utils.GetEnv("TEMPLATE_SUITE_PACKAGE_NAME", "")
+	var templateSpecName = utils.GetEnv("TEMPLATE_SPEC_FILE_NAME", templateDirName)
+	var templateAppendFrameworkDescribeBool = utils.GetEnv("TEMPLATE_APPEND_FRAMEWORK_DESCRIBE_FILE", "true")
+	var templateJoinSuiteSpecNamesBool = utils.GetEnv("TEMPLATE_JOIN_SUITE_SPEC_FILE_NAMES", "false")
+	var templatePath = "templates/test_spec_file.tmpl"
+	var templateDirPath string
+	var templateSpecFile string
+	var err error
+	var caser = cases.Title(language.English)
+
+	if !utils.CheckIfEnvironmentExists("TEMPLATE_SUITE_PACKAGE_NAME") {
+		klog.Exitf("TEMPLATE_SUITE_PACKAGE_NAME not set or is empty")
+	}
+
+	if !utils.CheckIfEnvironmentExists("TEMPLATE_SPEC_FILE_NAME") {
+		klog.Infof("TEMPLATE_SPEC_FILE_NAME not set. Defaulting test spec file to value of `%s`.\n", templateSpecName)
+	}
+
+	if !utils.CheckIfEnvironmentExists("TEMPLATE_APPEND_FRAMEWORK_DESCRIBE_FILE") {
+		klog.Infof("TEMPLATE_APPEND_FRAMEWORK_DESCRIBE_FILE not set. Defaulting to `%s` which will update the pkg/framework/describe.go after generating the template.\n", templateAppendFrameworkDescribeBool)
+	}
+
+	if utils.CheckIfEnvironmentExists("TEMPLATE_JOIN_SUITE_SPEC_FILE_NAMES") {
+		klog.Infof("TEMPLATE_JOIN_SUITE_SPEC_FILE_NAMES is set to %s. Will join the suite package and spec file name to be used in the Describe of suites.\n", templateJoinSuiteSpecNamesBool)
+	}
+
+	templateDirPath = fmt.Sprintf("tests/%s", templateDirName)
+	err = os.Mkdir(templateDirPath, 0775)
+	if err != nil {
+		klog.Errorf("failed to create package directory, %s, template with: %v", templateDirPath, err)
+		return err
+	}
+	templateSpecFile = fmt.Sprintf("%s/%s.go", templateDirPath, templateSpecName)
+
+	klog.Infof("Creating new test package directory and spec file %s.\n", templateSpecFile)
+	if templateJoinSuiteSpecNamesBool == "true" {
+		templateSpecName = fmt.Sprintf("%s%v", caser.String(templateDirName), caser.String(templateSpecName))
+	} else {
+		templateSpecName = caser.String(templateSpecName)
+	}
+
+	data := TemplateData{SuiteName: templateDirName,
+		TestSpecName: templateSpecName}
+	err = renderTemplate(templateSpecFile, templatePath, data, false)
+	if err != nil {
+		klog.Errorf("failed to render template with: %s", err)
+		return err
+	}
+
+	err = goFmt(templateSpecFile)
+	if err != nil {
+
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	if templateAppendFrameworkDescribeBool == "true" {
+
+		err = appendFrameworkDescribeFile(templateSpecName)
+
+		if err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+
+}
+
+func appendFrameworkDescribeFile(packageName string) error {
+
+	var templatePath = "templates/framework_describe_func.tmpl"
+	var describeFile = "pkg/framework/describe.go"
+	var err error
+	var caser = cases.Title(language.English)
+
+	data := TemplateData{TestSpecName: caser.String(packageName)}
+	err = renderTemplate(describeFile, templatePath, data, true)
+	if err != nil {
+		klog.Errorf("failed to append to pkg/framework/describe.go with : %s", err)
+		return err
+	}
+	err = goFmt(describeFile)
+
+	if err != nil {
+
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	return nil
+
 }
