@@ -369,7 +369,7 @@ func (Local) GenerateTestSpecFile() error {
 	}
 
 	templateDirPath = fmt.Sprintf("tests/%s", templateDirName)
-	err = os.Mkdir(templateDirPath, 0775)
+	err = os.MkdirAll(templateDirPath, 0775)
 	if err != nil {
 		klog.Errorf("failed to create package directory, %s, template with: %v", templateDirPath, err)
 		return err
