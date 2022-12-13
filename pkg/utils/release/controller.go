@@ -221,7 +221,7 @@ func (s *SuiteController) CreateRegistryJsonSecret(name, namespace, authKey, key
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
 		Type:       corev1.SecretTypeDockerConfigJson,
-		Data:       map[string][]byte{".dockerconfigjson": []byte(authKey)},
+		Data:       map[string][]byte{".dockerconfigjson": []byte(fmt.Sprintf("{\"auths\":{\"quay.io\":{\"username\":\"%s\",\"password\":\"%s\",\"auth\":\"dGVzdDp0ZXN0\",\"email\":\"\"}}}", keyName, authKey))},
 	}
 	err := s.KubeRest().Create(context.TODO(), secret)
 	if err != nil {

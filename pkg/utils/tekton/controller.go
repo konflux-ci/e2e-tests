@@ -555,3 +555,32 @@ func (s *SuiteController) CreateEnterpriseContractPolicy(name, namespace string,
 	}
 	return ec, s.K8sClient.KubeRest().Create(context.TODO(), ec)
 }
+
+func (s *SuiteController) CreatePVCAccessMode(name, namespace string, accessMode corev1.PersistentVolumeAccessMode) (*corev1.PersistentVolumeClaim, error) {
+	pvc := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{
+				accessMode,
+			},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: resource.MustParse("1Gi"),
+				},
+			},
+		},
+	}
+
+	createdPVC, err := s.K8sClient.KubeInterface().CoreV1().PersistentVolumeClaims(namespace).Create(context.TODO(), pvc, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return createdPVC, err
+}
+
+func (s *SuiteController) GetPipelineRunInNamespace(namespace string) (*v1beta1.PipelineRunList, error) {
+	return s.PipelineClient().TektonV1beta1().PipelineRuns(namespace).List(context.TODO(), metav1.ListOptions{}) //Get(context.TODO(), pipelineRunName, metav1.GetOptions{})
+}

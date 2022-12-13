@@ -185,6 +185,7 @@ require (
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/prometheus/statsd_exporter v0.21.0 // indirect
+	github.com/redhat-appstudio/managed-gitops/appstudio-shared v0.0.0-20220616131733-1638c00a7583
 	github.com/redhat-cop/operator-utils v1.3.3-0.20220121120056-862ef22b8cdf // indirect
 	github.com/redhat-developer/alizer/go v0.0.0-20220704150640-ef50ead0b279 // indirect
 	github.com/redhat-developer/gitops-generator v0.0.0-20221117222854-240399c18bc0 // indirect
