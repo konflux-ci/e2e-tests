@@ -3,7 +3,6 @@ package release
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
@@ -62,7 +61,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 		Eventually(func() bool {
 			sa, err := framework.CommonController.GetServiceAccount(serviceAccount, managedNamespace)
 			return sa != nil && err == nil
-		}, 1*time.Minute, defaultInterval).Should(BeTrue(), "timed out when waiting for the \"pipeline\" SA to be created")
+		}, pipelineServiceAccountCreationTimeout, defaultInterval).Should(BeTrue(), "timed out when waiting for the \"pipeline\" SA to be created")
 	})
 
 	AfterAll(func() {
@@ -142,7 +141,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("the Release should reference the release PipelineRun.", func(ctx SpecContext) {
+		It("makes sure the Release references the release PipelineRun.", func(ctx SpecContext) {
 			var pipelineRunList *v1beta1.PipelineRunList
 
 			Eventually(func() bool {
