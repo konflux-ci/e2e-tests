@@ -76,7 +76,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 		It("creates a Snapshot in dev namespace.", func(ctx SpecContext) {
 			_, err := framework.ReleaseController.CreateSnapshot(snapshotName, devNamespace, applicationName, snapshotComponents)
 			Expect(err).NotTo(HaveOccurred())
-			// We add the namespace creation timeout as this is the first test so must also take into account the code in beforeall
+			// We add the namespace creation timeout as this is the first test so must also take into account the code in BefforeAll
 		}, SpecTimeout(snapshotCreationTimeout+namespaceCreationTimeout*2))
 
 		It("creates Release Strategy in managed namespace.", func(ctx SpecContext) {
@@ -159,7 +159,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 				klog.Error(err)
 			}
 			Expect(release.Status.ReleasePipelineRun == (fmt.Sprintf("%s/%s", pipelineRunList.Items[0].Namespace, pipelineRunList.Items[0].Name))).Should(BeTrue())
-			// We add the namespace creation timeout as this is the last test so must also take into account the code in afterall
+			// We add the namespace deletion timeout as this is the last test so must also take into account the code in AfterAll
 		}, SpecTimeout(avgControllerQueryTimeout*2+namespaceDeletionTimeout*2))
 	})
 })
