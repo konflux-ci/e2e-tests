@@ -76,7 +76,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 		It("creates a Snapshot in dev namespace.", func(ctx SpecContext) {
 			_, err := framework.ReleaseController.CreateSnapshot(snapshotName, devNamespace, applicationName, snapshotComponents)
 			Expect(err).NotTo(HaveOccurred())
-			// We add the namespace creation timeout as this is the first test so must also take into account the code in BefforeAll
+			// We add the namespace creation timeout as this is the first test so must also take into account the code in BeforeAll
 		}, SpecTimeout(snapshotCreationTimeout+namespaceCreationTimeout*2))
 
 		It("creates Release Strategy in managed namespace.", func(ctx SpecContext) {
