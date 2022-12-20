@@ -387,7 +387,7 @@ func (h *SuiteController) GetComponentService(componentName string, componentNam
 }
 
 func (h *SuiteController) WaitForComponentPipelineToBeFinished(componentName string, applicationName string, componentNamespace string) error {
-	return wait.PollImmediate(20*time.Second, 15*time.Minute, func() (done bool, err error) {
+	return wait.PollImmediate(20*time.Second, 25*time.Minute, func() (done bool, err error) {
 		pipelineRun, err := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, false, "")
 
 		if err != nil {
