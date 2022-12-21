@@ -846,13 +846,15 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		JustBeforeEach(func() {
 			componentName = fmt.Sprintf("build-suite-test-component-image-url-%s", util.GenerateRandomString(4))
 		})
-		It("should fail for ContainerImage field set to a protected repository (without an image tag)", func() {
+		// Disabled due to PLNSRVCE-952
+		It("should fail for ContainerImage field set to a protected repository (without an image tag)", Pending, func() {
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected", utils.GetQuayIOOrganization())
 			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "")
 			Expect(err).ToNot(BeNil())
 
 		})
-		It("should fail for ContainerImage field set to a protected repository followed by a random tag", func() {
+		// Disabled due to PLNSRVCE-952
+		It("should fail for ContainerImage field set to a protected repository followed by a random tag", Pending, func() {
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "")
 			Expect(err).ToNot(BeNil())
