@@ -26,9 +26,14 @@ var snapshotComponents = []applicationapiv1alpha1.SnapshotComponent{
 
 var ecPolicy = ecp.EnterpriseContractPolicySpec{
 	Description: "Red Hat's enterprise requirements",
-	Sources: []string{
-		"https://github.com/hacbs-contract/ec-policies",
+	Sources: []ecp.Source{
+		{
+			Name:   "ec-policies",
+			Policy: []string{"git::https://github.com/hacbs-contract/ec-policies//policy"},
+			Data:   []string{"git::https://github.com/hacbs-contract/ec-policies//data"},
+		},
 	},
+
 	Exceptions: &ecp.EnterpriseContractPolicyExceptions{
 		NonBlocking: []string{"tasks", "attestation_task_bundle", "java", "test", "not_useful"},
 	},
