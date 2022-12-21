@@ -28,7 +28,7 @@ var ecPolicy = ecp.EnterpriseContractPolicySpec{
 	Description: "Red Hat's enterprise requirements",
 	Sources: []ecp.Source{
 		{
-			Name:   "ec-policies",
+			Name:   "policy",
 			Policy: []string{"git::https://github.com/hacbs-contract/ec-policies//policy"},
 			Data:   []string{"git::https://github.com/hacbs-contract/ec-policies//data"},
 		},

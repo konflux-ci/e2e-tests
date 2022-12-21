@@ -19,7 +19,7 @@ require (
 	github.com/openshift/api v0.0.0-20220525145417-ee5b62754c68
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
-	github.com/redhat-appstudio/application-api v0.0.0-20221114151952-77cba9006505
+	github.com/redhat-appstudio/application-api v0.0.0-20221220162402-c1e887791dac
 	github.com/redhat-appstudio/application-service v0.0.0-20221122170733-a852feca3998
 	github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2cad2
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20221128055414-018f50a9d68e
