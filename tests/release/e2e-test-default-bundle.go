@@ -66,12 +66,10 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 
 		Expect(sourceAuthJson).ToNot(BeEmpty())
 		Expect(destinationAuthJson).ToNot(BeEmpty())
-		klog.Info("Source Auth Key: ", sourceAuthJson)
-		klog.Info("Destination Auth Key: ", destinationAuthJson)
 
-		_, err = framework.CommonController.CreateRegistryAuthSecret(redhatAppstudioUserSecret, devNamespace, sourceAuthJson)
+		// _, err = framework.CommonController.CreateRegistryAuthSecret(hacbsReleaseTestsTokenSecret, devNamespace, sourceAuthJson)
 		// _, err = framework.ReleaseController.CreateRegistryJsonSecret(redhatAppstudioUserSecret, devNamespace, sourceAuthJson, sourceKeyName)
-		Expect(err).ToNot(HaveOccurred())
+		// Expect(err).ToNot(HaveOccurred())
 
 		_, err = framework.CommonController.CreateRegistryAuthSecret(hacbsReleaseTestsTokenSecret, managedNamespace, destinationAuthJson)
 		//_, err = framework.ReleaseController.CreateRegistryJsonSecret(hacbsReleaseTestsTokenSecret, managedNamespace, destinationAuthJson, destinationKeyName)
