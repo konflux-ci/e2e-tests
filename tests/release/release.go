@@ -36,7 +36,7 @@ var ecPolicy = ecp.EnterpriseContractPolicySpec{
 
 var paramsReleaseStrategy = []appstudiov1alpha1.Params{}
 
-var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-path", Label("release", "HACBS"), func() {
+var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-path", Label("release", "HACBS"), Pending, func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	framework, err := framework.NewFramework()
