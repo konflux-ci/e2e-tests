@@ -71,7 +71,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 
 		var kubeController tekton.KubeController
 
-		var policySource []string
+		var policySource []ecp.Source
 
 		BeforeAll(func() {
 			kubeController = tekton.KubeController{
@@ -93,8 +93,16 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				BeTrue(), "timed out when waiting for the %q SA to be created", serviceAccountName)
 
 			// the default policy source
-			policySource = []string{
-				"git::https://github.com/hacbs-contract/ec-policies.git",
+			policySource = []ecp.Source{
+				{
+					Name: "ec-policies",
+					Policy: []string{
+						"git::https://github.com/hacbs-contract/ec-policies.git//policy",
+					},
+					Data: []string{
+						"git::https://github.com/hacbs-contract/ec-policies.git//data",
+					},
+				},
 			}
 
 			// if there is a ConfigMap e2e-tests/ec-config with keys `revision` and

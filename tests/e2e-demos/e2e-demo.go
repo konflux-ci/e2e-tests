@@ -180,7 +180,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 						}
 
 						return false
-					}, 15*time.Minute, 10*time.Second).Should(BeTrue(), "Component deployment didn't become ready")
+					}, 25*time.Minute, 10*time.Second).Should(BeTrue(), "Component deployment didn't become ready")
 					Expect(err).NotTo(HaveOccurred())
 				})
 

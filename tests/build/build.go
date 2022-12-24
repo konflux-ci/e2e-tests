@@ -495,6 +495,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		}
 
 		It("should reference the custom pipeline bundle in a PipelineRun", Label(buildTemplatesTestLabel), func() {
+			Skip("skipping - should be updated by PLNSRVCE-914")
 			customBundleConfigMap, err := f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, testNamespace)
 			if err != nil {
 				if errors.IsNotFound(err) {
@@ -516,6 +517,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		It("should reference the default pipeline bundle in a PipelineRun", func() {
+			Skip("skipping - should be updated by PLNSRVCE-914")
 			defaultBundleConfigMap, err = f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace)
 			if err != nil {
 				if errors.IsForbidden(err) {
@@ -715,6 +717,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		// })
 
 		It("should be referenced in a PipelineRun", Label("build-bundle-overriding"), func() {
+			Skip("skipping - should be updated by PLNSRVCE-914")
 			Eventually(func() bool {
 				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				if err != nil {
@@ -846,13 +849,15 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		JustBeforeEach(func() {
 			componentName = fmt.Sprintf("build-suite-test-component-image-url-%s", util.GenerateRandomString(4))
 		})
-		It("should fail for ContainerImage field set to a protected repository (without an image tag)", func() {
+		// Disabled due to PLNSRVCE-952
+		It("should fail for ContainerImage field set to a protected repository (without an image tag)", Pending, func() {
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected", utils.GetQuayIOOrganization())
 			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "")
 			Expect(err).ToNot(BeNil())
 
 		})
-		It("should fail for ContainerImage field set to a protected repository followed by a random tag", func() {
+		// Disabled due to PLNSRVCE-952
+		It("should fail for ContainerImage field set to a protected repository followed by a random tag", Pending, func() {
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "")
 			Expect(err).ToNot(BeNil())
