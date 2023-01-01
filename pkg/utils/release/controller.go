@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
-	. "github.com/onsi/ginkgo/v2"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -43,6 +41,27 @@ func (s *SuiteController) CreateSnapshot(name string, namespace string, applicat
 		},
 	}
 	return snapshot, s.KubeRest().Create(context.TODO(), snapshot)
+}
+
+func (s *SuiteController) GetSnapshotInNamespace(namespace, componentName string) (*appstudioApi.Snapshot, error) {
+	snapshot := &appstudioApi.SnapshotList{}
+	opts := []client.ListOption{
+		client.MatchingLabels{
+			"test.appstudio.openshift.io/component": componentName,
+		},
+		client.InNamespace(namespace),
+	}
+	err := s.KubeRest().List(context.TODO(), snapshot, opts...)
+
+	if err == nil && len(snapshot.Items) > 0 {
+		snapshot.Items[0].Labels["pac.test.appstudio.openshift.io/event-type"] = "push"
+		// myLabels := snapshot.Items[0].GetLabels()
+		// myLabels["pac.test.appstudio.openshift.io/event-type"] = "push" //myLabels map[string]string{"pac.test.appstudio.openshift.io/event-type": "push"}//.append("pac.test.appstudio.openshift.io/event-type", "push")
+		// snapshot.Items[0].SetLabels(myLabels)
+		klog.Info("Snapshot Labels are :  ", snapshot.Items[0].Labels)
+		return &snapshot.Items[0], nil
+	}
+	return nil, err
 }
 
 // CreateRelease creates a new Release using the given parameters.
@@ -275,26 +294,4 @@ func (h *SuiteController) CreateComponentWithDockerSource(applicationName, compo
 		return nil, err
 	}
 	return component, nil
-}
-
-func (k *SuiteController) CreatePolicyConfiguration(name, namespace, enterpriseContractPolicyUrl string) (*ecp.EnterpriseContractPolicy, error) {
-	policy_test := &ecp.EnterpriseContractPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: ecp.EnterpriseContractPolicySpec{
-			Sources: []string{
-				enterpriseContractPolicyUrl,
-			},
-			Exceptions: &ecp.EnterpriseContractPolicyExceptions{
-				NonBlocking: []string{"not_useful", "test:conftest-clair"},
-			},
-		},
-	}
-	err := k.K8sClient.KubeRest().Create(context.TODO(), policy_test)
-	if err != nil {
-		return nil, err
-	}
-	return policy_test, nil
 }

@@ -23,7 +23,29 @@ var snapshotComponents = []applicationapiv1alpha1.SnapshotComponent{
 	{Name: "component-3", ContainerImage: "quay.io/redhat-appstudio/component3@sha256:d90a0a33e4c5a1daf5877f8dd989a570bfae4f94211a8143599245e503775b1f"},
 }
 
-var paramsReleaseStrategy = []appstudiov1alpha1.Params{}
+var ecPolicy = ecp.EnterpriseContractPolicySpec{
+	Description: "Red Hat's enterprise requirements",
+	Sources: []ecp.Source{
+		{
+			Name: "ec-policies",
+			Policy: []string{
+				"git::https://github.com/hacbs-contract/ec-policies.git//policy",
+			},
+			Data: []string{
+				"git::https://github.com/hacbs-contract/ec-policies.git//data",
+			},
+		},
+	},
+	Exceptions: &ecp.EnterpriseContractPolicyExceptions{
+		NonBlocking: []string{"tasks", "attestation_task_bundle", "java", "test", "not_useful"},
+	},
+}
+
+var paramsReleaseStrategy = []appstudiov1alpha1.Params{
+	{Name: "extraConfigGitUrl", Value: "https://github.com/scoheb/strategy-configs.git"},
+	{Name: "extraConfigPath", Value: "m6.yaml"},
+	{Name: "extraConfigRevision", Value: "main"},
+}
 
 var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-path", Label("release", "HACBS"), func() {
 	defer GinkgoRecover()
