@@ -90,11 +90,6 @@ func (ci CI) PrepareE2EBranch() error {
 	return nil
 }
 
-func (Local) DownloadInfra() {
-	c, _ := installation.NewAppStudioInstallController()
-	c.InstallAppStudioPreviewMode()
-}
-
 func (Local) PrepareCluster() error {
 	if err := PreflightChecks(); err != nil {
 		return fmt.Errorf("error when running preflight checks: %v", err)
