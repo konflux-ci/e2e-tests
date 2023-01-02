@@ -14,6 +14,7 @@ import (
 
 	gh "github.com/google/go-github/v44/github"
 	"github.com/magefile/mage/sh"
+	"github.com/redhat-appstudio/e2e-tests/magefiles/installation"
 	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"k8s.io/klog/v2"
@@ -87,6 +88,11 @@ func (ci CI) PrepareE2EBranch() error {
 	}
 
 	return nil
+}
+
+func (Local) DownloadInfra() {
+	c, _ := installation.NewAppStudioInstallController()
+	c.InstallAppStudioPreviewMode()
 }
 
 func (Local) PrepareCluster() error {
@@ -290,7 +296,12 @@ func BootstrapCluster() error {
 		envVars["E2E_TESTS_COMMIT_SHA"] = os.Getenv("PULL_PULL_SHA")
 	}
 
-	return sh.RunWith(envVars, "./scripts/install-appstudio.sh")
+	ic, err := installation.NewAppStudioInstallController()
+	if err != nil {
+		return fmt.Errorf("failed to initialize installation controller: %+v", err)
+	}
+
+	return ic.InstallAppStudioPreviewMode()
 }
 
 func (CI) isPRPairingRequired() bool {
