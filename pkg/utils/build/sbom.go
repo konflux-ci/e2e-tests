@@ -18,6 +18,7 @@ func GetParsedSbomFilesContentFromImage(image string) (*SbomPurl, *SbomCyclonedx
 		return nil, nil, fmt.Errorf("cannot parse docker pull spec (image) %s, error: %+v", image, err)
 	}
 	tmpDir, err := os.MkdirTemp(os.TempDir(), "sbom")
+	defer os.RemoveAll(tmpDir)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error when creating a temp directory for extracting files: %+v", err)
 	}
