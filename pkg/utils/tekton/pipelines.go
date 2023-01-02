@@ -45,6 +45,10 @@ func (g BuildahDemo) Generate() *v1beta1.PipelineRun {
 					Name:  "git-url",
 					Value: *v1beta1.NewArrayOrString("https://github.com/ziwoshixianzhe/simple_docker_app.git"),
 				},
+				{
+					Name:  "skip-checks",
+					Value: *v1beta1.NewArrayOrString("true"),
+				},
 			},
 			PipelineRef: &v1beta1.PipelineRef{
 				Name:   "docker-build",
