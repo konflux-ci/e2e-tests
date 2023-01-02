@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type SuiteController struct {
@@ -54,14 +55,25 @@ func (s *SuiteController) GetSnapshotInNamespace(namespace, componentName string
 	err := s.KubeRest().List(context.TODO(), snapshot, opts...)
 
 	if err == nil && len(snapshot.Items) > 0 {
-		snapshot.Items[0].Labels["pac.test.appstudio.openshift.io/event-type"] = "push"
-		// myLabels := snapshot.Items[0].GetLabels()
-		// myLabels["pac.test.appstudio.openshift.io/event-type"] = "push" //myLabels map[string]string{"pac.test.appstudio.openshift.io/event-type": "push"}//.append("pac.test.appstudio.openshift.io/event-type", "push")
-		// snapshot.Items[0].SetLabels(myLabels)
-		klog.Info("Snapshot Labels are :  ", snapshot.Items[0].Labels)
+		// snapshot.Items[0].Labels["pac.test.appstudio.openshift.io/event-type"] = "push"
+		// // myLabels := snapshot.Items[0].GetLabels()
+		// // myLabels["pac.test.appstudio.openshift.io/event-type"] = "push" //myLabels map[string]string{"pac.test.appstudio.openshift.io/event-type": "push"}//.append("pac.test.appstudio.openshift.io/event-type", "push")
+		// // snapshot.Items[0].SetLabels(myLabels)
+		// klog.Info("Snapshot Labels are :  ", snapshot.Items[0].Labels)
 		return &snapshot.Items[0], nil
 	}
 	return nil, err
+}
+
+func (s *SuiteController) AddLabelToSnapshot(snapshot *appstudioApi.Snapshot) (*appstudioApi.Snapshot, error) {
+	snapshot.Labels["pac.test.appstudio.openshift.io/event-type"] = "push"
+
+	err := s.KubeRest().Update(context.TODO(), snapshot, &rclient.UpdateOptions{})
+	if err != nil {
+		return &appstudioApi.Snapshot{}, err
+	}
+
+	return snapshot, nil
 }
 
 // CreateRelease creates a new Release using the given parameters.
@@ -129,6 +141,20 @@ func (s *SuiteController) GetRelease(releaseName, releaseNamespace string) (*v1a
 	}, release)
 
 	return release, err
+}
+
+// GetReleaseInNamespace returns the list of releases in the given namespace.
+func (s *SuiteController) GetReleaseInNamespace(namespace string) (*v1alpha1.Release, error) {
+	releaseList := &v1alpha1.ReleaseList{}
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+
+	err := s.KubeRest().List(context.TODO(), releaseList, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &releaseList.Items[0], nil
 }
 
 // GetReleasePlanAdmission returns the ReleasePlanAdmission with the given name in the given namespace.

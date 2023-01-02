@@ -12,7 +12,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 
-	//gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/appstudio-shared/apis/appstudio.redhat.com/v1alpha1"
+	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 
 	appstudiov1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,9 +23,11 @@ import (
 	// "knative.dev/pkg/apis"
 )
 
-// var myEnvironment = []gitopsv1alpha1.EnvVarPair{
-// 	{Name: releaseEnvironment, Value: releaseEnvironment},
-// }
+var myEnvironment = appstudioApi.EnvironmentConfiguration{
+	Env: []appstudioApi.EnvVarPair{
+		{Name: releaseEnvironment, Value: releaseEnvironment},
+	},
+}
 
 var managednamespaceSecret = []corev1.ObjectReference{
 	{Name: hacbsReleaseTestsTokenSecret},
@@ -39,7 +41,7 @@ var roleRules = map[string][]string{
 
 var paramsReleaseStrategyDefault = []appstudiov1alpha1.Params{
 	{Name: "extraConfigGitUrl", Value: "https://github.com/scoheb/strategy-configs.git"},
-	{Name: "extraConfigPath", Value: "m6.yaml"},
+	{Name: "extraConfigPath", Value: "release.yaml"},
 	{Name: "extraConfigRevision", Value: "main"},
 }
 
@@ -61,7 +63,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 		},
 	}
 
-	//var myEnvironment = []gitopsv1alpha1.EnvVarPair{}
+	// var myEnvironment = appstudioApi.EnvironmentConfiguration{}
 
 	BeforeAll(func() {
 		kubeController := tekton.KubeController{
@@ -103,7 +105,8 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 		// Expect(err).ToNot(HaveOccurred())
 
 		_, err = framework.CommonController.CreateRegistryAuthSecret(hacbsReleaseTestsTokenSecret, devNamespace, sourceAuthJson)
-		//_, err = framework.ReleaseController.CreateRegistryJsonSecret(hacbsReleaseTestsTokenSecret, managedNamespace, destinationAuthJson, destinationKeyName)
+		Expect(err).ToNot(HaveOccurred())
+		_, err = framework.ReleaseController.CreateRegistryJsonSecret(redhatAppstudioUserSecret, managedNamespace, destinationAuthJson, destinationKeyName)
 		Expect(err).ToNot(HaveOccurred())
 
 		// Copy the public key from tekton-chains/signing-secrets to a new
@@ -154,10 +157,10 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 			Expect(err).NotTo(HaveOccurred())
 		}, SpecTimeout(EnterpriseContractPolicyTimeout))
 
-		// It("Create Environment", func() {
-		// 	_, err := framework.GitOpsController.CreateEnvironment(releaseEnvironment, managedNamespace, gitopsv1alpha1.DeploymentStrategy_Manual, gitopsv1alpha1.EnvironmentType_POC, displayEnvironment) //, myEnvironment)
-		// 	Expect(err).NotTo(HaveOccurred())
-		// })
+		It("Create Environment", func() {
+			_, err := framework.GitOpsController.CreateEnvironment(releaseEnvironment, managedNamespace, appstudioApi.DeploymentStrategy_Manual, appstudioApi.EnvironmentType_POC, displayEnvironment, myEnvironment)
+			Expect(err).NotTo(HaveOccurred())
+		})
 
 		It("Create PVC", func() {
 			_, err := framework.TektonController.CreatePVCAccessMode(releasePvcName, managedNamespace, corev1.ReadWriteOnce)
@@ -214,16 +217,29 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 				klog.Error(err)
 				return false
 			}
-
 			return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 		}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 	})
 
-	// get snapshot from deb namespace
-	It("gets snapshot created in dev namepsace", func() {
+	It("gets snapshot created in dev namepsace and add labebl to the Snapshot", func() {
 		snapshotCreatedInDev, err := framework.ReleaseController.GetSnapshotInNamespace(devNamespace, componentName)
 		Expect(err).NotTo(HaveOccurred())
-		klog.Info("Snapshot is : ", snapshotCreatedInDev.Name)
+		snapshotUpdated, err := framework.ReleaseController.AddLabelToSnapshot(snapshotCreatedInDev)
+		Expect(err).NotTo(HaveOccurred())
+		klog.Info("Snapshot Name: ", snapshotUpdated.Name)
+
 	})
 
+	It("tests a Release should have been created in the dev namespace and succeeded", func() {
+		Eventually(func() bool {
+			releaseCreated, err := framework.ReleaseController.GetReleaseInNamespace(devNamespace)
+			if releaseCreated == nil || err != nil {
+				klog.Error(err)
+				return false
+			}
+			klog.Info("Release Created in %s namespace is :  %s", devNamespace, releaseCreated.Name)
+			return releaseCreated.HasStarted() && releaseCreated.IsDone() // && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
+		}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
+
+	})
 })
