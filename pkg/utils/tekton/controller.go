@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"regexp"
 	"strings"
 	"time"
 
@@ -21,12 +20,13 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	g "github.com/onsi/ginkgo/v2"
+	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 )
 
 type KubeController struct {
@@ -36,30 +36,43 @@ type KubeController struct {
 }
 
 type Bundles struct {
-	BuildTemplatesBundle string
-	HACBSTemplatesBundle string
+	FBCBuilderBundle    string
+	DockerBuildBundle   string
+	JavaBuilderBundle   string
+	NodeJSBuilderBundle string
 }
 
-func newBundles(client kubernetes.Interface) (*Bundles, error) {
-	buildPipelineDefaults, err := client.CoreV1().ConfigMaps("build-templates").Get(context.TODO(), "build-pipelines-defaults", metav1.GetOptions{})
-	if err != nil && !errors.IsNotFound(err) {
+func newBundles(client crclient.Client) (*Bundles, error) {
+	namespacedName := types.NamespacedName{
+		Name:      "build-pipeline-selector",
+		Namespace: "build-service",
+	}
+	bundles := &Bundles{}
+	pipelineSelector := &buildservice.BuildPipelineSelector{}
+	err := client.Get(context.TODO(), namespacedName, pipelineSelector)
+	if err != nil {
 		return nil, err
 	}
-
-	bundle := buildPipelineDefaults.Data["default_build_bundle"]
-
-	r := regexp.MustCompile(`([/:])(?:build|base)-`)
-
-	return &Bundles{
-		BuildTemplatesBundle: bundle,
-		HACBSTemplatesBundle: r.ReplaceAllString(bundle, "${1}hacbs-"),
-	}, nil
+	for _, selector := range pipelineSelector.Spec.Selectors {
+		bundleName := selector.PipelineRef.Name
+		bundleRef := selector.PipelineRef.Bundle
+		switch bundleName {
+		case "docker-build":
+			bundles.DockerBuildBundle = bundleRef
+		case "fbc-builder":
+			bundles.FBCBuilderBundle = bundleRef
+		case "java-builder":
+			bundles.JavaBuilderBundle = bundleRef
+		case "nodejs-builder":
+			bundles.NodeJSBuilderBundle = bundleRef
+		}
+	}
+	return bundles, nil
 }
 
 // Create the struct for kubernetes clients
 type SuiteController struct {
 	*kubeCl.K8sClient
-
 	Bundles Bundles
 }
 
@@ -87,16 +100,11 @@ func (c CosignResult) Missing(prefix string) string {
 
 // Create controller for Application/Component crud operations
 func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
-
-	bundles, err := newBundles(kube.KubeInterface())
+	bundles, err := newBundles(kube.KubeRest())
 	if err != nil {
 		return nil, err
 	}
-
-	return &SuiteController{
-		kube,
-		*bundles,
-	}, nil
+	return &SuiteController{kube, *bundles}, nil
 }
 
 func (s *SuiteController) GetPipelineRun(pipelineRunName, namespace string) (*v1beta1.PipelineRun, error) {
