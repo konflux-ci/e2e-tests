@@ -92,15 +92,17 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			}).WithTimeout(1*time.Minute).WithPolling(100*time.Millisecond).Should(
 				BeTrue(), "timed out when waiting for the %q SA to be created", serviceAccountName)
 
+			cm, err := kubeController.Commonctrl.GetConfigMap("ec-defaults", "enterprise-contract-service")
+			Expect(err).ToNot(HaveOccurred())
 			// the default policy source
 			policySource = []ecp.Source{
 				{
 					Name: "ec-policies",
 					Policy: []string{
-						"git::https://github.com/hacbs-contract/ec-policies.git//policy",
+						cm.Data["ec_policy_source"],
 					},
 					Data: []string{
-						"git::https://github.com/hacbs-contract/ec-policies.git//data",
+						cm.Data["ec_data_source"],
 					},
 				},
 			}
