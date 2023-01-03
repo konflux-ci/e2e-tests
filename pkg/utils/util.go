@@ -2,13 +2,14 @@ package utils
 
 import (
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"net"
 	"net/url"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/devfile/library/pkg/util"
 	"github.com/redhat-appstudio/application-service/pkg/devfile"
@@ -35,6 +36,14 @@ func GetEnv(key, defaultVal string) string {
 		return val
 	}
 	return defaultVal
+}
+
+// Retrieve an environment variable. If it doesn't exist, returns result of a call to `defaultFunc`.
+func GetEnvOrFunc(key string, defaultFunc func() (string, error)) (string, error) {
+	if val := os.Getenv(key); val != "" {
+		return val, nil
+	}
+	return defaultFunc()
 }
 
 /*
