@@ -1,20 +1,26 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"text/template"
 	"time"
 
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 
 	sprig "github.com/go-task/slim-sprig"
 	"github.com/magefile/mage/sh"
+	routev1 "github.com/openshift/api/route/v1"
+	client "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 )
 
 func getRemoteAndBranchNameFromPRLink(url string) (remote, branchName string, err error) {
@@ -149,4 +155,78 @@ func renderTemplate(destination, templatePath string, templateData interface{}, 
 	}
 
 	return nil
+}
+
+func getRouteHost(name, namespace string) (string, error) {
+	kubeClient, err := client.NewK8SClient()
+	if err != nil {
+		return "", err
+	}
+	route := &routev1.Route{}
+	err = kubeClient.KubeRest().Get(context.TODO(), types.NamespacedName{
+		Namespace: namespace,
+		Name:      name,
+	}, route)
+	if err != nil {
+		return "", err
+	}
+	return route.Spec.Host, nil
+}
+
+func getKeycloakUrl() (string, error) {
+	keycloakHost, err := getRouteHost("keycloak", "dev-sso")
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("https://%s", keycloakHost), nil
+}
+
+func getToolchainApiUrl() (string, error) {
+	toolchainHost, err := getRouteHost("api", "toolchain-host-operator")
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("https://%s:443", toolchainHost), nil
+}
+
+func getKeycloakToken(keycloakUrl, username, password, client_id string) (string, error) {
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+	data := url.Values{}
+	data.Set("client_id", client_id)
+	data.Set("password", username)
+	data.Set("username", password)
+	data.Set("grant_type", "password")
+
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/auth/realms/testrealm/protocol/openid-connect/token", keycloakUrl), bytes.NewBufferString(data.Encode()))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	fmt.Printf("Response: %+v\n", resp)
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	token := struct {
+		AccessToken string `json:"access_token"`
+	}{}
+
+	if err := json.Unmarshal(body, &token); err != nil {
+		return "", err
+	}
+	return token.AccessToken, nil
 }

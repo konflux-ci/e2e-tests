@@ -1,6 +1,8 @@
 package installation
 
 import (
+	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
@@ -12,6 +14,9 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	v1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
 )
 
@@ -22,7 +27,9 @@ const (
 	DEFAULT_LOCAL_FORK_ORGANIZATION     = "redhat-appstudio-qe"
 	DEFAULT_E2E_APPLICATIONS_NAMEPSPACE = "appstudio-e2e-test"
 	DEFAULT_SHARED_SECRETS_NAMESPACE    = "build-templates"
+	DEFAULT_SHARED_SECRET_NAME          = "redhat-appstudio-user-workload"
 	DEFAULT_E2E_QUAY_ORG                = "redhat-appstudio-qe"
+	SECRET_DOCKER_CONFIG_KEY            = ".dockerconfigjson"
 )
 
 var (
@@ -94,6 +101,10 @@ func (i *InstallAppStudio) InstallAppStudioPreviewMode() error {
 		return err
 	}
 
+	if err := i.createSharedSecret(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -148,8 +159,56 @@ func (i *InstallAppStudio) runInstallationScript() error {
 		return err
 	}
 
-	io.WriteString(stdin, "4\n")
-	cmd.Wait()
+	_, _ = io.WriteString(stdin, "4\n")
 
-	return nil
+	if err := cmd.Wait(); err != nil {
+		return err
+	}
+
+	return err
+}
+
+// createSharedSecret make sure that redhat-appstudio-user-workload secret is created in the build-templates namespace for build purposes
+func (i *InstallAppStudio) createSharedSecret() error {
+	quayToken := os.Getenv("QUAY_TOKEN")
+	if quayToken == "" {
+		return fmt.Errorf("failed to obtain quay token from 'QUAY_TOKEN' env; make sure the env exists")
+	}
+
+	decodedToken, err := base64.StdEncoding.DecodeString(quayToken)
+	if err != nil {
+		return fmt.Errorf("failed to decode quay token. Make sure that QUAY_TOKEN env contain a base64 token")
+	}
+
+	sharedSecret, err := i.KubernetesClient.KubeInterface().CoreV1().Secrets(i.SharedSecretNamespace).Get(context.Background(), DEFAULT_SHARED_SECRET_NAME, metav1.GetOptions{})
+
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			_, err := i.KubernetesClient.KubeInterface().CoreV1().Secrets(i.SharedSecretNamespace).Create(context.Background(), &v1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      DEFAULT_SHARED_SECRET_NAME,
+					Namespace: DEFAULT_SHARED_SECRETS_NAMESPACE,
+				},
+				Type: v1.SecretTypeDockerConfigJson,
+				Data: map[string][]byte{
+					SECRET_DOCKER_CONFIG_KEY: decodedToken,
+				},
+			}, metav1.CreateOptions{})
+
+			if err != nil {
+				return fmt.Errorf("error when creating secret %s : %v", DEFAULT_SHARED_SECRET_NAME, err)
+			}
+		} else {
+			sharedSecret.Data = map[string][]byte{
+				SECRET_DOCKER_CONFIG_KEY: decodedToken,
+			}
+			_, err = i.KubernetesClient.KubeInterface().CoreV1().Secrets(i.SharedSecretNamespace).Update(context.TODO(), sharedSecret, metav1.UpdateOptions{})
+			if err != nil {
+				return fmt.Errorf("error when updating secret '%s' namespace: %v", DEFAULT_SHARED_SECRET_NAME, err)
+			}
+		}
+		return err
+	}
+
+	return err
 }
