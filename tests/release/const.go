@@ -27,7 +27,7 @@ const (
 	releasePlanAdmissionCreationTimeout   = 1 * time.Second
 	releaseCreationTimeout                = 1 * time.Second
 	releasePipelineRunCreationTimeout     = 1 * time.Second
-	releasePipelineRunCompletionTimeout   = 20 * time.Second
+	releasePipelineRunCompletionTimeout   = 120 * time.Second
 	avgControllerQueryTimeout             = 1 * time.Second
 	pipelineServiceAccountCreationTimeout = 1 * time.Minute
 
