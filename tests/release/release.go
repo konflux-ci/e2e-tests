@@ -67,8 +67,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 					Data:   []string{cm.Data["ec_data_source"]},
 				},
 			},
-			Exceptions: &ecp.EnterpriseContractPolicyExceptions{
-				NonBlocking: []string{"tasks", "attestation_task_bundle", "java", "test", "not_useful"},
+			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
+				Exclude: []string{"tasks", "attestation_task_bundle", "java", "test", "not_useful"},
 			},
 		}
 	})
