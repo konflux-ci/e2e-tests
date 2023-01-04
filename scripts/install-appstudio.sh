@@ -36,7 +36,7 @@ git checkout "${INFRA_DEPLOYMENTS_BRANCH}"
 # Add a custom remote for infra-deployments repository.
 git remote add "${MY_GIT_FORK_REMOTE}" https://github.com/"${MY_GITHUB_ORG}"/infra-deployments.git
 # Run the bootstrap script
-./hack/bootstrap-cluster.sh preview
+./hack/bootstrap-cluster.sh preview --keycloak --toolchain
 # Secret used by pipelines to push component containers to quay.io
 QUAY_TOKEN=${QUAY_TOKEN:-}
 echo -e "[INFO] Creating application-service related secret in $SHARED_SECRET_NAMESPACE namespace"

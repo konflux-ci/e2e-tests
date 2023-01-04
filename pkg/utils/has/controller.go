@@ -162,6 +162,9 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 	}
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"skip-initial-checks": "true",
+			},
 			Name:      componentName,
 			Namespace: namespace,
 		},
