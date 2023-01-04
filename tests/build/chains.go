@@ -97,13 +97,9 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			// the default policy source
 			policySource = []ecp.Source{
 				{
-					Name: "ec-policies",
-					Policy: []string{
-						cm.Data["ec_policy_source"],
-					},
-					Data: []string{
-						cm.Data["ec_data_source"],
-					},
+					Name:   "ec-policies",
+					Policy: []string{cm.Data["ec_policy_source"]},
+					Data:   []string{cm.Data["ec_data_source"]},
 				},
 			}
 

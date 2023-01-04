@@ -62,13 +62,9 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 			Description: "Red Hat's enterprise requirements",
 			Sources: []ecp.Source{
 				{
-					Name: "ec-policies",
-					Policy: []string{
-						cm.Data["ec_policy_source"],
-					},
-					Data: []string{
-						cm.Data["ec_data_source"],
-					},
+					Name:   "ec-policies",
+					Policy: []string{cm.Data["ec_policy_source"]},
+					Data:   []string{cm.Data["ec_data_source"]},
 				},
 			},
 			Exceptions: &ecp.EnterpriseContractPolicyExceptions{
