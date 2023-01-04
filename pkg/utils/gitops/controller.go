@@ -115,12 +115,7 @@ func (h *SuiteController) CreateEnvironment(name, namespace string) (*appservice
 		},
 		Spec: appservice.EnvironmentSpec{
 			Configuration: appservice.EnvironmentConfiguration{
-				Env: []appservice.EnvVarPair{
-					{
-						Name:  "FOO",
-						Value: "BAR",
-					},
-				},
+				Env: []appservice.EnvVarPair{},
 			},
 			DeploymentStrategy: appservice.DeploymentStrategy_AppStudioAutomated,
 			DisplayName:        name,

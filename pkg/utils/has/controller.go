@@ -3,6 +3,7 @@ package has
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -497,7 +498,7 @@ func (h *SuiteController) GetHasComponentConditionStatusMessages(name, namespace
 }
 
 // CreateSnapshotEnvironmentBinding creates a new SnapshotEnvironmentBinding
-func (h *SuiteController) CreateSnapshotEnvironmentBinding(name, namespace, applicationName, snapshotName, environmentName, componentName string) (*appservice.SnapshotEnvironmentBinding, error) {
+func (h *SuiteController) CreateSnapshotEnvironmentBinding(name, namespace, applicationName, snapshotName, environmentName string, component *appservice.Component) (*appservice.SnapshotEnvironmentBinding, error) {
 	bindingComponents := make([]appservice.BindingComponent, 0)
 	snapshotEnvironmentBinding := &appservice.SnapshotEnvironmentBinding{
 		ObjectMeta: metav1.ObjectMeta{
@@ -510,9 +511,9 @@ func (h *SuiteController) CreateSnapshotEnvironmentBinding(name, namespace, appl
 			Components: append(bindingComponents,
 				appservice.BindingComponent{
 					Configuration: appservice.BindingComponentConfiguration{
-						Replicas: 1,
+						Replicas: int(math.Max(1, float64(component.Spec.Replicas))),
 					},
-					Name: componentName,
+					Name: component.Name,
 				}),
 			Snapshot: snapshotName,
 		},

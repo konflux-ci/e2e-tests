@@ -206,7 +206,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				// Create snapshotEnvironmentBinding to cause an application (and its components) to be deployed
 				It("snapshotEnvironmentBinding is created", func() {
 					snapshotEnvBindingName := SnapshotEnvironmentBindingName + "-" + util.GenerateRandomString(4)
-					_, err = fw.HasController.CreateSnapshotEnvironmentBinding(snapshotEnvBindingName, namespace, application.Name, snapshot.Name, EnvironmentName, componentTest.Name)
+					_, err = fw.HasController.CreateSnapshotEnvironmentBinding(snapshotEnvBindingName, namespace, application.Name, snapshot.Name, EnvironmentName, component)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
