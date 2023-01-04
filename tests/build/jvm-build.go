@@ -191,7 +191,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				Expect(err).ToNot(HaveOccurred())
 				DeferCleanup(f.CommonController.DeleteConfigMap, constants.BuildPipelinesConfigMapName, testNamespace, false)
 			} else {
-				Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, testNamespace, err))
+				Fail(fmt.Sprintf("error occurred when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, testNamespace, err))
 			}
 		} else {
 			bundlePullSpec := customBundleConfigMap.Data["default_build_bundle"]
@@ -224,7 +224,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				Expect(err).ToNot(HaveOccurred())
 				DeferCleanup(f.CommonController.DeleteConfigMap, constants.JVMUserConfigMapName, testNamespace, false)
 			} else {
-				Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.JVMUserConfigMapName, testNamespace, err))
+				Fail(fmt.Sprintf("error occurred when trying to get configmap %s in %s namespace: %v", constants.JVMUserConfigMapName, testNamespace, err))
 			}
 		} else {
 			_, err = f.CommonController.UpdateConfigMap(jvmConfigMap, testNamespace)
@@ -296,7 +296,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				return false, nil
 			})
 			if err != nil {
-				Fail(fmt.Sprintf("failure occured when verifying the sidecar image reference in pipelinerun: %v", err))
+				Fail(fmt.Sprintf("failure occurred when verifying the sidecar image reference in pipelinerun: %v", err))
 			}
 		})
 
@@ -330,7 +330,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				return false, nil
 			})
 			if err != nil {
-				Fail(fmt.Sprintf("failure occured when verifying the analyzer image reference in pipelinerun: %v", err))
+				Fail(fmt.Sprintf("failure occurred when verifying the analyzer image reference in pipelinerun: %v", err))
 			}
 		})
 

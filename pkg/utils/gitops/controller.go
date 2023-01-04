@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"net/http"
 	"time"
 
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+
 	routev1 "github.com/openshift/api/route/v1"
+	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	managedgitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend/apis/managed-gitops/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -101,5 +103,49 @@ func (h *SuiteController) DeleteAllGitOpsDeploymentInASpecificNamespace(namespac
 			return false, nil
 		}
 		return len(gdList.Items) == 0, nil
+	}, timeout)
+}
+
+// CreateEnvironment creates a new environment
+func (h *SuiteController) CreateEnvironment(name, namespace string) (*appservice.Environment, error) {
+	environment := &appservice.Environment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: appservice.EnvironmentSpec{
+			Configuration: appservice.EnvironmentConfiguration{
+				Env: []appservice.EnvVarPair{
+					{
+						Name:  "FOO",
+						Value: "BAR",
+					},
+				},
+			},
+			DeploymentStrategy: appservice.DeploymentStrategy_AppStudioAutomated,
+			DisplayName:        name,
+			Type:               appservice.EnvironmentType_NonPOC,
+		},
+	}
+
+	err := h.KubeRest().Create(context.TODO(), environment)
+	if err != nil {
+		return nil, err
+	}
+	return environment, nil
+}
+
+// DeleteAllEnvironmentsInASpecificNamespace removes all environments from a specific namespace. Useful when creating a lot of resources and want to remove all of them
+func (h *SuiteController) DeleteAllEnvironmentsInASpecificNamespace(namespace string, timeout time.Duration) error {
+	if err := h.KubeRest().DeleteAllOf(context.TODO(), &appservice.Environment{}, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("error deleting environments from the namespace %s: %+v", namespace, err)
+	}
+
+	environmentList := &appservice.EnvironmentList{}
+	return utils.WaitUntil(func() (done bool, err error) {
+		if err := h.KubeRest().List(context.Background(), environmentList, &client.ListOptions{Namespace: namespace}); err != nil {
+			return false, nil
+		}
+		return len(environmentList.Items) == 0, nil
 	}, timeout)
 }

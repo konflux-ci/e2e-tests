@@ -81,7 +81,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				if errors.IsForbidden(err) {
 					klog.Infof("don't have enough permissions to get a configmap with default pipeline in %s namespace\n", constants.BuildPipelinesConfigMapDefaultNamespace)
 				} else {
-					Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace, err))
+					Fail(fmt.Sprintf("error occurred when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace, err))
 				}
 			}
 			_ = defaultBundleConfigMap.Data["default_build_bundle"]
@@ -131,7 +131,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("check if the ApplicationSnapshot is created", func() {
-				applicationSnapshot, err = f.IntegrationController.GetApplicationSnapshot(applicationName, appStudioE2EApplicationsNamespace)
+				applicationSnapshot, err = f.IntegrationController.GetApplicationSnapshot(applicationName, appStudioE2EApplicationsNamespace, componentName)
 				Expect(err).ShouldNot(HaveOccurred())
 				klog.Infof("applicationSnapshot %s is found", applicationSnapshot.Name)
 			})

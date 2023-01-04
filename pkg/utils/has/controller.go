@@ -495,3 +495,47 @@ func (h *SuiteController) GetHasComponentConditionStatusMessages(name, namespace
 	}
 	return
 }
+
+// CreateSnapshotEnvironmentBinding creates a new SnapshotEnvironmentBinding
+func (h *SuiteController) CreateSnapshotEnvironmentBinding(name, namespace, applicationName, snapshotName, environmentName, componentName string) (*appservice.SnapshotEnvironmentBinding, error) {
+	bindingComponents := make([]appservice.BindingComponent, 0)
+	snapshotEnvironmentBinding := &appservice.SnapshotEnvironmentBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: appservice.SnapshotEnvironmentBindingSpec{
+			Application: applicationName,
+			Environment: environmentName,
+			Components: append(bindingComponents,
+				appservice.BindingComponent{
+					Configuration: appservice.BindingComponentConfiguration{
+						Replicas: 1,
+					},
+					Name: componentName,
+				}),
+			Snapshot: snapshotName,
+		},
+	}
+
+	err := h.KubeRest().Create(context.TODO(), snapshotEnvironmentBinding)
+	if err != nil {
+		return nil, err
+	}
+	return snapshotEnvironmentBinding, nil
+}
+
+// DeleteAllSnapshotEnvBindingsInASpecificNamespace removes all snapshotEnvironmentBindings from a specific namespace. Useful when creating a lot of resources and want to remove all of them
+func (h *SuiteController) DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace string, timeout time.Duration) error {
+	if err := h.KubeRest().DeleteAllOf(context.TODO(), &appservice.SnapshotEnvironmentBinding{}, rclient.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("error deleting snapshotEnvironmentBindings from the namespace %s: %+v", namespace, err)
+	}
+
+	snapshotEnvironmentBindingList := &appservice.SnapshotEnvironmentBindingList{}
+	return utils.WaitUntil(func() (done bool, err error) {
+		if err := h.KubeRest().List(context.Background(), snapshotEnvironmentBindingList, &rclient.ListOptions{Namespace: namespace}); err != nil {
+			return false, nil
+		}
+		return len(snapshotEnvironmentBindingList.Items) == 0, nil
+	}, timeout)
+}

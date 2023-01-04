@@ -30,7 +30,7 @@ func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
 
 // getApplicationSnapshot returns the all ApplicationSnapshots in the Application's namespace nil if it's not found.
 // In the case the List operation fails, an error will be returned.
-func (h *SuiteController) GetApplicationSnapshot(applicationName, namespace string) (*appstudioApi.Snapshot, error) {
+func (h *SuiteController) GetApplicationSnapshot(applicationName, namespace, componentName string) (*appstudioApi.Snapshot, error) {
 	applicationSnapshots := &appstudioApi.SnapshotList{}
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
@@ -40,7 +40,8 @@ func (h *SuiteController) GetApplicationSnapshot(applicationName, namespace stri
 		return nil, err
 	}
 	for _, applicationSnapshot := range applicationSnapshots.Items {
-		if applicationSnapshot.Spec.Application == applicationName {
+		if applicationSnapshot.Spec.Application == applicationName &&
+			applicationSnapshot.Labels["test.appstudio.openshift.io/component"] == componentName {
 			return &applicationSnapshot, nil
 		}
 	}
