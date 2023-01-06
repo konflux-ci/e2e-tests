@@ -124,7 +124,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		When("the build pipelineRun run succeeded", func() {
 			It("check if the ApplicationSnapshot is created", func() {
-				applicationSnapshot, err = f.IntegrationController.GetApplicationSnapshot("", applicationName, appStudioE2EApplicationsNamespace, componentName)
+				applicationSnapshot, err = f.IntegrationController.GetApplicationSnapshot("", "", appStudioE2EApplicationsNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
 				klog.Infof("applicationSnapshot %s is found", applicationSnapshot.Name)
 			})
@@ -235,7 +235,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						}
 						return true
 					}
-					applicationSnapshot_push, err = f.IntegrationController.GetApplicationSnapshot("", applicationSnapshot_push.Name, appStudioE2EApplicationsNamespace, "")
+					applicationSnapshot_push, err = f.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, "", appStudioE2EApplicationsNamespace, "")
 					return false
 				}, timeout, interval).Should(BeTrue(), "time out when waiting for release created")
 			})
@@ -251,7 +251,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						klog.Infof("The EnvironmentBinding is created\n")
 						return true
 					}
-					applicationSnapshot_push, err = f.IntegrationController.GetApplicationSnapshot("", applicationSnapshot_push.Name, appStudioE2EApplicationsNamespace, "")
+					applicationSnapshot_push, err = f.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, "", appStudioE2EApplicationsNamespace, "")
 					return false
 				}, timeout, interval).Should(BeTrue(), "time out when waiting for release created")
 			})

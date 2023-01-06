@@ -198,7 +198,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					})
 				} else {
 					It("check if the component's snapshot is created when the pipelinerun is targeted", func() {
-						snapshot, err = fw.IntegrationController.GetApplicationSnapshot(application.Name, namespace, component.Name)
+						snapshot, err = fw.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, component.Name)
 						Expect(err).ShouldNot(HaveOccurred())
 					})
 				}
