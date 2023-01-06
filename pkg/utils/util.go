@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"os"
@@ -147,4 +148,33 @@ func GetGeneratedNamespace(name string) string {
 
 func WaitUntil(cond wait.ConditionFunc, timeout time.Duration) error {
 	return wait.PollImmediate(time.Second, timeout, cond)
+}
+
+func ExecuteCommandInASpecificDirectory(command string, args []string, directory string) error {
+	cmd := exec.Command(command, args...) // nolint:gosec
+	cmd.Dir = directory
+
+	stdin, err := cmd.StdinPipe()
+
+	if err != nil {
+		return err
+	}
+	defer stdin.Close() // the doc says subProcess.Wait will close it, but I'm not sure, so I kept this line
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err = cmd.Start(); err != nil {
+		klog.Errorf("an error ocurred: %s", err)
+
+		return err
+	}
+
+	_, _ = io.WriteString(stdin, "4\n")
+
+	if err := cmd.Wait(); err != nil {
+		return err
+	}
+
+	return err
 }

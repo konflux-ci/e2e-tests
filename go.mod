@@ -3,6 +3,7 @@ module github.com/redhat-appstudio/e2e-tests
 go 1.18
 
 require (
+	github.com/avast/retry-go/v4 v4.3.2
 	github.com/averageflow/gohooks/v2 v2.1.0
 	github.com/codeready-toolchain/api v0.0.0-20220511141428-1adfed7d17b0
 	github.com/codeready-toolchain/toolchain-e2e v0.0.0-20220525131508-60876bfb99d3

@@ -186,9 +186,6 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when setting up required env vars: %v", err)
 	}
 
-	if err := retry(ci.createOpenshiftUser, 3, 10*time.Second); err != nil {
-		return fmt.Errorf("error when creating openshift user: %v", err)
-	}
 	if err := retry(BootstrapCluster, 2, 10*time.Second); err != nil {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
 	}
@@ -282,17 +279,6 @@ func (CI) setRequiredEnvVars() error {
 		}
 
 	}
-
-	return nil
-}
-
-func (CI) createOpenshiftUser() error {
-	tempKubeconfigPath := "/tmp/kubeconfig"
-	os.Setenv("KUBECONFIG_TEST", tempKubeconfigPath)
-	if err := sh.Run("./scripts/provision-openshift-user.sh"); err != nil {
-		return err
-	}
-	os.Setenv("KUBECONFIG", tempKubeconfigPath)
 
 	return nil
 }

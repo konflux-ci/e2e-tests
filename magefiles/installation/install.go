@@ -4,9 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"io"
 	"os"
-	"os/exec"
 
 	"github.com/devfile/library/pkg/util"
 	"github.com/go-git/go-git/v5"
@@ -14,13 +12,14 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
 )
 
 const (
+	DEFAULT_TMP_DIR                     = "tmp"
 	DEFAULT_INFRA_DEPLOYMENTS_BRANCH    = "main"
 	DEFAULT_INFRA_DEPLOYMENTS_GH_ORG    = "redhat-appstudio"
 	DEFAULT_LOCAL_FORK_NAME             = "qe"
@@ -29,16 +28,18 @@ const (
 	DEFAULT_SHARED_SECRETS_NAMESPACE    = "build-templates"
 	DEFAULT_SHARED_SECRET_NAME          = "redhat-appstudio-user-workload"
 	DEFAULT_E2E_QUAY_ORG                = "redhat-appstudio-qe"
-	SECRET_DOCKER_CONFIG_KEY            = ".dockerconfigjson"
 )
 
 var (
-	previewInstallArgs = []string{"preview"}
+	previewInstallArgs = []string{"preview", "--keycloak", "--tolchain"}
 )
 
 type InstallAppStudio struct {
 	// Kubernetes Client to interact with Openshift Cluster
 	KubernetesClient *kubeCl.K8sClient
+
+	// TmpDirectory to store temporary files like git repos or some metadata
+	TmpDirectory string
 
 	// Directory where to clone https://github.com/redhat-appstudio/infra-deployments repo
 	InfraDeploymentsCloneDir string
@@ -78,7 +79,8 @@ func NewAppStudioInstallController() (*InstallAppStudio, error) {
 
 	return &InstallAppStudio{
 		KubernetesClient:                 k8sClient,
-		InfraDeploymentsCloneDir:         fmt.Sprintf("%s/tmp/infra-deployments", cwd),
+		TmpDirectory:                     DEFAULT_TMP_DIR,
+		InfraDeploymentsCloneDir:         fmt.Sprintf("%s/%s/infra-deployments", cwd, DEFAULT_TMP_DIR),
 		InfraDeploymentsBranch:           utils.GetEnv(os.Getenv("INFRA_DEPLOYMENTS_BRANCH"), DEFAULT_INFRA_DEPLOYMENTS_BRANCH),
 		InfraDeploymentsOrganizationName: utils.GetEnv(os.Getenv("INFRA_DEPLOYMENTS_ORG"), DEFAULT_INFRA_DEPLOYMENTS_GH_ORG),
 		LocalForkName:                    DEFAULT_LOCAL_FORK_NAME,
@@ -92,12 +94,12 @@ func NewAppStudioInstallController() (*InstallAppStudio, error) {
 
 func (i *InstallAppStudio) InstallAppStudioPreviewMode() error {
 	if _, err := i.cloneInfraDeployments(); err != nil {
-		fmt.Println(err)
 		return err
 	}
 	i.setInstallationEnvironments()
 
-	if err := i.runInstallationScript(); err != nil {
+	// Start AppStudio installation
+	if err := utils.ExecuteCommandInASpecificDirectory("hack/bootstrap-cluster.sh", previewInstallArgs, i.InfraDeploymentsCloneDir); err != nil {
 		return err
 	}
 
@@ -105,7 +107,7 @@ func (i *InstallAppStudio) InstallAppStudioPreviewMode() error {
 		return err
 	}
 
-	return nil
+	return i.CreateOauth()
 }
 
 func (i *InstallAppStudio) setInstallationEnvironments() {
@@ -140,34 +142,6 @@ func (i *InstallAppStudio) cloneInfraDeployments() (*git.Remote, error) {
 	return repo.CreateRemote(&config.RemoteConfig{Name: i.LocalForkName, URLs: []string{fmt.Sprintf("https://github.com/%s/infra-deployments.git", i.LocalGithubForkOrganization)}})
 }
 
-func (i *InstallAppStudio) runInstallationScript() error {
-	cmd := exec.Command("hack/bootstrap-cluster.sh", previewInstallArgs...) // nolint:gosec
-	cmd.Dir = i.InfraDeploymentsCloneDir
-	stdin, err := cmd.StdinPipe()
-
-	if err != nil {
-		return err
-	}
-	defer stdin.Close() // the doc says subProcess.Wait will close it, but I'm not sure, so I kept this line
-
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err = cmd.Start(); err != nil {
-		klog.Errorf("an error ocurred: %s", err)
-
-		return err
-	}
-
-	_, _ = io.WriteString(stdin, "4\n")
-
-	if err := cmd.Wait(); err != nil {
-		return err
-	}
-
-	return err
-}
-
 // createSharedSecret make sure that redhat-appstudio-user-workload secret is created in the build-templates namespace for build purposes
 func (i *InstallAppStudio) createSharedSecret() error {
 	quayToken := os.Getenv("QUAY_TOKEN")
@@ -184,14 +158,14 @@ func (i *InstallAppStudio) createSharedSecret() error {
 
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
-			_, err := i.KubernetesClient.KubeInterface().CoreV1().Secrets(i.SharedSecretNamespace).Create(context.Background(), &v1.Secret{
+			_, err := i.KubernetesClient.KubeInterface().CoreV1().Secrets(i.SharedSecretNamespace).Create(context.Background(), &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      DEFAULT_SHARED_SECRET_NAME,
 					Namespace: DEFAULT_SHARED_SECRETS_NAMESPACE,
 				},
-				Type: v1.SecretTypeDockerConfigJson,
+				Type: corev1.SecretTypeDockerConfigJson,
 				Data: map[string][]byte{
-					SECRET_DOCKER_CONFIG_KEY: decodedToken,
+					corev1.DockerConfigJsonKey: decodedToken,
 				},
 			}, metav1.CreateOptions{})
 
@@ -200,15 +174,14 @@ func (i *InstallAppStudio) createSharedSecret() error {
 			}
 		} else {
 			sharedSecret.Data = map[string][]byte{
-				SECRET_DOCKER_CONFIG_KEY: decodedToken,
+				corev1.DockerConfigJsonKey: decodedToken,
 			}
 			_, err = i.KubernetesClient.KubeInterface().CoreV1().Secrets(i.SharedSecretNamespace).Update(context.TODO(), sharedSecret, metav1.UpdateOptions{})
 			if err != nil {
 				return fmt.Errorf("error when updating secret '%s' namespace: %v", DEFAULT_SHARED_SECRET_NAME, err)
 			}
 		}
-		return err
 	}
 
-	return err
+	return nil
 }
