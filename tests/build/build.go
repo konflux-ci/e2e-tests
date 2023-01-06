@@ -509,9 +509,19 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			When("the container image is created and pushed to container registry", Label("sbom", "slow"), func() {
 				It("contains non-empty sbom files", func() {
-					component, err := f.HasController.GetHasComponent(componentName, testNamespace)
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, false, "")
 					Expect(err).ShouldNot(HaveOccurred())
-					purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(component.Spec.ContainerImage)
+
+					var outputImage string
+					// Workaround - until https://issues.redhat.com/browse/STONE-300 is solved
+					for _, p := range pipelineRun.Spec.Params {
+						if p.Name == "output-image" {
+							outputImage = p.Value.StringVal
+						}
+					}
+					Expect(outputImage).ToNot(BeEmpty(), "output image of a component could not be found")
+
+					purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(outputImage)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(cyclonedx.BomFormat).To(Equal("CycloneDX"))
