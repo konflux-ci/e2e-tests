@@ -89,8 +89,6 @@ func (i *InstallAppStudio) GenerateHttpaswd() error {
 
 func (i *InstallAppStudio) LoginAsNewUser() error {
 	// At this stage in CI we will use the admin user to
-	utils.ExecuteCommandInASpecificDirectory("oc", []string{"whoami", "--show-token"}, "")
-
 	if err := utils.ExecuteCommandInASpecificDirectory("oc", []string{"adm", "policy", "add-cluster-role-to-user", "cluster-admin", randomOCPUserName}, ""); err != nil {
 		return err
 	}
@@ -99,14 +97,10 @@ func (i *InstallAppStudio) LoginAsNewUser() error {
 		return err
 	}
 
-	fmt.Println(cfg.Host)
 	tempKubeconfigPath := "/tmp/kubeconfig"
-
 	err = retry.Do(
 		func() error {
-			tempKubeconfigPath := "/tmp/kubeconfig"
-			os.Setenv("KUBECONFIG_TEST", tempKubeconfigPath)
-			return utils.ExecuteCommandInASpecificDirectory("oc", []string{"login", "--kubeconfig=/tmp/kubeconfig", "--server", cfg.Host, "--username", randomOCPUserName, "--password", randomOCPUserPass, "--insecure-skip-tls-verify=true", "--loglevel=9"}, "")
+			return utils.ExecuteCommandInASpecificDirectory("oc", []string{"login", fmt.Sprintf("kubeconfig=%s", tempKubeconfigPath), "--server", cfg.Host, "--username", randomOCPUserName, "--password", randomOCPUserPass, "--insecure-skip-tls-verify=true"}, "")
 		},
 		retry.Attempts(30),
 	)
