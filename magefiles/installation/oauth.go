@@ -11,6 +11,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
@@ -97,10 +98,12 @@ func (i *InstallAppStudio) LoginAsNewUser() error {
 		return err
 	}
 
+	klog.Infof("server api: %s", cfg.Host)
+
 	tempKubeconfigPath := "/tmp/kubeconfig"
 	err = retry.Do(
 		func() error {
-			return utils.ExecuteCommandInASpecificDirectory("oc", []string{"login", fmt.Sprintf("kubeconfig=%s", tempKubeconfigPath), "--server", cfg.Host, "--username", randomOCPUserName, "--password", randomOCPUserPass, "--insecure-skip-tls-verify=true"}, "")
+			return utils.ExecuteCommandInASpecificDirectory("oc", []string{"login", "--kubeconfig=/tmp/kubeconfig", fmt.Sprintf("--server=%s", cfg.Host), "--username", randomOCPUserName, "--password", randomOCPUserPass, "--insecure-skip-tls-verify=true"}, "")
 		},
 		retry.Attempts(30),
 	)
