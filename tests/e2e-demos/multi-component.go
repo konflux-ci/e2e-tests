@@ -182,9 +182,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	It(fmt.Sprintf("check if the %s and %s components snapshot is created when the pipelinerun is targeted", compNameNode, compNameNode), func() {
 		snapshotGo, err = fw.IntegrationController.GetApplicationSnapshot("", application.Name, AppStudioE2EApplicationsNamespace, compNameGo)
 		Expect(err).ShouldNot(HaveOccurred())
-		if snapshotGo.Spec.Application == application.Name &&
-			snapshotGo.Labels["test.appstudio.openshift.io/component"] == compNameGo {
-		}
 
 		snapshotNode, err = fw.IntegrationController.GetApplicationSnapshot("", application.Name, AppStudioE2EApplicationsNamespace, compNameNode)
 		Expect(err).ShouldNot(HaveOccurred())
