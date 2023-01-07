@@ -17,7 +17,7 @@ import (
 
 const (
 	HTPASSWD_FILE_NAME      = "ci.htpaswd"
-	DEFAULT_IDP_SECRET_NAME = "htpass-secretss"
+	DEFAULT_IDP_SECRET_NAME = "htpass-secret"
 	DEFAULT_IDP_NAME        = "ci_identity"
 	DEFAULT_OAUTH_NAME      = "cluster"
 	DEFAULT_HTPASSWD_BIN    = "htpasswd"
@@ -29,8 +29,13 @@ var (
 	httpaswdArgs      = []string{"-c", "-B", "-b", HTPASSWD_FILE_NAME, randomOCPUserName, randomOCPUserPass}
 )
 
+// CreateOauth generate a new random admin user for testing. This functionality will be executed only in Openshift CI.
 func (i *InstallAppStudio) CreateOauth() error {
-	if err := i.GenerateHttpaswd(); err != nil {
+	if os.Getenv("CI") != "true" {
+		return nil
+	}
+
+	if err := i.generateHttpaswd(); err != nil {
 		return err
 	}
 
@@ -38,13 +43,14 @@ func (i *InstallAppStudio) CreateOauth() error {
 		return err
 	}
 
-	if err := i.createOauthObject(); err != nil {
+	if err := i.updateOauthCluster(); err != nil {
 		return err
 	}
-	return i.LoginAsNewUser()
+	return i.loginAsNewUser()
 }
 
-func (i *InstallAppStudio) createOauthObject() error {
+// updateOauthCluster update the existing oauth object in the openshift cluster
+func (i *InstallAppStudio) updateOauthCluster() error {
 	namespacedName := types.NamespacedName{
 		Name: DEFAULT_OAUTH_NAME,
 	}
@@ -84,12 +90,14 @@ func (i *InstallAppStudio) createOauthObject() error {
 	return i.KubernetesClient.KubeRest().Update(context.Background(), updateObj)
 }
 
-func (i *InstallAppStudio) GenerateHttpaswd() error {
+// generateHttpaswd create a new htpasswd file with random user and password
+func (i *InstallAppStudio) generateHttpaswd() error {
 	return utils.ExecuteCommandInASpecificDirectory(DEFAULT_HTPASSWD_BIN, httpaswdArgs, i.TmpDirectory)
 }
 
-func (i *InstallAppStudio) LoginAsNewUser() error {
-	// At this stage in CI we will use the admin user to
+// loginAsNewUser add cluster-admin role to a random user and then generate a new kubeconfig and login to the cluster. This func will be executed with an openshift admin user. In openshift CI
+// by default the admin user is system:admin
+func (i *InstallAppStudio) loginAsNewUser() error {
 	if err := utils.ExecuteCommandInASpecificDirectory("oc", []string{"adm", "policy", "add-cluster-role-to-user", "cluster-admin", randomOCPUserName}, ""); err != nil {
 		return err
 	}

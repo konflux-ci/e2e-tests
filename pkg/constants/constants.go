@@ -6,7 +6,7 @@ const (
 	GITHUB_TOKEN_ENV string = "GITHUB_TOKEN" // #nosec
 
 	// The github organization is used to create the gitops repositories in Red Hat Appstudio.
-	GITHUB_E2E_ORGANIZATION_ENV string = "GITHUB_E2E_ORGANIZATION" // #nosec
+	GITHUB_E2E_ORGANIZATION_ENV string = "MY_GITHUB_ORG" // #nosec
 
 	// The quay organization is used to push container images using Red Hat Appstudio pipelines.
 	QUAY_E2E_ORGANIZATION_ENV string = "QUAY_E2E_ORGANIZATION" // #nosec

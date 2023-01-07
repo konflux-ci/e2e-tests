@@ -86,19 +86,19 @@ func NewAppStudioInstallController() (*InstallAppStudio, error) {
 		LocalForkName:                    DEFAULT_LOCAL_FORK_NAME,
 		LocalGithubForkOrganization:      utils.GetEnv("MY_GITHUB_ORG", DEFAULT_LOCAL_FORK_ORGANIZATION),
 		E2EApplicationsNamespace:         utils.GetEnv("E2E_APPLICATIONS_NAMESPACE", DEFAULT_E2E_APPLICATIONS_NAMEPSPACE),
-		SharedSecretNamespace:            utils.GetEnv("SHARED_SECRET_NAMESPACE", DEFAULT_SHARED_SECRETS_NAMESPACE),
+		SharedSecretNamespace:            DEFAULT_SHARED_SECRETS_NAMESPACE,
 		HasDefaultImageRepository:        utils.GetEnv("HAS_DEFAULT_IMAGE_REPOSITORY", fmt.Sprintf("quay.io/%s/test-images-protected", DEFAULT_E2E_QUAY_ORG)),
 		QuayToken:                        utils.GetEnv("QUAY_TOKEN", ""),
 	}, nil
 }
 
+// Start the appstudio installation in preview mode.
 func (i *InstallAppStudio) InstallAppStudioPreviewMode() error {
 	if _, err := i.cloneInfraDeployments(); err != nil {
 		return err
 	}
 	i.setInstallationEnvironments()
 
-	// Start AppStudio installation
 	if err := utils.ExecuteCommandInASpecificDirectory("hack/bootstrap-cluster.sh", previewInstallArgs, i.InfraDeploymentsCloneDir); err != nil {
 		return err
 	}
