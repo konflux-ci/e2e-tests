@@ -124,7 +124,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		When("the build pipelineRun run succeeded", func() {
 			It("check if the ApplicationSnapshot is created", func() {
-				applicationSnapshot, err = f.IntegrationController.GetApplicationSnapshot("", "", appStudioE2EApplicationsNamespace, "")
+				// snapshotName is sent as empty since it is unknown at this stage
+				applicationSnapshot, err = f.IntegrationController.GetApplicationSnapshot("", applicationName, appStudioE2EApplicationsNamespace, componentName)
 				Expect(err).ShouldNot(HaveOccurred())
 				klog.Infof("applicationSnapshot %s is found", applicationSnapshot.Name)
 			})

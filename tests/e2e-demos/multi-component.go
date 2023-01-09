@@ -180,9 +180,11 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	})
 
 	It(fmt.Sprintf("check if the %s and %s components snapshot is created when the pipelinerun is targeted", compNameNode, compNameNode), func() {
+		// snapshotName is sent as empty since it is unknown at this stage
 		snapshotGo, err = fw.IntegrationController.GetApplicationSnapshot("", application.Name, AppStudioE2EApplicationsNamespace, compNameGo)
 		Expect(err).ShouldNot(HaveOccurred())
 
+		// snapshotName is sent as empty since it is unknown at this stage
 		snapshotNode, err = fw.IntegrationController.GetApplicationSnapshot("", application.Name, AppStudioE2EApplicationsNamespace, compNameNode)
 		Expect(err).ShouldNot(HaveOccurred())
 	})

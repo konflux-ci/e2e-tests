@@ -68,9 +68,6 @@ func (h *SuiteController) GetApplicationSnapshot(snapshotName, applicationName, 
 			applicationSnapshot.Labels["test.appstudio.openshift.io/component"] == componentName {
 			return &applicationSnapshot, nil
 		}
-		if snapshotName == "" {
-			return &applicationSnapshot, nil
-		}
 		if applicationSnapshot.Name == snapshotName {
 			return &applicationSnapshot, nil
 		}
