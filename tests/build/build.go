@@ -479,7 +479,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 
 			It("should validate HACBS taskrun results", func() {
-				Skip("skipping - should be updated by PLNSRVCE-914")
 				// List Of Taskruns Expected to Get Taskrun Results
 				gatherResult := []string{"conftest-clair", "sanity-inspect-image", "sanity-label-check"}
 				// TODO: once we migrate "build" e2e tests to kcp, remove this condition
