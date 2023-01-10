@@ -9,43 +9,56 @@ import (
 	"github.com/devfile/library/pkg/util"
 	ocpOauth "github.com/openshift/api/config/v1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"golang.org/x/crypto/bcrypt"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 const (
-	HTPASSWD_FILE_NAME      = "ci.htpaswd"
-	DEFAULT_IDP_SECRET_NAME = "htpass-secret"
-	DEFAULT_IDP_NAME        = "ci_identity"
-	DEFAULT_OAUTH_NAME      = "cluster"
-	DEFAULT_HTPASSWD_BIN    = "htpasswd"
+	DEFAULT_IDP_SECRET_NAME            = "htpass-secret"
+	DEFAULT_IDP_NAME                   = "ci_identity"
+	DEFAULT_OAUTH_NAME                 = "cluster"
+	DEFAULT_OPENSHIFT_CONFIG_NAMESPACE = "openshift-config"
 )
 
 var (
-	randomOCPUserPass = util.GenerateRandomString(10)
 	randomOCPUserName = util.GenerateRandomString(6)
-	httpaswdArgs      = []string{"-c", "-B", "-b", HTPASSWD_FILE_NAME, randomOCPUserName, randomOCPUserPass}
+	randomOCPUserPass = util.GenerateRandomString(10)
 )
 
 // CreateOauth generate a new random admin user for testing. This functionality will be executed only in Openshift CI.
 func (i *InstallAppStudio) CreateOauth() error {
+
 	if os.Getenv("CI") != "true" {
 		return nil
 	}
 
-	if err := i.generateHttpaswd(); err != nil {
-		return err
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(randomOCPUserPass), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("error generating openshift password: %v", err)
 	}
 
-	if err := utils.ExecuteCommandInASpecificDirectory("oc", []string{"create", "secret", "generic", DEFAULT_IDP_SECRET_NAME, fmt.Sprintf("--from-file=htpasswd=%s/%s", i.TmpDirectory, HTPASSWD_FILE_NAME), "-n", "openshift-config"}, ""); err != nil {
+	if secret, err := i.KubernetesClient.KubeInterface().CoreV1().Secrets(DEFAULT_OPENSHIFT_CONFIG_NAMESPACE).Create(context.Background(), &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      DEFAULT_IDP_SECRET_NAME,
+			Namespace: DEFAULT_OPENSHIFT_CONFIG_NAMESPACE,
+		},
+		StringData: map[string]string{
+			"htpasswd": fmt.Sprintf("%s:%s", randomOCPUserName, passwordHash),
+		},
+	}, metav1.CreateOptions{}); err != nil {
+
+		klog.Infof("failed to create secret %s. error: %v", secret.Name, err)
 		return err
 	}
 
 	if err := i.updateOauthCluster(); err != nil {
 		return err
 	}
+
 	return i.loginAsNewUser()
 }
 
@@ -61,10 +74,10 @@ func (i *InstallAppStudio) updateOauthCluster() error {
 	}
 
 	updateObj := &ocpOauth.OAuth{
-		TypeMeta: v1.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			APIVersion: ocpOauth.GroupVersion.Version,
 		},
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: DEFAULT_OAUTH_NAME,
 		},
 		Spec: ocpOauth.OAuthSpec{
@@ -90,11 +103,6 @@ func (i *InstallAppStudio) updateOauthCluster() error {
 	return i.KubernetesClient.KubeRest().Update(context.Background(), updateObj)
 }
 
-// generateHttpaswd create a new htpasswd file with random user and password
-func (i *InstallAppStudio) generateHttpaswd() error {
-	return utils.ExecuteCommandInASpecificDirectory(DEFAULT_HTPASSWD_BIN, httpaswdArgs, i.TmpDirectory)
-}
-
 // loginAsNewUser add cluster-admin role to a random user and then generate a new kubeconfig and login to the cluster. This func will be executed with an openshift admin user. In openshift CI
 // by default the admin user is system:admin
 func (i *InstallAppStudio) loginAsNewUser() error {
@@ -111,7 +119,7 @@ func (i *InstallAppStudio) loginAsNewUser() error {
 	tempKubeconfigPath := "/tmp/kubeconfig"
 	err = retry.Do(
 		func() error {
-			return utils.ExecuteCommandInASpecificDirectory("oc", []string{"login", "--kubeconfig=/tmp/kubeconfig", fmt.Sprintf("--server=%s", cfg.Host), "--username", randomOCPUserName, "--password", randomOCPUserPass, "--insecure-skip-tls-verify=true"}, "")
+			return utils.ExecuteCommandInASpecificDirectory("oc", []string{"login", fmt.Sprintf("--kubeconfig=%s", tempKubeconfigPath), fmt.Sprintf("--server=%s", cfg.Host), "--username", randomOCPUserName, "--password", randomOCPUserPass, "--insecure-skip-tls-verify=true"}, "")
 		},
 		retry.Attempts(30),
 	)

@@ -59,13 +59,13 @@ type InstallAppStudio struct {
 	// Namespace where build applications will be placed
 	E2EApplicationsNamespace string
 
-	// build secrets which will be shared across all namespaces
+	// A namespace used for storing a build secret which will be shared across all namespaces
 	SharedSecretNamespace string
 
 	// Default quay image repository
 	HasDefaultImageRepository string
 
-	// Valid quay token from quay.io
+	// base64-encoded content of a docker/config.json file which contains a valid login credentials for quay.io
 	QuayToken string
 }
 
