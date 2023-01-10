@@ -62,3 +62,8 @@ const (
 	JVMUserConfigMapName = "jvm-build-config"
 	JVMEnableRebuilds    = "enable-rebuilds"
 )
+
+var (
+	ComponentDefaultLabel      = map[string]string{"e2e-test": "true"}
+	ComponentDefaultAnnotation = map[string]string{"com.redhat.appstudio/component-initial-build-processed": "true"}
+)

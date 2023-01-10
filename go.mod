@@ -18,11 +18,12 @@ require (
 	github.com/magefile/mage v1.13.0
 	github.com/onsi/ginkgo/v2 v2.5.1
 	github.com/onsi/gomega v1.24.0
-	github.com/openshift/api v0.0.0-20220525145417-ee5b62754c68
+	github.com/openshift/api v0.0.0-20221013123534-96eec44e1979
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
 	github.com/redhat-appstudio/application-api v0.0.0-20221114151952-77cba9006505
-	github.com/redhat-appstudio/application-service v0.0.0-20221122170733-a852feca3998
+	github.com/redhat-appstudio/application-service v0.0.0-20221129172232-763cbbe1992e
+	github.com/redhat-appstudio/build-service v0.0.0-20230105230040-fd3097c1b686
 	github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2cad2
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20221128055414-018f50a9d68e
 	github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001
@@ -42,6 +43,7 @@ require (
 	k8s.io/client-go v0.25.4
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.80.1
+	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448
 	knative.dev/pkg v0.0.0-20221011175852-714b7630a836
 	kubevirt.io/qe-tools v0.1.8
 	sigs.k8s.io/controller-runtime v0.14.1
@@ -222,23 +224,23 @@ require (
 	golang.org/x/time v0.1.0 // indirect
 	golang.org/x/tools v0.2.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
-	google.golang.org/api v0.100.0 // indirect
+	google.golang.org/api v0.103.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20221014213838-99cd37c6964a // indirect
+	google.golang.org/genproto v0.0.0-20221202195650-67e5cbc046fd // indirect
 	google.golang.org/grpc v1.50.1 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
-	gopkg.in/h2non/gock.v1 v1.0.16 // indirect
+	gopkg.in/h2non/gock.v1 v1.1.2 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gotest.tools/v3 v3.3.0 // indirect
 	k8s.io/apiextensions-apiserver v0.25.2 // indirect
 	k8s.io/apiserver v0.25.2 // indirect
 	k8s.io/component-base v0.25.2 // indirect
 	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // indirect
 	k8s.io/kubectl v0.24.1 // indirect
 	k8s.io/metrics v0.24.1 // indirect
-	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448 // indirect
 	oras.land/oras-go v0.4.0 // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/kustomize/api v0.11.4 // indirect

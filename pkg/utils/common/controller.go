@@ -299,7 +299,7 @@ func (s *SuiteController) DeleteNamespace(namespace string) error {
 	_, err := s.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
 
 	if err != nil && !k8sErrors.IsNotFound(err) {
-		return fmt.Errorf("could not check for namespace existence: %v", err)
+		return fmt.Errorf("could not check for namespace '%s' existence: %v", namespace, err)
 	}
 
 	if err := s.KubeInterface().CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{}); err != nil {
