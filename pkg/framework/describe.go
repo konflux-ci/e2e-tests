@@ -11,7 +11,7 @@ func HASSuiteDescribe(text string, args ...interface{}) bool {
 
 // E2ESuiteDescribe annotates the e2e scenarios tests with the e2e-scenarios label.
 func E2ESuiteDescribe(args ...interface{}) bool {
-	return Describe("[e2e-demos-suite]", args, Ordered)
+	return Describe("[e2e-demos-suite]", args)
 }
 
 // CommonSuiteDescribe annotates the common tests with the application label.
