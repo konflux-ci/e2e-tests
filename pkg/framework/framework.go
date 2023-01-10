@@ -16,13 +16,13 @@ import (
 
 // Framework struct to store all controllers
 type Framework struct {
-	HasController     *has.SuiteController
-	CommonController  *common.SuiteController
-	TektonController  *tekton.SuiteController
-	GitOpsController  *gitops.SuiteController
-	SPIController     *spi.SuiteController
-	ReleaseController *release.SuiteController
-	IntegrationController *integration.SuiteController
+	HasController             *has.SuiteController
+	CommonController          *common.SuiteController
+	TektonController          *tekton.SuiteController
+	GitOpsController          *gitops.SuiteController
+	SPIController             *spi.SuiteController
+	ReleaseController         *release.SuiteController
+	IntegrationController     *integration.SuiteController
 	JvmbuildserviceController *jvmbuildservice.SuiteController
 }
 
@@ -30,25 +30,25 @@ type Framework struct {
 func NewFramework() (*Framework, error) {
 
 	// Initialize a common kubernetes client to be passed to the test controllers
-	kubeClient, err := kubeCl.NewK8SClient()
+	_, err := kubeCl.NewK8SClient()
 	if err != nil {
 		return nil, fmt.Errorf("error creating client-go %v", err)
 	}
 
 	// Initialize Common controller
-	commonCtrl, err := common.NewSuiteController(kubeClient)
+	/*commonCtrl, err := common.NewSuiteController(kubeClient)
 	if err != nil {
 		return nil, err
-	}
+	}*/
 
 	// Initialize Has controller
-	hasController, err := has.NewSuiteController(kubeClient)
-	if err != nil {
-		return nil, err
-	}
+	//hasController, err := has.NewSuiteController(kubeClient)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	// Initialize Tekton controller
-	tektonController, err := tekton.NewSuiteController(kubeClient)
+	/*tektonController, err := tekton.NewSuiteController(kubeClient)
 	if err != nil {
 		return nil, err
 	}
@@ -60,36 +60,36 @@ func NewFramework() (*Framework, error) {
 	}
 
 	// Initialize SPI controller
-	spiController, err := spi.NewSuiteController(kubeClient)
+	/*spiController, err := spi.NewSuiteController(kubeClient)
 	if err != nil {
 		return nil, err
-	}
+	}*/
 
 	// Initialize Release Controller
-	releaseController, err := release.NewSuiteController(kubeClient)
-	if err != nil {
-		return nil, err
-	}
+	/*	releaseController, err := release.NewSuiteController(kubeClient)
+		if err != nil {
+			return nil, err
+		}
 
-	// Initialize Integration Controller
-	integrationController, err := integration.NewSuiteController(kubeClient)
-	if err != nil {
-		return nil, err
-	}
+		// Initialize Integration Controller
+		integrationController, err := integration.NewSuiteController(kubeClient)
+		if err != nil {
+			return nil, err
+		}
 
-	jvmbuildserviceController, err := jvmbuildservice.NewSuiteControler(kubeClient)
-	if err != nil {
-		return nil, err
-	}
-
+		jvmbuildserviceController, err := jvmbuildservice.NewSuiteControler(kubeClient)
+		if err != nil {
+			return nil, err
+		}
+	*/
 	return &Framework{
-		CommonController:  commonCtrl,
-		HasController:     hasController,
-		TektonController:  tektonController,
-		GitOpsController:  gitopsController,
-		SPIController:     spiController,
-		ReleaseController: releaseController,
-		IntegrationController: integrationController,
-		JvmbuildserviceController: jvmbuildserviceController,
+		//CommonController: commonCtrl,
+		//HasController:             hasController,
+		//TektonController: tektonController,
+		//GitOpsController: gitopsController,
+		//SPIController:             spiController,
+		//ReleaseController:         releaseController,
+		//IntegrationController:     integrationController,
+		//JvmbuildserviceController: jvmbuildserviceController,
 	}, nil
 }

@@ -17,10 +17,10 @@ import (
 )
 
 type SuiteController struct {
-	*kubeCl.K8sClient
+	*kubeCl.CustomClient
 }
 
-func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
+func NewSuiteController(kube *kubeCl.CustomClient) (*SuiteController, error) {
 	return &SuiteController{
 		kube,
 	}, nil
@@ -122,7 +122,8 @@ func (s *SuiteController) GetReleasePlanAdmission(name, namespace string) (*apps
 
 // DeleteReleasePlanAdmission deletes the ReleasePlanAdmission resource with the given name from the given namespace.
 // Optionally, it can avoid returning an error if the resource did not exist:
-//  specify 'false', if it's likely the ReleasePlanAdmission has already been deleted (for example, because the Namespace was deleted)
+//
+//	specify 'false', if it's likely the ReleasePlanAdmission has already been deleted (for example, because the Namespace was deleted)
 func (s *SuiteController) DeleteReleasePlanAdmission(name, namespace string, failOnNotFound bool) error {
 	releasePlanAdmission := appstudiov1alpha1.ReleasePlanAdmission{
 		ObjectMeta: metav1.ObjectMeta{
@@ -175,7 +176,7 @@ func (s *SuiteController) GetReleasePlan(name, namespace string) (*appstudiov1al
 	return releasePlan, err
 }
 
-//  DeletetReleasePlan deletes a given ReleasePlan name in given namespace.
+// DeletetReleasePlan deletes a given ReleasePlan name in given namespace.
 func (s *SuiteController) DeleteReleasePlan(name, namespace string, failOnNotFound bool) error {
 	releasePlan := &appstudiov1alpha1.ReleasePlan{
 		ObjectMeta: metav1.ObjectMeta{

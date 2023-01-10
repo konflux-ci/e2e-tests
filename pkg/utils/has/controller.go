@@ -24,10 +24,10 @@ import (
 )
 
 type SuiteController struct {
-	*kubeCl.K8sClient
+	*kubeCl.CustomClient
 }
 
-func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
+func NewSuiteController(kube *kubeCl.CustomClient) (*SuiteController, error) {
 	return &SuiteController{
 		kube,
 	}, nil
@@ -394,7 +394,7 @@ func (h *SuiteController) WaitForComponentPipelineToBeFinished(componentName str
 		pipelineRun, err := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, false, "")
 
 		if err != nil {
-			klog.Infoln("PipelineRun has not been created yet")
+			klog.Infof("PipelineRun has not been created yet: %v", err)
 			return false, nil
 		}
 

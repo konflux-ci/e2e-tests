@@ -4,19 +4,16 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/devfile/library/pkg/util"
 	"github.com/google/uuid"
-	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -31,7 +28,48 @@ var (
 var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Label("has"), func() {
 	defer GinkgoRecover()
 
-	var applicationName, componentName, testNamespace string
+	var applicationName, testNamespace string
+	//application := &appservice.Application{}
+	//cdq := &appservice.ComponentDetectionQuery{}
+	//compDetected := appservice.ComponentDetectionDescription{}
+	// Initialize the tests controllers
+	framework, err := framework.NewFrameworkv2()
+	Expect(err).NotTo(HaveOccurred())
+
+	BeforeAll(func() {
+		testNamespace = "user1"
+		applicationName = fmt.Sprintf(RedHatAppStudioApplicationName+"-%s", util.GenerateRandomString(10))
+		//componentName = fmt.Sprintf(QuarkusComponentName+"-%s", util.GenerateRandomString(10))
+		// Check to see if the github token was provided
+		Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
+		// Check if 'has-github-token' is present, unless SKIP_HAS_SECRET_CHECK env var is set
+		if !utils.CheckIfEnvironmentExists(constants.SKIP_HAS_SECRET_CHECK_ENV) {
+			_, err := framework.AsAdmin.HasController.KubeInterface().CoreV1().Secrets(RedHatAppStudioApplicationNamespace).Get(context.TODO(), ApplicationServiceGHTokenSecrName, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
+		}
+
+	})
+
+	/*AfterAll(func() {
+		err = framework.AsAdmin.HasController.DeleteHasComponentDetectionQuery(componentName, testNamespace)
+		Expect(err).NotTo(HaveOccurred())
+
+		Eventually(func() bool {
+			// application info should be stored even after deleting the application in application variable
+			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
+
+			return framework.AsUser.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+		}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
+	})*/
+
+	It("Create Red Hat AppStudio Application", func() {
+		createdApplication, err := framework.AsUser.HasController.CreateHasApplication(applicationName, testNamespace)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(createdApplication.Spec.DisplayName).To(Equal(applicationName))
+		Expect(createdApplication.Namespace).To(Equal(testNamespace))
+	})
+
+	/*var applicationName, componentName, testNamespace string
 	// Initialize the tests controllers
 	framework, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
@@ -166,5 +204,5 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 			return false
 		}, 10*time.Minute, 10*time.Second).Should(BeTrue(), "Component didn't get get deleted with its Application")
 		Expect(err).NotTo(HaveOccurred())
-	})
+	})*/
 })

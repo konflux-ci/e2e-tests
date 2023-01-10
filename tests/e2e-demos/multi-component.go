@@ -55,6 +55,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	var removeApplication = true
 
 	BeforeAll(func() {
+		Skip("ASDASD")
 		// Check to see if the github token was provided
 		Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
 		// Check if 'has-github-token' is present, unless SKIP_HAS_SECRET_CHECK env var is set

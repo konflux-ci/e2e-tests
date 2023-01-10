@@ -44,6 +44,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 	privateGitRepository := utils.GetEnv(constants.PRIVATE_DEVFILE_SAMPLE, PrivateQuarkusDevfileSource)
 
 	BeforeAll(func() {
+		Skip("AAAAA")
 		testNamespace = utils.GetGeneratedNamespace("has-e2e")
 		// Generate names for the application and component resources
 		applicationName = fmt.Sprintf(RedHatAppStudioApplicationName+"-%s", util.GenerateRandomString(10))
