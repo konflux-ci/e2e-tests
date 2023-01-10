@@ -125,7 +125,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			Expect(pr.ObjectMeta.Name).To(Equal(buildPipelineRunName))
 			Expect(pr.ObjectMeta.Namespace).To(Equal(namespace))
 			Expect(kubeController.WatchPipelineRun(pr.Name, pipelineRunTimeout)).To(Succeed())
-			GinkgoWriter.Printf("The pipeline named %q in namespace %q suceeded\n", pr.ObjectMeta.Name, pr.ObjectMeta.Namespace)
+			GinkgoWriter.Printf("The pipeline named %q in namespace %q succeeded\n", pr.ObjectMeta.Name, pr.ObjectMeta.Namespace)
 
 			// The PipelineRun resource has been updated, refresh our reference.
 			pr, err = kubeController.Tektonctrl.GetPipelineRun(pr.ObjectMeta.Name, pr.ObjectMeta.Namespace)
@@ -221,7 +221,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract")
 				Expect(err).NotTo(HaveOccurred())
 				printTaskRunStatus(tr, namespace, *fwk.CommonController)
-				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s suceeded\n", tr.PipelineTaskName, pr.Name)
+				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s succeeded\n", tr.PipelineTaskName, pr.Name)
 				Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
 				GinkgoWriter.Printf("Make sure result for TaskRun %q succeeded\n", tr.PipelineTaskName)
 				Expect(tr.Status.TaskRunResults).Should(ContainElements(
@@ -253,7 +253,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				Expect(err).NotTo(HaveOccurred())
 
 				printTaskRunStatus(tr, namespace, *fwk.CommonController)
-				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s suceeded\n", tr.PipelineTaskName, pr.Name)
+				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s succeeded\n", tr.PipelineTaskName, pr.Name)
 				Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
 				GinkgoWriter.Printf("Make sure result for TaskRun %q succeeded\n", tr.PipelineTaskName)
 				Expect(tr.Status.TaskRunResults).Should(ContainElements(

@@ -165,7 +165,7 @@ func GenerateCustomJUnitReportWithConfig(report types.Report, dst string, config
 
 // This function generates folder structure for the rp_preproc tool with logs for upload in Report Portal
 func GenerateRPPreprocReport(report types.Report, rpPreprocDir string) {
-	//Delete directory, if existss
+	//Delete directory, if exists
 	if _, err := os.Stat(rpPreprocDir); !os.IsNotExist(err) {
 		err2 := os.RemoveAll(rpPreprocDir)
 		if err2 != nil {
