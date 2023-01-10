@@ -71,7 +71,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				if errors.IsForbidden(err) {
 					klog.Infof("don't have enough permissions to get a configmap with default pipeline in %s namespace\n", constants.BuildPipelinesConfigMapDefaultNamespace)
 				} else {
-					Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace, err))
+					Fail(fmt.Sprintf("error occurred when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace, err))
 				}
 			}
 			_ = defaultBundleConfigMap.Data["default_build_bundle"]
@@ -124,7 +124,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		When("the build pipelineRun run succeeded", func() {
 			It("check if the ApplicationSnapshot is created", func() {
-				applicationSnapshot, err = f.IntegrationController.GetApplicationSnapshot("", appStudioE2EApplicationsNamespace)
+				// snapshotName is sent as empty since it is unknown at this stage
+				applicationSnapshot, err = f.IntegrationController.GetApplicationSnapshot("", applicationName, appStudioE2EApplicationsNamespace, componentName)
 				Expect(err).ShouldNot(HaveOccurred())
 				klog.Infof("applicationSnapshot %s is found", applicationSnapshot.Name)
 			})
@@ -214,7 +215,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						klog.Infof("Global candidate is updated\n")
 						return true
 					}
-					applicationSnapshot_push, err = f.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, appStudioE2EApplicationsNamespace)
+					applicationSnapshot_push, err = f.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, "", appStudioE2EApplicationsNamespace, "")
 					return false
 				}, timeout, interval).Should(BeTrue(), "time out when waiting for updating the global candidate")
 			})
@@ -235,7 +236,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						}
 						return true
 					}
-					applicationSnapshot_push, err = f.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, appStudioE2EApplicationsNamespace)
+					applicationSnapshot_push, err = f.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, "", appStudioE2EApplicationsNamespace, "")
 					return false
 				}, timeout, interval).Should(BeTrue(), "time out when waiting for release created")
 			})
@@ -251,7 +252,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						klog.Infof("The EnvironmentBinding is created\n")
 						return true
 					}
-					applicationSnapshot_push, err = f.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, appStudioE2EApplicationsNamespace)
+					applicationSnapshot_push, err = f.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, "", appStudioE2EApplicationsNamespace, "")
 					return false
 				}, timeout, interval).Should(BeTrue(), "time out when waiting for release created")
 			})

@@ -185,17 +185,17 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 	return secretName
 }
 
-// Remove all tokens from a given repository. Usefull when create a lot of resources and want to remove all of them
+// Remove all tokens from a given repository. Useful when creating a lot of resources and wanting to remove all of them
 func (h *SuiteController) DeleteAllBindingTokensInASpecificNamespace(namespace string) error {
 	return h.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.SPIAccessTokenBinding{}, client.InNamespace(namespace))
 }
 
-// Remove all tokens from a given repository. Usefull when create a lot of resources and want to remove all of them
+// Remove all tokens from a given repository. Useful when creating a lot of resources and wanting to remove all of them
 func (h *SuiteController) DeleteAllAccessTokenDataInASpecificNamespace(namespace string) error {
 	return h.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.SPIAccessTokenDataUpdate{}, client.InNamespace(namespace))
 }
 
-// Remove all tokens from a given repository. Usefull when create a lot of resources and want to remove all of them
+// Remove all tokens from a given repository. Useful when creating a lot of resources and wanting to remove all of them
 func (h *SuiteController) DeleteAllAccessTokensInASpecificNamespace(namespace string) error {
 	return h.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.SPIAccessToken{}, client.InNamespace(namespace))
 }

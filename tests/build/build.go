@@ -423,7 +423,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Expect(err).ToNot(HaveOccurred())
 					DeferCleanup(f.CommonController.DeleteConfigMap, constants.BuildPipelinesConfigMapName, testNamespace, false)
 				} else {
-					Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, testNamespace, err))
+					Fail(fmt.Sprintf("error occurred when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, testNamespace, err))
 				}
 			} else {
 				bundlePullSpec := customBundleConfigMap.Data["default_build_bundle"]
@@ -501,7 +501,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				if errors.IsNotFound(err) {
 					klog.Infof("configmap with custom pipeline bundle not found in %s namespace\n", testNamespace)
 				} else {
-					Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, testNamespace, err))
+					Fail(fmt.Sprintf("error occurred when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, testNamespace, err))
 				}
 			} else {
 				customBundleRef = customBundleConfigMap.Data["default_build_bundle"]
@@ -523,7 +523,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				if errors.IsForbidden(err) {
 					klog.Infof("don't have enough permissions to get a configmap with default pipeline in %s namespace\n", constants.BuildPipelinesConfigMapDefaultNamespace)
 				} else {
-					Fail(fmt.Sprintf("error occured when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace, err))
+					Fail(fmt.Sprintf("error occurred when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace, err))
 				}
 			} else {
 				defaultBundleRef = defaultBundleConfigMap.Data["default_build_bundle"]
