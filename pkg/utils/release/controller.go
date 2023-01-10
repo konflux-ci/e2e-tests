@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
@@ -242,4 +243,58 @@ func (h *SuiteController) DeleteAllSnapshotsInASpecificNamespace(namespace strin
 		}
 		return len(snapshotList.Items) == 0, nil
 	}, timeout)
+}
+
+// CreateComponentWithDockerSource create an has component from a given name, namespace, application, devfile and a container image
+func (h *SuiteController) CreateComponentWithDockerSource(applicationName, componentName, namespace, gitSourceURL, containerImageSource, outputContainerImage, secret string) (*appstudioApi.Component, error) {
+	component := &appstudioApi.Component{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      componentName,
+			Namespace: namespace,
+		},
+		Spec: appstudioApi.ComponentSpec{
+			ComponentName: componentName,
+			Application:   applicationName,
+			Source: appstudioApi.ComponentSource{
+				ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
+					GitSource: &appstudioApi.GitSource{
+						URL:           gitSourceURL,
+						DockerfileURL: containerImageSource,
+					},
+				},
+			},
+			Secret:         secret,
+			ContainerImage: outputContainerImage,
+			Replicas:       1,
+			TargetPort:     8081,
+			Route:          "",
+		},
+	}
+	err := h.KubeRest().Create(context.TODO(), component)
+	if err != nil {
+		return nil, err
+	}
+	return component, nil
+}
+
+func (k *SuiteController) CreatePolicyConfiguration(name, namespace, enterpriseContractPolicyUrl string) (*ecp.EnterpriseContractPolicy, error) {
+	policy_test := &ecp.EnterpriseContractPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: ecp.EnterpriseContractPolicySpec{
+			Sources: []string{
+				enterpriseContractPolicyUrl,
+			},
+			Exceptions: &ecp.EnterpriseContractPolicyExceptions{
+				NonBlocking: []string{"not_useful", "test:conftest-clair"},
+			},
+		},
+	}
+	err := k.K8sClient.KubeRest().Create(context.TODO(), policy_test)
+	if err != nil {
+		return nil, err
+	}
+	return policy_test, nil
 }

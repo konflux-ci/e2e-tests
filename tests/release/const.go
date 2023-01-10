@@ -6,7 +6,6 @@ import (
 
 const (
 	snapshotName                        = "snapshot"
-	sourceReleasePlanName               = "source-release-plan"
 	destinationReleasePlanAdmissionName = "sre-production"
 	releaseStrategyName                 = "strategy"
 	releaseName                         = "release"
@@ -18,6 +17,24 @@ const (
 	environment                         = "test-environment"
 	releaseStrategyServiceAccount       = "pipeline"
 
+	sourceReleaseLinkName                = "source-release-link"
+	targetReleaseLinkName                = "target-release-link"
+	releasePipelineNameDefault           = "m6-release-pipeline"
+	applicationNameDefault               = "appstudio"
+	componentName                        = "java-springboot"
+	releasePipelineBundleDefault         = "quay.io/hacbs-release/m6-release-pipeline:main"
+	releaseStrategyPolicyDefault         = "m7-policy"
+	releaseStrategyServiceAccountDefault = "service-account"
+	sourceReleasePlanName                = "source-releaseplan"
+	targetReleasePlanAdmissionName       = "target-releaseplanadmission"
+	releasePvcName                       = "release-pvc"
+	releaseEnvironment                   = "sre-production"
+	redhatAppstudioUserSecret            = "redhat-appstudio-user-workload"
+	hacbsReleaseTestsTokenSecret         = "hacbs-release-tests-token"
+	publicSecretNameAuth                 = "cosign-public-key"
+	gitSourceComponentUrl                = "https://github.com/scoheb/devfile-sample-java-springboot-basic"
+	sourceKeyName                        = "release-e2e+release_e2e"
+	destinationKeyName                   = "hacbs-release-tests+m5_robot_account"
 
 	namespaceCreationTimeout              = 1 * time.Minute
 	namespaceDeletionTimeout              = 1 * time.Minute
@@ -32,5 +49,6 @@ const (
 	avgControllerQueryTimeout             = 1 * time.Minute
 	pipelineServiceAccountCreationTimeout = 3 * time.Minute
 
-	defaultInterval = 100 * time.Millisecond
+	avgPipelineCompletionTime = 2 * time.Minute
+	defaultInterval           = 100 * time.Millisecond
 )

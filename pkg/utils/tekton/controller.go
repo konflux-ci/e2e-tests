@@ -392,7 +392,7 @@ func findCosignResultsForImage(imageRef string, client crclient.Client) (*Cosign
 	imageNameInfo := strings.Split(imageInfo[2], "@")
 	imageStreamName, imageDigest := imageNameInfo[0], imageNameInfo[1]
 
-	// Cosign creates tags for attestation and signature based on the image digest. Compute
+	//  creates tags for attestation and signature based on the image digest. Compute
 	// the expected prefix for later usage: sha256:abcd... -> sha256-abcd...
 	// Also, this prefix is really the prefix of the ImageStreamTag resource which follows the
 	// format: <image stream name>:<tag-name>

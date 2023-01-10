@@ -27,6 +27,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -517,4 +518,100 @@ func (s *SuiteController) ApplicationGitopsRepoExists(devfileContent string) wai
 		gitOpsRepoURL := utils.ObtainGitOpsRepositoryName(devfileContent)
 		return s.Github.CheckIfRepositoryExist(gitOpsRepoURL), nil
 	}
+}
+
+//CreateServiceAccount create ServiceAccount
+func (s *SuiteController) CreateServiceAccount(name, namespace string, serviceAccountSecretList []corev1.ObjectReference) (*corev1.ServiceAccount, error) {
+	serviceAccount := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Secrets: serviceAccountSecretList,
+	}
+	return s.KubeInterface().CoreV1().ServiceAccounts(namespace).Create(context.TODO(), serviceAccount, metav1.CreateOptions{})
+}
+
+func (s *SuiteController) CreatePVC(name, namespace string, volumeAccessMode corev1.PersistentVolumeAccessMode) error {
+	return s.CreatePVCWithSize(name, namespace, "1Gi", volumeAccessMode)
+}
+
+func (s *SuiteController) CreatePVCWithSize(name, namespace, volumeSize string, volumeAccessMode corev1.PersistentVolumeAccessMode) error {
+	pvc := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{
+				volumeAccessMode,
+			},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: resource.MustParse(volumeSize),
+				},
+			},
+		},
+	}
+
+	_, err := s.KubeInterface().CoreV1().PersistentVolumeClaims(namespace).Create(context.TODO(), pvc, metav1.CreateOptions{})
+	if err != nil {
+		return nil
+	}
+	return err
+}
+
+func (s *SuiteController) CreateRole(roleName, namespace string, roleRules map[string][]string) (*rbacv1.Role, error) {
+
+	rules := &rbacv1.PolicyRule{
+		APIGroups: roleRules["apiGroupsList"],
+		Resources: roleRules["roleResources"],
+		Verbs:     roleRules["roleVerbs"],
+	}
+	role := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      roleName,
+			Namespace: namespace,
+		},
+		Rules: []rbacv1.PolicyRule{
+			*rules,
+		},
+	}
+	createdRole, err := s.KubeInterface().RbacV1().Roles(namespace).Create(context.TODO(), role, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return createdRole, nil
+}
+
+func (s *SuiteController) CreateRoleBinding(roleBindingName, namespace string, subjectKind string, serviceAccountName string, roleRefKind string, roleRefName, roleRefApiGroup string) (*rbacv1.RoleBinding, error) {
+
+	roleBindingSubjects := []rbacv1.Subject{
+		{
+			Kind:      subjectKind,
+			Name:      serviceAccountName,
+			Namespace: namespace,
+		},
+	}
+
+	roleBindingRoleRef := rbacv1.RoleRef{
+		Kind:     roleRefKind,
+		Name:     roleRefName,
+		APIGroup: roleRefApiGroup,
+	}
+
+	roleBinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      roleBindingName,
+			Namespace: namespace,
+		},
+		Subjects: roleBindingSubjects,
+		RoleRef:  roleBindingRoleRef,
+	}
+
+	createdRoleBinding, err := s.KubeInterface().RbacV1().RoleBindings(namespace).Create(context.TODO(), roleBinding, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return createdRoleBinding, nil
 }
