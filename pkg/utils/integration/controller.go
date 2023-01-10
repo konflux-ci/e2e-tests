@@ -54,7 +54,7 @@ func (h *SuiteController) MarkHACBSTestsSucceeded(snapshot *appstudioApi.Snapsho
 
 // getApplicationSnapshot returns the all ApplicationSnapshots in the Application's namespace nil if it's not found.
 // In the case the List operation fails, an error will be returned.
-func (h *SuiteController) GetApplicationSnapshot(snapshotName, namespace string) (*appstudioApi.Snapshot, error) {
+func (h *SuiteController) GetApplicationSnapshot(snapshotName, applicationName, namespace, componentName string) (*appstudioApi.Snapshot, error) {
 	applicationSnapshots := &appstudioApi.SnapshotList{}
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
@@ -64,7 +64,8 @@ func (h *SuiteController) GetApplicationSnapshot(snapshotName, namespace string)
 		return nil, err
 	}
 	for _, applicationSnapshot := range applicationSnapshots.Items {
-		if snapshotName == "" {
+		if applicationSnapshot.Spec.Application == applicationName &&
+			applicationSnapshot.Labels["test.appstudio.openshift.io/component"] == componentName {
 			return &applicationSnapshot, nil
 		}
 		if applicationSnapshot.Name == snapshotName {

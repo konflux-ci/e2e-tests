@@ -117,7 +117,7 @@ func GetOpenshiftToken() (token string, err error) {
 	// Get the token for the current openshift user
 	tokenBytes, err := exec.Command("oc", "whoami", "--show-token").Output()
 	if err != nil {
-		return "", fmt.Errorf("Error obtainig oc token %s", err.Error())
+		return "", fmt.Errorf("Error obtaining oc token %s", err.Error())
 	}
 	return strings.TrimSuffix(string(tokenBytes), "\n"), nil
 }
