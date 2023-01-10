@@ -18,17 +18,18 @@ const (
 	environment                         = "test-environment"
 	releaseStrategyServiceAccount       = "pipeline"
 
-	namespaceCreationTimeout              = 60 * time.Second
-	namespaceDeletionTimeout              = 60 * time.Second
-	snapshotCreationTimeout               = 60 * time.Second
-	releaseStrategyCreationTimeout        = 60 * time.Second
-	releasePlanCreationTimeout            = 60 * time.Second
-	EnterpriseContractPolicyTimeout       = 60 * time.Second
-	releasePlanAdmissionCreationTimeout   = 60 * time.Second
-	releaseCreationTimeout                = 60 * time.Second
+
+	namespaceCreationTimeout              = 1 * time.Minute
+	namespaceDeletionTimeout              = 1 * time.Minute
+	snapshotCreationTimeout               = 1 * time.Minute
+	releaseStrategyCreationTimeout        = 1 * time.Minute
+	releasePlanCreationTimeout            = 1 * time.Minute
+	EnterpriseContractPolicyTimeout       = 1 * time.Minute
+	releasePlanAdmissionCreationTimeout   = 1 * time.Minute
+	releaseCreationTimeout                = 1 * time.Minute
 	releasePipelineRunCreationTimeout     = 5 * time.Minute
 	releasePipelineRunCompletionTimeout   = 10 * time.Minute
-	avgControllerQueryTimeout             = 10 * time.Second
+	avgControllerQueryTimeout             = 1 * time.Minute
 	pipelineServiceAccountCreationTimeout = 3 * time.Minute
 
 	defaultInterval = 100 * time.Millisecond
