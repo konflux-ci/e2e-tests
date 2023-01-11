@@ -65,7 +65,7 @@ func (h *SuiteController) GetApplicationSnapshot(snapshotName, applicationName, 
 	}
 	for _, applicationSnapshot := range applicationSnapshots.Items {
 		if applicationSnapshot.Spec.Application == applicationName &&
-			applicationSnapshot.Labels["test.appstudio.openshift.io/component"] == componentName {
+			applicationSnapshot.Labels["appstudio.openshift.io/component"] == componentName {
 			return &applicationSnapshot, nil
 		}
 		if applicationSnapshot.Name == snapshotName {
@@ -165,7 +165,7 @@ func (h *SuiteController) CreateApplicationSnapshot(applicationName, namespace, 
 			Namespace: namespace,
 			Labels: map[string]string{
 				"test.appstudio.openshift.io/type":           "component",
-				"test.appstudio.openshift.io/component":      componentName,
+				"appstudio.openshift.io/component":           componentName,
 				"pac.test.appstudio.openshift.io/event-type": "push",
 			},
 		},
@@ -229,11 +229,11 @@ func (h *SuiteController) CreateIntegrationPipelineRun(applicationSnapshotName, 
 			GenerateName: "component-pipelinerun" + "-",
 			Namespace:    namespace,
 			Labels: map[string]string{
-				"pipelinesascode.tekton.dev/event-type":  "push",
-				"build.appstudio.openshift.io/component": componentName,
-				"pipelines.appstudio.openshift.io/type":  "test",
-				"test.appstudio.openshift.io/snapshot":   applicationSnapshotName,
-				"test.appstudio.openshift.io/scenario":   "example-pass",
+				"pipelinesascode.tekton.dev/event-type": "push",
+				"appstudio.openshift.io/component":      componentName,
+				"pipelines.appstudio.openshift.io/type": "test",
+				"appstudio.openshift.io/snapshot":       applicationSnapshotName,
+				"test.appstudio.openshift.io/scenario":  "example-pass",
 			},
 		},
 		Spec: tektonv1beta1.PipelineRunSpec{

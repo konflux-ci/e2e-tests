@@ -210,6 +210,31 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					Expect(err).NotTo(HaveOccurred())
 				})
 
+				// Obtain a snapshot for the SnapshotEnvironmentBinding
+				if componentTest.ContainerSource != "" {
+					It("create snapshot for component imported from quay.io/docker.io source", func() {
+						snapshotName := SnapshotName + "-" + util.GenerateRandomString(4)
+						snapshotComponents := []appservice.SnapshotComponent{
+							{Name: component.Name, ContainerImage: component.Spec.ContainerImage},
+						}
+						snapshot, err = fw.AsKubeDeveloper.ReleaseController.CreateSnapshot(snapshotName, namespace, application.Name, snapshotComponents)
+						Expect(err).NotTo(HaveOccurred())
+					})
+				} else {
+					It("check if the component's snapshot is created when the pipelinerun is targeted", func() {
+						// snapshotName is sent as empty since it is unknown at this stage
+						snapshot, err = fw.AsKubeDeveloper.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, component.Name)
+						Expect(err).ShouldNot(HaveOccurred())
+					})
+				}
+
+				// Create snapshotEnvironmentBinding to cause an application (and its components) to be deployed
+				It("snapshotEnvironmentBinding is created", func() {
+					snapshotEnvBindingName := SnapshotEnvironmentBindingName + "-" + util.GenerateRandomString(4)
+					_, err = fw.AsKubeDeveloper.HasController.CreateSnapshotEnvironmentBinding(snapshotEnvBindingName, namespace, application.Name, snapshot.Name, EnvironmentName, component)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
 				// Deploy the component using gitops and check for the health
 				It(fmt.Sprintf("deploy component %s using gitops", componentTest.Name), func() {
 

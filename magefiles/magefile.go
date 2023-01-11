@@ -17,6 +17,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-e2e/testsupport/md5"
 	gh "github.com/google/go-github/v44/github"
 	"github.com/magefile/mage/sh"
+	"github.com/redhat-appstudio/e2e-tests/magefiles/installation"
 	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
 	client "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -186,9 +187,6 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when setting up required env vars: %v", err)
 	}
 
-	if err := retry(ci.createOpenshiftUser, 3, 10*time.Second); err != nil {
-		return fmt.Errorf("error when creating openshift user: %v", err)
-	}
 	if err := retry(BootstrapCluster, 2, 10*time.Second); err != nil {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
 	}
@@ -286,17 +284,6 @@ func (CI) setRequiredEnvVars() error {
 	return nil
 }
 
-func (CI) createOpenshiftUser() error {
-	tempKubeconfigPath := "/tmp/kubeconfig"
-	os.Setenv("KUBECONFIG_TEST", tempKubeconfigPath)
-	if err := sh.Run("./scripts/provision-openshift-user.sh"); err != nil {
-		return err
-	}
-	os.Setenv("KUBECONFIG", tempKubeconfigPath)
-
-	return nil
-}
-
 func BootstrapCluster() error {
 	envVars := map[string]string{}
 
@@ -306,7 +293,12 @@ func BootstrapCluster() error {
 		envVars["E2E_TESTS_COMMIT_SHA"] = os.Getenv("PULL_PULL_SHA")
 	}
 
-	return sh.RunWith(envVars, "./scripts/install-appstudio.sh")
+	ic, err := installation.NewAppStudioInstallController()
+	if err != nil {
+		return fmt.Errorf("failed to initialize installation controller: %+v", err)
+	}
+
+	return ic.InstallAppStudioPreviewMode()
 }
 
 func (CI) isPRPairingRequired() bool {

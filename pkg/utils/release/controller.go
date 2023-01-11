@@ -125,6 +125,7 @@ func (s *SuiteController) GetReleasePlanAdmission(name, namespace string) (*apps
 
 // DeleteReleasePlanAdmission deletes the ReleasePlanAdmission resource with the given name from the given namespace.
 // Optionally, it can avoid returning an error if the resource did not exist:
+// specify 'false', if it's likely the ReleasePlanAdmission has already been deleted (for example, because the Namespace was deleted)
 func (s *SuiteController) DeleteReleasePlanAdmission(name, namespace string, failOnNotFound bool) error {
 	releasePlanAdmission := appstudiov1alpha1.ReleasePlanAdmission{
 		ObjectMeta: metav1.ObjectMeta{
