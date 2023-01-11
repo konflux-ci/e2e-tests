@@ -261,6 +261,9 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 	// The Component from the CDQ is only a template, and needs things like name filled in
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"skip-initial-checks": "true",
+			},
 			Name:      componentName,
 			Namespace: namespace,
 		},
