@@ -33,7 +33,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 	//cdq := &appservice.ComponentDetectionQuery{}
 	//compDetected := appservice.ComponentDetectionDescription{}
 	// Initialize the tests controllers
-	framework, err := framework.NewFrameworkv2()
+	framework, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
 
 	BeforeAll(func() {
@@ -44,26 +44,26 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 		Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
 		// Check if 'has-github-token' is present, unless SKIP_HAS_SECRET_CHECK env var is set
 		if !utils.CheckIfEnvironmentExists(constants.SKIP_HAS_SECRET_CHECK_ENV) {
-			_, err := framework.AsAdmin.HasController.KubeInterface().CoreV1().Secrets(RedHatAppStudioApplicationNamespace).Get(context.TODO(), ApplicationServiceGHTokenSecrName, metav1.GetOptions{})
+			_, err := framework.AsKubeAdmin.HasController.KubeInterface().CoreV1().Secrets(RedHatAppStudioApplicationNamespace).Get(context.TODO(), ApplicationServiceGHTokenSecrName, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
 		}
 
 	})
 
 	/*AfterAll(func() {
-		err = framework.AsAdmin.HasController.DeleteHasComponentDetectionQuery(componentName, testNamespace)
+		err = framework.AsKubeAdmin.HasController.DeleteHasComponentDetectionQuery(componentName, testNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
 			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return framework.AsUser.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			return framework.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
 	})*/
 
 	It("Create Red Hat AppStudio Application", func() {
-		createdApplication, err := framework.AsUser.HasController.CreateHasApplication(applicationName, testNamespace)
+		createdApplication, err := framework.AsKubeDeveloper.HasController.CreateHasApplication(applicationName, testNamespace)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createdApplication.Spec.DisplayName).To(Equal(applicationName))
 		Expect(createdApplication.Namespace).To(Equal(testNamespace))
@@ -91,7 +91,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 			Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
 		}
 
-		_, err := framework.CommonController.CreateTestNamespace(testNamespace)
+		_, err := framework.AsKubeAdmin.CommonController.CreateTestNamespace(testNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
 
 	})
@@ -105,7 +105,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 			// application info should be stored even after deleting the application in application variable
 			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			return framework.AsKubeAdmin.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
 	})
 
@@ -128,14 +128,14 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 			// application info should be stored even after deleting the application in application variable
 			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			return framework.AsKubeAdmin.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 	})
 
 	// Necessary for component pipeline
 	It("Check if 'git-clone' cluster tasks exists", func() {
 		Eventually(func() bool {
-			return framework.CommonController.CheckIfClusterTaskExists("git-clone")
+			return framework.AsKubeAdmin.CommonController.CheckIfClusterTaskExists("git-clone")
 		}, 5*time.Minute, 45*time.Second).Should(BeTrue(), "'git-clone' cluster task don't exist in cluster. Component cannot be created")
 	})
 
@@ -188,7 +188,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 			// application info should be stored even after deleting the application in application variable
 			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			return framework.AsKubeAdmin.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "Gitops repository deleted after component was deleted")
 	})
 

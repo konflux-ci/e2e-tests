@@ -50,7 +50,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 		applicationName = fmt.Sprintf(RedHatAppStudioApplicationName+"-%s", util.GenerateRandomString(10))
 		componentName = fmt.Sprintf(QuarkusComponentName+"-%s", util.GenerateRandomString(10))
 
-		_, err = framework.CommonController.CreateTestNamespace(testNamespace)
+		_, err = framework.AsKubeAdmin.CommonController.CreateTestNamespace(testNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
 
 		credentials := `{"access_token":"` + utils.GetEnv(constants.GITHUB_TOKEN_ENV, "") + `"}`
@@ -80,10 +80,10 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 			// application info should be stored even after deleting the application in application variable
 			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			return framework.AsKubeAdmin.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
 
-		Expect(framework.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
+		Expect(framework.AsKubeAdmin.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
 	})
 
 	It("Create Red Hat AppStudio Application", func() {
@@ -105,14 +105,14 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 			// application info should be stored even after deleting the application in application variable
 			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			return framework.AsKubeAdmin.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 	})
 
 	// Necessary for component pipeline
 	It("Check if 'git-clone' cluster tasks exists", func() {
 		Eventually(func() bool {
-			return framework.CommonController.CheckIfClusterTaskExists("git-clone")
+			return framework.AsKubeAdmin.CommonController.CheckIfClusterTaskExists("git-clone")
 		}, 5*time.Minute, 45*time.Second).Should(BeTrue(), "'git-clone' cluster task don't exist in cluster. Component cannot be created")
 	})
 

@@ -14,8 +14,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
-// Framework struct to store all controllers
-type Framework struct {
+type ControllerHub struct {
 	HasController             *has.SuiteController
 	CommonController          *common.SuiteController
 	TektonController          *tekton.SuiteController
@@ -26,70 +25,81 @@ type Framework struct {
 	JvmbuildserviceController *jvmbuildservice.SuiteController
 }
 
-// Initialize all test controllers and return them in a Framework
-func NewFramework() (*Framework, error) {
+type Framework struct {
+	AsKubeAdmin     *ControllerHub
+	AsKubeDeveloper *ControllerHub
+}
 
+func NewFramework() (*Framework, error) {
 	// Initialize a common kubernetes client to be passed to the test controllers
-	_, err := kubeCl.NewK8SClient()
+	k, err := kubeCl.NewKubernetesClient()
 	if err != nil {
-		return nil, fmt.Errorf("error creating client-go %v", err)
+		return nil, fmt.Errorf("error when initializing kubernetes clients: %+v", err)
 	}
 
+	asAdmin, _ := initControllerHub(k.AsAppStudioAdmin)
+	asUser, _ := initControllerHub(k.AsAppStudioUser)
+	//asUser, _ := initControllerHub((*kubeCl.K8sClient)(k.AsAppStudioUser))
+	return &Framework{
+		AsKubeAdmin:     asAdmin,
+		AsKubeDeveloper: asUser,
+	}, nil
+}
+
+func initControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 	// Initialize Common controller
-	/*commonCtrl, err := common.NewSuiteController(kubeClient)
+	commonCtrl, err := common.NewSuiteController(cc)
 	if err != nil {
 		return nil, err
-	}*/
+	}
 
 	// Initialize Has controller
-	//hasController, err := has.NewSuiteController(kubeClient)
-	//if err != nil {
-	//	return nil, err
-	//}
+	hasController, err := has.NewSuiteController(cc)
+	if err != nil {
+		return nil, err
+	}
+
+	spiController, err := spi.NewSuiteController(cc)
+	if err != nil {
+		return nil, err
+	}
 
 	// Initialize Tekton controller
-	/*tektonController, err := tekton.NewSuiteController(kubeClient)
+	tektonController, err := tekton.NewSuiteController(cc)
 	if err != nil {
 		return nil, err
 	}
 
+	// TODO: Once all controllers are working on KCP activate all the clients.
 	// Initialize GitOps controller
-	gitopsController, err := gitops.NewSuiteController(kubeClient)
+	gitopsController, err := gitops.NewSuiteController(cc)
 	if err != nil {
 		return nil, err
 	}
-
-	// Initialize SPI controller
-	/*spiController, err := spi.NewSuiteController(kubeClient)
-	if err != nil {
-		return nil, err
-	}*/
 
 	// Initialize Release Controller
-	/*	releaseController, err := release.NewSuiteController(kubeClient)
-		if err != nil {
-			return nil, err
-		}
+	releaseController, err := release.NewSuiteController(cc)
+	if err != nil {
+		return nil, err
+	}
+	// Initialize Integration Controller
+	integrationController, err := integration.NewSuiteController(cc)
+	if err != nil {
+		return nil, err
+	}
+	jvmbuildserviceController, err := jvmbuildservice.NewSuiteControler(cc)
+	if err != nil {
+		return nil, err
+	}
 
-		// Initialize Integration Controller
-		integrationController, err := integration.NewSuiteController(kubeClient)
-		if err != nil {
-			return nil, err
-		}
-
-		jvmbuildserviceController, err := jvmbuildservice.NewSuiteControler(kubeClient)
-		if err != nil {
-			return nil, err
-		}
-	*/
-	return &Framework{
-		//CommonController: commonCtrl,
-		//HasController:             hasController,
-		//TektonController: tektonController,
-		//GitOpsController: gitopsController,
-		//SPIController:             spiController,
-		//ReleaseController:         releaseController,
-		//IntegrationController:     integrationController,
-		//JvmbuildserviceController: jvmbuildserviceController,
+	return &ControllerHub{
+		HasController:             hasController,
+		CommonController:          commonCtrl,
+		SPIController:             spiController,
+		TektonController:          tektonController,
+		GitOpsController:          gitopsController,
+		ReleaseController:         releaseController,
+		IntegrationController:     integrationController,
+		JvmbuildserviceController: jvmbuildserviceController,
 	}, nil
 }
