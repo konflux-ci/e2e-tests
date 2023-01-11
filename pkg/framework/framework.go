@@ -37,8 +37,8 @@ func NewFramework() (*Framework, error) {
 		return nil, fmt.Errorf("error when initializing kubernetes clients: %+v", err)
 	}
 
-	asAdmin, _ := initControllerHub(k.AsAppStudioAdmin)
-	asUser, _ := initControllerHub(k.AsAppStudioUser)
+	asAdmin, _ := initControllerHub(k.AsKubeAdmin)
+	asUser, _ := initControllerHub(k.AsKubeAdmin)
 	//asUser, _ := initControllerHub((*kubeCl.K8sClient)(k.AsAppStudioUser))
 	return &Framework{
 		AsKubeAdmin:     asAdmin,

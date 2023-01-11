@@ -41,7 +41,7 @@ func (i *InstallAppStudio) CreateOauth() error {
 		return fmt.Errorf("error generating openshift password: %v", err)
 	}
 
-	if secret, err := i.KubernetesClient.KubeInterface().CoreV1().Secrets(DEFAULT_OPENSHIFT_CONFIG_NAMESPACE).Create(context.Background(), &corev1.Secret{
+	if secret, err := i.KubernetesClient.AsKubeAdmin.KubeInterface().CoreV1().Secrets(DEFAULT_OPENSHIFT_CONFIG_NAMESPACE).Create(context.Background(), &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      DEFAULT_IDP_SECRET_NAME,
 			Namespace: DEFAULT_OPENSHIFT_CONFIG_NAMESPACE,
@@ -69,7 +69,7 @@ func (i *InstallAppStudio) updateOauthCluster() error {
 	}
 
 	oauth := &ocpOauth.OAuth{}
-	if err := i.KubernetesClient.KubeRest().Get(context.TODO(), namespacedName, oauth); err != nil {
+	if err := i.KubernetesClient.AsKubeAdmin.KubeRest().Get(context.TODO(), namespacedName, oauth); err != nil {
 		return err
 	}
 
@@ -100,7 +100,7 @@ func (i *InstallAppStudio) updateOauthCluster() error {
 	}
 	updateObj.SetResourceVersion(oauth.GetResourceVersion())
 
-	return i.KubernetesClient.KubeRest().Update(context.Background(), updateObj)
+	return i.KubernetesClient.AsKubeAdmin.KubeRest().Update(context.Background(), updateObj)
 }
 
 // loginAsNewUser add cluster-admin role to a random user and then generate a new kubeconfig and login to the cluster. This func will be executed with an openshift admin user. In openshift CI

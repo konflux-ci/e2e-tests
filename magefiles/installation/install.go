@@ -36,7 +36,7 @@ var (
 
 type InstallAppStudio struct {
 	// Kubernetes Client to interact with Openshift Cluster
-	KubernetesClient *kubeCl.K8sClient
+	KubernetesClient *kubeCl.K8SClient
 
 	// TmpDirectory to store temporary files like git repos or some metadata
 	TmpDirectory string
@@ -71,7 +71,7 @@ type InstallAppStudio struct {
 
 func NewAppStudioInstallController() (*InstallAppStudio, error) {
 	cwd, _ := os.Getwd()
-	k8sClient, err := kubeCl.NewK8SClient()
+	k8sClient, err := kubeCl.NewKubernetesClient()
 
 	if err != nil {
 		return nil, err
@@ -154,11 +154,11 @@ func (i *InstallAppStudio) createSharedSecret() error {
 		return fmt.Errorf("failed to decode quay token. Make sure that QUAY_TOKEN env contain a base64 token")
 	}
 
-	sharedSecret, err := i.KubernetesClient.KubeInterface().CoreV1().Secrets(i.SharedSecretNamespace).Get(context.Background(), DEFAULT_SHARED_SECRET_NAME, metav1.GetOptions{})
+	sharedSecret, err := i.KubernetesClient.AsKubeAdmin.KubeInterface().CoreV1().Secrets(i.SharedSecretNamespace).Get(context.Background(), DEFAULT_SHARED_SECRET_NAME, metav1.GetOptions{})
 
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
-			_, err := i.KubernetesClient.KubeInterface().CoreV1().Secrets(i.SharedSecretNamespace).Create(context.Background(), &corev1.Secret{
+			_, err := i.KubernetesClient.AsKubeAdmin.KubeInterface().CoreV1().Secrets(i.SharedSecretNamespace).Create(context.Background(), &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      DEFAULT_SHARED_SECRET_NAME,
 					Namespace: DEFAULT_SHARED_SECRETS_NAMESPACE,
@@ -176,7 +176,7 @@ func (i *InstallAppStudio) createSharedSecret() error {
 			sharedSecret.Data = map[string][]byte{
 				corev1.DockerConfigJsonKey: decodedToken,
 			}
-			_, err = i.KubernetesClient.KubeInterface().CoreV1().Secrets(i.SharedSecretNamespace).Update(context.TODO(), sharedSecret, metav1.UpdateOptions{})
+			_, err = i.KubernetesClient.AsKubeAdmin.KubeInterface().CoreV1().Secrets(i.SharedSecretNamespace).Update(context.TODO(), sharedSecret, metav1.UpdateOptions{})
 			if err != nil {
 				return fmt.Errorf("error when updating secret '%s' namespace: %v", DEFAULT_SHARED_SECRET_NAME, err)
 			}

@@ -483,7 +483,7 @@ func (Local) GenerateTestSpecFile() error {
 
 // Creates preapproved userSignup CR cluster and waits for its reconcilliation
 func RegisterUser() error {
-	kubeClient, err := client.NewK8SClient()
+	kubeClient, err := client.NewKubernetesClient()
 	if err != nil {
 		return err
 	}
@@ -505,11 +505,11 @@ func RegisterUser() error {
 		},
 	}
 	fmt.Printf("Creating: %+v\n", userSignup)
-	if err := kubeClient.KubeRest().Create(context.TODO(), userSignup); err != nil {
+	if err := kubeClient.AsKubeAdmin.KubeRest().Create(context.TODO(), userSignup); err != nil {
 		return err
 	}
 	err = utils.WaitUntil(func() (done bool, err error) {
-		err = kubeClient.KubeRest().Get(context.TODO(), types.NamespacedName{
+		err = kubeClient.AsKubeAdmin.KubeRest().Get(context.TODO(), types.NamespacedName{
 			Namespace: "toolchain-host-operator",
 			Name:      "user1",
 		}, userSignup)

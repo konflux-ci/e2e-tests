@@ -158,12 +158,12 @@ func renderTemplate(destination, templatePath string, templateData interface{}, 
 }
 
 func getRouteHost(name, namespace string) (string, error) {
-	kubeClient, err := client.NewK8SClient()
+	kubeClient, err := client.NewKubernetesClient()
 	if err != nil {
 		return "", err
 	}
 	route := &routev1.Route{}
-	err = kubeClient.KubeRest().Get(context.TODO(), types.NamespacedName{
+	err = kubeClient.AsKubeAdmin.KubeRest().Get(context.TODO(), types.NamespacedName{
 		Namespace: namespace,
 		Name:      name,
 	}, route)
