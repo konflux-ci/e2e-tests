@@ -30,8 +30,6 @@ const (
 	avgControllerQueryTimeout             = 5 * time.Second
 	pipelineServiceAccountCreationTimeout = 5 * time.Minute
 
-	defaultInterval = 100 * time.Millisecond
-
 	sourceReleaseLinkName                string = "source-release-link"
 	targetReleaseLinkName                string = "target-release-link"
 	releasePipelineNameDefault           string = "bundle-release-pipelinerun"
@@ -61,6 +59,7 @@ const (
 	roleRefName                          string = "role-m6-service-account"
 	roleRefKind                          string = "Role"
 	displayEnvironment                   string = "demo production"
-	avgPipelineCompletionTime                   = 2 * time.Minute
-	// defaultInterval           = 100 * time.Millisecond
+
+	avgPipelineCompletionTime = 2 * time.Minute
+	defaultInterval           = 100 * time.Millisecond
 )
