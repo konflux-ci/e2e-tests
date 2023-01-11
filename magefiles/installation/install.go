@@ -133,9 +133,12 @@ func (i *InstallAppStudio) cloneInfraDeployments() (*git.Remote, error) {
 		}
 	}
 
+	url := fmt.Sprintf("https://github.com/%s/infra-deployments", i.InfraDeploymentsOrganizationName)
+	refName := fmt.Sprintf("refs/heads/%s", i.InfraDeploymentsBranch)
+	klog.Infof("cloning '%s' with git ref '%s'", url, refName)
 	repo, _ := git.PlainClone(i.InfraDeploymentsCloneDir, false, &git.CloneOptions{
-		URL:           fmt.Sprintf("https://github.com/%s/infra-deployments", i.InfraDeploymentsOrganizationName),
-		ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", i.InfraDeploymentsBranch)),
+		URL:           url,
+		ReferenceName: plumbing.ReferenceName(refName),
 		Progress:      os.Stdout,
 	})
 
