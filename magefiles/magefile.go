@@ -4,9 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
-	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -546,8 +543,6 @@ func RegisterUser() error {
 // KC_PASSWORD["user1"], KC_CLIENT_ID["sandbox-public"], KEYCLOAK_URL[obtained dynamically - route `keycloak` in `dev-sso` namespace],
 // TOOLCHAIN_API_URL[obtained dynamically - route `api` in `toolchain-host-operator` namespace]
 func GenerateUserKubeconfig() error {
-	err := expandKeycloakTokenLife()
-	fmt.Println(err)
 	//setup provided/default values
 	wd, err := os.Getwd()
 	if err != nil {
@@ -592,50 +587,6 @@ func GenerateUserKubeconfig() error {
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-func expandKeycloakTokenLife() error {
-
-	client := &http.Client{}
-	username := utils.GetEnv("KC_USERNAME", "user1")
-	password := utils.GetEnv("KC_PASSWORD", "user1")
-	client_id := utils.GetEnv("KC_CLIENT_ID", "sandbox-public")
-	fmt.Println("ASDAS")
-	keycloakUrl, err := utils.GetEnvOrFunc("KEYCLOAK_URL", getKeycloakUrl)
-	if err != nil {
-		return err
-	}
-
-	// Obtain active token from keycloak for provided user
-	token, err := getKeycloakToken(keycloakUrl, username, password, client_id)
-	if err != nil {
-		return err
-	}
-	fmt.Println("Bearer " + token)
-
-	var data = strings.NewReader(`{"accessTokenLifespan":3600}`)
-	//data := url.Values{}
-	//data.Set("accessTokenLifespan", "3600")
-
-	req, err := http.NewRequest("PUT", "https://keycloak-dev-sso.apps.cluster-9vvmp.9vvmp.sandbox2545.opentlc.com/auth/admin/realms/testrealm", data)
-	if err != nil {
-		log.Fatal(err)
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	fmt.Println(resp.StatusCode)
-	defer resp.Body.Close()
-	bodyText, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%s\n", bodyText)
-
 	return nil
 }
 

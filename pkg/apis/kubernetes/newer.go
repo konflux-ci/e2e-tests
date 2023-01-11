@@ -71,6 +71,7 @@ func NewKubernetesClient() (*K8SClient, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	userClusterClient, err := createCustomClient(*userCfg)
 	if err != nil {
 		return nil, err

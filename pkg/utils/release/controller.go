@@ -2,9 +2,12 @@ package release
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/release-service/api/v1alpha1"
 	appstudiov1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -122,8 +125,6 @@ func (s *SuiteController) GetReleasePlanAdmission(name, namespace string) (*apps
 
 // DeleteReleasePlanAdmission deletes the ReleasePlanAdmission resource with the given name from the given namespace.
 // Optionally, it can avoid returning an error if the resource did not exist:
-//
-//	specify 'false', if it's likely the ReleasePlanAdmission has already been deleted (for example, because the Namespace was deleted)
 func (s *SuiteController) DeleteReleasePlanAdmission(name, namespace string, failOnNotFound bool) error {
 	releasePlanAdmission := appstudiov1alpha1.ReleasePlanAdmission{
 		ObjectMeta: metav1.ObjectMeta{
@@ -225,4 +226,19 @@ func (s *SuiteController) CreateRegistryJsonSecret(name, namespace, authKey, key
 		return nil, err
 	}
 	return secret, nil
+}
+
+// DeleteAllSnapshotsInASpecificNamespace removes all snapshots from a specific namespace. Useful when creating a lot of resources and want to remove all of them
+func (h *SuiteController) DeleteAllSnapshotsInASpecificNamespace(namespace string, timeout time.Duration) error {
+	if err := h.KubeRest().DeleteAllOf(context.TODO(), &appstudioApi.Snapshot{}, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("error deleting snapshots from the namespace %s: %+v", namespace, err)
+	}
+
+	snapshotList := &appstudioApi.SnapshotList{}
+	return utils.WaitUntil(func() (done bool, err error) {
+		if err := h.KubeRest().List(context.Background(), snapshotList, &client.ListOptions{Namespace: namespace}); err != nil {
+			return false, nil
+		}
+		return len(snapshotList.Items) == 0, nil
+	}, timeout)
 }

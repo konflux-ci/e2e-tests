@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/devfile/library/pkg/util"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -34,6 +35,15 @@ const (
 
 	// GitOps repository branch to use
 	GitOpsRepositoryRevision string = "main"
+
+	// Name for the Environment resource
+	EnvironmentName string = "environment-e2e"
+
+	// Name for the Snapshot resource
+	SnapshotName string = "snapshot-e2e"
+
+	// Name for the SnapshotEnvironmentBinding resource
+	SnapshotEnvironmentBindingName string = "snapshot-environment-binding-e2e"
 )
 
 var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
@@ -43,6 +53,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	// Initialize the application struct
 	application := &appservice.Application{}
 	component := &appservice.Component{}
+	snapshot := &appservice.Snapshot{}
 
 	// Initialize the e2e demo configuration
 	configTestFile := viper.GetString("config-suites")
@@ -75,6 +86,9 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 			AfterAll(func() {
 				Expect(fw.AsUser.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 				Expect(fw.AsUser.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+				Expect(fw.AsUser.HasController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+				Expect(fw.AsUser.ReleaseController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+				Expect(fw.AsUser.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 				Expect(fw.AsUser.GitOpsController.DeleteAllGitOpsDeploymentInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 			})
 
@@ -104,6 +118,13 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 			})
 
+			It("environment is created", func() {
+				createdEnvironment, err := fw.AsUser.GitOpsController.CreateEnvironment(EnvironmentName, namespace)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(createdEnvironment.Spec.DisplayName).To(Equal(EnvironmentName))
+				Expect(createdEnvironment.Namespace).To(Equal(namespace))
+			})
+
 			for _, componentTest := range appTest.Components {
 				var oauthSecretName = ""
 
@@ -131,7 +152,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				// Components for now can be imported from gitUrl, container image or a devfile
 				if componentTest.ContainerSource != "" {
 					It(fmt.Sprintf("create component %s from %s container source", componentTest.Name, componentTest.Type), func() {
-						_, err := fw.AsUser.HasController.CreateComponent(application.Name, componentTest.Name, namespace, "", "", componentTest.ContainerSource, outputContainerImage, oauthSecretName)
+						component, err = fw.AsUser.HasController.CreateComponent(application.Name, componentTest.Name, namespace, "", "", componentTest.ContainerSource, outputContainerImage, oauthSecretName)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -159,14 +180,38 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				// Start to watch the pipeline until is finished
 				It(fmt.Sprintf("wait %s component %s pipeline to be finished", componentTest.Type, componentTest.Name), func() {
 					if componentTest.ContainerSource != "" {
-						Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skiping pipelinerun check.", componentTest.Name))
+						Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skipping pipelinerun check.", componentTest.Name))
 					}
 					Expect(fw.AsUser.HasController.WaitForComponentPipelineToBeFinished(component.Name, application.Name, namespace)).To(Succeed(), "Failed component pipeline %v", err)
 				})
 
+				// Obtain a snapshot for the SnapshotEnvironmentBinding
+				if componentTest.ContainerSource != "" {
+					It("create snapshot for component imported from quay.io/docker.io source", func() {
+						snapshotName := SnapshotName + "-" + util.GenerateRandomString(4)
+						snapshotComponents := []appservice.SnapshotComponent{
+							{Name: component.Name, ContainerImage: component.Spec.ContainerImage},
+						}
+						snapshot, err = fw.AsUser.ReleaseController.CreateSnapshot(snapshotName, namespace, application.Name, snapshotComponents)
+						Expect(err).NotTo(HaveOccurred())
+					})
+				} else {
+					It("check if the component's snapshot is created when the pipelinerun is targeted", func() {
+						// snapshotName is sent as empty since it is unknown at this stage
+						snapshot, err = fw.AsUser.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, component.Name)
+						Expect(err).ShouldNot(HaveOccurred())
+					})
+				}
+
+				// Create snapshotEnvironmentBinding to cause an application (and its components) to be deployed
+				It("snapshotEnvironmentBinding is created", func() {
+					snapshotEnvBindingName := SnapshotEnvironmentBindingName + "-" + util.GenerateRandomString(4)
+					_, err = fw.AsUser.HasController.CreateSnapshotEnvironmentBinding(snapshotEnvBindingName, namespace, application.Name, snapshot.Name, EnvironmentName, component)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
 				// Deploy the component using gitops and check for the health
-				// TODO re-enable once the issue with GitopsDeployment creation is resolved
-				It(fmt.Sprintf("deploy component %s using gitops", componentTest.Name), Pending, func() {
+				It(fmt.Sprintf("deploy component %s using gitops", componentTest.Name), func() {
 
 					Eventually(func() bool {
 						deployment, err := fw.AsUser.CommonController.GetAppDeploymentByName(componentTest.Name, namespace)
@@ -183,7 +228,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					Expect(err).NotTo(HaveOccurred())
 				})
 
-				It(fmt.Sprintf("check component %s health", componentTest.Name), Pending, func() {
+				It(fmt.Sprintf("check component %s health", componentTest.Name), func() {
 					Eventually(func() bool {
 						gitOpsRoute, err := fw.AsUser.CommonController.GetOpenshiftRoute(componentTest.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())
