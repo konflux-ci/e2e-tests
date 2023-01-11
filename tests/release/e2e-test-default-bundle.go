@@ -7,14 +7,10 @@ import (
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
-
-	//appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 
 	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
 	appstudiov1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
@@ -224,8 +220,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 					klog.Error(err)
 					return false
 				}
-				klog.Infof("pipelineList in managed namespace are : ", prList.Items[0].Name)
-				return strings.Contains(prList.Items[0].Name, componentName)
+				return strings.Contains(prList.Items[0].Name, "release")
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 

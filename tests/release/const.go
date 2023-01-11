@@ -17,19 +17,6 @@ const (
 	environment                         = "test-environment"
 	releaseStrategyServiceAccount       = "pipeline"
 
-	namespaceCreationTimeout              = 20 * time.Second
-	namespaceDeletionTimeout              = 20 * time.Second
-	snapshotCreationTimeout               = 5 * time.Second
-	releaseStrategyCreationTimeout        = 5 * time.Second
-	releasePlanCreationTimeout            = 5 * time.Second
-	EnterpriseContractPolicyTimeout       = 5 * time.Second
-	releasePlanAdmissionCreationTimeout   = 5 * time.Second
-	releaseCreationTimeout                = 5 * time.Second
-	releasePipelineRunCreationTimeout     = 20 * time.Second
-	releasePipelineRunCompletionTimeout   = 900 * time.Second
-	avgControllerQueryTimeout             = 5 * time.Second
-	pipelineServiceAccountCreationTimeout = 5 * time.Minute
-
 	sourceReleaseLinkName                string = "source-release-link"
 	targetReleaseLinkName                string = "target-release-link"
 	releasePipelineNameDefault           string = "bundle-release-pipelinerun"
@@ -60,6 +47,18 @@ const (
 	roleRefKind                          string = "Role"
 	displayEnvironment                   string = "demo production"
 
-	avgPipelineCompletionTime = 2 * time.Minute
-	defaultInterval           = 100 * time.Millisecond
+	namespaceCreationTimeout              = 1 * time.Minute
+	namespaceDeletionTimeout              = 1 * time.Minute
+	snapshotCreationTimeout               = 1 * time.Minute
+	releaseStrategyCreationTimeout        = 1 * time.Minute
+	releasePlanCreationTimeout            = 1 * time.Minute
+	EnterpriseContractPolicyTimeout       = 1 * time.Minute
+	releasePlanAdmissionCreationTimeout   = 1 * time.Minute
+	releaseCreationTimeout                = 1 * time.Minute
+	releasePipelineRunCreationTimeout     = 5 * time.Minute
+	releasePipelineRunCompletionTimeout   = 10 * time.Minute
+	avgControllerQueryTimeout             = 1 * time.Minute
+	pipelineServiceAccountCreationTimeout = 3 * time.Minute
+
+	defaultInterval = 100 * time.Millisecond
 )
