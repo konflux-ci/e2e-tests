@@ -237,6 +237,12 @@ func PreflightChecks() error {
 }
 
 func (CI) setRequiredEnvVars() error {
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	os.Setenv("USER_KUBE_CONFIG_PATH", fmt.Sprintf("%s/tmp/user.kubeconfig", wd))
 
 	if strings.Contains(jobName, "hacbs-e2e-periodic") {
 		os.Setenv("E2E_TEST_SUITE_LABEL", "HACBS")
@@ -531,16 +537,15 @@ func RegisterUser() error {
 }
 
 // Obtains user's keycloak token and generates new kubeconfig for this user against toolchain proxy endpoint.
-// Configurable via env variables (default in brackets): USER_KUBE_CONFIG_PATH["$(pwd)/user.kubeconfig"], "KC_USERNAME"["user1"],
+// Configurable via env variables (default in brackets): USER_KUBE_CONFIG_PATH["$(pwd)/tmp/user.kubeconfig"], "KC_USERNAME"["user1"],
 // KC_PASSWORD["user1"], KC_CLIENT_ID["sandbox-public"], KEYCLOAK_URL[obtained dynamically - route `keycloak` in `dev-sso` namespace],
 // TOOLCHAIN_API_URL[obtained dynamically - route `api` in `toolchain-host-operator` namespace]
 func GenerateUserKubeconfig() error {
-	//setup provided/default values
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
+	kubeconfigPath := os.Getenv("USER_KUBE_CONFIG_PATH")
+	if kubeconfigPath == "" {
+		return fmt.Errorf("USER_KUBE_CONFIG_PATH env is not defined. Please define USER_KUBE_CONFIG_PATH to a valid path to generate toolchain kubeconfig")
 	}
-	kubeconfigPath := utils.GetEnv("USER_KUBE_CONFIG_PATH", fmt.Sprintf("%s/user.kubeconfig", wd))
+
 	username := utils.GetEnv("KC_USERNAME", "user1")
 	password := utils.GetEnv("KC_PASSWORD", "user1")
 	client_id := utils.GetEnv("KC_CLIENT_ID", "sandbox-public")
@@ -549,6 +554,7 @@ func GenerateUserKubeconfig() error {
 	if err != nil {
 		return err
 	}
+
 	toolchainApiUrl, err := utils.GetEnvOrFunc("TOOLCHAIN_API_URL", getToolchainApiUrl)
 	if err != nil {
 		return err

@@ -32,3 +32,6 @@ local/template/generate-test-suite:
 
 local/template/generate-test-spec:
 	./mage -v local:generateTestSpecFile
+
+user-kubeconfig:
+	./mage -v generateUserKubeconfig

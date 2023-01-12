@@ -38,6 +38,12 @@ const (
 	// Skip checking "ApplicationServiceGHTokenSecrName" secret
 	SKIP_HAS_SECRET_CHECK_ENV string = "SKIP_HAS_SECRET_CHECK"
 
+	// default user generated with toolchain. It is used to run e2e against toolchain appstudio proxy
+	DEFAULT_KUBE_DEVELOPER_USERNAME = "user1"
+
+	// Default namespace generated for user1.
+	DEFAULT_KUBE_DEVELOPER_NAMESPACE = "user1"
+
 	// Test namespace's required labels
 	ArgoCDLabelKey   string = "argocd.argoproj.io/managed-by"
 	ArgoCDLabelValue string = "gitops-service-argocd"
