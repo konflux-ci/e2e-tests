@@ -251,7 +251,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 
 		// Create a component with Git Source URL being defined
-		_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, testProjectGitUrl, testProjectRevision, "", outputContainerImage, "")
+		_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, testProjectGitUrl, testProjectRevision, "", outputContainerImage, "", true)
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 

@@ -22,7 +22,7 @@ func FetchTaskRunResult(pr *v1beta1.PipelineRun, pipelineTaskName string, result
 		}
 	}
 	return "", fmt.Errorf(
-		"result %q not found in TaskRuns of PipelineRun %s/%s", result, pr.ObjectMeta.Namespace, pr.ObjectMeta.Name)
+		"result %q not found in TaskRuns of PipelineRun %s/%s for pipeline task name %s", result, pr.ObjectMeta.Namespace, pr.ObjectMeta.Name, pipelineTaskName)
 }
 
 func FetchImageTaskRunResult(pr *v1beta1.PipelineRun, pipelineTaskName string, result string) (string, error) {

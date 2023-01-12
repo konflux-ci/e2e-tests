@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
 	routev1 "github.com/openshift/api/route/v1"
@@ -67,7 +69,7 @@ func (h *SuiteController) CreateHasApplication(name, namespace string) (*appserv
 		return nil, err
 	}
 
-	if err := utils.WaitUntil(h.ApplicationDevfilePresent(application), time.Second*30); err != nil {
+	if err := utils.WaitUntil(h.ApplicationDevfilePresent(application), time.Minute*2); err != nil {
 		return nil, fmt.Errorf("timed out when waiting for devfile content creation for application %s in %s namespace: %+v", name, namespace, err)
 	}
 
@@ -154,7 +156,7 @@ func (h *SuiteController) DeleteHasComponent(name string, namespace string, repo
 }
 
 // CreateComponent create an has component from a given name, namespace, application, devfile and a container image
-func (h *SuiteController) CreateComponent(applicationName, componentName, namespace, gitSourceURL, gitSourceRevision, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
+func (h *SuiteController) CreateComponent(applicationName, componentName, namespace, gitSourceURL, gitSourceRevision, containerImageSource, outputContainerImage, secret string, skipInitialChecks bool) (*appservice.Component, error) {
 	var containerImage string
 	if outputContainerImage != "" {
 		containerImage = outputContainerImage
@@ -164,8 +166,10 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
-				"skip-initial-checks": "true",
+				// PLNSRVCE-957 - if true, run only basic build pipeline tasks
+				"skip-initial-checks": strconv.FormatBool(skipInitialChecks),
 			},
+			Labels:    constants.ComponentDefaultLabel,
 			Name:      componentName,
 			Namespace: namespace,
 		},
@@ -191,7 +195,7 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 	if err != nil {
 		return nil, err
 	}
-	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*40); err != nil {
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*2); err != nil {
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
 	}
 	return component, nil
@@ -257,6 +261,9 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 	// The Component from the CDQ is only a template, and needs things like name filled in
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"skip-initial-checks": "true",
+			},
 			Name:      componentName,
 			Namespace: namespace,
 		},

@@ -6,6 +6,7 @@ import (
 	ocpOauth "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	integrationservice "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	jvmbuildservice "github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	jvmbuildserviceclientset "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
@@ -50,6 +51,7 @@ func init() {
 	utilruntime.Must(integrationservice.AddToScheme(scheme))
 	utilruntime.Must(jvmbuildservice.AddToScheme(scheme))
 	utilruntime.Must(ecp.AddToScheme(scheme))
+	utilruntime.Must(buildservice.AddToScheme(scheme))
 }
 
 // Kube returns the clientset for Kubernetes upstream.

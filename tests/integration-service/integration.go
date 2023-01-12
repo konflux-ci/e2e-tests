@@ -62,7 +62,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			timeout = time.Minute * 4
 			interval = time.Second * 1
 			// Create a component with Git Source URL being defined
-			_, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", "", outputContainerImage, "")
+			_, err = f.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", "", outputContainerImage, "", true)
 			Expect(err).ShouldNot(HaveOccurred())
 			DeferCleanup(f.HasController.DeleteHasComponent, componentName, appStudioE2EApplicationsNamespace, false)
 

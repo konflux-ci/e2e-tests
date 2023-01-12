@@ -1,10 +1,13 @@
 package build
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 	"time"
+
+	"k8s.io/utils/pointer"
 
 	"github.com/google/go-github/v44/github"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
@@ -18,6 +21,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -117,13 +121,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			for _, h := range hooks {
 				hookUrl := h.Config["url"].(string)
-				klog.Infoln(hookUrl, pacControllerHost)
 				if strings.Contains(hookUrl, pacControllerHost) {
 					Expect(f.CommonController.Github.DeleteWebhook(helloWorldComponentGitSourceRepoName, h.GetID())).To(Succeed())
 					break
 				}
 			}
-
 		})
 
 		It("triggers a PipelineRun", func() {
@@ -223,7 +225,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 				createdFileSHA = createdFile.GetSHA()
 				klog.Infoln("created file sha:", createdFileSHA)
-
 			})
 
 			It("eventually leads to triggering another PipelineRun", func() {
@@ -355,7 +356,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, time.Minute*1, time.Second*1).Should(BeTrue(), "timed out when waiting for the app %s to be deleted in %s namespace", applicationName, testNamespace)
 
 				_, err = f.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, outputContainerImage)
-
 			})
 
 			It("should no longer lead to a creation of a PaC PR", func() {
@@ -379,9 +379,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	Describe("HACBS pipelines", Ordered, func() {
 
 		var applicationName, componentName, testNamespace, outputContainerImage string
-		var defaultBundleConfigMap *v1.ConfigMap
-		var defaultBundleRef, customBundleRef string
-
 		BeforeAll(func() {
 			if os.Getenv("APP_SUFFIX") != "" {
 				applicationName = fmt.Sprintf("test-app-%s", os.Getenv("APP_SUFFIX"))
@@ -408,49 +405,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
 			)
 
-			customBundleConfigMap, err := f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, testNamespace)
-			if err != nil {
-				if errors.IsNotFound(err) {
-					defaultBundleConfigMap, err = f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace)
-					Expect(err).ToNot(HaveOccurred())
-
-					bundlePullSpec := defaultBundleConfigMap.Data["default_build_bundle"]
-					hacbsBundleConfigMap := &v1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{Name: constants.BuildPipelinesConfigMapName},
-						Data:       map[string]string{"default_build_bundle": strings.Replace(bundlePullSpec, "build-", "hacbs-", 1)},
-					}
-					_, err = f.CommonController.CreateConfigMap(hacbsBundleConfigMap, testNamespace)
-					Expect(err).ToNot(HaveOccurred())
-					DeferCleanup(f.CommonController.DeleteConfigMap, constants.BuildPipelinesConfigMapName, testNamespace, false)
-				} else {
-					Fail(fmt.Sprintf("error occurred when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, testNamespace, err))
-				}
-			} else {
-				bundlePullSpec := customBundleConfigMap.Data["default_build_bundle"]
-				hacbsBundleConfigMap := &v1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{Name: constants.BuildPipelinesConfigMapName},
-					Data:       map[string]string{"default_build_bundle": bundlePullSpec},
-				}
-
-				_, err = f.CommonController.UpdateConfigMap(hacbsBundleConfigMap, testNamespace)
-				Expect(err).ToNot(HaveOccurred())
-				DeferCleanup(func() error {
-					hacbsBundleConfigMap.Data = customBundleConfigMap.Data
-					_, err := f.CommonController.UpdateConfigMap(hacbsBundleConfigMap, testNamespace)
-					if err != nil {
-						return err
-					}
-					return nil
-				})
-			}
-
 			for _, gitUrl := range componentUrls {
 				gitUrl := gitUrl
 				componentName = fmt.Sprintf("%s-%s", "test-component", util.GenerateRandomString(4))
 				componentNames = append(componentNames, componentName)
 				outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 				// Create a component with Git Source URL being defined
-				_, err := f.HasController.CreateComponent(applicationName, componentName, testNamespace, gitUrl, "", "", outputContainerImage, "")
+				_, err := f.HasController.CreateComponent(applicationName, componentName, testNamespace, gitUrl, "", "", outputContainerImage, "", false)
 				Expect(err).ShouldNot(HaveOccurred())
 			}
 		})
@@ -466,15 +427,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Expect(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 					Expect(f.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
 				}
-			} else {
-				// Workaround: We cannot keep applications/components present in the specific namespace due to
-				// an issue reported here: https://issues.redhat.com/browse/PLNSRVCE-484
-				// TODO: delete the whole 'else' block after the issue is resolved
-				if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) != "" {
-					DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace, false)
-				}
 			}
-
 		})
 
 		for i, gitUrl := range componentUrls {
@@ -494,57 +447,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 		}
 
-		It("should reference the custom pipeline bundle in a PipelineRun", Label(buildTemplatesTestLabel), func() {
-			Skip("skipping - should be updated by PLNSRVCE-914")
-			customBundleConfigMap, err := f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, testNamespace)
-			if err != nil {
-				if errors.IsNotFound(err) {
-					klog.Infof("configmap with custom pipeline bundle not found in %s namespace\n", testNamespace)
-				} else {
-					Fail(fmt.Sprintf("error occurred when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, testNamespace, err))
-				}
-			} else {
-				customBundleRef = customBundleConfigMap.Data["default_build_bundle"]
-			}
-
-			if customBundleRef == "" {
-				Skip("skipping the specs - custom pipeline bundle is not defined")
-			}
-			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, false, "")
-			Expect(err).ShouldNot(HaveOccurred())
-
-			Expect(pipelineRun.Spec.PipelineRef.Bundle).To(Equal(customBundleRef))
-		})
-
-		It("should reference the default pipeline bundle in a PipelineRun", func() {
-			Skip("skipping - should be updated by PLNSRVCE-914")
-			defaultBundleConfigMap, err = f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace)
-			if err != nil {
-				if errors.IsForbidden(err) {
-					klog.Infof("don't have enough permissions to get a configmap with default pipeline in %s namespace\n", constants.BuildPipelinesConfigMapDefaultNamespace)
-				} else {
-					Fail(fmt.Sprintf("error occurred when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace, err))
-				}
-			} else {
-				defaultBundleRef = defaultBundleConfigMap.Data["default_build_bundle"]
-			}
-
-			if customBundleRef != "" {
-				Skip("skipping - custom pipeline bundle bundle (that overrides the default one) is defined")
-			}
-			if defaultBundleRef == "" {
-				Skip("skipping - default pipeline bundle cannot be fetched")
-			}
-			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, false, "")
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(pipelineRun.Spec.PipelineRef.Bundle).To(Equal(defaultBundleRef))
-		})
-
 		for i, gitUrl := range componentUrls {
 			gitUrl := gitUrl
 
 			It(fmt.Sprintf("should eventually finish successfully for component with source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
-				timeout := time.Second * 600
+				timeout := time.Second * 900
 				interval := time.Second * 10
 				Eventually(func() bool {
 					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, false, "")
@@ -572,7 +479,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 
 			It("should validate HACBS taskrun results", func() {
-				Skip("skipping - should be updated by PLNSRVCE-914")
 				// List Of Taskruns Expected to Get Taskrun Results
 				gatherResult := []string{"conftest-clair", "sanity-inspect-image", "sanity-label-check"}
 				// TODO: once we migrate "build" e2e tests to kcp, remove this condition
@@ -602,9 +508,19 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			When("the container image is created and pushed to container registry", Label("sbom", "slow"), func() {
 				It("contains non-empty sbom files", func() {
-					component, err := f.HasController.GetHasComponent(componentName, testNamespace)
+					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, false, "")
 					Expect(err).ShouldNot(HaveOccurred())
-					purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(component.Spec.ContainerImage)
+
+					var outputImage string
+					// Workaround - until https://issues.redhat.com/browse/STONE-300 is solved
+					for _, p := range pipelineRun.Spec.Params {
+						if p.Name == "output-image" {
+							outputImage = p.Value.StringVal
+						}
+					}
+					Expect(outputImage).ToNot(BeEmpty(), "output image of a component could not be found")
+
+					purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(outputImage)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(cyclonedx.BomFormat).To(Equal("CycloneDX"))
@@ -661,7 +577,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			timeout = time.Second * 180
 			interval = time.Second * 1
 			// Create a component with containerImageSource being defined
-			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, "", "", containerImageSource, outputContainerImage, "")
+			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, "", "", containerImageSource, outputContainerImage, "", true)
 			Expect(err).ShouldNot(HaveOccurred())
 			DeferCleanup(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace, testNamespace)
 		})
@@ -675,19 +591,18 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 	})
 
-	Describe("Creating a configmap with 'dummy' custom pipeline bundle in the testing namespace", Ordered, func() {
+	Describe("PLNSRVCE-799 - test pipeline selector", Label("pipeline-selector"), Ordered, func() {
 		var timeout, interval time.Duration
-
-		var componentName, applicationName, testNamespace string
+		var componentName, applicationName, testNamespace, outputContainerImage string
+		var expectedAdditionalPipelineParam buildservice.PipelineParam
 
 		BeforeAll(func() {
 
-			testNamespace := fmt.Sprintf("build-e2e-dummy-custom-pipeline-%s", util.GenerateRandomString(4))
+			testNamespace = fmt.Sprintf("build-e2e-pipeline-selector-%s", util.GenerateRandomString(4))
 			applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
 
 			_, err = f.CommonController.CreateTestNamespace(testNamespace)
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
-			DeferCleanup(f.CommonController.DeleteNamespace, testNamespace)
 
 			app, err := f.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
@@ -695,30 +610,57 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
 			)
 
-			cm := &v1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{Name: constants.BuildPipelinesConfigMapName},
-				Data:       map[string]string{"default_build_bundle": dummyPipelineBundleRef},
-			}
-			_, err = f.CommonController.CreateConfigMap(cm, testNamespace)
-			Expect(err).ToNot(HaveOccurred())
-
 			componentName = "build-suite-test-bundle-overriding"
-			outputContainerImage := fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "")
-			Expect(err).ShouldNot(HaveOccurred())
-			DeferCleanup(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace, testNamespace)
+
+			expectedAdditionalPipelineParam = buildservice.PipelineParam{
+				Name:  "test-custom-param-name",
+				Value: "test-custom-param-value",
+			}
+
+			ps := &buildservice.BuildPipelineSelector{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "build-pipeline-selector",
+					Namespace: testNamespace,
+				},
+				Spec: buildservice.BuildPipelineSelectorSpec{Selectors: []buildservice.PipelineSelector{
+					{
+						Name: "user-custom-selector",
+						PipelineRef: v1beta1.PipelineRef{
+							Name:   "docker-build",
+							Bundle: dummyPipelineBundleRef,
+						},
+						PipelineParams: []buildservice.PipelineParam{expectedAdditionalPipelineParam},
+						WhenConditions: buildservice.WhenCondition{
+							ProjectType:        "hello-world",
+							DockerfileRequired: pointer.Bool(true),
+							ComponentName:      componentName,
+							Annotations:        constants.ComponentDefaultAnnotation,
+							Labels:             constants.ComponentDefaultLabel,
+						},
+					},
+				}},
+			}
+
+			Expect(f.CommonController.KubeRest().Create(context.TODO(), ps)).To(Succeed())
+
+			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 
 			timeout = time.Second * 360
 			interval = time.Second * 1
 
 		})
 
-		// AfterAll(func() {
-		// 	f.CommonController.DeleteNamespace(testNamespace)
-		// })
+		AfterAll(func() {
+			if !CurrentSpecReport().Failed() {
+				Expect(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+				Expect(f.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
+			}
+		})
 
-		It("should be referenced in a PipelineRun", Label("build-bundle-overriding"), func() {
-			Skip("skipping - should be updated by PLNSRVCE-914")
+		It("a specific Pipeline bundle should be used and additional pipeline params should be added to the PipelineRun if all WhenConditions match", func() {
+			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "", true)
+			Expect(err).ShouldNot(HaveOccurred())
+
 			Eventually(func() bool {
 				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				if err != nil {
@@ -731,6 +673,32 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(pipelineRun.Spec.PipelineRef.Bundle).To(Equal(dummyPipelineBundleRef))
+			Expect(pipelineRun.Spec.Params).To(ContainElement(v1beta1.Param{
+				Name:  expectedAdditionalPipelineParam.Name,
+				Value: v1beta1.ParamValue{StringVal: expectedAdditionalPipelineParam.Value, Type: "string"}},
+			))
+		})
+
+		It("default Pipeline bundle should be used and no additional Pipeline params should be added to the PipelineRun if one of the WhenConditions does not match", func() {
+			notMatchingComponentName := componentName + util.GenerateRandomString(4)
+			_, err = f.HasController.CreateComponent(applicationName, notMatchingComponentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "", true)
+			Expect(err).ShouldNot(HaveOccurred())
+			Eventually(func() bool {
+				pipelineRun, err := f.HasController.GetComponentPipelineRun(notMatchingComponentName, applicationName, testNamespace, false, "")
+				if err != nil {
+					klog.Infoln("PipelineRun has not been created yet")
+					return false
+				}
+				return pipelineRun.HasStarted()
+			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
+
+			pipelineRun, err := f.HasController.GetComponentPipelineRun(notMatchingComponentName, applicationName, testNamespace, false, "")
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(pipelineRun.Spec.PipelineRef.Bundle).ToNot(Equal(dummyPipelineBundleRef))
+			Expect(pipelineRun.Spec.Params).ToNot(ContainElement(v1beta1.Param{
+				Name:  expectedAdditionalPipelineParam.Name,
+				Value: v1beta1.ParamValue{StringVal: expectedAdditionalPipelineParam.Value, Type: "string"}},
+			))
 		})
 	})
 
@@ -778,7 +746,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			componentName = "build-suite-test-secret-overriding"
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "")
+			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "", true)
 			Expect(err).ShouldNot(HaveOccurred())
 			DeferCleanup(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace, testNamespace)
 
@@ -820,59 +788,5 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				return false
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to fail")
 		})
-	})
-	Describe("Creating a component with a specific container image URL", Ordered, func() {
-
-		var applicationName, componentName, testNamespace, outputContainerImage string
-
-		BeforeAll(func() {
-
-			applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
-			testNamespace = fmt.Sprintf("build-e2e-specific-image-url-%s", util.GenerateRandomString(4))
-
-			_, err = f.CommonController.CreateTestNamespace(testNamespace)
-			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
-			app, err := f.HasController.CreateHasApplication(applicationName, testNamespace)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(utils.WaitUntil(f.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
-				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
-			)
-
-		})
-
-		AfterAll(func() {
-			Expect(f.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, 30*time.Second)).To(Succeed())
-			Expect(f.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, 30*time.Second)).To(Succeed())
-			Expect(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
-			Expect(f.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
-		})
-
-		JustBeforeEach(func() {
-			componentName = fmt.Sprintf("build-suite-test-component-image-url-%s", util.GenerateRandomString(4))
-		})
-		// Disabled due to PLNSRVCE-952
-		It("should fail for ContainerImage field set to a protected repository (without an image tag)", Pending, func() {
-			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected", utils.GetQuayIOOrganization())
-			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "")
-			Expect(err).ToNot(BeNil())
-
-		})
-		// Disabled due to PLNSRVCE-952
-		It("should fail for ContainerImage field set to a protected repository followed by a random tag", Pending, func() {
-			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "")
-			Expect(err).ToNot(BeNil())
-		})
-		It("should succeed for ContainerImage field set to a protected repository followed by a namespace prefix + dash + string", func() {
-			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images-protected:%s-%s", utils.GetQuayIOOrganization(), testNamespace, strings.Replace(uuid.New().String(), "-", "", -1))
-			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "")
-			Expect(err).ShouldNot(HaveOccurred())
-		})
-		It("should succeed for ContainerImage field set to a custom (unprotected) repository without a tag being specified", func() {
-			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images", utils.GetQuayIOOrganization())
-			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "")
-			Expect(err).ShouldNot(HaveOccurred())
-		})
-
 	})
 })

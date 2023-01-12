@@ -208,6 +208,7 @@ func setup(cmd *cobra.Command, args []string) {
 				"",
 				ComponentContainerImage,
 				"",
+				true,
 			)
 			if component.Name != ComponentName {
 				klog.Fatalf("Component Name Does not Match: %v", err)

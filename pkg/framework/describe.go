@@ -24,7 +24,7 @@ func ChainsSuiteDescribe(text string, args ...interface{}) bool {
 }
 
 func BuildSuiteDescribe(text string, args ...interface{}) bool {
-	return Describe("[build-service-suite "+text+"]", args, Ordered)
+	return Describe("[build-service-suite "+text+"]", args)
 }
 
 func JVMBuildSuiteDescribe(text string, args ...interface{}) bool {
