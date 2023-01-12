@@ -81,8 +81,8 @@ func NewAppStudioInstallController() (*InstallAppStudio, error) {
 		KubernetesClient:                 k8sClient,
 		TmpDirectory:                     DEFAULT_TMP_DIR,
 		InfraDeploymentsCloneDir:         fmt.Sprintf("%s/%s/infra-deployments", cwd, DEFAULT_TMP_DIR),
-		InfraDeploymentsBranch:           utils.GetEnv(os.Getenv("INFRA_DEPLOYMENTS_BRANCH"), DEFAULT_INFRA_DEPLOYMENTS_BRANCH),
-		InfraDeploymentsOrganizationName: utils.GetEnv(os.Getenv("INFRA_DEPLOYMENTS_ORG"), DEFAULT_INFRA_DEPLOYMENTS_GH_ORG),
+		InfraDeploymentsBranch:           utils.GetEnv("INFRA_DEPLOYMENTS_BRANCH", DEFAULT_INFRA_DEPLOYMENTS_BRANCH),
+		InfraDeploymentsOrganizationName: utils.GetEnv("INFRA_DEPLOYMENTS_ORG", DEFAULT_INFRA_DEPLOYMENTS_GH_ORG),
 		LocalForkName:                    DEFAULT_LOCAL_FORK_NAME,
 		LocalGithubForkOrganization:      utils.GetEnv("MY_GITHUB_ORG", DEFAULT_LOCAL_FORK_ORGANIZATION),
 		E2EApplicationsNamespace:         utils.GetEnv("E2E_APPLICATIONS_NAMESPACE", DEFAULT_E2E_APPLICATIONS_NAMEPSPACE),
@@ -133,9 +133,12 @@ func (i *InstallAppStudio) cloneInfraDeployments() (*git.Remote, error) {
 		}
 	}
 
+	url := fmt.Sprintf("https://github.com/%s/infra-deployments", i.InfraDeploymentsOrganizationName)
+	refName := fmt.Sprintf("refs/heads/%s", i.InfraDeploymentsBranch)
+	klog.Infof("cloning '%s' with git ref '%s'", url, refName)
 	repo, _ := git.PlainClone(i.InfraDeploymentsCloneDir, false, &git.CloneOptions{
-		URL:           fmt.Sprintf("https://github.com/%s/infra-deployments", i.InfraDeploymentsOrganizationName),
-		ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", i.InfraDeploymentsBranch)),
+		URL:           url,
+		ReferenceName: plumbing.ReferenceName(refName),
 		Progress:      os.Stdout,
 	})
 
