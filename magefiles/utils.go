@@ -60,11 +60,14 @@ func sendHttpRequestAndParseResponse(url, method string, v interface{}) error {
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("token %s", os.Getenv("GITHUB_TOKEN")))
 	res, err := http.DefaultClient.Do(req)
+	klog.Infof("request statuscode %s, error: %v", res.StatusCode, err)
+
 	if err != nil {
 		return err
 	}
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
+
 	if err != nil {
 		return err
 	}
