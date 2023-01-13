@@ -17,6 +17,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
 	e2eConfig "github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
 	"github.com/spf13/viper"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -213,9 +214,9 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 				// Deploy the component using gitops and check for the health
 				It(fmt.Sprintf("deploy component %s using gitops", componentTest.Name), func() {
-
+					var deployment *appsv1.Deployment
 					Eventually(func() bool {
-						deployment, err := fw.CommonController.GetAppDeploymentByName(componentTest.Name, namespace)
+						deployment, err = fw.CommonController.GetAppDeploymentByName(componentTest.Name, namespace)
 						if err != nil && !errors.IsNotFound(err) {
 							return false
 						}
@@ -225,7 +226,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 						}
 
 						return false
-					}, 25*time.Minute, 10*time.Second).Should(BeTrue(), "Component deployment didn't become ready")
+					}, 25*time.Minute, 10*time.Second).Should(BeTrue(), fmt.Sprintf("Component deployment didn't become ready: %+v", deployment))
 					Expect(err).NotTo(HaveOccurred())
 				})
 
