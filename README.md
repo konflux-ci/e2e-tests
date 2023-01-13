@@ -61,6 +61,8 @@ The following environments are used to launch the Red Hat AppStudio installation
 | `QUAY_OAUTH_TOKEN` | no | A valid quay quay robot account token to make oauth against quay.io. | '' |
 | `INFRA_DEPLOYMENTS_ORG` | no | A specific github organization from where to download infra-deployments repository | `redhat-appstudio` |
 | `INFRA_DEPLOYMENTS_BRANCH` | no | A valid infra-deployments branch. | `main` |
+| `E2E_TEST_SUITE_LABEL` | no | Run only test suites with the given Giknkgo label | '' |
+| `KLOG_VERBOSITY` | no | Level of verbosity for `klog` | 1 |
 
 3. Install dependencies:
 
@@ -144,6 +146,12 @@ For more information refer to [Generate Tests](docs/DeveloperGenerateTest.md).
 * Every new test should have correct [labels](docs/LabelsNaming.md).
 * Every test should have meaningful description with JIRA/GitHub issue key.
 * (Recommended) Use JIRA integration for linking issues and commits (just add JIRA issue key in the commit message). You can found more information about GitHub-JIRA integration [here](https://docs.engineering.redhat.com/display/JiraAid/GitHub-Jira+integration).
+* When running via mage you can filter the suites run by specifying the
+  `E2E_TEST_SUITE_LABEL` environment variable. For example:
+  `E2E_TEST_SUITE_LABEL=ec ./mage runE2ETests`
+* `klog` level can be controled via `KLOG_VERBOSITY` environment variable. For
+  example: `KLOG_VERBOSITY=9 ./mage runE2ETests` would output `curl` commands
+  issued via Kubernetes client from sigs.k8s.io/controller-runtime
 
 ```golang
 // cmd/e2e_test.go
