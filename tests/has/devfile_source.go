@@ -59,8 +59,12 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 	})
 
 	AfterAll(func() {
-
-		err = framework.HasController.DeleteHasComponentDetectionQuery(componentName, testNamespace)
+		_, err = framework.HasController.GetComponentDetectionQuery(componentName, testNamespace)
+		if err != nil {
+			err = framework.HasController.DeleteHasComponentDetectionQuery(componentName, testNamespace)
+			Expect(err).NotTo(HaveOccurred())
+		}
+		err = framework.HasController.DeleteHasApplication(applicationName, testNamespace, false)
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func() bool {
