@@ -41,7 +41,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	// Initialize the tests controllers
 	f, err := framework.NewFramework()
 	Expect(err).NotTo(HaveOccurred())
-	Describe("the component with git source (GitHub) is created", Ordered, Label("github-webhook"), func() {
+	Describe("the component with git source (GitHub) is created", Ordered, func() {
 		BeforeAll(func() {
 			applicationName = fmt.Sprintf("integ-app-%s", util.GenerateRandomString(4))
 			appStudioE2EApplicationsNamespace = utils.GetGeneratedNamespace("integ-e2e")
