@@ -55,11 +55,6 @@ func (s *SuiteController) GetSnapshotInNamespace(namespace, componentName string
 	err := s.KubeRest().List(context.TODO(), snapshot, opts...)
 
 	if err == nil && len(snapshot.Items) > 0 {
-		// snapshot.Items[0].Labels["pac.test.appstudio.openshift.io/event-type"] = "push"
-		// // myLabels := snapshot.Items[0].GetLabels()
-		// // myLabels["pac.test.appstudio.openshift.io/event-type"] = "push" //myLabels map[string]string{"pac.test.appstudio.openshift.io/event-type": "push"}//.append("pac.test.appstudio.openshift.io/event-type", "push")
-		// // snapshot.Items[0].SetLabels(myLabels)
-		// klog.Info("Snapshot Labels are :  ", snapshot.Items[0].Labels)
 		return &snapshot.Items[0], nil
 	}
 	return nil, err
@@ -276,22 +271,22 @@ func (s *SuiteController) CreateRegistryJsonSecret(name, namespace, authKey, key
 }
 
 // DeleteAllSnapshotsInASpecificNamespace removes all snapshots from a specific namespace. Useful when creating a lot of resources and want to remove all of them
-func (h *SuiteController) DeleteAllSnapshotsInASpecificNamespace(namespace string, timeout time.Duration) error {
-	if err := h.KubeRest().DeleteAllOf(context.TODO(), &appstudioApi.Snapshot{}, client.InNamespace(namespace)); err != nil {
+func (s *SuiteController) DeleteAllSnapshotsInASpecificNamespace(namespace string, timeout time.Duration) error {
+	if err := s.KubeRest().DeleteAllOf(context.TODO(), &appstudioApi.Snapshot{}, client.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting snapshots from the namespace %s: %+v", namespace, err)
 	}
 
 	snapshotList := &appstudioApi.SnapshotList{}
 	return utils.WaitUntil(func() (done bool, err error) {
-		if err := h.KubeRest().List(context.Background(), snapshotList, &client.ListOptions{Namespace: namespace}); err != nil {
+		if err := s.KubeRest().List(context.Background(), snapshotList, &client.ListOptions{Namespace: namespace}); err != nil {
 			return false, nil
 		}
 		return len(snapshotList.Items) == 0, nil
 	}, timeout)
 }
 
-// CreateComponentWithDockerSource create an has component from a given name, namespace, application, devfile and a container image
-func (h *SuiteController) CreateComponentWithDockerSource(applicationName, componentName, namespace, gitSourceURL, containerImageSource, outputContainerImage, secret string) (*appstudioApi.Component, error) {
+// CreateComponentWithDockerSource create a component from a given name, namespace, application, sourceurl  and a container image
+func (s *SuiteController) CreateComponentWithDockerSource(applicationName, componentName, namespace, gitSourceURL, containerImageSource, outputContainerImage, secret string) (*appstudioApi.Component, error) {
 	component := &appstudioApi.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      componentName,
@@ -315,7 +310,7 @@ func (h *SuiteController) CreateComponentWithDockerSource(applicationName, compo
 			Route:          "",
 		},
 	}
-	err := h.KubeRest().Create(context.TODO(), component)
+	err := s.KubeRest().Create(context.TODO(), component)
 	if err != nil {
 		return nil, err
 	}

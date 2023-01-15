@@ -174,7 +174,7 @@ var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label(
 		})
 
 		It("CreateComponent", func() {
-			_, err := framework.HasController.CreateComponent(applicationNameDefault, componentName, devNamespace, gitSourceComponentUrl, "", containerImageUrl, "", "")
+			_, err := framework.HasController.CreateComponent(applicationNameDefault, componentName, devNamespace, gitSourceComponentUrl, "", containerImageUrl, "", "", false)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
