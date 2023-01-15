@@ -36,7 +36,7 @@ var paramsReleaseStrategyDefault = []appstudiov1alpha1.Params{
 	{Name: "extraConfigRevision", Value: "main"},
 }
 
-var _ = framework.ReleaseSuiteDescribe("test-release-service-happy-path", Label("release", "defaultBundle"), func() {
+var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-path", Label("release", "defaultBundle"), func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	framework, err := framework.NewFramework()
