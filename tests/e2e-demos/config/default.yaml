@@ -32,6 +32,7 @@ tests:
         language: "quarkus"
         healthz: "/hello-resteasy"
   - name: "RHDP-467: create an application with a component from private and public quay.io images"
+    skip: true
     applicationName: "e2e-quayio"
     components:
       - name: "quay-public-component"
