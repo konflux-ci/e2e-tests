@@ -14,7 +14,6 @@ import (
 
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
-	klog "k8s.io/klog/v2"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -69,7 +68,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			defaultBundleConfigMap, err = f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace)
 			if err != nil {
 				if errors.IsForbidden(err) {
-					klog.Infof("don't have enough permissions to get a configmap with default pipeline in %s namespace\n", constants.BuildPipelinesConfigMapDefaultNamespace)
+					GinkgoWriter.Printf("don't have enough permissions to get a configmap with default pipeline in %s namespace\n", constants.BuildPipelinesConfigMapDefaultNamespace)
 				} else {
 					Fail(fmt.Sprintf("error occurred when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace, err))
 				}
@@ -99,7 +98,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			Eventually(func() bool {
 				pipelineRun, err := f.IntegrationController.GetBuildPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false, "")
 				if err != nil {
-					klog.Infoln("PipelineRun has not been created yet")
+					GinkgoWriter.Println("PipelineRun has not been created yet")
 					return false
 				}
 				return pipelineRun.HasStarted()
@@ -111,7 +110,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				Expect(err).ShouldNot(HaveOccurred())
 
 				for _, condition := range pipelineRun.Status.Conditions {
-					klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
+					GinkgoWriter.Printf("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 
 					if condition.Reason == "Failed" {
 						Fail(fmt.Sprintf("Pipelinerun %s has failed", pipelineRun.Name))
@@ -127,7 +126,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				// snapshotName is sent as empty since it is unknown at this stage
 				applicationSnapshot, err = f.IntegrationController.GetApplicationSnapshot("", applicationName, appStudioE2EApplicationsNamespace, componentName)
 				Expect(err).ShouldNot(HaveOccurred())
-				klog.Infof("applicationSnapshot %s is found", applicationSnapshot.Name)
+				GinkgoWriter.Printf("applicationSnapshot %s is found\n", applicationSnapshot.Name)
 			})
 			It("check if all of the integrationPipelineRuns passed", Label("slow"), func() {
 				integrationTestScenarios, err := f.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
@@ -138,7 +137,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					Eventually(func() bool {
 						pipelineRun, err := f.IntegrationController.GetIntegrationPipelineRun(testScenario.Name, applicationSnapshot.Name, appStudioE2EApplicationsNamespace)
 						if err != nil {
-							klog.Infof("cannot get the Integration PipelineRun: %v", err)
+							GinkgoWriter.Printf("cannot get the Integration PipelineRun: %v\n", err)
 							return false
 						}
 						return pipelineRun.HasStarted()
@@ -161,14 +160,14 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			testScenarios, err := f.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
 			for _, testScenario := range *testScenarios {
-				klog.Infof("IntegrationTestScenario %s is found", testScenario.Name)
+				GinkgoWriter.Printf("IntegrationTestScenario %s is found\n", testScenario.Name)
 			}
 		})
 
 		It("create an applicationSnapshot of push event", func() {
 			applicationSnapshot_push, err = f.IntegrationController.CreateApplicationSnapshot(applicationName, appStudioE2EApplicationsNamespace, componentName)
 			Expect(err).ShouldNot(HaveOccurred())
-			klog.Infof("applicationSnapshot %s is found", applicationSnapshot_push.Name)
+			GinkgoWriter.Printf("applicationSnapshot %s is found\n", applicationSnapshot_push.Name)
 		})
 
 		When("An applicationSnapshot of push event is created", func() {
@@ -182,7 +181,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					Eventually(func() bool {
 						pipelineRun, err := f.IntegrationController.GetIntegrationPipelineRun(testScenario.Name, applicationSnapshot_push.Name, appStudioE2EApplicationsNamespace)
 						if err != nil {
-							klog.Infof("cannot get the Integration PipelineRun: %v", err)
+							GinkgoWriter.Printf("cannot get the Integration PipelineRun: %v\n", err)
 							return false
 						}
 						return pipelineRun.HasStarted()
@@ -195,7 +194,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						Expect(err).ShouldNot(HaveOccurred())
 
 						for _, condition := range pipelineRun.Status.Conditions {
-							klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
+							GinkgoWriter.Printf("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 							if condition.Reason == "Failed" {
 								Fail(fmt.Sprintf("Pipelinerun %s has failed", pipelineRun.Name))
 							}
@@ -212,7 +211,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					if f.IntegrationController.HaveHACBSTestsSucceeded(applicationSnapshot_push) {
 						component, _ := f.IntegrationController.GetComponent(applicationName, appStudioE2EApplicationsNamespace)
 						Expect(component.Spec.ContainerImage != "").To(BeTrue())
-						klog.Infof("Global candidate is updated\n")
+						GinkgoWriter.Printf("Global candidate is updated\n")
 						return true
 					}
 					applicationSnapshot_push, err = f.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, "", appStudioE2EApplicationsNamespace, "")
@@ -229,7 +228,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						Expect(err).ShouldNot(HaveOccurred())
 						if len(*releases) != 0 {
 							for _, release := range *releases {
-								klog.Infof("Release %s is found\n", release.Name)
+								GinkgoWriter.Printf("Release %s is found\n", release.Name)
 							}
 						} else {
 							Fail("No Release found")
@@ -249,7 +248,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						envbinding, err := f.IntegrationController.GetSnapshotEnvironmentBinding(applicationName, appStudioE2EApplicationsNamespace, env)
 						Expect(err).ShouldNot(HaveOccurred())
 						Expect(envbinding != nil).To(BeTrue())
-						klog.Infof("The EnvironmentBinding is created\n")
+						GinkgoWriter.Printf("The EnvironmentBinding is created\n")
 						return true
 					}
 					applicationSnapshot_push, err = f.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, "", appStudioE2EApplicationsNamespace, "")

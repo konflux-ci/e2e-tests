@@ -25,7 +25,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
 	"knative.dev/pkg/apis"
 )
 
@@ -48,12 +47,12 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 	AfterAll(func() {
 		abList, err := f.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
 		if err != nil {
-			klog.Infof("got error fetching artifactbuilds: %s", err.Error())
+			GinkgoWriter.Printf("got error fetching artifactbuilds: %s\n", err.Error())
 		}
 
 		dbList, err := f.JvmbuildserviceController.ListDependencyBuilds(testNamespace)
 		if err != nil {
-			klog.Infof("got error fetching dependencybuilds: %s", err.Error())
+			GinkgoWriter.Printf("got error fetching dependencybuilds: %s\n", err.Error())
 		}
 
 		if CurrentSpecReport().Failed() || doCollectLogs {
@@ -65,7 +64,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				testLogsDir = fmt.Sprintf("%s/jvm-build-service-test", artifactDir)
 				err := os.MkdirAll(testLogsDir, 0755)
 				if err != nil && !os.IsExist(err) {
-					klog.Infof("cannot create a folder %s for storing test logs/resources: %+v", testLogsDir, err)
+					GinkgoWriter.Printf("cannot create a folder %s for storing test logs/resources: %+v\n", testLogsDir, err)
 				} else {
 					storeLogsInFiles = true
 				}
@@ -75,9 +74,9 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 			jvmPodList, jerr := f.CommonController.K8sClient.KubeInterface().CoreV1().Pods("jvm-build-service").List(context.TODO(), metav1.ListOptions{})
 			if jerr != nil {
-				klog.Infof("error listing jvm-build-service pods: %s", jerr.Error())
+				GinkgoWriter.Printf("error listing jvm-build-service pods: %s\n", jerr.Error())
 			}
-			klog.Infof("found %d pods in jvm-build-service namespace", len(jvmPodList.Items))
+			GinkgoWriter.Printf("found %d pods in jvm-build-service namespace\n", len(jvmPodList.Items))
 			for _, pod := range jvmPodList.Items {
 				var containers []corev1.Container
 				containers = append(containers, pod.Spec.InitContainers...)
@@ -85,7 +84,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				for _, c := range containers {
 					cLog, cerr := f.CommonController.GetContainerLogs(pod.Name, c.Name, pod.Namespace)
 					if cerr != nil {
-						klog.Infof("error getting logs for pod/container %s/%s: %s", pod.Name, c.Name, cerr.Error())
+						GinkgoWriter.Printf("error getting logs for pod/container %s/%s: %s\n", pod.Name, c.Name, cerr.Error())
 						continue
 					}
 					filename := fmt.Sprintf("%s-pod-%s-%s.log", pod.Namespace, pod.Name, c.Name)
@@ -96,23 +95,23 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 			logs, err := f.TektonController.GetPipelineRunLogs(componentPipelineRun.Name, testNamespace)
 			if err != nil {
-				klog.Infof("got error fetching PR logs: %s", err.Error())
+				GinkgoWriter.Printf("got error fetching PR logs: %s\n", err.Error())
 			}
 			filename := fmt.Sprintf("%s-pr-%s.log", testNamespace, componentPipelineRun.Name)
 			toDebug[filename] = logs
 
 			prList, err := f.TektonController.ListAllPipelineRuns(testNamespace)
 			if err != nil {
-				klog.Infof("got error fetching PR list: %s", err.Error())
+				GinkgoWriter.Printf("got error fetching PR list: %s\n", err.Error())
 			}
-			klog.Infof("total number of pipeline runs not pruned: %d", len(prList.Items))
+			GinkgoWriter.Printf("total number of pipeline runs not pruned: %d\n", len(prList.Items))
 			for _, pr := range prList.Items {
 				if pr.Name == componentPipelineRun.Name {
 					continue
 				}
 				prLog, err := f.TektonController.GetPipelineRunLogs(pr.Name, pr.Namespace)
 				if err != nil {
-					klog.Infof("got error fetching PR logs for %s: %s", pr.Name, err.Error())
+					GinkgoWriter.Printf("got error fetching PR logs for %s: %s\n", pr.Name, err.Error())
 				}
 				filename := fmt.Sprintf("%s-pr-%s.log", pr.Namespace, pr.Name)
 				toDebug[filename] = prLog
@@ -121,7 +120,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			for _, ab := range abList.Items {
 				v, err := json.MarshalIndent(ab, "", "  ")
 				if err != nil {
-					klog.Infof("error when marshalling content of %s from %s namespace: %+v", ab.Name, ab.Namespace, err)
+					GinkgoWriter.Printf("error when marshalling content of %s from %s namespace: %+v\n", ab.Name, ab.Namespace, err)
 				} else {
 					filename := fmt.Sprintf("%s-ab-%s.json", ab.Namespace, ab.Name)
 					toDebug[filename] = string(v)
@@ -130,7 +129,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			for _, db := range dbList.Items {
 				v, err := json.MarshalIndent(db, "", "  ")
 				if err != nil {
-					klog.Infof("error when marshalling content of %s from %s namespace: %+v", db.Name, db.Namespace, err)
+					GinkgoWriter.Printf("error when marshalling content of %s from %s namespace: %+v\n", db.Name, db.Namespace, err)
 				} else {
 					filename := fmt.Sprintf("%s-db-%s.json", db.Namespace, db.Name)
 					toDebug[filename] = string(v)
@@ -141,12 +140,12 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				if storeLogsInFiles {
 					filename := fmt.Sprintf("%s/%s", testLogsDir, file)
 					if err := os.WriteFile(filename, []byte(content), 0644); err != nil {
-						klog.Infof("cannot write to %s: %+v", filename, err)
+						GinkgoWriter.Printf("cannot write to %s: %+v\n", filename, err)
 					} else {
 						continue
 					}
 				} else {
-					klog.Infof("%s\n%s", file, content)
+					GinkgoWriter.Printf("%s\n%s\n", file, content)
 				}
 			}
 		}
@@ -154,13 +153,13 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		for _, ab := range abList.Items {
 			err := f.JvmbuildserviceController.DeleteArtifactBuild(ab.Name, ab.Namespace)
 			if err != nil {
-				klog.Infof("got error deleting AB %s: %s", ab.Name, err.Error())
+				GinkgoWriter.Printf("got error deleting AB %s: %s\n", ab.Name, err.Error())
 			}
 		}
 		for _, db := range dbList.Items {
 			err := f.JvmbuildserviceController.DeleteDependencyBuild(db.Name, db.Namespace)
 			if err != nil {
-				klog.Infof("got error deleting DB %s: %s", db.Name, err.Error())
+				GinkgoWriter.Printf("got error deleting DB %s: %s\n", db.Name, err.Error())
 			}
 		}
 		Expect(f.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
@@ -171,7 +170,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 	BeforeAll(func() {
 		testNamespace = utils.GetGeneratedNamespace("jvm-build")
 
-		klog.Infof("Test namespace: %s", testNamespace)
+		GinkgoWriter.Printf("Test namespace: %s\n", testNamespace)
 
 		_, err := f.CommonController.CreateTestNamespace(testNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
@@ -260,7 +259,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			Eventually(func() bool {
 				componentPipelineRun, err = f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				if err != nil {
-					klog.Infoln("PipelineRun has not been created yet")
+					GinkgoWriter.Println("PipelineRun has not been created yet")
 					return false
 				}
 				return componentPipelineRun.HasStarted()
@@ -276,7 +275,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			err = wait.PollImmediate(interval, timeout, func() (done bool, err error) {
 				pr, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				if err != nil {
-					klog.Infof("get pr for component %s produced err: %s", componentName, err.Error())
+					GinkgoWriter.Printf("get pr for component %s produced err: %s\n", componentName, err.Error())
 					return false, nil
 				}
 
@@ -310,7 +309,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			err = wait.PollImmediate(interval, timeout, func() (done bool, err error) {
 				pr, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				if err != nil {
-					klog.Infof("get pr for the component %s produced err: %s", componentName, err.Error())
+					GinkgoWriter.Printf("get pr for the component %s produced err: %s\n", componentName, err.Error())
 					return false, nil
 				}
 
@@ -338,11 +337,11 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			Eventually(func() bool {
 				pr, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				if err != nil {
-					klog.Infof("get of pr %s returned error: %s", pr.Name, err.Error())
+					GinkgoWriter.Printf("get of pr %s returned error: %s\n", pr.Name, err.Error())
 					return false
 				}
 				if !pr.IsDone() {
-					klog.Infof("pipeline run %s not done", pr.Name)
+					GinkgoWriter.Printf("pipeline run %s not done\n", pr.Name)
 					return false
 				}
 				if !pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
@@ -355,7 +354,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			Eventually(func() bool {
 				abList, err := f.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
 				if err != nil {
-					klog.Infof("error listing artifactbuilds: %s", err.Error())
+					GinkgoWriter.Printf("error listing artifactbuilds: %s\n", err.Error())
 					return false
 				}
 				gotABs := false
@@ -364,7 +363,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				}
 				dbList, err := f.JvmbuildserviceController.ListDependencyBuilds(testNamespace)
 				if err != nil {
-					klog.Infof("error listing dependencybuilds: %s", err.Error())
+					GinkgoWriter.Printf("error listing dependencybuilds: %s\n", err.Error())
 					return false
 				}
 				gotDBs := false
@@ -382,7 +381,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			err = wait.PollImmediate(interval, timeout, func() (done bool, err error) {
 				abList, err := f.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
 				if err != nil {
-					klog.Infof("error listing artifactbuilds: %s", err.Error())
+					GinkgoWriter.Printf("error listing artifactbuilds: %s\n", err.Error())
 					return false, nil
 				}
 				abComplete := false
@@ -394,7 +393,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				}
 				dbList, err := f.JvmbuildserviceController.ListDependencyBuilds(testNamespace)
 				if err != nil {
-					klog.Infof("error listing dependencybuilds: %s", err.Error())
+					GinkgoWriter.Printf("error listing dependencybuilds: %s\n", err.Error())
 					return false, nil
 				}
 				dbComplete := false

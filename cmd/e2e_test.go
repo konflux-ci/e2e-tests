@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
@@ -47,6 +48,19 @@ func init() {
 	flag.StringVar(&polarionOutputFile, "polarion-output-file", "polarion.xml", "Generated polarion test cases")
 	flag.StringVar(&polarionProjectID, "project-id", "AppStudio", "Set the Polarion project ID")
 	flag.BoolVar(&generateTestCases, "generate-test-cases", false, "Generate Test Cases for Polarion")
+
+	klog.SetLogger(ginkgo.GinkgoLogr)
+
+	verbosity := 1
+	if v, err := strconv.ParseUint(os.Getenv("KLOG_VERBOSITY"), 10, 8); err == nil {
+		verbosity = int(v)
+	}
+
+	flags := &flag.FlagSet{}
+	klog.InitFlags(flags)
+	if err := flags.Set("v", fmt.Sprintf("%d", verbosity)); err != nil {
+		panic(err)
+	}
 }
 
 func TestE2E(t *testing.T) {

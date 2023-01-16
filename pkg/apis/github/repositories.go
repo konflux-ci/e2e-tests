@@ -5,16 +5,16 @@ import (
 	"fmt"
 
 	"github.com/google/go-github/v44/github"
-	"k8s.io/klog/v2"
+	. "github.com/onsi/ginkgo/v2"
 )
 
 func (g *Github) CheckIfRepositoryExist(repository string) bool {
 	_, resp, err := g.client.Repositories.Get(context.Background(), g.organization, repository)
 	if err != nil {
-		klog.Errorf("error when sending request to Github API: %v", err)
+		GinkgoWriter.Printf("error when sending request to Github API: %v\n", err)
 		return false
 	}
-	klog.Infof("repository %s status request to github: %d", repository, resp.StatusCode)
+	GinkgoWriter.Printf("repository %s status request to github: %d\n", repository, resp.StatusCode)
 	return resp.StatusCode == 200
 }
 
@@ -113,7 +113,7 @@ func (g *Github) GetAllRepositories() ([]*github.Repository, error) {
 }
 
 func (g *Github) DeleteRepository(repository *github.Repository) error {
-	klog.Infof("Deleting repository %s\n", *repository.Name)
+	GinkgoWriter.Printf("Deleting repository %s\n", *repository.Name)
 	_, err := g.client.Repositories.Delete(context.Background(), g.organization, *repository.Name)
 	if err != nil {
 		return err
