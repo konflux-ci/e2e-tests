@@ -11,6 +11,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
+	. "github.com/onsi/ginkgo/v2"
 	routev1 "github.com/openshift/api/route/v1"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
@@ -22,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/klog/v2"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -402,12 +402,12 @@ func (h *SuiteController) WaitForComponentPipelineToBeFinished(componentName str
 		pipelineRun, err := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, false, "")
 
 		if err != nil {
-			klog.Infoln("PipelineRun has not been created yet")
+			GinkgoWriter.Println("PipelineRun has not been created yet")
 			return false, nil
 		}
 
 		for _, condition := range pipelineRun.Status.Conditions {
-			klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)
+			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
 
 			if condition.Reason == "Failed" {
 				return false, fmt.Errorf("component %s pipeline failed", pipelineRun.Name)

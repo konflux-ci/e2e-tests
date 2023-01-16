@@ -21,7 +21,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
 )
 
 const (
@@ -58,7 +57,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 	// Initialize the e2e demo configuration
 	configTestFile := viper.GetString("config-suites")
-	klog.Infof("Starting e2e-demo test suites from config: %s", configTestFile)
+	GinkgoWriter.Printf("Starting e2e-demo test suites from config: %s\n", configTestFile)
 
 	// Initialize the tests controllers
 	fw, err := framework.NewFramework()
@@ -72,8 +71,8 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 			var namespace = utils.GetGeneratedNamespace("e2e-demo")
 			BeforeAll(func() {
 				suiteConfig, _ := GinkgoConfiguration()
-				fmt.Printf("Parallel processes: %d", suiteConfig.ParallelTotal)
-				fmt.Printf("Running on namespace: %s", namespace)
+				GinkgoWriter.Printf("Parallel processes: %d\n", suiteConfig.ParallelTotal)
+				GinkgoWriter.Printf("Running on namespace: %s\n", namespace)
 				// Check to see if the github token was provided
 				Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
 				// Check if 'has-github-token' is present, unless SKIP_HAS_SECRET_CHECK env var is set
@@ -96,7 +95,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 			// Create an application in a specific namespace
 			It("application is created", func() {
-				fmt.Printf("Parallel process %d", GinkgoParallelProcess())
+				GinkgoWriter.Printf("Parallel process %d\n", GinkgoParallelProcess())
 				createdApplication, err := fw.HasController.CreateHasApplication(appTest.ApplicationName, namespace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(createdApplication.Spec.DisplayName).To(Equal(appTest.ApplicationName))
@@ -221,7 +220,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 							return false
 						}
 						if deployment.Status.AvailableReplicas == 1 {
-							klog.Infof("Deployment %s is ready", deployment.Name)
+							GinkgoWriter.Printf("Deployment %s is ready\n", deployment.Name)
 							return true
 						}
 
@@ -236,7 +235,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 						Expect(err).NotTo(HaveOccurred())
 						err = fw.GitOpsController.CheckGitOpsEndpoint(gitOpsRoute, componentTest.HealthEndpoint)
 						if err != nil {
-							klog.Info("Failed to request component endpoint. retrying...")
+							GinkgoWriter.Println("Failed to request component endpoint. retrying...")
 						}
 						return true
 					}, 5*time.Minute, 10*time.Second).Should(BeTrue())
@@ -255,7 +254,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 								return false
 							}
 							if deployment.Status.AvailableReplicas == *componentTest.K8sSpec.Replicas {
-								klog.Infof("Replicas scaled to %s ", componentTest.K8sSpec.Replicas)
+								GinkgoWriter.Printf("Replicas scaled to %s\n", componentTest.K8sSpec.Replicas)
 								return true
 							}
 

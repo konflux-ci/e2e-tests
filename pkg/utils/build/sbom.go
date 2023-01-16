@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"os"
 
+	. "github.com/onsi/ginkgo/v2"
 	"github.com/openshift/library-go/pkg/image/reference"
 	"github.com/openshift/oc/pkg/cli/image/extract"
 	"github.com/openshift/oc/pkg/cli/image/imagesource"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/klog"
 )
 
 func GetParsedSbomFilesContentFromImage(image string) (*SbomPurl, *SbomCyclonedx, error) {
@@ -22,7 +22,7 @@ func GetParsedSbomFilesContentFromImage(image string) (*SbomPurl, *SbomCyclonedx
 	if err != nil {
 		return nil, nil, fmt.Errorf("error when creating a temp directory for extracting files: %+v", err)
 	}
-	klog.Infof("extracting contents of container image %s to dir: %s", image, tmpDir)
+	GinkgoWriter.Printf("extracting contents of container image %s to dir: %s\n", image, tmpDir)
 	eMapping := extract.Mapping{
 		ImageRef: imagesource.TypedImageReference{Type: "docker", Ref: dockerImageRef},
 		To:       tmpDir,

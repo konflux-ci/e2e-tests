@@ -14,7 +14,6 @@ import (
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
-	klog "k8s.io/klog/v2"
 	"knative.dev/pkg/apis"
 )
 
@@ -40,15 +39,15 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 		// Create the dev namespace
 		_, err := framework.CommonController.CreateTestNamespace(devNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", devNamespace, err)
-		klog.Info("Dev Namespace :", devNamespace)
+		GinkgoWriter.Println("Dev Namespace :", devNamespace)
 
 		// Create the managed namespace
 		_, err = framework.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", managedNamespace, err)
-		klog.Info("Managed Namespace :", managedNamespace)
+		GinkgoWriter.Println("Managed Namespace :", managedNamespace)
 
 		// Wait until the "pipeline" SA is created and ready with secrets by the openshift-pipelines operator
-		klog.Infof("Wait until the 'pipeline' SA is created in %s namespace \n", managedNamespace)
+		GinkgoWriter.Printf("Wait until the 'pipeline' SA is created in %s namespace \n", managedNamespace)
 		Eventually(func() bool {
 			sa, err := framework.CommonController.GetServiceAccount(serviceAccount, managedNamespace)
 			return sa != nil && err == nil
@@ -120,7 +119,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(managedNamespace)
 				if err != nil || prList == nil || len(prList.Items) < 1 {
-					klog.Error(err)
+					GinkgoWriter.Println(err)
 					return false
 				}
 
@@ -132,7 +131,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(managedNamespace)
 				if prList == nil || err != nil || len(prList.Items) < 1 {
-					klog.Error(err)
+					GinkgoWriter.Println(err)
 					return false
 				}
 
@@ -165,7 +164,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 
 			release, err := framework.ReleaseController.GetRelease(releaseName, devNamespace)
 			if err != nil {
-				klog.Error(err)
+				GinkgoWriter.Println(err)
 			}
 			Expect(release.Status.ReleasePipelineRun == (fmt.Sprintf("%s/%s", pipelineRunList.Items[0].Namespace, pipelineRunList.Items[0].Name))).Should(BeTrue())
 			// We add the namespace deletion timeout as this is the last test so must also take into account the code in AfterAll
