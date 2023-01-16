@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
@@ -15,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -106,7 +106,7 @@ func (h *SuiteController) GetReleasesWithApplicationSnapshot(applicationSnapshot
 	}
 
 	for _, release := range releases.Items {
-		klog.Infof("Release %s is found", release.Name)
+		GinkgoWriter.Printf("Release %s is found\n", release.Name)
 	}
 
 	return &releases.Items, nil
@@ -292,7 +292,7 @@ func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(testScenario *i
 		pipelineRun, _ := h.GetIntegrationPipelineRun(testScenario.Name, applicationSnapshot.Name, appNamespace)
 
 		for _, condition := range pipelineRun.Status.Conditions {
-			klog.Infof("PipelineRun %s reason: %s", pipelineRun.Name, condition.Reason)
+			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
 
 			if condition.Reason == "Failed" {
 				return false, fmt.Errorf("component %s pipeline failed", pipelineRun.Name)

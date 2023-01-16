@@ -25,7 +25,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/klog/v2"
 	"knative.dev/pkg/apis"
 )
 
@@ -134,7 +133,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Eventually(func() bool {
 				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true, "")
 				if err != nil {
-					klog.Infoln("PipelineRun has not been created yet")
+					GinkgoWriter.Println("PipelineRun has not been created yet")
 					return false
 				}
 				return pipelineRun.HasStarted()
@@ -171,7 +170,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, condition := range pipelineRun.Status.Conditions {
-						klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
+						GinkgoWriter.Printf("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 
 						if !pipelineRun.IsDone() {
 							return false
@@ -224,7 +223,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(err).NotTo(HaveOccurred())
 
 				createdFileSHA = createdFile.GetSHA()
-				klog.Infoln("created file sha:", createdFileSHA)
+				GinkgoWriter.Println("created file sha:", createdFileSHA)
 			})
 
 			It("eventually leads to triggering another PipelineRun", func() {
@@ -234,7 +233,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Eventually(func() bool {
 					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true, createdFileSHA)
 					if err != nil {
-						klog.Infoln("PipelineRun has not been created yet")
+						GinkgoWriter.Println("PipelineRun has not been created yet")
 						return false
 					}
 					return pipelineRun.HasStarted()
@@ -249,7 +248,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, condition := range pipelineRun.Status.Conditions {
-						klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
+						GinkgoWriter.Printf("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 
 						if !pipelineRun.IsDone() {
 							return false
@@ -300,7 +299,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request: %+v", err))
 
 				mergeResultSha = mergeResult.GetSHA()
-				klog.Infoln("merged result sha:", mergeResultSha)
+				GinkgoWriter.Println("merged result sha:", mergeResultSha)
 			})
 
 			It("eventually leads to triggering another PipelineRun", func() {
@@ -310,7 +309,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Eventually(func() bool {
 					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true, mergeResultSha)
 					if err != nil {
-						klog.Infoln("PipelineRun has not been created yet")
+						GinkgoWriter.Println("PipelineRun has not been created yet")
 						return false
 					}
 					return pipelineRun.HasStarted()
@@ -325,7 +324,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, condition := range pipelineRun.Status.Conditions {
-						klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
+						GinkgoWriter.Printf("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 
 						if !pipelineRun.IsDone() {
 							return false
@@ -439,7 +438,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Eventually(func() bool {
 					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, false, "")
 					if err != nil {
-						klog.Infoln("PipelineRun has not been created yet")
+						GinkgoWriter.Println("PipelineRun has not been created yet")
 						return false
 					}
 					return pipelineRun.HasStarted()
@@ -458,7 +457,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, condition := range pipelineRun.Status.Conditions {
-						klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
+						GinkgoWriter.Printf("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 
 						if !pipelineRun.IsDone() {
 							return false
@@ -664,7 +663,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Eventually(func() bool {
 				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				if err != nil {
-					klog.Infoln("PipelineRun has not been created yet")
+					GinkgoWriter.Println("PipelineRun has not been created yet")
 					return false
 				}
 				return pipelineRun.HasStarted()
@@ -686,7 +685,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Eventually(func() bool {
 				pipelineRun, err := f.HasController.GetComponentPipelineRun(notMatchingComponentName, applicationName, testNamespace, false, "")
 				if err != nil {
-					klog.Infoln("PipelineRun has not been created yet")
+					GinkgoWriter.Println("PipelineRun has not been created yet")
 					return false
 				}
 				return pipelineRun.HasStarted()
@@ -756,7 +755,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Eventually(func() bool {
 				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				if err != nil {
-					klog.Infoln("PipelineRun has not been created yet")
+					GinkgoWriter.Println("PipelineRun has not been created yet")
 					return false
 				}
 				return pipelineRun.HasStarted()
@@ -782,7 +781,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(err).ShouldNot(HaveOccurred())
 
 				for _, condition := range pipelineRun.Status.Conditions {
-					klog.Infof("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
+					GinkgoWriter.Printf("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 					return condition.Reason == "Failed"
 				}
 				return false
