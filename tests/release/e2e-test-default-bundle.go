@@ -61,13 +61,13 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 			Tektonctrl: *framework.TektonController,
 		}
 
-		demo, err := framework.CommonController.CreateTestNamespace(devNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", demo.Name, err)
-		klog.Info("Dev Namespace created: ", demo.Name)
+		dev, err := framework.CommonController.CreateTestNamespace(devNamespace)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", dev.Name, err)
+		klog.Info("Dev Namespace created: ", dev.Name)
 
-		namespace, err := framework.CommonController.CreateTestNamespace(managedNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", namespace.Name, err)
-		klog.Info("Managed Namespace created: ", namespace.Name)
+		manageNamespace, err := framework.CommonController.CreateTestNamespace(managedNamespace)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", manageNamespace.Name, err)
+		klog.Info("Managed Namespace created: ", manageNamespace.Name)
 
 		klog.Infof("Wait until the 'pipeline' SA is created in %s namespace \n", managedNamespace)
 		Eventually(func() bool {
@@ -123,22 +123,22 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 
 	var _ = Describe("Creation of the 'Happy path for defult pipeline bundle' resources", func() {
 
-		It("Create buildPipelineDeafultBundle", func() {
+		It("Create a config map with the given detail in dev namespace.", func() {
 			_, err := framework.CommonController.CreateConfigMap(cm, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Create ReleasePlan in dev namespace", func() {
+		It("Create ReleasePlan in dev namespace.", func() {
 			_, err := framework.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Create Release Strategy", func() {
+		It("creates Release Strategy with a given name in managed namespace.", func() {
 			_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineNameDefault, releasePipelineBundleDefault, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategyDefault)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Create ReleasePlanAdmission in managed namespace", func() {
+		It("Create ReleasePlanAdmission in managed namespace.", func() {
 			_, err := framework.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, "", "", releaseStrategyDefaultName) //releaseEnvironment
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -148,32 +148,32 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 			Expect(err).NotTo(HaveOccurred())
 		}, SpecTimeout(EnterpriseContractPolicyTimeout))
 
-		It("Create PVC", func() {
-			_, err := framework.TektonController.CreatePVCAccessMode(releasePvcName, managedNamespace, corev1.ReadWriteOnce)
+		It("creates pvc with a given name in managed namespace with the given accessmode.", func() {
+			_, err := framework.TektonController.CreatePVCInAccessMode(releasePvcName, managedNamespace, corev1.ReadWriteOnce)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Create Service Account", func() {
+		It("creates sevice account with a given name in the manged namespace.", func() {
 			_, err := framework.CommonController.CreateServiceAccount(releaseStrategyServiceAccountDefault, managedNamespace, managednamespaceSecret)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Create Role", func() {
+		It("creates Role with a given name in managed namespace.", func() {
 			_, err := framework.CommonController.CreateRole(roleName, managedNamespace, roleRules)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Create RoleBinding", func() {
-			_, err := framework.CommonController.CreateRoleBinding(roleBindingName, managedNamespace, subjectKind, roleName, roleRefKind, roleRefName, roleRefApiGroup)
+		It("creates Role binding with a given name in managednamespace.", func() {
+			_, err := framework.CommonController.CreateRoleBinding("role-relase-service-account-binding", managedNamespace, "ServiceAccount", roleName, roleRefKind, "role-m6-service-account", "rbac.authorization.k8s.io")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("CreateApplication", func() {
+		It("creates application with the given name in dev namespace.", func() {
 			_, err := framework.HasController.CreateHasApplication(applicationNameDefault, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("CreateComponent", func() {
+		It("creats component with the given component name in dev namespace.", func() {
 			_, err := framework.HasController.CreateComponent(applicationNameDefault, componentName, devNamespace, gitSourceComponentUrl, "", containerImageUrl, "", "", false)
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -206,8 +206,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 
 		// TODO should be removed once the it's done by service
 		// Adds manually the label of PaC to created snapshot in dev namespace
-		It("gets snapshot created in dev namepsace and add labebl to the Snapshot.", func() {
-			snapshotCreatedInDev, err := framework.ReleaseController.GetSnapshotInNamespace(devNamespace, componentName)
+		It("gets snapshot created in dev namepsace and add label to the Snapshot.", func() {
+			snapshotCreatedInDev, err := framework.ReleaseController.GetSnapshotByComponent(devNamespace, componentName)
 			Expect(err).NotTo(HaveOccurred())
 			_, err = framework.ReleaseController.AddLabelToSnapshot(snapshotCreatedInDev)
 			Expect(err).NotTo(HaveOccurred())
@@ -237,7 +237,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 
 		It("tests a Release should have been created in the dev namespace and succeeded", func() {
 			Eventually(func() bool {
-				releaseCreated, err := framework.ReleaseController.GetReleaseInNamespace(devNamespace)
+				releaseCreated, err := framework.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				if releaseCreated == nil || err != nil {
 					klog.Error(err)
 					return false

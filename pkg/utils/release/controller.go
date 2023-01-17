@@ -15,6 +15,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -44,7 +45,7 @@ func (s *SuiteController) CreateSnapshot(name string, namespace string, applicat
 	return snapshot, s.KubeRest().Create(context.TODO(), snapshot)
 }
 
-func (s *SuiteController) GetSnapshotInNamespace(namespace, componentName string) (*appstudioApi.Snapshot, error) {
+func (s *SuiteController) GetSnapshotByComponent(namespace, componentName string) (*appstudioApi.Snapshot, error) {
 	snapshot := &appstudioApi.SnapshotList{}
 	opts := []client.ListOption{
 		client.MatchingLabels{
@@ -60,6 +61,7 @@ func (s *SuiteController) GetSnapshotInNamespace(namespace, componentName string
 	return nil, err
 }
 
+// AddLabelToSnapshot it adds the missing PaC lapel to the given Snapshot.
 func (s *SuiteController) AddLabelToSnapshot(snapshot *appstudioApi.Snapshot) (*appstudioApi.Snapshot, error) {
 	snapshot.Labels["pac.test.appstudio.openshift.io/event-type"] = "push"
 
@@ -138,8 +140,8 @@ func (s *SuiteController) GetRelease(releaseName, releaseNamespace string) (*v1a
 	return release, err
 }
 
-// GetReleaseInNamespace returns the list of releases in the given namespace.
-func (s *SuiteController) GetReleaseInNamespace(namespace string) (*v1alpha1.Release, error) {
+// GetReleaseInNamespace returns the first Release from  list of releases in the given namespace.
+func (s *SuiteController) GetFirstReleaseInNamespace(namespace string) (*v1alpha1.Release, error) {
 	releaseList := &v1alpha1.ReleaseList{}
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
@@ -257,7 +259,7 @@ func (s *SuiteController) CreateReleasePlanAdmission(name, originNamespace, appl
 
 // CreateRegistryJsonSecret creates a secret for registry repository in namespace given with key passed.
 func (s *SuiteController) CreateRegistryJsonSecret(name, namespace, authKey, keyName string) (*corev1.Secret, error) {
-	GinkgoWriter.Println("Key is : ", authKey)
+	klog.Info("Key is : ", authKey)
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
 		Type:       corev1.SecretTypeDockerConfigJson,

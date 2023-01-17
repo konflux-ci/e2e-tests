@@ -17,8 +17,6 @@ const (
 	environment                         = "test-environment"
 	releaseStrategyServiceAccount       = "pipeline"
 
-	sourceReleaseLinkName                string = "source-release-link"
-	targetReleaseLinkName                string = "target-release-link"
 	releasePipelineNameDefault           string = "bundle-release-pipelinerun"
 	applicationNameDefault               string = "appstudio"
 	componentName                        string = "dc-metro-map"
@@ -40,10 +38,6 @@ const (
 	containerImageUrl                    string = "quay.io/hacbs-release-tests/dcmetromap:latest"
 	releasePipelineBundleDefault         string = "quay.io/hacbs-release/pipeline-release:main"
 	roleName                             string = "role-release-service-account"
-	roleBindingName                      string = "role-relase-service-account-binding"
-	subjectKind                          string = "ServiceAccount"
-	roleRefApiGroup                      string = "rbac.authorization.k8s.io"
-	roleRefName                          string = "role-m6-service-account"
 	roleRefKind                          string = "Role"
 	displayEnvironment                   string = "demo production"
 

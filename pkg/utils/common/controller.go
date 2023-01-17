@@ -554,7 +554,7 @@ func (s *SuiteController) CreateRole(roleName, namespace string, roleRules map[s
 	return createdRole, nil
 }
 
-func (s *SuiteController) CreateRoleBinding(roleBindingName, namespace string, subjectKind string, serviceAccountName string, roleRefKind string, roleRefName, roleRefApiGroup string) (*rbacv1.RoleBinding, error) {
+func (s *SuiteController) CreateRoleBinding(roleBindingName, namespace, subjectKind, serviceAccountName string, roleRefKind string, roleRefName, roleRefApiGroup string) (*rbacv1.RoleBinding, error) {
 
 	roleBindingSubjects := []rbacv1.Subject{
 		{
