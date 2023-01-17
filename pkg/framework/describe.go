@@ -42,3 +42,7 @@ func ReleaseSuiteDescribe(text string, args ...interface{}) bool {
 func IntegrationServiceSuiteDescribe(text string, args ...interface{}) bool {
 	return Describe("[integration-service-suite "+text+"]", args, Ordered)
 }
+
+func PipelineSuiteDescribe(text string, args ...interface{}) bool {
+	return Describe("[Pipeline-suite "+text+"]", args, Ordered)
+}
