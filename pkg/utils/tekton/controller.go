@@ -301,7 +301,7 @@ func (s *SuiteController) DeleteAllPipelineRunsInASpecificNamespace(ns string) e
 					// PipelinerRun CR is already removed
 					return true, nil
 				}
-				g.GinkgoWriter.Printf("unable to retrieve PipelineRun '%s' in '%s': %v", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
+				g.GinkgoWriter.Printf("unable to retrieve PipelineRun '%s' in '%s': %v\n", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
 				return false, nil
 
 			}
@@ -309,12 +309,12 @@ func (s *SuiteController) DeleteAllPipelineRunsInASpecificNamespace(ns string) e
 			// Remove the finalizer, so that it can be deleted.
 			pipelineRunCR.Finalizers = []string{}
 			if err := s.K8sClient.KubeRest().Update(context.TODO(), &pipelineRunCR); err != nil {
-				g.GinkgoWriter.Printf("unable to remove finalizers from PipelineRun '%s' in '%s': %v", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
+				g.GinkgoWriter.Printf("unable to remove finalizers from PipelineRun '%s' in '%s': %v\n", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
 				return false, nil
 			}
 
 			if err := s.K8sClient.KubeRest().Delete(context.TODO(), &pipelineRunCR); err != nil {
-				g.GinkgoWriter.Printf("unable to delete PipelineRun '%s' in '%s': %v", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
+				g.GinkgoWriter.Printf("unable to delete PipelineRun '%s' in '%s': %v\n", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
 				return false, nil
 			}
 			return true, nil
