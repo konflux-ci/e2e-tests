@@ -344,21 +344,21 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 
 func printTaskRunStatus(tr *v1beta1.PipelineRunTaskRunStatus, namespace string, sc common.SuiteController) {
 	if tr.Status == nil {
-		GinkgoWriter.Printf("*** TaskRun status: nil")
+		GinkgoWriter.Println("*** TaskRun status: nil")
 		return
 	}
 
 	if y, err := yaml.Marshal(tr.Status); err == nil {
 		GinkgoWriter.Printf("*** TaskRun status:\n%s\n", string(y))
 	} else {
-		GinkgoWriter.Printf("*** Unable to serialize TaskRunStatus to YAML: %#v; error: %s", tr.Status, err)
+		GinkgoWriter.Printf("*** Unable to serialize TaskRunStatus to YAML: %#v; error: %s\n", tr.Status, err)
 	}
 
 	for _, s := range tr.Status.TaskRunStatusFields.Steps {
 		if logs, err := sc.GetContainerLogs(tr.Status.PodName, s.ContainerName, namespace); err == nil {
 			GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, s.ContainerName, logs)
 		} else {
-			GinkgoWriter.Printf("*** Can't fetch logs from pod '%s', container '%s': %s", tr.Status.PodName, s.ContainerName, err)
+			GinkgoWriter.Printf("*** Can't fetch logs from pod '%s', container '%s': %s\n", tr.Status.PodName, s.ContainerName, err)
 		}
 	}
 }

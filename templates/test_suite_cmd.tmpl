@@ -16,8 +16,6 @@ import (
 	"flag"
 
 	"github.com/spf13/viper"
-
-	"k8s.io/klog/v2"
 )
 
 const ()
@@ -41,7 +39,7 @@ func init() {
 }
 
 func {{ .SuiteName }}Test(t *testing.T) {
-	klog.Info("Starting {{ .SuiteName }} tests...")
+	GinkgoWriter.Println("Starting {{ .SuiteName }} tests...")
 
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	ginkgo.RunSpecs(t, "{{ .SuiteName }} tests")
@@ -50,7 +48,7 @@ func {{ .SuiteName }}Test(t *testing.T) {
 var _ = ginkgo.SynchronizedAfterSuite(func() {}, func() {
 	//Send webhook only it the parameter configPath is not empty
 	if len(webhookConfigPath) > 0 {
-		klog.Info("Send webhook")
+		GinkgoWriter.Println("Send webhook")
 		framework.SendWebhook(webhookConfigPath)
 	}
 })
