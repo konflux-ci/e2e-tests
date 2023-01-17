@@ -49,7 +49,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	Expect(err).NotTo(HaveOccurred())
 
 	Describe("the component with git source (GitHub) is created", Ordered, Label("github-webhook"), func() {
-		var applicationName, componentName, pacBranchName, testNamespace, outputContainerImage, pacControllerHost string
+		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, outputContainerImage, pacControllerHost string
 
 		var timeout, interval time.Duration
 
@@ -83,12 +83,18 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			componentName = fmt.Sprintf("%s-%s", "test-component-pac", util.GenerateRandomString(4))
 			pacBranchName = fmt.Sprintf("appstudio-%s", componentName)
+			componentDefaultBranchName := "main"
+			componentBaseBranchName = fmt.Sprintf("%s-%s", "base", util.GenerateRandomString(4))
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images", utils.GetQuayIOOrganization())
 			// TODO: test image naming with provided image tag
 			// outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 
+			err = f.CommonController.Github.CreateRef(helloWorldComponentGitSourceRepoName, componentDefaultBranchName, componentBaseBranchName)
+			if err != nil {
+				Expect(err).ShouldNot(HaveOccurred())
+			}
 			// Create a component with Git Source URL being defined
-			_, err = f.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, outputContainerImage)
+			_, err = f.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, componentBaseBranchName, outputContainerImage)
 			Expect(err).ShouldNot(HaveOccurred())
 
 		})
@@ -109,7 +115,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}
 			}
 
+			// Delete new branch created by PaC and a testing branch used as a component's base branch
 			err = f.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, pacBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			err = f.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, componentBaseBranchName)
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 			}
@@ -354,7 +365,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return errors.IsNotFound(err)
 				}, time.Minute*1, time.Second*1).Should(BeTrue(), "timed out when waiting for the app %s to be deleted in %s namespace", applicationName, testNamespace)
 
-				_, err = f.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, outputContainerImage)
+				_, err = f.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, componentBaseBranchName, outputContainerImage)
 			})
 
 			It("should no longer lead to a creation of a PaC PR", func() {
