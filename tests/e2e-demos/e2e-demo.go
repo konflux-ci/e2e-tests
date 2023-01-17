@@ -70,6 +70,10 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 		Describe(appTest.Name, Ordered, func() {
 			var namespace = utils.GetGeneratedNamespace("e2e-demo")
 			BeforeAll(func() {
+				if appTest.Skip {
+					Skip(fmt.Sprintf("test skipped %s", appTest.Name))
+				}
+
 				suiteConfig, _ := GinkgoConfiguration()
 				GinkgoWriter.Printf("Parallel processes: %d\n", suiteConfig.ParallelTotal)
 				GinkgoWriter.Printf("Running on namespace: %s\n", namespace)
