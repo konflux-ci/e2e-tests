@@ -61,6 +61,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 	Describe(testSpecification.Tests[0].ApplicationName, Ordered, func() {
 		BeforeAll(func() {
+			Skip("skip tests due a issue with devfile detection. See jira: https://issues.redhat.com/browse/DEVHAS-225")
 			// Check to see if the github token was provided
 			Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
 			// Check if 'has-github-token' is present, unless SKIP_HAS_SECRET_CHECK env var is set
