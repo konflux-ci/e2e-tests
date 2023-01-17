@@ -22,5 +22,6 @@ func LoadTestGeneratorConfig(configPath string) (WorkflowSpec, error) {
 	if err := d.Decode(&c); err != nil {
 		return c, err
 	}
+
 	return c, nil
 }
