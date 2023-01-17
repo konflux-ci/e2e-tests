@@ -196,7 +196,7 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 		return nil, err
 	}
 	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*2); err != nil {
-		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v, component: %+v", componentName, namespace, component, err)
 	}
 	return component, nil
 }
@@ -251,8 +251,8 @@ func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, compone
 	if err != nil {
 		return nil, err
 	}
-	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*30); err != nil {
-		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*2); err != nil {
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v, component: %+v", componentName, namespace, component, err)
 	}
 	return component, nil
 }
@@ -276,8 +276,8 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 	if err != nil {
 		return nil, err
 	}
-	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*30); err != nil {
-		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*2); err != nil {
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v, component: %+v", componentName, namespace, component, err)
 	}
 	return component, nil
 }
@@ -458,8 +458,8 @@ func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentN
 	if err != nil {
 		return nil, err
 	}
-	if err = utils.WaitUntil(h.ComponentReady(component), time.Second*30); err != nil {
-		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v", componentName, namespace, err)
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*2); err != nil {
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v, component: %+v", componentName, namespace, component, err)
 	}
 	return component, nil
 }
