@@ -192,9 +192,6 @@ func (ci CI) TestE2E() error {
 	if err := RegisterUser(); err != nil {
 		return fmt.Errorf("error when registerin user via toolchain operators: %v", err)
 	}
-	if err := GenerateUserKubeconfig(); err != nil {
-		return fmt.Errorf("error while generating user's kubeconfig file: %v", err)
-	}
 
 	if err := RunE2ETests(); err != nil {
 		testFailure = true
