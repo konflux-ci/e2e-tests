@@ -753,6 +753,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			_, err = f.CommonController.CreateSecret(testNamespace, dummySecret)
 			Expect(err).ToNot(HaveOccurred())
+			err = f.CommonController.LinkSecretToServiceAccount(testNamespace, dummySecret.Name, "pipeline")
+			Expect(err).ToNot(HaveOccurred())
 
 			componentName = "build-suite-test-secret-overriding"
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
@@ -774,14 +776,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(pipelineRun.Spec.Workspaces).To(HaveLen(2))
-			registryAuthWorkspace := &v1beta1.WorkspaceBinding{
-				Name: "registry-auth",
-				Secret: &v1.SecretVolumeSource{
-					SecretName: "redhat-appstudio-registry-pull-secret",
-				},
-			}
-			Expect(pipelineRun.Spec.Workspaces).To(ContainElement(*registryAuthWorkspace))
+			Expect(pipelineRun.Spec.Workspaces).To(HaveLen(1))
 		})
 
 		It("should not be possible to push to quay.io repo (PipelineRun should fail)", func() {
