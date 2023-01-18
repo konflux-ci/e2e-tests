@@ -60,19 +60,19 @@ func sendHttpRequestAndParseResponse(url, method string, v interface{}) error {
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("token %s", os.Getenv("GITHUB_TOKEN")))
 	res, err := http.DefaultClient.Do(req)
-	klog.Infof("request statuscode %s, error: %v", res.StatusCode, err)
+	klog.Infof("response status code: '%d'", res.StatusCode)
 
 	if err != nil {
-		return err
+		return fmt.Errorf("error when sending request to '%s': %+v", url, err)
 	}
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
 
 	if err != nil {
-		return err
+		return fmt.Errorf("error when reading the response body from URL '%s': %+v", url, err)
 	}
 	if err := json.Unmarshal(body, v); err != nil {
-		return err
+		return fmt.Errorf("error when unmarshalling the response body from URL '%s': %+v", url, err)
 	}
 
 	return nil

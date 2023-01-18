@@ -301,15 +301,16 @@ func BootstrapCluster() error {
 }
 
 func (CI) isPRPairingRequired() bool {
-	var ghBranches []GithubBranch
-	url := fmt.Sprintf("https://api.github.com/repos/%s/e2e-tests/branches", pr.RemoteName)
-	if err := sendHttpRequestAndParseResponse(url, "GET", &ghBranches); err != nil {
+	var pullRequests []gh.PullRequest
+
+	url := "https://api.github.com/repos/redhat-appstudio/e2e-tests/pulls?per_page=100"
+	if err := sendHttpRequestAndParseResponse(url, "GET", &pullRequests); err != nil {
 		klog.Infof("cannot determine e2e-tests Github branches for author %s: %v. will stick with the redhat-appstudio/e2e-tests main branch for running tests", pr.Author, err)
 		return false
 	}
 
-	for _, b := range ghBranches {
-		if b.Name == pr.BranchName {
+	for _, pull := range pullRequests {
+		if pull.GetHead().GetRef() == pr.BranchName && pull.GetUser().GetLogin() == pr.RemoteName {
 			return true
 		}
 	}
