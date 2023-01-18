@@ -184,10 +184,14 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 		It("verifies that in dev namespace will be created a PipelineRun.", func() {
 			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(devNamespace)
+				klog.Infof("PipeLineRun is : %s", prList.Items[0].Name)
+				klog.Infof("ComponentName is : %s", componentName)
 				if err != nil || prList == nil || len(prList.Items) < 1 {
 					klog.Error(err)
 					return false
 				}
+				klog.Infof("PipeLineRun is : %s", prList.Items[0].Name)
+				klog.Infof("ComponentName is : %s", componentName)
 				return strings.Contains(prList.Items[0].Name, componentName)
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
@@ -202,15 +206,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 
 				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
-		})
-
-		// TODO should be removed once the it's done by service
-		// Adds manually the label of PaC to created snapshot in dev namespace
-		It("gets snapshot created in dev namepsace and add label to the Snapshot.", func() {
-			snapshotCreatedInDev, err := framework.ReleaseController.GetSnapshotByComponent(devNamespace, componentName)
-			Expect(err).NotTo(HaveOccurred())
-			_, err = framework.ReleaseController.AddLabelToSnapshot(snapshotCreatedInDev)
-			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("verifies that in managed namespace will be created a PipelineRun.", func() {

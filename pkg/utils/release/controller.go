@@ -45,11 +45,11 @@ func (s *SuiteController) CreateSnapshot(name string, namespace string, applicat
 	return snapshot, s.KubeRest().Create(context.TODO(), snapshot)
 }
 
-func (s *SuiteController) GetSnapshotByComponent(namespace, componentName string) (*appstudioApi.Snapshot, error) {
+func (s *SuiteController) GetSnapshotByComponent(namespace string) (*appstudioApi.Snapshot, error) {
 	snapshot := &appstudioApi.SnapshotList{}
 	opts := []client.ListOption{
 		client.MatchingLabels{
-			"test.appstudio.openshift.io/component": componentName,
+			"test.appstudio.openshift.io/type": "component",
 		},
 		client.InNamespace(namespace),
 	}
