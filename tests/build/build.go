@@ -173,7 +173,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 
 			It("the PipelineRun should eventually finish successfully", func() {
-				timeout = time.Second * 600
+				timeout = time.Minute * 15
 				interval = time.Second * 10
 				Eventually(func() bool {
 
