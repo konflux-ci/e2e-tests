@@ -66,23 +66,25 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 	})
 
 	AfterAll(func() {
-		err := framework.HasController.DeleteHasComponent(componentName, testNamespace, false)
-		Expect(err).NotTo(HaveOccurred())
+		if !CurrentSpecReport().Failed() {
+			err := framework.HasController.DeleteHasComponent(componentName, testNamespace, false)
+			Expect(err).NotTo(HaveOccurred())
 
-		err = framework.HasController.DeleteHasApplication(applicationName, testNamespace, false)
-		Expect(err).NotTo(HaveOccurred())
+			err = framework.HasController.DeleteHasApplication(applicationName, testNamespace, false)
+			Expect(err).NotTo(HaveOccurred())
 
-		err = framework.SPIController.DeleteAllBindingTokensInASpecificNamespace(testNamespace)
-		Expect(err).NotTo(HaveOccurred())
+			err = framework.SPIController.DeleteAllBindingTokensInASpecificNamespace(testNamespace)
+			Expect(err).NotTo(HaveOccurred())
 
-		Eventually(func() bool {
-			// application info should be stored even after deleting the application in application variable
-			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
+			Eventually(func() bool {
+				// application info should be stored even after deleting the application in application variable
+				gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
-		}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
+				return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
 
-		Expect(framework.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
+			Expect(framework.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
+		}
 	})
 
 	It("Create Red Hat AppStudio Application", func() {

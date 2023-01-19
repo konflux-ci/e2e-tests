@@ -59,20 +59,22 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 	})
 
 	AfterAll(func() {
-		_, err = framework.HasController.GetComponentDetectionQuery(componentName, testNamespace)
-		if err != nil {
-			err = framework.HasController.DeleteHasComponentDetectionQuery(componentName, testNamespace)
+		if !CurrentSpecReport().Failed() {
+			_, err = framework.HasController.GetComponentDetectionQuery(componentName, testNamespace)
+			if err != nil {
+				err = framework.HasController.DeleteHasComponentDetectionQuery(componentName, testNamespace)
+				Expect(err).NotTo(HaveOccurred())
+			}
+			err = framework.HasController.DeleteHasApplication(applicationName, testNamespace, false)
 			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() bool {
+				// application info should be stored even after deleting the application in application variable
+				gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
+
+				return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
 		}
-		err = framework.HasController.DeleteHasApplication(applicationName, testNamespace, false)
-		Expect(err).NotTo(HaveOccurred())
-
-		Eventually(func() bool {
-			// application info should be stored even after deleting the application in application variable
-			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
-
-			return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
-		}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
 	})
 
 	It("Create Red Hat AppStudio Application", func() {
