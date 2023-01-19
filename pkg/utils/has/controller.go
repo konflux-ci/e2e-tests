@@ -227,11 +227,9 @@ func (h *SuiteController) ComponentDeleted(component *appservice.Component) wait
 func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, componentName, namespace, gitSourceURL, baseBranch, outputContainerImage string) (*appservice.Component, error) {
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				"pipelinesascode": "1",
-			},
-			Name:      componentName,
-			Namespace: namespace,
+			Annotations: constants.ComponentPaCRequestAnnotation,
+			Name:        componentName,
+			Namespace:   namespace,
 		},
 		Spec: appservice.ComponentSpec{
 			ComponentName: componentName,

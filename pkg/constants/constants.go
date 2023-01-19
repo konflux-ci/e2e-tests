@@ -64,6 +64,7 @@ const (
 )
 
 var (
-	ComponentDefaultLabel      = map[string]string{"e2e-test": "true"}
-	ComponentDefaultAnnotation = map[string]string{"com.redhat.appstudio/component-initial-build-processed": "true"}
+	ComponentDefaultLabel         = map[string]string{"e2e-test": "true"}
+	ComponentDefaultAnnotation    = map[string]string{"appstudio.openshift.io/component-initial-build": "processed"}
+	ComponentPaCRequestAnnotation = map[string]string{"appstudio.openshift.io/pac-provision": "request"}
 )
