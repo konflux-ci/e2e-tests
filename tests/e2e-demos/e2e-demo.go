@@ -191,10 +191,8 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					Expect(err).ShouldNot(HaveOccurred())
 
 					Eventually(func() bool {
-						if fw.IntegrationController.HaveHACBSTestsSucceeded(snapshot) {
-							return true
-						}
-						return false
+						return fw.IntegrationController.HaveHACBSTestsSucceeded(snapshot)
+
 					}, timeout, interval).Should(BeTrue(), "time out when trying to check if the snapshot is marked as successful")
 				})
 
