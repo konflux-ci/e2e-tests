@@ -90,6 +90,23 @@ func (s *SuiteController) DeleteSecret(ns string, name string) error {
 	return s.KubeInterface().CoreV1().Secrets(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
+// Links a secret to a specified serviceaccount
+func (s *SuiteController) LinkSecretToServiceAccount(ns, secret, serviceaccount string) error {
+	serviceAccountObject, err := s.KubeInterface().CoreV1().ServiceAccounts(ns).Get(context.TODO(), serviceaccount, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	for _, credentialSecret := range serviceAccountObject.Secrets {
+		if credentialSecret.Name == secret {
+			// The secret is present in the service account, no updates needed
+			return nil
+		}
+	}
+	serviceAccountObject.Secrets = append(serviceAccountObject.Secrets, corev1.ObjectReference{Name: secret})
+	_, err = s.KubeInterface().CoreV1().ServiceAccounts(ns).Update(context.TODO(), serviceAccountObject, metav1.UpdateOptions{})
+	return err
+}
+
 func (s *SuiteController) GetPod(namespace, podName string) (*corev1.Pod, error) {
 	return s.KubeInterface().CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 }
