@@ -42,7 +42,6 @@ require (
 	k8s.io/apimachinery v0.26.0
 	k8s.io/cli-runtime v0.24.3
 	k8s.io/client-go v0.25.4
-	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.80.1
 	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448
 	knative.dev/pkg v0.0.0-20221011175852-714b7630a836
@@ -234,6 +233,7 @@ require (
 	gotest.tools/v3 v3.3.0 // indirect
 	k8s.io/apiextensions-apiserver v0.25.2 // indirect
 	k8s.io/component-base v0.25.2 // indirect
+	k8s.io/klog v1.0.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // indirect
 	k8s.io/kubectl v0.24.1 // indirect
 	k8s.io/metrics v0.24.1 // indirect

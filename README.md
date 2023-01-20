@@ -12,7 +12,7 @@ It is recommended to install AppStudio in E2E mode, but the E2E suite can be als
 * Ability to run the test suites separately.
 
 # Running the tests
-Whnen you want to run the E2E tests for AppStudio you need to have installed tools(in Requirements chapter), installed the AppStudio in E2E mode and compiled `e2e-appstudio` binary.
+When you want to run the E2E tests for AppStudio you need to have installed tools(in Requirements chapter), installed the AppStudio in E2E mode and compiled `e2e-appstudio` binary.
 
 ## Requirements
 Requirements for installing AppStudio in E2E mode and running the E2E tests:

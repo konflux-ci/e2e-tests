@@ -77,14 +77,14 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 		}
 	})
 
-	It("Create Red Hat AppStudio Application", func() {
+	It("creates Red Hat AppStudio Application", func() {
 		createdApplication, err := framework.HasController.CreateHasApplication(applicationName, testNamespace)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createdApplication.Spec.DisplayName).To(Equal(applicationName))
 		Expect(createdApplication.Namespace).To(Equal(testNamespace))
 	})
 
-	It("Check Red Hat AppStudio Application health", func() {
+	It("checks Red Hat AppStudio Application health", func() {
 		Eventually(func() string {
 			application, err = framework.HasController.GetHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
@@ -101,20 +101,20 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 	})
 
 	// Necessary for component pipeline
-	It("Check if 'git-clone' cluster tasks exists", func() {
+	It("checks if 'git-clone' cluster tasks exists", func() {
 		Eventually(func() bool {
 			return framework.CommonController.CheckIfClusterTaskExists("git-clone")
 		}, 5*time.Minute, 45*time.Second).Should(BeTrue(), "'git-clone' cluster task don't exist in cluster. Component cannot be created")
 	})
 
-	It("Create Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
+	It("creates Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
 		cdq, err := framework.HasController.CreateComponentDetectionQuery(componentName, testNamespace, QuarkusDevfileSource, "", false)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cdq.Name).To(Equal(componentName))
 
 	})
 
-	It("Check Red Hat AppStudio ComponentDetectionQuery status", func() {
+	It("checks Red Hat AppStudio ComponentDetectionQuery status", func() {
 		// Validate that the CDQ completes successfully
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
@@ -133,13 +133,13 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 		}
 	})
 
-	It("Create Red Hat AppStudio Quarkus component", func() {
+	It("creates Red Hat AppStudio Quarkus component", func() {
 		component, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, "", applicationName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(component.Name).To(Equal(componentName))
 	})
 
-	It("Gitops Repository should not be deleted when component gets deleted", func() {
+	It("gitops Repository should not be deleted when component gets deleted", func() {
 		comp2Detected := appservice.ComponentDetectionDescription{}
 
 		for _, comp2Detected = range cdq.Status.ComponentDetected {
@@ -160,7 +160,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "Gitops repository deleted after component was deleted")
 	})
 
-	It("Check a Component gets deleted when its application is deleted", func() {
+	It("checks a Component gets deleted when its application is deleted", func() {
 		err = framework.HasController.DeleteHasApplication(applicationName, testNamespace, false)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(func() bool {

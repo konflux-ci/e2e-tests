@@ -1,4 +1,4 @@
-# Cluser Registration
+# Cluster Registration
 
 Contains E2E tests related with [Cluster Registration Operator](https://github.com/stolostron/cluster-registration-operator).
 

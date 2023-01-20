@@ -16,13 +16,13 @@ import (
 
 // Framework struct to store all controllers
 type Framework struct {
-	HasController     *has.SuiteController
-	CommonController  *common.SuiteController
-	TektonController  *tekton.SuiteController
-	GitOpsController  *gitops.SuiteController
-	SPIController     *spi.SuiteController
-	ReleaseController *release.SuiteController
-	IntegrationController *integration.SuiteController
+	HasController             *has.SuiteController
+	CommonController          *common.SuiteController
+	TektonController          *tekton.SuiteController
+	GitOpsController          *gitops.SuiteController
+	SPIController             *spi.SuiteController
+	ReleaseController         *release.SuiteController
+	IntegrationController     *integration.SuiteController
 	JvmbuildserviceController *jvmbuildservice.SuiteController
 }
 
@@ -83,13 +83,13 @@ func NewFramework() (*Framework, error) {
 	}
 
 	return &Framework{
-		CommonController:  commonCtrl,
-		HasController:     hasController,
-		TektonController:  tektonController,
-		GitOpsController:  gitopsController,
-		SPIController:     spiController,
-		ReleaseController: releaseController,
-		IntegrationController: integrationController,
+		CommonController:          commonCtrl,
+		HasController:             hasController,
+		TektonController:          tektonController,
+		GitOpsController:          gitopsController,
+		SPIController:             spiController,
+		ReleaseController:         releaseController,
+		IntegrationController:     integrationController,
 		JvmbuildserviceController: jvmbuildserviceController,
 	}, nil
 }

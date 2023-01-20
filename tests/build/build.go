@@ -326,7 +326,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return pipelineRun.HasStarted()
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 			})
-			It("PipelineRun should eventually finish", func() {
+			It("pipelineRun should eventually finish", func() {
 				timeout = time.Minute * 5
 				interval = time.Second * 10
 
@@ -430,7 +430,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			// Do cleanup only in case the test succeeded
 			if !CurrentSpecReport().Failed() {
 				// Clean up only Application CR (Component and Pipelines are included) in case we are targeting specific namespace
-				// Used e.g. in build-defintions e2e tests, where we are targeting build-templates-e2e namespace
+				// Used e.g. in build-definitions e2e tests, where we are targeting build-templates-e2e namespace
 				if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) != "" {
 					DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace, false)
 				} else {

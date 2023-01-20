@@ -143,7 +143,7 @@ func (Local) CleanupGithubOrg() error {
 		// Add only repos older than 24 hours
 		dayDuration, _ := time.ParseDuration("24h")
 		if time.Since(repo.GetCreatedAt().Time) > dayDuration {
-			// Add only repos machting the regex
+			// Add only repos matching the regex
 			if r.MatchString(*repo.Name) {
 				reposToDelete = append(reposToDelete, repo)
 			}
@@ -190,7 +190,7 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
 	}
 	if err := RegisterUser(); err != nil {
-		return fmt.Errorf("error when registerin user via toolchain operators: %v", err)
+		return fmt.Errorf("error when registering user via toolchain operators: %v", err)
 	}
 	if err := GenerateUserKubeconfig(); err != nil {
 		return fmt.Errorf("error while generating user's kubeconfig file: %v", err)
@@ -481,7 +481,7 @@ func (Local) GenerateTestSpecFile() error {
 
 }
 
-// Creates preapproved userSignup CR cluster and waits for its reconcilliation
+// Creates preapproved userSignup CR cluster and waits for its reconciliation
 func RegisterUser() error {
 	kubeClient, err := client.NewK8SClient()
 	if err != nil {
