@@ -87,31 +87,37 @@ func (c *CustomClient) DynamicClient() dynamic.Interface {
 }
 
 func NewKubernetesClient() (*K8SClient, error) {
-	asAdminClient, err := NewAdminKubernetesClient()
+	var asDeveloperClient *CustomClient
 
+	asAdminClient, err := NewAdminKubernetesClient()
 	if err != nil {
 		return nil, err
 	}
 
 	userKubeconfigPath := os.Getenv("USER_KUBE_CONFIG_PATH")
 	if userKubeconfigPath == "" {
-		klog.Info("'USER_KUBE_CONFIG_PATH' not detected. Generating toolchain user kubeconfig")
+		userKubeconfigPath, err = asAdminClient.GenerateSandboxUserKubeconfig()
+		if err != nil {
+			klog.Errorf("error geting sandbox user kubeconfig %v. Using admin client instead for developer tests", err)
 
-	}
+			asDeveloperClient = asAdminClient
+		}
+		userCfg, err := clientcmd.BuildConfigFromFlags("", userKubeconfigPath)
+		if err != nil {
+			klog.Errorf("error geting sandbox user kubeconfig %v. Using admin client instead for developer tests", err)
+			asDeveloperClient = asAdminClient
+		}
 
-	userCfg, err := clientcmd.BuildConfigFromFlags("", userKubeconfigPath)
-	if err != nil {
-		return nil, err
-	}
-
-	userClusterClient, err := createCustomClient(*userCfg)
-	if err != nil {
-		return nil, err
+		asDeveloperClient, err = createCustomClient(*userCfg)
+		if err != nil {
+			klog.Errorf("error geting sandbox user kubeconfig %v. Using admin client instead for developer tests", err)
+			asDeveloperClient = asAdminClient
+		}
 	}
 
 	return &K8SClient{
 		AsKubeAdmin:     asAdminClient,
-		AsKubeDeveloper: userClusterClient,
+		AsKubeDeveloper: asDeveloperClient,
 	}, nil
 }
 
