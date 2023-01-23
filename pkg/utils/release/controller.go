@@ -178,7 +178,7 @@ func (s *SuiteController) GetReleasePlan(name, namespace string) (*appstudiov1al
 	return releasePlan, err
 }
 
-// DeletetReleasePlan deletes a given ReleasePlan name in given namespace.
+// DeleteReleasePlan deletes a given ReleasePlan name in given namespace.
 func (s *SuiteController) DeleteReleasePlan(name, namespace string, failOnNotFound bool) error {
 	releasePlan := &appstudiov1alpha1.ReleasePlan{
 		ObjectMeta: metav1.ObjectMeta{

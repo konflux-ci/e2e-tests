@@ -23,8 +23,8 @@ const (
 	containerImageSource = "quay.io/redhat-appstudio-qe/busybox-loop:latest"
 	gitSourceRepoName    = "devfile-sample-python-basic"
 	gitSourceURL         = "https://github.com/redhat-appstudio-qe/" + gitSourceRepoName
-	bundleURL            = "quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-pass"
-	inPipelineName       = "integration-pipeline-pass"
+	BundleURL            = "quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-pass"
+	InPipelineName       = "integration-pipeline-pass"
 )
 
 var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests", Label("integration-service", "HACBS"), func() {
@@ -74,7 +74,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				}
 			}
 			_ = defaultBundleConfigMap.Data["default_build_bundle"]
-			_, err = f.IntegrationController.CreateIntegrationTestScenario(applicationName, appStudioE2EApplicationsNamespace, bundleURL, inPipelineName)
+			_, err = f.IntegrationController.CreateIntegrationTestScenario(applicationName, appStudioE2EApplicationsNamespace, BundleURL, InPipelineName)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
@@ -122,13 +122,13 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 
 		When("the build pipelineRun run succeeded", func() {
-			It("check if the ApplicationSnapshot is created", func() {
+			It("checks if the ApplicationSnapshot is created", func() {
 				// snapshotName is sent as empty since it is unknown at this stage
 				applicationSnapshot, err = f.IntegrationController.GetApplicationSnapshot("", applicationName, appStudioE2EApplicationsNamespace, componentName)
 				Expect(err).ShouldNot(HaveOccurred())
 				GinkgoWriter.Printf("applicationSnapshot %s is found\n", applicationSnapshot.Name)
 			})
-			It("check if all of the integrationPipelineRuns passed", Label("slow"), func() {
+			It("checks if all of the integrationPipelineRuns passed", Label("slow"), func() {
 				integrationTestScenarios, err := f.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 				for _, testScenario := range *integrationTestScenarios {
@@ -152,7 +152,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 		})
 
-		It("create a ReleasePlan and an environment", func() {
+		It("creates a ReleasePlan and an environment", func() {
 			_, err = f.IntegrationController.CreateReleasePlan(applicationName, appStudioE2EApplicationsNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
 			env, err = f.IntegrationController.CreateEnvironment(appStudioE2EApplicationsNamespace)
@@ -164,14 +164,15 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			}
 		})
 
-		It("create an applicationSnapshot of push event", func() {
-			applicationSnapshot_push, err = f.IntegrationController.CreateApplicationSnapshot(applicationName, appStudioE2EApplicationsNamespace, componentName)
+		It("creates an applicationSnapshot of push event", func() {
+			sample_image := "quay.io/redhat-appstudio/sample-image"
+			applicationSnapshot_push, err = f.IntegrationController.CreateApplicationSnapshot(applicationName, appStudioE2EApplicationsNamespace, componentName, sample_image)
 			Expect(err).ShouldNot(HaveOccurred())
 			GinkgoWriter.Printf("applicationSnapshot %s is found\n", applicationSnapshot_push.Name)
 		})
 
 		When("An applicationSnapshot of push event is created", func() {
-			It("check if all of the integrationPipelineRuns created by push event passed", Label("slow"), func() {
+			It("checks if all of the integrationPipelineRuns created by push event passed", Label("slow"), func() {
 				integrationTestScenarios, err := f.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 
@@ -204,7 +205,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				}
 			})
 
-			It("check if the global candidate is updated after push event", func() {
+			It("checks if the global candidate is updated after push event", func() {
 				timeout = time.Second * 600
 				interval = time.Second * 10
 				Eventually(func() bool {
@@ -219,7 +220,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				}, timeout, interval).Should(BeTrue(), "time out when waiting for updating the global candidate")
 			})
 
-			It("check if a Release is created successfully", func() {
+			It("checks if a Release is created successfully", func() {
 				timeout = time.Second * 800
 				interval = time.Second * 10
 				Eventually(func() bool {
@@ -240,7 +241,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				}, timeout, interval).Should(BeTrue(), "time out when waiting for release created")
 			})
 
-			It("check if an EnvironmentBinding is created successfully", func() {
+			It("checks if an EnvironmentBinding is created successfully", func() {
 				timeout = time.Second * 600
 				interval = time.Second * 2
 				Eventually(func() bool {

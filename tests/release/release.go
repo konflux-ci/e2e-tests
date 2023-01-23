@@ -115,7 +115,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 
 	var _ = Describe("post-release verification.", func() {
 
-		It("make sure a PipelineRun should have been created in the managed namespace.", func() {
+		It("makes sure a PipelineRun should have been created in the managed namespace.", func() {
 			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(managedNamespace)
 				if err != nil || prList == nil || len(prList.Items) < 1 {
