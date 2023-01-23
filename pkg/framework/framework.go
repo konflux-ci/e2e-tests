@@ -14,82 +14,97 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
-// Framework struct to store all controllers
-type Framework struct {
-	HasController     *has.SuiteController
-	CommonController  *common.SuiteController
-	TektonController  *tekton.SuiteController
-	GitOpsController  *gitops.SuiteController
-	SPIController     *spi.SuiteController
-	ReleaseController *release.SuiteController
-	IntegrationController *integration.SuiteController
+type ControllerHub struct {
+	HasController             *has.SuiteController
+	CommonController          *common.SuiteController
+	TektonController          *tekton.SuiteController
+	GitOpsController          *gitops.SuiteController
+	SPIController             *spi.SuiteController
+	ReleaseController         *release.SuiteController
+	IntegrationController     *integration.SuiteController
 	JvmbuildserviceController *jvmbuildservice.SuiteController
 }
 
-// Initialize all test controllers and return them in a Framework
-func NewFramework() (*Framework, error) {
+type Framework struct {
+	AsKubeAdmin     *ControllerHub
+	AsKubeDeveloper *ControllerHub
+}
 
-	// Initialize a common kubernetes client to be passed to the test controllers
-	kubeClient, err := kubeCl.NewK8SClient()
+func NewFramework() (*Framework, error) {
+	k, err := kubeCl.NewKubernetesClient()
 	if err != nil {
-		return nil, fmt.Errorf("error creating client-go %v", err)
+		return nil, fmt.Errorf("error when initializing kubernetes clients: %v", err)
 	}
 
+	asAdmin, err := initControllerHub(k.AsKubeAdmin)
+	if err != nil {
+		return nil, fmt.Errorf("error when initializing appstudio hub controllers for admin user: %v", err)
+	}
+
+	asUser, err := initControllerHub(k.AsKubeAdmin)
+	if err != nil {
+		return nil, fmt.Errorf("error when initializing appstudio hub controllers for sandbox user: %v", err)
+	}
+
+	return &Framework{
+		AsKubeAdmin:     asAdmin,
+		AsKubeDeveloper: asUser,
+	}, nil
+}
+
+func initControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 	// Initialize Common controller
-	commonCtrl, err := common.NewSuiteController(kubeClient)
+	commonCtrl, err := common.NewSuiteController(cc)
 	if err != nil {
 		return nil, err
 	}
 
 	// Initialize Has controller
-	hasController, err := has.NewSuiteController(kubeClient)
+	hasController, err := has.NewSuiteController(cc)
+	if err != nil {
+		return nil, err
+	}
+
+	spiController, err := spi.NewSuiteController(cc)
 	if err != nil {
 		return nil, err
 	}
 
 	// Initialize Tekton controller
-	tektonController, err := tekton.NewSuiteController(kubeClient)
+	tektonController, err := tekton.NewSuiteController(cc)
 	if err != nil {
 		return nil, err
 	}
 
 	// Initialize GitOps controller
-	gitopsController, err := gitops.NewSuiteController(kubeClient)
-	if err != nil {
-		return nil, err
-	}
-
-	// Initialize SPI controller
-	spiController, err := spi.NewSuiteController(kubeClient)
+	gitopsController, err := gitops.NewSuiteController(cc)
 	if err != nil {
 		return nil, err
 	}
 
 	// Initialize Release Controller
-	releaseController, err := release.NewSuiteController(kubeClient)
+	releaseController, err := release.NewSuiteController(cc)
 	if err != nil {
 		return nil, err
 	}
-
 	// Initialize Integration Controller
-	integrationController, err := integration.NewSuiteController(kubeClient)
+	integrationController, err := integration.NewSuiteController(cc)
+	if err != nil {
+		return nil, err
+	}
+	jvmbuildserviceController, err := jvmbuildservice.NewSuiteControler(cc)
 	if err != nil {
 		return nil, err
 	}
 
-	jvmbuildserviceController, err := jvmbuildservice.NewSuiteControler(kubeClient)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Framework{
-		CommonController:  commonCtrl,
-		HasController:     hasController,
-		TektonController:  tektonController,
-		GitOpsController:  gitopsController,
-		SPIController:     spiController,
-		ReleaseController: releaseController,
-		IntegrationController: integrationController,
+	return &ControllerHub{
+		HasController:             hasController,
+		CommonController:          commonCtrl,
+		SPIController:             spiController,
+		TektonController:          tektonController,
+		GitOpsController:          gitopsController,
+		ReleaseController:         releaseController,
+		IntegrationController:     integrationController,
 		JvmbuildserviceController: jvmbuildserviceController,
 	}, nil
 }

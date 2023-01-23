@@ -32,12 +32,12 @@ import (
 
 // Create the struct for kubernetes clients
 type SuiteController struct {
-	*kubeCl.K8sClient
+	*kubeCl.CustomClient
 	Github *github.Github
 }
 
 // Create controller for Application/Component crud operations
-func NewSuiteController(kubeC *kubeCl.K8sClient) (*SuiteController, error) {
+func NewSuiteController(kubeC *kubeCl.CustomClient) (*SuiteController, error) {
 	// Check if a github organization env var is set, if not use by default the redhat-appstudio-qe org. See: https://github.com/redhat-appstudio-qe
 	org := utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
 	token := utils.GetEnv(constants.GITHUB_TOKEN_ENV, "")
