@@ -29,5 +29,5 @@ The Script works in Steps
 - Creating the Component will start the pipelines , if the `-w` flag is given it will wait for the pipelines to finish then print results 
 - Then after the tests are completed it will dump the results / stats , on error the stats will still get dumped along with the trace
 
-## How to contrubute 
+## How to contribute
 Just edit the file `cmd/loadTests.go` 

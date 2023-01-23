@@ -33,7 +33,7 @@ type ComponentSpec struct {
 	// The component name which will be created
 	Name string `yaml:"name"`
 
-	// The type indicate if the component comes from a private source like quay or github. Posible values: "private" or "public"
+	// The type indicate if the component comes from a private source like quay or github. Possible values: "private" or "public"
 	Type string `yaml:"type"`
 
 	// Indicate the container value

@@ -77,14 +77,14 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 		}
 	})
 
-	It("Create Red Hat AppStudio Application", func() {
-		createdApplication, err := framework.AsKubeDeveloper.HasController.CreateHasApplication(applicationName, testNamespace)
+	It("creates Red Hat AppStudio Application", func() {
+		createdApplication, err := framework.HasController.CreateHasApplication(applicationName, testNamespace)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createdApplication.Spec.DisplayName).To(Equal(applicationName))
 		Expect(createdApplication.Namespace).To(Equal(testNamespace))
 	})
 
-	It("Check Red Hat AppStudio Application health", func() {
+	It("checks Red Hat AppStudio Application health", func() {
 		Eventually(func() string {
 			application, err = framework.AsKubeDeveloper.HasController.GetHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
@@ -100,14 +100,26 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 	})
 
+<<<<<<< HEAD
 	It("Create Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
 		cdq, err := framework.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentName, testNamespace, QuarkusDevfileSource, "", false)
+=======
+	// Necessary for component pipeline
+	It("checks if 'git-clone' cluster tasks exists", func() {
+		Eventually(func() bool {
+			return framework.CommonController.CheckIfClusterTaskExists("git-clone")
+		}, 5*time.Minute, 45*time.Second).Should(BeTrue(), "'git-clone' cluster task don't exist in cluster. Component cannot be created")
+	})
+
+	It("creates Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
+		cdq, err := framework.HasController.CreateComponentDetectionQuery(componentName, testNamespace, QuarkusDevfileSource, "", false)
+>>>>>>> upstream/main
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cdq.Name).To(Equal(componentName))
 
 	})
 
-	It("Check Red Hat AppStudio ComponentDetectionQuery status", func() {
+	It("checks Red Hat AppStudio ComponentDetectionQuery status", func() {
 		// Validate that the CDQ completes successfully
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
@@ -126,15 +138,20 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 		}
 	})
 
+<<<<<<< HEAD
 	It("Create Red Hat AppStudio Quarkus component", func() {
 		GinkgoWriter.Printf("Creating component quarkus")
 
 		component, err := framework.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, "", applicationName)
+=======
+	It("creates Red Hat AppStudio Quarkus component", func() {
+		component, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, "", applicationName)
+>>>>>>> upstream/main
 		Expect(err).NotTo(HaveOccurred())
 		Expect(component.Name).To(Equal(componentName))
 	})
 
-	It("Gitops Repository should not be deleted when component gets deleted", func() {
+	It("gitops Repository should not be deleted when component gets deleted", func() {
 		comp2Detected := appservice.ComponentDetectionDescription{}
 
 		for _, comp2Detected = range cdq.Status.ComponentDetected {
@@ -155,8 +172,13 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "Gitops repository deleted after component was deleted")
 	})
 
+<<<<<<< HEAD
 	It("Check a Component gets deleted when its application is deleted", func() {
 		err = framework.AsKubeDeveloper.HasController.DeleteHasApplication(applicationName, testNamespace, false)
+=======
+	It("checks a Component gets deleted when its application is deleted", func() {
+		err = framework.HasController.DeleteHasApplication(applicationName, testNamespace, false)
+>>>>>>> upstream/main
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(func() bool {
 			_, err := framework.AsKubeDeveloper.HasController.GetHasComponent(componentName, testNamespace)

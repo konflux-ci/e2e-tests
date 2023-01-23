@@ -403,7 +403,7 @@ func findCosignResultsForImage(imageRef string, client crclient.Client) (*Cosign
 
 	if attestationTag, err := findTagWithName(client, namespace, cosignImagePrefix+".att"); err == nil {
 		// we want two layers, one for TaskRun and one for PipelineRun
-		// attestations, i.e. that the Chains controller reconcilled both and
+		// attestations, i.e. that the Chains controller reconciled both and
 		// uploaded them as layers
 		img, ok := attestationTag.Object["image"]
 		if ok {

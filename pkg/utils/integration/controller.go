@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/devfile/library/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
@@ -64,10 +65,13 @@ func (h *SuiteController) GetApplicationSnapshot(snapshotName, applicationName, 
 		return nil, err
 	}
 	for _, applicationSnapshot := range applicationSnapshots.Items {
-		if applicationSnapshot.Spec.Application == applicationName &&
-			applicationSnapshot.Labels["appstudio.openshift.io/component"] == componentName {
-			return &applicationSnapshot, nil
+		// find snapshot by component name
+		if _, ok := applicationSnapshot.Labels["appstudio.openshift.io/component"]; ok && applicationSnapshot.Spec.Application == applicationName {
+			if applicationSnapshot.Labels["appstudio.openshift.io/component"] == componentName {
+				return &applicationSnapshot, nil
+			}
 		}
+		// find snapshot by snapshot name
 		if applicationSnapshot.Name == snapshotName {
 			return &applicationSnapshot, nil
 		}
@@ -156,12 +160,10 @@ func (h *SuiteController) CreateEnvironment(namespace string) (*appstudioApi.Env
 	return env, err
 }
 
-func (h *SuiteController) CreateApplicationSnapshot(applicationName, namespace, componentName string) (*appstudioApi.Snapshot, error) {
-	sample_image := "quay.io/redhat-appstudio/sample-image"
-
+func (h *SuiteController) CreateApplicationSnapshot(applicationName, namespace, componentName, containerImage string) (*appstudioApi.Snapshot, error) {
 	hasSnapshot := &appstudioApi.Snapshot{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "snapshot-sample",
+			Name:      "snapshot-sample-" + util.GenerateRandomString(4),
 			Namespace: namespace,
 			Labels: map[string]string{
 				"test.appstudio.openshift.io/type":           "component",
@@ -174,7 +176,7 @@ func (h *SuiteController) CreateApplicationSnapshot(applicationName, namespace, 
 			Components: []appstudioApi.SnapshotComponent{
 				{
 					Name:           componentName,
-					ContainerImage: sample_image,
+					ContainerImage: containerImage,
 				},
 			},
 		},
@@ -270,8 +272,8 @@ func (h *SuiteController) CreateIntegrationTestScenario(applicationName, namespa
 		},
 		Spec: integrationv1alpha1.IntegrationTestScenarioSpec{
 			Application: applicationName,
-			Bundle:      "quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-pass",
-			Pipeline:    "integration-pipeline-pass",
+			Bundle:      bundleURL,
+			Pipeline:    pipelineName,
 			Environment: integrationv1alpha1.TestEnvironment{
 				Name:   "envname",
 				Type:   "POC",

@@ -135,7 +135,7 @@ func (Local) CleanupGithubOrg() error {
 		// Add only repos older than 24 hours
 		dayDuration, _ := time.ParseDuration("24h")
 		if time.Since(repo.GetCreatedAt().Time) > dayDuration {
-			// Add only repos machting the regex
+			// Add only repos matching the regex
 			if r.MatchString(*repo.Name) {
 				reposToDelete = append(reposToDelete, repo)
 			}
@@ -213,7 +213,7 @@ func (ci CI) TestE2E() error {
 func RunE2ETests() error {
 	cwd, _ := os.Getwd()
 
-	return sh.RunV("ginkgo", "-p", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", fmt.Sprintf("--config-suites=%s/tests/e2e-demos/config/default.yaml", cwd), "--generate-rppreproc-report=true", fmt.Sprintf("--rp-preproc-dir=%s", artifactDir))
+	return sh.RunV("ginkgo", "-p", "-vv", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", fmt.Sprintf("--config-suites=%s/tests/e2e-demos/config/default.yaml", cwd), "--generate-rppreproc-report=true", fmt.Sprintf("--rp-preproc-dir=%s", artifactDir))
 }
 
 func PreflightChecks() error {

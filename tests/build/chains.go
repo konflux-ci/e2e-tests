@@ -30,27 +30,27 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 	})
 
 	Context("infrastructure is running", func() {
-		It("verify the chains controller is running", func() {
+		It("verifies if the chains controller is running", func() {
 			err := fwk.CommonController.WaitForPodSelector(fwk.CommonController.IsPodRunning, constants.TEKTON_CHAINS_NS, "app", "tekton-chains-controller", 60, 100)
 			Expect(err).NotTo(HaveOccurred())
 		})
-		It("verify the correct secrets have been created", func() {
+		It("verifies if the correct secrets have been created", func() {
 			_, err := fwk.CommonController.GetSecret(constants.TEKTON_CHAINS_NS, "chains-ca-cert")
 			Expect(err).NotTo(HaveOccurred())
 		})
-		It("verify the correct roles are created", func() {
+		It("verifies if the correct roles are created", func() {
 			_, csaErr := fwk.CommonController.GetRole("chains-secret-admin", constants.TEKTON_CHAINS_NS)
 			Expect(csaErr).NotTo(HaveOccurred())
 			_, srErr := fwk.CommonController.GetRole("secret-reader", "openshift-ingress-operator")
 			Expect(srErr).NotTo(HaveOccurred())
 		})
-		It("verify the correct rolebindings are created", func() {
+		It("verifies if the correct rolebindings are created", func() {
 			_, csaErr := fwk.CommonController.GetRoleBinding("chains-secret-admin", constants.TEKTON_CHAINS_NS)
 			Expect(csaErr).NotTo(HaveOccurred())
 			_, csrErr := fwk.CommonController.GetRoleBinding("chains-secret-reader", "openshift-ingress-operator")
 			Expect(csrErr).NotTo(HaveOccurred())
 		})
-		It("verify the correct service account is created", func() {
+		It("verifies if the correct service account is created", func() {
 			_, err := fwk.CommonController.GetServiceAccount("chains-secrets-admin", constants.TEKTON_CHAINS_NS)
 			Expect(err).NotTo(HaveOccurred())
 		})
