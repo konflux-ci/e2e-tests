@@ -89,7 +89,7 @@ func (ci CI) PrepareE2EBranch() error {
 			return err
 		}
 	} else {
-		if ci.isPRPairingRequired() {
+		if ci.isPRPairingRequired("e2e-tests") {
 			if err := gitCheckoutRemoteBranch(pr.Author, pr.BranchName); err != nil {
 				return err
 			}
@@ -235,7 +235,7 @@ func PreflightChecks() error {
 	return nil
 }
 
-func (CI) setRequiredEnvVars() error {
+func (ci CI) setRequiredEnvVars() error {
 
 	if strings.Contains(jobName, "hacbs-e2e-periodic") {
 		os.Setenv("E2E_TEST_SUITE_LABEL", "HACBS")
@@ -278,6 +278,11 @@ func (CI) setRequiredEnvVars() error {
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
 		}
 
+	} else {
+		if ci.isPRPairingRequired("infra-deployments") {
+			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
+			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
+		}
 	}
 
 	return nil
@@ -300,12 +305,12 @@ func BootstrapCluster() error {
 	return ic.InstallAppStudioPreviewMode()
 }
 
-func (CI) isPRPairingRequired() bool {
+func (CI) isPRPairingRequired(repoForPairing string) bool {
 	var pullRequests []gh.PullRequest
 
-	url := "https://api.github.com/repos/redhat-appstudio/e2e-tests/pulls?per_page=100"
+	url := fmt.Sprintf("https://api.github.com/repos/redhat-appstudio/%s/pulls?per_page=100", repoForPairing)
 	if err := sendHttpRequestAndParseResponse(url, "GET", &pullRequests); err != nil {
-		klog.Infof("cannot determine e2e-tests Github branches for author %s: %v. will stick with the redhat-appstudio/e2e-tests main branch for running tests", pr.Author, err)
+		klog.Infof("cannot determine %s Github branches for author %s: %v. will stick with the redhat-appstudio/%s main branch for running tests", repoForPairing, pr.Author, err, repoForPairing)
 		return false
 	}
 
