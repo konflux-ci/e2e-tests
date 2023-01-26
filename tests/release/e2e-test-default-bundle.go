@@ -62,11 +62,11 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 		}
 
 		dev, err := framework.CommonController.CreateTestNamespace(devNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", dev.Name, err)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace: %v", err)
 		klog.Info("Dev Namespace created: ", dev.Name)
 
 		manageNamespace, err := framework.CommonController.CreateTestNamespace(managedNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", manageNamespace.Name, err)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace: %v", err)
 		klog.Info("Managed Namespace created: ", manageNamespace.Name)
 
 		klog.Infof("Wait until the 'pipeline' SA is created in %s namespace \n", managedNamespace)
@@ -77,6 +77,9 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 
 		sourceAuthJson := utils.GetEnv(constants.QUAY_OAUTH_TOKEN_RELEASE_SOURCE, "")
 		Expect(sourceAuthJson).ToNot(BeEmpty())
+
+		err = framework.CommonController.LinkSecretToServiceAccount(devNamespace, hacbsReleaseTestsTokenSecret, "pipeline")
+		Expect(err).ToNot(HaveOccurred())
 
 		destinationAuthJson := utils.GetEnv(constants.QUAY_OAUTH_TOKEN_RELEASE_DESTINATION, "")
 		Expect(destinationAuthJson).ToNot(BeEmpty())
@@ -184,14 +187,11 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 		It("verifies that in dev namespace will be created a PipelineRun.", func() {
 			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(devNamespace)
-				klog.Infof("PipeLineRun is : %s", prList.Items[0].Name)
-				klog.Infof("ComponentName is : %s", componentName)
 				if err != nil || prList == nil || len(prList.Items) < 1 {
 					klog.Error(err)
 					return false
 				}
-				klog.Infof("PipeLineRun is : %s", prList.Items[0].Name)
-				klog.Infof("ComponentName is : %s", componentName)
+
 				return strings.Contains(prList.Items[0].Name, componentName)
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
