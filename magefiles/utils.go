@@ -31,7 +31,6 @@ import (
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	client "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/tektoncd/cli/pkg/bundle"
-	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tektoncd/pipeline/pkg/remote/oci"
 )
 
@@ -291,36 +290,16 @@ func createDockerConfigFile(base64EncodedString string) error {
 	return nil
 }
 
-// extractPipelineFromBundle extracts specified Tekton Pipeline from bundle reference
-func extractPipelineFromBundle(bundleRef, pipelineName string) (tektonapi.PipelineObject, error) {
+// extractTektonObjectFromBundle extracts specified Tekton object from specified bundle reference
+func extractTektonObjectFromBundle(bundleRef, kind, name string) (runtime.Object, error) {
 	var obj runtime.Object
 	var err error
 
 	resolver := oci.NewResolver(bundleRef, authn.DefaultKeychain)
-	if obj, _, err = resolver.Get(context.TODO(), "pipeline", pipelineName); err != nil {
-		return nil, fmt.Errorf("failed to get the pipeline from a bundle: %v", err)
+	if obj, _, err = resolver.Get(context.TODO(), kind, name); err != nil {
+		return nil, fmt.Errorf("failed to fetch the tekton object %s with name %s: %v", kind, name, err)
 	}
-	pipelineObj, ok := obj.(tektonapi.PipelineObject)
-	if !ok {
-		return nil, fmt.Errorf("failed to extract the pipeline: %v", err)
-	}
-	return pipelineObj, nil
-}
-
-// extractPipelineTaskFromBundle extracts specified Tekton Task from bundle reference
-func extractPipelineTaskFromBundle(bundleRef, taskName string) (tektonapi.TaskObject, error) {
-	var obj runtime.Object
-	var err error
-
-	resolver := oci.NewResolver(bundleRef, authn.DefaultKeychain)
-	if obj, _, err = resolver.Get(context.TODO(), "task", taskName); err != nil {
-		return nil, fmt.Errorf("failed to fetch the task %s: %v", taskName, err)
-	}
-	taskObject, ok := obj.(tektonapi.TaskObject)
-	if !ok {
-		return nil, fmt.Errorf("failed to extract the task: %v", err)
-	}
-	return taskObject, nil
+	return obj, nil
 }
 
 // buildAndPushTektonBundle builds a Tekton bundle from YAML and pushes to remote container registry

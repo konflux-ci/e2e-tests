@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"regexp"
 	"strconv"
@@ -276,8 +277,7 @@ func (ci CI) setRequiredEnvVars() error {
 				klog.Infof("going to override default Tekton bundle for the purpose of testing jvm-build-service PR")
 				var err error
 				var defaultBundleRef string
-				var originalJavaPipelineObj tektonapi.PipelineObject
-				var originalJavaPipelineTaskObj tektonapi.TaskObject
+				var tektonObj runtime.Object
 
 				prSHA := openshiftJobSpec.Refs.Pulls[0].SHA
 				var newS2iJavaTaskRef, _ = name.ParseReference(fmt.Sprintf("%s:task-bundle-%s", constants.DefaultImagePushRepo, prSHA))
@@ -291,31 +291,33 @@ func (ci CI) setRequiredEnvVars() error {
 				if defaultBundleRef, err = getDefaultPipelineBundleRef(constants.BuildPipelineSelectorYamlURL, "Java"); err != nil {
 					return fmt.Errorf("failed to get the pipeline bundle ref: %+v", err)
 				}
-				if originalJavaPipelineObj, err = extractPipelineFromBundle(defaultBundleRef, "java-builder"); err != nil {
-					return fmt.Errorf("failed to extract the pipeline from bundle: %+v", err)
+				if tektonObj, err = extractTektonObjectFromBundle(defaultBundleRef, "pipeline", "java-builder"); err != nil {
+					return fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
 				}
+				javaPipelineObj := tektonObj.(tektonapi.PipelineObject)
 
 				var currentS2iJavaTaskRef string
-				for _, t := range originalJavaPipelineObj.PipelineSpec().Tasks {
+				for _, t := range javaPipelineObj.PipelineSpec().Tasks {
 					if t.TaskRef.Name == "s2i-java" {
 						currentS2iJavaTaskRef = t.TaskRef.Bundle
 						t.TaskRef.Bundle = newS2iJavaTaskRef.String()
 					}
 				}
-				if originalJavaPipelineTaskObj, err = extractPipelineTaskFromBundle(currentS2iJavaTaskRef, "s2i-java"); err != nil {
-					return fmt.Errorf("failed to extract the pipeline task from bundle: %+v", err)
+				if tektonObj, err = extractTektonObjectFromBundle(currentS2iJavaTaskRef, "task", "s2i-java"); err != nil {
+					return fmt.Errorf("failed to extract the Tekton Task from bundle: %+v", err)
 				}
+				taskObj := tektonObj.(tektonapi.TaskObject)
 
-				for i, s := range originalJavaPipelineTaskObj.TaskSpec().Steps {
+				for i, s := range taskObj.TaskSpec().Steps {
 					if s.Name == "analyse-dependencies-java-sbom" {
-						originalJavaPipelineTaskObj.TaskSpec().Steps[i].Image = newReqprocessorImage
+						taskObj.TaskSpec().Steps[i].Image = newReqprocessorImage
 					}
 				}
 
-				if newTaskYaml, err = yaml.Marshal(originalJavaPipelineTaskObj); err != nil {
+				if newTaskYaml, err = yaml.Marshal(taskObj); err != nil {
 					return fmt.Errorf("error when marshalling a new task to YAML: %v", err)
 				}
-				if newPipelineYaml, err = yaml.Marshal(originalJavaPipelineObj); err != nil {
+				if newPipelineYaml, err = yaml.Marshal(javaPipelineObj); err != nil {
 					return fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
 				}
 
