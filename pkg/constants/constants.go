@@ -42,6 +42,9 @@ const (
 	QUAY_OAUTH_TOKEN_RELEASE_SOURCE      string = "QUAY_OAUTH_TOKEN_RELEASE_SOURCE"
 	QUAY_OAUTH_TOKEN_RELEASE_DESTINATION string = "QUAY_OAUTH_TOKEN_RELEASE_DESTINATION"
 
+	// Bundle ref for overriding the default Java build bundle specified in BuildPipelineSelectorYamlURL
+	CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV string = "CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE"
+
 	// Test namespace's required labels
 	ArgoCDLabelKey   string = "argocd.argoproj.io/managed-by"
 	ArgoCDLabelValue string = "gitops-service-argocd"
@@ -67,6 +70,10 @@ const (
 
 	JVMBuildImageSecretName = "jvm-build-image-secrets"
 	JBSConfigName           = "jvm-build-config"
+
+	BuildPipelineSelectorYamlURL = "https://raw.githubusercontent.com/redhat-appstudio/infra-deployments/main/components/build-service/build-pipeline-selector.yaml"
+
+	DefaultImagePushRepo = "quay.io/redhat-appstudio-qe/test-images"
 )
 
 var (

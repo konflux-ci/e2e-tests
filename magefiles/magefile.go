@@ -13,20 +13,28 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	toolchainApi "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/toolchain-e2e/testsupport/md5"
-	gh "github.com/google/go-github/v44/github"
-	"github.com/magefile/mage/sh"
-	"github.com/redhat-appstudio/e2e-tests/magefiles/installation"
-	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
-	client "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/klog/v2"
+
+	"sigs.k8s.io/yaml"
+
+	toolchainApi "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/toolchain-e2e/testsupport/md5"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
+	gh "github.com/google/go-github/v44/github"
+	"github.com/magefile/mage/sh"
+	"github.com/redhat-appstudio/e2e-tests/magefiles/installation"
+	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
+	client "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
 var (
@@ -264,6 +272,64 @@ func (ci CI) setRequiredEnvVars() error {
 				envVarPrefix = "JVM_BUILD_SERVICE"
 				imageTagSuffix = "jvm-build-service-image"
 				testSuiteLabel = "jvm-build"
+
+				klog.Infof("going to override default Tekton bundle for the purpose of testing jvm-build-service PR")
+				var err error
+				var defaultBundleRef string
+				var originalJavaPipelineObj tektonapi.PipelineObject
+				var originalJavaPipelineTaskObj tektonapi.TaskObject
+
+				prSHA := openshiftJobSpec.Refs.Pulls[0].SHA
+				var newS2iJavaTaskRef, _ = name.ParseReference(fmt.Sprintf("%s:task-bundle-%s", constants.DefaultImagePushRepo, prSHA))
+				var newJavaBuilderPipelineRef, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", constants.DefaultImagePushRepo, prSHA))
+				var newReqprocessorImage = os.Getenv("JVM_BUILD_SERVICE_REQPROCESSOR_IMAGE")
+				var newTaskYaml, newPipelineYaml []byte
+
+				if err = createDockerConfigFile(os.Getenv("QUAY_TOKEN")); err != nil {
+					return fmt.Errorf("failed to create docker config file: %+v", err)
+				}
+				if defaultBundleRef, err = getDefaultPipelineBundleRef(constants.BuildPipelineSelectorYamlURL, "Java"); err != nil {
+					return fmt.Errorf("failed to get the pipeline bundle ref: %+v", err)
+				}
+				if originalJavaPipelineObj, err = extractPipelineFromBundle(defaultBundleRef, "java-builder"); err != nil {
+					return fmt.Errorf("failed to extract the pipeline from bundle: %+v", err)
+				}
+
+				var currentS2iJavaTaskRef string
+				for _, t := range originalJavaPipelineObj.PipelineSpec().Tasks {
+					if t.TaskRef.Name == "s2i-java" {
+						currentS2iJavaTaskRef = t.TaskRef.Bundle
+						t.TaskRef.Bundle = newS2iJavaTaskRef.String()
+					}
+				}
+				if originalJavaPipelineTaskObj, err = extractPipelineTaskFromBundle(currentS2iJavaTaskRef, "s2i-java"); err != nil {
+					return fmt.Errorf("failed to extract the pipeline task from bundle: %+v", err)
+				}
+
+				for i, s := range originalJavaPipelineTaskObj.TaskSpec().Steps {
+					if s.Name == "analyse-dependencies-java-sbom" {
+						originalJavaPipelineTaskObj.TaskSpec().Steps[i].Image = newReqprocessorImage
+					}
+				}
+
+				if newTaskYaml, err = yaml.Marshal(originalJavaPipelineTaskObj); err != nil {
+					return fmt.Errorf("error when marshalling a new task to YAML: %v", err)
+				}
+				if newPipelineYaml, err = yaml.Marshal(originalJavaPipelineObj); err != nil {
+					return fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
+				}
+
+				keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
+				authOption := remoteimg.WithAuthFromKeychain(keychain)
+
+				if err = buildAndPushTektonBundle(newTaskYaml, newS2iJavaTaskRef, authOption); err != nil {
+					return fmt.Errorf("error when building/pushing a tekton task bundle: %v", err)
+				}
+				if err = buildAndPushTektonBundle(newPipelineYaml, newJavaBuilderPipelineRef, authOption); err != nil {
+					return fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
+				}
+
+				os.Setenv(constants.CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV, newJavaBuilderPipelineRef.String())
 			}
 
 			os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", envVarPrefix), sp[0])
