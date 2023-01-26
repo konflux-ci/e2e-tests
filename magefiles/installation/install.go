@@ -31,7 +31,7 @@ const (
 )
 
 var (
-	previewInstallArgs = []string{"preview", "--keycloak", "--tolchain"}
+	previewInstallArgs = []string{"preview", "--keycloak", "--toolchain"}
 )
 
 type InstallAppStudio struct {

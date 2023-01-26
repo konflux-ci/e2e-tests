@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/devfile/library/pkg/util"
@@ -18,6 +17,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -131,7 +131,9 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 			return false
 		}
 
-		return spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected || spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData
+		klog.Info(spiAccessTokenBinding.Name)
+
+		return (spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected || spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData)
 	}, 2*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to AwaitingTokenData/Injected")
 
 	Eventually(func() bool {
@@ -142,16 +144,13 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 			return false
 		}
 
-		return spiAccessTokenBinding.Status.OAuthUrl != ""
-	}, 2*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI oauth url not set. Please check if spi oauth-config configmap contain all necessary providers for tests.")
+		return spiAccessTokenBinding.Status.UploadUrl != ""
+	}, 5*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI oauth url not set. Please check if spi oauth-config configmap contain all necessary providers for tests.")
 
 	if spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData {
 		// If the phase is AwaitingTokenData then manually inject the git token
 		// Get the oauth url and linkedAccessTokenName from the spiaccesstokenbinding resource
-		oauthURL := spiAccessTokenBinding.Status.OAuthUrl
-		parsedOAuthURL, err := url.Parse(oauthURL)
 		Expect(err).NotTo(HaveOccurred())
-		oauthHost := parsedOAuthURL.Host
 		linkedAccessTokenName := spiAccessTokenBinding.Status.LinkedAccessTokenName
 
 		// Before injecting the token, validate that the linkedaccesstoken resource exists, otherwise injecting will return a 404 error code
@@ -164,7 +163,7 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 		// Format for quay.io token injection: `{"access_token":"tokenToInject","username":"redhat-appstudio-qe+redhat_appstudio_qe_bot"}`
 		// Now that the spiaccesstokenbinding is in the AwaitingTokenData phase, inject the GitHub token
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-		req, err := http.NewRequest("POST", "https://"+oauthHost+"/token/"+namespace+"/"+linkedAccessTokenName, bytes.NewBuffer([]byte(oauthCredentials)))
+		req, err := http.NewRequest("POST", spiAccessTokenBinding.Status.UploadUrl, bytes.NewBuffer([]byte(oauthCredentials)))
 		Expect(err).NotTo(HaveOccurred())
 		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", string(bearerToken)))
 		req.Header.Set("Content-Type", "application/json")

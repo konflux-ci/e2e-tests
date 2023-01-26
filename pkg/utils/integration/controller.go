@@ -16,6 +16,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -130,10 +131,10 @@ func (h *SuiteController) GetIntegrationTestScenarios(applicationName, namespace
 	return &integrationTestScenarioList.Items, nil
 }
 
-func (h *SuiteController) CreateEnvironment(namespace string) (*appstudioApi.Environment, error) {
+func (h *SuiteController) CreateEnvironment(namespace string, environmenName string) (*appstudioApi.Environment, error) {
 	env := &appstudioApi.Environment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "envname",
+			Name:      environmenName,
 			Namespace: namespace,
 		},
 		Spec: appstudioApi.EnvironmentSpec{
@@ -152,12 +153,25 @@ func (h *SuiteController) CreateEnvironment(namespace string) (*appstudioApi.Env
 			},
 		},
 	}
-	err := h.KubeRest().Create(context.TODO(), env)
-	if err != nil {
-		return nil, err
+
+	if err := h.KubeRest().Create(context.TODO(), env); err != nil {
+		if err != nil {
+			if k8sErrors.IsAlreadyExists(err) {
+				environment := &appstudioApi.Environment{}
+
+				err := h.KubeRest().Get(context.TODO(), types.NamespacedName{
+					Name:      environmenName,
+					Namespace: namespace,
+				}, environment)
+
+				return environment, err
+			} else {
+				return nil, err
+			}
+		}
 	}
 
-	return env, err
+	return env, nil
 }
 
 func (h *SuiteController) CreateApplicationSnapshot(applicationName, namespace, componentName, containerImage string) (*appstudioApi.Snapshot, error) {

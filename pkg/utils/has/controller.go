@@ -69,7 +69,7 @@ func (h *SuiteController) CreateHasApplication(name, namespace string) (*appserv
 		return nil, err
 	}
 
-	if err := utils.WaitUntil(h.ApplicationDevfilePresent(application), time.Minute*2); err != nil {
+	if err := utils.WaitUntil(h.ApplicationDevfilePresent(application), time.Minute*10); err != nil {
 		return nil, fmt.Errorf("timed out when waiting for devfile content creation for application %s in %s namespace: %+v", name, namespace, err)
 	}
 

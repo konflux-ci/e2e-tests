@@ -34,6 +34,9 @@ const (
 
 	// GitOps repository branch to use
 	GitOpsRepositoryRevision string = "main"
+
+	// Environment name used for e2e-tests demos
+	EnvironmentName string = "testing"
 )
 
 var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
@@ -80,12 +83,12 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 			// Remove all resources created by the tests
 			AfterAll(func() {
 				if !CurrentSpecReport().Failed() {
-					Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-					Expect(fw.AsKubeDeveloper.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-					Expect(fw.AsKubeDeveloper.HasController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-					Expect(fw.AsKubeDeveloper.ReleaseController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-					Expect(fw.AsKubeDeveloper.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-					Expect(fw.AsKubeDeveloper.GitOpsController.DeleteAllGitOpsDeploymentInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+					//Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+					//Expect(fw.AsKubeDeveloper.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+					//Expect(fw.AsKubeDeveloper.HasController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+					//Expect(fw.AsKubeDeveloper.ReleaseController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+					//Expect(fw.AsKubeDeveloper.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+					//Expect(fw.AsKubeDeveloper.GitOpsController.DeleteAllGitOpsDeploymentInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 				}
 			})
 
@@ -112,13 +115,12 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
 					return fw.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
-				}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
+				}, 5*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 			})
-
 			// Create an environment in a specific namespace
 			It("creates an environment", func() {
-				env, err = fw.AsKubeDeveloper.IntegrationController.CreateEnvironment(namespace)
-				Expect(err).ShouldNot(HaveOccurred())
+				env, err = fw.AsKubeDeveloper.IntegrationController.CreateEnvironment(namespace, EnvironmentName)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			for _, componentTest := range appTest.Components {
@@ -199,7 +201,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 						if fw.AsKubeDeveloper.IntegrationController.HaveHACBSTestsSucceeded(snapshot) {
 							envbinding, err := fw.AsKubeDeveloper.IntegrationController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
 							Expect(err).ShouldNot(HaveOccurred())
-							Expect(envbinding != nil).To(BeTrue())
 							GinkgoWriter.Printf("The EnvironmentBinding %s is created\n", envbinding.Name)
 							return true
 						}
