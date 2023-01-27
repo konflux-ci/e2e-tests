@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/devfile/library/pkg/util"
 	"k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"regexp"
@@ -256,12 +257,12 @@ func (ci CI) setRequiredEnvVars() error {
 
 	if openshiftJobSpec.Refs.Repo != "e2e-tests" {
 
-		if strings.Contains(openshiftJobSpec.Refs.Repo, "-service") {
+		if strings.Contains(jobName, "-service") {
 			var envVarPrefix, imageTagSuffix, testSuiteLabel string
 			sp := strings.Split(os.Getenv("COMPONENT_IMAGE"), "@")
 
-			switch openshiftJobSpec.Refs.Repo {
-			case "application-service":
+			switch {
+			case strings.Contains(jobName, "application-service"):
 				envVarPrefix = "HAS"
 				imageTagSuffix = "has-image"
 				testSuiteLabel = "has,e2e-demo"
@@ -269,7 +270,7 @@ func (ci CI) setRequiredEnvVars() error {
 				envVarPrefix = "BUILD_SERVICE"
 				imageTagSuffix = "build-service-image"
 				testSuiteLabel = "build"
-			case "jvm-build-service":
+			case strings.Contains(jobName, "jvm-build-service"):
 				envVarPrefix = "JVM_BUILD_SERVICE"
 				imageTagSuffix = "jvm-build-service-image"
 				testSuiteLabel = "jvm-build"
@@ -279,9 +280,9 @@ func (ci CI) setRequiredEnvVars() error {
 				var defaultBundleRef string
 				var tektonObj runtime.Object
 
-				prSHA := openshiftJobSpec.Refs.Pulls[0].SHA
-				var newS2iJavaTaskRef, _ = name.ParseReference(fmt.Sprintf("%s:task-bundle-%s", constants.DefaultImagePushRepo, prSHA))
-				var newJavaBuilderPipelineRef, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", constants.DefaultImagePushRepo, prSHA))
+				tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
+				var newS2iJavaTaskRef, _ = name.ParseReference(fmt.Sprintf("%s:task-bundle-%s", constants.DefaultImagePushRepo, tag))
+				var newJavaBuilderPipelineRef, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", constants.DefaultImagePushRepo, tag))
 				var newReqprocessorImage = os.Getenv("JVM_BUILD_SERVICE_REQPROCESSOR_IMAGE")
 				var newTaskYaml, newPipelineYaml []byte
 
@@ -332,12 +333,22 @@ func (ci CI) setRequiredEnvVars() error {
 				}
 
 				os.Setenv(constants.CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV, newJavaBuilderPipelineRef.String())
+			case strings.Contains(jobName, "build-service"):
+				envVarPrefix = "BUILD_SERVICE"
+				imageTagSuffix = "build-service-image"
+				testSuiteLabel = "build"
+			}
+			var prSHA, prOwner string
+			// "rehearse" jobs metadata are not relevant for testing
+			if !strings.Contains(jobName, "rehearse") {
+				prSHA = openshiftJobSpec.Refs.Pulls[0].SHA
+				prOwner = openshiftJobSpec.Refs.Pulls[0].Author
 			}
 
 			os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", envVarPrefix), sp[0])
 			os.Setenv(fmt.Sprintf("%s_IMAGE_TAG", envVarPrefix), fmt.Sprintf("redhat-appstudio-%s", imageTagSuffix))
-			os.Setenv(fmt.Sprintf("%s_PR_OWNER", envVarPrefix), openshiftJobSpec.Refs.Pulls[0].Author)
-			os.Setenv(fmt.Sprintf("%s_PR_SHA", envVarPrefix), openshiftJobSpec.Refs.Pulls[0].SHA)
+			os.Setenv(fmt.Sprintf("%s_PR_OWNER", envVarPrefix), prOwner)
+			os.Setenv(fmt.Sprintf("%s_PR_SHA", envVarPrefix), prSHA)
 			os.Setenv("E2E_TEST_SUITE_LABEL", testSuiteLabel)
 
 		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
