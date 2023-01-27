@@ -283,7 +283,10 @@ func createDockerConfigFile(base64EncodedString string) error {
 	if homeDir, err = homedir.Dir(); err != nil {
 		return fmt.Errorf("unable to locate home directory: %v", err)
 	}
-	if err := os.WriteFile(homeDir+"/.docker/config.json", rawRegistryCreds, 0644); err != nil {
+	if err = os.MkdirAll(homeDir+"/.docker", 0775); err != nil {
+		return fmt.Errorf("failed to create '.docker' config directory: %v", err)
+	}
+	if err = os.WriteFile(homeDir+"/.docker/config.json", rawRegistryCreds, 0644); err != nil {
 		return fmt.Errorf("failed to create a docker config file: %v", err)
 	}
 
