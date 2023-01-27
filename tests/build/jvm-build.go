@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"os"
 	"strings"
 	"time"
@@ -17,23 +18,20 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 )
 
 var (
-	testProjectGitUrl   = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_URL", "https://github.com/stuartwdouglas/hacbs-test-project")
+	testProjectGitUrl   = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_URL", "https://github.com/redhat-appstudio-qe/hacbs-test-project")
 	testProjectRevision = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_REVISION", "main")
 )
 
-var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jvm-build", "HACBS"), Pending, func() {
+var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jvm-build", "HACBS"), func() {
 	defer GinkgoRecover()
 
 	var testNamespace, applicationName, componentName, outputContainerImage string
@@ -175,67 +173,17 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		_, err := f.CommonController.CreateTestNamespace(testNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
 
-		customBundleConfigMap, err := f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, testNamespace)
-		if err != nil {
-			if errors.IsNotFound(err) {
-				defaultBundleConfigMap, err := f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace)
-				Expect(err).ToNot(HaveOccurred())
+		_, err = f.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, testNamespace, utils.GetQuayIOOrganization())
+		Expect(err).ShouldNot(HaveOccurred())
 
-				bundlePullSpec := defaultBundleConfigMap.Data["default_build_bundle"]
-				hacbsBundleConfigMap := &v1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{Name: constants.BuildPipelinesConfigMapName},
-					Data:       map[string]string{"default_build_bundle": strings.Replace(bundlePullSpec, "build-", "hacbs-", 1)},
-				}
-				_, err = f.CommonController.CreateConfigMap(hacbsBundleConfigMap, testNamespace)
-				Expect(err).ToNot(HaveOccurred())
-				DeferCleanup(f.CommonController.DeleteConfigMap, constants.BuildPipelinesConfigMapName, testNamespace, false)
-			} else {
-				Fail(fmt.Sprintf("error occurred when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, testNamespace, err))
-			}
-		} else {
-			bundlePullSpec := customBundleConfigMap.Data["default_build_bundle"]
-			hacbsBundleConfigMap := &v1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{Name: constants.BuildPipelinesConfigMapName},
-				Data:       map[string]string{"default_build_bundle": strings.Replace(bundlePullSpec, "build-", "hacbs-", 1)},
-			}
+		sharedSecret, err := f.CommonController.GetSecret(constants.SharedPullSecretNamespace, constants.SharedPullSecretName)
+		Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error when getting shared secret - make sure the secret %s in %s namespace is created", constants.SharedPullSecretName, constants.SharedPullSecretNamespace))
 
-			_, err = f.CommonController.UpdateConfigMap(hacbsBundleConfigMap, testNamespace)
-			Expect(err).ToNot(HaveOccurred())
-			DeferCleanup(func() error {
-				hacbsBundleConfigMap.Data = customBundleConfigMap.Data
-				_, err := f.CommonController.UpdateConfigMap(hacbsBundleConfigMap, testNamespace)
-				if err != nil {
-					return err
-				}
-				return nil
-			})
-		}
+		jvmBuildSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: constants.JVMBuildImageSecretName, Namespace: testNamespace},
+			Data: map[string][]byte{".dockerconfigjson": sharedSecret.Data[".dockerconfigjson"]}}
+		_, err = f.CommonController.CreateSecret(testNamespace, jvmBuildSecret)
+		Expect(err).ShouldNot(HaveOccurred())
 
-		//enable artifact rebuilds
-		jvmConfigMap := &v1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{Name: constants.JVMUserConfigMapName},
-			Data:       map[string]string{constants.JVMEnableRebuilds: "true"},
-		}
-		existingJvmConfigMap, err := f.CommonController.GetConfigMap(constants.JVMUserConfigMapName, testNamespace)
-		if err != nil {
-			if errors.IsNotFound(err) {
-				_, err = f.CommonController.CreateConfigMap(jvmConfigMap, testNamespace)
-				Expect(err).ToNot(HaveOccurred())
-				DeferCleanup(f.CommonController.DeleteConfigMap, constants.JVMUserConfigMapName, testNamespace, false)
-			} else {
-				Fail(fmt.Sprintf("error occurred when trying to get configmap %s in %s namespace: %v", constants.JVMUserConfigMapName, testNamespace, err))
-			}
-		} else {
-			_, err = f.CommonController.UpdateConfigMap(jvmConfigMap, testNamespace)
-			Expect(err).ToNot(HaveOccurred())
-			DeferCleanup(func() error {
-				_, err := f.CommonController.UpdateConfigMap(existingJvmConfigMap, testNamespace)
-				if err != nil {
-					return err
-				}
-				return nil
-			})
-		}
 		timeout = time.Minute * 20
 		interval = time.Second * 10
 

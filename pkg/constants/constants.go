@@ -59,8 +59,11 @@ const (
 
 	RegistryAuthSecretName = "redhat-appstudio-registry-pull-secret"
 
-	JVMUserConfigMapName = "jvm-build-config"
-	JVMEnableRebuilds    = "enable-rebuilds"
+	SharedPullSecretName      = "redhat-appstudio-user-workload"
+	SharedPullSecretNamespace = "build-templates"
+
+	JVMBuildImageSecretName = "jvm-build-image-secrets"
+	JBSConfigName           = "jvm-build-config"
 )
 
 var (
