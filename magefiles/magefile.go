@@ -275,6 +275,14 @@ func (ci CI) setRequiredEnvVars() error {
 				imageTagSuffix = "jvm-build-service-image"
 				testSuiteLabel = "jvm-build"
 
+				// Since CI requires to have default values for dependency images
+				// (https://github.com/openshift/release/blob/master/ci-operator/step-registry/redhat-appstudio/e2e/redhat-appstudio-e2e-ref.yaml#L15)
+				// we cannot let these env vars to have identical names in CI as those env vars used in tests
+				// e.g. JVM_BUILD_SERVICE_REQPROCESSOR_IMAGE, otherwise those images they are referencing wouldn't
+				// be always relevant for tests and tests would be failing
+				os.Setenv(fmt.Sprintf("%s_REQPROCESSOR_IMAGE", envVarPrefix), os.Getenv("CI_JBS_REQPROCESSOR_IMAGE"))
+				os.Setenv(fmt.Sprintf("%s_CACHE_IMAGE", envVarPrefix), os.Getenv("CI_JBS_CACHE_IMAGE"))
+
 				klog.Infof("going to override default Tekton bundle for the purpose of testing jvm-build-service PR")
 				var err error
 				var defaultBundleRef string
@@ -331,7 +339,6 @@ func (ci CI) setRequiredEnvVars() error {
 				if err = buildAndPushTektonBundle(newPipelineYaml, newJavaBuilderPipelineRef, authOption); err != nil {
 					return fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
 				}
-
 				os.Setenv(constants.CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV, newJavaBuilderPipelineRef.String())
 			case strings.Contains(jobName, "build-service"):
 				envVarPrefix = "BUILD_SERVICE"
