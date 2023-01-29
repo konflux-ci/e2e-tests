@@ -45,16 +45,16 @@ const (
 	KEYCLOAK_URL_ENV string = "USER_KUBE_CONFIG_PATH"
 
 	// Default local devsandbox user namespace. User namespace is the same like user name. Please see: https://github.com/redhat-appstudio/infra-deployments/blob/main/components/dev-sso/keycloak-realm.yaml#L32
-	DEFAULT_KEYCLOAK_USERNAME_NAMESPACE = "user1"
+	DEFAULT_KEYCLOAK_USERNAME_NAMESPACE = "user-phvb"
 
 	// Default local devsandbox user name.
-	DEFAULT_KEYCLOAK_USERNAME = "user1"
+	DEFAULT_KEYCLOAK_USERNAME = "user-phvb"
 
 	// Before executing e2e allow to use an env to put a random user name
 	KEYCLOAK_USERNAME_ENV = "KEYCLOAK_USERNAME"
 
 	// Default local devsandbox user password.
-	DEFAULT_KEYCLOAK_PASSWORD = "user1"
+	DEFAULT_KEYCLOAK_PASSWORD = "user-phvb"
 
 	// Before executing e2e allow to use an env to put a random user password
 	KEYCLOAK_USER_PASSWORD_ENV = "KEYCLOAK_PASSWORD"

@@ -37,7 +37,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 
 	BeforeAll(func() {
 		// Create the dev namespace
-		_, err := framework.CommonController.CreateTestNamespace(devNamespace)
+		_, err := framework.AsKubeAdmin.CommonController.CreateTestNamespace(devNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", devNamespace, err)
 		GinkgoWriter.Println("Dev Namespace :", devNamespace)
 

@@ -16,7 +16,6 @@ import (
 	"github.com/magefile/mage/sh"
 	"github.com/redhat-appstudio/e2e-tests/magefiles/installation"
 	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
-	client "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"k8s.io/klog/v2"
 )
@@ -166,10 +165,10 @@ func (Local) CleanupGithubOrg() error {
 func (ci CI) TestE2E() error {
 	var testFailure bool
 
-	k, err := client.NewAdminKubernetesClient()
-	if err != nil {
-		return fmt.Errorf("error when initializing kubernetes clients: %v", err)
-	}
+	//k, err := client.NewAdminKubernetesClient()
+	//	if err != nil {
+	//		return fmt.Errorf("error when initializing kubernetes clients: %v", err)
+	//	}
 
 	if err := ci.init(); err != nil {
 		return fmt.Errorf("error when running ci init: %v", err)
@@ -187,13 +186,13 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
 	}
 
-	if err := k.RegisterSandboxUser(); err != nil {
-		return fmt.Errorf("error when registerin user via toolchain operators: %v", err)
-	}
+	/*	if err := k.RegisterSandboxUser(); err != nil {
+			return fmt.Errorf("error when registerin user via toolchain operators: %v", err)
+		}
 
-	if _, err := k.GenerateSandboxUserKubeconfig(); err != nil {
-		return fmt.Errorf("error while generating user's kubeconfig file: %v", err)
-	}
+		if _, err := k.GenerateSandboxUserKubeconfig(); err != nil {
+			return fmt.Errorf("error while generating user's kubeconfig file: %v", err)
+		}*/
 
 	if err := RunE2ETests(); err != nil {
 		testFailure = true
@@ -504,6 +503,7 @@ func appendFrameworkDescribeFile(packageName string) error {
 
 }
 
+/*
 // Obtains user's keycloak token and generates new kubeconfig for this user against toolchain proxy endpoint.
 // Configurable via env variables (default in brackets): USER_KUBE_CONFIG_PATH["$(pwd)/user.kubeconfig"], "KC_USERNAME"["user1"],
 // KC_PASSWORD["user1"], KC_CLIENT_ID["sandbox-public"], KEYCLOAK_URL[obtained dynamically - route `keycloak` in `dev-sso` namespace],
@@ -525,3 +525,4 @@ func RegisterUser() error {
 	}
 	return k.RegisterSandboxUser()
 }
+*/

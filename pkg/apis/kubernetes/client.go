@@ -8,6 +8,8 @@ import (
 	ocpOauth "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/sandbox"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	integrationservice "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	jvmbuildservice "github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	jvmbuildserviceclientset "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
@@ -24,7 +26,6 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/klog"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
@@ -40,6 +41,7 @@ type CustomClient struct {
 type K8SClient struct {
 	AsKubeAdmin     *CustomClient
 	AsKubeDeveloper *CustomClient
+	UserName        string
 }
 
 var (
@@ -86,38 +88,53 @@ func (c *CustomClient) DynamicClient() dynamic.Interface {
 	return c.dynamicClient
 }
 
-func NewKubernetesClient() (*K8SClient, error) {
-	var asDeveloperClient *CustomClient
+/*
+	if U SPECIFY KUBECONFIG_STAGING AND USER_STAGING {
+		intialize the client
+		* how to handle multiple users
+	}
+		userName,_ := sandbox.CreateKeyCloakUser()
+		registerUser := sandbox.RegisterUser()
+		userKubeconfigPath := GenerateSandboxUserKubeconfig()
+		client := obtainTheClient
 
+		return the client
+*/
+
+/**/
+func NewDevSandboxProxyClient() (*K8SClient, error) {
 	asAdminClient, err := NewAdminKubernetesClient()
 	if err != nil {
 		return nil, err
 	}
 
-	userKubeconfigPath := os.Getenv("USER_KUBE_CONFIG_PATH")
-	if userKubeconfigPath == "" {
-		userKubeconfigPath, err = asAdminClient.GenerateSandboxUserKubeconfig()
-		if err != nil {
-			klog.Errorf("error geting sandbox user kubeconfig %v. Using admin client instead for developer tests", err)
-
-			asDeveloperClient = asAdminClient
-		}
-		userCfg, err := clientcmd.BuildConfigFromFlags("", userKubeconfigPath)
-		if err != nil {
-			klog.Errorf("error geting sandbox user kubeconfig %v. Using admin client instead for developer tests", err)
-			asDeveloperClient = asAdminClient
-		}
-
-		asDeveloperClient, err = createCustomClient(*userCfg)
-		if err != nil {
-			klog.Errorf("error geting sandbox user kubeconfig %v. Using admin client instead for developer tests", err)
-			asDeveloperClient = asAdminClient
-		}
+	sandboxController, err := sandbox.NewDevSandboxController(asAdminClient.KubeInterface(), asAdminClient.KubeRest())
+	if err != nil {
+		return nil, err
 	}
+
+	userAuthInfo, err := sandboxController.ReconcileUserCreation()
+	if err != nil {
+		return nil, err
+	}
+
+	userCfg, err := clientcmd.BuildConfigFromFlags("", userAuthInfo.KubeconfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	sandboxProxyClient, err := createCustomClient(*userCfg)
+	if err != nil {
+		return nil, err
+	}
+
+	utils.PrintBeauty(sandboxProxyClient)
+	os.Exit(0)
 
 	return &K8SClient{
 		AsKubeAdmin:     asAdminClient,
-		AsKubeDeveloper: asDeveloperClient,
+		AsKubeDeveloper: sandboxProxyClient,
+		UserName:        userAuthInfo.UserName,
 	}, nil
 }
 

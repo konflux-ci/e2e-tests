@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/devfile/library/pkg/util"
@@ -177,4 +178,14 @@ func ExecuteCommandInASpecificDirectory(command string, args []string, directory
 	}
 
 	return err
+}
+
+func PrintBeauty(i interface{}) {
+	yamlData, err := yaml.Marshal(&i)
+
+	if err != nil {
+		fmt.Printf("Error while Marshaling. %v", err)
+	}
+
+	fmt.Println(string(yamlData))
 }

@@ -31,7 +31,7 @@ type Framework struct {
 }
 
 func NewFramework() (*Framework, error) {
-	k, err := kubeCl.NewKubernetesClient()
+	k, err := kubeCl.NewDevSandboxProxyClient()
 	if err != nil {
 		return nil, fmt.Errorf("error when initializing kubernetes clients: %v", err)
 	}
@@ -41,7 +41,7 @@ func NewFramework() (*Framework, error) {
 		return nil, fmt.Errorf("error when initializing appstudio hub controllers for admin user: %v", err)
 	}
 
-	asUser, err := initControllerHub(k.AsKubeAdmin)
+	asUser, err := initControllerHub(k.AsKubeDeveloper)
 	if err != nil {
 		return nil, fmt.Errorf("error when initializing appstudio hub controllers for sandbox user: %v", err)
 	}

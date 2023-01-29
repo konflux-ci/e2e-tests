@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -13,13 +12,11 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
 	e2eConfig "github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
 	"github.com/spf13/viper"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -37,6 +34,12 @@ const (
 
 	// Environment name used for e2e-tests demos
 	EnvironmentName string = "testing"
+
+	// Secret Name created by spi to interact with github
+	SPIGithubSecretName string = "e2e-github-secret"
+
+	// Environment name used for e2e-tests demos
+	SPIQuaySecretName string = "e2e-quay-secret"
 )
 
 var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
@@ -49,6 +52,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	component := &appservice.Component{}
 	snapshot := &appservice.Snapshot{}
 	env := &appservice.Environment{}
+	var namespace = constants.DEFAULT_KEYCLOAK_USERNAME_NAMESPACE
 
 	// Initialize the e2e demo configuration
 	configTestFile := viper.GetString("config-suites")
@@ -62,8 +66,8 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 	for _, appTest := range configTest.Tests {
 		appTest := appTest
+
 		Describe(appTest.Name, Ordered, func() {
-			var namespace = constants.DEFAULT_KEYCLOAK_USERNAME_NAMESPACE
 			BeforeAll(func() {
 				if appTest.Skip {
 					Skip(fmt.Sprintf("test skipped %s", appTest.Name))
@@ -72,24 +76,10 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				suiteConfig, _ := GinkgoConfiguration()
 				GinkgoWriter.Printf("Parallel processes: %d\n", suiteConfig.ParallelTotal)
 				GinkgoWriter.Printf("Running on namespace: %s\n", namespace)
-				// Check to see if the github token was provided
-				Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
-				// Check if 'has-github-token' is present, unless SKIP_HAS_SECRET_CHECK env var is set
-				if !utils.CheckIfEnvironmentExists(constants.SKIP_HAS_SECRET_CHECK_ENV) {
-					_, err := fw.AsKubeAdmin.HasController.KubeInterface().CoreV1().Secrets(RedHatAppStudioApplicationNamespace).Get(context.TODO(), ApplicationServiceGHTokenSecrName, metav1.GetOptions{})
-					Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
-				}
-			})
-			// Remove all resources created by the tests
-			AfterAll(func() {
-				if !CurrentSpecReport().Failed() {
-					//Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-					//Expect(fw.AsKubeDeveloper.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-					//Expect(fw.AsKubeDeveloper.HasController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-					//Expect(fw.AsKubeDeveloper.ReleaseController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-					//Expect(fw.AsKubeDeveloper.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-					//Expect(fw.AsKubeDeveloper.GitOpsController.DeleteAllGitOpsDeploymentInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-				}
+
+				githubCredentials := `{"access_token":"` + utils.GetEnv(constants.GITHUB_TOKEN_ENV, "") + `"}`
+
+				_ = fw.AsKubeDeveloper.SPIController.InjectManualSPIToken(namespace, fmt.Sprintf("https://github.com/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")), githubCredentials, v1.SecretTypeBasicAuth, SPIGithubSecretName)
 			})
 
 			// Create an application in a specific namespace
@@ -117,6 +107,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					return fw.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 				}, 5*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 			})
+
 			// Create an environment in a specific namespace
 			It("creates an environment", func() {
 				env, err = fw.AsKubeDeveloper.IntegrationController.CreateEnvironment(namespace, EnvironmentName)
@@ -124,33 +115,23 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 			})
 
 			for _, componentTest := range appTest.Components {
-				var oauthSecretName = ""
-
 				componentTest := componentTest
 				var containerIMG = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 
-				// TODO: In the future when HAS support creating private applications should push the containers from private repos to a private quay.io repo
-				if componentTest.Type == "private" {
-					It("injects manually SPI token", func() {
-						// Inject spi tokens to work with private components
-						if componentTest.ContainerSource != "" {
-							// More info about manual token upload for quay.io here: https://github.com/redhat-appstudio/service-provider-integration-operator/pull/115
-							oauthCredentials := `{"access_token":"` + utils.GetEnv(constants.QUAY_OAUTH_TOKEN_ENV, "") + `", "username":"` + utils.GetEnv(constants.QUAY_OAUTH_USER_ENV, "") + `"}`
+				It("injects manually SPI token", func() {
+					// Inject spi tokens to work with private components
+					if componentTest.ContainerSource != "" {
+						// More info about manual token upload for quay.io here: https://github.com/redhat-appstudio/service-provider-integration-operator/pull/115
+						oauthCredentials := `{"access_token":"` + utils.GetEnv(constants.QUAY_OAUTH_TOKEN_ENV, "") + `", "username":"` + utils.GetEnv(constants.QUAY_OAUTH_USER_ENV, "") + `"}`
 
-							oauthSecretName = fw.AsKubeDeveloper.SPIController.InjectManualSPIToken(namespace, componentTest.ContainerSource, oauthCredentials, v1.SecretTypeDockerConfigJson)
-						} else if componentTest.GitSourceUrl != "" {
-							// More info about manual token upload for github.com
-							oauthCredentials := `{"access_token":"` + utils.GetEnv(constants.GITHUB_TOKEN_ENV, "") + `"}`
-
-							oauthSecretName = fw.AsKubeDeveloper.SPIController.InjectManualSPIToken(namespace, componentTest.GitSourceUrl, oauthCredentials, v1.SecretTypeBasicAuth)
-						}
-					})
-				}
+						_ = fw.AsKubeDeveloper.SPIController.InjectManualSPIToken(namespace, componentTest.ContainerSource, oauthCredentials, v1.SecretTypeDockerConfigJson, SPIQuaySecretName)
+					}
+				})
 
 				// Components for now can be imported from gitUrl, container image or a devfile
 				if componentTest.ContainerSource != "" {
 					It(fmt.Sprintf("creates component %s from %s container source", componentTest.Name, componentTest.Type), func() {
-						component, err = fw.AsKubeDeveloper.HasController.CreateComponent(application.Name, componentTest.Name, namespace, "", "", componentTest.ContainerSource, outputContainerImage, oauthSecretName, true)
+						component, err = fw.AsKubeDeveloper.HasController.CreateComponent(application.Name, componentTest.Name, namespace, "", "", componentTest.ContainerSource, outputContainerImage, SPIQuaySecretName, true)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -158,7 +139,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				} else if componentTest.GitSourceUrl != "" && componentTest.Devfilesource != "" {
 					It(fmt.Sprintf("creates component %s from %s git source %s and devfile %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl, componentTest.Devfilesource), func() {
 						component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromDevfile(application.Name, componentTest.Name, namespace,
-							componentTest.GitSourceUrl, componentTest.Devfilesource, "", containerIMG, oauthSecretName)
+							componentTest.GitSourceUrl, componentTest.Devfilesource, "", containerIMG, SPIGithubSecretName)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -166,7 +147,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				} else if componentTest.GitSourceUrl != "" {
 					It(fmt.Sprintf("creates component %s from %s git source %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl), func() {
 						component, err = fw.AsKubeDeveloper.HasController.CreateComponent(application.Name, componentTest.Name, namespace,
-							componentTest.GitSourceUrl, "", "", containerIMG, oauthSecretName, true)
+							componentTest.GitSourceUrl, "", "", containerIMG, SPIGithubSecretName, true)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -241,7 +222,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					}, 5*time.Minute, 10*time.Second).Should(BeTrue())
 				})
 
-				if componentTest.K8sSpec != (config.K8sSpec{}) && *componentTest.K8sSpec.Replicas > 1 {
+				if componentTest.K8sSpec != (e2eConfig.K8sSpec{}) && *componentTest.K8sSpec.Replicas > 1 {
 					It(fmt.Sprintf("scales component %s replicas", componentTest.Name), Pending, func() {
 						component, err := fw.AsKubeDeveloper.HasController.GetHasComponent(componentTest.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())
@@ -264,6 +245,14 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					})
 				}
 			}
+			It("remove resources if successfull", func() {
+				// Remove all resources created by the tests
+				AfterEach(func() {
+					if !CurrentSpecReport().Failed() {
+						Expect(fw.AsKubeDeveloper.HasController.DeleteHasApplication(namespace, appTest.ApplicationName, true)).To(Succeed())
+					}
+				})
+			})
 		})
 	}
 })

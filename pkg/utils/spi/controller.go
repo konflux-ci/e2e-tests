@@ -8,13 +8,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/devfile/library/pkg/util"
 	. "github.com/onsi/gomega"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	spi "github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	v1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
@@ -112,13 +112,20 @@ func (s *SuiteController) GetSPIAccessToken(name, namespace string) (*spi.SPIAcc
 }
 
 // Inject manually access tokens using spi API
-func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string, oauthCredentials string, secretType v1.SecretType) string {
+func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string, oauthCredentials string, secretType v1.SecretType, secretName string) string {
 	var spiAccessTokenBinding *v1beta1.SPIAccessTokenBinding
-	var secretName = util.GenerateRandomString(10)
 
 	// Get the token for the current openshift user
 	bearerToken, err := utils.GetOpenshiftToken()
 	Expect(err).NotTo(HaveOccurred())
+
+	// https://issues.redhat.com/browse/STONE-444. Is not possible to create more than 1 secret per user namespace
+	secret, err := s.KubeInterface().CoreV1().Secrets(namespace).Get(context.Background(), secretName, metav1.GetOptions{})
+	if k8sErrors.IsAlreadyExists(err) {
+		klog.Infof("secret %s already exists", secret.Name)
+
+		return secret.Name
+	}
 
 	spiAccessTokenBinding, err = s.CreateSPIAccessTokenBinding(SPIAccessTokenBindingPrefixName, namespace, repoUrl, secretName, secretType)
 	Expect(err).NotTo(HaveOccurred())
@@ -130,8 +137,6 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 		if err != nil {
 			return false
 		}
-
-		klog.Info(spiAccessTokenBinding.Name)
 
 		return (spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected || spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData)
 	}, 2*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to AwaitingTokenData/Injected")
