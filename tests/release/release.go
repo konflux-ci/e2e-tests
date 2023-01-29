@@ -60,12 +60,12 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 	BeforeAll(func() {
 		// Create the dev namespace
 		_, err := framework.CommonController.CreateTestNamespace(devNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", devNamespace, err)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace: %v", err)
 		GinkgoWriter.Println("Dev Namespace :", devNamespace)
 
 		// Create the managed namespace
 		_, err = framework.CommonController.CreateTestNamespace(managedNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", managedNamespace, err)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace: %v", err)
 		GinkgoWriter.Println("Managed Namespace :", managedNamespace)
 
 		// Wait until the "pipeline" SA is created and ready with secrets by the openshift-pipelines operator

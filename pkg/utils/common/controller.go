@@ -519,7 +519,7 @@ func (s *SuiteController) ApplicationGitopsRepoExists(devfileContent string) wai
 	}
 }
 
-//CreateServiceAccount create service account with given name in the given namespace based on other params.
+// CreateServiceAccount creates a service account with the provided name and namespace using the given list of secrets.
 func (s *SuiteController) CreateServiceAccount(name, namespace string, serviceAccountSecretList []corev1.ObjectReference) (*corev1.ServiceAccount, error) {
 	serviceAccount := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -531,6 +531,7 @@ func (s *SuiteController) CreateServiceAccount(name, namespace string, serviceAc
 	return s.KubeInterface().CoreV1().ServiceAccounts(namespace).Create(context.TODO(), serviceAccount, metav1.CreateOptions{})
 }
 
+// CreateRole creates an object of Role.
 func (s *SuiteController) CreateRole(roleName, namespace string, roleRules map[string][]string) (*rbacv1.Role, error) {
 
 	rules := &rbacv1.PolicyRule{
@@ -554,7 +555,8 @@ func (s *SuiteController) CreateRole(roleName, namespace string, roleRules map[s
 	return createdRole, nil
 }
 
-func (s *SuiteController) CreateRoleBinding(roleBindingName, namespace, subjectKind, serviceAccountName string, roleRefKind string, roleRefName, roleRefApiGroup string) (*rbacv1.RoleBinding, error) {
+// CreateRole creates an object of Role Binding.
+func (s *SuiteController) CreateRoleBinding(roleBindingName, namespace, subjectKind, serviceAccountName, roleRefKind, roleRefName, roleRefApiGroup string) (*rbacv1.RoleBinding, error) {
 
 	roleBindingSubjects := []rbacv1.Subject{
 		{

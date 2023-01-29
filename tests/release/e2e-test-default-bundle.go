@@ -61,13 +61,13 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 			Tektonctrl: *framework.TektonController,
 		}
 
-		dev, err := framework.CommonController.CreateTestNamespace(devNamespace)
+		_, err := framework.CommonController.CreateTestNamespace(devNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace: %v", err)
-		klog.Info("Dev Namespace created: ", dev.Name)
+		klog.Info("Dev Namespace created: ", devNamespace)
 
-		manageNamespace, err := framework.CommonController.CreateTestNamespace(managedNamespace)
+		_, err = framework.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace: %v", err)
-		klog.Info("Managed Namespace created: ", manageNamespace.Name)
+		klog.Info("Managed Namespace created: ", managedNamespace)
 
 		klog.Infof("Wait until the 'pipeline' SA is created in %s namespace \n", managedNamespace)
 		Eventually(func() bool {
@@ -124,44 +124,44 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 		Expect(framework.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
 	})
 
-	var _ = Describe("Creation of the 'Happy path for defult pipeline bundle' resources", func() {
+	var _ = Describe("creation of the 'Happy path for defult pipeline bundle resources without deployment", func() {
 
-		It("Create a config map with the given detail in dev namespace.", func() {
+		It("creates config map in the dev namespace.", func() {
 			_, err := framework.CommonController.CreateConfigMap(cm, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Create ReleasePlan in dev namespace.", func() {
+		It("create release plan in the dev namespace.", func() {
 			_, err := framework.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("creates Release Strategy with a given name in managed namespace.", func() {
+		It("creates release strategy in the managed namespace.", func() {
 			_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineNameDefault, releasePipelineBundleDefault, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategyDefault)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Create ReleasePlanAdmission in managed namespace.", func() {
+		It("creates release plan admission in the managed namespace.", func() {
 			_, err := framework.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, "", "", releaseStrategyDefaultName) //releaseEnvironment
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("creates EnterpriseContractPolicy in managed namespace.", func(ctx SpecContext) {
+		It("creates EnterpriseContractPolicy in the managed namespace.", func(ctx SpecContext) {
 			_, err := framework.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicyDefault, managedNamespace, defaultEcPolicy)
 			Expect(err).NotTo(HaveOccurred())
 		}, SpecTimeout(EnterpriseContractPolicyTimeout))
 
-		It("creates pvc with a given name in managed namespace with the given accessmode.", func() {
+		It("creates pvc in the managed namespace.", func() {
 			_, err := framework.TektonController.CreatePVCInAccessMode(releasePvcName, managedNamespace, corev1.ReadWriteOnce)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("creates sevice account with a given name in the manged namespace.", func() {
+		It("creates sevice account in the manged namespace.", func() {
 			_, err := framework.CommonController.CreateServiceAccount(releaseStrategyServiceAccountDefault, managedNamespace, managednamespaceSecret)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("creates Role with a given name in managed namespace.", func() {
+		It("creates role in the managed namespace.", func() {
 			_, err := framework.CommonController.CreateRole(roleName, managedNamespace, roleRules)
 			Expect(err).NotTo(HaveOccurred())
 		})

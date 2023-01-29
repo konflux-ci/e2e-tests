@@ -15,7 +15,6 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -45,6 +44,7 @@ func (s *SuiteController) CreateSnapshot(name string, namespace string, applicat
 	return snapshot, s.KubeRest().Create(context.TODO(), snapshot)
 }
 
+// GetSnapshotByComponent returns the first snapshot in namespace if exist, else will return nil
 func (s *SuiteController) GetSnapshotByComponent(namespace string) (*appstudioApi.Snapshot, error) {
 	snapshot := &appstudioApi.SnapshotList{}
 	opts := []client.ListOption{
@@ -259,7 +259,6 @@ func (s *SuiteController) CreateReleasePlanAdmission(name, originNamespace, appl
 
 // CreateRegistryJsonSecret creates a secret for registry repository in namespace given with key passed.
 func (s *SuiteController) CreateRegistryJsonSecret(name, namespace, authKey, keyName string) (*corev1.Secret, error) {
-	klog.Info("Key is : ", authKey)
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
 		Type:       corev1.SecretTypeDockerConfigJson,
