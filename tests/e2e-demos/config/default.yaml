@@ -46,7 +46,7 @@ tests:
         language: "go"
         healthz: "/"
   - name: "RHDP-489: create an application with a component from private and public personal repositories"
-    applicationName: "e2e-python-personal"
+    applicationName: "e2e-personal"
     components:
       - name: "component-python-public"
         type: "public"
