@@ -705,7 +705,6 @@ github.com/google/pprof v0.0.0-20201203190320-1bf35d6f28c2/go.mod h1:kpwsk12EmLe
 github.com/google/pprof v0.0.0-20201218002935-b9804c9f04c2/go.mod h1:kpwsk12EmLew5upagYY7GY0pfYCcupk39gWOCRROcvE=
 github.com/google/pprof v0.0.0-20210122040257-d980be63207e/go.mod h1:kpwsk12EmLew5upagYY7GY0pfYCcupk39gWOCRROcvE=
 github.com/google/pprof v0.0.0-20210226084205-cbba55b83ad5/go.mod h1:kpwsk12EmLew5upagYY7GY0pfYCcupk39gWOCRROcvE=
-github.com/google/pprof v0.0.0-20210407192527-94a9f03dee38 h1:yAJXTCF9TqKcTiHJAE8dj7HMvPfh66eeA2JYW7eFpSE=
 github.com/google/pprof v0.0.0-20210407192527-94a9f03dee38/go.mod h1:kpwsk12EmLew5upagYY7GY0pfYCcupk39gWOCRROcvE=
 github.com/google/renameio v0.1.0/go.mod h1:KWCgfxg9yswjAJkECMjeO8J8rahYeXnNhOm40UhjYkI=
 github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 h1:El6M4kTTCOh6aBiKaUGG7oYTSPP8MxqL4YI3kZKwcP4=
@@ -1179,8 +1178,8 @@ github.com/redhat-appstudio/build-service v0.0.0-20230105230040-fd3097c1b686 h1:
 github.com/redhat-appstudio/build-service v0.0.0-20230105230040-fd3097c1b686/go.mod h1:2eYI4Zw83S2CVEIflUCseJQ96t97xW0xKU4429NhYr4=
 github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2cad2 h1:wVpENUra8XAN2UgR09KLjyejoiHcd20P79gVx2wdIuE=
 github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2cad2/go.mod h1:FNCuALWZDRMbMKm3Vb/5E2R8ei6eFwcEhgYcFKRVZJU=
-github.com/redhat-appstudio/jvm-build-service v0.0.0-20221128055414-018f50a9d68e h1:db8H6mIYQNQ82GYGP9ZEn/ba49cn6ZEcN9xI6yH7sE4=
-github.com/redhat-appstudio/jvm-build-service v0.0.0-20221128055414-018f50a9d68e/go.mod h1:oXhzBMqglmraqPlTrFpjbEsqJ02jxxyH+PP/TNyW+rI=
+github.com/redhat-appstudio/jvm-build-service v0.0.0-20230125042419-efd0d0342a2c h1:3kgmn4uwlTjlzofcFU0zWBKsx+PthW5hBjR6LnEy/NA=
+github.com/redhat-appstudio/jvm-build-service v0.0.0-20230125042419-efd0d0342a2c/go.mod h1:sZOAcdjkXDE8osXzcos72Fs678szvsk3UOYD5B2d8qs=
 github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001 h1:dHYSaZ8slDW27YrbAYj59Zd82Oml3oTj9ieICLtzk8Y=
 github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001/go.mod h1:jqTuNQDL/xf+LsxWg1RuhJiMvMWnoRZcpcHRhX8Z12s=
 github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20220506042230-3a79f373a001 h1:xjO01dcMV7mv7b0GFeEN1uLhJiLOlzglgeEO57rfdNk=

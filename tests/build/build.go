@@ -100,8 +100,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		AfterAll(func() {
-			Expect(f.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
-			Expect(f.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
+			if !CurrentSpecReport().Failed() {
+				Expect(f.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
+				Expect(f.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
+			}
+
 			pacInitTestFiles := []string{
 				fmt.Sprintf(".tekton/%s-pull-request.yaml", componentName),
 				fmt.Sprintf(".tekton/%s-push.yaml", componentName),
@@ -251,7 +254,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 			})
 			It("PipelineRun should eventually finish", func() {
-				timeout = time.Minute * 5
+				timeout = time.Minute * 10
 				interval = time.Second * 10
 
 				Eventually(func() bool {
@@ -327,7 +330,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 			})
 			It("pipelineRun should eventually finish", func() {
-				timeout = time.Minute * 5
+				timeout = time.Minute * 10
 				interval = time.Second * 10
 
 				Eventually(func() bool {

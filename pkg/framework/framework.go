@@ -28,6 +28,7 @@ type ControllerHub struct {
 type Framework struct {
 	AsKubeAdmin     *ControllerHub
 	AsKubeDeveloper *ControllerHub
+	UserNamespace   string
 }
 
 func NewFramework() (*Framework, error) {
@@ -49,6 +50,7 @@ func NewFramework() (*Framework, error) {
 	return &Framework{
 		AsKubeAdmin:     asAdmin,
 		AsKubeDeveloper: asUser,
+		UserNamespace:   k.UserName,
 	}, nil
 }
 

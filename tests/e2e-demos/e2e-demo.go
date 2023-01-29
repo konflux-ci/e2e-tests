@@ -52,7 +52,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	component := &appservice.Component{}
 	snapshot := &appservice.Snapshot{}
 	env := &appservice.Environment{}
-	var namespace = constants.DEFAULT_KEYCLOAK_USERNAME_NAMESPACE
 
 	// Initialize the e2e demo configuration
 	configTestFile := viper.GetString("config-suites")
@@ -63,6 +62,9 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	Expect(err).NotTo(HaveOccurred())
 	configTest, err := e2eConfig.LoadTestGeneratorConfig(configTestFile)
 	Expect(err).NotTo(HaveOccurred())
+
+	var namespace = fw.UserNamespace
+	Expect(namespace).NotTo(BeEmpty())
 
 	for _, appTest := range configTest.Tests {
 		appTest := appTest
@@ -245,14 +247,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					})
 				}
 			}
-			It("remove resources if successfull", func() {
-				// Remove all resources created by the tests
-				AfterEach(func() {
-					if !CurrentSpecReport().Failed() {
-						Expect(fw.AsKubeDeveloper.HasController.DeleteHasApplication(namespace, appTest.ApplicationName, true)).To(Succeed())
-					}
-				})
-			})
 		})
 	}
 })

@@ -25,7 +25,7 @@ require (
 	github.com/redhat-appstudio/application-service v0.0.0-20221129172232-763cbbe1992e
 	github.com/redhat-appstudio/build-service v0.0.0-20230105230040-fd3097c1b686
 	github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2cad2
-	github.com/redhat-appstudio/jvm-build-service v0.0.0-20221128055414-018f50a9d68e
+	github.com/redhat-appstudio/jvm-build-service v0.0.0-20230125042419-efd0d0342a2c
 	github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001
 	github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0
 	github.com/redhat-appstudio/release-service v0.0.0-20221124083149-2b9e7545bcab

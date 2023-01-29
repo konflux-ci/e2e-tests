@@ -1,4 +1,23 @@
 tests:
+  - name: "RHDP-466: create an application with nodejs component"
+    applicationName: "e2e-nodejs"
+    components:
+      - name: "nodejs-component"
+        type: "public"
+        gitSourceUrl: "https://github.com/redhat-appstudio-qe/simple-nodejs-app"
+        devfileSource: "https://raw.githubusercontent.com/redhat-appstudio-qe/simple-nodejs-app/main/devfiles/devfile.yaml"
+        language: "nodejs"
+        healthz: "/"
+        spec:
+          replicas: 2
+  - name: "RHDP-476: create an application with DotNet component"
+    applicationName: "e2e-dotnet"
+    components:
+      - name: "dotnet-component"
+        type: "public"
+        gitSourceUrl: "https://github.com/redhat-appstudio-qe/devfile-sample-dotnet60-basic"
+        language: "dotNet"
+        healthz: "/"
   - name: "RHDP-478: create an application with multiple components from private and public repositories"
     applicationName: "e2e-multiple-components"
     components:
@@ -25,4 +44,17 @@ tests:
         type: "private"
         containerSource: "quay.io/redhat-appstudio-qe/private-image:go"
         language: "go"
+        healthz: "/"
+  - name: "RHDP-489: create an application with a component from private and public personal repositories"
+    applicationName: "e2e-python-personal"
+    components:
+      - name: "component-python-public"
+        type: "public"
+        gitSourceUrl: "https://github.com/redhat-appstudio-qe-bot/devfile-sample-python-basic"
+        language: "python"
+        healthz: "/"
+      - name: "component-python-private"
+        type: "private"
+        gitSourceUrl: "https://github.com/redhat-appstudio-qe-bot/devfile-sample-python-basic-private"
+        language: "python"
         healthz: "/"

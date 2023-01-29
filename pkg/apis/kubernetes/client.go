@@ -1,8 +1,6 @@
 package client
 
 import (
-	"os"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
 	ocpOauth "github.com/openshift/api/config/v1"
@@ -129,7 +127,6 @@ func NewDevSandboxProxyClient() (*K8SClient, error) {
 	}
 
 	utils.PrintBeauty(sandboxProxyClient)
-	os.Exit(0)
 
 	return &K8SClient{
 		AsKubeAdmin:     asAdminClient,
