@@ -75,19 +75,24 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 			return sa != nil && err == nil
 		}, 1*time.Minute, defaultInterval).Should(BeTrue(), "timed out when waiting for the \"pipeline\" SA to be created")
 
-		sourceAuthJson := utils.GetEnv(constants.QUAY_OAUTH_TOKEN_RELEASE_SOURCE, "")
+		//utils.GetEnv(constants.QUAY_OAUTH_TOKEN_RELEASE_SOURCE, "")
+		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
 		Expect(sourceAuthJson).ToNot(BeEmpty())
-
-		err = framework.CommonController.LinkSecretToServiceAccount(devNamespace, hacbsReleaseTestsTokenSecret, "pipeline")
-		Expect(err).ToNot(HaveOccurred())
 
 		destinationAuthJson := utils.GetEnv(constants.QUAY_OAUTH_TOKEN_RELEASE_DESTINATION, "")
 		Expect(destinationAuthJson).ToNot(BeEmpty())
 
 		_, err = framework.CommonController.CreateRegistryAuthSecret(hacbsReleaseTestsTokenSecret, devNamespace, sourceAuthJson)
 		Expect(err).ToNot(HaveOccurred())
+
 		_, err = framework.ReleaseController.CreateRegistryJsonSecret(redhatAppstudioUserSecret, managedNamespace, destinationAuthJson, destinationKeyName)
 		Expect(err).ToNot(HaveOccurred())
+
+		err = framework.CommonController.LinkSecretToServiceAccount(devNamespace, hacbsReleaseTestsTokenSecret, "pipeline")
+		Expect(err).ToNot(HaveOccurred())
+
+		klog.Info("Dev Namespace:", devNamespace)
+		klog.Info("Managed Namespace:", managedNamespace)
 
 		// Copy the public key from tekton-chains/signing-secrets to a new
 		// secret that contains just the public key to ensure that access
@@ -189,8 +194,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 		It("verifies that in dev namespace will be created a PipelineRun.", func() {
 			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(devNamespace)
+				time.Sleep(40 * time.Second)
 				if err != nil || prList == nil || len(prList.Items) < 1 {
-					klog.Error(err)
 					return false
 				}
 
@@ -212,10 +217,10 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 		It("verifies that in managed namespace will be created a PipelineRun.", func() {
 			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(managedNamespace)
+				time.Sleep(20 * time.Second)
 				if err != nil || prList == nil || len(prList.Items) < 1 {
 					return false
 				}
-				klog.Info("PR in managed: ", prList.Items[0].Name)
 				return strings.Contains(prList.Items[0].Name, "release")
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})

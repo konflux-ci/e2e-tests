@@ -34,8 +34,8 @@ const (
 	publicSecretNameAuth                 string = "cosign-public-key"
 	gitSourceComponentUrl                string = "https://github.com/scoheb/dc-metro-map" //"https://github.com/sbose78/dc-metro-map"
 	sourceKeyName                        string = "release-e2e+release_e2e"
-	destinationKeyName                   string = "hacbs-release-tests+m5_robot_account"
-	containerImageUrl                    string = "quay.io/hacbs-release-tests/dcmetromap:latest"
+	destinationKeyName                   string = "redhat-appstudio-qe+redhat_appstudio_quality"
+	containerImageUrl                    string = "quay.io/redhat-appstudio-qe/dcmetromap:latest"
 	releasePipelineBundleDefault         string = "quay.io/hacbs-release/pipeline-release:main"
 	roleName                             string = "role-release-service-account"
 	roleRefKind                          string = "Role"
@@ -50,7 +50,7 @@ const (
 	releasePlanAdmissionCreationTimeout   = 1 * time.Minute
 	releaseCreationTimeout                = 1 * time.Minute
 	releasePipelineRunCreationTimeout     = 5 * time.Minute
-	releasePipelineRunCompletionTimeout   = 15 * time.Minute
+	releasePipelineRunCompletionTimeout   = 20 * time.Minute
 	avgControllerQueryTimeout             = 1 * time.Minute
 	pipelineServiceAccountCreationTimeout = 3 * time.Minute
 
