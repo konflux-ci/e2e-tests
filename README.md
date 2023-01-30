@@ -74,15 +74,11 @@ $ go mod tidy
 $ go mod vendor
 ```
 
-4. Install Red Hat AppStudio in e2e mode with install script in scripts folder. The e2e framework will use by default the `redhat-appstudio-qe` GitHub organization(you can change the GitHub organization by environment variable `GITHUB_E2E_ORGANIZATION`).
+4. Install Red Hat AppStudio in e2e mode with install script in scripts folder. The e2e framework will use by default the `redhat-appstudio-qe` GitHub organization(you can change the GitHub organization by environment variable `MY_GITHUB_ORG`).
 
    ```bash
       make local/cluster/prepare
    ```
-   or
-   ```bash
-       ./scripts/install-appstudio-e2e-mode.sh install
-    ```
 
 More information about how to deploy Red Hat AppStudio
 are in the [infra-deployments](https://github.com/redhat-appstudio/infra-deployments) repository.
