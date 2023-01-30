@@ -11,6 +11,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	"knative.dev/pkg/apis"
 
 	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
 	appstudiov1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
@@ -118,9 +119,11 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 	})
 
 	AfterAll(func() {
-		// Delete the dev and managed namespaces with all the resources created in them
-		Expect(framework.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
-		Expect(framework.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+
+		if !CurrentSpecReport().Failed() {
+			Expect(framework.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
+			Expect(framework.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+		}
 	})
 
 	var _ = Describe("creation of the 'Happy path for defult pipeline bundle resources without deployment", func() {
@@ -199,20 +202,17 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(devNamespace)
 				if prList == nil || err != nil || len(prList.Items) < 1 {
-					klog.Error(err)
 					return false
 				}
 
-				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() //&& prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
+				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
 
 		It("verifies that in managed namespace will be created a PipelineRun.", func() {
 			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(managedNamespace)
-				klog.Info("PR List : ", prList.Items)
 				if err != nil || prList == nil || len(prList.Items) < 1 {
-					klog.Error(err)
 					return false
 				}
 				klog.Info("PR in managed: ", prList.Items[0].Name)
@@ -224,10 +224,9 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(managedNamespace)
 				if prList == nil || err != nil || len(prList.Items) < 1 {
-					klog.Error(err)
 					return false
 				}
-				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() //&& prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
+				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
 
@@ -235,7 +234,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 			Eventually(func() bool {
 				releaseCreated, err := framework.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				if releaseCreated == nil || err != nil {
-					klog.Error(err)
 					return false
 				}
 				return releaseCreated.HasStarted() && releaseCreated.IsDone() && releaseCreated.Status.Conditions[0].Status == "True"
