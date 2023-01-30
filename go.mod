@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	github.com/avast/retry-go/v4 v4.3.2
-	github.com/averageflow/gohooks/v2 v2.1.0
 	github.com/codeready-toolchain/api v0.0.0-20220511141428-1adfed7d17b0
 	github.com/codeready-toolchain/toolchain-e2e v0.0.0-20220525131508-60876bfb99d3
 	github.com/devfile/library v1.2.1-0.20211104222135-49d635cb492f
@@ -21,6 +20,7 @@ require (
 	github.com/openshift/api v0.0.0-20221013123534-96eec44e1979
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
+	github.com/opentracing/opentracing-go v1.2.0
 	github.com/redhat-appstudio/application-api v0.0.0-20221114151952-77cba9006505
 	github.com/redhat-appstudio/application-service v0.0.0-20221129172232-763cbbe1992e
 	github.com/redhat-appstudio/build-service v0.0.0-20230105230040-fd3097c1b686
@@ -175,7 +175,6 @@ require (
 	github.com/opencontainers/image-spec v1.1.0-rc2 // indirect
 	github.com/opencontainers/runc v1.1.2 // indirect
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417 // indirect
-	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/operator-framework/api v0.13.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
