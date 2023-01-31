@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	github.com/avast/retry-go/v4 v4.3.2
-	github.com/averageflow/gohooks/v2 v2.1.0
 	github.com/codeready-toolchain/api v0.0.0-20220511141428-1adfed7d17b0
 	github.com/codeready-toolchain/toolchain-e2e v0.0.0-20220525131508-60876bfb99d3
 	github.com/devfile/library v1.2.1-0.20211104222135-49d635cb492f
@@ -175,7 +174,6 @@ require (
 	github.com/opencontainers/image-spec v1.1.0-rc2 // indirect
 	github.com/opencontainers/runc v1.1.2 // indirect
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417 // indirect
-	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/operator-framework/api v0.13.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.1 // indirect

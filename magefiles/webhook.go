@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/averageflow/gohooks/v2/gohooks"
 	"net/http"
+
+	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 )
 
 // Webhook struct used for sending webhooks to https://smee.io/
@@ -20,7 +21,7 @@ type Repository struct {
 }
 
 func (w *Webhook) CreateAndSend(saltSecret, webhookTarget string) (*http.Response, error) {
-	hook := &gohooks.GoHook{}
+	hook := &framework.GoWebHook{}
 	hook.Create(w, w.Path, saltSecret)
 	resp, err := hook.Send(webhookTarget)
 	if err != nil {
