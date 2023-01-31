@@ -7,13 +7,10 @@ import (
 
 	"github.com/devfile/library/pkg/util"
 	"github.com/google/uuid"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"k8s.io/apimachinery/pkg/api/errors"
 
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
-	v1 "k8s.io/api/core/v1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -35,8 +32,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	var applicationSnapshot *appstudioApi.Snapshot
 	var applicationSnapshot_push *appstudioApi.Snapshot
 	var env *appstudioApi.Environment
-
-	var defaultBundleConfigMap *v1.ConfigMap
 
 	// Initialize the tests controllers
 	f, err := framework.NewFramework()
@@ -65,15 +60,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			Expect(err).ShouldNot(HaveOccurred())
 			DeferCleanup(f.HasController.DeleteHasComponent, componentName, appStudioE2EApplicationsNamespace, false)
 
-			defaultBundleConfigMap, err = f.CommonController.GetConfigMap(constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace)
-			if err != nil {
-				if errors.IsForbidden(err) {
-					GinkgoWriter.Printf("don't have enough permissions to get a configmap with default pipeline in %s namespace\n", constants.BuildPipelinesConfigMapDefaultNamespace)
-				} else {
-					Fail(fmt.Sprintf("error occurred when trying to get configmap %s in %s namespace: %v", constants.BuildPipelinesConfigMapName, constants.BuildPipelinesConfigMapDefaultNamespace, err))
-				}
-			}
-			_ = defaultBundleConfigMap.Data["default_build_bundle"]
 			_, err = f.IntegrationController.CreateIntegrationTestScenario(applicationName, appStudioE2EApplicationsNamespace, BundleURL, InPipelineName)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
