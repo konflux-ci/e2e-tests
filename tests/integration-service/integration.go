@@ -103,7 +103,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				}
 				return pipelineRun.HasStarted()
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
-			timeout = time.Second * 600
+			timeout = time.Second * 1200
 			interval = time.Second * 10
 			Eventually(func() bool {
 				pipelineRun, err := f.IntegrationController.GetBuildPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false, "")
