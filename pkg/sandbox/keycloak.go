@@ -46,9 +46,11 @@ func (k *SandboxController) GetKeycloakToken(clientID string, userName string, p
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	response, err := k.HttpClient.Do(request)
+
 	if err != nil || response.StatusCode != 200 {
 		return nil, fmt.Errorf("failed to get keycloak token, realm: %s, userName: %s, client-id: %s statusCode: %d, url: %s", realm, userName, clientID, response.StatusCode, k.KeycloakUrl)
 	}
+	defer response.Body.Close()
 
 	err = json.NewDecoder(response.Body).Decode(&keycloakAuth)
 
@@ -90,9 +92,9 @@ func (k *SandboxController) RegisterKeyclokUser(userName string, keycloakToken s
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", keycloakToken))
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := k.HttpClient.Do(req)
 	if err != nil || resp.StatusCode != 201 {
-		return user, fmt.Errorf("failed to create keycloak users. Status code %d", resp.StatusCode)
+		return user, fmt.Errorf("failed to create keycloak users. Status code %v", err)
 	}
 	defer resp.Body.Close()
 
