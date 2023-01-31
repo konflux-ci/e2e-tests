@@ -464,7 +464,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			gitUrl := gitUrl
 
 			It(fmt.Sprintf("should eventually finish successfully for component with source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
-				timeout := time.Second * 900
+				timeout := time.Second * 1200
 				interval := time.Second * 10
 				Eventually(func() bool {
 					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, false, "")

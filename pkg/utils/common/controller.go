@@ -440,7 +440,8 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 	}
 
 	// "pipeline" service account needs to be present in the namespace before we start with creating tekton resources
-	if err := utils.WaitUntil(s.ServiceaccountPresent("pipeline", name), time.Second*30); err != nil {
+	// TODO: STONE-442 - decrease the timeout here back to 30 seconds once this issue is resolved.
+	if err := utils.WaitUntil(s.ServiceaccountPresent("pipeline", name), time.Second*60); err != nil {
 		return nil, fmt.Errorf("'pipeline' service account wasn't created in %s namespace: %+v", name, err)
 	}
 
