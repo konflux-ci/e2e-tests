@@ -165,11 +165,6 @@ func (Local) CleanupGithubOrg() error {
 func (ci CI) TestE2E() error {
 	var testFailure bool
 
-	//k, err := client.NewAdminKubernetesClient()
-	//	if err != nil {
-	//		return fmt.Errorf("error when initializing kubernetes clients: %v", err)
-	//	}
-
 	if err := ci.init(); err != nil {
 		return fmt.Errorf("error when running ci init: %v", err)
 	}
@@ -185,14 +180,6 @@ func (ci CI) TestE2E() error {
 	if err := retry(BootstrapCluster, 2, 10*time.Second); err != nil {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
 	}
-
-	/*	if err := k.RegisterSandboxUser(); err != nil {
-			return fmt.Errorf("error when registerin user via toolchain operators: %v", err)
-		}
-
-		if _, err := k.GenerateSandboxUserKubeconfig(); err != nil {
-			return fmt.Errorf("error while generating user's kubeconfig file: %v", err)
-		}*/
 
 	if err := RunE2ETests(); err != nil {
 		testFailure = true
@@ -507,27 +494,3 @@ func appendFrameworkDescribeFile(packageName string) error {
 	return nil
 
 }
-
-/*
-// Obtains user's keycloak token and generates new kubeconfig for this user against toolchain proxy endpoint.
-// Configurable via env variables (default in brackets): USER_KUBE_CONFIG_PATH["$(pwd)/user.kubeconfig"], "KC_USERNAME"["user1"],
-// KC_PASSWORD["user1"], KC_CLIENT_ID["sandbox-public"], KEYCLOAK_URL[obtained dynamically - route `keycloak` in `dev-sso` namespace],
-// TOOLCHAIN_API_URL[obtained dynamically - route `api` in `toolchain-host-operator` namespace]
-func GenerateUserKubeconfig() error {
-	k, err := client.NewAdminKubernetesClient()
-	if err != nil {
-		return err
-	}
-	_, err = k.GenerateSandboxUserKubeconfig()
-	return err
-}
-
-// Creates preapproved userSignup CR cluster and waits for its reconciliation
-func RegisterUser() error {
-	k, err := client.NewAdminKubernetesClient()
-	if err != nil {
-		return err
-	}
-	return k.RegisterSandboxUser()
-}
-*/
