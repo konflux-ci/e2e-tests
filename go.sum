@@ -148,8 +148,6 @@ github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf/go.mod h1:l
 github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a/go.mod h1:lB+ZfQJz7igIIfQNfa7Ml4HSf2uFQQRzpGGRXenZAgY=
 github.com/avast/retry-go/v4 v4.3.2 h1:x4sTEu3jSwr7zNjya8NTdIN+U88u/jtO/q3OupBoDtM=
 github.com/avast/retry-go/v4 v4.3.2/go.mod h1:rg6XFaiuFYII0Xu3RDbZQkxCofFwruZKW8oEF1jpWiU=
-github.com/averageflow/gohooks/v2 v2.1.0 h1:6QpwoQldPLAXThPQgGC2pIp/VxFkpRyqlNLfp6Kdp7U=
-github.com/averageflow/gohooks/v2 v2.1.0/go.mod h1:lcjhame46DD7+XE+nnUXg1XIZUowq4m/0/TMY2TrF3Q=
 github.com/aws/aws-sdk-go v1.15.11/go.mod h1:mFuSZ37Z9YOHbQEwBWztmVzqXrEkub65tZoCYDt7FT0=
 github.com/aws/aws-sdk-go v1.44.95 h1:QwmA+PeR6v4pF0f/dPHVPWGAshAhb9TnGZBTM5uKuI8=
 github.com/aws/aws-sdk-go v1.44.95/go.mod h1:y4AeaBuwd2Lk+GepC1E9v0qOiTws0MIWAX4oIKwKHZo=
@@ -1092,8 +1090,6 @@ github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc/go.mod h1:AMZ
 github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e h1:yhaiYE+K4pb0UOTqebs58zeWnzSCXA/KXrnlO6RBbBE=
 github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e/go.mod h1:ECgU5vGvVODsGpspdXGo9EvV709jQyvvJRHLoBhAaOc=
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
-github.com/opentracing/opentracing-go v1.2.0 h1:uEJPy/1a5RIPAJ0Ov+OIO8OxWu77jEv+1B0VhjKrZUs=
-github.com/opentracing/opentracing-go v1.2.0/go.mod h1:GxEUsuufX4nBwe+T+Wl9TAgYrxe9dPLANfrWvHYVTgc=
 github.com/operator-framework/api v0.13.0 h1:V1vUluRwajSBdDPCnzgTWDnn5LYxLk66VPVGMw3B7Uc=
 github.com/operator-framework/api v0.13.0/go.mod h1:FTiYGm11fZQ3cSX+EQHc/UWoGZAwkGfyeHU+wMJ8jmA=
 github.com/ostreedev/ostree-go v0.0.0-20190702140239-759a8c1ac913/go.mod h1:J6OG6YJVEWopen4avK3VNQSnALmmjvniMmni/YFYAwc=
