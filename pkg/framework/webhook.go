@@ -29,7 +29,6 @@ package framework
 
 import (
 	"bytes"
-	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/tls"
@@ -39,7 +38,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/opentracing/opentracing-go"
 	"gopkg.in/yaml.v2"
 	"k8s.io/klog/v2"
 
@@ -64,8 +62,6 @@ type GoWebHook struct {
 	PreferredMethod string
 	// Additional HTTP headers to be added to the hook
 	AdditionalHeaders map[string]string
-	// Span for distributed tracing
-	Span *opentracing.Span
 }
 
 // GoWebHookPayload represents the data that will be sent in the GoWebHook.
@@ -167,16 +163,6 @@ func (hook *GoWebHook) Send(receiverURL string) (*http.Response, error) {
 		return nil, err
 	}
 
-	if hook.Span != nil {
-		ctx := opentracing.ContextWithSpan(context.Background(), *hook.Span)
-
-		req = req.WithContext(ctx)
-
-		_ = InjectRequestContext(*hook.Span, req)
-	} else {
-		req = req.WithContext(context.Background())
-	}
-
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Charset", "utf-8")
 	req.Header.Add(DefaultSignatureHeader, hook.ResultingSha)
@@ -195,13 +181,6 @@ func (hook *GoWebHook) Send(receiverURL string) (*http.Response, error) {
 	}
 
 	return resp, nil
-}
-
-func InjectRequestContext(span opentracing.Span, request *http.Request) error {
-	return span.Tracer().Inject(
-		span.Context(),
-		opentracing.HTTPHeaders,
-		opentracing.HTTPHeadersCarrier(request.Header))
 }
 
 // Send webhook

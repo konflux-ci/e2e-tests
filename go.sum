@@ -1087,8 +1087,6 @@ github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc/go.mod h1:AMZ
 github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e h1:yhaiYE+K4pb0UOTqebs58zeWnzSCXA/KXrnlO6RBbBE=
 github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e/go.mod h1:ECgU5vGvVODsGpspdXGo9EvV709jQyvvJRHLoBhAaOc=
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
-github.com/opentracing/opentracing-go v1.2.0 h1:uEJPy/1a5RIPAJ0Ov+OIO8OxWu77jEv+1B0VhjKrZUs=
-github.com/opentracing/opentracing-go v1.2.0/go.mod h1:GxEUsuufX4nBwe+T+Wl9TAgYrxe9dPLANfrWvHYVTgc=
 github.com/operator-framework/api v0.13.0 h1:V1vUluRwajSBdDPCnzgTWDnn5LYxLk66VPVGMw3B7Uc=
 github.com/operator-framework/api v0.13.0/go.mod h1:FTiYGm11fZQ3cSX+EQHc/UWoGZAwkGfyeHU+wMJ8jmA=
 github.com/ostreedev/ostree-go v0.0.0-20190702140239-759a8c1ac913/go.mod h1:J6OG6YJVEWopen4avK3VNQSnALmmjvniMmni/YFYAwc=
