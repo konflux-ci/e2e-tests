@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -43,12 +44,12 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 	Expect(err).NotTo(HaveOccurred())
 
 	AfterAll(func() {
-		abList, err := f.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
+		abList, err := f.AsKubeAdmin.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
 		if err != nil {
 			GinkgoWriter.Printf("got error fetching artifactbuilds: %s\n", err.Error())
 		}
 
-		dbList, err := f.JvmbuildserviceController.ListDependencyBuilds(testNamespace)
+		dbList, err := f.AsKubeAdmin.JvmbuildserviceController.ListDependencyBuilds(testNamespace)
 		if err != nil {
 			GinkgoWriter.Printf("got error fetching dependencybuilds: %s\n", err.Error())
 		}
@@ -70,7 +71,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			// get jvm-build-service logs
 			toDebug := map[string]string{}
 
-			jvmPodList, jerr := f.CommonController.K8sClient.KubeInterface().CoreV1().Pods("jvm-build-service").List(context.TODO(), metav1.ListOptions{})
+			jvmPodList, jerr := f.AsKubeAdmin.CommonController.KubeInterface().CoreV1().Pods("jvm-build-service").List(context.TODO(), metav1.ListOptions{})
 			if jerr != nil {
 				GinkgoWriter.Printf("error listing jvm-build-service pods: %s\n", jerr.Error())
 			}
@@ -80,7 +81,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				containers = append(containers, pod.Spec.InitContainers...)
 				containers = append(containers, pod.Spec.Containers...)
 				for _, c := range containers {
-					cLog, cerr := f.CommonController.GetContainerLogs(pod.Name, c.Name, pod.Namespace)
+					cLog, cerr := f.AsKubeAdmin.CommonController.GetContainerLogs(pod.Name, c.Name, pod.Namespace)
 					if cerr != nil {
 						GinkgoWriter.Printf("error getting logs for pod/container %s/%s: %s\n", pod.Name, c.Name, cerr.Error())
 						continue
@@ -91,14 +92,14 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			}
 			// let's make sure and print the pr that starts the analysis first
 
-			logs, err := f.TektonController.GetPipelineRunLogs(componentPipelineRun.Name, testNamespace)
+			logs, err := f.AsKubeAdmin.TektonController.GetPipelineRunLogs(componentPipelineRun.Name, testNamespace)
 			if err != nil {
 				GinkgoWriter.Printf("got error fetching PR logs: %s\n", err.Error())
 			}
 			filename := fmt.Sprintf("%s-pr-%s.log", testNamespace, componentPipelineRun.Name)
 			toDebug[filename] = logs
 
-			prList, err := f.TektonController.ListAllPipelineRuns(testNamespace)
+			prList, err := f.AsKubeAdmin.TektonController.ListAllPipelineRuns(testNamespace)
 			if err != nil {
 				GinkgoWriter.Printf("got error fetching PR list: %s\n", err.Error())
 			}
@@ -107,7 +108,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				if pr.Name == componentPipelineRun.Name {
 					continue
 				}
-				prLog, err := f.TektonController.GetPipelineRunLogs(pr.Name, pr.Namespace)
+				prLog, err := f.AsKubeAdmin.TektonController.GetPipelineRunLogs(pr.Name, pr.Namespace)
 				if err != nil {
 					GinkgoWriter.Printf("got error fetching PR logs for %s: %s\n", pr.Name, err.Error())
 				}
@@ -149,20 +150,20 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		}
 		// Cleanup
 		for _, ab := range abList.Items {
-			err := f.JvmbuildserviceController.DeleteArtifactBuild(ab.Name, ab.Namespace)
+			err := f.AsKubeAdmin.JvmbuildserviceController.DeleteArtifactBuild(ab.Name, ab.Namespace)
 			if err != nil {
 				GinkgoWriter.Printf("got error deleting AB %s: %s\n", ab.Name, err.Error())
 			}
 		}
 		for _, db := range dbList.Items {
-			err := f.JvmbuildserviceController.DeleteDependencyBuild(db.Name, db.Namespace)
+			err := f.AsKubeAdmin.JvmbuildserviceController.DeleteDependencyBuild(db.Name, db.Namespace)
 			if err != nil {
 				GinkgoWriter.Printf("got error deleting DB %s: %s\n", db.Name, err.Error())
 			}
 		}
-		Expect(f.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
-		Expect(f.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
-		Expect(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+		Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
+		Expect(f.AsKubeAdmin.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
+		Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 	})
 
 	BeforeAll(func() {
@@ -170,27 +171,27 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 		GinkgoWriter.Printf("Test namespace: %s\n", testNamespace)
 
-		_, err := f.CommonController.CreateTestNamespace(testNamespace)
+		_, err := f.AsKubeAdmin.CommonController.CreateTestNamespace(testNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
 
-		_, err = f.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, testNamespace, utils.GetQuayIOOrganization())
+		_, err = f.AsKubeAdmin.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, testNamespace, utils.GetQuayIOOrganization())
 		Expect(err).ShouldNot(HaveOccurred())
 
-		sharedSecret, err := f.CommonController.GetSecret(constants.SharedPullSecretNamespace, constants.SharedPullSecretName)
+		sharedSecret, err := f.AsKubeAdmin.CommonController.GetSecret(constants.SharedPullSecretNamespace, constants.SharedPullSecretName)
 		Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error when getting shared secret - make sure the secret %s in %s namespace is created", constants.SharedPullSecretName, constants.SharedPullSecretNamespace))
 
 		jvmBuildSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: constants.JVMBuildImageSecretName, Namespace: testNamespace},
 			Data: map[string][]byte{".dockerconfigjson": sharedSecret.Data[".dockerconfigjson"]}}
-		_, err = f.CommonController.CreateSecret(testNamespace, jvmBuildSecret)
+		_, err = f.AsKubeAdmin.CommonController.CreateSecret(testNamespace, jvmBuildSecret)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		timeout = time.Minute * 20
 		interval = time.Second * 10
 
 		applicationName = fmt.Sprintf("jvm-build-suite-application-%s", util.GenerateRandomString(4))
-		app, err := f.HasController.CreateHasApplication(applicationName, testNamespace)
+		app, err := f.AsKubeAdmin.HasController.CreateHasApplication(applicationName, testNamespace)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(utils.WaitUntil(f.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
+		Expect(utils.WaitUntil(f.AsKubeAdmin.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
 			Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
 		)
 
@@ -198,14 +199,14 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 
 		// Create a component with Git Source URL being defined
-		_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, testProjectGitUrl, testProjectRevision, "", outputContainerImage, "", true)
+		_, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, testNamespace, testProjectGitUrl, testProjectRevision, "", outputContainerImage, "", true)
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	When("the Component with s2i-java component is created", func() {
 		It("a PipelineRun is triggered", func() {
 			Eventually(func() bool {
-				componentPipelineRun, err = f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
+				componentPipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				if err != nil {
 					GinkgoWriter.Println("PipelineRun has not been created yet")
 					return false
@@ -221,7 +222,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			}
 
 			err = wait.PollImmediate(interval, timeout, func() (done bool, err error) {
-				pr, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
+				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				if err != nil {
 					GinkgoWriter.Printf("get pr for component %s produced err: %s\n", componentName, err.Error())
 					return false, nil
@@ -255,7 +256,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			}
 
 			err = wait.PollImmediate(interval, timeout, func() (done bool, err error) {
-				pr, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
+				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				if err != nil {
 					GinkgoWriter.Printf("get pr for the component %s produced err: %s\n", componentName, err.Error())
 					return false, nil
@@ -283,7 +284,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 		It("that PipelineRun completes successfully", func() {
 			Eventually(func() bool {
-				pr, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
+				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
 				if err != nil {
 					GinkgoWriter.Printf("get of pr %s returned error: %s\n", pr.Name, err.Error())
 					return false
@@ -300,7 +301,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		})
 		It("artifactbuilds and dependencybuilds are generated", func() {
 			Eventually(func() bool {
-				abList, err := f.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
+				abList, err := f.AsKubeAdmin.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
 				if err != nil {
 					GinkgoWriter.Printf("error listing artifactbuilds: %s\n", err.Error())
 					return false
@@ -309,7 +310,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				if len(abList.Items) > 0 {
 					gotABs = true
 				}
-				dbList, err := f.JvmbuildserviceController.ListDependencyBuilds(testNamespace)
+				dbList, err := f.AsKubeAdmin.JvmbuildserviceController.ListDependencyBuilds(testNamespace)
 				if err != nil {
 					GinkgoWriter.Printf("error listing dependencybuilds: %s\n", err.Error())
 					return false
@@ -327,7 +328,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 		It("some artifactbuilds and dependencybuilds complete", func() {
 			err = wait.PollImmediate(interval, timeout, func() (done bool, err error) {
-				abList, err := f.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
+				abList, err := f.AsKubeAdmin.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
 				if err != nil {
 					GinkgoWriter.Printf("error listing artifactbuilds: %s\n", err.Error())
 					return false, nil
@@ -339,7 +340,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 						break
 					}
 				}
-				dbList, err := f.JvmbuildserviceController.ListDependencyBuilds(testNamespace)
+				dbList, err := f.AsKubeAdmin.JvmbuildserviceController.ListDependencyBuilds(testNamespace)
 				if err != nil {
 					GinkgoWriter.Printf("error listing dependencybuilds: %s\n", err.Error())
 					return false, nil

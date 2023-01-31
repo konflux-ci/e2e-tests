@@ -31,27 +31,27 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 
 	Context("infrastructure is running", func() {
 		It("verifies if the chains controller is running", func() {
-			err := fwk.CommonController.WaitForPodSelector(fwk.CommonController.IsPodRunning, constants.TEKTON_CHAINS_NS, "app", "tekton-chains-controller", 60, 100)
+			err := fwk.AsKubeAdmin.CommonController.WaitForPodSelector(fwk.AsKubeAdmin.CommonController.IsPodRunning, constants.TEKTON_CHAINS_NS, "app", "tekton-chains-controller", 60, 100)
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("verifies if the correct secrets have been created", func() {
-			_, err := fwk.CommonController.GetSecret(constants.TEKTON_CHAINS_NS, "chains-ca-cert")
+			_, err := fwk.AsKubeAdmin.CommonController.GetSecret(constants.TEKTON_CHAINS_NS, "chains-ca-cert")
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("verifies if the correct roles are created", func() {
-			_, csaErr := fwk.CommonController.GetRole("chains-secret-admin", constants.TEKTON_CHAINS_NS)
+			_, csaErr := fwk.AsKubeAdmin.CommonController.GetRole("chains-secret-admin", constants.TEKTON_CHAINS_NS)
 			Expect(csaErr).NotTo(HaveOccurred())
-			_, srErr := fwk.CommonController.GetRole("secret-reader", "openshift-ingress-operator")
+			_, srErr := fwk.AsKubeAdmin.CommonController.GetRole("secret-reader", "openshift-ingress-operator")
 			Expect(srErr).NotTo(HaveOccurred())
 		})
 		It("verifies if the correct rolebindings are created", func() {
-			_, csaErr := fwk.CommonController.GetRoleBinding("chains-secret-admin", constants.TEKTON_CHAINS_NS)
+			_, csaErr := fwk.AsKubeAdmin.CommonController.GetRoleBinding("chains-secret-admin", constants.TEKTON_CHAINS_NS)
 			Expect(csaErr).NotTo(HaveOccurred())
-			_, csrErr := fwk.CommonController.GetRoleBinding("chains-secret-reader", "openshift-ingress-operator")
+			_, csrErr := fwk.AsKubeAdmin.CommonController.GetRoleBinding("chains-secret-reader", "openshift-ingress-operator")
 			Expect(csrErr).NotTo(HaveOccurred())
 		})
 		It("verifies if the correct service account is created", func() {
-			_, err := fwk.CommonController.GetServiceAccount("chains-secrets-admin", constants.TEKTON_CHAINS_NS)
+			_, err := fwk.AsKubeAdmin.CommonController.GetServiceAccount("chains-secrets-admin", constants.TEKTON_CHAINS_NS)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -75,8 +75,8 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 
 		BeforeAll(func() {
 			kubeController = tekton.KubeController{
-				Commonctrl: *fwk.CommonController,
-				Tektonctrl: *fwk.TektonController,
+				Commonctrl: *fwk.AsKubeAdmin.CommonController,
+				Tektonctrl: *fwk.AsKubeAdmin.TektonController,
 				Namespace:  namespace,
 			}
 
@@ -119,7 +119,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			// At a bare minimum, each spec within this context relies on the existence of
 			// an image that has been signed by Tekton Chains. Trigger a demo task to fulfill
 			// this purpose.
-			pr, err := kubeController.RunPipeline(tekton.BuildahDemo{Image: image, Bundle: fwk.TektonController.Bundles.BuildTemplatesBundle}, pipelineRunTimeout)
+			pr, err := kubeController.RunPipeline(tekton.BuildahDemo{Image: image, Bundle: fwk.AsKubeAdmin.TektonController.Bundles.BuildTemplatesBundle}, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			// Verify that the build task was created as expected.
 			Expect(pr.ObjectMeta.Name).To(Equal(buildPipelineRunName))
@@ -220,7 +220,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 
 				tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract")
 				Expect(err).NotTo(HaveOccurred())
-				printTaskRunStatus(tr, namespace, *fwk.CommonController)
+				printTaskRunStatus(tr, namespace, *fwk.AsKubeAdmin.CommonController)
 				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s succeeded\n", tr.PipelineTaskName, pr.Name)
 				Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
 				GinkgoWriter.Printf("Make sure result for TaskRun %q succeeded\n", tr.PipelineTaskName)
@@ -252,7 +252,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract")
 				Expect(err).NotTo(HaveOccurred())
 
-				printTaskRunStatus(tr, namespace, *fwk.CommonController)
+				printTaskRunStatus(tr, namespace, *fwk.AsKubeAdmin.CommonController)
 				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s succeeded\n", tr.PipelineTaskName, pr.Name)
 				Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
 				GinkgoWriter.Printf("Make sure result for TaskRun %q succeeded\n", tr.PipelineTaskName)
@@ -285,7 +285,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract")
 				Expect(err).NotTo(HaveOccurred())
 
-				printTaskRunStatus(tr, namespace, *fwk.CommonController)
+				printTaskRunStatus(tr, namespace, *fwk.AsKubeAdmin.CommonController)
 				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s failed\n", tr.PipelineTaskName, pr.Name)
 				Expect(tekton.DidTaskSucceed(tr)).To(BeFalse())
 				// Because the task fails, no results are created
@@ -312,7 +312,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract")
 				Expect(err).NotTo(HaveOccurred())
 
-				printTaskRunStatus(tr, namespace, *fwk.CommonController)
+				printTaskRunStatus(tr, namespace, *fwk.AsKubeAdmin.CommonController)
 				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s failed\n", tr.PipelineTaskName, pr.Name)
 				Expect(tekton.DidTaskSucceed(tr)).To(BeFalse())
 				// Because the task fails, no results are created
