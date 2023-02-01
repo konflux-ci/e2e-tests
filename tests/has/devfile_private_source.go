@@ -124,6 +124,27 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 
 	})
 
+	It("creates configMap for ComponentDetectionQuery", func() {
+		devfilesMap := make(map[string][]byte)
+		devfilesURLMap := make(map[string]string)
+		dockerfileContextMap := make(map[string]string)
+		devfilesURLMap["./"] = "devfile.yaml"
+		dockerfileContextMap["./"] = "src/main/docker/Dockerfile.jvm.staged"
+		devfilesMap["./"] = []byte(QuarkusDevfileContext)
+		configMap, err := framework.HasController.CreateCDQConfigMap(devfilesMap, devfilesURLMap, dockerfileContextMap, componentName, testNamespace, map[string]string{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(configMap.Name).To(Equal(componentName))
+	})
+
+	It("checks cdq configMap status", func() {
+		// Look up the has app resource that was created.
+		// num(conditions) may still be < 1 on the first try, so retry until at least _some_ condition is set
+		Eventually(func() bool {
+			configMap, err := framework.HasController.GetCDQConfigMap(componentName, testNamespace)
+			return err == nil && len(configMap.BinaryData) > 1
+		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "CDQ configMap did not be created successfully")
+	})
+
 	It("checks Red Hat AppStudio ComponentDetectionQuery status", func() {
 		// Validate that the CDQ completes successfully
 		Eventually(func() bool {

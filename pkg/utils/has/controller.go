@@ -2,6 +2,7 @@ package has
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"strconv"
@@ -328,6 +329,53 @@ func (h *SuiteController) GetComponentDetectionQuery(name, namespace string) (*a
 		return nil, err
 	}
 	return &componentDetectionQuery, nil
+}
+
+// CreateCDQConfigMap create a config map which contains information on the cdq analysis, from a given name, namespace, and git source
+func (h *SuiteController) CreateCDQConfigMap(devfilesMap map[string][]byte, devfilesURLMap map[string]string, dockerfileContextMap map[string]string, name, namespace string, errorMap map[string]string) (*corev1.ConfigMap, error) {
+
+	configMapBinaryData := make(map[string][]byte)
+	devfilesMapbytes, _ := json.Marshal(devfilesMap)
+	devfilesURLMapbytes, _ := json.Marshal(devfilesURLMap)
+	dockerfileContextMapbytes, _ := json.Marshal(dockerfileContextMap)
+	errorMapbytes, _ := json.Marshal(errorMap)
+	configMapBinaryData["devfilesMap"] = devfilesMapbytes
+	configMapBinaryData["devfilesURLMap"] = devfilesURLMapbytes
+	configMapBinaryData["dockerfileContextMap"] = dockerfileContextMapbytes
+	configMapBinaryData["errorMap"] = errorMapbytes
+
+	configMap := corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		BinaryData: configMapBinaryData,
+	}
+	err := h.KubeRest().Create(context.TODO(), &configMap)
+	if err != nil {
+		return nil, err
+	}
+	return &configMap, nil
+}
+
+// GetCDQConfigMap returns a config map for a given component label
+func (h *SuiteController) GetCDQConfigMap(name, namespace string) (*corev1.ConfigMap, error) {
+
+	namespacedName := types.NamespacedName{
+		Name:      name,
+		Namespace: namespace,
+	}
+
+	configMap := corev1.ConfigMap{}
+	err := h.KubeRest().Get(context.TODO(), namespacedName, &configMap)
+	if err != nil {
+		return nil, err
+	}
+	return &configMap, nil
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels

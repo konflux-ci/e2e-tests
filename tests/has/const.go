@@ -18,6 +18,17 @@ const (
 	// Sample devfile created redhat-appstudio-qe repository with the following content:
 	QuarkusDevfileSource string = "https://github.com/redhat-appstudio-qe/devfile-sample-code-with-quarkus"
 
+	// Sample devfile content
+	QuarkusDevfileContext string = `
+schemaVersion: 2.2.0
+metadata:
+	name: java-quarkus
+	version: 1.2.1
+	projectType: Quarkus
+	provider: Red Hat
+	language: Java
+`
+
 	// The default private devfile sample to use if none is passed in via the PRIVATE_DEVFILE_SAMPLE env variable.
 	PrivateQuarkusDevfileSource string = "https://github.com/redhat-appstudio-qe/private-quarkus-devfile-sample"
 

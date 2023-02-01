@@ -18,7 +18,6 @@ const (
 	environment                         = "test-environment"
 	releaseStrategyServiceAccount       = "pipeline"
 
-
 	namespaceCreationTimeout              = 1 * time.Minute
 	namespaceDeletionTimeout              = 1 * time.Minute
 	snapshotCreationTimeout               = 1 * time.Minute
