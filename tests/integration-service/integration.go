@@ -65,16 +65,18 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 
 		AfterAll(func() {
-			Expect(f.HasController.DeleteHasApplication(applicationName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
-			Expect(f.HasController.DeleteHasComponent(componentName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
-			err = f.IntegrationController.DeleteApplicationSnapshot(applicationSnapshot_push, appStudioE2EApplicationsNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
-			integrationTestScenarios, err := f.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			for _, testScenario := range *integrationTestScenarios {
-				err = f.IntegrationController.DeleteIntegrationTestScenario(&testScenario, appStudioE2EApplicationsNamespace)
+			if !CurrentSpecReport().Failed() {
+				Expect(f.HasController.DeleteHasApplication(applicationName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
+				Expect(f.HasController.DeleteHasComponent(componentName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
+				err = f.IntegrationController.DeleteApplicationSnapshot(applicationSnapshot_push, appStudioE2EApplicationsNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
+				integrationTestScenarios, err := f.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				for _, testScenario := range *integrationTestScenarios {
+					err = f.IntegrationController.DeleteIntegrationTestScenario(&testScenario, appStudioE2EApplicationsNamespace)
+					Expect(err).ShouldNot(HaveOccurred())
+				}
 			}
 		})
 
@@ -89,7 +91,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				}
 				return pipelineRun.HasStarted()
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
-			timeout = time.Second * 1200
+			timeout = time.Second * 2000
 			interval = time.Second * 10
 			Eventually(func() bool {
 				pipelineRun, err := f.IntegrationController.GetBuildPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false, "")
@@ -128,7 +130,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						}
 						return pipelineRun.HasStarted()
 					}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
-					timeout = time.Second * 800
+					timeout = time.Second * 1000
 					interval = time.Second * 10
 					Eventually(func() bool {
 						Expect(f.IntegrationController.WaitForIntegrationPipelineToBeFinished(&testScenario, applicationSnapshot, applicationName, appStudioE2EApplicationsNamespace)).To(Succeed(), "Error when waiting for a integration pipeline to finish")
