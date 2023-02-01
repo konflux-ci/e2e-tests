@@ -15,7 +15,7 @@ tests:
     components:
       - name: "dotnet-component"
         type: "public"
-        gitSourceUrl: "https://github.com/redhat-appstudio-qe/devfile-sample-dotnet60-basic"
+        gitSourceUrl: "https://github.com/devfile-samples/devfile-sample-dotnet60-basic"
         language: "dotNet"
         healthz: "/"
   - name: "RHDP-478: create an application with multiple components from private and public repositories"
@@ -23,7 +23,7 @@ tests:
     components:
       - name: "component-python"
         type: "public"
-        gitSourceUrl: "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic"
+        gitSourceUrl: "https://github.com/devfile-samples/devfile-sample-python-basic"
         language: "python"
         healthz: "/"
       - name: "private-quarkus-component"
