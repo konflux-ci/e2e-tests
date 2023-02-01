@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type SuiteController struct {
@@ -59,18 +58,6 @@ func (s *SuiteController) GetSnapshotByComponent(namespace string) (*appstudioAp
 		return &snapshot.Items[0], nil
 	}
 	return nil, err
-}
-
-// AddLabelToSnapshot it adds the missing PaC lapel to the given Snapshot.
-func (s *SuiteController) AddLabelToSnapshot(snapshot *appstudioApi.Snapshot) (*appstudioApi.Snapshot, error) {
-	snapshot.Labels["pac.test.appstudio.openshift.io/event-type"] = "push"
-
-	err := s.KubeRest().Update(context.TODO(), snapshot, &rclient.UpdateOptions{})
-	if err != nil {
-		return &appstudioApi.Snapshot{}, err
-	}
-
-	return snapshot, nil
 }
 
 // CreateRelease creates a new Release using the given parameters.
@@ -140,7 +127,7 @@ func (s *SuiteController) GetRelease(releaseName, releaseNamespace string) (*v1a
 	return release, err
 }
 
-// GetReleaseInNamespace returns the first Release from  list of releases in the given namespace.
+// GetFirstReleaseInNamespace returns the first Release from  list of releases in the given namespace.
 func (s *SuiteController) GetFirstReleaseInNamespace(namespace string) (*v1alpha1.Release, error) {
 	releaseList := &v1alpha1.ReleaseList{}
 	opts := []client.ListOption{
@@ -286,7 +273,7 @@ func (s *SuiteController) DeleteAllSnapshotsInASpecificNamespace(namespace strin
 	}, timeout)
 }
 
-// CreateComponentWithDockerSource create a component from a given name, namespace, application, sourceurl  and a container image
+// CreateComponentWithDockerSource creates a component based on container image source.
 func (s *SuiteController) CreateComponentWithDockerSource(applicationName, componentName, namespace, gitSourceURL, containerImageSource, outputContainerImage, secret string) (*appstudioApi.Component, error) {
 	component := &appstudioApi.Component{
 		ObjectMeta: metav1.ObjectMeta{

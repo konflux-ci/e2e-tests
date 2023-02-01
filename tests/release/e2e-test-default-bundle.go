@@ -2,7 +2,6 @@ package release
 
 import (
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
@@ -14,7 +13,6 @@ import (
 	"knative.dev/pkg/apis"
 
 	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
-	appstudiov1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	klog "k8s.io/klog/v2"
@@ -28,12 +26,6 @@ var roleRules = map[string][]string{
 	"apiGroupsList": {""},
 	"roleResources": {"secrets"},
 	"roleVerbs":     {"get", "list", "watch"},
-}
-
-var paramsReleaseStrategyDefault = []appstudiov1alpha1.Params{
-	{Name: "extraConfigGitUrl", Value: "https://github.com/scoheb/strategy-configs.git"},
-	{Name: "extraConfigPath", Value: "m6.yaml"},
-	{Name: "extraConfigRevision", Value: "main"},
 }
 
 var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-path", Label("release", "defaultBundle"), func() {
@@ -62,20 +54,19 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 		}
 
 		_, err := framework.CommonController.CreateTestNamespace(devNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace: %v", err)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating devNamespace: %v", err)
 		klog.Info("Dev Namespace created: ", devNamespace)
 
 		_, err = framework.CommonController.CreateTestNamespace(managedNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace: %v", err)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating managedNamespace: %v", err)
 		klog.Info("Managed Namespace created: ", managedNamespace)
 
 		klog.Infof("Wait until the 'pipeline' SA is created in %s namespace \n", managedNamespace)
 		Eventually(func() bool {
 			sa, err := framework.CommonController.GetServiceAccount("pipeline", managedNamespace)
 			return sa != nil && err == nil
-		}, 1*time.Minute, defaultInterval).Should(BeTrue(), "timed out when waiting for the \"pipeline\" SA to be created")
+		}, oneMinuteTimeout, defaultInterval).Should(BeTrue(), "timed out when waiting for the \"pipeline\" SA to be created")
 
-		//utils.GetEnv(constants.QUAY_OAUTH_TOKEN_RELEASE_SOURCE, "")
 		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
 		Expect(sourceAuthJson).ToNot(BeEmpty())
 
@@ -143,12 +134,12 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 		})
 
 		It("creates release strategy in the managed namespace.", func() {
-			_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineNameDefault, releasePipelineBundleDefault, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategyDefault)
+			_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineNameDefault, releasePipelineBundleDefault, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategy)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("creates release plan admission in the managed namespace.", func() {
-			_, err := framework.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, "", "", releaseStrategyDefaultName) //releaseEnvironment
+			_, err := framework.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, "", "", releaseStrategyDefaultName)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -182,7 +173,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("creats component with the given component name in dev namespace.", func() {
+		It("creates component with the given component name in dev namespace.", func() {
 			_, err := framework.HasController.CreateComponent(applicationNameDefault, componentName, devNamespace, gitSourceComponentUrl, "", containerImageUrl, "", "", false)
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -235,7 +226,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("tests a Release should have been created in the dev namespace and succeeded", func() {
+		It("tests a Release should have been created in the dev namespace and succeeded.", func() {
 			Eventually(func() bool {
 				releaseCreated, err := framework.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				if releaseCreated == nil || err != nil {

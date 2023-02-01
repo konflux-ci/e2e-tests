@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/gomega"
 	applicationapiv1alpha1 "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	appstudiov1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -39,12 +38,6 @@ var ecPolicy = ecp.EnterpriseContractPolicySpec{
 	Exceptions: &ecp.EnterpriseContractPolicyExceptions{
 		NonBlocking: []string{"tasks", "attestation_task_bundle", "java", "test", "not_useful"},
 	},
-}
-
-var paramsReleaseStrategy = []appstudiov1alpha1.Params{
-	{Name: "extraConfigGitUrl", Value: "https://github.com/scoheb/strategy-configs.git"},
-	{Name: "extraConfigPath", Value: "m6.yaml"},
-	{Name: "extraConfigRevision", Value: "main"},
 }
 
 var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-path", Label("release", "HACBS"), func() {
