@@ -5,6 +5,7 @@ import (
 	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
 	ocpOauth "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
+	userv1 "github.com/openshift/api/user/v1"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/sandbox"
@@ -61,6 +62,7 @@ func init() {
 	utilruntime.Must(jvmbuildservice.AddToScheme(scheme))
 	utilruntime.Must(ecp.AddToScheme(scheme))
 	utilruntime.Must(buildservice.AddToScheme(scheme))
+	utilruntime.Must(userv1.AddToScheme(scheme))
 }
 
 // Kube returns the clientset for Kubernetes upstream.
@@ -113,6 +115,7 @@ func NewDevSandboxProxyClient(userName string) (*K8SClient, error) {
 	}
 
 	userAuthInfo, err := sandboxController.ReconcileUserCreation(userName)
+
 	if err != nil {
 		return nil, err
 	}

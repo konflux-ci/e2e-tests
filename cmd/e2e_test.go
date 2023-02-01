@@ -49,9 +49,9 @@ func init() {
 	flag.StringVar(&polarionProjectID, "project-id", "AppStudio", "Set the Polarion project ID")
 	flag.BoolVar(&generateTestCases, "generate-test-cases", false, "Generate Test Cases for Polarion")
 
-	klog.SetLogger(ginkgo.GinkgoLogr)
+	//klog.SetLogger(ginkgo.GinkgoLogr)
 
-	verbosity := 1
+	verbosity := 2
 	if v, err := strconv.ParseUint(os.Getenv("KLOG_VERBOSITY"), 10, 8); err == nil {
 		verbosity = int(v)
 	}

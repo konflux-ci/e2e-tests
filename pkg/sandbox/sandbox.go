@@ -141,6 +141,10 @@ func (s *SandboxController) ReconcileUserCreation(userName string) (*SandboxUser
 		if err != nil {
 			return nil, err
 		}
+		if err := s.RegisterSandboxUser(userName); err != nil {
+			return nil, err
+		}
+
 		return s.GetKubeconfigPathForSpecifigUser(toolchainApiUrl, userName, kubeconfigPath, userToken)
 	}
 
@@ -172,10 +176,6 @@ func (s *SandboxController) ReconcileUserCreation(userName string) (*SandboxUser
 	userToken, err := s.GetKeycloakToken(DEFAULT_KEYCLOAK_TEST_CLIENT_ID, userName, userName, DEFAULT_KEYCLOAK_TESTING_REALM)
 	if err != nil {
 		return nil, err
-	}
-
-	if err := s.WaitForUserNamespaceToBeProvisioned(fmt.Sprintf("%s-tenant", userName)); err != nil {
-		return nil, fmt.Errorf("namespace '%s-tenant' was not provisioned correctly by toolchain operators", userName)
 	}
 
 	return s.GetKubeconfigPathForSpecifigUser(toolchainApiUrl, userName, kubeconfigPath, userToken)
@@ -234,7 +234,7 @@ func (s *SandboxController) RegisterSandboxUser(userName string) error {
 
 		klog.Info("Waiting...\n", userSignup)
 		for _, condition := range userSignup.Status.Conditions {
-			if condition.Type == "Complete" && condition.Status == corev1.ConditionTrue {
+			if condition.Type == toolchainApi.UserSignupComplete && condition.Status == corev1.ConditionTrue {
 				return true, nil
 			}
 		}
@@ -276,15 +276,15 @@ func (s *SandboxController) GetOpenshiftRouteHost(namespace string, name string)
 	return fmt.Sprintf("https://%s", route.Spec.Host), nil
 }
 
-func (s *SandboxController) WaitForUserNamespaceToBeProvisioned(namespaceName string) error {
+func (s *SandboxController) WaitForUserToBePRovisioned(userName string) error {
 	return utils.WaitUntil(func() (done bool, err error) {
-		ns, err := s.KubeClient.CoreV1().Namespaces().Get(context.TODO(), namespaceName, metav1.GetOptions{})
+		ns, err := s.KubeClient.CoreV1().Namespaces().Get(context.TODO(), fmt.Sprintf("%s-tenant", userName), metav1.GetOptions{})
 
 		if err != nil {
 			return false, err
 		}
 
-		if ns.Name == namespaceName {
+		if ns.Name == fmt.Sprintf("%s-tenant", userName) {
 			return true, nil
 		}
 		return false, nil

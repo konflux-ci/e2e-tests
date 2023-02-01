@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	DEFAULT_RELEASE_SERVICE_USER = "release-service"
+	DEFAULT_RELEASE_SERVICE_USER = "release-service-e2e"
 )
 
 var snapshotComponents = []applicationapiv1alpha1.SnapshotComponent{
