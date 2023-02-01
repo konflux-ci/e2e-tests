@@ -7,11 +7,15 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 )
 
+const (
+	DEFAULT_USER_CLUSTER_REG = "cluster-reg-ns"
+)
+
 var _ = framework.ClusterRegistrationSuiteDescribe("Cluster Registration E2E tests", g.Label("cluster-registration"), func() {
 	defer g.GinkgoRecover()
 
 	// Initialize the tests controllers
-	framework, err := framework.NewFramework()
+	framework, err := framework.NewFramework(DEFAULT_USER_CLUSTER_REG)
 	Expect(err).NotTo(HaveOccurred())
 
 	g.Context("infrastructure is running", func() {

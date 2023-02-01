@@ -17,6 +17,10 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
+const (
+	DEFAULT_TEKTON_CHAIN_USER = "tekton-e2e"
+)
+
 var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HACBS"), func() {
 	defer GinkgoRecover()
 
@@ -25,7 +29,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 	BeforeAll(func() {
 		// Initialize the tests controllers
 		var err error
-		fwk, err = framework.NewFramework()
+		fwk, err = framework.NewFramework(DEFAULT_TEKTON_CHAIN_USER)
 		Expect(err).NotTo(HaveOccurred())
 	})
 

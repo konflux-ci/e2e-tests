@@ -17,6 +17,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
+const (
+	DEFAULT_USER_PRIVATE_REPOS = "has-e2e-private"
+)
+
 var (
 	ComponentContainerImage string = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 )
@@ -31,7 +35,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 
 	var applicationName, componentName string
 	// Initialize the tests controllers
-	framework, err := framework.NewFramework()
+	framework, err := framework.NewFramework(DEFAULT_USER_PRIVATE_REPOS)
 	Expect(err).NotTo(HaveOccurred())
 	var testNamespace = framework.UserNamespace
 	Expect(testNamespace).NotTo(BeEmpty())

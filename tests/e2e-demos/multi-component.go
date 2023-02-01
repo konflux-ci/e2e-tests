@@ -16,6 +16,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
+const (
+	MultiComponentDemoNamespace string = "multi-comp-e2e"
+)
+
 var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	// TODO investigate failing of Component detection
 	var timeout, interval time.Duration
@@ -32,7 +36,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	env := &appservice.Environment{}
 
 	// Initialize the tests controllers
-	fw, err := framework.NewFramework()
+	fw, err := framework.NewFramework(MultiComponentDemoNamespace)
 	Expect(err).NotTo(HaveOccurred())
 	namespace := fw.UserNamespace
 

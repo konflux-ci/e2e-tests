@@ -3,6 +3,7 @@ package sandbox
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -10,7 +11,6 @@ import (
 
 	toolchainApi "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-e2e/testsupport/md5"
-	"github.com/devfile/library/pkg/util"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -111,21 +111,40 @@ func NewDevSandboxController(kube kubernetes.Interface, kubeRest crclient.Client
 	}, nil
 }
 
-func (s *SandboxController) ReconcileUserCreation() (*SandboxUserAuthInfo, error) {
-	var userName = fmt.Sprintf("user-%s", util.GenerateRandomString(5))
-	klog.Infof("started reconcile to create sandbox user: %s", userName)
-
+func (s *SandboxController) ReconcileUserCreation(userName string) (*SandboxUserAuthInfo, error) {
+	userSignup := &toolchainApi.UserSignup{}
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
 	kubeconfigPath := utils.GetEnv(constants.USER_USER_KUBE_CONFIG_PATH_ENV, fmt.Sprintf("%s/tmp/%s.kubeconfig", wd, userName))
 
-	if err := s.IsKeycloakRunning(); err != nil {
+	toolchainApiUrl, err := s.GetOpenshiftRouteHost(DEFAULT_TOOLCHAIN_NAMESPACE, DEFAULT_TOOLCHAIN_INSTANCE_NAME)
+	if err != nil {
 		return nil, err
 	}
 
 	if s.KeycloakUrl, err = s.GetOpenshiftRouteHost(DEFAULT_KEYCLOAK_NAMESPACE, DEFAULT_KEYCLOAK_INSTANCE_NAME); err != nil {
+		return nil, err
+	}
+
+	err = s.KubeRest.Get(context.Background(), types.NamespacedName{
+		Name:      userName,
+		Namespace: DEFAULT_TOOLCHAIN_NAMESPACE,
+	}, userSignup)
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			klog.Infof("user %s don't exists... recreating", userName)
+		}
+	} else {
+		userToken, err := s.GetKeycloakToken(DEFAULT_KEYCLOAK_TEST_CLIENT_ID, userName, userName, DEFAULT_KEYCLOAK_TESTING_REALM)
+		if err != nil {
+			return nil, err
+		}
+		return s.GetKubeconfigPathForSpecifigUser(toolchainApiUrl, userName, kubeconfigPath, userToken)
+	}
+
+	if err := s.IsKeycloakRunning(); err != nil {
 		return nil, err
 	}
 
@@ -139,25 +158,30 @@ func (s *SandboxController) ReconcileUserCreation() (*SandboxUserAuthInfo, error
 		return nil, err
 	}
 
-	registerUser, err := s.RegisterKeyclokUser(userName, adminToken.AccessToken, DEFAULT_KEYCLOAK_TESTING_REALM)
+	if s.KeycloakUserExists(DEFAULT_KEYCLOAK_TESTING_REALM, adminToken.AccessToken, userName) {
+		registerUser, err := s.RegisterKeyclokUser(userName, adminToken.AccessToken, DEFAULT_KEYCLOAK_TESTING_REALM)
+		if err != nil && registerUser.Username == "" {
+			return nil, errors.New("failed to register user in keycloak: " + err.Error())
+		}
+	}
+
+	if err := s.RegisterSandboxUser(userName); err != nil {
+		return nil, err
+	}
+
+	userToken, err := s.GetKeycloakToken(DEFAULT_KEYCLOAK_TEST_CLIENT_ID, userName, userName, DEFAULT_KEYCLOAK_TESTING_REALM)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.RegisterSandboxUser(registerUser.Username); err != nil {
-		return nil, err
+	if err := s.WaitForUserNamespaceToBeProvisioned(fmt.Sprintf("%s-tenant", userName)); err != nil {
+		return nil, fmt.Errorf("namespace '%s-tenant' was not provisioned correctly by toolchain operators", userName)
 	}
 
-	toolchainApiUrl, err := s.GetOpenshiftRouteHost(DEFAULT_TOOLCHAIN_NAMESPACE, DEFAULT_TOOLCHAIN_INSTANCE_NAME)
-	if err != nil {
-		return nil, err
-	}
+	return s.GetKubeconfigPathForSpecifigUser(toolchainApiUrl, userName, kubeconfigPath, userToken)
+}
 
-	userToken, err := s.GetKeycloakToken(DEFAULT_KEYCLOAK_TEST_CLIENT_ID, registerUser.Username, registerUser.Username, DEFAULT_KEYCLOAK_TESTING_REALM)
-	if err != nil {
-		return nil, err
-	}
-
+func (s *SandboxController) GetKubeconfigPathForSpecifigUser(toolchainApiUrl string, userName string, kubeconfigPath string, keycloakAuth *KeycloakAuth) (*SandboxUserAuthInfo, error) {
 	kubeconfig := api.NewConfig()
 	kubeconfig.Clusters[toolchainApiUrl] = &api.Cluster{
 		Server:                toolchainApiUrl,
@@ -165,23 +189,23 @@ func (s *SandboxController) ReconcileUserCreation() (*SandboxUserAuthInfo, error
 	}
 	kubeconfig.Contexts[fmt.Sprintf("%s/%s/%s", userName, toolchainApiUrl, userName)] = &api.Context{
 		Cluster:   toolchainApiUrl,
-		Namespace: userName,
+		Namespace: fmt.Sprintf("%s-tenant", userName),
 		AuthInfo:  fmt.Sprintf("%s/%s", userName, toolchainApiUrl),
 	}
 	kubeconfig.AuthInfos[fmt.Sprintf("%s/%s", userName, toolchainApiUrl)] = &api.AuthInfo{
-		Token: userToken.AccessToken,
+		Token: keycloakAuth.AccessToken,
 	}
 	kubeconfig.CurrentContext = fmt.Sprintf("%s/%s/%s", userName, toolchainApiUrl, userName)
 
-	err = clientcmd.WriteToFile(*kubeconfig, kubeconfigPath)
+	err := clientcmd.WriteToFile(*kubeconfig, kubeconfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("error writing sandbox user kubeconfig to %s path: %v", kubeconfigPath, err)
 	}
 
 	return &SandboxUserAuthInfo{
-		UserName:       registerUser.Username,
+		UserName:       userName,
 		KubeconfigPath: kubeconfigPath,
-	}, err
+	}, nil
 }
 
 func (s *SandboxController) RegisterSandboxUser(userName string) error {
@@ -250,4 +274,19 @@ func (s *SandboxController) GetOpenshiftRouteHost(namespace string, name string)
 		return "", err
 	}
 	return fmt.Sprintf("https://%s", route.Spec.Host), nil
+}
+
+func (s *SandboxController) WaitForUserNamespaceToBeProvisioned(namespaceName string) error {
+	return utils.WaitUntil(func() (done bool, err error) {
+		ns, err := s.KubeClient.CoreV1().Namespaces().Get(context.TODO(), namespaceName, metav1.GetOptions{})
+
+		if err != nil {
+			return false, err
+		}
+
+		if ns.Name == namespaceName {
+			return true, nil
+		}
+		return false, nil
+	}, 4*time.Minute)
 }

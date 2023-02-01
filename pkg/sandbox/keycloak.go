@@ -94,7 +94,7 @@ func (k *SandboxController) RegisterKeyclokUser(userName string, keycloakToken s
 
 	resp, err := k.HttpClient.Do(req)
 	if err != nil || resp.StatusCode != 201 {
-		return user, fmt.Errorf("failed to create keycloak users. Status code %v", err)
+		return user, fmt.Errorf("failed to create keycloak users. Status code %d", resp.StatusCode)
 	}
 	defer resp.Body.Close()
 
@@ -153,4 +153,26 @@ func (s *SandboxController) GetKeycloakAdminSecret() (adminPassword string, err 
 	}
 
 	return adminPassword, nil
+}
+
+func (s *SandboxController) KeycloakUserExists(realm string, token string, username string) bool {
+	///{realm}/users?username=toto
+	///admin/realms/{my-realm}/users?search={username}
+	request, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/auth/admin/realms/%s/users?search=%s", s.KeycloakUrl, realm, username), strings.NewReader(""))
+
+	if err != nil {
+		klog.Errorf("failed to get user: %v", err)
+		return false
+	}
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+	response, err := s.HttpClient.Do(request)
+
+	if err != nil || response.StatusCode != 200 {
+		return false
+	}
+	defer response.Body.Close()
+
+	return true
 }

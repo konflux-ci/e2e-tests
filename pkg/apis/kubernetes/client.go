@@ -101,7 +101,7 @@ func (c *CustomClient) DynamicClient() dynamic.Interface {
 */
 
 /**/
-func NewDevSandboxProxyClient() (*K8SClient, error) {
+func NewDevSandboxProxyClient(userName string) (*K8SClient, error) {
 	asAdminClient, err := NewAdminKubernetesClient()
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func NewDevSandboxProxyClient() (*K8SClient, error) {
 		return nil, err
 	}
 
-	userAuthInfo, err := sandboxController.ReconcileUserCreation()
+	userAuthInfo, err := sandboxController.ReconcileUserCreation(userName)
 	if err != nil {
 		return nil, err
 	}

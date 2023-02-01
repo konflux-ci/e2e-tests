@@ -27,6 +27,10 @@ import (
 	"knative.dev/pkg/apis"
 )
 
+const (
+	DEFAULT_JVM_USER = "jvm-e2e"
+)
+
 var (
 	testProjectGitUrl   = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_URL", "https://github.com/redhat-appstudio-qe/hacbs-test-project")
 	testProjectRevision = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_REVISION", "main")
@@ -40,7 +44,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 	var timeout, interval time.Duration
 	var doCollectLogs bool
 
-	f, err := framework.NewFramework()
+	f, err := framework.NewFramework(DEFAULT_JVM_USER)
 	Expect(err).NotTo(HaveOccurred())
 
 	AfterAll(func() {

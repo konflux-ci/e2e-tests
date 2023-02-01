@@ -31,8 +31,8 @@ type Framework struct {
 	UserNamespace   string
 }
 
-func NewFramework() (*Framework, error) {
-	k, err := kubeCl.NewDevSandboxProxyClient()
+func NewFramework(userName string) (*Framework, error) {
+	k, err := kubeCl.NewDevSandboxProxyClient(userName)
 	if err != nil {
 		return nil, fmt.Errorf("error when initializing kubernetes clients: %v", err)
 	}
@@ -50,7 +50,7 @@ func NewFramework() (*Framework, error) {
 	return &Framework{
 		AsKubeAdmin:     asAdmin,
 		AsKubeDeveloper: asUser,
-		UserNamespace:   k.UserName,
+		UserNamespace:   fmt.Sprintf("%s-tenant", k.UserName),
 	}, nil
 }
 

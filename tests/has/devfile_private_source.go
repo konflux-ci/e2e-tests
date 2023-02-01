@@ -17,6 +17,10 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+const (
+	DEFAULT_USER_PUBLIC_REPOS = "has-e2e-public"
+)
+
 var (
 	PrivateComponentContainerImage string = fmt.Sprintf("quay.io/%s/quarkus:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 
@@ -33,7 +37,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 	defer GinkgoRecover()
 
 	// Initialize the tests controllers
-	framework, err := framework.NewFramework()
+	framework, err := framework.NewFramework(DEFAULT_USER_PUBLIC_REPOS)
 	Expect(err).NotTo(HaveOccurred())
 	var testNamespace = framework.UserNamespace
 	Expect(testNamespace).NotTo(BeEmpty())

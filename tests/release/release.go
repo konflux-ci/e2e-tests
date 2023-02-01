@@ -17,6 +17,10 @@ import (
 	"knative.dev/pkg/apis"
 )
 
+const (
+	DEFAULT_RELEASE_SERVICE_USER = "release-service"
+)
+
 var snapshotComponents = []applicationapiv1alpha1.SnapshotComponent{
 	{Name: "component-1", ContainerImage: "quay.io/redhat-appstudio/component1@sha256:d5e85e49c89df42b221d972f5b96c6507a8124717a6e42e83fd3caae1031d514"},
 	{Name: "component-2", ContainerImage: "quay.io/redhat-appstudio/component2@sha256:a01dfd18cf8ca8b68770b09a9b6af0fd7c6d1f8644c7ab97f0e06c34dfc5860e"},
@@ -28,7 +32,7 @@ var paramsReleaseStrategy = []appstudiov1alpha1.Params{}
 var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-path", Label("release", "HACBS"), func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
-	framework, err := framework.NewFramework()
+	framework, err := framework.NewFramework(DEFAULT_RELEASE_SERVICE_USER)
 	Expect(err).NotTo(HaveOccurred())
 
 	var devNamespace = uuid.New().String()

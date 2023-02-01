@@ -35,6 +35,7 @@ const (
 	dummyPipelineBundleRef               = "quay.io/redhat-appstudio-qe/dummy-pipeline-bundle:latest"
 	buildTemplatesTestLabel              = "build-templates-e2e"
 	buildTemplatesKcpTestLabel           = "build-templates-kcp-e2e"
+	buildTemplatesE2EUser                = "build-e2e"
 )
 
 var (
@@ -45,7 +46,7 @@ var (
 
 var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "HACBS"), func() {
 	defer GinkgoRecover()
-	f, err := framework.NewFramework()
+	f, err := framework.NewFramework(buildTemplatesE2EUser)
 	Expect(err).NotTo(HaveOccurred())
 
 	Describe("the component with git source (GitHub) is created", Ordered, Label("github-webhook"), func() {

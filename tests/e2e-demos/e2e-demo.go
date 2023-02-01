@@ -40,6 +40,8 @@ const (
 
 	// Environment name used for e2e-tests demos
 	SPIQuaySecretName string = "e2e-quay-secret"
+
+	E2EDemoTestingNamespace = "e2e-demos"
 )
 
 var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
@@ -58,7 +60,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	GinkgoWriter.Printf("Starting e2e-demo test suites from config: %s\n", configTestFile)
 
 	// Initialize the tests controllers
-	fw, err := framework.NewFramework()
+	fw, err := framework.NewFramework(E2EDemoTestingNamespace)
 	Expect(err).NotTo(HaveOccurred())
 	configTest, err := e2eConfig.LoadTestGeneratorConfig(configTestFile)
 	Expect(err).NotTo(HaveOccurred())

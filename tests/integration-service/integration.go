@@ -20,12 +20,13 @@ import (
 )
 
 const (
-	containerImageSource = "quay.io/redhat-appstudio-qe/busybox-loop:latest"
-	gitSourceRepoName    = "devfile-sample-python-basic"
-	gitSourceURL         = "https://github.com/redhat-appstudio-qe/" + gitSourceRepoName
-	BundleURL            = "quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-pass"
-	InPipelineName       = "integration-pipeline-pass"
-	EnvironmentName      = "development"
+	containerImageSource   = "quay.io/redhat-appstudio-qe/busybox-loop:latest"
+	gitSourceRepoName      = "devfile-sample-python-basic"
+	gitSourceURL           = "https://github.com/redhat-appstudio-qe/" + gitSourceRepoName
+	BundleURL              = "quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-pass"
+	InPipelineName         = "integration-pipeline-pass"
+	EnvironmentName        = "development"
+	IntegrationServiceUser = "integration-e2e"
 )
 
 var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests", Label("integration-service", "HACBS"), func() {
@@ -40,12 +41,12 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	var defaultBundleConfigMap *v1.ConfigMap
 
 	// Initialize the tests controllers
-	f, err := framework.NewFramework()
+	f, err := framework.NewFramework(IntegrationServiceUser)
 	Expect(err).NotTo(HaveOccurred())
 	Describe("the component with git source (GitHub) is created", Ordered, func() {
 		BeforeAll(func() {
 			applicationName = fmt.Sprintf("integ-app-%s", util.GenerateRandomString(4))
-			appStudioE2EApplicationsNamespace = utils.GetGeneratedNamespace("integ-e2e")
+			appStudioE2EApplicationsNamespace = f.UserNamespace
 
 			_, err := f.AsKubeAdmin.CommonController.CreateTestNamespace(appStudioE2EApplicationsNamespace)
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", appStudioE2EApplicationsNamespace, err)

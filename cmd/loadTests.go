@@ -89,7 +89,7 @@ func setup(cmd *cobra.Command, args []string) {
 	klog.Infof("Batch Size: %d", userBatches)
 
 	klog.Infof("🕖 initializing...\n")
-	framework, err := framework.NewFramework()
+	framework, err := framework.NewFramework("load-tests")
 	if err != nil {
 		klog.Errorf("error creating client-go %v", err)
 	}
