@@ -3,6 +3,7 @@ package framework
 import (
 	"fmt"
 
+	"github.com/avast/retry-go/v4"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/gitops"
@@ -32,7 +33,20 @@ type Framework struct {
 }
 
 func NewFramework(userName string) (*Framework, error) {
-	k, err := kubeCl.NewDevSandboxProxyClient(userName)
+	var err error
+	var k *kubeCl.K8SClient
+
+	// in some very rare cases fail to get the client for some timeout in member operator.
+	// Just try several times to get the user kubeconfig
+	err = retry.Do(
+		func() error {
+			k, err = kubeCl.NewDevSandboxProxyClient(userName)
+
+			return err
+		},
+		retry.Attempts(20),
+	)
+
 	if err != nil {
 		return nil, fmt.Errorf("error when initializing kubernetes clients: %v", err)
 	}

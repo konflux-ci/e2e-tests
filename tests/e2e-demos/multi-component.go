@@ -73,8 +73,8 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 		// Remove all resources created by the tests
 		AfterAll(func() {
 			if removeApplication {
-				//Expect(fw.HasController.DeleteAllComponentsInASpecificNamespace(AppStudioE2EApplicationsNamespace, 30*time.Second)).To(Succeed())
-				//Expect(fw.HasController.DeleteAllApplicationsInASpecificNamespace(AppStudioE2EApplicationsNamespace, 30*time.Second)).To(Succeed())
+				Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+				Expect(fw.AsKubeDeveloper.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 			}
 		})
 

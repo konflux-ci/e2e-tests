@@ -86,6 +86,17 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				_ = fw.AsKubeDeveloper.SPIController.InjectManualSPIToken(namespace, fmt.Sprintf("https://github.com/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")), githubCredentials, v1.SecretTypeBasicAuth, SPIGithubSecretName)
 			})
 
+			// Remove all resources created by the tests
+			AfterAll(func() {
+				if !CurrentSpecReport().Failed() {
+					Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+					Expect(fw.AsKubeDeveloper.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+					Expect(fw.AsKubeDeveloper.HasController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+					Expect(fw.AsKubeDeveloper.ReleaseController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+					Expect(fw.AsKubeDeveloper.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+					Expect(fw.AsKubeDeveloper.GitOpsController.DeleteAllGitOpsDeploymentInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+				}
+			})
 			// Create an application in a specific namespace
 			It("creates an application", func() {
 				GinkgoWriter.Printf("Parallel process %d\n", GinkgoParallelProcess())

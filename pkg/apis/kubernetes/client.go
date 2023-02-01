@@ -115,7 +115,6 @@ func NewDevSandboxProxyClient(userName string) (*K8SClient, error) {
 	}
 
 	userAuthInfo, err := sandboxController.ReconcileUserCreation(userName)
-
 	if err != nil {
 		return nil, err
 	}

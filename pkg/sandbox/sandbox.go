@@ -210,9 +210,6 @@ func (s *SandboxController) GetKubeconfigPathForSpecifigUser(toolchainApiUrl str
 
 func (s *SandboxController) RegisterSandboxUser(userName string) error {
 	userSignup := getUserSignupSpecs(userName)
-
-	klog.Infof("Creating: %v+\n", userSignup)
-
 	if err := s.KubeRest.Create(context.TODO(), userSignup); err != nil {
 		if k8sErrors.IsAlreadyExists(err) {
 			klog.Infof("User already exists:")
@@ -274,19 +271,4 @@ func (s *SandboxController) GetOpenshiftRouteHost(namespace string, name string)
 		return "", err
 	}
 	return fmt.Sprintf("https://%s", route.Spec.Host), nil
-}
-
-func (s *SandboxController) WaitForUserToBePRovisioned(userName string) error {
-	return utils.WaitUntil(func() (done bool, err error) {
-		ns, err := s.KubeClient.CoreV1().Namespaces().Get(context.TODO(), fmt.Sprintf("%s-tenant", userName), metav1.GetOptions{})
-
-		if err != nil {
-			return false, err
-		}
-
-		if ns.Name == fmt.Sprintf("%s-tenant", userName) {
-			return true, nil
-		}
-		return false, nil
-	}, 4*time.Minute)
 }
