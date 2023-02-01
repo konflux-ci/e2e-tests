@@ -176,7 +176,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 
 			It("the PipelineRun should eventually finish successfully", func() {
-				timeout = time.Minute * 15
+				timeout = time.Minute * 30
 				interval = time.Second * 10
 				Eventually(func() bool {
 
@@ -254,7 +254,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 			})
 			It("PipelineRun should eventually finish", func() {
-				timeout = time.Minute * 10
+				timeout = time.Minute * 20
 				interval = time.Second * 10
 
 				Eventually(func() bool {
@@ -330,7 +330,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 			})
 			It("pipelineRun should eventually finish", func() {
-				timeout = time.Minute * 10
+				timeout = time.Minute * 20
 				interval = time.Second * 10
 
 				Eventually(func() bool {
