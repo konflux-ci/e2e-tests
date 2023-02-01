@@ -131,8 +131,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 		}
 	})
 
-	var _ = Describe("creation of the 'Happy path for defult pipeline bundle resources without deployment", func() {
-
+	var _ = Describe("creating all CRDs required for test", func() {
 		It("creates config map in the dev namespace.", func() {
 			_, err := framework.CommonController.CreateConfigMap(cm, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
@@ -174,7 +173,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 		})
 
 		It("creates Role binding with a given name in managednamespace.", func() {
-			_, err := framework.CommonController.CreateRoleBinding("role-relase-service-account-binding", managedNamespace, "ServiceAccount", roleName, roleRefKind, "role-m6-service-account", "rbac.authorization.k8s.io")
+			_, err := framework.CommonController.CreateRoleBinding("role-relase-service-account-binding", managedNamespace, "ServiceAccount", roleName, "Role", "role-m6-service-account", "rbac.authorization.k8s.io")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -187,6 +186,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 			_, err := framework.HasController.CreateComponent(applicationNameDefault, componentName, devNamespace, gitSourceComponentUrl, "", containerImageUrl, "", "", false)
 			Expect(err).NotTo(HaveOccurred())
 		})
+
 	})
 
 	var _ = Describe("Post-release verification", func() {
@@ -194,7 +194,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 		It("verifies that in dev namespace will be created a PipelineRun.", func() {
 			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(devNamespace)
-				time.Sleep(40 * time.Second)
 				if err != nil || prList == nil || len(prList.Items) < 1 {
 					return false
 				}
@@ -217,10 +216,10 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 		It("verifies that in managed namespace will be created a PipelineRun.", func() {
 			Eventually(func() bool {
 				prList, err := framework.TektonController.ListAllPipelineRuns(managedNamespace)
-				time.Sleep(20 * time.Second)
 				if err != nil || prList == nil || len(prList.Items) < 1 {
 					return false
 				}
+
 				return strings.Contains(prList.Items[0].Name, "release")
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
@@ -231,6 +230,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 				if prList == nil || err != nil || len(prList.Items) < 1 {
 					return false
 				}
+
 				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
@@ -241,6 +241,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 				if releaseCreated == nil || err != nil {
 					return false
 				}
+
 				return releaseCreated.HasStarted() && releaseCreated.IsDone() && releaseCreated.Status.Conditions[0].Status == "True"
 			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 		})

@@ -38,8 +38,6 @@ const (
 	containerImageUrl                    string = "quay.io/redhat-appstudio-qe/dcmetromap:latest"
 	releasePipelineBundleDefault         string = "quay.io/hacbs-release/pipeline-release:main"
 	roleName                             string = "role-release-service-account"
-	roleRefKind                          string = "Role"
-	displayEnvironment                   string = "demo production"
 
 	namespaceCreationTimeout              = 1 * time.Minute
 	namespaceDeletionTimeout              = 1 * time.Minute
