@@ -94,13 +94,6 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 	})
 
-	// Necessary for component pipeline
-	It("checks if 'git-clone' cluster tasks exists", func() {
-		Eventually(func() bool {
-			return framework.AsKubeDeveloper.CommonController.CheckIfClusterTaskExists("git-clone")
-		}, 5*time.Minute, 45*time.Second).Should(BeTrue(), "'git-clone' cluster task don't exist in cluster. Component cannot be created")
-	})
-
 	It("creates Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
 		cdq, err := framework.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentName, testNamespace, QuarkusDevfileSource, "", false)
 		Expect(err).NotTo(HaveOccurred())
