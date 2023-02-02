@@ -363,7 +363,7 @@ func (CI) sendWebhook() error {
 
 // Generates test cases for Polarion(polarion.xml) from test files for AppStudio project.
 func GenerateTestCasesAppStudio() error {
-	return sh.RunV("ginkgo", "--v", "--dry-run", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", "--polarion-output-file=polarion.xml", "--generate-test-cases=true")
+	return sh.RunV("ginkgo", "--poll-progress-after,", "--dry-run", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", "--polarion-output-file=polarion.xml", "--generate-test-cases=true")
 }
 
 // I've attached to the Local struct for now since it felt like it fit but it can be decoupled later as a standalone func.
