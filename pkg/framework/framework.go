@@ -48,10 +48,7 @@ func NewFramework() (*Framework, error) {
 	}
 
 	// Initialize Tekton controller
-	tektonController, err := tekton.NewSuiteController(kubeClient)
-	if err != nil {
-		return nil, err
-	}
+	tektonController := tekton.NewSuiteController(kubeClient)
 
 	// Initialize GitOps controller
 	gitopsController, err := gitops.NewSuiteController(kubeClient)
