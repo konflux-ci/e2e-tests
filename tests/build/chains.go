@@ -120,7 +120,9 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			// an image that has been signed by Tekton Chains. Trigger a demo task to fulfill
 			// this purpose.
 
-			dockerBuildBundle := fwk.TektonController.Bundles.DockerBuildBundle
+			bundles, err := fwk.TektonController.NewBundles()
+			Expect(err).ShouldNot(HaveOccurred())
+			dockerBuildBundle := bundles.DockerBuildBundle
 			Expect(dockerBuildBundle).NotTo(Equal(""), "Can't continue without a docker-build pipeline got from selector config")
 			pr, err := kubeController.RunPipeline(tekton.BuildahDemo{Image: image, Bundle: dockerBuildBundle}, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
