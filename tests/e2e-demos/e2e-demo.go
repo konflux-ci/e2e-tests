@@ -91,8 +91,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				if !CurrentSpecReport().Failed() {
 					Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeDeveloper.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-					Expect(fw.AsKubeDeveloper.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-					Expect(fw.AsKubeDeveloper.GitOpsController.DeleteAllGitOpsDeploymentInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 				}
 			})
 			// Create an application in a specific namespace
