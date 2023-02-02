@@ -18,6 +18,12 @@ const (
 	// Sample devfile created redhat-appstudio-qe repository with the following content:
 	QuarkusDevfileSource string = "https://github.com/redhat-appstudio-qe/devfile-sample-code-with-quarkus"
 
+	// Sample devfile URL
+	QuarkusDevfileURL string = "https://raw.githubusercontent.com/redhat-appstudio-qe/devfile-sample-code-with-quarkus/main/devfile.yaml"
+
+	// Sample dockerfile URL
+	QuarkusDockerfileURL string = "https://raw.githubusercontent.com/redhat-appstudio-qe/devfile-sample-code-with-quarkus/main/src/main/docker/Dockerfile.jvm.staged"
+
 	// Sample devfile content
 	QuarkusDevfileContext string = `
 schemaVersion: 2.2.0

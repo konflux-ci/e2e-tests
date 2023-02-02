@@ -117,8 +117,8 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 		devfilesMap := make(map[string][]byte)
 		devfilesURLMap := make(map[string]string)
 		dockerfileContextMap := make(map[string]string)
-		devfilesURLMap["./"] = "devfile.yaml"
-		dockerfileContextMap["./"] = "src/main/docker/Dockerfile.jvm.staged"
+		devfilesURLMap["./"] = QuarkusDevfileURL
+		dockerfileContextMap["./"] = QuarkusDockerfileURL
 		devfilesMap["./"] = []byte(QuarkusDevfileContext)
 		configMap, err := framework.HasController.CreateCDQConfigMap(devfilesMap, devfilesURLMap, dockerfileContextMap, componentName, testNamespace, map[string]string{})
 		Expect(err).NotTo(HaveOccurred())
