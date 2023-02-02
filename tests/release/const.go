@@ -53,7 +53,6 @@ const (
 	releasePipelineRunCompletionTimeout   = 20 * time.Minute
 	avgControllerQueryTimeout             = 1 * time.Minute
 	pipelineServiceAccountCreationTimeout = 3 * time.Minute
-	oneMinuteTimeout                      = 1 * time.Minute
 
 	defaultInterval = 100 * time.Millisecond
 )

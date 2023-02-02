@@ -531,7 +531,7 @@ func (s *SuiteController) CreateServiceAccount(name, namespace string, serviceAc
 	return s.KubeInterface().CoreV1().ServiceAccounts(namespace).Create(context.TODO(), serviceAccount, metav1.CreateOptions{})
 }
 
-// CreateRole creates an object of Role.
+// CreateRole creates a role with the provided name and namespace using the given list of rules
 func (s *SuiteController) CreateRole(roleName, namespace string, roleRules map[string][]string) (*rbacv1.Role, error) {
 
 	rules := &rbacv1.PolicyRule{
@@ -555,7 +555,7 @@ func (s *SuiteController) CreateRole(roleName, namespace string, roleRules map[s
 	return createdRole, nil
 }
 
-// CreateRole creates an object of Role Binding in namespace with service accounr provided and role refernce api group.
+// CreateRole creates an object of Role Binding in namespace with service account provided and role reference api group.
 func (s *SuiteController) CreateRoleBinding(roleBindingName, namespace, subjectKind, serviceAccountName, roleRefKind, roleRefName, roleRefApiGroup string) (*rbacv1.RoleBinding, error) {
 
 	roleBindingSubjects := []rbacv1.Subject{

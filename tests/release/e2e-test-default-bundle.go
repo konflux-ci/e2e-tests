@@ -28,7 +28,7 @@ var roleRules = map[string][]string{
 	"roleVerbs":     {"get", "list", "watch"},
 }
 
-var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-path", Label("release", "defaultBundle"), func() {
+var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-path", Label("release", "defaultBundle", "HACBS"), func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	framework, err := framework.NewFramework()
@@ -65,7 +65,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 		Eventually(func() bool {
 			sa, err := framework.CommonController.GetServiceAccount("pipeline", managedNamespace)
 			return sa != nil && err == nil
-		}, oneMinuteTimeout, defaultInterval).Should(BeTrue(), "timed out when waiting for the \"pipeline\" SA to be created")
+		}, pipelineServiceAccountCreationTimeout, defaultInterval).Should(BeTrue(), "timed out when waiting for the \"pipeline\" SA to be created")
 
 		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
 		Expect(sourceAuthJson).ToNot(BeEmpty())
@@ -112,6 +112,39 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 			},
 		}
 
+		_, err = framework.CommonController.CreateConfigMap(cm, devNamespace)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = framework.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "")
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = framework.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineNameDefault, releasePipelineBundleDefault, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategy)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = framework.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, "", "", releaseStrategyDefaultName)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = framework.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicyDefault, managedNamespace, defaultEcPolicy)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = framework.TektonController.CreatePVCInAccessMode(releasePvcName, managedNamespace, corev1.ReadWriteOnce)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = framework.CommonController.CreateServiceAccount(releaseStrategyServiceAccountDefault, managedNamespace, managednamespaceSecret)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = framework.CommonController.CreateRole(roleName, managedNamespace, roleRules)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = framework.CommonController.CreateRoleBinding("role-relase-service-account-binding", managedNamespace, "ServiceAccount", roleName, "Role", "role-m6-service-account", "rbac.authorization.k8s.io")
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = framework.HasController.CreateHasApplication(applicationNameDefault, devNamespace)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = framework.HasController.CreateComponent(applicationNameDefault, componentName, devNamespace, gitSourceComponentUrl, "", containerImageUrl, "", "", false)
+		Expect(err).NotTo(HaveOccurred())
+
 	})
 
 	AfterAll(func() {
@@ -120,64 +153,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 			Expect(framework.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
 			Expect(framework.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
 		}
-	})
-
-	var _ = Describe("creating all CRDs required for test", func() {
-		It("creates config map in the dev namespace.", func() {
-			_, err := framework.CommonController.CreateConfigMap(cm, devNamespace)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("create release plan in the dev namespace.", func() {
-			_, err := framework.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "")
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("creates release strategy in the managed namespace.", func() {
-			_, err := framework.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineNameDefault, releasePipelineBundleDefault, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategy)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("creates release plan admission in the managed namespace.", func() {
-			_, err := framework.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, "", "", releaseStrategyDefaultName)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("creates EnterpriseContractPolicy in the managed namespace.", func(ctx SpecContext) {
-			_, err := framework.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicyDefault, managedNamespace, defaultEcPolicy)
-			Expect(err).NotTo(HaveOccurred())
-		}, SpecTimeout(EnterpriseContractPolicyTimeout))
-
-		It("creates pvc in the managed namespace.", func() {
-			_, err := framework.TektonController.CreatePVCInAccessMode(releasePvcName, managedNamespace, corev1.ReadWriteOnce)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("creates sevice account in the manged namespace.", func() {
-			_, err := framework.CommonController.CreateServiceAccount(releaseStrategyServiceAccountDefault, managedNamespace, managednamespaceSecret)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("creates role in the managed namespace.", func() {
-			_, err := framework.CommonController.CreateRole(roleName, managedNamespace, roleRules)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("creates Role binding with a given name in managednamespace.", func() {
-			_, err := framework.CommonController.CreateRoleBinding("role-relase-service-account-binding", managedNamespace, "ServiceAccount", roleName, "Role", "role-m6-service-account", "rbac.authorization.k8s.io")
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("creates application with the given name in dev namespace.", func() {
-			_, err := framework.HasController.CreateHasApplication(applicationNameDefault, devNamespace)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("creates component with the given component name in dev namespace.", func() {
-			_, err := framework.HasController.CreateComponent(applicationNameDefault, componentName, devNamespace, gitSourceComponentUrl, "", containerImageUrl, "", "", false)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
 	})
 
 	var _ = Describe("Post-release verification", func() {
