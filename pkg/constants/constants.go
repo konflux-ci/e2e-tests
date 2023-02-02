@@ -42,7 +42,6 @@ const (
 	ArgoCDLabelKey   string = "argocd.argoproj.io/managed-by"
 	ArgoCDLabelValue string = "gitops-service-argocd"
 
-	BuildPipelinesConfigMapName             = "build-pipelines-defaults"
 	BuildPipelinesConfigMapDefaultNamespace = "build-templates"
 
 	HostOperatorNamespace   string = "toolchain-host-operator"
