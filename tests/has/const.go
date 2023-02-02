@@ -22,11 +22,11 @@ const (
 	QuarkusDevfileContext string = `
 schemaVersion: 2.2.0
 metadata:
-	name: java-quarkus
-	version: 1.2.1
-	projectType: Quarkus
-	provider: Red Hat
-	language: Java
+  name: java-quarkus
+  version: 1.2.1
+  projectType: Quarkus
+  provider: Red Hat
+  language: Java
 `
 
 	// The default private devfile sample to use if none is passed in via the PRIVATE_DEVFILE_SAMPLE env variable.
