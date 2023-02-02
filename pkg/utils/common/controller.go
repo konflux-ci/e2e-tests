@@ -518,3 +518,24 @@ func (s *SuiteController) ApplicationGitopsRepoExists(devfileContent string) wai
 		return s.Github.CheckIfRepositoryExist(gitOpsRepoURL), nil
 	}
 }
+
+func (s *SuiteController) CreateServiceAccount(namespace string, sa *corev1.ServiceAccount) (*corev1.ServiceAccount, error) {
+	return s.KubeInterface().CoreV1().ServiceAccounts(namespace).Create(context.TODO(), sa, metav1.CreateOptions{})
+}
+
+func (s *SuiteController) CreateClusterRoleBinding(clusterRoleBinding *rbacv1.ClusterRoleBinding) (*rbacv1.ClusterRoleBinding, error) {
+	return s.KubeInterface().RbacV1().ClusterRoleBindings().Create(context.TODO(), clusterRoleBinding, metav1.CreateOptions{})
+}
+
+func (s *SuiteController) GetServiceAccountToken(namespace, name string) (string, error) {
+	secrets, err := s.KubeInterface().CoreV1().Secrets(namespace).List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		return "", err
+	}
+	for _, secret := range secrets.Items {
+		if secret.Type == corev1.SecretTypeServiceAccountToken && secret.Annotations[corev1.ServiceAccountNameKey] == name {
+			return string(secret.Data[corev1.ServiceAccountTokenKey]), nil
+		}
+	}
+	return "", nil
+}
