@@ -25,7 +25,7 @@ const (
 	DEFAULT_LOCAL_FORK_NAME             = "qe"
 	DEFAULT_LOCAL_FORK_ORGANIZATION     = "redhat-appstudio-qe"
 	DEFAULT_E2E_APPLICATIONS_NAMEPSPACE = "appstudio-e2e-test"
-	DEFAULT_SHARED_SECRETS_NAMESPACE    = "build-templates"
+	DEFAULT_SHARED_SECRETS_NAMESPACE    = "build-templates-e2e"
 	DEFAULT_SHARED_SECRET_NAME          = "redhat-appstudio-user-workload"
 	DEFAULT_E2E_QUAY_ORG                = "redhat-appstudio-qe"
 )
@@ -141,7 +141,7 @@ func (i *InstallAppStudio) cloneInfraDeployments() (*git.Remote, error) {
 	return repo.CreateRemote(&config.RemoteConfig{Name: i.LocalForkName, URLs: []string{fmt.Sprintf("https://github.com/%s/infra-deployments.git", i.LocalGithubForkOrganization)}})
 }
 
-// createSharedSecret make sure that redhat-appstudio-user-workload secret is created in the build-templates namespace for build purposes
+// createSharedSecret make sure that redhat-appstudio-user-workload secret is created in the build-templates-e2e namespace for build purposes
 func (i *InstallAppStudio) createSharedSecret() error {
 	quayToken := os.Getenv("QUAY_TOKEN")
 	if quayToken == "" {

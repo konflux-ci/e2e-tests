@@ -42,8 +42,6 @@ const (
 	ArgoCDLabelKey   string = "argocd.argoproj.io/managed-by"
 	ArgoCDLabelValue string = "gitops-service-argocd"
 
-	BuildPipelinesConfigMapDefaultNamespace = "build-templates"
-
 	HostOperatorNamespace   string = "toolchain-host-operator"
 	MemberOperatorNamespace string = "toolchain-member-operator"
 
@@ -59,7 +57,7 @@ const (
 	RegistryAuthSecretName = "redhat-appstudio-registry-pull-secret"
 
 	SharedPullSecretName      = "redhat-appstudio-user-workload"
-	SharedPullSecretNamespace = "build-templates"
+	SharedPullSecretNamespace = "build-templates-e2e"
 
 	JVMBuildImageSecretName = "jvm-build-image-secrets"
 	JBSConfigName           = "jvm-build-config"
