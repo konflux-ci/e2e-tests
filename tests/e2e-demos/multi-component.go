@@ -79,6 +79,8 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 			if removeApplication {
 				Expect(fw.HasController.DeleteAllComponentsInASpecificNamespace(AppStudioE2EApplicationsNamespace, 30*time.Second)).To(Succeed())
 				Expect(fw.HasController.DeleteAllApplicationsInASpecificNamespace(AppStudioE2EApplicationsNamespace, 30*time.Second)).To(Succeed())
+				Expect(fw.TektonController.DeleteAllPipelineRunsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
+
 			}
 		})
 
