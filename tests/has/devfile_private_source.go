@@ -82,7 +82,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 
 				return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 			}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
-
+			Expect(framework.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 			Expect(framework.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
 		}
 	})
