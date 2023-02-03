@@ -103,11 +103,7 @@ func (i *InstallAppStudio) InstallAppStudioPreviewMode() error {
 		return err
 	}
 
-	if err := i.createSharedSecret(); err != nil {
-		return err
-	}
-
-	return i.CreateOauth()
+	return i.createSharedSecret()
 }
 
 func (i *InstallAppStudio) setInstallationEnvironments() {
