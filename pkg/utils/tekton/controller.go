@@ -7,6 +7,9 @@ import (
 	"strings"
 	"time"
 
+	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
+	"k8s.io/apimachinery/pkg/types"
+
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
 	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
@@ -20,13 +23,11 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	g "github.com/onsi/ginkgo/v2"
-	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 )
 
 type KubeController struct {
@@ -42,39 +43,9 @@ type Bundles struct {
 	NodeJSBuilderBundle string
 }
 
-func newBundles(client crclient.Client) (*Bundles, error) {
-	namespacedName := types.NamespacedName{
-		Name:      "build-pipeline-selector",
-		Namespace: "build-service",
-	}
-	bundles := &Bundles{}
-	pipelineSelector := &buildservice.BuildPipelineSelector{}
-	err := client.Get(context.TODO(), namespacedName, pipelineSelector)
-	if err != nil {
-		return nil, err
-	}
-	for _, selector := range pipelineSelector.Spec.Selectors {
-		bundleName := selector.PipelineRef.Name
-		bundleRef := selector.PipelineRef.Bundle
-		switch bundleName {
-		case "docker-build":
-			bundles.DockerBuildBundle = bundleRef
-		case "fbc-builder":
-			bundles.FBCBuilderBundle = bundleRef
-		case "java-builder":
-			bundles.JavaBuilderBundle = bundleRef
-		case "nodejs-builder":
-			bundles.NodeJSBuilderBundle = bundleRef
-		}
-	}
-	return bundles, nil
-}
-
 // Create the struct for kubernetes clients
 type SuiteController struct {
 	*kubeCl.CustomClient
-
-	Bundles Bundles
 }
 
 type CosignResult struct {
@@ -99,14 +70,37 @@ func (c CosignResult) Missing(prefix string) string {
 	return strings.Join(ret, " and ")
 }
 
-// Create controller for Application/Component crud operations
-func NewSuiteController(kube *kubeCl.CustomClient) (*SuiteController, error) {
+// Create controller for Tekton Task/Pipeline CRUD operations
+func NewSuiteController(kube *kubeCl.CustomClient) *SuiteController {
+	return &SuiteController{kube}
+}
 
-	bundles, err := newBundles(kube.KubeRest())
+func (s *SuiteController) NewBundles() (*Bundles, error) {
+	namespacedName := types.NamespacedName{
+		Name:      "build-pipeline-selector",
+		Namespace: "build-service",
+	}
+	bundles := &Bundles{}
+	pipelineSelector := &buildservice.BuildPipelineSelector{}
+	err := s.KubeRest().Get(context.TODO(), namespacedName, pipelineSelector)
 	if err != nil {
 		return nil, err
 	}
-	return &SuiteController{kube, *bundles}, nil
+	for _, selector := range pipelineSelector.Spec.Selectors {
+		bundleName := selector.PipelineRef.Name
+		bundleRef := selector.PipelineRef.Bundle
+		switch bundleName {
+		case "docker-build":
+			bundles.DockerBuildBundle = bundleRef
+		case "fbc-builder":
+			bundles.FBCBuilderBundle = bundleRef
+		case "java-builder":
+			bundles.JavaBuilderBundle = bundleRef
+		case "nodejs-builder":
+			bundles.NodeJSBuilderBundle = bundleRef
+		}
+	}
+	return bundles, nil
 }
 
 func (s *SuiteController) GetPipelineRun(pipelineRunName, namespace string) (*v1beta1.PipelineRun, error) {

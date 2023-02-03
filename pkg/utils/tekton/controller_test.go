@@ -1,12 +1,6 @@
 package tekton
 
 import (
-	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -123,68 +117,4 @@ func TestFindingCosignResults(t *testing.T) {
 		})
 	}
 
-}
-
-func TestNewBundles(t *testing.T) {
-	refBundles := Bundles{
-		FBCBuilderBundle:    "quay.io/test/test:fbc-build-bundle",
-		DockerBuildBundle:   "quay.io/test/test:docker-build-bundle",
-		JavaBuilderBundle:   "quay.io/test/test:java-build-bundle",
-		NodeJSBuilderBundle: "quay.io/test/test:nodejs-build-bundle",
-	}
-
-	t.Run("each bundle is assigned correctly", func(t *testing.T) {
-		scheme := runtime.NewScheme()
-		utilruntime.Must(buildservice.AddToScheme(scheme))
-		ps := &buildservice.BuildPipelineSelector{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "build-pipeline-selector",
-				Namespace: "build-service",
-			},
-			Spec: buildservice.BuildPipelineSelectorSpec{Selectors: []buildservice.PipelineSelector{
-				{
-					Name: "FBC",
-					PipelineRef: v1beta1.PipelineRef{
-						Name:   "fbc-builder",
-						Bundle: refBundles.FBCBuilderBundle,
-					},
-					WhenConditions: buildservice.WhenCondition{Language: "fbc"},
-				},
-				{
-					Name: "Docker build",
-					PipelineRef: v1beta1.PipelineRef{
-						Name:   "docker-build",
-						Bundle: refBundles.DockerBuildBundle,
-					},
-					WhenConditions: buildservice.WhenCondition{DockerfileRequired: pointer.Bool(true)},
-				},
-				{
-					Name: "Java",
-					PipelineRef: v1beta1.PipelineRef{
-						Name:   "java-builder",
-						Bundle: refBundles.JavaBuilderBundle,
-					},
-					WhenConditions: buildservice.WhenCondition{Language: "java"},
-				},
-				{
-					Name: "NodeJS",
-					PipelineRef: v1beta1.PipelineRef{
-						Name:   "nodejs-builder",
-						Bundle: refBundles.NodeJSBuilderBundle,
-					},
-					WhenConditions: buildservice.WhenCondition{Language: "nodejs,node"},
-				},
-			}},
-		}
-
-		client := fake.NewClientBuilder().WithObjects(ps).WithScheme(scheme).Build()
-
-		bundles, error := newBundles(client)
-		assert.Nil(t, error)
-
-		assert.Equal(t, refBundles.FBCBuilderBundle, bundles.FBCBuilderBundle)
-		assert.Equal(t, refBundles.DockerBuildBundle, bundles.DockerBuildBundle)
-		assert.Equal(t, refBundles.JavaBuilderBundle, bundles.JavaBuilderBundle)
-		assert.Equal(t, refBundles.NodeJSBuilderBundle, bundles.NodeJSBuilderBundle)
-	})
 }

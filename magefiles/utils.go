@@ -53,6 +53,7 @@ func sendHttpRequestAndParseResponse(url, method string, v interface{}) error {
 		return err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("token %s", os.Getenv("GITHUB_TOKEN")))
+	fmt.Println("DSADDDSDADASDDSASD")
 	res, err := http.DefaultClient.Do(req)
 	klog.Infof("response status code: '%d'", res.StatusCode)
 

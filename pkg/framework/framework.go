@@ -94,12 +94,8 @@ func initAdminControllerHub(cc *kubeCl.CustomClient) (*AdminControllerHub, error
 	if err != nil {
 		return nil, err
 	}
-
 	// Initialize Tekton controller
-	tektonController, err := tekton.NewSuiteController(cc)
-	if err != nil {
-		return nil, err
-	}
+	tektonController := tekton.NewSuiteController(cc)
 
 	// Initialize GitOps controller
 	gitopsController, err := gitops.NewSuiteController(cc)
