@@ -555,7 +555,7 @@ func (s *SuiteController) CreateRole(roleName, namespace string, roleRules map[s
 	return createdRole, nil
 }
 
-// CreateRole creates an object of Role Binding in namespace with service account provided and role reference api group.
+// CreateRoleBinding creates an object of Role Binding in namespace with service account provided and role reference api group.
 func (s *SuiteController) CreateRoleBinding(roleBindingName, namespace, subjectKind, serviceAccountName, roleRefKind, roleRefName, roleRefApiGroup string) (*rbacv1.RoleBinding, error) {
 
 	roleBindingSubjects := []rbacv1.Subject{

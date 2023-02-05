@@ -4,6 +4,7 @@ import (
 	"time"
 
 	appstudiov1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -19,7 +20,7 @@ const (
 	environment                         = "test-environment"
 	releaseStrategyServiceAccount       = "pipeline"
 
-	releasePipelineNameDefault           string = "bundle-release-pipelinerun"
+	releasePipelineNameDefault           string = "release"
 	applicationNameDefault               string = "appstudio"
 	componentName                        string = "dc-metro-map"
 	buildPipelineBundleDefault           string = "quay.io/redhat-appstudio/hacbs-templates-bundle:latest"
@@ -61,4 +62,14 @@ var paramsReleaseStrategy = []appstudiov1alpha1.Params{
 	{Name: "extraConfigGitUrl", Value: "https://github.com/scoheb/strategy-configs.git"},
 	{Name: "extraConfigPath", Value: "m6.yaml"},
 	{Name: "extraConfigRevision", Value: "main"},
+}
+
+var managednamespaceSecret = []corev1.ObjectReference{
+	{Name: redhatAppstudioUserSecret},
+}
+
+var roleRules = map[string][]string{
+	"apiGroupsList": {""},
+	"roleResources": {"secrets"},
+	"roleVerbs":     {"get", "list", "watch"},
 }

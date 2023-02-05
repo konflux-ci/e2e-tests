@@ -18,16 +18,6 @@ import (
 	klog "k8s.io/klog/v2"
 )
 
-var managednamespaceSecret = []corev1.ObjectReference{
-	{Name: redhatAppstudioUserSecret},
-}
-
-var roleRules = map[string][]string{
-	"apiGroupsList": {""},
-	"roleResources": {"secrets"},
-	"roleVerbs":     {"get", "list", "watch"},
-}
-
 var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-path", Label("release", "defaultBundle", "HACBS"), func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
