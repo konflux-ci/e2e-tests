@@ -1162,12 +1162,12 @@ github.com/prometheus/procfs v0.8.0/go.mod h1:z7EfXMXOkbkqb9IINtpCn86r/to3BnA0ua
 github.com/prometheus/statsd_exporter v0.21.0 h1:hA05Q5RFeIjgwKIYEdFd59xu5Wwaznf33yKI+pyX6T8=
 github.com/prometheus/statsd_exporter v0.21.0/go.mod h1:rbT83sZq2V+p73lHhPZfMc3MLCHmSHelCh9hSGYNLTQ=
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
-github.com/redhat-appstudio/application-api v0.0.0-20221114151952-77cba9006505 h1:8x+HtXDPJ9xmQbtWMdV5ntb0T+uEXjsmzzLgxpKFR1M=
-github.com/redhat-appstudio/application-api v0.0.0-20221114151952-77cba9006505/go.mod h1:LpcTNLCDMf1CUNTw2bgTiz8M49sUsN2F9T7bOSKcJEo=
+github.com/redhat-appstudio/application-api v0.0.0-20221220162402-c1e887791dac h1:KU7oYezxX2cLsg77naV3b5Upt/YEV+GGcglm7qgj4Ug=
+github.com/redhat-appstudio/application-api v0.0.0-20221220162402-c1e887791dac/go.mod h1:LpcTNLCDMf1CUNTw2bgTiz8M49sUsN2F9T7bOSKcJEo=
 github.com/redhat-appstudio/application-service v0.0.0-20221129172232-763cbbe1992e h1:ARDByR4vj5cN+0AX7pGyEAYvdCnIlS8bcJDe2kHPAFo=
 github.com/redhat-appstudio/application-service v0.0.0-20221129172232-763cbbe1992e/go.mod h1:1NeB0c0AXeeOAMKlhBPikA7f+cTZambH9i8z8Eg+4os=
-github.com/redhat-appstudio/build-service v0.0.0-20230105230040-fd3097c1b686 h1:NDw7JDRvteDnVJJQ8i1hrNnYj5nUCRsSpQUuy7zchCo=
-github.com/redhat-appstudio/build-service v0.0.0-20230105230040-fd3097c1b686/go.mod h1:2eYI4Zw83S2CVEIflUCseJQ96t97xW0xKU4429NhYr4=
+github.com/redhat-appstudio/build-service v0.0.0-20230113121706-a9f10055dbc4 h1:Nc4qjZHxb8wnn5DW559GUyIVV5Z2HgYmGxQoWW02mWg=
+github.com/redhat-appstudio/build-service v0.0.0-20230113121706-a9f10055dbc4/go.mod h1:wgto41R9bV9wLVOp29llmx+O+voEb0r/hy7Yw+MkKxQ=
 github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2cad2 h1:wVpENUra8XAN2UgR09KLjyejoiHcd20P79gVx2wdIuE=
 github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2cad2/go.mod h1:FNCuALWZDRMbMKm3Vb/5E2R8ei6eFwcEhgYcFKRVZJU=
 github.com/redhat-appstudio/jvm-build-service v0.0.0-20230125042419-efd0d0342a2c h1:3kgmn4uwlTjlzofcFU0zWBKsx+PthW5hBjR6LnEy/NA=

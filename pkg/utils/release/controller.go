@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -42,6 +41,23 @@ func (s *SuiteController) CreateSnapshot(name string, namespace string, applicat
 		},
 	}
 	return snapshot, s.KubeRest().Create(context.TODO(), snapshot)
+}
+
+// GetSnapshotByComponent returns the first snapshot in namespace if exist, else will return nil
+func (s *SuiteController) GetSnapshotByComponent(namespace string) (*appstudioApi.Snapshot, error) {
+	snapshot := &appstudioApi.SnapshotList{}
+	opts := []client.ListOption{
+		client.MatchingLabels{
+			"test.appstudio.openshift.io/type": "component",
+		},
+		client.InNamespace(namespace),
+	}
+	err := s.KubeRest().List(context.TODO(), snapshot, opts...)
+
+	if err == nil && len(snapshot.Items) > 0 {
+		return &snapshot.Items[0], nil
+	}
+	return nil, err
 }
 
 // CreateRelease creates a new Release using the given parameters.
@@ -109,6 +125,20 @@ func (s *SuiteController) GetRelease(releaseName, releaseNamespace string) (*v1a
 	}, release)
 
 	return release, err
+}
+
+// GetFirstReleaseInNamespace returns the first Release from  list of releases in the given namespace.
+func (s *SuiteController) GetFirstReleaseInNamespace(namespace string) (*v1alpha1.Release, error) {
+	releaseList := &v1alpha1.ReleaseList{}
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+
+	err := s.KubeRest().List(context.TODO(), releaseList, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &releaseList.Items[0], nil
 }
 
 // GetReleasePlanAdmission returns the ReleasePlanAdmission with the given name in the given namespace.
@@ -216,11 +246,10 @@ func (s *SuiteController) CreateReleasePlanAdmission(name, originNamespace, appl
 
 // CreateRegistryJsonSecret creates a secret for registry repository in namespace given with key passed.
 func (s *SuiteController) CreateRegistryJsonSecret(name, namespace, authKey, keyName string) (*corev1.Secret, error) {
-	GinkgoWriter.Println("Key is : ", authKey)
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
 		Type:       corev1.SecretTypeDockerConfigJson,
-		Data:       map[string][]byte{".dockerconfigjson": []byte(authKey)},
+		Data:       map[string][]byte{".dockerconfigjson": []byte(fmt.Sprintf("{\"auths\":{\"quay.io\":{\"username\":\"%s\",\"password\":\"%s\",\"auth\":\"dGVzdDp0ZXN0\",\"email\":\"\"}}}", keyName, authKey))},
 	}
 	err := s.KubeRest().Create(context.TODO(), secret)
 	if err != nil {
@@ -230,16 +259,48 @@ func (s *SuiteController) CreateRegistryJsonSecret(name, namespace, authKey, key
 }
 
 // DeleteAllSnapshotsInASpecificNamespace removes all snapshots from a specific namespace. Useful when creating a lot of resources and want to remove all of them
-func (h *SuiteController) DeleteAllSnapshotsInASpecificNamespace(namespace string, timeout time.Duration) error {
-	if err := h.KubeRest().DeleteAllOf(context.TODO(), &appstudioApi.Snapshot{}, client.InNamespace(namespace)); err != nil {
+func (s *SuiteController) DeleteAllSnapshotsInASpecificNamespace(namespace string, timeout time.Duration) error {
+	if err := s.KubeRest().DeleteAllOf(context.TODO(), &appstudioApi.Snapshot{}, client.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting snapshots from the namespace %s: %+v", namespace, err)
 	}
 
 	snapshotList := &appstudioApi.SnapshotList{}
 	return utils.WaitUntil(func() (done bool, err error) {
-		if err := h.KubeRest().List(context.Background(), snapshotList, &client.ListOptions{Namespace: namespace}); err != nil {
+		if err := s.KubeRest().List(context.Background(), snapshotList, &client.ListOptions{Namespace: namespace}); err != nil {
 			return false, nil
 		}
 		return len(snapshotList.Items) == 0, nil
 	}, timeout)
+}
+
+// CreateComponentWithDockerSource creates a component based on container image source.
+func (s *SuiteController) CreateComponentWithDockerSource(applicationName, componentName, namespace, gitSourceURL, containerImageSource, outputContainerImage, secret string) (*appstudioApi.Component, error) {
+	component := &appstudioApi.Component{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      componentName,
+			Namespace: namespace,
+		},
+		Spec: appstudioApi.ComponentSpec{
+			ComponentName: componentName,
+			Application:   applicationName,
+			Source: appstudioApi.ComponentSource{
+				ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
+					GitSource: &appstudioApi.GitSource{
+						URL:           gitSourceURL,
+						DockerfileURL: containerImageSource,
+					},
+				},
+			},
+			Secret:         secret,
+			ContainerImage: outputContainerImage,
+			Replicas:       1,
+			TargetPort:     8081,
+			Route:          "",
+		},
+	}
+	err := s.KubeRest().Create(context.TODO(), component)
+	if err != nil {
+		return nil, err
+	}
+	return component, nil
 }
