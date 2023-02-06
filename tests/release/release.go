@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/gomega"
 	applicationapiv1alpha1 "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	appstudiov1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -22,8 +21,6 @@ var snapshotComponents = []applicationapiv1alpha1.SnapshotComponent{
 	{Name: "component-2", ContainerImage: "quay.io/redhat-appstudio/component2@sha256:a01dfd18cf8ca8b68770b09a9b6af0fd7c6d1f8644c7ab97f0e06c34dfc5860e"},
 	{Name: "component-3", ContainerImage: "quay.io/redhat-appstudio/component3@sha256:d90a0a33e4c5a1daf5877f8dd989a570bfae4f94211a8143599245e503775b1f"},
 }
-
-var paramsReleaseStrategy = []appstudiov1alpha1.Params{}
 
 var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-path", Label("release", "HACBS"), func() {
 	defer GinkgoRecover()
@@ -38,12 +35,12 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 	BeforeAll(func() {
 		// Create the dev namespace
 		_, err := framework.CommonController.CreateTestNamespace(devNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", devNamespace, err)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace: %v", err)
 		GinkgoWriter.Println("Dev Namespace :", devNamespace)
 
 		// Create the managed namespace
 		_, err = framework.CommonController.CreateTestNamespace(managedNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", managedNamespace, err)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace: %v", err)
 		GinkgoWriter.Println("Managed Namespace :", managedNamespace)
 
 		// Wait until the "pipeline" SA is created and ready with secrets by the openshift-pipelines operator
@@ -73,10 +70,13 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 	})
 
 	AfterAll(func() {
-
-		// Delete the dev and managed namespaces with all the resources created in them
-		Expect(framework.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
-		Expect(framework.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+		if !CurrentSpecReport().Failed() {
+			// Delete the dev and managed namespaces with all the resources created in them
+			Expect(framework.TektonController.DeleteAllPipelineRunsInASpecificNamespace(devNamespace)).NotTo(HaveOccurred())
+			Expect(framework.TektonController.DeleteAllPipelineRunsInASpecificNamespace(managedNamespace)).NotTo(HaveOccurred())
+			Expect(framework.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
+			Expect(framework.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+		}
 	})
 
 	var _ = Describe("Creation of the 'Happy path' resources", func() {
