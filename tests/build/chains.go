@@ -70,7 +70,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 		var imageWithDigest string
 		serviceAccountName := "pipeline"
 
-		pipelineRunTimeout := 600
+		pipelineRunTimeout := int(time.Duration(20) * time.Minute)
 		attestationTimeout := time.Duration(60) * time.Second
 
 		var kubeController tekton.KubeController

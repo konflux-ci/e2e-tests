@@ -77,10 +77,13 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 	})
 
 	AfterAll(func() {
-
-		// Delete the dev and managed namespaces with all the resources created in them
-		Expect(framework.AsKubeAdmin.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
-		Expect(framework.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+		if !CurrentSpecReport().Failed() {
+			// Delete the dev and managed namespaces with all the resources created in them
+			Expect(framework.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(devNamespace)).NotTo(HaveOccurred())
+			Expect(framework.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(managedNamespace)).NotTo(HaveOccurred())
+			Expect(framework.AsKubeAdmin.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
+			Expect(framework.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+		}
 	})
 
 	var _ = Describe("Creation of the 'Happy path' resources", func() {
