@@ -38,6 +38,10 @@ const (
 	// Skip checking "ApplicationServiceGHTokenSecrName" secret
 	SKIP_HAS_SECRET_CHECK_ENV string = "SKIP_HAS_SECRET_CHECK"
 
+	// Release e2e auth for build and release quay keys
+	QUAY_OAUTH_TOKEN_RELEASE_SOURCE      string = "QUAY_OAUTH_TOKEN_RELEASE_SOURCE"
+	QUAY_OAUTH_TOKEN_RELEASE_DESTINATION string = "QUAY_OAUTH_TOKEN_RELEASE_DESTINATION"
+
 	// Test namespace's required labels
 	ArgoCDLabelKey   string = "argocd.argoproj.io/managed-by"
 	ArgoCDLabelValue string = "gitops-service-argocd"

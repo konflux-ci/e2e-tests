@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/util/wait"

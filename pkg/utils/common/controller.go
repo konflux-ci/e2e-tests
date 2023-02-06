@@ -518,3 +518,72 @@ func (s *SuiteController) ApplicationGitopsRepoExists(devfileContent string) wai
 		return s.Github.CheckIfRepositoryExist(gitOpsRepoURL), nil
 	}
 }
+
+// CreateServiceAccount creates a service account with the provided name and namespace using the given list of secrets.
+func (s *SuiteController) CreateServiceAccount(name, namespace string, serviceAccountSecretList []corev1.ObjectReference) (*corev1.ServiceAccount, error) {
+	serviceAccount := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Secrets: serviceAccountSecretList,
+	}
+	return s.KubeInterface().CoreV1().ServiceAccounts(namespace).Create(context.TODO(), serviceAccount, metav1.CreateOptions{})
+}
+
+// CreateRole creates a role with the provided name and namespace using the given list of rules
+func (s *SuiteController) CreateRole(roleName, namespace string, roleRules map[string][]string) (*rbacv1.Role, error) {
+
+	rules := &rbacv1.PolicyRule{
+		APIGroups: roleRules["apiGroupsList"],
+		Resources: roleRules["roleResources"],
+		Verbs:     roleRules["roleVerbs"],
+	}
+	role := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      roleName,
+			Namespace: namespace,
+		},
+		Rules: []rbacv1.PolicyRule{
+			*rules,
+		},
+	}
+	createdRole, err := s.KubeInterface().RbacV1().Roles(namespace).Create(context.TODO(), role, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return createdRole, nil
+}
+
+// CreateRoleBinding creates an object of Role Binding in namespace with service account provided and role reference api group.
+func (s *SuiteController) CreateRoleBinding(roleBindingName, namespace, subjectKind, serviceAccountName, roleRefKind, roleRefName, roleRefApiGroup string) (*rbacv1.RoleBinding, error) {
+
+	roleBindingSubjects := []rbacv1.Subject{
+		{
+			Kind:      subjectKind,
+			Name:      serviceAccountName,
+			Namespace: namespace,
+		},
+	}
+
+	roleBindingRoleRef := rbacv1.RoleRef{
+		Kind:     roleRefKind,
+		Name:     roleRefName,
+		APIGroup: roleRefApiGroup,
+	}
+
+	roleBinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      roleBindingName,
+			Namespace: namespace,
+		},
+		Subjects: roleBindingSubjects,
+		RoleRef:  roleBindingRoleRef,
+	}
+
+	createdRoleBinding, err := s.KubeInterface().RbacV1().RoleBindings(namespace).Create(context.TODO(), roleBinding, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return createdRoleBinding, nil
+}
