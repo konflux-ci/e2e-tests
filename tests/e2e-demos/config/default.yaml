@@ -10,6 +10,14 @@ tests:
         healthz: "/"
         spec:
           replicas: 2
+  - name: "create an application with springboot component"
+    applicationName: "e2e-springboot"
+    components:
+      - name: "springboot-component"
+        type: "public"
+        gitSourceUrl: "https://github.com/devfile-samples/devfile-sample-java-springboot-basic.git"
+        language: "java"
+        healthz: "/"
   - name: "RHDP-476: create an application with DotNet component"
     applicationName: "e2e-dotnet"
     components:
