@@ -40,9 +40,9 @@ const (
 
 	DEFAULT_TOOLCHAIN_NAMESPACE = "toolchain-host-operator"
 
-	DEFAULT_KEYCLOAK_TESTING_REALM = "testrealm"
+	DEFAULT_KEYCLOAK_TESTING_REALM = "redhat-external"
 
-	DEFAULT_KEYCLOAK_TEST_CLIENT_ID = "sandbox-public"
+	DEFAULT_KEYCLOAK_TEST_CLIENT_ID = "cloud-services"
 )
 
 type SandboxController struct {
