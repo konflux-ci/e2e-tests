@@ -73,3 +73,9 @@ var roleRules = map[string][]string{
 	"roleResources": {"secrets"},
 	"roleVerbs":     {"get", "list", "watch"},
 }
+
+// var myEnvironment = appstudioApi.EnvironmentConfiguration{
+// 	Env: []appstudioApi.EnvVarPair{
+// 		{Name: releaseEnvironment, Value: releaseEnvironment},
+// 	},
+// }
