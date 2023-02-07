@@ -576,7 +576,7 @@ func (s *SuiteController) CreatePVCInAccessMode(name, namespace string, accessMo
 		},
 	}
 
-	createdPVC, err := s.K8sClient.KubeInterface().CoreV1().PersistentVolumeClaims(namespace).Create(context.TODO(), pvc, metav1.CreateOptions{})
+	createdPVC, err := s.KubeInterface().CoreV1().PersistentVolumeClaims(namespace).Create(context.TODO(), pvc, metav1.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}
