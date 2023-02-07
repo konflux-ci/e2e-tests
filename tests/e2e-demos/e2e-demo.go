@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/devfile/library/pkg/util"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -48,6 +49,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	defer GinkgoRecover()
 	var outputContainerImage = ""
 	var timeout, interval time.Duration
+	var namespace string
 
 	// Initialize the application struct
 	application := &appservice.Application{}
@@ -60,13 +62,10 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	GinkgoWriter.Printf("Starting e2e-demo test suites from config: %s\n", configTestFile)
 
 	// Initialize the tests controllers
-	fw, err := framework.NewFramework(E2EDemoTestingNamespace)
+	fw, err := framework.NewFramework(fmt.Sprintf("%s-%s", E2EDemoTestingNamespace, util.GenerateRandomString(4)))
 	Expect(err).NotTo(HaveOccurred())
 	configTest, err := e2eConfig.LoadTestGeneratorConfig(configTestFile)
 	Expect(err).NotTo(HaveOccurred())
-
-	var namespace = fw.UserNamespace
-	Expect(namespace).NotTo(BeEmpty())
 
 	for _, appTest := range configTest.Tests {
 		appTest := appTest
@@ -76,7 +75,8 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				if appTest.Skip {
 					Skip(fmt.Sprintf("test skipped %s", appTest.Name))
 				}
-
+				namespace = fw.UserNamespace
+				Expect(namespace).NotTo(BeEmpty())
 				suiteConfig, _ := GinkgoConfiguration()
 				GinkgoWriter.Printf("Parallel processes: %d\n", suiteConfig.ParallelTotal)
 				GinkgoWriter.Printf("Running on namespace: %s\n", namespace)
