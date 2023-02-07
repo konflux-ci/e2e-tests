@@ -40,6 +40,11 @@ const (
 
 	// Sandbox kubeconfig user path
 	USER_USER_KUBE_CONFIG_PATH_ENV string = "USER_KUBE_CONFIG_PATH"
+	// Release e2e auth for build and release quay keys
+  
+	QUAY_OAUTH_TOKEN_RELEASE_SOURCE      string = "QUAY_OAUTH_TOKEN_RELEASE_SOURCE"
+  
+	QUAY_OAUTH_TOKEN_RELEASE_DESTINATION string = "QUAY_OAUTH_TOKEN_RELEASE_DESTINATION"
 
 	// Test namespace's required labels
 	ArgoCDLabelKey   string = "argocd.argoproj.io/managed-by"

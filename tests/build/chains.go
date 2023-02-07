@@ -33,7 +33,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	Context("infrastructure is running", func() {
+	Context("infrastructure is running", Label("pipeline"), func() {
 		It("verifies if the chains controller is running", func() {
 			err := fwk.AsKubeAdmin.CommonController.WaitForPodSelector(fwk.AsKubeAdmin.CommonController.IsPodRunning, constants.TEKTON_CHAINS_NS, "app", "tekton-chains-controller", 60, 100)
 			Expect(err).NotTo(HaveOccurred())
@@ -60,7 +60,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 		})
 	})
 
-	Context("test creating and signing an image and task", func() {
+	Context("test creating and signing an image and task", Label("pipeline"), func() {
 		// Make the PipelineRun name and namespace predictable. For convenience, the name of the
 		// PipelineRun that builds an image, is the same as the repository where the image is
 		// pushed to.

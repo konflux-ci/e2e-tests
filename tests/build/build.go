@@ -49,7 +49,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	f, err := framework.NewFramework(buildTemplatesE2EUser)
 	Expect(err).NotTo(HaveOccurred())
 
-	Describe("the component with git source (GitHub) is created", Ordered, Label("github-webhook"), func() {
+	Describe("the component with git source (GitHub) is created", Ordered, Label("github-webhook", "pipeline"), func() {
 		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, outputContainerImage, pacControllerHost string
 
 		var timeout, interval time.Duration
