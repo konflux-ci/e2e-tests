@@ -18,7 +18,7 @@ import (
 	klog "k8s.io/klog/v2"
 )
 
-var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deployment", Label("release", "withDeployment", "defaultBundle", "HACBS"), func() {
+var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deployment", Label("release", "withDeployment", "HACBS"), func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	framework, err := framework.NewFramework()
@@ -142,13 +142,13 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 
 	})
 
-	AfterAll(func() {
+	// AfterAll(func() {
 
-		if !CurrentSpecReport().Failed() {
-			Expect(framework.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
-			Expect(framework.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-		}
-	})
+	// 	if !CurrentSpecReport().Failed() {
+	// 		Expect(framework.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
+	// 		Expect(framework.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+	// 	}
+	// })
 
 	var _ = Describe("Post-release verification", func() {
 
