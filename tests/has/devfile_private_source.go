@@ -144,7 +144,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 	})
 
 	It("creates Red Hat AppStudio Quarkus component", func() {
-		component, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, oauthSecretName, applicationName)
+		component, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, oauthSecretName, applicationName, "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(component.Name).To(Equal(componentName))
 	})

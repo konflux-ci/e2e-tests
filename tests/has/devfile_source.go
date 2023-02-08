@@ -135,7 +135,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 	})
 
 	It("creates Red Hat AppStudio Quarkus component", func() {
-		component, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, "", applicationName)
+		component, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, "", applicationName, "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(component.Name).To(Equal(componentName))
 	})
@@ -147,7 +147,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 			comp2Detected.ComponentStub.ComponentName = "java-quarkus2"
 		}
 		component2Name := fmt.Sprintf(QuarkusComponentName+"-%s", util.GenerateRandomString(10))
-		component2, err := framework.HasController.CreateComponentFromStub(comp2Detected, component2Name, testNamespace, "", applicationName)
+		component2, err := framework.HasController.CreateComponentFromStub(comp2Detected, component2Name, testNamespace, "", applicationName, "")
 		Expect(err).NotTo(HaveOccurred())
 
 		err = framework.HasController.DeleteHasComponent(component2.Name, testNamespace, false)

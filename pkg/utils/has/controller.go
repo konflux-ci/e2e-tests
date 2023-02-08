@@ -256,20 +256,24 @@ func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, compone
 }
 
 // CreateComponentFromCDQ create a HAS Component resource from a Completed CDQ resource, which includes a stub Component CR
-func (h *SuiteController) CreateComponentFromStub(compDetected appservice.ComponentDetectionDescription, componentName, namespace, secret, applicationName string) (*appservice.Component, error) {
+func (h *SuiteController) CreateComponentFromStub(compDetected appservice.ComponentDetectionDescription, componentName, namespace, secret, applicationName string, containerImage string) (*appservice.Component, error) {
 	// The Component from the CDQ is only a template, and needs things like name filled in
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"skip-initial-checks": "true",
 			},
-			Name:      componentName,
+			Name:      compDetected.ComponentStub.ComponentName,
 			Namespace: namespace,
 		},
 		Spec: compDetected.ComponentStub,
 	}
 	component.Spec.Secret = secret
 	component.Spec.Application = applicationName
+
+	if containerImage != "" {
+		component.Spec.ContainerImage = ""
+	}
 	err := h.KubeRest().Create(context.TODO(), component)
 	if err != nil {
 		return nil, err
@@ -293,7 +297,6 @@ func (h *SuiteController) DeleteHasComponentDetectionQuery(name string, namespac
 
 // CreateComponentDetectionQuery create a has componentdetectionquery from a given name, namespace, and git source
 func (h *SuiteController) CreateComponentDetectionQuery(cdqName, namespace, gitSourceURL, secret string, isMultiComponent bool) (*appservice.ComponentDetectionQuery, error) {
-
 	componentDetectionQuery := &appservice.ComponentDetectionQuery{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cdqName,
@@ -310,6 +313,24 @@ func (h *SuiteController) CreateComponentDetectionQuery(cdqName, namespace, gitS
 	if err != nil {
 		return nil, err
 	}
+
+	err = utils.WaitUntil(func() (done bool, err error) {
+		componentDetectionQuery, err = h.GetComponentDetectionQuery(componentDetectionQuery.Name, componentDetectionQuery.Namespace)
+		if err != nil {
+			return false, err
+		}
+		for _, condition := range componentDetectionQuery.Status.Conditions {
+			if condition.Type == "Completed" && len(componentDetectionQuery.Status.ComponentDetected) > 0 {
+				return true, nil
+			}
+		}
+		return false, nil
+	}, 3*time.Minute)
+
+	if err != nil {
+		return nil, fmt.Errorf("error waiting for cdq to be ready: %v", err)
+	}
+
 	return componentDetectionQuery, nil
 }
 
