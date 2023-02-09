@@ -42,18 +42,18 @@ const (
 	releasePipelineBundleDefault         string = "quay.io/hacbs-release/pipeline-release:main"
 	roleName                             string = "role-release-service-account"
 
-	namespaceCreationTimeout              = 1 * time.Minute
-	namespaceDeletionTimeout              = 1 * time.Minute
-	snapshotCreationTimeout               = 1 * time.Minute
-	releaseStrategyCreationTimeout        = 1 * time.Minute
-	releasePlanCreationTimeout            = 1 * time.Minute
-	EnterpriseContractPolicyTimeout       = 1 * time.Minute
-	releasePlanAdmissionCreationTimeout   = 1 * time.Minute
-	releaseCreationTimeout                = 1 * time.Minute
-	releasePipelineRunCreationTimeout     = 5 * time.Minute
-	releasePipelineRunCompletionTimeout   = 20 * time.Minute
-	avgControllerQueryTimeout             = 1 * time.Minute
-	pipelineServiceAccountCreationTimeout = 3 * time.Minute
+	namespaceCreationTimeout              = 5 * time.Minute
+	namespaceDeletionTimeout              = 5 * time.Minute
+	snapshotCreationTimeout               = 5 * time.Minute
+	releaseStrategyCreationTimeout        = 5 * time.Minute
+	releasePlanCreationTimeout            = 5 * time.Minute
+	EnterpriseContractPolicyTimeout       = 5 * time.Minute
+	releasePlanAdmissionCreationTimeout   = 5 * time.Minute
+	releaseCreationTimeout                = 5 * time.Minute
+	releasePipelineRunCreationTimeout     = 25 * time.Minute
+	releasePipelineRunCompletionTimeout   = 40 * time.Minute
+	avgControllerQueryTimeout             = 5 * time.Minute
+	pipelineServiceAccountCreationTimeout = 7 * time.Minute
 
 	defaultInterval = 100 * time.Millisecond
 )
