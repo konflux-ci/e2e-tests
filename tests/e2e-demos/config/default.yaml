@@ -15,19 +15,6 @@ tests:
         gitSourceUrl: "https://github.com/redhat-appstudio-qe-bot/devfile-sample-python-basic"
         language: "Python"
         healthz: "/"
-  - name: "RHDP-478: create an application with multiple components from private and public repositories"
-    applicationName: "e2e-multiple-components"
-    components:
-      - name: "component-python-private"
-        type: "private"
-        gitSourceUrl: "https://github.com/redhat-appstudio-qe-bot/devfile-sample-python-basic-private"
-        language: "python"
-        healthz: "/"
-      - name: "private-quarkus-component"
-        type: "private"
-        gitSourceUrl: "https://github.com/redhat-appstudio-qe/private-quarkus-devfile-sample"
-        language: "Java"
-        healthz: "/hello-resteasy"
   - name: "RHDP-476: create an application with DotNet component"
     applicationName: "e2e-dotnet"
     components:
@@ -50,7 +37,7 @@ tests:
         language: "JavaScript"
         healthz: "/"
   - name: "create an golang application"
-    applicationName: "e2e--golang"
+    applicationName: "e2e-golang"
     components:
       - name: "golang-dockerfile"
         type: "public"

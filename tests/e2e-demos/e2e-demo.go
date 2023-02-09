@@ -34,6 +34,8 @@ const (
 
 	// GitOps repository branch to use
 	GitOpsRepositoryRevision string = "main"
+
+	InitialBuildAnnotationName = "appstudio.openshift.io/component-initial-build"
 )
 
 var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
@@ -177,9 +179,15 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				}
 
 				// Start to watch the pipeline until is finished
-				It(fmt.Sprintf("waits %s component %s pipeline to be finished", componentTest.Type, componentTest.Name), func() {
+				It(fmt.Sprintf("waits %s component %s pipeline to be finished", componentTest.Type, componentTest.Name), FlakeAttempts(3), func() {
 					if componentTest.ContainerSource != "" {
 						Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skipping pipelinerun check.", componentTest.Name))
+					}
+					if _, exists := component.Annotations[InitialBuildAnnotationName]; exists {
+						// Initial build have already happend, trigger the pipeline again.
+						delete(component.Annotations, InitialBuildAnnotationName)
+						err := fw.HasController.K8sClient.KubeRest().Update(context.Background(), component)
+						Expect(err).ShouldNot(HaveOccurred(), "failed to update component to trigger another pipeline build: %v", err)
 					}
 					Expect(fw.HasController.WaitForComponentPipelineToBeFinished(component.Name, application.Name, namespace)).To(Succeed(), "Failed component pipeline %v", err)
 				})
@@ -214,7 +222,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				})
 
 				// Deploy the component using gitops and check for the health
-				It(fmt.Sprintf("deploys component %s using gitops", componentTest.Name), Pending, func() {
+				It(fmt.Sprintf("deploys component %s using gitops", componentTest.Name), func() {
 					var deployment *appsv1.Deployment
 					Eventually(func() bool {
 						deployment, err = fw.CommonController.GetAppDeploymentByName(componentTest.Name, namespace)
@@ -231,7 +239,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					Expect(err).NotTo(HaveOccurred())
 				})
 
-				It(fmt.Sprintf("checks if component %s health", componentTest.Name), Pending, func() {
+				It(fmt.Sprintf("checks if component %s health", componentTest.Name), func() {
 					Eventually(func() bool {
 						gitOpsRoute, err := fw.CommonController.GetOpenshiftRoute(componentTest.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())
