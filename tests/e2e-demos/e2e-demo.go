@@ -210,7 +210,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 						snapshot, err = fw.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, component.Name)
 						Expect(err).ShouldNot(HaveOccurred())
 						return false
-					}, timeout, interval).Should(BeTrue(), "time out when trying to check if SnapshotEnvironmentBinding is created")
+					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("time out when trying to check if SnapshotEnvironmentBinding is created (snapshot: %s, env: %s)", snapshot.Name, env.Name))
 				})
 
 				// Deploy the component using gitops and check for the health
