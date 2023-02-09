@@ -179,15 +179,9 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				}
 
 				// Start to watch the pipeline until is finished
-				It(fmt.Sprintf("waits %s component %s pipeline to be finished", componentTest.Type, componentTest.Name), FlakeAttempts(3), func() {
+				It(fmt.Sprintf("waits %s component %s pipeline to be finished", componentTest.Type, componentTest.Name), func() {
 					if componentTest.ContainerSource != "" {
 						Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skipping pipelinerun check.", componentTest.Name))
-					}
-					if _, exists := component.Annotations[InitialBuildAnnotationName]; exists {
-						// Initial build have already happend, trigger the pipeline again.
-						delete(component.Annotations, InitialBuildAnnotationName)
-						err := fw.HasController.K8sClient.KubeRest().Update(context.Background(), component)
-						Expect(err).ShouldNot(HaveOccurred(), "failed to update component to trigger another pipeline build: %v", err)
 					}
 					Expect(fw.HasController.WaitForComponentPipelineToBeFinished(component.Name, application.Name, namespace)).To(Succeed(), "Failed component pipeline %v", err)
 				})
