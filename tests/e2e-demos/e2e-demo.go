@@ -194,7 +194,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					Eventually(func() bool {
 						return fw.IntegrationController.HaveHACBSTestsSucceeded(snapshot)
 
-					}, timeout, interval).Should(BeTrue(), "time out when trying to check if the snapshot is marked as successful")
+					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("time out when trying to check if the snapshot %s is marked as successful", snapshot.Name))
 				})
 
 				It("checks if a snapshot environment binding is created successfully", func() {
@@ -203,14 +203,14 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 							envbinding, err := fw.IntegrationController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
 							Expect(err).ShouldNot(HaveOccurred())
 							Expect(envbinding != nil).To(BeTrue())
-							GinkgoWriter.Printf("The EnvironmentBinding %s is created\n", envbinding.Name)
+							GinkgoWriter.Printf("The SnapshotEnvironmentBinding %s is created\n", envbinding.Name)
 							return true
 						}
 
 						snapshot, err = fw.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, component.Name)
 						Expect(err).ShouldNot(HaveOccurred())
 						return false
-					}, timeout, interval).Should(BeTrue(), "time out when waiting for release created")
+					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("time out when trying to check if SnapshotEnvironmentBinding is created (snapshot: %s, env: %s)", snapshot.Name, env.Name))
 				})
 
 				// Deploy the component using gitops and check for the health
