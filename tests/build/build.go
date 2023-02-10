@@ -142,8 +142,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		It("triggers a PipelineRun", func() {
-			timeout = time.Second * 120
-			interval = time.Second * 1
+			timeout = time.Minute * 5
+			interval = time.Second * 5
 			Eventually(func() bool {
 				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true, "")
 				if err != nil {
