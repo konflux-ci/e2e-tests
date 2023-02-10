@@ -34,6 +34,8 @@ const (
 
 	// GitOps repository branch to use
 	GitOpsRepositoryRevision string = "main"
+
+	InitialBuildAnnotationName = "appstudio.openshift.io/component-initial-build"
 )
 
 var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
@@ -46,6 +48,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	component := &appservice.Component{}
 	snapshot := &appservice.Snapshot{}
 	env := &appservice.Environment{}
+	cdq := &appservice.ComponentDetectionQuery{}
 
 	// Initialize the e2e demo configuration
 	configTestFile := viper.GetString("config-suites")
@@ -126,7 +129,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 			for _, componentTest := range appTest.Components {
 				var oauthSecretName = ""
-
 				componentTest := componentTest
 				var containerIMG = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 
@@ -148,6 +150,13 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					})
 				}
 
+				It("creates componentdetectionquery", func() {
+					cdq, err = fw.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, oauthSecretName, false)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+
+				})
+
 				// Components for now can be imported from gitUrl, container image or a devfile
 				if componentTest.ContainerSource != "" {
 					It(fmt.Sprintf("creates component %s from %s container source", componentTest.Name, componentTest.Type), func() {
@@ -155,25 +164,17 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 						Expect(err).NotTo(HaveOccurred())
 					})
 
-					// User can define a git url and a devfile at the same time if multiple devfile exists into a repo
-				} else if componentTest.GitSourceUrl != "" && componentTest.Devfilesource != "" {
-					It(fmt.Sprintf("creates component %s from %s git source %s and devfile %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl, componentTest.Devfilesource), func() {
-						component, err = fw.HasController.CreateComponentFromDevfile(application.Name, componentTest.Name, namespace,
-							componentTest.GitSourceUrl, componentTest.Devfilesource, "", containerIMG, oauthSecretName)
-						Expect(err).NotTo(HaveOccurred())
-					})
-
-					// If component have only a git source application-service will start to fetch the devfile from the git root directory
 				} else if componentTest.GitSourceUrl != "" {
 					It(fmt.Sprintf("creates component %s from %s git source %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl), func() {
-						component, err = fw.HasController.CreateComponent(application.Name, componentTest.Name, namespace,
-							componentTest.GitSourceUrl, "", "", containerIMG, oauthSecretName, true)
-						Expect(err).NotTo(HaveOccurred())
+						for _, compDetected := range cdq.Status.ComponentDetected {
+							component, err = fw.HasController.CreateComponentFromStub(compDetected, componentTest.Name, namespace, oauthSecretName, appTest.ApplicationName, containerIMG)
+							Expect(err).NotTo(HaveOccurred())
+						}
 					})
 
 				} else {
 					defer GinkgoRecover()
-					Fail("Please Provide a valid test configuration")
+					Fail("Please Provide a valid test sample")
 				}
 
 				// Start to watch the pipeline until is finished
@@ -214,10 +215,10 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				})
 
 				// Deploy the component using gitops and check for the health
-				It(fmt.Sprintf("deploys component %s using gitops", componentTest.Name), func() {
+				It(fmt.Sprintf("deploys component %s using gitops", component.Name), func() {
 					var deployment *appsv1.Deployment
 					Eventually(func() bool {
-						deployment, err = fw.CommonController.GetAppDeploymentByName(componentTest.Name, namespace)
+						deployment, err = fw.CommonController.GetAppDeploymentByName(component.Name, namespace)
 						if err != nil && !errors.IsNotFound(err) {
 							return false
 						}
@@ -231,9 +232,9 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					Expect(err).NotTo(HaveOccurred())
 				})
 
-				It(fmt.Sprintf("checks if component %s health", componentTest.Name), func() {
+				It(fmt.Sprintf("checks if component %s health", component.Name), func() {
 					Eventually(func() bool {
-						gitOpsRoute, err := fw.CommonController.GetOpenshiftRoute(componentTest.Name, namespace)
+						gitOpsRoute, err := fw.CommonController.GetOpenshiftRoute(component.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())
 						err = fw.GitOpsController.CheckGitOpsEndpoint(gitOpsRoute, componentTest.HealthEndpoint)
 						if err != nil {
@@ -244,14 +245,14 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				})
 
 				if componentTest.K8sSpec != (config.K8sSpec{}) && *componentTest.K8sSpec.Replicas > 1 {
-					It(fmt.Sprintf("scales component %s replicas", componentTest.Name), Pending, func() {
-						component, err := fw.HasController.GetHasComponent(componentTest.Name, namespace)
+					It(fmt.Sprintf("scales component %s replicas", component.Name), Pending, func() {
+						component, err := fw.HasController.GetHasComponent(component.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())
 						_, err = fw.HasController.ScaleComponentReplicas(component, int(*componentTest.K8sSpec.Replicas))
 						Expect(err).NotTo(HaveOccurred())
 
 						Eventually(func() bool {
-							deployment, _ := fw.CommonController.GetAppDeploymentByName(componentTest.Name, namespace)
+							deployment, _ := fw.CommonController.GetAppDeploymentByName(component.Name, namespace)
 							if err != nil && !errors.IsNotFound(err) {
 								return false
 							}
