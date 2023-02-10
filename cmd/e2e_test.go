@@ -27,8 +27,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-const ()
-
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	return nil
 }, func(data []byte) {})

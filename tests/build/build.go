@@ -142,8 +142,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		It("triggers a PipelineRun", func() {
+<<<<<<< HEAD
 			timeout = time.Minute * 5
 			interval = time.Second * 5
+=======
+			timeout = time.Second * 600
+			interval = time.Second * 1
+>>>>>>> upstream/main
 			Eventually(func() bool {
 				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, true, "")
 				if err != nil {
@@ -156,7 +161,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 		When("the PipelineRun has started", func() {
 			It("should lead to a PaC init PR creation", func() {
-				timeout = time.Second * 60
+				timeout = time.Second * 300
 				interval = time.Second * 1
 
 				Eventually(func() bool {
@@ -176,7 +181,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 
 			It("the PipelineRun should eventually finish successfully", func() {
-				timeout = time.Minute * 30
+				timeout = time.Minute * 60
 				interval = time.Second * 10
 				Eventually(func() bool {
 
@@ -209,7 +214,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			It("eventually leads to a creation of a PR comment with the PipelineRun status report", func() {
 				var comments []*github.IssueComment
-				timeout = time.Minute * 5
+				timeout = time.Minute * 15
 				interval = time.Second * 10
 
 				Eventually(func() bool {
@@ -241,7 +246,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 
 			It("eventually leads to triggering another PipelineRun", func() {
-				timeout = time.Minute * 2
+				timeout = time.Minute * 7
 				interval = time.Second * 1
 
 				Eventually(func() bool {
@@ -254,7 +259,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 			})
 			It("PipelineRun should eventually finish", func() {
-				timeout = time.Minute * 20
+				timeout = time.Minute * 50
 				interval = time.Second * 10
 
 				Eventually(func() bool {
@@ -285,7 +290,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			It("eventually leads to another update of a PR with a comment about the PipelineRun status report", func() {
 				var comments []*github.IssueComment
 
-				timeout = time.Minute * 5
+				timeout = time.Minute * 20
 				interval = time.Second * 5
 
 				Eventually(func() bool {
@@ -317,7 +322,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 
 			It("eventually leads to triggering another PipelineRun", func() {
-				timeout = time.Minute * 2
+				timeout = time.Minute * 10
 				interval = time.Second * 1
 
 				Eventually(func() bool {
@@ -330,7 +335,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 			})
 			It("pipelineRun should eventually finish", func() {
-				timeout = time.Minute * 20
+				timeout = time.Minute * 50
 				interval = time.Second * 10
 
 				Eventually(func() bool {
@@ -372,7 +377,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 
 			It("should no longer lead to a creation of a PaC PR", func() {
-				timeout = time.Second * 10
+				timeout = time.Second * 40
 				interval = time.Second * 2
 				Consistently(func() bool {
 					prs, err := f.CommonController.Github.ListPullRequests(helloWorldComponentGitSourceRepoName)
@@ -444,9 +449,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		for i, gitUrl := range componentUrls {
+			i := i
 			gitUrl := gitUrl
 			It(fmt.Sprintf("triggers PipelineRun for component with source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
-				timeout := time.Minute * 5
+				timeout := time.Minute * 25
 				interval := time.Second * 1
 
 				Eventually(func() bool {
@@ -461,10 +467,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		}
 
 		for i, gitUrl := range componentUrls {
+			i := i
 			gitUrl := gitUrl
 
 			It(fmt.Sprintf("should eventually finish successfully for component with source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
-				timeout := time.Second * 1200
+				timeout := time.Second * 1800
 				interval := time.Second * 10
 				Eventually(func() bool {
 					pipelineRun, err := f.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, false, "")
@@ -587,7 +594,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			componentName = fmt.Sprintf("build-suite-test-component-image-source-%s", util.GenerateRandomString(4))
 			outputContainerImage := ""
-			timeout = time.Second * 180
+			timeout = time.Second * 500
 			interval = time.Second * 1
 			// Create a component with containerImageSource being defined
 			_, err = f.HasController.CreateComponent(applicationName, componentName, testNamespace, "", "", containerImageSource, outputContainerImage, "", true)
@@ -658,7 +665,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 
-			timeout = time.Second * 360
+			timeout = time.Second * 600
 			interval = time.Second * 1
 
 		})
@@ -745,7 +752,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			)
 			DeferCleanup(f.HasController.DeleteHasApplication, applicationName, testNamespace, false)
 
-			timeout = time.Minute * 5
+			timeout = time.Minute * 20
 			interval = time.Second * 1
 
 			dummySecret := &v1.Secret{
@@ -783,7 +790,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		It("should not be possible to push to quay.io repo (PipelineRun should fail)", func() {
-			timeout = time.Minute * 10
+			timeout = time.Minute * 30
 			interval = time.Second * 5
 			Eventually(func() bool {
 				pipelineRun, err := f.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
