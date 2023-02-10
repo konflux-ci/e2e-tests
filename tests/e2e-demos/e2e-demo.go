@@ -92,7 +92,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					Expect(fw.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 					Expect(fw.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)).To(Succeed())
 					Expect(fw.GitOpsController.DeleteAllGitOpsDeploymentInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-					Expect(fw.CommonController.DeleteNamespace(namespace))
 				}
 			})
 
@@ -216,10 +215,10 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				})
 
 				// Deploy the component using gitops and check for the health
-				It(fmt.Sprintf("deploys component %s using gitops", componentTest.Name), func() {
+				It(fmt.Sprintf("deploys component %s using gitops", component.Name), func() {
 					var deployment *appsv1.Deployment
 					Eventually(func() bool {
-						deployment, err = fw.CommonController.GetAppDeploymentByName(componentTest.Name, namespace)
+						deployment, err = fw.CommonController.GetAppDeploymentByName(component.Name, namespace)
 						if err != nil && !errors.IsNotFound(err) {
 							return false
 						}
@@ -233,9 +232,9 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					Expect(err).NotTo(HaveOccurred())
 				})
 
-				It(fmt.Sprintf("checks if component %s health", componentTest.Name), func() {
+				It(fmt.Sprintf("checks if component %s health", component.Name), func() {
 					Eventually(func() bool {
-						gitOpsRoute, err := fw.CommonController.GetOpenshiftRoute(componentTest.Name, namespace)
+						gitOpsRoute, err := fw.CommonController.GetOpenshiftRoute(component.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())
 						err = fw.GitOpsController.CheckGitOpsEndpoint(gitOpsRoute, componentTest.HealthEndpoint)
 						if err != nil {
@@ -246,14 +245,14 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				})
 
 				if componentTest.K8sSpec != (config.K8sSpec{}) && *componentTest.K8sSpec.Replicas > 1 {
-					It(fmt.Sprintf("scales component %s replicas", componentTest.Name), Pending, func() {
-						component, err := fw.HasController.GetHasComponent(componentTest.Name, namespace)
+					It(fmt.Sprintf("scales component %s replicas", component.Name), Pending, func() {
+						component, err := fw.HasController.GetHasComponent(component.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())
 						_, err = fw.HasController.ScaleComponentReplicas(component, int(*componentTest.K8sSpec.Replicas))
 						Expect(err).NotTo(HaveOccurred())
 
 						Eventually(func() bool {
-							deployment, _ := fw.CommonController.GetAppDeploymentByName(componentTest.Name, namespace)
+							deployment, _ := fw.CommonController.GetAppDeploymentByName(component.Name, namespace)
 							if err != nil && !errors.IsNotFound(err) {
 								return false
 							}

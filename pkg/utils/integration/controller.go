@@ -144,7 +144,10 @@ func (h *SuiteController) CreateEnvironment(namespace string) (*appstudioApi.Env
 			Tags:               []string{},
 			Configuration: appstudioApi.EnvironmentConfiguration{
 				Env: []appstudioApi.EnvVarPair{
-					{},
+					{
+						Name:  "var_name",
+						Value: "test",
+					},
 				},
 			},
 		},
