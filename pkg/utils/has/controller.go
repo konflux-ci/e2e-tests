@@ -196,7 +196,7 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 		return nil, err
 	}
 	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*2); err != nil {
-		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v, component: %+v", componentName, namespace, component, err)
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentName, namespace, utils.ToPrettyJSONString(component))
 	}
 	return component, nil
 }
@@ -250,7 +250,7 @@ func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, compone
 		return nil, err
 	}
 	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*2); err != nil {
-		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v, component: %+v", componentName, namespace, component, err)
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentName, namespace, utils.ToPrettyJSONString(component))
 	}
 	return component, nil
 }
@@ -279,7 +279,7 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 		return nil, err
 	}
 	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*2); err != nil {
-		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v, component: %+v", componentName, namespace, component, err)
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentName, namespace, utils.ToPrettyJSONString(component))
 	}
 	return component, nil
 }
@@ -478,7 +478,7 @@ func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentN
 		return nil, err
 	}
 	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*2); err != nil {
-		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace: %+v, component: %+v", componentName, namespace, component, err)
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentName, namespace, utils.ToPrettyJSONString(component))
 	}
 	return component, nil
 }
