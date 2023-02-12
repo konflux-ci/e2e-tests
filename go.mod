@@ -3,7 +3,6 @@ module github.com/redhat-appstudio/e2e-tests
 go 1.18
 
 require (
-	github.com/avast/retry-go/v4 v4.3.2
 	github.com/codeready-toolchain/api v0.0.0-20220511141428-1adfed7d17b0
 	github.com/codeready-toolchain/toolchain-e2e v0.0.0-20220525131508-60876bfb99d3
 	github.com/devfile/library v1.2.1-0.20211104222135-49d635cb492f
@@ -209,7 +208,11 @@ require (
 	go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
+<<<<<<< HEAD
 	go.uber.org/zap v1.24.0 // indirect
+=======
+	go.uber.org/zap v1.23.0 // indirect
+>>>>>>> upstream/main
 	golang.org/x/crypto v0.2.0 // indirect
 	golang.org/x/mod v0.6.0 // indirect
 	golang.org/x/net v0.3.1-0.20221206200815-1e63c2f08a10 // indirect

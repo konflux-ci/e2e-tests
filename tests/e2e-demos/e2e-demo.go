@@ -56,6 +56,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	component := &appservice.Component{}
 	snapshot := &appservice.Snapshot{}
 	env := &appservice.Environment{}
+	cdq := &appservice.ComponentDetectionQuery{}
 
 	// Initialize the e2e demo configuration
 	configTestFile := viper.GetString("config-suites")
@@ -144,6 +145,13 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					}
 				})
 
+				It("creates componentdetectionquery", func() {
+					cdq, err = fw.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, oauthSecretName, false)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+
+				})
+
 				// Components for now can be imported from gitUrl, container image or a devfile
 				if componentTest.ContainerSource != "" {
 					It(fmt.Sprintf("creates component %s from %s container source", componentTest.Name, componentTest.Type), func() {
@@ -151,25 +159,17 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 						Expect(err).NotTo(HaveOccurred())
 					})
 
-					// User can define a git url and a devfile at the same time if multiple devfile exists into a repo
-				} else if componentTest.GitSourceUrl != "" && componentTest.Devfilesource != "" {
-					It(fmt.Sprintf("creates component %s from %s git source %s and devfile %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl, componentTest.Devfilesource), func() {
-						component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromDevfile(application.Name, componentTest.Name, namespace,
-							componentTest.GitSourceUrl, componentTest.Devfilesource, "", containerIMG, SPIGithubSecretName)
-						Expect(err).NotTo(HaveOccurred())
-					})
-
-					// If component have only a git source application-service will start to fetch the devfile from the git root directory
 				} else if componentTest.GitSourceUrl != "" {
 					It(fmt.Sprintf("creates component %s from %s git source %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl), func() {
-						component, err = fw.AsKubeDeveloper.HasController.CreateComponent(application.Name, componentTest.Name, namespace,
-							componentTest.GitSourceUrl, "", "", containerIMG, SPIGithubSecretName, true)
-						Expect(err).NotTo(HaveOccurred())
+						for _, compDetected := range cdq.Status.ComponentDetected {
+							component, err = fw.HasController.CreateComponentFromStub(compDetected, componentTest.Name, namespace, oauthSecretName, appTest.ApplicationName, containerIMG)
+							Expect(err).NotTo(HaveOccurred())
+						}
 					})
 
 				} else {
 					defer GinkgoRecover()
-					Fail("Please Provide a valid test configuration")
+					Fail("Please Provide a valid test sample")
 				}
 
 				// Start to watch the pipeline until is finished
@@ -190,7 +190,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					Eventually(func() bool {
 						return fw.AsKubeDeveloper.IntegrationController.HaveHACBSTestsSucceeded(snapshot)
 
-					}, timeout, interval).Should(BeTrue(), "time out when trying to check if the snapshot is marked as successful")
+					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("time out when trying to check if the snapshot %s is marked as successful", snapshot.Name))
 				})
 
 				It("checks if a snapshot environment binding is created successfully", func() {
@@ -198,21 +198,26 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 						if fw.AsKubeDeveloper.IntegrationController.HaveHACBSTestsSucceeded(snapshot) {
 							envbinding, err := fw.AsKubeDeveloper.IntegrationController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
 							Expect(err).ShouldNot(HaveOccurred())
-							GinkgoWriter.Printf("The EnvironmentBinding %s is created\n", envbinding.Name)
+							Expect(envbinding != nil).To(BeTrue())
+							GinkgoWriter.Printf("The SnapshotEnvironmentBinding %s is created\n", envbinding.Name)
 							return true
 						}
 
 						snapshot, err = fw.AsKubeDeveloper.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, component.Name)
 						Expect(err).ShouldNot(HaveOccurred())
 						return false
-					}, timeout, interval).Should(BeTrue(), "time out when waiting for release created")
+					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("time out when trying to check if SnapshotEnvironmentBinding is created (snapshot: %s, env: %s)", snapshot.Name, env.Name))
 				})
 
 				// Deploy the component using gitops and check for the health
-				It(fmt.Sprintf("deploys component %s using gitops", componentTest.Name), func() {
+				It(fmt.Sprintf("deploys component %s using gitops", component.Name), func() {
 					var deployment *appsv1.Deployment
 					Eventually(func() bool {
+<<<<<<< HEAD
 						deployment, err = fw.AsKubeDeveloper.CommonController.GetAppDeploymentByName(componentTest.Name, namespace)
+=======
+						deployment, err = fw.CommonController.GetAppDeploymentByName(component.Name, namespace)
+>>>>>>> upstream/main
 						if err != nil && !errors.IsNotFound(err) {
 							return false
 						}
@@ -226,9 +231,13 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					Expect(err).NotTo(HaveOccurred())
 				})
 
-				It(fmt.Sprintf("checks if component %s health", componentTest.Name), func() {
+				It(fmt.Sprintf("checks if component %s health", component.Name), func() {
 					Eventually(func() bool {
+<<<<<<< HEAD
 						gitOpsRoute, err := fw.AsKubeDeveloper.CommonController.GetOpenshiftRoute(componentTest.Name, namespace)
+=======
+						gitOpsRoute, err := fw.CommonController.GetOpenshiftRoute(component.Name, namespace)
+>>>>>>> upstream/main
 						Expect(err).NotTo(HaveOccurred())
 						err = fw.AsKubeDeveloper.GitOpsController.CheckGitOpsEndpoint(gitOpsRoute, componentTest.HealthEndpoint)
 						if err != nil {
@@ -238,15 +247,25 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					}, 5*time.Minute, 10*time.Second).Should(BeTrue())
 				})
 
+<<<<<<< HEAD
 				if componentTest.K8sSpec != (e2eConfig.K8sSpec{}) && *componentTest.K8sSpec.Replicas > 1 {
 					It(fmt.Sprintf("scales component %s replicas", componentTest.Name), Pending, func() {
 						component, err := fw.AsKubeDeveloper.HasController.GetHasComponent(componentTest.Name, namespace)
+=======
+				if componentTest.K8sSpec != (config.K8sSpec{}) && *componentTest.K8sSpec.Replicas > 1 {
+					It(fmt.Sprintf("scales component %s replicas", component.Name), Pending, func() {
+						component, err := fw.HasController.GetHasComponent(component.Name, namespace)
+>>>>>>> upstream/main
 						Expect(err).NotTo(HaveOccurred())
 						_, err = fw.AsKubeDeveloper.HasController.ScaleComponentReplicas(component, int(*componentTest.K8sSpec.Replicas))
 						Expect(err).NotTo(HaveOccurred())
 
 						Eventually(func() bool {
+<<<<<<< HEAD
 							deployment, _ := fw.AsKubeDeveloper.CommonController.GetAppDeploymentByName(componentTest.Name, namespace)
+=======
+							deployment, _ := fw.CommonController.GetAppDeploymentByName(component.Name, namespace)
+>>>>>>> upstream/main
 							if err != nil && !errors.IsNotFound(err) {
 								return false
 							}

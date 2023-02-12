@@ -240,7 +240,7 @@ func (ci CI) setRequiredEnvVars() error {
 			case "application-service":
 				envVarPrefix = "HAS"
 				imageTagSuffix = "has-image"
-				testSuiteLabel = "has"
+				testSuiteLabel = "has,e2e-demo"
 			case "build-service":
 				envVarPrefix = "BUILD_SERVICE"
 				imageTagSuffix = "build-service-image"
