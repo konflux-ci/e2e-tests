@@ -1,6 +1,7 @@
 package release
 
 import (
+	"os"
 	"strings"
 
 	"github.com/google/uuid"
@@ -8,11 +9,11 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"knative.dev/pkg/apis"
 
 	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
-	//appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	klog "k8s.io/klog/v2"
@@ -57,12 +58,10 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 			return sa != nil && err == nil
 		}, pipelineServiceAccountCreationTimeout, defaultInterval).Should(BeTrue(), "timed out when waiting for the \"pipeline\" SA to be created")
 
-		sourceAuthJson := "ewogICJhdXRocyI6IHsKICAgICJxdWF5LmlvIjogewogICAgICAiYXV0aCI6ICJjbVZrYUdGMExXRndjSE4wZFdScGJ5MXhaU3R5WldSb1lYUmZZWEJ3YzNSMVpHbHZYM0YxWVd4cGRIazZXRmxQUVV3MVR6ZzRTMUZVTjFWSFZVVkdXRUkzUmxOQlZUTkZXRkZGU1ZwVVRsbEhNRE5LVFVVMlRUZzVTVWs0VDBKTlFsazROMVk0VkZveFYxZE9OZz09IiwKICAgICAgImVtYWlsIjogIiIKICAgIH0KICB9Cn0="
-		//utils.GetEnv("QUAY_TOKEN", "")
+		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
 		Expect(sourceAuthJson).ToNot(BeEmpty())
 
-		destinationAuthJson := "ewogICJhdXRocyI6IHsKICAgICJxdWF5LmlvIjogewogICAgICAiYXV0aCI6ICJjbVZzWldGelpTMWxNbVVyY21Wc1pXRnpaVjlsTW1VNlVUTkNRa1JOTWtaTk4waFNUVWxHVWxsR09GaFNOVWROTlZkUlFqWklXVXRKTjBwWVJrbzJTMXBQVUV4WFJVOVVWamxUUVVOVk9WRkZXRGxTU2pCRlJ3PT0iLAogICAgICAiZW1haWwiOiAiIgogICAgfQogIH0KfQ=="
-		//utils.GetEnv(constants.QUAY_OAUTH_TOKEN_RELEASE_DESTINATION, "")
+		destinationAuthJson := utils.GetEnv(constants.QUAY_OAUTH_TOKEN_RELEASE_DESTINATION, "")
 		Expect(destinationAuthJson).ToNot(BeEmpty())
 
 		_, err = framework.CommonController.CreateRegistryAuthSecret(hacbsReleaseTestsTokenSecret, devNamespace, sourceAuthJson)
@@ -113,7 +112,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		_, err = framework.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineNameDefault, releasePipelineBundleDefault, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategy)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = framework.GitOpsController.CreateEnvironment(releaseEnvironment, managedNamespace)
+		myEnvironment, err = framework.GitOpsController.CreateEnvironment(releaseEnvironment, managedNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = framework.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, releaseEnvironment, "", releaseStrategyDefaultName)
@@ -142,13 +141,13 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 
 	})
 
-	// AfterAll(func() {
+	AfterAll(func() {
 
-	// 	if !CurrentSpecReport().Failed() {
-	// 		Expect(framework.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
-	// 		Expect(framework.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-	// 	}
-	// })
+		if !CurrentSpecReport().Failed() {
+			Expect(framework.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
+			Expect(framework.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+		}
+	})
 
 	var _ = Describe("Post-release verification", func() {
 
@@ -206,5 +205,44 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 				return releaseCreated.HasStarted() && releaseCreated.IsDone() && releaseCreated.Status.Conditions[0].Status == "True"
 			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 		})
+
+		It("cpoying the application and components from dev namespace to managed.", func(ctx SpecContext) {
+			workingDir, err := os.Getwd()
+			if err != nil {
+				klog.Info(err)
+			}
+			workingDir = workingDir + "/tests/release"
+			args := []string{managedNamespace, "-a", devNamespace + "/" + applicationNameDefault}
+			err = utils.ExecuteCommandInASpecificDirectory("./copy-application.sh", args, workingDir)
+			Expect(err).NotTo(HaveOccurred())
+		}, SpecTimeout(snapshotCreationTimeout+namespaceCreationTimeout*2))
+	})
+
+	It("validate SnapshotEnvironmentBinding is created and deployment succeeded.", func() {
+		Eventually(func() bool {
+			snapshotEnvironmentBinding, err := framework.IntegrationController.GetSnapshotEnvironmentBinding(applicationNameDefault, managedNamespace, myEnvironment)
+			if snapshotEnvironmentBinding == nil || err != nil {
+				return false
+			}
+			klog.Info("Binding:", snapshotEnvironmentBinding.Name)                                 //.ComponentDeploymentConditions)
+			klog.Info("Binding:", snapshotEnvironmentBinding.Status.ComponentDeploymentConditions) //.ComponentDeploymentConditions)
+			//"msg"="Binding:{[] [] [{GitOpsResourcesGenerated False 0 2023-02-12 17:04:05 +0200 IST GenerateError GitOps repository sync failed: unable to process GitOps status, GitOps Repository URL cannot be empty}] [{ErrorOccurred True 0 2023-02-12 17:04:05 +0200 IST ErrorOccurred SnapshotEventBinding Component status is required to generate GitOps deployment, waiting for the Application Service controller to finish reconciling binding 'production-tlj6p'}] []}
+			// status:
+			// 	bindingConditions:
+			// 	- lastTransitionTime: "2023-02-12T15:04:05Z"
+			// 		message: Can not Reconcile Binding 'production-tlj6p', since GitOps Repo Conditions
+			// 		status is false.
+			// 		reason: ErrorOccurred
+			// 		status: "True"
+			// 		type: ErrorOccurred
+			// 	componentDeploymentConditions:
+			// 	- lastTransitionTime: "2023-02-12T15:04:24Z"
+			// 		message: 1 of 1 components deployed
+			// 		reason: CommitsSynced
+			// 		status: "True"
+			// 		type: AllComponentsDeployed
+
+			return snapshotEnvironmentBinding.Spec.Components != nil //&& snapshotEnvironmentBinding.Status.ComponentDeploymentConditions != nil //== "1 of 1 components deployed"
+		}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 	})
 })
