@@ -5,6 +5,7 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	"github.com/redhat-appstudio/e2e-tests/pkg/sandbox"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/gitops"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/has"
@@ -21,6 +22,7 @@ type UserControllerHub struct {
 	GitOpsController          *gitops.SuiteController
 	SPIController             *spi.SuiteController
 	IntegrationController     *integration.SuiteController
+	TektonController          *tekton.SuiteController
 	JvmbuildserviceController *jvmbuildservice.SuiteController
 }
 
@@ -36,9 +38,10 @@ type AdminControllerHub struct {
 }
 
 type Framework struct {
-	AsKubeAdmin     *AdminControllerHub
-	AsKubeDeveloper *UserControllerHub
-	UserNamespace   string
+	AsKubeAdmin       *AdminControllerHub
+	AsKubeDeveloper   *UserControllerHub
+	SandboxController *sandbox.SandboxController
+	UserNamespace     string
 }
 
 func NewFramework(userName string) (*Framework, error) {
@@ -71,9 +74,10 @@ func NewFramework(userName string) (*Framework, error) {
 	}
 
 	return &Framework{
-		AsKubeAdmin:     asAdmin,
-		AsKubeDeveloper: asUser,
-		UserNamespace:   fmt.Sprintf("%s-tenant", k.UserName),
+		AsKubeAdmin:       asAdmin,
+		AsKubeDeveloper:   asUser,
+		SandboxController: k.SandboxController,
+		UserNamespace:     fmt.Sprintf("%s-tenant", k.UserName),
 	}, nil
 }
 
@@ -165,6 +169,9 @@ func initUserControllerHub(cc *kubeCl.CustomClient) (*UserControllerHub, error) 
 		return nil, err
 	}
 
+	// Initialize Tekton controller
+	tektonController := tekton.NewSuiteController(cc)
+
 	return &UserControllerHub{
 		HasController:             hasController,
 		CommonController:          commonCtrl,
@@ -172,5 +179,6 @@ func initUserControllerHub(cc *kubeCl.CustomClient) (*UserControllerHub, error) 
 		GitOpsController:          gitopsController,
 		IntegrationController:     integrationController,
 		JvmbuildserviceController: jvmbuildserviceController,
+		TektonController:          tektonController,
 	}, nil
 }

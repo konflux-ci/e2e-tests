@@ -130,7 +130,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 	})
 
 	It("creates Red Hat AppStudio Quarkus component", func() {
-		_, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, oauthSecretName, applicationName, "")
+		_, err := framework.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, oauthSecretName, applicationName, "")
 		Expect(err).NotTo(HaveOccurred())
 	})
 })

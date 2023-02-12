@@ -13,6 +13,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
 	e2eConfig "github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
 	"github.com/spf13/viper"
 	appsv1 "k8s.io/api/apps/v1"
@@ -146,7 +147,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				})
 
 				It("creates componentdetectionquery", func() {
-					cdq, err = fw.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, oauthSecretName, false)
+					cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, SPIGithubSecretName, false)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
 
@@ -162,7 +163,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				} else if componentTest.GitSourceUrl != "" {
 					It(fmt.Sprintf("creates component %s from %s git source %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl), func() {
 						for _, compDetected := range cdq.Status.ComponentDetected {
-							component, err = fw.HasController.CreateComponentFromStub(compDetected, componentTest.Name, namespace, oauthSecretName, appTest.ApplicationName, containerIMG)
+							component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, componentTest.Name, namespace, SPIGithubSecretName, appTest.ApplicationName, containerIMG)
 							Expect(err).NotTo(HaveOccurred())
 						}
 					})
@@ -213,11 +214,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				It(fmt.Sprintf("deploys component %s using gitops", component.Name), func() {
 					var deployment *appsv1.Deployment
 					Eventually(func() bool {
-<<<<<<< HEAD
-						deployment, err = fw.AsKubeDeveloper.CommonController.GetAppDeploymentByName(componentTest.Name, namespace)
-=======
-						deployment, err = fw.CommonController.GetAppDeploymentByName(component.Name, namespace)
->>>>>>> upstream/main
+						deployment, err = fw.AsKubeDeveloper.CommonController.GetAppDeploymentByName(component.Name, namespace)
 						if err != nil && !errors.IsNotFound(err) {
 							return false
 						}
@@ -233,11 +230,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 				It(fmt.Sprintf("checks if component %s health", component.Name), func() {
 					Eventually(func() bool {
-<<<<<<< HEAD
-						gitOpsRoute, err := fw.AsKubeDeveloper.CommonController.GetOpenshiftRoute(componentTest.Name, namespace)
-=======
-						gitOpsRoute, err := fw.CommonController.GetOpenshiftRoute(component.Name, namespace)
->>>>>>> upstream/main
+						gitOpsRoute, err := fw.AsKubeDeveloper.CommonController.GetOpenshiftRoute(component.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())
 						err = fw.AsKubeDeveloper.GitOpsController.CheckGitOpsEndpoint(gitOpsRoute, componentTest.HealthEndpoint)
 						if err != nil {
@@ -247,25 +240,15 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					}, 5*time.Minute, 10*time.Second).Should(BeTrue())
 				})
 
-<<<<<<< HEAD
-				if componentTest.K8sSpec != (e2eConfig.K8sSpec{}) && *componentTest.K8sSpec.Replicas > 1 {
-					It(fmt.Sprintf("scales component %s replicas", componentTest.Name), Pending, func() {
-						component, err := fw.AsKubeDeveloper.HasController.GetHasComponent(componentTest.Name, namespace)
-=======
 				if componentTest.K8sSpec != (config.K8sSpec{}) && *componentTest.K8sSpec.Replicas > 1 {
 					It(fmt.Sprintf("scales component %s replicas", component.Name), Pending, func() {
-						component, err := fw.HasController.GetHasComponent(component.Name, namespace)
->>>>>>> upstream/main
+						component, err := fw.AsKubeDeveloper.HasController.GetHasComponent(component.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())
 						_, err = fw.AsKubeDeveloper.HasController.ScaleComponentReplicas(component, int(*componentTest.K8sSpec.Replicas))
 						Expect(err).NotTo(HaveOccurred())
 
 						Eventually(func() bool {
-<<<<<<< HEAD
-							deployment, _ := fw.AsKubeDeveloper.CommonController.GetAppDeploymentByName(componentTest.Name, namespace)
-=======
-							deployment, _ := fw.CommonController.GetAppDeploymentByName(component.Name, namespace)
->>>>>>> upstream/main
+							deployment, _ := fw.AsKubeDeveloper.CommonController.GetAppDeploymentByName(component.Name, namespace)
 							if err != nil && !errors.IsNotFound(err) {
 								return false
 							}

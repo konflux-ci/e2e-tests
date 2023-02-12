@@ -38,9 +38,10 @@ type CustomClient struct {
 }
 
 type K8SClient struct {
-	AsKubeAdmin     *CustomClient
-	AsKubeDeveloper *CustomClient
-	UserName        string
+	AsKubeAdmin       *CustomClient
+	AsKubeDeveloper   *CustomClient
+	SandboxController *sandbox.SandboxController
+	UserName          string
 }
 
 var (
@@ -130,9 +131,10 @@ func NewDevSandboxProxyClient(userName string) (*K8SClient, error) {
 	}
 
 	return &K8SClient{
-		AsKubeAdmin:     asAdminClient,
-		AsKubeDeveloper: sandboxProxyClient,
-		UserName:        userAuthInfo.UserName,
+		AsKubeAdmin:       asAdminClient,
+		AsKubeDeveloper:   sandboxProxyClient,
+		UserName:          userAuthInfo.UserName,
+		SandboxController: sandboxController,
 	}, nil
 }
 
