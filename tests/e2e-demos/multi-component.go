@@ -79,6 +79,8 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 			if removeApplication {
 				Expect(fw.HasController.DeleteAllComponentsInASpecificNamespace(AppStudioE2EApplicationsNamespace, 30*time.Second)).To(Succeed())
 				Expect(fw.HasController.DeleteAllApplicationsInASpecificNamespace(AppStudioE2EApplicationsNamespace, 30*time.Second)).To(Succeed())
+				Expect(fw.TektonController.DeleteAllPipelineRunsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
+
 			}
 		})
 
@@ -143,7 +145,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 			Expect(cdq.Status.ComponentDetected[compNameGo].DevfileFound).To(BeTrue(), "DevfileFound was not set to true")
 			componentDescription := cdq.Status.ComponentDetected[compNameGo]
 			componentDescription.ComponentStub.ContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-			componentGo, err = fw.HasController.CreateComponentFromStub(componentDescription, compNameGo, AppStudioE2EApplicationsNamespace, "", testSpecification.Tests[0].ApplicationName)
+			componentGo, err = fw.HasController.CreateComponentFromStub(componentDescription, compNameGo, AppStudioE2EApplicationsNamespace, "", testSpecification.Tests[0].ApplicationName, "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(componentGo.Name).To(Equal(compNameGo))
 
@@ -151,7 +153,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 			Expect(cdq.Status.ComponentDetected[compNameNode].DevfileFound).To(BeTrue(), "DevfileFound was not set to true")
 			componentDescription = cdq.Status.ComponentDetected[compNameNode]
 			componentDescription.ComponentStub.ContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-			componentNode, err = fw.HasController.CreateComponentFromStub(componentDescription, compNameNode, AppStudioE2EApplicationsNamespace, "", testSpecification.Tests[0].ApplicationName)
+			componentNode, err = fw.HasController.CreateComponentFromStub(componentDescription, compNameNode, AppStudioE2EApplicationsNamespace, "", testSpecification.Tests[0].ApplicationName, "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(componentNode.Name).To(Equal(compNameNode))
 		})

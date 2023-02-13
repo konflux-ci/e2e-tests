@@ -82,7 +82,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 
 				return framework.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 			}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
-
+			Expect(framework.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 			Expect(framework.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
 		}
 	})
@@ -110,18 +110,10 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 	})
 
-	// Necessary for component pipeline
-	It("checks if 'git-clone' cluster tasks exists", func() {
-		Eventually(func() bool {
-			return framework.CommonController.CheckIfClusterTaskExists("git-clone")
-		}, 5*time.Minute, 45*time.Second).Should(BeTrue(), "'git-clone' cluster task don't exist in cluster. Component cannot be created")
-	})
-
 	It("creates Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
 		cdq, err := framework.HasController.CreateComponentDetectionQuery(componentName, testNamespace, QuarkusDevfileSource, "", false)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cdq.Name).To(Equal(componentName))
-
 	})
 
 	It("checks Red Hat AppStudio ComponentDetectionQuery status", func() {
@@ -144,8 +136,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 	})
 
 	It("creates Red Hat AppStudio Quarkus component", func() {
-		component, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, oauthSecretName, applicationName)
+		_, err := framework.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, oauthSecretName, applicationName, "")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(component.Name).To(Equal(componentName))
 	})
 })

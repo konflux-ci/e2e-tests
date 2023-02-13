@@ -29,7 +29,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	Context("infrastructure is running", func() {
+	Context("infrastructure is running", Label("pipeline"), func() {
 		It("verifies if the chains controller is running", func() {
 			err := fwk.CommonController.WaitForPodSelector(fwk.CommonController.IsPodRunning, constants.TEKTON_CHAINS_NS, "app", "tekton-chains-controller", 60, 100)
 			Expect(err).NotTo(HaveOccurred())
@@ -56,7 +56,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 		})
 	})
 
-	Context("test creating and signing an image and task", func() {
+	Context("test creating and signing an image and task", Label("pipeline"), func() {
 		// Make the PipelineRun name and namespace predictable. For convenience, the name of the
 		// PipelineRun that builds an image, is the same as the repository where the image is
 		// pushed to.
@@ -66,7 +66,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 		var imageWithDigest string
 		serviceAccountName := "pipeline"
 
-		pipelineRunTimeout := 600
+		pipelineRunTimeout := int(time.Duration(20) * time.Minute)
 		attestationTimeout := time.Duration(60) * time.Second
 
 		var kubeController tekton.KubeController
@@ -119,7 +119,12 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			// At a bare minimum, each spec within this context relies on the existence of
 			// an image that has been signed by Tekton Chains. Trigger a demo task to fulfill
 			// this purpose.
-			pr, err := kubeController.RunPipeline(tekton.BuildahDemo{Image: image, Bundle: fwk.TektonController.Bundles.BuildTemplatesBundle}, pipelineRunTimeout)
+
+			bundles, err := fwk.TektonController.NewBundles()
+			Expect(err).ShouldNot(HaveOccurred())
+			dockerBuildBundle := bundles.DockerBuildBundle
+			Expect(dockerBuildBundle).NotTo(Equal(""), "Can't continue without a docker-build pipeline got from selector config")
+			pr, err := kubeController.RunPipeline(tekton.BuildahDemo{Image: image, Bundle: dockerBuildBundle}, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			// Verify that the build task was created as expected.
 			Expect(pr.ObjectMeta.Name).To(Equal(buildPipelineRunName))

@@ -4,12 +4,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	kfake "k8s.io/client-go/kubernetes/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -120,50 +117,4 @@ func TestFindingCosignResults(t *testing.T) {
 		})
 	}
 
-}
-
-func TestNewBundles(t *testing.T) {
-	cases := []struct {
-		name                string
-		bundle              string
-		expectedBuildBundle string
-		expectedHACBSBundle string
-	}{
-		{
-			name:                "non PR builds",
-			bundle:              "quay.io/redhat-appstudio/build-templates-bundle:861e28f4eb2380fd1531ee30a9e74fb6ce496b9f",
-			expectedBuildBundle: "quay.io/redhat-appstudio/build-templates-bundle:861e28f4eb2380fd1531ee30a9e74fb6ce496b9f",
-			expectedHACBSBundle: "quay.io/redhat-appstudio/hacbs-templates-bundle:861e28f4eb2380fd1531ee30a9e74fb6ce496b9f",
-		},
-		{
-			name:                "PR builds",
-			bundle:              "quay.io/redhat-appstudio/pull-request-builds:base-671f833e488d2b38b4e14d8248d58eb1b58ebdac",
-			expectedBuildBundle: "quay.io/redhat-appstudio/pull-request-builds:base-671f833e488d2b38b4e14d8248d58eb1b58ebdac",
-			expectedHACBSBundle: "quay.io/redhat-appstudio/pull-request-builds:hacbs-671f833e488d2b38b4e14d8248d58eb1b58ebdac",
-		},
-	}
-
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			buildTemplatesConfigMap := corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "build-pipelines-defaults",
-					Namespace: "build-templates",
-				},
-				Data: map[string]string{
-					"default_build_bundle": c.bundle,
-				},
-			}
-
-			client := kfake.NewSimpleClientset(&buildTemplatesConfigMap)
-
-			bundles, error := newBundles(client)
-			assert.Nil(t, error)
-
-			assert.Equal(t, &Bundles{
-				BuildTemplatesBundle: c.expectedBuildBundle,
-				HACBSTemplatesBundle: c.expectedHACBSBundle,
-			}, bundles)
-		})
-	}
 }

@@ -3,8 +3,9 @@ package tekton
 import (
 	"context"
 	"fmt"
+	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"io"
-	"regexp"
+	"k8s.io/apimachinery/pkg/types"
 	"strings"
 	"time"
 
@@ -22,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -36,31 +36,15 @@ type KubeController struct {
 }
 
 type Bundles struct {
-	BuildTemplatesBundle string
-	HACBSTemplatesBundle string
-}
-
-func newBundles(client kubernetes.Interface) (*Bundles, error) {
-	buildPipelineDefaults, err := client.CoreV1().ConfigMaps("build-templates").Get(context.TODO(), "build-pipelines-defaults", metav1.GetOptions{})
-	if err != nil && !errors.IsNotFound(err) {
-		return nil, err
-	}
-
-	bundle := buildPipelineDefaults.Data["default_build_bundle"]
-
-	r := regexp.MustCompile(`([/:])(?:build|base)-`)
-
-	return &Bundles{
-		BuildTemplatesBundle: bundle,
-		HACBSTemplatesBundle: r.ReplaceAllString(bundle, "${1}hacbs-"),
-	}, nil
+	FBCBuilderBundle    string
+	DockerBuildBundle   string
+	JavaBuilderBundle   string
+	NodeJSBuilderBundle string
 }
 
 // Create the struct for kubernetes clients
 type SuiteController struct {
 	*kubeCl.K8sClient
-
-	Bundles Bundles
 }
 
 type CosignResult struct {
@@ -85,18 +69,37 @@ func (c CosignResult) Missing(prefix string) string {
 	return strings.Join(ret, " and ")
 }
 
-// Create controller for Application/Component crud operations
-func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
+// Create controller for Tekton Task/Pipeline CRUD operations
+func NewSuiteController(kube *kubeCl.K8sClient) *SuiteController {
+	return &SuiteController{kube}
+}
 
-	bundles, err := newBundles(kube.KubeInterface())
+func (s *SuiteController) NewBundles() (*Bundles, error) {
+	namespacedName := types.NamespacedName{
+		Name:      "build-pipeline-selector",
+		Namespace: "build-service",
+	}
+	bundles := &Bundles{}
+	pipelineSelector := &buildservice.BuildPipelineSelector{}
+	err := s.K8sClient.KubeRest().Get(context.TODO(), namespacedName, pipelineSelector)
 	if err != nil {
 		return nil, err
 	}
-
-	return &SuiteController{
-		kube,
-		*bundles,
-	}, nil
+	for _, selector := range pipelineSelector.Spec.Selectors {
+		bundleName := selector.PipelineRef.Name
+		bundleRef := selector.PipelineRef.Bundle
+		switch bundleName {
+		case "docker-build":
+			bundles.DockerBuildBundle = bundleRef
+		case "fbc-builder":
+			bundles.FBCBuilderBundle = bundleRef
+		case "java-builder":
+			bundles.JavaBuilderBundle = bundleRef
+		case "nodejs-builder":
+			bundles.NodeJSBuilderBundle = bundleRef
+		}
+	}
+	return bundles, nil
 }
 
 func (s *SuiteController) GetPipelineRun(pipelineRunName, namespace string) (*v1beta1.PipelineRun, error) {
@@ -551,4 +554,35 @@ func (s *SuiteController) CreateEnterpriseContractPolicy(name, namespace string,
 		Spec: ecpolicy,
 	}
 	return ec, s.K8sClient.KubeRest().Create(context.TODO(), ec)
+}
+
+// CreatePVCInAccessMode creates a PVC with mode as passed in arguments.
+func (s *SuiteController) CreatePVCInAccessMode(name, namespace string, accessMode corev1.PersistentVolumeAccessMode) (*corev1.PersistentVolumeClaim, error) {
+	pvc := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{
+				accessMode,
+			},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: resource.MustParse("1Gi"),
+				},
+			},
+		},
+	}
+
+	createdPVC, err := s.K8sClient.KubeInterface().CoreV1().PersistentVolumeClaims(namespace).Create(context.TODO(), pvc, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return createdPVC, err
+}
+
+// GetListOfPipelineRunsInNamespace returns a List of all PipelineRuns in namespace.
+func (s *SuiteController) GetListOfPipelineRunsInNamespace(namespace string) (*v1beta1.PipelineRunList, error) {
+	return s.PipelineClient().TektonV1beta1().PipelineRuns(namespace).List(context.TODO(), metav1.ListOptions{})
 }
