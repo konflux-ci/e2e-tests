@@ -60,3 +60,11 @@ tests:
         gitSourceUrl: "https://github.com/devfile-samples/devfile-sample-code-with-quarkus.git"
         language: "Java"
         healthz: "/hello-resteasy"
+  - name: "STONE-436 Dockerfile Python sample"
+    applicationName: "python"
+    components:
+      - name: "python-dockerfile"
+        type: "public"
+        gitSourceUrl: "https://github.com/maysunfaisal/python-src-docker"
+        language: "Dockerfile"
+        healthz: "/"
