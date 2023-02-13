@@ -67,7 +67,11 @@ func (s *SuiteController) CreateJBSConfig(name, namespace, imageRegistryOwner st
 				Repository: "test-images",
 				PrependTag: strconv.FormatInt(time.Now().UnixMilli(), 10),
 			},
-			CacheSettings: v1alpha1.CacheSettings{},
+			CacheSettings: v1alpha1.CacheSettings{
+				RequestMemory: "256Mi",
+				RequestCPU:    "100m",
+				Storage:       "1Gi",
+			},
 			BuildSettings: v1alpha1.BuildSettings{},
 			RelocationPatterns: []v1alpha1.RelocationPatternElement{
 				{
