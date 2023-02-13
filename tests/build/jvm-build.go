@@ -147,8 +147,13 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 					GinkgoWriter.Printf("%s\n%s\n", file, content)
 				}
 			}
+		} else {
+			Expect(f.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
+			Expect(f.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
+			Expect(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 		}
-		// Cleanup
+		// Cleanup artifact builds and dependency builds which are already
+		// archived in case of a failure
 		for _, ab := range abList.Items {
 			err := f.JvmbuildserviceController.DeleteArtifactBuild(ab.Name, ab.Namespace)
 			if err != nil {
@@ -161,9 +166,6 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				GinkgoWriter.Printf("got error deleting DB %s: %s\n", db.Name, err.Error())
 			}
 		}
-		Expect(f.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
-		Expect(f.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
-		Expect(f.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 	})
 
 	BeforeAll(func() {

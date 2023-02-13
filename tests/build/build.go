@@ -444,6 +444,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		for i, gitUrl := range componentUrls {
+			i := i
 			gitUrl := gitUrl
 			It(fmt.Sprintf("triggers PipelineRun for component with source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
 				timeout := time.Minute * 25
@@ -461,6 +462,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		}
 
 		for i, gitUrl := range componentUrls {
+			i := i
 			gitUrl := gitUrl
 
 			It(fmt.Sprintf("should eventually finish successfully for component with source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
