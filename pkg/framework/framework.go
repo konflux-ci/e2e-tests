@@ -26,7 +26,7 @@ type UserControllerHub struct {
 	JvmbuildserviceController *jvmbuildservice.SuiteController
 }
 
-type AdminControllerHub struct {
+type ControllerHub struct {
 	HasController             *has.SuiteController
 	CommonController          *common.SuiteController
 	TektonController          *tekton.SuiteController
@@ -38,10 +38,11 @@ type AdminControllerHub struct {
 }
 
 type Framework struct {
-	AsKubeAdmin       *AdminControllerHub
-	AsKubeDeveloper   *UserControllerHub
+	AsKubeAdmin       *ControllerHub
+	AsKubeDeveloper   *ControllerHub
 	SandboxController *sandbox.SandboxController
 	UserNamespace     string
+	UserName          string
 }
 
 func NewFramework(userName string) (*Framework, error) {
@@ -63,12 +64,12 @@ func NewFramework(userName string) (*Framework, error) {
 		return nil, fmt.Errorf("error when initializing kubernetes clients: %v", err)
 	}
 
-	asAdmin, err := initAdminControllerHub(k.AsKubeAdmin)
+	asAdmin, err := initControllerHub(k.AsKubeAdmin)
 	if err != nil {
 		return nil, fmt.Errorf("error when initializing appstudio hub controllers for admin user: %v", err)
 	}
 
-	asUser, err := initUserControllerHub(k.AsKubeDeveloper)
+	asUser, err := initControllerHub(k.AsKubeDeveloper)
 	if err != nil {
 		return nil, fmt.Errorf("error when initializing appstudio hub controllers for sandbox user: %v", err)
 	}
@@ -78,10 +79,11 @@ func NewFramework(userName string) (*Framework, error) {
 		AsKubeDeveloper:   asUser,
 		SandboxController: k.SandboxController,
 		UserNamespace:     fmt.Sprintf("%s-tenant", k.UserName),
+		UserName:          k.UserName,
 	}, nil
 }
 
-func initAdminControllerHub(cc *kubeCl.CustomClient) (*AdminControllerHub, error) {
+func initControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 	// Initialize Common controller
 	commonCtrl, err := common.NewSuiteController(cc)
 	if err != nil {
@@ -122,7 +124,7 @@ func initAdminControllerHub(cc *kubeCl.CustomClient) (*AdminControllerHub, error
 		return nil, err
 	}
 
-	return &AdminControllerHub{
+	return &ControllerHub{
 		HasController:             hasController,
 		CommonController:          commonCtrl,
 		SPIController:             spiController,
@@ -133,52 +135,4 @@ func initAdminControllerHub(cc *kubeCl.CustomClient) (*AdminControllerHub, error
 		JvmbuildserviceController: jvmbuildserviceController,
 	}, nil
 
-}
-
-func initUserControllerHub(cc *kubeCl.CustomClient) (*UserControllerHub, error) {
-	// Initialize Common controller
-	commonCtrl, err := common.NewSuiteController(cc)
-	if err != nil {
-		return nil, err
-	}
-
-	// Initialize Has controller
-	hasController, err := has.NewSuiteController(cc)
-	if err != nil {
-		return nil, err
-	}
-
-	spiController, err := spi.NewSuiteController(cc)
-	if err != nil {
-		return nil, err
-	}
-
-	// Initialize GitOps controller
-	gitopsController, err := gitops.NewSuiteController(cc)
-	if err != nil {
-		return nil, err
-	}
-
-	// Initialize Integration Controller
-	integrationController, err := integration.NewSuiteController(cc)
-	if err != nil {
-		return nil, err
-	}
-	jvmbuildserviceController, err := jvmbuildservice.NewSuiteControler(cc)
-	if err != nil {
-		return nil, err
-	}
-
-	// Initialize Tekton controller
-	tektonController := tekton.NewSuiteController(cc)
-
-	return &UserControllerHub{
-		HasController:             hasController,
-		CommonController:          commonCtrl,
-		SPIController:             spiController,
-		GitOpsController:          gitopsController,
-		IntegrationController:     integrationController,
-		JvmbuildserviceController: jvmbuildserviceController,
-		TektonController:          tektonController,
-	}, nil
 }

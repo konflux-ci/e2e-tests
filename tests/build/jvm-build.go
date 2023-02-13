@@ -152,9 +152,9 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				}
 			}
 		} else {
-			Expect(f.AsKubeDeveloper.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
-			Expect(f.AsKubeDeveloper.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
-			Expect(f.AsKubeDeveloper.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+			Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
+			Expect(f.AsKubeAdmin.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
+			Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 		}
 		// Cleanup artifact builds and dependency builds which are already
 		// archived in case of a failure

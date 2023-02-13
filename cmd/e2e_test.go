@@ -12,13 +12,13 @@ import (
 	"github.com/onsi/ginkgo/v2/types"
 	"github.com/onsi/gomega"
 
-	//_ "github.com/redhat-appstudio/e2e-tests/tests/build"
-	//_ "github.com/redhat-appstudio/e2e-tests/tests/cluster-registration"
+	_ "github.com/redhat-appstudio/e2e-tests/tests/build"
+	_ "github.com/redhat-appstudio/e2e-tests/tests/cluster-registration"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/e2e-demos"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/has"
 
-	//_ "github.com/redhat-appstudio/e2e-tests/tests/integration-service"
-	//_ "github.com/redhat-appstudio/e2e-tests/tests/release"
+	_ "github.com/redhat-appstudio/e2e-tests/tests/integration-service"
+	_ "github.com/redhat-appstudio/e2e-tests/tests/release"
 
 	"flag"
 
@@ -49,7 +49,7 @@ func init() {
 	flag.StringVar(&polarionProjectID, "project-id", "AppStudio", "Set the Polarion project ID")
 	flag.BoolVar(&generateTestCases, "generate-test-cases", false, "Generate Test Cases for Polarion")
 
-	//klog.SetLogger(ginkgo.GinkgoLogr)
+	klog.SetLogger(ginkgo.GinkgoLogr)
 
 	verbosity := 1
 	if v, err := strconv.ParseUint(os.Getenv("KLOG_VERBOSITY"), 10, 8); err == nil {

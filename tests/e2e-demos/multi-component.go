@@ -75,6 +75,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 			if removeApplication {
 				Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 				Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+				Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
 			}
 		})
 

@@ -272,3 +272,35 @@ func (s *SandboxController) GetOpenshiftRouteHost(namespace string, name string)
 	}
 	return fmt.Sprintf("https://%s", route.Spec.Host), nil
 }
+
+func (s *SandboxController) DeleteUserSignup(userName string) (bool, error) {
+	userSignup := &toolchainApi.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      userName,
+			Namespace: DEFAULT_TOOLCHAIN_NAMESPACE,
+		},
+	}
+	if err := s.KubeRest.Delete(context.TODO(), userSignup); err != nil {
+		return false, err
+	}
+	err := utils.WaitUntil(func() (done bool, err error) {
+		err = s.KubeRest.Get(context.TODO(), types.NamespacedName{
+			Namespace: DEFAULT_TOOLCHAIN_NAMESPACE,
+			Name:      userName,
+		}, userSignup)
+
+		if err != nil {
+			if k8sErrors.IsNotFound(err) {
+				return true, nil
+			}
+			return false, err
+		}
+		return false, nil
+	}, 5*time.Minute)
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}

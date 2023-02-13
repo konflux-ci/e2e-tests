@@ -78,6 +78,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 				return framework.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 			}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
 			Expect(framework.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+			Expect(framework.SandboxController.DeleteUserSignup(framework.UserName)).NotTo(BeFalse())
 		}
 	})
 

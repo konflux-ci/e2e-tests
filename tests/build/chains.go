@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	DEFAULT_TEKTON_CHAIN_USER = "tekton-e2e"
+	DEFAULT_TEKTON_CHAIN_USER = "tekton-chains-e2e"
 )
 
 var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HACBS"), func() {

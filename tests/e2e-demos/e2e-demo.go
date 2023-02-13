@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devfile/library/pkg/util"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -35,7 +34,7 @@ const (
 	GitOpsRepositoryRevision string = "main"
 
 	// Environment name used for e2e-tests demos
-	EnvironmentName string = "testing"
+	EnvironmentName string = "development"
 
 	// Secret Name created by spi to interact with github
 	SPIGithubSecretName string = "e2e-github-secret"
@@ -43,7 +42,7 @@ const (
 	// Environment name used for e2e-tests demos
 	SPIQuaySecretName string = "e2e-quay-secret"
 
-	E2EDemoTestingNamespace = "e2e-demos"
+	E2EDemosNamespace = "e2e-demos"
 )
 
 var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
@@ -64,7 +63,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	GinkgoWriter.Printf("Starting e2e-demo test suites from config: %s\n", configTestFile)
 
 	// Initialize the tests controllers
-	fw, err := framework.NewFramework(fmt.Sprintf("%s-%s", E2EDemoTestingNamespace, util.GenerateRandomString(4)))
+	fw, err := framework.NewFramework(utils.GetGeneratedNamespace(E2EDemosNamespace))
 	Expect(err).NotTo(HaveOccurred())
 	configTest, err := e2eConfig.LoadTestGeneratorConfig(configTestFile)
 	Expect(err).NotTo(HaveOccurred())
@@ -82,6 +81,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				suiteConfig, _ := GinkgoConfiguration()
 				GinkgoWriter.Printf("Parallel processes: %d\n", suiteConfig.ParallelTotal)
 				GinkgoWriter.Printf("Running on namespace: %s\n", namespace)
+				GinkgoWriter.Printf("User: %s\n", fw.UserName)
 
 				githubCredentials := `{"access_token":"` + utils.GetEnv(constants.GITHUB_TOKEN_ENV, "") + `"}`
 
@@ -98,6 +98,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)).To(Succeed())
 					Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllGitOpsDeploymentInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+					Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
 				}
 			})
 			// Create an application in a specific namespace
@@ -147,10 +148,16 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				})
 
 				It("creates componentdetectionquery", func() {
-					cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, SPIGithubSecretName, false)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+					if componentTest.Type == "private" {
+						cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, SPIGithubSecretName, false)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
 
+					} else {
+						cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, "", false)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+					}
 				})
 
 				// Components for now can be imported from gitUrl, container image or a devfile
@@ -163,8 +170,13 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				} else if componentTest.GitSourceUrl != "" {
 					It(fmt.Sprintf("creates component %s from %s git source %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl), func() {
 						for _, compDetected := range cdq.Status.ComponentDetected {
-							component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, componentTest.Name, namespace, SPIGithubSecretName, appTest.ApplicationName, containerIMG)
-							Expect(err).NotTo(HaveOccurred())
+							if componentTest.Type == "private" {
+								component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, componentTest.Name, namespace, SPIGithubSecretName, appTest.ApplicationName, containerIMG)
+								Expect(err).NotTo(HaveOccurred())
+							} else if componentTest.Type == "public" {
+								component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, componentTest.Name, namespace, "", appTest.ApplicationName, containerIMG)
+								Expect(err).NotTo(HaveOccurred())
+							}
 						}
 					})
 
