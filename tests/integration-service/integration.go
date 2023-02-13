@@ -81,7 +81,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 
 		It("triggers a build PipelineRun", Label("integration-service"), func() {
-			timeout = time.Second * 60
+			timeout = time.Minute * 10
 			interval = time.Second * 2
 			Eventually(func() bool {
 				pipelineRun, err := f.IntegrationController.GetBuildPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false, "")

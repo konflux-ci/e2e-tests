@@ -39,8 +39,8 @@ type ComponentSpec struct {
 	// Indicate the container value
 	ContainerSource string `yaml:"containerSource,omitempty"`
 
-	// Indicate the devfile value
-	Devfilesource string `yaml:"devfileSource,omitempty"`
+	// Component language
+	Language string `yaml:"language"`
 
 	// Repository URL from where component will be created
 	GitSourceUrl string `yaml:"gitSourceUrl,omitempty"`
