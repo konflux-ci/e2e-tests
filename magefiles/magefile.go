@@ -266,10 +266,6 @@ func (ci CI) setRequiredEnvVars() error {
 				envVarPrefix = "HAS"
 				imageTagSuffix = "has-image"
 				testSuiteLabel = "has,e2e-demo"
-			case "build-service":
-				envVarPrefix = "BUILD_SERVICE"
-				imageTagSuffix = "build-service-image"
-				testSuiteLabel = "build"
 			case strings.Contains(jobName, "jvm-build-service"):
 				envVarPrefix = "JVM_BUILD_SERVICE"
 				imageTagSuffix = "jvm-build-service-image"
