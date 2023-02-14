@@ -17,7 +17,7 @@ Simple tests where:
 
 * The framework create an `Application` CR.
 * Verify if the application was created successfully.
-* Create a Quarkus component. [See Quarkus devfile sample](https://github.com/redhat-appstudio-qe/devfile-sample-code-with-quarkus).
+* Create a Quarkus component. [See Quarkus devfile sample](https://github.com/devfile-samples/devfile-sample-code-with-quarkus).
 * Wait for pipelinesRuns to build and push a container image to `https://quay.io/organization/redhat-appstudio-qe/test-images:<sha1>`.
 * Verify if HAS operator create gitops resources in the cluster(routes, deployments, services...).
 * Remove kubernetes objects created by the framework.
