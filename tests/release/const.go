@@ -3,7 +3,6 @@ package release
 import (
 	"time"
 
-	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	appstudiov1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -74,5 +73,3 @@ var roleRules = map[string][]string{
 	"roleResources": {"secrets"},
 	"roleVerbs":     {"get", "list", "watch"},
 }
-
-var myEnvironment = &appstudioApi.Environment{}

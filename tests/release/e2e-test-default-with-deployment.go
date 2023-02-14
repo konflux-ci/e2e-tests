@@ -112,7 +112,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		_, err = framework.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineNameDefault, releasePipelineBundleDefault, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategy)
 		Expect(err).NotTo(HaveOccurred())
 
-		myEnvironment, err = framework.GitOpsController.CreateEnvironment(releaseEnvironment, managedNamespace)
+		_, err = framework.GitOpsController.CreateEnvironment(releaseEnvironment, managedNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = framework.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, releaseEnvironment, "", releaseStrategyDefaultName)
@@ -211,38 +211,21 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 			if err != nil {
 				klog.Info(err)
 			}
-			workingDir = workingDir + "/tests/release"
+
 			args := []string{managedNamespace, "-a", devNamespace + "/" + applicationNameDefault}
-			err = utils.ExecuteCommandInASpecificDirectory("./copy-application.sh", args, workingDir)
+			err = utils.ExecuteCommandInASpecificDirectory("./copy-application.sh", args, workingDir+"/../tests/release")
 			Expect(err).NotTo(HaveOccurred())
 		}, SpecTimeout(snapshotCreationTimeout+namespaceCreationTimeout*2))
 	})
 
-	It("validate SnapshotEnvironmentBinding is created and deployment succeeded.", func() {
+	It("tests a Release should report the deployment was successfull.", func() {
 		Eventually(func() bool {
-			snapshotEnvironmentBinding, err := framework.IntegrationController.GetSnapshotEnvironmentBinding(applicationNameDefault, managedNamespace, myEnvironment)
-			if snapshotEnvironmentBinding == nil || err != nil {
+			releaseCreated, err := framework.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
+			if releaseCreated == nil || err != nil || len(releaseCreated.Status.Conditions) < 2 {
 				return false
 			}
-			klog.Info("Binding:", snapshotEnvironmentBinding.Name)                                 //.ComponentDeploymentConditions)
-			klog.Info("Binding:", snapshotEnvironmentBinding.Status.ComponentDeploymentConditions) //.ComponentDeploymentConditions)
-			//"msg"="Binding:{[] [] [{GitOpsResourcesGenerated False 0 2023-02-12 17:04:05 +0200 IST GenerateError GitOps repository sync failed: unable to process GitOps status, GitOps Repository URL cannot be empty}] [{ErrorOccurred True 0 2023-02-12 17:04:05 +0200 IST ErrorOccurred SnapshotEventBinding Component status is required to generate GitOps deployment, waiting for the Application Service controller to finish reconciling binding 'production-tlj6p'}] []}
-			// status:
-			// 	bindingConditions:
-			// 	- lastTransitionTime: "2023-02-12T15:04:05Z"
-			// 		message: Can not Reconcile Binding 'production-tlj6p', since GitOps Repo Conditions
-			// 		status is false.
-			// 		reason: ErrorOccurred
-			// 		status: "True"
-			// 		type: ErrorOccurred
-			// 	componentDeploymentConditions:
-			// 	- lastTransitionTime: "2023-02-12T15:04:24Z"
-			// 		message: 1 of 1 components deployed
-			// 		reason: CommitsSynced
-			// 		status: "True"
-			// 		type: AllComponentsDeployed
 
-			return snapshotEnvironmentBinding.Spec.Components != nil //&& snapshotEnvironmentBinding.Status.ComponentDeploymentConditions != nil //== "1 of 1 components deployed"
+			return releaseCreated.Status.Conditions[1].Message == "1 of 1 components deployed" && releaseCreated.Status.Conditions[1].Type == "AllComponentsDeployed"
 		}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 	})
 })
