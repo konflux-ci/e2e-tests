@@ -3,11 +3,12 @@ package tekton
 import (
 	"context"
 	"fmt"
-	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"io"
-	"k8s.io/apimachinery/pkg/types"
 	"strings"
 	"time"
+
+	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
@@ -554,6 +555,22 @@ func (s *SuiteController) CreateEnterpriseContractPolicy(name, namespace string,
 		Spec: ecpolicy,
 	}
 	return ec, s.K8sClient.KubeRest().Create(context.TODO(), ec)
+}
+
+// GetEnterpriseContractPolicy gets an EnterpriseContractPolicy from specified a namespace
+func (k KubeController) GetEnterpriseContractPolicy(name, namespace string) (*ecp.EnterpriseContractPolicy, error) {
+	defaultEcPolicy := ecp.EnterpriseContractPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+	err := k.Tektonctrl.K8sClient.KubeRest().Get(context.TODO(), crclient.ObjectKey{
+		Namespace: namespace,
+		Name:      name,
+	}, &defaultEcPolicy)
+
+	return &defaultEcPolicy, err
 }
 
 // CreatePVCInAccessMode creates a PVC with mode as passed in arguments.
