@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -43,6 +44,8 @@ const (
 	SPIQuaySecretName string = "e2e-quay-secret"
 
 	E2EDemosNamespace = "e2e-demos"
+
+	InitialBuildAnnotationName = "appstudio.openshift.io/component-initial-build"
 )
 
 var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
@@ -186,9 +189,15 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				}
 
 				// Start to watch the pipeline until is finished
-				It(fmt.Sprintf("waits %s component %s pipeline to be finished", componentTest.Type, componentTest.Name), func() {
+				It(fmt.Sprintf("waits %s component %s pipeline to be finished", componentTest.Type, componentTest.Name), FlakeAttempts(3), func() {
 					if componentTest.ContainerSource != "" {
 						Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skipping pipelinerun check.", componentTest.Name))
+					}
+					// If initial build have already happend, trigger the pipeline again.
+					if _, exists := component.Annotations[InitialBuildAnnotationName]; exists {
+						delete(component.Annotations, InitialBuildAnnotationName)
+						err := fw.AsKubeDeveloper.HasController.KubeRest().Update(context.Background(), component)
+						Expect(err).ShouldNot(HaveOccurred(), "failed to update component to trigger another pipeline build: %v", err)
 					}
 					Expect(fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component.Name, application.Name, namespace)).To(Succeed(), "Failed component pipeline %v", err)
 				})

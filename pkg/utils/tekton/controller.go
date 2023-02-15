@@ -557,6 +557,22 @@ func (s *SuiteController) CreateEnterpriseContractPolicy(name, namespace string,
 	return ec, s.KubeRest().Create(context.TODO(), ec)
 }
 
+// GetEnterpriseContractPolicy gets an EnterpriseContractPolicy from specified a namespace
+func (k KubeController) GetEnterpriseContractPolicy(name, namespace string) (*ecp.EnterpriseContractPolicy, error) {
+	defaultEcPolicy := ecp.EnterpriseContractPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+	err := k.Tektonctrl.K8sClient.KubeRest().Get(context.TODO(), crclient.ObjectKey{
+		Namespace: namespace,
+		Name:      name,
+	}, &defaultEcPolicy)
+
+	return &defaultEcPolicy, err
+}
+
 // CreatePVCInAccessMode creates a PVC with mode as passed in arguments.
 func (s *SuiteController) CreatePVCInAccessMode(name, namespace string, accessMode corev1.PersistentVolumeAccessMode) (*corev1.PersistentVolumeClaim, error) {
 	pvc := &corev1.PersistentVolumeClaim{

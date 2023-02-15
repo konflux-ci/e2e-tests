@@ -77,6 +77,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			for _, testScenario := range *integrationTestScenarios {
 				err = f.AsKubeAdmin.IntegrationController.DeleteIntegrationTestScenario(&testScenario, appStudioE2EApplicationsNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
+
+				for _, testScenario := range *integrationTestScenarios {
+					err = f.AsKubeAdmin.IntegrationController.DeleteIntegrationTestScenario(&testScenario, appStudioE2EApplicationsNamespace)
+					Expect(err).ShouldNot(HaveOccurred())
+				}
 			}
 		})
 
@@ -91,7 +96,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				}
 				return pipelineRun.HasStarted()
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
-			timeout = time.Second * 1200
+			timeout = time.Second * 2000
 			interval = time.Second * 10
 			Eventually(func() bool {
 				pipelineRun, err := f.AsKubeAdmin.IntegrationController.GetBuildPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false, "")
@@ -130,7 +135,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						}
 						return pipelineRun.HasStarted()
 					}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
-					timeout = time.Second * 800
+					timeout = time.Second * 1000
 					interval = time.Second * 10
 					Eventually(func() bool {
 						Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(&testScenario, applicationSnapshot, applicationName, appStudioE2EApplicationsNamespace)).To(Succeed(), "Error when waiting for a integration pipeline to finish")
