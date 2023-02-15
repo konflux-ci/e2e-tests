@@ -60,14 +60,12 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	snapshot := &appservice.Snapshot{}
 	env := &appservice.Environment{}
 	cdq := &appservice.ComponentDetectionQuery{}
+	fw := &framework.Framework{}
 
 	// Initialize the e2e demo configuration
 	configTestFile := viper.GetString("config-suites")
 	GinkgoWriter.Printf("Starting e2e-demo test suites from config: %s\n", configTestFile)
 
-	// Initialize the tests controllers
-	fw, err := framework.NewFramework(utils.GetGeneratedNamespace(E2EDemosNamespace))
-	Expect(err).NotTo(HaveOccurred())
 	configTest, err := e2eConfig.LoadTestGeneratorConfig(configTestFile)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -79,8 +77,13 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				if appTest.Skip {
 					Skip(fmt.Sprintf("test skipped %s", appTest.Name))
 				}
+
+				// Initialize the tests controllers
+				fw, err = framework.NewFramework(utils.GetGeneratedNamespace(E2EDemosNamespace))
+				Expect(err).NotTo(HaveOccurred())
 				namespace = fw.UserNamespace
 				Expect(namespace).NotTo(BeEmpty())
+
 				suiteConfig, _ := GinkgoConfiguration()
 				GinkgoWriter.Printf("Parallel processes: %d\n", suiteConfig.ParallelTotal)
 				GinkgoWriter.Printf("Running on namespace: %s\n", namespace)
@@ -146,7 +149,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 						// More info about manual token upload for quay.io here: https://github.com/redhat-appstudio/service-provider-integration-operator/pull/115
 						oauthCredentials := `{"access_token":"` + utils.GetEnv(constants.QUAY_OAUTH_TOKEN_ENV, "") + `", "username":"` + utils.GetEnv(constants.QUAY_OAUTH_USER_ENV, "") + `"}`
 
-						_ = fw.AsKubeDeveloper.SPIController.InjectManualSPIToken(namespace, componentTest.ContainerSource, oauthCredentials, v1.SecretTypeDockerConfigJson, SPIQuaySecretName)
+						_ = fw.AsKubeAdmin.SPIController.InjectManualSPIToken(namespace, componentTest.ContainerSource, oauthCredentials, v1.SecretTypeDockerConfigJson, SPIQuaySecretName)
 					}
 				})
 

@@ -271,9 +271,6 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 	component.Spec.Secret = secret
 	component.Spec.Application = applicationName
 
-	if containerImage != "" {
-		component.Spec.ContainerImage = ""
-	}
 	err := h.KubeRest().Create(context.TODO(), component)
 	if err != nil {
 		return nil, err
