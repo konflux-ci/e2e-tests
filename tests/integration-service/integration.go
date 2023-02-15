@@ -210,7 +210,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					applicationSnapshot_push, err = f.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, "", appStudioE2EApplicationsNamespace, "")
 					if err != nil {
 						GinkgoWriter.Printf("snapshot %s has not been found yet\n", applicationSnapshot_push.Name)
-						return false
 					}
 					return false
 				}, timeout, interval).Should(BeTrue(), "time out when waiting for updating the global candidate")
@@ -235,7 +234,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					applicationSnapshot_push, err = f.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, "", appStudioE2EApplicationsNamespace, "")
 					if err != nil {
 						GinkgoWriter.Printf("snapshot %s has not been found yet\n", applicationSnapshot_push.Name)
-						return false
 					}
 					return false
 				}, timeout, interval).Should(BeTrue(), "time out when waiting for release created")
@@ -255,7 +253,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					applicationSnapshot_push, err = f.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, "", appStudioE2EApplicationsNamespace, "")
 					if err != nil {
 						GinkgoWriter.Printf("snapshot %s has not been found yet\n", applicationSnapshot_push.Name)
-						return false
 					}
 					return false
 				}, timeout, interval).Should(BeTrue(), "time out when waiting for release created")
