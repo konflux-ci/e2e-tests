@@ -195,16 +195,13 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					timeout = time.Second * 600
 					interval = time.Second * 10
 
-					snapshot, err = fw.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, component.Name)
-					Expect(err).ShouldNot(HaveOccurred())
-
 					Eventually(func() bool {
-						if snapshot != nil {
-							return fw.IntegrationController.HaveHACBSTestsSucceeded(snapshot)
+						snapshot, err = fw.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, component.Name)
+						if err != nil {
+							GinkgoWriter.Println("snapshot has not been found yet")
+							return false
 						}
-						snapshot, _ = fw.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, component.Name)
-						Expect(err).ShouldNot(HaveOccurred())
-						return false
+						return fw.IntegrationController.HaveHACBSTestsSucceeded(snapshot)
 
 					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("time out when trying to check if the snapshot %s is marked as successful", snapshot.Name))
 				})
@@ -213,14 +210,13 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					Eventually(func() bool {
 						if fw.IntegrationController.HaveHACBSTestsSucceeded(snapshot) {
 							envbinding, err := fw.IntegrationController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
-							Expect(err).ShouldNot(HaveOccurred())
-							Expect(envbinding != nil).To(BeTrue())
+							if err != nil {
+								GinkgoWriter.Println("SnapshotEnvironmentBinding has not been found yet")
+								return false
+							}
 							GinkgoWriter.Printf("The SnapshotEnvironmentBinding %s is created\n", envbinding.Name)
 							return true
 						}
-
-						snapshot, err = fw.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, component.Name)
-						Expect(err).ShouldNot(HaveOccurred())
 						return false
 					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("time out when trying to check if SnapshotEnvironmentBinding is created (snapshot: %s, env: %s)", snapshot.Name, env.Name))
 				})
