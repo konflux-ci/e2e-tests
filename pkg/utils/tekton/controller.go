@@ -565,7 +565,7 @@ func (k KubeController) GetEnterpriseContractPolicy(name, namespace string) (*ec
 			Namespace: namespace,
 		},
 	}
-	err := k.Tektonctrl.K8sClient.KubeRest().Get(context.TODO(), crclient.ObjectKey{
+	err := k.Tektonctrl.KubeRest().Get(context.TODO(), crclient.ObjectKey{
 		Namespace: namespace,
 		Name:      name,
 	}, &defaultEcPolicy)
