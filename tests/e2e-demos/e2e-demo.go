@@ -182,6 +182,9 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					if componentTest.ContainerSource != "" {
 						Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skipping pipelinerun check.", componentTest.Name))
 					}
+					component, err = fw.HasController.GetHasComponent(component.Name, namespace)
+					Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
+
 					// If initial build have already happend, trigger the pipeline again.
 					if _, exists := component.Annotations[InitialBuildAnnotationName]; exists {
 						delete(component.Annotations, InitialBuildAnnotationName)
