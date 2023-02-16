@@ -495,7 +495,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			It("should validate HACBS taskrun results", func() {
 				// List Of Taskruns Expected to Get Taskrun Results
-				gatherResult := []string{"conftest-clair", "sanity-inspect-image", "sanity-label-check"}
+				gatherResult := []string{"clair-scan", "sanity-inspect-image", "sanity-label-check", "sbom-json-check"}
 				// TODO: once we migrate "build" e2e tests to kcp, remove this condition
 				// and add the 'sbom-json-check' taskrun to gatherResults slice
 				s, _ := GinkgoConfiguration()
@@ -507,16 +507,25 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 				for i := range gatherResult {
 					if gatherResult[i] == "sanity-inspect-image" {
+						// Fetching BASE_IMAGE shouldn't fail
 						result, err := build.FetchImageTaskRunResult(pipelineRun, gatherResult[i], "BASE_IMAGE")
 						Expect(err).ShouldNot(HaveOccurred())
 						ret := build.ValidateImageTaskRunResults(gatherResult[i], result)
 						Expect(ret).Should(BeTrue())
-						// TODO conftest-clair returns SUCCESS which is not expected
-						// } else {
-						// 	result, err := build.FetchTaskRunResult(pipelineRun, gatherResult[i], "HACBS_TEST_OUTPUT")
-						// 	Expect(err).ShouldNot(HaveOccurred())
-						// 	ret := build.ValidateTaskRunResults(gatherResult[i], result)
-						// 	Expect(ret).Should(BeTrue())
+					} else if gatherResult[i] == "clair-scan" {
+						// Fetching HACBS_TEST_OUTPUT shouldn't fail
+						result, err := build.FetchTaskRunResult(pipelineRun, gatherResult[i], "HACBS_TEST_OUTPUT")
+						Expect(err).ShouldNot(HaveOccurred())
+						ret := build.ValidateTaskRunResults(gatherResult[i], result)
+						// Vulnerabilities should get periodically eliminated with image rebuild, so the result of that task might be different
+						// This should not block e2e tests with errors.
+						GinkgoWriter.Printf("retcode for validate taskrun result is %s\n", ret)
+					} else {
+						// Fetching HACBS_TEST_OUTPUT shouldn't fail
+						result, err := build.FetchTaskRunResult(pipelineRun, gatherResult[i], "HACBS_TEST_OUTPUT")
+						Expect(err).ShouldNot(HaveOccurred())
+						ret := build.ValidateTaskRunResults(gatherResult[i], result)
+						Expect(ret).Should(BeTrue())
 					}
 				}
 			})
