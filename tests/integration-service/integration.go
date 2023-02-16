@@ -203,12 +203,19 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				interval = time.Second * 10
 				Eventually(func() bool {
 					if f.AsKubeAdmin.IntegrationController.HaveHACBSTestsSucceeded(applicationSnapshot_push) {
-						component, _ := f.AsKubeAdmin.IntegrationController.GetComponent(applicationName, appStudioE2EApplicationsNamespace)
+						component, err := f.AsKubeAdmin.IntegrationController.GetComponent(applicationName, appStudioE2EApplicationsNamespace)
+						if err != nil {
+							GinkgoWriter.Println("component has not been found yet")
+							return false
+						}
 						Expect(component.Spec.ContainerImage != "").To(BeTrue())
 						GinkgoWriter.Printf("Global candidate is updated\n")
 						return true
 					}
 					applicationSnapshot_push, err = f.AsKubeAdmin.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, "", appStudioE2EApplicationsNamespace, "")
+					if err != nil {
+						GinkgoWriter.Printf("snapshot %s has not been found yet\n", applicationSnapshot_push.Name)
+					}
 					return false
 				}, timeout, interval).Should(BeTrue(), "time out when waiting for updating the global candidate")
 			})
@@ -230,6 +237,9 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						return true
 					}
 					applicationSnapshot_push, err = f.AsKubeAdmin.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, "", appStudioE2EApplicationsNamespace, "")
+					if err != nil {
+						GinkgoWriter.Printf("snapshot %s has not been found yet\n", applicationSnapshot_push.Name)
+					}
 					return false
 				}, timeout, interval).Should(BeTrue(), "time out when waiting for release created")
 			})
@@ -246,6 +256,9 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						return true
 					}
 					applicationSnapshot_push, err = f.AsKubeAdmin.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, "", appStudioE2EApplicationsNamespace, "")
+					if err != nil {
+						GinkgoWriter.Printf("snapshot %s has not been found yet\n", applicationSnapshot_push.Name)
+					}
 					return false
 				}, timeout, interval).Should(BeTrue(), "time out when waiting for release created")
 			})

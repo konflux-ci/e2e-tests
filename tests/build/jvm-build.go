@@ -8,19 +8,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/devfile/library/pkg/util"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
-
+	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -191,6 +190,27 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		_, err = f.AsKubeAdmin.CommonController.CreateSecret(testNamespace, jvmBuildSecret)
 		Expect(err).ShouldNot(HaveOccurred())
 
+		customJavaPipelineBundleRef := os.Getenv(constants.CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV)
+		if len(customJavaPipelineBundleRef) > 0 {
+			ps := &buildservice.BuildPipelineSelector{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "build-pipeline-selector",
+					Namespace: testNamespace,
+				},
+				Spec: buildservice.BuildPipelineSelectorSpec{Selectors: []buildservice.PipelineSelector{
+					{
+						Name: "custom java selector",
+						PipelineRef: v1beta1.PipelineRef{
+							Name:   "java-builder",
+							Bundle: customJavaPipelineBundleRef,
+						},
+						WhenConditions: buildservice.WhenCondition{Language: "java"},
+					},
+				}},
+			}
+			Expect(f.AsKubeAdmin.CommonController.KubeRest().Create(context.TODO(), ps)).To(Succeed())
+		}
+
 		timeout = time.Minute * 20
 		interval = time.Second * 10
 
@@ -221,44 +241,11 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 		})
 
-		It("the build-container task from component PipelineRun references a correct sidecar image", func() {
-			ciSidecarImage := os.Getenv("JVM_BUILD_SERVICE_SIDECAR_IMAGE")
-			if ciSidecarImage == "" {
-				Skip("JVM_BUILD_SERVICE_SIDECAR_IMAGE env var is not exported, skipping the test...")
-			}
-
-			err = wait.PollImmediate(interval, timeout, func() (done bool, err error) {
-				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
-				if err != nil {
-					GinkgoWriter.Printf("get pr for component %s produced err: %s\n", componentName, err.Error())
-					return false, nil
-				}
-
-				for _, tr := range pr.Status.TaskRuns {
-					if tr.PipelineTaskName == "build-container" && tr.Status != nil && tr.Status.TaskSpec != nil && tr.Status.TaskSpec.Sidecars != nil {
-						for _, sc := range tr.Status.TaskSpec.Sidecars {
-							if sc.Name == "proxy" {
-								if sc.Image != ciSidecarImage {
-									Fail(fmt.Sprintf("the build-container task from component pipelinerun doesn't contain correct sidecar image. expected: %v, actual: %v", ciSidecarImage, sc.Image))
-								} else {
-									return true, nil
-								}
-							}
-						}
-					}
-				}
-				return false, nil
-			})
-			if err != nil {
-				Fail(fmt.Sprintf("failure occurred when verifying the sidecar image reference in pipelinerun: %v", err))
-			}
-		})
-
 		It("the build-container task from component pipelinerun references a correct analyzer image", func() {
-			ciAnalyzerImage := os.Getenv("JVM_BUILD_SERVICE_ANALYZER_IMAGE")
+			ciAnalyzerImage := os.Getenv("JVM_BUILD_SERVICE_REQPROCESSOR_IMAGE")
 
 			if ciAnalyzerImage == "" {
-				Skip("JVM_BUILD_SERVICE_ANALYZER_IMAGE env var is not exported, skipping the test...")
+				Skip("JVM_BUILD_SERVICE_REQPROCESSOR_IMAGE env var is not exported, skipping the test...")
 			}
 
 			err = wait.PollImmediate(interval, timeout, func() (done bool, err error) {
@@ -273,7 +260,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 						for _, step := range tr.Status.TaskSpec.Steps {
 							if step.Name == "analyse-dependencies-java-sbom" {
 								if step.Image != ciAnalyzerImage {
-									Fail(fmt.Sprintf("the build-container task from component pipelinerun doesn't reference the correct analyzer image. expected: %v, actual: %v", ciAnalyzerImage, step.Image))
+									Fail(fmt.Sprintf("the build-container task from component pipelinerun doesn't reference the correct request processor image. expected: %v, actual: %v", ciAnalyzerImage, step.Image))
 								} else {
 									return true, nil
 								}
@@ -284,7 +271,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				return false, nil
 			})
 			if err != nil {
-				Fail(fmt.Sprintf("failure occurred when verifying the analyzer image reference in pipelinerun: %v", err))
+				Fail(fmt.Sprintf("failure occurred when verifying the request processor image reference in pipelinerun: %v", err))
 			}
 		})
 

@@ -196,6 +196,9 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					if componentTest.ContainerSource != "" {
 						Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skipping pipelinerun check.", componentTest.Name))
 					}
+					component, err = fw.AsKubeAdmin.HasController.GetHasComponent(component.Name, namespace)
+					Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
+
 					// If initial build have already happend, trigger the pipeline again.
 					if _, exists := component.Annotations[InitialBuildAnnotationName]; exists {
 						delete(component.Annotations, InitialBuildAnnotationName)
@@ -209,27 +212,28 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					timeout = time.Second * 600
 					interval = time.Second * 10
 
-					snapshot, err = fw.AsKubeDeveloper.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, component.Name)
-					Expect(err).ShouldNot(HaveOccurred())
-
 					Eventually(func() bool {
-						return fw.AsKubeDeveloper.IntegrationController.HaveHACBSTestsSucceeded(snapshot)
+						snapshot, err = fw.AsKubeAdmin.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, component.Name)
+						if err != nil {
+							GinkgoWriter.Println("snapshot has not been found yet")
+							return false
+						}
+						return fw.AsKubeAdmin.IntegrationController.HaveHACBSTestsSucceeded(snapshot)
 
 					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("time out when trying to check if the snapshot %s is marked as successful", snapshot.Name))
 				})
 
 				It("checks if a snapshot environment binding is created successfully", func() {
 					Eventually(func() bool {
-						if fw.AsKubeDeveloper.IntegrationController.HaveHACBSTestsSucceeded(snapshot) {
-							envbinding, err := fw.AsKubeDeveloper.IntegrationController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
-							Expect(err).ShouldNot(HaveOccurred())
-							Expect(envbinding != nil).To(BeTrue())
+						if fw.AsKubeAdmin.IntegrationController.HaveHACBSTestsSucceeded(snapshot) {
+							envbinding, err := fw.AsKubeAdmin.IntegrationController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
+							if err != nil {
+								GinkgoWriter.Println("SnapshotEnvironmentBinding has not been found yet")
+								return false
+							}
 							GinkgoWriter.Printf("The SnapshotEnvironmentBinding %s is created\n", envbinding.Name)
 							return true
 						}
-
-						snapshot, err = fw.AsKubeDeveloper.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, component.Name)
-						Expect(err).ShouldNot(HaveOccurred())
 						return false
 					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("time out when trying to check if SnapshotEnvironmentBinding is created (snapshot: %s, env: %s)", snapshot.Name, env.Name))
 				})
