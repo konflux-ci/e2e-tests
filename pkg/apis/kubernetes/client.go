@@ -1,6 +1,9 @@
 package client
 
 import (
+	"fmt"
+	"io/ioutil"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
 	ocpOauth "github.com/openshift/api/config/v1"
@@ -90,20 +93,6 @@ func (c *CustomClient) DynamicClient() dynamic.Interface {
 	return c.dynamicClient
 }
 
-/*
-	if U SPECIFY KUBECONFIG_STAGING AND USER_STAGING {
-		intialize the client
-		* how to handle multiple users
-	}
-		userName,_ := sandbox.CreateKeyCloakUser()
-		registerUser := sandbox.RegisterUser()
-		userKubeconfigPath := GenerateSandboxUserKubeconfig()
-		client := obtainTheClient
-
-		return the client
-*/
-
-/**/
 func NewDevSandboxProxyClient(userName string) (*K8SClient, error) {
 	asAdminClient, err := NewAdminKubernetesClient()
 	if err != nil {
@@ -120,7 +109,12 @@ func NewDevSandboxProxyClient(userName string) (*K8SClient, error) {
 		return nil, err
 	}
 
-	userCfg, err := clientcmd.BuildConfigFromFlags("", userAuthInfo.KubeconfigPath)
+	cfgBytes, err := ioutil.ReadFile(userAuthInfo.KubeconfigPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read user kubeconfig %v", err)
+	}
+
+	userCfg, err := clientcmd.RESTConfigFromKubeConfig(cfgBytes)
 	if err != nil {
 		return nil, err
 	}
