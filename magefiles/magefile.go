@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/devfile/library/pkg/util"
+	"k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"regexp"
 	"strconv"
@@ -13,20 +15,28 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	toolchainApi "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/toolchain-e2e/testsupport/md5"
-	gh "github.com/google/go-github/v44/github"
-	"github.com/magefile/mage/sh"
-	"github.com/redhat-appstudio/e2e-tests/magefiles/installation"
-	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
-	client "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/klog/v2"
+
+	"sigs.k8s.io/yaml"
+
+	toolchainApi "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/toolchain-e2e/testsupport/md5"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
+	gh "github.com/google/go-github/v44/github"
+	"github.com/magefile/mage/sh"
+	"github.com/redhat-appstudio/e2e-tests/magefiles/installation"
+	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
+	client "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
 var (
@@ -247,29 +257,101 @@ func (ci CI) setRequiredEnvVars() error {
 
 	if openshiftJobSpec.Refs.Repo != "e2e-tests" {
 
-		if strings.Contains(openshiftJobSpec.Refs.Repo, "-service") {
+		if strings.Contains(jobName, "-service") {
 			var envVarPrefix, imageTagSuffix, testSuiteLabel string
 			sp := strings.Split(os.Getenv("COMPONENT_IMAGE"), "@")
 
-			switch openshiftJobSpec.Refs.Repo {
-			case "application-service":
+			switch {
+			case strings.Contains(jobName, "application-service"):
 				envVarPrefix = "HAS"
 				imageTagSuffix = "has-image"
 				testSuiteLabel = "has,e2e-demo"
-			case "build-service":
-				envVarPrefix = "BUILD_SERVICE"
-				imageTagSuffix = "build-service-image"
-				testSuiteLabel = "build"
-			case "jvm-build-service":
+			case strings.Contains(jobName, "jvm-build-service"):
 				envVarPrefix = "JVM_BUILD_SERVICE"
 				imageTagSuffix = "jvm-build-service-image"
 				testSuiteLabel = "jvm-build"
+
+				// Since CI requires to have default values for dependency images
+				// (https://github.com/openshift/release/blob/master/ci-operator/step-registry/redhat-appstudio/e2e/redhat-appstudio-e2e-ref.yaml#L15)
+				// we cannot let these env vars to have identical names in CI as those env vars used in tests
+				// e.g. JVM_BUILD_SERVICE_REQPROCESSOR_IMAGE, otherwise those images they are referencing wouldn't
+				// be always relevant for tests and tests would be failing
+				os.Setenv(fmt.Sprintf("%s_REQPROCESSOR_IMAGE", envVarPrefix), os.Getenv("CI_JBS_REQPROCESSOR_IMAGE"))
+				os.Setenv(fmt.Sprintf("%s_CACHE_IMAGE", envVarPrefix), os.Getenv("CI_JBS_CACHE_IMAGE"))
+
+				klog.Infof("going to override default Tekton bundle for the purpose of testing jvm-build-service PR")
+				var err error
+				var defaultBundleRef string
+				var tektonObj runtime.Object
+
+				tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
+				var newS2iJavaTaskRef, _ = name.ParseReference(fmt.Sprintf("%s:task-bundle-%s", constants.DefaultImagePushRepo, tag))
+				var newJavaBuilderPipelineRef, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", constants.DefaultImagePushRepo, tag))
+				var newReqprocessorImage = os.Getenv("JVM_BUILD_SERVICE_REQPROCESSOR_IMAGE")
+				var newTaskYaml, newPipelineYaml []byte
+
+				if err = createDockerConfigFile(os.Getenv("QUAY_TOKEN")); err != nil {
+					return fmt.Errorf("failed to create docker config file: %+v", err)
+				}
+				if defaultBundleRef, err = getDefaultPipelineBundleRef(constants.BuildPipelineSelectorYamlURL, "Java"); err != nil {
+					return fmt.Errorf("failed to get the pipeline bundle ref: %+v", err)
+				}
+				if tektonObj, err = extractTektonObjectFromBundle(defaultBundleRef, "pipeline", "java-builder"); err != nil {
+					return fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
+				}
+				javaPipelineObj := tektonObj.(tektonapi.PipelineObject)
+
+				var currentS2iJavaTaskRef string
+				for _, t := range javaPipelineObj.PipelineSpec().Tasks {
+					if t.TaskRef.Name == "s2i-java" {
+						currentS2iJavaTaskRef = t.TaskRef.Bundle
+						t.TaskRef.Bundle = newS2iJavaTaskRef.String()
+					}
+				}
+				if tektonObj, err = extractTektonObjectFromBundle(currentS2iJavaTaskRef, "task", "s2i-java"); err != nil {
+					return fmt.Errorf("failed to extract the Tekton Task from bundle: %+v", err)
+				}
+				taskObj := tektonObj.(tektonapi.TaskObject)
+
+				for i, s := range taskObj.TaskSpec().Steps {
+					if s.Name == "analyse-dependencies-java-sbom" {
+						taskObj.TaskSpec().Steps[i].Image = newReqprocessorImage
+					}
+				}
+
+				if newTaskYaml, err = yaml.Marshal(taskObj); err != nil {
+					return fmt.Errorf("error when marshalling a new task to YAML: %v", err)
+				}
+				if newPipelineYaml, err = yaml.Marshal(javaPipelineObj); err != nil {
+					return fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
+				}
+
+				keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
+				authOption := remoteimg.WithAuthFromKeychain(keychain)
+
+				if err = buildAndPushTektonBundle(newTaskYaml, newS2iJavaTaskRef, authOption); err != nil {
+					return fmt.Errorf("error when building/pushing a tekton task bundle: %v", err)
+				}
+				if err = buildAndPushTektonBundle(newPipelineYaml, newJavaBuilderPipelineRef, authOption); err != nil {
+					return fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
+				}
+				os.Setenv(constants.CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV, newJavaBuilderPipelineRef.String())
+			case strings.Contains(jobName, "build-service"):
+				envVarPrefix = "BUILD_SERVICE"
+				imageTagSuffix = "build-service-image"
+				testSuiteLabel = "build"
+			}
+			var prSHA, prOwner string
+			// "rehearse" jobs metadata are not relevant for testing
+			if !strings.Contains(jobName, "rehearse") {
+				prSHA = openshiftJobSpec.Refs.Pulls[0].SHA
+				prOwner = openshiftJobSpec.Refs.Pulls[0].Author
 			}
 
 			os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", envVarPrefix), sp[0])
 			os.Setenv(fmt.Sprintf("%s_IMAGE_TAG", envVarPrefix), fmt.Sprintf("redhat-appstudio-%s", imageTagSuffix))
-			os.Setenv(fmt.Sprintf("%s_PR_OWNER", envVarPrefix), openshiftJobSpec.Refs.Pulls[0].Author)
-			os.Setenv(fmt.Sprintf("%s_PR_SHA", envVarPrefix), openshiftJobSpec.Refs.Pulls[0].SHA)
+			os.Setenv(fmt.Sprintf("%s_PR_OWNER", envVarPrefix), prOwner)
+			os.Setenv(fmt.Sprintf("%s_PR_SHA", envVarPrefix), prSHA)
 			os.Setenv("E2E_TEST_SUITE_LABEL", testSuiteLabel)
 
 		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
