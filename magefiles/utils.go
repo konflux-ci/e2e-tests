@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,10 +12,17 @@ import (
 	"text/template"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
 
 	sprig "github.com/go-task/slim-sprig"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/magefile/mage/sh"
+	"github.com/mitchellh/go-homedir"
+	"github.com/tektoncd/cli/pkg/bundle"
+	"github.com/tektoncd/pipeline/pkg/remote/oci"
 )
 
 func getRemoteAndBranchNameFromPRLink(url string) (remote, branchName string, err error) {

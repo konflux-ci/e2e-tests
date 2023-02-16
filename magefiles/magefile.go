@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -24,6 +26,7 @@ import (
 	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
 	gh "github.com/google/go-github/v44/github"
 	"github.com/magefile/mage/sh"
+	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/magefiles/installation"
 	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
@@ -576,4 +579,30 @@ func appendFrameworkDescribeFile(packageName string) error {
 
 	return nil
 
+}
+
+// getDefaultPipelineBundleRef gets the specific Tekton pipeline bundle reference from a Build pipeline selector
+// (in a YAML format) from a URL specified in the parameter
+func getDefaultPipelineBundleRef(buildPipelineSelectorYamlURL, selectorName string) (string, error) {
+	res, err := http.Get(buildPipelineSelectorYamlURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to get a build pipeline selector from url %s: %v", buildPipelineSelectorYamlURL, err)
+	}
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read the body response of a build pipeline selector: %v", err)
+	}
+	ps := &buildservice.BuildPipelineSelector{}
+	if err = yaml.Unmarshal(body, ps); err != nil {
+		return "", fmt.Errorf("failed to unmarshal build pipeline selector: %v", err)
+	}
+
+	for _, s := range ps.Spec.Selectors {
+		if s.Name == selectorName {
+			return s.PipelineRef.Bundle, nil
+		}
+	}
+
+	return "", fmt.Errorf("could not find %s pipeline bundle in build pipeline selector fetched from %s", selectorName, buildPipelineSelectorYamlURL)
 }
