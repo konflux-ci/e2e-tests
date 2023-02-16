@@ -160,6 +160,9 @@ import (
 )
 ```
 
+# Viewing job artifacts in openshift-ci
+Every Prow job executed by the CI system generates an artifacts directory containing information about that execution and its results. This [document](https://docs.ci.openshift.org/docs/how-tos/artifacts/) describes the contents of this directory and how they can be used to investigate the steps by the job.
+
 # Generate test cases for Polarion
 You can also generate test cases for Polarion with command:
    ```bash
