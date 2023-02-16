@@ -44,9 +44,10 @@ var (
 )
 
 var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "HACBS"), func() {
+	var f *framework.Framework
+	var err error
+
 	defer GinkgoRecover()
-	f, err := framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
-	Expect(err).NotTo(HaveOccurred())
 
 	Describe("the component with git source (GitHub) is created", Ordered, Label("github-webhook", "pipeline"), func() {
 		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, outputContainerImage, pacControllerHost string
@@ -57,6 +58,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		var prCreationTime time.Time
 
 		BeforeAll(func() {
+			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
+			Expect(err).NotTo(HaveOccurred())
+
 			consoleRoute, err := f.AsKubeAdmin.CommonController.GetOpenshiftRoute("console", "openshift-console")
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -70,10 +74,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			pacControllerHost = pacControllerRoute.Spec.Host
 
 			applicationName = fmt.Sprintf("build-suite-test-application-%s", util.GenerateRandomString(4))
-			testNamespace = utils.GetGeneratedNamespace("build-e2e")
-
-			_, err = f.AsKubeAdmin.CommonController.CreateTestNamespace(testNamespace)
-			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
+			testNamespace = f.UserNamespace
 
 			app, err := f.AsKubeAdmin.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
@@ -103,6 +104,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			if !CurrentSpecReport().Failed() {
 				Expect(f.AsKubeAdmin.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
 				Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
+				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
 			}
 
@@ -399,10 +401,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			} else {
 				applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
 			}
-			testNamespace = utils.GetEnv(constants.E2E_APPLICATIONS_NAMESPACE_ENV, fmt.Sprintf("build-e2e-hacbs-%s", util.GenerateRandomString(4)))
-
-			_, err := f.AsKubeAdmin.CommonController.CreateTestNamespace(testNamespace)
-			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
+			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.UserNamespace).NotTo(BeNil())
+			testNamespace = f.UserNamespace
 
 			_, err = f.AsKubeAdmin.HasController.GetHasApplication(applicationName, testNamespace)
 			// In case the app with the same name exist in the selected namespace, delete it first
@@ -439,7 +441,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					DeferCleanup(f.AsKubeAdmin.HasController.DeleteHasApplication, applicationName, testNamespace, false)
 				} else {
 					Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
-					Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
+					Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
 				}
 			}
 		})
@@ -582,20 +584,16 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		var timeout, interval time.Duration
 
 		BeforeAll(func() {
-
 			applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
-			testNamespace = fmt.Sprintf("build-e2e-container-image-source-%s", util.GenerateRandomString(4))
-
-			_, err = f.AsKubeAdmin.CommonController.CreateTestNamespace(testNamespace)
-			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
-			DeferCleanup(f.AsKubeAdmin.CommonController.DeleteNamespace, testNamespace)
+			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
+			Expect(err).NotTo(HaveOccurred())
+			testNamespace = f.UserNamespace
 
 			app, err := f.AsKubeAdmin.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(utils.WaitUntil(f.AsKubeAdmin.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
 				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
 			)
-			DeferCleanup(f.AsKubeAdmin.HasController.DeleteHasApplication, applicationName, testNamespace, false)
 
 			componentName = fmt.Sprintf("build-suite-test-component-image-source-%s", util.GenerateRandomString(4))
 			outputContainerImage := ""
@@ -604,7 +602,15 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			// Create a component with containerImageSource being defined
 			_, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, testNamespace, "", "", containerImageSource, outputContainerImage, "", true)
 			Expect(err).ShouldNot(HaveOccurred())
-			DeferCleanup(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace, testNamespace)
+		})
+
+		AfterAll(func() {
+			if !CurrentSpecReport().Failed() {
+				Expect(f.AsKubeAdmin.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
+				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
+			}
 		})
 
 		It("should not trigger a PipelineRun", func() {
@@ -622,12 +628,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		var expectedAdditionalPipelineParam buildservice.PipelineParam
 
 		BeforeAll(func() {
-
-			testNamespace = fmt.Sprintf("build-e2e-pipeline-selector-%s", util.GenerateRandomString(4))
+			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
+			Expect(err).NotTo(HaveOccurred())
+			testNamespace = f.UserNamespace
 			applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
-
-			_, err = f.AsKubeAdmin.CommonController.CreateTestNamespace(testNamespace)
-			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
 
 			app, err := f.AsKubeAdmin.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
@@ -677,8 +681,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
+				Expect(f.AsKubeAdmin.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
-				Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
+				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
 			}
 		})
 
@@ -734,11 +740,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 		BeforeAll(func() {
 
-			testNamespace = fmt.Sprintf("build-e2e-dummy-quay-creds-%s", util.GenerateRandomString(4))
-
-			_, err = f.AsKubeAdmin.CommonController.CreateTestNamespace(testNamespace)
-			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
-			DeferCleanup(f.AsKubeAdmin.CommonController.DeleteNamespace, testNamespace)
+			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
+			Expect(err).NotTo(HaveOccurred())
+			testNamespace = f.UserNamespace
 
 			_, err := f.AsKubeAdmin.CommonController.GetSecret(testNamespace, constants.RegistryAuthSecretName)
 			if err != nil {
@@ -755,8 +759,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Expect(utils.WaitUntil(f.AsKubeAdmin.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
 				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
 			)
-			DeferCleanup(f.AsKubeAdmin.HasController.DeleteHasApplication, applicationName, testNamespace, false)
-
 			timeout = time.Minute * 20
 			interval = time.Second * 1
 
@@ -775,8 +777,15 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 			_, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "", true)
 			Expect(err).ShouldNot(HaveOccurred())
-			DeferCleanup(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace, testNamespace)
+		})
 
+		AfterAll(func() {
+			if !CurrentSpecReport().Failed() {
+				Expect(f.AsKubeAdmin.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
+				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
+			}
 		})
 
 		It("should override the shared secret", func() {

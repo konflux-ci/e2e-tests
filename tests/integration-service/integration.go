@@ -67,21 +67,24 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 
 		AfterAll(func() {
-			Expect(f.AsKubeAdmin.HasController.DeleteHasApplication(applicationName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
-			Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
-			err = f.AsKubeAdmin.IntegrationController.DeleteApplicationSnapshot(applicationSnapshot_push, appStudioE2EApplicationsNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
-			integrationTestScenarios, err := f.AsKubeAdmin.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			for _, testScenario := range *integrationTestScenarios {
-				err = f.AsKubeAdmin.IntegrationController.DeleteIntegrationTestScenario(&testScenario, appStudioE2EApplicationsNamespace)
+			if !CurrentSpecReport().Failed() {
+				Expect(f.AsKubeAdmin.HasController.DeleteHasApplication(applicationName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
+				err = f.AsKubeAdmin.IntegrationController.DeleteApplicationSnapshot(applicationSnapshot_push, appStudioE2EApplicationsNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+				integrationTestScenarios, err := f.AsKubeAdmin.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				for _, testScenario := range *integrationTestScenarios {
 					err = f.AsKubeAdmin.IntegrationController.DeleteIntegrationTestScenario(&testScenario, appStudioE2EApplicationsNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
+
+					for _, testScenario := range *integrationTestScenarios {
+						err = f.AsKubeAdmin.IntegrationController.DeleteIntegrationTestScenario(&testScenario, appStudioE2EApplicationsNamespace)
+						Expect(err).ShouldNot(HaveOccurred())
+					}
 				}
+				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
 			}
 		})
 

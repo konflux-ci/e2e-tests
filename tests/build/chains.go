@@ -17,21 +17,12 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
-const (
-	DEFAULT_TEKTON_CHAIN_USER = "tekton-chains-e2e"
-)
-
 var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HACBS"), func() {
 	defer GinkgoRecover()
 
-	var fwk *framework.Framework
-
-	BeforeAll(func() {
-		// Initialize the tests controllers
-		var err error
-		fwk, err = framework.NewFramework(DEFAULT_TEKTON_CHAIN_USER)
-		Expect(err).NotTo(HaveOccurred())
-	})
+	fwk, err := framework.NewFramework(constants.TEKTON_CHAINS_E2E_USER)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(fwk.UserNamespace).NotTo(BeNil(), "failed to create sandbox user")
 
 	Context("infrastructure is running", Label("pipeline"), func() {
 		It("verifies if the chains controller is running", func() {
@@ -64,11 +55,10 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 		// Make the PipelineRun name and namespace predictable. For convenience, the name of the
 		// PipelineRun that builds an image, is the same as the repository where the image is
 		// pushed to.
-		namespace := constants.TEKTON_CHAINS_E2E_NS
+		namespace := fwk.UserNamespace
 		buildPipelineRunName := fmt.Sprintf("buildah-demo-%s", util.GenerateRandomString(10))
 		image := fmt.Sprintf("image-registry.openshift-image-registry.svc:5000/%s/%s", namespace, buildPipelineRunName)
 		var imageWithDigest string
-		serviceAccountName := "pipeline"
 
 		pipelineRunTimeout := int(time.Duration(20) * time.Minute)
 		attestationTimeout := time.Duration(60) * time.Second
@@ -83,18 +73,6 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				Tektonctrl: *fwk.AsKubeAdmin.TektonController,
 				Namespace:  namespace,
 			}
-
-			// Create the e2e test namespace
-			_, err := kubeController.Commonctrl.CreateTestNamespace(namespace)
-			Expect(err).NotTo(HaveOccurred(), "Error when creating namespace %q: %v", namespace, err)
-
-			// Wait until the "pipeline" SA is created
-			GinkgoWriter.Printf("Wait until the %q SA is created in namespace %q\n", serviceAccountName, namespace)
-			Eventually(func() bool {
-				sa, err := kubeController.Commonctrl.GetServiceAccount(serviceAccountName, namespace)
-				return sa != nil && err == nil
-			}).WithTimeout(1*time.Minute).WithPolling(100*time.Millisecond).Should(
-				BeTrue(), "timed out when waiting for the %q SA to be created", serviceAccountName)
 
 			defaultEcp, err := kubeController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 			Expect(err).NotTo(HaveOccurred())

@@ -81,6 +81,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 			Expect(framework.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(managedNamespace)).NotTo(HaveOccurred())
 			Expect(framework.AsKubeAdmin.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
 			Expect(framework.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+			Expect(framework.SandboxController.DeleteUserSignup(framework.UserName)).NotTo(BeFalse())
 		}
 	})
 

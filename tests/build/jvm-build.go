@@ -26,25 +26,21 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-const (
-	DEFAULT_JVM_USER = "jvm-e2e"
-)
-
 var (
 	testProjectGitUrl   = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_URL", "https://github.com/redhat-appstudio-qe/hacbs-test-project")
 	testProjectRevision = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_REVISION", "main")
 )
 
 var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jvm-build", "HACBS"), func() {
+	var f *framework.Framework
+	var err error
+
 	defer GinkgoRecover()
 
 	var testNamespace, applicationName, componentName, outputContainerImage string
 	var componentPipelineRun *v1beta1.PipelineRun
 	var timeout, interval time.Duration
 	var doCollectLogs bool
-
-	f, err := framework.NewFramework(DEFAULT_JVM_USER)
-	Expect(err).NotTo(HaveOccurred())
 
 	AfterAll(func() {
 		abList, err := f.AsKubeAdmin.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
@@ -154,6 +150,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
 			Expect(f.AsKubeAdmin.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
 			Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+			Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
 		}
 		// Cleanup artifact builds and dependency builds which are already
 		// archived in case of a failure
@@ -172,12 +169,12 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 	})
 
 	BeforeAll(func() {
-		testNamespace = utils.GetGeneratedNamespace("jvm-build")
+		f, err = framework.NewFramework(utils.GetGeneratedNamespace("jvm-build"))
+		Expect(err).NotTo(HaveOccurred())
+		testNamespace = f.UserNamespace
+		Expect(testNamespace).NotTo(BeNil(), "failed to create sandbox user namespace")
 
 		GinkgoWriter.Printf("Test namespace: %s\n", testNamespace)
-
-		_, err := f.AsKubeAdmin.CommonController.CreateTestNamespace(testNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", testNamespace, err)
 
 		_, err = f.AsKubeAdmin.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, testNamespace, utils.GetQuayIOOrganization())
 		Expect(err).ShouldNot(HaveOccurred())
