@@ -60,6 +60,12 @@ const (
 
 var paramsReleaseStrategy = []appstudiov1alpha1.Params{
 	{Name: "extraConfigGitUrl", Value: "https://github.com/scoheb/strategy-configs.git"},
+	{Name: "extraConfigPath", Value: "mvp.yaml"},
+	{Name: "extraConfigRevision", Value: "main"},
+}
+
+var paramsReleaseStrategyM6 = []appstudiov1alpha1.Params{
+	{Name: "extraConfigGitUrl", Value: "https://github.com/scoheb/strategy-configs.git"},
 	{Name: "extraConfigPath", Value: "m6.yaml"},
 	{Name: "extraConfigRevision", Value: "main"},
 }

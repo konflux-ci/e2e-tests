@@ -2,6 +2,8 @@
 #
 # Perform a copy of applications and components to a target namespace.
 
+## This script was cpoied from https://github.com/hacbs-release/release-utils
+
 SHORT_OPTS=a:,h
 LONG_OPTS=applications:,all,help
 OPTS=$(getopt --alternative --name copy-application --options $SHORT_OPTS --longoptions $LONG_OPTS -- "$@")

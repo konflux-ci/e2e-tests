@@ -117,9 +117,9 @@ func (h *SuiteController) CreateEnvironment(name, namespace string) (*appservice
 			Configuration: appservice.EnvironmentConfiguration{
 				Env: []appservice.EnvVarPair{},
 			},
-			DeploymentStrategy: appservice.DeploymentStrategy_Manual, // .DeploymentStrategy_AppStudioAutomated,
+			DeploymentStrategy: appservice.DeploymentStrategy_Manual,
 			DisplayName:        name,
-			Type:               appservice.EnvironmentType_POC, //.EnvironmentType_NonPOC,
+			Type:               appservice.EnvironmentType_POC,
 			ParentEnvironment:  "non-existent-environment-to-fool-integration-service",
 		},
 	}
