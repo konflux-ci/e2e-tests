@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	releasev1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -77,7 +78,11 @@ func (h *SuiteController) GetApplicationSnapshot(snapshotName, applicationName, 
 		}
 	}
 
-	return nil, nil
+	additionalInfo := utils.GetAdditionalInfo(applicationName, namespace)
+	if componentName != "" {
+		return &appstudioApi.Snapshot{}, fmt.Errorf("no snapshot found for component %s %s", componentName, additionalInfo)
+	}
+	return &appstudioApi.Snapshot{}, fmt.Errorf("no snapshot '%s' found %s", snapshotName, additionalInfo)
 }
 
 func (h *SuiteController) GetComponent(applicationName, namespace string) (*appstudioApi.Component, error) {
@@ -95,7 +100,7 @@ func (h *SuiteController) GetComponent(applicationName, namespace string) (*apps
 		}
 	}
 
-	return nil, nil
+	return &appstudioApi.Component{}, fmt.Errorf("no component found %s", utils.GetAdditionalInfo(applicationName, namespace))
 }
 
 func (h *SuiteController) GetReleasesWithApplicationSnapshot(applicationSnapshot *appstudioApi.Snapshot, namespace string) (*[]releasev1alpha1.Release, error) {
@@ -335,7 +340,7 @@ func (h *SuiteController) GetBuildPipelineRun(componentName, applicationName, na
 		return &list.Items[0], nil
 	}
 
-	return &tektonv1beta1.PipelineRun{}, fmt.Errorf("no pipelinerun found for component %s", componentName)
+	return &tektonv1beta1.PipelineRun{}, fmt.Errorf("no pipelinerun found for component %s %s", componentName, utils.GetAdditionalInfo(applicationName, namespace))
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels
@@ -361,7 +366,7 @@ func (h *SuiteController) GetIntegrationPipelineRun(integrationTestScenarioName 
 		return &list.Items[0], nil
 	}
 
-	return &tektonv1beta1.PipelineRun{}, fmt.Errorf("no pipelinerun found for integrationTestScenario %s", integrationTestScenarioName)
+	return &tektonv1beta1.PipelineRun{}, fmt.Errorf("no pipelinerun found for integrationTestScenario %s (snapshot: %s, namespace: %s)", integrationTestScenarioName, applicationSnapshotName, namespace)
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels
@@ -382,5 +387,5 @@ func (h *SuiteController) GetSnapshotEnvironmentBinding(applicationName string, 
 		}
 	}
 
-	return nil, nil
+	return &appstudioApi.SnapshotEnvironmentBinding{}, fmt.Errorf("no SnapshotEnvironmentBinding found in environment %s %s", environment.Name, utils.GetAdditionalInfo(applicationName, namespace))
 }
