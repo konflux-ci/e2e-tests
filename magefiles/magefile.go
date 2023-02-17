@@ -255,15 +255,14 @@ func (ci CI) setRequiredEnvVars() error {
 				envVarPrefix = "HAS"
 				imageTagSuffix = "has-image"
 				testSuiteLabel = "has,e2e-demo"
-			case strings.Contains(jobName, "jvm-build-service"):
-				envVarPrefix = "JVM_BUILD_SERVICE"
-				imageTagSuffix = "jvm-build-service-image"
-				testSuiteLabel = "jvm-build"
 			case strings.Contains(jobName, "release-service"):
 				envVarPrefix = "RELEASE_SERVICE"
 				imageTagSuffix = "release-service-image"
 				testSuiteLabel = "release"
-
+			case strings.Contains(jobName, "jvm-build-service"):
+				envVarPrefix = "JVM_BUILD_SERVICE"
+				imageTagSuffix = "jvm-build-service-image"
+				testSuiteLabel = "jvm-build"
 				// Since CI requires to have default values for dependency images
 				// (https://github.com/openshift/release/blob/master/ci-operator/step-registry/redhat-appstudio/e2e/redhat-appstudio-e2e-ref.yaml#L15)
 				// we cannot let these env vars to have identical names in CI as those env vars used in tests
