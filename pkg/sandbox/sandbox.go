@@ -60,7 +60,7 @@ type SandboxController struct {
 	KubeRest crclient.Client
 }
 
-// Add some description
+// Return specs to authenticate with toolchain proxy
 type SandboxUserAuthInfo struct {
 	// Add a description about user
 	UserName string
@@ -111,6 +111,7 @@ func NewDevSandboxController(kube kubernetes.Interface, kubeRest crclient.Client
 	}, nil
 }
 
+// ReconcileUserCreation create a user in sandbox and return a valid kubeconfig for user to be used for the tests
 func (s *SandboxController) ReconcileUserCreation(userName string) (*SandboxUserAuthInfo, error) {
 	userSignup := &toolchainApi.UserSignup{}
 	wd, err := os.Getwd()
@@ -145,7 +146,7 @@ func (s *SandboxController) ReconcileUserCreation(userName string) (*SandboxUser
 			return nil, err
 		}
 
-		return s.GetKubeconfigPathForSpecifigUser(toolchainApiUrl, userName, kubeconfigPath, userToken)
+		return s.GetKubeconfigPathForSpecificUser(toolchainApiUrl, userName, kubeconfigPath, userToken)
 	}
 
 	if err := s.IsKeycloakRunning(); err != nil {
@@ -178,10 +179,10 @@ func (s *SandboxController) ReconcileUserCreation(userName string) (*SandboxUser
 		return nil, err
 	}
 
-	return s.GetKubeconfigPathForSpecifigUser(toolchainApiUrl, userName, kubeconfigPath, userToken)
+	return s.GetKubeconfigPathForSpecificUser(toolchainApiUrl, userName, kubeconfigPath, userToken)
 }
 
-func (s *SandboxController) GetKubeconfigPathForSpecifigUser(toolchainApiUrl string, userName string, kubeconfigPath string, keycloakAuth *KeycloakAuth) (*SandboxUserAuthInfo, error) {
+func (s *SandboxController) GetKubeconfigPathForSpecificUser(toolchainApiUrl string, userName string, kubeconfigPath string, keycloakAuth *KeycloakAuth) (*SandboxUserAuthInfo, error) {
 	kubeconfig := api.NewConfig()
 	kubeconfig.Clusters[toolchainApiUrl] = &api.Cluster{
 		Server:                toolchainApiUrl,
