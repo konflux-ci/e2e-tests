@@ -3,8 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -259,6 +257,10 @@ func (ci CI) setRequiredEnvVars() error {
 				envVarPrefix = "JVM_BUILD_SERVICE"
 				imageTagSuffix = "jvm-build-service-image"
 				testSuiteLabel = "jvm-build"
+			case strings.Contains(jobName, "release-service"):
+				envVarPrefix = "RELEASE_SERVICE"
+				imageTagSuffix = "release-service-image"
+				testSuiteLabel = "release"
 
 				// Since CI requires to have default values for dependency images
 				// (https://github.com/openshift/release/blob/master/ci-operator/step-registry/redhat-appstudio/e2e/redhat-appstudio-e2e-ref.yaml#L15)
