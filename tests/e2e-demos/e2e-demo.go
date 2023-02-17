@@ -83,17 +83,17 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", namespace, err)
 			})
 			// Remove all resources created by the tests
-			AfterAll(func() {
-				if !CurrentSpecReport().Failed() {
-					Expect(fw.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-					Expect(fw.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-					Expect(fw.HasController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-					Expect(fw.ReleaseController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-					Expect(fw.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-					Expect(fw.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)).To(Succeed())
-					Expect(fw.GitOpsController.DeleteAllGitOpsDeploymentInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-				}
-			})
+			// AfterAll(func() {
+			// 	if !CurrentSpecReport().Failed() {
+			// 		Expect(fw.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+			// 		Expect(fw.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+			// 		Expect(fw.HasController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+			// 		Expect(fw.ReleaseController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+			// 		Expect(fw.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+			// 		Expect(fw.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)).To(Succeed())
+			// 		Expect(fw.GitOpsController.DeleteAllGitOpsDeploymentInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+			// 	}
+			// })
 
 			// Create an application in a specific namespace
 			It("creates an application", func() {
@@ -151,7 +151,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				}
 
 				It("creates componentdetectionquery", func() {
-					cdq, err = fw.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, oauthSecretName, false)
+					cdq, err = fw.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, componentTest.GitSourceRevision, componentTest.GitSourceContext, oauthSecretName, false)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
 
