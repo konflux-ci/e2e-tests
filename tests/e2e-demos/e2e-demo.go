@@ -143,15 +143,17 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				componentTest := componentTest
 				var containerIMG = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 
-				It("injects manually SPI token", func() {
-					// Inject spi tokens to work with private components
-					if componentTest.ContainerSource != "" {
-						// More info about manual token upload for quay.io here: https://github.com/redhat-appstudio/service-provider-integration-operator/pull/115
-						oauthCredentials := `{"access_token":"` + utils.GetEnv(constants.QUAY_OAUTH_TOKEN_ENV, "") + `", "username":"` + utils.GetEnv(constants.QUAY_OAUTH_USER_ENV, "") + `"}`
+				if componentTest.Type == "private" {
+					It("injects manually SPI token", func() {
+						// Inject spi tokens to work with private components
+						if componentTest.ContainerSource != "" {
+							// More info about manual token upload for quay.io here: https://github.com/redhat-appstudio/service-provider-integration-operator/pull/115
+							oauthCredentials := `{"access_token":"` + utils.GetEnv(constants.QUAY_OAUTH_TOKEN_ENV, "") + `", "username":"` + utils.GetEnv(constants.QUAY_OAUTH_USER_ENV, "") + `"}`
 
-						_ = fw.AsKubeAdmin.SPIController.InjectManualSPIToken(namespace, componentTest.ContainerSource, oauthCredentials, v1.SecretTypeDockerConfigJson, SPIQuaySecretName)
-					}
-				})
+							_ = fw.AsKubeAdmin.SPIController.InjectManualSPIToken(namespace, componentTest.ContainerSource, oauthCredentials, v1.SecretTypeDockerConfigJson, SPIQuaySecretName)
+						}
+					})
+				}
 
 				It("creates componentdetectionquery", func() {
 					if componentTest.Type == "private" {
