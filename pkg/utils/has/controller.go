@@ -10,11 +10,13 @@ import (
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 
 	. "github.com/onsi/ginkgo/v2"
 	routev1 "github.com/openshift/api/route/v1"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	u "github.com/redhat-appstudio/e2e-tests/tests/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -417,7 +419,7 @@ func (h *SuiteController) GetComponentService(componentName string, componentNam
 	return service, nil
 }
 
-func (h *SuiteController) WaitForComponentPipelineToBeFinished(componentName string, applicationName string, componentNamespace string) error {
+func (h *SuiteController) WaitForComponentPipelineToBeFinished(c *common.SuiteController, componentName string, applicationName string, componentNamespace string) error {
 	return wait.PollImmediate(20*time.Second, 25*time.Minute, func() (done bool, err error) {
 		pipelineRun, err := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, false, "")
 
@@ -430,7 +432,7 @@ func (h *SuiteController) WaitForComponentPipelineToBeFinished(componentName str
 			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
 
 			if condition.Reason == "Failed" {
-				return false, fmt.Errorf("component %s pipeline failed", pipelineRun.Name)
+				return false, fmt.Errorf(u.GetFailedPipelineRunLogs(c, pipelineRun))
 			}
 
 			if condition.Status == corev1.ConditionTrue {

@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	u "github.com/redhat-appstudio/e2e-tests/tests/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -191,12 +192,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
-							d := utils.GetFailedPipelineRunDetails(pipelineRun)
-							if d.FailedContainerName != "" {
-								logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
-								failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
-							}
+							failMessage := u.GetFailedPipelineRunLogs(f.CommonController, pipelineRun)
 							Fail(failMessage)
 						}
 					}
@@ -269,12 +265,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
-							d := utils.GetFailedPipelineRunDetails(pipelineRun)
-							if d.FailedContainerName != "" {
-								logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
-								failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
-							}
+							failMessage := u.GetFailedPipelineRunLogs(f.CommonController, pipelineRun)
 							Fail(failMessage)
 						}
 					}
@@ -345,12 +336,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
-							d := utils.GetFailedPipelineRunDetails(pipelineRun)
-							if d.FailedContainerName != "" {
-								logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
-								failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
-							}
+							failMessage := u.GetFailedPipelineRunLogs(f.CommonController, pipelineRun)
 							Fail(failMessage)
 						}
 					}
@@ -480,12 +466,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
-							d := utils.GetFailedPipelineRunDetails(pipelineRun)
-							if d.FailedContainerName != "" {
-								logs, _ := f.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
-								failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
-							}
+							failMessage := u.GetFailedPipelineRunLogs(f.CommonController, pipelineRun)
 							Fail(failMessage)
 						}
 					}

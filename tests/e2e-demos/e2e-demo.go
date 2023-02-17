@@ -191,7 +191,11 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 						err := fw.HasController.K8sClient.KubeRest().Update(context.Background(), component)
 						Expect(err).ShouldNot(HaveOccurred(), "failed to update component to trigger another pipeline build: %v", err)
 					}
-					Expect(fw.HasController.WaitForComponentPipelineToBeFinished(component.Name, application.Name, namespace)).To(Succeed(), "Failed component pipeline %v", err)
+
+					err := fw.HasController.WaitForComponentPipelineToBeFinished(fw.CommonController, component.Name, application.Name, namespace)
+					if err != nil {
+						Fail(fmt.Sprint(err))
+					}
 				})
 
 				It("finds the snapshot and checks if it is marked as successful", func() {
