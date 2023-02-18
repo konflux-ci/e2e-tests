@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -15,13 +14,15 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var AppStudioE2EApplicationsNamespace = utils.GetGeneratedNamespace("e2e-demo")
+const (
+	MultiComponentDemoNamespace string = "multi-comp-e2e"
+)
 
 var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	// TODO investigate failing of Component detection
+	var timeout, interval time.Duration
 
 	defer GinkgoRecover()
 
@@ -30,10 +31,14 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	cdq := &appservice.ComponentDetectionQuery{}
 	componentGo := &appservice.Component{}
 	componentNode := &appservice.Component{}
+	snapshotGo := &appservice.Snapshot{}
+	snapshotNode := &appservice.Snapshot{}
+	env := &appservice.Environment{}
 
 	// Initialize the tests controllers
-	fw, err := framework.NewFramework()
+	fw, err := framework.NewFramework(MultiComponentDemoNamespace)
 	Expect(err).NotTo(HaveOccurred())
+	namespace := fw.UserNamespace
 
 	var testSpecification = config.WorkflowSpec{
 		Tests: []config.TestSpec{
@@ -61,15 +66,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 			Skip("skip tests due a issue with devfile detection. See jira: https://issues.redhat.com/browse/DEVHAS-225")
 			// Check to see if the github token was provided
 			Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
-			// Check if 'has-github-token' is present, unless SKIP_HAS_SECRET_CHECK env var is set
-			if !utils.CheckIfEnvironmentExists(constants.SKIP_HAS_SECRET_CHECK_ENV) {
-				_, err := fw.HasController.KubeInterface().CoreV1().Secrets(RedHatAppStudioApplicationNamespace).Get(context.TODO(), ApplicationServiceGHTokenSecrName, metav1.GetOptions{})
-				Expect(err).NotTo(HaveOccurred(), "Error checking 'has-github-token' secret %s", err)
-			}
-
-			_, err := fw.CommonController.CreateTestNamespace(AppStudioE2EApplicationsNamespace)
-			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", AppStudioE2EApplicationsNamespace, err)
-
 			// Check test specification has at least one test defined
 			Expect(len(testSpecification.Tests)).To(BeNumerically(">", 0))
 		})
@@ -77,23 +73,22 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 		// Remove all resources created by the tests
 		AfterAll(func() {
 			if removeApplication {
-				Expect(fw.HasController.DeleteAllComponentsInASpecificNamespace(AppStudioE2EApplicationsNamespace, 30*time.Second)).To(Succeed())
-				Expect(fw.HasController.DeleteAllApplicationsInASpecificNamespace(AppStudioE2EApplicationsNamespace, 30*time.Second)).To(Succeed())
-				Expect(fw.TektonController.DeleteAllPipelineRunsInASpecificNamespace(AppStudioE2EApplicationsNamespace)).To(Succeed())
-
+				Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+				Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+				Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
 			}
 		})
 
 		It("creates Red Hat AppStudio Application", func() {
-			createdApplication, err := fw.HasController.CreateHasApplication(testSpecification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)
+			createdApplication, err := fw.AsKubeDeveloper.HasController.CreateHasApplication(testSpecification.Tests[0].ApplicationName, namespace)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(createdApplication.Spec.DisplayName).To(Equal(testSpecification.Tests[0].ApplicationName))
-			Expect(createdApplication.Namespace).To(Equal(AppStudioE2EApplicationsNamespace))
+			Expect(createdApplication.Namespace).To(Equal(namespace))
 		})
 
 		It("checks Red Hat AppStudio Application health", func() {
 			Eventually(func() string {
-				application, err = fw.HasController.GetHasApplication(testSpecification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)
+				application, err = fw.AsKubeDeveloper.HasController.GetHasApplication(testSpecification.Tests[0].ApplicationName, namespace)
 				Expect(err).NotTo(HaveOccurred())
 
 				return application.Status.Devfile
@@ -103,12 +98,18 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				// application info should be stored even after deleting the application in application variable
 				gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-				return fw.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+				return fw.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 			}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 		})
 
+		// Create an environment in a specific namespace
+		It("creates an environment", func() {
+			env, err = fw.AsKubeDeveloper.IntegrationController.CreateEnvironment(namespace, EnvironmentName)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 		It("creates Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
-			cdq, err := fw.HasController.CreateComponentDetectionQuery(testSpecification.Tests[0].Components[0].Name, AppStudioE2EApplicationsNamespace, testSpecification.Tests[0].Components[0].GitSourceUrl, "", false)
+			cdq, err := fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(testSpecification.Tests[0].Components[0].Name, namespace, testSpecification.Tests[0].Components[0].GitSourceUrl, "", false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cdq.Name).To(Equal(testSpecification.Tests[0].Components[0].Name))
 		})
@@ -117,7 +118,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 			// Validate that the CDQ completes successfully
 			Eventually(func() bool {
 				// application info should be stored even after deleting the application in application variable
-				cdq, err = fw.HasController.GetComponentDetectionQuery(testSpecification.Tests[0].Components[0].Name, AppStudioE2EApplicationsNamespace)
+				cdq, err = fw.AsKubeDeveloper.HasController.GetComponentDetectionQuery(testSpecification.Tests[0].Components[0].Name, namespace)
 				return err == nil && len(cdq.Status.ComponentDetected) > 0
 			}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "ComponentDetectionQuery did not complete successfully")
 
@@ -145,7 +146,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 			Expect(cdq.Status.ComponentDetected[compNameGo].DevfileFound).To(BeTrue(), "DevfileFound was not set to true")
 			componentDescription := cdq.Status.ComponentDetected[compNameGo]
 			componentDescription.ComponentStub.ContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-			componentGo, err = fw.HasController.CreateComponentFromStub(componentDescription, compNameGo, AppStudioE2EApplicationsNamespace, "", testSpecification.Tests[0].ApplicationName, "")
+			componentGo, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(componentDescription, compNameGo, namespace, "", testSpecification.Tests[0].ApplicationName, "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(componentGo.Name).To(Equal(compNameGo))
 
@@ -153,35 +154,91 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 			Expect(cdq.Status.ComponentDetected[compNameNode].DevfileFound).To(BeTrue(), "DevfileFound was not set to true")
 			componentDescription = cdq.Status.ComponentDetected[compNameNode]
 			componentDescription.ComponentStub.ContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-			componentNode, err = fw.HasController.CreateComponentFromStub(componentDescription, compNameNode, AppStudioE2EApplicationsNamespace, "", testSpecification.Tests[0].ApplicationName, "")
+			componentNode, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(componentDescription, compNameNode, namespace, "", testSpecification.Tests[0].ApplicationName, "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(componentNode.Name).To(Equal(compNameNode))
 		})
 
 		// Start to watch the pipeline until is finished
 		It("waits for all pipelines to be finished", func() {
-			err := fw.HasController.WaitForComponentPipelineToBeFinished(compNameGo, testSpecification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)
+			err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(compNameGo, testSpecification.Tests[0].ApplicationName, namespace)
 			if err != nil {
 				removeApplication = false
 			}
 			Expect(err).NotTo(HaveOccurred(), "Failed component pipeline %v", err)
 
-			err = fw.HasController.WaitForComponentPipelineToBeFinished(compNameNode, testSpecification.Tests[0].ApplicationName, AppStudioE2EApplicationsNamespace)
+			err = fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(compNameNode, testSpecification.Tests[0].ApplicationName, namespace)
 			if err != nil {
 				removeApplication = false
 			}
 			Expect(err).NotTo(HaveOccurred(), "Failed component pipeline %v", err)
 		})
 
+		It("finds the snapshot and checks if it is marked as successful for golang component", func() {
+			timeout = time.Second * 600
+			interval = time.Second * 10
+
+			snapshotGo, err = fw.AsKubeDeveloper.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, componentGo.Name)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Eventually(func() bool {
+				return fw.AsKubeDeveloper.IntegrationController.HaveHACBSTestsSucceeded(snapshotGo)
+
+			}, timeout, interval).Should(BeTrue(), "time out when trying to check if the snapshot is marked as successful")
+		})
+
+		It("finds the snapshot and checks if it is marked as successful for NodeJS component", func() {
+			timeout = time.Second * 600
+			interval = time.Second * 10
+
+			snapshotNode, err = fw.AsKubeDeveloper.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, componentNode.Name)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Eventually(func() bool {
+				return fw.AsKubeDeveloper.IntegrationController.HaveHACBSTestsSucceeded(snapshotNode)
+
+			}, timeout, interval).Should(BeTrue(), "time out when trying to check if the snapshot is marked as successful")
+		})
+
+		It("checks if a golang snapshot environment binding is created successfully", func() {
+			Eventually(func() bool {
+				if fw.AsKubeDeveloper.IntegrationController.HaveHACBSTestsSucceeded(snapshotGo) {
+					envbinding, err := fw.AsKubeDeveloper.IntegrationController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
+					Expect(err).ShouldNot(HaveOccurred())
+					GinkgoWriter.Printf("The EnvironmentBinding %s is created\n", envbinding.Name)
+					return true
+				}
+
+				snapshotGo, err = fw.AsKubeDeveloper.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, compNameGo)
+				Expect(err).ShouldNot(HaveOccurred())
+				return false
+			}, timeout, interval).Should(BeTrue(), "time out when waiting for release created")
+		})
+
+		It("checks if a Nodejs snapshot environment binding is created successfully", func() {
+			Eventually(func() bool {
+				if fw.AsKubeDeveloper.IntegrationController.HaveHACBSTestsSucceeded(snapshotGo) {
+					envbinding, err := fw.AsKubeDeveloper.IntegrationController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
+					Expect(err).ShouldNot(HaveOccurred())
+					GinkgoWriter.Printf("The EnvironmentBinding %s is created\n", envbinding.Name)
+					return true
+				}
+
+				snapshotGo, err = fw.AsKubeDeveloper.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, componentNode.Name)
+				Expect(err).ShouldNot(HaveOccurred())
+				return false
+			}, timeout, interval).Should(BeTrue(), "time out when waiting for release created")
+		})
+
 		// Check components are deployed
 		It("checks if multiple components are deployed", Pending, func() {
 			Eventually(func() bool {
-				deploymentGo, err := fw.CommonController.GetAppDeploymentByName(compNameGo, AppStudioE2EApplicationsNamespace)
+				deploymentGo, err := fw.AsKubeDeveloper.CommonController.GetAppDeploymentByName(compNameGo, namespace)
 				if err != nil && !errors.IsNotFound(err) {
 					return false
 				}
 
-				deploymentNode, err := fw.CommonController.GetAppDeploymentByName(compNameNode, AppStudioE2EApplicationsNamespace)
+				deploymentNode, err := fw.AsKubeDeveloper.CommonController.GetAppDeploymentByName(compNameNode, namespace)
 				if err != nil && !errors.IsNotFound(err) {
 					return false
 				}

@@ -36,7 +36,7 @@ var (
 
 type InstallAppStudio struct {
 	// Kubernetes Client to interact with Openshift Cluster
-	KubernetesClient *kubeCl.K8sClient
+	KubernetesClient *kubeCl.CustomClient
 
 	// TmpDirectory to store temporary files like git repos or some metadata
 	TmpDirectory string
@@ -71,7 +71,7 @@ type InstallAppStudio struct {
 
 func NewAppStudioInstallController() (*InstallAppStudio, error) {
 	cwd, _ := os.Getwd()
-	k8sClient, err := kubeCl.NewK8SClient()
+	k8sClient, err := kubeCl.NewAdminKubernetesClient()
 
 	if err != nil {
 		return nil, err
