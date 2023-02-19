@@ -14,7 +14,6 @@ import (
 
 	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deployment", Label("release", "withDeployment", "HACBS"), func() {
@@ -25,15 +24,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 
 	var devNamespace = utils.GetGeneratedNamespace("release-dev")
 	var managedNamespace = utils.GetGeneratedNamespace("release-managed")
-
-	var cm = &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: buildPipelineBundleDefaultName,
-		},
-		Data: map[string]string{
-			"default_build_bundle": buildPipelineBundleDefault,
-		},
-	}
 
 	BeforeAll(func() {
 		kubeController := tekton.KubeController{
@@ -52,9 +42,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
 		Expect(sourceAuthJson).ToNot(BeEmpty())
 
-		destinationAuthJson := utils.GetEnv(constants.QUAY_OAUTH_TOKEN_RELEASE_DESTINATION, "")
-		Expect(destinationAuthJson).ToNot(BeEmpty())
-
 		_, err = framework.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(hacbsReleaseTestsTokenSecret, devNamespace, sourceAuthJson)
 		Expect(err).ToNot(HaveOccurred())
 
@@ -64,13 +51,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		err = framework.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, hacbsReleaseTestsTokenSecret, "pipeline")
 		Expect(err).ToNot(HaveOccurred())
 
-		// Copy the public key from tekton-chains/signing-secrets to a new
-		// secret that contains just the public key to ensure that access
-		// to password and private key are not needed.
 		publicKey, err := kubeController.GetPublicKey("signing-secrets", constants.TEKTON_CHAINS_NS)
-
-		GinkgoWriter.Println("Publick Key : %s ", string(publicKey))
-
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(kubeController.CreateOrUpdateSigningSecret(
@@ -92,41 +73,32 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 			},
 			Exceptions: &ecp.EnterpriseContractPolicyExceptions{
 				NonBlocking: []string{
-					"tasks", "attestation_task_bundle", "java", "dc-metro-map",
+					"tasks", "attestation_task_bundle", "java",
 					"test", "hermetic_build_task.build_task_not_hermetic",
 					"buildah_build_task.dockerfile_param_external_source",
 					"step_image_registries.disallowed_task_step_image"},
 			},
 		}
 
-		_, err = framework.AsKubeAdmin.CommonController.CreateConfigMap(cm, devNamespace)
-		Expect(err).NotTo(HaveOccurred())
-
 		_, err = framework.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = framework.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-deploy-strategy", managedNamespace, "deploy-release", "quay.io/hacbs-release/pipeline-deploy-release:main", releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategy) //(releaseStrategyDefaultName, managedNamespace, releasePipelineNameDefault, releasePipelineBundleDefault, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategy)
+		_, err = framework.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-deploy-strategy", managedNamespace, "deploy-release", "quay.io/hacbs-release/pipeline-deploy-release:main", releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategyMvp)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = framework.AsKubeAdmin.GitOpsController.CreateEnvironment(releaseEnvironment, managedNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = framework.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, releaseEnvironment, "", "mvp-deploy-strategy") //releaseStrategyDefaultName)
+		_, err = framework.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, releaseEnvironment, "", "mvp-deploy-strategy")
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = framework.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicyDefault, managedNamespace, defaultEcPolicy) //(releaseStrategyPolicyDefault, managedNamespace, defaultEcPolicy)
+		_, err = framework.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicyDefault, managedNamespace, defaultEcPolicy)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = framework.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasePvcName, managedNamespace, corev1.ReadWriteOnce)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = framework.AsKubeAdmin.CommonController.CreateServiceAccount(releaseStrategyServiceAccountDefault, managedNamespace, managednamespaceSecret)
-		Expect(err).NotTo(HaveOccurred())
-
-		_, err = framework.AsKubeAdmin.CommonController.CreateRole(roleName, managedNamespace, roleRules)
-		Expect(err).NotTo(HaveOccurred())
-
-		_, err = framework.AsKubeAdmin.CommonController.CreateRoleBinding("role-relase-service-account-binding", managedNamespace, "ServiceAccount", roleName, "Role", "role-m6-service-account", "rbac.authorization.k8s.io")
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = framework.AsKubeAdmin.HasController.CreateHasApplication(applicationNameDefault, devNamespace)
@@ -208,8 +180,18 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 				GinkgoWriter.Printf(err.Error())
 			}
 
-			args := []string{managedNamespace, "-a", devNamespace + "/" + applicationNameDefault}
-			err = utils.ExecuteCommandInASpecificDirectory("./copy-application.sh", args, workingDir+"/../tests/release")
+			// Download copy-applications.sh script from release-utils repo
+			args := []string{"https://raw.githubusercontent.com/hacbs-release/release-utils/main/copy-application.sh", "-o", "copy-application.sh"}
+			err = utils.ExecuteCommandInASpecificDirectory("curl", args, workingDir)
+			Expect(err).NotTo(HaveOccurred())
+
+			args = []string{"775", "copy-application.sh"}
+			err = utils.ExecuteCommandInASpecificDirectory("chmod", args, workingDir)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Copying application in dev namespace to managed namespace
+			args = []string{managedNamespace, "-a", devNamespace + "/" + applicationNameDefault}
+			err = utils.ExecuteCommandInASpecificDirectory("./copy-application.sh", args, workingDir)
 			Expect(err).NotTo(HaveOccurred())
 		}, SpecTimeout(snapshotCreationTimeout+namespaceCreationTimeout*2))
 	})

@@ -97,7 +97,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 		}, SpecTimeout(snapshotCreationTimeout+namespaceCreationTimeout*2))
 
 		It("creates Release Strategy in managed namespace.", func(ctx SpecContext) {
-			_, err := fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, serviceAccount, paramsReleaseStrategy)
+			_, err := fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, serviceAccount, paramsReleaseStrategyM6)
 			Expect(err).NotTo(HaveOccurred())
 		}, SpecTimeout(releaseStrategyCreationTimeout))
 
