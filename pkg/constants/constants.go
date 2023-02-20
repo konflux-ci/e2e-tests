@@ -23,8 +23,8 @@ const (
 	// The Tekton Chains namespace
 	TEKTON_CHAINS_NS string = "tekton-chains" // #nosec
 
-	// Namespace for running the end-to-end Tekton Chains tests
-	TEKTON_CHAINS_E2E_NS string = "tekton-chains-e2e"
+	// User for running the end-to-end Tekton Chains tests
+	TEKTON_CHAINS_E2E_USER string = "tekton-chains-e2e"
 
 	//base64 Encoded docker config json value to create registry pull secret
 	DOCKER_CONFIG_JSON string = "DOCKER_CONFIG_JSON"
@@ -38,9 +38,16 @@ const (
 	// Skip checking "ApplicationServiceGHTokenSecrName" secret
 	SKIP_HAS_SECRET_CHECK_ENV string = "SKIP_HAS_SECRET_CHECK"
 
+	// Sandbox kubeconfig user path
+	USER_USER_KUBE_CONFIG_PATH_ENV string = "USER_KUBE_CONFIG_PATH"
 	// Release e2e auth for build and release quay keys
-	QUAY_OAUTH_TOKEN_RELEASE_SOURCE      string = "QUAY_OAUTH_TOKEN_RELEASE_SOURCE"
+
+	QUAY_OAUTH_TOKEN_RELEASE_SOURCE string = "QUAY_OAUTH_TOKEN_RELEASE_SOURCE"
+
 	QUAY_OAUTH_TOKEN_RELEASE_DESTINATION string = "QUAY_OAUTH_TOKEN_RELEASE_DESTINATION"
+
+	// Bundle ref for overriding the default Java build bundle specified in BuildPipelineSelectorYamlURL
+	CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV string = "CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE"
 
 	// Test namespace's required labels
 	ArgoCDLabelKey   string = "argocd.argoproj.io/managed-by"
@@ -67,6 +74,10 @@ const (
 
 	JVMBuildImageSecretName = "jvm-build-image-secrets"
 	JBSConfigName           = "jvm-build-config"
+
+	BuildPipelineSelectorYamlURL = "https://raw.githubusercontent.com/redhat-appstudio/infra-deployments/main/components/build-service/base/build-pipeline-selector.yaml"
+
+	DefaultImagePushRepo = "quay.io/redhat-appstudio-qe/test-images"
 )
 
 var (

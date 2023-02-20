@@ -1,26 +1,28 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"text/template"
 	"time"
 
-	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
 
 	sprig "github.com/go-task/slim-sprig"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/magefile/mage/sh"
-	routev1 "github.com/openshift/api/route/v1"
-	client "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	"github.com/mitchellh/go-homedir"
+	"github.com/tektoncd/cli/pkg/bundle"
+	"github.com/tektoncd/pipeline/pkg/remote/oci"
 )
 
 func getRemoteAndBranchNameFromPRLink(url string) (remote, branchName string, err error) {
@@ -160,76 +162,52 @@ func renderTemplate(destination, templatePath string, templateData interface{}, 
 	return nil
 }
 
-func getRouteHost(name, namespace string) (string, error) {
-	kubeClient, err := client.NewK8SClient()
-	if err != nil {
-		return "", err
+// createDockerConfigFile takes base64 encoded dockerconfig.json and saves it locally (/<home-directory/.docker/config.json)
+func createDockerConfigFile(base64EncodedString string) error {
+	var rawRegistryCreds []byte
+	var homeDir string
+	var err error
+
+	if rawRegistryCreds, err = base64.StdEncoding.DecodeString(base64EncodedString); err != nil {
+		return fmt.Errorf("unable to decode container registry credentials: %v", err)
 	}
-	route := &routev1.Route{}
-	err = kubeClient.KubeRest().Get(context.TODO(), types.NamespacedName{
-		Namespace: namespace,
-		Name:      name,
-	}, route)
-	if err != nil {
-		return "", err
+	if homeDir, err = homedir.Dir(); err != nil {
+		return fmt.Errorf("unable to locate home directory: %v", err)
 	}
-	return route.Spec.Host, nil
+	if err = os.MkdirAll(homeDir+"/.docker", 0775); err != nil {
+		return fmt.Errorf("failed to create '.docker' config directory: %v", err)
+	}
+	if err = os.WriteFile(homeDir+"/.docker/config.json", rawRegistryCreds, 0644); err != nil {
+		return fmt.Errorf("failed to create a docker config file: %v", err)
+	}
+
+	return nil
 }
 
-func getKeycloakUrl() (string, error) {
-	keycloakHost, err := getRouteHost("keycloak", "dev-sso")
-	if err != nil {
-		return "", err
+// extractTektonObjectFromBundle extracts specified Tekton object from specified bundle reference
+func extractTektonObjectFromBundle(bundleRef, kind, name string) (runtime.Object, error) {
+	var obj runtime.Object
+	var err error
+
+	resolver := oci.NewResolver(bundleRef, authn.DefaultKeychain)
+	if obj, _, err = resolver.Get(context.TODO(), kind, name); err != nil {
+		return nil, fmt.Errorf("failed to fetch the tekton object %s with name %s: %v", kind, name, err)
 	}
-	return fmt.Sprintf("https://%s", keycloakHost), nil
+	return obj, nil
 }
 
-func getToolchainApiUrl() (string, error) {
-	toolchainHost, err := getRouteHost("api", "toolchain-host-operator")
+// buildAndPushTektonBundle builds a Tekton bundle from YAML and pushes to remote container registry
+func buildAndPushTektonBundle(YamlContent []byte, ref name.Reference, remoteOption remoteimg.Option) error {
+	img, err := bundle.BuildTektonBundle([]string{string(YamlContent)}, os.Stdout)
 	if err != nil {
-		return "", err
+		return fmt.Errorf("error when building a bundle %s: %v", ref.String(), err)
 	}
-	return fmt.Sprintf("https://%s:443", toolchainHost), nil
-}
 
-func getKeycloakToken(keycloakUrl, username, password, client_id string) (string, error) {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		},
-	}
-	data := url.Values{}
-	data.Set("client_id", client_id)
-	data.Set("password", username)
-	data.Set("username", password)
-	data.Set("grant_type", "password")
-
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/auth/realms/testrealm/protocol/openid-connect/token", keycloakUrl), bytes.NewBufferString(data.Encode()))
+	outDigest, err := bundle.Write(img, ref, remoteOption)
 	if err != nil {
-		return "", err
+		return fmt.Errorf("error when pushing a bundle %s to a container image registry repo: %v", ref.String(), err)
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	klog.Infof("image digest for a new tekton bundle %s: %+v", ref.String(), outDigest)
 
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	fmt.Printf("Response: %+v\n", resp)
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	token := struct {
-		AccessToken string `json:"access_token"`
-	}{}
-
-	if err := json.Unmarshal(body, &token); err != nil {
-		return "", err
-	}
-	return token.AccessToken, nil
+	return nil
 }

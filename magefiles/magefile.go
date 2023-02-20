@@ -1,32 +1,37 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/devfile/library/pkg/util"
+	"k8s.io/apimachinery/pkg/runtime"
+
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	toolchainApi "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/toolchain-e2e/testsupport/md5"
+	"k8s.io/klog/v2"
+
+	"sigs.k8s.io/yaml"
+
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
 	gh "github.com/google/go-github/v44/github"
 	"github.com/magefile/mage/sh"
+	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/magefiles/installation"
 	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
-	client "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/tools/clientcmd/api"
-	"k8s.io/klog/v2"
+	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
 var (
@@ -189,12 +194,6 @@ func (ci CI) TestE2E() error {
 	if err := retry(BootstrapCluster, 2, 10*time.Second); err != nil {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
 	}
-	if err := RegisterUser(); err != nil {
-		return fmt.Errorf("error when registering user via toolchain operators: %v", err)
-	}
-	if err := GenerateUserKubeconfig(); err != nil {
-		return fmt.Errorf("error while generating user's kubeconfig file: %v", err)
-	}
 
 	if err := RunE2ETests(); err != nil {
 		testFailure = true
@@ -247,29 +246,104 @@ func (ci CI) setRequiredEnvVars() error {
 
 	if openshiftJobSpec.Refs.Repo != "e2e-tests" {
 
-		if strings.Contains(openshiftJobSpec.Refs.Repo, "-service") {
+		if strings.Contains(jobName, "-service") {
 			var envVarPrefix, imageTagSuffix, testSuiteLabel string
 			sp := strings.Split(os.Getenv("COMPONENT_IMAGE"), "@")
 
-			switch openshiftJobSpec.Refs.Repo {
-			case "application-service":
+			switch {
+			case strings.Contains(jobName, "application-service"):
 				envVarPrefix = "HAS"
 				imageTagSuffix = "has-image"
 				testSuiteLabel = "has,e2e-demo"
-			case "build-service":
-				envVarPrefix = "BUILD_SERVICE"
-				imageTagSuffix = "build-service-image"
-				testSuiteLabel = "build"
-			case "jvm-build-service":
+			case strings.Contains(jobName, "release-service"):
+				envVarPrefix = "RELEASE_SERVICE"
+				imageTagSuffix = "release-service-image"
+				testSuiteLabel = "release"
+			case strings.Contains(jobName, "jvm-build-service"):
 				envVarPrefix = "JVM_BUILD_SERVICE"
 				imageTagSuffix = "jvm-build-service-image"
 				testSuiteLabel = "jvm-build"
+				// Since CI requires to have default values for dependency images
+				// (https://github.com/openshift/release/blob/master/ci-operator/step-registry/redhat-appstudio/e2e/redhat-appstudio-e2e-ref.yaml#L15)
+				// we cannot let these env vars to have identical names in CI as those env vars used in tests
+				// e.g. JVM_BUILD_SERVICE_REQPROCESSOR_IMAGE, otherwise those images they are referencing wouldn't
+				// be always relevant for tests and tests would be failing
+				os.Setenv(fmt.Sprintf("%s_REQPROCESSOR_IMAGE", envVarPrefix), os.Getenv("CI_JBS_REQPROCESSOR_IMAGE"))
+				os.Setenv(fmt.Sprintf("%s_CACHE_IMAGE", envVarPrefix), os.Getenv("CI_JBS_CACHE_IMAGE"))
+
+				klog.Infof("going to override default Tekton bundle for the purpose of testing jvm-build-service PR")
+				var err error
+				var defaultBundleRef string
+				var tektonObj runtime.Object
+
+				tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
+				var newS2iJavaTaskRef, _ = name.ParseReference(fmt.Sprintf("%s:task-bundle-%s", constants.DefaultImagePushRepo, tag))
+				var newJavaBuilderPipelineRef, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", constants.DefaultImagePushRepo, tag))
+				var newReqprocessorImage = os.Getenv("JVM_BUILD_SERVICE_REQPROCESSOR_IMAGE")
+				var newTaskYaml, newPipelineYaml []byte
+
+				if err = createDockerConfigFile(os.Getenv("QUAY_TOKEN")); err != nil {
+					return fmt.Errorf("failed to create docker config file: %+v", err)
+				}
+				if defaultBundleRef, err = getDefaultPipelineBundleRef(constants.BuildPipelineSelectorYamlURL, "Java"); err != nil {
+					return fmt.Errorf("failed to get the pipeline bundle ref: %+v", err)
+				}
+				if tektonObj, err = extractTektonObjectFromBundle(defaultBundleRef, "pipeline", "java-builder"); err != nil {
+					return fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
+				}
+				javaPipelineObj := tektonObj.(tektonapi.PipelineObject)
+
+				var currentS2iJavaTaskRef string
+				for _, t := range javaPipelineObj.PipelineSpec().Tasks {
+					if t.TaskRef.Name == "s2i-java" {
+						currentS2iJavaTaskRef = t.TaskRef.Bundle
+						t.TaskRef.Bundle = newS2iJavaTaskRef.String()
+					}
+				}
+				if tektonObj, err = extractTektonObjectFromBundle(currentS2iJavaTaskRef, "task", "s2i-java"); err != nil {
+					return fmt.Errorf("failed to extract the Tekton Task from bundle: %+v", err)
+				}
+				taskObj := tektonObj.(tektonapi.TaskObject)
+
+				for i, s := range taskObj.TaskSpec().Steps {
+					if s.Name == "analyse-dependencies-java-sbom" {
+						taskObj.TaskSpec().Steps[i].Image = newReqprocessorImage
+					}
+				}
+
+				if newTaskYaml, err = yaml.Marshal(taskObj); err != nil {
+					return fmt.Errorf("error when marshalling a new task to YAML: %v", err)
+				}
+				if newPipelineYaml, err = yaml.Marshal(javaPipelineObj); err != nil {
+					return fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
+				}
+
+				keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
+				authOption := remoteimg.WithAuthFromKeychain(keychain)
+
+				if err = buildAndPushTektonBundle(newTaskYaml, newS2iJavaTaskRef, authOption); err != nil {
+					return fmt.Errorf("error when building/pushing a tekton task bundle: %v", err)
+				}
+				if err = buildAndPushTektonBundle(newPipelineYaml, newJavaBuilderPipelineRef, authOption); err != nil {
+					return fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
+				}
+				os.Setenv(constants.CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV, newJavaBuilderPipelineRef.String())
+			case strings.Contains(jobName, "build-service"):
+				envVarPrefix = "BUILD_SERVICE"
+				imageTagSuffix = "build-service-image"
+				testSuiteLabel = "build"
+			}
+			var prSHA, prOwner string
+			// "rehearse" jobs metadata are not relevant for testing
+			if !strings.Contains(jobName, "rehearse") {
+				prSHA = openshiftJobSpec.Refs.Pulls[0].SHA
+				prOwner = openshiftJobSpec.Refs.Pulls[0].Author
 			}
 
 			os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", envVarPrefix), sp[0])
 			os.Setenv(fmt.Sprintf("%s_IMAGE_TAG", envVarPrefix), fmt.Sprintf("redhat-appstudio-%s", imageTagSuffix))
-			os.Setenv(fmt.Sprintf("%s_PR_OWNER", envVarPrefix), openshiftJobSpec.Refs.Pulls[0].Author)
-			os.Setenv(fmt.Sprintf("%s_PR_SHA", envVarPrefix), openshiftJobSpec.Refs.Pulls[0].SHA)
+			os.Setenv(fmt.Sprintf("%s_PR_OWNER", envVarPrefix), prOwner)
+			os.Setenv(fmt.Sprintf("%s_PR_SHA", envVarPrefix), prSHA)
 			os.Setenv("E2E_TEST_SUITE_LABEL", testSuiteLabel)
 
 		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
@@ -378,7 +452,7 @@ func (CI) sendWebhook() error {
 
 // Generates test cases for Polarion(polarion.xml) from test files for AppStudio project.
 func GenerateTestCasesAppStudio() error {
-	return sh.RunV("ginkgo", "--v", "--dry-run", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", "--polarion-output-file=polarion.xml", "--generate-test-cases=true")
+	return sh.RunV("ginkgo", "--dry-run", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", "--polarion-output-file=polarion.xml", "--generate-test-cases=true")
 }
 
 // I've attached to the Local struct for now since it felt like it fit but it can be decoupled later as a standalone func.
@@ -483,109 +557,6 @@ func (Local) GenerateTestSpecFile() error {
 	}
 
 	return nil
-
-}
-
-// Creates preapproved userSignup CR cluster and waits for its reconciliation
-func RegisterUser() error {
-	kubeClient, err := client.NewK8SClient()
-	if err != nil {
-		return err
-	}
-	userSignup := &toolchainApi.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "user1",
-			Namespace: "toolchain-host-operator",
-			Annotations: map[string]string{
-				"toolchain.dev.openshift.com/user-email": "user1@user.us",
-			},
-			Labels: map[string]string{
-				"toolchain.dev.openshift.com/email-hash": md5.CalcMd5("user1@user.us"),
-			},
-		},
-		Spec: toolchainApi.UserSignupSpec{
-			Userid:   "user1",
-			Username: "user1",
-			States:   []toolchainApi.UserSignupState{"approved"},
-		},
-	}
-	fmt.Printf("Creating: %+v\n", userSignup)
-	if err := kubeClient.KubeRest().Create(context.TODO(), userSignup); err != nil {
-		return err
-	}
-	err = utils.WaitUntil(func() (done bool, err error) {
-		err = kubeClient.KubeRest().Get(context.TODO(), types.NamespacedName{
-			Namespace: "toolchain-host-operator",
-			Name:      "user1",
-		}, userSignup)
-		if err != nil {
-			return false, err
-		}
-		fmt.Printf("Waiting. %+v\n", userSignup)
-		for _, condition := range userSignup.Status.Conditions {
-			if condition.Type == "Complete" && condition.Status == corev1.ConditionTrue {
-				return true, nil
-			}
-		}
-		return false, nil
-	}, 2*time.Minute)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Obtains user's keycloak token and generates new kubeconfig for this user against toolchain proxy endpoint.
-// Configurable via env variables (default in brackets): USER_KUBE_CONFIG_PATH["$(pwd)/user.kubeconfig"], "KC_USERNAME"["user1"],
-// KC_PASSWORD["user1"], KC_CLIENT_ID["sandbox-public"], KEYCLOAK_URL[obtained dynamically - route `keycloak` in `dev-sso` namespace],
-// TOOLCHAIN_API_URL[obtained dynamically - route `api` in `toolchain-host-operator` namespace]
-func GenerateUserKubeconfig() error {
-
-	//setup provided/default values
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	kubeconfigPath := utils.GetEnv("USER_KUBE_CONFIG_PATH", fmt.Sprintf("%s/user.kubeconfig", wd))
-	username := utils.GetEnv("KC_USERNAME", "user1")
-	password := utils.GetEnv("KC_PASSWORD", "user1")
-	client_id := utils.GetEnv("KC_CLIENT_ID", "sandbox-public")
-
-	keycloakUrl, err := utils.GetEnvOrFunc("KEYCLOAK_URL", getKeycloakUrl)
-	if err != nil {
-		return err
-	}
-	toolchainApiUrl, err := utils.GetEnvOrFunc("TOOLCHAIN_API_URL", getToolchainApiUrl)
-	if err != nil {
-		return err
-	}
-
-	// Obtain active token from keycloak for provided user
-	token, err := getKeycloakToken(keycloakUrl, username, password, client_id)
-	if err != nil {
-		return err
-	}
-
-	// use the token to generate kubeconfig file
-	kubeconfig := api.NewConfig()
-	kubeconfig.Clusters[toolchainApiUrl] = &api.Cluster{
-		Server:                toolchainApiUrl,
-		InsecureSkipTLSVerify: true,
-	}
-	kubeconfig.Contexts[fmt.Sprintf("%s/%s/%s", username, toolchainApiUrl, username)] = &api.Context{
-		Cluster:   toolchainApiUrl,
-		Namespace: username,
-		AuthInfo:  fmt.Sprintf("%s/%s", username, toolchainApiUrl),
-	}
-	kubeconfig.AuthInfos[fmt.Sprintf("%s/%s", username, toolchainApiUrl)] = &api.AuthInfo{
-		Token: token,
-	}
-	kubeconfig.CurrentContext = fmt.Sprintf("%s/%s/%s", username, toolchainApiUrl, username)
-	err = clientcmd.WriteToFile(*kubeconfig, kubeconfigPath)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func appendFrameworkDescribeFile(packageName string) error {
@@ -611,4 +582,30 @@ func appendFrameworkDescribeFile(packageName string) error {
 
 	return nil
 
+}
+
+// getDefaultPipelineBundleRef gets the specific Tekton pipeline bundle reference from a Build pipeline selector
+// (in a YAML format) from a URL specified in the parameter
+func getDefaultPipelineBundleRef(buildPipelineSelectorYamlURL, selectorName string) (string, error) {
+	res, err := http.Get(buildPipelineSelectorYamlURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to get a build pipeline selector from url %s: %v", buildPipelineSelectorYamlURL, err)
+	}
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read the body response of a build pipeline selector: %v", err)
+	}
+	ps := &buildservice.BuildPipelineSelector{}
+	if err = yaml.Unmarshal(body, ps); err != nil {
+		return "", fmt.Errorf("failed to unmarshal build pipeline selector: %v", err)
+	}
+
+	for _, s := range ps.Spec.Selectors {
+		if s.Name == selectorName {
+			return s.PipelineRef.Bundle, nil
+		}
+	}
+
+	return "", fmt.Errorf("could not find %s pipeline bundle in build pipeline selector fetched from %s", selectorName, buildPipelineSelectorYamlURL)
 }

@@ -178,7 +178,7 @@ func GenerateRPPreprocReport(report types.Report, rpPreprocDir string) {
 		//generate folders only for failed tests
 		if !reportSpec.Failure.IsZero() {
 			if reportSpec.LeafNodeType == types.NodeTypeIt {
-				name := getClassnameFromReport(reportSpec) + "." + shortenStringAddHash(reportSpec)
+				name := shortenStringAddHash(reportSpec)
 				filePath := rpPreprocDir + "/rp_preproc/attachments/xunit/" + name
 				if err3 := os.MkdirAll(filePath, os.ModePerm); err3 != nil {
 					klog.Error(err3)
