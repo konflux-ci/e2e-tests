@@ -208,7 +208,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 						Expect(err).ShouldNot(HaveOccurred(), "failed to update component to trigger another pipeline build: %v", err)
 					}
 
-					err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeDeveloper.CommonController, component.Name, application.Name, namespace)
+					err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeAdmin.CommonController, component.Name, application.Name, namespace)
 					if err != nil {
 						Fail(fmt.Sprint(err))
 					}
