@@ -19,7 +19,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"knative.dev/pkg/apis"
 )
 
 const (
@@ -188,15 +187,16 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					component, err = fw.AsKubeAdmin.HasController.GetHasComponent(component.Name, namespace)
 					Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
 
-					pipelineRun, err := fw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, application.Name, namespace, false, "")
-					Expect(err).ShouldNot(HaveOccurred(), "failed to get pipelinerun: %v", err)
+					// If we are attempting more than 1 time lets retrigger the pipelinerun
+					if CurrentSpecReport().NumAttempts > 1 {
+						pipelineRun, err := fw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, application.Name, namespace, false, "")
+						Expect(err).ShouldNot(HaveOccurred(), "failed to get pipelinerun: %v", err)
 
-					if pipelineRun.Status.GetCondition(apis.ConditionReady).Reason == "Failed" {
 						err = fw.AsKubeAdmin.TektonController.DeletePipelineRun(pipelineRun.Name, namespace)
 						Expect(err).ShouldNot(HaveOccurred(), "failed to delete pipelinerun when retriger: %v", err)
 
 						delete(component.Annotations, InitialBuildAnnotationName)
-						err := fw.AsKubeDeveloper.HasController.KubeRest().Update(context.Background(), component)
+						err = fw.AsKubeDeveloper.HasController.KubeRest().Update(context.Background(), component)
 						Expect(err).ShouldNot(HaveOccurred(), "failed to update component to trigger another pipeline build: %v", err)
 					}
 
