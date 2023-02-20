@@ -19,21 +19,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"knative.dev/pkg/apis"
 )
 
 const (
-	// Application Service controller is deployed the namespace: https://github.com/redhat-appstudio/infra-deployments/blob/main/argo-cd-apps/base/has.yaml#L14
-	RedHatAppStudioApplicationNamespace string = "application-service"
-
-	// See more info: https://github.com/redhat-appstudio/application-service#creating-a-github-secret-for-has
-	ApplicationServiceGHTokenSecrName string = "has-github-token" // #nosec
-
-	// Name for the GitOps Deployment resource
-	GitOpsDeploymentName string = "gitops-deployment-e2e"
-
-	// GitOps repository branch to use
-	GitOpsRepositoryRevision string = "main"
-
 	// Environment name used for e2e-tests demos
 	EnvironmentName string = "development"
 
@@ -42,8 +31,6 @@ const (
 
 	// Environment name used for e2e-tests demos
 	SPIQuaySecretName string = "e2e-quay-secret"
-
-	E2EDemosNamespace = "e2e-demos"
 
 	InitialBuildAnnotationName = "appstudio.openshift.io/component-initial-build"
 )
@@ -79,7 +66,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				}
 
 				// Initialize the tests controllers
-				fw, err = framework.NewFramework(utils.GetGeneratedNamespace(E2EDemosNamespace))
+				fw, err = framework.NewFramework(utils.GetGeneratedNamespace("e2e-demos"))
 				Expect(err).NotTo(HaveOccurred())
 				namespace = fw.UserNamespace
 				Expect(namespace).NotTo(BeEmpty())
@@ -107,6 +94,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
 				}
 			})
+
 			// Create an application in a specific namespace
 			It("creates an application", func() {
 				GinkgoWriter.Printf("Parallel process %d\n", GinkgoParallelProcess())
@@ -174,7 +162,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 						component, err = fw.AsKubeDeveloper.HasController.CreateComponent(application.Name, componentTest.Name, namespace, "", "", componentTest.ContainerSource, outputContainerImage, SPIQuaySecretName, true)
 						Expect(err).NotTo(HaveOccurred())
 					})
-
 				} else if componentTest.GitSourceUrl != "" {
 					It(fmt.Sprintf("creates component %s from %s git source %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl), func() {
 						for _, compDetected := range cdq.Status.ComponentDetected {
@@ -201,12 +188,18 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					component, err = fw.AsKubeAdmin.HasController.GetHasComponent(component.Name, namespace)
 					Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
 
-					// If initial build have already happend, trigger the pipeline again.
-					if _, exists := component.Annotations[InitialBuildAnnotationName]; exists {
+					pipelineRun, err := fw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, application.Name, namespace, false, "")
+					Expect(err).ShouldNot(HaveOccurred(), "failed to get pipelinerun: %v", err)
+
+					if pipelineRun.Status.GetCondition(apis.ConditionReady).Reason == "Failed" {
+						err = fw.AsKubeAdmin.TektonController.DeletePipelineRun(pipelineRun.Name, namespace)
+						Expect(err).ShouldNot(HaveOccurred(), "failed to delete pipelinerun when retriger: %v", err)
+
 						delete(component.Annotations, InitialBuildAnnotationName)
 						err := fw.AsKubeDeveloper.HasController.KubeRest().Update(context.Background(), component)
 						Expect(err).ShouldNot(HaveOccurred(), "failed to update component to trigger another pipeline build: %v", err)
 					}
+
 					Expect(fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component.Name, application.Name, namespace)).To(Succeed(), "Failed component pipeline %v", err)
 				})
 
