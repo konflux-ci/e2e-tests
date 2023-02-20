@@ -110,7 +110,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					GinkgoWriter.Printf("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 
 					if condition.Reason == "Failed" {
-						Fail(u.GetFailedPipelineRunLogs(f.CommonController, pipelineRun))
+						Fail(u.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun))
 					}
 				}
 				return pipelineRun.IsDone()
