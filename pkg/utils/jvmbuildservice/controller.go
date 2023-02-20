@@ -12,10 +12,10 @@ import (
 )
 
 type SuiteController struct {
-	*kubeCl.K8sClient
+	*kubeCl.CustomClient
 }
 
-func NewSuiteControler(kube *kubeCl.K8sClient) (*SuiteController, error) {
+func NewSuiteControler(kube *kubeCl.CustomClient) (*SuiteController, error) {
 	return &SuiteController{
 		kube,
 	}, nil

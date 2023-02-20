@@ -1,25 +1,19 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"text/template"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
-
-	"sigs.k8s.io/yaml"
 
 	sprig "github.com/go-task/slim-sprig"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -27,9 +21,6 @@ import (
 	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/magefile/mage/sh"
 	"github.com/mitchellh/go-homedir"
-	routev1 "github.com/openshift/api/route/v1"
-	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
-	client "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/tektoncd/cli/pkg/bundle"
 	"github.com/tektoncd/pipeline/pkg/remote/oci"
 )
@@ -169,106 +160,6 @@ func renderTemplate(destination, templatePath string, templateData interface{}, 
 	}
 
 	return nil
-}
-
-func getRouteHost(name, namespace string) (string, error) {
-	kubeClient, err := client.NewK8SClient()
-	if err != nil {
-		return "", err
-	}
-	route := &routev1.Route{}
-	err = kubeClient.KubeRest().Get(context.TODO(), types.NamespacedName{
-		Namespace: namespace,
-		Name:      name,
-	}, route)
-	if err != nil {
-		return "", err
-	}
-	return route.Spec.Host, nil
-}
-
-func getKeycloakUrl() (string, error) {
-	keycloakHost, err := getRouteHost("keycloak", "dev-sso")
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("https://%s", keycloakHost), nil
-}
-
-func getToolchainApiUrl() (string, error) {
-	toolchainHost, err := getRouteHost("api", "toolchain-host-operator")
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("https://%s:443", toolchainHost), nil
-}
-
-func getKeycloakToken(keycloakUrl, username, password, client_id string) (string, error) {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		},
-	}
-	data := url.Values{}
-	data.Set("client_id", client_id)
-	data.Set("password", username)
-	data.Set("username", password)
-	data.Set("grant_type", "password")
-
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/auth/realms/testrealm/protocol/openid-connect/token", keycloakUrl), bytes.NewBufferString(data.Encode()))
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	fmt.Printf("Response: %+v\n", resp)
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	token := struct {
-		AccessToken string `json:"access_token"`
-	}{}
-
-	if err := json.Unmarshal(body, &token); err != nil {
-		return "", err
-	}
-	return token.AccessToken, nil
-}
-
-// getDefaultPipelineBundleRef gets the specific Tekton pipeline bundle reference from a Build pipeline selector
-// (in a YAML format) from a URL specified in the parameter
-func getDefaultPipelineBundleRef(buildPipelineSelectorYamlURL, selectorName string) (string, error) {
-	res, err := http.Get(buildPipelineSelectorYamlURL)
-	if err != nil {
-		return "", fmt.Errorf("failed to get a build pipeline selector from url %s: %v", buildPipelineSelectorYamlURL, err)
-	}
-	defer res.Body.Close()
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read the body response of a build pipeline selector: %v", err)
-	}
-	ps := &buildservice.BuildPipelineSelector{}
-	if err = yaml.Unmarshal(body, ps); err != nil {
-		return "", fmt.Errorf("failed to unmarshal build pipeline selector: %v", err)
-	}
-
-	for _, s := range ps.Spec.Selectors {
-		if s.Name == selectorName {
-			return s.PipelineRef.Bundle, nil
-		}
-	}
-
-	return "", fmt.Errorf("could not find %s pipeline bundle in build pipeline selector fetched from %s", selectorName, buildPipelineSelectorYamlURL)
 }
 
 // createDockerConfigFile takes base64 encoded dockerconfig.json and saves it locally (/<home-directory/.docker/config.json)

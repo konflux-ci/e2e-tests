@@ -29,10 +29,10 @@ import (
 )
 
 type SuiteController struct {
-	*kubeCl.K8sClient
+	*kubeCl.CustomClient
 }
 
-func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
+func NewSuiteController(kube *kubeCl.CustomClient) (*SuiteController, error) {
 	return &SuiteController{
 		kube,
 	}, nil
@@ -71,7 +71,7 @@ func (h *SuiteController) CreateHasApplication(name, namespace string) (*appserv
 		return nil, err
 	}
 
-	if err := utils.WaitUntil(h.ApplicationDevfilePresent(application), time.Minute*2); err != nil {
+	if err := utils.WaitUntil(h.ApplicationDevfilePresent(application), time.Minute*10); err != nil {
 		return nil, fmt.Errorf("timed out when waiting for devfile content creation for application %s in %s namespace: %+v", name, namespace, err)
 	}
 
@@ -273,9 +273,6 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 	component.Spec.Secret = secret
 	component.Spec.Application = applicationName
 
-	if containerImage != "" {
-		component.Spec.ContainerImage = ""
-	}
 	err := h.KubeRest().Create(context.TODO(), component)
 	if err != nil {
 		return nil, err

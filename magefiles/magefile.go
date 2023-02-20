@@ -1,9 +1,10 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -16,25 +17,18 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/yaml"
 
-	toolchainApi "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/toolchain-e2e/testsupport/md5"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
 	gh "github.com/google/go-github/v44/github"
 	"github.com/magefile/mage/sh"
+	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/magefiles/installation"
 	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
-	client "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -199,12 +193,6 @@ func (ci CI) TestE2E() error {
 
 	if err := retry(BootstrapCluster, 2, 10*time.Second); err != nil {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
-	}
-	if err := RegisterUser(); err != nil {
-		return fmt.Errorf("error when registering user via toolchain operators: %v", err)
-	}
-	if err := GenerateUserKubeconfig(); err != nil {
-		return fmt.Errorf("error while generating user's kubeconfig file: %v", err)
 	}
 
 	if err := RunE2ETests(); err != nil {
@@ -464,7 +452,7 @@ func (CI) sendWebhook() error {
 
 // Generates test cases for Polarion(polarion.xml) from test files for AppStudio project.
 func GenerateTestCasesAppStudio() error {
-	return sh.RunV("ginkgo", "--v", "--dry-run", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", "--polarion-output-file=polarion.xml", "--generate-test-cases=true")
+	return sh.RunV("ginkgo", "--dry-run", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", "--polarion-output-file=polarion.xml", "--generate-test-cases=true")
 }
 
 // I've attached to the Local struct for now since it felt like it fit but it can be decoupled later as a standalone func.
@@ -569,109 +557,6 @@ func (Local) GenerateTestSpecFile() error {
 	}
 
 	return nil
-
-}
-
-// Creates preapproved userSignup CR cluster and waits for its reconciliation
-func RegisterUser() error {
-	kubeClient, err := client.NewK8SClient()
-	if err != nil {
-		return err
-	}
-	userSignup := &toolchainApi.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "user1",
-			Namespace: "toolchain-host-operator",
-			Annotations: map[string]string{
-				"toolchain.dev.openshift.com/user-email": "user1@user.us",
-			},
-			Labels: map[string]string{
-				"toolchain.dev.openshift.com/email-hash": md5.CalcMd5("user1@user.us"),
-			},
-		},
-		Spec: toolchainApi.UserSignupSpec{
-			Userid:   "user1",
-			Username: "user1",
-			States:   []toolchainApi.UserSignupState{"approved"},
-		},
-	}
-	fmt.Printf("Creating: %+v\n", userSignup)
-	if err := kubeClient.KubeRest().Create(context.TODO(), userSignup); err != nil {
-		return err
-	}
-	err = utils.WaitUntil(func() (done bool, err error) {
-		err = kubeClient.KubeRest().Get(context.TODO(), types.NamespacedName{
-			Namespace: "toolchain-host-operator",
-			Name:      "user1",
-		}, userSignup)
-		if err != nil {
-			return false, err
-		}
-		fmt.Printf("Waiting. %+v\n", userSignup)
-		for _, condition := range userSignup.Status.Conditions {
-			if condition.Type == "Complete" && condition.Status == corev1.ConditionTrue {
-				return true, nil
-			}
-		}
-		return false, nil
-	}, 2*time.Minute)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Obtains user's keycloak token and generates new kubeconfig for this user against toolchain proxy endpoint.
-// Configurable via env variables (default in brackets): USER_KUBE_CONFIG_PATH["$(pwd)/user.kubeconfig"], "KC_USERNAME"["user1"],
-// KC_PASSWORD["user1"], KC_CLIENT_ID["sandbox-public"], KEYCLOAK_URL[obtained dynamically - route `keycloak` in `dev-sso` namespace],
-// TOOLCHAIN_API_URL[obtained dynamically - route `api` in `toolchain-host-operator` namespace]
-func GenerateUserKubeconfig() error {
-
-	//setup provided/default values
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	kubeconfigPath := utils.GetEnv("USER_KUBE_CONFIG_PATH", fmt.Sprintf("%s/user.kubeconfig", wd))
-	username := utils.GetEnv("KC_USERNAME", "user1")
-	password := utils.GetEnv("KC_PASSWORD", "user1")
-	client_id := utils.GetEnv("KC_CLIENT_ID", "sandbox-public")
-
-	keycloakUrl, err := utils.GetEnvOrFunc("KEYCLOAK_URL", getKeycloakUrl)
-	if err != nil {
-		return err
-	}
-	toolchainApiUrl, err := utils.GetEnvOrFunc("TOOLCHAIN_API_URL", getToolchainApiUrl)
-	if err != nil {
-		return err
-	}
-
-	// Obtain active token from keycloak for provided user
-	token, err := getKeycloakToken(keycloakUrl, username, password, client_id)
-	if err != nil {
-		return err
-	}
-
-	// use the token to generate kubeconfig file
-	kubeconfig := api.NewConfig()
-	kubeconfig.Clusters[toolchainApiUrl] = &api.Cluster{
-		Server:                toolchainApiUrl,
-		InsecureSkipTLSVerify: true,
-	}
-	kubeconfig.Contexts[fmt.Sprintf("%s/%s/%s", username, toolchainApiUrl, username)] = &api.Context{
-		Cluster:   toolchainApiUrl,
-		Namespace: username,
-		AuthInfo:  fmt.Sprintf("%s/%s", username, toolchainApiUrl),
-	}
-	kubeconfig.AuthInfos[fmt.Sprintf("%s/%s", username, toolchainApiUrl)] = &api.AuthInfo{
-		Token: token,
-	}
-	kubeconfig.CurrentContext = fmt.Sprintf("%s/%s/%s", username, toolchainApiUrl, username)
-	err = clientcmd.WriteToFile(*kubeconfig, kubeconfigPath)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func appendFrameworkDescribeFile(packageName string) error {
@@ -697,4 +582,30 @@ func appendFrameworkDescribeFile(packageName string) error {
 
 	return nil
 
+}
+
+// getDefaultPipelineBundleRef gets the specific Tekton pipeline bundle reference from a Build pipeline selector
+// (in a YAML format) from a URL specified in the parameter
+func getDefaultPipelineBundleRef(buildPipelineSelectorYamlURL, selectorName string) (string, error) {
+	res, err := http.Get(buildPipelineSelectorYamlURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to get a build pipeline selector from url %s: %v", buildPipelineSelectorYamlURL, err)
+	}
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read the body response of a build pipeline selector: %v", err)
+	}
+	ps := &buildservice.BuildPipelineSelector{}
+	if err = yaml.Unmarshal(body, ps); err != nil {
+		return "", fmt.Errorf("failed to unmarshal build pipeline selector: %v", err)
+	}
+
+	for _, s := range ps.Spec.Selectors {
+		if s.Name == selectorName {
+			return s.PipelineRef.Bundle, nil
+		}
+	}
+
+	return "", fmt.Errorf("could not find %s pipeline bundle in build pipeline selector fetched from %s", selectorName, buildPipelineSelectorYamlURL)
 }
