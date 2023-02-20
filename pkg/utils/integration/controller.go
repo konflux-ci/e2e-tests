@@ -133,7 +133,14 @@ func (h *SuiteController) GetIntegrationTestScenarios(applicationName, namespace
 	if err != nil {
 		return nil, err
 	}
-	return &integrationTestScenarioList.Items, nil
+
+	items := make([]integrationv1alpha1.IntegrationTestScenario, 0)
+	for _, t := range integrationTestScenarioList.Items {
+		if t.Spec.Application == applicationName {
+			items = append(items, t)
+		}
+	}
+	return &items, nil
 }
 
 func (h *SuiteController) CreateEnvironment(namespace string, environmenName string) (*appstudioApi.Environment, error) {
