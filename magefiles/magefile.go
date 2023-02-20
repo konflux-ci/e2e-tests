@@ -42,7 +42,8 @@ var (
 	jobName          = utils.GetEnv("JOB_NAME", "")
 	// can be periodic, presubmit or postsubmit
 	jobType                    = utils.GetEnv("JOB_TYPE", "")
-	reposToDeleteDefaultRegexp = "jvm-build-suite|e2e-dotnet|build-suite-test|e2e-multiple-components|e2e-nodejs|pet-clinic-e2e|test-app|multi-component-application|e2e-quayio|petclinic"
+	reposToDeleteDefaultRegexp = "jvm-build|e2e-dotnet|build-suite|e2e|pet-clinic-e2e|test-app|multi-component-application|e2e-quayio|petclinic|test-app|integ-app|^dockerfile-|new-|^python|my-app|^test-|^multi-component"
+	repositoriesWithWebhooks   = []string{"devfile-sample-hello-world"}
 )
 
 func (CI) parseJobSpec() error {
@@ -484,7 +485,34 @@ func (Local) GenerateTestSuiteFile() error {
 	}
 
 	return nil
+}
 
+// Remove all webhooks which with 1 day lifetime. By default will delete webooks from redhat-appstudio-qe
+func CleanWebHooks() error {
+	token := utils.GetEnv(constants.GITHUB_TOKEN_ENV, "")
+	if token == "" {
+		return fmt.Errorf("empty GITHUB_TOKEN env. Please provide a valid github token")
+	}
+
+	githubOrg := utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
+	gh := github.NewGithubClient(token, githubOrg)
+
+	for _, repo := range repositoriesWithWebhooks {
+		webhookList, err := gh.ListRepoWebhooks(repo)
+		if err != nil {
+			return err
+		}
+		for _, wh := range webhookList {
+			dayDuration, _ := time.ParseDuration("24h")
+			if time.Since(wh.GetCreatedAt()) > dayDuration {
+				klog.Infof("removing webhook: %s, git_organization: %s, git_repository: %s", wh.Name, githubOrg, repo)
+				if err := gh.DeleteWebhook(repo, *wh.ID); err != nil {
+					return fmt.Errorf("failed to delete webhook: %v, repo: %s", wh.Name, repo)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // I've attached to the Local struct for now since it felt like it fit but it can be decoupled later as a standalone func.
