@@ -323,6 +323,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return pipelineRun.HasStarted()
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 			})
+
 			It("pipelineRun should eventually finish", func() {
 				timeout = time.Minute * 50
 				interval = time.Second * 10
