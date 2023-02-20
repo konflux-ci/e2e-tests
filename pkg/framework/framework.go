@@ -16,16 +16,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
-type UserControllerHub struct {
-	HasController             *has.SuiteController
-	CommonController          *common.SuiteController
-	GitOpsController          *gitops.SuiteController
-	SPIController             *spi.SuiteController
-	IntegrationController     *integration.SuiteController
-	TektonController          *tekton.SuiteController
-	JvmbuildserviceController *jvmbuildservice.SuiteController
-}
-
 type ControllerHub struct {
 	HasController             *has.SuiteController
 	CommonController          *common.SuiteController
