@@ -89,7 +89,7 @@ func setup(cmd *cobra.Command, args []string) {
 	klog.Infof("Batch Size: %d", userBatches)
 
 	klog.Infof("🕖 initializing...\n")
-	framework, err := framework.NewFramework()
+	framework, err := framework.NewFramework("load-tests")
 	if err != nil {
 		klog.Errorf("error creating client-go %v", err)
 	}
@@ -97,7 +97,7 @@ func setup(cmd *cobra.Command, args []string) {
 	if len(token) == 0 {
 		token, err = auth.GetTokenFromOC()
 		if err != nil {
-			tokenRequestURI, err := auth.GetTokenRequestURI(framework.CommonController.KubeRest()) // authorization.FindTokenRequestURI(framework.CommonController.KubeRest())
+			tokenRequestURI, err := auth.GetTokenRequestURI(framework.AsKubeAdmin.CommonController.KubeRest()) // authorization.FindTokenRequestURI(framework.CommonController.KubeRest())
 			if err != nil {
 				klog.Fatalf("a token is required to capture metrics, use oc login to log into the cluster: %v", err)
 			}
@@ -105,9 +105,9 @@ func setup(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	metricsInstance := metrics.NewEmpty(term, framework.CommonController.KubeRest(), 5*time.Minute)
+	metricsInstance := metrics.NewEmpty(term, framework.AsKubeAdmin.CommonController.KubeRest(), 5*time.Minute)
 
-	prometheusClient := metrics.GetPrometheusClient(term, framework.CommonController.KubeRest(), token)
+	prometheusClient := metrics.GetPrometheusClient(term, framework.AsKubeAdmin.CommonController.KubeRest(), token)
 
 	metricsInstance.AddQueries(
 		queries.QueryClusterCPUUtilisation(prometheusClient),
@@ -154,13 +154,13 @@ func setup(cmd *cobra.Command, args []string) {
 		for AppStudioUsersBar.Incr() {
 			startTime := time.Now()
 			username := fmt.Sprintf("%s-%04d", usernamePrefix, AppStudioUsersBar.Current())
-			if err := users.Create(framework.CommonController.KubeRest(), username, constants.HostOperatorNamespace, constants.MemberOperatorNamespace); err != nil {
+			if err := users.Create(framework.AsKubeAdmin.CommonController.KubeRest(), username, constants.HostOperatorNamespace, constants.MemberOperatorNamespace); err != nil {
 				klog.Fatalf("failed to provision user '%s'", username)
 				klog.Errorf(err.Error())
 			}
 			if AppStudioUsersBar.Current()%userBatches == 0 {
 				for i := AppStudioUsersBar.Current() - userBatches + 1; i < AppStudioUsersBar.Current(); i++ {
-					if err := wait.ForNamespace(framework.CommonController.KubeRest(), username); err != nil {
+					if err := wait.ForNamespace(framework.AsKubeAdmin.CommonController.KubeRest(), username); err != nil {
 						klog.Fatalf("failed to find namespace '%s'", username)
 						klog.Errorf(err.Error())
 					}
@@ -180,7 +180,7 @@ func setup(cmd *cobra.Command, args []string) {
 		for ResourcesBar.Incr() {
 			startTime := time.Now()
 			username := fmt.Sprintf("%s-%04d", usernamePrefix, ResourcesBar.Current())
-			_, errors := framework.CommonController.CreateRegistryAuthSecret(
+			_, errors := framework.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(
 				"redhat-appstudio-registry-pull-secret",
 				username,
 				utils.GetDockerConfigJson(),
@@ -190,16 +190,16 @@ func setup(cmd *cobra.Command, args []string) {
 			}
 			// time.Sleep(time.Second * 2)
 			ApplicationName := fmt.Sprintf("%s-app", username)
-			app, err := framework.HasController.CreateHasApplication(ApplicationName, username)
+			app, err := framework.AsKubeAdmin.HasController.CreateHasApplication(ApplicationName, username)
 			if err != nil {
 				klog.Fatalf("Problem Creating the Application: %v", err)
 			}
-			if err := utils.WaitUntil(framework.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second); err != nil {
+			if err := utils.WaitUntil(framework.AsKubeAdmin.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second); err != nil {
 				klog.Fatalf("timed out waiting for application gitops repo to be created: %v", err)
 			}
 			ComponentName := fmt.Sprintf("%s-component", username)
 			ComponentContainerImage := fmt.Sprintf("image-registry.openshift-image-registry.svc:5000/%s/devfile-sample-code-with-quarkus:%s", username, strings.Replace(uuid.New().String(), "-", "", -1))
-			component, err := framework.HasController.CreateComponent(
+			component, err := framework.AsKubeAdmin.HasController.CreateComponent(
 				ApplicationName,
 				ComponentName,
 				username,
@@ -239,7 +239,7 @@ func setup(cmd *cobra.Command, args []string) {
 				DefaultRetryInterval := time.Millisecond * 200
 				DefaultTimeout := time.Minute * 17
 				error := k8swait.Poll(DefaultRetryInterval, DefaultTimeout, func() (done bool, err error) {
-					pipelineRun, err := framework.HasController.GetComponentPipelineRun(ComponentName, ApplicationName, username, false, "")
+					pipelineRun, err := framework.AsKubeAdmin.HasController.GetComponentPipelineRun(ComponentName, ApplicationName, username, false, "")
 					if err != nil {
 						return false, err
 					}
