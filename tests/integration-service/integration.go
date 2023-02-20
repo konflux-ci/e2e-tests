@@ -51,7 +51,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			Expect(utils.WaitUntil(f.AsKubeAdmin.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
 				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
 			)
-			DeferCleanup(f.AsKubeAdmin.HasController.DeleteHasApplication, applicationName, appStudioE2EApplicationsNamespace, false)
+			//	DeferCleanup(f.AsKubeAdmin.HasController.DeleteHasApplication, applicationName, appStudioE2EApplicationsNamespace, false)
 
 			componentName = fmt.Sprintf("integration-suite-test-component-git-source-%s", util.GenerateRandomString(4))
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
@@ -60,7 +60,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			// Create a component with Git Source URL being defined
 			_, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", "", outputContainerImage, "", true)
 			Expect(err).ShouldNot(HaveOccurred())
-			DeferCleanup(f.AsKubeAdmin.HasController.DeleteHasComponent, componentName, appStudioE2EApplicationsNamespace, false)
+			//	DeferCleanup(f.AsKubeAdmin.HasController.DeleteHasComponent, componentName, appStudioE2EApplicationsNamespace, false)
 
 			_, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, appStudioE2EApplicationsNamespace, BundleURL, InPipelineName)
 			Expect(err).ShouldNot(HaveOccurred())
