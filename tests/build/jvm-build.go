@@ -289,6 +289,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				return true
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the pipeline run to complete")
 		})
+
 		It("artifactbuilds and dependencybuilds are generated", func() {
 			Eventually(func() bool {
 				abList, err := f.AsKubeAdmin.JvmbuildserviceController.ListArtifactBuilds(testNamespace)

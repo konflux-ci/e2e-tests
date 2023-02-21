@@ -144,12 +144,12 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 				It("creates componentdetectionquery", func() {
 					if componentTest.Type == "private" {
-						cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, SPIGithubSecretName, false)
+						cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, componentTest.GitSourceRevision, componentTest.GitSourceContext, SPIGithubSecretName, false)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
 
 					} else {
-						cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, "", false)
+						cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, componentTest.GitSourceRevision, componentTest.GitSourceContext, "", false)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
 					}
