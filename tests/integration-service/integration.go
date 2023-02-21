@@ -29,17 +29,21 @@ const (
 var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests", Label("integration-service", "HACBS"), func() {
 	defer GinkgoRecover()
 
+	var f *framework.Framework
+	var err error
+
 	var applicationName, componentName, appStudioE2EApplicationsNamespace, outputContainerImage string
 	var timeout, interval time.Duration
 	var applicationSnapshot *appstudioApi.Snapshot
 	var applicationSnapshot_push *appstudioApi.Snapshot
 	var env *appstudioApi.Environment
 
-	// Initialize the tests controllers
-	f, err := framework.NewFramework(IntegrationServiceUser)
-	Expect(err).NotTo(HaveOccurred())
 	Describe("the component with git source (GitHub) is created", Ordered, func() {
 		BeforeAll(func() {
+			// Initialize the tests controllers
+			f, err = framework.NewFramework(IntegrationServiceUser)
+			Expect(err).NotTo(HaveOccurred())
+
 			applicationName = fmt.Sprintf("integ-app-%s", util.GenerateRandomString(4))
 			appStudioE2EApplicationsNamespace = f.UserNamespace
 

@@ -19,10 +19,16 @@ import (
 
 var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HACBS"), func() {
 	defer GinkgoRecover()
+	var fwk *framework.Framework
+	var err error
+	var namespace string
 
-	fwk, err := framework.NewFramework(constants.TEKTON_CHAINS_E2E_USER)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(fwk.UserNamespace).NotTo(BeNil(), "failed to create sandbox user")
+	BeforeAll(func() {
+		fwk, err = framework.NewFramework(constants.TEKTON_CHAINS_E2E_USER)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(fwk.UserNamespace).NotTo(BeNil(), "failed to create sandbox user")
+		namespace = fwk.UserNamespace
+	})
 
 	Context("infrastructure is running", Label("pipeline"), func() {
 		It("verifies if the chains controller is running", func() {
@@ -55,16 +61,10 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 		// Make the PipelineRun name and namespace predictable. For convenience, the name of the
 		// PipelineRun that builds an image, is the same as the repository where the image is
 		// pushed to.
-		namespace := fwk.UserNamespace
-		buildPipelineRunName := fmt.Sprintf("buildah-demo-%s", util.GenerateRandomString(10))
-		image := fmt.Sprintf("image-registry.openshift-image-registry.svc:5000/%s/%s", namespace, buildPipelineRunName)
-		var imageWithDigest string
-
-		pipelineRunTimeout := int(time.Duration(20) * time.Minute)
-		attestationTimeout := time.Duration(60) * time.Second
-
+		var buildPipelineRunName, image, imageWithDigest string
+		var pipelineRunTimeout int
+		var attestationTimeout time.Duration
 		var kubeController tekton.KubeController
-
 		var policySource []ecp.Source
 
 		BeforeAll(func() {
@@ -73,6 +73,12 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				Tektonctrl: *fwk.AsKubeAdmin.TektonController,
 				Namespace:  namespace,
 			}
+
+			buildPipelineRunName = fmt.Sprintf("buildah-demo-%s", util.GenerateRandomString(10))
+			image = fmt.Sprintf("image-registry.openshift-image-registry.svc:5000/%s/%s", namespace, buildPipelineRunName)
+
+			pipelineRunTimeout = int(time.Duration(20) * time.Minute)
+			attestationTimeout = time.Duration(60) * time.Second
 
 			defaultEcp, err := kubeController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 			Expect(err).NotTo(HaveOccurred())

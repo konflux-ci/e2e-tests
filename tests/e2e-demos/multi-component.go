@@ -26,6 +26,9 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 	defer GinkgoRecover()
 
+	var fw *framework.Framework
+	var err error
+
 	// Initialize the application struct
 	application := &appservice.Application{}
 	cdq := &appservice.ComponentDetectionQuery{}
@@ -34,11 +37,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	snapshotGo := &appservice.Snapshot{}
 	snapshotNode := &appservice.Snapshot{}
 	env := &appservice.Environment{}
-
-	// Initialize the tests controllers
-	fw, err := framework.NewFramework(MultiComponentDemoNamespace)
-	Expect(err).NotTo(HaveOccurred())
-	namespace := fw.UserNamespace
 
 	var testSpecification = config.WorkflowSpec{
 		Tests: []config.TestSpec{
@@ -61,9 +59,15 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 	var removeApplication = true
 
+	var namespace string
+
 	Describe(testSpecification.Tests[0].ApplicationName, Ordered, func() {
 		BeforeAll(func() {
 			Skip("skip tests due a issue with devfile detection. See jira: https://issues.redhat.com/browse/DEVHAS-225")
+			// Initialize the tests controllers
+			fw, err = framework.NewFramework(MultiComponentDemoNamespace)
+			Expect(err).NotTo(HaveOccurred())
+			namespace = fw.UserNamespace
 			// Check to see if the github token was provided
 			Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
 			// Check test specification has at least one test defined
