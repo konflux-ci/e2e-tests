@@ -32,3 +32,9 @@ local/template/generate-test-suite:
 
 local/template/generate-test-spec:
 	./mage -v local:generateTestSpecFile
+
+clean-gitops-repositories:
+	DRY_RUN=false ./mage -v local:cleanupGithubOrg
+
+clean-github-webhooks:
+	./mage -v cleanWebHooks
