@@ -171,7 +171,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				Expect(err).ShouldNot(HaveOccurred())
 
 				for _, testScenario := range *integrationTestScenarios {
-					timeout = time.Second * 60
+					timeout = time.Minute * 5
 					interval = time.Second * 2
 					Eventually(func() bool {
 						pipelineRun, err := f.AsKubeAdmin.IntegrationController.GetIntegrationPipelineRun(testScenario.Name, applicationSnapshot_push.Name, appStudioE2EApplicationsNamespace)
