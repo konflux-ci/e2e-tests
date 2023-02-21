@@ -36,11 +36,8 @@ var (
 var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label("has"), func() {
 	defer GinkgoRecover()
 
-	// Initialize the tests controllers
-	framework, err := framework.NewFramework(DEFAULT_USER_PUBLIC_REPOS)
-	Expect(err).NotTo(HaveOccurred())
-	var testNamespace = framework.UserNamespace
-	Expect(testNamespace).NotTo(BeEmpty())
+	var fw *framework.Framework
+	var err error
 
 	var oauthSecretName = ""
 	var applicationName, componentName string
@@ -51,13 +48,20 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 	compDetected := appservice.ComponentDetectionDescription{}
 	privateGitRepository := utils.GetEnv(constants.PRIVATE_DEVFILE_SAMPLE, PrivateQuarkusDevfileSource)
 
+	var testNamespace string
+
 	BeforeAll(func() {
+		// Initialize the tests controllers
+		fw, err = framework.NewFramework(DEFAULT_USER_PUBLIC_REPOS)
+		Expect(err).NotTo(HaveOccurred())
+		testNamespace = fw.UserNamespace
+		Expect(testNamespace).NotTo(BeEmpty())
 		// Generate names for the application and component resources
 		applicationName = fmt.Sprintf(RedHatAppStudioApplicationName+"-%s", util.GenerateRandomString(10))
 		componentName = fmt.Sprintf(QuarkusComponentName+"-%s", util.GenerateRandomString(10))
 
 		credentials := `{"access_token":"` + utils.GetEnv(constants.GITHUB_TOKEN_ENV, "") + `"}`
-		oauthSecretName = framework.AsKubeDeveloper.SPIController.InjectManualSPIToken(testNamespace, privateGitRepository, credentials, v1.SecretTypeBasicAuth, SPIGithubSecretName)
+		oauthSecretName = fw.AsKubeDeveloper.SPIController.InjectManualSPIToken(testNamespace, privateGitRepository, credentials, v1.SecretTypeBasicAuth, SPIGithubSecretName)
 
 		// Check to see if the github token was provided
 		Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
@@ -65,25 +69,25 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 
 	AfterAll(func() {
 		if !CurrentSpecReport().Failed() {
-			err := framework.AsKubeDeveloper.HasController.DeleteHasComponent(componentName, testNamespace, false)
+			err := fw.AsKubeDeveloper.HasController.DeleteHasComponent(componentName, testNamespace, false)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = framework.AsKubeDeveloper.HasController.DeleteHasApplication(applicationName, testNamespace, false)
+			err = fw.AsKubeDeveloper.HasController.DeleteHasApplication(applicationName, testNamespace, false)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() bool {
 				// application info should be stored even after deleting the application in application variable
 				gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-				return framework.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+				return fw.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 			}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
-			Expect(framework.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
-			Expect(framework.SandboxController.DeleteUserSignup(framework.UserName)).NotTo(BeFalse())
+			Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
 		}
 	})
 
 	It("creates Red Hat AppStudio Application", func() {
-		createdApplication, err := framework.AsKubeDeveloper.HasController.CreateHasApplication(applicationName, testNamespace)
+		createdApplication, err := fw.AsKubeDeveloper.HasController.CreateHasApplication(applicationName, testNamespace)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createdApplication.Spec.DisplayName).To(Equal(applicationName))
 		Expect(createdApplication.Namespace).To(Equal(testNamespace))
@@ -91,7 +95,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 
 	It("checks Red Hat AppStudio Application health", func() {
 		Eventually(func() string {
-			application, err = framework.AsKubeDeveloper.HasController.GetHasApplication(applicationName, testNamespace)
+			application, err = fw.AsKubeDeveloper.HasController.GetHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
 			return application.Status.Devfile
@@ -101,12 +105,12 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 			// application info should be stored even after deleting the application in application variable
 			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return framework.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			return fw.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 	})
 
 	It("creates Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
-		cdq, err := framework.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentName, testNamespace, QuarkusDevfileSource, "", false)
+		cdq, err := fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentName, testNamespace, QuarkusDevfileSource, "", false)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cdq.Name).To(Equal(componentName))
 	})
@@ -115,7 +119,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 		// Validate that the CDQ completes successfully
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
-			cdq, err = framework.AsKubeDeveloper.HasController.GetComponentDetectionQuery(componentName, testNamespace)
+			cdq, err = fw.AsKubeDeveloper.HasController.GetComponentDetectionQuery(componentName, testNamespace)
 			return err == nil && len(cdq.Status.ComponentDetected) > 0
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "ComponentDetectionQuery did not complete successfully")
 
@@ -131,7 +135,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 	})
 
 	It("creates Red Hat AppStudio Quarkus component", func() {
-		_, err := framework.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, oauthSecretName, applicationName, "")
+		_, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, oauthSecretName, applicationName, "")
 		Expect(err).NotTo(HaveOccurred())
 	})
 })
