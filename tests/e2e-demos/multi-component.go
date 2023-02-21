@@ -113,7 +113,14 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 		})
 
 		It("creates Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
-			cdq, err := fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(testSpecification.Tests[0].Components[0].Name, namespace, testSpecification.Tests[0].Components[0].GitSourceUrl, "", false)
+			cdq, err := fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(
+				testSpecification.Tests[0].Components[0].Name,
+				namespace,
+				testSpecification.Tests[0].Components[0].GitSourceUrl,
+				testSpecification.Tests[0].Components[0].GitSourceRevision,
+				testSpecification.Tests[0].Components[0].GitSourceContext,
+				"",
+				false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cdq.Name).To(Equal(testSpecification.Tests[0].Components[0].Name))
 		})

@@ -102,7 +102,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 	})
 
 	It("creates Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
-		_, err := fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentName, testNamespace, QuarkusDevfileSource, "", false)
+		_, err := fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentName, testNamespace, QuarkusDevfileSource, "", "", "", false)
 		Expect(err).NotTo(HaveOccurred())
 	})
 

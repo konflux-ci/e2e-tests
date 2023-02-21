@@ -293,7 +293,7 @@ func (h *SuiteController) DeleteHasComponentDetectionQuery(name string, namespac
 }
 
 // CreateComponentDetectionQuery create a has componentdetectionquery from a given name, namespace, and git source
-func (h *SuiteController) CreateComponentDetectionQuery(cdqName, namespace, gitSourceURL, secret string, isMultiComponent bool) (*appservice.ComponentDetectionQuery, error) {
+func (h *SuiteController) CreateComponentDetectionQuery(cdqName, namespace, gitSourceURL, gitSourceRevision, gitSourceContext, secret string, isMultiComponent bool) (*appservice.ComponentDetectionQuery, error) {
 	componentDetectionQuery := &appservice.ComponentDetectionQuery{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cdqName,
@@ -301,7 +301,9 @@ func (h *SuiteController) CreateComponentDetectionQuery(cdqName, namespace, gitS
 		},
 		Spec: appservice.ComponentDetectionQuerySpec{
 			GitSource: appservice.GitSource{
-				URL: gitSourceURL,
+				URL:      gitSourceURL,
+				Revision: gitSourceRevision,
+				Context:  gitSourceContext,
 			},
 			Secret: secret,
 		},
