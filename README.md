@@ -174,7 +174,7 @@ Parameters:
 | `project-id` | string | Polarion project ID  | `AppStudio`  |
 
 # Reporting issues
-For reporting issues with e2e tests please use [RHDP JIRA project](https://issues.redhat.com/projects/RHDP) - please use labels `appstudio` and `quality`. If the issues is also relevant to CI - for example it is blocking PRs, the also use label `appstudio-e2e-tests-known-issues`.
+For reporting issues with e2e tests please use [STONE Jira project](https://issues.redhat.com/browse/STONE) - please use labels `ci-fail` and `quality`. For existing issues, see [this Jira query](https://issues.redhat.com/issues/?jql=labels%20%3D%20%22ci-fail%22%20and%20labels%20%3D%20%22quality%22%20and%20resolution%20%3D%20unresolved).
 
 # Debugging tests
 ## In vscode
