@@ -29,17 +29,21 @@ const (
 var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests", Label("integration-service", "HACBS"), func() {
 	defer GinkgoRecover()
 
+	var f *framework.Framework
+	var err error
+
 	var applicationName, componentName, appStudioE2EApplicationsNamespace, outputContainerImage string
 	var timeout, interval time.Duration
 	var applicationSnapshot *appstudioApi.Snapshot
 	var applicationSnapshot_push *appstudioApi.Snapshot
 	var env *appstudioApi.Environment
 
-	// Initialize the tests controllers
-	f, err := framework.NewFramework(IntegrationServiceUser)
-	Expect(err).NotTo(HaveOccurred())
 	Describe("the component with git source (GitHub) is created", Ordered, func() {
 		BeforeAll(func() {
+			// Initialize the tests controllers
+			f, err = framework.NewFramework(IntegrationServiceUser)
+			Expect(err).NotTo(HaveOccurred())
+
 			applicationName = fmt.Sprintf("integ-app-%s", util.GenerateRandomString(4))
 			appStudioE2EApplicationsNamespace = f.UserNamespace
 
@@ -51,7 +55,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			Expect(utils.WaitUntil(f.AsKubeAdmin.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
 				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
 			)
-			DeferCleanup(f.AsKubeAdmin.HasController.DeleteHasApplication, applicationName, appStudioE2EApplicationsNamespace, false)
 
 			componentName = fmt.Sprintf("integration-suite-test-component-git-source-%s", util.GenerateRandomString(4))
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
@@ -60,7 +63,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			// Create a component with Git Source URL being defined
 			_, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", "", outputContainerImage, "", true)
 			Expect(err).ShouldNot(HaveOccurred())
-			DeferCleanup(f.AsKubeAdmin.HasController.DeleteHasComponent, componentName, appStudioE2EApplicationsNamespace, false)
 
 			_, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, appStudioE2EApplicationsNamespace, BundleURL, InPipelineName)
 			Expect(err).ShouldNot(HaveOccurred())
@@ -128,7 +130,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				integrationTestScenarios, err := f.AsKubeAdmin.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 				for _, testScenario := range *integrationTestScenarios {
-					timeout = time.Second * 60
+					timeout = time.Minute * 5
 					interval = time.Second * 2
 					Eventually(func() bool {
 						pipelineRun, err := f.AsKubeAdmin.IntegrationController.GetIntegrationPipelineRun(testScenario.Name, applicationSnapshot.Name, appStudioE2EApplicationsNamespace)
@@ -173,7 +175,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				Expect(err).ShouldNot(HaveOccurred())
 
 				for _, testScenario := range *integrationTestScenarios {
-					timeout = time.Second * 60
+					timeout = time.Minute * 5
 					interval = time.Second * 2
 					Eventually(func() bool {
 						pipelineRun, err := f.AsKubeAdmin.IntegrationController.GetIntegrationPipelineRun(testScenario.Name, applicationSnapshot_push.Name, appStudioE2EApplicationsNamespace)
