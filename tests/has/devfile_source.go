@@ -33,19 +33,24 @@ var (
 var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Label("has"), func() {
 	defer GinkgoRecover()
 
+	var fw *framework.Framework
+	var err error
+
 	var applicationName, componentName string
-	// Initialize the tests controllers
-	framework, err := framework.NewFramework(DEFAULT_USER_PRIVATE_REPOS)
-	Expect(err).NotTo(HaveOccurred())
-	var testNamespace = framework.UserNamespace
-	Expect(testNamespace).NotTo(BeEmpty())
 
 	// Initialize the application struct
 	application := &appservice.Application{}
 	cdq := &appservice.ComponentDetectionQuery{}
 	compDetected := appservice.ComponentDetectionDescription{}
 
+	var testNamespace string
+
 	BeforeAll(func() {
+		// Initialize the tests controllers
+		fw, err = framework.NewFramework(DEFAULT_USER_PRIVATE_REPOS)
+		Expect(err).NotTo(HaveOccurred())
+		testNamespace = fw.UserNamespace
+		Expect(testNamespace).NotTo(BeEmpty())
 		applicationName = fmt.Sprintf(RedHatAppStudioApplicationName+"-%s", util.GenerateRandomString(10))
 		componentName = fmt.Sprintf(QuarkusComponentName+"-%s", util.GenerateRandomString(10))
 		// Check to see if the github token was provided
@@ -54,27 +59,27 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 
 	AfterAll(func() {
 		if !CurrentSpecReport().Failed() {
-			_, err = framework.AsKubeDeveloper.HasController.GetComponentDetectionQuery(componentName, testNamespace)
+			_, err = fw.AsKubeDeveloper.HasController.GetComponentDetectionQuery(componentName, testNamespace)
 			if err != nil {
-				err = framework.AsKubeDeveloper.HasController.DeleteHasComponentDetectionQuery(componentName, testNamespace)
+				err = fw.AsKubeDeveloper.HasController.DeleteHasComponentDetectionQuery(componentName, testNamespace)
 				Expect(err).NotTo(HaveOccurred())
 			}
-			err = framework.AsKubeDeveloper.HasController.DeleteHasApplication(applicationName, testNamespace, false)
+			err = fw.AsKubeDeveloper.HasController.DeleteHasApplication(applicationName, testNamespace, false)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(framework.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+			Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 
 			Eventually(func() bool {
 				// application info should be stored even after deleting the application in application variable
 				gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-				return framework.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+				return fw.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 			}, 1*time.Minute, 100*time.Millisecond).Should(BeFalse(), "Has controller didn't remove Red Hat AppStudio application gitops repository")
-			Expect(framework.SandboxController.DeleteUserSignup(framework.UserName)).NotTo(BeFalse())
+			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
 		}
 	})
 
 	It("creates Red Hat AppStudio Application", func() {
-		createdApplication, err := framework.AsKubeDeveloper.HasController.CreateHasApplication(applicationName, testNamespace)
+		createdApplication, err := fw.AsKubeDeveloper.HasController.CreateHasApplication(applicationName, testNamespace)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createdApplication.Spec.DisplayName).To(Equal(applicationName))
 		Expect(createdApplication.Namespace).To(Equal(testNamespace))
@@ -82,7 +87,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 
 	It("checks Red Hat AppStudio Application health", func() {
 		Eventually(func() string {
-			application, err = framework.AsKubeDeveloper.HasController.GetHasApplication(applicationName, testNamespace)
+			application, err = fw.AsKubeDeveloper.HasController.GetHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
 			return application.Status.Devfile
@@ -92,12 +97,12 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 			// application info should be stored even after deleting the application in application variable
 			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return framework.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			return fw.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 	})
 
 	It("creates Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
-		_, err := framework.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentName, testNamespace, QuarkusDevfileSource, "", false)
+		_, err := fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentName, testNamespace, QuarkusDevfileSource, "", false)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -105,7 +110,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 		// Validate that the CDQ completes successfully
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
-			cdq, err = framework.AsKubeDeveloper.HasController.GetComponentDetectionQuery(componentName, testNamespace)
+			cdq, err = fw.AsKubeDeveloper.HasController.GetComponentDetectionQuery(componentName, testNamespace)
 			return err == nil && len(cdq.Status.ComponentDetected) > 0
 		}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "ComponentDetectionQuery did not complete successfully")
 
@@ -121,7 +126,7 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 	})
 
 	It("creates Red Hat AppStudio Quarkus component", func() {
-		_, err := framework.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, "", applicationName, "")
+		_, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, "", applicationName, "")
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -132,25 +137,25 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 			comp2Detected.ComponentStub.ComponentName = "java-quarkus2"
 		}
 		component2Name := fmt.Sprintf(QuarkusComponentName+"-%s", util.GenerateRandomString(10))
-		component2, err := framework.AsKubeDeveloper.HasController.CreateComponentFromStub(comp2Detected, component2Name, testNamespace, "", applicationName, "")
+		component2, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(comp2Detected, component2Name, testNamespace, "", applicationName, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		err = framework.AsKubeDeveloper.HasController.DeleteHasComponent(component2.Name, testNamespace, false)
+		err = fw.AsKubeDeveloper.HasController.DeleteHasComponent(component2.Name, testNamespace, false)
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
 			gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-			return framework.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+			return fw.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "Gitops repository deleted after component was deleted")
 	})
 
 	It("checks a Component gets deleted when its application is deleted", func() {
-		err = framework.AsKubeDeveloper.HasController.DeleteHasApplication(applicationName, testNamespace, false)
+		err = fw.AsKubeDeveloper.HasController.DeleteHasApplication(applicationName, testNamespace, false)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(func() bool {
-			_, err := framework.AsKubeDeveloper.HasController.GetHasComponent(componentName, testNamespace)
+			_, err := fw.AsKubeDeveloper.HasController.GetHasComponent(componentName, testNamespace)
 			if err != nil && errors.IsNotFound(err) {
 				return true
 			}
