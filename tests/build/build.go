@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/go-github/v44/github"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 
 	"github.com/devfile/library/pkg/util"
 	"github.com/google/uuid"
@@ -194,12 +195,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
-							d := utils.GetFailedPipelineRunDetails(pipelineRun)
-							if d.FailedContainerName != "" {
-								logs, _ := f.AsKubeAdmin.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
-								failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
-							}
+							failMessage := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
 							Fail(failMessage)
 						}
 					}
@@ -272,12 +268,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
-							d := utils.GetFailedPipelineRunDetails(pipelineRun)
-							if d.FailedContainerName != "" {
-								logs, _ := f.AsKubeAdmin.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
-								failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
-							}
+							failMessage := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
 							Fail(failMessage)
 						}
 					}
@@ -332,6 +323,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return pipelineRun.HasStarted()
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 			})
+
 			It("pipelineRun should eventually finish", func() {
 				timeout = time.Minute * 50
 				interval = time.Second * 10
@@ -348,12 +340,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
-							d := utils.GetFailedPipelineRunDetails(pipelineRun)
-							if d.FailedContainerName != "" {
-								logs, _ := f.AsKubeAdmin.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
-								failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
-							}
+							failMessage := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
 							Fail(failMessage)
 						}
 					}
@@ -483,12 +470,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
-							d := utils.GetFailedPipelineRunDetails(pipelineRun)
-							if d.FailedContainerName != "" {
-								logs, _ := f.AsKubeAdmin.CommonController.GetContainerLogs(d.PodName, d.FailedContainerName, testNamespace)
-								failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
-							}
+							failMessage := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
 							Fail(failMessage)
 						}
 					}
