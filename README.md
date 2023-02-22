@@ -160,6 +160,15 @@ import (
 )
 ```
 
+# Troubleshooting e2e-tests issues in openshift-ci
+Every Prow job executed by the CI system generates an artifacts directory containing information about that execution and its results. This [document](https://docs.ci.openshift.org/docs/how-tos/artifacts/) describes the contents of this directory and how they can be used to investigate the steps by the job.
+
+The “artifacts” link in the job result page leads to a page containing every file uploaded by that job. For AppStudio jobs there are three important folders in artifacts:
+* **redhat-appstudio_e2e-tests/redhat-appstudio-e2e/***               - Store xunit files related to appstudio e2e-tests.
+* **redhat-appstudio_e2e-tests/redhat-appstudio-gather/***            - Store appstudio Kube APIs information. Components, Application, Environment etc.
+* **redhat-appstudio_e2e-tests/redhat-appstudio-hypershift-gather/*** - Store all cluster pods logs, events, configmaps etc. This artifacts are present only with hypershift installer.
+* **redhat-appstudio_e2e-tests/gather-extra/***                       - Store all cluster pods logs, events, configmaps etc. This artifacts are present only when we dont use hypershift.
+
 # Generate test cases for Polarion
 You can also generate test cases for Polarion with command:
    ```bash
