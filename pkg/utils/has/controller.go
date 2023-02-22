@@ -27,10 +27,10 @@ import (
 )
 
 type SuiteController struct {
-	*kubeCl.K8sClient
+	*kubeCl.CustomClient
 }
 
-func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
+func NewSuiteController(kube *kubeCl.CustomClient) (*SuiteController, error) {
 	return &SuiteController{
 		kube,
 	}, nil
@@ -69,7 +69,7 @@ func (h *SuiteController) CreateHasApplication(name, namespace string) (*appserv
 		return nil, err
 	}
 
-	if err := utils.WaitUntil(h.ApplicationDevfilePresent(application), time.Minute*2); err != nil {
+	if err := utils.WaitUntil(h.ApplicationDevfilePresent(application), time.Minute*10); err != nil {
 		return nil, fmt.Errorf("timed out when waiting for devfile content creation for application %s in %s namespace: %+v", name, namespace, err)
 	}
 
@@ -271,9 +271,6 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 	component.Spec.Secret = secret
 	component.Spec.Application = applicationName
 
-	if containerImage != "" {
-		component.Spec.ContainerImage = ""
-	}
 	err := h.KubeRest().Create(context.TODO(), component)
 	if err != nil {
 		return nil, err
@@ -296,7 +293,7 @@ func (h *SuiteController) DeleteHasComponentDetectionQuery(name string, namespac
 }
 
 // CreateComponentDetectionQuery create a has componentdetectionquery from a given name, namespace, and git source
-func (h *SuiteController) CreateComponentDetectionQuery(cdqName, namespace, gitSourceURL, secret string, isMultiComponent bool) (*appservice.ComponentDetectionQuery, error) {
+func (h *SuiteController) CreateComponentDetectionQuery(cdqName, namespace, gitSourceURL, gitSourceRevision, gitSourceContext, secret string, isMultiComponent bool) (*appservice.ComponentDetectionQuery, error) {
 	componentDetectionQuery := &appservice.ComponentDetectionQuery{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cdqName,
@@ -304,7 +301,9 @@ func (h *SuiteController) CreateComponentDetectionQuery(cdqName, namespace, gitS
 		},
 		Spec: appservice.ComponentDetectionQuerySpec{
 			GitSource: appservice.GitSource{
-				URL: gitSourceURL,
+				URL:      gitSourceURL,
+				Revision: gitSourceRevision,
+				Context:  gitSourceContext,
 			},
 			Secret: secret,
 		},
@@ -352,7 +351,7 @@ func (h *SuiteController) GetComponentDetectionQuery(name, namespace string) (*a
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels
-func (h *SuiteController) GetComponentPipelineRun(componentName, applicationName, namespace string, pacBuild bool, sha string) (*v1beta1.PipelineRun, error) {
+func (h *SuiteController) GetComponentPipelineRun(componentName, applicationName, namespace, sha string) (*v1beta1.PipelineRun, error) {
 	pipelineRunLabels := map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName}
 
 	if sha != "" {
@@ -417,9 +416,9 @@ func (h *SuiteController) GetComponentService(componentName string, componentNam
 	return service, nil
 }
 
-func (h *SuiteController) WaitForComponentPipelineToBeFinished(componentName string, applicationName string, componentNamespace string) error {
+func (h *SuiteController) WaitForComponentPipelineToBeFinished(componentName string, applicationName string, componentNamespace string, sha string) error {
 	return wait.PollImmediate(20*time.Second, 25*time.Minute, func() (done bool, err error) {
-		pipelineRun, err := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, false, "")
+		pipelineRun, err := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, sha)
 
 		if err != nil {
 			GinkgoWriter.Println("PipelineRun has not been created yet")

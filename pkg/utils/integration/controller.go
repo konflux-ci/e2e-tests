@@ -17,15 +17,16 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type SuiteController struct {
-	*kubeCl.K8sClient
+	*kubeCl.CustomClient
 }
 
-func NewSuiteController(kube *kubeCl.K8sClient) (*SuiteController, error) {
+func NewSuiteController(kube *kubeCl.CustomClient) (*SuiteController, error) {
 	return &SuiteController{
 		kube,
 	}, nil
@@ -132,13 +133,20 @@ func (h *SuiteController) GetIntegrationTestScenarios(applicationName, namespace
 	if err != nil {
 		return nil, err
 	}
-	return &integrationTestScenarioList.Items, nil
+
+	items := make([]integrationv1alpha1.IntegrationTestScenario, 0)
+	for _, t := range integrationTestScenarioList.Items {
+		if t.Spec.Application == applicationName {
+			items = append(items, t)
+		}
+	}
+	return &items, nil
 }
 
-func (h *SuiteController) CreateEnvironment(namespace string) (*appstudioApi.Environment, error) {
+func (h *SuiteController) CreateEnvironment(namespace string, environmenName string) (*appstudioApi.Environment, error) {
 	env := &appstudioApi.Environment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "envname",
+			Name:      environmenName,
 			Namespace: namespace,
 		},
 		Spec: appstudioApi.EnvironmentSpec{
@@ -157,7 +165,36 @@ func (h *SuiteController) CreateEnvironment(namespace string) (*appstudioApi.Env
 			},
 		},
 	}
-	err := h.KubeRest().Create(context.TODO(), env)
+
+	if err := h.KubeRest().Create(context.TODO(), env); err != nil {
+		if err != nil {
+			if k8sErrors.IsAlreadyExists(err) {
+				environment := &appstudioApi.Environment{}
+
+				err := h.KubeRest().Get(context.TODO(), types.NamespacedName{
+					Name:      environmenName,
+					Namespace: namespace,
+				}, environment)
+
+				return environment, err
+			} else {
+				return nil, err
+			}
+		}
+	}
+
+	return env, nil
+}
+
+// DeleteEnvironment deletes default Environment from the namespace
+func (h *SuiteController) DeleteEnvironment(namespace string) (*appstudioApi.Environment, error) {
+	env := &appstudioApi.Environment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "envname",
+			Namespace: namespace,
+		},
+	}
+	err := h.KubeRest().Delete(context.TODO(), env)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +267,7 @@ func (h *SuiteController) CreateReleasePlan(applicationName, namespace string) (
 	return testReleasePlan, err
 }
 
-func (h *SuiteController) CreateIntegrationPipelineRun(applicationSnapshotName, namespace, componentName string) (*tektonv1beta1.PipelineRun, error) {
+func (h *SuiteController) CreateIntegrationPipelineRun(applicationSnapshotName, namespace, componentName, integrationTestScenarioName string) (*tektonv1beta1.PipelineRun, error) {
 	testpipelineRun := &tektonv1beta1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "component-pipelinerun" + "-",
@@ -240,7 +277,7 @@ func (h *SuiteController) CreateIntegrationPipelineRun(applicationSnapshotName, 
 				"appstudio.openshift.io/component":      componentName,
 				"pipelines.appstudio.openshift.io/type": "test",
 				"appstudio.openshift.io/snapshot":       applicationSnapshotName,
-				"test.appstudio.openshift.io/scenario":  "example-pass",
+				"test.appstudio.openshift.io/scenario":  integrationTestScenarioName,
 			},
 		},
 		Spec: tektonv1beta1.PipelineRunSpec{
@@ -269,7 +306,7 @@ func (h *SuiteController) CreateIntegrationPipelineRun(applicationSnapshotName, 
 func (h *SuiteController) CreateIntegrationTestScenario(applicationName, namespace, bundleURL, pipelineName string) (*integrationv1alpha1.IntegrationTestScenario, error) {
 	integrationTestScenario := &integrationv1alpha1.IntegrationTestScenario{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "example-pass",
+			Name:      "example-pass-" + util.GenerateRandomString(4),
 			Namespace: namespace,
 			Labels: map[string]string{
 				"test.appstudio.openshift.io/optional": "false",
