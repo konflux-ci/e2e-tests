@@ -229,7 +229,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 	When("the Component with s2i-java component is created", func() {
 		It("a PipelineRun is triggered", func() {
 			Eventually(func() bool {
-				componentPipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
+				componentPipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 				if err != nil {
 					GinkgoWriter.Println("PipelineRun has not been created yet")
 					return false
@@ -246,7 +246,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			}
 
 			err = wait.PollImmediate(interval, timeout, func() (done bool, err error) {
-				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
+				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 				if err != nil {
 					GinkgoWriter.Printf("get pr for the component %s produced err: %s\n", componentName, err.Error())
 					return false, nil
@@ -274,7 +274,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 		It("that PipelineRun completes successfully", func() {
 			Eventually(func() bool {
-				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, false, "")
+				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 				if err != nil {
 					GinkgoWriter.Printf("get of pr %s returned error: %s\n", pr.Name, err.Error())
 					return false

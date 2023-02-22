@@ -186,6 +186,22 @@ func (h *SuiteController) CreateEnvironment(namespace string, environmenName str
 	return env, nil
 }
 
+// DeleteEnvironment deletes default Environment from the namespace
+func (h *SuiteController) DeleteEnvironment(namespace string) (*appstudioApi.Environment, error) {
+	env := &appstudioApi.Environment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "envname",
+			Namespace: namespace,
+		},
+	}
+	err := h.KubeRest().Delete(context.TODO(), env)
+	if err != nil {
+		return nil, err
+	}
+
+	return env, err
+}
+
 func (h *SuiteController) CreateApplicationSnapshot(applicationName, namespace, componentName, containerImage string) (*appstudioApi.Snapshot, error) {
 	hasSnapshot := &appstudioApi.Snapshot{
 		ObjectMeta: metav1.ObjectMeta{
