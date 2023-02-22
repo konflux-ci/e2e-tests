@@ -3,9 +3,11 @@ package common
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
 	"time"
 
@@ -239,6 +241,32 @@ func (h *SuiteController) GetOpenshiftRoute(routeName string, routeNamespace str
 	return route, nil
 }
 
+func (h *SuiteController) RouteHostnameIsAccessible(routeName, namespace string) wait.ConditionFunc {
+	return func() (bool, error) {
+		namespacedName := types.NamespacedName{
+			Name:      routeName,
+			Namespace: namespace,
+		}
+		route := &routev1.Route{}
+		if err := h.KubeRest().Get(context.TODO(), namespacedName, route); err != nil {
+			return false, nil
+		}
+
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+		client := http.Client{Transport: tr}
+		res, err := client.Get("https://" + route.Spec.Host)
+		if err != nil || res.StatusCode > 299 {
+			return false, nil
+		}
+
+		return true, nil
+	}
+}
+
 // GetAppDeploymentByName returns the deployment for a given component name
 func (h *SuiteController) GetAppDeploymentByName(deploymentName string, deploymentNamespace string) (*appsv1.Deployment, error) {
 	namespacedName := types.NamespacedName{
@@ -252,6 +280,25 @@ func (h *SuiteController) GetAppDeploymentByName(deploymentName string, deployme
 		return &appsv1.Deployment{}, err
 	}
 	return deployment, nil
+}
+
+func (h *SuiteController) DeploymentIsCompleted(deploymentName, namespace string, readyReplicas int32) wait.ConditionFunc {
+	return func() (bool, error) {
+		namespacedName := types.NamespacedName{
+			Name:      deploymentName,
+			Namespace: namespace,
+		}
+
+		deployment := &appsv1.Deployment{}
+		err := h.KubeRest().Get(context.TODO(), namespacedName, deployment)
+		if err != nil && !k8sErrors.IsNotFound(err) {
+			return false, err
+		}
+		if deployment.Status.AvailableReplicas == readyReplicas && deployment.Status.UnavailableReplicas == 0 {
+			return true, nil
+		}
+		return false, nil
+	}
 }
 
 // GetServiceByName returns the service for a given component name

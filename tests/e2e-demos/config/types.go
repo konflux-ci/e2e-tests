@@ -45,6 +45,12 @@ type ComponentSpec struct {
 	// Repository URL from where component will be created
 	GitSourceUrl string `yaml:"gitSourceUrl,omitempty"`
 
+	// Repository branch
+	GitSourceRevision string `yaml:"gitSourceRevision,omitempty"`
+
+	// Relative path inside the repository containing the component
+	GitSourceContext string `yaml:"gitSourceContext,omitempty"`
+
 	// An endpoint where the framework can ping to see if a component was deployed successfully
 	HealthEndpoint string `yaml:"healthz"`
 

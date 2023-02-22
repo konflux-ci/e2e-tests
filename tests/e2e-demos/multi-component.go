@@ -26,6 +26,9 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 	defer GinkgoRecover()
 
+	var fw *framework.Framework
+	var err error
+
 	// Initialize the application struct
 	application := &appservice.Application{}
 	cdq := &appservice.ComponentDetectionQuery{}
@@ -34,11 +37,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	snapshotGo := &appservice.Snapshot{}
 	snapshotNode := &appservice.Snapshot{}
 	env := &appservice.Environment{}
-
-	// Initialize the tests controllers
-	fw, err := framework.NewFramework(MultiComponentDemoNamespace)
-	Expect(err).NotTo(HaveOccurred())
-	namespace := fw.UserNamespace
 
 	var testSpecification = config.WorkflowSpec{
 		Tests: []config.TestSpec{
@@ -61,9 +59,15 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 	var removeApplication = true
 
+	var namespace string
+
 	Describe(testSpecification.Tests[0].ApplicationName, Ordered, func() {
 		BeforeAll(func() {
 			Skip("skip tests due a issue with devfile detection. See jira: https://issues.redhat.com/browse/DEVHAS-225")
+			// Initialize the tests controllers
+			fw, err = framework.NewFramework(MultiComponentDemoNamespace)
+			Expect(err).NotTo(HaveOccurred())
+			namespace = fw.UserNamespace
 			// Check to see if the github token was provided
 			Expect(utils.CheckIfEnvironmentExists(constants.GITHUB_TOKEN_ENV)).Should(BeTrue(), "%s environment variable is not set", constants.GITHUB_TOKEN_ENV)
 			// Check test specification has at least one test defined
@@ -109,7 +113,14 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 		})
 
 		It("creates Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
-			cdq, err := fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(testSpecification.Tests[0].Components[0].Name, namespace, testSpecification.Tests[0].Components[0].GitSourceUrl, "", false)
+			cdq, err := fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(
+				testSpecification.Tests[0].Components[0].Name,
+				namespace,
+				testSpecification.Tests[0].Components[0].GitSourceUrl,
+				testSpecification.Tests[0].Components[0].GitSourceRevision,
+				testSpecification.Tests[0].Components[0].GitSourceContext,
+				"",
+				false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cdq.Name).To(Equal(testSpecification.Tests[0].Components[0].Name))
 		})
@@ -161,13 +172,13 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 		// Start to watch the pipeline until is finished
 		It("waits for all pipelines to be finished", func() {
-			err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeAdmin.CommonController, compNameGo, testSpecification.Tests[0].ApplicationName, namespace)
+			err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeAdmin.CommonController, compNameGo, testSpecification.Tests[0].ApplicationName, namespace, "")
 			if err != nil {
 				removeApplication = false
 				Fail(fmt.Sprint(err))
 			}
 
-			err = fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeAdmin.CommonController, compNameNode, testSpecification.Tests[0].ApplicationName, namespace)
+			err = fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeAdmin.CommonController, compNameNode, testSpecification.Tests[0].ApplicationName, namespace, "")
 			if err != nil {
 				removeApplication = false
 				Fail(fmt.Sprint(err))

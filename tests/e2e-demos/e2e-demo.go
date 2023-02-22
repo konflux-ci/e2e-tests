@@ -144,12 +144,12 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 				It("creates componentdetectionquery", func() {
 					if componentTest.Type == "private" {
-						cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, SPIGithubSecretName, false)
+						cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, componentTest.GitSourceRevision, componentTest.GitSourceContext, SPIGithubSecretName, false)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
 
 					} else {
-						cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, "", false)
+						cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, componentTest.GitSourceRevision, componentTest.GitSourceContext, "", false)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
 					}
@@ -189,7 +189,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 					// If we are attempting more than 1 time lets retrigger the pipelinerun
 					if CurrentSpecReport().NumAttempts > 1 {
-						pipelineRun, err := fw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, application.Name, namespace, false, "")
+						pipelineRun, err := fw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, application.Name, namespace, "")
 						Expect(err).ShouldNot(HaveOccurred(), "failed to get pipelinerun: %v", err)
 
 						err = fw.AsKubeAdmin.TektonController.DeletePipelineRun(pipelineRun.Name, namespace)
@@ -200,7 +200,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 						Expect(err).ShouldNot(HaveOccurred(), "failed to update component to trigger another pipeline build: %v", err)
 					}
 
-					err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeAdmin.CommonController, component.Name, application.Name, namespace)
+					err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeAdmin.CommonController, component.Name, application.Name, namespace, "")
 					if err != nil {
 						Fail(fmt.Sprint(err))
 					}

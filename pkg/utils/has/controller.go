@@ -295,7 +295,7 @@ func (h *SuiteController) DeleteHasComponentDetectionQuery(name string, namespac
 }
 
 // CreateComponentDetectionQuery create a has componentdetectionquery from a given name, namespace, and git source
-func (h *SuiteController) CreateComponentDetectionQuery(cdqName, namespace, gitSourceURL, secret string, isMultiComponent bool) (*appservice.ComponentDetectionQuery, error) {
+func (h *SuiteController) CreateComponentDetectionQuery(cdqName, namespace, gitSourceURL, gitSourceRevision, gitSourceContext, secret string, isMultiComponent bool) (*appservice.ComponentDetectionQuery, error) {
 	componentDetectionQuery := &appservice.ComponentDetectionQuery{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cdqName,
@@ -303,7 +303,9 @@ func (h *SuiteController) CreateComponentDetectionQuery(cdqName, namespace, gitS
 		},
 		Spec: appservice.ComponentDetectionQuerySpec{
 			GitSource: appservice.GitSource{
-				URL: gitSourceURL,
+				URL:      gitSourceURL,
+				Revision: gitSourceRevision,
+				Context:  gitSourceContext,
 			},
 			Secret: secret,
 		},
@@ -351,7 +353,7 @@ func (h *SuiteController) GetComponentDetectionQuery(name, namespace string) (*a
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels
-func (h *SuiteController) GetComponentPipelineRun(componentName, applicationName, namespace string, pacBuild bool, sha string) (*v1beta1.PipelineRun, error) {
+func (h *SuiteController) GetComponentPipelineRun(componentName, applicationName, namespace, sha string) (*v1beta1.PipelineRun, error) {
 	pipelineRunLabels := map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName}
 
 	if sha != "" {
@@ -416,9 +418,9 @@ func (h *SuiteController) GetComponentService(componentName string, componentNam
 	return service, nil
 }
 
-func (h *SuiteController) WaitForComponentPipelineToBeFinished(c *common.SuiteController, componentName string, applicationName string, componentNamespace string) error {
+func (h *SuiteController) WaitForComponentPipelineToBeFinished(c *common.SuiteController, componentName, applicationName, componentNamespace, sha string) error {
 	return wait.PollImmediate(20*time.Second, 25*time.Minute, func() (done bool, err error) {
-		pipelineRun, err := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, false, "")
+		pipelineRun, err := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, sha)
 
 		if err != nil {
 			GinkgoWriter.Println("PipelineRun has not been created yet")
