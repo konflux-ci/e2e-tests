@@ -60,3 +60,14 @@ tests:
         gitSourceUrl: "https://github.com/devfile-samples/devfile-sample-code-with-quarkus.git"
         language: "Java"
         healthz: "/hello-resteasy"
+  - name: "STONE-522: create an application with branch and context dir"
+    applicationName: "e2e-java"
+    components:
+      - name: "component-devfile-java-sample"
+        type: "public"
+        gitSourceUrl: "https://github.com/redhat-appstudio-qe/java-sample"
+        gitSourceRevision: "testing"
+        gitSourceContext: "java/java"
+        language: "Java"
+        healthz: "/"
+

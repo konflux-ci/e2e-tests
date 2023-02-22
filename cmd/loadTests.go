@@ -239,7 +239,7 @@ func setup(cmd *cobra.Command, args []string) {
 				DefaultRetryInterval := time.Millisecond * 200
 				DefaultTimeout := time.Minute * 17
 				error := k8swait.Poll(DefaultRetryInterval, DefaultTimeout, func() (done bool, err error) {
-					pipelineRun, err := framework.AsKubeAdmin.HasController.GetComponentPipelineRun(ComponentName, ApplicationName, username, false, "")
+					pipelineRun, err := framework.AsKubeAdmin.HasController.GetComponentPipelineRun(ComponentName, ApplicationName, username, "")
 					if err != nil {
 						return false, err
 					}

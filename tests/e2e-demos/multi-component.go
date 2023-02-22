@@ -113,7 +113,14 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 		})
 
 		It("creates Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
-			cdq, err := fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(testSpecification.Tests[0].Components[0].Name, namespace, testSpecification.Tests[0].Components[0].GitSourceUrl, "", false)
+			cdq, err := fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(
+				testSpecification.Tests[0].Components[0].Name,
+				namespace,
+				testSpecification.Tests[0].Components[0].GitSourceUrl,
+				testSpecification.Tests[0].Components[0].GitSourceRevision,
+				testSpecification.Tests[0].Components[0].GitSourceContext,
+				"",
+				false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cdq.Name).To(Equal(testSpecification.Tests[0].Components[0].Name))
 		})
@@ -165,13 +172,13 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 		// Start to watch the pipeline until is finished
 		It("waits for all pipelines to be finished", func() {
-			err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(compNameGo, testSpecification.Tests[0].ApplicationName, namespace)
+			err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(compNameGo, testSpecification.Tests[0].ApplicationName, namespace, "")
 			if err != nil {
 				removeApplication = false
 			}
 			Expect(err).NotTo(HaveOccurred(), "Failed component pipeline %v", err)
 
-			err = fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(compNameNode, testSpecification.Tests[0].ApplicationName, namespace)
+			err = fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(compNameNode, testSpecification.Tests[0].ApplicationName, namespace, "")
 			if err != nil {
 				removeApplication = false
 			}

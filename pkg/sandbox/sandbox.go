@@ -213,8 +213,7 @@ func (s *SandboxController) RegisterSandboxUser(userName string) error {
 	userSignup := getUserSignupSpecs(userName)
 	if err := s.KubeRest.Create(context.TODO(), userSignup); err != nil {
 		if k8sErrors.IsAlreadyExists(err) {
-			klog.Infof("User already exists:")
-
+			klog.Infof("User %s already exists", userName)
 			return nil
 		}
 		return err
