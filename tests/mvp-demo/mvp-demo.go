@@ -190,7 +190,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		It("sample app can be built successfully", func() {
 			_, err = f.AsKubeAdmin.HasController.CreateComponent(appName, componentName, userNamespace, sampleRepoURL, componentNewBaseBranch, "", constants.DefaultImagePushRepo, "", true)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(componentName, appName, userNamespace, "")).To(Succeed())
+			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(f.AsKubeAdmin.CommonController, componentName, appName, userNamespace, "")).To(Succeed())
 		})
 
 		It("sample app is successfully deployed to dev environment", func() {
@@ -310,7 +310,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		})
 
 		It("SLSA level 3 customizable pipeline completes successfully", func() {
-			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(componentName, appName, userNamespace, mergeResultSha)).To(Succeed())
+			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(f.AsKubeAdmin.CommonController, componentName, appName, userNamespace, mergeResultSha)).To(Succeed())
 		})
 
 		It("resulting SBOM file can be downloaded", func() {
