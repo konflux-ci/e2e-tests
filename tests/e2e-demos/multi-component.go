@@ -172,13 +172,13 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 		// Start to watch the pipeline until is finished
 		It("waits for all pipelines to be finished", func() {
-			err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(compNameGo, testSpecification.Tests[0].ApplicationName, namespace)
+			err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(compNameGo, testSpecification.Tests[0].ApplicationName, namespace, "")
 			if err != nil {
 				removeApplication = false
 			}
 			Expect(err).NotTo(HaveOccurred(), "Failed component pipeline %v", err)
 
-			err = fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(compNameNode, testSpecification.Tests[0].ApplicationName, namespace)
+			err = fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(compNameNode, testSpecification.Tests[0].ApplicationName, namespace, "")
 			if err != nil {
 				removeApplication = false
 			}

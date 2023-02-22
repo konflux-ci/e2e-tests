@@ -66,7 +66,6 @@ func (ci CI) init() error {
 		return err
 	}
 
-	pr.Author = openshiftJobSpec.Refs.Pulls[0].Author
 	pr.Organization = openshiftJobSpec.Refs.Organization
 	pr.RepoName = openshiftJobSpec.Refs.Repo
 	pr.CommitSHA = openshiftJobSpec.Refs.Pulls[0].SHA
@@ -91,12 +90,12 @@ func (ci CI) PrepareE2EBranch() error {
 	}
 
 	if openshiftJobSpec.Refs.Repo == "e2e-tests" {
-		if err := gitCheckoutRemoteBranch(pr.Author, pr.CommitSHA); err != nil {
+		if err := gitCheckoutRemoteBranch(pr.RemoteName, pr.CommitSHA); err != nil {
 			return err
 		}
 	} else {
 		if ci.isPRPairingRequired("e2e-tests") {
-			if err := gitCheckoutRemoteBranch(pr.Author, pr.BranchName); err != nil {
+			if err := gitCheckoutRemoteBranch(pr.RemoteName, pr.BranchName); err != nil {
 				return err
 			}
 		}
@@ -335,17 +334,15 @@ func (ci CI) setRequiredEnvVars() error {
 				imageTagSuffix = "build-service-image"
 				testSuiteLabel = "build"
 			}
-			var prSHA, prOwner string
-			// "rehearse" jobs metadata are not relevant for testing
-			if !strings.Contains(jobName, "rehearse") {
-				prSHA = openshiftJobSpec.Refs.Pulls[0].SHA
-				prOwner = openshiftJobSpec.Refs.Pulls[0].Author
-			}
 
 			os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", envVarPrefix), sp[0])
 			os.Setenv(fmt.Sprintf("%s_IMAGE_TAG", envVarPrefix), fmt.Sprintf("redhat-appstudio-%s", imageTagSuffix))
-			os.Setenv(fmt.Sprintf("%s_PR_OWNER", envVarPrefix), prOwner)
-			os.Setenv(fmt.Sprintf("%s_PR_SHA", envVarPrefix), prSHA)
+			// "rehearse" jobs metadata are not relevant for testing
+			if !strings.Contains(jobName, "rehearse") {
+				os.Setenv(fmt.Sprintf("%s_PR_OWNER", envVarPrefix), pr.RemoteName)
+				os.Setenv(fmt.Sprintf("%s_PR_SHA", envVarPrefix), pr.CommitSHA)
+			}
+
 			os.Setenv("E2E_TEST_SUITE_LABEL", testSuiteLabel)
 
 		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
@@ -386,7 +383,7 @@ func (CI) isPRPairingRequired(repoForPairing string) bool {
 
 	url := fmt.Sprintf("https://api.github.com/repos/redhat-appstudio/%s/pulls?per_page=100", repoForPairing)
 	if err := sendHttpRequestAndParseResponse(url, "GET", &pullRequests); err != nil {
-		klog.Infof("cannot determine %s Github branches for author %s: %v. will stick with the redhat-appstudio/%s main branch for running tests", repoForPairing, pr.Author, err, repoForPairing)
+		klog.Infof("cannot determine %s Github branches for author %s: %v. will stick with the redhat-appstudio/%s main branch for running tests", repoForPairing, pr.RemoteName, err, repoForPairing)
 		return false
 	}
 

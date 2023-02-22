@@ -127,6 +127,17 @@ func (s *SuiteController) GetRelease(releaseName, releaseNamespace string) (*v1a
 	return release, err
 }
 
+// GetRelease returns the list of Release CR in the given namespace.
+func (s *SuiteController) GetReleases(namespace string) (*v1alpha1.ReleaseList, error) {
+	releaseList := &v1alpha1.ReleaseList{}
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+	err := s.KubeRest().List(context.TODO(), releaseList, opts...)
+
+	return releaseList, err
+}
+
 // GetFirstReleaseInNamespace returns the first Release from  list of releases in the given namespace.
 func (s *SuiteController) GetFirstReleaseInNamespace(namespace string) (*v1alpha1.Release, error) {
 	releaseList := &v1alpha1.ReleaseList{}
@@ -135,8 +146,8 @@ func (s *SuiteController) GetFirstReleaseInNamespace(namespace string) (*v1alpha
 	}
 
 	err := s.KubeRest().List(context.TODO(), releaseList, opts...)
-	if err != nil {
-		return nil, err
+	if err != nil || len(releaseList.Items) < 1 {
+		return nil, fmt.Errorf("could not find any Releases in namespace %s: %+v", namespace, err)
 	}
 	return &releaseList.Items[0], nil
 }
