@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -142,4 +144,15 @@ func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
 			},
 		},
 	}
+}
+
+// GetFailedPipelineRunLogs gets the logs of the pipelinerun failed task
+func GetFailedPipelineRunLogs(c *common.SuiteController, pipelineRun *v1beta1.PipelineRun) string {
+	failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
+	d := utils.GetFailedPipelineRunDetails(pipelineRun)
+	if d.FailedContainerName != "" {
+		logs, _ := c.GetContainerLogs(d.PodName, d.FailedContainerName, pipelineRun.Namespace)
+		failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
+	}
+	return failMessage
 }

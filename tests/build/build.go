@@ -11,12 +11,12 @@ import (
 
 	"github.com/google/go-github/v44/github"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 
 	"github.com/devfile/library/pkg/util"
 	"github.com/google/uuid"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	u "github.com/redhat-appstudio/e2e-tests/tests/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -195,7 +195,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage := u.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+							failMessage := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
 							Fail(failMessage)
 						}
 					}
@@ -268,7 +268,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage := u.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+							failMessage := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
 							Fail(failMessage)
 						}
 					}
@@ -340,7 +340,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage := u.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+							failMessage := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
 							Fail(failMessage)
 						}
 					}
@@ -470,7 +470,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage := u.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+							failMessage := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
 							Fail(failMessage)
 						}
 					}

@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	u "github.com/redhat-appstudio/e2e-tests/tests/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 
@@ -112,7 +112,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					GinkgoWriter.Printf("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 
 					if condition.Reason == "Failed" {
-						Fail(u.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun))
+						Fail(tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun))
 					}
 				}
 				return pipelineRun.IsDone()

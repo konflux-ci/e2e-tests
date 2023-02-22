@@ -16,7 +16,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
-	u "github.com/redhat-appstudio/e2e-tests/tests/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -431,7 +431,7 @@ func (h *SuiteController) WaitForComponentPipelineToBeFinished(c *common.SuiteCo
 			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
 
 			if condition.Reason == "Failed" {
-				return false, fmt.Errorf(u.GetFailedPipelineRunLogs(c, pipelineRun))
+				return false, fmt.Errorf(tekton.GetFailedPipelineRunLogs(c, pipelineRun))
 			}
 
 			if condition.Status == corev1.ConditionTrue {
