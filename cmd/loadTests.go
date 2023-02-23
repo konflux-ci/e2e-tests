@@ -30,7 +30,7 @@ var (
 	userBatches          int
 	waitPipelines        bool
 	verbose              bool
-	QuarkusDevfileSource string = "https://github.com/redhat-appstudio-qe/devfile-sample-code-with-quarkus"
+	QuarkusDevfileSource string = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
 	token                string
 )
 
