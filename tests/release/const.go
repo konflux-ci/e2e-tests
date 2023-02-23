@@ -58,18 +58,18 @@ const (
 	defaultInterval = 100 * time.Millisecond
 )
 
-var paramsReleaseStrategy = []appstudiov1alpha1.Params{
-	{Name: "extraConfigGitUrl", Value: "https://github.com/scoheb/strategy-configs.git"},
+var paramsReleaseStrategyMvp = []appstudiov1alpha1.Params{
+	{Name: "extraConfigGitUrl", Value: "https://github.com/hacbs-release/strategy-configs"},
+	{Name: "extraConfigPath", Value: "mvp.yaml"},
+	{Name: "extraConfigRevision", Value: "main"},
+}
+
+var paramsReleaseStrategyM6 = []appstudiov1alpha1.Params{
+	{Name: "extraConfigGitUrl", Value: "https://github.com/hacbs-release/strategy-configs"},
 	{Name: "extraConfigPath", Value: "m6.yaml"},
 	{Name: "extraConfigRevision", Value: "main"},
 }
 
 var managednamespaceSecret = []corev1.ObjectReference{
 	{Name: redhatAppstudioUserSecret},
-}
-
-var roleRules = map[string][]string{
-	"apiGroupsList": {""},
-	"roleResources": {"secrets"},
-	"roleVerbs":     {"get", "list", "watch"},
 }

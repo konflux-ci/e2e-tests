@@ -3,39 +3,25 @@ package release
 import (
 	"strings"
 
-	"github.com/google/uuid"
+	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
-	"knative.dev/pkg/apis"
-
-	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	klog "k8s.io/klog/v2"
+	"knative.dev/pkg/apis"
 )
 
-var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-path", Label("release", "defaultBundle", "HACBS"), func() {
+var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-pipeline", Label("release", "defaultBundle", "HACBS"), func() {
 	defer GinkgoRecover()
 
 	var fw *framework.Framework
 	var err error
 
-	var defaultEcPolicy = ecp.EnterpriseContractPolicySpec{}
-	var devNamespace = uuid.New().String()
-	var managedNamespace = uuid.New().String()
-
-	var cm = &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: buildPipelineBundleDefaultName,
-		},
-		Data: map[string]string{
-			"default_build_bundle": buildPipelineBundleDefault,
-		},
-	}
+	var devNamespace = utils.GetGeneratedNamespace("release-dev")
+	var managedNamespace = utils.GetGeneratedNamespace("release-managed")
 
 	BeforeAll(func() {
 		// Initialize the tests controllers
@@ -48,45 +34,30 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 
 		_, err := fw.AsKubeAdmin.CommonController.CreateTestNamespace(devNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating devNamespace: %v", err)
-		klog.Info("Dev Namespace created: ", devNamespace)
+		GinkgoWriter.Println("Dev Namespace created: %s ", devNamespace)
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating managedNamespace: %v", err)
-		klog.Info("Managed Namespace created: ", managedNamespace)
-
-		klog.Infof("Wait until the 'pipeline' SA is created in %s namespace \n", managedNamespace)
-		Eventually(func() bool {
-			sa, err := fw.AsKubeAdmin.CommonController.GetServiceAccount("pipeline", managedNamespace)
-			return sa != nil && err == nil
-		}, pipelineServiceAccountCreationTimeout, defaultInterval).Should(BeTrue(), "timed out when waiting for the \"pipeline\" SA to be created")
+		GinkgoWriter.Println("Managed Namespace created: %s", managedNamespace)
 
 		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
 		Expect(sourceAuthJson).ToNot(BeEmpty())
 
-		destinationAuthJson := utils.GetEnv(constants.QUAY_OAUTH_TOKEN_RELEASE_DESTINATION, "")
-		Expect(destinationAuthJson).ToNot(BeEmpty())
-
 		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(hacbsReleaseTestsTokenSecret, devNamespace, sourceAuthJson)
 		Expect(err).ToNot(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateRegistryJsonSecret(redhatAppstudioUserSecret, managedNamespace, destinationAuthJson, destinationKeyName)
+		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(redhatAppstudioUserSecret, managedNamespace, sourceAuthJson)
 		Expect(err).ToNot(HaveOccurred())
 
 		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, hacbsReleaseTestsTokenSecret, "pipeline")
 		Expect(err).ToNot(HaveOccurred())
 
-		klog.Info("Dev Namespace:", devNamespace)
-		klog.Info("Managed Namespace:", managedNamespace)
-
-		// Copy the public key from tekton-chains/signing-secrets to a new
-		// secret that contains just the public key to ensure that access
-		// to password and private key are not needed.
 		publicKey, err := kubeController.GetPublicKey("signing-secrets", constants.TEKTON_CHAINS_NS)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(kubeController.CreateOrUpdateSigningSecret(
 			publicKey, publicSecretNameAuth, managedNamespace)).To(Succeed())
 
-		defaultEcPolicy = ecp.EnterpriseContractPolicySpec{
+		defaultEcPolicy := ecp.EnterpriseContractPolicySpec{
 			Description: "Red Hat's enterprise requirements",
 			PublicKey:   string(publicKey),
 			Sources: []ecp.Source{
@@ -101,17 +72,19 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 				},
 			},
 			Exceptions: &ecp.EnterpriseContractPolicyExceptions{
-				NonBlocking: []string{"tasks", "attestation_task_bundle", "java", "test", "not_useful"},
+				NonBlocking: []string{
+					"tasks", "attestation_task_bundle", "java",
+					"test", "hermetic_build_task.build_task_not_hermetic",
+					"buildah_build_task.dockerfile_param_external_source",
+					"step_image_registries.disallowed_task_step_image",
+				},
 			},
 		}
-
-		_, err = fw.AsKubeAdmin.CommonController.CreateConfigMap(cm, devNamespace)
-		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineNameDefault, releasePipelineBundleDefault, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategy)
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineNameDefault, releasePipelineBundleDefault, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategyM6)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, "", "", releaseStrategyDefaultName)
@@ -124,12 +97,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-happy-pa
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateServiceAccount(releaseStrategyServiceAccountDefault, managedNamespace, managednamespaceSecret)
-		Expect(err).NotTo(HaveOccurred())
-
-		_, err = fw.AsKubeAdmin.CommonController.CreateRole(roleName, managedNamespace, roleRules)
-		Expect(err).NotTo(HaveOccurred())
-
-		_, err = fw.AsKubeAdmin.CommonController.CreateRoleBinding("role-relase-service-account-binding", managedNamespace, "ServiceAccount", roleName, "Role", "role-m6-service-account", "rbac.authorization.k8s.io")
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.HasController.CreateHasApplication(applicationNameDefault, devNamespace)
