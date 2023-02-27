@@ -106,6 +106,7 @@ func (s *SuiteController) LinkSecretToServiceAccount(ns, secret, serviceaccount 
 		}
 	}
 	serviceAccountObject.Secrets = append(serviceAccountObject.Secrets, corev1.ObjectReference{Name: secret})
+	serviceAccountObject.ImagePullSecrets = append(serviceAccountObject.ImagePullSecrets, corev1.LocalObjectReference{Name: secret})
 	_, err = s.KubeInterface().CoreV1().ServiceAccounts(ns).Update(context.TODO(), serviceAccountObject, metav1.UpdateOptions{})
 	return err
 }
@@ -339,18 +340,19 @@ func (s *SuiteController) DeleteConfigMap(name, namespace string, returnErrorOnN
 	return err
 }
 
-func (s *SuiteController) CreateRegistryAuthSecret(secretName, namespace, secretData string) (*corev1.Secret, error) {
-	rawDecodedText, err := base64.StdEncoding.DecodeString(secretData)
+func (s *SuiteController) CreateRegistryAuthSecret(secretName, namespace, secretStringData string) (*corev1.Secret, error) {
+	rawDecodedTextStringData, err := base64.StdEncoding.DecodeString(secretStringData)
 	if err != nil {
 		return nil, err
 	}
+
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
 			Namespace: namespace,
 		},
-		Type:       "kubernetes.io/dockerconfigjson",
-		StringData: map[string]string{".dockerconfigjson": string(rawDecodedText)},
+		Type:       corev1.SecretTypeDockerConfigJson,
+		StringData: map[string]string{corev1.DockerConfigJsonKey: string(rawDecodedTextStringData)},
 	}
 	er := s.KubeRest().Create(context.TODO(), secret)
 	if er != nil {
@@ -671,4 +673,35 @@ func (s *SuiteController) DeleteAllPipelineRunsAndTasks(namespace string) error 
 	}
 
 	return nil
+}
+
+// CreateRegistryAuthSecretKeyValueDecoded creating key/value kubernetes secret.
+func (s *SuiteController) CreateRegistryAuthSecretKeyValueDecoded(secretName, namespace, secretStringData, secretData string) (*corev1.Secret, error) {
+
+	rawDecodedTextStringData, err := base64.StdEncoding.DecodeString(strings.TrimSpace(secretStringData))
+	if err != nil {
+		return nil, err
+	}
+
+	rawDecodedTextData, err := base64.StdEncoding.DecodeString(secretData)
+	if err != nil {
+		return nil, err
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: namespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			"cert": rawDecodedTextData,
+			"key":  rawDecodedTextStringData,
+		},
+	}
+	er := s.KubeRest().Create(context.TODO(), secret)
+	if er != nil {
+		return nil, er
+	}
+	return secret, nil
 }

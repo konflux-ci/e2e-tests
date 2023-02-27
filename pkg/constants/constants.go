@@ -46,6 +46,12 @@ const (
 
 	QUAY_OAUTH_TOKEN_RELEASE_DESTINATION string = "QUAY_OAUTH_TOKEN_RELEASE_DESTINATION"
 
+	// Key auth for accessing Pyxis stage external registry
+	PYXIS_STAGE_KEY_ENV string = "PYXIS_STAGE_KEY"
+
+	// Cert auth for accessing Pyxis stage external registry
+	PYXIS_STAGE_CERT_ENV string = "PYXIS_STAGE_CERT"
+
 	// Bundle ref for overriding the default Java build bundle specified in BuildPipelineSelectorYamlURL
 	CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV string = "CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE"
 
