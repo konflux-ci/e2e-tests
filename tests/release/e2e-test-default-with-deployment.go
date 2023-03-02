@@ -71,12 +71,9 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 					},
 				},
 			},
-			Exceptions: &ecp.EnterpriseContractPolicyExceptions{
-				NonBlocking: []string{
-					"tasks", "attestation_task_bundle", "java",
-					"test", "hermetic_build_task.build_task_not_hermetic",
-					"buildah_build_task.dockerfile_param_external_source",
-					"step_image_registries.disallowed_task_step_image"},
+			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
+				Collections: []string{"minimal"},
+				Exclude:     []string{"cve"},
 			},
 		}
 
