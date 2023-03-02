@@ -367,10 +367,10 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				Expect(err).ShouldNot(HaveOccurred(), "error in listing artifact builds")
 				// we want to make sure there is more than one ab and that they are all complete
 				abComplete := len(abList.Items) > 0
-				GinkgoWriter.Printf("number of artifactbuilds: %d", len(abList.Items))
+				GinkgoWriter.Printf("number of artifactbuilds: %d\n", len(abList.Items))
 				for _, ab := range abList.Items {
 					if ab.Status.State != v1alpha1.ArtifactBuildStateComplete {
-						GinkgoWriter.Printf("artifactbuild %s not complete", ab.Spec.GAV)
+						GinkgoWriter.Printf("artifactbuild %s not complete\n", ab.Spec.GAV)
 						abComplete = false
 						break
 					}
@@ -378,10 +378,10 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				dbList, err := f.AsKubeAdmin.JvmbuildserviceController.ListDependencyBuilds(testNamespace)
 				Expect(err).ShouldNot(HaveOccurred(), "error in listing dependency builds")
 				dbComplete := len(dbList.Items) > 0
-				GinkgoWriter.Printf("number of dependencybuilds: %d", len(dbList.Items))
+				GinkgoWriter.Printf("number of dependencybuilds: %d\n", len(dbList.Items))
 				for _, db := range dbList.Items {
 					if db.Status.State != v1alpha1.DependencyBuildStateComplete {
-						GinkgoWriter.Printf("dependencybuild %s not complete", db.Spec.ScmInfo.SCMURL)
+						GinkgoWriter.Printf("dependencybuild %s not complete\n", db.Spec.ScmInfo.SCMURL)
 						dbComplete = false
 						break
 					} else if db.Status.State == v1alpha1.DependencyBuildStateFailed {
@@ -435,12 +435,12 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 					}
 					if prun.Name != pr.Name {
 						if pr.IsDone() {
-							GinkgoWriter.Printf("got event for pipelinerun %s in a terminal state", pr.Name)
+							GinkgoWriter.Printf("got event for pipelinerun %s in a terminal state\n", pr.Name)
 							continue
 						}
 						Fail("another non-completed pipeline run was generated when it should not")
 					}
-					GinkgoWriter.Printf("done processing event for pr %s", pr.Name)
+					GinkgoWriter.Printf("done processing event for pr %s\n", pr.Name)
 					if pr.IsDone() {
 						GinkgoWriter.Println("pr is done")
 
