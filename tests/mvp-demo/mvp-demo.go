@@ -125,6 +125,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 			},
 			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
 				Collections: []string{"minimal"},
+				Exclude:     []string{"cve"},
 			},
 		}
 		_, err = f.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy("mvp-policy", managedNamespace, defaultEcPolicy)
