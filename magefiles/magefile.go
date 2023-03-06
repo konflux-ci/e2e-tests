@@ -133,7 +133,8 @@ func (Local) CleanupGithubOrg() error {
 	}
 
 	// Get all repos
-	ghClient := github.NewGithubClient(githubToken, "redhat-appstudio-qe")
+	githubOrgName := utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
+	ghClient := github.NewGithubClient(githubToken, githubOrgName)
 	repos, err := ghClient.GetAllRepositories()
 	if err != nil {
 		return err
