@@ -20,7 +20,7 @@ Requirements for installing AppStudio in E2E mode and running the E2E tests:
 * An OpenShift 4.10 or higher Environment (If you are using CRC/OpenShift Local please also review [optional-codeready-containers-post-bootstrap-configuration](https://github.com/redhat-appstudio/infra-deployments#optional-codeready-containers-post-bootstrap-configuration))
 * A machine from which to run the install (usually your laptop) with required tools:
   * A properly setup Go workspace using **Go 1.18 is required**
-  * The OpenShift Command Line Tool (oc)
+  * The OpenShift Command Line Tool (oc) **Use the version coresponding to the Openshift version**
   * yq
   * jq
   * git
@@ -108,7 +108,7 @@ The `e2e-appstudio` command is the root command that executes all test functiona
    ```
 
 The instructions for every test suite can be found in the [tests folder](tests), e.g. [has Readme.md](tests/has/README.md).
-You can also specify hich tests you want to run using [labels](docs/LabelsNaming.md) or [Ginkgo Focus](docs/DeveloperFocus.md).
+You can also specify which tests you want to run using [labels](docs/LabelsNaming.md) or [Ginkgo Focus](docs/DeveloperFocus.md).
 
 # Red Hat AppStudio Load Tests
 
@@ -141,7 +141,7 @@ For more information refer to [Generate Tests](docs/DeveloperGenerateTest.md).
 * Every test package should be imported to `cmd/e2e_test.go`, e.g. [has](https://github.com/redhat-appstudio/e2e-tests/blob/main/cmd/e2e_test.go#L15).
 * Every new test should have correct [labels](docs/LabelsNaming.md).
 * Every test should have meaningful description with JIRA/GitHub issue key.
-* (Recommended) Use JIRA integration for linking issues and commits (just add JIRA issue key in the commit message). You can found more information about GitHub-JIRA integration [here](https://docs.engineering.redhat.com/display/JiraAid/GitHub-Jira+integration).
+* (Recommended) Use JIRA integration for linking issues and commits (just add JIRA issue key in the commit message).
 * When running via mage you can filter the suites run by specifying the
   `E2E_TEST_SUITE_LABEL` environment variable. For example:
   `E2E_TEST_SUITE_LABEL=ec ./mage runE2ETests`
@@ -168,19 +168,6 @@ The “artifacts” link in the job result page leads to a page containing every
 * **redhat-appstudio_e2e-tests/redhat-appstudio-gather/***            - Store appstudio Kube APIs information. Components, Application, Environment etc.
 * **redhat-appstudio_e2e-tests/redhat-appstudio-hypershift-gather/*** - Store all cluster pods logs, events, configmaps etc. This artifacts are present only with hypershift installer.
 * **redhat-appstudio_e2e-tests/gather-extra/***                       - Store all cluster pods logs, events, configmaps etc. This artifacts are present only when we dont use hypershift.
-
-# Generate test cases for Polarion
-You can also generate test cases for Polarion with command:
-   ```bash
-    ` ginkgo --vv --dry-run cmd/ -- --polarion-output-file=polarion.xml --generate-test-cases=true`
-   ```
-Note: is is recommended to use `dry-mode` - it will generate the test cases without running the tests.
-Parameters:
-| Variable | Type | Explanation | Default Value |
-|---|---|---|---|
-| `generate-test-cases` | bool | Generate test cases for Polarion  | `false`  |
-| `polarion-output-file` | string | Path to polarion xml file | `polarion.xml` |
-| `project-id` | string | Polarion project ID  | `AppStudio`  |
 
 # Reporting issues
 For reporting issues with e2e tests please use [STONE Jira project](https://issues.redhat.com/browse/STONE) - please use labels `ci-fail` and `quality`. For existing issues, see [this Jira query](https://issues.redhat.com/issues/?jql=labels%20%3D%20%22ci-fail%22%20and%20labels%20%3D%20%22quality%22%20and%20resolution%20%3D%20unresolved).
