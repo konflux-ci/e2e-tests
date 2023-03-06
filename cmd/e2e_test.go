@@ -15,6 +15,7 @@ import (
 	_ "github.com/redhat-appstudio/e2e-tests/tests/build"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/cluster-registration"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/e2e-demos"
+	_ "github.com/redhat-appstudio/e2e-tests/tests/enterprise-contract"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/has"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/integration-service"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/mvp-demo"

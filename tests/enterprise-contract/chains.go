@@ -1,4 +1,4 @@
-package build
+package contract
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
-var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HACBS"), func() {
+var _ = framework.ChainsSuiteDescribe("Enterprise Contract E2E tests", Label("ec", "HACBS"), func() {
 	defer GinkgoRecover()
 	var fwk *framework.Framework
 	var err error
