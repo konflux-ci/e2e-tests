@@ -719,12 +719,21 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 		var applicationName, componentName, testNamespace, outputContainerImage string
 		var timeout, interval time.Duration
+		var err error
+		var kc tekton.KubeController
+		var pipelineRun *v1beta1.PipelineRun
 
 		BeforeAll(func() {
 
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace
+
+			kc = tekton.KubeController{
+				Commonctrl: *f.AsKubeAdmin.CommonController,
+				Tektonctrl: *f.AsKubeAdmin.TektonController,
+				Namespace:  testNamespace,
+			}
 
 			_, err := f.AsKubeAdmin.CommonController.GetSecret(testNamespace, constants.RegistryAuthSecretName)
 			if err != nil {
@@ -780,24 +789,20 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				return pipelineRun.HasStarted()
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 
-			pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+			pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(pipelineRun.Spec.Workspaces).To(HaveLen(1))
 		})
 
 		It("should not be possible to push to quay.io repo (PipelineRun should fail)", func() {
-			timeout = time.Minute * 30
-			interval = time.Second * 5
-			Eventually(func() bool {
-				pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-				Expect(err).ShouldNot(HaveOccurred())
+			pipelineRunTimeout := int(time.Duration(20) * time.Minute)
 
-				for _, condition := range pipelineRun.Status.Conditions {
-					GinkgoWriter.Printf("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
-					return condition.Reason == "Failed"
-				}
-				return false
-			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to fail")
+			Expect(kc.WatchPipelineRun(pipelineRun.Name, pipelineRunTimeout)).To(Succeed())
+			pipelineRun, err = kc.Tektonctrl.GetPipelineRun(pipelineRun.Name, pipelineRun.Namespace)
+			Expect(err).NotTo(HaveOccurred())
+			tr, err := kc.GetTaskRunStatus(pipelineRun, constants.BuildTaskRunName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tekton.DidTaskSucceed(tr)).To(BeFalse())
 		})
 	})
 })

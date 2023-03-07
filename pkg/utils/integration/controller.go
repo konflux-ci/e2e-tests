@@ -10,15 +10,17 @@ import (
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	releasev1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"knative.dev/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -331,19 +333,21 @@ func (h *SuiteController) CreateIntegrationTestScenario(applicationName, namespa
 	return integrationTestScenario, nil
 }
 
-func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(testScenario *integrationv1alpha1.IntegrationTestScenario, applicationSnapshot *appstudioApi.Snapshot, applicationName string, appNamespace string) error {
+func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(c *common.SuiteController, testScenario *integrationv1alpha1.IntegrationTestScenario, applicationSnapshot *appstudioApi.Snapshot, applicationName string, appNamespace string) error {
 	return wait.PollImmediate(20*time.Second, 100*time.Minute, func() (done bool, err error) {
 		pipelineRun, _ := h.GetIntegrationPipelineRun(testScenario.Name, applicationSnapshot.Name, appNamespace)
 
 		for _, condition := range pipelineRun.Status.Conditions {
 			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
 
-			if condition.Reason == "Failed" {
-				return false, fmt.Errorf("component %s pipeline failed", pipelineRun.Name)
+			if !pipelineRun.IsDone() {
+				return false, nil
 			}
 
-			if condition.Status == corev1.ConditionTrue {
+			if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
 				return true, nil
+			} else {
+				return false, fmt.Errorf(tekton.GetFailedPipelineRunLogs(c, pipelineRun))
 			}
 		}
 		return false, nil
