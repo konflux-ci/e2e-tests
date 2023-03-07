@@ -10,6 +10,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	"knative.dev/pkg/apis"
 
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 
@@ -111,8 +112,13 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				for _, condition := range pipelineRun.Status.Conditions {
 					GinkgoWriter.Printf("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
 
-					if condition.Reason == "Failed" {
-						Fail(tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun))
+					if !pipelineRun.IsDone() {
+						return false
+					}
+
+					if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+						failMessage := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+						Fail(failMessage)
 					}
 				}
 				return pipelineRun.IsDone()
@@ -144,7 +150,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					timeout = time.Second * 1000
 					interval = time.Second * 10
 					Eventually(func() bool {
-						Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(&testScenario, applicationSnapshot, applicationName, appStudioE2EApplicationsNamespace)).To(Succeed(), "Error when waiting for a integration pipeline to finish")
+						Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(f.AsKubeAdmin.CommonController, &testScenario, applicationSnapshot, applicationName, appStudioE2EApplicationsNamespace)).To(Succeed(), "Error when waiting for a integration pipeline to finish")
 						return true
 					}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
 				}
@@ -195,8 +201,13 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 						for _, condition := range pipelineRun.Status.Conditions {
 							GinkgoWriter.Printf("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
-							if condition.Reason == "Failed" {
-								Fail(fmt.Sprintf("Pipelinerun %s has failed", pipelineRun.Name))
+							if !pipelineRun.IsDone() {
+								return false
+							}
+
+							if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+								failMessage := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+								Fail(failMessage)
 							}
 						}
 						return pipelineRun.IsDone()
