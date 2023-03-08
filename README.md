@@ -17,7 +17,7 @@ When you want to run the E2E tests for AppStudio you need to have installed tool
 ## Requirements
 Requirements for installing AppStudio in E2E mode and running the E2E tests:
 
-* An OpenShift 4.10 or higher Environment (If you are using CRC/OpenShift Local please also review [optional-codeready-containers-post-bootstrap-configuration](https://github.com/redhat-appstudio/infra-deployments#optional-codeready-containers-post-bootstrap-configuration))
+* An OpenShift 4.11 or higher Environment (If you are using CRC/OpenShift Local please also review [optional-codeready-containers-post-bootstrap-configuration](https://github.com/redhat-appstudio/infra-deployments#optional-codeready-containers-post-bootstrap-configuration))
 * A machine from which to run the install (usually your laptop) with required tools:
   * A properly setup Go workspace using **Go 1.18 is required**
   * The OpenShift Command Line Tool (oc) **Use the version coresponding to the Openshift version**
@@ -40,21 +40,16 @@ Before executing the e2e suites you need to have deployed AppStudio in E2E Mode 
     oc login -u <user> -p <password> --server=<oc_api_url>
    ```
 
-2. Setup environment variables for GitHub and Quay.io tokens(tokens are required, you can also set more variables, see the table below):
+2. Export required (and recommended) environment variables (i.e. `export ENV_VAR_NAME=value ENV_VAR2_NAME=value`) from the table below.
 
-   ```bash
-    `export GITHUB_TOKEN=ghp_Iq...`
-    `export QUAY_TOKEN=ewogI3...`
-   ```
-
-The following environments are used to launch the Red Hat AppStudio installation in E2E mode and the tests execution(tokens are also used for running the tests):
+The following environment variables are used to launch the Red Hat AppStudio installation in E2E mode and the tests execution (tokens are also used for running the tests):
 
 | Variable | Required | Explanation | Default Value |
 |---|---|---|---|
 | `GITHUB_TOKEN` | yes | A github token used to create AppStudio applications in github  | ''  |
-| `QUAY_TOKEN` | yes | A quay token to push components images to quay.io. Note the quay token must be your dockerconfigjson encoded in base64 format, e.g. `ewogI3dJhdXRocyI6I...` | '' |
-| `MY_GITHUB_ORG` | no | GitHub Organization where to create/push Red Hat AppStudio Applications  | `redhat-appstudio-qe`  |
-| `QUAY_E2E_ORGANIZATION` | no | Quay organization where to push components containers | `redhat-appstudio-qe` |
+| `QUAY_TOKEN` | yes | A quay token to push components images to quay.io. Note the quay token must be your dockerconfigjson encoded in base64 format. Example: `export QUAY_TOKEN=$(base64 < ~/.docker/config.json)` | '' |
+| `MY_GITHUB_ORG` | no (recommended) | GitHub organization (must be organization, cannot use regular GitHub account!) where to create/push Red Hat AppStudio Applications. You can create your GitHub organization for free  | `redhat-appstudio-qe`  |
+| `QUAY_E2E_ORGANIZATION` | no (recommended) | Quay organization/account where to push components containers. It is recommended to create your own account | `redhat-appstudio-qe` |
 | `E2E_APPLICATIONS_NAMESPACE` | no | Name of the namespace used for running HAS E2E tests | `appstudio-e2e-test` |
 | `PRIVATE_DEVFILE_SAMPLE` | no | The name of the private git repository used in HAS E2E tests. Your GITHUB_TOKEN should be able to read from it. | `https://github.com/redhat-appstudio-qe/private-quarkus-devfile-sample` |
 | `QUAY_OAUTH_USER` | no | A valid quay robot account username to make quay oauth | '' |
@@ -64,7 +59,7 @@ The following environments are used to launch the Red Hat AppStudio installation
 | `E2E_TEST_SUITE_LABEL` | no | Run only test suites with the given Giknkgo label | '' |
 | `KLOG_VERBOSITY` | no | Level of verbosity for `klog` | 1 |
 
-3. Install dependencies:
+1. Install dependencies:
 
 ``` bash
 # Install dependencies
@@ -74,7 +69,9 @@ $ go mod tidy
 $ go mod vendor
 ```
 
-4. Install Red Hat AppStudio in e2e mode with install script in scripts folder. The e2e framework will use by default the `redhat-appstudio-qe` GitHub organization(you can change the GitHub organization by environment variable `MY_GITHUB_ORG`).
+1. Install Red Hat AppStudio in e2e mode. By default the installation script will use the `redhat-appstudio-qe` GitHub organization for pushing changes to `infra-deployments` repository.
+
+**It is recommended to use your fork of [infra-deployments repo](https://github.com/redhat-appstudio/infra-deployments) in your GitHub org instead** - you can change the GitHub organization with environment variable `export MY_GITHUB_ORG=<name-of-your-github-org>`.
 
    ```bash
       make local/cluster/prepare
@@ -84,10 +81,11 @@ More information about how to deploy Red Hat AppStudio
 are in the [infra-deployments](https://github.com/redhat-appstudio/infra-deployments) repository.
 
 ## Building and running the e2e tests
-You can use scripts to build and run the tests:
+You can use the following make target to build and run the tests:
    ```bash
       make local/test/e2e
    ```
+
 Or build and run the tests without scripts:
 1. Install dependencies and build the tests:
 
@@ -102,6 +100,14 @@ Or build and run the tests without scripts:
 
 2. Run the e2e tests:
 The `e2e-appstudio` command is the root command that executes all test functionality. To obtain all available flags for the binary please use `--help` flags. All ginkgo flags and go tests are available in `e2e-appstudio` binary.
+
+Some tests could require you to have specific container image repo's created (if you're using your own container image org/user account (`QUAY_E2E_ORGANIZATION`) or your own GitHub organization (`MY_GITHUB_ORG`) 
+In that case, before you run the test, make sure you have created
+* `test-images` repo in quay.io, i.e. `quay.io/<QUAY_E2E_ORGANIZATION>/test-images` and make it **public**
+  * also make sure that the docker config credentials (encoded in the value of `QUAY_TOKEN` environment variable) contain a correct credentials (with proper permissions) that will be used for pushing images to that repo
+* forked following GitHub repositories to your org (specified in `MY_GITHUB_ORG` env var)
+  * https://github.com/redhat-appstudio-qe/devfile-sample-hello-world (for running build-service tests)
+  * https://github.com/redhat-appstudio-qe/hacbs-test-project (for mvp-demo test)
 
    ```bash
     `./bin/e2e-appstudio`
