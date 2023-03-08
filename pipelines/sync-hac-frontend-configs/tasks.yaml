@@ -1,0 +1,64 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata: 
+  name: sync-frontend-configs
+  namespace: appstudio-qe
+spec:
+  description: >-
+    This task updates redhat-appstudio-qe/frontend-configs with 
+    content from internal gitlab repo insights-platform/frontend-configs.
+  steps:
+    - image: quay.io/devfile/base-developer-image:latest
+      name: sync-frontend-configs
+      script: >
+        #!/bin/bash
+
+        git -c http.sslVerify=false clone 
+        https://gitlab.cee.redhat.com/insights-platform/frontend-configs.git 
+
+        cd frontend-configs 
+
+        git remote add redhat-appstudio-qe
+        https://github.com/redhat-appstudio-qe/frontend-configs.git
+
+        git push redhat-appstudio-qe main
+
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata: 
+  name: send-slack-message
+  namespace: appstudio-qe
+spec:
+  description: >-
+    This tasks post a simple message to a slack channel.
+
+    This task uses chat.postMessage slack REST api to send the message. There
+    are multiple ways to send a message to slack.
+  params:
+    - description: secret name of the slack app access token (key is token)
+      name: token-secret
+      type: string
+    - description: channel id or channel name
+      name: channel
+      type: string
+    - description: plain text message
+      name: message
+      type: string
+  steps:
+    - env:
+        - name: TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: token
+              name: $(params.token-secret)
+      image: >-
+        quay.io/devfile/base-developer-image:latest
+      name: post
+      resources: {}
+      script: >
+        #!/bin/sh
+
+        /usr/bin/curl -X POST -H 'Content-type: application/json' -H
+        'Authorization: Bearer '$TOKEN --data '{"channel":"$(params.channel)",
+        "text":"$(params.message)"}' https://slack.com/api/chat.postMessage
