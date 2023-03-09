@@ -20,5 +20,5 @@ Please describe the tests that you ran to verify your changes. Provide instructi
 - [ ] I have performed a self-review of my code
 - [ ] I have commented my code, particularly in hard-to-understand areas
 - [ ] I have made corresponding changes to the documentation
-- [ ] I have added meaningful description with JIRA/GitHub issue key(if applicable), for example HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source") 
+- [ ] I have added meaningful description with JIRA/GitHub issue key(if applicable), for example HASSuiteDescribe("STONE-123456789 devfile source") 
 - [ ] I have updated labels (if needed)
