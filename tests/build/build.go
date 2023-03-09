@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
+
 	"k8s.io/utils/pointer"
 
 	"github.com/google/go-github/v44/github"
@@ -609,19 +611,82 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}
 			})
 
-			When("the container image is created and pushed to container registry", Label("sbom", "slow"), func() {
-				It("contains non-empty sbom files", func() {
+			When("the container image is created and pushed to container registry", Label("sbom", "slow", buildTemplatesTestLabel), func() {
+				var outputImage string
+				var kubeController tekton.KubeController
+				BeforeAll(func() {
 					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, "")
 					Expect(err).ShouldNot(HaveOccurred())
 
-					var outputImage string
-					// Workaround - until https://issues.redhat.com/browse/STONE-300 is solved
 					for _, p := range pipelineRun.Spec.Params {
 						if p.Name == "output-image" {
 							outputImage = p.Value.StringVal
 						}
 					}
 					Expect(outputImage).ToNot(BeEmpty(), "output image of a component could not be found")
+
+					kubeController = tekton.KubeController{
+						Commonctrl: *kubeadminClient.CommonController,
+						Tektonctrl: *kubeadminClient.TektonController,
+						Namespace:  testNamespace,
+					}
+				})
+				It("verify-enterprice-contract check should pass", Label(buildTemplatesTestLabel, "DEBUG-EC"), func() {
+					cm, err := kubeController.Commonctrl.GetConfigMap("ec-defaults", "enterprise-contract-service")
+					Expect(err).ToNot(HaveOccurred())
+
+					verifyECTaskBundle := cm.Data["verify_ec_task_bundle"]
+					Expect(verifyECTaskBundle).ToNot(BeEmpty())
+
+					publicSecretName := "cosign-public-key"
+					publicKey, err := kubeController.GetPublicKey("signing-secrets", constants.TEKTON_CHAINS_NS)
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(kubeController.CreateOrUpdateSigningSecret(
+						publicKey, publicSecretName, testNamespace)).To(Succeed())
+
+					defaultEcp, err := kubeController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+					Expect(err).NotTo(HaveOccurred())
+
+					policySource := defaultEcp.Spec.Sources
+					policy := ecp.EnterpriseContractPolicySpec{
+						Sources: policySource,
+						Configuration: &ecp.EnterpriseContractPolicyConfiguration{
+							// The BuildahDemo pipeline used to generate the test data does not
+							// include the required test tasks, so this policy should always fail.
+							Collections: []string{"slsa2"},
+							Exclude:     []string{"cve"},
+						},
+					}
+					Expect(kubeController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
+
+					generator := tekton.VerifyEnterpriseContract{
+						Bundle:              verifyECTaskBundle,
+						Image:               outputImage,
+						Name:                "verify-enterprise-contract",
+						Namespace:           testNamespace,
+						PolicyConfiguration: "ec-policy",
+						PublicKey:           fmt.Sprintf("k8s://%s/%s", testNamespace, publicSecretName),
+						SSLCertDir:          "/var/run/secrets/kubernetes.io/serviceaccount",
+						Strict:              true,
+					}
+					ecPipelineRunTimeout := int(time.Duration(10 * time.Minute).Seconds())
+					pr, err := kubeController.RunPipeline(generator, ecPipelineRunTimeout)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(kubeController.WatchPipelineRun(pr.Name, ecPipelineRunTimeout)).To(Succeed())
+
+					pr, err = kubeController.Tektonctrl.GetPipelineRun(pr.Name, pr.Namespace)
+					Expect(err).NotTo(HaveOccurred())
+
+					tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
+					Expect(tr.Status.TaskRunResults).Should(ContainElements(
+						tekton.MatchTaskRunResultWithJSONPathValue("HACBS_TEST_OUTPUT", "{$.result}", `["SUCCESS"]`),
+					))
+				})
+				It("contains non-empty sbom files", func() {
 
 					purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(outputImage)
 					Expect(err).NotTo(HaveOccurred())
