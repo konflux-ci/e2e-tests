@@ -161,13 +161,7 @@ import (
 ```
 
 # Troubleshooting e2e-tests issues in openshift-ci
-Every Prow job executed by the CI system generates an artifacts directory containing information about that execution and its results. This [document](https://docs.ci.openshift.org/docs/how-tos/artifacts/) describes the contents of this directory and how they can be used to investigate the steps by the job.
-
-The “artifacts” link in the job result page leads to a page containing every file uploaded by that job. For AppStudio jobs there are three important folders in artifacts:
-* **redhat-appstudio_e2e-tests/redhat-appstudio-e2e/***               - Store xunit files related to appstudio e2e-tests.
-* **redhat-appstudio_e2e-tests/redhat-appstudio-gather/***            - Store appstudio Kube APIs information. Components, Application, Environment etc.
-* **redhat-appstudio_e2e-tests/redhat-appstudio-hypershift-gather/*** - Store all cluster pods logs, events, configmaps etc. This artifacts are present only with hypershift installer.
-* **redhat-appstudio_e2e-tests/gather-extra/***                       - Store all cluster pods logs, events, configmaps etc. This artifacts are present only when we dont use hypershift.
+The whole process of investigating issues is defined in [InvestigatingCIFailures](docs/InvestigatingCIFailures.md).
 
 # Reporting issues
 For reporting issues with e2e tests please use [STONE Jira project](https://issues.redhat.com/browse/STONE) - please use labels `ci-fail` and `quality`. For existing issues, see [this Jira query](https://issues.redhat.com/issues/?jql=labels%20%3D%20%22ci-fail%22%20and%20labels%20%3D%20%22quality%22%20and%20resolution%20%3D%20unresolved).
