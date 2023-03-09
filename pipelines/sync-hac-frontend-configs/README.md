@@ -15,8 +15,8 @@ In case of any failure, this pipeline sends message to Stonesoup QE Slack Channe
   * slack token used for posting the messages to slack named `slack-token` (key is `token`)
 * Link the git access secrets to `pipeline` service account:
     ```
-    $ oc secrets link gitlab-ssh
-    $ oc secrets link github-basic
+    $ oc secrets link pipeline gitlab-ssh
+    $ oc secrets link pipeline github-basic
     ```
 * Apply all resources from this folder
     ```
