@@ -1,0 +1,30 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata: 
+  name: sync-frontend-configs
+  namespace: appstudio-qe
+spec:
+  finally:
+    - name: send-slack-message
+      params:
+        - name: token-secret
+          value: slack-token
+        - name: channel
+          value: C02FANRBZQD
+        - name: message
+          value: >-
+            :warning: sync-frontend-configs pipeline failed on ocp-c1 cluster.
+            Please take a look.
+      taskRef:
+        kind: Task
+        name: send-slack-message
+      when:
+        - input: $(tasks.sync-frontend-configs.status)
+          operator: notin
+          values:
+            - Succeeded
+  tasks:
+    - name: sync-frontend-configs
+      taskRef:
+        kind: Task
+        name: sync-frontend-configs
