@@ -63,7 +63,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 	Describe(testSpecification.Tests[0].ApplicationName, Ordered, func() {
 		BeforeAll(func() {
-			Skip("skip tests due a issue with devfile detection. See jira: https://issues.redhat.com/browse/DEVHAS-225")
+			Skip("skip tests due a issue with dockerfile detections. See jira: https://issues.redhat.com/browse/DEVHAS-266")
 			// Initialize the tests controllers
 			fw, err = framework.NewFramework(MultiComponentDemoNamespace)
 			Expect(err).NotTo(HaveOccurred())

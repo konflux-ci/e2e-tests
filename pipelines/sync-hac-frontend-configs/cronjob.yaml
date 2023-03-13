@@ -1,0 +1,16 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: sync-frontend-configs
+  namespace: appstudio-qe
+spec:
+  schedule: "0 1 * * *" # Every day at 1AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: trigger
+            image: curlimages/curl
+            args: ["curl", "-X", "POST", "--data", "{}", "el-sync-frontend-configs.appstudio-qe.svc.cluster.local:8080"]
+          restartPolicy: Never

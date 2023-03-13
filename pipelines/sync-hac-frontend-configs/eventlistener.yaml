@@ -1,0 +1,11 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: sync-frontend-configs
+  namespace: appstudio-qe
+spec:
+  serviceAccountName: pipeline
+  triggers:
+    - name: cron-trig
+      template:
+        ref: sync-frontend-configs-template
