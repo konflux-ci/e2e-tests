@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
+	kubeapi "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/pipeline"
 	v1 "k8s.io/api/core/v1"
@@ -419,28 +420,41 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 	Describe("HACBS pipelines", Label("pipeline"), Ordered, func() {
 		var applicationName, componentName, testNamespace, outputContainerImage string
+		var kubeadminClient *framework.ControllerHub
+
 		BeforeAll(func() {
 			if os.Getenv("APP_SUFFIX") != "" {
 				applicationName = fmt.Sprintf("test-app-%s", os.Getenv("APP_SUFFIX"))
 			} else {
 				applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
 			}
-			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(f.UserNamespace).NotTo(BeNil())
-			testNamespace = f.UserNamespace
-			_, err = f.AsKubeAdmin.HasController.GetHasApplication(applicationName, testNamespace)
+			testNamespace = os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV)
+			if len(testNamespace) > 0 {
+				asAdminClient, err := kubeapi.NewAdminKubernetesClient()
+				Expect(err).ShouldNot(HaveOccurred())
+				kubeadminClient, err = framework.InitControllerHub(asAdminClient)
+				Expect(err).ShouldNot(HaveOccurred())
+				kubeadminClient.CommonController.CreateTestNamespace(testNamespace)
+			} else {
+				f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
+				Expect(err).NotTo(HaveOccurred())
+				testNamespace = f.UserNamespace
+				Expect(f.UserNamespace).NotTo(BeNil())
+				kubeadminClient = f.AsKubeAdmin
+			}
+
+			_, err = kubeadminClient.HasController.GetHasApplication(applicationName, testNamespace)
 			// In case the app with the same name exist in the selected namespace, delete it first
 			if err == nil {
-				Expect(f.AsKubeAdmin.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
+				Expect(kubeadminClient.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
 				Eventually(func() bool {
-					_, err := f.AsKubeAdmin.HasController.GetHasApplication(applicationName, testNamespace)
+					_, err := kubeadminClient.HasController.GetHasApplication(applicationName, testNamespace)
 					return errors.IsNotFound(err)
 				}, time.Minute*5, time.Second*1).Should(BeTrue(), "timed out when waiting for the app %s to be deleted in %s namespace", applicationName, testNamespace)
 			}
-			app, err := f.AsKubeAdmin.HasController.CreateHasApplication(applicationName, testNamespace)
+			app, err := kubeadminClient.HasController.CreateHasApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(utils.WaitUntil(f.AsKubeAdmin.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
+			Expect(utils.WaitUntil(kubeadminClient.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
 				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
 			)
 
@@ -450,7 +464,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				componentNames = append(componentNames, componentName)
 				outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 				// Create a component with Git Source URL being defined
-				_, err := f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, testNamespace, gitUrl, "", "", outputContainerImage, "", false)
+				_, err := kubeadminClient.HasController.CreateComponent(applicationName, componentName, testNamespace, gitUrl, "", "", outputContainerImage, "", false)
 				Expect(err).ShouldNot(HaveOccurred())
 			}
 		})
@@ -461,9 +475,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				// Clean up only Application CR (Component and Pipelines are included) in case we are targeting specific namespace
 				// Used e.g. in build-definitions e2e tests, where we are targeting build-templates-e2e namespace
 				if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) != "" {
-					DeferCleanup(f.AsKubeAdmin.HasController.DeleteHasApplication, applicationName, testNamespace, false)
+					DeferCleanup(kubeadminClient.HasController.DeleteHasApplication, applicationName, testNamespace, false)
 				} else {
-					Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+					Expect(kubeadminClient.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 					Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
 				}
 			}
@@ -477,7 +491,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				interval := time.Second * 1
 
 				Eventually(func() bool {
-					pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
+					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
 					if err != nil {
 						GinkgoWriter.Println("PipelineRun has not been created yet")
 						return false
@@ -495,7 +509,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				timeout := time.Second * 1800
 				interval := time.Second * 10
 				Eventually(func() bool {
-					pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
+					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, condition := range pipelineRun.Status.Conditions {
@@ -506,7 +520,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+							failMessage := tekton.GetFailedPipelineRunLogs(kubeadminClient.CommonController, pipelineRun)
 							Fail(failMessage)
 						}
 					}
@@ -567,7 +581,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				if strings.Contains(s.LabelFilter, buildTemplatesKcpTestLabel) {
 					gatherResult = append(gatherResult, "sbom-json-check")
 				}
-				pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, "")
+				pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
 
 				for i := range gatherResult {
@@ -597,7 +611,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			When("the container image is created and pushed to container registry", Label("sbom", "slow"), func() {
 				It("contains non-empty sbom files", func() {
-					pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, "")
+					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, "")
 					Expect(err).ShouldNot(HaveOccurred())
 
 					var outputImage string
