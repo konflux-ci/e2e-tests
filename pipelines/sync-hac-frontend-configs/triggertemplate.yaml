@@ -1,0 +1,14 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: sync-frontend-configs-template
+  namespace: appstudio-qe
+spec:
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1beta1
+    kind: PipelineRun
+    metadata:
+      generateName: sync-frontend-configs-
+    spec:
+      pipelineRef:
+        name: sync-frontend-configs

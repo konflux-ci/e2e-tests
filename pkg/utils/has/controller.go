@@ -11,6 +11,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
+	"knative.dev/pkg/apis"
 
 	. "github.com/onsi/ginkgo/v2"
 	routev1 "github.com/openshift/api/route/v1"
@@ -430,12 +431,14 @@ func (h *SuiteController) WaitForComponentPipelineToBeFinished(c *common.SuiteCo
 		for _, condition := range pipelineRun.Status.Conditions {
 			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
 
-			if condition.Reason == "Failed" {
-				return false, fmt.Errorf(tekton.GetFailedPipelineRunLogs(c, pipelineRun))
+			if !pipelineRun.IsDone() {
+				return false, nil
 			}
 
-			if condition.Status == corev1.ConditionTrue {
+			if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
 				return true, nil
+			} else {
+				return false, fmt.Errorf(tekton.GetFailedPipelineRunLogs(c, pipelineRun))
 			}
 		}
 		return false, nil

@@ -261,6 +261,10 @@ func (ci CI) setRequiredEnvVars() error {
 				envVarPrefix = "RELEASE_SERVICE"
 				imageTagSuffix = "release-service-image"
 				testSuiteLabel = "release"
+			case strings.Contains(jobName, "integration-service"):
+				envVarPrefix = "INTEGRATION_SERVICE"
+				imageTagSuffix = "integration-service-image"
+				testSuiteLabel = "integration-service"
 			case strings.Contains(jobName, "jvm-build-service"):
 				envVarPrefix = "JVM_BUILD_SERVICE"
 				imageTagSuffix = "jvm-build-service-image"

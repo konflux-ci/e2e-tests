@@ -41,7 +41,7 @@ const (
 	// This pipeline contains an image that comes from "not allowed" container image registry repo
 	// https://github.com/hacbs-contract/ec-policies/blob/de8afa912e7a80d02abb82358ce7b23cf9a286c8/data/rule_data.yml#L9-L12
 	// It is required in order to test that the release of the image failed based on a failed check in EC
-	untrustedPipelineBundle = "quay.io/psturc/pipeline-docker-build:2023-02-17-162546@sha256:470155be2886a81fd03afae53b559beec038d449d712aa54b93788c7a719f50a"
+	untrustedPipelineBundle = "quay.io/psturc/pipeline-docker-build:2023-03-07-104058@sha256:7e64d34d73b185df301ffd96271196cd547f2c1148471865d1d16d915ddf4e74"
 )
 
 var sampleRepoURL = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), sampleRepoName)

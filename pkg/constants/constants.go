@@ -78,6 +78,8 @@ const (
 	BuildPipelineSelectorYamlURL = "https://raw.githubusercontent.com/redhat-appstudio/infra-deployments/main/components/build-service/base/build-pipeline-selector.yaml"
 
 	DefaultImagePushRepo = "quay.io/redhat-appstudio-qe/test-images"
+
+	BuildTaskRunName = "build-container"
 )
 
 var (
