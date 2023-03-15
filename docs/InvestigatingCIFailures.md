@@ -40,7 +40,7 @@
 
 ## Reporting and escalating CI Issue
 1. Create JIRA issue
-Please report the issue in the STONE JIRA project with label **ci-fail** and **quality** in case you don't know the correct component/service. In case you know which component is responsible for the failure, use components project and also use the label **ci-fail**.
+Please report the issue in the STONEBUGS JIRA project with label **ci-fail** and **quality** in case you don't know the correct component/service. In case you know which component is responsible for the failure, use components project and also use the label **ci-fail**.
 The QE team will get a notification, when a new issue is created with this label.
 Please include:
     - **Link to the prow job**
