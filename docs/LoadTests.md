@@ -10,11 +10,12 @@ This Test Section Provides Load Testing Scripts for Red Hat AppStudio
 
 ## Running the script
 1. Change your directory to `tests/load-tests` 
-2. Open `run.sh` and add your encoded docker config json:
+2. Set the following environment variables with your encoded docker config json:
 ```bash
-  DOCKER_CONFIG_JSON=<PLEASE_ENTER_BASE64_ENCODED_CONFIG>
+  export DOCKER_CONFIG_JSON=<PLEASE_ENTER_BASE64_ENCODED_CONFIG>
 ```
-3. Run the bash script
+3. Additional environment variables are required to set for the e2e framework that the load test uses. Refer to [Running the tests](https://github.com/redhat-appstudio/e2e-tests#running-the-tests).
+4. Run the bash script
 ```
 ./run.sh 
 ```
