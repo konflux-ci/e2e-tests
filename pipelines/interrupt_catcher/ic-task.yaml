@@ -11,42 +11,80 @@ spec:
             secretKeyRef:
               key: token
               name: slack-token
-      image: registry.access.redhat.com/ubi8/ubi-minimal:8.6
+      image: quay.io/devfile/base-developer-image:latest
       name: rotate-ic
       script: |
         #!/bin/bash
 
-        microdnf install jq
+        # Updates IC group in slack and sends message about it.
+        # First arument is index of primary IC in allPeople array
+        # Second argument is index of secondary IC in allPeople array
+        function updateICAndSendMessage {
+            echo "Next Primary is:"
+            echo "${allPeople[$1]}"
+            echo "Next backup is:"
+            echo "${allPeople[$2]}"
+            primaryUsername=$(echo ${allPeople[$1]} |jq -r .username)
+            primaryId=$(echo ${allPeople[$1]} |jq -r .id)
+            backupUsername=$(echo ${allPeople[$2]} |jq -r .username)
+            backupId=$(echo ${allPeople[$2]} |jq -r .id)
+            curl -X POST -H "Authorization: Bearer $TOKEN" \
+                --data-urlencode="usergroup=${USERGROUP_ID}" \
+                --data-urlencode="users=${primaryId},${backupId}" \
+                    "https://slack.com/api/usergroups.users.update"
+
+            text=":interrupt-catcher: Primary IC for next week is ${primaryUsername}. Backup is ${backupUsername}"
+            curl -X POST -H "Authorization: Bearer $TOKEN" \
+                --data-urlencode="channel=C02FANRBZQD" \
+                --data-urlencode="text=$text" \
+                "https://slack.com/api/chat.postMessage"
+
+        }
 
         USERGROUP_ID=S03PD4MV58W
-        current_IC=$(curl -X POST -H "Authorization: Bearer $TOKEN" https://slack.com/api/usergroups.users.list?usergroup=$USERGROUP_ID | jq -r .users[0])
-        FOUND=false
 
-        ## Loop over the array of users
-        while read i; do
-            id=$(echo "$i" |jq -r ".id")
-            username=$(echo "$i" |jq -r ".username")
+        readarray -t allPeople < <(jq -c ".[]" /var/people-list/people-list)
+        readarray -t currentICs < <(curl -X POST -H "Authorization: Bearer $TOKEN" https://slack.com/api/usergroups.users.list\?usergroup\=S03PD4MV58W | jq -r ".users[]")
 
-            if [ "$FOUND" == true ]; then
-                echo "next in line is $username"
-                curl -X POST -H "Authorization: Bearer $TOKEN" "https://slack.com/api/usergroups.users.update?usergroup=${USERGROUP_ID}&users=${id}"
-                curl -X POST -H "Authorization: Bearer $TOKEN" "https://slack.com/api/chat.postMessage?channel=C02FANRBZQD&text=Interrupt%20catcher%20for%20next%20week%20is%20@$username"
-                FOUND=set
-                break
-            fi
-            if [ "$id" == "$current_IC" ]; then
-                echo "found username: $username"
-                FOUND=true
-            fi
-        done <<< $(jq -c ".[]" /var/people-list/people-list)
-
-        if [ "$FOUND" == true ]; then
-            id=$(jq -r ".[0].id" /var/people-list/people-list)
-            username=$(jq -r ".[0].username" /var/people-list/people-list)
-            echo "next in line is $username"
-            curl -X POST -H "Authorization: Bearer $TOKEN" "https://slack.com/api/usergroups.users.update?usergroup=${USERGROUP_ID}&users=${id}"
-            curl -X POST -H "Authorization: Bearer $TOKEN" "https://slack.com/api/chat.postMessage?channel=C02FANRBZQD&text=Interrupt%20catcher%20for%20next%20week%20is%20@$username"
+        if [ ${#currentICs[@]} -ne 2 ]; then
+            text=":warning: :interrupt-catcher: IC rotation pipeline failed (Expect exaclty 2 people in IC group). Please check latest run."
+            curl -X POST -H "Authorization: Bearer $TOKEN" \
+                --data-urlencode="channel=C02FANRBZQD" \
+                --data-urlencode="text=$text" \
+                "https://slack.com/api/chat.postMessage"
+            exit 1
         fi
+
+        for i in "${!allPeople[@]}"; do 
+            for currentIC in "${currentICs[@]}"; do
+
+                if [[ $currentIC == $(echo ${allPeople[$i]} | jq -r .id) ]]; then
+
+                    # Exception for when the primary IC is first in list and the backup was last on the list (list wraps around)
+                    if [[ $i -eq 0 ]]; then
+                        if [[ " ${currentICs[*]} " =~ " $(echo ${allPeople[$((${#allPeople[@]}-1))]} | jq -r .id) " ]]; then
+                            updateICAndSendMessage $(($i+1)) $i
+                            exit 0
+                        fi
+                    fi
+
+                    # Normal flow - check whether next one was in IC group as well and shift by one.
+                    # Fail othewise
+                    if [[ " ${currentICs[*]} " =~ " $(echo ${allPeople[$(($i+1))]} | jq -r .id) " ]]; then
+                        updateICAndSendMessage $(($i+2)) $(($i+1))
+                        exit 0
+                    else 
+                        text=":warning: :interrupt-catcher: IC rotation pipeline failed (People in IC group are not next to each other according to roration list). Please check latest run."
+                        curl -X POST -H "Authorization: Bearer $TOKEN" \
+                            --data-urlencode="channel=C02FANRBZQD" \
+                            --data-urlencode="text=$text" \
+                            "https://slack.com/api/chat.postMessage"
+                        exit 1
+                    fi
+                fi
+            done
+        done
+
       volumeMounts: 
         - name: people-list
           mountPath: /var/people-list
