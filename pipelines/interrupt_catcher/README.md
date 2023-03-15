@@ -2,6 +2,10 @@
 
 This pipeline triggers an Appstudio QE Interrupt catcher roration. It's scheduled to run every Thursday at 10 AM.
 
+This jobs rotates IC responsibility through the list defined in cm_people_list.yaml. It will shift the two IC people by one (a.k.a. last week's Primary IC is next week's backup IC).
+The job also sends a message to #forum-stonesoup-qe slack channel with info who is current primary and backup IC.
+It also sends a message to the same channel, when the pipeline fails.
+
 ## Prerequisities
 * Cluster with Openshift Pipelines installed (tested with Pipelines 1.7.2).
 * Existing `appstudio-qe` namespace
