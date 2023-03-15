@@ -13,6 +13,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/integration"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/jvmbuildservice"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/o11y"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/spi"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
@@ -27,6 +28,7 @@ type ControllerHub struct {
 	ReleaseController         *release.SuiteController
 	IntegrationController     *integration.SuiteController
 	JvmbuildserviceController *jvmbuildservice.SuiteController
+	O11yController            *o11y.SuiteController
 }
 
 type Framework struct {
@@ -122,6 +124,11 @@ func InitControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Initialize o11y controller
+	o11yController, err := o11y.NewSuiteController(cc)
+	if err != nil {
+		return nil, err
+	}
 
 	return &ControllerHub{
 		HasController:             hasController,
@@ -132,6 +139,7 @@ func InitControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 		ReleaseController:         releaseController,
 		IntegrationController:     integrationController,
 		JvmbuildserviceController: jvmbuildserviceController,
+		O11yController:            o11yController,
 	}, nil
 
 }
