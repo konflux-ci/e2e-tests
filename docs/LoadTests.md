@@ -10,9 +10,9 @@ This Test Section Provides Load Testing Scripts for Red Hat AppStudio
 
 ## Running the script
 1. Change your directory to `tests/load-tests` 
-2. Open `run.sh` and add your encoded docker config json:
+2. Set `DOCKER_CONFIG_JSON` environment variable with your encoded docker config json:
 ```bash
-  DOCKER_CONFIG_JSON=<PLEASE_ENTER_BASE64_ENCODED_CONFIG>
+  export DOCKER_CONFIG_JSON=<PLEASE_ENTER_BASE64_ENCODED_CONFIG>
 ```
 3. Run the bash script
 ```
