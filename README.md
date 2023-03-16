@@ -171,7 +171,7 @@ import (
 The whole process of investigating issues is defined in [InvestigatingCIFailures](docs/InvestigatingCIFailures.md).
 
 # Reporting issues
-For reporting issues with e2e tests please use [STONE Jira project](https://issues.redhat.com/browse/STONE) - please use labels `ci-fail` and `quality`. For existing issues, see [this Jira query](https://issues.redhat.com/issues/?jql=labels%20%3D%20%22ci-fail%22%20and%20labels%20%3D%20%22quality%22%20and%20resolution%20%3D%20unresolved).
+Please follow the process in [Reporting and escalating CI Issue](docs/InvestigatingCIFailures.md#reporting-and-escalating-ci-issue) for reporting issues.
 
 # Debugging tests
 ## In vscode
