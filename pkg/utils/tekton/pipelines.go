@@ -69,7 +69,9 @@ func (g BuildahDemo) Generate() *v1beta1.PipelineRun {
 }
 
 type VerifyEnterpriseContract struct {
+	ApplicationName     string
 	Bundle              string
+	ComponentName       string
 	Image               string
 	Name                string
 	Namespace           string
@@ -84,6 +86,10 @@ func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-run-", p.Name),
 			Namespace:    p.Namespace,
+			Labels: map[string]string{
+				"appstudio.openshift.io/application": p.ApplicationName,
+				"appstudio.openshift.io/component":   p.ComponentName,
+			},
 		},
 		Spec: v1beta1.PipelineRunSpec{
 			PipelineSpec: &v1beta1.PipelineSpec{
@@ -96,10 +102,10 @@ func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
 								Value: v1beta1.ArrayOrString{
 									Type: v1beta1.ParamTypeString,
 									StringVal: `{
-							"application": "test",
+							"application": "` + p.ApplicationName + `",
 							"components": [
 							  {
-								"name": "component1",
+								"name": "` + p.ComponentName + `",
 								"containerImage": "` + p.Image + `"
 							  }
 							]

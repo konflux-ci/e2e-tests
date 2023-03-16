@@ -611,11 +611,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}
 			})
 
-			When("the container image is created and pushed to container registry", Label("sbom", "slow", buildTemplatesTestLabel), func() {
+			When("the container image is created and pushed to container registry", Label("sbom", "slow"), func() {
 				var outputImage string
 				var kubeController tekton.KubeController
 				BeforeAll(func() {
-					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, "")
+					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, p := range pipelineRun.Spec.Params {
@@ -631,7 +631,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						Namespace:  testNamespace,
 					}
 				})
-				It("verify-enterprice-contract check should pass", Label(buildTemplatesTestLabel, "DEBUG-EC"), func() {
+				It("verify-enterprice-contract check should pass", Label(buildTemplatesTestLabel), func() {
 					cm, err := kubeController.Commonctrl.GetConfigMap("ec-defaults", "enterprise-contract-service")
 					Expect(err).ToNot(HaveOccurred())
 
@@ -639,7 +639,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Expect(verifyECTaskBundle).ToNot(BeEmpty())
 
 					publicSecretName := "cosign-public-key"
-					publicKey, err := kubeController.GetPublicKey("signing-secrets", constants.TEKTON_CHAINS_NS)
+					publicKey, err := kubeController.GetTektonChainsPublicKey()
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(kubeController.CreateOrUpdateSigningSecret(
@@ -661,7 +661,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Expect(kubeController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
 
 					generator := tekton.VerifyEnterpriseContract{
+						ApplicationName:     applicationName,
 						Bundle:              verifyECTaskBundle,
+						ComponentName:       componentNames[i],
 						Image:               outputImage,
 						Name:                "verify-enterprise-contract",
 						Namespace:           testNamespace,
