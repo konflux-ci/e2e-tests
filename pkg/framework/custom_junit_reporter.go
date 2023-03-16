@@ -164,7 +164,8 @@ func GenerateCustomJUnitReportWithConfig(report types.Report, dst string, config
 }
 
 // This function generates folder structure for the rp_preproc tool with logs for upload in Report Portal
-func GenerateRPPreprocReport(report types.Report, rpPreprocDir string) {
+func GenerateRPPreprocReport(report types.Report, rpPreprocParentDir string) {
+	rpPreprocDir := rpPreprocParentDir + "/rp_preproc"
 	//Delete directory, if exists
 	if _, err := os.Stat(rpPreprocDir); !os.IsNotExist(err) {
 		err2 := os.RemoveAll(rpPreprocDir)
@@ -179,7 +180,7 @@ func GenerateRPPreprocReport(report types.Report, rpPreprocDir string) {
 		if !reportSpec.Failure.IsZero() {
 			if reportSpec.LeafNodeType == types.NodeTypeIt {
 				name := shortenStringAddHash(reportSpec)
-				filePath := rpPreprocDir + "/rp_preproc/attachments/xunit/" + name
+				filePath := rpPreprocDir + "/attachments/xunit/" + name
 				if err3 := os.MkdirAll(filePath, os.ModePerm); err3 != nil {
 					klog.Error(err3)
 				} else {
