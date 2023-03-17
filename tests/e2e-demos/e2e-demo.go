@@ -30,8 +30,6 @@ const (
 
 	// Environment name used for e2e-tests demos
 	SPIQuaySecretName string = "e2e-quay-secret"
-
-	InitialBuildAnnotationName = "appstudio.openshift.io/component-initial-build"
 )
 
 var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
@@ -195,7 +193,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 						err = fw.AsKubeAdmin.TektonController.DeletePipelineRun(pipelineRun.Name, namespace)
 						Expect(err).ShouldNot(HaveOccurred(), "failed to delete pipelinerun when retriger: %v", err)
 
-						delete(component.Annotations, InitialBuildAnnotationName)
+						delete(component.Annotations, constants.ComponentInitialBuildAnnotationKey)
 						err = fw.AsKubeDeveloper.HasController.KubeRest().Update(context.Background(), component)
 						Expect(err).ShouldNot(HaveOccurred(), "failed to update component to trigger another pipeline build: %v", err)
 					}
