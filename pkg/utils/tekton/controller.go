@@ -9,6 +9,7 @@ import (
 
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
@@ -105,6 +106,10 @@ func (s *SuiteController) NewBundles() (*Bundles, error) {
 
 func (s *SuiteController) GetPipelineRun(pipelineRunName, namespace string) (*v1beta1.PipelineRun, error) {
 	return s.PipelineClient().TektonV1beta1().PipelineRuns(namespace).Get(context.TODO(), pipelineRunName, metav1.GetOptions{})
+}
+
+func (s *SuiteController) WatchPipelineRun(ctx context.Context, namespace string) (watch.Interface, error) {
+	return s.PipelineClient().TektonV1beta1().PipelineRuns(namespace).Watch(ctx, metav1.ListOptions{})
 }
 
 func (s *SuiteController) fetchContainerLog(podName, containerName, namespace string) (string, error) {
