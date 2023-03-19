@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/library/pkg/util"
 	"github.com/google/uuid"
@@ -356,6 +357,136 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				} else {
 					doCollectLogs = true
 					Skip("SKIPPING: unstable feature: timed-out when waiting for some artifactbuilds and dependencybuilds complete")
+				}
+			}
+		})
+
+		It("all artifactbuild and dependencybuilds complete", func() {
+			err = wait.PollImmediate(interval, 2*timeout, func() (done bool, err error) {
+				abList, err := f.AsKubeAdmin.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
+				Expect(err).ShouldNot(HaveOccurred(), "error in listing artifact builds")
+				// we want to make sure there is more than one ab and that they are all complete
+				abComplete := len(abList.Items) > 0
+				GinkgoWriter.Printf("number of artifactbuilds: %d\n", len(abList.Items))
+				for _, ab := range abList.Items {
+					if ab.Status.State != v1alpha1.ArtifactBuildStateComplete {
+						GinkgoWriter.Printf("artifactbuild %s not complete\n", ab.Spec.GAV)
+						abComplete = false
+						break
+					}
+				}
+				dbList, err := f.AsKubeAdmin.JvmbuildserviceController.ListDependencyBuilds(testNamespace)
+				Expect(err).ShouldNot(HaveOccurred(), "error in listing dependency builds")
+				dbComplete := len(dbList.Items) > 0
+				GinkgoWriter.Printf("number of dependencybuilds: %d\n", len(dbList.Items))
+				for _, db := range dbList.Items {
+					if db.Status.State != v1alpha1.DependencyBuildStateComplete {
+						GinkgoWriter.Printf("dependencybuild %s not complete\n", db.Spec.ScmInfo.SCMURL)
+						dbComplete = false
+						break
+					} else if db.Status.State == v1alpha1.DependencyBuildStateFailed {
+						Fail(fmt.Sprintf("dependencybuild %s FAILED", db.Spec.ScmInfo.SCMURL))
+					}
+				}
+				if abComplete && dbComplete {
+					return true, nil
+				}
+				return false, nil
+			})
+			if err != nil {
+				Fail("timed out waiting for some artifactbuilds and dependencybuilds to complete")
+			}
+		})
+
+		It("does rebuild use cached dependencies", func() {
+			prun := &v1beta1.PipelineRun{}
+
+			component, err := f.AsKubeAdmin.HasController.GetHasComponent(componentName, testNamespace)
+			Expect(err).ShouldNot(HaveOccurred(), "could not get component")
+
+			annotations := component.GetAnnotations()
+			delete(annotations, constants.ComponentInitialBuildAnnotationKey)
+			component.SetAnnotations(annotations)
+			Expect(f.AsKubeAdmin.CommonController.KubeRest().Update(context.TODO(), component, &client.UpdateOptions{})).To(Succeed())
+
+			Eventually(func() bool {
+				prun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			ctx := context.TODO()
+
+			watch, err := f.AsKubeAdmin.TektonController.WatchPipelineRun(ctx, testNamespace)
+			Expect(err).ShouldNot(HaveOccurred(), "watch pipelinerun failed")
+
+			exitForLoop := false
+
+			for {
+				select {
+				case <-time.After(15 * time.Minute):
+					Fail("timed out waiting for second build to complete")
+				case event := <-watch.ResultChan():
+					if event.Object == nil {
+						continue
+					}
+					pr, ok := event.Object.(*v1beta1.PipelineRun)
+					if !ok {
+						continue
+					}
+					if prun.Name != pr.Name {
+						if pr.IsDone() {
+							GinkgoWriter.Printf("got event for pipelinerun %s in a terminal state\n", pr.Name)
+							continue
+						}
+						Fail("another non-completed pipeline run was generated when it should not")
+					}
+					GinkgoWriter.Printf("done processing event for pr %s\n", pr.Name)
+					if pr.IsDone() {
+						GinkgoWriter.Println("pr is done")
+
+						podClient := f.AsKubeAdmin.CommonController.KubeInterface().CoreV1().Pods(testNamespace)
+						listOptions := metav1.ListOptions{
+							LabelSelector: fmt.Sprintf("tekton.dev/pipelineRun=%s", pr.Name),
+						}
+						podList, err := podClient.List(context.TODO(), listOptions)
+						Expect(err).ShouldNot(HaveOccurred(), "error listing pr pods")
+
+						pods := podList.Items
+
+						if len(pods) == 0 {
+							Fail("pod for pipeline run unexpectedly missing")
+						}
+
+						containers := []corev1.Container{}
+						containers = append(containers, pods[0].Spec.InitContainers...)
+						containers = append(containers, pods[0].Spec.Containers...)
+
+						for _, container := range containers {
+							if !strings.Contains(container.Name, "analyse-dependecies") {
+								continue
+							}
+							cLog, err := f.AsKubeAdmin.CommonController.GetContainerLogs(pods[0].Name, container.Name, testNamespace)
+							Expect(err).ShouldNot(HaveOccurred(), "getting container logs failed")
+							if strings.Contains(cLog, "\"publisher\" : \"central\"") {
+								Fail(fmt.Sprintf("pipelinerun %s has container %s with dep analysis still pointing to central %s", pr.Name, container.Name, cLog))
+							}
+							if !strings.Contains(cLog, "\"publisher\" : \"rebuilt\"") {
+								Fail(fmt.Sprintf("pipelinerun %s has container %s with dep analysis that does not access rebuilt %s", pr.Name, container.Name, cLog))
+							}
+							if !strings.Contains(cLog, "\"java:scm-uri\" : \"https://github.com/stuartwdouglas/hacbs-test-simple-jdk8.git\"") {
+								Fail(fmt.Sprintf("pipelinerun %s has container %s with dep analysis did not include java:scm-uri %s", pr.Name, container.Name, cLog))
+							}
+							if !strings.Contains(cLog, "\"java:scm-commit\" : \"") {
+								Fail(fmt.Sprintf("pipelinerun %s has container %s with dep analysis did not include java:scm-commit %s", pr.Name, container.Name, cLog))
+							}
+							break
+						}
+						GinkgoWriter.Println("pr is done and has correct analyse-dependecies output, exiting")
+						exitForLoop = true
+					}
+				}
+				if exitForLoop {
+					break
 				}
 			}
 		})
