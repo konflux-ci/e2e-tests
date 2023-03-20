@@ -38,7 +38,7 @@ const (
 
 	pacPRBranchPrefix                    = "appstudio-"
 	helloWorldComponentGitSourceRepoName = "devfile-sample-hello-world"
-	helloWorldComponentDefaultBranch     = "master"
+	helloWorldComponentDefaultBranch     = "default"
 )
 
 var (
