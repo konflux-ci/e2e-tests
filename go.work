@@ -1,0 +1,7 @@
+go 1.19
+
+use (
+    ./
+    ./tests/performance-tests/sample_project/books
+    ./tests/performance-tests/sample_project/godog_tests
+)

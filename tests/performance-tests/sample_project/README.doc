@@ -1,0 +1,102 @@
+#
+# This sample project demonstrates how to execute a ginkgo test suit as a step within godog testing framework scenario
+# This project was cloned my e2e-tests cloned repo https://github.com/naftalysh/e2e-tests.git which was cloned from https://github.com/redhat-appstudio/e2e-tests.git 
+#
+
+#
+# Structure:
+#
+
+We have the following elements in the sample project:
+
+1. books sub-directory that holds the books package go file (books.go) and the ginkgo test suite files (books_suite_test.go, book_test.go)
+2. godog_tests sub-directory that holds the godog related tests files (sample.feature, main_test.go)
+
+
+
+Preparation:
+0. Setup GO environemnt related environment variables
+   export GOPATH=$HOME/go
+   export GOBIN=$GOPATH/bin
+
+   # Make sure that the $GOPATH/bin directory is in your PATH. If not, add it using:
+   export PATH=$GOPATH/bin:$PATH
+
+   
+
+1. Init the books package 
+   a. First, make sure you have a go.mod file in the "books" package sub-directory (tests/performance-tests/sample_project/books)
+      a1. Get write permission to that directory - sudo chmod -R u+w /home/nshprai/Setup/App-Studio/STONE-768-Integrate-mvp-demo-ginkgo-testsuit/tests/performance-tests/sample_project/books
+      a2. cd /home/nshprai/Setup/App-Studio/STONE-768-Integrate-mvp-demo-ginkgo-testsuit/tests/performance-tests/sample_project/books
+      a3. go mod init books 
+          go mod tidy   (comment: to add module requirements and sums)
+
+      a4. Create a go.work file because I use a nested structure of your Go modules, that will look like the following:
+          go 1.19
+
+          use (
+              ./
+              ./tests/performance-tests/sample_project/books
+          )
+
+      a5. Do the same for the godog dirtecory
+
+
+
+
+
+2. Running books Ginkgo suite separately 
+   Leet's assume our working directory is:
+   /home/nshprai/Setup/App-Studio/STONE-768-Integrate-mvp-demo-ginkgo-testsuit/tests/performance-tests/sample_project
+   go test -v -test.timeout 60s ./books 
+   or
+   go test -v -tags=ginkgo -test.timeout 60s ./books      (if // +build ginkgo tag is defined in books_suite_test.go,  for all test suites)
+   or
+   go test -v -tags=ginkgo ./books --ginkgo.focus="Books Suite" (if // +build ginkgo tag is defined in books_suite_test.go,  for "Books Suite" test suite)
+
+   (Comment: go test method doesn't use ginkgo flags)
+   
+   GODOG_OPTS="--format pretty" ginkgo -v -r ./books   
+   or 
+   ginkgo -v -r ./books
+   or 
+   ginkgo -v -r -tags=ginkgo -- -timeout=10s ./books   
+   or
+   ginkgo --ginkgo.v --ginkgo.r --ginkgo.tags=ginkgo --ginkgo.label-filter="Books Suite"                                                                                                            
+   
+3. Running godog feature scenario in sample.feature file (Scenario: Run Ginkgo test suite concurrently)
+   go test -v -test.timeout 60s ./godog_tests  
+   
+
+
+# if we changed anything within the godog testing suit (Ex: like the feature file)   , 
+  we need to bypass the caching mechanism by running the following command:
+  go test -v -count=1 ./godog_tests
+
+# to choosed the output format we can also execute the godog tests as follows:
+GODOG_OPTS="--format pretty" go test -v -count=1 ./godog_tests     (for pretty format)
+
+
+# what will be the difference between both and what other format options we have?
+Godog supports various output formats for test results. Here's a brief description of each format and their diff
+
+- progress (default): Provides a compact output, using dots (.) to represent passed scenarios, "F" for failed sc
+
+- pretty: Provides a more verbose output, displaying the feature, scenario, and step descriptions in a hierarchi
+
+- junit: Outputs the test results in JUnit XML format, which is a widely used format for test results and can be
+
+- cucumber: Outputs the test results in Cucumber's JSON format. This format is suitable for generating Cucumber 
+
+- events: Outputs the test results as a JSON stream of Godog test events. This format is intended for advanced u
+
+To set a specific format for your Godog tests, you can update the Format field in the godog.Options struct, like
+
+Options: &godog.Options{
+    Output:    os.Stdout,
+    Format:    "pretty", // Change this value to the desired format
+    Randomize: 0,
+    Paths:     []string{"./sample.feature"},
+},
+
+Replace "pretty" with any of the other formats, such as "junit" or "cucumber", depending on your needs.
