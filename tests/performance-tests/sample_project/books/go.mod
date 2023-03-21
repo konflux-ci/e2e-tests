@@ -1,6 +1,6 @@
 module books
 
-go 1.19
+go 1.18
 
 require (
 	github.com/onsi/ginkgo v1.16.5

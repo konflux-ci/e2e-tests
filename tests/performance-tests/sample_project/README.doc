@@ -37,6 +37,7 @@ Preparation:
           use (
               ./
               ./tests/performance-tests/sample_project/books
+              ./tests/performance-tests/sample_project/godog_tests
           )
 
       a5. Do the same for the godog dirtecory
@@ -46,7 +47,7 @@ Preparation:
 
 
 2. Running books Ginkgo suite separately 
-   Leet's assume our working directory is:
+   Let's assume our working directory is:
    /home/nshprai/Setup/App-Studio/STONE-768-Integrate-mvp-demo-ginkgo-testsuit/tests/performance-tests/sample_project
    go test -v -test.timeout 60s ./books 
    or
@@ -73,7 +74,7 @@ Preparation:
   we need to bypass the caching mechanism by running the following command:
   go test -v -count=1 ./godog_tests
 
-# to choosed the output format we can also execute the godog tests as follows:
+# to choose the output format we can also execute the godog tests as follows:
 GODOG_OPTS="--format pretty" go test -v -count=1 ./godog_tests     (for pretty format)
 
 
@@ -82,13 +83,13 @@ Godog supports various output formats for test results. Here's a brief descripti
 
 - progress (default): Provides a compact output, using dots (.) to represent passed scenarios, "F" for failed sc
 
-- pretty: Provides a more verbose output, displaying the feature, scenario, and step descriptions in a hierarchi
+- pretty: Provides a more verbose output, displaying the feature, scenario, and step descriptions in a hierarchy
 
 - junit: Outputs the test results in JUnit XML format, which is a widely used format for test results and can be
 
 - cucumber: Outputs the test results in Cucumber's JSON format. This format is suitable for generating Cucumber 
 
-- events: Outputs the test results as a JSON stream of Godog test events. This format is intended for advanced u
+- events: Outputs the test results as a JSON stream of Godog test events. This format is intended for advanced usage (?)
 
 To set a specific format for your Godog tests, you can update the Format field in the godog.Options struct, like
 

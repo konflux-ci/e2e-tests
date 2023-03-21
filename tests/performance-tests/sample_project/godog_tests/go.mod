@@ -1,6 +1,6 @@
 module godog_tests
 
-go 1.19
+go 1.18
 
 require github.com/cucumber/godog v0.12.6
 
