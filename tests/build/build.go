@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/pipeline"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"knative.dev/pkg/apis"
@@ -416,8 +417,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 	})
 
-	Describe("HACBS pipelines", Ordered, func() {
-
+	Describe("HACBS pipelines", Label("pipeline"), Ordered, func() {
 		var applicationName, componentName, testNamespace, outputContainerImage string
 		BeforeAll(func() {
 			if os.Getenv("APP_SUFFIX") != "" {
@@ -429,7 +429,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Expect(err).NotTo(HaveOccurred())
 			Expect(f.UserNamespace).NotTo(BeNil())
 			testNamespace = f.UserNamespace
-
 			_, err = f.AsKubeAdmin.HasController.GetHasApplication(applicationName, testNamespace)
 			// In case the app with the same name exist in the selected namespace, delete it first
 			if err == nil {
@@ -513,6 +512,50 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					}
 					return true
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
+			})
+
+			It("should validate Tekton Results", func() {
+				// Create an Service account and a token associating it with the service account
+				resultSA := "tekton-results-tests"
+				_, err := f.AsKubeAdmin.CommonController.CreateServiceAccount(resultSA, testNamespace, nil)
+				Expect(err).NotTo(HaveOccurred())
+				_, err = f.AsKubeAdmin.CommonController.CreateRoleBinding("tekton-results-tests", testNamespace, "ServiceAccount", resultSA, "ClusterRole", "tekton-results-readonly", "rbac.authorization.k8s.io")
+				Expect(err).NotTo(HaveOccurred())
+
+				resultSecret := &v1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "tekton-results-tests",
+						Annotations: map[string]string{"kubernetes.io/service-account.name": resultSA},
+					},
+					Type: v1.SecretTypeServiceAccountToken,
+				}
+
+				_, err = f.AsKubeAdmin.CommonController.CreateSecret(testNamespace, resultSecret)
+				Expect(err).ToNot(HaveOccurred())
+				err = f.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(testNamespace, resultSecret.Name, resultSA)
+				Expect(err).ToNot(HaveOccurred())
+
+				resultSecret, err = f.AsKubeAdmin.CommonController.GetSecret(testNamespace, resultSecret.Name)
+				Expect(err).ToNot(HaveOccurred())
+				token := resultSecret.Data["token"]
+
+				// Retrive Result REST API url
+				resultRoute, err := f.AsKubeAdmin.CommonController.GetOpenshiftRoute("tekton-results", "tekton-results")
+				Expect(err).NotTo(HaveOccurred())
+				resultUrl := fmt.Sprintf("https://%s", resultRoute.Spec.Host)
+				resultClient := pipeline.NewClient(resultUrl, string(token))
+
+				pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
+				Expect(err).ShouldNot(HaveOccurred())
+
+				// Verify Records
+				records, err := resultClient.GetRecords(testNamespace, string(pipelineRun.GetUID()))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(records.Record)).NotTo(BeZero())
+				// Verify Logs
+				logs, err := resultClient.GetLogs(testNamespace, string(pipelineRun.GetUID()))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(logs.Record)).NotTo(BeZero())
 			})
 
 			It("should validate HACBS taskrun results", func() {
