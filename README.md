@@ -48,6 +48,8 @@ The following environment variables are used to launch the Red Hat AppStudio ins
 |---|---|---|---|
 | `GITHUB_TOKEN` | yes | A github token used to create AppStudio applications in github  | ''  |
 | `QUAY_TOKEN` | yes | A quay token to push components images to quay.io. Note the quay token must be your dockerconfigjson encoded in base64 format. Example: `export QUAY_TOKEN=$(base64 < ~/.docker/config.json)` | '' |
+| `DEFAULT_QUAY_ORG` | yes | A quay organization where repositories for component images will be created  | 'redhat-appstudio-qe'  |
+| `DEFAULT_QUAY_ORG_TOKEN` | yes | A quay token of OAuth application for `DEFAULT_QUAY_ORG` with scopes -  Administer organizations, Adminster repositories, Create Repositories | ''  |
 | `MY_GITHUB_ORG` | no (recommended) | GitHub organization (must be organization, cannot use regular GitHub account!) where to create/push Red Hat AppStudio Applications. You can create your GitHub organization for free  | `redhat-appstudio-qe`  |
 | `QUAY_E2E_ORGANIZATION` | no (recommended) | Quay organization/account where to push components containers. It is recommended to create your own account | `redhat-appstudio-qe` |
 | `E2E_APPLICATIONS_NAMESPACE` | no | Name of the namespace used for running HAS E2E tests | `appstudio-e2e-test` |
