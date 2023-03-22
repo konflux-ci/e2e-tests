@@ -2,12 +2,12 @@ package framework
 
 import (
 	"fmt"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"time"
 
 	"github.com/avast/retry-go/v4"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/sandbox"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/gitops"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/has"
@@ -56,12 +56,12 @@ func NewFramework(userName string) (*Framework, error) {
 		return nil, fmt.Errorf("error when initializing kubernetes clients: %v", err)
 	}
 
-	asAdmin, err := initControllerHub(k.AsKubeAdmin)
+	asAdmin, err := InitControllerHub(k.AsKubeAdmin)
 	if err != nil {
 		return nil, fmt.Errorf("error when initializing appstudio hub controllers for admin user: %v", err)
 	}
 
-	asUser, err := initControllerHub(k.AsKubeDeveloper)
+	asUser, err := InitControllerHub(k.AsKubeDeveloper)
 	if err != nil {
 		return nil, fmt.Errorf("error when initializing appstudio hub controllers for sandbox user: %v", err)
 	}
@@ -82,7 +82,7 @@ func NewFramework(userName string) (*Framework, error) {
 	}, nil
 }
 
-func initControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
+func InitControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 	// Initialize Common controller
 	commonCtrl, err := common.NewSuiteController(cc)
 	if err != nil {
