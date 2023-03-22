@@ -152,7 +152,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				// Copy the public key from tekton-chains/signing-secrets to a new
 				// secret that contains just the public key to ensure that access
 				// to password and private key are not needed.
-				publicKey, err := kubeController.GetPublicKey("signing-secrets", constants.TEKTON_CHAINS_NS)
+				publicKey, err := kubeController.GetTektonChainsPublicKey()
 				Expect(err).ToNot(HaveOccurred())
 				GinkgoWriter.Printf("Copy public key from %s/signing-secrets to a new secret\n", constants.TEKTON_CHAINS_NS)
 				Expect(kubeController.CreateOrUpdateSigningSecret(

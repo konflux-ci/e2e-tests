@@ -91,7 +91,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		_, err = f.AsKubeAdmin.CommonController.CreateServiceAccount("release-service-account", managedNamespace, []corev1.ObjectReference{{Name: secret.Name}})
 		Expect(err).NotTo(HaveOccurred())
 
-		publicKey, err := kc.GetPublicKey("signing-secrets", constants.TEKTON_CHAINS_NS)
+		publicKey, err := kc.GetTektonChainsPublicKey()
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(kc.CreateOrUpdateSigningSecret(publicKey, "cosign-public-key", managedNamespace)).To(Succeed())
