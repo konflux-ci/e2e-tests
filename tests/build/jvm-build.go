@@ -89,48 +89,51 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 					toDebug[filename] = cLog
 				}
 			}
-			// let's make sure and print the pr that starts the analysis first
-
-			logs, err := f.AsKubeAdmin.TektonController.GetPipelineRunLogs(componentPipelineRun.Name, testNamespace)
-			if err != nil {
-				GinkgoWriter.Printf("got error fetching PR logs: %s\n", err.Error())
-			}
-			filename := fmt.Sprintf("%s-pr-%s.log", testNamespace, componentPipelineRun.Name)
-			toDebug[filename] = logs
-
-			prList, err := f.AsKubeAdmin.TektonController.ListAllPipelineRuns(testNamespace)
-			if err != nil {
-				GinkgoWriter.Printf("got error fetching PR list: %s\n", err.Error())
-			}
-			GinkgoWriter.Printf("total number of pipeline runs not pruned: %d\n", len(prList.Items))
-			for _, pr := range prList.Items {
-				if pr.Name == componentPipelineRun.Name {
-					continue
-				}
-				prLog, err := f.AsKubeAdmin.TektonController.GetPipelineRunLogs(pr.Name, pr.Namespace)
+			// In case the test fails before the Component PipelineRun is created,
+			// we are unable to collect following resources
+			if componentPipelineRun != nil {
+				// let's make sure and print the pr that starts the analysis first
+				logs, err := f.AsKubeAdmin.TektonController.GetPipelineRunLogs(componentPipelineRun.Name, testNamespace)
 				if err != nil {
-					GinkgoWriter.Printf("got error fetching PR logs for %s: %s\n", pr.Name, err.Error())
+					GinkgoWriter.Printf("got error fetching PR logs: %s\n", err.Error())
 				}
-				filename := fmt.Sprintf("%s-pr-%s.log", pr.Namespace, pr.Name)
-				toDebug[filename] = prLog
-			}
+				filename := fmt.Sprintf("%s-pr-%s.log", testNamespace, componentPipelineRun.Name)
+				toDebug[filename] = logs
 
-			for _, ab := range abList.Items {
-				v, err := json.MarshalIndent(ab, "", "  ")
+				prList, err := f.AsKubeAdmin.TektonController.ListAllPipelineRuns(testNamespace)
 				if err != nil {
-					GinkgoWriter.Printf("error when marshalling content of %s from %s namespace: %+v\n", ab.Name, ab.Namespace, err)
-				} else {
-					filename := fmt.Sprintf("%s-ab-%s.json", ab.Namespace, ab.Name)
-					toDebug[filename] = string(v)
+					GinkgoWriter.Printf("got error fetching PR list: %s\n", err.Error())
 				}
-			}
-			for _, db := range dbList.Items {
-				v, err := json.MarshalIndent(db, "", "  ")
-				if err != nil {
-					GinkgoWriter.Printf("error when marshalling content of %s from %s namespace: %+v\n", db.Name, db.Namespace, err)
-				} else {
-					filename := fmt.Sprintf("%s-db-%s.json", db.Namespace, db.Name)
-					toDebug[filename] = string(v)
+				GinkgoWriter.Printf("total number of pipeline runs not pruned: %d\n", len(prList.Items))
+				for _, pr := range prList.Items {
+					if pr.Name == componentPipelineRun.Name {
+						continue
+					}
+					prLog, err := f.AsKubeAdmin.TektonController.GetPipelineRunLogs(pr.Name, pr.Namespace)
+					if err != nil {
+						GinkgoWriter.Printf("got error fetching PR logs for %s: %s\n", pr.Name, err.Error())
+					}
+					filename := fmt.Sprintf("%s-pr-%s.log", pr.Namespace, pr.Name)
+					toDebug[filename] = prLog
+				}
+
+				for _, ab := range abList.Items {
+					v, err := json.MarshalIndent(ab, "", "  ")
+					if err != nil {
+						GinkgoWriter.Printf("error when marshalling content of %s from %s namespace: %+v\n", ab.Name, ab.Namespace, err)
+					} else {
+						filename := fmt.Sprintf("%s-ab-%s.json", ab.Namespace, ab.Name)
+						toDebug[filename] = string(v)
+					}
+				}
+				for _, db := range dbList.Items {
+					v, err := json.MarshalIndent(db, "", "  ")
+					if err != nil {
+						GinkgoWriter.Printf("error when marshalling content of %s from %s namespace: %+v\n", db.Name, db.Namespace, err)
+					} else {
+						filename := fmt.Sprintf("%s-db-%s.json", db.Namespace, db.Name)
+						toDebug[filename] = string(v)
+					}
 				}
 			}
 
