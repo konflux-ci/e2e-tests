@@ -29,14 +29,14 @@ spec:
             backupUsername=$(echo ${allPeople[$2]} |jq -r .username)
             backupId=$(echo ${allPeople[$2]} |jq -r .id)
             curl -X POST -H "Authorization: Bearer $TOKEN" \
-                --data-urlencode="usergroup=${USERGROUP_ID}" \
-                --data-urlencode="users=${primaryId},${backupId}" \
+                --data-urlencode "usergroup=${USERGROUP_ID}" \
+                --data-urlencode "users=${primaryId},${backupId}" \
                     "https://slack.com/api/usergroups.users.update"
 
             text=":interrupt-catcher: Primary IC for next week is ${primaryUsername}. Backup is ${backupUsername}"
             curl -X POST -H "Authorization: Bearer $TOKEN" \
-                --data-urlencode="channel=C02FANRBZQD" \
-                --data-urlencode="text=$text" \
+                --data-urlencode "channel=C02FANRBZQD" \
+                --data-urlencode "text=$text" \
                 "https://slack.com/api/chat.postMessage"
 
         }
@@ -49,8 +49,8 @@ spec:
         if [ ${#currentICs[@]} -ne 2 ]; then
             text=":warning: :interrupt-catcher: IC rotation pipeline failed (Expect exaclty 2 people in IC group). Please check latest run."
             curl -X POST -H "Authorization: Bearer $TOKEN" \
-                --data-urlencode="channel=C02FANRBZQD" \
-                --data-urlencode="text=$text" \
+                --data-urlencode "channel=C02FANRBZQD" \
+                --data-urlencode "text=$text" \
                 "https://slack.com/api/chat.postMessage"
             exit 1
         fi
@@ -76,8 +76,8 @@ spec:
                     else 
                         text=":warning: :interrupt-catcher: IC rotation pipeline failed (People in IC group are not next to each other according to roration list). Please check latest run."
                         curl -X POST -H "Authorization: Bearer $TOKEN" \
-                            --data-urlencode="channel=C02FANRBZQD" \
-                            --data-urlencode="text=$text" \
+                            --data-urlencode "channel=C02FANRBZQD" \
+                            --data-urlencode "text=$text" \
                             "https://slack.com/api/chat.postMessage"
                         exit 1
                     fi
