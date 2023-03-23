@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/library/pkg/util"
@@ -246,11 +245,11 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				Skip("JVM_BUILD_SERVICE_REQPROCESSOR_IMAGE env var is not exported, skipping the test...")
 			}
 
-			err = wait.PollImmediate(interval, timeout, func() (done bool, err error) {
+			Eventually(func() bool {
 				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 				if err != nil {
 					GinkgoWriter.Printf("get pr for the component %s produced err: %s\n", componentName, err.Error())
-					return false, nil
+					return false
 				}
 
 				for _, tr := range pr.Status.TaskRuns {
@@ -260,17 +259,14 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 								if step.Image != ciAnalyzerImage {
 									Fail(fmt.Sprintf("the build-container task from component pipelinerun doesn't reference the correct request processor image. expected: %v, actual: %v", ciAnalyzerImage, step.Image))
 								} else {
-									return true, nil
+									return true
 								}
 							}
 						}
 					}
 				}
-				return false, nil
-			})
-			if err != nil {
-				Fail(fmt.Sprintf("failure occurred when verifying the request processor image reference in pipelinerun: %v", err))
-			}
+				return false
+			}, timeout, interval).Should(BeTrue(), "timed out when verifying the request processor image reference in pipelinerun")
 		})
 
 		It("that PipelineRun completes successfully", func() {
@@ -319,11 +315,11 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		})
 
 		It("some artifactbuilds and dependencybuilds complete", func() {
-			err = wait.PollImmediate(interval, timeout, func() (done bool, err error) {
+			Eventually(func() bool {
 				abList, err := f.AsKubeAdmin.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
 				if err != nil {
 					GinkgoWriter.Printf("error listing artifactbuilds: %s\n", err.Error())
-					return false, nil
+					return false
 				}
 				abComplete := false
 				for _, ab := range abList.Items {
@@ -335,7 +331,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				dbList, err := f.AsKubeAdmin.JvmbuildserviceController.ListDependencyBuilds(testNamespace)
 				if err != nil {
 					GinkgoWriter.Printf("error listing dependencybuilds: %s\n", err.Error())
-					return false, nil
+					return false
 				}
 				dbComplete := false
 				for _, db := range dbList.Items {
@@ -345,24 +341,14 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 					}
 				}
 				if abComplete && dbComplete {
-					return true, nil
+					return true
 				}
-				return false, nil
-			})
-			if err != nil {
-				ciRepoName := os.Getenv("REPO_NAME")
-				// Fail only in case the test was run from jvm-build-service repo or locally
-				if ciRepoName == "jvm-build-service" || ciRepoName == "" {
-					Fail("timed out waiting for some artifactbuilds/dependencybuilds to complete")
-				} else {
-					doCollectLogs = true
-					Skip("SKIPPING: unstable feature: timed-out when waiting for some artifactbuilds and dependencybuilds complete")
-				}
-			}
+				return false
+			}, timeout, interval).Should(BeTrue(), "timed out when waiting for some artifactbuilds and dependencybuilds to complete")
 		})
 
 		It("all artifactbuild and dependencybuilds complete", func() {
-			err = wait.PollImmediate(interval, 2*timeout, func() (done bool, err error) {
+			Eventually(func() bool {
 				abList, err := f.AsKubeAdmin.JvmbuildserviceController.ListArtifactBuilds(testNamespace)
 				Expect(err).ShouldNot(HaveOccurred(), "error in listing artifact builds")
 				// we want to make sure there is more than one ab and that they are all complete
@@ -389,13 +375,10 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 					}
 				}
 				if abComplete && dbComplete {
-					return true, nil
+					return true
 				}
-				return false, nil
-			})
-			if err != nil {
-				Fail("timed out waiting for some artifactbuilds and dependencybuilds to complete")
-			}
+				return false
+			}, 2*timeout, interval).Should(BeTrue(), "timed out when waiting for all artifactbuilds and dependencybuilds to complete")
 		})
 
 		It("does rebuild use cached dependencies", func() {
