@@ -404,7 +404,7 @@ func (CI) isPRPairingRequired(repoForPairing string) bool {
 func (CI) sendWebhook() error {
 	// AppStudio QE webhook configuration values will be used by default (if none are provided via env vars)
 	const appstudioQESaltSecret = "123456789"
-	const appstudioQEWebhookTargetURL = "https://smee.io/JgVqn2oYFPY1CF"
+	const appstudioQEWebhookTargetURL = "https://hook.pipelinesascode.com/EyFYTakxEgEy"
 
 	var repoURL string
 
