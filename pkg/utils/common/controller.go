@@ -29,6 +29,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -633,4 +634,41 @@ func (s *SuiteController) CreateRoleBinding(roleBindingName, namespace, subjectK
 		return nil, err
 	}
 	return createdRoleBinding, nil
+}
+
+// Delete all the PipelineRuns and Tasks associated to namespace
+func (s *SuiteController) DeleteAllPipelineRunsAndTasks(namespace string) error {
+	// List all PipelineRuns in the namespace
+	pipelineRunList := &v1beta1.PipelineRunList{}
+	err := s.KubeRest().List(context.TODO(), pipelineRunList, &client.ListOptions{
+		Namespace: namespace,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Delete each PipelineRun and its associated tasks
+	for _, pipelineRun := range pipelineRunList.Items {
+		if err := s.KubeRest().Delete(context.TODO(), &pipelineRun, &client.DeleteOptions{}); err != nil {
+			return err
+		}
+		for _, task := range pipelineRun.Spec.PipelineSpec.Tasks {
+			taskObj := &v1beta1.Task{}
+			if err := s.KubeRest().Get(context.TODO(), types.NamespacedName{
+				Namespace: namespace,
+				Name:      task.TaskRef.Name,
+			}, taskObj); err != nil {
+				// Ignore "not found" errors since the task may have already been deleted
+				if k8sErrors.IsNotFound(err) {
+					continue
+				}
+				return err
+			}
+			if err := s.KubeRest().Delete(context.TODO(), taskObj, &client.DeleteOptions{}); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
