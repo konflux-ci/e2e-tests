@@ -3,14 +3,12 @@ package build
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
 	"k8s.io/utils/pointer"
 
 	"github.com/google/go-github/v44/github"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 
 	"github.com/devfile/library/pkg/util"
@@ -27,24 +25,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"knative.dev/pkg/apis"
-)
-
-const (
-	containerImageSource        = "quay.io/redhat-appstudio-qe/busybox-loop:latest"
-	pythonComponentGitSourceURL = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic.git"
-	dummyPipelineBundleRef      = "quay.io/redhat-appstudio-qe/dummy-pipeline-bundle:latest"
-	buildTemplatesTestLabel     = "build-templates-e2e"
-	buildTemplatesKcpTestLabel  = "build-templates-kcp-e2e"
-
-	pacPRBranchPrefix                    = "appstudio-"
-	helloWorldComponentGitSourceRepoName = "devfile-sample-hello-world"
-	helloWorldComponentDefaultBranch     = "master"
-)
-
-var (
-	componentUrls                   = strings.Split(utils.GetEnv(COMPONENT_REPO_URLS_ENV, pythonComponentGitSourceURL), ",") //multiple urls
-	componentNames                  []string
-	helloWorldComponentGitSourceURL = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), helloWorldComponentGitSourceRepoName)
 )
 
 var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "HACBS"), func() {
@@ -414,187 +394,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, timeout, interval).Should(BeFalse(), "did not expect a new PR created after initial PaC configuration was already merged for the same component name and a namespace")
 			})
 		})
-	})
-
-	Describe("HACBS pipelines", Ordered, func() {
-
-		var applicationName, componentName, testNamespace, outputContainerImage string
-		BeforeAll(func() {
-			if os.Getenv("APP_SUFFIX") != "" {
-				applicationName = fmt.Sprintf("test-app-%s", os.Getenv("APP_SUFFIX"))
-			} else {
-				applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
-			}
-			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(f.UserNamespace).NotTo(BeNil())
-			testNamespace = f.UserNamespace
-
-			_, err = f.AsKubeAdmin.HasController.GetHasApplication(applicationName, testNamespace)
-			// In case the app with the same name exist in the selected namespace, delete it first
-			if err == nil {
-				Expect(f.AsKubeAdmin.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
-				Eventually(func() bool {
-					_, err := f.AsKubeAdmin.HasController.GetHasApplication(applicationName, testNamespace)
-					return errors.IsNotFound(err)
-				}, time.Minute*5, time.Second*1).Should(BeTrue(), "timed out when waiting for the app %s to be deleted in %s namespace", applicationName, testNamespace)
-			}
-			app, err := f.AsKubeAdmin.HasController.CreateHasApplication(applicationName, testNamespace)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(utils.WaitUntil(f.AsKubeAdmin.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
-				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
-			)
-
-			for _, gitUrl := range componentUrls {
-				gitUrl := gitUrl
-				componentName = fmt.Sprintf("%s-%s", "test-component", util.GenerateRandomString(4))
-				componentNames = append(componentNames, componentName)
-				outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-				// Create a component with Git Source URL being defined
-				_, err := f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, testNamespace, gitUrl, "", "", outputContainerImage, "", false)
-				Expect(err).ShouldNot(HaveOccurred())
-			}
-		})
-
-		AfterAll(func() {
-			// Do cleanup only in case the test succeeded
-			if !CurrentSpecReport().Failed() {
-				// Clean up only Application CR (Component and Pipelines are included) in case we are targeting specific namespace
-				// Used e.g. in build-definitions e2e tests, where we are targeting build-templates-e2e namespace
-				if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) != "" {
-					DeferCleanup(f.AsKubeAdmin.HasController.DeleteHasApplication, applicationName, testNamespace, false)
-				} else {
-					Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
-					Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
-				}
-			}
-		})
-
-		for i, gitUrl := range componentUrls {
-			i := i
-			gitUrl := gitUrl
-			It(fmt.Sprintf("triggers PipelineRun for component with source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
-				timeout := time.Minute * 25
-				interval := time.Second * 1
-
-				Eventually(func() bool {
-					pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
-					if err != nil {
-						GinkgoWriter.Println("PipelineRun has not been created yet")
-						return false
-					}
-					return pipelineRun.HasStarted()
-				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the %s PipelineRun to start", componentNames[i])
-			})
-		}
-
-		for i, gitUrl := range componentUrls {
-			i := i
-			gitUrl := gitUrl
-
-			It(fmt.Sprintf("should eventually finish successfully for component with source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
-				timeout := time.Second * 1800
-				interval := time.Second * 10
-				Eventually(func() bool {
-					pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
-					Expect(err).ShouldNot(HaveOccurred())
-
-					for _, condition := range pipelineRun.Status.Conditions {
-						GinkgoWriter.Printf("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
-
-						if !pipelineRun.IsDone() {
-							return false
-						}
-
-						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
-							Fail(failMessage)
-						}
-					}
-					return true
-				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
-			})
-
-			It("should validate HACBS taskrun results", func() {
-				// List Of Taskruns Expected to Get Taskrun Results
-				gatherResult := []string{"clair-scan", "sanity-inspect-image", "sanity-label-check", "sbom-json-check"}
-				// TODO: once we migrate "build" e2e tests to kcp, remove this condition
-				// and add the 'sbom-json-check' taskrun to gatherResults slice
-				s, _ := GinkgoConfiguration()
-				if strings.Contains(s.LabelFilter, buildTemplatesKcpTestLabel) {
-					gatherResult = append(gatherResult, "sbom-json-check")
-				}
-				pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, "")
-				Expect(err).ShouldNot(HaveOccurred())
-
-				for i := range gatherResult {
-					if gatherResult[i] == "sanity-inspect-image" {
-						// Fetching BASE_IMAGE shouldn't fail
-						result, err := build.FetchImageTaskRunResult(pipelineRun, gatherResult[i], "BASE_IMAGE")
-						Expect(err).ShouldNot(HaveOccurred())
-						ret := build.ValidateImageTaskRunResults(gatherResult[i], result)
-						Expect(ret).Should(BeTrue())
-					} else if gatherResult[i] == "clair-scan" {
-						// Fetching HACBS_TEST_OUTPUT shouldn't fail
-						result, err := build.FetchTaskRunResult(pipelineRun, gatherResult[i], "HACBS_TEST_OUTPUT")
-						Expect(err).ShouldNot(HaveOccurred())
-						ret := build.ValidateTaskRunResults(gatherResult[i], result)
-						// Vulnerabilities should get periodically eliminated with image rebuild, so the result of that task might be different
-						// This should not block e2e tests with errors.
-						GinkgoWriter.Printf("retcode for validate taskrun result is %s\n", ret)
-					} else {
-						// Fetching HACBS_TEST_OUTPUT shouldn't fail
-						result, err := build.FetchTaskRunResult(pipelineRun, gatherResult[i], "HACBS_TEST_OUTPUT")
-						Expect(err).ShouldNot(HaveOccurred())
-						ret := build.ValidateTaskRunResults(gatherResult[i], result)
-						Expect(ret).Should(BeTrue())
-					}
-				}
-			})
-
-			When("the container image is created and pushed to container registry", Label("sbom", "slow"), func() {
-				It("contains non-empty sbom files", func() {
-					pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, "")
-					Expect(err).ShouldNot(HaveOccurred())
-
-					var outputImage string
-					// Workaround - until https://issues.redhat.com/browse/STONE-300 is solved
-					for _, p := range pipelineRun.Spec.Params {
-						if p.Name == "output-image" {
-							outputImage = p.Value.StringVal
-						}
-					}
-					Expect(outputImage).ToNot(BeEmpty(), "output image of a component could not be found")
-
-					purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(outputImage)
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(cyclonedx.BomFormat).To(Equal("CycloneDX"))
-					Expect(cyclonedx.SpecVersion).ToNot(BeEmpty())
-					Expect(cyclonedx.Version).ToNot(BeZero())
-					Expect(cyclonedx.Components).ToNot(BeEmpty())
-
-					numberOfLibraryComponents := 0
-					for _, component := range cyclonedx.Components {
-						Expect(component.Name).ToNot(BeEmpty())
-						Expect(component.Type).ToNot(BeEmpty())
-						Expect(component.Version).ToNot(BeEmpty())
-
-						if component.Type == "library" {
-							Expect(component.Purl).ToNot(BeEmpty())
-							numberOfLibraryComponents++
-						}
-					}
-
-					Expect(purl.ImageContents.Dependencies).ToNot(BeEmpty())
-					Expect(len(purl.ImageContents.Dependencies)).To(Equal(numberOfLibraryComponents))
-
-					for _, dependency := range purl.ImageContents.Dependencies {
-						Expect(dependency.Purl).ToNot(BeEmpty())
-					}
-				})
-			})
-		}
 	})
 
 	Describe("Creating component with container image source", Ordered, func() {

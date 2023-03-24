@@ -482,17 +482,20 @@ func (k KubeController) CreateOrUpdateSigningSecret(publicKey []byte, name, name
 	return
 }
 
-func (k KubeController) GetPublicKey(name, namespace string) (publicKey []byte, err error) {
-	api := k.Tektonctrl.KubeInterface().CoreV1().Secrets(namespace)
-	ctx := context.TODO()
+func (k KubeController) GetTektonChainsPublicKey() ([]byte, error) {
+	namespace := "tekton-chains"
+	secretName := "public-key"
+	dataKey := "cosign.pub"
 
-	secret, err := api.Get(ctx, name, metav1.GetOptions{})
+	secret, err := k.Tektonctrl.KubeInterface().CoreV1().Secrets(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 	if err != nil {
-		return
+		return nil, fmt.Errorf("couldn't get the secret %s from %s namespace: %+v", secretName, namespace, err)
 	}
-
-	publicKey = secret.Data["cosign.pub"]
-	return
+	publicKey := secret.Data[dataKey]
+	if len(publicKey) < 1 {
+		return nil, fmt.Errorf("the content of the public key '%s' in secret %s in %s namespace is empty", dataKey, secretName, namespace)
+	}
+	return publicKey, err
 }
 
 func (k KubeController) CreateOrUpdatePolicyConfiguration(namespace string, policy ecp.EnterpriseContractPolicySpec) error {
