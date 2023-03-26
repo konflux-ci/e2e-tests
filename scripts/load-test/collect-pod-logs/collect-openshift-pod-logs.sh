@@ -22,36 +22,11 @@ else
 fi
 
 
-# Remote store configuration
-remote_user="username"
-remote_host="10.0.0.1"
-remote_path="~/data"
-
-
 # Log directory configuration
 log_dir="logs-${USER}-$(date +%Y-%m-%d)"
 
 # Create log directory if it doesn't exist
 mkdir -p "${log_dir}"
-
-
-create_remote_log_dir() {
-  echo "Creating remote ${log_dir} log directory in ssh remote store..."
-  ssh "${remote_user}@${remote_host}" "mkdir -p ${remote_path}/${log_dir}/"
-}
-
-# Function to send the log file to a remote store using SSH
-send_log_to_remote() {
-  local log_file=$1
-
-  echo "Sending log file ${log_file} to remote store..."
-  rsync -e ssh -avz "${log_dir}/${log_file}" "${remote_user}@${remote_host}:${remote_path}/${log_dir}/${log_file}"
-}
-
-
-# Create remote log directory
-# We need it because we are copying remotely the log files as a pod is deleted..
-create_remote_log_dir
 
 # Function to collect logs from existing pods
 collect_logs_from_existing_pods() {
@@ -89,7 +64,6 @@ list_log_file() {
     else
       # Send the log file to the remote store
       echo "Pod ${pod_name} in namespace ${namespace} deleted. Logfile: ${log_file}"
-      send_log_to_remote "${log_file}"
     fi
   fi
 }
