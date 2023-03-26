@@ -23,7 +23,17 @@ fi
 
 
 # Log directory configuration
-log_dir="logs-${USER}-$(date +%Y-%m-%d)"
+# Format:  ./collect-openshift-pod-logs.sh logs-${USER}-$(date +%Y-%m-%d)  
+
+# if no parameter given, a default will be used for the log_dir
+if [ -z "$1" ]; then
+  # Set default log directory
+  log_dir="logs-${USER}-$(date +%Y-%m-%d)"
+else
+  # Use log directory provided as script argument
+  log_dir="$1"
+fi
+
 
 # Create log directory if it doesn't exist
 mkdir -p "${log_dir}"
