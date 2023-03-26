@@ -87,7 +87,7 @@ collect_logs_from_existing_pods
 cleanup_and_exit() {
   echo "Received SIGINT. Cleaning up and exiting..."
   kill $(jobs -p) 2>/dev/null
-  rm -f "${log_dir}"/*.log
+  # rm -f "${log_dir}"/*.log
   exit 0
 }
 
