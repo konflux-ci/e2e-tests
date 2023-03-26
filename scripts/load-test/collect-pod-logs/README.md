@@ -17,6 +17,10 @@ The tool would check all the pods in all the namespaces and would be following (
 
 The script logic:
 ================
+Log directory configuration
+Format:  ./collect-openshift-pod-logs.sh logs-${USER}-$(date +%Y-%m-%d)  
+if no parameter given, a default will be used for the log_dir - logs-${USER}-$(date +%Y-%m-%d)
+
 1. The script will run in the background process
 2. Per each namespace, it will tail logs of a created or existing pod in the background and store it in a distinct filename
 3. All log files will be stored under a main log_dir of type log_dir="logs-${USER}-$(date +%Y-%m-%d)"
