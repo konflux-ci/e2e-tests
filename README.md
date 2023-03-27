@@ -54,6 +54,7 @@ The following environment variables are used to launch the Red Hat AppStudio ins
 | `PRIVATE_DEVFILE_SAMPLE` | no | The name of the private git repository used in HAS E2E tests. Your GITHUB_TOKEN should be able to read from it. | `https://github.com/redhat-appstudio-qe/private-quarkus-devfile-sample` |
 | `QUAY_OAUTH_USER` | no | A valid quay robot account username to make quay oauth | '' |
 | `QUAY_OAUTH_TOKEN` | no | A valid quay quay robot account token to make oauth against quay.io. | '' |
+| `DOCKER_IO_AUTH` | no | A valid docker.io token to avoid pull limits in the format: username:access_token, eg. `export DOCKER_IO_AUTH=susdas:43228532-b374-11ec-989b-98fa9b70b97d` | '' |
 | `INFRA_DEPLOYMENTS_ORG` | no | A specific github organization from where to download infra-deployments repository | `redhat-appstudio` |
 | `INFRA_DEPLOYMENTS_BRANCH` | no | A valid infra-deployments branch. | `main` |
 | `E2E_TEST_SUITE_LABEL` | no | Run only test suites with the given Giknkgo label | '' |
@@ -167,16 +168,10 @@ import (
 ```
 
 # Troubleshooting e2e-tests issues in openshift-ci
-Every Prow job executed by the CI system generates an artifacts directory containing information about that execution and its results. This [document](https://docs.ci.openshift.org/docs/how-tos/artifacts/) describes the contents of this directory and how they can be used to investigate the steps by the job.
-
-The “artifacts” link in the job result page leads to a page containing every file uploaded by that job. For AppStudio jobs there are three important folders in artifacts:
-* **redhat-appstudio_e2e-tests/redhat-appstudio-e2e/***               - Store xunit files related to appstudio e2e-tests.
-* **redhat-appstudio_e2e-tests/redhat-appstudio-gather/***            - Store appstudio Kube APIs information. Components, Application, Environment etc.
-* **redhat-appstudio_e2e-tests/redhat-appstudio-hypershift-gather/*** - Store all cluster pods logs, events, configmaps etc. This artifacts are present only with hypershift installer.
-* **redhat-appstudio_e2e-tests/gather-extra/***                       - Store all cluster pods logs, events, configmaps etc. This artifacts are present only when we dont use hypershift.
+The whole process of investigating issues is defined in [InvestigatingCIFailures](docs/InvestigatingCIFailures.md).
 
 # Reporting issues
-For reporting issues with e2e tests please use [STONE Jira project](https://issues.redhat.com/browse/STONE) - please use labels `ci-fail` and `quality`. For existing issues, see [this Jira query](https://issues.redhat.com/issues/?jql=labels%20%3D%20%22ci-fail%22%20and%20labels%20%3D%20%22quality%22%20and%20resolution%20%3D%20unresolved).
+Please follow the process in [Reporting and escalating CI Issue](docs/InvestigatingCIFailures.md#reporting-and-escalating-ci-issue) for reporting issues.
 
 # Debugging tests
 ## In vscode
