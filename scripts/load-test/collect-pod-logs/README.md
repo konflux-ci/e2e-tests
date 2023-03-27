@@ -1,18 +1,5 @@
 # JIRA task - https://issues.redhat.com/browse/STONE-831 
-
 # The bash script is collect-openshift-pod-logs.sh
-
-
-# The Jira task description:
-
-Description
-===========
-Goal is to be able to look at was happening in the cluster pods logs before the cluster dies.
-
-Input of the tool would be:
-it would be running on the host logged to the StoneSoup cluster
-it will be provided a list of namespaces
-The tool would check all the pods in all the namespaces and would be following (tailing) logs to files.
 
 
 The script logic:
