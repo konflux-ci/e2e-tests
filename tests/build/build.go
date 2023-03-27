@@ -166,6 +166,15 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return true
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 			})
+			It("PR branch should not exists in the repo", func() {
+				timeout = time.Second * 60
+				interval = time.Second * 1
+				Eventually(func() bool {
+					exists, err := f.AsKubeAdmin.CommonController.Github.ExistsRef(helloWorldComponentGitSourceRepoName, pacPRBranchPrefix+defaultBranchTestComponentName)
+					Expect(err).ShouldNot(HaveOccurred())
+					return !exists
+				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the branch to be deleted")
+			})
 		})
 
 		When("a new component with specified custom branch branch is created", func() {

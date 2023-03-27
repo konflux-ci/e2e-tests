@@ -3,6 +3,8 @@ package github
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/google/go-github/v44/github"
 )
 
@@ -28,4 +30,17 @@ func (g *Github) CreateRef(repository, baseBranchName, newBranchName string) err
 		return fmt.Errorf("error when creating a new branch '%s' for the repo '%s': %+v", newBranchName, repository, err)
 	}
 	return nil
+}
+
+func (g *Github) ExistsRef(repository, branchName string) (bool, error) {
+	_, _, err := g.client.Git.GetRef(context.Background(), g.organization, repository, fmt.Sprintf("heads/%s", branchName))
+	if err != nil {
+		if strings.Contains(err.Error(), "404 Not Found") {
+			return false, nil
+		} else {
+			return false, fmt.Errorf("error when getting the branch %s : %+v", branchName, err)
+		}
+	} else {
+		return true, nil
+	}
 }
