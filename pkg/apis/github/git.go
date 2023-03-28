@@ -38,7 +38,7 @@ func (g *Github) ExistsRef(repository, branchName string) (bool, error) {
 		if strings.Contains(err.Error(), "404 Not Found") {
 			return false, nil
 		} else {
-			return false, fmt.Errorf("error when getting the branch %s : %+v", branchName, err)
+			return false, fmt.Errorf("error when getting the branch '%s' for the repo '%s': %+v", branchName, repository, err)
 		}
 	} else {
 		return true, nil
