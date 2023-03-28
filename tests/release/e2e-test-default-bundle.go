@@ -3,7 +3,7 @@ package release
 import (
 	"strings"
 
-	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
+	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
@@ -63,10 +63,10 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 				{
 					Name: "ec-policies",
 					Policy: []string{
-						"git::https://github.com/hacbs-contract/ec-policies.git//policy",
+						"git::https://github.com/enterprise-contract/ec-policies.git//policy",
 					},
 					Data: []string{
-						"git::https://github.com/hacbs-contract/ec-policies.git//data",
+						"git::https://github.com/enterprise-contract/ec-policies.git//data",
 					},
 				},
 			},
