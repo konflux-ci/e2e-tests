@@ -11,3 +11,4 @@ release-service
 toolchain-host-operator
 toolchain-member-operator
 tekton-results
+openshift-user-workload-monitoring

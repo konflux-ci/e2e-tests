@@ -6,6 +6,7 @@ default_namespaces=(
     "build-service"
     "enterprise-contract-service"
     "gitops-service-argocd"
+    "openshift-user-workload-monitoring"
     "integration-service"
     "internal-services"
     "jvm-build-service" 
