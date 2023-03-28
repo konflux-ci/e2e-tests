@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/devfile/library/pkg/util"
+	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	"github.com/google/go-github/v44/github"
-	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
@@ -39,7 +39,7 @@ const (
 	managedNamespace = "mvp-demo-managed-namespace"
 
 	// This pipeline contains an image that comes from "not allowed" container image registry repo
-	// https://github.com/hacbs-contract/ec-policies/blob/de8afa912e7a80d02abb82358ce7b23cf9a286c8/data/rule_data.yml#L9-L12
+	// https://github.com/enterprise-contract/ec-policies/blob/de8afa912e7a80d02abb82358ce7b23cf9a286c8/data/rule_data.yml#L9-L12
 	// It is required in order to test that the release of the image failed based on a failed check in EC
 	untrustedPipelineBundle = "quay.io/psturc/pipeline-docker-build:2023-03-07-104058@sha256:7e64d34d73b185df301ffd96271196cd547f2c1148471865d1d16d915ddf4e74"
 )
@@ -116,10 +116,10 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 				{
 					Name: "ec-policies",
 					Policy: []string{
-						"git::https://github.com/hacbs-contract/ec-policies.git//policy",
+						"git::https://github.com/enterprise-contract/ec-policies.git//policy",
 					},
 					Data: []string{
-						"git::https://github.com/hacbs-contract/ec-policies.git//data",
+						"git::https://github.com/enterprise-contract/ec-policies.git//data",
 					},
 				},
 			},
