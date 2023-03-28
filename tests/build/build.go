@@ -172,8 +172,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Eventually(func() bool {
 					exists, err := f.AsKubeAdmin.CommonController.Github.ExistsRef(helloWorldComponentGitSourceRepoName, pacPRBranchPrefix+defaultBranchTestComponentName)
 					Expect(err).ShouldNot(HaveOccurred())
-					return !exists
-				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the branch to be deleted")
+					return exists
+				}, timeout, interval).Should(BeFalse(), "timed out when waiting for the branch to be deleted")
 			})
 		})
 
