@@ -1,6 +1,7 @@
 package release
 
 import (
+	"encoding/base64"
 	"os"
 	"regexp"
 	"strings"
@@ -14,8 +15,9 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"knative.dev/pkg/apis"
 
-	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
+	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-to-pyxis", Label("release", "pushPyxis", "HACBS"), func() {
@@ -51,19 +53,40 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		certPyxisStage := os.Getenv(constants.PYXIS_STAGE_CERT_ENV)
 		Expect(certPyxisStage).ToNot(BeEmpty())
 
+		// Create secret for the build registry repo "redhat-appstudio-qe".
 		_, err = framework.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(hacbsReleaseTestsTokenSecret, devNamespace, sourceAuthJson)
 		Expect(err).ToNot(HaveOccurred())
 
+		// Create secret for the release registry repo "hacbs-release-tests".
 		_, err = framework.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(redhatAppstudioUserSecret, managedNamespace, destinationAuthJson)
 		Expect(err).ToNot(HaveOccurred())
 
-		err = framework.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, hacbsReleaseTestsTokenSecret, "pipeline")
+		// Linking the build secret to the pipline service account in dev namespace.
+		err = framework.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, hacbsReleaseTestsTokenSecret, "pipeline", true)
 		Expect(err).ToNot(HaveOccurred())
 
 		publicKey, err := kubeController.GetTektonChainsPublicKey()
 		Expect(err).ToNot(HaveOccurred())
 
-		_, err = framework.AsKubeAdmin.CommonController.CreateRegistryAuthSecretKeyValueDecoded("pyxis", managedNamespace, string(keyPyxisStage), string(certPyxisStage))
+		// Creating k8s secret to access Pyxis stage based on base64 decoded of key and cert
+		rawDecodedTextStringData, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(keyPyxisStage)))
+		Expect(err).ToNot(HaveOccurred())
+		rawDecodedTextData, err := base64.StdEncoding.DecodeString(string(certPyxisStage))
+		Expect(err).ToNot(HaveOccurred())
+
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pyxis",
+				Namespace: managedNamespace,
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{
+				"cert": rawDecodedTextData,
+				"key":  rawDecodedTextStringData,
+			},
+		}
+
+		_, err = framework.AsKubeAdmin.CommonController.CreateSecret(managedNamespace, secret)
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(kubeController.CreateOrUpdateSigningSecret(
@@ -93,7 +116,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		_, err = framework.AsKubeAdmin.CommonController.CreateServiceAccount(releaseStrategyServiceAccountDefault, managedNamespace, managednamespaceSecret)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = framework.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, redhatAppstudioUserSecret, releaseStrategyServiceAccountDefault)
+		err = framework.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, redhatAppstudioUserSecret, releaseStrategyServiceAccountDefault, true)
 		Expect(err).ToNot(HaveOccurred())
 
 		_, err = framework.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "")
