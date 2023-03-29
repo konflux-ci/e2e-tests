@@ -105,14 +105,72 @@ collect_logs_from_existing_namespaces() {
         echo "New pod added: $pod_name in namespace $namespace"
         pod_dir="$namespace_dir/$pod_name"
         mkdir -p "$pod_dir"
+
+        # Wait until the pod is in Running state
+        kubectl wait --timeout=60s --for=condition=Ready pod/$pod_name --namespace=$namespace 2>/dev/null
+        if [ $? -ne 0 ]; then
+          echo "Pod $pod_name in namespace $namespace timed-out of being ready, skip to next pod.."
+          continue 
+        fi
+        
+        # Verify that the pod is in running state
+        while true; do
+          phase=$(kubectl get pods "$pod_name" -n "$namespace" -o json | jq '.status.phase' | tr -d '"')
+          if [ "$phase" == "Running" ]; then
+            echo "Pod $pod_name in namespace $namespace is now Running"
+            break
+          fi
+          echo "Waiting for pod $pod_name in namespace $namespace to become Running..."
+          sleep 3
+        done 
+
         # Watch for added or deleted containers in the new pod
         kubectl get pods "$pod_name" --watch --namespace "$namespace" --output-watch-events --output jsonpath='{.type} {.object.spec.containers[*].name}{"\n"}' | while read -r event container_names; do
-          IFS=' ' read -r -a container_array <<< "$container_names"
+          IFS=' ' read -ra container_array <<< "$container_names"
           for container_name in "${container_array[@]}"; do
             if [ "$event" == "ADDED" ]; then
               echo "New container added: $container_name in pod $pod_name in tenant namespace $namespace"
               container_dir="$pod_dir"
+
+              # Wait until the container is in ready state or until timeout is reached
+              # doesn't work because the ready state is always empty and not "true" or "false"
+              # We shall check the state field for being in a "Running" mode
+
+              # Define timeout value
+              timeout=60
+              # Start timer
+              start=$(date +%s)
+
+              # Loop until the timeout is reached
+              while true; do
+                # Check the container's state and readiness..
+                container_status=$(kubectl get pods "$pod_name" -n "$namespace" -o jsonpath="{.status.containerStatuses[?(@.name=='$container_name')].state}" | sed -n 's/{"\([^"]*\)".*/\1/p')
+                container_ready=$(kubectl get pods "$pod_name" -n "$namespace" -o jsonpath="{.status.containerStatuses[?(@.name=='$container_name')].ready}")
+
+                # If the container is ready and in Running state, break the loop
+                # We check both fields because -  
+                # It is important to note that while a running container is usually considered ready, 
+                #  a container with a status other than running 
+                #  (e.g., waiting or terminated) would generally not be considered ready (ready='false').
+                
+                if [ "$container_ready" == "true" ] && [ "$container_status" == "running" ]; then
+                  echo "Container $container_name in pod $pod_name in tenant namespace $namespace is in ready and in running state"
+                  break
+                fi
+
+               # Check if timeout has been reached
+                now=$(date +%s)
+                if [ $((now - start)) -ge $timeout ]; then
+                  echo "Timeout reached while waiting for the container $container_name in pod $pod_name in tenant namespace $namespace to be in Running state and ready"
+                  continue 2
+                fi
+
+                # Sleep for a short duration before checking again
+                sleep 5
+              done
+
               collect_logs "${namespace}" "${pod_name}" "${container_name}" "${container_dir}"
+            
             elif [ "$event" == "DELETED" ]; then
               echo "Container deleted: $container_name in pod $pod_name in tenant namespace $namespace"
               list_log_file "${namespace}" "${pod_name}" "${container_name}"
@@ -142,17 +200,73 @@ collect_logs_from_new_namespaces() {
           # Watch for added or deleted pods in the new tenant namespace
           kubectl get pods --watch --namespace "$namespace" --output-watch-events --output jsonpath='{.type} {.object.metadata.name}{"\n"}' | while read -r event pod_name; do
             if [ "$event" == "ADDED" ]; then
-              echo "New pod added: $pod_name in tenant namespace $namespace"
+              echo "New pod added: $pod_name in namespace $namespace"
               pod_dir="$namespace_dir/$pod_name"
               mkdir -p "$pod_dir"
 
+              # Wait until the pod is in Running state
+              kubectl wait --timeout=60s --for=condition=Ready pod/$pod_name --namespace=$namespace 2>/dev/null
+              if [ $? -ne 0 ]; then
+                echo "Pod $pod_name in namespace $namespace timed-out of being ready, skip to next pod.."
+                continue 
+              fi
+
+              # Verify that the pod is in running state
+              while true; do
+                phase=$(kubectl get pods "$pod_name" -n "$namespace" -o json | jq '.status.phase' | tr -d '"')
+                if [ "$phase" == "Running" ]; then
+                  echo "Pod $pod_name in namespace $namespace is now Running"
+                  break
+                fi
+                echo "Waiting for pod $pod_name in namespace $namespace to become Running..."
+                sleep 3
+              done 
+
               # Watch for added or deleted containers in the new pod
               kubectl get pods "$pod_name" --watch --namespace "$namespace" --output-watch-events --output jsonpath='{.type} {.object.spec.containers[*].name}{"\n"}' | while read -r event container_names; do
-                IFS=' ' read -r -a container_array <<< "$container_names"
+                IFS=' ' read -ra container_array <<< "$container_names"
                 for container_name in "${container_array[@]}"; do
                   if [ "$event" == "ADDED" ]; then
                     echo "New container added: $container_name in pod $pod_name in tenant namespace $namespace"
                     container_dir="$pod_dir"
+
+                    # Wait until the container is in ready state or until timeout is reached
+                    # doesn't work because the ready state is always empty and not "true" or "false"
+                    # We shall check the state field for being in a "Running" mode
+
+                    # Define timeout value
+                    timeout=60
+                    # Start timer
+                    start=$(date +%s)
+
+                    # Loop until the timeout is reached
+                    while true; do
+                      # Check the container's state and readiness..
+                      container_status=$(kubectl get pods "$pod_name" -n "$namespace" -o jsonpath="{.status.containerStatuses[?(@.name=='$container_name')].state}" | sed -n 's/{"\([^"]*\)".*/\1/p')
+                      container_ready=$(kubectl get pods "$pod_name" -n "$namespace" -o jsonpath="{.status.containerStatuses[?(@.name=='$container_name')].ready}")
+
+                      # If the container is ready and in Running state, break the loop
+                      # We check both fields because -  
+                      # It is important to note that while a running container is usually considered ready, 
+                      #  a container with a status other than running 
+                      #  (e.g., waiting or terminated) would generally not be considered ready (ready='false').
+
+                      if [ "$container_ready" == "true" ] && [ "$container_status" == "running" ]; then
+                        echo "Container $container_name in pod $pod_name in tenant namespace $namespace is in ready and in running state"
+                        break
+                      fi
+
+                     # Check if timeout has been reached
+                      now=$(date +%s)
+                      if [ $((now - start)) -ge $timeout ]; then
+                        echo "Timeout reached while waiting for the container $container_name in pod $pod_name in tenant namespace $namespace to be in Running state and ready"
+                        continue 2
+                      fi
+
+                      # Sleep for a short duration before checking again
+                      sleep 5
+                    done
+
                     collect_logs "${namespace}" "${pod_name}" "${container_name}" "${container_dir}"
                   elif [ "$event" == "DELETED" ]; then
                     echo "Container deleted: $container_name in pod $pod_name in tenant namespace $namespace"
@@ -164,9 +278,7 @@ collect_logs_from_new_namespaces() {
               echo "Pod deleted: $pod_name in tenant namespace $namespace"
             fi
           done &
-      elif [ "$event_type" == "DELETED" ] && echo "$namespace" | grep -q ".*-tenant$"; then
-        echo "New tenant namespace deleted: $namespace"
-      fi
+      fi    
     done
   done
 }
