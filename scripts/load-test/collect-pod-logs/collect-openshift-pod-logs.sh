@@ -109,8 +109,7 @@ collect_logs_from_existing_namespaces() {
         kubectl get pods "$pod_name" --watch --namespace "$namespace" --output-watch-events --output jsonpath='{.type} {.object.spec.containers[*].name}{"\n"}' | while read -r event container_name; do
           if [ "$event" == "ADDED" ]; then
             echo "New container added: $container_name in pod $pod_name in tenant namespace $namespace"
-            container_dir="$pod_dir/$container_name"
-            mkdir -p "$container_dir"
+            container_dir="$pod_dir"
             collect_logs "${namespace}" "${pod_name}" "${container_name}" "${container_dir}"
           elif [ "$event" == "DELETED" ]; then
             echo "Container deleted: $container_name in pod $pod_name in tenant namespace $namespace"
@@ -148,8 +147,7 @@ collect_logs_from_new_namespaces() {
               kubectl get pods "$pod_name" --watch --namespace "$namespace" --output-watch-events --output jsonpath='{.type} {.object.spec.containers[*].name}{"\n"}' | while read -r event container_name; do
                 if [ "$event" == "ADDED" ]; then
                   echo "New container added: $container_name in pod $pod_name in tenant namespace $namespace"
-                  container_dir="$pod_dir/$container_name"
-                  mkdir -p "$container_dir"
+                  container_dir="$pod_dir"
                   collect_logs "${namespace}" "${pod_name}" "${container_name}" "${container_dir}"
                 elif [ "$event" == "DELETED" ]; then
                   echo "Container deleted: $container_name in pod $pod_name in tenant namespace $namespace"
