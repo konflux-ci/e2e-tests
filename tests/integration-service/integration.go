@@ -10,6 +10,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"knative.dev/pkg/apis"
 
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -23,7 +24,9 @@ const (
 	gitSourceRepoName      = "devfile-sample-python-basic"
 	gitSourceURL           = "https://github.com/redhat-appstudio-qe/" + gitSourceRepoName
 	BundleURL              = "quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-pass"
+	BundleURLFail          = "quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-fail"
 	InPipelineName         = "integration-pipeline-pass"
+	InPipelineNameFail     = "integration-pipeline-fail"
 	EnvironmentName        = "development"
 	IntegrationServiceUser = "integration-e2e"
 )
@@ -69,8 +72,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		cleanup := func() {
 			Expect(f.AsKubeAdmin.HasController.DeleteHasApplication(applicationName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
 			Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
-			err = f.AsKubeAdmin.IntegrationController.DeleteApplicationSnapshot(applicationSnapshot_push, appStudioE2EApplicationsNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
 			integrationTestScenarios, err := f.AsKubeAdmin.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -126,6 +127,29 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			GinkgoWriter.Printf("applicationSnapshot %s is found\n", applicationSnapshot.Name)
 		}
 
+		assertIntegrationPipelineRunFinished := func() {
+			integrationTestScenarios, err := f.AsKubeAdmin.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
+			Expect(err).ShouldNot(HaveOccurred())
+			for _, testScenario := range *integrationTestScenarios {
+				timeout = time.Minute * 5
+				interval = time.Second * 2
+				Eventually(func() bool {
+					pipelineRun, err := f.AsKubeAdmin.IntegrationController.GetIntegrationPipelineRun(testScenario.Name, applicationSnapshot.Name, appStudioE2EApplicationsNamespace)
+					if err != nil {
+						GinkgoWriter.Printf("cannot get the Integration PipelineRun: %v\n", err)
+						return false
+					}
+					return pipelineRun.HasStarted()
+				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
+				timeout = time.Second * 1000
+				interval = time.Second * 10
+				Eventually(func() bool {
+					Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(f.AsKubeAdmin.CommonController, &testScenario, applicationSnapshot, applicationName, appStudioE2EApplicationsNamespace)).To(Succeed(), "Error when waiting for a integration pipeline to finish")
+					return true
+				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
+			}
+		}
+
 		Describe("with happy path", Ordered, func() {
 			BeforeAll(func() {
 				// Initialize the tests controllers
@@ -142,6 +166,9 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			AfterAll(func() {
 				if !CurrentSpecReport().Failed() {
 					cleanup()
+
+					err = f.AsKubeAdmin.IntegrationController.DeleteApplicationSnapshot(applicationSnapshot_push, appStudioE2EApplicationsNamespace)
+					Expect(err).ShouldNot(HaveOccurred())
 				}
 			})
 
@@ -155,26 +182,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				})
 
 				It("checks if all of the integrationPipelineRuns passed", Label("slow"), func() {
-					integrationTestScenarios, err := f.AsKubeAdmin.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
-					Expect(err).ShouldNot(HaveOccurred())
-					for _, testScenario := range *integrationTestScenarios {
-						timeout = time.Minute * 5
-						interval = time.Second * 2
-						Eventually(func() bool {
-							pipelineRun, err := f.AsKubeAdmin.IntegrationController.GetIntegrationPipelineRun(testScenario.Name, applicationSnapshot.Name, appStudioE2EApplicationsNamespace)
-							if err != nil {
-								GinkgoWriter.Printf("cannot get the Integration PipelineRun: %v\n", err)
-								return false
-							}
-							return pipelineRun.HasStarted()
-						}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
-						timeout = time.Second * 1000
-						interval = time.Second * 10
-						Eventually(func() bool {
-							Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(f.AsKubeAdmin.CommonController, &testScenario, applicationSnapshot, applicationName, appStudioE2EApplicationsNamespace)).To(Succeed(), "Error when waiting for a integration pipeline to finish")
-							return true
-						}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
-					}
+					assertIntegrationPipelineRunFinished()
 				})
 			})
 
@@ -203,6 +211,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, testScenario := range *integrationTestScenarios {
+						GinkgoWriter.Printf("Integration test scenario %s is found\n", applicationSnapshot.Name)
 						timeout = time.Minute * 5
 						interval = time.Second * 2
 						Eventually(func() bool {
@@ -300,6 +309,45 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						return false
 					}, timeout, interval).Should(BeTrue(), "time out when waiting for release created")
 				})
+			})
+		})
+
+		Describe("with an integration test fail", Ordered, func() {
+			BeforeAll(func() {
+				// Initialize the tests controllers
+				f, err = framework.NewFramework(IntegrationServiceUser)
+				Expect(err).NotTo(HaveOccurred())
+
+				createApp()
+				createComponent()
+
+				_, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, appStudioE2EApplicationsNamespace, BundleURLFail, InPipelineNameFail)
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+
+			AfterAll(func() {
+				if !CurrentSpecReport().Failed() {
+					cleanup()
+				}
+			})
+
+			It("triggers a build PipelineRun", Label("integration-service"), func() {
+				assertBuildPipelineRunFinished()
+			})
+
+			It("checks if the ApplicationSnapshot is created", func() {
+				assertApplicationSnapshotCreated()
+			})
+
+			It("checks if all of the integrationPipelineRuns finished", Label("slow"), func() {
+				assertIntegrationPipelineRunFinished()
+			})
+
+			It("checks if snapshot is marked as failed", func() {
+				snapshot, err := f.AsKubeAdmin.IntegrationController.GetApplicationSnapshot(applicationSnapshot.Name, applicationName, appStudioE2EApplicationsNamespace, componentName)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(meta.IsStatusConditionFalse(snapshot.Status.Conditions, "HACBSTestSucceeded")).To(BeTrue())
+
 			})
 		})
 	})
