@@ -106,15 +106,18 @@ collect_logs_from_existing_namespaces() {
         pod_dir="$namespace_dir/$pod_name"
         mkdir -p "$pod_dir"
         # Watch for added or deleted containers in the new pod
-        kubectl get pods "$pod_name" --watch --namespace "$namespace" --output-watch-events --output jsonpath='{.type} {.object.spec.containers[*].name}{"\n"}' | while read -r event container_name; do
-          if [ "$event" == "ADDED" ]; then
-            echo "New container added: $container_name in pod $pod_name in tenant namespace $namespace"
-            container_dir="$pod_dir"
-            collect_logs "${namespace}" "${pod_name}" "${container_name}" "${container_dir}"
-          elif [ "$event" == "DELETED" ]; then
-            echo "Container deleted: $container_name in pod $pod_name in tenant namespace $namespace"
-            list_log_file "${namespace}" "${pod_name}" "${container_name}"
-          fi
+        kubectl get pods "$pod_name" --watch --namespace "$namespace" --output-watch-events --output jsonpath='{.type} {.object.spec.containers[*].name}{"\n"}' | while read -r event container_names; do
+          IFS=' ' read -r -a container_array <<< "$container_names"
+          for container_name in "${container_array[@]}"; do
+            if [ "$event" == "ADDED" ]; then
+              echo "New container added: $container_name in pod $pod_name in tenant namespace $namespace"
+              container_dir="$pod_dir"
+              collect_logs "${namespace}" "${pod_name}" "${container_name}" "${container_dir}"
+            elif [ "$event" == "DELETED" ]; then
+              echo "Container deleted: $container_name in pod $pod_name in tenant namespace $namespace"
+              list_log_file "${namespace}" "${pod_name}" "${container_name}"
+            fi
+          done 
         done &
       elif [ "$event" == "DELETED" ]; then
         echo "Pod deleted: $pod_name in tenant namespace $namespace"
@@ -144,20 +147,23 @@ collect_logs_from_new_namespaces() {
               mkdir -p "$pod_dir"
 
               # Watch for added or deleted containers in the new pod
-              kubectl get pods "$pod_name" --watch --namespace "$namespace" --output-watch-events --output jsonpath='{.type} {.object.spec.containers[*].name}{"\n"}' | while read -r event container_name; do
-                if [ "$event" == "ADDED" ]; then
-                  echo "New container added: $container_name in pod $pod_name in tenant namespace $namespace"
-                  container_dir="$pod_dir"
-                  collect_logs "${namespace}" "${pod_name}" "${container_name}" "${container_dir}"
-                elif [ "$event" == "DELETED" ]; then
-                  echo "Container deleted: $container_name in pod $pod_name in tenant namespace $namespace"
-                  list_log_file "${namespace}" "${pod_name}" "${container_name}"
-                fi
+              kubectl get pods "$pod_name" --watch --namespace "$namespace" --output-watch-events --output jsonpath='{.type} {.object.spec.containers[*].name}{"\n"}' | while read -r event container_names; do
+                IFS=' ' read -r -a container_array <<< "$container_names"
+                for container_name in "${container_array[@]}"; do
+                  if [ "$event" == "ADDED" ]; then
+                    echo "New container added: $container_name in pod $pod_name in tenant namespace $namespace"
+                    container_dir="$pod_dir"
+                    collect_logs "${namespace}" "${pod_name}" "${container_name}" "${container_dir}"
+                  elif [ "$event" == "DELETED" ]; then
+                    echo "Container deleted: $container_name in pod $pod_name in tenant namespace $namespace"
+                    list_log_file "${namespace}" "${pod_name}" "${container_name}"
+                  fi
+                done 
               done &
             elif [ "$event" == "DELETED" ]; then
               echo "Pod deleted: $pod_name in tenant namespace $namespace"
             fi
-        done &
+          done &
       elif [ "$event_type" == "DELETED" ] && echo "$namespace" | grep -q ".*-tenant$"; then
         echo "New tenant namespace deleted: $namespace"
       fi
