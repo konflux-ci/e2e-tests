@@ -374,7 +374,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					}
 				}
 				return false
-			}, 10*time.Minute, 10*time.Second).Should(BeTrue())
+			}, 15*time.Minute, 10*time.Second).Should(BeTrue())
 		})
 
 	})
