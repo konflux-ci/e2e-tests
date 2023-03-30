@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
+	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	ocpOauth "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	userv1 "github.com/openshift/api/user/v1"

@@ -48,6 +48,8 @@ The following environment variables are used to launch the Red Hat AppStudio ins
 |---|---|---|---|
 | `GITHUB_TOKEN` | yes | A github token used to create AppStudio applications in github  | ''  |
 | `QUAY_TOKEN` | yes | A quay token to push components images to quay.io. Note the quay token must be your dockerconfigjson encoded in base64 format. Example: `export QUAY_TOKEN=$(base64 < ~/.docker/config.json)` | '' |
+| `DEFAULT_QUAY_ORG` | yes | A quay organization where repositories for component images will be created  | 'redhat-appstudio-qe'  |
+| `DEFAULT_QUAY_ORG_TOKEN` | yes | A quay token of OAuth application for `DEFAULT_QUAY_ORG` with scopes -  Administer organizations, Adminster repositories, Create Repositories | ''  |
 | `MY_GITHUB_ORG` | no (recommended) | GitHub organization (must be organization, cannot use regular GitHub account!) where to create/push Red Hat AppStudio Applications. You can create your GitHub organization for free  | `redhat-appstudio-qe`  |
 | `QUAY_E2E_ORGANIZATION` | no (recommended) | Quay organization/account where to push components containers. It is recommended to create your own account | `redhat-appstudio-qe` |
 | `E2E_APPLICATIONS_NAMESPACE` | no | Name of the namespace used for running HAS E2E tests | `appstudio-e2e-test` |
@@ -102,7 +104,7 @@ Or build and run the tests without scripts:
 2. Run the e2e tests:
 The `e2e-appstudio` command is the root command that executes all test functionality. To obtain all available flags for the binary please use `--help` flags. All ginkgo flags and go tests are available in `e2e-appstudio` binary.
 
-Some tests could require you to have specific container image repo's created (if you're using your own container image org/user account (`QUAY_E2E_ORGANIZATION`) or your own GitHub organization (`MY_GITHUB_ORG`) 
+Some tests could require you to have specific container image repo's created (if you're using your own container image org/user account (`QUAY_E2E_ORGANIZATION`) or your own GitHub organization (`MY_GITHUB_ORG`)
 In that case, before you run the test, make sure you have created
 * `test-images` repo in quay.io, i.e. `quay.io/<QUAY_E2E_ORGANIZATION>/test-images` and make it **public**
   * also make sure that the docker config, that is encoded in the value of `QUAY_TOKEN` environment variable, contains a correct credentials required to push to `test-images` repo. And make sure the robot account or user account has the **write** permissions set for `test-images` repo which is required by the tests to push the generated artifacts.

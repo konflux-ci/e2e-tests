@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/devfile/library/pkg/util"
+	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	"github.com/google/uuid"
-	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	kubeapi "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"

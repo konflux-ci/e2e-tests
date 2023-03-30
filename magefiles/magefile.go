@@ -219,8 +219,20 @@ func RunE2ETests() error {
 }
 
 func PreflightChecks() error {
-	if os.Getenv("GITHUB_TOKEN") == "" || os.Getenv("QUAY_TOKEN") == "" {
-		return fmt.Errorf("required env vars containing secrets (QUAY_TOKEN, GITHUB_TOKEN) not defined or empty")
+	requiredEnv := []string{
+		"GITHUB_TOKEN",
+		"QUAY_TOKEN",
+		"DEFAULT_QUAY_ORG",
+		"DEFAULT_QUAY_ORG_TOKEN",
+	}
+	missingEnv := []string{}
+	for _, env := range requiredEnv {
+		if os.Getenv(env) == "" {
+			missingEnv = append(missingEnv, env)
+		}
+	}
+	if len(missingEnv) != 0 {
+		return fmt.Errorf("required env vars containing secrets (%s) not defined or empty", strings.Join(missingEnv, ","))
 	}
 
 	for _, binaryName := range requiredBinaries {
