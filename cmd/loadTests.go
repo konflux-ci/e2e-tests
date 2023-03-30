@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/codeready-toolchain/toolchain-e2e/setup/auth"
+	"github.com/codeready-toolchain/toolchain-e2e/setup/configuration"
 	"github.com/codeready-toolchain/toolchain-e2e/setup/metrics"
 	"github.com/codeready-toolchain/toolchain-e2e/setup/metrics/queries"
 	"github.com/codeready-toolchain/toolchain-e2e/setup/terminal"
@@ -37,6 +38,7 @@ var (
 	token                string
 	logConsole           bool
 	failFast             bool
+	disableMetrics       bool
 )
 
 var (
@@ -85,6 +87,7 @@ func init() {
 	rootCmd.Flags().BoolVarP(&waitPipelines, "waitpipelines", "w", false, "if you want to wait for pipelines to finish")
 	rootCmd.Flags().BoolVarP(&logConsole, "log-to-console", "l", false, "if you want to log to console in addition to the log file")
 	rootCmd.Flags().BoolVar(&failFast, "fail-fast", false, "if you want the test to fail fast at first failure")
+	rootCmd.Flags().BoolVar(&disableMetrics, "disable-metrics", false, "if you want to disable metrics gathering")
 }
 
 func logError(errCode int, message string) {
@@ -99,7 +102,7 @@ func logError(errCode int, message string) {
 func setKlogFlag(fs flag.FlagSet, name string, value string) {
 	err := fs.Set(name, value)
 	if err != nil {
-		klog.Fatalf("Failed to set klog flag %s: %v", name, err)
+		klog.Fatalf("Unable to set klog flag %s: %v", name, err)
 	}
 }
 
@@ -142,38 +145,41 @@ func setup(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	metricsInstance := metrics.NewEmpty(term, framework.AsKubeAdmin.CommonController.KubeRest(), 5*time.Minute)
+	var stopMetrics chan struct{}
+	var metricsInstance *metrics.Gatherer
+	if !disableMetrics {
+		metricsInstance = metrics.NewEmpty(term, framework.AsKubeAdmin.CommonController.KubeRest(), 10*time.Minute)
 
-	prometheusClient := metrics.GetPrometheusClient(term, framework.AsKubeAdmin.CommonController.KubeRest(), token)
+		prometheusClient := metrics.GetPrometheusClient(term, framework.AsKubeAdmin.CommonController.KubeRest(), token)
 
-	metricsInstance.AddQueries(
-		queries.QueryClusterCPUUtilisation(prometheusClient),
-		queries.QueryClusterMemoryUtilisation(prometheusClient),
-		queries.QueryNodeMemoryUtilisation(prometheusClient),
-		queries.QueryEtcdMemoryUsage(prometheusClient),
-		queries.QueryWorkloadCPUUsage(prometheusClient, constants.OLMOperatorNamespace, constants.OLMOperatorWorkload),
-		queries.QueryWorkloadMemoryUsage(prometheusClient, constants.OLMOperatorNamespace, constants.OLMOperatorWorkload),
-		queries.QueryOpenshiftKubeAPIMemoryUtilisation(prometheusClient),
-		queries.QueryWorkloadCPUUsage(prometheusClient, constants.OSAPIServerNamespace, constants.OSAPIServerWorkload),
-		queries.QueryWorkloadMemoryUsage(prometheusClient, constants.OSAPIServerNamespace, constants.OSAPIServerWorkload),
-		queries.QueryWorkloadCPUUsage(prometheusClient, constants.HostOperatorNamespace, constants.HostOperatorWorkload),
-		queries.QueryWorkloadMemoryUsage(prometheusClient, constants.HostOperatorNamespace, constants.HostOperatorWorkload),
-		queries.QueryWorkloadCPUUsage(prometheusClient, constants.MemberOperatorNamespace, constants.MemberOperatorWorkload),
-		queries.QueryWorkloadMemoryUsage(prometheusClient, constants.MemberOperatorNamespace, constants.MemberOperatorWorkload),
-		queries.QueryWorkloadCPUUsage(prometheusClient, "application-service", "application-service-application-service-controller-manager"),
-		queries.QueryWorkloadMemoryUsage(prometheusClient, "application-service", "application-service-application-service-controller-manager"),
-		queries.QueryWorkloadCPUUsage(prometheusClient, "build-service", "build-service-controller-manager"),
-		queries.QueryWorkloadMemoryUsage(prometheusClient, "build-service", "build-service-controller-manager"),
-	)
+		metricsInstance.AddQueries(
+			queries.QueryClusterCPUUtilisation(prometheusClient),
+			queries.QueryClusterMemoryUtilisation(prometheusClient),
+			queries.QueryNodeMemoryUtilisation(prometheusClient),
+			queries.QueryEtcdMemoryUsage(prometheusClient),
+			queries.QueryWorkloadCPUUsage(prometheusClient, constants.OLMOperatorNamespace, constants.OLMOperatorWorkload),
+			queries.QueryWorkloadMemoryUsage(prometheusClient, constants.OLMOperatorNamespace, constants.OLMOperatorWorkload),
+			queries.QueryOpenshiftKubeAPIMemoryUtilisation(prometheusClient),
+			queries.QueryWorkloadCPUUsage(prometheusClient, constants.OSAPIServerNamespace, constants.OSAPIServerWorkload),
+			queries.QueryWorkloadMemoryUsage(prometheusClient, constants.OSAPIServerNamespace, constants.OSAPIServerWorkload),
+			queries.QueryWorkloadCPUUsage(prometheusClient, constants.HostOperatorNamespace, constants.HostOperatorWorkload),
+			queries.QueryWorkloadMemoryUsage(prometheusClient, constants.HostOperatorNamespace, constants.HostOperatorWorkload),
+			queries.QueryWorkloadCPUUsage(prometheusClient, constants.MemberOperatorNamespace, constants.MemberOperatorWorkload),
+			queries.QueryWorkloadMemoryUsage(prometheusClient, constants.MemberOperatorNamespace, constants.MemberOperatorWorkload),
+			queries.QueryWorkloadCPUUsage(prometheusClient, "application-service", "application-service-application-service-controller-manager"),
+			queries.QueryWorkloadMemoryUsage(prometheusClient, "application-service", "application-service-application-service-controller-manager"),
+			queries.QueryWorkloadCPUUsage(prometheusClient, "build-service", "build-service-controller-manager"),
+			queries.QueryWorkloadMemoryUsage(prometheusClient, "build-service", "build-service-controller-manager"),
+		)
+		stopMetrics = metricsInstance.StartGathering()
 
+		klog.Infof("Sleeping till all metrics queries gets init")
+		time.Sleep(time.Second * 10)
+	}
 	klog.Infof("🍿 provisioning users...\n")
 
 	chUsers := make(chan int, numberOfUsers)
 	chPipelines := make(chan int, numberOfUsers)
-	stopMetrics := metricsInstance.StartGathering()
-
-	klog.Infof("Sleeping till all metrics queries gets init")
-	time.Sleep(time.Second * 10)
 
 	uip := uiprogress.New()
 	var wg sync.WaitGroup
@@ -195,7 +201,7 @@ func setup(cmd *cobra.Command, args []string) {
 			startTime := time.Now()
 			username := fmt.Sprintf("%s-%04d", usernamePrefix, userIndex)
 			if err := users.Create(framework.AsKubeAdmin.CommonController.KubeRest(), username, constants.HostOperatorNamespace, constants.MemberOperatorNamespace); err != nil {
-				logError(1, fmt.Sprintf("Failed to provision user '%s': %v", username, err))
+				logError(1, fmt.Sprintf("Unable to provision user '%s': %v", username, err))
 				atomic.StoreInt64(&FailedUserCreations, atomic.AddInt64(&FailedUserCreations, 1))
 				continue
 			}
@@ -204,7 +210,7 @@ func setup(cmd *cobra.Command, args []string) {
 					user := fmt.Sprintf("%s-%04d", usernamePrefix, i)
 					usernamespace := fmt.Sprintf("%s-tenant", user)
 					if err := wait.ForNamespace(framework.AsKubeAdmin.CommonController.KubeRest(), usernamespace); err != nil {
-						logError(2, fmt.Sprintf("Failed to find namespace '%s': %v", usernamespace, err))
+						logError(2, fmt.Sprintf("Unable to find namespace '%s' within %v: %v", usernamespace, configuration.DefaultTimeout, err))
 						atomic.StoreInt64(&FailedUserCreations, atomic.AddInt64(&FailedUserCreations, 1))
 						continue UserLoop
 					}
@@ -231,7 +237,7 @@ func setup(cmd *cobra.Command, args []string) {
 				utils.GetDockerConfigJson(),
 			)
 			if errors != nil {
-				logError(3, fmt.Sprintf("Failed to create the secret %s: %v", constants.RegistryAuthSecretName, errors))
+				logError(3, fmt.Sprintf("Unable to create the secret %s: %v", constants.RegistryAuthSecretName, errors))
 				atomic.StoreInt64(&FailedResourceCreations, atomic.AddInt64(&FailedResourceCreations, 1))
 				continue
 			}
@@ -239,12 +245,13 @@ func setup(cmd *cobra.Command, args []string) {
 			ApplicationName := fmt.Sprintf("%s-app", username)
 			app, err := framework.AsKubeAdmin.HasController.CreateHasApplication(ApplicationName, usernamespace)
 			if err != nil {
-				logError(4, fmt.Sprintf("Failed to create the Application %s: %v", ApplicationName, err))
+				logError(4, fmt.Sprintf("Unable to create the Application %s: %v", ApplicationName, err))
 				atomic.StoreInt64(&FailedResourceCreations, atomic.AddInt64(&FailedResourceCreations, 1))
 				continue
 			}
-			if err := utils.WaitUntil(framework.AsKubeAdmin.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 60*time.Second); err != nil {
-				logError(5, fmt.Sprintf("Timed out waiting for application gitops repo to be created: %v", err))
+			gitopsRepoTimeout := 60 * time.Second
+			if err := utils.WaitUntil(framework.AsKubeAdmin.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), gitopsRepoTimeout); err != nil {
+				logError(5, fmt.Sprintf("Unable to create application gitops repo within %v: %v", gitopsRepoTimeout, err))
 				atomic.StoreInt64(&FailedResourceCreations, atomic.AddInt64(&FailedResourceCreations, 1))
 				continue
 			}
@@ -262,7 +269,7 @@ func setup(cmd *cobra.Command, args []string) {
 				true,
 			)
 			if err != nil {
-				logError(6, fmt.Sprintf("Failed to create the Component %s: %v", ComponentName, err))
+				logError(6, fmt.Sprintf("Unable to create the Component %s: %v", ComponentName, err))
 				atomic.StoreInt64(&FailedResourceCreations, atomic.AddInt64(&FailedResourceCreations, 1))
 				continue
 			}
@@ -322,7 +329,6 @@ func setup(cmd *cobra.Command, args []string) {
 
 	wg.Wait()
 	uip.Stop()
-	defer close(stopMetrics)
 	klog.Infof("🏁 Load Test Completed!")
 	klog.Infof("📈 Results 📉")
 	klog.Infof("Average Time taken to spin up users: %.2f s", AverageUserCreationTime.Seconds()/float64(numberOfUsers))
@@ -333,5 +339,8 @@ func setup(cmd *cobra.Command, args []string) {
 	klog.Infof("Number of times pipeline run failed: %d (%.2f %%)", FailedPipelineRuns, float64(FailedPipelineRuns)/float64(numberOfUsers))
 	klog.StopFlushDaemon()
 	klog.Flush()
-	metricsInstance.PrintResults()
+	if !disableMetrics {
+		defer close(stopMetrics)
+		metricsInstance.PrintResults()
+	}
 }

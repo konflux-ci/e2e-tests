@@ -7,5 +7,5 @@ if [ -z ${DOCKER_CONFIG_JSON+x} ]; then
 else echo "DOCKER_CONFIG_JSON is set"; fi
 
 USER_PREFIX=${USER_PREFIX:-testuser}
-go run loadtest.go --username "$USER_PREFIX" --users "${USERS:-50}" --batch "${USERS_BATCH:-10}" -w -l &&
+go run loadtest.go --username "$USER_PREFIX" --users "${USERS:-50}" --batch "${USERS_BATCH:-10}" -w -l --disable-metrics &&
     DRY_RUN=false ./clear.sh "$USER_PREFIX"
