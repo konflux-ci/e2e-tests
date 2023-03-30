@@ -13,6 +13,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
 	e2eConfig "github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
 	"github.com/spf13/viper"
@@ -188,7 +189,13 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					// If we are attempting more than 1 time lets retrigger the pipelinerun
 					if CurrentSpecReport().NumAttempts > 1 {
 						pipelineRun, err := fw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, application.Name, namespace, "")
-						Expect(err).ShouldNot(HaveOccurred(), "failed to get pipelinerun: %v", err)
+						Expect(err).ShouldNot(HaveOccurred(), "\nfailed to get pipelinerun: %v", err)
+
+						// Store failed pipelineRun logs and yamls under the ARTIFACT_DIR
+						err = tekton.StorePipelineRun(pipelineRun, "e2e-demo-tests", fw.AsKubeAdmin.CommonController)
+						if err != nil {
+							GinkgoWriter.Printf("\nfailed to store pipelineRun: %s\n", err.Error())
+						}
 
 						err = fw.AsKubeAdmin.TektonController.DeletePipelineRun(pipelineRun.Name, namespace)
 						Expect(err).ShouldNot(HaveOccurred(), "failed to delete pipelinerun when retriger: %v", err)
