@@ -82,6 +82,8 @@ const (
 	BuildTaskRunName = "build-container"
 
 	ComponentInitialBuildAnnotationKey = "appstudio.openshift.io/component-initial-build"
+
+	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.10"
 )
 
 var (
