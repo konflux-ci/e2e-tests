@@ -39,7 +39,6 @@ const (
 	sourceKeyName                        string = "release-e2e+release_e2e"
 	destinationKeyName                   string = "redhat-appstudio-qe+redhat_appstudio_quality"
 	containerImageUrl                    string = "quay.io/redhat-appstudio-qe/dcmetromap:latest"
-	releasePipelineBundleDefault         string = "quay.io/hacbs-release/pipeline-release:main"
 	roleName                             string = "role-release-service-account"
 
 	namespaceCreationTimeout              = 5 * time.Minute
