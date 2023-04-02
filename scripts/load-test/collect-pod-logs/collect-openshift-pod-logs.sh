@@ -77,8 +77,6 @@ cleanup_and_exit() {
 
 # Main loop to watch for created and deleted pods for current namespaces
 collect_logs_from_existing_namespaces() {
-  echo "in collect_logs_from_existing_namespaces"
-
   for namespace in "${namespaces[@]}"; do
     process_namespace $namespace &
   done
@@ -86,8 +84,6 @@ collect_logs_from_existing_namespaces() {
 
 
 collect_logs_from_new_namespaces() {
-  echo "in collect_logs_from_new_namespaces"
-
   while true; do
     kubectl get namespaces --watch --output-watch-events | while read -r event; do
       event_type=$(echo "$event" | awk '{print $1}')
@@ -116,8 +112,6 @@ collect_logs() {
   local container_dir=$4
   local log_file="${container_dir}/${container_name}.log"
 
-  echo "in collect_logs"
-
   echo "Collecting logs for container ${container_name} in pod ${pod_name} in namespace ${namespace} ..."
   kubectl logs -f "${pod_name}" -c "${container_name}"  -n "${namespace}" --tail=1 >> "${log_file}" 2>&1 &
 }
@@ -129,8 +123,6 @@ list_log_file() {
   local pod_name=$2
   local container_name=$3
   local log_file="${log_dir}/${namespace}/${pod_name}/${container_name}.log"
-
-  echo "in list_log_file"
 
   # If the file exists then process it..
   if [ -e "${log_file}" ]; then
@@ -150,8 +142,6 @@ process_namespace() {
   local namespace=$1
   namespace_dir="$log_dir/$namespace"
   mkdir -p "$namespace_dir"
-
-  echo "in process_namespace - namespace=$namespace"
 
   # Continuously watch the namespace's events for changes
   kubectl get pods -n "$namespace" --watch --output-watch-events --output jsonpath='{.type} {.object.metadata.name}{"\n"}' | while read -r event pod_name; do
@@ -212,8 +202,6 @@ process_pod() {
   local namespace=$1
   local pod_name=$2
 
-  echo "in process_pod"
-
   pod_dir="$namespace_dir/$pod_name"
   mkdir -p "$pod_dir"
 
@@ -267,8 +255,6 @@ is_pod_in_terminal_state() {
   local pod_name=$2
   local pod_phase
 
-  echo "in is_pod_in_terminal_state"
-
   pod_phase=$(kubectl get pod "$pod_name" -n "$namespace" -o jsonpath='{.status.phase}')
   [[ "$pod_phase" == "Succeeded" ]] || [[ "$pod_phase" == "Failed" ]]
 }
@@ -307,8 +293,6 @@ process_container() {
   local container_dir=$4
 
   local container_name=$3
-  echo "in process_container - namespace=$namespace;pod_name=$pod_name;container_name=$container_name;container_dir=$container_dir"
-
   # Wait until the container is in ready state or until timeout is reached
   # Define timeout value
   timeout=60
@@ -349,8 +333,6 @@ is_processed() {
   shift
   local container=$1
 
-  echo "in is_processed"
-
   for processed_container in "${processed_containers_ref[@]}"; do
     if [[ "$container" == "$processed_container" ]]; then
       return 0
@@ -363,8 +345,6 @@ is_processed() {
 get_container_list() {
   local namespace=$1
   local pod_name=$2
-
-  echo "in get_container_list"
 
   kubectl get pods "$pod_name" -n "$namespace" -o jsonpath='{.spec.containers[*].name}'
 }
