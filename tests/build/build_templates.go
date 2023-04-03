@@ -159,7 +159,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 				_, err = kubeadminClient.CommonController.CreateSecret(testNamespace, resultSecret)
 				Expect(err).ToNot(HaveOccurred())
-				err = kubeadminClient.CommonController.LinkSecretToServiceAccount(testNamespace, resultSecret.Name, resultSA)
+				err = kubeadminClient.CommonController.LinkSecretToServiceAccount(testNamespace, resultSecret.Name, resultSA, false)
 				Expect(err).ToNot(HaveOccurred())
 
 				resultSecret, err = kubeadminClient.CommonController.GetSecret(testNamespace, resultSecret.Name)

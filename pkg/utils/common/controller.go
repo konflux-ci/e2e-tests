@@ -93,8 +93,8 @@ func (s *SuiteController) DeleteSecret(ns string, name string) error {
 	return s.KubeInterface().CoreV1().Secrets(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
-// Links a secret to a specified serviceaccount
-func (s *SuiteController) LinkSecretToServiceAccount(ns, secret, serviceaccount string) error {
+// Links a secret to a specified serviceaccount, if argument addImagePullSecrets is true secret will be added also to ImagePullSecrets of SA.
+func (s *SuiteController) LinkSecretToServiceAccount(ns, secret, serviceaccount string, addImagePullSecrets bool) error {
 	serviceAccountObject, err := s.KubeInterface().CoreV1().ServiceAccounts(ns).Get(context.TODO(), serviceaccount, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -106,6 +106,9 @@ func (s *SuiteController) LinkSecretToServiceAccount(ns, secret, serviceaccount 
 		}
 	}
 	serviceAccountObject.Secrets = append(serviceAccountObject.Secrets, corev1.ObjectReference{Name: secret})
+	if addImagePullSecrets {
+		serviceAccountObject.ImagePullSecrets = append(serviceAccountObject.ImagePullSecrets, corev1.LocalObjectReference{Name: secret})
+	}
 	_, err = s.KubeInterface().CoreV1().ServiceAccounts(ns).Update(context.TODO(), serviceAccountObject, metav1.UpdateOptions{})
 	return err
 }
@@ -339,18 +342,19 @@ func (s *SuiteController) DeleteConfigMap(name, namespace string, returnErrorOnN
 	return err
 }
 
-func (s *SuiteController) CreateRegistryAuthSecret(secretName, namespace, secretData string) (*corev1.Secret, error) {
-	rawDecodedText, err := base64.StdEncoding.DecodeString(secretData)
+func (s *SuiteController) CreateRegistryAuthSecret(secretName, namespace, secretStringData string) (*corev1.Secret, error) {
+	rawDecodedTextStringData, err := base64.StdEncoding.DecodeString(secretStringData)
 	if err != nil {
 		return nil, err
 	}
+
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
 			Namespace: namespace,
 		},
-		Type:       "kubernetes.io/dockerconfigjson",
-		StringData: map[string]string{".dockerconfigjson": string(rawDecodedText)},
+		Type:       corev1.SecretTypeDockerConfigJson,
+		StringData: map[string]string{corev1.DockerConfigJsonKey: string(rawDecodedTextStringData)},
 	}
 	er := s.KubeRest().Create(context.TODO(), secret)
 	if er != nil {
