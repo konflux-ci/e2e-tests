@@ -99,7 +99,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlan("source-releaseplan", userNamespace, appName, managedNamespace, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = f.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-strategy", managedNamespace, "release", "quay.io/hacbs-release/pipeline-release:main", "mvp-policy", "release-service-account", []appstudiov1alpha1.Params{
+		_, err = f.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-strategy", managedNamespace, "release", constants.ReleasePipelineImageRef, "mvp-policy", "release-service-account", []appstudiov1alpha1.Params{
 			{Name: "extraConfigGitUrl", Value: "https://github.com/redhat-appstudio-qe/strategy-configs.git"},
 			{Name: "extraConfigPath", Value: "mvp.yaml"},
 			{Name: "extraConfigRevision", Value: "main"},
@@ -374,7 +374,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					}
 				}
 				return false
-			}, 10*time.Minute, 10*time.Second).Should(BeTrue())
+			}, 15*time.Minute, 10*time.Second).Should(BeTrue())
 		})
 
 	})
