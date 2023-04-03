@@ -254,7 +254,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 				It(fmt.Sprintf("checks if component %s health", component.Name), func() {
 					Eventually(func() bool {
-						gitOpsRoute, err := fw.AsKubeDeveloper.CommonController.GetOpenshiftRoute(component.Name, namespace)
+						gitOpsRoute, err := fw.AsKubeDeveloper.CommonController.GetOpenshiftRouteByComponentName(component.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())
 						err = fw.AsKubeDeveloper.GitOpsController.CheckGitOpsEndpoint(gitOpsRoute, componentTest.HealthEndpoint)
 						if err != nil {
