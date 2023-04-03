@@ -57,6 +57,15 @@ const (
 	defaultInterval = 100 * time.Millisecond
 )
 
+var paramsReleaseStrategyPyxis = []appstudiov1alpha1.Params{
+	{Name: "extraConfigGitUrl", Value: "https://github.com/hacbs-release/strategy-configs"},
+	{Name: "extraConfigPath", Value: "mvp.yaml"},
+	{Name: "extraConfigRevision", Value: "main"},
+	{Name: "pyxisServerType", Value: "stage"},
+	{Name: "pyxisSecret", Value: "pyxis"},
+	{Name: "tag", Value: "latest"},
+}
+
 var paramsReleaseStrategyMvp = []appstudiov1alpha1.Params{
 	{Name: "extraConfigGitUrl", Value: "https://github.com/hacbs-release/strategy-configs"},
 	{Name: "extraConfigPath", Value: "mvp.yaml"},
