@@ -258,7 +258,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 								GinkgoWriter.Println("component has not been found yet")
 								return false
 							}
-							Expect(component.Spec.ContainerImage != "").To(BeTrue())
+							Expect(component.Spec.ContainerImage != originalComponent.Spec.ContainerImage).To(BeTrue())
 							GinkgoWriter.Printf("Global candidate is updated\n")
 							return true
 						}
