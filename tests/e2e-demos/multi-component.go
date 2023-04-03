@@ -37,7 +37,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 			{
 				Name:            "multi-component-application",
 				ApplicationName: "multi-component-application",
-				// We need to skip for now deployment checks until: https://issues.redhat.com/browse/STONEBUGS-108
+				// We need to skip for now deployment checks of quality dashboard until RHTAP support secrets
 				Components: []config.ComponentSpec{
 					{
 						Name:                "mc-withdockerfile-withoutdevfile",
@@ -54,7 +54,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 					{
 						Name:                "mc-withdevfile",
 						Type:                "public",
-						SkipDeploymentCheck: true,
+						SkipDeploymentCheck: false,
 						GitSourceUrl:        "https://github.com/redhat-appstudio-qe/rhtap-devfile-multi-component.git",
 					},
 				},
@@ -194,7 +194,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 
 				It("checks if multiple components are deployed", func() {
 					if testComponent.SkipDeploymentCheck {
-						Skip("component deployment skipped. Jira issue: https://issues.redhat.com/browse/STONEBUGS-108")
+						Skip("component deployment skipped.")
 					}
 					for _, component := range componentList {
 						Eventually(func() bool {
@@ -214,7 +214,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 
 				It("checks if multicomponents routes exists", func() {
 					if testComponent.SkipDeploymentCheck {
-						Skip("component deployment skipped. Jira issue: https://issues.redhat.com/browse/STONEBUGS-108")
+						Skip("component deployment skipped.")
 					}
 					for _, component := range componentList {
 						Eventually(func() bool {
