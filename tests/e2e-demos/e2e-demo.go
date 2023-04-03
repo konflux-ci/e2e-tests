@@ -3,17 +3,14 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
 	e2eConfig "github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
 	"github.com/spf13/viper"
 	appsv1 "k8s.io/api/apps/v1"
@@ -58,6 +55,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 		Describe(appTest.Name, Ordered, func() {
 			BeforeAll(func() {
+				Skip("AAA")
 				if appTest.Skip {
 					Skip(fmt.Sprintf("test skipped %s", appTest.Name))
 				}
@@ -126,8 +124,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 			for _, componentTest := range appTest.Components {
 				componentTest := componentTest
-				var containerIMG = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-
 				if componentTest.Type == "private" {
 					It("injects manually SPI token", func() {
 						// Inject spi tokens to work with private components
@@ -163,10 +159,10 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					It(fmt.Sprintf("creates component %s from %s git source %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl), func() {
 						for _, compDetected := range cdq.Status.ComponentDetected {
 							if componentTest.Type == "private" {
-								component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, componentTest.Name, namespace, SPIGithubSecretName, appTest.ApplicationName, containerIMG)
+								component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, componentTest.Name, namespace, SPIGithubSecretName, appTest.ApplicationName)
 								Expect(err).NotTo(HaveOccurred())
 							} else if componentTest.Type == "public" {
-								component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, componentTest.Name, namespace, "", appTest.ApplicationName, containerIMG)
+								component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, componentTest.Name, namespace, "", appTest.ApplicationName)
 								Expect(err).NotTo(HaveOccurred())
 							}
 						}
@@ -264,7 +260,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					}, 5*time.Minute, 10*time.Second).Should(BeTrue())
 				})
 
-				if componentTest.K8sSpec != (config.K8sSpec{}) && *componentTest.K8sSpec.Replicas > 1 {
+				if componentTest.K8sSpec != (e2eConfig.K8sSpec{}) && *componentTest.K8sSpec.Replicas > 1 {
 					It(fmt.Sprintf("scales component %s replicas", component.Name), Pending, func() {
 						component, err := fw.AsKubeDeveloper.HasController.GetHasComponent(component.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())

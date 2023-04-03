@@ -12,6 +12,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -36,11 +37,25 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 			{
 				Name:            "multi-component-application",
 				ApplicationName: "multi-component-application",
+				// We need to skip for now deployment checks until: https://issues.redhat.com/browse/STONEBUGS-108
 				Components: []config.ComponentSpec{
 					{
-						Name:         "mc-withdockerfile-withoutdevfile",
-						Type:         "public",
-						GitSourceUrl: "https://github.com/redhat-appstudio/quality-dashboard.git",
+						Name:                "mc-withdockerfile-withoutdevfile",
+						SkipDeploymentCheck: true,
+						Type:                "public",
+						GitSourceUrl:        "https://github.com/redhat-appstudio/quality-dashboard.git",
+					},
+				},
+			},
+			{
+				Name:            "multi-component-devfile",
+				ApplicationName: "multi-component-devfile",
+				Components: []config.ComponentSpec{
+					{
+						Name:                "mc-withdevfile",
+						Type:                "public",
+						SkipDeploymentCheck: true,
+						GitSourceUrl:        "https://github.com/redhat-appstudio-qe/rhtap-devfile-multi-component.git",
 					},
 				},
 			},
@@ -111,57 +126,106 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 				}, 5*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 			})
 
-			It(fmt.Sprintf("creates ComponentDetectionQuery for application %s", suite.ApplicationName), func() {
-				cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(
-					suite.Components[0].Name,
-					namespace,
-					suite.Components[0].GitSourceUrl,
-					suite.Components[0].GitSourceRevision,
-					suite.Components[0].GitSourceContext,
-					"",
-					false,
-				)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(cdq.Name).To(Equal(suite.Components[0].Name))
-			})
-
-			// Create an environment in a specific namespace
-			It(fmt.Sprintf("creates environment %s", EnvironmentName), func() {
-				env, err = fw.AsKubeDeveloper.IntegrationController.CreateEnvironment(namespace, EnvironmentName)
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It(fmt.Sprintf("creates multiple components in application %s", suite.ApplicationName), func() {
-				for _, component := range cdq.Status.ComponentDetected {
-					c, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(component, component.ComponentStub.ComponentName, namespace, SPIGithubSecretName, application.Name, "")
+			for _, testComponent := range suite.Components {
+				It(fmt.Sprintf("creates ComponentDetectionQuery for application %s", suite.ApplicationName), func() {
+					cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(
+						testComponent.Name,
+						namespace,
+						testComponent.GitSourceUrl,
+						testComponent.GitSourceRevision,
+						testComponent.GitSourceContext,
+						"",
+						false,
+					)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(c.Name).To(Equal(component.ComponentStub.ComponentName))
-					componentList = append(componentList, c)
-				}
-			})
+					Expect(cdq.Name).To(Equal(testComponent.Name))
+				})
 
-			It(fmt.Sprintf("waits application %s components pipelines to be finished", application.Name), func() {
-				GinkgoWriter.Print(env)
-				for _, component := range componentList {
-					if err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeAdmin.CommonController, component.Name, suite.ApplicationName, namespace, ""); err != nil {
-						Fail(fmt.Sprint(err))
+				// Create an environment in a specific namespace
+				It(fmt.Sprintf("creates environment %s", EnvironmentName), func() {
+					env, err = fw.AsKubeDeveloper.IntegrationController.CreateEnvironment(namespace, EnvironmentName)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It(fmt.Sprintf("creates multiple components in application %s", suite.ApplicationName), func() {
+					for _, component := range cdq.Status.ComponentDetected {
+						c, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(component, component.ComponentStub.ComponentName, namespace, SPIGithubSecretName, application.Name)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(c.Name).To(Equal(component.ComponentStub.ComponentName))
+						componentList = append(componentList, c)
 					}
-				}
-			})
+				})
 
-			It(fmt.Sprintf("finds the application %s components snapshots and checks if it is marked as successfully", suite.ApplicationName), func() {
-				timeout := time.Second * 600
-				interval := time.Second * 10
+				It(fmt.Sprintf("waits application %s components pipelines to be finished", application.Name), func() {
+					GinkgoWriter.Print(env)
+					for _, component := range componentList {
+						if err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeAdmin.CommonController, component.Name, suite.ApplicationName, namespace, ""); err != nil {
+							Fail(fmt.Sprint(err))
+						}
+					}
+				})
 
-				for _, component := range componentList {
-					componentSnapshot, err := fw.AsKubeDeveloper.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, component.Name)
-					Expect(err).ShouldNot(HaveOccurred())
+				It(fmt.Sprintf("finds the application %s components snapshots and checks if it is marked as successfully", suite.ApplicationName), func() {
+					timeout := time.Second * 600
+					interval := time.Second * 10
 
-					Eventually(func() bool {
-						return fw.AsKubeDeveloper.IntegrationController.HaveHACBSTestsSucceeded(componentSnapshot)
-					}, timeout, interval).Should(BeTrue(), "time out when trying to check if the snapshot is marked as successful")
-				}
-			})
+					for _, component := range componentList {
+						componentSnapshot, err := fw.AsKubeDeveloper.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, component.Name)
+						Expect(err).ShouldNot(HaveOccurred())
+
+						Eventually(func() bool {
+							return fw.AsKubeDeveloper.IntegrationController.HaveHACBSTestsSucceeded(componentSnapshot)
+						}, timeout, interval).Should(BeTrue(), "time out when trying to check if the snapshot is marked as successful")
+
+						Eventually(func() bool {
+							if fw.AsKubeDeveloper.IntegrationController.HaveHACBSTestsSucceeded(componentSnapshot) {
+								envbinding, err := fw.AsKubeDeveloper.IntegrationController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
+								Expect(err).ShouldNot(HaveOccurred())
+								GinkgoWriter.Printf("The EnvironmentBinding %s is created\n", envbinding.Name)
+								return true
+							}
+
+							componentSnapshot, err = fw.AsKubeDeveloper.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, component.Name)
+							Expect(err).ShouldNot(HaveOccurred())
+							return false
+						}, timeout, interval).Should(BeTrue(), "time out when waiting for snapshoot environment binding")
+					}
+				})
+
+				It("checks if multiple components are deployed", func() {
+					if testComponent.SkipDeploymentCheck {
+						Skip("component deployment skipped. Jira issue: https://issues.redhat.com/browse/STONEBUGS-108")
+					}
+					for _, component := range componentList {
+						Eventually(func() bool {
+							componentDeployment, err := fw.AsKubeDeveloper.CommonController.GetAppDeploymentByName(component.Name, namespace)
+							if err != nil && !errors.IsNotFound(err) {
+								return false
+							}
+
+							if componentDeployment.Status.AvailableReplicas == 1 {
+								return true
+							}
+							return false
+						})
+
+					}
+				})
+
+				It("checks if multicomponents routes exists", func() {
+					if testComponent.SkipDeploymentCheck {
+						Skip("component deployment skipped. Jira issue: https://issues.redhat.com/browse/STONEBUGS-108")
+					}
+					for _, component := range componentList {
+						Eventually(func() bool {
+							if _, err := fw.AsKubeDeveloper.CommonController.GetOpenshiftRoute(component.Name, namespace); err != nil {
+								return false
+							}
+							return true
+						})
+					}
+				})
+			}
 		})
 	}
 })
