@@ -39,6 +39,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 	var applicationName, componentName, appStudioE2EApplicationsNamespace, outputContainerImage string
 	var timeout, interval time.Duration
+	var originalComponent *appstudioApi.Component
 	var applicationSnapshot *appstudioApi.Snapshot
 	var applicationSnapshot_push *appstudioApi.Snapshot
 	var env *appstudioApi.Environment
@@ -65,8 +66,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			timeout = time.Minute * 4
 			interval = time.Second * 1
 			// Create a component with Git Source URL being defined
-			_, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", "", outputContainerImage, "", true)
+			originalComponent, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", "", outputContainerImage, "", true)
 			Expect(err).ShouldNot(HaveOccurred())
+			Expect(originalComponent).NotTo(BeNil())
+
 		}
 
 		cleanup := func() {
@@ -347,6 +350,18 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				snapshot, err := f.AsKubeAdmin.IntegrationController.GetApplicationSnapshot(applicationSnapshot.Name, applicationName, appStudioE2EApplicationsNamespace, componentName)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(meta.IsStatusConditionFalse(snapshot.Status.Conditions, "HACBSTestSucceeded")).To(BeTrue())
+
+			})
+
+			It("checks if the global candidate is not updated", func() {
+				// give some time to do eventual updates in component
+				time.Sleep(60 * time.Second)
+
+				component, err := f.AsKubeAdmin.IntegrationController.GetComponent(applicationName, appStudioE2EApplicationsNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				// global candidate is not updated
+				Expect(component.Spec.ContainerImage == originalComponent.Spec.ContainerImage).To(BeTrue())
 
 			})
 		})
