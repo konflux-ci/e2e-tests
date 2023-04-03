@@ -55,7 +55,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 		Describe(appTest.Name, Ordered, func() {
 			BeforeAll(func() {
-				Skip("AAA")
 				if appTest.Skip {
 					Skip(fmt.Sprintf("test skipped %s", appTest.Name))
 				}

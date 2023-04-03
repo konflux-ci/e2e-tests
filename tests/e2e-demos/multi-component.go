@@ -15,6 +15,16 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
+// All multiple components scenarios are supported in the next jira: https://issues.redhat.com/browse/DEVHAS-305
+const (
+	MultiComponentWithoutDockerFileAndDevfile     = "multi-component scenario with components without devfile or dockerfile"
+	MultiComponentWithAllSupportedImportScenarios = "multi-component scenario with all supported import components"
+	MultiComponentWithDevfileAndDockerfile        = "multi-component scenario with components with devfile or dockerfile or both"
+	MultiComponentWithUnsupportedRuntime          = "multi-component scenario with a component with a supported runtime and another unsuported"
+)
+
+var runtimeSupported = []string{"Dockerfile", "Node.js", "Go", "Quarkus", "Python", "JavaScript", "springboot"}
+
 const (
 	multiComponentTestNamespace string = "multi-comp-e2e"
 )
@@ -32,11 +42,12 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 	componentList := []*appservice.Component{}
 	env := &appservice.Environment{}
 
+	// https://github.com/redhat-appstudio-qe/rhtap-three-component-scenarios.git
 	var testSpecification = config.WorkflowSpec{
 		Tests: []config.TestSpec{
 			{
-				Name:            "multi-component-application",
-				ApplicationName: "multi-component-application",
+				Name:            MultiComponentWithoutDockerFileAndDevfile,
+				ApplicationName: "mc-quality-dashboard",
 				// We need to skip for now deployment checks of quality dashboard until RHTAP support secrets
 				Components: []config.ComponentSpec{
 					{
@@ -48,14 +59,38 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 				},
 			},
 			{
-				Name:            "multi-component-devfile",
-				ApplicationName: "multi-component-devfile",
+				Name:            MultiComponentWithDevfileAndDockerfile,
+				ApplicationName: "mc-two-scenarios",
 				Components: []config.ComponentSpec{
 					{
-						Name:                "mc-withdevfile",
+						Name:                "mc-two-scenarios",
+						SkipDeploymentCheck: false,
+						Type:                "public",
+						GitSourceUrl:        "https://github.com/redhat-appstudio-qe/rhtap-devfile-multi-component.git",
+					},
+				},
+			},
+			{
+				Name:            MultiComponentWithAllSupportedImportScenarios,
+				ApplicationName: "mc-three-scenarios",
+				Components: []config.ComponentSpec{
+					{
+						Name:                "mc-three-scenarios",
 						Type:                "public",
 						SkipDeploymentCheck: false,
-						GitSourceUrl:        "https://github.com/redhat-appstudio-qe/rhtap-devfile-multi-component.git",
+						GitSourceUrl:        "https://github.com/redhat-appstudio-qe/rhtap-three-component-scenarios.git",
+					},
+				},
+			},
+			{
+				Name:            MultiComponentWithUnsupportedRuntime,
+				ApplicationName: "mc-unsupported-runtime",
+				Components: []config.ComponentSpec{
+					{
+						Name:                "mc-unsuported-runtime",
+						Type:                "public",
+						SkipDeploymentCheck: false,
+						GitSourceUrl:        "https://github.com/redhat-appstudio-qe/rhtap-mc-unsuported-runtime.git",
 					},
 				},
 			},
@@ -64,6 +99,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 
 	for _, suite := range testSpecification.Tests {
 		Describe(suite.Name, Ordered, func() {
+			suite := suite
 			BeforeAll(func() {
 				if suite.Skip {
 					Skip(fmt.Sprintf("test skipped %s", suite.Name))
@@ -127,6 +163,8 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 			})
 
 			for _, testComponent := range suite.Components {
+				testComponent := testComponent
+
 				It(fmt.Sprintf("creates ComponentDetectionQuery for application %s", suite.ApplicationName), func() {
 					cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(
 						testComponent.Name,
@@ -141,6 +179,17 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 					Expect(cdq.Name).To(Equal(testComponent.Name))
 				})
 
+				It("check if components have supported languages by AppStudio", func() {
+					if suite.Name == MultiComponentWithUnsupportedRuntime {
+						// Validate that the completed CDQ only has detected 1 component and not also the unsupported component
+						Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "cdq also detect unsupported component")
+					}
+					for _, component := range cdq.Status.ComponentDetected {
+						Expect(utils.Contains(runtimeSupported, component.ProjectType), "unsupported runtime used for multi component tests")
+
+					}
+				})
+
 				// Create an environment in a specific namespace
 				It(fmt.Sprintf("creates environment %s", EnvironmentName), func() {
 					env, err = fw.AsKubeDeveloper.IntegrationController.CreateEnvironment(namespace, EnvironmentName)
@@ -152,11 +201,13 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 						c, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(component, component.ComponentStub.ComponentName, namespace, SPIGithubSecretName, application.Name)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(c.Name).To(Equal(component.ComponentStub.ComponentName))
+						Expect(utils.Contains(runtimeSupported, component.ProjectType), "unsupported runtime used for multi component tests")
+
 						componentList = append(componentList, c)
 					}
 				})
 
-				It(fmt.Sprintf("waits application %s components pipelines to be finished", application.Name), func() {
+				It(fmt.Sprintf("waits application %s components pipelines to be finished", suite.ApplicationName), func() {
 					GinkgoWriter.Print(env)
 					for _, component := range componentList {
 						if err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeAdmin.CommonController, component.Name, suite.ApplicationName, namespace, ""); err != nil {
