@@ -110,10 +110,15 @@ collect_logs() {
   local pod_name=$2
   local container_name=$3
   local container_dir=$4
+  local follow_or_previous=$5
   local log_file="${container_dir}/${container_name}.log"
 
   echo "Collecting logs for container ${container_name} in pod ${pod_name} in namespace ${namespace} ..."
-  kubectl logs -f "${pod_name}" -c "${container_name}"  -n "${namespace}" --tail=1 >> "${log_file}" 2>&1 &
+  if [ "$follow_or_previous" == "-f" ]; then
+    kubectl logs ${follow_or_previous} "${pod_name}" -c "${container_name}"  -n "${namespace}" --tail=1 >> "${log_file}" 2>&1 &
+  else
+    kubectl logs ${follow_or_previous} "${pod_name}" -c "${container_name}"  -n "${namespace}" >> "${log_file}" 2>&1 &
+  fi
 }
 
 
@@ -305,17 +310,16 @@ process_container() {
     container_ready=$(kubectl get pods "$pod_name" -n "$namespace" -o jsonpath="{.status.containerStatuses[?(@.name=='$container_name')].ready}")
 
     # If the container is ready and in Running state, break the loop
-    if [ "$container_ready" == "true" ] && [ "$container_status" == "running" ]; then
+    if [ "$container_status" == "running" ] || [ "$container_status" == "terminated" ]; then
       echo "Container $container_name in pod $pod_name in namespace $namespace is in ready and in running state"
       break
     fi
 
     # Check if timeout has been reached
-    now=$(date +%s)
     if [ $((now - start)) -ge $timeout ]; then
       echo "Timeout of $timeout seconds reached while waiting for the container $container_name in pod $pod_name in namespace $namespace to be in Running state and ready"
       # Reset the start time to the current time
-      start=$(date +%s)
+      break
     fi
 
     # Sleep for a short duration before checking again
@@ -323,7 +327,12 @@ process_container() {
   done
 
   # Collect logs from the container
-  collect_logs "${namespace}" "${pod_name}" "${container_name}" "$container_dir" 
+  if [ "$container_status" == "running" ]; then
+    collect_logs "${namespace}" "${pod_name}" "${container_name}" "$container_dir" -f
+  elif [ "$container_status" == "terminated" ]; then
+    collect_logs "${namespace}" "${pod_name}" "${container_name}" "$container_dir" ""
+  fi
+
 }
 
 
