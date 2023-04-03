@@ -95,22 +95,28 @@ func (s *SuiteController) DeleteSecret(ns string, name string) error {
 
 // Links a secret to a specified serviceaccount, if argument addImagePullSecrets is true secret will be added also to ImagePullSecrets of SA.
 func (s *SuiteController) LinkSecretToServiceAccount(ns, secret, serviceaccount string, addImagePullSecrets bool) error {
-	serviceAccountObject, err := s.KubeInterface().CoreV1().ServiceAccounts(ns).Get(context.TODO(), serviceaccount, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	for _, credentialSecret := range serviceAccountObject.Secrets {
-		if credentialSecret.Name == secret {
-			// The secret is present in the service account, no updates needed
-			return nil
+	timeout := 20 * time.Second
+	return wait.PollImmediate(time.Second, timeout, func() (bool, error) {
+		serviceAccountObject, err := s.KubeInterface().CoreV1().ServiceAccounts(ns).Get(context.TODO(), serviceaccount, metav1.GetOptions{})
+		if err != nil {
+			return false, err
 		}
-	}
-	serviceAccountObject.Secrets = append(serviceAccountObject.Secrets, corev1.ObjectReference{Name: secret})
-	if addImagePullSecrets {
-		serviceAccountObject.ImagePullSecrets = append(serviceAccountObject.ImagePullSecrets, corev1.LocalObjectReference{Name: secret})
-	}
-	_, err = s.KubeInterface().CoreV1().ServiceAccounts(ns).Update(context.TODO(), serviceAccountObject, metav1.UpdateOptions{})
-	return err
+		for _, credentialSecret := range serviceAccountObject.Secrets {
+			if credentialSecret.Name == secret {
+				// The secret is present in the service account, no updates needed
+				return true, nil
+			}
+		}
+		serviceAccountObject.Secrets = append(serviceAccountObject.Secrets, corev1.ObjectReference{Name: secret})
+		if addImagePullSecrets {
+			serviceAccountObject.ImagePullSecrets = append(serviceAccountObject.ImagePullSecrets, corev1.LocalObjectReference{Name: secret})
+		}
+		_, err = s.KubeInterface().CoreV1().ServiceAccounts(ns).Update(context.TODO(), serviceAccountObject, metav1.UpdateOptions{})
+		if err != nil {
+			return false, nil
+		}
+		return true, nil
+	})
 }
 
 func (s *SuiteController) GetPod(namespace, podName string) (*corev1.Pod, error) {
