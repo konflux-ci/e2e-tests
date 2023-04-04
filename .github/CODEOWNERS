@@ -5,7 +5,7 @@
 # the repo. Unless a later match takes precedence,
 # @global-owner1 and @global-owner2 will be requested for
 # review when someone opens a pull request.
-*       @flacatus @jkopriva @rhopp @sawood14012 @psturc @albarbaro
+*       @flacatus @jkopriva @rhopp @sawood14012 @psturc @albarbaro @kasemAlem @jinqi7 @tisutisu @srivickynesh @cuipinghuo @dheerajodha
 
 # Any change inside the `/tests/build` and `utils/build` directories will require approval from following members 
 tests/build @trdoyle81 @psturc @XinRedhat
