@@ -3,12 +3,16 @@ package mvp
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/devfile/library/pkg/util"
+	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-github/v44/github"
-	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
@@ -19,11 +23,16 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	appstudiov1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
+
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -37,11 +46,6 @@ const (
 	componentName = "mvp-test-component"
 
 	managedNamespace = "mvp-demo-managed-namespace"
-
-	// This pipeline contains an image that comes from "not allowed" container image registry repo
-	// https://github.com/hacbs-contract/ec-policies/blob/de8afa912e7a80d02abb82358ce7b23cf9a286c8/data/rule_data.yml#L9-L12
-	// It is required in order to test that the release of the image failed based on a failed check in EC
-	untrustedPipelineBundle = "quay.io/psturc/pipeline-docker-build:2023-03-07-104058@sha256:7e64d34d73b185df301ffd96271196cd547f2c1148471865d1d16d915ddf4e74"
 )
 
 var sampleRepoURL = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), sampleRepoName)
@@ -53,11 +57,17 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 	var f *framework.Framework
 	var sharedSecret *corev1.Secret
 
-	var componentNewBaseBranch, userNamespace string
+	var untrustedPipelineBundle, componentNewBaseBranch, userNamespace string
 
 	var kc tekton.KubeController
 
 	BeforeAll(func() {
+		// This pipeline contains an image that comes from "not allowed" container image registry repo
+		// https://github.com/hacbs-contract/ec-policies/blob/de8afa912e7a80d02abb82358ce7b23cf9a286c8/data/rule_data.yml#L9-L12
+		// It is required in order to test that the release of the image failed based on a failed check in EC
+		untrustedPipelineBundle, err = createUntrustedPipelineBundle()
+		klog.Info(untrustedPipelineBundle)
+		Expect(err).NotTo(HaveOccurred())
 		f, err = framework.NewFramework(utils.GetGeneratedNamespace(testNamespace))
 		Expect(err).NotTo(HaveOccurred())
 		userNamespace = f.UserNamespace
@@ -99,7 +109,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlan("source-releaseplan", userNamespace, appName, managedNamespace, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = f.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-strategy", managedNamespace, "release", "quay.io/hacbs-release/pipeline-release:main", "mvp-policy", "release-service-account", []appstudiov1alpha1.Params{
+		_, err = f.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-strategy", managedNamespace, "release", constants.ReleasePipelineImageRef, "mvp-policy", "release-service-account", []appstudiov1alpha1.Params{
 			{Name: "extraConfigGitUrl", Value: "https://github.com/redhat-appstudio-qe/strategy-configs.git"},
 			{Name: "extraConfigPath", Value: "mvp.yaml"},
 			{Name: "extraConfigRevision", Value: "main"},
@@ -116,10 +126,10 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 				{
 					Name: "ec-policies",
 					Policy: []string{
-						"git::https://github.com/hacbs-contract/ec-policies.git//policy",
+						"git::https://github.com/enterprise-contract/ec-policies.git//policy",
 					},
 					Data: []string{
-						"git::https://github.com/hacbs-contract/ec-policies.git//data",
+						"git::https://github.com/enterprise-contract/ec-policies.git//data",
 					},
 				},
 			},
@@ -171,7 +181,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 				Spec: buildservice.BuildPipelineSelectorSpec{Selectors: []buildservice.PipelineSelector{
 					{
 						Name: "custom-selector",
-						PipelineRef: v1beta1.PipelineRef{
+						PipelineRef: tektonapi.PipelineRef{
 							Name:   "docker-build",
 							Bundle: untrustedPipelineBundle,
 						},
@@ -374,9 +384,69 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					}
 				}
 				return false
-			}, 10*time.Minute, 10*time.Second).Should(BeTrue())
+			}, 15*time.Minute, 10*time.Second).Should(BeTrue())
 		})
 
 	})
 
 })
+
+func createUntrustedPipelineBundle() (string, error) {
+	var err error
+	var defaultBundleRef string
+	var tektonObj runtime.Object
+
+	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
+	var newBuildahTaskRef, _ = name.ParseReference(fmt.Sprintf("%s:task-bundle-%s", constants.DefaultImagePushRepo, tag))
+	var newDockerBuildPipelineRef, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", constants.DefaultImagePushRepo, tag))
+	var newBuildImage = "quay.io/containers/buildah:latest"
+	var newTaskYaml, newPipelineYaml []byte
+
+	if err = utils.CreateDockerConfigFile(os.Getenv("QUAY_TOKEN")); err != nil {
+		return "", fmt.Errorf("failed to create docker config file: %+v", err)
+	}
+	if defaultBundleRef, err = utils.GetDefaultPipelineBundleRef(constants.BuildPipelineSelectorYamlURL, "Docker build"); err != nil {
+		return "", fmt.Errorf("failed to get the pipeline bundle ref: %+v", err)
+	}
+	if tektonObj, err = utils.ExtractTektonObjectFromBundle(defaultBundleRef, "pipeline", "docker-build"); err != nil {
+		return "", fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
+	}
+	dockerPipelineObj := tektonObj.(tektonapi.PipelineObject)
+
+	var currentBuildahTaskRef string
+	for _, t := range dockerPipelineObj.PipelineSpec().Tasks {
+		if t.TaskRef.Name == "buildah" {
+			currentBuildahTaskRef = t.TaskRef.Bundle
+			t.TaskRef.Bundle = newBuildahTaskRef.String()
+		}
+	}
+	if tektonObj, err = utils.ExtractTektonObjectFromBundle(currentBuildahTaskRef, "task", "buildah"); err != nil {
+		return "", fmt.Errorf("failed to extract the Tekton Task from bundle: %+v", err)
+	}
+	taskObj := tektonObj.(tektonapi.TaskObject)
+
+	for i, s := range taskObj.TaskSpec().Steps {
+		if s.Name == "build" {
+			taskObj.TaskSpec().Steps[i].Image = newBuildImage
+		}
+	}
+
+	if newTaskYaml, err = yaml.Marshal(taskObj); err != nil {
+		return "", fmt.Errorf("error when marshalling a new task to YAML: %v", err)
+	}
+	if newPipelineYaml, err = yaml.Marshal(dockerPipelineObj); err != nil {
+		return "", fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
+	}
+
+	keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
+	authOption := remoteimg.WithAuthFromKeychain(keychain)
+
+	if err = utils.BuildAndPushTektonBundle(newTaskYaml, newBuildahTaskRef, authOption); err != nil {
+		return "", fmt.Errorf("error when building/pushing a tekton task bundle: %v", err)
+	}
+	if err = utils.BuildAndPushTektonBundle(newPipelineYaml, newDockerBuildPipelineRef, authOption); err != nil {
+		return "", fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
+	}
+
+	return newDockerBuildPipelineRef.Name(), nil
+}

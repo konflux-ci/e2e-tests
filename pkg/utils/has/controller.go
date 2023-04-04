@@ -264,7 +264,9 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
-				"skip-initial-checks": "true",
+				"skip-initial-checks":       "true",
+				"image.redhat.com/generate": "true",
+				"image.redhat.com/delete-image-repo": "true",
 			},
 			Name:      compDetected.ComponentStub.ComponentName,
 			Namespace: namespace,

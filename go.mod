@@ -7,6 +7,7 @@ require (
 	github.com/codeready-toolchain/api v0.0.0-20220511141428-1adfed7d17b0
 	github.com/codeready-toolchain/toolchain-e2e v0.0.0-20220525131508-60876bfb99d3
 	github.com/devfile/library v1.2.1-0.20211104222135-49d635cb492f
+	github.com/enterprise-contract/enterprise-contract-controller/api v0.0.0-20230327185456-5befd172d558
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0
 	github.com/google/go-containerregistry v0.12.1
@@ -14,7 +15,6 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/gosuri/uiprogress v0.0.1
 	github.com/gosuri/uitable v0.0.4
-	github.com/hacbs-contract/enterprise-contract-controller/api v0.0.0-20221220151524-ad0f637efacf
 	github.com/magefile/mage v1.13.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/onsi/ginkgo/v2 v2.5.1
@@ -40,7 +40,7 @@ require (
 	golang.org/x/text v0.7.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.25.5
-	k8s.io/apimachinery v0.26.0
+	k8s.io/apimachinery v0.26.3
 	k8s.io/cli-runtime v0.25.4
 	k8s.io/client-go v0.25.4
 	k8s.io/klog v1.0.0
@@ -48,7 +48,7 @@ require (
 	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448
 	knative.dev/pkg v0.0.0-20221031202413-2f194914a4b2
 	kubevirt.io/qe-tools v0.1.8
-	sigs.k8s.io/controller-runtime v0.14.1
+	sigs.k8s.io/controller-runtime v0.14.5
 	sigs.k8s.io/yaml v1.3.0
 )
 
@@ -57,8 +57,6 @@ replace github.com/redhat-appstudio/managed-gitops/backend-shared => github.com/
 replace github.com/antlr/antlr4 => github.com/antlr/antlr4 v0.0.0-20211106181442-e4c1a74c66bd
 
 replace sigs.k8s.io/controller-runtime => github.com/kcp-dev/controller-runtime v0.12.2-0.20220808200255-4b60fd66e5de
-
-replace github.com/hacbs-contract/enterprise-contract-controller/api v0.0.0-00010101000000-000000000000 => github.com/hacbs-contract/enterprise-contract-controller/api v0.0.0-20221122140036-dfd646ad4f07
 
 require (
 	contrib.go.opencensus.io/exporter/ocagent v0.7.1-0.20200907061046-05415f1de66d // indirect

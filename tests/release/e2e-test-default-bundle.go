@@ -3,9 +3,10 @@ package release
 import (
 	"strings"
 
-	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
+	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
@@ -48,7 +49,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(redhatAppstudioUserSecret, managedNamespace, sourceAuthJson)
 		Expect(err).ToNot(HaveOccurred())
 
-		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, hacbsReleaseTestsTokenSecret, "pipeline")
+		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, hacbsReleaseTestsTokenSecret, "pipeline", true)
 		Expect(err).ToNot(HaveOccurred())
 
 		publicKey, err := kubeController.GetTektonChainsPublicKey()
@@ -63,10 +64,10 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 				{
 					Name: "ec-policies",
 					Policy: []string{
-						"git::https://github.com/hacbs-contract/ec-policies.git//policy",
+						"git::https://github.com/enterprise-contract/ec-policies.git//policy",
 					},
 					Data: []string{
-						"git::https://github.com/hacbs-contract/ec-policies.git//data",
+						"git::https://github.com/enterprise-contract/ec-policies.git//data",
 					},
 				},
 			},
@@ -79,7 +80,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineNameDefault, releasePipelineBundleDefault, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategyM6)
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineNameDefault, constants.ReleasePipelineImageRef, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategyM6)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, "", "", releaseStrategyDefaultName)
