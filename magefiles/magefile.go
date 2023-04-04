@@ -131,7 +131,10 @@ func (Local) CleanupGithubOrg() error {
 
 	// Get all repos
 	githubOrgName := utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
-	ghClient := github.NewGithubClient(githubToken, githubOrgName)
+	ghClient, err := github.NewGithubClient(githubToken, githubOrgName)
+	if err != nil {
+		return err
+	}
 	repos, err := ghClient.GetAllRepositories()
 	if err != nil {
 		return err
@@ -507,8 +510,11 @@ func CleanWebHooks() error {
 	}
 
 	githubOrg := utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
-	gh := github.NewGithubClient(token, githubOrg)
-
+	gh, err := github.NewGithubClient(token, githubOrg)
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
 	for _, repo := range repositoriesWithWebhooks {
 		webhookList, err := gh.ListRepoWebhooks(repo)
 		if err != nil {
