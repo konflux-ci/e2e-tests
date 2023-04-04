@@ -14,16 +14,16 @@ type Github struct {
 	organization string
 }
 
-func NewGithubClient(token, organization string) (Github, error) {
+func NewGithubClient(token, organization string) (*Github, error) {
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 	tc := oauth2.NewClient(context.Background(), ts)
 	// https://docs.github.com/en/rest/guides/best-practices-for-integrators?apiVersion=2022-11-28#dealing-with-secondary-rate-limits
 	rateLimiter, err := github_ratelimit.NewRateLimitWaiterClient(tc.Transport, github_ratelimit.WithSingleSleepLimit(time.Minute, nil))
 	if err != nil {
-		return Github{}, err
+		return &Github{}, err
 	}
 	client := github.NewClient(rateLimiter)
-	githubClient := Github{
+	githubClient := &Github{
 		client:       client,
 		organization: organization,
 	}

@@ -512,7 +512,6 @@ func CleanWebHooks() error {
 	githubOrg := utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
 	gh, err := github.NewGithubClient(token, githubOrg)
 	if err != nil {
-		klog.Errorf("%s", err)
 		return err
 	}
 	for _, repo := range repositoriesWithWebhooks {

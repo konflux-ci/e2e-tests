@@ -46,12 +46,11 @@ func NewSuiteController(kubeC *kubeCl.CustomClient) (*SuiteController, error) {
 	token := utils.GetEnv(constants.GITHUB_TOKEN_ENV, "")
 	gh, err := github.NewGithubClient(token, org)
 	if err != nil {
-
 		return nil, err
 	}
 	return &SuiteController{
 		kubeC,
-		&gh,
+		gh,
 	}, nil
 }
 
