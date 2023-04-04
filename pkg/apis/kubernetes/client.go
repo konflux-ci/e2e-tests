@@ -39,7 +39,7 @@ type CustomClient struct {
 	pipelineClient        pipelineclientset.Interface
 	dynamicClient         dynamic.Interface
 	jvmbuildserviceClient jvmbuildserviceclientset.Interface
-	RouteClient           routeclientset.Clientset
+	routeClient           routeclientset.Interface
 }
 
 type K8SClient struct {
@@ -87,6 +87,10 @@ func (c *CustomClient) PipelineClient() pipelineclientset.Interface {
 
 func (c *CustomClient) JvmbuildserviceClient() jvmbuildserviceclientset.Interface {
 	return c.jvmbuildserviceClient
+}
+
+func (c *CustomClient) RouteClient() routeclientset.Interface {
+	return c.routeClient
 }
 
 // Returns a DynamicClient interface.
@@ -170,11 +174,16 @@ func createCustomClient(cfg rest.Config) (*CustomClient, error) {
 	if err != nil {
 		return nil, err
 	}
+	routeClient, err := routeclientset.NewForConfig(&cfg)
+	if err != nil {
+		return nil, err
+	}
 	return &CustomClient{
 		kubeClient:            client,
 		crClient:              crClient,
 		pipelineClient:        pipelineClient,
 		dynamicClient:         dynamicClient,
 		jvmbuildserviceClient: jvmbuildserviceClient,
+		routeClient:           routeClient,
 	}, nil
 }

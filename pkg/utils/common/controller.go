@@ -251,7 +251,7 @@ func (h *SuiteController) GetOpenshiftRouteByComponentName(componentName string,
 	listOptions := metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("app.kubernetes.io/instance=%s", componentName),
 	}
-	routeList, err := h.CustomClient.RouteClient.RouteV1().Routes(componentNamespace).List(listOptions)
+	routeList, err := h.CustomClient.RouteClient().RouteV1().Routes(componentNamespace).List(listOptions)
 	if err != nil {
 		return &routev1.Route{}, err
 	}
