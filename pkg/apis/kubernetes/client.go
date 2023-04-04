@@ -9,6 +9,7 @@ import (
 	ocpOauth "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	userv1 "github.com/openshift/api/user/v1"
+	routeclientset "github.com/openshift/client-go/route/clientset/versioned"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/sandbox"
@@ -38,6 +39,7 @@ type CustomClient struct {
 	pipelineClient        pipelineclientset.Interface
 	dynamicClient         dynamic.Interface
 	jvmbuildserviceClient jvmbuildserviceclientset.Interface
+	RouteClient           routeclientset.Clientset
 }
 
 type K8SClient struct {
