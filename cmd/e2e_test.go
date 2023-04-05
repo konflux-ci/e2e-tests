@@ -20,6 +20,7 @@ import (
 	_ "github.com/redhat-appstudio/e2e-tests/tests/mvp-demo"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/o11y"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/release"
+  _ "github.com/redhat-appstudio/e2e-tests/tests/spi"
 
 	"flag"
 

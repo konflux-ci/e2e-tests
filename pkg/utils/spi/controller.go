@@ -203,3 +203,21 @@ func (h *SuiteController) DeleteAllAccessTokenDataInASpecificNamespace(namespace
 func (h *SuiteController) DeleteAllAccessTokensInASpecificNamespace(namespace string) error {
 	return h.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.SPIAccessToken{}, client.InNamespace(namespace))
 }
+
+func (h *SuiteController) UploadWithRestEndpoint(uploadURL string, oauthCredentials string, bearerToken string) (int, error) {
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	req, err := http.NewRequest("POST", uploadURL, bytes.NewBuffer([]byte(oauthCredentials)))
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", string(bearerToken)))
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return resp.StatusCode, err
+	}
+	defer resp.Body.Close()
+	return resp.StatusCode, nil
+}
