@@ -44,7 +44,10 @@ func NewSuiteController(kubeC *kubeCl.CustomClient) (*SuiteController, error) {
 	// Check if a github organization env var is set, if not use by default the redhat-appstudio-qe org. See: https://github.com/redhat-appstudio-qe
 	org := utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
 	token := utils.GetEnv(constants.GITHUB_TOKEN_ENV, "")
-	gh := github.NewGithubClient(token, org)
+	gh, err := github.NewGithubClient(token, org)
+	if err != nil {
+		return nil, err
+	}
 	return &SuiteController{
 		kubeC,
 		gh,
