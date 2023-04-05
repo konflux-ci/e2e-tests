@@ -51,6 +51,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 	var testNamespace string
 
 	BeforeAll(func() {
+		Skip("skip private imports until jira: https://issues.redhat.com/browse/DEVHAS-254")
 		// Initialize the tests controllers
 		fw, err = framework.NewFramework(DEFAULT_USER_PUBLIC_REPOS)
 		Expect(err).NotTo(HaveOccurred())

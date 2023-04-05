@@ -1,23 +1,36 @@
 package utils
 
 import (
+	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/devfile/library/pkg/util"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/mitchellh/go-homedir"
 	"github.com/redhat-appstudio/application-service/pkg/devfile"
+	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/tektoncd/cli/pkg/bundle"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/remote/oci"
 	"k8s.io/klog/v2"
+
+	"sigs.k8s.io/yaml"
 )
 
 type FailedPipelineRunDetails struct {
@@ -199,4 +212,79 @@ func Contains(s []string, str string) bool {
 	}
 
 	return false
+}
+
+// CreateDockerConfigFile takes base64 encoded dockerconfig.json and saves it locally (/<home-directory/.docker/config.json)
+func CreateDockerConfigFile(base64EncodedString string) error {
+	var rawRegistryCreds []byte
+	var homeDir string
+	var err error
+
+	if rawRegistryCreds, err = base64.StdEncoding.DecodeString(base64EncodedString); err != nil {
+		return fmt.Errorf("unable to decode container registry credentials: %v", err)
+	}
+	if homeDir, err = homedir.Dir(); err != nil {
+		return fmt.Errorf("unable to locate home directory: %v", err)
+	}
+	if err = os.MkdirAll(homeDir+"/.docker", 0775); err != nil {
+		return fmt.Errorf("failed to create '.docker' config directory: %v", err)
+	}
+	if err = os.WriteFile(homeDir+"/.docker/config.json", rawRegistryCreds, 0644); err != nil {
+		return fmt.Errorf("failed to create a docker config file: %v", err)
+	}
+
+	return nil
+}
+
+// ExtractTektonObjectFromBundle extracts specified Tekton object from specified bundle reference
+func ExtractTektonObjectFromBundle(bundleRef, kind, name string) (runtime.Object, error) {
+	var obj runtime.Object
+	var err error
+
+	resolver := oci.NewResolver(bundleRef, authn.DefaultKeychain)
+	if obj, _, err = resolver.Get(context.TODO(), kind, name); err != nil {
+		return nil, fmt.Errorf("failed to fetch the tekton object %s with name %s: %v", kind, name, err)
+	}
+	return obj, nil
+}
+
+// BuildAndPushTektonBundle builds a Tekton bundle from YAML and pushes to remote container registry
+func BuildAndPushTektonBundle(YamlContent []byte, ref name.Reference, remoteOption remoteimg.Option) error {
+	img, err := bundle.BuildTektonBundle([]string{string(YamlContent)}, os.Stdout)
+	if err != nil {
+		return fmt.Errorf("error when building a bundle %s: %v", ref.String(), err)
+	}
+
+	outDigest, err := bundle.Write(img, ref, remoteOption)
+	if err != nil {
+		return fmt.Errorf("error when pushing a bundle %s to a container image registry repo: %v", ref.String(), err)
+	}
+	klog.Infof("image digest for a new tekton bundle %s: %+v", ref.String(), outDigest)
+
+	return nil
+}
+
+// GetDefaultPipelineBundleRef gets the specific Tekton pipeline bundle reference from a Build pipeline selector
+// (in a YAML format) from a URL specified in the parameter
+func GetDefaultPipelineBundleRef(buildPipelineSelectorYamlURL, selectorName string) (string, error) {
+	res, err := http.Get(buildPipelineSelectorYamlURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to get a build pipeline selector from url %s: %v", buildPipelineSelectorYamlURL, err)
+	}
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read the body response of a build pipeline selector: %v", err)
+	}
+	ps := &buildservice.BuildPipelineSelector{}
+	if err = yaml.Unmarshal(body, ps); err != nil {
+		return "", fmt.Errorf("failed to unmarshal build pipeline selector: %v", err)
+	}
+	for _, s := range ps.Spec.Selectors {
+		if s.Name == selectorName {
+			return s.PipelineRef.Bundle, nil
+		}
+	}
+
+	return "", fmt.Errorf("could not find %s pipeline bundle in build pipeline selector fetched from %s", selectorName, buildPipelineSelectorYamlURL)
 }

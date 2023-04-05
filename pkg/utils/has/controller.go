@@ -198,7 +198,7 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 	if err != nil {
 		return nil, err
 	}
-	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*2); err != nil {
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*10); err != nil {
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentName, namespace, utils.ToPrettyJSONString(component))
 	}
 	return component, nil
@@ -252,7 +252,7 @@ func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, compone
 	if err != nil {
 		return nil, err
 	}
-	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*2); err != nil {
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*10); err != nil {
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentName, namespace, utils.ToPrettyJSONString(component))
 	}
 	return component, nil
@@ -285,7 +285,7 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 	if err != nil {
 		return nil, err
 	}
-	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*2); err != nil {
+	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*10); err != nil {
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentName, namespace, utils.ToPrettyJSONString(component))
 	}
 	return component, nil

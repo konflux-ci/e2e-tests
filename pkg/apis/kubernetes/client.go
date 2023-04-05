@@ -9,6 +9,7 @@ import (
 	ocpOauth "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	userv1 "github.com/openshift/api/user/v1"
+	routeclientset "github.com/openshift/client-go/route/clientset/versioned"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/sandbox"
@@ -38,6 +39,7 @@ type CustomClient struct {
 	pipelineClient        pipelineclientset.Interface
 	dynamicClient         dynamic.Interface
 	jvmbuildserviceClient jvmbuildserviceclientset.Interface
+	routeClient           routeclientset.Interface
 }
 
 type K8SClient struct {
@@ -85,6 +87,10 @@ func (c *CustomClient) PipelineClient() pipelineclientset.Interface {
 
 func (c *CustomClient) JvmbuildserviceClient() jvmbuildserviceclientset.Interface {
 	return c.jvmbuildserviceClient
+}
+
+func (c *CustomClient) RouteClient() routeclientset.Interface {
+	return c.routeClient
 }
 
 // Returns a DynamicClient interface.
@@ -168,11 +174,16 @@ func createCustomClient(cfg rest.Config) (*CustomClient, error) {
 	if err != nil {
 		return nil, err
 	}
+	routeClient, err := routeclientset.NewForConfig(&cfg)
+	if err != nil {
+		return nil, err
+	}
 	return &CustomClient{
 		kubeClient:            client,
 		crClient:              crClient,
 		pipelineClient:        pipelineClient,
 		dynamicClient:         dynamicClient,
 		jvmbuildserviceClient: jvmbuildserviceClient,
+		routeClient:           routeClient,
 	}, nil
 }

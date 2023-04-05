@@ -44,7 +44,10 @@ func NewSuiteController(kubeC *kubeCl.CustomClient) (*SuiteController, error) {
 	// Check if a github organization env var is set, if not use by default the redhat-appstudio-qe org. See: https://github.com/redhat-appstudio-qe
 	org := utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
 	token := utils.GetEnv(constants.GITHUB_TOKEN_ENV, "")
-	gh := github.NewGithubClient(token, org)
+	gh, err := github.NewGithubClient(token, org)
+	if err != nil {
+		return nil, err
+	}
 	return &SuiteController{
 		kubeC,
 		gh,
@@ -243,6 +246,22 @@ func (h *SuiteController) GetOpenshiftRoute(routeName string, routeNamespace str
 		return &routev1.Route{}, err
 	}
 	return route, nil
+}
+
+// GetOpenshiftRouteByComponentName returns a route associated with the given component
+// Routes that belong to a given component will have the following label: 'app.kubernetes.io/name: <component-name>'
+func (h *SuiteController) GetOpenshiftRouteByComponentName(componentName string, componentNamespace string) (*routev1.Route, error) {
+	listOptions := metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("app.kubernetes.io/name=%s", componentName),
+	}
+	routeList, err := h.CustomClient.RouteClient().RouteV1().Routes(componentNamespace).List(context.Background(), listOptions)
+	if err != nil {
+		return &routev1.Route{}, err
+	}
+	if len(routeList.Items) == 0 {
+		return &routev1.Route{}, fmt.Errorf("unable to find routes with label %v:%v", "app.kubernetes.io/name", componentName)
+	}
+	return &routeList.Items[0], nil
 }
 
 func (h *SuiteController) RouteHostnameIsAccessible(routeName, namespace string) wait.ConditionFunc {

@@ -208,7 +208,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 				})
 
 				It(fmt.Sprintf("waits application %s components pipelines to be finished", suite.ApplicationName), func() {
-					GinkgoWriter.Print(env)
 					for _, component := range componentList {
 						if err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeAdmin.CommonController, component.Name, suite.ApplicationName, namespace, ""); err != nil {
 							Fail(fmt.Sprint(err))
