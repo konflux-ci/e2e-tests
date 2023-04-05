@@ -40,7 +40,7 @@ var (
 	// can be periodic, presubmit or postsubmit
 	jobType                    = utils.GetEnv("JOB_TYPE", "")
 	reposToDeleteDefaultRegexp = "jvm-build|e2e-dotnet|build-suite|e2e|pet-clinic-e2e|test-app|e2e-quayio|petclinic|test-app|integ-app|^dockerfile-|new-|^python|my-app|^test-|^multi-component"
-	repositoriesWithWebhooks   = []string{"devfile-sample-hello-world"}
+	repositoriesWithWebhooks   = []string{"devfile-sample-hello-world", "hacbs-test-project"}
 )
 
 func (CI) parseJobSpec() error {
