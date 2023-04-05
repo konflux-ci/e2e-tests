@@ -23,18 +23,17 @@ main() {
     # Log directory configuration
     # Format:  ./collect-openshift-pod-logs.sh logs-${USER}-$(date +%Y-%m-%d)  
 
-    # Create a subdirectory to store named pipes
-    declare -g event_pipe_subdir="event_pipes"
-    # this subdirectory is used as event_pipe files to be used in the process_pod function
-
-    # if no parameter given, a default will be used for the log_dir
+# if no parameter given, a default will be used for the log_dir
     if [ -z "$1" ]; then
       # Set default log directory
-      log_dir="logs-${USER}-$(date +%Y-%m-%d)"
+      log_dir="logs-${USER}-$(date +%Y-%m-%d-%H-%M-%S)"
     else
       # Use log directory provided as script argument
       log_dir="$1"
     fi
+    # Create a subdirectory to store named pipes
+    declare -g event_pipe_subdir="$log_dir/event_pipes"
+    # this subdirectory is used as event_pipe files to be used in the process_pod function
 
     # Create log directory if it doesn't exist
     mkdir -p "${log_dir}" || { echo "Error: Could not create directory ${log_dir}"; exit 1; }
