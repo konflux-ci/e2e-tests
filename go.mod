@@ -10,6 +10,7 @@ require (
 	github.com/enterprise-contract/enterprise-contract-controller/api v0.0.0-20230327185456-5befd172d558
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0
+	github.com/gofri/go-github-ratelimit v1.0.2
 	github.com/google/go-containerregistry v0.12.1
 	github.com/google/go-github/v44 v44.1.0
 	github.com/google/uuid v1.3.0

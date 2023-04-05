@@ -3,8 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -26,7 +24,6 @@ import (
 	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
 	gh "github.com/google/go-github/v44/github"
 	"github.com/magefile/mage/sh"
-	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/magefiles/installation"
 	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
@@ -43,7 +40,7 @@ var (
 	// can be periodic, presubmit or postsubmit
 	jobType                    = utils.GetEnv("JOB_TYPE", "")
 	reposToDeleteDefaultRegexp = "jvm-build|e2e-dotnet|build-suite|e2e|pet-clinic-e2e|test-app|e2e-quayio|petclinic|test-app|integ-app|^dockerfile-|new-|^python|my-app|^test-|^multi-component"
-	repositoriesWithWebhooks   = []string{"devfile-sample-hello-world"}
+	repositoriesWithWebhooks   = []string{"devfile-sample-hello-world", "hacbs-test-project"}
 )
 
 func (CI) parseJobSpec() error {
@@ -134,7 +131,10 @@ func (Local) CleanupGithubOrg() error {
 
 	// Get all repos
 	githubOrgName := utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
-	ghClient := github.NewGithubClient(githubToken, githubOrgName)
+	ghClient, err := github.NewGithubClient(githubToken, githubOrgName)
+	if err != nil {
+		return err
+	}
 	repos, err := ghClient.GetAllRepositories()
 	if err != nil {
 		return err
@@ -300,13 +300,13 @@ func (ci CI) setRequiredEnvVars() error {
 				var newReqprocessorImage = os.Getenv("JVM_BUILD_SERVICE_REQPROCESSOR_IMAGE")
 				var newTaskYaml, newPipelineYaml []byte
 
-				if err = createDockerConfigFile(os.Getenv("QUAY_TOKEN")); err != nil {
+				if err = utils.CreateDockerConfigFile(os.Getenv("QUAY_TOKEN")); err != nil {
 					return fmt.Errorf("failed to create docker config file: %+v", err)
 				}
-				if defaultBundleRef, err = getDefaultPipelineBundleRef(constants.BuildPipelineSelectorYamlURL, "Java"); err != nil {
+				if defaultBundleRef, err = utils.GetDefaultPipelineBundleRef(constants.BuildPipelineSelectorYamlURL, "Java"); err != nil {
 					return fmt.Errorf("failed to get the pipeline bundle ref: %+v", err)
 				}
-				if tektonObj, err = extractTektonObjectFromBundle(defaultBundleRef, "pipeline", "java-builder"); err != nil {
+				if tektonObj, err = utils.ExtractTektonObjectFromBundle(defaultBundleRef, "pipeline", "java-builder"); err != nil {
 					return fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
 				}
 				javaPipelineObj := tektonObj.(tektonapi.PipelineObject)
@@ -318,7 +318,7 @@ func (ci CI) setRequiredEnvVars() error {
 						t.TaskRef.Bundle = newS2iJavaTaskRef.String()
 					}
 				}
-				if tektonObj, err = extractTektonObjectFromBundle(currentS2iJavaTaskRef, "task", "s2i-java"); err != nil {
+				if tektonObj, err = utils.ExtractTektonObjectFromBundle(currentS2iJavaTaskRef, "task", "s2i-java"); err != nil {
 					return fmt.Errorf("failed to extract the Tekton Task from bundle: %+v", err)
 				}
 				taskObj := tektonObj.(tektonapi.TaskObject)
@@ -339,10 +339,10 @@ func (ci CI) setRequiredEnvVars() error {
 				keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
 				authOption := remoteimg.WithAuthFromKeychain(keychain)
 
-				if err = buildAndPushTektonBundle(newTaskYaml, newS2iJavaTaskRef, authOption); err != nil {
+				if err = utils.BuildAndPushTektonBundle(newTaskYaml, newS2iJavaTaskRef, authOption); err != nil {
 					return fmt.Errorf("error when building/pushing a tekton task bundle: %v", err)
 				}
-				if err = buildAndPushTektonBundle(newPipelineYaml, newJavaBuilderPipelineRef, authOption); err != nil {
+				if err = utils.BuildAndPushTektonBundle(newPipelineYaml, newJavaBuilderPipelineRef, authOption); err != nil {
 					return fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
 				}
 				os.Setenv(constants.CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV, newJavaBuilderPipelineRef.String())
@@ -510,8 +510,10 @@ func CleanWebHooks() error {
 	}
 
 	githubOrg := utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
-	gh := github.NewGithubClient(token, githubOrg)
-
+	gh, err := github.NewGithubClient(token, githubOrg)
+	if err != nil {
+		return err
+	}
 	for _, repo := range repositoriesWithWebhooks {
 		webhookList, err := gh.ListRepoWebhooks(repo)
 		if err != nil {
@@ -625,30 +627,4 @@ func appendFrameworkDescribeFile(packageName string) error {
 
 	return nil
 
-}
-
-// getDefaultPipelineBundleRef gets the specific Tekton pipeline bundle reference from a Build pipeline selector
-// (in a YAML format) from a URL specified in the parameter
-func getDefaultPipelineBundleRef(buildPipelineSelectorYamlURL, selectorName string) (string, error) {
-	res, err := http.Get(buildPipelineSelectorYamlURL)
-	if err != nil {
-		return "", fmt.Errorf("failed to get a build pipeline selector from url %s: %v", buildPipelineSelectorYamlURL, err)
-	}
-	defer res.Body.Close()
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read the body response of a build pipeline selector: %v", err)
-	}
-	ps := &buildservice.BuildPipelineSelector{}
-	if err = yaml.Unmarshal(body, ps); err != nil {
-		return "", fmt.Errorf("failed to unmarshal build pipeline selector: %v", err)
-	}
-
-	for _, s := range ps.Spec.Selectors {
-		if s.Name == selectorName {
-			return s.PipelineRef.Bundle, nil
-		}
-	}
-
-	return "", fmt.Errorf("could not find %s pipeline bundle in build pipeline selector fetched from %s", selectorName, buildPipelineSelectorYamlURL)
 }
