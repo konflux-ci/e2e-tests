@@ -307,7 +307,6 @@ process_container() {
   while true; do
     # Check the container's state and readiness.
     container_status=$(kubectl get pods "$pod_name" -n "$namespace" -o jsonpath="{.status.containerStatuses[?(@.name=='$container_name')].state}" | sed -n 's/{"\([^"]*\)".*/\1/p')
-    container_ready=$(kubectl get pods "$pod_name" -n "$namespace" -o jsonpath="{.status.containerStatuses[?(@.name=='$container_name')].ready}")
 
     # If the container is ready and in Running state, break the loop
     if [ "$container_status" == "running" ] || [ "$container_status" == "terminated" ]; then
@@ -316,6 +315,7 @@ process_container() {
     fi
 
     # Check if timeout has been reached
+    now=$(date +%s)
     if [ $((now - start)) -ge $timeout ]; then
       echo "Timeout of $timeout seconds reached while waiting for the container $container_name in pod $pod_name in namespace $namespace to be in Running state and ready"
       # Reset the start time to the current time
