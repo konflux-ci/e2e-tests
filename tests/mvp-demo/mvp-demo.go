@@ -119,26 +119,19 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission("demo", userNamespace, appName, managedNamespace, "", "", "mvp-strategy")
 		Expect(err).NotTo(HaveOccurred())
 
-		defaultEcPolicy := ecp.EnterpriseContractPolicySpec{
+		defaultEcPolicy, err := kc.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+		Expect(err).NotTo(HaveOccurred())
+
+		defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
 			Description: "Red Hat's enterprise requirements",
 			PublicKey:   string(publicKey),
-			Sources: []ecp.Source{
-				{
-					Name: "ec-policies",
-					Policy: []string{
-						"git::https://github.com/enterprise-contract/ec-policies.git//policy",
-					},
-					Data: []string{
-						"git::https://github.com/enterprise-contract/ec-policies.git//data",
-					},
-				},
-			},
+			Sources:     defaultEcPolicy.Spec.Sources,
 			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
 				Collections: []string{"minimal"},
 				Exclude:     []string{"cve"},
 			},
 		}
-		_, err = f.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy("mvp-policy", managedNamespace, defaultEcPolicy)
+		_, err = f.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy("mvp-policy", managedNamespace, defaultEcPolicySpec)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = f.AsKubeAdmin.TektonController.CreatePVCInAccessMode("release-pvc", managedNamespace, corev1.ReadWriteOnce)
