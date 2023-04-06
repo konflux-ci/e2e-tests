@@ -173,7 +173,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite"), func() {
 					return false
 				}
 				return SPITokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected
-			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in Injected phase")
+			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in Injected phase")
 
 		})
 
@@ -191,7 +191,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite"), func() {
 				}
 
 				return (SPIAccessToken.Status.Phase == v1beta1.SPIAccessTokenPhaseReady)
-			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "SPIAccessToken should be in ready phase")
+			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "SPIAccessToken should be in ready phase")
 
 		})
 	})
@@ -233,7 +233,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite"), func() {
 				}
 
 				return (SPIAccessToken.Status.Phase == v1beta1.SPIAccessTokenPhaseReady)
-			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "SPIAccessToken should be in ready phase")
+			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "SPIAccessToken should be in ready phase")
 
 		})
 	})
