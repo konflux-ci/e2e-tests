@@ -204,6 +204,7 @@ func (h *SuiteController) DeleteAllAccessTokensInASpecificNamespace(namespace st
 	return h.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.SPIAccessToken{}, client.InNamespace(namespace))
 }
 
+// Perform http POST call to upload a token at the given upload URL
 func (h *SuiteController) UploadWithRestEndpoint(uploadURL string, oauthCredentials string, bearerToken string) (int, error) {
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	req, err := http.NewRequest("POST", uploadURL, bytes.NewBuffer([]byte(oauthCredentials)))
@@ -220,4 +221,36 @@ func (h *SuiteController) UploadWithRestEndpoint(uploadURL string, oauthCredenti
 	}
 	defer resp.Body.Close()
 	return resp.StatusCode, nil
+}
+
+// GetSPIAccessTokenBinding returns the requested SPIAccessTokenBinding object
+func (s *SuiteController) UploadWithK8sSecret(secretName, namespace, spiTokenName, providerURL, username, tokenData string) (*v1.Secret, error) {
+	k8sSecret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      secretName,
+			Labels: map[string]string{
+				"spi.appstudio.redhat.com/upload-secret": "token",
+			},
+		},
+		Type: "Opaque",
+		StringData: map[string]string{
+			"tokenData": tokenData,
+		},
+	}
+	if spiTokenName != "" {
+		k8sSecret.StringData["spiTokenName"] = spiTokenName
+	}
+	if providerURL != "" {
+		k8sSecret.StringData["providerUrl"] = providerURL
+	}
+	if username != "" {
+		k8sSecret.StringData["userName"] = username
+	}
+
+	err := s.KubeRest().Create(context.TODO(), k8sSecret)
+	if err != nil {
+		return nil, err
+	}
+	return k8sSecret, nil
 }
