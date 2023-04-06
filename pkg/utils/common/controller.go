@@ -44,7 +44,10 @@ func NewSuiteController(kubeC *kubeCl.CustomClient) (*SuiteController, error) {
 	// Check if a github organization env var is set, if not use by default the redhat-appstudio-qe org. See: https://github.com/redhat-appstudio-qe
 	org := utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
 	token := utils.GetEnv(constants.GITHUB_TOKEN_ENV, "")
-	gh := github.NewGithubClient(token, org)
+	gh, err := github.NewGithubClient(token, org)
+	if err != nil {
+		return nil, err
+	}
 	return &SuiteController{
 		kubeC,
 		gh,
@@ -95,22 +98,28 @@ func (s *SuiteController) DeleteSecret(ns string, name string) error {
 
 // Links a secret to a specified serviceaccount, if argument addImagePullSecrets is true secret will be added also to ImagePullSecrets of SA.
 func (s *SuiteController) LinkSecretToServiceAccount(ns, secret, serviceaccount string, addImagePullSecrets bool) error {
-	serviceAccountObject, err := s.KubeInterface().CoreV1().ServiceAccounts(ns).Get(context.TODO(), serviceaccount, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	for _, credentialSecret := range serviceAccountObject.Secrets {
-		if credentialSecret.Name == secret {
-			// The secret is present in the service account, no updates needed
-			return nil
+	timeout := 20 * time.Second
+	return wait.PollImmediate(time.Second, timeout, func() (bool, error) {
+		serviceAccountObject, err := s.KubeInterface().CoreV1().ServiceAccounts(ns).Get(context.TODO(), serviceaccount, metav1.GetOptions{})
+		if err != nil {
+			return false, err
 		}
-	}
-	serviceAccountObject.Secrets = append(serviceAccountObject.Secrets, corev1.ObjectReference{Name: secret})
-	if addImagePullSecrets {
-		serviceAccountObject.ImagePullSecrets = append(serviceAccountObject.ImagePullSecrets, corev1.LocalObjectReference{Name: secret})
-	}
-	_, err = s.KubeInterface().CoreV1().ServiceAccounts(ns).Update(context.TODO(), serviceAccountObject, metav1.UpdateOptions{})
-	return err
+		for _, credentialSecret := range serviceAccountObject.Secrets {
+			if credentialSecret.Name == secret {
+				// The secret is present in the service account, no updates needed
+				return true, nil
+			}
+		}
+		serviceAccountObject.Secrets = append(serviceAccountObject.Secrets, corev1.ObjectReference{Name: secret})
+		if addImagePullSecrets {
+			serviceAccountObject.ImagePullSecrets = append(serviceAccountObject.ImagePullSecrets, corev1.LocalObjectReference{Name: secret})
+		}
+		_, err = s.KubeInterface().CoreV1().ServiceAccounts(ns).Update(context.TODO(), serviceAccountObject, metav1.UpdateOptions{})
+		if err != nil {
+			return false, nil
+		}
+		return true, nil
+	})
 }
 
 func (s *SuiteController) GetPod(namespace, podName string) (*corev1.Pod, error) {
@@ -243,6 +252,22 @@ func (h *SuiteController) GetOpenshiftRoute(routeName string, routeNamespace str
 		return &routev1.Route{}, err
 	}
 	return route, nil
+}
+
+// GetOpenshiftRouteByComponentName returns a route associated with the given component
+// Routes that belong to a given component will have the following label: 'app.kubernetes.io/name: <component-name>'
+func (h *SuiteController) GetOpenshiftRouteByComponentName(componentName string, componentNamespace string) (*routev1.Route, error) {
+	listOptions := metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("app.kubernetes.io/name=%s", componentName),
+	}
+	routeList, err := h.CustomClient.RouteClient().RouteV1().Routes(componentNamespace).List(context.Background(), listOptions)
+	if err != nil {
+		return &routev1.Route{}, err
+	}
+	if len(routeList.Items) == 0 {
+		return &routev1.Route{}, fmt.Errorf("unable to find routes with label %v:%v", "app.kubernetes.io/name", componentName)
+	}
+	return &routeList.Items[0], nil
 }
 
 func (h *SuiteController) RouteHostnameIsAccessible(routeName, namespace string) wait.ConditionFunc {

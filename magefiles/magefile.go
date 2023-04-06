@@ -40,7 +40,7 @@ var (
 	// can be periodic, presubmit or postsubmit
 	jobType                    = utils.GetEnv("JOB_TYPE", "")
 	reposToDeleteDefaultRegexp = "jvm-build|e2e-dotnet|build-suite|e2e|pet-clinic-e2e|test-app|e2e-quayio|petclinic|test-app|integ-app|^dockerfile-|new-|^python|my-app|^test-|^multi-component"
-	repositoriesWithWebhooks   = []string{"devfile-sample-hello-world"}
+	repositoriesWithWebhooks   = []string{"devfile-sample-hello-world", "hacbs-test-project"}
 )
 
 func (CI) parseJobSpec() error {
@@ -131,7 +131,10 @@ func (Local) CleanupGithubOrg() error {
 
 	// Get all repos
 	githubOrgName := utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
-	ghClient := github.NewGithubClient(githubToken, githubOrgName)
+	ghClient, err := github.NewGithubClient(githubToken, githubOrgName)
+	if err != nil {
+		return err
+	}
 	repos, err := ghClient.GetAllRepositories()
 	if err != nil {
 		return err
@@ -212,7 +215,8 @@ func (ci CI) TestE2E() error {
 func RunE2ETests() error {
 	cwd, _ := os.Getwd()
 
-	return sh.RunV("ginkgo", "-p", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", fmt.Sprintf("--config-suites=%s/tests/e2e-demos/config/default.yaml", cwd), "--generate-rppreproc-report=true", fmt.Sprintf("--rp-preproc-dir=%s", artifactDir))
+	// added --output-interceptor-mode=none to mitigate RHTAPBUGS-34
+	return sh.RunV("ginkgo", "-p", "--output-interceptor-mode=none", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", fmt.Sprintf("--config-suites=%s/tests/e2e-demos/config/default.yaml", cwd), "--generate-rppreproc-report=true", fmt.Sprintf("--rp-preproc-dir=%s", artifactDir))
 }
 
 func PreflightChecks() error {
@@ -507,8 +511,10 @@ func CleanWebHooks() error {
 	}
 
 	githubOrg := utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
-	gh := github.NewGithubClient(token, githubOrg)
-
+	gh, err := github.NewGithubClient(token, githubOrg)
+	if err != nil {
+		return err
+	}
 	for _, repo := range repositoriesWithWebhooks {
 		webhookList, err := gh.ListRepoWebhooks(repo)
 		if err != nil {

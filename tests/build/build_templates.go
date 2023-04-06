@@ -29,7 +29,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	var err error
 
 	defer GinkgoRecover()
-	Describe("HACBS pipelines", Ordered, func() {
+	Describe("HACBS pipelines", Ordered, Label("pipeline"), func() {
 
 		var applicationName, componentName, testNamespace, outputContainerImage string
 		var kubeadminClient *framework.ControllerHub
@@ -299,7 +299,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						tekton.MatchTaskRunResultWithJSONPathValue("HACBS_TEST_OUTPUT", "{$.result}", `["SUCCESS"]`),
 					))
 				})
-				It("contains non-empty sbom files", func() {
+				It("contains non-empty sbom files", Label(buildTemplatesTestLabel), func() {
 
 					purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(outputImage)
 					Expect(err).NotTo(HaveOccurred())
