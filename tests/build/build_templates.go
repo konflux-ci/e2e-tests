@@ -29,7 +29,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	var err error
 
 	defer GinkgoRecover()
-	Describe("HACBS pipelines", Ordered, func() {
+	Describe("HACBS pipelines", Ordered, Label("pipeline"), func() {
 
 		var applicationName, componentName, testNamespace, outputContainerImage string
 		var kubeadminClient *framework.ControllerHub
