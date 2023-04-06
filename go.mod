@@ -20,7 +20,8 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/onsi/ginkgo/v2 v2.5.1
 	github.com/onsi/gomega v1.24.1
-	github.com/openshift/api v0.0.0-20221013123534-96eec44e1979
+	github.com/openshift/api v0.0.0-20221018124113-7edcfe3c76cb
+	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
 	github.com/redhat-appstudio/application-api v0.0.0-20221220162402-c1e887791dac

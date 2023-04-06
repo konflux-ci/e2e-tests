@@ -254,6 +254,22 @@ func (h *SuiteController) GetOpenshiftRoute(routeName string, routeNamespace str
 	return route, nil
 }
 
+// GetOpenshiftRouteByComponentName returns a route associated with the given component
+// Routes that belong to a given component will have the following label: 'app.kubernetes.io/name: <component-name>'
+func (h *SuiteController) GetOpenshiftRouteByComponentName(componentName string, componentNamespace string) (*routev1.Route, error) {
+	listOptions := metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("app.kubernetes.io/name=%s", componentName),
+	}
+	routeList, err := h.CustomClient.RouteClient().RouteV1().Routes(componentNamespace).List(context.Background(), listOptions)
+	if err != nil {
+		return &routev1.Route{}, err
+	}
+	if len(routeList.Items) == 0 {
+		return &routev1.Route{}, fmt.Errorf("unable to find routes with label %v:%v", "app.kubernetes.io/name", componentName)
+	}
+	return &routeList.Items[0], nil
+}
+
 func (h *SuiteController) RouteHostnameIsAccessible(routeName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
 		namespacedName := types.NamespacedName{
