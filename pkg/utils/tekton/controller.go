@@ -13,7 +13,7 @@ import (
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
-	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
+	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -187,6 +187,23 @@ func (s *SuiteController) CheckPipelineRunFinished(pipelineRunName, namespace st
 	}
 }
 
+func (s *SuiteController) CheckPipelineRunSucceeded(pipelineRunName, namespace string) wait.ConditionFunc {
+	return func() (bool, error) {
+		pr, err := s.GetPipelineRun(pipelineRunName, namespace)
+		if err != nil {
+			return false, err
+		}
+		if len(pr.Status.Conditions) > 0 {
+			for _, c := range pr.Status.Conditions {
+				if c.Type == "Succeeded" && c.Status == "True" {
+					return true, nil
+				}
+			}
+		}
+		return false, nil
+	}
+}
+
 // Create a tekton task and return the task or error
 func (s *SuiteController) CreateTask(task *v1beta1.Task, ns string) (*v1beta1.Task, error) {
 	return s.PipelineClient().TektonV1beta1().Tasks(ns).Create(context.TODO(), task, metav1.CreateOptions{})
@@ -238,6 +255,11 @@ func (s *SuiteController) DeleteTaskRun(name, ns string) error {
 func (k KubeController) WatchPipelineRun(pipelineRunName string, taskTimeout int) error {
 	g.GinkgoWriter.Printf("Waiting for pipeline %q to finish\n", pipelineRunName)
 	return utils.WaitUntil(k.Tektonctrl.CheckPipelineRunFinished(pipelineRunName, k.Namespace), time.Duration(taskTimeout)*time.Second)
+}
+
+func (k KubeController) WatchPipelineRunSucceeded(pipelineRunName string, taskTimeout int) error {
+	g.GinkgoWriter.Printf("Waiting for pipeline %q to finish\n", pipelineRunName)
+	return utils.WaitUntil(k.Tektonctrl.CheckPipelineRunSucceeded(pipelineRunName, k.Namespace), time.Duration(taskTimeout)*time.Second)
 }
 
 func (k KubeController) GetTaskRunResult(pr *v1beta1.PipelineRun, pipelineTaskName string, result string) (string, error) {

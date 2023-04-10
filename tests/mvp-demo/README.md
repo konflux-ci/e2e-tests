@@ -8,7 +8,7 @@
 
 This test simulates the "simple build -> deploy -> (failed) release" to "advanced -> build -> scan -> test -> release" user journey
 
-For simulating the failed release we are using a custom docker-build template that contains a container image coming from ["untrusted" container image registry](https://github.com/hacbs-contract/ec-policies/blob/2d9fc8317a6349a4a9a1969f16c90dfec4448cd3/data/rule_data.yml#L9-L18). This should guarantee that the EC validation will fail and cause the failure of the release process.
+For simulating the failed release we are using a custom docker-build template that contains a container image coming from ["untrusted" container image registry](https://github.com/enterprise-contract/ec-policies/blob/2d9fc8317a6349a4a9a1969f16c90dfec4448cd3/data/rule_data.yml#L9-L18). This should guarantee that the EC validation will fail and cause the failure of the release process.
 
 ### Test steps
 1. Setup

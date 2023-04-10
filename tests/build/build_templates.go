@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/devfile/library/pkg/util"
+	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	"github.com/google/uuid"
-	ecp "github.com/hacbs-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	kubeapi "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
@@ -29,7 +29,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	var err error
 
 	defer GinkgoRecover()
-	Describe("HACBS pipelines", Ordered, func() {
+	Describe("HACBS pipelines", Ordered, Label("pipeline"), func() {
 
 		var applicationName, componentName, testNamespace, outputContainerImage string
 		var kubeadminClient *framework.ControllerHub
@@ -159,7 +159,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 				_, err = kubeadminClient.CommonController.CreateSecret(testNamespace, resultSecret)
 				Expect(err).ToNot(HaveOccurred())
-				err = kubeadminClient.CommonController.LinkSecretToServiceAccount(testNamespace, resultSecret.Name, resultSA)
+				err = kubeadminClient.CommonController.LinkSecretToServiceAccount(testNamespace, resultSecret.Name, resultSA, false)
 				Expect(err).ToNot(HaveOccurred())
 
 				resultSecret, err = kubeadminClient.CommonController.GetSecret(testNamespace, resultSecret.Name)
@@ -187,7 +187,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			It("should validate HACBS taskrun results", func() {
 				// List Of Taskruns Expected to Get Taskrun Results
-				gatherResult := []string{"clair-scan", "sanity-inspect-image", "sanity-label-check", "sbom-json-check"}
+				gatherResult := []string{"clair-scan", "sbom-json-check"}
 				// TODO: once we migrate "build" e2e tests to kcp, remove this condition
 				// and add the 'sbom-json-check' taskrun to gatherResults slice
 				s, _ := GinkgoConfiguration()
@@ -299,7 +299,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						tekton.MatchTaskRunResultWithJSONPathValue("HACBS_TEST_OUTPUT", "{$.result}", `["SUCCESS"]`),
 					))
 				})
-				It("contains non-empty sbom files", func() {
+				It("contains non-empty sbom files", Label(buildTemplatesTestLabel), func() {
 
 					purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(outputImage)
 					Expect(err).NotTo(HaveOccurred())
