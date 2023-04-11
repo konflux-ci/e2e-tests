@@ -203,6 +203,17 @@ func GetAdditionalInfo(applicationName, namespace string) string {
 	return fmt.Sprintf("(application: %s, namespace: %s)", applicationName, namespace)
 }
 
+// contains checks if a string is present in a slice
+func Contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+
+	return false
+}
+
 // CreateDockerConfigFile takes base64 encoded dockerconfig.json and saves it locally (/<home-directory/.docker/config.json)
 func CreateDockerConfigFile(base64EncodedString string) error {
 	var rawRegistryCreds []byte
