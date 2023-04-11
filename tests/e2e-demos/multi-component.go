@@ -210,8 +210,11 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 				})
 
 				It(fmt.Sprintf("waits application %s components pipelines to be finished", suite.ApplicationName), FlakeAttempts(3), func() {
+					// Create an array with the components build which failed and rerun them again
+					componentToRetest := make([]string, 0)
+
 					for _, component := range componentList {
-						if CurrentSpecReport().NumAttempts > 1 {
+						if CurrentSpecReport().NumAttempts > 1 && utils.Contains(componentToRetest, component.Name) {
 							pipelineRun, err := fw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, application.Name, namespace, "")
 							Expect(err).ShouldNot(HaveOccurred(), "failed to get pipelinerun: %v", err)
 
@@ -225,7 +228,12 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 							}
 						}
 
-						Expect(fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeAdmin.CommonController, component.Name, suite.ApplicationName, namespace, "")).ShouldNot(HaveOccurred(), "failed to build component %s", component.Name)
+						if err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeAdmin.CommonController, component.Name, application.Name, namespace, ""); err != nil {
+							if !utils.Contains(componentToRetest, component.Name) {
+								componentToRetest = append(componentToRetest, component.Name)
+							}
+							Expect(err).ShouldNot(HaveOccurred(), "pipeline didnt finish successfully: %v", err)
+						}
 					}
 				})
 
