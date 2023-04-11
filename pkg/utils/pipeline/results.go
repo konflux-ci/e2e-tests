@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"time"
 )
@@ -35,7 +34,7 @@ func (c *ResultClient) sendRequest(path string) (body []byte, err error) {
 	requestURL := fmt.Sprintf("%s/%s", c.BaseURL, path)
 	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	req.Header.Set("Accept", "application/json; charset=utf-8")
@@ -60,7 +59,7 @@ func (c *ResultClient) GetRecords(namespace, resultId string) (*Records, error) 
 
 	body, err := c.sendRequest(path)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	var records *Records
 	err = json.Unmarshal(body, &records)
@@ -75,7 +74,7 @@ func (c *ResultClient) GetLogs(namespace, resultId string) (*Logs, error) {
 
 	body, err := c.sendRequest(path)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	var logs *Logs
