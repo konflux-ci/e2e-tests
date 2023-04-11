@@ -111,7 +111,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 		When("a new component without specified branch is created", Label("pac-custom-default-branch"), func() {
 			BeforeAll(func() {
-				_, err = f.AsKubeDeveloper.HasController.CreateComponentWithPaCEnabled(applicationName, defaultBranchTestComponentName, testNamespace, helloWorldComponentGitSourceURL, "", "")
+				_, err = f.AsKubeDeveloper.HasController.CreateComponentWithPaCEnabled(applicationName, defaultBranchTestComponentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
