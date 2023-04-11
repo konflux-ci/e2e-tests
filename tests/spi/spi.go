@@ -14,10 +14,6 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
-const ()
-
-var ()
-
 /*
  * Component: spi
  * Description: Contains tests covering basic spi scenarios
@@ -43,9 +39,11 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite"), func() {
 
 		// Clean up after running these tests and before the next tests block: can't have multiple AccessTokens in Injected phase
 		AfterAll(func() {
-			Expect(fw.AsKubeAdmin.SPIController.DeleteAllBindingTokensInASpecificNamespace(namespace)).To(Succeed())
-			Expect(fw.AsKubeAdmin.SPIController.DeleteAllAccessTokensInASpecificNamespace(namespace)).To(Succeed())
-			Expect(fw.AsKubeAdmin.SPIController.DeleteAllAccessTokenDataInASpecificNamespace(namespace)).To(Succeed())
+			if !CurrentSpecReport().Failed() {
+				Expect(fw.AsKubeAdmin.SPIController.DeleteAllBindingTokensInASpecificNamespace(namespace)).To(Succeed())
+				Expect(fw.AsKubeAdmin.SPIController.DeleteAllAccessTokensInASpecificNamespace(namespace)).To(Succeed())
+				Expect(fw.AsKubeAdmin.SPIController.DeleteAllAccessTokenDataInASpecificNamespace(namespace)).To(Succeed())
+			}
 		})
 
 		var SPITokenBinding *v1beta1.SPIAccessTokenBinding
@@ -177,7 +175,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite"), func() {
 
 		})
 
-		It("upload secret should be autometically be removed", func() {
+		It("upload secret should be automatically be removed", func() {
 			_, err := fw.AsKubeDeveloper.CommonController.GetSecret(namespace, K8sSecret.Name)
 			Expect(k8sErrors.IsNotFound(err)).To(BeTrue())
 		})
@@ -200,9 +198,11 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite"), func() {
 
 		// Clean up after running these tests and before the next tests block: can't have multiple AccessTokens in Injected phase
 		AfterAll(func() {
-			Expect(fw.AsKubeAdmin.SPIController.DeleteAllBindingTokensInASpecificNamespace(namespace)).To(Succeed())
-			Expect(fw.AsKubeAdmin.SPIController.DeleteAllAccessTokensInASpecificNamespace(namespace)).To(Succeed())
-			Expect(fw.AsKubeAdmin.SPIController.DeleteAllAccessTokenDataInASpecificNamespace(namespace)).To(Succeed())
+			if !CurrentSpecReport().Failed() {
+				Expect(fw.AsKubeAdmin.SPIController.DeleteAllBindingTokensInASpecificNamespace(namespace)).To(Succeed())
+				Expect(fw.AsKubeAdmin.SPIController.DeleteAllAccessTokensInASpecificNamespace(namespace)).To(Succeed())
+				Expect(fw.AsKubeAdmin.SPIController.DeleteAllAccessTokenDataInASpecificNamespace(namespace)).To(Succeed())
+			}
 		})
 
 		// we create a secret specifying a non-existing SPIAccessToken name: it should be created automatically by SPI
