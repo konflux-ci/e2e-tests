@@ -259,8 +259,8 @@ func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, compone
 }
 
 // CreateComponentFromCDQ create a HAS Component resource from a Completed CDQ resource, which includes a stub Component CR
-func (h *SuiteController) CreateComponentFromStub(compDetected appservice.ComponentDetectionDescription, componentName, namespace, secret, applicationName string, containerImage string) (*appservice.Component, error) {
-	// The Component from the CDQ is only a template, and needs things like name filled in
+// The Component from the CDQ is only a template, and needs things like name filled in
+func (h *SuiteController) CreateComponentFromStub(compDetected appservice.ComponentDetectionDescription, componentName, namespace, secret, applicationName string) (*appservice.Component, error) {
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
@@ -273,6 +273,11 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 		},
 		Spec: compDetected.ComponentStub,
 	}
+
+	if component.Spec.TargetPort == 0 {
+		component.Spec.TargetPort = 8081
+	}
+
 	component.Spec.Secret = secret
 	component.Spec.Application = applicationName
 
@@ -422,7 +427,7 @@ func (h *SuiteController) GetComponentService(componentName string, componentNam
 }
 
 func (h *SuiteController) WaitForComponentPipelineToBeFinished(c *common.SuiteController, componentName, applicationName, componentNamespace, sha string) error {
-	return wait.PollImmediate(20*time.Second, 25*time.Minute, func() (done bool, err error) {
+	return wait.PollImmediate(20*time.Second, 30*time.Minute, func() (done bool, err error) {
 		pipelineRun, err := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, sha)
 
 		if err != nil {
