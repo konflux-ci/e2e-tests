@@ -222,17 +222,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 								delete(component.Annotations, constants.ComponentInitialBuildAnnotationKey)
 								err = fw.AsKubeDeveloper.HasController.KubeRest().Update(context.Background(), component)
 								Expect(err).ShouldNot(HaveOccurred(), "failed to update component to trigger another pipeline build: %v", err)
-
-								// Wait for pipeline to exists after deletion
-								Eventually(func() bool {
-									_, err := fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.Name, application.Name, namespace, "")
-
-									if err != nil {
-										GinkgoWriter.Println("PipelineRun has not been created yet")
-										return false
-									}
-									return true
-								}, time.Minute*1, time.Second*10)
 							}
 						}
 
