@@ -43,7 +43,7 @@ func FetchImageTaskRunResult(pr *v1beta1.PipelineRun, pipelineTaskName string, r
 
 func ValidateImageTaskRunResults(taskname string, result string) bool {
 	var re = regexp.MustCompile(`devfile/python`)
-	if taskname == "sanity-inspect-image" {
+	if taskname == "inspect-image" {
 		if !(re.MatchString(result)) {
 			Fail(fmt.Sprintf("Expected Result for Taskrun '%s', failed with '%s'", taskname, result))
 		}
@@ -60,14 +60,12 @@ func ValidateTaskRunResults(taskname string, result string) bool {
 	// conftest-clair taskruns are expected to FAIL
 	if taskname == "conftest-clair" {
 		if testOutput["result"] == "FAILURE" {
-			// Fail(fmt.Sprintf("Expected Result for Taskrun '%s' is SUCCESS, failed with '%s'", taskname, testOutput["failures"]))
 			return true
 		}
 	}
-	// sanity-label-check taskruns are expected to FAIL
-	if taskname == "sanity-label-check" {
+	// label-check taskruns are expected to FAIL
+	if taskname == "label-check" {
 		if testOutput["result"] == "FAILURE" {
-			// Fail(fmt.Sprintf("Expected Result for Taskrun '%s' is SUCCESS, failed with '%s'", taskname, testOutput["failures"]))
 			return true
 		}
 	}
