@@ -2,7 +2,9 @@ package utils
 
 import (
 	"context"
+	"crypto/md5"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -287,4 +289,11 @@ func GetDefaultPipelineBundleRef(buildPipelineSelectorYamlURL, selectorName stri
 	}
 
 	return "", fmt.Errorf("could not find %s pipeline bundle in build pipeline selector fetched from %s", selectorName, buildPipelineSelectorYamlURL)
+}
+
+// CalcMd5 Calculates the md5 hash of a specified value and returns it as a hex-encoded string
+func CalcMd5(value string) string {
+	md5hash := md5.New() //nolint:gosec
+	_, _ = md5hash.Write([]byte(value))
+	return hex.EncodeToString(md5hash.Sum(nil))
 }

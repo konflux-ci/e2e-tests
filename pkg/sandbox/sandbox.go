@@ -10,7 +10,6 @@ import (
 	"time"
 
 	toolchainApi "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/toolchain-e2e/testsupport/md5"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -248,7 +247,7 @@ func getUserSignupSpecs(username string) *toolchainApi.UserSignup {
 				"toolchain.dev.openshift.com/user-email": fmt.Sprintf("%s@user.us", username),
 			},
 			Labels: map[string]string{
-				"toolchain.dev.openshift.com/email-hash": md5.CalcMd5(fmt.Sprintf("%s@user.us", username)),
+				"toolchain.dev.openshift.com/email-hash": utils.CalcMd5(fmt.Sprintf("%s@user.us", username)),
 			},
 		},
 		Spec: toolchainApi.UserSignupSpec{
