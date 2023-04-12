@@ -56,4 +56,7 @@ type ComponentSpec struct {
 
 	// Set k8s resource specific properties
 	K8sSpec K8sSpec `yaml:"spec,omitempty"`
+
+	// Skip the deployment of a component in case not needed to deploy
+	SkipDeploymentCheck bool `yaml:"skipDeploy,omitempty"`
 }
