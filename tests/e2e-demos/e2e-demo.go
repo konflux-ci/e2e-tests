@@ -233,7 +233,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				It(fmt.Sprintf("deploys component %s using gitops", component.Name), func() {
 					var deployment *appsv1.Deployment
 					Eventually(func() bool {
-						deployment, err = fw.AsKubeDeveloper.CommonController.GetAppDeploymentByName(component.Name, namespace)
+						deployment, err = fw.AsKubeDeveloper.CommonController.GetDeployment(component.Name, namespace)
 						if err != nil && !errors.IsNotFound(err) {
 							return false
 						}
@@ -267,7 +267,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 						Expect(err).NotTo(HaveOccurred())
 
 						Eventually(func() bool {
-							deployment, _ := fw.AsKubeDeveloper.CommonController.GetAppDeploymentByName(component.Name, namespace)
+							deployment, _ := fw.AsKubeDeveloper.CommonController.GetDeployment(component.Name, namespace)
 							if err != nil && !errors.IsNotFound(err) {
 								return false
 							}

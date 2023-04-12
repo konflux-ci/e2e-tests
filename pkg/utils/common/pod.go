@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+// GetPod returns the pod object from a given namespace and pod name
 func (s *SuiteController) GetPod(namespace, podName string) (*corev1.Pod, error) {
 	return s.KubeInterface().CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 }
@@ -35,6 +36,7 @@ func (s *SuiteController) IsPodRunning(podName, namespace string) wait.Condition
 	}
 }
 
+// Checks phases of a given pod name in a given namespace
 func (s *SuiteController) IsPodSuccessful(podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
 		pod, err := s.GetPod(namespace, podName)
@@ -51,6 +53,7 @@ func (s *SuiteController) IsPodSuccessful(podName, namespace string) wait.Condit
 	}
 }
 
+// TaskPodExists checks if a task have a pod
 func TaskPodExists(tr *v1beta1.TaskRun) wait.ConditionFunc {
 	return func() (bool, error) {
 		if tr.Status.PodName != "" {
@@ -60,6 +63,7 @@ func TaskPodExists(tr *v1beta1.TaskRun) wait.ConditionFunc {
 	}
 }
 
+// ListPods return a list of pods from a namespace by labels and selection limits
 func (s *SuiteController) ListPods(namespace, labelKey, labelValue string, selectionLimit int64) (*corev1.PodList, error) {
 	labelSelector := metav1.LabelSelector{MatchLabels: map[string]string{labelKey: labelValue}}
 	listOptions := metav1.ListOptions{
@@ -69,6 +73,7 @@ func (s *SuiteController) ListPods(namespace, labelKey, labelValue string, selec
 	return s.KubeInterface().CoreV1().Pods(namespace).List(context.TODO(), listOptions)
 }
 
+// Return a container logs from a given pod and namespace
 func (s *SuiteController) GetContainerLogs(podName, containerName, namespace string) (string, error) {
 	podLogOpts := corev1.PodLogOptions{
 		Container: containerName,
@@ -89,6 +94,7 @@ func (s *SuiteController) GetContainerLogs(podName, containerName, namespace str
 	return buf.String(), nil
 }
 
+// Wait for a pod selector until exists
 func (s *SuiteController) WaitForPodSelector(
 	fn func(podName, namespace string) wait.ConditionFunc, namespace, labelKey string, labelValue string,
 	timeout int, selectionLimit int64) error {

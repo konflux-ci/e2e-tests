@@ -11,7 +11,6 @@ import (
 )
 
 func (s *SuiteController) ListRoles(namespace string) (*rbacv1.RoleList, error) {
-
 	listOptions := metav1.ListOptions{}
 	return s.KubeInterface().RbacV1().Roles(namespace).List(context.TODO(), listOptions)
 }
@@ -35,7 +34,6 @@ func (s *SuiteController) GetRoleBinding(rolebindingName, namespace string) (*rb
 //     is created by the GitOps Operator.
 func (s *SuiteController) argoCDNamespaceRBACPresent(namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-
 		roles, err := s.ListRoles(namespace)
 		if err != nil || roles == nil {
 			return false, nil
@@ -70,7 +68,6 @@ func (s *SuiteController) argoCDNamespaceRBACPresent(namespace string) wait.Cond
 
 // CreateRole creates a role with the provided name and namespace using the given list of rules
 func (s *SuiteController) CreateRole(roleName, namespace string, roleRules map[string][]string) (*rbacv1.Role, error) {
-
 	rules := &rbacv1.PolicyRule{
 		APIGroups: roleRules["apiGroupsList"],
 		Resources: roleRules["roleResources"],
@@ -94,7 +91,6 @@ func (s *SuiteController) CreateRole(roleName, namespace string, roleRules map[s
 
 // CreateRoleBinding creates an object of Role Binding in namespace with service account provided and role reference api group.
 func (s *SuiteController) CreateRoleBinding(roleBindingName, namespace, subjectKind, serviceAccountName, roleRefKind, roleRefName, roleRefApiGroup string) (*rbacv1.RoleBinding, error) {
-
 	roleBindingSubjects := []rbacv1.Subject{
 		{
 			Kind:      subjectKind,

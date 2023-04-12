@@ -8,14 +8,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Create and return a configmap by cm name and namespace from the cluster
 func (s *SuiteController) CreateConfigMap(cm *corev1.ConfigMap, namespace string) (*corev1.ConfigMap, error) {
 	return s.KubeInterface().CoreV1().ConfigMaps(namespace).Create(context.TODO(), cm, metav1.CreateOptions{})
 }
 
+// Update and return a configmap by configmap cm name and namespace from the cluster
 func (s *SuiteController) UpdateConfigMap(cm *corev1.ConfigMap, namespace string) (*corev1.ConfigMap, error) {
 	return s.KubeInterface().CoreV1().ConfigMaps(namespace).Update(context.TODO(), cm, metav1.UpdateOptions{})
 }
 
+// Get a configmap by name and namespace from the cluster
 func (s *SuiteController) GetConfigMap(name, namespace string) (*corev1.ConfigMap, error) {
 	return s.KubeInterface().CoreV1().ConfigMaps(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }

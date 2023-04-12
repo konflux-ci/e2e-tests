@@ -7,9 +7,12 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 )
 
-// Create the struct for kubernetes and github clients
+// Create the struct for kubernetes and github clients.
 type SuiteController struct {
+	// Wrap K8S client go to interact with Kube cluster
 	*kubeCl.CustomClient
+
+	// Github client to interact with GH apis
 	Github *github.Github
 }
 

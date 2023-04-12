@@ -10,10 +10,10 @@ import (
 )
 
 // GetAppDeploymentByName returns the deployment for a given component name
-func (h *SuiteController) GetAppDeploymentByName(deploymentName string, deploymentNamespace string) (*appsv1.Deployment, error) {
+func (h *SuiteController) GetDeployment(deploymentName string, namespace string) (*appsv1.Deployment, error) {
 	namespacedName := types.NamespacedName{
 		Name:      deploymentName,
-		Namespace: deploymentNamespace,
+		Namespace: namespace,
 	}
 
 	deployment := &appsv1.Deployment{}
@@ -24,6 +24,7 @@ func (h *SuiteController) GetAppDeploymentByName(deploymentName string, deployme
 	return deployment, nil
 }
 
+// Checks and waits for a kubernetes deployment object to be completed or not
 func (h *SuiteController) DeploymentIsCompleted(deploymentName, namespace string, readyReplicas int32) wait.ConditionFunc {
 	return func() (bool, error) {
 		namespacedName := types.NamespacedName{

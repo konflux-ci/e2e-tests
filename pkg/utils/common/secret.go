@@ -51,6 +51,7 @@ func (s *SuiteController) LinkSecretToServiceAccount(ns, secret, serviceaccount 
 	})
 }
 
+// CreateRegistryAuthSecret create a docker registry secret in a given ns
 func (s *SuiteController) CreateRegistryAuthSecret(secretName, namespace, secretStringData string) (*corev1.Secret, error) {
 	rawDecodedTextStringData, err := base64.StdEncoding.DecodeString(secretStringData)
 	if err != nil {

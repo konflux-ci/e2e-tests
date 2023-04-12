@@ -40,7 +40,6 @@ func (s *SuiteController) DeleteNamespace(namespace string) error {
 	}
 
 	return nil
-
 }
 
 // ListNamespaceScopedResourcesAsString returns a list of resources in a namespace as a string, for test debugging purposes.
@@ -107,12 +106,10 @@ func (s *SuiteController) ListNamespaceScopedResourcesAsString(namespace string,
 	}
 
 	return resourceList
-
 }
 
 // CreateTestNamespace creates a namespace where Application and Component CR will be created
 func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, error) {
-
 	// Check if the E2E test namespace already exists
 	ns, err := s.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), name, metav1.GetOptions{})
 
