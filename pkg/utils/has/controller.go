@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	routev1 "github.com/openshift/api/route/v1"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -30,11 +31,20 @@ import (
 )
 
 type SuiteController struct {
+	Github *github.Github
 	*kubeCl.CustomClient
 }
 
 func NewSuiteController(kube *kubeCl.CustomClient) (*SuiteController, error) {
+	// Check if a github organization env var is set, if not use by default the redhat-appstudio-qe org. See: https://github.com/redhat-appstudio-qe
+	org := utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
+	token := utils.GetEnv(constants.GITHUB_TOKEN_ENV, "")
+	gh, err := github.NewGithubClient(token, org)
+	if err != nil {
+		return nil, err
+	}
 	return &SuiteController{
+		gh,
 		kube,
 	}, nil
 }
@@ -577,4 +587,11 @@ func (h *SuiteController) DeleteAllSnapshotEnvBindingsInASpecificNamespace(names
 		}
 		return len(snapshotEnvironmentBindingList.Items) == 0, nil
 	}, timeout)
+}
+
+func (s *SuiteController) ApplicationGitopsRepoExists(devfileContent string) wait.ConditionFunc {
+	return func() (bool, error) {
+		gitOpsRepoURL := utils.ObtainGitOpsRepositoryName(devfileContent)
+		return s.Github.CheckIfRepositoryExist(gitOpsRepoURL), nil
+	}
 }
