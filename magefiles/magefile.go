@@ -351,6 +351,10 @@ func (ci CI) setRequiredEnvVars() error {
 				envVarPrefix = "BUILD_SERVICE"
 				imageTagSuffix = "build-service-image"
 				testSuiteLabel = "build"
+			case strings.Contains(jobName, "image-controller"):
+				envVarPrefix = "IMAGE_CONTROLLER"
+				imageTagSuffix = "image-controller-image"
+				testSuiteLabel = "image-controller"
 			}
 
 			os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", envVarPrefix), sp[0])
