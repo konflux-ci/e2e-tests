@@ -7,7 +7,7 @@ tests:
         gitSourceUrl: "https://github.com/devfile-samples/devfile-sample-java-springboot-basic"
         language: "Java"
         healthz: "/"
-  - name: "DEVHAS-234: creates an application with with python component from RHTAP samples"
+  - name: "DEVHAS-234: creates an application with python component from RHTAP samples"
     applicationName: "e2e-python-personal"
     components:
       - name: "component-python-flask"
@@ -15,7 +15,7 @@ tests:
         gitSourceUrl: "https://github.com/devfile-samples/devfile-sample-python-basic.git"
         language: "Python"
         healthz: "/"
-  - name: "DEVHAS-234: creates an application with with dotnet component from RHTAP samples"
+  - name: "DEVHAS-234: creates an application with dotnet component from RHTAP samples"
     applicationName: "e2e-dotnet"
     components:
       - name: "dotnet-component"
@@ -78,7 +78,9 @@ tests:
         gitSourceUrl: "https://github.com/quarkusio/status.quarkus.io.git"
         language: "Java"
         healthz: "/"
-  - name: "DEVHAS-234: creates quarkus application(without dockerfile and devfile) which is not included in AppStudio starter stack"
+        # requires to create secret and RHTAP dont have yet this ability
+        skipDeploy: true
+  - name: "DEVHAS-234: creates nodejs application(without dockerfile and devfile) which is not included in AppStudio starter stack"
     applicationName: "nodejs-users"
     components:
       - name: "nodejs-user"
