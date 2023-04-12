@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/avast/retry-go/v4 v4.3.3
-	github.com/codeready-toolchain/api v0.0.0-20220511141428-1adfed7d17b0
+	github.com/codeready-toolchain/api v0.0.0-20230406073419-4f8108d3a1c6
 	github.com/codeready-toolchain/toolchain-e2e v0.0.0-20220525131508-60876bfb99d3
 	github.com/devfile/library v1.2.1-0.20211104222135-49d635cb492f
 	github.com/enterprise-contract/enterprise-contract-controller/api v0.0.0-20230327185456-5befd172d558
@@ -20,9 +20,9 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/onsi/ginkgo/v2 v2.9.2
 	github.com/onsi/gomega v1.27.6
-	github.com/openshift/api v0.0.0-20221018124113-7edcfe3c76cb
+	github.com/openshift/api v0.0.0-20230213134911-7ba313770556
 	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
-	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
+	github.com/openshift/library-go v0.0.0-20230301092340-c13b89190a26
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
 	github.com/redhat-appstudio/application-api v0.0.0-20221220162402-c1e887791dac
 	github.com/redhat-appstudio/application-service v0.0.0-20221129172232-763cbbe1992e
@@ -81,7 +81,7 @@ require (
 	github.com/chai2010/gettext-go v0.0.0-20160711120539-c6fed771bfd5 // indirect
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/cloudflare/circl v1.1.0 // indirect
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20220523142428-2558e76260fb // indirect
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20230406074039-c486d404e698 // indirect
 	github.com/containerd/cgroups v1.0.3 // indirect
 	github.com/containerd/containerd v1.6.10 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.12.1 // indirect
