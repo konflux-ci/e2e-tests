@@ -57,35 +57,44 @@ func (h *SuiteController) MarkHACBSTestsSucceeded(snapshot *appstudioApi.Snapsho
 	return snapshot, nil
 }
 
-// getApplicationSnapshot returns the all ApplicationSnapshots in the Application's namespace nil if it's not found.
+// GetApplicationSnapshot returns the Snapshot in the namespace and nil if it's not found
+// It will search for the Snapshot based on the Snapshot name, associated PipelineRun name or Component name
 // In the case the List operation fails, an error will be returned.
-func (h *SuiteController) GetApplicationSnapshot(snapshotName, applicationName, namespace, componentName string) (*appstudioApi.Snapshot, error) {
+func (h *SuiteController) GetApplicationSnapshot(snapshotName, pipelineRunName, componentName, namespace string) (*appstudioApi.Snapshot, error) {
+	ctx := context.Background()
+	// If Snapshot name is provided, try to get the resource directly
+	if len(snapshotName) > 0 {
+		snapshot := &appstudioApi.Snapshot{}
+		if err := h.KubeRest().Get(ctx, types.NamespacedName{Name: snapshotName, Namespace: namespace}, snapshot); err != nil {
+			return nil, fmt.Errorf("couldn't find Snapshot find name '%s' in '%s' namespace", snapshotName, namespace)
+		}
+		return snapshot, nil
+	}
+	// Search for the Snapshot in the namespace based on the associated Component or PipelineRun
 	applicationSnapshots := &appstudioApi.SnapshotList{}
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
 	}
-	err := h.KubeRest().List(context.TODO(), applicationSnapshots, opts...)
+	err := h.KubeRest().List(ctx, applicationSnapshots, opts...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error when listing Snaphots in '%s' namespace", namespace)
 	}
 	for _, applicationSnapshot := range applicationSnapshots.Items {
-		// find snapshot by component name
-		if _, ok := applicationSnapshot.Labels["appstudio.openshift.io/component"]; ok && applicationSnapshot.Spec.Application == applicationName {
-			if applicationSnapshot.Labels["appstudio.openshift.io/component"] == componentName {
-				return &applicationSnapshot, nil
-			}
-		}
-		// find snapshot by snapshot name
 		if applicationSnapshot.Name == snapshotName {
 			return &applicationSnapshot, nil
 		}
-	}
+		// find snapshot by pipelinerun name
+		if len(pipelineRunName) > 0 && applicationSnapshot.Labels["appstudio.openshift.io/build-pipelinerun"] == pipelineRunName {
+			return &applicationSnapshot, nil
 
-	additionalInfo := utils.GetAdditionalInfo(applicationName, namespace)
-	if componentName != "" {
-		return &appstudioApi.Snapshot{}, fmt.Errorf("no snapshot found for component %s %s", componentName, additionalInfo)
+		}
+		// find snapshot by component name
+		if len(componentName) > 0 && applicationSnapshot.Labels["appstudio.openshift.io/component"] == componentName {
+			return &applicationSnapshot, nil
+
+		}
 	}
-	return &appstudioApi.Snapshot{}, fmt.Errorf("no snapshot '%s' found %s", snapshotName, additionalInfo)
+	return nil, fmt.Errorf("no snapshot found for component '%s', pipelineRun '%s' in '%s' namespace", componentName, pipelineRunName, namespace)
 }
 
 func (h *SuiteController) GetComponent(applicationName, namespace string) (*appstudioApi.Component, error) {

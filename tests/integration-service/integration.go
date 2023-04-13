@@ -125,7 +125,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		assertApplicationSnapshotCreated := func() {
 			// snapshotName is sent as empty since it is unknown at this stage
-			applicationSnapshot, err = f.AsKubeAdmin.IntegrationController.GetApplicationSnapshot("", applicationName, appStudioE2EApplicationsNamespace, componentName)
+			applicationSnapshot, err = f.AsKubeAdmin.IntegrationController.GetApplicationSnapshot("", "", componentName, appStudioE2EApplicationsNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
 			GinkgoWriter.Printf("applicationSnapshot %s is found\n", applicationSnapshot.Name)
 		}
@@ -262,7 +262,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 							GinkgoWriter.Printf("Global candidate is updated\n")
 							return true
 						}
-						applicationSnapshot_push, err = f.AsKubeAdmin.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, "", appStudioE2EApplicationsNamespace, "")
+						applicationSnapshot_push, err = f.AsKubeAdmin.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, "", "", appStudioE2EApplicationsNamespace)
 						if err != nil {
 							GinkgoWriter.Printf("snapshot %s has not been found yet\n", applicationSnapshot_push.Name)
 						}
@@ -286,7 +286,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 							}
 							return true
 						}
-						applicationSnapshot_push, err = f.AsKubeAdmin.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, "", appStudioE2EApplicationsNamespace, "")
+						applicationSnapshot_push, err = f.AsKubeAdmin.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, "", "", appStudioE2EApplicationsNamespace)
 						if err != nil {
 							GinkgoWriter.Printf("snapshot %s has not been found yet\n", applicationSnapshot_push.Name)
 						}
@@ -305,7 +305,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 							GinkgoWriter.Printf("The EnvironmentBinding is created\n")
 							return true
 						}
-						applicationSnapshot_push, err = f.AsKubeAdmin.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, "", appStudioE2EApplicationsNamespace, "")
+						applicationSnapshot_push, err = f.AsKubeAdmin.IntegrationController.GetApplicationSnapshot(applicationSnapshot_push.Name, "", "", appStudioE2EApplicationsNamespace)
 						if err != nil {
 							GinkgoWriter.Printf("snapshot %s has not been found yet\n", applicationSnapshot_push.Name)
 						}
@@ -347,7 +347,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("checks if snapshot is marked as failed", func() {
-				snapshot, err := f.AsKubeAdmin.IntegrationController.GetApplicationSnapshot(applicationSnapshot.Name, applicationName, appStudioE2EApplicationsNamespace, componentName)
+				snapshot, err := f.AsKubeAdmin.IntegrationController.GetApplicationSnapshot(applicationSnapshot.Name, "", "", appStudioE2EApplicationsNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(meta.IsStatusConditionFalse(snapshot.Status.Conditions, "HACBSTestSucceeded")).To(BeTrue())
 

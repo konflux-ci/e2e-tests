@@ -211,7 +211,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					interval = time.Second * 10
 
 					Eventually(func() bool {
-						snapshot, err = fw.AsKubeAdmin.IntegrationController.GetApplicationSnapshot("", application.Name, namespace, component.Name)
+						snapshot, err = fw.AsKubeAdmin.IntegrationController.GetApplicationSnapshot("", "", component.Name, namespace)
 						if err != nil {
 							GinkgoWriter.Println("snapshot has not been found yet")
 							return false
