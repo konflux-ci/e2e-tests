@@ -59,20 +59,13 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		Expect(kubeController.CreateOrUpdateSigningSecret(
 			publicKey, publicSecretNameAuth, managedNamespace)).To(Succeed())
 
-		defaultEcPolicy := ecp.EnterpriseContractPolicySpec{
+		defaultEcPolicy, err := kubeController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+		Expect(err).NotTo(HaveOccurred())
+
+		defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
 			Description: "Red Hat's enterprise requirements",
 			PublicKey:   string(publicKey),
-			Sources: []ecp.Source{
-				{
-					Name: "ec-policies",
-					Policy: []string{
-						"git::https://github.com/enterprise-contract/ec-policies.git//policy",
-					},
-					Data: []string{
-						"git::https://github.com/enterprise-contract/ec-policies.git//data",
-					},
-				},
-			},
+			Sources:     defaultEcPolicy.Spec.Sources,
 			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
 				Collections: []string{"minimal"},
 				Exclude:     []string{"cve"},
@@ -91,7 +84,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, releaseEnvironment, "", "mvp-deploy-strategy")
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicyDefault, managedNamespace, defaultEcPolicy)
+		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicyDefault, managedNamespace, defaultEcPolicySpec)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasePvcName, managedNamespace, corev1.ReadWriteOnce)
