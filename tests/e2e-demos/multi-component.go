@@ -270,7 +270,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 					}
 					for _, component := range componentList {
 						Eventually(func() bool {
-							componentDeployment, err := fw.AsKubeDeveloper.CommonController.GetAppDeploymentByName(component.Name, namespace)
+							componentDeployment, err := fw.AsKubeDeveloper.CommonController.GetDeployment(component.Name, namespace)
 							if err != nil && !errors.IsNotFound(err) {
 								return false
 							}
