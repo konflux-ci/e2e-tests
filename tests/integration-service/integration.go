@@ -55,7 +55,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			app, err := f.AsKubeAdmin.HasController.CreateHasApplication(applicationName, appStudioE2EApplicationsNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(utils.WaitUntil(f.AsKubeAdmin.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
+			Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
 				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
 			)
 		}
