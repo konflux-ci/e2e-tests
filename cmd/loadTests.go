@@ -250,7 +250,7 @@ func setup(cmd *cobra.Command, args []string) {
 				continue
 			}
 			gitopsRepoTimeout := 60 * time.Second
-			if err := utils.WaitUntil(framework.AsKubeAdmin.CommonController.ApplicationGitopsRepoExists(app.Status.Devfile), gitopsRepoTimeout); err != nil {
+			if err := utils.WaitUntil(framework.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), gitopsRepoTimeout); err != nil {
 				logError(5, fmt.Sprintf("Unable to create application gitops repo within %v: %v", gitopsRepoTimeout, err))
 				atomic.StoreInt64(&FailedResourceCreations, atomic.AddInt64(&FailedResourceCreations, 1))
 				continue
