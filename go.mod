@@ -1,6 +1,6 @@
 module github.com/redhat-appstudio/e2e-tests
 
-go 1.19
+go 1.18
 
 require (
 	github.com/avast/retry-go/v4 v4.3.3
