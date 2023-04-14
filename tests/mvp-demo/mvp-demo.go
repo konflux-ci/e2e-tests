@@ -42,14 +42,27 @@ const (
 	sampleRepoName             = "hacbs-test-project"
 	componentDefaultBranchName = "main"
 
-	testNamespace = "mvp-demo-dev-namespace"
+	// Kubernetes resource names
+	testNamespacePrefix = "mvp-demo-dev-namespace"
+	managedNamespace    = "mvp-demo-managed-namespace"
 
 	appName       = "mvp-test-app"
 	componentName = "mvp-test-component"
 
-	managedNamespace = "mvp-demo-managed-namespace"
+	// Timeouts
+	appDeployTimeout            = time.Minute * 20
+	appRouteAvailableTimeout    = time.Minute * 5
+	customResourceUpdateTimeout = time.Minute * 2
+	jvmRebuildTimeout           = time.Minute * 20
+	mergePRTimeout              = time.Minute * 1
+	pipelineRunStartedTimeout   = time.Minute * 5
+	pullRequestCreationTimeout  = time.Minute * 5
+	releasePipelineTimeout      = time.Minute * 15
 
-	releasePipelineTimeout = time.Minute * 15
+	// Intervals
+	defaultPollingInterval     = time.Second * 2
+	jvmRebuildPollingInterval  = time.Second * 10
+	pipelineRunPollingInterval = time.Second * 10
 )
 
 var sampleRepoURL = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), sampleRepoName)
@@ -76,7 +89,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		untrustedPipelineBundle, err = createUntrustedPipelineBundle()
 		klog.Info(untrustedPipelineBundle)
 		Expect(err).NotTo(HaveOccurred())
-		f, err = framework.NewFramework(utils.GetGeneratedNamespace(testNamespace))
+		f, err = framework.NewFramework(utils.GetGeneratedNamespace(testNamespacePrefix))
 		Expect(err).NotTo(HaveOccurred())
 		userNamespace = f.UserNamespace
 		Expect(userNamespace).NotTo(BeEmpty())
@@ -206,11 +219,11 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		})
 
 		It("sample app is successfully deployed to dev environment", func() {
-			Expect(utils.WaitUntil(f.AsKubeAdmin.CommonController.DeploymentIsCompleted(componentName, userNamespace, 1), time.Minute*20)).To(Succeed())
+			Expect(utils.WaitUntil(f.AsKubeAdmin.CommonController.DeploymentIsCompleted(componentName, userNamespace, 1), appDeployTimeout)).To(Succeed())
 		})
 
 		It("sample app's route can be accessed", func() {
-			Expect(utils.WaitUntil(f.AsKubeAdmin.CommonController.RouteHostnameIsAccessible(componentName, userNamespace), time.Minute*10)).To(Succeed())
+			Expect(utils.WaitUntil(f.AsKubeAdmin.CommonController.RouteHostnameIsAccessible(componentName, userNamespace), appRouteAvailableTimeout)).To(Succeed())
 		})
 
 		It("Snapshot is created", func() {
@@ -233,18 +246,18 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					return false
 				}
 				return pipelineRun.HasStarted()
-			}, 2*time.Minute, 2*time.Second).Should(BeTrue())
+			}, pipelineRunStartedTimeout, defaultPollingInterval).Should(BeTrue())
 		})
 
 		It("Release status is updated", func() {
 			Eventually(func() bool {
 				release, err = f.AsKubeAdmin.ReleaseController.GetRelease(release.Name, "", userNamespace)
 				if err != nil {
-					GinkgoWriter.Printf("failed to get Relase CR in '%s' namespace: %+v\n", managedNamespace, err)
+					GinkgoWriter.Printf("failed to get Release CR in '%s' namespace: %+v\n", managedNamespace, err)
 					return false
 				}
 				return release.HasStarted()
-			}, 1*time.Minute, 2*time.Second).Should(BeTrue())
+			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue())
 		})
 
 		It("Release PipelineRun should eventually fail", func() {
@@ -255,7 +268,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					return false
 				}
 				return pipelineRun.IsDone()
-			}, releasePipelineTimeout, 10*time.Second).Should(BeTrue())
+			}, releasePipelineTimeout, pipelineRunPollingInterval).Should(BeTrue())
 		})
 
 		It("associated Release should be marked as failed", func() {
@@ -266,7 +279,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					return false
 				}
 				return release.IsDone() && !release.HasSucceeded()
-			}, 1*time.Minute, 2*time.Second).Should(BeTrue())
+			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue())
 		})
 
 	})
@@ -326,8 +339,6 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 			}
 			Expect(f.AsKubeAdmin.CommonController.KubeRest().Update(context.TODO(), comp)).To(Succeed())
 
-			timeout := time.Minute * 5
-			interval := time.Second * 1
 			pacBranchName := fmt.Sprintf("appstudio-%s", componentName)
 
 			var prSHA string
@@ -343,7 +354,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					}
 				}
 				return false
-			}, timeout, interval).Should(BeTrue(), "timed out when waiting for init PaC PR to be created")
+			}, pullRequestCreationTimeout, defaultPollingInterval).Should(BeTrue(), "timed out when waiting for init PaC PR to be created")
 
 			// We actually don't need the "on-pull-request" PipelineRun to complete, so we can delete it
 			Eventually(func() bool {
@@ -353,7 +364,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					return true
 				}
 				return false
-			}, timeout, interval).Should(BeTrue(), "timed out when waiting for init PaC PipelineRun to be present in the user namespace")
+			}, pipelineRunStartedTimeout, pipelineRunPollingInterval).Should(BeTrue(), "timed out when waiting for init PaC PipelineRun to be present in the user namespace")
 
 		})
 
@@ -361,12 +372,9 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 			Eventually(func() error {
 				mergeResult, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(sampleRepoName, prNumber)
 				return err
-			}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request: %+v\n", err))
+			}, mergePRTimeout).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request: %+v\n", err))
 
 			mergeResultSha = mergeResult.GetSHA()
-
-			timeout := time.Minute * 2
-			interval := time.Second * 1
 
 			Eventually(func() bool {
 				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, appName, userNamespace, mergeResultSha)
@@ -375,7 +383,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					return false
 				}
 				return pipelineRun.HasStarted()
-			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
+			}, pipelineRunStartedTimeout, pipelineRunPollingInterval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 		})
 
 		It("SLSA level 3 customizable pipeline completes successfully", func() {
@@ -417,16 +425,16 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					return false
 				}
 				return pipelineRun.HasStarted()
-			}, 2*time.Minute, 2*time.Second).Should(BeTrue())
+			}, pipelineRunStartedTimeout, defaultPollingInterval).Should(BeTrue())
 
 			Eventually(func() bool {
 				release, err = f.AsKubeAdmin.ReleaseController.GetRelease(release.Name, "", userNamespace)
 				if err != nil {
-					GinkgoWriter.Printf("failed to get Relase CR in '%s' namespace: %+v\n", managedNamespace, err)
+					GinkgoWriter.Printf("failed to get Release CR in '%s' namespace: %+v\n", managedNamespace, err)
 					return false
 				}
 				return release.HasStarted()
-			}, 1*time.Minute, 2*time.Second).Should(BeTrue())
+			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue())
 		})
 
 		It("Release PipelineRun should eventually succeed and associated Release should be marked as succeeded", func() {
@@ -437,7 +445,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					return false
 				}
 				return pipelineRun.IsDone() && pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue()
-			}, releasePipelineTimeout, 10*time.Second).Should(BeTrue())
+			}, releasePipelineTimeout, pipelineRunPollingInterval).Should(BeTrue())
 
 			Eventually(func() bool {
 				release, err = f.AsKubeAdmin.ReleaseController.GetRelease(release.Name, "", userNamespace)
@@ -446,13 +454,10 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					return false
 				}
 				return release.IsDone() && release.HasSucceeded()
-			}, 1*time.Minute, 2*time.Second).Should(BeTrue())
+			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue())
 		})
 
 		It("JVM Build Service is used for rebuilding dependencies and completes rebuild of all artifacts and dependencies", func() {
-			timeout := time.Minute * 20
-			interval := time.Second * 10
-
 			Eventually(func() bool {
 				abList, err := f.AsKubeAdmin.JvmbuildserviceController.ListArtifactBuilds(userNamespace)
 				if err != nil {
@@ -477,7 +482,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					}
 				}
 				return true
-			}, timeout, interval).Should(BeTrue(), "timed out when waiting for all artifactbuilds and dependencybuilds to complete")
+			}, jvmRebuildTimeout, jvmRebuildPollingInterval).Should(BeTrue(), "timed out when waiting for all artifactbuilds and dependencybuilds to complete")
 		})
 
 	})

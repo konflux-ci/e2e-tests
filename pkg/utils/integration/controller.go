@@ -66,7 +66,7 @@ func (h *SuiteController) GetSnapshot(snapshotName, pipelineRunName, componentNa
 	if len(snapshotName) > 0 {
 		snapshot := &appstudioApi.Snapshot{}
 		if err := h.KubeRest().Get(ctx, types.NamespacedName{Name: snapshotName, Namespace: namespace}, snapshot); err != nil {
-			return nil, fmt.Errorf("couldn't find Snapshot find name '%s' in '%s' namespace", snapshotName, namespace)
+			return nil, fmt.Errorf("couldn't find Snapshot with name '%s' in '%s' namespace", snapshotName, namespace)
 		}
 		return snapshot, nil
 	}
@@ -77,7 +77,7 @@ func (h *SuiteController) GetSnapshot(snapshotName, pipelineRunName, componentNa
 	}
 	err := h.KubeRest().List(ctx, snapshots, opts...)
 	if err != nil {
-		return nil, fmt.Errorf("error when listing Snaphots in '%s' namespace", namespace)
+		return nil, fmt.Errorf("error when listing Snapshots in '%s' namespace", namespace)
 	}
 	for _, snapshot := range snapshots.Items {
 		if snapshot.Name == snapshotName {
