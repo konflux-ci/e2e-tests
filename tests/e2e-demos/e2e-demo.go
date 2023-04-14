@@ -41,7 +41,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	component := &appservice.Component{}
 	snapshot := &appservice.Snapshot{}
 	env := &appservice.Environment{}
-	cdq := &appservice.ComponentDetectionQuery{}
 	fw := &framework.Framework{}
 
 	// Initialize the e2e demo configuration
@@ -124,6 +123,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 			for _, componentTest := range appTest.Components {
 				componentTest := componentTest
+				cdq := &appservice.ComponentDetectionQuery{}
 				if componentTest.Type == "private" {
 					It("injects manually SPI token", func() {
 						// Inject spi tokens to work with private components
