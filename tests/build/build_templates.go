@@ -1,6 +1,7 @@
 package build
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -139,6 +140,27 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					}
 					return true
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
+			})
+
+			It("should ensure SBOM is shown", Label(buildTemplatesTestLabel), func() {
+				pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(pipelineRun).ToNot(BeNil(), "component pipelinerun not found")
+
+				logs, err := kubeadminClient.TektonController.GetTaskRunLogs(pipelineRun.Name, "show-sbom", testNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(logs).To(HaveLen(1))
+				var sbomTaskLog string
+				for _, log := range logs {
+					sbomTaskLog = log
+				}
+
+				sbom := &build.SbomCyclonedx{}
+				err = json.Unmarshal([]byte(sbomTaskLog), sbom)
+				Expect(err).NotTo(HaveOccurred(), "failed to parse SBOM from show-sbom task output")
+				Expect(sbom.BomFormat).ToNot(BeEmpty())
+				Expect(sbom.SpecVersion).ToNot(BeEmpty())
+				Expect(len(sbom.Components)).To(BeNumerically(">=", 1))
 			})
 
 			It("should validate Tekton Results", func() {
