@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	spi "github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -113,7 +112,7 @@ func (s *SuiteController) GetSPIAccessToken(name, namespace string) (*spi.SPIAcc
 
 // Inject manually access tokens using spi API
 func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string, oauthCredentials string, secretType v1.SecretType, secretName string) string {
-	var spiAccessTokenBinding *v1beta1.SPIAccessTokenBinding
+	var spiAccessTokenBinding *spi.SPIAccessTokenBinding
 
 	// Get the token for the current openshift user
 	bearerToken, err := utils.GetOpenshiftToken()
@@ -138,7 +137,7 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 			return false
 		}
 
-		return (spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected || spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData)
+		return (spiAccessTokenBinding.Status.Phase == spi.SPIAccessTokenBindingPhaseInjected || spiAccessTokenBinding.Status.Phase == spi.SPIAccessTokenBindingPhaseAwaitingTokenData)
 	}, 2*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to AwaitingTokenData/Injected")
 
 	Eventually(func() bool {
@@ -152,7 +151,7 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 		return spiAccessTokenBinding.Status.UploadUrl != ""
 	}, 5*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI oauth url not set. Please check if spi oauth-config configmap contain all necessary providers for tests.")
 
-	if spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData {
+	if spiAccessTokenBinding.Status.Phase == spi.SPIAccessTokenBindingPhaseAwaitingTokenData {
 		// If the phase is AwaitingTokenData then manually inject the git token
 		// Get the oauth url and linkedAccessTokenName from the spiaccesstokenbinding resource
 		Expect(err).NotTo(HaveOccurred())
@@ -183,7 +182,7 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
 			spiAccessTokenBinding, err = s.GetSPIAccessTokenBinding(spiAccessTokenBinding.Name, namespace)
-			return err == nil && spiAccessTokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected
+			return err == nil && spiAccessTokenBinding.Status.Phase == spi.SPIAccessTokenBindingPhaseInjected
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to Injected")
 	}
 	return secretName
@@ -191,17 +190,17 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 
 // Remove all tokens from a given repository. Useful when creating a lot of resources and wanting to remove all of them
 func (h *SuiteController) DeleteAllBindingTokensInASpecificNamespace(namespace string) error {
-	return h.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.SPIAccessTokenBinding{}, client.InNamespace(namespace))
+	return h.KubeRest().DeleteAllOf(context.TODO(), &spi.SPIAccessTokenBinding{}, client.InNamespace(namespace))
 }
 
 // Remove all tokens from a given repository. Useful when creating a lot of resources and wanting to remove all of them
 func (h *SuiteController) DeleteAllAccessTokenDataInASpecificNamespace(namespace string) error {
-	return h.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.SPIAccessTokenDataUpdate{}, client.InNamespace(namespace))
+	return h.KubeRest().DeleteAllOf(context.TODO(), &spi.SPIAccessTokenDataUpdate{}, client.InNamespace(namespace))
 }
 
 // Remove all tokens from a given repository. Useful when creating a lot of resources and wanting to remove all of them
 func (h *SuiteController) DeleteAllAccessTokensInASpecificNamespace(namespace string) error {
-	return h.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.SPIAccessToken{}, client.InNamespace(namespace))
+	return h.KubeRest().DeleteAllOf(context.TODO(), &spi.SPIAccessToken{}, client.InNamespace(namespace))
 }
 
 // Perform http POST call to upload a token at the given upload URL
@@ -223,7 +222,7 @@ func (h *SuiteController) UploadWithRestEndpoint(uploadURL string, oauthCredenti
 	return resp.StatusCode, nil
 }
 
-// GetSPIAccessTokenBinding returns the requested SPIAccessTokenBinding object
+// UploadWithK8sSecret returns the requested Secret object
 func (s *SuiteController) UploadWithK8sSecret(secretName, namespace, spiTokenName, providerURL, username, tokenData string) (*v1.Secret, error) {
 	k8sSecret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -253,4 +252,103 @@ func (s *SuiteController) UploadWithK8sSecret(secretName, namespace, spiTokenNam
 		return nil, err
 	}
 	return k8sSecret, nil
+}
+
+// CreateSPIAccessCheck creates a SPIAccessCheck object
+func (s *SuiteController) CreateSPIAccessCheck(name, namespace, repoURL string) (*spi.SPIAccessCheck, error) {
+	spiAccessCheck := spi.SPIAccessCheck{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: name,
+			Namespace:    namespace,
+		},
+		Spec: spi.SPIAccessCheckSpec{RepoUrl: repoURL},
+	}
+	err := s.KubeRest().Create(context.TODO(), &spiAccessCheck)
+	if err != nil {
+		return nil, err
+	}
+	return &spiAccessCheck, nil
+}
+
+// GetSPIAccessCheck returns the requested SPIAccessCheck object
+func (s *SuiteController) GetSPIAccessCheck(name, namespace string) (*spi.SPIAccessCheck, error) {
+	namespacedName := types.NamespacedName{
+		Name:      name,
+		Namespace: namespace,
+	}
+
+	spiAccessCheck := spi.SPIAccessCheck{
+		Spec: spi.SPIAccessCheckSpec{},
+	}
+	err := s.KubeRest().Get(context.TODO(), namespacedName, &spiAccessCheck)
+	if err != nil {
+		return nil, err
+	}
+	return &spiAccessCheck, nil
+}
+
+// CreateSPIAccessTokenBindingWithSA creates SPIAccessTokenBinding with secret linked to a service account
+// There are three ways of linking a secret to a service account:
+// - Linking a secret to an existing service account
+// - Linking a secret to an existing service account as image pull secret
+// - Using a managed service account
+func (s *SuiteController) CreateSPIAccessTokenBindingWithSA(name, namespace, serviceAccountName, repoURL, secretName string, isImagePullSecret, isManagedServiceAccount bool) (*spi.SPIAccessTokenBinding, error) {
+	spiAccessTokenBinding := spi.SPIAccessTokenBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: name,
+			Namespace:    namespace,
+		},
+		Spec: spi.SPIAccessTokenBindingSpec{
+			Permissions: spi.Permissions{
+				Required: []spi.Permission{
+					{
+						Type: spi.PermissionTypeReadWrite,
+						Area: spi.PermissionAreaRepository,
+					},
+				},
+			},
+			RepoUrl: repoURL,
+			Secret: spi.SecretSpec{
+				Name: secretName,
+				Type: "kubernetes.io/dockerconfigjson",
+				LinkedTo: []spi.SecretLink{
+					{
+						ServiceAccount: spi.ServiceAccountLink{
+							Reference: v1.LocalObjectReference{
+								Name: serviceAccountName,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if isImagePullSecret {
+		spiAccessTokenBinding.Spec.Secret.LinkedTo[0].ServiceAccount.As = spi.ServiceAccountLinkTypeImagePullSecret
+	}
+
+	if isManagedServiceAccount {
+		spiAccessTokenBinding.Spec.Secret.Type = "kubernetes.io/basic-auth"
+		spiAccessTokenBinding.Spec.Secret.LinkedTo = []spi.SecretLink{
+			{
+				ServiceAccount: spi.ServiceAccountLink{
+					Managed: spi.ManagedServiceAccountSpec{
+						GenerateName: serviceAccountName,
+					},
+				},
+			},
+		}
+	}
+
+	err := s.KubeRest().Create(context.TODO(), &spiAccessTokenBinding)
+	if err != nil {
+		return nil, err
+	}
+	return &spiAccessTokenBinding, nil
+}
+
+// DeleteAllSPIAccessChecksInASpecificNamespace deletes all SPIAccessCheck from a given namespace
+func (h *SuiteController) DeleteAllAccessChecksInASpecificNamespace(namespace string) error {
+	return h.KubeRest().DeleteAllOf(context.TODO(), &spi.SPIAccessCheck{}, client.InNamespace(namespace))
 }
