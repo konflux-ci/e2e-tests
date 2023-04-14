@@ -93,7 +93,11 @@ const (
 )
 
 var (
-	ComponentDefaultLabel         = map[string]string{"e2e-test": "true"}
-	ComponentDefaultAnnotation    = map[string]string{ComponentInitialBuildAnnotationKey: "processed"}
-	ComponentPaCRequestAnnotation = map[string]string{"appstudio.openshift.io/pac-provision": "request"}
+	ComponentDefaultLabel                  = map[string]string{"e2e-test": "true"}
+	ComponentDefaultAnnotation             = map[string]string{ComponentInitialBuildAnnotationKey: "processed"}
+	ComponentPaCRequestAnnotation          = map[string]string{"appstudio.openshift.io/pac-provision": "request"}
+	ComponentWithImageControllerAnnotation = map[string]string{
+		"image.redhat.com/generate":          "true",
+		"image.redhat.com/delete-image-repo": "true",
+	}
 )
