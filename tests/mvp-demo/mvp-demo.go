@@ -213,8 +213,8 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 			Expect(utils.WaitUntil(f.AsKubeAdmin.CommonController.RouteHostnameIsAccessible(componentName, userNamespace), time.Minute*10)).To(Succeed())
 		})
 
-		It("application snapshot is created", func() {
-			snapshot, err = f.AsKubeAdmin.IntegrationController.GetApplicationSnapshot("", "", componentName, userNamespace)
+		It("Snapshot is created", func() {
+			snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", "", componentName, userNamespace)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(snapshot.Name).ToNot(BeEmpty())
 		})
@@ -399,8 +399,8 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 
 		})
 
-		It("application snapshot is created", func() {
-			snapshot, err = f.AsKubeAdmin.IntegrationController.GetApplicationSnapshot("", pipelineRun.Name, "", userNamespace)
+		It("Snapshot is created", func() {
+			snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", userNamespace)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(snapshot.Name).ToNot(BeEmpty())
 		})

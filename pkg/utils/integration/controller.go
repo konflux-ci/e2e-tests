@@ -57,10 +57,10 @@ func (h *SuiteController) MarkHACBSTestsSucceeded(snapshot *appstudioApi.Snapsho
 	return snapshot, nil
 }
 
-// GetApplicationSnapshot returns the Snapshot in the namespace and nil if it's not found
+// GetSnapshot returns the Snapshot in the namespace and nil if it's not found
 // It will search for the Snapshot based on the Snapshot name, associated PipelineRun name or Component name
 // In the case the List operation fails, an error will be returned.
-func (h *SuiteController) GetApplicationSnapshot(snapshotName, pipelineRunName, componentName, namespace string) (*appstudioApi.Snapshot, error) {
+func (h *SuiteController) GetSnapshot(snapshotName, pipelineRunName, componentName, namespace string) (*appstudioApi.Snapshot, error) {
 	ctx := context.Background()
 	// If Snapshot name is provided, try to get the resource directly
 	if len(snapshotName) > 0 {
@@ -71,26 +71,26 @@ func (h *SuiteController) GetApplicationSnapshot(snapshotName, pipelineRunName, 
 		return snapshot, nil
 	}
 	// Search for the Snapshot in the namespace based on the associated Component or PipelineRun
-	applicationSnapshots := &appstudioApi.SnapshotList{}
+	snapshots := &appstudioApi.SnapshotList{}
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
 	}
-	err := h.KubeRest().List(ctx, applicationSnapshots, opts...)
+	err := h.KubeRest().List(ctx, snapshots, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("error when listing Snaphots in '%s' namespace", namespace)
 	}
-	for _, applicationSnapshot := range applicationSnapshots.Items {
-		if applicationSnapshot.Name == snapshotName {
-			return &applicationSnapshot, nil
+	for _, snapshot := range snapshots.Items {
+		if snapshot.Name == snapshotName {
+			return &snapshot, nil
 		}
 		// find snapshot by pipelinerun name
-		if len(pipelineRunName) > 0 && applicationSnapshot.Labels["appstudio.openshift.io/build-pipelinerun"] == pipelineRunName {
-			return &applicationSnapshot, nil
+		if len(pipelineRunName) > 0 && snapshot.Labels["appstudio.openshift.io/build-pipelinerun"] == pipelineRunName {
+			return &snapshot, nil
 
 		}
 		// find snapshot by component name
-		if len(componentName) > 0 && applicationSnapshot.Labels["appstudio.openshift.io/component"] == componentName {
-			return &applicationSnapshot, nil
+		if len(componentName) > 0 && snapshot.Labels["appstudio.openshift.io/component"] == componentName {
+			return &snapshot, nil
 
 		}
 	}
@@ -115,7 +115,7 @@ func (h *SuiteController) GetComponent(applicationName, namespace string) (*apps
 	return &appstudioApi.Component{}, fmt.Errorf("no component found %s", utils.GetAdditionalInfo(applicationName, namespace))
 }
 
-func (h *SuiteController) GetReleasesWithApplicationSnapshot(applicationSnapshot *appstudioApi.Snapshot, namespace string) (*[]releasev1alpha1.Release, error) {
+func (h *SuiteController) GetReleasesWithSnapshot(snapshot *appstudioApi.Snapshot, namespace string) (*[]releasev1alpha1.Release, error) {
 	releases := &releasev1alpha1.ReleaseList{}
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
@@ -213,7 +213,7 @@ func (h *SuiteController) DeleteEnvironment(namespace string) (*appstudioApi.Env
 	return env, err
 }
 
-func (h *SuiteController) CreateApplicationSnapshot(applicationName, namespace, componentName, containerImage string) (*appstudioApi.Snapshot, error) {
+func (h *SuiteController) CreateSnapshot(applicationName, namespace, componentName, containerImage string) (*appstudioApi.Snapshot, error) {
 	hasSnapshot := &appstudioApi.Snapshot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "snapshot-sample-" + util.GenerateRandomString(4),
@@ -241,7 +241,7 @@ func (h *SuiteController) CreateApplicationSnapshot(applicationName, namespace, 
 	return hasSnapshot, err
 }
 
-func (h *SuiteController) DeleteApplicationSnapshot(hasSnapshot *appstudioApi.Snapshot, namespace string) error {
+func (h *SuiteController) DeleteSnapshot(hasSnapshot *appstudioApi.Snapshot, namespace string) error {
 	err := h.KubeRest().Delete(context.TODO(), hasSnapshot)
 	return err
 }
@@ -278,7 +278,7 @@ func (h *SuiteController) CreateReleasePlan(applicationName, namespace string) (
 	return testReleasePlan, err
 }
 
-func (h *SuiteController) CreateIntegrationPipelineRun(applicationSnapshotName, namespace, componentName, integrationTestScenarioName string) (*tektonv1beta1.PipelineRun, error) {
+func (h *SuiteController) CreateIntegrationPipelineRun(snapshotName, namespace, componentName, integrationTestScenarioName string) (*tektonv1beta1.PipelineRun, error) {
 	testpipelineRun := &tektonv1beta1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "component-pipelinerun" + "-",
@@ -287,7 +287,7 @@ func (h *SuiteController) CreateIntegrationPipelineRun(applicationSnapshotName, 
 				"pipelinesascode.tekton.dev/event-type": "push",
 				"appstudio.openshift.io/component":      componentName,
 				"pipelines.appstudio.openshift.io/type": "test",
-				"appstudio.openshift.io/snapshot":       applicationSnapshotName,
+				"appstudio.openshift.io/snapshot":       snapshotName,
 				"test.appstudio.openshift.io/scenario":  integrationTestScenarioName,
 			},
 		},
@@ -342,9 +342,9 @@ func (h *SuiteController) CreateIntegrationTestScenario(applicationName, namespa
 	return integrationTestScenario, nil
 }
 
-func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(c *common.SuiteController, testScenario *integrationv1alpha1.IntegrationTestScenario, applicationSnapshot *appstudioApi.Snapshot, applicationName string, appNamespace string) error {
+func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(c *common.SuiteController, testScenario *integrationv1alpha1.IntegrationTestScenario, snapshot *appstudioApi.Snapshot, applicationName string, appNamespace string) error {
 	return wait.PollImmediate(20*time.Second, 100*time.Minute, func() (done bool, err error) {
-		pipelineRun, _ := h.GetIntegrationPipelineRun(testScenario.Name, applicationSnapshot.Name, appNamespace)
+		pipelineRun, _ := h.GetIntegrationPipelineRun(testScenario.Name, snapshot.Name, appNamespace)
 
 		for _, condition := range pipelineRun.Status.Conditions {
 			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
@@ -394,14 +394,14 @@ func (h *SuiteController) GetBuildPipelineRun(componentName, applicationName, na
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels
-func (h *SuiteController) GetIntegrationPipelineRun(integrationTestScenarioName string, applicationSnapshotName string, namespace string) (*tektonv1beta1.PipelineRun, error) {
+func (h *SuiteController) GetIntegrationPipelineRun(integrationTestScenarioName string, snapshotName string, namespace string) (*tektonv1beta1.PipelineRun, error) {
 
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
 		client.MatchingLabels{
 			"pipelines.appstudio.openshift.io/type": "test",
 			"test.appstudio.openshift.io/scenario":  integrationTestScenarioName,
-			"appstudio.openshift.io/snapshot":       applicationSnapshotName,
+			"appstudio.openshift.io/snapshot":       snapshotName,
 		},
 	}
 
@@ -416,7 +416,7 @@ func (h *SuiteController) GetIntegrationPipelineRun(integrationTestScenarioName 
 		return &list.Items[0], nil
 	}
 
-	return &tektonv1beta1.PipelineRun{}, fmt.Errorf("no pipelinerun found for integrationTestScenario %s (snapshot: %s, namespace: %s)", integrationTestScenarioName, applicationSnapshotName, namespace)
+	return &tektonv1beta1.PipelineRun{}, fmt.Errorf("no pipelinerun found for integrationTestScenario %s (snapshot: %s, namespace: %s)", integrationTestScenarioName, snapshotName, namespace)
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels

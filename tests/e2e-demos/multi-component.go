@@ -242,7 +242,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 					interval := time.Second * 10
 
 					for _, component := range componentList {
-						componentSnapshot, err := fw.AsKubeDeveloper.IntegrationController.GetApplicationSnapshot("", "", component.Name, namespace)
+						componentSnapshot, err := fw.AsKubeDeveloper.IntegrationController.GetSnapshot("", "", component.Name, namespace)
 						Expect(err).ShouldNot(HaveOccurred())
 
 						Eventually(func() bool {
@@ -257,7 +257,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 								return true
 							}
 
-							componentSnapshot, err = fw.AsKubeDeveloper.IntegrationController.GetApplicationSnapshot("", "", component.Name, namespace)
+							componentSnapshot, err = fw.AsKubeDeveloper.IntegrationController.GetSnapshot("", "", component.Name, namespace)
 							Expect(err).ShouldNot(HaveOccurred())
 							return false
 						}, timeout, interval).Should(BeTrue(), "time out when waiting for snapshoot environment binding")
