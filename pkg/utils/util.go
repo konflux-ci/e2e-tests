@@ -179,7 +179,7 @@ func ExecuteCommandInASpecificDirectory(command string, args []string, directory
 	cmd.Stderr = os.Stderr
 
 	if err = cmd.Start(); err != nil {
-		klog.Errorf("an error ocurred: %s", err)
+		klog.Errorf("an error occurred: %s", err)
 
 		return err
 	}

@@ -6,6 +6,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (s *SuiteController) GetServiceAccount(saName, namespace string) (*corev1.ServiceAccount, error) {
@@ -32,4 +33,9 @@ func (s *SuiteController) CreateServiceAccount(name, namespace string, serviceAc
 		Secrets: serviceAccountSecretList,
 	}
 	return s.KubeInterface().CoreV1().ServiceAccounts(namespace).Create(context.TODO(), serviceAccount, metav1.CreateOptions{})
+}
+
+// DeleteAllServiceAccountsInASpecificNamespace deletes all ServiceAccount from a given namespace
+func (h *SuiteController) DeleteAllServiceAccountsInASpecificNamespace(namespace string) error {
+	return h.KubeRest().DeleteAllOf(context.TODO(), &corev1.ServiceAccount{}, client.InNamespace(namespace))
 }

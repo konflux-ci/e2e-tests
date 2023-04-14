@@ -161,6 +161,47 @@ func (s *SuiteController) GetPipelineRunLogs(pipelineRunName, namespace string) 
 	return podLog, nil
 }
 
+func (s *SuiteController) GetTaskRunLogs(pipelineRunName, taskName, namespace string) (map[string]string, error) {
+	tektonClient := s.PipelineClient().TektonV1beta1().PipelineRuns(namespace)
+	pipelineRun, err := tektonClient.Get(context.TODO(), pipelineRunName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	podName := ""
+	for _, childStatusReference := range pipelineRun.Status.ChildReferences {
+		if childStatusReference.PipelineTaskName == taskName {
+			taskRun := &v1beta1.TaskRun{}
+			taskRunKey := types.NamespacedName{Namespace: pipelineRun.Namespace, Name: childStatusReference.Name}
+			if err := s.KubeRest().Get(context.TODO(), taskRunKey, taskRun); err != nil {
+				return nil, err
+			}
+			podName = taskRun.Status.PodName
+			break
+		}
+	}
+	if podName == "" {
+		return nil, fmt.Errorf("task with %s name doesn't exist in %s pipelinerun", taskName, pipelineRunName)
+	}
+
+	podClient := s.KubeInterface().CoreV1().Pods(namespace)
+	pod, err := podClient.Get(context.TODO(), podName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	logs := make(map[string]string)
+	for _, container := range pod.Spec.Containers {
+		containerName := container.Name
+		if containerLogs, err := s.fetchContainerLog(podName, containerName, namespace); err == nil {
+			logs[containerName] = containerLogs
+		} else {
+			logs[containerName] = "failed to get logs"
+		}
+	}
+	return logs, nil
+}
+
 func (s *SuiteController) CheckPipelineRunStarted(pipelineRunName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
 		pr, err := s.GetPipelineRun(pipelineRunName, namespace)
