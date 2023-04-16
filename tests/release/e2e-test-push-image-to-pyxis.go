@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
@@ -44,26 +45,16 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating managedNamespace: ", err)
 
-		sourceAuthJson := "ewogICJhdXRocyI6IHsKICAgICJxdWF5LmlvIjogewogICAgICAiYXV0aCI6ICJjbVZrYUdGMExXRndjSE4wZFdScGJ5MXhaU3R5WldSb1lYUmZZWEJ3YzNSMVpHbHZYM0YxWVd4cGRIazZXRmxQUVV3MVR6ZzRTMUZVTjFWSFZVVkdXRUkzUmxOQlZUTkZXRkZGU1ZwVVRsbEhNRE5LVFVVMlRUZzVTVWs0VDBKTlFsazROMVk0VkZveFYxZE9OZz09IiwKICAgICAgImVtYWlsIjogIiIKICAgIH0KICB9Cn0="
-		//utils.GetEnv("QUAY_TOKEN", "")
+		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
 		Expect(sourceAuthJson).ToNot(BeEmpty())
 
-		destinationAuthJson := "ewogICJhdXRocyI6IHsKICAgICJxdWF5LmlvIjogewogICAgICAiYXV0aCI6ICJhR0ZqWW5NdGNtVnNaV0Z6WlMxMFpYTjBjeXR0TlY5eWIySnZkRjloWTJOdmRXNTBPakpXTWpaQ1NrdExVMEZSTWpKWVZEQktOVGM1UmxJNVZ6azJOVlE1UlRkYVZWSlpNRVZNU3psVk1FdEJUVVE1U0ZGSk1sQk9WVUZNU2trMlRsVldNVGc9IiwKICAgICAgImVtYWlsIjogIiIKICAgIH0KICB9Cn0="
-		//utils.GetEnv("QUAY_OAUTH_TOKEN_RELEASE_DESTINATION", "")
+		destinationAuthJson := utils.GetEnv("QUAY_OAUTH_TOKEN_RELEASE_DESTINATION", "")
 		Expect(destinationAuthJson).ToNot(BeEmpty())
 
-		keyPyxisStage, err := os.ReadFile("/home/kasemalem/Downloads/key_px_stg")
-		if err != nil {
-			GinkgoWriter.Println("Error reading Pyxis_key: \n", err)
-		}
-		// := os.Getenv(constants.PYXIS_STAGE_KEY_ENV)
+		keyPyxisStage := os.Getenv(constants.PYXIS_STAGE_KEY_ENV)
 		Expect(keyPyxisStage).ToNot(BeEmpty())
 
-		certPyxisStage, err := os.ReadFile("/home/kasemalem/Downloads/cert_px_stg")
-		if err != nil {
-			GinkgoWriter.Println("Error reading Pyxis_cert: \n", err)
-		}
-		// := os.Getenv(constants.PYXIS_STAGE_CERT_ENV)
+		certPyxisStage := os.Getenv(constants.PYXIS_STAGE_CERT_ENV)
 		Expect(certPyxisStage).ToNot(BeEmpty())
 
 		// Create secret for the build registry repo "redhat-appstudio-qe".

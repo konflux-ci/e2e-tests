@@ -212,7 +212,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					return false
 				}
 
-				return releaseCreated.HasStarted() && releaseCreated.IsDone() && releaseCreated.Status.Conditions[0].Status == "False"
+				return !(releaseCreated.IsReleased())
 			}, 10*time.Minute, 10*time.Second).Should(BeTrue())
 		})
 
@@ -372,7 +372,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 				for _, r := range releases.Items {
 					for k, v := range r.Annotations {
 						if k == "pac.test.appstudio.openshift.io/on-target-branch" && v == "["+componentNewBaseBranch+"]" {
-							return r.HasStarted() && r.IsDone() && r.Status.Conditions[0].Status == "True"
+							return r.IsReleased()
 						}
 					}
 				}
