@@ -17,12 +17,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	devfilePkg "github.com/devfile/library/pkg/devfile"
+	"github.com/devfile/library/pkg/devfile/parser"
+	"github.com/devfile/library/pkg/devfile/parser/data"
 	"github.com/devfile/library/pkg/util"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/mitchellh/go-homedir"
-	"github.com/redhat-appstudio/application-service/pkg/devfile"
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/tektoncd/cli/pkg/bundle"
@@ -74,7 +76,7 @@ metadata:
 The ObtainGitUrlFromDevfile extract from the string the git url associated with a application
 */
 func ObtainGitOpsRepositoryName(devfileStatus string) string {
-	appDevfile, err := devfile.ParseDevfileModel(devfileStatus)
+	appDevfile, err := ParseDevfileModel(devfileStatus)
 	if err != nil {
 		err = fmt.Errorf("error parsing devfile: %v", err)
 	}
@@ -91,7 +93,7 @@ func ObtainGitOpsRepositoryName(devfileStatus string) string {
 }
 
 func ObtainGitOpsRepositoryUrl(devfileStatus string) string {
-	appDevfile, err := devfile.ParseDevfileModel(devfileStatus)
+	appDevfile, err := ParseDevfileModel(devfileStatus)
 	if err != nil {
 		err = fmt.Errorf("error parsing devfile: %v", err)
 	}
@@ -132,7 +134,7 @@ func GetOpenshiftToken() (token string, err error) {
 	// Get the token for the current openshift user
 	tokenBytes, err := exec.Command("oc", "whoami", "--show-token").Output()
 	if err != nil {
-		return "", fmt.Errorf("Error obtaining oc token %s", err.Error())
+		return "", fmt.Errorf("error obtaining oc token %s", err.Error())
 	}
 	return strings.TrimSuffix(string(tokenBytes), "\n"), nil
 }
@@ -298,4 +300,15 @@ func GetDefaultPipelineBundleRef(buildPipelineSelectorYamlURL, selectorName stri
 	}
 
 	return "", fmt.Errorf("could not find %s pipeline bundle in build pipeline selector fetched from %s", selectorName, buildPipelineSelectorYamlURL)
+}
+
+// ParseDevfileModel calls the devfile library's parse and returns the devfile data
+func ParseDevfileModel(devfileModel string) (data.DevfileData, error) {
+	// Retrieve the devfile from the body of the resource
+	devfileBytes := []byte(devfileModel)
+	parserArgs := parser.ParserArgs{
+		Data: devfileBytes,
+	}
+	devfileObj, _, err := devfilePkg.ParseDevfileAndValidate(parserArgs)
+	return devfileObj.Data, err
 }

@@ -28,7 +28,8 @@ For simulating the failed release we are using a custom docker-build template th
       3. Create a build pipeline selector with pipeline ref poiting to a custom build-template, that contains an image which should fail the EC validation (for more information see the [Description](#description))
       4. Create a new component that will trigger the "simple" build pipipelinerun
    2. After the component is built, check that the component is deployed (by checking the related deployment status) and check that the component route can be accessed
-   3. In the meantime the release of the container image (that was built by the custom-untrusted pipelinerun) should fail for the reasons mentioned above
+   3. Check that Snapshot and Release CRs are created and Release PipelineRun has started
+   4. Eventually the release of the container image (that was built by the custom-untrusted pipelinerun) should fail for the reasons mentioned above
 2. Chapter 2 (advanced build, JVM rebuild, successful release)
    1. Setup
       1. Create JBSConfig and related secret in user's (dev) namespace that will trigger jvm-build-service to deploy a jvm-cache to the dev namespace, which will be used for caching java dependencies during build
@@ -37,5 +38,5 @@ For simulating the failed release we are using a custom docker-build template th
    4. After merging the PR, there should be another build pipelinerun triggered in user namespace
    5. Make sure the pipelinerun completes successfully
    6. Make sure that the resulting SBOM file can be pulled from the container registry (where also the image was pushed) and it is saved in expected format
-   7. Make sure JVM build service is used for rebuilding java component's dependencies and that all related dependency builds complete successfully
-   8. This time we used official build-templates (that use container images from trusted registry), so the release pipeline should succeed and the release should be marked as successful
+   7. This time we used official build-templates (that use container images from trusted registry), so the release pipeline should succeed and the release should be marked as successful
+   8. Make sure JVM build service is used for rebuilding java component's dependencies and that all related dependency builds complete successfully
