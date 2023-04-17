@@ -1,6 +1,6 @@
 module github.com/redhat-appstudio/e2e-tests
 
-go 1.18
+go 1.19
 
 require (
 	github.com/avast/retry-go/v4 v4.3.3
@@ -53,17 +53,14 @@ require (
 	sigs.k8s.io/yaml v1.3.0
 )
 
-replace github.com/redhat-appstudio/managed-gitops/backend-shared => github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20220506042230-3a79f373a001
-
-replace github.com/antlr/antlr4 => github.com/antlr/antlr4 v0.0.0-20211106181442-e4c1a74c66bd
-
-replace sigs.k8s.io/controller-runtime => github.com/kcp-dev/controller-runtime v0.12.2-0.20220808200255-4b60fd66e5de
-
-replace k8s.io/api => k8s.io/api v0.25.5
-
-replace k8s.io/client-go => k8s.io/client-go v0.25.5
-
-replace k8s.io/apimachinery => k8s.io/apimachinery v0.25.5
+replace (
+	github.com/antlr/antlr4 => github.com/antlr/antlr4 v0.0.0-20211106181442-e4c1a74c66bd
+	github.com/redhat-appstudio/managed-gitops/backend-shared => github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20220506042230-3a79f373a001
+	k8s.io/api => k8s.io/api v0.25.5
+	k8s.io/apimachinery => k8s.io/apimachinery v0.25.5
+	k8s.io/client-go => k8s.io/client-go v0.25.5
+	sigs.k8s.io/controller-runtime => github.com/kcp-dev/controller-runtime v0.12.2-0.20220808200255-4b60fd66e5de
+)
 
 require (
 	contrib.go.opencensus.io/exporter/ocagent v0.7.1-0.20200907061046-05415f1de66d // indirect
