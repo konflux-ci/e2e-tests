@@ -24,14 +24,14 @@ require (
 	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
-	github.com/redhat-appstudio/application-api v0.0.0-20221220162402-c1e887791dac
+	github.com/redhat-appstudio/application-api v0.0.0-20230111181119-3144e2878df0
 	github.com/redhat-appstudio/application-service v0.0.0-20221129172232-763cbbe1992e
 	github.com/redhat-appstudio/build-service v0.0.0-20230113121706-a9f10055dbc4
-	github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2cad2
+	github.com/redhat-appstudio/integration-service v0.0.0-20221130110641-f5453dea9623
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20230125042419-efd0d0342a2c
 	github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001
 	github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0
-	github.com/redhat-appstudio/release-service v0.0.0-20221124083149-2b9e7545bcab
+	github.com/redhat-appstudio/release-service v0.0.0-20230404140848-d2ad6f470f2e
 	github.com/redhat-appstudio/service-provider-integration-operator v0.9.1-0.20230412095305-101be612c01e
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.14.0
@@ -60,14 +60,24 @@ replace github.com/antlr/antlr4 => github.com/antlr/antlr4 v0.0.0-20211106181442
 
 replace sigs.k8s.io/controller-runtime => github.com/kcp-dev/controller-runtime v0.12.2-0.20220808200255-4b60fd66e5de
 
+replace github.com/apcera/gssapi => github.com/openshift/gssapi v0.0.0-20161010215902-5fb4217df13b
+
 replace k8s.io/api => k8s.io/api v0.25.5
 
 replace k8s.io/client-go => k8s.io/client-go v0.25.4
 
 require (
+	cloud.google.com/go/compute v1.14.0 // indirect
+	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	contrib.go.opencensus.io/exporter/ocagent v0.7.1-0.20200907061046-05415f1de66d // indirect
-	contrib.go.opencensus.io/exporter/prometheus v0.4.0 // indirect
+	contrib.go.opencensus.io/exporter/prometheus v0.4.2 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
+	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
+	github.com/Azure/go-autorest/autorest v0.11.28 // indirect
+	github.com/Azure/go-autorest/autorest/adal v0.9.21 // indirect
+	github.com/Azure/go-autorest/autorest/date v0.3.0 // indirect
+	github.com/Azure/go-autorest/logger v0.2.1 // indirect
+	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/BurntSushi/toml v1.2.0 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
@@ -121,11 +131,13 @@ require (
 	github.com/go-kit/log v0.2.1 // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
+	github.com/go-logr/zapr v1.2.3 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.20.0 // indirect
 	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
@@ -184,6 +196,7 @@ require (
 	github.com/opencontainers/runc v1.1.2 // indirect
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417 // indirect
 	github.com/operator-framework/api v0.13.0 // indirect
+	github.com/operator-framework/operator-lib v0.10.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
@@ -193,7 +206,8 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
-	github.com/prometheus/statsd_exporter v0.21.0 // indirect
+	github.com/prometheus/statsd_exporter v0.22.8 // indirect
+	github.com/redhat-appstudio/operator-goodies v0.0.0-20221130140446-010c05bd7471 // indirect
 	github.com/redhat-cop/operator-utils v1.3.3-0.20220121120056-862ef22b8cdf // indirect
 	github.com/redhat-developer/alizer/go v0.0.0-20220704150640-ef50ead0b279 // indirect
 	github.com/redhat-developer/gitops-generator v0.0.0-20221117222854-240399c18bc0 // indirect

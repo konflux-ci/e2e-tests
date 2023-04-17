@@ -12,7 +12,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"knative.dev/pkg/apis"
 )
 
@@ -26,7 +25,7 @@ var snapshotComponents = []applicationapiv1alpha1.SnapshotComponent{
 	{Name: "component-3", ContainerImage: "quay.io/redhat-appstudio/component3@sha256:d90a0a33e4c5a1daf5877f8dd989a570bfae4f94211a8143599245e503775b1f"},
 }
 
-var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-path", Label("release", "HACBS"), func() {
+var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-path", Label("release", "happy-path", "HACBS"), func() {
 	defer GinkgoRecover()
 
 	var fw *framework.Framework
@@ -155,7 +154,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 					return false
 				}
 
-				return release.IsDone() && meta.IsStatusConditionTrue(release.Status.Conditions, "Succeeded")
+				return release.IsReleased()
 			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
@@ -175,7 +174,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 			if err != nil {
 				GinkgoWriter.Println(err)
 			}
-			Expect(release.Status.ReleasePipelineRun == (fmt.Sprintf("%s/%s", pipelineRunList.Items[0].Namespace, pipelineRunList.Items[0].Name))).Should(BeTrue())
+			Expect(release.Status.Processing.PipelineRun == (fmt.Sprintf("%s/%s", pipelineRunList.Items[0].Namespace, pipelineRunList.Items[0].Name))).Should(BeTrue())
 			// We add the namespace deletion timeout as this is the last test so must also take into account the code in AfterAll
 		}, SpecTimeout(avgControllerQueryTimeout*2+namespaceDeletionTimeout*2))
 	})

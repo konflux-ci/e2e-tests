@@ -256,7 +256,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					GinkgoWriter.Printf("failed to get Release CR in '%s' namespace: %+v\n", managedNamespace, err)
 					return false
 				}
-				return release.HasStarted()
+				return release.IsReleasing()
 			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue())
 		})
 
@@ -278,7 +278,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					GinkgoWriter.Printf("failed to get Release CR in '%s' namespace: %+v\n", managedNamespace, err)
 					return false
 				}
-				return release.IsDone() && !release.HasSucceeded()
+				return release.HasReleaseFinished() && !release.IsReleased()
 			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue())
 		})
 
@@ -433,7 +433,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					GinkgoWriter.Printf("failed to get Release CR in '%s' namespace: %+v\n", managedNamespace, err)
 					return false
 				}
-				return release.HasStarted()
+				return release.IsReleasing()
 			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue())
 		})
 
@@ -453,7 +453,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					GinkgoWriter.Printf("failed to get Release CR in '%s' namespace: %+v\n", managedNamespace, err)
 					return false
 				}
-				return release.IsDone() && release.HasSucceeded()
+				return release.IsReleased()
 			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue())
 		})
 
