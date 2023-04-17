@@ -2,7 +2,7 @@ package client
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
@@ -115,7 +115,7 @@ func NewDevSandboxProxyClient(userName string) (*K8SClient, error) {
 		return nil, err
 	}
 
-	cfgBytes, err := ioutil.ReadFile(userAuthInfo.KubeconfigPath)
+	cfgBytes, err := os.ReadFile(userAuthInfo.KubeconfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read user kubeconfig %v", err)
 	}
