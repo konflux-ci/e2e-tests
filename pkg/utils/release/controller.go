@@ -8,8 +8,7 @@ import (
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/release-service/api/v1alpha1"
-	appstudiov1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
+	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -61,13 +60,13 @@ func (s *SuiteController) GetSnapshotByComponent(namespace string) (*appstudioAp
 }
 
 // CreateRelease creates a new Release using the given parameters.
-func (s *SuiteController) CreateRelease(name, namespace, snapshot, releasePlan string) (*appstudiov1alpha1.Release, error) {
-	release := &appstudiov1alpha1.Release{
+func (s *SuiteController) CreateRelease(name, namespace, snapshot, releasePlan string) (*releaseApi.Release, error) {
+	release := &releaseApi.Release{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: v1alpha1.ReleaseSpec{
+		Spec: releaseApi.ReleaseSpec{
 			Snapshot:    snapshot,
 			ReleasePlan: releasePlan,
 		},
@@ -77,13 +76,13 @@ func (s *SuiteController) CreateRelease(name, namespace, snapshot, releasePlan s
 }
 
 // CreateReleaseStrategy creates a new ReleaseStrategy using the given parameters.
-func (s *SuiteController) CreateReleaseStrategy(name, namespace, pipelineName, bundle string, policy string, serviceAccount string, params []appstudiov1alpha1.Params) (*appstudiov1alpha1.ReleaseStrategy, error) {
-	releaseStrategy := &appstudiov1alpha1.ReleaseStrategy{
+func (s *SuiteController) CreateReleaseStrategy(name, namespace, pipelineName, bundle string, policy string, serviceAccount string, params []releaseApi.Params) (*releaseApi.ReleaseStrategy, error) {
+	releaseStrategy := &releaseApi.ReleaseStrategy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: v1alpha1.ReleaseStrategySpec{
+		Spec: releaseApi.ReleaseStrategySpec{
 			Pipeline:       pipelineName,
 			Bundle:         bundle,
 			Policy:         policy,
@@ -101,7 +100,7 @@ func (s *SuiteController) GetPipelineRunInNamespace(namespace, releaseName, rele
 	opts := []client.ListOption{
 		client.MatchingLabels{
 			"release.appstudio.openshift.io/name":      releaseName,
-			"release.appstudio.openshift.io/workspace": releaseNamespace,
+			"release.appstudio.openshift.io/namespace": releaseNamespace,
 		},
 		client.InNamespace(namespace),
 	}
@@ -112,24 +111,39 @@ func (s *SuiteController) GetPipelineRunInNamespace(namespace, releaseName, rele
 		return &pipelineRuns.Items[0], nil
 	}
 
-	return nil, err
+	return nil, fmt.Errorf("couldn't find PipelineRun in managed namespace '%s' for a release '%s' in '%s' namespace", namespace, releaseName, releaseNamespace)
 }
 
-// GetRelease returns the release with the given name in the given namespace.
-func (s *SuiteController) GetRelease(releaseName, releaseNamespace string) (*v1alpha1.Release, error) {
-	release := &v1alpha1.Release{}
-
-	err := s.KubeRest().Get(context.TODO(), types.NamespacedName{
-		Name:      releaseName,
-		Namespace: releaseNamespace,
-	}, release)
-
-	return release, err
+// GetRelease returns the release with in the given namespace.
+// It can find a Release CR based on provided name or a name of an associated Snapshot
+func (s *SuiteController) GetRelease(releaseName, snapshotName, namespace string) (*releaseApi.Release, error) {
+	ctx := context.Background()
+	if len(releaseName) > 0 {
+		release := &releaseApi.Release{}
+		err := s.KubeRest().Get(ctx, types.NamespacedName{Name: releaseName, Namespace: namespace}, release)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get Release with name '%s' in '%s' namespace", releaseName, namespace)
+		}
+		return release, nil
+	}
+	releaseList := &releaseApi.ReleaseList{}
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+	if err := s.KubeRest().List(context.TODO(), releaseList, opts...); err != nil {
+		return nil, err
+	}
+	for _, r := range releaseList.Items {
+		if len(snapshotName) > 0 && r.Spec.Snapshot == snapshotName {
+			return &r, nil
+		}
+	}
+	return nil, fmt.Errorf("could not find Release CR based on associated Snapshot '%s' in '%s' namespace", snapshotName, namespace)
 }
 
 // GetRelease returns the list of Release CR in the given namespace.
-func (s *SuiteController) GetReleases(namespace string) (*v1alpha1.ReleaseList, error) {
-	releaseList := &v1alpha1.ReleaseList{}
+func (s *SuiteController) GetReleases(namespace string) (*releaseApi.ReleaseList, error) {
+	releaseList := &releaseApi.ReleaseList{}
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
 	}
@@ -139,8 +153,8 @@ func (s *SuiteController) GetReleases(namespace string) (*v1alpha1.ReleaseList, 
 }
 
 // GetFirstReleaseInNamespace returns the first Release from  list of releases in the given namespace.
-func (s *SuiteController) GetFirstReleaseInNamespace(namespace string) (*v1alpha1.Release, error) {
-	releaseList := &v1alpha1.ReleaseList{}
+func (s *SuiteController) GetFirstReleaseInNamespace(namespace string) (*releaseApi.Release, error) {
+	releaseList := &releaseApi.ReleaseList{}
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
 	}
@@ -153,8 +167,8 @@ func (s *SuiteController) GetFirstReleaseInNamespace(namespace string) (*v1alpha
 }
 
 // GetReleasePlanAdmission returns the ReleasePlanAdmission with the given name in the given namespace.
-func (s *SuiteController) GetReleasePlanAdmission(name, namespace string) (*appstudiov1alpha1.ReleasePlanAdmission, error) {
-	releasePlanAdmission := &appstudiov1alpha1.ReleasePlanAdmission{}
+func (s *SuiteController) GetReleasePlanAdmission(name, namespace string) (*releaseApi.ReleasePlanAdmission, error) {
+	releasePlanAdmission := &releaseApi.ReleasePlanAdmission{}
 
 	err := s.KubeRest().Get(context.TODO(), types.NamespacedName{
 		Name:      name,
@@ -168,7 +182,7 @@ func (s *SuiteController) GetReleasePlanAdmission(name, namespace string) (*apps
 // Optionally, it can avoid returning an error if the resource did not exist:
 // specify 'false', if it's likely the ReleasePlanAdmission has already been deleted (for example, because the Namespace was deleted)
 func (s *SuiteController) DeleteReleasePlanAdmission(name, namespace string, failOnNotFound bool) error {
-	releasePlanAdmission := appstudiov1alpha1.ReleasePlanAdmission{
+	releasePlanAdmission := releaseApi.ReleasePlanAdmission{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -182,34 +196,34 @@ func (s *SuiteController) DeleteReleasePlanAdmission(name, namespace string, fai
 }
 
 // CreateReleasePlan creates a new ReleasePlan using the given parameters.
-func (s *SuiteController) CreateReleasePlan(name, namespace, application, targetNamespace, autoReleaseLabel string) (*appstudiov1alpha1.ReleasePlan, error) {
-	var releasePlan *appstudiov1alpha1.ReleasePlan = &appstudiov1alpha1.ReleasePlan{
+func (s *SuiteController) CreateReleasePlan(name, namespace, application, targetNamespace, autoReleaseLabel string) (*releaseApi.ReleasePlan, error) {
+	var releasePlan *releaseApi.ReleasePlan = &releaseApi.ReleasePlan{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: name,
 			Name:         name,
 			Namespace:    namespace,
 			Labels: map[string]string{
-				appstudiov1alpha1.AutoReleaseLabel: autoReleaseLabel,
+				releaseApi.AutoReleaseLabel: autoReleaseLabel,
 			},
 		},
-		Spec: appstudiov1alpha1.ReleasePlanSpec{
+		Spec: releaseApi.ReleasePlanSpec{
 			DisplayName: name,
 			Application: application,
 			Target:      targetNamespace,
 		},
 	}
 	if autoReleaseLabel == "" || autoReleaseLabel == "true" {
-		releasePlan.ObjectMeta.Labels[appstudiov1alpha1.AutoReleaseLabel] = "true"
+		releasePlan.ObjectMeta.Labels[releaseApi.AutoReleaseLabel] = "true"
 	} else {
-		releasePlan.ObjectMeta.Labels[appstudiov1alpha1.AutoReleaseLabel] = "false"
+		releasePlan.ObjectMeta.Labels[releaseApi.AutoReleaseLabel] = "false"
 	}
 
 	return releasePlan, s.KubeRest().Create(context.TODO(), releasePlan)
 }
 
 // GetReleasePlan returns the ReleasePlan with the given name in the given namespace.
-func (s *SuiteController) GetReleasePlan(name, namespace string) (*appstudiov1alpha1.ReleasePlan, error) {
-	releasePlan := &appstudiov1alpha1.ReleasePlan{}
+func (s *SuiteController) GetReleasePlan(name, namespace string) (*releaseApi.ReleasePlan, error) {
+	releasePlan := &releaseApi.ReleasePlan{}
 
 	err := s.KubeRest().Get(context.TODO(), types.NamespacedName{
 		Name:      name,
@@ -221,7 +235,7 @@ func (s *SuiteController) GetReleasePlan(name, namespace string) (*appstudiov1al
 
 // DeleteReleasePlan deletes a given ReleasePlan name in given namespace.
 func (s *SuiteController) DeleteReleasePlan(name, namespace string, failOnNotFound bool) error {
-	releasePlan := &appstudiov1alpha1.ReleasePlan{
+	releasePlan := &releaseApi.ReleasePlan{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -235,13 +249,13 @@ func (s *SuiteController) DeleteReleasePlan(name, namespace string, failOnNotFou
 }
 
 // CreateReleasePlanAdmission creates a new ReleasePlanAdmission using the given parameters.
-func (s *SuiteController) CreateReleasePlanAdmission(name, originNamespace, application, namespace, environment, autoRelease, releaseStrategy string) (*appstudiov1alpha1.ReleasePlanAdmission, error) {
-	var releasePlanAdmission *appstudiov1alpha1.ReleasePlanAdmission = &appstudiov1alpha1.ReleasePlanAdmission{
+func (s *SuiteController) CreateReleasePlanAdmission(name, originNamespace, application, namespace, environment, autoRelease, releaseStrategy string) (*releaseApi.ReleasePlanAdmission, error) {
+	var releasePlanAdmission *releaseApi.ReleasePlanAdmission = &releaseApi.ReleasePlanAdmission{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: appstudiov1alpha1.ReleasePlanAdmissionSpec{
+		Spec: releaseApi.ReleasePlanAdmissionSpec{
 			DisplayName:     name,
 			Application:     application,
 			Origin:          originNamespace,
@@ -250,7 +264,7 @@ func (s *SuiteController) CreateReleasePlanAdmission(name, originNamespace, appl
 		},
 	}
 	if autoRelease != "" {
-		releasePlanAdmission.ObjectMeta.Labels[appstudiov1alpha1.AutoReleaseLabel] = autoRelease
+		releasePlanAdmission.ObjectMeta.Labels[releaseApi.AutoReleaseLabel] = autoRelease
 	}
 	return releasePlanAdmission, s.KubeRest().Create(context.TODO(), releasePlanAdmission)
 }
