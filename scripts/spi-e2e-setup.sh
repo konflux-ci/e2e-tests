@@ -14,8 +14,10 @@ export OAUTH_URL='spi-oauth-route-spi-system.'$( oc get ingresses.config/cluster
 export tmpfile=$(mktemp -d)/config.yaml
 
 # We are injecting the token manually for the e2e. No need a real secret for now
-export SPI_GITHUB_CLIENT_ID="app-client-id"
-export SPI_GITHUB_CLIENT_SECRET="app-secret"
+export SPI_GITHUB_CLIENT_ID=${SPI_GITHUB_CLIENT_ID:-"app-client-id"}
+export SPI_GITHUB_CLIENT_SECRET=${SPI_GITHUB_CLIENT_SECRET:-"app-secret"}
+export SPI_QUAY_CLIENT_ID=${SPI_QUAY_CLIENT_ID:-"app-client-id"}
+export SPI_QUAY_CLIENT_SECRET=${SPI_QUAY_CLIENT_SECRET:-"app-secret"}
 
 # The legacy stuff can be removed once https://github.com/redhat-appstudio/infra-deployments/pull/638 is merged
 # in infra-deployments
@@ -26,8 +28,8 @@ serviceProviders:
     clientId: $SPI_GITHUB_CLIENT_ID
     clientSecret: $SPI_GITHUB_CLIENT_SECRET
   - type: Quay
-    clientId: $SPI_GITHUB_CLIENT_ID
-    clientSecret: $SPI_GITHUB_CLIENT_SECRET
+    clientId: $SPI_QUAY_CLIENT_ID
+    clientSecret: $SPI_QUAY_CLIENT_SECRET
 baseUrl: https://spi-oauth-route-spi-system.$( oc get ingresses.config/cluster -o jsonpath={.spec.domain})
 EOF
 )
@@ -39,8 +41,8 @@ serviceProviders:
     clientId: $SPI_GITHUB_CLIENT_ID
     clientSecret: $SPI_GITHUB_CLIENT_SECRET
   - type: Quay
-    clientId: $SPI_GITHUB_CLIENT_ID
-    clientSecret: $SPI_GITHUB_CLIENT_SECRET
+    clientId: $SPI_QUAY_CLIENT_ID
+    clientSecret: $SPI_QUAY_CLIENT_SECRET
 EOF
 )
 
