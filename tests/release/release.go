@@ -150,7 +150,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 
 		It("makes sure that the Release should have succeeded.", func() {
 			Eventually(func() bool {
-				release, err := fw.AsKubeAdmin.ReleaseController.GetRelease(releaseName, devNamespace)
+				release, err := fw.AsKubeAdmin.ReleaseController.GetRelease(releaseName, "", devNamespace)
 				if err != nil || release == nil {
 					return false
 				}
@@ -171,7 +171,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 				return len(pipelineRunList.Items) > 0 && err == nil
 			}, avgControllerQueryTimeout, defaultInterval).Should(BeTrue())
 
-			release, err := fw.AsKubeAdmin.ReleaseController.GetRelease(releaseName, devNamespace)
+			release, err := fw.AsKubeAdmin.ReleaseController.GetRelease(releaseName, "", devNamespace)
 			if err != nil {
 				GinkgoWriter.Println(err)
 			}
