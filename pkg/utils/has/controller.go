@@ -49,6 +49,20 @@ func NewSuiteController(kube *kubeCl.CustomClient) (*SuiteController, error) {
 	}, nil
 }
 
+func (h *SuiteController) refreshComponentForErrorDebug(component *appservice.Component) *appservice.Component {
+	retComp := &appservice.Component{}
+	key := types.NamespacedName{
+		Namespace: component.Namespace,
+		Name:      component.Name,
+	}
+	err := h.KubeRest().Get(context.Background(), key, retComp)
+	if err != nil {
+		//TODO let's log this somehow, but return the original component obj, as that is better than nothing
+		return component
+	}
+	return retComp
+}
+
 // GetHasApplication return the Application Custom Resource object
 func (h *SuiteController) GetHasApplication(name, namespace string) (*appservice.Application, error) {
 	namespacedName := types.NamespacedName{
@@ -209,6 +223,7 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 		return nil, err
 	}
 	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*10); err != nil {
+		component = h.refreshComponentForErrorDebug(component)
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentName, namespace, utils.ToPrettyJSONString(component))
 	}
 	return component, nil
@@ -263,6 +278,7 @@ func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, compone
 		return nil, err
 	}
 	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*10); err != nil {
+		component = h.refreshComponentForErrorDebug(component)
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentName, namespace, utils.ToPrettyJSONString(component))
 	}
 	return component, nil
@@ -296,6 +312,7 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 		return nil, err
 	}
 	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*10); err != nil {
+		component = h.refreshComponentForErrorDebug(component)
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentName, namespace, utils.ToPrettyJSONString(component))
 	}
 	return component, nil
@@ -499,6 +516,7 @@ func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentN
 		return nil, err
 	}
 	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*2); err != nil {
+		component = h.refreshComponentForErrorDebug(component)
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentName, namespace, utils.ToPrettyJSONString(component))
 	}
 	return component, nil
