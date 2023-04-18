@@ -216,6 +216,17 @@ func Contains(s []string, str string) bool {
 	return false
 }
 
+func MergeMaps(m1, m2 map[string]string) map[string]string {
+	resultMap := make(map[string]string)
+	for k, v := range m1 {
+		resultMap[k] = v
+	}
+	for k, v := range m2 {
+		resultMap[k] = v
+	}
+	return resultMap
+}
+
 // CreateDockerConfigFile takes base64 encoded dockerconfig.json and saves it locally (/<home-directory/.docker/config.json)
 func CreateDockerConfigFile(base64EncodedString string) error {
 	var rawRegistryCreds []byte
