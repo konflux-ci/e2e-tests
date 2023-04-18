@@ -240,7 +240,7 @@ func (h *SuiteController) ComponentDeleted(component *appservice.Component) wait
 func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, componentName, namespace, gitSourceURL, baseBranch, outputContainerImage string) (*appservice.Component, error) {
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: constants.ComponentPaCRequestAnnotation,
+			Annotations: utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ComponentWithImageControllerAnnotation),
 			Name:        componentName,
 			Namespace:   namespace,
 		},
