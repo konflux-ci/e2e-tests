@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -48,23 +49,31 @@ func (m *QuayClientMock) CreateRobotAccount(organization string, robotName strin
 }
 
 func TestCleanupQuay(t *testing.T) {
+	timeFormat := "Mon, 02 Jan 2006 15:04:05 -0700"
+
+	deletedRepos := []quay.Repository{
+		{Name: "e2e-demos/test-old"},
+		{Name: "has-e2e/test-old"},
+	}
+	preservedRepos := []quay.Repository{
+		{Name: "e2e-demos/test-new"},
+		{Name: "has-e2e/test-new"},
+		{Name: "other/test-new"},
+		{Name: "other/test-old"},
+	}
+	deletedRobots := []quay.RobotAccount{
+		{Name: "test-org+e2e-demostest-old", Created: time.Now().Add(-25 * time.Hour).Format(timeFormat)},
+		{Name: "test-org+has-e2etest-old", Created: time.Now().Add(-25 * time.Hour).Format(timeFormat)},
+	}
+	preservedRobots := []quay.RobotAccount{
+		{Name: "test-org+e2e-demostest-new", Created: time.Now().Format(timeFormat)},
+		{Name: "test-org+has-e2etest-new", Created: time.Now().Format(timeFormat)},
+		{Name: "test-org+othertest-old", Created: time.Now().Add(-25 * time.Hour).Format(timeFormat)},
+		{Name: "test-org+othertest-new", Created: time.Now().Format(timeFormat)},
+	}
 	quayClientMock := QuayClientMock{
-		AllRepositories: []quay.Repository{
-			{Name: "e2e-demos/test-old"},
-			{Name: "e2e-demos/test-new"},
-			{Name: "has-e2e/test-old"},
-			{Name: "has-e2e/test-new"},
-			{Name: "other/test-new"},
-			{Name: "other/test-old"},
-		},
-		AllRobotAccounts: []quay.RobotAccount{
-			{Name: "test-org+e2e-demostest-old", Created: time.Now().Add(-25 * time.Hour).Format("Mon, 02 Jan 2006 15:04:05 -0700")},
-			{Name: "test-org+e2e-demostest-new", Created: time.Now().Format("Mon, 02 Jan 2006 15:04:05 -0700")},
-			{Name: "test-org+has-e2etest-old", Created: time.Now().Add(-25 * time.Hour).Format("Mon, 02 Jan 2006 15:04:05 -0700")},
-			{Name: "test-org+has-e2etest-new", Created: time.Now().Format("Mon, 02 Jan 2006 15:04:05 -0700")},
-			{Name: "test-org+othertest-old", Created: time.Now().Add(-25 * time.Hour).Format("Mon, 02 Jan 2006 15:04:05 -0700")},
-			{Name: "test-org+othertest-new", Created: time.Now().Format("Mon, 02 Jan 2006 15:04:05 -0700")},
-		},
+		AllRepositories:         append(deletedRepos, preservedRepos...),
+		AllRobotAccounts:        append(deletedRobots, preservedRobots...),
 		DeleteRepositoryCalls:   make(map[string]bool),
 		DeleteRobotAccountCalls: make(map[string]bool),
 	}
@@ -73,46 +82,26 @@ func TestCleanupQuay(t *testing.T) {
 		t.Errorf("error during quay cleanup, error: %s", err)
 	}
 
-	if !quayClientMock.DeleteRepositoryCalls["e2e-demos/test-old"] {
-		t.Error("DeleteRepository() should have been called for 'e2e-demos/test-old'")
+	for _, repo := range deletedRepos {
+		if !quayClientMock.DeleteRepositoryCalls[repo.Name] {
+			t.Errorf("DeleteRepository() should have been called for '%s'", repo.Name)
+		}
 	}
-	if quayClientMock.DeleteRepositoryCalls["e2e-demos/test-new"] {
-		t.Error("DeleteRepository() should not have been called for 'e2e-demos/test-new'")
+	for _, repo := range preservedRepos {
+		if quayClientMock.DeleteRepositoryCalls[repo.Name] {
+			t.Errorf("DeleteRepository() should not have been called for '%s'", repo.Name)
+		}
 	}
-
-	if !quayClientMock.DeleteRepositoryCalls["has-e2e/test-old"] {
-		t.Error("DeleteRepository() should have been called for 'has-e2e/test-old'")
+	for _, robot := range deletedRobots {
+		shortName := strings.Split(robot.Name, "+")[1]
+		if !quayClientMock.DeleteRobotAccountCalls[shortName] {
+			t.Errorf("DeleteRobotAccount() should have been called for '%s'", shortName)
+		}
 	}
-	if quayClientMock.DeleteRepositoryCalls["has-e2e/test-new"] {
-		t.Error("DeleteRepository() should not have been called for 'has-e2e/test-new'")
+	for _, robot := range preservedRobots {
+		shortName := strings.Split(robot.Name, "+")[1]
+		if quayClientMock.DeleteRepositoryCalls[shortName] {
+			t.Errorf("DeleteRobotAccount() should not have been called for '%s'", shortName)
+		}
 	}
-
-	if quayClientMock.DeleteRepositoryCalls["other/test-old"] {
-		t.Error("DeleteRepository() should not have been called for 'other/test-old'")
-	}
-	if quayClientMock.DeleteRepositoryCalls["other/test-new"] {
-		t.Error("DeleteRepository() should not have been called for 'other/test-new'")
-	}
-
-	if !quayClientMock.DeleteRobotAccountCalls["e2e-demostest-old"] {
-		t.Error("DeleteRobotAccount() should have been called for 'test-org+e2e-demostest-old'")
-	}
-	if quayClientMock.DeleteRobotAccountCalls["e2e-demostest-new"] {
-		t.Error("DeleteRobotAccount() should not have been called for 'test-org+e2e-demostest-new'")
-	}
-
-	if !quayClientMock.DeleteRobotAccountCalls["has-e2etest-old"] {
-		t.Error("DeleteRobotAccount() should have been called for 'test-org+has-e2etest-old'")
-	}
-	if quayClientMock.DeleteRobotAccountCalls["has-e2etest-new"] {
-		t.Error("DeleteRobotAccount() should not have been called for 'test-org+has-e2etest-new'")
-	}
-
-	if quayClientMock.DeleteRobotAccountCalls["othertest-old"] {
-		t.Error("DeleteRobotAccount() should not have been called for 'test-org+othertest-old'")
-	}
-	if quayClientMock.DeleteRobotAccountCalls["othertest-new"] {
-		t.Error("DeleteRobotAccount() should not have been called for 'test-org+othertest-new'")
-	}
-
 }
