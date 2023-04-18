@@ -9,6 +9,7 @@ import (
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
+	releaseMetadata "github.com/redhat-appstudio/release-service/metadata"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -203,7 +204,7 @@ func (s *SuiteController) CreateReleasePlan(name, namespace, application, target
 			Name:         name,
 			Namespace:    namespace,
 			Labels: map[string]string{
-				releaseApi.AutoReleaseLabel: autoReleaseLabel,
+				releaseMetadata.AutoReleaseLabel: autoReleaseLabel,
 			},
 		},
 		Spec: releaseApi.ReleasePlanSpec{
@@ -213,9 +214,9 @@ func (s *SuiteController) CreateReleasePlan(name, namespace, application, target
 		},
 	}
 	if autoReleaseLabel == "" || autoReleaseLabel == "true" {
-		releasePlan.ObjectMeta.Labels[releaseApi.AutoReleaseLabel] = "true"
+		releasePlan.ObjectMeta.Labels[releaseMetadata.AutoReleaseLabel] = "true"
 	} else {
-		releasePlan.ObjectMeta.Labels[releaseApi.AutoReleaseLabel] = "false"
+		releasePlan.ObjectMeta.Labels[releaseMetadata.AutoReleaseLabel] = "false"
 	}
 
 	return releasePlan, s.KubeRest().Create(context.TODO(), releasePlan)
@@ -264,7 +265,7 @@ func (s *SuiteController) CreateReleasePlanAdmission(name, originNamespace, appl
 		},
 	}
 	if autoRelease != "" {
-		releasePlanAdmission.ObjectMeta.Labels[releaseApi.AutoReleaseLabel] = autoRelease
+		releasePlanAdmission.ObjectMeta.Labels[releaseMetadata.AutoReleaseLabel] = autoRelease
 	}
 	return releasePlanAdmission, s.KubeRest().Create(context.TODO(), releasePlanAdmission)
 }
