@@ -1,7 +1,7 @@
 # MVP demo test
 
 ### Prerequisites for running this test against your own cluster
-1. Fork https://github.com/redhat-appstudio-qe/hacbs-test-project to your GitHub org (specified in `MY_GITHUB_ORG` env var)
+1. Fork https://github.com/redhat-appstudio-qe/hacbs-test-project and https://github.com/redhat-appstudio-qe/strategy-configs to your GitHub org (specified in `MY_GITHUB_ORG` env var)
 2. Make sure the cluster you are about to run this test against is public (i.e. hosted on a public cloud provider)
 
 ### Description
