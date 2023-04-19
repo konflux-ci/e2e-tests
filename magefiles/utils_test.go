@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
+	"math/rand"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -11,9 +14,14 @@ import (
 type QuayClientMock struct {
 	AllRepositories         []quay.Repository
 	AllRobotAccounts        []quay.RobotAccount
+	AllTags                 []quay.Tag
 	DeleteRepositoryCalls   map[string]bool
 	DeleteRobotAccountCalls map[string]bool
+	DeleteTagCalls          map[string]bool
 }
+
+const TAGS_ON_PAGE = 10
+const TAG_PAGES = 5
 
 var _ quay.QuayService = (*QuayClientMock)(nil)
 
@@ -32,6 +40,22 @@ func (m *QuayClientMock) DeleteRepository(organization, repoName string) (bool, 
 
 func (m *QuayClientMock) DeleteRobotAccount(organization, robotName string) (bool, error) {
 	m.DeleteRobotAccountCalls[robotName] = true
+	return true, nil
+}
+
+func (m *QuayClientMock) GetTagsFromPage(organization, repository string, page int) ([]quay.Tag, bool, error) {
+	if page == TAG_PAGES {
+		return m.AllTags[(page-1)*TAGS_ON_PAGE : (page * TAGS_ON_PAGE)], false, nil
+	}
+	return m.AllTags[(page-1)*TAGS_ON_PAGE : (page * TAGS_ON_PAGE)], true, nil
+}
+
+var deleteTagCallsMutex = sync.RWMutex{}
+
+func (m *QuayClientMock) DeleteTag(organization, repository, tag string) (bool, error) {
+	deleteTagCallsMutex.Lock()
+	m.DeleteTagCalls[tag] = true
+	deleteTagCallsMutex.Unlock()
 	return true, nil
 }
 
@@ -102,6 +126,50 @@ func TestCleanupQuay(t *testing.T) {
 		shortName := strings.Split(robot.Name, "+")[1]
 		if quayClientMock.DeleteRepositoryCalls[shortName] {
 			t.Errorf("DeleteRobotAccount() should not have been called for '%s'", shortName)
+		}
+	}
+}
+
+func TestCleanupQuayTags(t *testing.T) {
+	testOrg := "test-org"
+	testRepo := "test-repo"
+
+	var deletedTags []quay.Tag
+	var preservedTags []quay.Tag
+	var allTags []quay.Tag
+
+	// Randomly generate slices of deleted and preserved tags
+	for i := 0; i < TAGS_ON_PAGE*TAG_PAGES; i++ {
+		tagName := fmt.Sprintf("tag%d", i)
+		var tag quay.Tag
+		if rand.Intn(2) == 0 {
+			tag = quay.Tag{Name: tagName, StartTS: time.Now().AddDate(0, 0, -8).Unix()}
+			deletedTags = append(deletedTags, tag)
+		} else {
+			tag = quay.Tag{Name: tagName, StartTS: time.Now().Unix()}
+			preservedTags = append(preservedTags, tag)
+		}
+		allTags = append(allTags, tag)
+	}
+
+	quayClientMock := QuayClientMock{
+		AllTags:        allTags,
+		DeleteTagCalls: make(map[string]bool),
+	}
+
+	err := cleanupQuayTags(&quayClientMock, testOrg, testRepo)
+	if err != nil {
+		t.Errorf("error during quay tag cleanup, error: %s", err)
+	}
+
+	for _, tag := range deletedTags {
+		if !quayClientMock.DeleteTagCalls[tag.Name] {
+			t.Errorf("DeleteTag() should have been called for '%s'", tag.Name)
+		}
+	}
+	for _, tag := range preservedTags {
+		if quayClientMock.DeleteTagCalls[tag.Name] {
+			t.Errorf("DeleteTag() should not have been called for '%s'", tag.Name)
 		}
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
@@ -228,5 +229,43 @@ func cleanupQuay(quayService quay.QuayService, quayOrg string) error {
 			}
 		}
 	}
+	return nil
+}
+
+func cleanupQuayTags(quayService quay.QuayService, organization, repository string) error {
+	workerCount := 10
+	tagsChan := make(chan []quay.Tag, workerCount)
+	var wg sync.WaitGroup
+
+	for i := 0; i < workerCount; i++ {
+		wg.Add(1)
+		go func(tagsChan <-chan []quay.Tag, wg *sync.WaitGroup) {
+			defer wg.Done()
+
+			for tags := range tagsChan {
+				for _, tag := range tags {
+					if time.Unix(tag.StartTS, 0).Before(time.Now().AddDate(0, 0, -7)) {
+						quayService.DeleteTag(organization, repository, tag.Name)
+					}
+				}
+			}
+		}(tagsChan, &wg)
+	}
+
+	page := 1
+	for {
+		tags, hasAdditional, err := quayService.GetTagsFromPage(organization, repository, page)
+		if err != nil {
+			fmt.Printf("error during getting tags from page: %s\n", err)
+			continue
+		}
+		tagsChan <- tags
+		if !hasAdditional {
+			break
+		}
+		page++
+	}
+	close(tagsChan)
+	wg.Wait()
 	return nil
 }
