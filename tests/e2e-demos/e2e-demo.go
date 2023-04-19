@@ -238,6 +238,9 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 				// Deploy the component using gitops and check for the health
 				It(fmt.Sprintf("deploys component %s using gitops", component.Name), func() {
+					if componentTest.SkipDeploymentCheck {
+						Skip("component deployment skipped.")
+					}
 					var deployment *appsv1.Deployment
 					Eventually(func() bool {
 						deployment, err = fw.AsKubeDeveloper.CommonController.GetDeployment(component.Name, namespace)
@@ -255,6 +258,9 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				})
 
 				It(fmt.Sprintf("checks if component %s health", component.Name), func() {
+					if componentTest.SkipDeploymentCheck {
+						Skip("component deployment skipped.")
+					}
 					Eventually(func() bool {
 						gitOpsRoute, err := fw.AsKubeDeveloper.CommonController.GetOpenshiftRouteByComponentName(component.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())

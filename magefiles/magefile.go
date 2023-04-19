@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -28,6 +29,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/image-controller/pkg/quay"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
@@ -176,6 +178,18 @@ func (Local) CleanupGithubOrg() error {
 		klog.Info("If you really want to delete these repositories, run `DRY_RUN=false [REGEXP=<regexp>] mage local:cleanupGithubOrg`")
 	}
 	return nil
+}
+
+// Deletes Quay repos and robot accounts older than 24 hours with prefixes `has-e2e` and `e2e-demos`, uses env vars DEFAULT_QUAY_ORG and DEFAULT_QUAY_ORG_TOKEN
+func (Local) CleanupQuay() error {
+	quayOrgToken := os.Getenv("DEFAULT_QUAY_ORG_TOKEN")
+	if quayOrgToken == "" {
+		return fmt.Errorf("DEFAULT_QUAY_ORG_TOKEN env var was not found")
+	}
+	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
+
+	quayClient := quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayOrgToken, "https://quay.io/api/v1")
+	return cleanupQuay(&quayClient, quayOrg)
 }
 
 func (ci CI) TestE2E() error {
