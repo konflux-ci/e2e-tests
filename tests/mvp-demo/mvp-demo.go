@@ -46,8 +46,7 @@ const (
 	testNamespacePrefix = "mvp-demo-dev-namespace"
 	managedNamespace    = "mvp-demo-managed-namespace"
 
-	appName       = "mvp-test-app"
-	componentName = "mvp-test-component"
+	appName = "mvp-test-app"
 
 	// Timeouts
 	appDeployTimeout            = time.Minute * 20
@@ -73,6 +72,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 	var err error
 	var f *framework.Framework
 	var sharedSecret *corev1.Secret
+	var componentName string
 
 	var untrustedPipelineBundle, componentNewBaseBranch, userNamespace string
 
@@ -94,6 +94,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		userNamespace = f.UserNamespace
 		Expect(userNamespace).NotTo(BeEmpty())
 
+		componentName = fmt.Sprintf("test-mvp-component-%s", util.GenerateRandomString(4))
 		componentNewBaseBranch = fmt.Sprintf("base-%s", util.GenerateRandomString(4))
 
 		sharedSecret, err = f.AsKubeAdmin.CommonController.GetSecret(constants.SharedPullSecretNamespace, constants.SharedPullSecretName)
@@ -130,10 +131,19 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlan("source-releaseplan", userNamespace, appName, managedNamespace, "")
 		Expect(err).NotTo(HaveOccurred())
 
+		sc := f.AsKubeAdmin.ReleaseController.GenerateReleaseStrategyConfig(componentName, constants.DefaultReleasedImagePushRepo)
+		scYaml, err := yaml.Marshal(sc)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		scPath := "mvp-demo.yaml"
+		Expect(f.AsKubeAdmin.CommonController.Github.CreateRef("strategy-configs", "main", componentName)).To(Succeed())
+		_, err = f.AsKubeAdmin.CommonController.Github.CreateFile("strategy-configs", scPath, string(scYaml), componentName)
+		Expect(err).ShouldNot(HaveOccurred())
+
 		_, err = f.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-strategy", managedNamespace, "release", constants.ReleasePipelineImageRef, "mvp-policy", "release-service-account", []releaseApi.Params{
-			{Name: "extraConfigGitUrl", Value: "https://github.com/redhat-appstudio-qe/strategy-configs.git"},
-			{Name: "extraConfigPath", Value: "mvp.yaml"},
-			{Name: "extraConfigRevision", Value: "main"},
+			{Name: "extraConfigGitUrl", Value: fmt.Sprintf("https://github.com/%s/strategy-configs.git", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"))},
+			{Name: "extraConfigPath", Value: scPath},
+			{Name: "extraConfigGitRevision", Value: componentName},
 		})
 		Expect(err).NotTo(HaveOccurred())
 
@@ -176,6 +186,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		if !CurrentSpecReport().Failed() {
 			Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
 			Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).To(Succeed())
+			Expect(f.AsKubeAdmin.CommonController.Github.DeleteRef("strategy-configs", componentName)).To(Succeed())
 		}
 	})
 

@@ -27,6 +27,23 @@ func NewSuiteController(kube *kubeCl.CustomClient) (*SuiteController, error) {
 	}, nil
 }
 
+type StrategyConfig struct {
+	Mapping Mapping `json:"mapping"`
+}
+type Mapping struct {
+	Components []Component `json:"components"`
+}
+type Component struct {
+	Name       string `json:"name"`
+	Repository string `json:"repository"`
+}
+
+func (s *SuiteController) GenerateReleaseStrategyConfig(componentName, targetRepository string) *StrategyConfig {
+	return &StrategyConfig{
+		Mapping{Components: []Component{{Name: componentName, Repository: targetRepository}}},
+	}
+}
+
 // CreateSnapshot creates a Snapshot using the given parameters.
 func (s *SuiteController) CreateSnapshot(name string, namespace string, applicationName string, snapshotComponents []appstudioApi.SnapshotComponent) (*appstudioApi.Snapshot, error) {
 	snapshot := &appstudioApi.Snapshot{
