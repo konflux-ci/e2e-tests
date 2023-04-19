@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"text/template"
 	"time"
@@ -15,7 +16,10 @@ import (
 
 	sprig "github.com/go-task/slim-sprig"
 	"github.com/magefile/mage/sh"
+	"github.com/redhat-appstudio/image-controller/pkg/quay"
 )
+
+const quayPrefixesToDeleteRegexp = "e2e-demos|has-e2e"
 
 func getRemoteAndBranchNameFromPRLink(url string) (remote, branchName string, err error) {
 	ghRes := &GithubPRInfo{}
@@ -152,5 +156,77 @@ func renderTemplate(destination, templatePath string, templateData interface{}, 
 		klog.Infof("error rendering template file: %v", err)
 	}
 
+	return nil
+}
+
+func cleanupQuay(quayService quay.QuayService, quayOrg string) error {
+	r, err := regexp.Compile(fmt.Sprintf(`^(%s)`, quayPrefixesToDeleteRegexp))
+	if err != nil {
+		return err
+	}
+
+	repos, err := quayService.GetAllRepositories(quayOrg)
+	if err != nil {
+		return err
+	}
+
+	// Key is the repo name without slashes which is the same as robot name
+	// Value is the repo name with slashes
+	reposMap := make(map[string]string)
+
+	for _, repo := range repos {
+		if r.MatchString(repo.Name) {
+			sanitizedRepoName := strings.ReplaceAll(repo.Name, "/", "") // repo name without slashes
+			reposMap[sanitizedRepoName] = repo.Name
+		}
+	}
+
+	robots, err := quayService.GetAllRobotAccounts(quayOrg)
+	if err != nil {
+		return err
+	}
+
+	r, err = regexp.Compile(fmt.Sprintf(`^%s\+(%s)`, quayOrg, quayPrefixesToDeleteRegexp))
+	if err != nil {
+		return err
+	}
+
+	const timeFormat = "Mon, 02 Jan 2006 15:04:05 -0700"
+
+	// Deletes robots and their repos with correct prefix if created more than 24 hours ago
+	for _, robot := range robots {
+		parsed, err := time.Parse(timeFormat, robot.Created)
+		if err != nil {
+			return err
+		}
+
+		// If robot.Name has correct prefix and was created more than 24 hours ago
+		if r.MatchString(robot.Name) && time.Since(parsed) > 24*time.Hour {
+			// Robot name without the name of org which is the same as previous sanitizedRepoName
+			// redhat-appstudio-qe+e2e-demos turns to e2e-demos
+			splitRobotName := strings.Split(robot.Name, "+")
+			if len(splitRobotName) != 2 {
+				return fmt.Errorf("failed to split robot name into 2 parts, got %d parts", len(splitRobotName))
+			}
+			sanitizedRepoName := splitRobotName[1] // Same as robot shortname
+			if repo, exists := reposMap[sanitizedRepoName]; exists {
+				deleted, err := quayService.DeleteRepository(quayOrg, repo)
+				if err != nil {
+					return fmt.Errorf("failed to delete repository %s, error: %s", repo, err)
+				}
+				if !deleted {
+					fmt.Printf("repository %s has already been deleted, skipping\n", repo)
+				}
+			}
+			// DeleteRobotAccount uses robot shortname, so e2e-demos instead of redhat-appstudio-qe+e2e-demos
+			deleted, err := quayService.DeleteRobotAccount(quayOrg, splitRobotName[1])
+			if err != nil {
+				return fmt.Errorf("failed to delete robot account %s, error: %s", robot.Name, err)
+			}
+			if !deleted {
+				fmt.Printf("robot account %s has already been deleted, skipping\n", robot.Name)
+			}
+		}
+	}
 	return nil
 }

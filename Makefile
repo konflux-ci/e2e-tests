@@ -38,3 +38,6 @@ clean-gitops-repositories:
 
 clean-github-webhooks:
 	./mage -v cleanWebHooks
+
+clean-quay:
+	./mage -v local:cleanupQuay

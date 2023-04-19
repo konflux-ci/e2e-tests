@@ -754,6 +754,7 @@ github.com/grpc-ecosystem/grpc-gateway v1.14.6/go.mod h1:zdiPV4Yse/1gnckTHtghG4G
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.3 h1:lLT7ZLSzGLI08vc9cpd+tYmNWjdKDqyr/2L+f6U12Fk=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.3/go.mod h1:o//XUCC/F+yRGJoPO/VU0GSB0f8Nhgmxx0VIRUvaC0w=
+github.com/h2non/gock v1.2.0 h1:K6ol8rfrRkUOefooBC8elXoaNGYkpp7y2qcxGG6BzUE=
 github.com/h2non/parth v0.0.0-20190131123155-b4df798d6542 h1:2VTzZjLZBgl62/EtslCrtky5vbi9dd7HrQPQIx6wqiw=
 github.com/h2non/parth v0.0.0-20190131123155-b4df798d6542/go.mod h1:Ow0tF8D4Kplbc8s8sSb3V2oUCygFHVp8gC3Dn6U4MNI=
 github.com/hashicorp/consul/api v1.1.0/go.mod h1:VmuI/Lkw1nC05EYQWNKwWGbkg+FbDBtguAZLlVdkD9Q=
@@ -1182,6 +1183,8 @@ github.com/redhat-appstudio/application-api v0.0.0-20230405183341-7a48b1d4c860 h
 github.com/redhat-appstudio/application-api v0.0.0-20230405183341-7a48b1d4c860/go.mod h1:LpcTNLCDMf1CUNTw2bgTiz8M49sUsN2F9T7bOSKcJEo=
 github.com/redhat-appstudio/build-service v0.0.0-20230113121706-a9f10055dbc4 h1:Nc4qjZHxb8wnn5DW559GUyIVV5Z2HgYmGxQoWW02mWg=
 github.com/redhat-appstudio/build-service v0.0.0-20230113121706-a9f10055dbc4/go.mod h1:wgto41R9bV9wLVOp29llmx+O+voEb0r/hy7Yw+MkKxQ=
+github.com/redhat-appstudio/image-controller v0.0.0-20230413111635-7e9bc2f236ee h1:3ZgAsp1ncL/veRndRyxwailsGVz2hcP9CScDpnGZZ6s=
+github.com/redhat-appstudio/image-controller v0.0.0-20230413111635-7e9bc2f236ee/go.mod h1:6v+OpSt2oy3uuP16s4HUdShE9CR5HBSwwjL1fvbkKcg=
 github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2cad2 h1:wVpENUra8XAN2UgR09KLjyejoiHcd20P79gVx2wdIuE=
 github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2cad2/go.mod h1:FNCuALWZDRMbMKm3Vb/5E2R8ei6eFwcEhgYcFKRVZJU=
 github.com/redhat-appstudio/jvm-build-service v0.0.0-20230125042419-efd0d0342a2c h1:3kgmn4uwlTjlzofcFU0zWBKsx+PthW5hBjR6LnEy/NA=
