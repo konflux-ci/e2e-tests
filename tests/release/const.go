@@ -60,7 +60,7 @@ const (
 var paramsReleaseStrategyPyxis = []appstudiov1alpha1.Params{
 	{Name: "extraConfigGitUrl", Value: "https://github.com/hacbs-release/strategy-configs"},
 	{Name: "extraConfigPath", Value: "mvp.yaml"},
-	{Name: "extraConfigRevision", Value: "main"},
+	{Name: "extraConfigGitRevision", Value: "main"},
 	{Name: "pyxisServerType", Value: "stage"},
 	{Name: "pyxisSecret", Value: "pyxis"},
 	{Name: "tag", Value: "latest"},
@@ -69,13 +69,13 @@ var paramsReleaseStrategyPyxis = []appstudiov1alpha1.Params{
 var paramsReleaseStrategyMvp = []appstudiov1alpha1.Params{
 	{Name: "extraConfigGitUrl", Value: "https://github.com/hacbs-release/strategy-configs"},
 	{Name: "extraConfigPath", Value: "mvp.yaml"},
-	{Name: "extraConfigRevision", Value: "main"},
+	{Name: "extraConfigGitRevision", Value: "main"},
 }
 
 var paramsReleaseStrategyM6 = []appstudiov1alpha1.Params{
 	{Name: "extraConfigGitUrl", Value: "https://github.com/hacbs-release/strategy-configs"},
 	{Name: "extraConfigPath", Value: "m6.yaml"},
-	{Name: "extraConfigRevision", Value: "main"},
+	{Name: "extraConfigGitRevision", Value: "main"},
 }
 
 var managednamespaceSecret = []corev1.ObjectReference{

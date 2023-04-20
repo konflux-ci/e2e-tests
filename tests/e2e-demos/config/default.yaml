@@ -1,5 +1,5 @@
 tests:
-  - name: "RHDP-466: create an application with springboot component"
+  - name: "DEVHAS-234: creates an application with springboot component from RHTAP samples"
     applicationName: "e2e-springboot"
     components:
       - name: "springboot-component"
@@ -7,7 +7,7 @@ tests:
         gitSourceUrl: "https://github.com/devfile-samples/devfile-sample-java-springboot-basic"
         language: "Java"
         healthz: "/"
-  - name: "RHDP-489: create an application with python flask"
+  - name: "DEVHAS-234: creates an application with python component from RHTAP samples"
     applicationName: "e2e-python-personal"
     components:
       - name: "component-python-flask"
@@ -15,7 +15,7 @@ tests:
         gitSourceUrl: "https://github.com/devfile-samples/devfile-sample-python-basic.git"
         language: "Python"
         healthz: "/"
-  - name: "RHDP-476: create an application with DotNet component"
+  - name: "DEVHAS-234: creates an application with dotnet component from RHTAP samples"
     applicationName: "e2e-dotnet"
     components:
       - name: "dotnet-component"
@@ -23,7 +23,7 @@ tests:
         gitSourceUrl: "https://github.com/devfile-samples/devfile-sample-dotnet60-basic"
         language: "dotNet"
         healthz: "/"
-  - name: "create an nodejs application without dockerfile"
+  - name: "DEVHAS-234: create an nodejs application without dockerfile"
     applicationName: "e2e-nodejs"
     components:
       - name: "nodejs-no-dockerfile"
@@ -36,7 +36,7 @@ tests:
         gitSourceUrl: "https://github.com/redhat-appstudio-qe-bot/nodejs-health-check.git"
         language: "JavaScript"
         healthz: "/live"
-  - name: "create an golang application"
+  - name: "DEVHAS-234: create an golang application"
     applicationName: "e2e-golang"
     components:
       - name: "golang-dockerfile"
@@ -44,7 +44,7 @@ tests:
         gitSourceUrl: "https://github.com/devfile-samples/devfile-sample-go-basic"
         language: "Go"
         healthz: "/"
-  - name: "create an nodejs application with dockerfile and devfile"
+  - name: "DEVHAS-234: create an nodejs application with dockerfile and devfile"
     applicationName: "e2e-nodejs"
     components:
       - name: "nodejs-dockerfile"
@@ -52,7 +52,7 @@ tests:
         gitSourceUrl: "https://github.com/nodeshift-starters/devfile-sample"
         language: "JavaScript"
         healthz: "/"
-  - name: "create an application with quarkus component"
+  - name: "DEVHAS-234: create an application with quarkus component"
     applicationName: "quarkus"
     components:
       - name: "quarkus-devfile"
@@ -60,7 +60,7 @@ tests:
         gitSourceUrl: "https://github.com/devfile-samples/devfile-sample-code-with-quarkus.git"
         language: "Java"
         healthz: "/hello-resteasy"
-  - name: "STONE-522: create an application with branch and context dir"
+  - name: "DEVHAS-234: create an application with branch and context dir"
     applicationName: "e2e-java"
     components:
       - name: "component-devfile-java-sample"
@@ -70,4 +70,21 @@ tests:
         gitSourceContext: "java/java"
         language: "Java"
         healthz: "/"
-
+  - name: "DEVHAS-234: creates quarkus application(with dockerfile but not devfile) which is not included in AppStudio starter stack"
+    applicationName: "status-quarkus-io"
+    components:
+      - name: "status-quarkus-io"
+        type: "public"
+        gitSourceUrl: "https://github.com/quarkusio/status.quarkus.io.git"
+        language: "Java"
+        healthz: "/"
+        # requires to create secret and RHTAP dont have yet this ability
+        skipDeploy: true
+  - name: "DEVHAS-234: creates nodejs application(without dockerfile and devfile) which is not included in AppStudio starter stack"
+    applicationName: "nodejs-users"
+    components:
+      - name: "nodejs-user"
+        type: "public"
+        gitSourceUrl: "https://github.com/redhat-appstudio-qe/simple-nodejs-app.git"
+        language: "JavaScript"
+        healthz: "/users"
