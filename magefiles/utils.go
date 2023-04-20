@@ -237,6 +237,8 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 	tagsChan := make(chan []quay.Tag, workerCount)
 	var wg sync.WaitGroup
 
+	var errors []error
+
 	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
 		go func(tagsChan <-chan []quay.Tag, wg *sync.WaitGroup) {
@@ -245,7 +247,13 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 			for tags := range tagsChan {
 				for _, tag := range tags {
 					if time.Unix(tag.StartTS, 0).Before(time.Now().AddDate(0, 0, -7)) {
-						quayService.DeleteTag(organization, repository, tag.Name)
+						deleted, err := quayService.DeleteTag(organization, repository, tag.Name)
+						if err != nil {
+							errors = append(errors, err)
+						}
+						if !deleted {
+							fmt.Printf("tag `%s` was not deleted\n", tag.Name)
+						}
 					}
 				}
 			}
@@ -256,7 +264,7 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 	for {
 		tags, hasAdditional, err := quayService.GetTagsFromPage(organization, repository, page)
 		if err != nil {
-			fmt.Printf("error during getting tags from page: %s\n", err)
+			errors = append(errors, err)
 			continue
 		}
 		tagsChan <- tags
@@ -267,5 +275,12 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 	}
 	close(tagsChan)
 	wg.Wait()
-	return nil
+
+	if len(errors) == 0 {
+		return nil
+	}
+	for _, err := range errors {
+		fmt.Printf("encountered error during CleanupQuayTags: %v\n", err)
+	}
+	return fmt.Errorf("encountered errors above")
 }
