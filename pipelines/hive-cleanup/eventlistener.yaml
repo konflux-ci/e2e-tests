@@ -1,0 +1,11 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: hive-cleanup-event-listener
+  namespace: appstudio-qe
+spec:
+  serviceAccountName: pipeline
+  triggers:
+    - name: cron-trigger
+      template:
+        ref: hive-cleanup-template

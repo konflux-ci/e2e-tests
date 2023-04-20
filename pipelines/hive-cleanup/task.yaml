@@ -1,0 +1,49 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata: 
+  name: hive-cleanup
+  namespace: appstudio-qe
+spec:
+  steps:
+    - env:
+        - name: KUBECONFIG
+          value: /var/kubeconfig/kubeconfig
+      image: registry.redhat.io/openshift4/ose-cli
+      name: hive-cleanup
+      script: |
+        #!/bin/bash
+
+        # Get the list of clusterclaims
+        clusterclaims=$(oc get clusterclaim -o jsonpath='{.items[*].metadata.name}')
+
+        # Loop through the list of clusterclaims
+        for clusterclaim in $clusterclaims
+        do
+          # Get the creation time of the clusterclaim
+          creation_time=$(oc get clusterclaim $clusterclaim -o jsonpath='{.metadata.creationTimestamp}')
+
+          # Convert the creation time to Unix timestamp format
+          creation_timestamp=$(date -d "$creation_time" +%s)
+
+          # Get the current date in Unix timestamp format
+          current_timestamp=$(date +%s)
+
+          # Calculate the difference between the two timestamps
+          difference=$(( current_timestamp - creation_timestamp ))
+
+          # Check if the difference is greater than one week (604800 seconds)
+          if [ $difference -gt 604800 ]; then
+            echo "The clusterclaim $clusterclaim was created more than one week ago. Deleting."
+            oc delete $clusterclaim
+          else
+            echo "The cluster $clusterclaim is newer than one week. Skipping."
+          fi
+        done
+      volumeMounts: 
+        - name: hive-kubeconfig
+          mountPath: /var/kubeconfig
+  volumes:
+    - name: hive-kubeconfig
+      secret:
+          secretName: hive-kubeconfig
+

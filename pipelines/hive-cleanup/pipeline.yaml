@@ -1,0 +1,11 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata: 
+  name: hive-cleanup
+  namespace: appstudio-qe
+spec:
+  tasks:
+    - name: hive-cleanup
+      taskRef:
+        kind: Task
+        name: hive-cleanup
