@@ -51,16 +51,23 @@ func NewSuiteController(kube *kubeCl.CustomClient) (*SuiteController, error) {
 
 func (h *SuiteController) refreshComponentForErrorDebug(component *appservice.Component) *appservice.Component {
 	retComp := &appservice.Component{}
-	key := types.NamespacedName{
-		Namespace: component.Namespace,
-		Name:      component.Name,
-	}
+	key := rclient.ObjectKeyFromObject(component)
 	err := h.KubeRest().Get(context.Background(), key, retComp)
 	if err != nil {
 		//TODO let's log this somehow, but return the original component obj, as that is better than nothing
 		return component
 	}
 	return retComp
+}
+
+func (h *SuiteController) refreshApplicationForErrorDebug(application *appservice.Application) *appservice.Application {
+	retApp := &appservice.Application{}
+	key := rclient.ObjectKeyFromObject(application)
+	err := h.KubeRest().Get(context.Background(), key, retApp)
+	if err != nil {
+		return application
+	}
+	return retApp
 }
 
 // GetHasApplication return the Application Custom Resource object
@@ -97,7 +104,8 @@ func (h *SuiteController) CreateHasApplication(name, namespace string) (*appserv
 	}
 
 	if err := utils.WaitUntil(h.ApplicationDevfilePresent(application), time.Minute*10); err != nil {
-		return nil, fmt.Errorf("timed out when waiting for devfile content creation for application %s in %s namespace: %+v", name, namespace, err)
+		application = h.refreshApplicationForErrorDebug(application)
+		return nil, fmt.Errorf("timed out when waiting for devfile content creation for application %s in %s namespace: %+v. applicattion: %s", name, namespace, err, utils.ToPrettyJSONString(application))
 	}
 
 	return application, nil
