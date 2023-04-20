@@ -45,7 +45,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "link-secret-sa"), func() 
 		BeforeAll(func() {
 
 			if os.Getenv("CI") != "true" {
-				Skip(fmt.Sprintln("test skipped on local"))
+				Skip(fmt.Sprintln("test skipped on local execution"))
 			}
 			// Initialize the tests controllers
 			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("spi-demos"))
