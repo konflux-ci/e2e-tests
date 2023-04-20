@@ -19,7 +19,7 @@ import (
 	"github.com/redhat-appstudio/image-controller/pkg/quay"
 )
 
-const quayPrefixesToDeleteRegexp = "e2e-demos|has-e2e"
+const quayPrefixesToDeleteRegexp = "e2e-demos|has-e2e|multi-comp|build-e2e"
 
 func getRemoteAndBranchNameFromPRLink(url string) (remote, branchName string, err error) {
 	ghRes := &GithubPRInfo{}
