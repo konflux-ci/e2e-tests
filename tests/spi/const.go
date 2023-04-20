@@ -5,4 +5,5 @@ const (
 	SPIAccessTokenBindingPrefixName = "spi-access-token-binding-"
 	SPIAccessCheckPrefixName        = "spi-access-check-"
 	SPITokenBindingName             = "spi-token-binding-rest-"
+	QuayPrivateRepoURL              = "quay.io/redhat-appstudio-qe/quay-private-test:test"
 )
