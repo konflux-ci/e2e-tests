@@ -1,0 +1,17 @@
+{
+  "timestamp": "2023/04/17 15:25:56",
+  "machine_name": "nshprai",
+  "binary_details": "Built with gc go1.19.6 for linux/amd64",
+  "number_of_users": 10,
+  "batch_size": 5,
+  "load_test_completion_status": "Completed",
+  "average_time_to_spin_up_users (sec)": 1.24,
+  "average_time_to_create_resources (sec)": 5.74,
+  "average_time_to_run_pipelines (sec)": 252.78,
+  "user_creation_failure_count": 0,
+  "user_creation_failure_percentage": 0,
+  "resource_creation_failure_count": 0,
+  "resource_creation_failure_percentage": 0,
+  "pipeline_run_failure_count": 0,
+  "pipeline_run_failure_percentage": 0
+}
