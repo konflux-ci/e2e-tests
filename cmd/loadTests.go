@@ -55,24 +55,27 @@ var (
 )
 
 type LogData struct {
-	Timestamp                         string  `json:"timestamp"`
-	MachineName                       string  `json:"machine_name"`
-	BinaryDetails                     string  `json:"binary_details"`
-	NumberOfUsers                     int     `json:"number_of_users"`
-	BatchSize                         int     `json:"batch_size"`
-	LoadTestCompletionStatus          string  `json:"load_test_completion_status"`
-	AverageTimeToSpinUpUsers          float64 `json:"average_time_to_spin_up_users (sec)"`
-	AverageTimeToCreateResources      float64 `json:"average_time_to_create_resources (sec)"`
-	AverageTimeToRunPipelines         float64 `json:"average_time_to_run_pipelines (sec)"`
-	UserCreationFailureCount          int64   `json:"user_creation_failure_count"`
-	UserCreationFailurePercentage     float64 `json:"user_creation_failure_percentage"`
-	ResourceCreationFailureCount      int64   `json:"resource_creation_failure_count"`
-	ResourceCreationFailurePercentage float64 `json:"resource_creation_failure_percentage"`
-	PipelineRunFailureCount           int64   `json:"pipeline_run_failure_count"`
-	PipelineRunFailurePercentage      float64 `json:"pipeline_run_failure_percentage"`
+	Timestamp                         string      `json:"timestamp"`
+	MachineName                       string      `json:"machineName"`
+	BinaryDetails                     string      `json:"binaryDetails"`
+	NumberOfThreads                   int         `json:"Number of threads"`
+	NumberOfUsersPerThread            int         `json:"Number of users per thread"`
+	BatchSize                         int         `json:"Batch size per thread"`
+	NumberOfUsers                     int         `json:"Total number of users"`
+	LoadTestCompletionStatus          string      `json:"loadTestCompletionStatus"`
+	AverageTimeToSpinUpUsers          FloatFormat `json:"Average Time taken to spin up users (sec)"`
+	AverageTimeToCreateResources      FloatFormat `json:"Average Time taken to Create Resources (sec)"`
+	AverageTimeToRunPipelines         FloatFormat `json:"Average Time taken to Run Pipelines (sec)"`
+	UserCreationFailureCount          int64       `json:"Number of times user creation failed"`
+	UserCreationFailurePercentage     FloatFormat `json:"User creation failed percentage"`
+	ResourceCreationFailureCount      int64       `json:"Number of times resource creation failed"`
+	ResourceCreationFailurePercentage FloatFormat `json:"Resource creation failed percentage"`
+	PipelineRunFailureCount           int64       `json:"Number of times pipeline run failed"`
+	PipelineRunFailurePercentage      FloatFormat `json:"Pipeline run failed percentage"`
 }
 
 // to marshall json float as .2f% we need the MarshalJSON function
+
 type FloatFormat float64
 
 func (f FloatFormat) MarshalJSON() ([]byte, error) {
@@ -83,6 +86,8 @@ func createLogDataJSON(
 	outputFile string,
 	timestamp string,
 	numberOfUsers int,
+	numberOfThreads int,
+	numberOfUsersPerThread int,
 	batchSize int,
 	loadTestCompletionStatus string,
 	averageTimeToSpinUpUsers float64,
@@ -116,18 +121,20 @@ func createLogDataJSON(
 		Timestamp:                         timestamp,
 		MachineName:                       machineName,
 		BinaryDetails:                     binaryDetails,
+		NumberOfThreads:                   numberOfThreads,
+		NumberOfUsersPerThread:            numberOfUsersPerThread,
 		NumberOfUsers:                     numberOfUsers,
 		BatchSize:                         batchSize,
 		LoadTestCompletionStatus:          loadTestCompletionStatus,
-		AverageTimeToSpinUpUsers:          averageTimeToSpinUpUsers,
-		AverageTimeToCreateResources:      averageTimeToCreateResources,
-		AverageTimeToRunPipelines:         averageTimeToRunPipelines,
+		AverageTimeToSpinUpUsers:          FloatFormat(averageTimeToSpinUpUsers),
+		AverageTimeToCreateResources:      FloatFormat(averageTimeToCreateResources),
+		AverageTimeToRunPipelines:         FloatFormat(averageTimeToRunPipelines),
 		UserCreationFailureCount:          userCreationFailureCount,
-		UserCreationFailurePercentage:     userCreationFailurePercentage,
+		UserCreationFailurePercentage:     FloatFormat(userCreationFailurePercentage),
 		ResourceCreationFailureCount:      resourceCreationFailureCount,
-		ResourceCreationFailurePercentage: resourceCreationFailurePercentage,
+		ResourceCreationFailurePercentage: FloatFormat(resourceCreationFailurePercentage),
 		PipelineRunFailureCount:           pipelineRunFailureCount,
-		PipelineRunFailurePercentage:      pipelineRunFailurePercentage,
+		PipelineRunFailurePercentage:      FloatFormat(pipelineRunFailurePercentage),
 	}
 
 	jsonData, err := json.MarshalIndent(logData, "", "  ")
@@ -137,10 +144,8 @@ func createLogDataJSON(
 
 	err = os.WriteFile(outputFile, jsonData, 0644) // Replace ioutil.WriteFile with os.WriteFile
 	if err != nil {
-		// fmt.Println("Error writing JSON file:", err)
 		return fmt.Errorf("error writing JSON file: %v", err)
 	}
-	fmt.Printf("JSON data written to %s\n", outputFile)
 
 	return nil
 }
@@ -209,11 +214,8 @@ func setup(cmd *cobra.Command, args []string) {
 	/*
 		used for the json output file -
 		loadTestsTimestamp - loadTests start timestamp, used for the json output file
-		totalNumberOfUsers - Number of threads (threadCount) * Number of users per thread (numberOfUsers)
-
 	*/
 	loadTestsTimestamp := time.Now().Format("2006/01/02 15:04:05")
-	totalNumberOfUsers := threadCount * numberOfUsers
 
 	logFile, err := os.Create("load-tests.log")
 	if err != nil {
@@ -331,6 +333,16 @@ func setup(cmd *cobra.Command, args []string) {
 	pipelineRunFailureCount := sumFromArray(FailedPipelineRuns)
 	PipelineRunFailurePercentage := 100 * float64(sumFromArray(FailedPipelineRuns)) / float64(overallCount)
 
+	// fmt.Printf("averageTimeToSpinUpUsers=%.2f \n", averageTimeToSpinUpUsers)
+	// fmt.Printf("averageTimeToCreateResources=%.2f \n", averageTimeToCreateResources)
+	// fmt.Printf("averageTimeToRunPipelines=%.2f \n", averageTimeToRunPipelines)
+	// fmt.Printf("userCreationFailureCount=%d \n", userCreationFailureCount)
+	// fmt.Printf("userCreationFailurePercentage=%.2f \n", userCreationFailurePercentage)
+	// fmt.Printf("resourceCreationFailureCount=%d \n", resourceCreationFailureCount)
+	// fmt.Printf("resourceCreationFailurePercentage=%.2f \n", resourceCreationFailurePercentage)
+	// fmt.Printf("pipelineRunFailureCount=%d \n", pipelineRunFailureCount)
+	// fmt.Printf("PipelineRunFailurePercentage=%.2f \n", PipelineRunFailurePercentage)
+
 	klog.Infof("🏁 Load Test Completed!")
 	klog.Infof("📈 Results 📉")
 	klog.Infof("Average Time taken to spin up users: %.2f s", averageTimeToSpinUpUsers)
@@ -339,6 +351,7 @@ func setup(cmd *cobra.Command, args []string) {
 	klog.Infof("Number of times user creation failed: %d (%.2f %%)", userCreationFailureCount, userCreationFailurePercentage)
 	klog.Infof("Number of times resource creation failed: %d (%.2f %%)", resourceCreationFailureCount, resourceCreationFailurePercentage)
 	klog.Infof("Number of times pipeline run failed: %d (%.2f %%)", pipelineRunFailureCount, PipelineRunFailurePercentage)
+
 	klog.StopFlushDaemon()
 	klog.Flush()
 	if !disableMetrics {
@@ -349,7 +362,9 @@ func setup(cmd *cobra.Command, args []string) {
 	err = createLogDataJSON(
 		"load-tests.json",
 		loadTestsTimestamp,
-		totalNumberOfUsers,
+		overallCount,
+		threadCount,
+		numberOfUsers,
 		userBatches,
 		"Completed",
 		averageTimeToSpinUpUsers,
