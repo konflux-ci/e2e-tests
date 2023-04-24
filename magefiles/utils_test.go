@@ -212,5 +212,8 @@ func BenchmarkCleanupQuayTags(b *testing.B) {
 		TagPages:       tagPages,
 		Benchmark:      true,
 	}
-	cleanupQuayTags(&quayClientMock, testOrg, testRepo)
+	err := cleanupQuayTags(&quayClientMock, testOrg, testRepo)
+	if err != nil {
+		b.Errorf("error during quay tag cleanup, error: %s", err)
+	}
 }
