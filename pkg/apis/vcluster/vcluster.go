@@ -117,7 +117,8 @@ func (vc *vclusterFactory) CreateRoute(serviceName string, namespace string) (ro
 }
 
 func (c *vclusterFactory) CreateKubconfig(clusterName string, targetNamespace string, kubeconfigPath string) error {
-	return utils.ExecuteCommandInASpecificDirectory(VCLUSTER_BIN, []string{"connect", clusterName, "--namespace", targetNamespace, "--update-current=false", "--insecure", "--kube-config", kubeconfigPath}, "")
+	return utils.ExecuteCommandInASpecificDirectory(VCLUSTER_BIN, []string{"connect", clusterName, "--namespace", targetNamespace, "--update-current=false", "--service-account=kube-system/admin",
+		"--token-expiration=10800", "--cluster-role=cluster-admin", "--insecure", "--kube-config", kubeconfigPath}, "")
 }
 
 func (c *vclusterFactory) GenerateHelmValues() ValuesTemplate {
@@ -134,6 +135,10 @@ func (c *vclusterFactory) GenerateHelmValues() ValuesTemplate {
 			},
 			Ingresses: Ingresses{
 				Enabled: true,
+			},
+			Secrets: Secrets{
+				Enabled: true,
+				All:     true,
 			},
 		},
 	}

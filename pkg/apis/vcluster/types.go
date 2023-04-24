@@ -20,11 +20,17 @@ type Ingresses struct {
 	Enabled bool `yaml:"enabled"`
 }
 
+type Secrets struct {
+	Enabled bool `yaml:"enabled"`
+	All     bool `yaml:"all"`
+}
+
 type Sync struct {
 	NetworkPolicies NetworkPolicies `yaml:"networkpolicies"`
-	//ServiceAccounts ServiceAccounts `yaml:"serviceaccounts"`
-	Services  Services  `yaml:"services"`
-	Ingresses Ingresses `yaml:"ingresses"`
+	ServiceAccounts ServiceAccounts `yaml:"serviceaccounts"`
+	Services        Services        `yaml:"services"`
+	Ingresses       Ingresses       `yaml:"ingresses"`
+	Secrets         Secrets         `yaml:"secrets"`
 }
 
 type ValuesTemplate struct {

@@ -106,6 +106,50 @@ func (h *SuiteController) DeleteAllGitOpsDeploymentInASpecificNamespace(namespac
 	}, timeout)
 }
 
+/*
+* CreateEphemeralEnvironment: create an RHTAP environment pointing to a valid Kubernetes/Openshift cluster
+* Args:
+*	- name: Environment name
+*	- namespace: Namespace where to create the environment. Note: Should be in the same namespace where cluster credential secret it is
+*	- targetNamespace: Cluster namespace where to create Gitops resources
+*	- serverApi: A valid API kubernetes server for a specific Kubernetes/Openshift cluster
+*   - clusterCredentialsSecret: Secret with a valid kubeconfig credentials
+ */
+func (h *SuiteController) CreateEphemeralEnvironment(name string, namespace string, targetNamespace string, serverApi string, clusterCredentialsSecret string) (*appservice.Environment, error) {
+	ephemeralEnvironmentObj := &appservice.Environment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: appservice.EnvironmentSpec{
+			DeploymentStrategy: appservice.DeploymentStrategy_AppStudioAutomated,
+			Configuration: appservice.EnvironmentConfiguration{
+				Env: []appservice.EnvVarPair{
+					{
+						Name:  "POC",
+						Value: "POC",
+					},
+				},
+			},
+			UnstableConfigurationFields: &appservice.UnstableEnvironmentConfiguration{
+				ClusterType: appservice.ConfigurationClusterType_Kubernetes,
+				KubernetesClusterCredentials: appservice.KubernetesClusterCredentials{
+					TargetNamespace:            targetNamespace,
+					APIURL:                     serverApi,
+					ClusterCredentialsSecret:   clusterCredentialsSecret,
+					AllowInsecureSkipTLSVerify: true,
+				},
+			},
+		},
+	}
+
+	if err := h.KubeRest().Create(context.TODO(), ephemeralEnvironmentObj); err != nil {
+		return nil, err
+	}
+
+	return ephemeralEnvironmentObj, nil
+}
+
 // CreateEnvironment creates a new environment
 func (h *SuiteController) CreateEnvironment(name, namespace string) (*appservice.Environment, error) {
 	environment := &appservice.Environment{
