@@ -135,7 +135,7 @@ func logError(errCode int, message string) {
 	if failFast {
 		klog.Fatalln(msg)
 	} else {
-		klog.Infoln(msg)
+		klog.Errorln(msg)
 	}
 }
 
