@@ -44,7 +44,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 	var stagingKubeconfig string
 	var kubernetesApiServerUrl string
 
-	cwd, err := os.Getwd()
+	rootPath, err := os.Getwd()
 	Expect(err).NotTo(HaveOccurred())
 
 	// Initialize the application struct
@@ -57,7 +57,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 		BeforeAll(func() {
 			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("byoc"))
 			Expect(err).NotTo(HaveOccurred())
-			vc = vcluster.NewVclusterController(fmt.Sprintf("%s/tmp", cwd), fw.AsKubeAdmin.CommonController.CustomClient)
+			vc = vcluster.NewVclusterController(fmt.Sprintf("%s/tmp", rootPath), fw.AsKubeAdmin.CommonController.CustomClient)
 		})
 
 		It("starts Kubernetes ephemeral cluster", func() {
@@ -162,7 +162,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("waits component pipeline to finish", func() {
+		It("waits component pipeline to finish", FlakeAttempts(3), func() {
 			if CurrentSpecReport().NumAttempts > 1 {
 				pipelineRun, err := fw.AsKubeDeveloper.HasController.GetComponentPipelineRun(componentObj.Name, application.Name, fw.UserNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred(), "failed to get pipelinerun: %v", err)
