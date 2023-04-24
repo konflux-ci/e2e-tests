@@ -297,7 +297,7 @@ func setup(cmd *cobra.Command, args []string) {
 	*/
 	machineName, err := os.Hostname()
 	if err != nil {
-		fmt.Printf("error getting hostname: %v\n", err)
+		klog.Errorf("error getting hostname: %v\n", err)
 		return
 	}
 
@@ -329,7 +329,7 @@ func setup(cmd *cobra.Command, args []string) {
 
 	err = createLogDataJSON("load-tests.json", logDataInput)
 	if err != nil {
-		fmt.Printf("error while marshalling JSON: %v\n", err)
+		klog.Errorf("error while marshalling JSON: %v\n", err)
 	}
 }
 
