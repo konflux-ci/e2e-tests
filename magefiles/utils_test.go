@@ -18,10 +18,10 @@ type QuayClientMock struct {
 	DeleteRepositoryCalls   map[string]bool
 	DeleteRobotAccountCalls map[string]bool
 	DeleteTagCalls          map[string]bool
+	TagsOnPage              int
+	TagPages                int
+	Benchmark               bool
 }
-
-const TAGS_ON_PAGE = 10
-const TAG_PAGES = 5
 
 var _ quay.QuayService = (*QuayClientMock)(nil)
 
@@ -44,15 +44,21 @@ func (m *QuayClientMock) DeleteRobotAccount(organization, robotName string) (boo
 }
 
 func (m *QuayClientMock) GetTagsFromPage(organization, repository string, page int) ([]quay.Tag, bool, error) {
-	if page == TAG_PAGES {
-		return m.AllTags[(page-1)*TAGS_ON_PAGE : (page * TAGS_ON_PAGE)], false, nil
+	if m.Benchmark {
+		time.Sleep(100 * time.Millisecond) // Mock delay for request
 	}
-	return m.AllTags[(page-1)*TAGS_ON_PAGE : (page * TAGS_ON_PAGE)], true, nil
+	if page == m.TagPages {
+		return m.AllTags[(page-1)*m.TagsOnPage : (page * m.TagsOnPage)], false, nil
+	}
+	return m.AllTags[(page-1)*m.TagsOnPage : (page * m.TagsOnPage)], true, nil
 }
 
 var deleteTagCallsMutex = sync.RWMutex{}
 
 func (m *QuayClientMock) DeleteTag(organization, repository, tag string) (bool, error) {
+	if m.Benchmark {
+		time.Sleep(100 * time.Millisecond) // Mock delay for request
+	}
 	deleteTagCallsMutex.Lock()
 	m.DeleteTagCalls[tag] = true
 	deleteTagCallsMutex.Unlock()
@@ -134,12 +140,15 @@ func TestCleanupQuayTags(t *testing.T) {
 	testOrg := "test-org"
 	testRepo := "test-repo"
 
+	tagsOnPage := 20
+	tagPages := 20
+
 	var deletedTags []quay.Tag
 	var preservedTags []quay.Tag
 	var allTags []quay.Tag
 
 	// Randomly generate slices of deleted and preserved tags
-	for i := 0; i < TAGS_ON_PAGE*TAG_PAGES; i++ {
+	for i := 0; i < tagsOnPage*tagPages; i++ {
 		tagName := fmt.Sprintf("tag%d", i)
 		var tag quay.Tag
 		if rand.Intn(2) == 0 {
@@ -155,6 +164,8 @@ func TestCleanupQuayTags(t *testing.T) {
 	quayClientMock := QuayClientMock{
 		AllTags:        allTags,
 		DeleteTagCalls: make(map[string]bool),
+		TagsOnPage:     tagsOnPage,
+		TagPages:       tagPages,
 	}
 
 	err := cleanupQuayTags(&quayClientMock, testOrg, testRepo)
@@ -172,4 +183,34 @@ func TestCleanupQuayTags(t *testing.T) {
 			t.Errorf("DeleteTag() should not have been called for '%s'", tag.Name)
 		}
 	}
+}
+
+func BenchmarkCleanupQuayTags(b *testing.B) {
+	testOrg := "test-org"
+	testRepo := "test-repo"
+	var allTags []quay.Tag
+
+	tagsOnPage := 20
+	tagPages := 20
+
+	// Randomly generate slices of deleted and preserved tags
+	for i := 0; i < tagsOnPage*tagPages; i++ {
+		tagName := fmt.Sprintf("tag%d", i)
+		var tag quay.Tag
+		if rand.Intn(2) == 0 {
+			tag = quay.Tag{Name: tagName, StartTS: time.Now().AddDate(0, 0, -8).Unix()}
+		} else {
+			tag = quay.Tag{Name: tagName, StartTS: time.Now().Unix()}
+		}
+		allTags = append(allTags, tag)
+	}
+
+	quayClientMock := QuayClientMock{
+		AllTags:        allTags,
+		DeleteTagCalls: make(map[string]bool),
+		TagsOnPage:     tagsOnPage,
+		TagPages:       tagPages,
+		Benchmark:      true,
+	}
+	cleanupQuayTags(&quayClientMock, testOrg, testRepo)
 }
