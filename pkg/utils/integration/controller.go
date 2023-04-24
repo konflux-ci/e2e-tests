@@ -327,11 +327,6 @@ func (h *SuiteController) CreateIntegrationTestScenario(applicationName, namespa
 			Application: applicationName,
 			Bundle:      bundleURL,
 			Pipeline:    pipelineName,
-			Environment: integrationv1alpha1.TestEnvironment{
-				Name:   "envname",
-				Type:   "POC",
-				Params: []string{},
-			},
 		},
 	}
 
