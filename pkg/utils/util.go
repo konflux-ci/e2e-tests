@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -311,4 +312,18 @@ func ParseDevfileModel(devfileModel string) (data.DevfileData, error) {
 	}
 	devfileObj, _, err := devfilePkg.ParseDevfileAndValidate(parserArgs)
 	return devfileObj.Data, err
+}
+
+func HostIsAccessible(host string) bool {
+	tc := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
+	client := http.Client{Transport: tc}
+	res, err := client.Get(host)
+	if err != nil || res.StatusCode > 499 {
+		return false
+	}
+	return true
 }
