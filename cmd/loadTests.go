@@ -15,7 +15,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-e2e/setup/metrics"
 	"github.com/codeready-toolchain/toolchain-e2e/setup/metrics/queries"
 	"github.com/codeready-toolchain/toolchain-e2e/setup/terminal"
-	"github.com/codeready-toolchain/toolchain-e2e/setup/users"
 	"github.com/codeready-toolchain/toolchain-e2e/setup/wait"
 	"github.com/google/uuid"
 	"github.com/gosuri/uiprogress"
@@ -134,7 +133,7 @@ func setup(cmd *cobra.Command, args []string) {
 	klog.Infof("Batch Size per thread: %d", userBatches)
 
 	klog.Infof("🕖 initializing...\n")
-	framework, err := framework.NewFramework("load-tests")
+	globalframework, err := framework.NewFramework("load-tests")
 	if err != nil {
 		klog.Fatalf("error creating client-go %v", err)
 	}
@@ -142,7 +141,7 @@ func setup(cmd *cobra.Command, args []string) {
 	if len(token) == 0 {
 		token, err = auth.GetTokenFromOC()
 		if err != nil {
-			tokenRequestURI, err := auth.GetTokenRequestURI(framework.AsKubeAdmin.CommonController.KubeRest()) // authorization.FindTokenRequestURI(framework.CommonController.KubeRest())
+			tokenRequestURI, err := auth.GetTokenRequestURI(globalframework.AsKubeAdmin.CommonController.KubeRest()) // authorization.FindTokenRequestURI(framework.CommonController.KubeRest())
 			if err != nil {
 				klog.Fatalf("a token is required to capture metrics, use oc login to log into the cluster: %v", err)
 			}
@@ -153,9 +152,9 @@ func setup(cmd *cobra.Command, args []string) {
 	var stopMetrics chan struct{}
 	var metricsInstance *metrics.Gatherer
 	if !disableMetrics {
-		metricsInstance = metrics.NewEmpty(term, framework.AsKubeAdmin.CommonController.KubeRest(), 10*time.Minute)
+		metricsInstance = metrics.NewEmpty(term, globalframework.AsKubeAdmin.CommonController.KubeRest(), 10*time.Minute)
 
-		prometheusClient := metrics.GetPrometheusClient(term, framework.AsKubeAdmin.CommonController.KubeRest(), token)
+		prometheusClient := metrics.GetPrometheusClient(term, globalframework.AsKubeAdmin.CommonController.KubeRest(), token)
 
 		metricsInstance.AddQueries(
 			queries.QueryClusterCPUUtilisation(prometheusClient),
@@ -207,10 +206,12 @@ func setup(cmd *cobra.Command, args []string) {
 	FailedUserCreations = make([]int64, threadCount)
 	FailedResourceCreations = make([]int64, threadCount)
 	FailedPipelineRuns = make([]int64, threadCount)
+	frameworkMap := make(map[string]*framework.Framework)
+	
 
 	threadsWG.Add(threadCount)
 	for thread := 0; thread < threadCount; thread++ {
-		go userJourneyThread(framework, thread, AppStudioUsersBar, ResourcesBar, PipelinesBar)
+		go userJourneyThread(frameworkMap, thread, AppStudioUsersBar, ResourcesBar, PipelinesBar)
 	}
 
 	// Todo add cleanup functions that will delete user signups
@@ -249,7 +250,7 @@ func sumFromArray(array []int64) int64 {
 	return sum
 }
 
-func userJourneyThread(framework *framework.Framework, threadIndex int, usersBar *uiprogress.Bar, resourcesBar *uiprogress.Bar, pipelinesBar *uiprogress.Bar) {
+func userJourneyThread(frameworkMap map[string]*framework.Framework, threadIndex int, usersBar *uiprogress.Bar, resourcesBar *uiprogress.Bar, pipelinesBar *uiprogress.Bar) {
 	chUsers := make(chan int, numberOfUsers)
 	chPipelines := make(chan int, numberOfUsers)
 
@@ -266,14 +267,15 @@ func userJourneyThread(framework *framework.Framework, threadIndex int, usersBar
 		for userIndex := 1; userIndex <= numberOfUsers; userIndex++ {
 			startTime := time.Now()
 			username := fmt.Sprintf("%s-%04d", usernamePrefix, threadIndex*numberOfUsers+userIndex)
-			if err := users.Create(framework.AsKubeAdmin.CommonController.KubeRest(), username, constants.HostOperatorNamespace, constants.MemberOperatorNamespace); err != nil {
-				logError(1, fmt.Sprintf("Unable to provision user '%s': %v", username, err))
-				atomic.StoreInt64(&FailedUserCreations[threadIndex], atomic.AddInt64(&FailedUserCreations[threadIndex], 1))
-				continue
+			framework, err := framework.NewFramework(username)
+			frameworkMap[username] = framework
+			if err != nil {
+				klog.Fatalf(err.Error());
 			}
+
 			if userIndex%userBatches == 0 {
 				for i := userIndex - userBatches + 1; i <= userIndex; i++ {
-					usernamespace := fmt.Sprintf("%s-%04d-tenant", usernamePrefix, threadIndex*numberOfUsers+userIndex)
+					usernamespace := framework.UserNamespace
 					if err := wait.ForNamespace(framework.AsKubeAdmin.CommonController.KubeRest(), usernamespace); err != nil {
 						logError(2, fmt.Sprintf("Unable to find namespace '%s' within %v: %v", usernamespace, configuration.DefaultTimeout, err))
 						atomic.StoreInt64(&FailedUserCreations[threadIndex], atomic.AddInt64(&FailedUserCreations[threadIndex], 1))
@@ -294,7 +296,8 @@ func userJourneyThread(framework *framework.Framework, threadIndex int, usersBar
 		for userIndex := range chUsers {
 			startTime := time.Now()
 			username := fmt.Sprintf("%s-%04d", usernamePrefix, threadIndex*numberOfUsers+userIndex)
-			usernamespace := fmt.Sprintf("%s-tenant", username)
+			framework := frameworkMap[username]
+			usernamespace := framework.UserNamespace
 			_, errors := framework.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(
 				constants.RegistryAuthSecretName,
 				usernamespace,
@@ -307,21 +310,21 @@ func userJourneyThread(framework *framework.Framework, threadIndex int, usersBar
 			}
 			// time.Sleep(time.Second * 2)
 			ApplicationName := fmt.Sprintf("%s-app", username)
-			app, err := framework.AsKubeAdmin.HasController.CreateHasApplication(ApplicationName, usernamespace)
+			app, err := framework.AsKubeDeveloper.HasController.CreateHasApplication(ApplicationName, usernamespace)
 			if err != nil {
 				logError(4, fmt.Sprintf("Unable to create the Application %s: %v", ApplicationName, err))
 				atomic.StoreInt64(&FailedResourceCreations[threadIndex], atomic.AddInt64(&FailedResourceCreations[threadIndex], 1))
 				continue
 			}
 			gitopsRepoTimeout := 60 * time.Second
-			if err := utils.WaitUntil(framework.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), gitopsRepoTimeout); err != nil {
+			if err := utils.WaitUntil(framework.AsKubeDeveloper.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), gitopsRepoTimeout); err != nil {
 				logError(5, fmt.Sprintf("Unable to create application %s gitops repo within %v: %v", ApplicationName, gitopsRepoTimeout, err))
 				atomic.StoreInt64(&FailedResourceCreations[threadIndex], atomic.AddInt64(&FailedResourceCreations[threadIndex], 1))
 				continue
 			}
 			ComponentName := fmt.Sprintf("%s-component", username)
 			ComponentContainerImage := fmt.Sprintf("quay.io/%s/test-images:%s-%s", utils.GetQuayIOOrganization(), username, strings.Replace(uuid.New().String(), "-", "", -1))
-			component, err := framework.AsKubeAdmin.HasController.CreateComponent(
+			component, err := framework.AsKubeDeveloper.HasController.CreateComponent(
 				ApplicationName,
 				ComponentName,
 				usernamespace,
@@ -361,13 +364,14 @@ func userJourneyThread(framework *framework.Framework, threadIndex int, usersBar
 		go func() {
 			for userIndex := range chPipelines {
 				username := fmt.Sprintf("%s-%04d", usernamePrefix, threadIndex*numberOfUsers+userIndex)
-				usernamespace := fmt.Sprintf("%s-tenant", username)
+				framework := frameworkMap[username]
+				usernamespace := framework.UserNamespace
 				ComponentName := fmt.Sprintf("%s-component", username)
 				ApplicationName := fmt.Sprintf("%s-app", username)
 				DefaultRetryInterval := time.Millisecond * 200
 				DefaultTimeout := time.Minute * 17
 				error := k8swait.Poll(DefaultRetryInterval, DefaultTimeout, func() (done bool, err error) {
-					pipelineRun, err := framework.AsKubeAdmin.HasController.GetComponentPipelineRun(ComponentName, ApplicationName, usernamespace, "")
+					pipelineRun, err := framework.AsKubeDeveloper.HasController.GetComponentPipelineRun(ComponentName, ApplicationName, usernamespace, "")
 					if err != nil {
 						return false, nil
 					}
