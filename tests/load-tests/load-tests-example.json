@@ -1,0 +1,20 @@
+{
+  "timestamp": "2023-04-24T14:53:11+03:00",
+  "endTimestamp": "2023-04-24T14:56:29+03:00",
+  "machineName": "nshprai",
+  "binaryDetails": "Built with go1.19.6 for linux/amd64",
+  "threads": 3,
+  "usersPerThread": 2,
+  "threadBatchSize": 1,
+  "totalUsers": 6,
+  "status": "Completed",
+  "createUserTimeAvg": 2,
+  "createResourcesTimeAvg": 6,
+  "runPipelineTimeAvg": 169.66666666666666,
+  "createUserFailures": 0,
+  "createUserFailureRate": 0,
+  "createResourcesFailures": 0,
+  "createResourcesFailureRate": 0,
+  "runPipelineFailures": 6,
+  "runPipelineFailureRate": 100
+}
