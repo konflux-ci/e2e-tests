@@ -3,9 +3,13 @@ package o11y
 import (
 	"bufio"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"os/exec"
+	"io"
+	"log"
+	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -34,6 +38,14 @@ type MetricResult struct {
 	Value  []interface{}     `json:"value"`
 }
 
+type ThanosResult struct {
+	Status string `json:"status"`
+	Data   struct {
+		ResultType string         `json:"resultType"`
+		Result     []MetricResult `json:"result"`
+	} `json:"data"`
+}
+
 func NewSuiteController(kube *kubeCl.CustomClient) (*SuiteController, error) {
 	return &SuiteController{
 		kube,
@@ -45,29 +57,104 @@ func (h *SuiteController) convertBytesToMB(valueInBytes float64) int {
 	return int(valueInMegabytes)
 }
 
-// Fetch metrics for given query
-func (h *SuiteController) GetMetrics(query string) ([]MetricResult, error) {
-
-	var result struct {
-		Data struct {
-			Result []MetricResult `json:"result"`
-		} `json:"data"`
+func (h *SuiteController) GetSecretName(namespace, pattern string) (string, error) {
+	secrets, err := h.KubeInterface().CoreV1().Secrets(namespace).List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		return "", err
 	}
 
-	// Temporary way to fetch the metrics, will be replaced by golang http client library
-	// curl -X GET -kG "https://$THANOS_QUERIER_HOST/api/v1/query?" --data-urlencode "query="+query -H "Authorization: Bearer $TOKEN"
-	curlCmd := exec.Command("curl", "-X", "GET", "-kG", "http://localhost:8080/api/v1/query", "--data-urlencode", "query="+query)
-	output, err := curlCmd.Output()
-	if err != nil {
-		return nil, err
+	for _, secret := range secrets.Items {
+		if strings.Contains(secret.Name, pattern) {
+			return secret.Name, nil
+		}
 	}
 
-	err = json.Unmarshal(output, &result)
+	return "", fmt.Errorf("no matching secrets found")
+}
+
+func (h *SuiteController) GetDecodedTokenFromSecret(namespace, secretName string) (string, error) {
+	secret, err := h.KubeInterface().CoreV1().Secrets(namespace).Get(context.Background(), secretName, metav1.GetOptions{})
 	if err != nil {
-		return nil, err
+		return "", err
+	}
+
+	tokenData, ok := secret.Data["token"]
+	if !ok {
+		return "", fmt.Errorf("token not found in secret %s", secretName)
+	}
+	token := string(tokenData)
+
+	return token, nil
+}
+
+func (h *SuiteController) RunSampleQuery(namespace, thanosQuerierHost, token string) ([]MetricResult, error) {
+	var result ThanosResult
+
+	ok, err := h.runQuery("up", thanosQuerierHost, token, &result)
+	if err != nil {
+		return nil, fmt.Errorf("sample query failed: %v", err)
+	}
+	if !ok {
+		return nil, fmt.Errorf("no result returned for sample query")
 	}
 
 	return result.Data.Result, nil
+}
+
+func (h *SuiteController) QueryThanosAPI(query, thanosQuerierHost, token string) ([]MetricResult, error) {
+	var result ThanosResult
+	maxRetries := 3
+	waitTime := 5 * time.Second
+
+	for i := 0; i < maxRetries; i++ {
+		ok, err := h.runQuery(query, thanosQuerierHost, token, &result)
+		if err != nil {
+			log.Printf("Error in running query, attempt %d: %v", i+1, err)
+		}
+		if ok {
+			return result.Data.Result, nil
+		}
+		time.Sleep(waitTime)
+	}
+	return nil, fmt.Errorf("the result is empty after %d retries", maxRetries)
+}
+
+func (h *SuiteController) runQuery(query, thanosQuerierHost, token string, result *ThanosResult) (bool, error) {
+	encodedQuery := url.QueryEscape(query)
+	url := fmt.Sprintf("https://%s/api/v1/query?query=%s", thanosQuerierHost, encodedQuery)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return false, fmt.Errorf("failed to create a new request: %w", err)
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, fmt.Errorf("failed to make HTTP request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("HTTP request failed with status code %d", resp.StatusCode)
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	err = json.Unmarshal(bodyBytes, result)
+	if err != nil {
+		return false, fmt.Errorf("failed to unmarshal response body: %w", err)
+	}
+
+	return len(result.Data.Result) != 0, nil
 }
 
 func (h *SuiteController) GetRegexPodNameWithResult(podNameRegex string, results []MetricResult) (map[string]string, error) {
@@ -165,7 +252,7 @@ func (s *SuiteController) WaitForScriptCompletion(deployment *appsv1.Deployment,
 func (h *SuiteController) getImagePushScript(secret, quayOrg string) string {
 	return fmt.Sprintf(`#!/bin/sh
 authFilePath="/tekton/creds-secrets/%s/.dockerconfigjson"
-destImageRef="quay.io/%s/o11y-workloads"
+destImageRef="quay.io/%s/test-images"
 # Set Permissions
 sed -i 's/^\s*short-name-mode\s*=\s*.*/short-name-mode = "disabled"/' /etc/containers/registries.conf
 echo 'root:1:4294967294' | tee -a /etc/subuid >> /etc/subgid
@@ -260,12 +347,12 @@ func (h *SuiteController) VCPUMinutesPipelineRun(namespace string) (*v1beta1.Pip
 										Script: "#!/usr/bin/env bash\nsleep 1m\necho 'vCPU Deployment Completed'\n",
 										Resources: corev1.ResourceRequirements{
 											Requests: corev1.ResourceList{
-												corev1.ResourceMemory: resource.MustParse("200Mi"),
-												corev1.ResourceCPU:    resource.MustParse("200m"),
+												corev1.ResourceMemory: resource.MustParse("100Mi"),
+												corev1.ResourceCPU:    resource.MustParse("100m"),
 											},
 											Limits: corev1.ResourceList{
-												corev1.ResourceMemory: resource.MustParse("200Mi"),
-												corev1.ResourceCPU:    resource.MustParse("200m"),
+												corev1.ResourceMemory: resource.MustParse("100Mi"),
+												corev1.ResourceCPU:    resource.MustParse("100m"),
 											},
 										},
 									},
@@ -327,7 +414,7 @@ func (h *SuiteController) QuayImagePushDeployment(quayOrg, secret, namespace str
 								{Name: "STORAGE_DRIVER", Value: "vfs"},
 							},
 							Command: []string{"/bin/sh", "-c"},
-							Args:    []string{h.getImagePushScript(secret, quayOrg)},
+							Args:    []string{h.getImagePushScript(secret, quayOrg) + "; while true; do sleep 30; done"},
 							SecurityContext: &corev1.SecurityContext{
 								RunAsUser: pointer.Int64(0),
 								Capabilities: &corev1.Capabilities{
@@ -387,16 +474,16 @@ func (h *SuiteController) VCPUMinutesDeployment(namespace string) (*appsv1.Deplo
 							Command: []string{
 								"/bin/bash",
 								"-c",
-								"sleep 1m ; echo 'vCPU Deployment Completed'",
+								"sleep 1m; echo 'vCPU Deployment Completed'; while true; do sleep 30; done",
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("200Mi"),
-									corev1.ResourceCPU:    resource.MustParse("200m"),
+									corev1.ResourceMemory: resource.MustParse("100Mi"),
+									corev1.ResourceCPU:    resource.MustParse("100m"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("200Mi"),
-									corev1.ResourceCPU:    resource.MustParse("200m"),
+									corev1.ResourceMemory: resource.MustParse("100Mi"),
+									corev1.ResourceCPU:    resource.MustParse("100m"),
 								},
 							},
 						},
