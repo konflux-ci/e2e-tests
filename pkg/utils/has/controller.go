@@ -89,6 +89,11 @@ func (h *SuiteController) GetHasApplication(name, namespace string) (*appservice
 
 // CreateHasApplication create an application Custom Resource object
 func (h *SuiteController) CreateHasApplication(name, namespace string) (*appservice.Application, error) {
+	return h.CreateHasApplicationWithTimeout(name, namespace, time.Minute*10)
+}
+
+// CreateHasApplicationWithTimeout create an application Custom Resource object
+func (h *SuiteController) CreateHasApplicationWithTimeout(name string, namespace string, timeout time.Duration) (*appservice.Application, error) {
 	application := &appservice.Application{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -103,7 +108,7 @@ func (h *SuiteController) CreateHasApplication(name, namespace string) (*appserv
 		return nil, err
 	}
 
-	if err := utils.WaitUntil(h.ApplicationDevfilePresent(application), time.Minute*10); err != nil {
+	if err := utils.WaitUntil(h.ApplicationDevfilePresent(application), timeout); err != nil {
 		application = h.refreshApplicationForErrorDebug(application)
 		return nil, fmt.Errorf("timed out when waiting for devfile content creation for application %s in %s namespace: %+v. applicattion: %s", name, namespace, err, utils.ToPrettyJSONString(application))
 	}
