@@ -41,3 +41,6 @@ clean-github-webhooks:
 
 clean-quay-repos-and-robots:
 	./mage -v local:cleanupQuayReposAndRobots
+
+clean-quay-tags:
+	./mage -v local:cleanupQuayTags
