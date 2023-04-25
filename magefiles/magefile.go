@@ -181,7 +181,7 @@ func (Local) CleanupGithubOrg() error {
 }
 
 // Deletes Quay repos and robot accounts older than 24 hours with prefixes `has-e2e` and `e2e-demos`, uses env vars DEFAULT_QUAY_ORG and DEFAULT_QUAY_ORG_TOKEN
-func (Local) CleanupQuay() error {
+func (Local) CleanupQuayReposAndRobots() error {
 	quayOrgToken := os.Getenv("DEFAULT_QUAY_ORG_TOKEN")
 	if quayOrgToken == "" {
 		return fmt.Errorf("DEFAULT_QUAY_ORG_TOKEN env var was not found")
@@ -189,7 +189,7 @@ func (Local) CleanupQuay() error {
 	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
 
 	quayClient := quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayOrgToken, "https://quay.io/api/v1")
-	return cleanupQuay(&quayClient, quayOrg)
+	return cleanupQuayReposAndRobots(&quayClient, quayOrg)
 }
 
 // Deletes Quay Tags older than 7 days in `test-images` repository

@@ -160,7 +160,7 @@ func renderTemplate(destination, templatePath string, templateData interface{}, 
 	return nil
 }
 
-func cleanupQuay(quayService quay.QuayService, quayOrg string) error {
+func cleanupQuayReposAndRobots(quayService quay.QuayService, quayOrg string) error {
 	r, err := regexp.Compile(fmt.Sprintf(`^(%s)`, quayPrefixesToDeleteRegexp))
 	if err != nil {
 		return err

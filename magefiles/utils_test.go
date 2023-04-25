@@ -78,7 +78,7 @@ func (m *QuayClientMock) CreateRobotAccount(organization string, robotName strin
 	return nil, nil
 }
 
-func TestCleanupQuay(t *testing.T) {
+func TestCleanupQuayReposAndRobots(t *testing.T) {
 	timeFormat := "Mon, 02 Jan 2006 15:04:05 -0700"
 
 	deletedRepos := []quay.Repository{
@@ -107,7 +107,7 @@ func TestCleanupQuay(t *testing.T) {
 		DeleteRepositoryCalls:   make(map[string]bool),
 		DeleteRobotAccountCalls: make(map[string]bool),
 	}
-	err := cleanupQuay(&quayClientMock, "test-org")
+	err := cleanupQuayReposAndRobots(&quayClientMock, "test-org")
 	if err != nil {
 		t.Errorf("error during quay cleanup, error: %s", err)
 	}
