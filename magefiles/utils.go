@@ -234,49 +234,57 @@ func cleanupQuayReposAndRobots(quayService quay.QuayService, quayOrg string) err
 
 func cleanupQuayTags(quayService quay.QuayService, organization, repository string) error {
 	workerCount := 10
-	tagsChan := make(chan []quay.Tag, workerCount)
 	var wg sync.WaitGroup
 
-	var errBuilder strings.Builder
+	allTagsChan := make(chan quay.Tag)
+	errChan := make(chan error)
+
+	go func() {
+		page := 1
+		for {
+			tags, hasAdditional, err := quayService.GetTagsFromPage(organization, repository, page)
+			if err != nil {
+				errChan <- fmt.Errorf("error getting tags of `%s` repository of `%s` organization on page `%d`, error: %s", repository, organization, page, err)
+				continue
+			}
+			for _, tag := range tags {
+				allTagsChan <- tag
+			}
+			if !hasAdditional {
+				break
+			}
+			page++
+		}
+		close(allTagsChan)
+	}()
+
+	wg.Add(workerCount)
 
 	for i := 0; i < workerCount; i++ {
-		wg.Add(1)
-		go func(tagsChan <-chan []quay.Tag, wg *sync.WaitGroup) {
+		go func(tagsChan <-chan quay.Tag, errChan chan<- error, wg *sync.WaitGroup) {
 			defer wg.Done()
-
-			for tags := range tagsChan {
-				for _, tag := range tags {
-					if time.Unix(tag.StartTS, 0).Before(time.Now().AddDate(0, 0, -7)) {
-						deleted, err := quayService.DeleteTag(organization, repository, tag.Name)
-						if err != nil {
-							errBuilder.WriteString(fmt.Sprintf("error during deletion of tag `%s` in repository `%s` of organization `%s`, error: `%s`\n", tag.Name, repository, organization, err))
-						} else if !deleted {
-							fmt.Printf("tag `%s` in repository `%s` of organization `%s` was not deleted\n", tag.Name, repository, organization)
-						}
+			for tag := range tagsChan {
+				if time.Unix(tag.StartTS, 0).Before(time.Now().AddDate(0, 0, -7)) {
+					deleted, err := quayService.DeleteTag(organization, repository, tag.Name)
+					if err != nil {
+						errChan <- fmt.Errorf("error during deletion of tag `%s` in repository `%s` of organization `%s`, error: `%s`\n", tag.Name, repository, organization, err)
+					} else if !deleted {
+						fmt.Printf("tag `%s` in repository `%s` of organization `%s` was not deleted\n", tag.Name, repository, organization)
 					}
 				}
 			}
-		}(tagsChan, &wg)
+		}(allTagsChan, errChan, &wg)
 	}
 
-	page := 1
-	for {
-		tags, hasAdditional, err := quayService.GetTagsFromPage(organization, repository, page)
-		if err != nil {
-			errBuilder.WriteString(fmt.Sprintf("error getting tags of `%s` repository of `%s` organization on page `%d`, error: %s", repository, organization, page, err))
-			continue
-		}
-		tagsChan <- tags
-		if !hasAdditional {
-			break
-		}
-		page++
-	}
-	close(tagsChan)
 	wg.Wait()
 
-	if len(errBuilder.String()) == 0 {
+	if len(errChan) == 0 {
 		return nil
 	}
-	return fmt.Errorf("encountered errors during CleanupQuayTags: %v", errBuilder.String())
+
+	var errBuilder strings.Builder
+	for err := range errChan {
+		errBuilder.WriteString(fmt.Sprintf("%s\n", err))
+	}
+	return fmt.Errorf("encountered errors during CleanupQuayTags: %s", errBuilder.String())
 }
