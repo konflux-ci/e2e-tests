@@ -91,6 +91,13 @@ const (
 	ComponentInitialBuildAnnotationKey = "appstudio.openshift.io/component-initial-build"
 
 	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.10"
+
+	// TODO
+	// delete this constant and all its occurrences in the code base
+	// once https://issues.redhat.com/browse/RHTAP-810 is completed
+	OldTektonTaskTestOutputName = "HACBS_TEST_OUTPUT"
+
+	TektonTaskTestOutputName = "TEST_OUTPUT"
 )
 
 var (
