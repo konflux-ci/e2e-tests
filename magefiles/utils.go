@@ -277,7 +277,7 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 	}
 
 	wg.Wait()
-  close(errChan)
+	close(errChan)
 
 	if len(errChan) == 0 {
 		return nil
