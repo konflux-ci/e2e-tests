@@ -236,34 +236,33 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 	workerCount := 10
 	var wg sync.WaitGroup
 
-	allTagsChan := make(chan quay.Tag)
+  var allTags []quay.Tag
 	errChan := make(chan error)
 
-	go func() {
-		page := 1
-		for {
-			tags, hasAdditional, err := quayService.GetTagsFromPage(organization, repository, page)
-			if err != nil {
-				errChan <- fmt.Errorf("error getting tags of `%s` repository of `%s` organization on page `%d`, error: %s", repository, organization, page, err)
-				continue
-			}
-			for _, tag := range tags {
-				allTagsChan <- tag
-			}
-			if !hasAdditional {
-				break
-			}
-			page++
-		}
-		close(allTagsChan)
-	}()
+  page := 1
+  for {
+    tags, hasAdditional, err := quayService.GetTagsFromPage(organization, repository, page)
+    if err != nil {
+      errChan <- fmt.Errorf("error getting tags of `%s` repository of `%s` organization on page `%d`, error: %s", repository, organization, page, err)
+      continue
+    }
+    allTags = append(allTags, tags...)
+    if !hasAdditional {
+      break
+    }
+    page++
+  }
 
 	wg.Add(workerCount)
 
+  var allTagsMutex sync.Mutex
 	for i := 0; i < workerCount; i++ {
-		go func(tagsChan <-chan quay.Tag, errChan chan<- error, wg *sync.WaitGroup) {
+		go func(startIdx int, allTags []quay.Tag, allTagsMutex sync.Mutex, errChan chan<- error, wg *sync.WaitGroup) {
 			defer wg.Done()
-			for tag := range tagsChan {
+      for idx := startIdx; idx < len(allTags); idx += workerCount {
+        allTagsMutex.Lock()
+        tag := allTags[idx]
+        allTagsMutex.Unlock()
 				if time.Unix(tag.StartTS, 0).Before(time.Now().AddDate(0, 0, -7)) {
 					deleted, err := quayService.DeleteTag(organization, repository, tag.Name)
 					if err != nil {
@@ -273,7 +272,7 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 					}
 				}
 			}
-		}(allTagsChan, errChan, &wg)
+		}(i, allTags, allTagsMutex, errChan, &wg)
 	}
 
 	wg.Wait()
