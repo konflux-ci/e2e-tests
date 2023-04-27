@@ -251,7 +251,6 @@ func setup(cmd *cobra.Command, args []string) {
 	FailedResourceCreations = make([]int64, threadCount)
 	FailedPipelineRuns = make([]int64, threadCount)
 	frameworkMap := make(map[string]*framework.Framework)
-	
 
 	threadsWG.Add(threadCount)
 	for thread := 0; thread < threadCount; thread++ {
@@ -369,7 +368,7 @@ func userJourneyThread(frameworkMap map[string]*framework.Framework, threadIndex
 			framework, err := framework.NewFramework(username)
 			frameworkMap[username] = framework
 			if err != nil {
-				klog.Fatalf(err.Error());
+				klog.Fatalf(err.Error())
 			}
 
 			if userIndex%userBatches == 0 {

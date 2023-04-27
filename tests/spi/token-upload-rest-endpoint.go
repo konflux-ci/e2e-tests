@@ -127,7 +127,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-rest-endpoin
 				}, 1*time.Minute, 10*time.Second).Should(BeTrue(), "uploadUrl not set")
 				Expect(err).NotTo(HaveOccurred())
 
-				// linked accessToken token should exsist
+				// linked accessToken token should exist
 				linkedAccessTokenName := SPITokenBinding.Status.LinkedAccessTokenName
 				Expect(linkedAccessTokenName).NotTo(BeEmpty())
 

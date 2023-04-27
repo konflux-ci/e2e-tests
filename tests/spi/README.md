@@ -5,12 +5,13 @@ This suite contains a set of tests that covers SPI scenarios.
 Steps to run 'spi-suite':
 
 1) Follow the instructions from the [Readme](../../docs/Installation.md) scripts to install AppStudio in e2e mode
-2) Run the e2e suite: `./bin/e2e-appstudio --ginkgo.focus="spi-suite"`
+2) Run `make build`
+3) Run the e2e suite: `./bin/e2e-appstudio --ginkgo.focus="spi-suite"`
 
 #### Environments
 
 Valid Quay username and token are required to be able to run the suite: SPI will use them to create valid configurations to test private container image deployment. 
-Values can be provided by setting the follwing enviroment variables.
+Values can be provided by setting the following environment variables.
 
 | Variable | Required | Explanation | Default Value |
 |---|---|---|---|
