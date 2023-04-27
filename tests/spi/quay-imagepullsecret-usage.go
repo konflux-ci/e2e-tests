@@ -3,6 +3,7 @@ package spi
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -44,9 +45,9 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 	Describe("SVPI-407 - Check ImagePullSecret usage for the private Quay image", Ordered, func() {
 		BeforeAll(func() {
 
-			// if os.Getenv("CI") != "true" {
-			// 	Skip(fmt.Sprintln("test skipped on local execution"))
-			// }
+			if os.Getenv("CI") != "true" {
+				Skip(fmt.Sprintln("test skipped on local execution"))
+			}
 			// Initialize the tests controllers
 			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("spi-demos"))
 			Expect(err).NotTo(HaveOccurred())
