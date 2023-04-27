@@ -207,7 +207,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(len(logs.Record)).NotTo(BeZero())
 			})
 
-			It("should validate HACBS taskrun results", func() {
+			It("should validate tekton taskrun test results", func() {
 				// List Of Taskruns Expected to Get Taskrun Results
 				gatherResult := []string{"clair-scan", "inspect-image", "label-check", "sbom-json-check"}
 				// TODO: once we migrate "build" e2e tests to kcp, remove this condition
@@ -227,16 +227,24 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						ret := build.ValidateImageTaskRunResults(gatherResult[i], result)
 						Expect(ret).Should(BeTrue())
 					} else if gatherResult[i] == "clair-scan" {
-						// Fetching HACBS_TEST_OUTPUT shouldn't fail
-						result, err := build.FetchTaskRunResult(pipelineRun, gatherResult[i], "HACBS_TEST_OUTPUT")
+						// Fetching HACBS_TEST_OUTPUT || TEST_OUTPUT shouldn't fail
+						result, err := build.FetchTaskRunResult(pipelineRun, gatherResult[i], constants.TektonTaskTestOutputName)
+						// TODO: delete this condition after https://issues.redhat.com/browse/RHTAP-810 is completed
+						if err != nil {
+							result, err = build.FetchTaskRunResult(pipelineRun, gatherResult[i], constants.OldTektonTaskTestOutputName)
+						}
 						Expect(err).ShouldNot(HaveOccurred())
 						ret := build.ValidateTaskRunResults(gatherResult[i], result)
 						// Vulnerabilities should get periodically eliminated with image rebuild, so the result of that task might be different
 						// This should not block e2e tests with errors.
 						GinkgoWriter.Printf("retcode for validate taskrun result is %s\n", ret)
 					} else {
-						// Fetching HACBS_TEST_OUTPUT shouldn't fail
-						result, err := build.FetchTaskRunResult(pipelineRun, gatherResult[i], "HACBS_TEST_OUTPUT")
+						// Fetching HACBS_TEST_OUTPUT || TEST_OUTPUT shouldn't fail
+						result, err := build.FetchTaskRunResult(pipelineRun, gatherResult[i], constants.TektonTaskTestOutputName)
+						// TODO: delete this condition after https://issues.redhat.com/browse/RHTAP-810 is completed
+						if err != nil {
+							result, err = build.FetchTaskRunResult(pipelineRun, gatherResult[i], constants.OldTektonTaskTestOutputName)
+						}
 						Expect(err).ShouldNot(HaveOccurred())
 						ret := build.ValidateTaskRunResults(gatherResult[i], result)
 						Expect(ret).Should(BeTrue())
@@ -317,8 +325,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
-					Expect(tr.Status.TaskRunResults).Should(ContainElements(
-						tekton.MatchTaskRunResultWithJSONPathValue("HACBS_TEST_OUTPUT", "{$.result}", `["SUCCESS"]`),
+					Expect(tr.Status.TaskRunResults).Should(Or(
+						// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
+						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
+						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
 					))
 				})
 				It("contains non-empty sbom files", Label(buildTemplatesTestLabel), func() {
