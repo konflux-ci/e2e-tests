@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
+
 	"github.com/avast/retry-go/v4"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/sandbox"
@@ -73,6 +75,10 @@ func NewFramework(userName string) (*Framework, error) {
 	userNamespace := fmt.Sprintf("%s-tenant", k.UserName)
 	if err = utils.WaitUntil(asAdmin.CommonController.ServiceaccountPresent("pipeline", userNamespace), time.Second*60); err != nil {
 		return nil, fmt.Errorf("'pipeline' service account wasn't created in %s namespace: %+v", userNamespace, err)
+	}
+
+	if err = asAdmin.CommonController.AddRegistryAuthSecretToSA("QUAY_TOKEN", userNamespace); err != nil {
+		GinkgoWriter.Println(fmt.Sprintf("Failed to add registry auth secret to service account: %s\n", err))
 	}
 
 	return &Framework{
