@@ -179,6 +179,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 					PublicKey:           fmt.Sprintf("k8s://%s/%s", namespace, publicSecretName),
 					SSLCertDir:          "/var/run/secrets/kubernetes.io/serviceaccount",
 					Strict:              true,
+					EffectiveTime:       "now",
 				}
 
 				// Since specs could update the config policy, make sure it has a consistent
