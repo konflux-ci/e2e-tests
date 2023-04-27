@@ -214,6 +214,10 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 						return false
 					}
 
+					if len(TaskRun.Status.Conditions) == 0 {
+						return false
+					}
+
 					return (TaskRun.Status.Conditions[0].Status == "True")
 				}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "taskrun is not successful")
 			})
