@@ -312,6 +312,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						PublicKey:           fmt.Sprintf("k8s://%s/%s", testNamespace, publicSecretName),
 						SSLCertDir:          "/var/run/secrets/kubernetes.io/serviceaccount",
 						Strict:              true,
+						EffectiveTime:       "now",
 					}
 					ecPipelineRunTimeout := int(time.Duration(10 * time.Minute).Seconds())
 					pr, err := kubeController.RunPipeline(generator, ecPipelineRunTimeout)
