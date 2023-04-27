@@ -83,6 +83,7 @@ type VerifyEnterpriseContract struct {
 	PublicKey           string
 	SSLCertDir          string
 	Strict              bool
+	EffectiveTime       string
 }
 
 func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
@@ -142,6 +143,13 @@ func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
 								Value: v1beta1.ArrayOrString{
 									Type:      v1beta1.ParamTypeString,
 									StringVal: strconv.FormatBool(p.Strict),
+								},
+							},
+							{
+								Name: "EFFECTIVE_TIME",
+								Value: v1beta1.ArrayOrString{
+									Type:      v1beta1.ParamTypeString,
+									StringVal: p.EffectiveTime,
 								},
 							},
 						},
