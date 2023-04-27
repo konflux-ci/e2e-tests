@@ -32,8 +32,8 @@ import (
 var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "HACBS"), func() {
 	var f *framework.Framework
 	var pacControllerRoute *routev1.Route
-	var err error
 
+	var err error
 	defer GinkgoRecover()
 
 	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline"), func() {
@@ -45,6 +45,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		var prCreationTime time.Time
 
 		BeforeAll(func() {
+
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace

@@ -74,6 +74,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 	var err error
 	var f *framework.Framework
 	var sharedSecret *corev1.Secret
+	var pacControllerRoute *routev1.Route
 	var componentName string
 
 	var untrustedPipelineBundle, componentNewBaseBranch, userNamespace string
@@ -305,7 +306,6 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		var mergeResultSha string
 
 		BeforeAll(func() {
-			var pacControllerRoute = &routev1.Route{}
 			// Used for identifying related webhook on GitHub - in order to delete it
 			// TODO: Remove when https://github.com/redhat-appstudio/infra-deployments/pull/1725 it is merged
 			pacControllerRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "pipelines-as-code")
