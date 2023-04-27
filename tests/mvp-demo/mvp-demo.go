@@ -304,7 +304,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 
 		BeforeAll(func() {
 			// Used for identifying related webhook on GitHub - in order to delete it
-			pacControllerRoute, err := f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "pipelines-as-code")
+			pacControllerRoute, err := f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "openshift-pipelines")
 			Expect(err).ShouldNot(HaveOccurred())
 			pacControllerHost = pacControllerRoute.Spec.Host
 
