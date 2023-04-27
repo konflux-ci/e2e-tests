@@ -16,10 +16,12 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	routev1 "github.com/openshift/api/route/v1"
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	v1 "k8s.io/api/core/v1"
@@ -29,8 +31,9 @@ import (
 
 var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "HACBS"), func() {
 	var f *framework.Framework
-	var err error
+	var pacControllerRoute *routev1.Route
 
+	var err error
 	defer GinkgoRecover()
 
 	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline"), func() {
@@ -42,6 +45,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		var prCreationTime time.Time
 
 		BeforeAll(func() {
+
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace
@@ -54,7 +58,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			}
 
 			// Used for identifying related webhook on GitHub - in order to delete it
-			pacControllerRoute, err := f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "pipelines-as-code")
+			// TODO: Remove when https://github.com/redhat-appstudio/infra-deployments/pull/1725 it is merged
+			pacControllerRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "pipelines-as-code")
+			if err != nil {
+				if k8sErrors.IsNotFound(err) {
+					pacControllerRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "openshift-pipelines")
+				}
+			}
 			Expect(err).ShouldNot(HaveOccurred())
 			pacControllerHost = pacControllerRoute.Spec.Host
 

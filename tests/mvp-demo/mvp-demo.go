@@ -15,6 +15,7 @@ import (
 	"github.com/google/go-github/v44/github"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	routev1 "github.com/openshift/api/route/v1"
 	"knative.dev/pkg/apis"
 
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -27,6 +28,7 @@ import (
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -72,6 +74,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 	var err error
 	var f *framework.Framework
 	var sharedSecret *corev1.Secret
+	var pacControllerRoute *routev1.Route
 	var componentName string
 
 	var untrustedPipelineBundle, componentNewBaseBranch, userNamespace string
@@ -304,7 +307,14 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 
 		BeforeAll(func() {
 			// Used for identifying related webhook on GitHub - in order to delete it
-			pacControllerRoute, err := f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "openshift-pipelines")
+			// TODO: Remove when https://github.com/redhat-appstudio/infra-deployments/pull/1725 it is merged
+			pacControllerRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "pipelines-as-code")
+			if err != nil {
+				if k8sErrors.IsNotFound(err) {
+					pacControllerRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "openshift-pipelines")
+				}
+			}
+
 			Expect(err).ShouldNot(HaveOccurred())
 			pacControllerHost = pacControllerRoute.Spec.Host
 
