@@ -34,18 +34,20 @@ func NewSuiteController(kube *kubeCl.CustomClient) (*SuiteController, error) {
 	}, nil
 }
 
-func (h *SuiteController) HaveHACBSTestsSucceeded(snapshot *appstudioApi.Snapshot) bool {
-	return meta.IsStatusConditionTrue(snapshot.Status.Conditions, "HACBSTestSucceeded")
+func (h *SuiteController) HaveTestsSucceeded(snapshot *appstudioApi.Snapshot) bool {
+	return meta.IsStatusConditionTrue(snapshot.Status.Conditions, "HACBSTestSucceeded") ||
+		meta.IsStatusConditionTrue(snapshot.Status.Conditions, "AppStudioTestSucceeded")
 }
 
-func (h *SuiteController) HaveHACBSTestsFinished(snapshot *appstudioApi.Snapshot) bool {
-	return meta.FindStatusCondition(snapshot.Status.Conditions, "HACBSTestSucceeded") != nil
+func (h *SuiteController) HaveTestsFinished(snapshot *appstudioApi.Snapshot) bool {
+	return meta.FindStatusCondition(snapshot.Status.Conditions, "HACBSTestSucceeded") != nil ||
+		meta.FindStatusCondition(snapshot.Status.Conditions, "AppStudioTestSucceeded") != nil
 }
 
-func (h *SuiteController) MarkHACBSTestsSucceeded(snapshot *appstudioApi.Snapshot) (*appstudioApi.Snapshot, error) {
+func (h *SuiteController) MarkTestsSucceeded(snapshot *appstudioApi.Snapshot) (*appstudioApi.Snapshot, error) {
 	patch := client.MergeFrom(snapshot.DeepCopy())
 	meta.SetStatusCondition(&snapshot.Status.Conditions, metav1.Condition{
-		Type:    "HACBSTestSucceeded",
+		Type:    "AppStudioTestSucceeded",
 		Status:  metav1.ConditionTrue,
 		Reason:  "Passed",
 		Message: "Snapshot Passed",

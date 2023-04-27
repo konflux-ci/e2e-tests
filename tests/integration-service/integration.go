@@ -10,7 +10,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"knative.dev/pkg/apis"
 
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -252,7 +251,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					timeout = time.Second * 600
 					interval = time.Second * 10
 					Eventually(func() bool {
-						if f.AsKubeAdmin.IntegrationController.HaveHACBSTestsSucceeded(snapshot_push) {
+						if f.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot_push) {
 							component, err := f.AsKubeAdmin.IntegrationController.GetComponent(applicationName, appStudioE2EApplicationsNamespace)
 							if err != nil {
 								GinkgoWriter.Println("component has not been found yet")
@@ -274,7 +273,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					timeout = time.Second * 800
 					interval = time.Second * 10
 					Eventually(func() bool {
-						if f.AsKubeAdmin.IntegrationController.HaveHACBSTestsSucceeded(snapshot_push) {
+						if f.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot_push) {
 							releases, err := f.AsKubeAdmin.IntegrationController.GetReleasesWithSnapshot(snapshot_push, appStudioE2EApplicationsNamespace)
 							Expect(err).ShouldNot(HaveOccurred())
 							if len(*releases) != 0 {
@@ -298,7 +297,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					timeout = time.Second * 600
 					interval = time.Second * 2
 					Eventually(func() bool {
-						if f.AsKubeAdmin.IntegrationController.HaveHACBSTestsSucceeded(snapshot_push) {
+						if f.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot_push) {
 							envbinding, err := f.AsKubeAdmin.IntegrationController.GetSnapshotEnvironmentBinding(applicationName, appStudioE2EApplicationsNamespace, env)
 							Expect(err).ShouldNot(HaveOccurred())
 							Expect(envbinding != nil).To(BeTrue())
@@ -349,7 +348,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			It("checks if snapshot is marked as failed", func() {
 				snapshot, err := f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", appStudioE2EApplicationsNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(meta.IsStatusConditionFalse(snapshot.Status.Conditions, "HACBSTestSucceeded")).To(BeTrue())
+				Expect(f.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot)).To(BeFalse())
 
 			})
 
