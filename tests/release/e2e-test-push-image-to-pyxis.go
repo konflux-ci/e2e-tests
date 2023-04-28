@@ -220,7 +220,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 					return false
 				}
 
-				return releaseCreated.IsReleased()
+				return releaseCreated.HasStarted() && releaseCreated.IsDone() && releaseCreated.Status.Conditions[0].Status == "True"
 			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 	})

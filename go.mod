@@ -27,11 +27,11 @@ require (
 	github.com/redhat-appstudio/application-api v0.0.0-20230405183341-7a48b1d4c860
 	github.com/redhat-appstudio/build-service v0.0.0-20230113121706-a9f10055dbc4
 	github.com/redhat-appstudio/image-controller v0.0.0-20230413111635-7e9bc2f236ee
-	github.com/redhat-appstudio/integration-service v0.0.0-20221130110641-f5453dea9623
+	github.com/redhat-appstudio/integration-service v0.0.0-20220622135319-863425d2cad2
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20230125042419-efd0d0342a2c
 	github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001
 	github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0
-	github.com/redhat-appstudio/release-service v0.0.0-20230404140848-d2ad6f470f2e
+	github.com/redhat-appstudio/release-service v0.0.0-20221124083149-2b9e7545bcab
 	github.com/redhat-appstudio/service-provider-integration-operator v0.9.1-0.20230412095305-101be612c01e
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.14.0
@@ -56,7 +56,6 @@ require (
 
 replace (
 	github.com/antlr/antlr4 => github.com/antlr/antlr4 v0.0.0-20211106181442-e4c1a74c66bd
-	github.com/apcera/gssapi => github.com/openshift/gssapi v0.0.0-20161010215902-5fb4217df13b
 	github.com/redhat-appstudio/managed-gitops/backend-shared => github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20220506042230-3a79f373a001
 	k8s.io/api => k8s.io/api v0.25.5
 	k8s.io/apimachinery => k8s.io/apimachinery v0.25.5
@@ -66,7 +65,7 @@ replace (
 
 require (
 	contrib.go.opencensus.io/exporter/ocagent v0.7.1-0.20200907061046-05415f1de66d // indirect
-	contrib.go.opencensus.io/exporter/prometheus v0.4.2 // indirect
+	contrib.go.opencensus.io/exporter/prometheus v0.4.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/BurntSushi/toml v1.2.0 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
@@ -184,7 +183,7 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
-	github.com/prometheus/statsd_exporter v0.22.8 // indirect
+	github.com/prometheus/statsd_exporter v0.21.0 // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
 	github.com/russross/blackfriday v1.6.0 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
