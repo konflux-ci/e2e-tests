@@ -238,7 +238,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+							failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+							if err != nil {
+								GinkgoWriter.Printf("failed to get logs for pipelinerun %s: %+v\n", pipelineRun.Name, err)
+							}
 							Fail(failMessage)
 						}
 					}
@@ -306,7 +309,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+							failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+							if err != nil {
+								GinkgoWriter.Printf("failed to get logs for pipelinerun %s: %+v\n", pipelineRun.Name, err)
+							}
 							Fail(failMessage)
 						}
 					}
@@ -376,7 +382,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+							failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+							if err != nil {
+								GinkgoWriter.Printf("failed to get logs for pipelinerun %s: %+v\n", pipelineRun.Name, err)
+							}
 							Fail(failMessage)
 						}
 					}
@@ -655,7 +664,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Expect(kc.WatchPipelineRun(pipelineRun.Name, pipelineRunTimeout)).To(Succeed())
 			pipelineRun, err = kc.Tektonctrl.GetPipelineRun(pipelineRun.Name, pipelineRun.Namespace)
 			Expect(err).NotTo(HaveOccurred())
-			tr, err := kc.GetTaskRunStatus(pipelineRun, constants.BuildTaskRunName)
+			tr, err := kc.GetTaskRunStatus(f.AsKubeAdmin.CommonController.KubeRest(), pipelineRun, constants.BuildTaskRunName)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(tekton.DidTaskSucceed(tr)).To(BeFalse())
 		})
