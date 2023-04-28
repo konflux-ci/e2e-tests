@@ -1184,8 +1184,8 @@ github.com/redhat-appstudio/application-api v0.0.0-20230405183341-7a48b1d4c860 h
 github.com/redhat-appstudio/application-api v0.0.0-20230405183341-7a48b1d4c860/go.mod h1:LpcTNLCDMf1CUNTw2bgTiz8M49sUsN2F9T7bOSKcJEo=
 github.com/redhat-appstudio/build-service v0.0.0-20230113121706-a9f10055dbc4 h1:Nc4qjZHxb8wnn5DW559GUyIVV5Z2HgYmGxQoWW02mWg=
 github.com/redhat-appstudio/build-service v0.0.0-20230113121706-a9f10055dbc4/go.mod h1:wgto41R9bV9wLVOp29llmx+O+voEb0r/hy7Yw+MkKxQ=
-github.com/redhat-appstudio/image-controller v0.0.0-20230413111635-7e9bc2f236ee h1:3ZgAsp1ncL/veRndRyxwailsGVz2hcP9CScDpnGZZ6s=
-github.com/redhat-appstudio/image-controller v0.0.0-20230413111635-7e9bc2f236ee/go.mod h1:6v+OpSt2oy3uuP16s4HUdShE9CR5HBSwwjL1fvbkKcg=
+github.com/redhat-appstudio/image-controller v0.0.0-20230424143941-3da9b4925e36 h1:vJcJsdTns+6tHfyI0Px//PUGlbAnsmky7BwRfjk58u0=
+github.com/redhat-appstudio/image-controller v0.0.0-20230424143941-3da9b4925e36/go.mod h1:6v+OpSt2oy3uuP16s4HUdShE9CR5HBSwwjL1fvbkKcg=
 github.com/redhat-appstudio/integration-service v0.0.0-20230427084439-306b4611389b h1:+9QZ6tcV3cddqE1E/N8zu3GJKe9bPtmLbN7cbY/9lQU=
 github.com/redhat-appstudio/integration-service v0.0.0-20230427084439-306b4611389b/go.mod h1:OVpNXkUNwAxJoJT3JwJfqNt2kAwixMxizcgzCQq4n8g=
 github.com/redhat-appstudio/jvm-build-service v0.0.0-20230125042419-efd0d0342a2c h1:3kgmn4uwlTjlzofcFU0zWBKsx+PthW5hBjR6LnEy/NA=
@@ -1194,8 +1194,8 @@ github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f37
 github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001/go.mod h1:jqTuNQDL/xf+LsxWg1RuhJiMvMWnoRZcpcHRhX8Z12s=
 github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20220506042230-3a79f373a001 h1:xjO01dcMV7mv7b0GFeEN1uLhJiLOlzglgeEO57rfdNk=
 github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20220506042230-3a79f373a001/go.mod h1:5GV2vv5Eu8yiwTgQcnnvyk0TEE9URL3zSB0aGVfEnFk=
-github.com/redhat-appstudio/release-service v0.0.0-20230404140848-d2ad6f470f2e h1:gNxwQwyevFqMPN7UCc9nMPXqRXYX9/VstCe1fIILp9c=
-github.com/redhat-appstudio/release-service v0.0.0-20230404140848-d2ad6f470f2e/go.mod h1:QDzyFG8JEXQlKDJrsQ4IqoTa6vvRIXD7eh9CPg+b3FM=
+github.com/redhat-appstudio/release-service v0.0.0-20230314103738-21edb2dadc4e h1:h2q5Q+Wzdal1Xq1thHYsPTut7QfpU5ivBLqKGi5giBg=
+github.com/redhat-appstudio/release-service v0.0.0-20230314103738-21edb2dadc4e/go.mod h1:nbCcDcWgfJs9LhyKbsjJEolQsUfvL5nnoHlQebNeOEo=
 github.com/redhat-appstudio/service-provider-integration-operator v0.9.1-0.20230412095305-101be612c01e h1:jwnK3IbkpSwpvWVpYNdZhKjkMma9vf48sL3SZiVM1jk=
 github.com/redhat-appstudio/service-provider-integration-operator v0.9.1-0.20230412095305-101be612c01e/go.mod h1:dpeRolVrK0Ukt4jcfob2Wygwlp9sOBPp2A0Ra7eBQ3U=
 github.com/redhat-cop/operator-utils v1.3.3-0.20220121120056-862ef22b8cdf/go.mod h1:FfTyeSCu+e2VLgeMh/1RFG8TSkVjKRPEyR6EmDt0RIw=
@@ -1912,8 +1912,8 @@ google.golang.org/api v0.51.0/go.mod h1:t4HdrdoNgyN5cbEfm7Lum0lcLDLiise1F8qDKX00
 google.golang.org/api v0.54.0/go.mod h1:7C4bFFOvVDGXjfDTAsgGwDgAxRDeQ4X8NvUedIt6z3k=
 google.golang.org/api v0.55.0/go.mod h1:38yMfeP1kfjsl8isn0tliTjIb1rJXcQi4UXlbqivdVE=
 google.golang.org/api v0.57.0/go.mod h1:dVPlbZyBo2/OjBpmvNdpn2GRm6rPy75jyU7bmhdrMgI=
-google.golang.org/api v0.114.0 h1:1xQPji6cO2E2vLiI+C/XiFAnsn1WV3mjaEwGLhi3grE=
-google.golang.org/api v0.114.0/go.mod h1:ifYI2ZsFK6/uGddGfAD5BMxlnkBqCmqHSDUVi45N5Yg=
+google.golang.org/api v0.112.0 h1:iDmzvZ4C086R3+en4nSyIf07HlQKMOX1Xx2dmia/+KQ=
+google.golang.org/api v0.112.0/go.mod h1:737UfWHNsOq4F3REUTmb+GN9pugkgNLCayLTfoIKpPc=
 google.golang.org/appengine v1.1.0/go.mod h1:EbEs0AVv82hx2wNQdGPgUI5lhzA/G0D9YwlJXL52JkM=
 google.golang.org/appengine v1.4.0/go.mod h1:xpcJRLb0r/rnEns0DIKYYv+WjYCduHsrkT7/EB5XEv4=
 google.golang.org/appengine v1.5.0/go.mod h1:xpcJRLb0r/rnEns0DIKYYv+WjYCduHsrkT7/EB5XEv4=
