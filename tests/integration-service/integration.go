@@ -30,7 +30,7 @@ const (
 	IntegrationServiceUser = "integration-e2e"
 )
 
-var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests", Label("integration-service", "HACBS"), Pending, func() {
+var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests", Label("integration-service", "HACBS"), func() {
 	defer GinkgoRecover()
 
 	var f *framework.Framework
