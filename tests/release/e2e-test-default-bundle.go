@@ -158,7 +158,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 					return false
 				}
 
-				return releaseCreated.HasStarted() && releaseCreated.IsDone() && releaseCreated.Status.Conditions[0].Status == "True"
+				return releaseCreated.IsReleased()
 			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 	})
