@@ -30,7 +30,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 	var devNamespace, managedNamespace string
 
 	BeforeAll(func() {
-		Skip("skip tests until: https://issues.redhat.com/browse/RHTAPBUGS-197")
 		fw, err = framework.NewFramework("release-e2e-pyxis")
 		Expect(err).NotTo(HaveOccurred())
 
