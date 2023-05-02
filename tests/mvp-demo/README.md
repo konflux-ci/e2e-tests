@@ -23,9 +23,9 @@ For simulating the failed release we are using a custom docker-build template th
       7. Enterprise contract policy
 1. Chapter 1 (simple app build, deploy, (failed) release)
    1. Setup
-      1. Create a new branch in a java project on GitHub (that is used as a git source of a compoment) that will be used as a base branch for PaC pull request (so we don't pollute default branch - `main`)
+      1. Create a new branch in a java project on GitHub (that is used as a git source of a component) that will be used as a base branch for PaC pull request (so we don't pollute default branch - `main`)
       2. Create a new application, test environment
-      3. Create a build pipeline selector with pipeline ref poiting to a custom build-template, that contains an image which should fail the EC validation (for more information see the [Description](#description))
+      3. Create a build pipeline selector with pipeline ref pointing to a custom build-template, that contains an image which should fail the EC validation (for more information see the [Description](#description))
       4. Create a new component that will trigger the "simple" build pipipelinerun
    2. After the component is built, check that the component is deployed (by checking the related deployment status) and check that the component route can be accessed
    3. Check that Snapshot and Release CRs are created and Release PipelineRun has started
