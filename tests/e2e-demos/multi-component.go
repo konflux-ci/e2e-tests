@@ -246,11 +246,11 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 						Expect(err).ShouldNot(HaveOccurred())
 
 						Eventually(func() bool {
-							return fw.AsKubeDeveloper.IntegrationController.HaveHACBSTestsSucceeded(componentSnapshot)
+							return fw.AsKubeDeveloper.IntegrationController.HaveTestsSucceeded(componentSnapshot)
 						}, timeout, interval).Should(BeTrue(), "time out when trying to check if the snapshot is marked as successful")
 
 						Eventually(func() bool {
-							if fw.AsKubeDeveloper.IntegrationController.HaveHACBSTestsSucceeded(componentSnapshot) {
+							if fw.AsKubeDeveloper.IntegrationController.HaveTestsSucceeded(componentSnapshot) {
 								envbinding, err := fw.AsKubeDeveloper.IntegrationController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
 								Expect(err).ShouldNot(HaveOccurred())
 								GinkgoWriter.Printf("The EnvironmentBinding %s is created\n", envbinding.Name)

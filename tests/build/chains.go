@@ -179,6 +179,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 					PublicKey:           fmt.Sprintf("k8s://%s/%s", namespace, publicSecretName),
 					SSLCertDir:          "/var/run/secrets/kubernetes.io/serviceaccount",
 					Strict:              true,
+					EffectiveTime:       "now",
 				}
 
 				// Since specs could update the config policy, make sure it has a consistent
@@ -210,8 +211,10 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s succeeded\n", tr.PipelineTaskName, pr.Name)
 				Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
 				GinkgoWriter.Printf("Make sure result for TaskRun %q succeeded\n", tr.PipelineTaskName)
-				Expect(tr.Status.TaskRunResults).Should(ContainElements(
-					tekton.MatchTaskRunResultWithJSONPathValue("HACBS_TEST_OUTPUT", "{$.result}", `["SUCCESS"]`),
+				Expect(tr.Status.TaskRunResults).Should(Or(
+					// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
+					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
+					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
 				))
 			})
 
@@ -242,8 +245,10 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s succeeded\n", tr.PipelineTaskName, pr.Name)
 				Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
 				GinkgoWriter.Printf("Make sure result for TaskRun %q succeeded\n", tr.PipelineTaskName)
-				Expect(tr.Status.TaskRunResults).Should(ContainElements(
-					tekton.MatchTaskRunResultWithJSONPathValue("HACBS_TEST_OUTPUT", "{$.result}", `["FAILURE"]`),
+				Expect(tr.Status.TaskRunResults).Should(Or(
+					// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
+					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
+					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
 				))
 			})
 
