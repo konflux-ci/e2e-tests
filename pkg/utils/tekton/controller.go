@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os/exec"
 	"strings"
 	"time"
 
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/pod"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/utils/pointer"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
@@ -26,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	g "github.com/onsi/ginkgo/v2"
@@ -673,4 +677,98 @@ func (s *SuiteController) CreatePVCInAccessMode(name, namespace string, accessMo
 // GetListOfPipelineRunsInNamespace returns a List of all PipelineRuns in namespace.
 func (s *SuiteController) GetListOfPipelineRunsInNamespace(namespace string) (*v1beta1.PipelineRunList, error) {
 	return s.PipelineClient().TektonV1beta1().PipelineRuns(namespace).List(context.TODO(), metav1.ListOptions{})
+}
+
+// CreateTaskRunCopy creates a TaskRun that copies one image to a second image repository
+func (s *SuiteController) CreateTaskRunCopy(name, namespace, serviceAccountName, srcImageURL, destImageURL string) (*v1beta1.TaskRun, error) {
+	taskRun := v1beta1.TaskRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: v1beta1.TaskRunSpec{
+			ServiceAccountName: serviceAccountName,
+			TaskRef: &v1beta1.TaskRef{
+				Name: "skopeo-copy",
+			},
+			Params: []v1beta1.Param{
+				{
+					Name: "srcImageURL",
+					Value: v1beta1.ParamValue{
+						StringVal: srcImageURL,
+						Type:      v1beta1.ParamTypeString,
+					},
+				},
+				{
+					Name: "destImageURL",
+					Value: v1beta1.ParamValue{
+						StringVal: destImageURL,
+						Type:      v1beta1.ParamTypeString,
+					},
+				},
+			},
+			// workaround to avoid the error "container has runAsNonRoot and image will run as root"
+			PodTemplate: &pod.Template{
+				SecurityContext: &corev1.PodSecurityContext{
+					RunAsNonRoot: pointer.Bool(true),
+					RunAsUser:    pointer.Int64(65532),
+				},
+			},
+			Workspaces: []v1beta1.WorkspaceBinding{
+				{
+					Name:     "images-url",
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
+			},
+		},
+	}
+
+	err := s.KubeRest().Create(context.TODO(), &taskRun)
+	if err != nil {
+		return nil, err
+	}
+	return &taskRun, nil
+}
+
+// GetTaskRun returns the requested TaskRun object
+func (s *SuiteController) GetTaskRun(name, namespace string) (*v1beta1.TaskRun, error) {
+	namespacedName := types.NamespacedName{
+		Name:      name,
+		Namespace: namespace,
+	}
+
+	taskRun := v1beta1.TaskRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+	err := s.KubeRest().Get(context.TODO(), namespacedName, &taskRun)
+	if err != nil {
+		return nil, err
+	}
+	return &taskRun, nil
+}
+
+// CreateSkopeoCopyTask creates a skopeo copy task in the given namespace
+func (s *SuiteController) CreateSkopeoCopyTask(namespace string) error {
+	_, err := exec.Command(
+		"oc",
+		"apply",
+		"-f",
+		"https://api.hub.tekton.dev/v1/resource/tekton/task/skopeo-copy/0.2/raw",
+		"-n",
+		namespace).Output()
+
+	return err
+}
+
+// Remove all Tasks from a given repository. Useful when creating a lot of resources and wanting to remove all of them
+func (h *SuiteController) DeleteAllTasksInASpecificNamespace(namespace string) error {
+	return h.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.Task{}, client.InNamespace(namespace))
+}
+
+// Remove all TaskRuns from a given repository. Useful when creating a lot of resources and wanting to remove all of them
+func (h *SuiteController) DeleteAllTaskRunsInASpecificNamespace(namespace string) error {
+	return h.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.TaskRun{}, client.InNamespace(namespace))
 }
