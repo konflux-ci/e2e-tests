@@ -237,27 +237,28 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 	var wg sync.WaitGroup
 
 	var allTags []quay.Tag
-	errChan := make(chan error)
+	var errors []error
 
 	page := 1
 	for {
 		tags, hasAdditional, err := quayService.GetTagsFromPage(organization, repository, page)
+		page++
 		if err != nil {
-			errChan <- fmt.Errorf("error getting tags of `%s` repository of `%s` organization on page `%d`, error: %s", repository, organization, page, err)
+			errors = append(errors, fmt.Errorf("error getting tags of `%s` repository of `%s` organization on page `%d`, error: %s", repository, organization, page, err))
 			continue
 		}
 		allTags = append(allTags, tags...)
 		if !hasAdditional {
 			break
 		}
-		page++
 	}
 
 	wg.Add(workerCount)
 
 	var allTagsMutex sync.Mutex
+	var errorsMutex sync.Mutex
 	for i := 0; i < workerCount; i++ {
-		go func(startIdx int, allTags []quay.Tag, allTagsMutex *sync.Mutex, errChan chan<- error, wg *sync.WaitGroup) {
+		go func(startIdx int, allTags []quay.Tag, errors []error, allTagsMutex, errorsMutex *sync.Mutex, wg *sync.WaitGroup) {
 			defer wg.Done()
 			for idx := startIdx; idx < len(allTags); idx += workerCount {
 				allTagsMutex.Lock()
@@ -266,24 +267,25 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 				if time.Unix(tag.StartTS, 0).Before(time.Now().AddDate(0, 0, -7)) {
 					deleted, err := quayService.DeleteTag(organization, repository, tag.Name)
 					if err != nil {
-						errChan <- fmt.Errorf("error during deletion of tag `%s` in repository `%s` of organization `%s`, error: `%s`\n", tag.Name, repository, organization, err)
+						errorsMutex.Lock()
+						errors = append(errors, fmt.Errorf("error during deletion of tag `%s` in repository `%s` of organization `%s`, error: `%s`\n", tag.Name, repository, organization, err))
+						errorsMutex.Unlock()
 					} else if !deleted {
 						fmt.Printf("tag `%s` in repository `%s` of organization `%s` was not deleted\n", tag.Name, repository, organization)
 					}
 				}
 			}
-		}(i, allTags, &allTagsMutex, errChan, &wg)
+		}(i, allTags, errors, &allTagsMutex, &errorsMutex, &wg)
 	}
 
 	wg.Wait()
-	close(errChan)
 
-	if len(errChan) == 0 {
+	if len(errors) == 0 {
 		return nil
 	}
 
 	var errBuilder strings.Builder
-	for err := range errChan {
+	for _, err := range errors {
 		errBuilder.WriteString(fmt.Sprintf("%s\n", err))
 	}
 	return fmt.Errorf("encountered errors during CleanupQuayTags: %s", errBuilder.String())
