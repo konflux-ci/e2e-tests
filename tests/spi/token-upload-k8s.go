@@ -151,8 +151,15 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-k8s"), func(
 		})
 
 		It("upload secret should be automatically be removed", func() {
-			_, err := fw.AsKubeDeveloper.CommonController.GetSecret(namespace, K8sSecret.Name)
-			Expect(k8sErrors.IsNotFound(err)).To(BeTrue())
+			Eventually(func() bool {
+				_, err := fw.AsKubeDeveloper.CommonController.GetSecret(namespace, K8sSecret.Name)
+
+				if err == nil {
+					return false
+				}
+
+				return k8sErrors.IsNotFound(err)
+			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "upload secret not removed")
 		})
 
 		It("SPIAccessToken exists and is in Read phase", func() {
