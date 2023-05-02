@@ -206,7 +206,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("checks if taskrun is successful", func() {
+			It("checks if taskrun is complete", func() {
 				Eventually(func() bool {
 					TaskRun, err = fw.AsKubeDeveloper.TektonController.GetTaskRun(taskRunName, namespace)
 
@@ -214,12 +214,15 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 						return false
 					}
 
-					if len(TaskRun.Status.Conditions) == 0 {
-						return false
-					}
+					return TaskRun.Status.CompletionTime != nil
+				}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "taskrun is not complete")
+			})
 
-					return (TaskRun.Status.Conditions[0].Status == "True")
-				}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "taskrun is not successful")
+			It("checks if taskrun is successful", func() {
+				TaskRun, err = fw.AsKubeDeveloper.TektonController.GetTaskRun(taskRunName, namespace)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(TaskRun.Status.Conditions)).NotTo(BeZero())
+				Expect(TaskRun.Status.Conditions[0].Status).To(Equal("True"))
 			})
 		})
 
