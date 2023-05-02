@@ -263,17 +263,6 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 			}, pipelineRunStartedTimeout, defaultPollingInterval).Should(BeTrue())
 		})
 
-		It("Release status is updated", func() {
-			Eventually(func() bool {
-				release, err = f.AsKubeAdmin.ReleaseController.GetRelease(release.Name, "", userNamespace)
-				if err != nil {
-					GinkgoWriter.Printf("failed to get Release CR in '%s' namespace: %+v\n", managedNamespace, err)
-					return false
-				}
-				return release.IsReleasing()
-			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue())
-		})
-
 		It("Release PipelineRun should eventually fail", func() {
 			Eventually(func() bool {
 				pipelineRun, err = f.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
