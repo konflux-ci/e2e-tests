@@ -1180,8 +1180,8 @@ github.com/prometheus/statsd_exporter v0.22.7/go.mod h1:N/TevpjkIh9ccs6nuzY3jQn9
 github.com/prometheus/statsd_exporter v0.23.0 h1:GEkriUCmARYh1gSA0gzpvmTg/oHMc5MfDFNlS/che4E=
 github.com/prometheus/statsd_exporter v0.23.0/go.mod h1:1itCY9XMa2p5pjO5HseGjs5cnaIA5qxLCYmn3OUna58=
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
-github.com/redhat-appstudio/application-api v0.0.0-20230405183341-7a48b1d4c860 h1:/12iN8Zft+v1hTrUN/Z06nYQ8rDUP2wKM4aAyc9cRhs=
-github.com/redhat-appstudio/application-api v0.0.0-20230405183341-7a48b1d4c860/go.mod h1:LpcTNLCDMf1CUNTw2bgTiz8M49sUsN2F9T7bOSKcJEo=
+github.com/redhat-appstudio/application-api v0.0.0-20230427114540-a91722251e0a h1:3fLezk9GHkAez0a94EywNVI9bWHAviddjEH8EKj9gRs=
+github.com/redhat-appstudio/application-api v0.0.0-20230427114540-a91722251e0a/go.mod h1:LpcTNLCDMf1CUNTw2bgTiz8M49sUsN2F9T7bOSKcJEo=
 github.com/redhat-appstudio/build-service v0.0.0-20230113121706-a9f10055dbc4 h1:Nc4qjZHxb8wnn5DW559GUyIVV5Z2HgYmGxQoWW02mWg=
 github.com/redhat-appstudio/build-service v0.0.0-20230113121706-a9f10055dbc4/go.mod h1:wgto41R9bV9wLVOp29llmx+O+voEb0r/hy7Yw+MkKxQ=
 github.com/redhat-appstudio/image-controller v0.0.0-20230424143941-3da9b4925e36 h1:vJcJsdTns+6tHfyI0Px//PUGlbAnsmky7BwRfjk58u0=
@@ -1194,8 +1194,8 @@ github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f37
 github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001/go.mod h1:jqTuNQDL/xf+LsxWg1RuhJiMvMWnoRZcpcHRhX8Z12s=
 github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20220506042230-3a79f373a001 h1:xjO01dcMV7mv7b0GFeEN1uLhJiLOlzglgeEO57rfdNk=
 github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20220506042230-3a79f373a001/go.mod h1:5GV2vv5Eu8yiwTgQcnnvyk0TEE9URL3zSB0aGVfEnFk=
-github.com/redhat-appstudio/release-service v0.0.0-20230314103738-21edb2dadc4e h1:h2q5Q+Wzdal1Xq1thHYsPTut7QfpU5ivBLqKGi5giBg=
-github.com/redhat-appstudio/release-service v0.0.0-20230314103738-21edb2dadc4e/go.mod h1:nbCcDcWgfJs9LhyKbsjJEolQsUfvL5nnoHlQebNeOEo=
+github.com/redhat-appstudio/release-service v0.0.0-20230501180319-d9907b54776b h1:MXD8a3aFbTuQ82+NBCHR3KnFT04uxVrBSDtnjcSOw5Q=
+github.com/redhat-appstudio/release-service v0.0.0-20230501180319-d9907b54776b/go.mod h1:6vJ+iIj6bY1PIxvdPOI+WpQvvmShVK6+1aX0MmNA8tY=
 github.com/redhat-appstudio/service-provider-integration-operator v0.9.1-0.20230412095305-101be612c01e h1:jwnK3IbkpSwpvWVpYNdZhKjkMma9vf48sL3SZiVM1jk=
 github.com/redhat-appstudio/service-provider-integration-operator v0.9.1-0.20230412095305-101be612c01e/go.mod h1:dpeRolVrK0Ukt4jcfob2Wygwlp9sOBPp2A0Ra7eBQ3U=
 github.com/redhat-cop/operator-utils v1.3.3-0.20220121120056-862ef22b8cdf/go.mod h1:FfTyeSCu+e2VLgeMh/1RFG8TSkVjKRPEyR6EmDt0RIw=
