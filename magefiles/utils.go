@@ -255,15 +255,12 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 
 	wg.Add(workerCount)
 
-	var allTagsMutex sync.Mutex
 	var errorsMutex sync.Mutex
 	for i := 0; i < workerCount; i++ {
-		go func(startIdx int, allTags []quay.Tag, errors []error, allTagsMutex, errorsMutex *sync.Mutex, wg *sync.WaitGroup) {
+		go func(startIdx int, allTags []quay.Tag, errors []error, errorsMutex *sync.Mutex, wg *sync.WaitGroup) {
 			defer wg.Done()
 			for idx := startIdx; idx < len(allTags); idx += workerCount {
-				allTagsMutex.Lock()
 				tag := allTags[idx]
-				allTagsMutex.Unlock()
 				if time.Unix(tag.StartTS, 0).Before(time.Now().AddDate(0, 0, -7)) {
 					deleted, err := quayService.DeleteTag(organization, repository, tag.Name)
 					if err != nil {
@@ -275,7 +272,7 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 					}
 				}
 			}
-		}(i, allTags, errors, &allTagsMutex, &errorsMutex, &wg)
+		}(i, allTags, errors, &errorsMutex, &wg)
 	}
 
 	wg.Wait()
