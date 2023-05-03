@@ -5,7 +5,7 @@ const (
 	SPIAccessTokenBindingPrefixName = "spi-access-token-binding-"
 	SPIAccessCheckPrefixName        = "spi-access-check-"
 	SPITokenBindingName             = "spi-token-binding-rest-"
-	QuayPrivateRepoURL              = "quay.io/redhat-appstudio-qe/quay-private-test:test"
+	QuayPrivateRepoURL              = "quay.io/redhat-appstudio-qe/quay-private-test"
 	GithubPrivateRepoURL            = "https://github.com/redhat-appstudio-qe/private-quarkus-devfile-sample"
 	GithubPrivateRepoFilePath       = "README.md"
 )

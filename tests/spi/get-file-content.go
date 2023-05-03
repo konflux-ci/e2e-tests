@@ -13,7 +13,12 @@ import (
 	"github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 )
 
-var _ = framework.SPISuiteDescribe(Label("spi-suite", "link-secret-sa"), func() {
+/*
+ * Component: spi
+ * Description: SVPI-402 - Get file content from a private Github repository
+ */
+
+var _ = framework.SPISuiteDescribe(Label("spi-suite", "get-file-content"), func() {
 
 	defer GinkgoRecover()
 
@@ -92,7 +97,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "link-secret-sa"), func() 
 			Expect(statusCode).Should(Equal(204))
 		})
 
-		It("SPIFileContentRequest should be in Delivered phase and content should be privided", func() {
+		It("SPIFileContentRequest should be in Delivered phase and content should be provided", func() {
 			Eventually(func() bool {
 				SPIFcr, err = fw.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(SPIFcr.Name, namespace)
 

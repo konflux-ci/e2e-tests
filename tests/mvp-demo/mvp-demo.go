@@ -15,6 +15,7 @@ import (
 	"github.com/google/go-github/v44/github"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	routev1 "github.com/openshift/api/route/v1"
 	"knative.dev/pkg/apis"
 
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -27,6 +28,7 @@ import (
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -72,6 +74,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 	var err error
 	var f *framework.Framework
 	var sharedSecret *corev1.Secret
+	var pacControllerRoute *routev1.Route
 	var componentName string
 
 	var untrustedPipelineBundle, componentNewBaseBranch, userNamespace string
@@ -260,17 +263,6 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 			}, pipelineRunStartedTimeout, defaultPollingInterval).Should(BeTrue())
 		})
 
-		It("Release status is updated", func() {
-			Eventually(func() bool {
-				release, err = f.AsKubeAdmin.ReleaseController.GetRelease(release.Name, "", userNamespace)
-				if err != nil {
-					GinkgoWriter.Printf("failed to get Release CR in '%s' namespace: %+v\n", managedNamespace, err)
-					return false
-				}
-				return release.HasStarted()
-			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue())
-		})
-
 		It("Release PipelineRun should eventually fail", func() {
 			Eventually(func() bool {
 				pipelineRun, err = f.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
@@ -289,7 +281,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					GinkgoWriter.Printf("failed to get Release CR in '%s' namespace: %+v\n", managedNamespace, err)
 					return false
 				}
-				return release.IsDone() && !release.HasSucceeded()
+				return release.HasReleaseFinished() && !release.IsReleased()
 			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue())
 		})
 
@@ -304,7 +296,14 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 
 		BeforeAll(func() {
 			// Used for identifying related webhook on GitHub - in order to delete it
-			pacControllerRoute, err := f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "openshift-pipelines")
+			// TODO: Remove when https://github.com/redhat-appstudio/infra-deployments/pull/1725 it is merged
+			pacControllerRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "pipelines-as-code")
+			if err != nil {
+				if k8sErrors.IsNotFound(err) {
+					pacControllerRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "openshift-pipelines")
+				}
+			}
+
 			Expect(err).ShouldNot(HaveOccurred())
 			pacControllerHost = pacControllerRoute.Spec.Host
 
@@ -444,7 +443,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					GinkgoWriter.Printf("failed to get Release CR in '%s' namespace: %+v\n", managedNamespace, err)
 					return false
 				}
-				return release.HasStarted()
+				return release.IsReleasing()
 			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue())
 		})
 
@@ -464,7 +463,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					GinkgoWriter.Printf("failed to get Release CR in '%s' namespace: %+v\n", managedNamespace, err)
 					return false
 				}
-				return release.IsDone() && release.HasSucceeded()
+				return release.IsReleased()
 			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue())
 		})
 
@@ -506,8 +505,11 @@ func createUntrustedPipelineBundle() (string, error) {
 	var tektonObj runtime.Object
 
 	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
-	var newBuildahTaskRef, _ = name.ParseReference(fmt.Sprintf("%s:task-bundle-%s", constants.DefaultImagePushRepo, tag))
-	var newDockerBuildPipelineRef, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", constants.DefaultImagePushRepo, tag))
+	quayOrg := utils.GetEnv(constants.DEFAULT_QUAY_ORG_ENV, constants.DefaultQuayOrg)
+	newBuildahTaskRefImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
+	var newBuildahTaskRef, _ = name.ParseReference(fmt.Sprintf("%s:task-bundle-%s", newBuildahTaskRefImg, tag))
+	newDockerBuildPipelineRefImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
+	var newDockerBuildPipelineRef, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newDockerBuildPipelineRefImg, tag))
 	var newBuildImage = "quay.io/containers/buildah:latest"
 	var newTaskYaml, newPipelineYaml []byte
 
