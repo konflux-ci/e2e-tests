@@ -134,7 +134,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage := tekton.GetFailedPipelineRunLogs(kubeadminClient.CommonController, pipelineRun)
+							failMessage, err := tekton.GetFailedPipelineRunLogs(kubeadminClient.CommonController, pipelineRun)
+							if err != nil {
+								GinkgoWriter.Printf("failed to get logs for pipelinerun %s: %+v\n", pipelineRun.Name, err)
+							}
 							Fail(failMessage)
 						}
 					}
@@ -222,16 +225,16 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				for i := range gatherResult {
 					if gatherResult[i] == "inspect-image" {
 						// Fetching BASE_IMAGE shouldn't fail
-						result, err := build.FetchImageTaskRunResult(pipelineRun, gatherResult[i], "BASE_IMAGE")
+						result, err := build.FetchImageTaskRunResult(kubeadminClient.CommonController.KubeRest(), pipelineRun, gatherResult[i], "BASE_IMAGE")
 						Expect(err).ShouldNot(HaveOccurred())
 						ret := build.ValidateImageTaskRunResults(gatherResult[i], result)
 						Expect(ret).Should(BeTrue())
 					} else if gatherResult[i] == "clair-scan" {
 						// Fetching HACBS_TEST_OUTPUT || TEST_OUTPUT shouldn't fail
-						result, err := build.FetchTaskRunResult(pipelineRun, gatherResult[i], constants.TektonTaskTestOutputName)
+						result, err := build.FetchTaskRunResult(kubeadminClient.CommonController.KubeRest(), pipelineRun, gatherResult[i], constants.TektonTaskTestOutputName)
 						// TODO: delete this condition after https://issues.redhat.com/browse/RHTAP-810 is completed
 						if err != nil {
-							result, err = build.FetchTaskRunResult(pipelineRun, gatherResult[i], constants.OldTektonTaskTestOutputName)
+							result, err = build.FetchTaskRunResult(kubeadminClient.CommonController.KubeRest(), pipelineRun, gatherResult[i], constants.OldTektonTaskTestOutputName)
 						}
 						Expect(err).ShouldNot(HaveOccurred())
 						ret := build.ValidateTaskRunResults(gatherResult[i], result)
@@ -240,10 +243,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						GinkgoWriter.Printf("retcode for validate taskrun result is %s\n", ret)
 					} else {
 						// Fetching HACBS_TEST_OUTPUT || TEST_OUTPUT shouldn't fail
-						result, err := build.FetchTaskRunResult(pipelineRun, gatherResult[i], constants.TektonTaskTestOutputName)
+						result, err := build.FetchTaskRunResult(kubeadminClient.CommonController.KubeRest(), pipelineRun, gatherResult[i], constants.TektonTaskTestOutputName)
 						// TODO: delete this condition after https://issues.redhat.com/browse/RHTAP-810 is completed
 						if err != nil {
-							result, err = build.FetchTaskRunResult(pipelineRun, gatherResult[i], constants.OldTektonTaskTestOutputName)
+							result, err = build.FetchTaskRunResult(kubeadminClient.CommonController.KubeRest(), pipelineRun, gatherResult[i], constants.OldTektonTaskTestOutputName)
 						}
 						Expect(err).ShouldNot(HaveOccurred())
 						ret := build.ValidateTaskRunResults(gatherResult[i], result)
@@ -323,7 +326,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					pr, err = kubeController.Tektonctrl.GetPipelineRun(pr.Name, pr.Namespace)
 					Expect(err).NotTo(HaveOccurred())
 
-					tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract")
+					tr, err := kubeController.GetTaskRunStatus(kubeadminClient.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
 					Expect(tr.Status.TaskRunResults).Should(Or(
