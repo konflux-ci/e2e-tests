@@ -96,7 +96,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			pr, err = kubeController.Tektonctrl.GetPipelineRun(pr.Name, pr.Namespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract")
+			tr, err := kubeController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(tr.Status.TaskRunResults).Should(Or(
@@ -130,7 +130,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			pr, err = kubeController.Tektonctrl.GetPipelineRun(pr.Name, pr.Namespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract")
+			tr, err := kubeController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(tr.Status.TaskRunResults).Should(Or(

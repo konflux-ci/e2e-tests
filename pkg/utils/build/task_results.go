@@ -1,6 +1,7 @@
 package build
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -8,14 +9,22 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"k8s.io/apimachinery/pkg/types"
+
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func FetchTaskRunResult(pr *v1beta1.PipelineRun, pipelineTaskName string, result string) (string, error) {
-	for _, tr := range pr.Status.TaskRuns {
-		if tr.PipelineTaskName != pipelineTaskName {
+func FetchTaskRunResult(c crclient.Client, pr *v1beta1.PipelineRun, pipelineTaskName string, result string) (string, error) {
+	for _, chr := range pr.Status.ChildReferences {
+		if chr.PipelineTaskName != pipelineTaskName {
 			continue
 		}
-		for _, trResult := range tr.Status.TaskRunResults {
+		taskRun := &v1beta1.TaskRun{}
+		taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
+		if err := c.Get(context.TODO(), taskRunKey, taskRun); err != nil {
+			return "", err
+		}
+		for _, trResult := range taskRun.Status.TaskRunResults {
 			if trResult.Name == result {
 				return strings.TrimSuffix(trResult.Value.StringVal, "\n"), nil
 			}
@@ -25,12 +34,17 @@ func FetchTaskRunResult(pr *v1beta1.PipelineRun, pipelineTaskName string, result
 		"result %q not found in TaskRuns of PipelineRun %s/%s for pipeline task name %s", result, pr.ObjectMeta.Namespace, pr.ObjectMeta.Name, pipelineTaskName)
 }
 
-func FetchImageTaskRunResult(pr *v1beta1.PipelineRun, pipelineTaskName string, result string) (string, error) {
-	for _, tr := range pr.Status.TaskRuns {
-		if tr.PipelineTaskName != pipelineTaskName {
+func FetchImageTaskRunResult(c crclient.Client, pr *v1beta1.PipelineRun, pipelineTaskName string, result string) (string, error) {
+	for _, chr := range pr.Status.ChildReferences {
+		if chr.PipelineTaskName != pipelineTaskName {
 			continue
 		}
-		for _, trResult := range tr.Status.TaskRunResults {
+		taskRun := &v1beta1.TaskRun{}
+		taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
+		if err := c.Get(context.TODO(), taskRunKey, taskRun); err != nil {
+			return "", err
+		}
+		for _, trResult := range taskRun.Status.TaskRunResults {
 
 			if trResult.Name == "BASE_IMAGE_REPOSITORY" || trResult.Name == result {
 				return trResult.Value.StringVal, nil
