@@ -484,31 +484,46 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				increaseBar(resourcesBar, resourcesBarMutex)
 				continue
 			}
-			ComponentName := fmt.Sprintf("%s-component", username)
-			ComponentContainerImage := fmt.Sprintf("quay.io/%s/test-images:%s-%s", utils.GetQuayIOOrganization(), username, strings.Replace(uuid.New().String(), "-", "", -1))
-			component, err := framework.AsKubeDeveloper.HasController.CreateComponent(
-				ApplicationName,
-				ComponentName,
-				usernamespace,
-				QuarkusDevfileSource,
-				"",
-				"",
-				ComponentContainerImage,
-				"",
-				true,
-			)
+
+			ComponentDetectionQueryName := fmt.Sprintf("%s-cdq", username)
+			cdq, err := framework.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(ComponentDetectionQueryName, usernamespace, QuarkusDevfileSource, "", "", "", false)
 			if err != nil {
-				logError(6, fmt.Sprintf("Unable to create the Component %s: %v", ComponentName, err))
+				logError(6, fmt.Sprintf("Unable to create ComponentDetectionQuery %s: %v", cdq.Name, err))
 				atomic.StoreInt64(&FailedResourceCreations[threadIndex], atomic.AddInt64(&FailedResourceCreations[threadIndex], 1))
 				increaseBar(resourcesBar, resourcesBarMutex)
 				continue
 			}
-			if component.Name != ComponentName {
-				logError(7, fmt.Sprintf("Actual component name (%s) does not match expected (%s): %v", component.Name, ComponentName, err))
+			if cdq.Name != ComponentDetectionQueryName {
+				logError(7, fmt.Sprintf("Actual cdq name (%s) does not match expected (%s): %v", cdq.Name, ComponentDetectionQueryName, err))
 				atomic.StoreInt64(&FailedResourceCreations[threadIndex], atomic.AddInt64(&FailedResourceCreations[threadIndex], 1))
 				increaseBar(resourcesBar, resourcesBarMutex)
 				continue
 			}
+			if len(cdq.Status.ComponentDetected) > 1 {
+				logError(7, fmt.Sprintf("cdq (%s) detected more than 1 component", cdq.Name))
+				atomic.StoreInt64(&FailedResourceCreations[threadIndex], atomic.AddInt64(&FailedResourceCreations[threadIndex], 1))
+				increaseBar(resourcesBar, resourcesBarMutex)
+				continue
+			}
+
+			for _, compStub := range cdq.Status.ComponentDetected {
+				ComponentContainerImage := fmt.Sprintf("quay.io/%s/test-images:%s-%s", utils.GetQuayIOOrganization(), username, strings.Replace(uuid.New().String(), "-", "", -1))
+				component, err := framework.AsKubeDeveloper.HasController.CreateComponentFromStub(compStub, usernamespace, ComponentContainerImage, "", ApplicationName)
+
+				if err != nil {
+					logError(6, fmt.Sprintf("Unable to create the Component %s: %v", component.Name, err))
+					atomic.StoreInt64(&FailedResourceCreations[threadIndex], atomic.AddInt64(&FailedResourceCreations[threadIndex], 1))
+					increaseBar(resourcesBar, resourcesBarMutex)
+					continue
+				}
+				if component.Name != compStub.ComponentStub.ComponentName {
+					logError(7, fmt.Sprintf("Actual component name (%s) does not match expected (%s): %v", component.Name, compStub.ComponentStub.ComponentName, err))
+					atomic.StoreInt64(&FailedResourceCreations[threadIndex], atomic.AddInt64(&FailedResourceCreations[threadIndex], 1))
+					increaseBar(resourcesBar, resourcesBarMutex)
+					continue
+				}
+			}
+
 			ResourceCreationTime := time.Since(startTime)
 			AverageResourceCreationTimePerUser[threadIndex] += ResourceCreationTime
 

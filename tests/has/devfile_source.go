@@ -126,18 +126,19 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 	})
 
 	It("creates Red Hat AppStudio Quarkus component", func() {
-		_, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, componentName, testNamespace, "", applicationName)
+		outputContainerImg := fmt.Sprintf("quay.io/%s/test-images:%s-%s", utils.GetQuayIOOrganization(), fw.UserName, strings.Replace(uuid.New().String(), "-", "", -1))
+		_, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, testNamespace, outputContainerImg, "", applicationName)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("gitops Repository should not be deleted when component gets deleted", func() {
 		comp2Detected := appservice.ComponentDetectionDescription{}
+		outputContainerImg := fmt.Sprintf("quay.io/%s/test-images:%s-%s", utils.GetQuayIOOrganization(), fw.UserName, strings.Replace(uuid.New().String(), "-", "", -1))
 
 		for _, comp2Detected = range cdq.Status.ComponentDetected {
 			comp2Detected.ComponentStub.ComponentName = "java-quarkus2"
 		}
-		component2Name := fmt.Sprintf(QuarkusComponentName+"-%s", util.GenerateRandomString(10))
-		component2, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(comp2Detected, component2Name, testNamespace, "", applicationName)
+		component2, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(comp2Detected, testNamespace, outputContainerImg, "", applicationName)
 		Expect(err).NotTo(HaveOccurred())
 
 		err = fw.AsKubeDeveloper.HasController.DeleteHasComponent(component2.Name, testNamespace, false)
