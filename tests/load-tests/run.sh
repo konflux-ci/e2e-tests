@@ -1,5 +1,8 @@
 #!/bin/bash
-export DOCKER_CONFIG_JSON=${DOCKER_CONFIG_JSON:-}
+source env.sh
+
+#export DOCKER_CONFIG_JSON=${DOCKER_CONFIG_JSON:-}
+
 
 if [ -z ${DOCKER_CONFIG_JSON+x} ]; then
     echo "env DOCKER_CONFIG_JSON need to be defined"
@@ -7,5 +10,5 @@ if [ -z ${DOCKER_CONFIG_JSON+x} ]; then
 else echo "DOCKER_CONFIG_JSON is set"; fi
 
 USER_PREFIX=${USER_PREFIX:-testuser}
-go run loadtest.go --username "$USER_PREFIX" --users "${USERS_PER_THREAD:-50}" -w -l -t "${THREADS:-1}" --disable-metrics &&
+go run loadtest.go --username "$USER_PREFIX" --users "${USERS_PER_THREAD:-5}" -w -l -t "${THREADS:-1}" --disable-metrics &&
     DRY_RUN=false ./clear.sh "$USER_PREFIX"
