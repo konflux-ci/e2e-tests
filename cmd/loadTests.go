@@ -16,6 +16,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-e2e/setup/metrics"
 	"github.com/codeready-toolchain/toolchain-e2e/setup/metrics/queries"
 	"github.com/codeready-toolchain/toolchain-e2e/setup/terminal"
+	metrics2 "github.com/redhat-appstudio-qe/perf-monitoring/metrics"
 	"github.com/google/uuid"
 	"github.com/gosuri/uiprogress"
 	"github.com/gosuri/uitable/util/strutil"
@@ -40,6 +41,8 @@ var (
 	failFast             bool
 	disableMetrics       bool
 	threadCount          int
+	ingesterURL          string = "http://<ip>:9091"
+	jobName 			 string = "uniqueJobName"
 )
 
 var (
@@ -199,6 +202,9 @@ func setup(cmd *cobra.Command, args []string) {
 		}
 	}
 
+	metricsController := metrics2.NewMetricController(ingesterURL, jobName)
+	metricsController.InitPusher()
+
 	var stopMetrics chan struct{}
 	var metricsInstance *metrics.Gatherer
 	if !disableMetrics {
@@ -284,7 +290,7 @@ func setup(cmd *cobra.Command, args []string) {
 	threadsWG = &sync.WaitGroup{}
 	threadsWG.Add(threadCount)
 	for thread := 0; thread < threadCount; thread++ {
-		go userJourneyThread(frameworkMap, threadsWG, thread, AppStudioUsersBar, ResourcesBar, PipelinesBar)
+		go userJourneyThread(metricsController, frameworkMap, threadsWG, thread, AppStudioUsersBar, ResourcesBar, PipelinesBar)
 	}
 
 	// Todo add cleanup functions that will delete user signups
@@ -409,7 +415,7 @@ func tryNewFramework(username string, timeout time.Duration) (*framework.Framewo
 	return ret, err
 }
 
-func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, threadIndex int, usersBar *uiprogress.Bar, resourcesBar *uiprogress.Bar, pipelinesBar *uiprogress.Bar) {
+func userJourneyThread(metricscontroller *metrics2.MetricsPush, frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, threadIndex int, usersBar *uiprogress.Bar, resourcesBar *uiprogress.Bar, pipelinesBar *uiprogress.Bar) {
 	chUsers := make(chan string, numberOfUsers)
 	chPipelines := make(chan string, numberOfUsers)
 
@@ -427,6 +433,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 		defer wg.Done()
 		for userIndex := 1; userIndex <= numberOfUsers; userIndex++ {
 			startTime := time.Now()
+
 			username := fmt.Sprintf("%s-%04d", usernamePrefix, threadIndex*numberOfUsers+userIndex)
 			framework, err := tryNewFramework(username, 60*time.Minute)
 			if err != nil {
@@ -442,6 +449,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 
 			UserCreationTime := time.Since(startTime)
 			AverageUserCreationTime[threadIndex] += UserCreationTime
+			metricscontroller.PushMetricsUsers(float64(FailedUserCreations[threadIndex]), float64(AverageUserCreationTime[threadIndex]))
 			increaseBar(usersBar, usersBarMutex)
 		}
 		close(chUsers)
@@ -511,7 +519,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			}
 			ResourceCreationTime := time.Since(startTime)
 			AverageResourceCreationTimePerUser[threadIndex] += ResourceCreationTime
-
+			metricscontroller.PushMetricsResources(float64(FailedResourceCreations[threadIndex]), float64(AverageResourceCreationTimePerUser[threadIndex]))
 			chPipelines <- username
 			increaseBar(resourcesBar, resourcesBarMutex)
 		}
