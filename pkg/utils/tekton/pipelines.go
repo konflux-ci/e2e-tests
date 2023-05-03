@@ -165,14 +165,18 @@ func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
 }
 
 // GetFailedPipelineRunLogs gets the logs of the pipelinerun failed task
-func GetFailedPipelineRunLogs(c *common.SuiteController, pipelineRun *v1beta1.PipelineRun) string {
+func GetFailedPipelineRunLogs(c *common.SuiteController, pipelineRun *v1beta1.PipelineRun) (string, error) {
+	var d *utils.FailedPipelineRunDetails
+	var err error
 	failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
-	d := utils.GetFailedPipelineRunDetails(pipelineRun)
+	if d, err = utils.GetFailedPipelineRunDetails(c.KubeRest(), pipelineRun); err != nil {
+		return "", err
+	}
 	if d.FailedContainerName != "" {
 		logs, _ := c.GetContainerLogs(d.PodName, d.FailedContainerName, pipelineRun.Namespace)
 		failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
 	}
-	return failMessage
+	return failMessage, nil
 }
 
 // StorePipelineRunLogs stores logs and parsed yamls of pipelineRuns into directory of given testName under ARTIFACT_DIR env.
@@ -182,14 +186,17 @@ func StorePipelineRun(pipelineRun *v1beta1.PipelineRun, testName string, suiteCo
 	artifactDir := utils.GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
 	testLogsDir := fmt.Sprintf("%s/%s", artifactDir, testName)
 
-	pipelineRunLog := GetFailedPipelineRunLogs(suiteController, pipelineRun)
+	pipelineRunLog, err := GetFailedPipelineRunLogs(suiteController, pipelineRun)
+	if err != nil {
+		return fmt.Errorf("failed to store PipelineRun: %+v", err)
+	}
 
 	pipelineRunYaml, prYamlErr := yaml.Marshal(pipelineRun)
 	if prYamlErr != nil {
 		GinkgoWriter.Printf("\nfailed to get pipelineRunYaml: %s\n", prYamlErr.Error())
 	}
 
-	err := os.MkdirAll(testLogsDir, os.ModePerm)
+	err = os.MkdirAll(testLogsDir, os.ModePerm)
 
 	if err != nil {
 		GinkgoWriter.Printf("\n%s\nFailed pipelineRunLog:\n%s\n---END OF THE LOG---\n", pipelineRun.GetName(), pipelineRunLog)

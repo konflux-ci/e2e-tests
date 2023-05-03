@@ -30,7 +30,7 @@ const (
 	IntegrationServiceUser = "integration-e2e"
 )
 
-var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests", Label("integration-service", "HACBS"), Pending, func() {
+var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests", Label("integration-service", "HACBS"), func() {
 	defer GinkgoRecover()
 
 	var f *framework.Framework
@@ -114,7 +114,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					}
 
 					if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-						failMessage := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+						failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+						if err != nil {
+							GinkgoWriter.Printf("failed to get logs for pipelinerun %s: %+v\n", pipelineRun.Name, err)
+						}
 						Fail(failMessage)
 					}
 				}
@@ -238,7 +241,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 								}
 
 								if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-									failMessage := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+									failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+									if err != nil {
+										GinkgoWriter.Printf("failed to get logs for pipelinerun %s: %+v\n", pipelineRun.Name, err)
+									}
 									Fail(failMessage)
 								}
 							}
