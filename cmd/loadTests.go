@@ -41,8 +41,8 @@ var (
 	failFast             bool
 	disableMetrics       bool
 	threadCount          int
-	ingesterURL          string = "http://<ip>:9091"
-	jobName 			 string = "uniqueJobName"
+	ingesterURL          string = "http://52.91.72.87:9091" //edit this
+	jobName 			 string = "testrun-meer-1"    //edit this
 )
 
 var (
@@ -204,6 +204,8 @@ func setup(cmd *cobra.Command, args []string) {
 
 	metricsController := metrics2.NewMetricController(ingesterURL, jobName)
 	metricsController.InitPusher()
+
+	metricsController.PushMetricsTotal(float64(overallCount))
 
 	var stopMetrics chan struct{}
 	var metricsInstance *metrics.Gatherer
@@ -449,7 +451,7 @@ func userJourneyThread(metricscontroller *metrics2.MetricsPush, frameworkMap *sy
 
 			UserCreationTime := time.Since(startTime)
 			AverageUserCreationTime[threadIndex] += UserCreationTime
-			metricscontroller.PushMetricsUsers(float64(FailedUserCreations[threadIndex]), float64(AverageUserCreationTime[threadIndex]))
+			metricscontroller.PushMetricsUsers(float64(FailedUserCreations[threadIndex]), float64(UserCreationTime))
 			increaseBar(usersBar, usersBarMutex)
 		}
 		close(chUsers)
@@ -519,7 +521,7 @@ func userJourneyThread(metricscontroller *metrics2.MetricsPush, frameworkMap *sy
 			}
 			ResourceCreationTime := time.Since(startTime)
 			AverageResourceCreationTimePerUser[threadIndex] += ResourceCreationTime
-			metricscontroller.PushMetricsResources(float64(FailedResourceCreations[threadIndex]), float64(AverageResourceCreationTimePerUser[threadIndex]))
+			metricscontroller.PushMetricsResources(float64(FailedResourceCreations[threadIndex]), float64(ResourceCreationTime))
 			chPipelines <- username
 			increaseBar(resourcesBar, resourcesBarMutex)
 		}
@@ -530,6 +532,7 @@ func userJourneyThread(metricscontroller *metrics2.MetricsPush, frameworkMap *sy
 		go func() {
 			defer wg.Done()
 			for username := range chPipelines {
+				startTime := time.Now()
 				framework := frameworkForUser(username)
 				if framework == nil {
 					logError(8, fmt.Sprintf("Framework not found for username %s", username))
@@ -564,6 +567,9 @@ func userJourneyThread(metricscontroller *metrics2.MetricsPush, frameworkMap *sy
 					increaseBar(pipelinesBar, pipelinesBarMutex)
 					continue
 				}
+				PipelineRunTime := time.Since(startTime)
+				AveragePipelineRunTimePerUser[threadIndex] += PipelineRunTime
+				metricscontroller.PushMetricsPipelines(float64(FailedPipelineRuns[threadIndex]), float64(PipelineRunTime))
 			}
 		}()
 	}

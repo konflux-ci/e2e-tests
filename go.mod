@@ -24,7 +24,7 @@ require (
 	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
-	github.com/redhat-appstudio-qe/perf-monitoring v0.0.0-20230503073704-65420a2ffa6b
+	github.com/redhat-appstudio-qe/perf-monitoring v0.0.0-20230503100428-6156a93cdcd3
 	github.com/redhat-appstudio/application-api v0.0.0-20230405183341-7a48b1d4c860
 	github.com/redhat-appstudio/build-service v0.0.0-20230113121706-a9f10055dbc4
 	github.com/redhat-appstudio/image-controller v0.0.0-20230413111635-7e9bc2f236ee

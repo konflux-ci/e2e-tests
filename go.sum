@@ -1184,6 +1184,8 @@ github.com/redhat-appstudio-qe/perf-monitoring v0.0.0-20230503070743-536edb5bcc5
 github.com/redhat-appstudio-qe/perf-monitoring v0.0.0-20230503070743-536edb5bcc53/go.mod h1:2rCrfNdnudOy+Zz6aS2rX0PaFKDyrfZTlxin1aHqfMs=
 github.com/redhat-appstudio-qe/perf-monitoring v0.0.0-20230503073704-65420a2ffa6b h1:5HjvywN7qAZ3wGcSnH3GNRfNil8x+DTeylJdF2W8LKU=
 github.com/redhat-appstudio-qe/perf-monitoring v0.0.0-20230503073704-65420a2ffa6b/go.mod h1:2rCrfNdnudOy+Zz6aS2rX0PaFKDyrfZTlxin1aHqfMs=
+github.com/redhat-appstudio-qe/perf-monitoring v0.0.0-20230503100428-6156a93cdcd3 h1:4FNNAb73sve7SANbx3xsIbbiuaz/AVXnHCJBxBqIY7w=
+github.com/redhat-appstudio-qe/perf-monitoring v0.0.0-20230503100428-6156a93cdcd3/go.mod h1:2rCrfNdnudOy+Zz6aS2rX0PaFKDyrfZTlxin1aHqfMs=
 github.com/redhat-appstudio/application-api v0.0.0-20230405183341-7a48b1d4c860 h1:/12iN8Zft+v1hTrUN/Z06nYQ8rDUP2wKM4aAyc9cRhs=
 github.com/redhat-appstudio/application-api v0.0.0-20230405183341-7a48b1d4c860/go.mod h1:LpcTNLCDMf1CUNTw2bgTiz8M49sUsN2F9T7bOSKcJEo=
 github.com/redhat-appstudio/build-service v0.0.0-20230113121706-a9f10055dbc4 h1:Nc4qjZHxb8wnn5DW559GUyIVV5Z2HgYmGxQoWW02mWg=
