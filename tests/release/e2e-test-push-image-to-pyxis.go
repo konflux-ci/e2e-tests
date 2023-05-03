@@ -201,7 +201,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 				pr, err := kubeController.Tektonctrl.GetPipelineRun(prList.Items[0].Name, managedNamespace)
 				Expect(err).NotTo(HaveOccurred())
 
-				tr, err := kubeController.GetTaskRunStatus(pr, "create-pyxis-image")
+				tr, err := kubeController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), pr, "create-pyxis-image")
 				Expect(err).NotTo(HaveOccurred())
 
 				re := regexp.MustCompile("^[0-9a-z]{10,50}")

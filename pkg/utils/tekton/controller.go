@@ -307,13 +307,19 @@ func (k KubeController) WatchPipelineRunSucceeded(pipelineRunName string, taskTi
 	return utils.WaitUntil(k.Tektonctrl.CheckPipelineRunSucceeded(pipelineRunName, k.Namespace), time.Duration(taskTimeout)*time.Second)
 }
 
-func (k KubeController) GetTaskRunResult(pr *v1beta1.PipelineRun, pipelineTaskName string, result string) (string, error) {
-	for _, tr := range pr.Status.TaskRuns {
-		if tr.PipelineTaskName != pipelineTaskName {
+func (k KubeController) GetTaskRunResult(c crclient.Client, pr *v1beta1.PipelineRun, pipelineTaskName string, result string) (string, error) {
+	for _, chr := range pr.Status.ChildReferences {
+		if chr.PipelineTaskName != pipelineTaskName {
 			continue
 		}
 
-		for _, trResult := range tr.Status.TaskRunResults {
+		taskRun := &v1beta1.TaskRun{}
+		taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
+		if err := c.Get(context.TODO(), taskRunKey, taskRun); err != nil {
+			return "", err
+		}
+
+		for _, trResult := range taskRun.Status.TaskRunResults {
 			if trResult.Name == result {
 				// for some reason the result might contain \n suffix
 				return strings.TrimSuffix(trResult.Value.StringVal, "\n"), nil
@@ -324,10 +330,15 @@ func (k KubeController) GetTaskRunResult(pr *v1beta1.PipelineRun, pipelineTaskNa
 		"result %q not found in TaskRuns of PipelineRun %s/%s", result, pr.ObjectMeta.Namespace, pr.ObjectMeta.Name)
 }
 
-func (k KubeController) GetTaskRunStatus(pr *v1beta1.PipelineRun, pipelineTaskName string) (*v1beta1.PipelineRunTaskRunStatus, error) {
-	for _, tr := range pr.Status.TaskRuns {
-		if tr.PipelineTaskName == pipelineTaskName {
-			return tr, nil
+func (k KubeController) GetTaskRunStatus(c crclient.Client, pr *v1beta1.PipelineRun, pipelineTaskName string) (*v1beta1.PipelineRunTaskRunStatus, error) {
+	for _, chr := range pr.Status.ChildReferences {
+		if chr.PipelineTaskName == pipelineTaskName {
+			taskRun := &v1beta1.TaskRun{}
+			taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
+			if err := c.Get(context.TODO(), taskRunKey, taskRun); err != nil {
+				return nil, err
+			}
+			return &v1beta1.PipelineRunTaskRunStatus{PipelineTaskName: chr.PipelineTaskName, Status: &taskRun.Status}, nil
 		}
 	}
 	return nil, fmt.Errorf(
