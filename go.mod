@@ -24,14 +24,14 @@ require (
 	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
-	github.com/redhat-appstudio/application-api v0.0.0-20230405183341-7a48b1d4c860
+	github.com/redhat-appstudio/application-api v0.0.0-20230427114540-a91722251e0a
 	github.com/redhat-appstudio/build-service v0.0.0-20230113121706-a9f10055dbc4
-	github.com/redhat-appstudio/image-controller v0.0.0-20230413111635-7e9bc2f236ee
+	github.com/redhat-appstudio/image-controller v0.0.0-20230424143941-3da9b4925e36
 	github.com/redhat-appstudio/integration-service v0.0.0-20230427084439-306b4611389b
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20230125042419-efd0d0342a2c
 	github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001
 	github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0
-	github.com/redhat-appstudio/release-service v0.0.0-20230404140848-d2ad6f470f2e
+	github.com/redhat-appstudio/release-service v0.0.0-20230501180319-d9907b54776b
 	github.com/redhat-appstudio/service-provider-integration-operator v0.9.1-0.20230412095305-101be612c01e
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.14.0
@@ -219,7 +219,7 @@ require (
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.8.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
-	google.golang.org/api v0.114.0 // indirect
+	google.golang.org/api v0.112.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
 	google.golang.org/grpc v1.54.0 // indirect
