@@ -299,7 +299,7 @@ func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, compone
 
 // CreateComponentFromCDQ create a HAS Component resource from a Completed CDQ resource, which includes a stub Component CR
 // The Component from the CDQ is only a template, and needs things like name filled in
-func (h *SuiteController) CreateComponentFromStub(compDetected appservice.ComponentDetectionDescription, componentName, namespace, secret, applicationName string) (*appservice.Component, error) {
+func (h *SuiteController) CreateComponentFromStub(compDetected appservice.ComponentDetectionDescription, namespace string, outputContainerImage string, secret string, applicationName string) (*appservice.Component, error) {
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
@@ -311,6 +311,10 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 			Namespace: namespace,
 		},
 		Spec: compDetected.ComponentStub,
+	}
+
+	if outputContainerImage != "" {
+		component.Spec.ContainerImage = outputContainerImage
 	}
 
 	if component.Spec.TargetPort == 0 {
@@ -326,7 +330,7 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 	}
 	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*10); err != nil {
 		component = h.refreshComponentForErrorDebug(component)
-		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentName, namespace, utils.ToPrettyJSONString(component))
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", compDetected.ComponentStub.ComponentName, namespace, utils.ToPrettyJSONString(component))
 	}
 	return component, nil
 }
