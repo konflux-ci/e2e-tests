@@ -9,6 +9,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
@@ -159,7 +160,7 @@ func renderTemplate(destination, templatePath string, templateData interface{}, 
 	return nil
 }
 
-func cleanupQuay(quayService quay.QuayService, quayOrg string) error {
+func cleanupQuayReposAndRobots(quayService quay.QuayService, quayOrg string) error {
 	r, err := regexp.Compile(fmt.Sprintf(`^(%s)`, quayPrefixesToDeleteRegexp))
 	if err != nil {
 		return err
@@ -229,4 +230,60 @@ func cleanupQuay(quayService quay.QuayService, quayOrg string) error {
 		}
 	}
 	return nil
+}
+
+func cleanupQuayTags(quayService quay.QuayService, organization, repository string) error {
+	workerCount := 10
+	var wg sync.WaitGroup
+
+	var allTags []quay.Tag
+	var errors []error
+
+	page := 1
+	for {
+		tags, hasAdditional, err := quayService.GetTagsFromPage(organization, repository, page)
+		page++
+		if err != nil {
+			errors = append(errors, fmt.Errorf("error getting tags of `%s` repository of `%s` organization on page `%d`, error: %s", repository, organization, page, err))
+			continue
+		}
+		allTags = append(allTags, tags...)
+		if !hasAdditional {
+			break
+		}
+	}
+
+	wg.Add(workerCount)
+
+	var errorsMutex sync.Mutex
+	for i := 0; i < workerCount; i++ {
+		go func(startIdx int, allTags []quay.Tag, errors []error, errorsMutex *sync.Mutex, wg *sync.WaitGroup) {
+			defer wg.Done()
+			for idx := startIdx; idx < len(allTags); idx += workerCount {
+				tag := allTags[idx]
+				if time.Unix(tag.StartTS, 0).Before(time.Now().AddDate(0, 0, -7)) {
+					deleted, err := quayService.DeleteTag(organization, repository, tag.Name)
+					if err != nil {
+						errorsMutex.Lock()
+						errors = append(errors, fmt.Errorf("error during deletion of tag `%s` in repository `%s` of organization `%s`, error: `%s`\n", tag.Name, repository, organization, err))
+						errorsMutex.Unlock()
+					} else if !deleted {
+						fmt.Printf("tag `%s` in repository `%s` of organization `%s` was not deleted\n", tag.Name, repository, organization)
+					}
+				}
+			}
+		}(i, allTags, errors, &errorsMutex, &wg)
+	}
+
+	wg.Wait()
+
+	if len(errors) == 0 {
+		return nil
+	}
+
+	var errBuilder strings.Builder
+	for _, err := range errors {
+		errBuilder.WriteString(fmt.Sprintf("%s\n", err))
+	}
+	return fmt.Errorf("encountered errors during CleanupQuayTags: %s", errBuilder.String())
 }
