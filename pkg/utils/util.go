@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	devfilePkg "github.com/devfile/library/pkg/devfile"
@@ -34,6 +35,8 @@ import (
 	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/yaml"
+
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type FailedPipelineRunDetails struct {
@@ -140,23 +143,28 @@ func GetOpenshiftToken() (token string, err error) {
 	return strings.TrimSuffix(string(tokenBytes), "\n"), nil
 }
 
-func GetFailedPipelineRunDetails(pipelineRun *v1beta1.PipelineRun) *FailedPipelineRunDetails {
+func GetFailedPipelineRunDetails(c crclient.Client, pipelineRun *v1beta1.PipelineRun) (*FailedPipelineRunDetails, error) {
 	d := &FailedPipelineRunDetails{}
-	for trName, trs := range pipelineRun.Status.PipelineRunStatusFields.TaskRuns {
-		for _, c := range trs.Status.Conditions {
+	for _, chr := range pipelineRun.Status.PipelineRunStatusFields.ChildReferences {
+		taskRun := &v1beta1.TaskRun{}
+		taskRunKey := types.NamespacedName{Namespace: pipelineRun.Namespace, Name: chr.Name}
+		if err := c.Get(context.TODO(), taskRunKey, taskRun); err != nil {
+			return nil, fmt.Errorf("failed to get details for PR %s: %+v", pipelineRun.GetName(), err)
+		}
+		for _, c := range taskRun.Status.Conditions {
 			if c.Reason == "Failed" {
-				d.FailedTaskRunName = trName
-				d.PodName = trs.Status.PodName
-				for _, s := range trs.Status.TaskRunStatusFields.Steps {
+				d.FailedTaskRunName = taskRun.Name
+				d.PodName = taskRun.Status.PodName
+				for _, s := range taskRun.Status.TaskRunStatusFields.Steps {
 					if s.Terminated.Reason == "Error" {
 						d.FailedContainerName = s.ContainerName
-						return d
+						return d, nil
 					}
 				}
 			}
 		}
 	}
-	return d
+	return d, nil
 }
 
 func GetGeneratedNamespace(name string) string {

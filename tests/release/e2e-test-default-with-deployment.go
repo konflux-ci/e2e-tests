@@ -75,7 +75,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-deploy-strategy", managedNamespace, "deploy-release", "quay.io/hacbs-release/pipeline-deploy-release:main", releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategyMvp)
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-deploy-strategy", managedNamespace, "deploy-release", "quay.io/hacbs-release/pipeline-deploy-release:0.2", releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategyMvp)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.GitOpsController.CreateEnvironment(releaseEnvironment, managedNamespace)
@@ -97,6 +97,25 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.HasController.CreateComponent(applicationNameDefault, componentName, devNamespace, gitSourceComponentUrl, "", containerImageUrl, "", "", true)
+		Expect(err).NotTo(HaveOccurred())
+
+		workingDir, err := os.Getwd()
+		if err != nil {
+			GinkgoWriter.Printf(err.Error())
+		}
+
+		// Download copy-applications.sh script from release-utils repo
+		args := []string{"https://raw.githubusercontent.com/hacbs-release/release-utils/main/copy-application.sh", "-o", "copy-application.sh"}
+		err = utils.ExecuteCommandInASpecificDirectory("curl", args, workingDir)
+		Expect(err).NotTo(HaveOccurred())
+
+		args = []string{"775", "copy-application.sh"}
+		err = utils.ExecuteCommandInASpecificDirectory("chmod", args, workingDir)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Copying application in dev namespace to managed namespace
+		args = []string{managedNamespace, "-a", devNamespace + "/" + applicationNameDefault}
+		err = utils.ExecuteCommandInASpecificDirectory("./copy-application.sh", args, workingDir)
 		Expect(err).NotTo(HaveOccurred())
 
 	})
@@ -162,40 +181,19 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 					return false
 				}
 
-				return releaseCreated.HasStarted() && releaseCreated.IsDone() && releaseCreated.Status.Conditions[0].Status == "True"
+				return releaseCreated.IsReleased()
 			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 		})
-
-		It("tests that copying application and component works as designed.", func(ctx SpecContext) {
-			workingDir, err := os.Getwd()
-			if err != nil {
-				GinkgoWriter.Printf(err.Error())
-			}
-
-			// Download copy-applications.sh script from release-utils repo
-			args := []string{"https://raw.githubusercontent.com/hacbs-release/release-utils/main/copy-application.sh", "-o", "copy-application.sh"}
-			err = utils.ExecuteCommandInASpecificDirectory("curl", args, workingDir)
-			Expect(err).NotTo(HaveOccurred())
-
-			args = []string{"775", "copy-application.sh"}
-			err = utils.ExecuteCommandInASpecificDirectory("chmod", args, workingDir)
-			Expect(err).NotTo(HaveOccurred())
-
-			// Copying application in dev namespace to managed namespace
-			args = []string{managedNamespace, "-a", devNamespace + "/" + applicationNameDefault}
-			err = utils.ExecuteCommandInASpecificDirectory("./copy-application.sh", args, workingDir)
-			Expect(err).NotTo(HaveOccurred())
-		}, SpecTimeout(snapshotCreationTimeout+namespaceCreationTimeout*2))
 	})
 
-	It("tests a Release should report the deployment was successfull.", func() {
+	It("tests a Release should report the deployment was successful.", func() {
 		Eventually(func() bool {
 			releaseCreated, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 			if releaseCreated == nil || err != nil || len(releaseCreated.Status.Conditions) < 2 {
 				return false
 			}
 
-			return releaseCreated.Status.Conditions[1].Message == "1 of 1 components deployed" && releaseCreated.Status.Conditions[1].Type == "AllComponentsDeployed"
+			return releaseCreated.IsDeployed()
 		}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 	})
 })

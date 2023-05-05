@@ -89,6 +89,11 @@ func (h *SuiteController) GetHasApplication(name, namespace string) (*appservice
 
 // CreateHasApplication create an application Custom Resource object
 func (h *SuiteController) CreateHasApplication(name, namespace string) (*appservice.Application, error) {
+	return h.CreateHasApplicationWithTimeout(name, namespace, time.Minute*10)
+}
+
+// CreateHasApplicationWithTimeout create an application Custom Resource object
+func (h *SuiteController) CreateHasApplicationWithTimeout(name string, namespace string, timeout time.Duration) (*appservice.Application, error) {
 	application := &appservice.Application{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -103,7 +108,7 @@ func (h *SuiteController) CreateHasApplication(name, namespace string) (*appserv
 		return nil, err
 	}
 
-	if err := utils.WaitUntil(h.ApplicationDevfilePresent(application), time.Minute*10); err != nil {
+	if err := utils.WaitUntil(h.ApplicationDevfilePresent(application), timeout); err != nil {
 		application = h.refreshApplicationForErrorDebug(application)
 		return nil, fmt.Errorf("timed out when waiting for devfile content creation for application %s in %s namespace: %+v. applicattion: %s", name, namespace, err, utils.ToPrettyJSONString(application))
 	}
@@ -294,7 +299,7 @@ func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, compone
 
 // CreateComponentFromCDQ create a HAS Component resource from a Completed CDQ resource, which includes a stub Component CR
 // The Component from the CDQ is only a template, and needs things like name filled in
-func (h *SuiteController) CreateComponentFromStub(compDetected appservice.ComponentDetectionDescription, componentName, namespace, secret, applicationName string) (*appservice.Component, error) {
+func (h *SuiteController) CreateComponentFromStub(compDetected appservice.ComponentDetectionDescription, namespace string, outputContainerImage string, secret string, applicationName string) (*appservice.Component, error) {
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
@@ -306,6 +311,10 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 			Namespace: namespace,
 		},
 		Spec: compDetected.ComponentStub,
+	}
+
+	if outputContainerImage != "" {
+		component.Spec.ContainerImage = outputContainerImage
 	}
 
 	if component.Spec.TargetPort == 0 {
@@ -321,7 +330,7 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 	}
 	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*10); err != nil {
 		component = h.refreshComponentForErrorDebug(component)
-		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentName, namespace, utils.ToPrettyJSONString(component))
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", compDetected.ComponentStub.ComponentName, namespace, utils.ToPrettyJSONString(component))
 	}
 	return component, nil
 }

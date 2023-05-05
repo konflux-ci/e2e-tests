@@ -118,9 +118,9 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			Expect(err).NotTo(HaveOccurred())
 
 			// Verify TaskRun has the type hinting required by Tekton Chains
-			digest, err := kubeController.GetTaskRunResult(pr, "build-container", "IMAGE_DIGEST")
+			digest, err := kubeController.GetTaskRunResult(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "build-container", "IMAGE_DIGEST")
 			Expect(err).NotTo(HaveOccurred())
-			i, err := kubeController.GetTaskRunResult(pr, "build-container", "IMAGE_URL")
+			i, err := kubeController.GetTaskRunResult(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "build-container", "IMAGE_URL")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(i).To(Equal(image))
 
@@ -179,6 +179,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 					PublicKey:           fmt.Sprintf("k8s://%s/%s", namespace, publicSecretName),
 					SSLCertDir:          "/var/run/secrets/kubernetes.io/serviceaccount",
 					Strict:              true,
+					EffectiveTime:       "now",
 				}
 
 				// Since specs could update the config policy, make sure it has a consistent
@@ -204,14 +205,16 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				pr, err = kubeController.Tektonctrl.GetPipelineRun(pr.Name, pr.Namespace)
 				Expect(err).NotTo(HaveOccurred())
 
-				tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract")
+				tr, err := kubeController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 				Expect(err).NotTo(HaveOccurred())
 				printTaskRunStatus(tr, namespace, *fwk.AsKubeAdmin.CommonController)
 				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s succeeded\n", tr.PipelineTaskName, pr.Name)
 				Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
 				GinkgoWriter.Printf("Make sure result for TaskRun %q succeeded\n", tr.PipelineTaskName)
-				Expect(tr.Status.TaskRunResults).Should(ContainElements(
-					tekton.MatchTaskRunResultWithJSONPathValue("HACBS_TEST_OUTPUT", "{$.result}", `["SUCCESS"]`),
+				Expect(tr.Status.TaskRunResults).Should(Or(
+					// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
+					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
+					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
 				))
 			})
 
@@ -235,15 +238,17 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				pr, err = kubeController.Tektonctrl.GetPipelineRun(pr.Name, pr.Namespace)
 				Expect(err).NotTo(HaveOccurred())
 
-				tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract")
+				tr, err := kubeController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 				Expect(err).NotTo(HaveOccurred())
 
 				printTaskRunStatus(tr, namespace, *fwk.AsKubeAdmin.CommonController)
 				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s succeeded\n", tr.PipelineTaskName, pr.Name)
 				Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
 				GinkgoWriter.Printf("Make sure result for TaskRun %q succeeded\n", tr.PipelineTaskName)
-				Expect(tr.Status.TaskRunResults).Should(ContainElements(
-					tekton.MatchTaskRunResultWithJSONPathValue("HACBS_TEST_OUTPUT", "{$.result}", `["FAILURE"]`),
+				Expect(tr.Status.TaskRunResults).Should(Or(
+					// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
+					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
+					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
 				))
 			})
 
@@ -268,7 +273,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				pr, err = kubeController.Tektonctrl.GetPipelineRun(pr.Name, pr.Namespace)
 				Expect(err).NotTo(HaveOccurred())
 
-				tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract")
+				tr, err := kubeController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 				Expect(err).NotTo(HaveOccurred())
 
 				printTaskRunStatus(tr, namespace, *fwk.AsKubeAdmin.CommonController)
@@ -295,7 +300,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				pr, err = kubeController.Tektonctrl.GetPipelineRun(pr.Name, pr.Namespace)
 				Expect(err).NotTo(HaveOccurred())
 
-				tr, err := kubeController.GetTaskRunStatus(pr, "verify-enterprise-contract")
+				tr, err := kubeController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 				Expect(err).NotTo(HaveOccurred())
 
 				printTaskRunStatus(tr, namespace, *fwk.AsKubeAdmin.CommonController)
