@@ -38,7 +38,6 @@ func NewVclusterController(dir string, kube *client.CustomClient) Vcluster {
 }
 
 func (c *vclusterFactory) InitializeVCluster(clusterName string, targetNamespace string) (kubeconfigPath string, err error) {
-	client.NewAdminKubernetesClient()
 	var valuesFilename = fmt.Sprintf("%s/%s-values.yaml", c.TargetDir, clusterName)
 	var createVclusterArgs = []string{"create", clusterName, "--namespace", targetNamespace, "--connect=false", "--expose", "-f", valuesFilename}
 	kubeconfigPath = fmt.Sprintf("%s/%s-kubeconfig", c.TargetDir, clusterName)

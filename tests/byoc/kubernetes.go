@@ -24,10 +24,10 @@ import (
 )
 
 const (
-	QuarkusDevfileSource         string = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
-	ManagedEnvironmentType       string = "managed-gitops.redhat.com/managed-environment"
-	ManagedEnvironmentSecretName string = "kubeconfig-vcluster"
-	KubernetesEnvironmentName    string = "development"
+	QuarkusDevfileSource                   string = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
+	ManagedEnvironmentType                 string = "managed-gitops.redhat.com/managed-environment"
+	KubernetesManagedEnvironmentSecretName string = "kubeconfig-vcluster"
+	KubernetesEnvironmentName              string = "development"
 )
 
 var (
@@ -35,7 +35,7 @@ var (
 	componentName   = utils.GetGeneratedNamespace("byoc-comp")
 )
 
-var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
+var _ = framework.E2ESuiteDescribe(Label("byoc", "kubernetes"), Ordered, func() {
 	defer GinkgoRecover()
 
 	var vc vcluster.Vcluster
@@ -55,7 +55,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 
 	Describe("Deploy RHTAP application in Kubernetes clusters", func() {
 		BeforeAll(func() {
-			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("byoc"))
+			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("byoc-k8s"))
 			Expect(err).NotTo(HaveOccurred())
 			vc = vcluster.NewVclusterController(fmt.Sprintf("%s/tmp", rootPath), fw.AsKubeAdmin.CommonController.CustomClient)
 		})
@@ -85,7 +85,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 
 			secret := &v1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      ManagedEnvironmentSecretName,
+					Name:      KubernetesManagedEnvironmentSecretName,
 					Namespace: fw.UserNamespace,
 				},
 				Type: v1.SecretType(ManagedEnvironmentType),
@@ -101,7 +101,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 			// As an workaround for now: Deletes the development environment and recreate it with kubernetes cluster information
 			Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(fw.UserNamespace, 1*time.Minute)).NotTo(HaveOccurred())
 
-			environment, err := fw.AsKubeAdmin.GitOpsController.CreateEphemeralEnvironment(KubernetesEnvironmentName, fw.UserNamespace, fw.UserNamespace, kubernetesApiServerUrl, ManagedEnvironmentSecretName)
+			environment, err := fw.AsKubeAdmin.GitOpsController.CreateEphemeralEnvironment(KubernetesEnvironmentName, fw.UserNamespace, fw.UserNamespace, kubernetesApiServerUrl, KubernetesManagedEnvironmentSecretName)
 			Expect(environment.Name).To(Equal(KubernetesEnvironmentName))
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -119,7 +119,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 			Expect(createdApplication.Namespace).To(Equal(fw.UserNamespace))
 
 			Eventually(func() string {
-				application, err = fw.AsKubeDeveloper.HasController.GetHasApplication(applicationName, fw.UserNamespace)
+				application, err = fw.AsKubeAdmin.HasController.GetHasApplication(applicationName, fw.UserNamespace)
 				Expect(err).NotTo(HaveOccurred())
 
 				return application.Status.Devfile
@@ -129,12 +129,12 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 				// application info should be stored even after deleting the application in application variable
 				gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-				return fw.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+				return fw.AsKubeAdmin.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 			}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
 		})
 
 		It("creates Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
-			_, err := fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentName, fw.UserNamespace, QuarkusDevfileSource, "", "", "", false)
+			_, err := fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(componentName, fw.UserNamespace, QuarkusDevfileSource, "", "", "", false)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -142,7 +142,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 			// Validate that the CDQ completes successfully
 			Eventually(func() bool {
 				// application info should be stored even after deleting the application in application variable
-				cdq, err = fw.AsKubeDeveloper.HasController.GetComponentDetectionQuery(componentName, fw.UserNamespace)
+				cdq, err = fw.AsKubeAdmin.HasController.GetComponentDetectionQuery(componentName, fw.UserNamespace)
 				return err == nil && len(cdq.Status.ComponentDetected) > 0
 			}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "ComponentDetectionQuery did not complete successfully")
 
@@ -158,13 +158,13 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 		})
 
 		It("creates Red Hat AppStudio Quarkus component", func() {
-			componentObj, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, componentName, fw.UserNamespace, "", applicationName)
+			componentObj, err = fw.AsKubeAdmin.HasController.CreateComponentFromStub(compDetected, componentName, fw.UserNamespace, "", applicationName)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("waits component pipeline to finish", FlakeAttempts(3), func() {
 			if CurrentSpecReport().NumAttempts > 1 {
-				pipelineRun, err := fw.AsKubeDeveloper.HasController.GetComponentPipelineRun(componentObj.Name, application.Name, fw.UserNamespace, "")
+				pipelineRun, err := fw.AsKubeAdmin.HasController.GetComponentPipelineRun(componentObj.Name, application.Name, fw.UserNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred(), "failed to get pipelinerun: %v", err)
 
 				if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsFalse() {
@@ -172,12 +172,12 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 					Expect(err).ShouldNot(HaveOccurred(), "failed to delete pipelinerun when retriger: %v", err)
 
 					delete(componentObj.Annotations, constants.ComponentInitialBuildAnnotationKey)
-					err = fw.AsKubeDeveloper.HasController.KubeRest().Update(context.Background(), componentObj)
+					err = fw.AsKubeAdmin.HasController.KubeRest().Update(context.Background(), componentObj)
 					Expect(err).ShouldNot(HaveOccurred(), "failed to update component to trigger another pipeline build: %v", err)
 				}
 			}
 
-			if err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeAdmin.CommonController, componentObj.Name, application.Name, fw.UserNamespace, ""); err != nil {
+			if err := fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeAdmin.CommonController, componentObj.Name, application.Name, fw.UserNamespace, ""); err != nil {
 				Expect(err).ShouldNot(HaveOccurred(), "pipeline didnt finish successfully: %v", err)
 			}
 		})
