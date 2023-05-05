@@ -14,6 +14,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	releasev1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
+	releasemetadata "github.com/redhat-appstudio/release-service/metadata"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -264,7 +265,7 @@ func (h *SuiteController) CreateReleasePlan(applicationName, namespace string) (
 			GenerateName: "test-releaseplan-",
 			Namespace:    namespace,
 			Labels: map[string]string{
-				releasev1alpha1.AutoReleaseLabel: "true",
+				releasemetadata.AutoReleaseLabel: "true",
 			},
 		},
 		Spec: releasev1alpha1.ReleasePlanSpec{

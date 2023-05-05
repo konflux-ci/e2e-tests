@@ -31,7 +31,7 @@ require (
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20230125042419-efd0d0342a2c
 	github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001
 	github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0
-	github.com/redhat-appstudio/release-service v0.0.0-20230501180319-d9907b54776b
+	github.com/redhat-appstudio/release-service v0.0.0-20230504094255-035afad2cab8
 	github.com/redhat-appstudio/service-provider-integration-operator v0.9.1-0.20230412095305-101be612c01e
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.14.0
