@@ -84,7 +84,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc", "openshift"), Ordered, func() {
 
 		It("creates namespace in the ephemeral target cluster", func() {
 			ns, err := ephemeralClusterClient.CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: OCPDeploymentsTargetNamespace}}, metav1.CreateOptions{})
-			Expect(ns.Name).To(Equal(fw.UserNamespace))
+			Expect(ns.Name).To(Equal(OCPDeploymentsTargetNamespace))
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

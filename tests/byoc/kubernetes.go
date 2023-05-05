@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -158,7 +160,8 @@ var _ = framework.E2ESuiteDescribe(Label("byoc", "kubernetes"), Ordered, func() 
 		})
 
 		It("creates Red Hat AppStudio Quarkus component", func() {
-			componentObj, err = fw.AsKubeAdmin.HasController.CreateComponentFromStub(compDetected, componentName, fw.UserNamespace, "", applicationName)
+			outputContainerImg := fmt.Sprintf("quay.io/%s/test-images:%s-%s", utils.GetQuayIOOrganization(), fw.UserName, strings.Replace(uuid.New().String(), "-", "", -1))
+			componentObj, err = fw.AsKubeAdmin.HasController.CreateComponentFromStub(compDetected, fw.UserNamespace, outputContainerImg, "", applicationName)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
