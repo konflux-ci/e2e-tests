@@ -27,7 +27,7 @@ require (
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
 	github.com/redhat-appstudio/application-api v0.0.0-20230509152222-ef5c4dcebc94
 	github.com/redhat-appstudio/build-service v0.0.0-20230113121706-a9f10055dbc4
-	github.com/redhat-appstudio/image-controller v0.0.0-20230424143941-3da9b4925e36
+	github.com/redhat-appstudio/image-controller v0.0.0-20230510051618-e2e987ef8f06
 	github.com/redhat-appstudio/integration-service v0.0.0-20230427084439-306b4611389b
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20230125042419-efd0d0342a2c
 	github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001
