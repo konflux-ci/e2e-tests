@@ -30,7 +30,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 	var devNamespace, managedNamespace string
 
 	BeforeAll(func() {
-		fw, err = framework.NewFramework("release-e2e-pyxis")
+		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("release-e2e-pyxis"))
 		Expect(err).NotTo(HaveOccurred())
 
 		kubeController = tekton.KubeController{
@@ -103,7 +103,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			PublicKey:   string(publicKey),
 			Sources:     defaultEcPolicy.Spec.Sources,
 			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-				Collections: []string{"minimal"},
+				Collections: []string{"minimal", "slsa2"},
 				Exclude:     []string{"cve"},
 			},
 		}
@@ -135,6 +135,10 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		_, err = fw.AsKubeAdmin.HasController.CreateComponent(applicationNameDefault, componentName, devNamespace, gitSourceComponentUrl, "", containerImageUrl, "", "", true)
 		Expect(err).NotTo(HaveOccurred())
 
+		outputContainerImage := "quay.io/redhat-appstudio-qe/test-release-images"
+		_, err = fw.AsKubeAdmin.HasController.CreateComponent(applicationNameDefault, "simple-python", devNamespace, "https://github.com/devfile-samples/devfile-sample-python-basic", "", "", outputContainerImage, "", false)
+		Expect(err).NotTo(HaveOccurred())
+
 	})
 
 	AfterAll(func() {
@@ -154,7 +158,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 					return false
 				}
 
-				return strings.Contains(prList.Items[0].Name, componentName)
+				return strings.Contains(prList.Items[0].Name, componentName) && strings.Contains(prList.Items[1].Name, "simple-python")
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
@@ -165,7 +169,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 					return false
 				}
 
-				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
+				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue() &&
+					prList.Items[1].HasStarted() && prList.Items[1].IsDone() && prList.Items[1].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
 
@@ -187,7 +192,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 					return false
 				}
 
-				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
+				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue() &&
+					prList.Items[1].HasStarted() && prList.Items[1].IsDone() && prList.Items[1].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
 
@@ -198,17 +204,26 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 					return false
 				}
 
-				pr, err := kubeController.Tektonctrl.GetPipelineRun(prList.Items[0].Name, managedNamespace)
+				pr_0, err := kubeController.Tektonctrl.GetPipelineRun(prList.Items[0].Name, managedNamespace)
 				Expect(err).NotTo(HaveOccurred())
 
-				tr, err := kubeController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), pr, "create-pyxis-image")
+				pr_1, err := kubeController.Tektonctrl.GetPipelineRun(prList.Items[1].Name, managedNamespace)
+				Expect(err).NotTo(HaveOccurred())
+
+				tr_0, err := kubeController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), pr_0, "create-pyxis-image")
+				Expect(err).NotTo(HaveOccurred())
+
+				tr_1, err := kubeController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), pr_1, "create-pyxis-image")
 				Expect(err).NotTo(HaveOccurred())
 
 				re := regexp.MustCompile("^[0-9a-z]{10,50}")
-				returnedImageID := re.FindString(tr.Status.TaskRunResults[0].Value.StringVal)
+				returnedImageID_0 := re.FindString(tr_0.Status.TaskRunResults[0].Value.StringVal)
+				returnedImageID_1 := re.FindString(tr_1.Status.TaskRunResults[1].Value.StringVal)
 
-				return strings.Contains(string(tr.Status.Status.Conditions[0].Status), "True") &&
-					strings.Contains(string(tr.Status.TaskRunResults[0].Name), "containerImageIDs") && len(returnedImageID) > 10
+				return strings.Contains(string(tr_0.Status.Status.Conditions[0].Status), "True") &&
+					strings.Contains(string(tr_0.Status.TaskRunResults[0].Name), "containerImageIDs") && len(returnedImageID_0) > 10 &&
+					strings.Contains(string(tr_1.Status.Status.Conditions[1].Status), "True") &&
+					strings.Contains(string(tr_1.Status.TaskRunResults[1].Name), "containerImageIDs") && len(returnedImageID_1) > 10
 			}).Should(BeTrue())
 		})
 
