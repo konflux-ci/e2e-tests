@@ -45,8 +45,8 @@ const (
 	componentDefaultBranchName = "main"
 
 	// Kubernetes resource names
-	testNamespacePrefix = "mvp-demo-dev-namespace"
-	managedNamespace    = "mvp-demo-managed-namespace"
+	testNamespacePrefix = "mvp-dev"
+	managedNamespace    = "mvp-managed"
 
 	appName = "mvp-test-app"
 
