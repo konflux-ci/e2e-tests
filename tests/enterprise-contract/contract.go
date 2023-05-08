@@ -28,6 +28,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 	publicSecretName := "cosign-public-key"
 
 	BeforeAll(func() {
+		Skip("Skip until: https://issues.redhat.com/browse/RHTAPBUGS-236 it is closed")
 		fwk, err = framework.NewFramework(constants.TEKTON_CHAINS_E2E_USER)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(fwk.UserNamespace).NotTo(BeNil(), "failed to create sandbox user")
