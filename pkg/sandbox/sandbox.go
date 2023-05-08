@@ -65,6 +65,9 @@ type SandboxUserAuthInfo struct {
 	// Add a description about user
 	UserName string
 
+	// Returns the username namespace provisioned by toolchain
+	UserNamespace string
+
 	// Add a description about kubeconfigpath
 	KubeconfigPath string
 }
@@ -203,8 +206,14 @@ func (s *SandboxController) GetKubeconfigPathForSpecificUser(toolchainApiUrl str
 		return nil, fmt.Errorf("error writing sandbox user kubeconfig to %s path: %v", kubeconfigPath, err)
 	}
 
+	ns, err := s.GetUserProvisionedNamespace(userName)
+	if err != nil {
+		return nil, fmt.Errorf("error getting provisioned usernamespace: %v", err)
+	}
+
 	return &SandboxUserAuthInfo{
 		UserName:       userName,
+		UserNamespace:  ns,
 		KubeconfigPath: kubeconfigPath,
 	}, nil
 }
@@ -259,6 +268,34 @@ func getUserSignupSpecs(username string) *toolchainApi.UserSignup {
 			},
 		},
 	}
+}
+
+func (s *SandboxController) GetUserProvisionedNamespace(userName string) (namespace string, err error) {
+	userSpace := &toolchainApi.Space{}
+	err = utils.WaitUntil(func() (done bool, err error) {
+		err = s.KubeRest.Get(context.TODO(), types.NamespacedName{
+			Namespace: DEFAULT_TOOLCHAIN_NAMESPACE,
+			Name:      userName,
+		}, userSpace)
+
+		if err != nil {
+			return false, err
+		}
+
+		for _, condition := range userSpace.Status.Conditions {
+			if condition.Type == toolchainApi.SpaceProvisionedReason && condition.Status == corev1.ConditionTrue {
+				return true, nil
+			}
+		}
+
+		if len(userSpace.Status.ProvisionedNamespaces) < 1 {
+			return false, nil
+		}
+
+		return false, nil
+	}, 4*time.Minute)
+
+	return userSpace.Status.ProvisionedNamespaces[0].Name, err
 }
 
 func (s *SandboxController) GetOpenshiftRouteHost(namespace string, name string) (string, error) {

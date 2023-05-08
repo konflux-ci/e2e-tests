@@ -74,16 +74,15 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration) (*Framework
 
 	// "pipeline" service account needs to be present in the namespace before we start with creating tekton resources
 	// TODO: STONE-442 - decrease the timeout here back to 30 seconds once this issue is resolved.
-	userNamespace := fmt.Sprintf("%s-tenant", k.UserName)
-	if err = utils.WaitUntil(asAdmin.CommonController.ServiceaccountPresent("pipeline", userNamespace), timeout); err != nil {
-		return nil, fmt.Errorf("'pipeline' service account wasn't created in %s namespace: %+v", userNamespace, err)
+	if err = utils.WaitUntil(asAdmin.CommonController.ServiceaccountPresent("pipeline", k.UserNamespace), timeout); err != nil {
+		return nil, fmt.Errorf("'pipeline' service account wasn't created in %s namespace: %+v", k.UserNamespace, err)
 	}
 
 	return &Framework{
 		AsKubeAdmin:       asAdmin,
 		AsKubeDeveloper:   asUser,
 		SandboxController: k.SandboxController,
-		UserNamespace:     userNamespace,
+		UserNamespace:     k.UserNamespace,
 		UserName:          k.UserName,
 	}, nil
 }
