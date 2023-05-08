@@ -63,6 +63,10 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 
 		// Clean up after running these tests and before the next tests block: can't have multiple AccessTokens in Injected phase
 		AfterAll(func() {
+			// collect SPI ResourceQuota metrics (temporary)
+			err := fw.AsKubeAdmin.CommonController.GetSpiResourceQuotaInfo("quay-imagepullsecret-usage", namespace, "appstudio-crds-spi")
+			Expect(err).NotTo(HaveOccurred())
+
 			if !CurrentSpecReport().Failed() {
 				Expect(fw.AsKubeAdmin.SPIController.DeleteAllBindingTokensInASpecificNamespace(namespace)).To(Succeed())
 				Expect(fw.AsKubeAdmin.SPIController.DeleteAllAccessTokensInASpecificNamespace(namespace)).To(Succeed())
