@@ -3,8 +3,10 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -158,11 +160,12 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				} else if componentTest.GitSourceUrl != "" {
 					It(fmt.Sprintf("creates component %s from %s git source %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl), func() {
 						for _, compDetected := range cdq.Status.ComponentDetected {
+							outputContainerImg := fmt.Sprintf("quay.io/%s/test-images:%s-%s", utils.GetQuayIOOrganization(), fw.UserName, strings.Replace(uuid.New().String(), "-", "", -1))
 							if componentTest.Type == "private" {
-								component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, componentTest.Name, namespace, SPIGithubSecretName, appTest.ApplicationName)
+								component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, namespace, outputContainerImg, SPIGithubSecretName, appTest.ApplicationName)
 								Expect(err).NotTo(HaveOccurred())
 							} else if componentTest.Type == "public" {
-								component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, componentTest.Name, namespace, "", appTest.ApplicationName)
+								component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, namespace, outputContainerImg, "", appTest.ApplicationName)
 								Expect(err).NotTo(HaveOccurred())
 							}
 						}
@@ -216,14 +219,14 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 							GinkgoWriter.Println("snapshot has not been found yet")
 							return false
 						}
-						return fw.AsKubeAdmin.IntegrationController.HaveHACBSTestsSucceeded(snapshot)
+						return fw.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot)
 
 					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("time out when trying to check if the snapshot %s is marked as successful", snapshot.Name))
 				})
 
 				It("checks if a snapshot environment binding is created successfully", func() {
 					Eventually(func() bool {
-						if fw.AsKubeAdmin.IntegrationController.HaveHACBSTestsSucceeded(snapshot) {
+						if fw.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot) {
 							envbinding, err := fw.AsKubeAdmin.IntegrationController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
 							if err != nil {
 								GinkgoWriter.Println("SnapshotEnvironmentBinding has not been found yet")

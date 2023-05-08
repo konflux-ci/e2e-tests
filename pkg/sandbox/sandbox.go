@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	toolchainApi "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -64,6 +65,9 @@ type SandboxController struct {
 type SandboxUserAuthInfo struct {
 	// Add a description about user
 	UserName string
+
+	// Returns the username namespace provisioned by toolchain
+	UserNamespace string
 
 	// Add a description about kubeconfigpath
 	KubeconfigPath string
@@ -203,8 +207,14 @@ func (s *SandboxController) GetKubeconfigPathForSpecificUser(toolchainApiUrl str
 		return nil, fmt.Errorf("error writing sandbox user kubeconfig to %s path: %v", kubeconfigPath, err)
 	}
 
+	ns, err := s.GetUserProvisionedNamespace(userName)
+	if err != nil {
+		return nil, fmt.Errorf("error getting provisioned usernamespace: %v", err)
+	}
+
 	return &SandboxUserAuthInfo{
 		UserName:       userName,
+		UserNamespace:  ns,
 		KubeconfigPath: kubeconfigPath,
 	}, nil
 }
@@ -259,6 +269,48 @@ func getUserSignupSpecs(username string) *toolchainApi.UserSignup {
 			},
 		},
 	}
+}
+
+func (s *SandboxController) GetUserProvisionedNamespace(userName string) (namespace string, err error) {
+	ns, err := s.waitForNamespaceToBeProvisioned(userName)
+	if err != nil {
+		return "", err
+	}
+
+	return ns, err
+}
+
+func (s *SandboxController) waitForNamespaceToBeProvisioned(userName string) (provisionedNamespace string, err error) {
+	err = utils.WaitUntil(func() (done bool, err error) {
+		var namespaceProvisioned bool
+		userSpace := &toolchainApi.Space{}
+		err = s.KubeRest.Get(context.TODO(), types.NamespacedName{
+			Namespace: DEFAULT_TOOLCHAIN_NAMESPACE,
+			Name:      userName,
+		}, userSpace)
+
+		if err != nil {
+			return false, err
+		}
+
+		// check if a namespace with the username prefix was provisioned
+		for _, pns := range userSpace.Status.ProvisionedNamespaces {
+			if strings.Contains(pns.Name, userName) {
+				namespaceProvisioned = true
+				provisionedNamespace = pns.Name
+			}
+		}
+
+		for _, condition := range userSpace.Status.Conditions {
+			if condition.Reason == toolchainApi.SpaceProvisionedReason && condition.Status == corev1.ConditionTrue && namespaceProvisioned {
+				return true, nil
+			}
+		}
+
+		return false, nil
+	}, 4*time.Minute)
+
+	return provisionedNamespace, err
 }
 
 func (s *SandboxController) GetOpenshiftRouteHost(namespace string, name string) (string, error) {

@@ -13,7 +13,12 @@ import (
 	"github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 )
 
-var _ = framework.SPISuiteDescribe(Label("spi-suite", "link-secret-sa"), func() {
+/*
+ * Component: spi
+ * Description: SVPI-402 - Get file content from a private Github repository
+ */
+
+var _ = framework.SPISuiteDescribe(Label("spi-suite", "get-file-content"), func() {
 
 	defer GinkgoRecover()
 
@@ -36,6 +41,10 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "link-secret-sa"), func() 
 
 		// Clean up after running these tests and before the next tests block: can't have multiple AccessTokens in Injected phase
 		AfterAll(func() {
+			// collect SPI ResourceQuota metrics (temporary)
+			err := fw.AsKubeAdmin.CommonController.GetSpiResourceQuotaInfo("get-file-content", namespace, "appstudio-crds-spi")
+			Expect(err).NotTo(HaveOccurred())
+
 			if !CurrentSpecReport().Failed() {
 				Expect(fw.AsKubeAdmin.SPIController.DeleteAllBindingTokensInASpecificNamespace(namespace)).To(Succeed())
 				Expect(fw.AsKubeAdmin.SPIController.DeleteAllAccessTokensInASpecificNamespace(namespace)).To(Succeed())
@@ -92,7 +101,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "link-secret-sa"), func() 
 			Expect(statusCode).Should(Equal(204))
 		})
 
-		It("SPIFileContentRequest should be in Delivered phase and content should be privided", func() {
+		It("SPIFileContentRequest should be in Delivered phase and content should be provided", func() {
 			Eventually(func() bool {
 				SPIFcr, err = fw.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(SPIFcr.Name, namespace)
 

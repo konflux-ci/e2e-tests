@@ -14,6 +14,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	releasev1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
+	releasemetadata "github.com/redhat-appstudio/release-service/metadata"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -34,18 +35,20 @@ func NewSuiteController(kube *kubeCl.CustomClient) (*SuiteController, error) {
 	}, nil
 }
 
-func (h *SuiteController) HaveHACBSTestsSucceeded(snapshot *appstudioApi.Snapshot) bool {
-	return meta.IsStatusConditionTrue(snapshot.Status.Conditions, "HACBSTestSucceeded")
+func (h *SuiteController) HaveTestsSucceeded(snapshot *appstudioApi.Snapshot) bool {
+	return meta.IsStatusConditionTrue(snapshot.Status.Conditions, "HACBSTestSucceeded") ||
+		meta.IsStatusConditionTrue(snapshot.Status.Conditions, "AppStudioTestSucceeded")
 }
 
-func (h *SuiteController) HaveHACBSTestsFinished(snapshot *appstudioApi.Snapshot) bool {
-	return meta.FindStatusCondition(snapshot.Status.Conditions, "HACBSTestSucceeded") != nil
+func (h *SuiteController) HaveTestsFinished(snapshot *appstudioApi.Snapshot) bool {
+	return meta.FindStatusCondition(snapshot.Status.Conditions, "HACBSTestSucceeded") != nil ||
+		meta.FindStatusCondition(snapshot.Status.Conditions, "AppStudioTestSucceeded") != nil
 }
 
-func (h *SuiteController) MarkHACBSTestsSucceeded(snapshot *appstudioApi.Snapshot) (*appstudioApi.Snapshot, error) {
+func (h *SuiteController) MarkTestsSucceeded(snapshot *appstudioApi.Snapshot) (*appstudioApi.Snapshot, error) {
 	patch := client.MergeFrom(snapshot.DeepCopy())
 	meta.SetStatusCondition(&snapshot.Status.Conditions, metav1.Condition{
-		Type:    "HACBSTestSucceeded",
+		Type:    "AppStudioTestSucceeded",
 		Status:  metav1.ConditionTrue,
 		Reason:  "Passed",
 		Message: "Snapshot Passed",
@@ -262,7 +265,7 @@ func (h *SuiteController) CreateReleasePlan(applicationName, namespace string) (
 			GenerateName: "test-releaseplan-",
 			Namespace:    namespace,
 			Labels: map[string]string{
-				releasev1alpha1.AutoReleaseLabel: "true",
+				releasemetadata.AutoReleaseLabel: "true",
 			},
 		},
 		Spec: releasev1alpha1.ReleasePlanSpec{

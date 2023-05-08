@@ -101,8 +101,15 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-k8s"), func(
 		})
 
 		It("upload secret should be automatically be removed", func() {
-			_, err := fw.AsKubeDeveloper.CommonController.GetSecret(namespace, K8sSecret.Name)
-			Expect(k8sErrors.IsNotFound(err)).To(BeTrue())
+			Eventually(func() bool {
+				_, err := fw.AsKubeDeveloper.CommonController.GetSecret(namespace, K8sSecret.Name)
+
+				if err == nil {
+					return false
+				}
+
+				return k8sErrors.IsNotFound(err)
+			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "upload secret not removed")
 		})
 
 		It("SPIAccessToken exists and is in Read phase", func() {
@@ -130,6 +137,10 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-k8s"), func(
 
 		// Clean up after running these tests and before the next tests block: can't have multiple AccessTokens in Injected phase
 		AfterAll(func() {
+			// collect SPI ResourceQuota metrics (temporary)
+			err := fw.AsKubeAdmin.CommonController.GetSpiResourceQuotaInfo("token-upload-k8s", namespace, "appstudio-crds-spi")
+			Expect(err).NotTo(HaveOccurred())
+
 			if !CurrentSpecReport().Failed() {
 				Expect(fw.AsKubeAdmin.SPIController.DeleteAllBindingTokensInASpecificNamespace(namespace)).To(Succeed())
 				Expect(fw.AsKubeAdmin.SPIController.DeleteAllAccessTokensInASpecificNamespace(namespace)).To(Succeed())
@@ -151,8 +162,15 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-k8s"), func(
 		})
 
 		It("upload secret should be automatically be removed", func() {
-			_, err := fw.AsKubeDeveloper.CommonController.GetSecret(namespace, K8sSecret.Name)
-			Expect(k8sErrors.IsNotFound(err)).To(BeTrue())
+			Eventually(func() bool {
+				_, err := fw.AsKubeDeveloper.CommonController.GetSecret(namespace, K8sSecret.Name)
+
+				if err == nil {
+					return false
+				}
+
+				return k8sErrors.IsNotFound(err)
+			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "upload secret not removed")
 		})
 
 		It("SPIAccessToken exists and is in Read phase", func() {

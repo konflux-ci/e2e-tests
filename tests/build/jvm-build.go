@@ -23,6 +23,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/pkg/apis"
 )
 
@@ -255,9 +256,19 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 					return false
 				}
 
-				for _, tr := range pr.Status.TaskRuns {
-					if tr.PipelineTaskName == "build-container" && tr.Status != nil && tr.Status.TaskSpec != nil && tr.Status.TaskSpec.Steps != nil {
-						for _, step := range tr.Status.TaskSpec.Steps {
+				for _, chr := range pr.Status.ChildReferences {
+					taskRun := &v1beta1.TaskRun{}
+					taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
+					err := f.AsKubeAdmin.CommonController.KubeRest().Get(context.TODO(), taskRunKey, taskRun)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					prTrStatus := &v1beta1.PipelineRunTaskRunStatus{
+						PipelineTaskName: chr.PipelineTaskName,
+						Status:           &taskRun.Status,
+					}
+
+					if chr.PipelineTaskName == "build-container" && prTrStatus.Status != nil && prTrStatus.Status.TaskSpec != nil && prTrStatus.Status.TaskSpec.Steps != nil {
+						for _, step := range prTrStatus.Status.TaskSpec.Steps {
 							if step.Name == "analyse-dependencies-java-sbom" {
 								if step.Image != ciAnalyzerImage {
 									Fail(fmt.Sprintf("the build-container task from component pipelinerun doesn't reference the correct request processor image. expected: %v, actual: %v", ciAnalyzerImage, step.Image))

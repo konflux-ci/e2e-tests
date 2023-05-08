@@ -14,6 +14,9 @@ const (
 	// The quay.io username to perform container builds and puush
 	QUAY_OAUTH_USER_ENV string = "QUAY_OAUTH_USER" // #nosec
 
+	// A quay organization where repositories for component images will be created.
+	DEFAULT_QUAY_ORG_ENV string = "DEFAULT_QUAY_ORG" // #nosec
+
 	// The quay.io token to perform container builds and push. The token must be correlated with the QUAY_OAUTH_USER environment
 	QUAY_OAUTH_TOKEN_ENV string = "QUAY_OAUTH_TOKEN" // #nosec
 
@@ -73,6 +76,8 @@ const (
 	OSAPIServerNamespace string = "openshift-apiserver"
 	OSAPIServerWorkload  string = "apiserver"
 
+	DefaultQuayOrg = "redhat-appstudio-qe"
+
 	RegistryAuthSecretName = "redhat-appstudio-registry-pull-secret"
 
 	SharedPullSecretName      = "redhat-appstudio-user-workload"
@@ -83,14 +88,21 @@ const (
 
 	BuildPipelineSelectorYamlURL = "https://raw.githubusercontent.com/redhat-appstudio/infra-deployments/main/components/build-service/base/build-pipeline-selector.yaml"
 
-	DefaultImagePushRepo         = "quay.io/redhat-appstudio-qe/test-images"
-	DefaultReleasedImagePushRepo = "quay.io/redhat-appstudio-qe/test-release-images"
+	DefaultImagePushRepo         = "quay.io/" + DefaultQuayOrg + "/test-images"
+	DefaultReleasedImagePushRepo = "quay.io/" + DefaultQuayOrg + "/test-release-images"
 
 	BuildTaskRunName = "build-container"
 
 	ComponentInitialBuildAnnotationKey = "appstudio.openshift.io/component-initial-build"
 
 	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.10"
+
+	// TODO
+	// delete this constant and all its occurrences in the code base
+	// once https://issues.redhat.com/browse/RHTAP-810 is completed
+	OldTektonTaskTestOutputName = "HACBS_TEST_OUTPUT"
+
+	TektonTaskTestOutputName = "TEST_OUTPUT"
 )
 
 var (
