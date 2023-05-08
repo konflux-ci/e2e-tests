@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	toolchainApi "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -271,8 +272,18 @@ func getUserSignupSpecs(username string) *toolchainApi.UserSignup {
 }
 
 func (s *SandboxController) GetUserProvisionedNamespace(userName string) (namespace string, err error) {
-	userSpace := &toolchainApi.Space{}
+	ns, err := s.waitForNamespaceToBeProvisioned(userName)
+	if err != nil {
+		return "", err
+	}
+
+	return ns, err
+}
+
+func (s *SandboxController) waitForNamespaceToBeProvisioned(userName string) (provisionedNamespace string, err error) {
 	err = utils.WaitUntil(func() (done bool, err error) {
+		var namespaceProvisioned bool
+		userSpace := &toolchainApi.Space{}
 		err = s.KubeRest.Get(context.TODO(), types.NamespacedName{
 			Namespace: DEFAULT_TOOLCHAIN_NAMESPACE,
 			Name:      userName,
@@ -282,20 +293,24 @@ func (s *SandboxController) GetUserProvisionedNamespace(userName string) (namesp
 			return false, err
 		}
 
-		for _, condition := range userSpace.Status.Conditions {
-			if condition.Type == toolchainApi.SpaceProvisionedReason && condition.Status == corev1.ConditionTrue {
-				return true, nil
+		// check if a namespace with the username prefix was provisioned
+		for _, pns := range userSpace.Status.ProvisionedNamespaces {
+			if strings.Contains(pns.Name, userName) {
+				namespaceProvisioned = true
+				provisionedNamespace = pns.Name
 			}
 		}
 
-		if len(userSpace.Status.ProvisionedNamespaces) < 1 {
-			return false, nil
+		for _, condition := range userSpace.Status.Conditions {
+			if condition.Reason == toolchainApi.SpaceProvisionedReason && condition.Status == corev1.ConditionTrue && namespaceProvisioned {
+				return true, nil
+			}
 		}
 
 		return false, nil
 	}, 4*time.Minute)
 
-	return userSpace.Status.ProvisionedNamespaces[0].Name, err
+	return provisionedNamespace, err
 }
 
 func (s *SandboxController) GetOpenshiftRouteHost(namespace string, name string) (string, error) {
