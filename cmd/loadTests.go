@@ -31,16 +31,16 @@ import (
 )
 
 var (
-	usernamePrefix       = "testuser"
-	numberOfUsers        int
-	waitPipelines        bool
-	verbose              bool
-	QuarkusDevfileSource string = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
-	token                string
-	logConsole           bool
-	failFast             bool
-	disableMetrics       bool
-	threadCount          int
+	componentRepoUrl string = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
+	usernamePrefix   string = "testuser"
+	numberOfUsers    int
+	waitPipelines    bool
+	verbose          bool
+	token            string
+	logConsole       bool
+	failFast         bool
+	disableMetrics   bool
+	threadCount      int
 )
 
 var (
@@ -72,6 +72,7 @@ type LogData struct {
 	EndTimestamp                 string            `json:"endTimestamp"`
 	MachineName                  string            `json:"machineName"`
 	BinaryDetails                string            `json:"binaryDetails"`
+	ComponentRepoUrl             string            `json:"componentRepoUrl"`
 	NumberOfThreads              int               `json:"threads"`
 	NumberOfUsersPerThread       int               `json:"usersPerThread"`
 	NumberOfUsers                int               `json:"totalUsers"`
@@ -121,6 +122,7 @@ func ExecuteLoadTest() {
 }
 
 func init() {
+	rootCmd.Flags().StringVar(&componentRepoUrl, "repo", componentRepoUrl, "the component repo URL to be used")
 	rootCmd.Flags().StringVar(&usernamePrefix, "username", usernamePrefix, "the prefix used for usersignup names")
 	// TODO use a custom kubeconfig and introduce debug logging and trace
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "if 'debug' traces should be displayed in the console")
@@ -248,6 +250,7 @@ func setup(cmd *cobra.Command, args []string) {
 		Timestamp:              time.Now().Format("2006-01-02T15:04:05Z07:00"),
 		MachineName:            machineName,
 		BinaryDetails:          binaryDetails,
+		ComponentRepoUrl:       componentRepoUrl,
 		NumberOfThreads:        threadCount,
 		NumberOfUsersPerThread: numberOfUsers,
 		NumberOfUsers:          overallCount,
@@ -517,7 +520,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			}
 
 			ComponentDetectionQueryName := fmt.Sprintf("%s-cdq", username)
-			cdq, err := framework.AsKubeDeveloper.HasController.CreateComponentDetectionQueryWithTimeout(ComponentDetectionQueryName, usernamespace, QuarkusDevfileSource, "", "", "", false, 60*time.Minute)
+			cdq, err := framework.AsKubeDeveloper.HasController.CreateComponentDetectionQueryWithTimeout(ComponentDetectionQueryName, usernamespace, componentRepoUrl, "", "", "", false, 60*time.Minute)
 			if err != nil {
 				logError(6, fmt.Sprintf("Unable to create ComponentDetectionQuery %s: %v", ComponentDetectionQueryName, err))
 				atomic.StoreInt64(&FailedResourceCreations[threadIndex], atomic.AddInt64(&FailedResourceCreations[threadIndex], 1))
