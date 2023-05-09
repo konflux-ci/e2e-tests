@@ -122,7 +122,7 @@ func ExecuteLoadTest() {
 }
 
 func init() {
-	rootCmd.Flags().StringVar(&componentRepoUrl, "repo", componentRepoUrl, "the component repo URL to be used")
+	rootCmd.Flags().StringVar(&componentRepoUrl, "component-repo", componentRepoUrl, "the component repo URL to be used")
 	rootCmd.Flags().StringVar(&usernamePrefix, "username", usernamePrefix, "the prefix used for usersignup names")
 	// TODO use a custom kubeconfig and introduce debug logging and trace
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "if 'debug' traces should be displayed in the console")
