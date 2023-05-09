@@ -45,8 +45,8 @@ const (
 	componentDefaultBranchName = "main"
 
 	// Kubernetes resource names
-	testNamespacePrefix = "mvp-demo-dev-namespace"
-	managedNamespace    = "mvp-demo-managed-namespace"
+	testNamespacePrefix = "mvp-dev"
+	managedNamespace    = "mvp-managed"
 
 	appName = "mvp-test-app"
 
@@ -90,8 +90,8 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		// https://github.com/hacbs-contract/ec-policies/blob/de8afa912e7a80d02abb82358ce7b23cf9a286c8/data/rule_data.yml#L9-L12
 		// It is required in order to test that the release of the image failed based on a failed check in EC
 		untrustedPipelineBundle, err = createUntrustedPipelineBundle()
-		klog.Info(untrustedPipelineBundle)
 		Expect(err).NotTo(HaveOccurred())
+		klog.Info(untrustedPipelineBundle)
 		f, err = framework.NewFramework(utils.GetGeneratedNamespace(testNamespacePrefix))
 		Expect(err).NotTo(HaveOccurred())
 		userNamespace = f.UserNamespace
