@@ -33,6 +33,7 @@ type Sync struct {
 	Secrets         Secrets         `yaml:"secrets"`
 }
 
+// Available values for vcluster helm chart: https://artifacthub.io/packages/helm/loft/vcluster
 type ValuesTemplate struct {
 	Openshift Openshift `yaml:"openshift"`
 	Sync      Sync      `yaml:"sync"`
