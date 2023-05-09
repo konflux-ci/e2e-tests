@@ -95,7 +95,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 
 			// Remove all resources created by the tests
 			AfterAll(func() {
-				/*if !CurrentSpecReport().Failed() {
+				if !CurrentSpecReport().Failed() {
 					Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.HasController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
@@ -104,7 +104,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 					Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(fw.UserNamespace)).To(Succeed())
 					Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllGitOpsDeploymentInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 					Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
-				}*/
+				}
 			})
 
 			It("initializes byoc cluster connection", func() {
