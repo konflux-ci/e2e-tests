@@ -3,6 +3,7 @@ package release
 import (
 	"time"
 
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	appstudiov1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -15,10 +16,10 @@ const (
 	releasePipelineName                 = "release-pipeline"
 	applicationName                     = "application"
 	releasePipelineBundle               = "quay.io/hacbs-release/demo:m5-alpine"
-	serviceAccount                      = "pipeline"
+	serviceAccount                      = constants.DefaultPipelineServiceAccount
 	releaseStrategyPolicy               = "policy"
 	environment                         = "test-environment"
-	releaseStrategyServiceAccount       = "pipeline"
+	releaseStrategyServiceAccount       = constants.DefaultPipelineServiceAccount
 
 	releasePipelineNameDefault           string = "release"
 	applicationNameDefault               string = "appstudio"

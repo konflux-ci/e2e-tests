@@ -19,6 +19,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/pipeline"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -166,48 +167,62 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(len(sbom.Components)).To(BeNumerically(">=", 1))
 			})
 
-			It("should validate Tekton Results", func() {
-				// Create an Service account and a token associating it with the service account
-				resultSA := "tekton-results-tests"
-				_, err := kubeadminClient.CommonController.CreateServiceAccount(resultSA, testNamespace, nil)
-				Expect(err).NotTo(HaveOccurred())
-				_, err = kubeadminClient.CommonController.CreateRoleBinding("tekton-results-tests", testNamespace, "ServiceAccount", resultSA, "ClusterRole", "tekton-results-readonly", "rbac.authorization.k8s.io")
-				Expect(err).NotTo(HaveOccurred())
+			When("Pipeline Results are stored", func() {
+				var resultClient *pipeline.ResultClient
+				var pipelineRun *v1beta1.PipelineRun
 
-				resultSecret := &v1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "tekton-results-tests",
-						Annotations: map[string]string{"kubernetes.io/service-account.name": resultSA},
-					},
-					Type: v1.SecretTypeServiceAccountToken,
-				}
+				BeforeAll(func() {
+					// Create an Service account and a token associating it with the service account
+					resultSA := "tekton-results-tests"
+					_, err := kubeadminClient.CommonController.CreateServiceAccount(resultSA, testNamespace, nil)
+					Expect(err).NotTo(HaveOccurred())
+					_, err = kubeadminClient.CommonController.CreateRoleBinding("tekton-results-tests", testNamespace, "ServiceAccount", resultSA, "ClusterRole", "tekton-results-readonly", "rbac.authorization.k8s.io")
+					Expect(err).NotTo(HaveOccurred())
 
-				_, err = kubeadminClient.CommonController.CreateSecret(testNamespace, resultSecret)
-				Expect(err).ToNot(HaveOccurred())
-				err = kubeadminClient.CommonController.LinkSecretToServiceAccount(testNamespace, resultSecret.Name, resultSA, false)
-				Expect(err).ToNot(HaveOccurred())
+					resultSecret := &v1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "tekton-results-tests",
+							Annotations: map[string]string{"kubernetes.io/service-account.name": resultSA},
+						},
+						Type: v1.SecretTypeServiceAccountToken,
+					}
 
-				resultSecret, err = kubeadminClient.CommonController.GetSecret(testNamespace, resultSecret.Name)
-				Expect(err).ToNot(HaveOccurred())
-				token := resultSecret.Data["token"]
+					_, err = kubeadminClient.CommonController.CreateSecret(testNamespace, resultSecret)
+					Expect(err).ToNot(HaveOccurred())
+					err = kubeadminClient.CommonController.LinkSecretToServiceAccount(testNamespace, resultSecret.Name, resultSA, false)
+					Expect(err).ToNot(HaveOccurred())
 
-				// Retrive Result REST API url
-				resultRoute, err := kubeadminClient.CommonController.GetOpenshiftRoute("tekton-results", "tekton-results")
-				Expect(err).NotTo(HaveOccurred())
-				resultUrl := fmt.Sprintf("https://%s", resultRoute.Spec.Host)
-				resultClient := pipeline.NewClient(resultUrl, string(token))
+					resultSecret, err = kubeadminClient.CommonController.GetSecret(testNamespace, resultSecret.Name)
+					Expect(err).ToNot(HaveOccurred())
+					token := resultSecret.Data["token"]
+					fmt.Println("token:", string(token))
 
-				pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
-				Expect(err).ShouldNot(HaveOccurred())
+					// Retrieve Result REST API url
+					resultRoute, err := kubeadminClient.CommonController.GetOpenshiftRoute("tekton-results", "tekton-results")
+					Expect(err).NotTo(HaveOccurred())
+					resultUrl := fmt.Sprintf("https://%s", resultRoute.Spec.Host)
+					resultClient = pipeline.NewClient(resultUrl, string(token))
 
-				// Verify Records
-				records, err := resultClient.GetRecords(testNamespace, string(pipelineRun.GetUID()))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(len(records.Record)).NotTo(BeZero())
-				// Verify Logs
-				logs, err := resultClient.GetLogs(testNamespace, string(pipelineRun.GetUID()))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(len(logs.Record)).NotTo(BeZero())
+					pipelineRun, err = kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
+					Expect(err).ShouldNot(HaveOccurred())
+				})
+				It("should have Pipeline Records", func() {
+					// Verify Records
+					records, err := resultClient.GetRecords(testNamespace, string(pipelineRun.GetUID()))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(len(records.Record)).NotTo(BeZero(), "No records found for PipelineRun %s", pipelineRun.Name)
+				})
+
+				It("should have Pipeline Logs", func() {
+					// Verify if result is stored in Database
+					logs, err := resultClient.GetLogs(testNamespace, string(pipelineRun.GetUID()))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(len(logs.Record)).NotTo(BeZero(), "No logs found for PipelineRun %s", pipelineRun.Name)
+					// Verify if result is stored in S3
+					log, err := resultClient.GetLogByName(logs.Record[0].Name)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(len(log)).NotTo(BeZero(), "No log content found for PipelineRun %s", pipelineRun.Name)
+				})
 			})
 
 			It("should validate tekton taskrun test results", func() {

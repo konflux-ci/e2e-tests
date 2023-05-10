@@ -8,6 +8,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -141,10 +142,49 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 		}
 	}
 
-	// "pipeline" service account needs to be present in the namespace before we start with creating tekton resources
-	// TODO: STONE-442 - decrease the timeout here back to 30 seconds once this issue is resolved.
-	if err := utils.WaitUntil(s.ServiceaccountPresent("pipeline", name), time.Second*60); err != nil {
-		return nil, fmt.Errorf("'pipeline' service account wasn't created in %s namespace: %+v", name, err)
+	// Create ServiceAccount which is used by Pipelines but created by Toolchain host operator
+	_, err = s.KubeInterface().CoreV1().ServiceAccounts(name).Get(context.TODO(), constants.DefaultPipelineServiceAccount, metav1.GetOptions{})
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			saTemplate := corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: constants.DefaultPipelineServiceAccount,
+				},
+			}
+			_, err = s.KubeInterface().CoreV1().ServiceAccounts(name).Create(context.TODO(), &saTemplate, metav1.CreateOptions{})
+			if err != nil {
+				return nil, fmt.Errorf("error when creating %s serviceaccount: %v", constants.DefaultPipelineServiceAccount, err)
+			}
+		} else {
+			return nil, fmt.Errorf("error when getting the '%s' serviceaccount: %v", constants.DefaultPipelineServiceAccount, err)
+		}
+	}
+
+	_, err = s.KubeInterface().RbacV1().RoleBindings(name).Get(context.TODO(), constants.DefaultPipelineServiceAccountRoleBinding, metav1.GetOptions{})
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			roleBindingTemplate := rbacv1.RoleBinding{
+				TypeMeta:   metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{Name: constants.DefaultPipelineServiceAccountRoleBinding},
+				Subjects: []rbacv1.Subject{
+					{
+						Kind:      "ServiceAccount",
+						Name:      constants.DefaultPipelineServiceAccount,
+						Namespace: name,
+					},
+				},
+				RoleRef: rbacv1.RoleRef{
+					Kind: "ClusterRole",
+					Name: constants.DefaultPipelineServiceAccountClusterRole,
+				},
+			}
+			_, err = s.KubeInterface().RbacV1().RoleBindings(name).Create(context.TODO(), &roleBindingTemplate, metav1.CreateOptions{})
+			if err != nil {
+				return nil, fmt.Errorf("error when creating %s roleBinding: %v", constants.DefaultPipelineServiceAccountRoleBinding, err)
+			}
+		} else {
+			return nil, fmt.Errorf("error when getting the '%s' roleBinding: %v", constants.DefaultPipelineServiceAccountRoleBinding, err)
+		}
 	}
 
 	// Argo CD role/rolebinding need to be present in the namespace before we create GitOpsDeployments.

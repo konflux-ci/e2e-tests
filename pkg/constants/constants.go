@@ -103,6 +103,10 @@ const (
 	OldTektonTaskTestOutputName = "HACBS_TEST_OUTPUT"
 
 	TektonTaskTestOutputName = "TEST_OUTPUT"
+
+	DefaultPipelineServiceAccount            = "appstudio-pipeline"
+	DefaultPipelineServiceAccountRoleBinding = "appstudio-pipelines-runner-rolebinding"
+	DefaultPipelineServiceAccountClusterRole = "appstudio-pipelines-runner"
 )
 
 var (
