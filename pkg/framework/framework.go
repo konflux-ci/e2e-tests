@@ -6,6 +6,7 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/sandbox"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
@@ -72,10 +73,8 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration) (*Framework
 		return nil, fmt.Errorf("error when initializing appstudio hub controllers for sandbox user: %v", err)
 	}
 
-	// "pipeline" service account needs to be present in the namespace before we start with creating tekton resources
-	// TODO: STONE-442 - decrease the timeout here back to 30 seconds once this issue is resolved.
-	if err = utils.WaitUntil(asAdmin.CommonController.ServiceaccountPresent("pipeline", k.UserNamespace), timeout); err != nil {
-		return nil, fmt.Errorf("'pipeline' service account wasn't created in %s namespace: %+v", k.UserNamespace, err)
+	if err = utils.WaitUntil(asAdmin.CommonController.ServiceaccountPresent(constants.DefaultPipelineServiceAccount, k.UserNamespace), timeout); err != nil {
+		return nil, fmt.Errorf("'%s' service account wasn't created in %s namespace: %+v", constants.DefaultPipelineServiceAccount, k.UserNamespace, err)
 	}
 
 	return &Framework{
