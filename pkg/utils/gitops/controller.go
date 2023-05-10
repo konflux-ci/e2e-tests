@@ -116,8 +116,10 @@ func (h *SuiteController) DeleteAllGitOpsDeploymentInASpecificNamespace(namespac
 *	- targetNamespace: Cluster namespace where to create Gitops resources
 *	- serverApi: A valid API kubernetes server for a specific Kubernetes/Openshift cluster
 *   - clusterCredentialsSecret: Secret with a valid kubeconfig credentials
+*   - clusterType: Openshift/Kubernetes
+*   - kubeIngressDomain: If clusterType == "Kubernetes", ingressDomain is mandatory and is enforced by the webhook validation
  */
-func (h *SuiteController) CreateEphemeralEnvironment(name string, namespace string, targetNamespace string, serverApi string, clusterCredentialsSecret string, clusterType appservice.ConfigurationClusterType) (*appservice.Environment, error) {
+func (h *SuiteController) CreateEphemeralEnvironment(name string, namespace string, targetNamespace string, serverApi string, clusterCredentialsSecret string, clusterType appservice.ConfigurationClusterType, kubeIngressDomain string) (*appservice.Environment, error) {
 	ephemeralEnvironmentObj := &appservice.Environment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -143,6 +145,10 @@ func (h *SuiteController) CreateEphemeralEnvironment(name string, namespace stri
 				},
 			},
 		},
+	}
+
+	if clusterType == appservice.ConfigurationClusterType_Kubernetes {
+		ephemeralEnvironmentObj.Spec.UnstableConfigurationFields.IngressDomain = kubeIngressDomain
 	}
 
 	if err := h.KubeRest().Create(context.TODO(), ephemeralEnvironmentObj); err != nil {

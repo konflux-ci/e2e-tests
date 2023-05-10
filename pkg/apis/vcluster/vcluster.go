@@ -50,7 +50,7 @@ func (c *vclusterFactory) InitializeVCluster(clusterName string, targetNamespace
 		return "", err
 	}
 
-	if err := c.CreateKubconfig(clusterName, targetNamespace, kubeconfigPath); err != nil {
+	if err := c.CreateKubeconfig(clusterName, targetNamespace, kubeconfigPath); err != nil {
 		return "", err
 	}
 
@@ -115,7 +115,7 @@ func (vc *vclusterFactory) CreateRoute(serviceName string, namespace string) (ro
 	})
 }
 
-func (c *vclusterFactory) CreateKubconfig(clusterName string, targetNamespace string, kubeconfigPath string) error {
+func (c *vclusterFactory) CreateKubeconfig(clusterName string, targetNamespace string, kubeconfigPath string) error {
 	return utils.ExecuteCommandInASpecificDirectory(VCLUSTER_BIN, []string{"connect", clusterName, "--namespace", targetNamespace, "--update-current=false", "--service-account=kube-system/admin",
 		"--token-expiration=10800", "--cluster-role=cluster-admin", "--insecure", "--kube-config", kubeconfigPath}, "")
 }

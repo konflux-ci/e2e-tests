@@ -5,7 +5,7 @@
 2. Make sure the cluster you are about to run this test against is public (i.e. hosted on a public cloud provider).
 3. Access to an external openshift cluster to use it as RHTAP environment.
 4. Have installed vcluster binary. How to install [here](https://www.vcluster.com/docs/getting-started/setup).
-5. Have installed helm binary. How to install [here](https://helm.sh/docs/helm/helm_install/).
+5. Have installed helm binary. How to install [here](https://helm.sh/docs/intro/install/).
 
 #### Environments
 

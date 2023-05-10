@@ -3,7 +3,6 @@ package has
 import (
 	"context"
 	"fmt"
-	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -27,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/pointer"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -168,7 +168,7 @@ func (h *SuiteController) GetHasComponent(name, namespace string) (*appservice.C
 }
 
 // ScaleDeploymentReplicas scales the replicas of a given deployment
-func (h *SuiteController) ScaleComponentReplicas(component *appservice.Component, replicas int) (*appservice.Component, error) {
+func (h *SuiteController) ScaleComponentReplicas(component *appservice.Component, replicas *int) (*appservice.Component, error) {
 	component.Spec.Replicas = replicas
 
 	err := h.KubeRest().Update(context.TODO(), component, &rclient.UpdateOptions{})
@@ -226,7 +226,7 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 			},
 			Secret:         secret,
 			ContainerImage: containerImage,
-			Replicas:       1,
+			Replicas:       pointer.Int(1),
 			TargetPort:     8081,
 			Route:          "",
 		},
@@ -523,7 +523,7 @@ func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentN
 			},
 			Secret:         secret,
 			ContainerImage: containerImage,
-			Replicas:       1,
+			Replicas:       pointer.Int(1),
 			TargetPort:     8080,
 			Route:          "",
 		},
@@ -578,35 +578,6 @@ func (h *SuiteController) GetHasComponentConditionStatusMessages(name, namespace
 		messages = append(messages, condition.Message)
 	}
 	return
-}
-
-// CreateSnapshotEnvironmentBinding creates a new SnapshotEnvironmentBinding
-func (h *SuiteController) CreateSnapshotEnvironmentBinding(name, namespace, applicationName, snapshotName, environmentName string, component *appservice.Component) (*appservice.SnapshotEnvironmentBinding, error) {
-	bindingComponents := make([]appservice.BindingComponent, 0)
-	snapshotEnvironmentBinding := &appservice.SnapshotEnvironmentBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: appservice.SnapshotEnvironmentBindingSpec{
-			Application: applicationName,
-			Environment: environmentName,
-			Components: append(bindingComponents,
-				appservice.BindingComponent{
-					Configuration: appservice.BindingComponentConfiguration{
-						Replicas: int(math.Max(1, float64(component.Spec.Replicas))),
-					},
-					Name: component.Name,
-				}),
-			Snapshot: snapshotName,
-		},
-	}
-
-	err := h.KubeRest().Create(context.TODO(), snapshotEnvironmentBinding)
-	if err != nil {
-		return nil, err
-	}
-	return snapshotEnvironmentBinding, nil
 }
 
 // DeleteAllSnapshotEnvBindingsInASpecificNamespace removes all snapshotEnvironmentBindings from a specific namespace. Useful when creating a lot of resources and want to remove all of them

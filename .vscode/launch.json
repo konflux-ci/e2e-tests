@@ -11,7 +11,7 @@
             "mode": "test",
             "program": "${workspaceFolder}/cmd/e2e_test.go",
             "args": [
-                "--ginkgo.focus=e2e-demos-suite",
+                "--ginkgo.focus=byoc",
                 "--ginkgo.junit-report=report.xml"
             ],
             "cwd": "${workspaceFolder}",

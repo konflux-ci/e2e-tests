@@ -15,6 +15,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -336,7 +337,7 @@ func (s *SuiteController) CreateComponentWithDockerSource(applicationName, compo
 			},
 			Secret:         secret,
 			ContainerImage: outputContainerImage,
-			Replicas:       1,
+			Replicas:       pointer.Int(1),
 			TargetPort:     8081,
 			Route:          "",
 		},

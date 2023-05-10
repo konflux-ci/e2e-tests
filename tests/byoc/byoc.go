@@ -72,7 +72,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 	var vc vcluster.Vcluster
 	var ephemeralClusterClient *kubernetes.Clientset
 	var fw *framework.Framework
-	var byocKubeconfig, byocAPIServerURL string
+	var byocKubeconfig, byocAPIServerURL, kubeIngressDomain string
 
 	// Initialize the application struct
 	application := &appservice.Application{}
@@ -88,12 +88,27 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 				fw, err = framework.NewFramework(utils.GetGeneratedNamespace(fmt.Sprintf("byoc-%s", strings.ToLower(string(suite.Byoc.ClusterType)))))
 				Expect(err).NotTo(HaveOccurred())
 
+				// Use target test cluster as Ingress for the cluster provided for user. Ingress is mandatory for kubernetes cluster like vcluster in this case.
+				openshiftIngress, err := fw.AsKubeAdmin.CommonController.GetOpenshiftIngress()
+				Expect(err).NotTo(HaveOccurred())
+
+				kubeIngressDomain = openshiftIngress.Spec.Domain
+				Expect(kubeIngressDomain).NotTo(BeEmpty(), "domain is not pressent in the cluster. Make sure your openshift cluster have the domain defined in ingress cluster object")
+
 				if suite.Byoc.ClusterType == appservice.ConfigurationClusterType_Kubernetes {
 					vc = vcluster.NewVclusterController(fmt.Sprintf("%s/tmp", rootPath), fw.AsKubeAdmin.CommonController.CustomClient)
+
+					byocKubeconfig, err = vc.InitializeVCluster(fw.UserNamespace, fw.UserNamespace)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(byocKubeconfig).NotTo(BeEmpty(), "failed to initialize vcluster. Kubeconfig not provided")
+
+				} else if suite.Byoc.ClusterType == appservice.ConfigurationClusterType_OpenShift {
+					byocKubeconfig = utils.GetEnv("BYOC_KUBECONFIG", "")
+					Expect(byocKubeconfig).NotTo(BeEmpty(), "Please provide BYOC_KUBECONFIG env pointing to a valid openshift kubeconfig file")
 				}
 			})
 
-			// Remove all resources created by the tests
+			// Remove all resources created by the tests in case the suite was successfull
 			AfterAll(func() {
 				if !CurrentSpecReport().Failed() {
 					Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
@@ -107,25 +122,20 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 				}
 			})
 
-			It("initializes byoc cluster connection", func() {
-				if suite.Byoc.ClusterType == appservice.ConfigurationClusterType_Kubernetes {
-					byocKubeconfig, err = vc.InitializeVCluster(fw.UserNamespace, fw.UserNamespace)
-					Expect(byocKubeconfig).NotTo(BeEmpty(), "failed to initialize vcluster. Kubeconfig not provided")
-					Expect(err).NotTo(HaveOccurred())
-
-				} else if suite.Byoc.ClusterType == appservice.ConfigurationClusterType_OpenShift {
-					byocKubeconfig = utils.GetEnv("BYOC_KUBECONFIG", "")
-					Expect(byocKubeconfig).NotTo(BeEmpty(), "Please provide BYOC_KUBECONFIG env pointing to a valid openshift kubeconfig file")
-				}
+			It("initializes byoc cluster connection and creates targetNamespace", func() {
 
 				config, err := clientcmd.BuildConfigFromFlags("", byocKubeconfig)
-
 				Expect(err).NotTo(HaveOccurred())
 				byocAPIServerURL = config.Host
 				Expect(byocAPIServerURL).NotTo(BeEmpty())
 
 				ephemeralClusterClient, err = client.NewKubeFromKubeConfigFile(byocKubeconfig)
 				Expect(err).NotTo(HaveOccurred())
+
+				// Cluster is managed by a user so we need to create the target cluster where we will deploy the RHTAP components
+				ns, err := ephemeralClusterClient.CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: suite.Byoc.TargetNamespace}}, metav1.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ns.Name).To(Equal(suite.Byoc.TargetNamespace))
 			})
 
 			It("creates managed-gitops.redhat.com/managed-environment secret type", func() {
@@ -152,15 +162,9 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 				// As an workaround for now: Deletes the development environment and recreate it with kubernetes cluster information
 				Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(fw.UserNamespace, 1*time.Minute)).NotTo(HaveOccurred())
 
-				environment, err := fw.AsKubeAdmin.GitOpsController.CreateEphemeralEnvironment(ManagedEnvironmentName, fw.UserNamespace, suite.Byoc.TargetNamespace, byocAPIServerURL, ManagedEnvironmentSecretName, suite.Byoc.ClusterType)
+				environment, err := fw.AsKubeAdmin.GitOpsController.CreateEphemeralEnvironment(ManagedEnvironmentName, fw.UserNamespace, suite.Byoc.TargetNamespace, byocAPIServerURL, ManagedEnvironmentSecretName, suite.Byoc.ClusterType, kubeIngressDomain)
 				Expect(environment.Name).To(Equal(ManagedEnvironmentName))
 				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("creates namespace in the ephemeral target cluster", func() {
-				ns, err := ephemeralClusterClient.CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: suite.Byoc.TargetNamespace}}, metav1.CreateOptions{})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(ns.Name).To(Equal(suite.Byoc.TargetNamespace))
 			})
 
 			It("creates RHTAP application and check healths", func() {
