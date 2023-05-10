@@ -426,7 +426,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		})
 
 		It("resulting SBOM file can be downloaded", func() {
-			pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, appName, userNamespace, "")
+			pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, appName, userNamespace, "")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			var outputImage string
@@ -440,6 +440,10 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 			_, _, err = build.GetParsedSbomFilesContentFromImage(outputImage)
 			Expect(err).NotTo(HaveOccurred())
 
+		})
+
+		It("validation of Tekton TaskRun test results completes successfully", func() {
+			Expect(build.ValidateBuildPipelineTestResults(pipelineRun, f.AsKubeAdmin.CommonController.KubeRest())).To(Succeed())
 		})
 
 		It("Snapshot is created", func() {
