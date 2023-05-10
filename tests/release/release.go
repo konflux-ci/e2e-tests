@@ -51,7 +51,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 		GinkgoWriter.Println("Managed Namespace :", managedNamespace)
 
 		// Wait until the "pipeline" SA is created and ready with secrets by the openshift-pipelines operator
-		GinkgoWriter.Printf("Wait until the 'pipeline' SA is created in %s namespace \n", managedNamespace)
+		GinkgoWriter.Printf("Wait until the '%s' SA is created in %s namespace \n", serviceAccount, managedNamespace)
 		Eventually(func() bool {
 			sa, err := fw.AsKubeAdmin.CommonController.GetServiceAccount(serviceAccount, managedNamespace)
 			return sa != nil && err == nil
