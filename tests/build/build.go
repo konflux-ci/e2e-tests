@@ -625,6 +625,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			_, err = f.AsKubeAdmin.CommonController.CreateSecret(testNamespace, dummySecret)
 			Expect(err).ToNot(HaveOccurred())
+			err = f.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(testNamespace, dummySecret.Name, constants.DefaultPipelineServiceAccount, false)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Temporary linking to old pipeline SA, should be removed when default SA is switched to "appstudio-pipeline"
 			err = f.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(testNamespace, dummySecret.Name, "pipeline", false)
 			Expect(err).ToNot(HaveOccurred())
 
