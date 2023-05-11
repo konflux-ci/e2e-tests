@@ -15,6 +15,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/pipeline"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
@@ -31,7 +32,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 		namespace = fwk.UserNamespace
 	})
 
-	Context("infrastructure is running", Label("pipeline"), func() {
+	Context("infrastructure is running", Label("pipeline", "pipeline2"), func() {
 		It("verifies if the chains controller is running", func() {
 			err := fwk.AsKubeAdmin.CommonController.WaitForPodSelector(fwk.AsKubeAdmin.CommonController.IsPodRunning, constants.TEKTON_CHAINS_NS, "app", "tekton-chains-controller", 60, 100)
 			Expect(err).NotTo(HaveOccurred())
@@ -254,34 +255,66 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				))
 			})
 
-			It("fails when tests are not satisfied on strict mode", func() {
-				policy := ecp.EnterpriseContractPolicySpec{
-					Sources: policySource,
-					Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-						// The BuildahDemo pipeline used to generate the test data does not
-						// include the required test tasks, so this policy should always fail.
-						Include: []string{"test"},
-					},
-				}
-				Expect(kubeController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
-				// printPolicyConfiguration(policy)
+			When("tests are not satisfied on strict mode", func() {
+				var tr *v1beta1.PipelineRunTaskRunStatus
+				var pr *v1beta1.PipelineRun
+				var resultClient *pipeline.ResultClient
+				BeforeAll(func() {
+					policy := ecp.EnterpriseContractPolicySpec{
+						Sources: policySource,
+						Configuration: &ecp.EnterpriseContractPolicyConfiguration{
+							// The BuildahDemo pipeline used to generate the test data does not
+							// include the required test tasks, so this policy should always fail.
+							Include: []string{"test"},
+						},
+					}
+					Expect(kubeController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
+					// printPolicyConfiguration(policy)
 
-				generator.Strict = true
-				pr, err := kubeController.RunPipeline(generator, pipelineRunTimeout)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(kubeController.WatchPipelineRun(pr.Name, pipelineRunTimeout)).To(Succeed())
+					generator.Strict = true
+					pr, err = kubeController.RunPipeline(generator, pipelineRunTimeout)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(kubeController.WatchPipelineRun(pr.Name, pipelineRunTimeout)).To(Succeed())
 
-				// Refresh our copy of the PipelineRun for latest results
-				pr, err = kubeController.Tektonctrl.GetPipelineRun(pr.Name, pr.Namespace)
-				Expect(err).NotTo(HaveOccurred())
+					// Refresh our copy of the PipelineRun for latest results
+					pr, err = kubeController.Tektonctrl.GetPipelineRun(pr.Name, pr.Namespace)
+					Expect(err).NotTo(HaveOccurred())
 
-				tr, err := kubeController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
-				Expect(err).NotTo(HaveOccurred())
+					tr, err = kubeController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
+					Expect(err).NotTo(HaveOccurred())
 
-				printTaskRunStatus(tr, namespace, *fwk.AsKubeAdmin.CommonController)
-				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s failed\n", tr.PipelineTaskName, pr.Name)
-				Expect(tekton.DidTaskSucceed(tr)).To(BeFalse())
-				// Because the task fails, no results are created
+					// Verify the logs of failed pipeline are stored in the persistent storage
+					token, err := tekton.CreateResultTestToken(fwk.AsKubeAdmin.CommonController, pr.Namespace)
+					Expect(err).NotTo(HaveOccurred())
+
+					// Retrive Result REST API url
+					resultRoute, err := fwk.AsKubeAdmin.CommonController.GetOpenshiftRoute("tekton-results", "tekton-results")
+					Expect(err).NotTo(HaveOccurred())
+					resultUrl := fmt.Sprintf("https://%s", resultRoute.Spec.Host)
+					resultClient = pipeline.NewClient(resultUrl, token)
+				})
+
+				It("should pipeline failed", func() {
+					printTaskRunStatus(tr, namespace, *fwk.AsKubeAdmin.CommonController)
+					GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s failed\n", tr.PipelineTaskName, pr.Name)
+					Expect(tekton.DidTaskSucceed(tr)).To(BeFalse())
+				})
+
+				It("should be able to retrieve the logs of failed pipeline", func() {
+					// Verify if result is stored in Database
+					logs, err := resultClient.GetLogs(pr.Namespace, string(pr.GetUID()))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(len(logs.Record)).NotTo(BeZero(), "No logs found for PipelineRun %s", pr.Name)
+					for log := range logs.Record {
+						fmt.Println("log: ", logs.Record[log].Name)
+					}
+
+					// Verify if result is stored in S3
+					log, err := resultClient.GetLogByName(logs.Record[0].Name)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(len(log)).NotTo(BeZero(), "No log content found for PipelineRun %s", pr.Name)
+					Expect(log).To(ContainSubstring("PipelineRun name from params:d"))
+				})
 			})
 
 			It("fails when unexpected signature is used", func() {

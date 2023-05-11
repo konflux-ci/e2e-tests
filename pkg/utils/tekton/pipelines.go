@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 
@@ -11,8 +12,15 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
+)
+
+const (
+	PipelineResultTestSA          = "tekton-results-tests"
+	PipelineResultTestSecret      = "tekton-results-tests"
+	PipelineResultTestRoleBinding = "tekton-results-tests"
 )
 
 type PipelineRunGenerator interface {
@@ -220,4 +228,59 @@ func StorePipelineRun(pipelineRun *v1beta1.PipelineRun, testName string, suiteCo
 	}
 
 	return nil
+}
+
+func CreateResultTestToken(c *common.SuiteController, namespace string) (string, error) {
+	_, err := c.CreateServiceAccount(PipelineResultTestSA, namespace, nil)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = c.CreateRoleBinding(PipelineResultTestRoleBinding, namespace, "ServiceAccount", PipelineResultTestSA, "ClusterRole", "tekton-results-readonly", "rbac.authorization.k8s.io")
+	if err != nil {
+		return "", err
+	}
+
+	resultSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        PipelineResultTestSecret,
+			Annotations: map[string]string{"kubernetes.io/service-account.name": PipelineResultTestSA},
+		},
+		Type: corev1.SecretTypeServiceAccountToken,
+	}
+
+	_, err = c.CreateSecret(namespace, resultSecret)
+	if err != nil {
+		return "", err
+	}
+
+	err = c.LinkSecretToServiceAccount(namespace, resultSecret.Name, PipelineResultTestSA, false)
+	if err != nil {
+		return "", err
+	}
+
+	resultSecret, err = c.GetSecret(namespace, resultSecret.Name)
+	if err != nil {
+		return "", err
+	}
+
+	token := resultSecret.Data["token"]
+	return string(token), nil
+}
+
+func DeleteResultTestToken(c *common.SuiteController, namespace string) error {
+	err := c.DeleteSecret(PipelineResultTestSecret, namespace)
+	// ignore error if secret doesn't exist
+	if err != nil && !errors.IsNotFound(err) {
+		fmt.Println(err.Error())
+		return err
+	}
+	if err := c.DeleteRoleBinding(PipelineResultTestRoleBinding, namespace, false); err != nil {
+		return err
+	}
+
+	if err := c.DeleteServiceAccount(PipelineResultTestSA, namespace, false); err != nil {
+		return err
+	}
+	return utils.WaitUntil(c.ServiceaccountPresent(PipelineResultTestSA, namespace), time.Second*60)
 }

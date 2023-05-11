@@ -6,6 +6,7 @@ import (
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -119,4 +120,13 @@ func (s *SuiteController) CreateRoleBinding(roleBindingName, namespace, subjectK
 		return nil, err
 	}
 	return createdRoleBinding, nil
+}
+
+// DeleteRoleBinding deletes the role binding with the provided name and namespace
+func (s *SuiteController) DeleteRoleBinding(roleBindingName, namespace string, returnErrorOnNotFound bool) error {
+	err := s.KubeInterface().RbacV1().RoleBindings(namespace).Delete(context.TODO(), roleBindingName, metav1.DeleteOptions{})
+	if err != nil && errors.IsNotFound(err) && !returnErrorOnNotFound {
+		return nil // Ignore not found errors, if requested
+	}
+	return err
 }

@@ -41,6 +41,9 @@ func (c *ResultClient) sendRequest(path string) (body []byte, err error) {
 	req.Header.Set("Accept", "application/json; charset=utf-8")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.Token))
 
+	//Debug
+	fmt.Printf("Request URL: %s\n", requestURL)
+	fmt.Printf("Request Token: %s\n", c.Token)
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err

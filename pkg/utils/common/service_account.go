@@ -3,6 +3,8 @@ package common
 import (
 	"context"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -38,4 +40,13 @@ func (s *SuiteController) CreateServiceAccount(name, namespace string, serviceAc
 // DeleteAllServiceAccountsInASpecificNamespace deletes all ServiceAccount from a given namespace
 func (h *SuiteController) DeleteAllServiceAccountsInASpecificNamespace(namespace string) error {
 	return h.KubeRest().DeleteAllOf(context.TODO(), &corev1.ServiceAccount{}, client.InNamespace(namespace))
+}
+
+// DeleteServiceAccount deletes a service account with the provided name and namespace
+func (s *SuiteController) DeleteServiceAccount(name, namespace string, returnErrorOnNotFound bool) error {
+	err := s.KubeInterface().CoreV1().ServiceAccounts(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+	if err != nil && errors.IsNotFound(err) && !returnErrorOnNotFound {
+		return nil // Ignore not found errors, if requested
+	}
+	return err
 }
