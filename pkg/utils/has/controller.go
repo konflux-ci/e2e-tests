@@ -378,7 +378,7 @@ func (h *SuiteController) CreateComponentDetectionQuery(cdqName, namespace, gitS
 			}
 		}
 		return false, nil
-	}, 3*time.Minute)
+	}, 5*time.Minute)
 
 	if err != nil {
 		return nil, fmt.Errorf("error waiting for cdq to be ready: %v", err)
