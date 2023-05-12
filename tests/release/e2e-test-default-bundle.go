@@ -73,7 +73,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineNameDefault, constants.ReleasePipelineImageRef, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategyM6)
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineNameDefault, constants.ReleasePipelineImageRef, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategyMvp)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, "", "", releaseStrategyDefaultName)
