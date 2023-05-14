@@ -263,23 +263,8 @@ func getUserSignupSpecs(username string) *toolchainApi.UserSignup {
 	}
 }
 
-// func (s *SandboxController) GetUserProvisionedNamespace(userName string) (namespace string, err error) {
-// 	ns, err := s.waitForNamespaceToBeProvisioned(userName)
-// 	if err != nil {
-// 		return "", err
-// 	}
-
-// 	return ns, err
-// }
-
 func (s *SandboxController) GetUserProvisionedNamespace(userName string) (namespace string, err error) {
-	userSignup := &toolchainApi.UserSignup{}
-	s.KubeRest.Get(context.TODO(), types.NamespacedName{
-		Namespace: DEFAULT_TOOLCHAIN_NAMESPACE,
-		Name:      userName,
-	}, userSignup)
-	fmt.Printf(userSignup.Status.CompliantUsername)
-	ns, err := s.waitForNamespaceToBeProvisioned(userSignup.Status.CompliantUsername)
+	ns, err := s.waitForNamespaceToBeProvisioned(userName)
 	if err != nil {
 		return "", err
 	}
