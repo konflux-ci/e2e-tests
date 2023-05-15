@@ -245,18 +245,26 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 					interval := time.Second * 10
 
 					for _, component := range componentList {
-						componentSnapshot, err := fw.AsKubeDeveloper.IntegrationController.GetSnapshot("", "", component.Name, namespace)
-						Expect(err).ShouldNot(HaveOccurred())
+						var componentSnapshot *appservice.Snapshot
 
 						Eventually(func() bool {
+							componentSnapshot, err = fw.AsKubeDeveloper.IntegrationController.GetSnapshot("", "", component.Name, namespace)
+							if err != nil {
+								GinkgoWriter.Printf("cannot get the Snapshot: %v\n", err)
+								return false
+							}
+
 							return fw.AsKubeDeveloper.IntegrationController.HaveTestsSucceeded(componentSnapshot)
-						}, timeout, interval).Should(BeTrue(), "time out when trying to check if the snapshot is marked as successful")
+						}, timeout, interval).Should(BeTrue(), "time out when trying to either check if the snapshot is created or is marked as successful")
 
 						Eventually(func() bool {
 							if fw.AsKubeDeveloper.IntegrationController.HaveTestsSucceeded(componentSnapshot) {
 								envbinding, err := fw.AsKubeDeveloper.IntegrationController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
-								Expect(err).ShouldNot(HaveOccurred())
-								GinkgoWriter.Printf("The EnvironmentBinding %s is created\n", envbinding.Name)
+								if err != nil {
+									GinkgoWriter.Printf("cannot get the SnapshotEnvironmentBinding: %v\n", err)
+									return false
+								}
+								GinkgoWriter.Printf("The SnapshotEnvironmentBinding %s is found\n", envbinding.Name)
 								return true
 							}
 
