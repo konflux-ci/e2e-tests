@@ -25,6 +25,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	"github.com/redhat-appstudio/e2e-tests/tests"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -472,6 +473,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					GinkgoWriter.Printf("failed to get PipelineRun for a release '%s' in '%s' namespace: %+v\n", release.Name, managedNamespace, err)
 					return false
 				}
+				tests.ExpectPipelineRunNotToFail(pipelineRun)
 				return pipelineRun.IsDone() && pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue()
 			}, releasePipelineTimeout, pipelineRunPollingInterval).Should(BeTrue())
 
