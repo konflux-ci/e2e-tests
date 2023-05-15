@@ -36,7 +36,7 @@ const (
 	redhatAppstudioUserSecret            string = "hacbs-release-tests-token"
 	hacbsReleaseTestsTokenSecret         string = "redhat-appstudio-registry-pull-secret"
 	publicSecretNameAuth                 string = "cosign-public-key"
-	gitSourceComponentUrl                string = "https://github.com/sbose78/dc-metro-map" //"https://github.com/scoheb/dc-metro-map"
+	gitSourceComponentUrl                string = "https://github.com/scoheb/dc-metro-map" // "https://github.com/sbose78/dc-metro-map"
 	sourceKeyName                        string = "release-e2e+release_e2e"
 	destinationKeyName                   string = "redhat-appstudio-qe+redhat_appstudio_quality"
 	containerImageUrl                    string = "quay.io/redhat-appstudio-qe/dcmetromap:latest"
@@ -75,7 +75,7 @@ var paramsReleaseStrategyMvp = []appstudiov1alpha1.Params{
 
 var paramsReleaseStrategyM6 = []appstudiov1alpha1.Params{
 	{Name: "extraConfigGitUrl", Value: "https://github.com/hacbs-release/strategy-configs"},
-	{Name: "extraConfigPath", Value: "m6.yaml"},
+	{Name: "extraConfigPath", Value: "mvp.yaml"},
 	{Name: "extraConfigGitRevision", Value: "main"},
 }
 

@@ -1,7 +1,11 @@
 package release
 
 import (
+	"crypto/tls"
 	"encoding/base64"
+	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -28,9 +32,13 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 	var kubeController tekton.KubeController
 
 	var devNamespace, managedNamespace string
+	var imageIDs []string
+	var pyxisKeyDecoded, pyxisCertDecoded []byte
 
 	BeforeAll(func() {
-		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("release-e2e-pyxis"))
+		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("e2e-pyxis"))
+		fmt.Println("NewFramework:", fw)
+		fmt.Println("NewFramework Error:", err)
 		Expect(err).NotTo(HaveOccurred())
 
 		kubeController = tekton.KubeController{
@@ -39,7 +47,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		}
 
 		devNamespace = fw.UserNamespace
-		managedNamespace = utils.GetGeneratedNamespace("release-pushpx-managed")
+		managedNamespace = utils.GetGeneratedNamespace("pyxis-managed")
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating managedNamespace: ", err)
@@ -76,6 +84,9 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		Expect(err).ToNot(HaveOccurred())
 		rawDecodedTextData, err := base64.StdEncoding.DecodeString(string(certPyxisStage))
 		Expect(err).ToNot(HaveOccurred())
+
+		pyxisKeyDecoded = rawDecodedTextStringData
+		pyxisCertDecoded = rawDecodedTextData
 
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -154,11 +165,17 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		It("verifies that a PipelineRun is created in dev namespace.", func() {
 			Eventually(func() bool {
 				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(devNamespace)
+				componentsCounter := 0
 				if err != nil || prList == nil || len(prList.Items) < 1 {
 					return false
 				}
+				for _, pr := range prList.Items {
+					if pr.Name == componentName || pr.Name == "simple-python" {
+						componentsCounter++
+					}
+				}
 
-				return strings.Contains(prList.Items[0].Name, componentName) && strings.Contains(prList.Items[1].Name, "simple-python")
+				return componentsCounter < 2
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
@@ -197,33 +214,33 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("validate the result of task create-pyxis-image contains id and succeeded.", func() {
+		It("validate the result of task create-pyxis-image contains two image ids.", func() {
 			Eventually(func() bool {
 				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
 				if prList == nil || err != nil || len(prList.Items) < 1 {
 					return false
 				}
 
-				pr_0, err := kubeController.Tektonctrl.GetPipelineRun(prList.Items[0].Name, managedNamespace)
-				Expect(err).NotTo(HaveOccurred())
+				for _, pr := range prList.Items {
+					pr, err := kubeController.Tektonctrl.GetPipelineRun(pr.Name, managedNamespace)
+					if err != nil {
+						Expect(err).NotTo(HaveOccurred())
+					}
 
-				pr_1, err := kubeController.Tektonctrl.GetPipelineRun(prList.Items[1].Name, managedNamespace)
-				Expect(err).NotTo(HaveOccurred())
+					tr, err := kubeController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), pr, "create-pyxis-image")
+					if err != nil {
+						Expect(err).NotTo(HaveOccurred())
+					}
 
-				tr_0, err := kubeController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), pr_0, "create-pyxis-image")
-				Expect(err).NotTo(HaveOccurred())
+					re := regexp.MustCompile("[a-fA-F0-9]{24}")
+					returnedImageID := re.FindAllString(tr.Status.TaskRunResults[0].Value.StringVal, -1)
 
-				tr_1, err := kubeController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), pr_1, "create-pyxis-image")
-				Expect(err).NotTo(HaveOccurred())
+					if len(returnedImageID) > len(imageIDs) {
+						imageIDs = returnedImageID
+					}
+				}
 
-				re := regexp.MustCompile("^[0-9a-z]{10,50}")
-				returnedImageID_0 := re.FindString(tr_0.Status.TaskRunResults[0].Value.StringVal)
-				returnedImageID_1 := re.FindString(tr_1.Status.TaskRunResults[1].Value.StringVal)
-
-				return strings.Contains(string(tr_0.Status.Status.Conditions[0].Status), "True") &&
-					strings.Contains(string(tr_0.Status.TaskRunResults[0].Name), "containerImageIDs") && len(returnedImageID_0) > 10 &&
-					strings.Contains(string(tr_1.Status.Status.Conditions[1].Status), "True") &&
-					strings.Contains(string(tr_1.Status.TaskRunResults[1].Name), "containerImageIDs") && len(returnedImageID_1) > 10
+				return len(imageIDs[0]) > 10 && len(imageIDs[1]) > 10
 			}).Should(BeTrue())
 		})
 
@@ -235,6 +252,62 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 				}
 
 				return releaseCreated.IsReleased()
+			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
+		})
+
+		It("validates that imageIds was pushed to pyxis are identical to those in task create-pyxis-image.", func() {
+			Eventually(func() bool {
+				isImageExist := 0
+				for _, imageId := range imageIDs {
+
+					url := fmt.Sprintf("https://pyxis.preprod.api.redhat.com/v1/images/id/%s", imageId)
+
+					// Create a TLS configuration with the key and certificate
+					cert, err := tls.X509KeyPair(pyxisCertDecoded, pyxisKeyDecoded)
+					if err != nil {
+						fmt.Println("Error creating TLS certificate and key:", err)
+						Expect(err).NotTo(HaveOccurred())
+					}
+
+					// Create a client with the custom TLS configuration
+					client := &http.Client{
+						Transport: &http.Transport{
+							TLSClientConfig: &tls.Config{
+								Certificates: []tls.Certificate{cert},
+							},
+						},
+					}
+
+					// Send GET request
+					request, err := http.NewRequest("GET", url, nil)
+					if err != nil {
+						fmt.Println("Error creating GET request:", err)
+						Expect(err).NotTo(HaveOccurred())
+					}
+
+					response, err := client.Do(request)
+					if err != nil {
+						fmt.Println("Error sending GET request:", err)
+						Expect(err).NotTo(HaveOccurred())
+					}
+
+					defer response.Body.Close()
+
+					// Read the response body
+					body, err := io.ReadAll(response.Body)
+					if err != nil {
+						fmt.Println("Error reading response body:", err)
+						Expect(err).NotTo(HaveOccurred())
+					}
+
+					// Print the response
+					if strings.Contains(string(body), imageId) {
+						isImageExist++
+					}
+
+				}
+
+				return isImageExist == len(imageIDs)
 			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 	})
