@@ -137,13 +137,13 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 
 	})
 
-	AfterAll(func() {
+	// AfterAll(func() {
 
-		if !CurrentSpecReport().Failed() {
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
-		}
-	})
+	// 	if !CurrentSpecReport().Failed() {
+	// 		Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+	// 		Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
+	// 	}
+	// })
 
 	var _ = Describe("Post-release verification", func() {
 
