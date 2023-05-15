@@ -84,9 +84,10 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 
 	var kc tekton.KubeController
 
-	var pipelineRun *tektonapi.PipelineRun
-	var release *releaseApi.Release
-	var snapshot *appstudioApi.Snapshot
+	// set vs. simply declare these pointers so we can use them in debug, where an empty name is indicative of Get's failing
+	pipelineRun := &tektonapi.PipelineRun{}
+	release := &releaseApi.Release{}
+	snapshot := &appstudioApi.Snapshot{}
 
 	BeforeAll(func() {
 		// This pipeline contains an image that comes from "not allowed" container image registry repo
@@ -265,36 +266,45 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		})
 
 		It("Release PipelineRun is triggered", func() {
+			errStr := ""
 			Eventually(func() bool {
 				pipelineRun, err = f.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
 				if err != nil {
+					errStr = err.Error()
 					GinkgoWriter.Printf("pipelineRun for component '%s' in namespace '%s' not created yet: %+v\n", componentName, managedNamespace, err)
 					return false
 				}
+				errStr = ""
 				return pipelineRun.HasStarted()
-			}, pipelineRunStartedTimeout, defaultPollingInterval).Should(BeTrue())
+			}, pipelineRunStartedTimeout, defaultPollingInterval).Should(BeTrue(), fmt.Sprintf("component %q did not start a pipelinerun named %q in namespace %q from release %q in namespace %q in time, get error %q", componentName, pipelineRun.Name, managedNamespace, release.Name, release.Namespace, errStr))
 		})
 
 		It("Release PipelineRun should eventually fail", func() {
+			errStr := ""
 			Eventually(func() bool {
 				pipelineRun, err = f.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
 				if err != nil {
+					errStr = err.Error()
 					GinkgoWriter.Printf("failed to get PipelineRun for a release '%s' in '%s' namespace: %+v\n", release.Name, managedNamespace, err)
 					return false
 				}
+				errStr = ""
 				return pipelineRun.IsDone()
-			}, releasePipelineTimeout, pipelineRunPollingInterval).Should(BeTrue())
+			}, releasePipelineTimeout, pipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("the pipelinerun %q in namespace %q for release %q in namespace %q did not fail in time, get error %q", pipelineRun.Name, managedNamespace, release.Name, release.Namespace, errStr))
 		})
 
 		It("associated Release should be marked as failed", func() {
+			errStr := ""
 			Eventually(func() bool {
 				release, err = f.AsKubeAdmin.ReleaseController.GetRelease(release.Name, "", userNamespace)
 				if err != nil {
+					errStr = err.Error()
 					GinkgoWriter.Printf("failed to get Release CR in '%s' namespace: %+v\n", managedNamespace, err)
 					return false
 				}
+				errStr = ""
 				return release.HasReleaseFinished() && !release.IsReleased()
-			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue())
+			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue(), fmt.Sprintf("the release %q in namespace %q was not marked as released but failed, get error %q", release.Name, release.Namespace, errStr))
 		})
 
 	})
@@ -376,7 +386,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					}
 				}
 				return false
-			}, pullRequestCreationTimeout, defaultPollingInterval).Should(BeTrue(), "timed out when waiting for init PaC PR to be created")
+			}, pullRequestCreationTimeout, defaultPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR to be created against the %q repo", sampleRepoName))
 
 			// We actually don't need the "on-pull-request" PipelineRun to complete, so we can delete it
 			Eventually(func() bool {
@@ -386,7 +396,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					return true
 				}
 				return false
-			}, pipelineRunStartedTimeout, pipelineRunPollingInterval).Should(BeTrue(), "timed out when waiting for init PaC PipelineRun to be present in the user namespace")
+			}, pipelineRunStartedTimeout, pipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PipelineRun to be present in the user namespace %q for component %q with a label pointing to %q", userNamespace, componentName, appName))
 
 		})
 
@@ -398,14 +408,17 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 
 			mergeResultSha = mergeResult.GetSHA()
 
+			errStr := ""
 			Eventually(func() bool {
 				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, appName, userNamespace, mergeResultSha)
 				if err != nil {
+					errStr = err.Error()
 					GinkgoWriter.Println("PipelineRun has not been created yet")
 					return false
 				}
+				errStr = ""
 				return pipelineRun.HasStarted()
-			}, pipelineRunStartedTimeout, pipelineRunPollingInterval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
+			}, pipelineRunStartedTimeout, pipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for a PipelineRun in namespace %q with label component label %q and application label %q and sha label %q to start, get err %q", userNamespace, componentName, appName, mergeResultSha, errStr))
 		})
 
 		It("SLSA level 3 customizable pipeline completes successfully", func() {
@@ -447,53 +460,66 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 			Expect(err).ToNot(HaveOccurred())
 			Expect(release.Name).ToNot(BeEmpty())
 
+			errStr := ""
 			Eventually(func() bool {
 				pipelineRun, err = f.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
 				if err != nil {
+					errStr = err.Error()
 					GinkgoWriter.Printf("pipelineRun for component '%s' in namespace '%s' not created yet: %+v\n", componentName, managedNamespace, err)
 					return false
 				}
+				errStr = ""
 				return pipelineRun.HasStarted()
-			}, pipelineRunStartedTimeout, defaultPollingInterval).Should(BeTrue())
+			}, pipelineRunStartedTimeout, defaultPollingInterval).Should(BeTrue(), fmt.Sprintf("failed to get pipelinerun named %q in namespace %q with label to release %q in namespace %q to start, get error %q", pipelineRun.Name, managedNamespace, release.Name, release.Namespace, errStr))
 
 			Eventually(func() bool {
 				release, err = f.AsKubeAdmin.ReleaseController.GetRelease(release.Name, "", userNamespace)
 				if err != nil {
+					errStr = err.Error()
 					GinkgoWriter.Printf("failed to get Release CR in '%s' namespace: %+v\n", managedNamespace, err)
 					return false
 				}
+				errStr = ""
 				return release.IsReleasing()
-			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue())
+			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue(), fmt.Sprintf("failed to get release %q in namespace %q to releasing state, get error %q", release.Name, userNamespace, errStr))
 		})
 
 		It("Release PipelineRun should eventually succeed and associated Release should be marked as succeeded", func() {
+			errStr := ""
 			Eventually(func() bool {
 				pipelineRun, err = f.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
 				if err != nil {
+					errStr = err.Error()
 					GinkgoWriter.Printf("failed to get PipelineRun for a release '%s' in '%s' namespace: %+v\n", release.Name, managedNamespace, err)
 					return false
 				}
+				errStr = ""
 				tests.ExpectPipelineRunNotToFail(pipelineRun)
 				return pipelineRun.IsDone() && pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue()
-			}, releasePipelineTimeout, pipelineRunPollingInterval).Should(BeTrue())
+			}, releasePipelineTimeout, pipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("failed to see pipelinerun %q in namespace %q with a label pointing to release %q in namespace %q to complete successfully, get err %q", pipelineRun.Name, managedNamespace, release.Name, release.Namespace, errStr))
 
 			Eventually(func() bool {
 				release, err = f.AsKubeAdmin.ReleaseController.GetRelease(release.Name, "", userNamespace)
 				if err != nil {
+					errStr = err.Error()
 					GinkgoWriter.Printf("failed to get Release CR in '%s' namespace: %+v\n", managedNamespace, err)
 					return false
 				}
+				errStr = ""
 				return release.IsReleased()
-			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue())
+			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue(), fmt.Sprintf("failed to see release %q in namespace %q get marked as released, get error %q", release.Name, userNamespace, errStr))
 		})
 
 		It("JVM Build Service is used for rebuilding dependencies and completes rebuild of all artifacts and dependencies", func() {
+			errStr := ""
 			Eventually(func() bool {
 				abList, err := f.AsKubeAdmin.JvmbuildserviceController.ListArtifactBuilds(userNamespace)
 				if err != nil {
+					errStr = err.Error()
 					GinkgoWriter.Printf("error listing artifactbuilds: %s\n", err.Error())
 					return false
 				}
+				errStr = ""
 				for _, ab := range abList.Items {
 					if ab.Status.State != v1alpha1.ArtifactBuildStateComplete {
 						GinkgoWriter.Printf("artifactbuild %s not complete\n", ab.Spec.GAV)
@@ -502,9 +528,11 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 				}
 				dbList, err := f.AsKubeAdmin.JvmbuildserviceController.ListDependencyBuilds(userNamespace)
 				if err != nil {
+					errStr = err.Error()
 					GinkgoWriter.Printf("error listing dependencybuilds: %s\n", err.Error())
 					return false
 				}
+				errStr = ""
 				for _, db := range dbList.Items {
 					if db.Status.State != v1alpha1.DependencyBuildStateComplete {
 						GinkgoWriter.Printf("dependencybuild %s not complete\n", db.Spec.ScmInfo.SCMURL)
@@ -512,7 +540,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 					}
 				}
 				return true
-			}, jvmRebuildTimeout, jvmRebuildPollingInterval).Should(BeTrue(), "timed out when waiting for all artifactbuilds and dependencybuilds to complete")
+			}, jvmRebuildTimeout, jvmRebuildPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for all artifactbuilds and dependencybuilds to complete in namespace %q, list err %q", userNamespace, errStr))
 		})
 
 	})
