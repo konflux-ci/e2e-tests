@@ -11,6 +11,7 @@ import (
 	"knative.dev/pkg/apis"
 
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -40,6 +41,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	var snapshot *appstudioApi.Snapshot
 	var snapshot_push *appstudioApi.Snapshot
 	var env *appstudioApi.Environment
+	var integrationTestScenario *integrationv1alpha1.IntegrationTestScenario
 
 	Describe("the component with git source (GitHub) is created", Ordered, func() {
 
@@ -378,6 +380,92 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				// global candidate is not updated
 				Expect(component.Spec.ContainerImage == originalComponent.Spec.ContainerImage).To(BeTrue())
 
+			})
+		})
+
+		Describe("valid dtcls doesn't exist", Ordered, func() {
+			BeforeAll(func() {
+				// Initialize the tests controllers
+				f, err = framework.NewFramework(IntegrationServiceUser)
+				Expect(err).NotTo(HaveOccurred())
+
+				createApp()
+				createComponent()
+
+				integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenarioWithEnvironment(applicationName, appStudioE2EApplicationsNamespace, BundleURL, InPipelineName, EnvironmentName)
+				Expect(err).ShouldNot(HaveOccurred())
+				env, err = f.AsKubeAdmin.IntegrationController.CreateEnvironment(appStudioE2EApplicationsNamespace, EnvironmentName)
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+
+			AfterAll(func() {
+				if !CurrentSpecReport().Failed() {
+					cleanup()
+
+					Expect(f.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(appStudioE2EApplicationsNamespace, 30*time.Second)).To(Succeed())
+					Expect(f.AsKubeAdmin.IntegrationController.DeleteSnapshot(snapshot_push, appStudioE2EApplicationsNamespace)).To(BeNil())
+				}
+			})
+
+			It("valid deploymentTargetClass doesn't exist", func() {
+				validDTCLS, err := f.AsKubeAdmin.IntegrationController.HaveAvailableDeploymentTargetClassExist()
+				Expect(validDTCLS).To(BeNil())
+				Expect(err).To(BeNil())
+			})
+
+			It("creates a snapshot of push event", func() {
+				sampleImage := "quay.io/redhat-appstudio/sample-image@sha256:841328df1b9f8c4087adbdcfec6cc99ac8308805dea83f6d415d6fb8d40227c1"
+				snapshot_push, err = f.AsKubeAdmin.IntegrationController.CreateSnapshot(applicationName, appStudioE2EApplicationsNamespace, componentName, sampleImage)
+				Expect(err).ShouldNot(HaveOccurred())
+				GinkgoWriter.Printf("snapshot %s is found\n", snapshot_push.Name)
+			})
+
+			When("nonexisting valid deploymentTargetClass", func() {
+				It("check no GitOpsCR is created for the dtc with nonexisting deploymentTargetClass", func() {
+					timeout = time.Second * 600
+					interval = time.Second * 10
+					Eventually(func() bool {
+						spaceRequestList, err := f.AsKubeAdmin.IntegrationController.GetSpaceRequests(appStudioE2EApplicationsNamespace)
+						if err != nil {
+							GinkgoWriter.Printf("error getting spaceRequest in %s namespace: %v", appStudioE2EApplicationsNamespace, err)
+							return false
+						}
+						if len(spaceRequestList.Items) > 0 {
+							GinkgoWriter.Printf("spaceRequest %s have been created unexceptedly\n", spaceRequestList)
+							return false
+						}
+						deploymentTargetList, _ := f.AsKubeAdmin.IntegrationController.GetDeploymentTargets(appStudioE2EApplicationsNamespace)
+						if err != nil {
+							GinkgoWriter.Printf("error getting deploymentTargets in %s namespace: %v", appStudioE2EApplicationsNamespace, err)
+							return false
+						}
+						if len(deploymentTargetList.Items) > 0 {
+							GinkgoWriter.Printf("deploymentTargets %s have been created unexceptedly\n", deploymentTargetList)
+							return false
+						}
+						deploymentTargetClaimList, _ := f.AsKubeAdmin.IntegrationController.GetDeploymentTargetClaims(appStudioE2EApplicationsNamespace)
+						if err != nil {
+							GinkgoWriter.Printf("error getting deploymentTargetClaims in %s namespace: %v", appStudioE2EApplicationsNamespace, err)
+							return false
+						}
+						if len(deploymentTargetClaimList.Items) > 0 {
+							GinkgoWriter.Printf("deploymentTargetClaim %s has been created unexceptedly\n", deploymentTargetClaimList)
+							return false
+						}
+						environmentList, _ := f.AsKubeAdmin.IntegrationController.GetEnvironments(appStudioE2EApplicationsNamespace)
+						if len(environmentList.Items) > 1 {
+							GinkgoWriter.Printf("ephemeral environment %s has been created unexceptedly\n", environmentList)
+							return false
+						}
+						pipelineRun, _ := f.AsKubeAdmin.IntegrationController.GetIntegrationPipelineRun(integrationTestScenario.Name, snapshot_push.Name, appStudioE2EApplicationsNamespace)
+						return pipelineRun.Name == ""
+					}, timeout, interval).Should(BeTrue())
+				})
+				It("checks if snapshot is not marked as passed", func() {
+					snapshot, err := f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot_push.Name, "", "", appStudioE2EApplicationsNamespace)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(f.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot)).To(BeFalse())
+				})
 			})
 		})
 	})
