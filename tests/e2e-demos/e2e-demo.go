@@ -270,7 +270,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 						Expect(err).NotTo(HaveOccurred())
 						err = fw.AsKubeDeveloper.GitOpsController.CheckGitOpsEndpoint(gitOpsRoute, componentTest.HealthEndpoint)
 						if err != nil {
-							GinkgoWriter.Println("Failed to request component endpoint. retrying...")
+							GinkgoWriter.Printf("Failed to request component endpoint: %+v\n retrying...\n", err)
 						}
 						return true
 					}, 5*time.Minute, 10*time.Second).Should(BeTrue())
