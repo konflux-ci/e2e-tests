@@ -28,7 +28,6 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 	publicSecretName := "cosign-public-key"
 
 	BeforeAll(func() {
-		Skip("Skip until: https://issues.redhat.com/browse/RHTAPBUGS-236 it is closed")
 		fwk, err = framework.NewFramework(constants.TEKTON_CHAINS_E2E_USER)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(fwk.UserNamespace).NotTo(BeNil(), "failed to create sandbox user")
@@ -115,7 +114,16 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 
 		It("verifies the release policy: Task bundle is out of date", func() {
 			policy := ecp.EnterpriseContractPolicySpec{
-				Sources: policySource,
+				Sources: []ecp.Source{
+					{
+						Policy: []string{
+							"oci::quay.io/hacbs-contract/ec-release-policy:git-086f871@sha256:373a5c4c1d34123836cbfc11826f6bbf6fdf8f0dfae333a2686bbe941c4f79ef",
+						},
+						Data: []string{
+							"oci::quay.io/hacbs-contract/ec-policy-data:git-8629680@sha256:ee5708dda57216647f63032dd3e63375e70e2353cb1ad10c9ab5493b9236c23e",
+						},
+					},
+				},
 				Configuration: &ecp.EnterpriseContractPolicyConfiguration{
 					Include: []string{"attestation_task_bundle.task_ref_bundles_current"},
 				},
