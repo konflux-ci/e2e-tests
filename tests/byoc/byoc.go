@@ -268,7 +268,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 							return false
 						}
 
-						return false
+						return true
 					}, 10*time.Minute, 10*time.Second).Should(BeTrue(), fmt.Sprintf("ingress didn't appear in target cluster in 10 minutes: %+v", ingress))
 				})
 			}
