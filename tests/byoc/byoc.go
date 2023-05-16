@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/magefile/mage/sh"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -96,6 +97,8 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 				Expect(kubeIngressDomain).NotTo(BeEmpty(), "domain is not pressent in the cluster. Make sure your openshift cluster have the domain defined in ingress cluster object")
 
 				if suite.Byoc.ClusterType == appservice.ConfigurationClusterType_Kubernetes {
+					Expect(sh.Run("which", "vcluster")).NotTo(HaveOccurred(), "please install vcluster locally in order to run kubernetes suite")
+
 					vc = vcluster.NewVclusterController(fmt.Sprintf("%s/tmp", rootPath), fw.AsKubeAdmin.CommonController.CustomClient)
 
 					byocKubeconfig, err = vc.InitializeVCluster(fw.UserNamespace, fw.UserNamespace)
