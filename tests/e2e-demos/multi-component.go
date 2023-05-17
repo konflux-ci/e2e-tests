@@ -269,7 +269,10 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 							}
 
 							componentSnapshot, err = fw.AsKubeDeveloper.IntegrationController.GetSnapshot("", "", component.Name, namespace)
-							Expect(err).ShouldNot(HaveOccurred())
+							if err != nil {
+								GinkgoWriter.Printf("cannot get the Snapshot: %v\n", err)
+								return false
+							}
 							return false
 						}, timeout, interval).Should(BeTrue(), "time out when waiting for snapshoot environment binding")
 					}
