@@ -37,12 +37,15 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "get-file-content"), func(
 			namespace = fw.UserNamespace
 			Expect(namespace).NotTo(BeEmpty())
 
+			// collect SPI ResourceQuota metrics (temporary)
+			err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("token-upload-rest-endpoint", namespace, "appstudio-crds-spi")
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		// Clean up after running these tests and before the next tests block: can't have multiple AccessTokens in Injected phase
 		AfterAll(func() {
 			// collect SPI ResourceQuota metrics (temporary)
-			err := fw.AsKubeAdmin.CommonController.GetSpiResourceQuotaInfo("get-file-content", namespace, "appstudio-crds-spi")
+			err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("get-file-content", namespace, "appstudio-crds-spi")
 			Expect(err).NotTo(HaveOccurred())
 
 			if !CurrentSpecReport().Failed() {
