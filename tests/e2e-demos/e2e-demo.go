@@ -68,6 +68,10 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				namespace = fw.UserNamespace
 				Expect(namespace).NotTo(BeEmpty())
 
+				// collect SPI ResourceQuota metrics (temporary)
+				err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("e2e-demo", namespace, "appstudio-crds-spi")
+				Expect(err).NotTo(HaveOccurred())
+
 				suiteConfig, _ := GinkgoConfiguration()
 				GinkgoWriter.Printf("Parallel processes: %d\n", suiteConfig.ParallelTotal)
 				GinkgoWriter.Printf("Running on namespace: %s\n", namespace)
@@ -80,6 +84,10 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 			// Remove all resources created by the tests
 			AfterAll(func() {
+				// collect SPI ResourceQuota metrics (temporary)
+				err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("e2e-demo", namespace, "appstudio-crds-spi")
+				Expect(err).NotTo(HaveOccurred())
+
 				if !CurrentSpecReport().Failed() {
 					Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
