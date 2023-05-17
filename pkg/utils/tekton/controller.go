@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	g "github.com/onsi/ginkgo/v2"
@@ -776,10 +775,10 @@ func (s *SuiteController) CreateSkopeoCopyTask(namespace string) error {
 
 // Remove all Tasks from a given repository. Useful when creating a lot of resources and wanting to remove all of them
 func (h *SuiteController) DeleteAllTasksInASpecificNamespace(namespace string) error {
-	return h.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.Task{}, client.InNamespace(namespace))
+	return h.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.Task{}, crclient.InNamespace(namespace))
 }
 
 // Remove all TaskRuns from a given repository. Useful when creating a lot of resources and wanting to remove all of them
 func (h *SuiteController) DeleteAllTaskRunsInASpecificNamespace(namespace string) error {
-	return h.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.TaskRun{}, client.InNamespace(namespace))
+	return h.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.TaskRun{}, crclient.InNamespace(namespace))
 }

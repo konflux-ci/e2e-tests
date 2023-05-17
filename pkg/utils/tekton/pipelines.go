@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 
@@ -23,21 +22,19 @@ type PipelineRunGenerator interface {
 }
 
 type BuildahDemo struct {
-	Image  string
-	Bundle string
+	Image     string
+	Bundle    string
+	Name      string
+	Namespace string
 }
 
 // This is a demo pipeline to create test image and task signing
 func (g BuildahDemo) Generate() *v1beta1.PipelineRun {
-	imageInfo := strings.Split(g.Image, "/")
-	namespace := imageInfo[1]
-	// Make the PipelineRun name predictable.
-	name := imageInfo[2]
 
 	return &v1beta1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+			Name:      g.Name,
+			Namespace: g.Namespace,
 		},
 		Spec: v1beta1.PipelineRunSpec{
 			Params: []v1beta1.Param{
