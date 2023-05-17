@@ -1,44 +1,69 @@
 # Generating Tests
 
-Before generating tests you should be aware of the following environment variables that are used to render new test files from a template:
+## Context
 
-| Variable | Required | Explanation | Default Value |
-|---|---|---|---|
-| `TEMPLATE_SUITE_PACKAGE_NAME` | yes | The name of the package directory and spec file created in `tests/` and the name used when creating the suite file in `cmd/`  | EMPTY  |
-| `TEMPLATE_SPEC_FILE_NAME` | no | It will override the name of the test spec file and the text within the `Describe/It` containers. Useful when you are looking to test a different component within a service. Refer to `tests/build/` for a good example.    | `template` |
-| `TEMPLATE_APPEND_FRAMEWORK_DESCRIBE_FILE` | no | By default, when the test spec file is generated, the root `Describe` container function is appended to the `pkg/framework/describe.go` file, using the value of either `TEMPLATE_SUITE_PACKAGE_NAME` or `TEMPLATE_SPEC_FILE_NAME`, so it can be utilized in the current e2e test suite. In some cases, due the type of testing, you may not want to perform this action. | `true`  |
-| `TEMPLATE_JOIN_SUITE_SPEC_FILE_NAMES` | no | It will join the values of `TEMPLATE_SUITE_PACKAGE_NAME` and `TEMPLATE_SPEC_FILE_NAME` to be used for the `pkg/framework/describe.go` root `Describe` container function and in all text within the Gingko container text. An example might be that a `tests/chaos` package directory is created and you want the test spec file to be named per component, i.e. `build.go`, but you want the test functions and container text to be more descriptive so that they say `ChaosBuildSuiteDescribe`. | `false` |
+We rely on Ginkgo and Gomega as the core of our E2E functional test framework. Ginkgo allows you to write expressive BDD style tests that act as specfications by example. The intent is to allow a team to write a specifications, which we call an spec outline, that look like this:
 
- 
- ## Generating Gingko Test Spec File
-  
- ```bash
-   $ make local/template/generate-test-spec
-   ./mage -v local:generateTestSpecFile
-	Running target: Local:GenerateTestSpecFile
-	I1129 10:34:56.777665   11171 magefile.go:360] TEMPLATE_SPEC_FILE_NAME not set. Defaulting test spec file to value of `chaos`.
-	I1129 10:34:56.777923   11171 magefile.go:379] Creating new test package directory and spec file tests/chaos/chaos.go.
-	exec: go "fmt" "tests/chaos/chaos.go"
-	tests/chaos/chaos.go
+```
+BookSuiteDescribe: Book service E2E tests
+    Describe: Categorizing book length @book
+        When: the book has more than 300 pages @slow
+            It: Should be a novel
+        When: the book has fewer than 300 pages @fast
+            It: should be a short story
 
- ```
- As noted above, this command will create a new package under the `tests/`directory and a test spec file `<SpecFile>.go` for you. It will contain some basic imports but more importantly it will generate a basic structured Ginkgo spec like the one below. You can update as necessary and build upon it.
+    Describe: Creating bookmarks in a book @book, @bookmark, @parallel
+        It: Has no bookmarks by default
+        It: Can add bookmarks
 
- ```golang
- package chaos
+```
 
-/* This was generated from a template file. Please feel free to update as necessary */
+and be able to generate Ginkgo Test Files that look like this:
+
+```golang
+package books
+
+/* This was generated from a template file. Please feel free to update as necessary!
+
+ In Gingko, "Describe", "Context", "When" are functionaly the same. They are container nodes that hierarchically
+ organize the specs, used to make the flow read better. The core piece of the spec is the subject container, "It",
+ this is where the meat of the test is written.
+
+ Ginkgo's default behavior is to only randomize the order of top-level containers -- the specs within those containers
+ continue to run in the order in which they are specified in the test files. That being said, Ginko does provide the
+ option to randomize ALL specs. So it is important to design and write test cases for randomization and parallelization
+ in mind. Tips to do so:
+
+  - Declare variables in "Describe" containers, initialize in "BeforeEach/All" containers
+  - Move all setup code into "BeforeEach/All" closures
+  - "It" containers should be independent of each other. If you require the "It" tests to be dependent on each other for
+    complex test scenarios, append into the "Describe" the "Ordered" decorator.
+
+a couple things to note:
+  - Remember to implement specific logic of the service/domain you are trying to test if it not already there in the pkg/
+
+  - To include the tests as part of the E2E Test suite:
+     - Update the pkg/framework/describe.go to include the `Describe func` of this new test suite, If you haven't already done so.
+     - Import this new package into the cmd/e2e_test.go
+*/
 
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+	"time"
+
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	//framework imports edit as required
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 )
 
-var _ = framework.ChaosSuiteDescribe("Chaos tests", Label("Chaos"), func() {
-
+var _ = framework.BookSuiteDescribe("Book service E2E tests", func() {
 
 	defer GinkgoRecover()
 	var err error
@@ -50,18 +75,41 @@ var _ = framework.ChaosSuiteDescribe("Chaos tests", Label("Chaos"), func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-
-	Describe("Chaos scenario to test", Label("Chaos"), func() {
+	Describe("Categorizing book length ", Label("book"), func() {
 		// Declare variables here.
 
-		BeforeEach(func() {
+		When("the book has more than 300 pages ", Label("slow"), func() {
 
-			// Initialize variables here.
-			// Assert setup here.
+			It("Should be a novel", func() {
+
+				// Implement test and assertions here
+
+			})
 
 		})
 
-		It("chaos does some test action", func() {
+		When("the book has fewer than 300 pages ", Label("fast"), func() {
+
+			It("should be a short story", func() {
+
+				// Implement test and assertions here
+
+			})
+
+		})
+
+	})
+
+	Describe("Creating bookmarks in a book ", Label("book"), Label("bookmark"), Label("parallel"), func() {
+		// Declare variables here.
+
+		It("Has no bookmarks by default", func() {
+
+			// Implement test and assertions here
+
+		})
+
+		It("Can add bookmarks", func() {
 
 			// Implement test and assertions here
 
@@ -71,19 +119,198 @@ var _ = framework.ChaosSuiteDescribe("Chaos tests", Label("Chaos"), func() {
 
 })
 
- ```
-
- ## Generating Ginkgo Test Suite File
-
- ```bash
-   $ make local/template/generate-test-suite 
-   ./mage -v local:generateTestSuiteFile
-   Running target: Local:GenerateTestSuiteFile
-   I1128 13:21:30.908854    5645 magefile.go:311] Creating new test suite file cmd/chaos_test.go.
-   exec: go "fmt" "cmd/chaos_test.go"
-   cmd/chaos_test.go
 ```
 
-This command will help setup a test suite file within the `cmd/` directory. It will do the test package import based on the value of `TEMPLATE_SUITE_PACKAGE_NAME`. So using the example above it will assume there is a `tests/chaos` package to import as well. It uses a simplified version of the `cmd/e2e_test.go` as a template to allow you to leverage the existing functionality built into the framework like webhooks eventing and Polarion formatted XML test case generation. Edit this file as you feel necessary.
+or parse Ginkgo Test Files that have large amount of code, like [build.go](../tests/build/build.go), and generate spec outline so that they can be easily evaluated.
+
+```
+BuildSuiteDescribe: Build service E2E tests @build, @HACBS
+  Describe: test PaC component build @github-webhook, @pac-build, @pipeline
+    When: a new component without specified branch is created @pac-custom-default-branch
+      It: correctly targets the default branch (that is not named 'main') with PaC
+      It: triggers a PipelineRun
+      It: a related PipelineRun and Github webhook should be deleted after deleting the component
+      It: PR branch should not exists in the repo
+    When: a new component with specified custom branch branch is created
+      It: triggers a PipelineRun
+      It: should lead to a PaC init PR creation
+      It: the PipelineRun should eventually finish successfully
+      It: eventually leads to a creation of a PR comment with the PipelineRun status report
+    When: the PaC init branch is updated
+      It: eventually leads to triggering another PipelineRun
+      It: PipelineRun should eventually finish
+      It: eventually leads to another update of a PR with a comment about the PipelineRun status report
+    When: the PaC init branch is merged
+      It: eventually leads to triggering another PipelineRun
+      It: pipelineRun should eventually finish
+    When: the component is removed and recreated (with the same name in the same namespace)
+      It: should no longer lead to a creation of a PaC PR
+
+  Describe: Creating component with container image source
+    It: should not trigger a PipelineRun
+
+  Describe: PLNSRVCE-799 - test pipeline selector @pipeline-selector
+    It: a specific Pipeline bundle should be used and additional pipeline params should be added to the PipelineRun if all WhenConditions match
+    It: default Pipeline bundle should be used and no additional Pipeline params should be added to the PipelineRun if one of the WhenConditions does not match
+
+  Describe: A secret with dummy quay.io credentials is created in the testing namespace
+    It: should override the shared secret
+    It: should not be possible to push to quay.io repo (PipelineRun should fail)
+
+```
+
+## How it works
+
+We leverage existing Ginkgo's tool set to be able to do this translation back and forth. 
+* `ginkgo outline` we use to be able to generate the intial spec outline for our internal model based on what is in the file Ginkgo Test File. This command depends on the GoLang AST to generates the output. 
+* `ginkgo generate` we use to pass a customize template and data so that it can render a spec file using Ginkgo's extensive use of closures to allow us to build a descriptive spec hierarchy. 
+
+## Schema
+
+The text outline file must be in the following format:
+
+ * Each line MUST be in key/value format using `:` as delimeter
+    * Each key MUST be a Ginkgo DSL for Container and Subject containers, `Describe/When/Context/It/By/DescribeTable/Entry`
+    * The value is essentially the Description text of the container
+ * All lines MUST be nested, by using spaces, to represent the logical tree hierarchy of the specification
+ * The first line MUST be a framework decorator function type `Describe` node that will get implemented in `/pkg/framework/describe.go`
+ * To assign Labels: 
+ 		* each string intended to be a label MUST be prefixed with `@`
+    * the set of labels MUST be a comma separated list
+    * they MUST be assigned AFTER the description text
+ * When using `DescribeTable` key, the proceeding nested lines MUST have the `Entry` or `By` key or Ginkgo will not render the template properly
+
+For the time being we don't support any of Ginkgo's Setup/Teardown containers. We could technically graph it together from the text outline but it won't render with our base template. The important thing is to expressively model the behavior to test. Test developers will be able to insert Setup/Teardown containers where they see fit. 
+
+
+## Prequisite
+
+Before generating anything make sure you have Ginkgo in place. To install Gingkgo:
+
+`go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo`
+
+ 
+ ## Usage
+
+ ### Printing a text outline of an existing ginkgo spec file
+ This will generate the outline and output to your terminal. If you would like to save the outline to a file refer to the next section.
+
+`./mage PrintOutlineOfGinkgoSpec tests/<subdirectory>/<test-file>.go`
+
+```bash
+$ ./mage PrintOutlineOfGinkgoSpec tests/books/books.go
+tests/books/books.goI0622 22:11:30.391491   19273 testcasemapper.go:26] Mapping outline from a Ginkgo test file, tests/books/books.go
+I0622 22:11:30.395240   19273 testcasemapper.go:40] Printing outline:
+
+BookSuiteDescribe: Book service E2E tests
+  Describe: Categorizing book length  @book
+    When: the book has more than 300 pages  @slow
+      It: Should be a novel
+    When: the book has fewer than 300 pages  @fast
+      It: should be a short story
+
+  Describe: Creating bookmarks in a book  @book, @bookmark, @parallel
+    It: Has no bookmarks by default
+    It: Can add bookmarks
+
+  DescribeTable: Reading invalid books always errors is table
+    Entry: Empty book
+    Entry: Only title
+    Entry: Only author
+    Entry: Missing pages
+
+```
+### Generating the text outline file from an existing ginkgo spec file
+This will generate the outline and output to a text file to the desired file location
+
+`./mage GenerateTextOutlineFromGinkgoSpec tests/<subdirectory>/<test-file>.go <dest>/<sub-path>/<file>`
+
+```bash
+$ ./mage GenerateTextOutlineFromGinkgoSpec tests/books/books.go /tmp/outlines/books.outline
+I0622 22:19:41.857966   20923 testcasemapper.go:26] Mapping outline from a Ginkgo test file, tests/books/books.go
+I0622 22:19:41.865725   20923 testcasemapper.go:70] Mapping outline to a text file, /tmp/outlines/books.outline
+I0622 22:19:41.865837   20923 textspec.go:67] successfully written to /tmp/outlines/books.outline
+
+```
+ 
+ ### Generating the ginkgo spec file from an existing text outline file
+ This will generate the Ginkgo spec in a subdirectory within our tests directory
+
+ `./mage GenerateGinkoSpecFromTextOutline <path>/<to>/<outline> <subpath-under-tests>/<filename>.go`
+
+ ```bash
+ $ ./mage GenerateGinkoSpecFromTextOutline dummy_test.outline books/books.go
+I0622 22:14:22.140583   20356 testcasemapper.go:58] Mapping outline from a text file, dummy_test.outline
+I0622 22:14:22.140673   20356 testcasemapper.go:47] Mapping outline to a Ginkgo test file, books/books.go
+I0622 22:14:22.140841   20356 ginkgosspec.go:242] Creating new test package directory and spec file tests/books/books.go.
+
+
+ ```
+ As noted above, this command will create a new package under the `tests/`directory and a test spec file `<filename>.go` for you. It will contain some basic imports but more importantly it will generate a basic structured Ginkgo spec skeleton that you can code against.
+
+### Printing a text outline in JSON format of an existing ginkgo spec file
+ This will generate the outline and output to your terminal in JSON format. This is the format we use when rendering the template. You can pipe this output to tools like `jq` for formatting and filtering. This would only be useful for troubleshooting purposes 
+
+`./mage PrintJsonOutlineOfGinkgoSpec tests/<subdirectory>/<test-file>.go`
+
+```bash
+$ ./mage PrintJsonOutlineOfGinkgoSpec tests/books/books.go 
+I0622 22:28:15.661455   23214 testcasemapper.go:26] Mapping outline from a Ginkgo test file, tests/books/books.go
+[{"Name":"BookSuiteDescribe","Text":"Book service E2E tests","Labels":[],"Nodes":[{"Name":"Describe","Text":"Categorizing book length ","Labels":["book"],"Nodes":[{"Name":"When","Text":"the book has more than 300 pages ","Labels":["slow"],"Nodes":[{"Name":"It","Text":"Should be a novel","Labels":[],"Nodes":[],"InnerParentContainer":false,"LineSpaceLevel":0}],"InnerParentContainer":false,"LineSpaceLevel":0},{"Name":"When","Text":"the book has fewer than 300 pages ","Labels":["fast"],"Nodes":[{"Name":"It","Text":"should be a short story","Labels":[],"Nodes":[],"InnerParentContainer":false,"LineSpaceLevel":0}],"InnerParentContainer":false,"LineSpaceLevel":0}],"InnerParentContainer":true,"LineSpaceLevel":0},{"Name":"Describe","Text":"Creating bookmarks in a book ","Labels":["book","bookmark","parallel"],"Nodes":[{"Name":"It","Text":"Has no bookmarks by default","Labels":[],"Nodes":[],"InnerParentContainer":false,"LineSpaceLevel":0},{"Name":"It","Text":"Can add bookmarks","Labels":[],"Nodes":[],"InnerParentContainer":false,"LineSpaceLevel":0}],"InnerParentContainer":true,"LineSpaceLevel":0},{"Name":"DescribeTable","Text":"Reading invalid books always errors is table","Labels":[],"Nodes":[{"Name":"Entry","Text":"Empty book","Labels":[],"Nodes":[],"InnerParentContainer":false,"LineSpaceLevel":0},{"Name":"Entry","Text":"Only title","Labels":[],"Nodes":[],"InnerParentContainer":false,"LineSpaceLevel":0},{"Name":"Entry","Text":"Only author","Labels":[],"Nodes":[],"InnerParentContainer":false,"LineSpaceLevel":0},{"Name":"Entry","Text":"Missing pages","Labels":[],"Nodes":[],"InnerParentContainer":false,"LineSpaceLevel":0}],"InnerParentContainer":true,"LineSpaceLevel":0}],"InnerParentContainer":false,"LineSpaceLevel":0}] 
+
+``` 
+
+### Printing a text outline of an existing text outline file
+ This will generate the outline and output to your terminal. This would only be useful for troubleshooting purposes. i.e. To make sure complex text outlines are graphed properly in the tree.
+
+`./mage PrintOutlineOfTextSpec <path>/<to>/<outline-file>`
+
+```bash
+$ ./mage PrintOutlineOfTextSpec /tmp/outlines/books.outline
+I0622 22:32:34.429681   23787 testcasemapper.go:58] Mapping outline from a text file, /tmp/outlines/books.outline
+I0622 22:32:34.429771   23787 testcasemapper.go:40] Printing outline:
+
+BookSuiteDescribe: Book service E2E tests
+  Describe: Categorizing book length   @book
+    When: the book has more than 300 pages   @slow
+      It: Should be a novel
+    When: the book has fewer than 300 pages   @fast
+      It: should be a short story
+  Describe: Creating bookmarks in a book   @book, @bookmark, @parallel
+    It: Has no bookmarks by default
+    It: Can add bookmarks
+  DescribeTable: Reading invalid books always errors is table
+    Entry: Empty book
+    Entry: Only title
+    Entry: Only author
+    Entry: Missing pages
+
+``` 
+
+### Updating the pkg framework describe file
+
+Once you are comfortable with your test you can update the framework/describe.go in our package directory.
+
+`./mage AppendFrameworkDescribeGoFile tests/<test-package>/<specfile>.go`
+
+```bash
+$ ./mage AppendFrameworkDescribeGoFile tests/books/books.go
+I0623 11:56:42.997793   20862 magefile.go:670] Inspecting Ginkgo spec file, tests/books/books.go
+pkg/framework/describe.go
+
+```
+
+ ### Generating Ginkgo Test Suite File
+
+ This command will help setup a test suite file within the `cmd/` directory. It will do the test package import based on the name of the package you passed in. So using the example below it will assume there is a `tests/chaos` package to import as well. It uses a simplified version of the `cmd/e2e_test.go` as a template to allow you to leverage the existing functionality built into the framework like webhooks eventing and Polarion formatted XML test case generation. Edit this file as you feel necessary.
 
 NOTE: You may not need to generate this file. This is useful when you want to move a type of testing into a separate suite that wouldn't go into the existing e2e test suite package. i.e. chaos testing. We have a current example with the existing `cmd/loadsTest.go` which are used to run the AppStudio Load tests.
+
+`./mage GenerateTestSuiteFile <name of test package under tests directory>`
+
+ ```bash
+$ ./mage GenerateTestSuiteFile chaos
+I0623 12:48:13.761038   31196 magefile.go:467] Creating new test suite file cmd/chaos_test.go.
+cmd/chaos_test.go
+
+```

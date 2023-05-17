@@ -1,3 +1,6 @@
-func {{ .TestSpecName }}SuiteDescribe(text string, args ...interface{}) bool {
-	return Describe("[{{ .TestSpecName }}-suite "+text+"]", args, Ordered)
+{{range .Outline}}
+func {{ .Name }}(text string, args ...interface{}) bool {
+{{break}}
+{{end -}}
+	return Describe("[{{ .FrameworkDescribeString }} "+text+"]", args, Ordered)
 }

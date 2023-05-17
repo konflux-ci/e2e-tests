@@ -1,6 +1,8 @@
 package main
 
-import "github.com/magefile/mage/mg"
+import (
+	"github.com/magefile/mage/mg"
+)
 
 type Local mg.Namespace
 type CI mg.Namespace
@@ -43,9 +45,4 @@ type PullRequestMetadata struct {
 	CommitSHA    string
 	Number       int
 	RemoteName   string
-}
-
-type TemplateData struct {
-	SuiteName    string
-	TestSpecName string
 }

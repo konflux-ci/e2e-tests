@@ -27,12 +27,6 @@ local/cluster/prepare:
 local/test/e2e:
 	./mage -v local:teste2e
 
-local/template/generate-test-suite:
-	./mage -v local:generateTestSuiteFile
-
-local/template/generate-test-spec:
-	./mage -v local:generateTestSpecFile
-
 clean-gitops-repositories:
 	DRY_RUN=false ./mage -v local:cleanupGithubOrg
 
