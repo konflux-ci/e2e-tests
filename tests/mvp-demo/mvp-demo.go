@@ -59,11 +59,13 @@ const (
 	pipelineRunStartedTimeout   = time.Minute * 5
 	pullRequestCreationTimeout  = time.Minute * 5
 	releasePipelineTimeout      = time.Minute * 15
+	snapshotTimeout             = time.Minute * 4
 
 	// Intervals
 	defaultPollingInterval     = time.Second * 2
 	jvmRebuildPollingInterval  = time.Second * 10
 	pipelineRunPollingInterval = time.Second * 10
+	snapshotPollingInterval    = time.Second * 1
 )
 
 var sampleRepoURL = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), sampleRepoName)
@@ -243,9 +245,16 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		})
 
 		It("Snapshot is created", func() {
-			snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", "", componentName, userNamespace)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(snapshot.Name).ToNot(BeEmpty())
+			Eventually(func() bool {
+				snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", "", componentName, userNamespace)
+				if err != nil || len(snapshot.Name) == 0 {
+					GinkgoWriter.Printf("cannot get the Snapshot: %v\n", err)
+					return false
+				}
+
+				GinkgoWriter.Printf("snapshot %s is found\n", snapshot.Name)
+				return true
+			}, snapshotTimeout, snapshotPollingInterval).Should(BeTrue(), "timed out when trying to check if the Snapshot exists")
 		})
 
 		It("Release is created", func() {
@@ -420,9 +429,16 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		})
 
 		It("Snapshot is created", func() {
-			snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", userNamespace)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(snapshot.Name).ToNot(BeEmpty())
+			Eventually(func() bool {
+				snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", userNamespace)
+				if err != nil || len(snapshot.Name) == 0 {
+					GinkgoWriter.Printf("cannot get the Snapshot: %v\n", err)
+					return false
+				}
+
+				GinkgoWriter.Printf("snapshot %s is found\n", snapshot.Name)
+				return true
+			}, snapshotTimeout, snapshotPollingInterval).Should(BeTrue(), "timed out when trying to check if the Snapshot exists")
 		})
 
 		It("Release is created and Release PipelineRun is triggered and Release status is updated", func() {
