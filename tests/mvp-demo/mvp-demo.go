@@ -229,7 +229,9 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		})
 
 		It("sample app can be built successfully", func() {
-			_, err = f.AsKubeAdmin.HasController.CreateComponent(appName, componentName, userNamespace, sampleRepoURL, componentNewBaseBranch, "", constants.DefaultImagePushRepo, "", true)
+			quayOrg := utils.GetEnv(constants.DEFAULT_QUAY_ORG_ENV, constants.DefaultQuayOrg)
+			outputContainerImage := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
+			_, err = f.AsKubeAdmin.HasController.CreateComponent(appName, componentName, userNamespace, sampleRepoURL, componentNewBaseBranch, "", outputContainerImage, "", true)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(f.AsKubeAdmin.CommonController, componentName, appName, userNamespace, "")).To(Succeed())
 		})
