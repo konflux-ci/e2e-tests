@@ -56,6 +56,8 @@ func (c *ResultClient) sendRequest(path string) (body []byte, err error) {
 
 	defer res.Body.Close()
 
+	//Debug:
+	fmt.Printf("Response Body: %s\n", string(body))
 	return body, err
 }
 
