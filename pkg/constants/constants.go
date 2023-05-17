@@ -95,7 +95,7 @@ const (
 
 	ComponentInitialBuildAnnotationKey = "appstudio.openshift.io/component-initial-build"
 
-	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.10"
+	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.11"
 
 	// TODO
 	// delete this constant and all its occurrences in the code base
