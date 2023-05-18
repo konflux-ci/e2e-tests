@@ -149,6 +149,20 @@ func NewAdminKubernetesClient() (*CustomClient, error) {
 	return createCustomClient(*adminKubeconfig)
 }
 
+func NewKubeFromKubeConfigFile(kubeconfig string) (*kubernetes.Clientset, error) {
+	kubeConfData, err := os.ReadFile(kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	config, err := clientcmd.RESTConfigFromKubeConfig(kubeConfData)
+	if err != nil {
+		return nil, err
+	}
+
+	return kubernetes.NewForConfig(config)
+}
+
 func createCustomClient(cfg rest.Config) (*CustomClient, error) {
 	client, err := kubernetes.NewForConfig(&cfg)
 	if err != nil {
