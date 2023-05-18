@@ -13,6 +13,7 @@ import (
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
@@ -75,7 +76,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			}
 
 			buildPipelineRunName = fmt.Sprintf("buildah-demo-%s", util.GenerateRandomString(10))
-			image = fmt.Sprintf("image-registry.openshift-image-registry.svc:5000/%s/%s", namespace, buildPipelineRunName)
+			image = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), buildPipelineRunName)
 
 			pipelineRunTimeout = int(time.Duration(20) * time.Minute)
 			attestationTimeout = time.Duration(60) * time.Second
@@ -105,7 +106,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			Expect(err).ShouldNot(HaveOccurred())
 			dockerBuildBundle := bundles.DockerBuildBundle
 			Expect(dockerBuildBundle).NotTo(Equal(""), "Can't continue without a docker-build pipeline got from selector config")
-			pr, err := kubeController.RunPipeline(tekton.BuildahDemo{Image: image, Bundle: dockerBuildBundle}, pipelineRunTimeout)
+			pr, err := kubeController.RunPipeline(tekton.BuildahDemo{Image: image, Bundle: dockerBuildBundle, Namespace: namespace, Name: buildPipelineRunName}, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			// Verify that the build task was created as expected.
 			Expect(pr.ObjectMeta.Name).To(Equal(buildPipelineRunName))
@@ -130,7 +131,8 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			GinkgoWriter.Printf("The image signed by Tekton Chains is %s\n", imageWithDigest)
 		})
 
-		It("creates signature and attestation", func() {
+		// Skip until https://issues.redhat.com/browse/RHTAPBUGS-276 is fixed
+		It("creates signature and attestation", Pending, func() {
 			err := kubeController.AwaitAttestationAndSignature(imageWithDigest, attestationTimeout)
 			Expect(err).NotTo(
 				HaveOccurred(),
