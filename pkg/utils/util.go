@@ -170,8 +170,12 @@ func GetGeneratedNamespace(name string) string {
 	return name + "-" + util.GenerateRandomString(4)
 }
 
+func WaitUntilWithInterval(cond wait.ConditionFunc, interval time.Duration, timeout time.Duration) error {
+	return wait.PollImmediate(interval, timeout, cond)
+}
+
 func WaitUntil(cond wait.ConditionFunc, timeout time.Duration) error {
-	return wait.PollImmediate(time.Second, timeout, cond)
+	return WaitUntilWithInterval(cond, time.Second, timeout)
 }
 
 func ExecuteCommandInASpecificDirectory(command string, args []string, directory string) error {
