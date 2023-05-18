@@ -115,7 +115,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 
 			// Remove all resources created by the tests in case the suite was successfull
 			AfterAll(func() {
-				/*if !CurrentSpecReport().Failed() {
+				if !CurrentSpecReport().Failed() {
 					Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.HasController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
@@ -124,7 +124,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 					Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(fw.UserNamespace)).To(Succeed())
 					Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllGitOpsDeploymentInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 					Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
-				}*/
+				}
 			})
 
 			It("initializes byoc cluster connection and creates targetNamespace", func() {
@@ -264,7 +264,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 			})
 
 			if suite.Byoc.ClusterType == appservice.ConfigurationClusterType_Kubernetes {
-				It("checks if ingress exists in the ephemeral cluster", func() {
+				It("checks if ingress exists and is accessible in the kubernetes ephemeral cluster", func() {
 					var ingress *v1.Ingress
 					Eventually(func() bool {
 						ingress, err = ephemeralClusterClient.NetworkingV1().Ingresses(suite.Byoc.TargetNamespace).Get(context.TODO(), componentObj.Name, metav1.GetOptions{})

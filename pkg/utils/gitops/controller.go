@@ -136,7 +136,7 @@ func (h *SuiteController) CreateEphemeralEnvironment(name string, namespace stri
 				},
 			},
 			UnstableConfigurationFields: &appservice.UnstableEnvironmentConfiguration{
-				ClusterType: appservice.ConfigurationClusterType_Kubernetes,
+				ClusterType: clusterType,
 				KubernetesClusterCredentials: appservice.KubernetesClusterCredentials{
 					TargetNamespace:            targetNamespace,
 					APIURL:                     serverApi,
