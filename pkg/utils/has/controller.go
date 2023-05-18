@@ -348,6 +348,11 @@ func (h *SuiteController) DeleteHasComponentDetectionQuery(name string, namespac
 
 // CreateComponentDetectionQuery create a has componentdetectionquery from a given name, namespace, and git source
 func (h *SuiteController) CreateComponentDetectionQuery(cdqName, namespace, gitSourceURL, gitSourceRevision, gitSourceContext, secret string, isMultiComponent bool) (*appservice.ComponentDetectionQuery, error) {
+	return h.CreateComponentDetectionQueryWithTimeout(cdqName, namespace, gitSourceURL, gitSourceRevision, gitSourceContext, secret, isMultiComponent, 5*time.Minute)
+}
+
+// CreateComponentDetectionQueryWithTimeout create a has componentdetectionquery from a given name, namespace, and git source and waits for it to be read
+func (h *SuiteController) CreateComponentDetectionQueryWithTimeout(cdqName, namespace, gitSourceURL, gitSourceRevision, gitSourceContext, secret string, isMultiComponent bool, timeout time.Duration) (*appservice.ComponentDetectionQuery, error) {
 	componentDetectionQuery := &appservice.ComponentDetectionQuery{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cdqName,
@@ -378,7 +383,7 @@ func (h *SuiteController) CreateComponentDetectionQuery(cdqName, namespace, gitS
 			}
 		}
 		return false, nil
-	}, 5*time.Minute)
+	}, timeout)
 
 	if err != nil {
 		return nil, fmt.Errorf("error waiting for cdq to be ready: %v", err)
