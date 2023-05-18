@@ -628,10 +628,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			err = f.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(testNamespace, dummySecret.Name, constants.DefaultPipelineServiceAccount, false)
 			Expect(err).ToNot(HaveOccurred())
 
-			// Temporary linking to old pipeline SA, should be removed when default SA is switched to "appstudio-pipeline"
-			err = f.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(testNamespace, dummySecret.Name, "pipeline", false)
-			Expect(err).ToNot(HaveOccurred())
-
 			componentName = "build-suite-test-secret-overriding"
 			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 			_, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "", true)
