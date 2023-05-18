@@ -27,7 +27,7 @@ type vclusterFactory struct {
 }
 
 type Vcluster interface {
-	InitializeVCluster(clusterName string, targetNamespace string) (kubeconfigPath string, err error)
+	InitializeVCluster(clusterName string, targetNamespace string, host string) (kubeconfigPath string, err error)
 }
 
 func NewVclusterController(dir string, kube *client.CustomClient) Vcluster {
@@ -37,12 +37,12 @@ func NewVclusterController(dir string, kube *client.CustomClient) Vcluster {
 	}
 }
 
-func (c *vclusterFactory) InitializeVCluster(clusterName string, targetNamespace string) (kubeconfigPath string, err error) {
+func (c *vclusterFactory) InitializeVCluster(clusterName string, targetNamespace string, host string) (kubeconfigPath string, err error) {
 	var valuesFilename = fmt.Sprintf("%s/%s-values.yaml", c.TargetDir, clusterName)
 	var createVclusterArgs = []string{"create", clusterName, "--namespace", targetNamespace, "--connect=false", "--expose", "-f", valuesFilename}
 	kubeconfigPath = fmt.Sprintf("%s/%s-kubeconfig", c.TargetDir, clusterName)
 
-	if err := c.WriteToFile(c.GenerateHelmValues(), valuesFilename); err != nil {
+	if err := c.WriteToFile(c.GenerateHelmValues(host), valuesFilename); err != nil {
 		return "", err
 	}
 
@@ -120,7 +120,7 @@ func (c *vclusterFactory) CreateKubeconfig(clusterName string, targetNamespace s
 		"--token-expiration=10800", "--cluster-role=cluster-admin", "--insecure", "--kube-config", kubeconfigPath}, "")
 }
 
-func (c *vclusterFactory) GenerateHelmValues() ValuesTemplate {
+func (c *vclusterFactory) GenerateHelmValues(host string) ValuesTemplate {
 	return ValuesTemplate{
 		Openshift: Openshift{
 			Enable: true,
@@ -133,7 +133,9 @@ func (c *vclusterFactory) GenerateHelmValues() ValuesTemplate {
 				SyncServiceSelector: true,
 			},
 			Ingresses: Ingresses{
-				Enabled: true,
+				Enabled:    true,
+				PathType:   "Prefix",
+				ApiVersion: "networking.k8s.io/v1",
 			},
 			Secrets: Secrets{
 				Enabled: true,

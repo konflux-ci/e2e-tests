@@ -335,3 +335,17 @@ func HostIsAccessible(host string) bool {
 	}
 	return true
 }
+
+func HostEndpointIsAccessible(host string, endpoint string) bool {
+	tc := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
+	client := http.Client{Transport: tc}
+	res, err := client.Get(host)
+	if err != nil || res.StatusCode == 200 {
+		return false
+	}
+	return true
+}

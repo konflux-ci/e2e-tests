@@ -17,7 +17,11 @@ type Services struct {
 }
 
 type Ingresses struct {
-	Enabled bool `yaml:"enabled"`
+	Enabled          bool   `yaml:"enabled"`
+	PathType         string `yaml:"pathType"`
+	ApiVersion       string `yaml:"apiVersion"`
+	IngressClassName string `yaml:"ingressClassName"`
+	Host             string `yaml:"host"`
 }
 
 type Secrets struct {

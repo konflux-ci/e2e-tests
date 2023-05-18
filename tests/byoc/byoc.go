@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/devfile/library/pkg/util"
 	"github.com/google/uuid"
 	"github.com/magefile/mage/sh"
 	. "github.com/onsi/ginkgo/v2"
@@ -32,11 +33,12 @@ const (
 	ManagedEnvironmentType       string = "managed-gitops.redhat.com/managed-environment"
 	ManagedEnvironmentName       string = "development"
 	QuarkusDevfileSource         string = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
+	QuarkusComponentEndpoint     string = "/hello-resteasy"
 )
 
 var (
 	applicationName = utils.GetGeneratedNamespace("byoc-app")
-	componentName   = utils.GetGeneratedNamespace("byoc-comp")
+	cdqName         = utils.GetGeneratedNamespace("byoc-comp")
 )
 
 // Initialize simple scenarios to test RHTAP byoc feature flow: Feature jira link: https://issues.redhat.com/browse/RHTAP-129
@@ -86,7 +88,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 
 		Describe(suite.Name, func() {
 			BeforeAll(func() {
-				fw, err = framework.NewFramework(utils.GetGeneratedNamespace(fmt.Sprintf("byoc-%s", strings.ToLower(string(suite.Byoc.ClusterType)))))
+				fw, err = framework.NewFramework(utils.GetGeneratedNamespace("byoc"))
 				Expect(err).NotTo(HaveOccurred())
 
 				// Use target test cluster as Ingress for the cluster provided for user. Ingress is mandatory for kubernetes cluster like vcluster in this case.
@@ -101,7 +103,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 
 					vc = vcluster.NewVclusterController(fmt.Sprintf("%s/tmp", rootPath), fw.AsKubeAdmin.CommonController.CustomClient)
 
-					byocKubeconfig, err = vc.InitializeVCluster(fw.UserNamespace, fw.UserNamespace)
+					byocKubeconfig, err = vc.InitializeVCluster(fw.UserNamespace, fw.UserNamespace, kubeIngressDomain)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(byocKubeconfig).NotTo(BeEmpty(), "failed to initialize vcluster. Kubeconfig not provided")
 
@@ -113,7 +115,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 
 			// Remove all resources created by the tests in case the suite was successfull
 			AfterAll(func() {
-				if !CurrentSpecReport().Failed() {
+				/*if !CurrentSpecReport().Failed() {
 					Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.HasController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
@@ -122,7 +124,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 					Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(fw.UserNamespace)).To(Succeed())
 					Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllGitOpsDeploymentInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 					Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
-				}
+				}*/
 			})
 
 			It("initializes byoc cluster connection and creates targetNamespace", func() {
@@ -192,7 +194,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 			})
 
 			It("creates Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
-				_, err := fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(componentName, fw.UserNamespace, suite.ApplicationService.GithubRepository, "", "", "", false)
+				_, err := fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(cdqName, fw.UserNamespace, suite.ApplicationService.GithubRepository, "", "", "", false)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -200,7 +202,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 				// Validate that the CDQ completes successfully
 				Eventually(func() bool {
 					// application info should be stored even after deleting the application in application variable
-					cdq, err = fw.AsKubeAdmin.HasController.GetComponentDetectionQuery(componentName, fw.UserNamespace)
+					cdq, err = fw.AsKubeAdmin.HasController.GetComponentDetectionQuery(cdqName, fw.UserNamespace)
 					return err == nil && len(cdq.Status.ComponentDetected) > 0
 				}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "ComponentDetectionQuery did not complete successfully")
 
@@ -217,6 +219,8 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 
 			It("creates Red Hat AppStudio Quarkus component", func() {
 				outputContainerImg := fmt.Sprintf("quay.io/%s/test-images:%s-%s", utils.GetQuayIOOrganization(), fw.UserName, strings.Replace(uuid.New().String(), "-", "", -1))
+
+				compDetected.ComponentStub.ComponentName = util.GenerateRandomString(4)
 				componentObj, err = fw.AsKubeAdmin.HasController.CreateComponentFromStub(compDetected, fw.UserNamespace, outputContainerImg, "", applicationName)
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -270,6 +274,13 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 
 						return true
 					}, 10*time.Minute, 10*time.Second).Should(BeTrue(), fmt.Sprintf("ingress didn't appear in target cluster in 10 minutes: %+v", ingress))
+
+					if len(ingress.Spec.Rules) == 0 {
+						Fail("kubernetes ingress set any rule during component creation")
+					}
+					Eventually(func() bool {
+						return utils.HostEndpointIsAccessible(fmt.Sprintf("http://%s", ingress.Spec.Rules[0].Host), QuarkusComponentEndpoint)
+					}, 10*time.Minute, 10*time.Second).Should(BeTrue(), fmt.Sprintf("ingress is not accessible: %+v", ingress))
 				})
 			}
 		})
