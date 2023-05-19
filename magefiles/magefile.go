@@ -34,7 +34,7 @@ import (
 )
 
 var (
-	requiredBinaries = []string{"jq", "kubectl", "oc", "yq", "git"}
+	requiredBinaries = []string{"jq", "kubectl", "oc", "yq", "git", "helm"}
 	artifactDir      = utils.GetEnv("ARTIFACT_DIR", ".")
 	openshiftJobSpec = &OpenshiftJobSpec{}
 	pr               = &PullRequestMetadata{}
@@ -295,7 +295,7 @@ func (ci CI) setRequiredEnvVars() error {
 			case strings.Contains(jobName, "application-service"):
 				envVarPrefix = "HAS"
 				imageTagSuffix = "has-image"
-				testSuiteLabel = "has,e2e-demo"
+				testSuiteLabel = "has,e2e-demo,byoc"
 			case strings.Contains(jobName, "release-service"):
 				envVarPrefix = "RELEASE_SERVICE"
 				imageTagSuffix = "release-service-image"

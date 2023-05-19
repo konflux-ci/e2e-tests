@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -170,8 +171,12 @@ func GetGeneratedNamespace(name string) string {
 	return name + "-" + util.GenerateRandomString(4)
 }
 
+func WaitUntilWithInterval(cond wait.ConditionFunc, interval time.Duration, timeout time.Duration) error {
+	return wait.PollImmediate(interval, timeout, cond)
+}
+
 func WaitUntil(cond wait.ConditionFunc, timeout time.Duration) error {
-	return wait.PollImmediate(time.Second, timeout, cond)
+	return WaitUntilWithInterval(cond, time.Second, timeout)
 }
 
 func ExecuteCommandInASpecificDirectory(command string, args []string, directory string) error {
@@ -319,4 +324,32 @@ func ParseDevfileModel(devfileModel string) (data.DevfileData, error) {
 	}
 	devfileObj, _, err := devfilePkg.ParseDevfileAndValidate(parserArgs)
 	return devfileObj.Data, err
+}
+
+func HostIsAccessible(host string) bool {
+	tc := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
+	client := http.Client{Transport: tc}
+	res, err := client.Get(host)
+	if err != nil || res.StatusCode > 499 {
+		return false
+	}
+	return true
+}
+
+func HostEndpointIsAccessible(host string, endpoint string) bool {
+	tc := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
+	client := http.Client{Transport: tc}
+	res, err := client.Get(host)
+	if err != nil || res.StatusCode == 200 {
+		return false
+	}
+	return true
 }
