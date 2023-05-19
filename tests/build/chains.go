@@ -131,8 +131,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			GinkgoWriter.Printf("The image signed by Tekton Chains is %s\n", imageWithDigest)
 		})
 
-		// Skip until https://issues.redhat.com/browse/RHTAPBUGS-276 is fixed
-		It("creates signature and attestation", Pending, func() {
+		It("creates signature and attestation", func() {
 			err := kubeController.AwaitAttestationAndSignature(imageWithDigest, attestationTimeout)
 			Expect(err).NotTo(
 				HaveOccurred(),
