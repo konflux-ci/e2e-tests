@@ -225,49 +225,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				})
 			})
 
-			It("should validate tekton taskrun test results", func() {
-				// List Of Taskruns Expected to Get Taskrun Results
-				gatherResult := []string{"clair-scan", "inspect-image", "label-check", "sbom-json-check"}
-				// TODO: once we migrate "build" e2e tests to kcp, remove this condition
-				// and add the 'sbom-json-check' taskrun to gatherResults slice
-				s, _ := GinkgoConfiguration()
-				if strings.Contains(s.LabelFilter, buildTemplatesKcpTestLabel) {
-					gatherResult = append(gatherResult, "sbom-json-check")
-				}
+			It("should validate tekton taskrun test results", Label(buildTemplatesTestLabel), func() {
 				pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
-
-				for i := range gatherResult {
-					if gatherResult[i] == "inspect-image" {
-						// Fetching BASE_IMAGE shouldn't fail
-						result, err := build.FetchImageTaskRunResult(kubeadminClient.CommonController.KubeRest(), pipelineRun, gatherResult[i], "BASE_IMAGE")
-						Expect(err).ShouldNot(HaveOccurred())
-						ret := build.ValidateImageTaskRunResults(gatherResult[i], result)
-						Expect(ret).Should(BeTrue())
-					} else if gatherResult[i] == "clair-scan" {
-						// Fetching HACBS_TEST_OUTPUT || TEST_OUTPUT shouldn't fail
-						result, err := build.FetchTaskRunResult(kubeadminClient.CommonController.KubeRest(), pipelineRun, gatherResult[i], constants.TektonTaskTestOutputName)
-						// TODO: delete this condition after https://issues.redhat.com/browse/RHTAP-810 is completed
-						if err != nil {
-							result, err = build.FetchTaskRunResult(kubeadminClient.CommonController.KubeRest(), pipelineRun, gatherResult[i], constants.OldTektonTaskTestOutputName)
-						}
-						Expect(err).ShouldNot(HaveOccurred())
-						ret := build.ValidateTaskRunResults(gatherResult[i], result)
-						// Vulnerabilities should get periodically eliminated with image rebuild, so the result of that task might be different
-						// This should not block e2e tests with errors.
-						GinkgoWriter.Printf("retcode for validate taskrun result is %s\n", ret)
-					} else {
-						// Fetching HACBS_TEST_OUTPUT || TEST_OUTPUT shouldn't fail
-						result, err := build.FetchTaskRunResult(kubeadminClient.CommonController.KubeRest(), pipelineRun, gatherResult[i], constants.TektonTaskTestOutputName)
-						// TODO: delete this condition after https://issues.redhat.com/browse/RHTAP-810 is completed
-						if err != nil {
-							result, err = build.FetchTaskRunResult(kubeadminClient.CommonController.KubeRest(), pipelineRun, gatherResult[i], constants.OldTektonTaskTestOutputName)
-						}
-						Expect(err).ShouldNot(HaveOccurred())
-						ret := build.ValidateTaskRunResults(gatherResult[i], result)
-						Expect(ret).Should(BeTrue())
-					}
-				}
+				Expect(build.ValidateBuildPipelineTestResults(pipelineRun, kubeadminClient.CommonController.KubeRest())).To(Succeed())
 			})
 
 			When("the container image is created and pushed to container registry", Label("sbom", "slow"), func() {
