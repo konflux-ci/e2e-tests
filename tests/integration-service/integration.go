@@ -126,10 +126,17 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		}
 
 		assertSnapshotCreated := func() {
-			// snapshotName is sent as empty since it is unknown at this stage
-			snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", "", componentName, appStudioE2EApplicationsNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
-			GinkgoWriter.Printf("snapshot %s is found\n", snapshot.Name)
+			Eventually(func() bool {
+				// snapshotName is sent as empty since it is unknown at this stage
+				snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", "", componentName, appStudioE2EApplicationsNamespace)
+				if err != nil {
+					GinkgoWriter.Printf("cannot get the Snapshot: %v\n", err)
+					return false
+				}
+
+				GinkgoWriter.Printf("snapshot %s is found\n", snapshot.Name)
+				return true
+			}, timeout, interval).Should(BeTrue(), "timed out when trying to check if the Snapshot exists")
 		}
 
 		assertIntegrationPipelineRunFinished := func() {
@@ -352,10 +359,16 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("checks if snapshot is marked as failed", func() {
-				snapshot, err := f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", appStudioE2EApplicationsNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(f.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot)).To(BeFalse())
+				Eventually(func() bool {
+					snapshot, err := f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", appStudioE2EApplicationsNamespace)
+					if err != nil {
+						GinkgoWriter.Printf("cannot get the Snapshot: %v\n", err)
+						return false
+					}
 
+					GinkgoWriter.Printf("snapshot %s is found\n", snapshot.Name)
+					return !f.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot)
+				}, timeout, interval).Should(BeTrue(), "time out when trying to check if either the Snapshot exists or if the Snapshot is marked as failed")
 			})
 
 			It("checks if the global candidate is not updated", func() {
