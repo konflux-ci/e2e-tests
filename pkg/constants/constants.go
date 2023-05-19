@@ -80,8 +80,8 @@ const (
 
 	RegistryAuthSecretName = "redhat-appstudio-registry-pull-secret"
 
-	SharedPullSecretName      = "redhat-appstudio-user-workload"
-	SharedPullSecretNamespace = "build-templates"
+	QuayRepositorySecretName      = "quay-repository"
+	QuayRepositorySecretNamespace = "e2e-secrets"
 
 	JVMBuildImageSecretName = "jvm-build-image-secrets"
 	JBSConfigName           = "jvm-build-config"

@@ -198,20 +198,24 @@ func (h *SuiteController) DeleteHasComponent(name string, namespace string, repo
 // CreateComponent create an has component from a given name, namespace, application, devfile and a container image
 func (h *SuiteController) CreateComponent(applicationName, componentName, namespace, gitSourceURL, gitSourceRevision, containerImageSource, outputContainerImage, secret string, skipInitialChecks bool) (*appservice.Component, error) {
 	var containerImage string
+	annotations := map[string]string{
+		// PLNSRVCE-957 - if true, run only basic build pipeline tasks
+		"skip-initial-checks": strconv.FormatBool(skipInitialChecks),
+	}
 	if outputContainerImage != "" {
 		containerImage = outputContainerImage
-	} else {
+	} else if containerImageSource != "" {
 		containerImage = containerImageSource
+	} else {
+		// When no image image is selected then add annotatation to generate new image repository
+		annotations = utils.MergeMaps(annotations, constants.ComponentWithImageControllerAnnotation)
 	}
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				// PLNSRVCE-957 - if true, run only basic build pipeline tasks
-				"skip-initial-checks": strconv.FormatBool(skipInitialChecks),
-			},
-			Labels:    constants.ComponentDefaultLabel,
-			Name:      componentName,
-			Namespace: namespace,
+			Annotations: annotations,
+			Labels:      constants.ComponentDefaultLabel,
+			Name:        componentName,
+			Namespace:   namespace,
 		},
 		Spec: appservice.ComponentSpec{
 			ComponentName: componentName,
@@ -303,9 +307,7 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
-				"skip-initial-checks":                "true",
-				"image.redhat.com/generate":          "true",
-				"image.redhat.com/delete-image-repo": "true",
+				"skip-initial-checks": "true",
 			},
 			Name:      compDetected.ComponentStub.ComponentName,
 			Namespace: namespace,
@@ -315,6 +317,8 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 
 	if outputContainerImage != "" {
 		component.Spec.ContainerImage = outputContainerImage
+	} else {
+		component.Annotations = utils.MergeMaps(component.Annotations, constants.ComponentWithImageControllerAnnotation)
 	}
 
 	if component.Spec.TargetPort == 0 {
@@ -504,12 +508,6 @@ func (h *SuiteController) WaitForComponentPipelineToBeFinished(c *common.SuiteCo
 
 // CreateComponentFromDevfile creates a has component from a given name, namespace, application, devfile and a container image
 func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentName, namespace, gitSourceURL, devfile, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
-	var containerImage string
-	if outputContainerImage != "" {
-		containerImage = outputContainerImage
-	} else {
-		containerImage = containerImageSource
-	}
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      componentName,
@@ -526,12 +524,18 @@ func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentN
 					},
 				},
 			},
-			Secret:         secret,
-			ContainerImage: containerImage,
-			Replicas:       pointer.Int(1),
-			TargetPort:     8080,
-			Route:          "",
+			Secret:     secret,
+			Replicas:   pointer.Int(1),
+			TargetPort: 8080,
+			Route:      "",
 		},
+	}
+	if outputContainerImage != "" {
+		component.Spec.ContainerImage = outputContainerImage
+	} else if containerImageSource != "" {
+		component.Spec.ContainerImage = containerImageSource
+	} else {
+		component.Annotations = constants.ComponentWithImageControllerAnnotation
 	}
 	err := h.KubeRest().Create(context.TODO(), component)
 	if err != nil {
