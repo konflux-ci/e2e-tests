@@ -115,6 +115,10 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 				namespace = fw.UserNamespace
 				Expect(namespace).NotTo(BeEmpty())
 
+				// collect SPI ResourceQuota metrics (temporary)
+				err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("multi-component", namespace, "appstudio-crds-spi")
+				Expect(err).NotTo(HaveOccurred())
+
 				suiteConfig, _ := GinkgoConfiguration()
 				GinkgoWriter.Printf("Parallel processes: %d\n", suiteConfig.ParallelTotal)
 				GinkgoWriter.Printf("Running on namespace: %s\n", namespace)
@@ -128,6 +132,10 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 
 			// Remove all resources created by the tests
 			AfterAll(func() {
+				// collect SPI ResourceQuota metrics (temporary)
+				err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("multi-component", namespace, "appstudio-crds-spi")
+				Expect(err).NotTo(HaveOccurred())
+
 				if !CurrentSpecReport().Failed() {
 					Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
@@ -245,23 +253,34 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 					interval := time.Second * 10
 
 					for _, component := range componentList {
-						componentSnapshot, err := fw.AsKubeDeveloper.IntegrationController.GetSnapshot("", "", component.Name, namespace)
-						Expect(err).ShouldNot(HaveOccurred())
+						var componentSnapshot *appservice.Snapshot
 
 						Eventually(func() bool {
+							componentSnapshot, err = fw.AsKubeDeveloper.IntegrationController.GetSnapshot("", "", component.Name, namespace)
+							if err != nil {
+								GinkgoWriter.Printf("cannot get the Snapshot: %v\n", err)
+								return false
+							}
+
 							return fw.AsKubeDeveloper.IntegrationController.HaveTestsSucceeded(componentSnapshot)
-						}, timeout, interval).Should(BeTrue(), "time out when trying to check if the snapshot is marked as successful")
+						}, timeout, interval).Should(BeTrue(), "time out when trying to either check if the snapshot is created or is marked as successful")
 
 						Eventually(func() bool {
 							if fw.AsKubeDeveloper.IntegrationController.HaveTestsSucceeded(componentSnapshot) {
 								envbinding, err := fw.AsKubeDeveloper.IntegrationController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
-								Expect(err).ShouldNot(HaveOccurred())
-								GinkgoWriter.Printf("The EnvironmentBinding %s is created\n", envbinding.Name)
+								if err != nil {
+									GinkgoWriter.Printf("cannot get the SnapshotEnvironmentBinding: %v\n", err)
+									return false
+								}
+								GinkgoWriter.Printf("The SnapshotEnvironmentBinding %s is found\n", envbinding.Name)
 								return true
 							}
 
 							componentSnapshot, err = fw.AsKubeDeveloper.IntegrationController.GetSnapshot("", "", component.Name, namespace)
-							Expect(err).ShouldNot(HaveOccurred())
+							if err != nil {
+								GinkgoWriter.Printf("cannot get the Snapshot: %v\n", err)
+								return false
+							}
 							return false
 						}, timeout, interval).Should(BeTrue(), "time out when waiting for snapshoot environment binding")
 					}

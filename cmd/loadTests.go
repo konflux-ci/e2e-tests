@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"runtime"
 	"strconv"
@@ -30,16 +31,16 @@ import (
 )
 
 var (
-	usernamePrefix       = "testuser"
-	numberOfUsers        int
-	waitPipelines        bool
-	verbose              bool
-	QuarkusDevfileSource string = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
-	token                string
-	logConsole           bool
-	failFast             bool
-	disableMetrics       bool
-	threadCount          int
+	componentRepoUrl string = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
+	usernamePrefix   string = "testuser"
+	numberOfUsers    int
+	waitPipelines    bool
+	verbose          bool
+	token            string
+	logConsole       bool
+	failFast         bool
+	disableMetrics   bool
+	threadCount      int
 )
 
 var (
@@ -50,6 +51,7 @@ var (
 	FailedResourceCreations            []int64
 	FailedPipelineRuns                 []int64
 	frameworkMap                       *sync.Map
+	userComponentMap                   *sync.Map
 	errorOccurredMap                   map[int]ErrorOccurrence
 	errorMutex                         = &sync.Mutex{}
 	usersBarMutex                      = &sync.Mutex{}
@@ -70,6 +72,7 @@ type LogData struct {
 	EndTimestamp                 string            `json:"endTimestamp"`
 	MachineName                  string            `json:"machineName"`
 	BinaryDetails                string            `json:"binaryDetails"`
+	ComponentRepoUrl             string            `json:"componentRepoUrl"`
 	NumberOfThreads              int               `json:"threads"`
 	NumberOfUsersPerThread       int               `json:"usersPerThread"`
 	NumberOfUsers                int               `json:"totalUsers"`
@@ -119,6 +122,7 @@ func ExecuteLoadTest() {
 }
 
 func init() {
+	rootCmd.Flags().StringVar(&componentRepoUrl, "component-repo", componentRepoUrl, "the component repo URL to be used")
 	rootCmd.Flags().StringVar(&usernamePrefix, "username", usernamePrefix, "the prefix used for usersignup names")
 	// TODO use a custom kubeconfig and introduce debug logging and trace
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "if 'debug' traces should be displayed in the console")
@@ -246,6 +250,7 @@ func setup(cmd *cobra.Command, args []string) {
 		Timestamp:              time.Now().Format("2006-01-02T15:04:05Z07:00"),
 		MachineName:            machineName,
 		BinaryDetails:          binaryDetails,
+		ComponentRepoUrl:       componentRepoUrl,
 		NumberOfThreads:        threadCount,
 		NumberOfUsersPerThread: numberOfUsers,
 		NumberOfUsers:          overallCount,
@@ -277,6 +282,7 @@ func setup(cmd *cobra.Command, args []string) {
 	FailedResourceCreations = make([]int64, threadCount)
 	FailedPipelineRuns = make([]int64, threadCount)
 	frameworkMap = &sync.Map{}
+	userComponentMap = &sync.Map{}
 	errorOccurredMap = make(map[int]ErrorOccurrence)
 
 	rand.Seed(time.Now().UnixNano())
@@ -331,7 +337,7 @@ func setup(cmd *cobra.Command, args []string) {
 	klog.Infof("Number of times user creation failed: %d (%.2f %%)", userCreationFailureCount, userCreationFailureRate*100)
 	klog.Infof("Number of times resource creation failed: %d (%.2f %%)", resourceCreationFailureCount, resourceCreationFailureRate*100)
 	klog.Infof("Number of times pipeline run failed: %d (%.2f %%)", pipelineRunFailureCount, pipelineRunFailureRate*100)
-	var errorOccurredList []ErrorOccurrence
+	errorOccurredList := []ErrorOccurrence{}
 	for _, errorOccurrence := range errorOccurredMap {
 		errorOccurredList = append(errorOccurredList, errorOccurrence)
 		klog.Infof("Number of error #%d occured: %d", errorOccurrence.ErrorCode, errorOccurrence.Count)
@@ -372,6 +378,19 @@ func increaseBar(bar *uiprogress.Bar, mutex *sync.Mutex) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	bar.Incr()
+}
+
+func componentForUser(username string) string {
+	val, ok := userComponentMap.Load(username)
+	if ok {
+		componentName, ok2 := val.(string)
+		if ok2 {
+			return componentName
+		} else {
+			klog.Errorf("Invalid type of map value: %+v", val)
+		}
+	}
+	return ""
 }
 
 func frameworkForUser(username string) *framework.Framework {
@@ -477,8 +496,23 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				increaseBar(resourcesBar, resourcesBarMutex)
 				continue
 			}
-			gitopsRepoTimeout := 60 * time.Second
-			if err := utils.WaitUntil(framework.AsKubeDeveloper.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), gitopsRepoTimeout); err != nil {
+			gitopsRepoInterval := 5 * time.Second
+			gitopsRepoTimeout := 60 * time.Minute
+			repoUrl := utils.ObtainGitOpsRepositoryUrl(app.Status.Devfile)
+			if err := utils.WaitUntilWithInterval(func() (done bool, err error) {
+				resp, err := http.Get(repoUrl)
+				if err != nil {
+					return false, fmt.Errorf("unable to request gitops repo %s: %+v", repoUrl, err)
+				}
+				defer resp.Body.Close()
+				if resp.StatusCode == 404 {
+					return false, nil
+				} else if resp.StatusCode == 200 {
+					return true, nil
+				} else {
+					return false, fmt.Errorf("unexpected response code when requesting gitop repo %s: %v", repoUrl, err)
+				}
+			}, gitopsRepoInterval, gitopsRepoTimeout); err != nil {
 				logError(5, fmt.Sprintf("Unable to create application %s gitops repo within %v: %v", ApplicationName, gitopsRepoTimeout, err))
 				atomic.StoreInt64(&FailedResourceCreations[threadIndex], atomic.AddInt64(&FailedResourceCreations[threadIndex], 1))
 				increaseBar(resourcesBar, resourcesBarMutex)
@@ -486,9 +520,9 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			}
 
 			ComponentDetectionQueryName := fmt.Sprintf("%s-cdq", username)
-			cdq, err := framework.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(ComponentDetectionQueryName, usernamespace, QuarkusDevfileSource, "", "", "", false)
+			cdq, err := framework.AsKubeDeveloper.HasController.CreateComponentDetectionQueryWithTimeout(ComponentDetectionQueryName, usernamespace, componentRepoUrl, "", "", "", false, 60*time.Minute)
 			if err != nil {
-				logError(6, fmt.Sprintf("Unable to create ComponentDetectionQuery %s: %v", cdq.Name, err))
+				logError(6, fmt.Sprintf("Unable to create ComponentDetectionQuery %s: %v", ComponentDetectionQueryName, err))
 				atomic.StoreInt64(&FailedResourceCreations[threadIndex], atomic.AddInt64(&FailedResourceCreations[threadIndex], 1))
 				increaseBar(resourcesBar, resourcesBarMutex)
 				continue
@@ -511,7 +545,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				component, err := framework.AsKubeDeveloper.HasController.CreateComponentFromStub(compStub, usernamespace, ComponentContainerImage, "", ApplicationName)
 
 				if err != nil {
-					logError(6, fmt.Sprintf("Unable to create the Component %s: %v", component.Name, err))
+					logError(6, fmt.Sprintf("Unable to create the Component %s: %v", compStub.ComponentStub.ComponentName, err))
 					atomic.StoreInt64(&FailedResourceCreations[threadIndex], atomic.AddInt64(&FailedResourceCreations[threadIndex], 1))
 					increaseBar(resourcesBar, resourcesBarMutex)
 					continue
@@ -522,6 +556,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 					increaseBar(resourcesBar, resourcesBarMutex)
 					continue
 				}
+				userComponentMap.Store(username, component.Name)
 			}
 
 			ResourceCreationTime := time.Since(startTime)
@@ -544,12 +579,17 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 					continue
 				}
 				usernamespace := framework.UserNamespace
-				ComponentName := fmt.Sprintf("%s-component", username)
-				ApplicationName := fmt.Sprintf("%s-app", username)
-				DefaultRetryInterval := time.Second * 5
-				DefaultTimeout := time.Minute * 60
-				error := k8swait.Poll(DefaultRetryInterval, DefaultTimeout, func() (done bool, err error) {
-					pipelineRun, err := framework.AsKubeDeveloper.HasController.GetComponentPipelineRun(ComponentName, ApplicationName, usernamespace, "")
+				componentName := componentForUser(username)
+				if componentName == "" {
+					logError(9, fmt.Sprintf("Component not found for username %s", username))
+					increaseBar(pipelinesBar, pipelinesBarMutex)
+					continue
+				}
+				applicationName := fmt.Sprintf("%s-app", username)
+				pipelineRetryInterval := time.Second * 5
+				pipelineTimeout := time.Minute * 60
+				error := k8swait.Poll(pipelineRetryInterval, pipelineTimeout, func() (done bool, err error) {
+					pipelineRun, err := framework.AsKubeDeveloper.HasController.GetComponentPipelineRun(componentName, applicationName, usernamespace, "")
 					if err != nil {
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
 						return false, nil
@@ -558,7 +598,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 						AveragePipelineRunTimePerUser[threadIndex] += pipelineRun.Status.CompletionTime.Sub(pipelineRun.CreationTimestamp.Time)
 						succeededCondition := pipelineRun.Status.GetCondition(apis.ConditionSucceeded)
 						if succeededCondition.IsFalse() {
-							logError(9, fmt.Sprintf("Pipeline run for %s/%s failed due to %v: %v", ApplicationName, ComponentName, succeededCondition.Reason, succeededCondition.Message))
+							logError(10, fmt.Sprintf("Pipeline run for %s/%s failed due to %v: %v", applicationName, componentName, succeededCondition.Reason, succeededCondition.Message))
 							atomic.StoreInt64(&FailedPipelineRuns[threadIndex], atomic.AddInt64(&FailedPipelineRuns[threadIndex], 1))
 						}
 						increaseBar(pipelinesBar, pipelinesBarMutex)
@@ -566,7 +606,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 					return pipelineRun.IsDone(), nil
 				})
 				if error != nil {
-					logError(10, fmt.Sprintf("Pipeline run for %s/%s failed to succeed within %v: %v", ApplicationName, ComponentName, DefaultTimeout, error))
+					logError(11, fmt.Sprintf("Pipeline run for %s/%s failed to succeed within %v: %v", applicationName, componentName, pipelineTimeout, error))
 					atomic.StoreInt64(&FailedPipelineRuns[threadIndex], atomic.AddInt64(&FailedPipelineRuns[threadIndex], 1))
 					increaseBar(pipelinesBar, pipelinesBarMutex)
 					continue
