@@ -34,6 +34,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 	var devNamespace, managedNamespace string
 	var imageIDs []string
 	var pyxisKeyDecoded, pyxisCertDecoded []byte
+	var buildPrName, additionalBuildPrName, releasePrName, additionalReleasePrName string
 
 	BeforeAll(func() {
 		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("e2e-pyxis"))
@@ -146,8 +147,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		_, err = fw.AsKubeAdmin.HasController.CreateComponent(applicationNameDefault, componentName, devNamespace, gitSourceComponentUrl, "", containerImageUrl, "", "", true)
 		Expect(err).NotTo(HaveOccurred())
 
-		outputContainerImage := "quay.io/redhat-appstudio-qe/test-release-images"
-		_, err = fw.AsKubeAdmin.HasController.CreateComponent(applicationNameDefault, "simple-python", devNamespace, "https://github.com/devfile-samples/devfile-sample-python-basic", "", "", outputContainerImage, "", false)
+		_, err = fw.AsKubeAdmin.HasController.CreateComponent(applicationNameDefault, additionalComponentName, devNamespace, additionalgitSourceComponentUrl, "", "", addtionalOutputContainerImage, "", false)
 		Expect(err).NotTo(HaveOccurred())
 
 	})
@@ -165,52 +165,89 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		It("verifies that a PipelineRun is created in dev namespace.", func() {
 			Eventually(func() bool {
 				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(devNamespace)
-				componentsCounter := 0
 				if err != nil || prList == nil || len(prList.Items) < 1 {
 					return false
 				}
+				componentHasBuildPr := false
+				additionalComponentHasBuildPr := false
 				for _, pr := range prList.Items {
-					if pr.Name == componentName || pr.Name == "simple-python" {
-						componentsCounter++
+					if strings.Contains(pr.Name, componentName) {
+						componentHasBuildPr = true
+						buildPrName = pr.Name
+					} else if strings.Contains(pr.Name, additionalComponentName) {
+						additionalComponentHasBuildPr = true
+						additionalBuildPrName = pr.Name
 					}
 				}
 
-				return componentsCounter < 2
+				GinkgoWriter.Printf("\nFirst Build PirpelineRun:\n %s", buildPrName)
+				GinkgoWriter.Printf("\nSecond Build PirpelineRun:\n %s", additionalBuildPrName)
+
+				return componentHasBuildPr && additionalComponentHasBuildPr
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("verifies that the PipelineRun in dev namespace succeeded.", func() {
+		It("verifies that the build PipelineRun in dev namespace succeeded.", func() {
 			Eventually(func() bool {
-				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(devNamespace)
-				if prList == nil || err != nil || len(prList.Items) < 1 {
+				buildPr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(buildPrName, devNamespace)
+				if err != nil {
+					GinkgoWriter.Printf("\nError getting PirpelineRun %s:\n %s", buildPrName, err)
+					return false
+				}
+				additionalBuildPr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(additionalBuildPrName, devNamespace)
+				if err != nil || additionalBuildPr == nil {
+					GinkgoWriter.Printf("\nError getting PirpelineRun %s:\n %s", additionalBuildPr, err)
 					return false
 				}
 
-				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue() &&
-					prList.Items[1].HasStarted() && prList.Items[1].IsDone() && prList.Items[1].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
-			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
+				return buildPr.HasStarted() && buildPr.IsDone() && buildPr.Status.GetCondition(apis.ConditionSucceeded).IsTrue() &&
+					additionalBuildPr.HasStarted() && additionalBuildPr.IsDone() && additionalBuildPr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
+			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
 		It("verifies that a PipelineRun is created in managed namespace.", func() {
 			Eventually(func() bool {
 				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
 				if err != nil || prList == nil || len(prList.Items) < 1 {
+					GinkgoWriter.Printf("Error getting Release PirpelineRun:\n %s", err)
 					return false
 				}
+				foudFirstReleasePr := false
+				for _, pr := range prList.Items {
+					if strings.Contains(pr.Name, "release-pipelinerun") {
+						if !foudFirstReleasePr {
+							releasePrName = pr.Name
+							foudFirstReleasePr = true
+						} else {
+							additionalReleasePrName = pr.Name
+						}
+					}
+				}
+				// GinkgoWriter.Printf(err.Error()
+				GinkgoWriter.Printf("\nFirst Release PirpelineRun:\n %s", releasePrName)
+				GinkgoWriter.Printf("\nSecond Release PirpelineRun:\n %s", additionalReleasePrName)
 
-				return strings.Contains(prList.Items[0].Name, "release")
+				return strings.Contains(releasePrName, "release-pipelinerun") &&
+					strings.Contains(additionalReleasePrName, "release-pipelinerun")
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("verifies a PipelineRun started in managed namespace succeeded.", func() {
+		It("verifies a PipelineRun started in managed namespace and succeeded.", func() {
 			Eventually(func() bool {
-				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
-				if prList == nil || err != nil || len(prList.Items) < 1 {
+
+				releasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(releasePrName, managedNamespace)
+				if err != nil {
+					GinkgoWriter.Printf("\nError getting Release PirpelineRun %s:\n %s", releasePr, err)
+					return false
+				}
+				additionalRleasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(additionalReleasePrName, managedNamespace)
+				if err != nil {
+					GinkgoWriter.Printf("\nError getting PirpelineRun %s:\n %s", additionalRleasePr, err)
 					return false
 				}
 
-				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue() &&
-					prList.Items[1].HasStarted() && prList.Items[1].IsDone() && prList.Items[1].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
+				return releasePr.HasStarted() && releasePr.IsDone() && releasePr.Status.GetCondition(apis.ConditionSucceeded).IsTrue() &&
+					additionalRleasePr.HasStarted() && additionalRleasePr.IsDone() && additionalRleasePr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
 
@@ -255,12 +292,12 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("validates that imageIds was pushed to pyxis are identical to those in task create-pyxis-image.", func() {
+		It("validates that imageIds from task create-pyxis-image exist in Pyxis.", func() {
 			Eventually(func() bool {
 				isImageExist := 0
 				for _, imageId := range imageIDs {
 
-					url := fmt.Sprintf("https://pyxis.preprod.api.redhat.com/v1/images/id/%s", imageId)
+					url := fmt.Sprintf("%s%s", pyxisStageURL, imageId)
 
 					// Create a TLS configuration with the key and certificate
 					cert, err := tls.X509KeyPair(pyxisCertDecoded, pyxisKeyDecoded)
@@ -302,6 +339,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 
 					// Print the response
 					if strings.Contains(string(body), imageId) {
+						fmt.Println("The body:\n ", string(body))
 						isImageExist++
 					}
 

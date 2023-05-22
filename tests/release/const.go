@@ -42,6 +42,11 @@ const (
 	containerImageUrl                    string = "quay.io/redhat-appstudio-qe/dcmetromap:latest"
 	roleName                             string = "role-release-service-account"
 
+	additionalComponentName         string = "simple-python"
+	additionalgitSourceComponentUrl string = "https://github.com/devfile-samples/devfile-sample-python-basic"
+	addtionalOutputContainerImage   string = "quay.io/redhat-appstudio-qe/test-release-images"
+	pyxisStageURL                   string = "https://pyxis.preprod.api.redhat.com/v1/images/id/"
+
 	namespaceCreationTimeout              = 5 * time.Minute
 	namespaceDeletionTimeout              = 5 * time.Minute
 	snapshotCreationTimeout               = 5 * time.Minute
