@@ -27,6 +27,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"github.com/redhat-appstudio/e2e-tests/tests"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
+	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -49,7 +50,9 @@ const (
 	testNamespacePrefix = "mvp-dev"
 	managedNamespace    = "mvp-managed"
 
-	appName = "mvp-test-app"
+	appName        = "mvp-test-app"
+	BundleURL      = "quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-pass"
+	InPipelineName = "integration-pipeline-pass"
 
 	// Timeouts
 	appDeployTimeout            = time.Minute * 20
@@ -61,12 +64,15 @@ const (
 	pullRequestCreationTimeout  = time.Minute * 5
 	releasePipelineTimeout      = time.Minute * 15
 	snapshotTimeout             = time.Minute * 4
+	releaseTimeout              = time.Minute * 4
+	testPipelineTimeout         = time.Minute * 15
 
 	// Intervals
 	defaultPollingInterval     = time.Second * 2
 	jvmRebuildPollingInterval  = time.Second * 10
 	pipelineRunPollingInterval = time.Second * 10
 	snapshotPollingInterval    = time.Second * 1
+	releasePollingInterval     = time.Second * 1
 )
 
 var sampleRepoURL = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), sampleRepoName)
@@ -88,14 +94,16 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 	pipelineRun := &tektonapi.PipelineRun{}
 	release := &releaseApi.Release{}
 	snapshot := &appstudioApi.Snapshot{}
+	testPipelinerun := &tektonapi.PipelineRun{}
+	integrationTestScenario := &integrationv1alpha1.IntegrationTestScenario{}
 
 	BeforeAll(func() {
 		// This pipeline contains an image that comes from "not allowed" container image registry repo
 		// https://github.com/hacbs-contract/ec-policies/blob/de8afa912e7a80d02abb82358ce7b23cf9a286c8/data/rule_data.yml#L9-L12
 		// It is required in order to test that the release of the image failed based on a failed check in EC
 		untrustedPipelineBundle, err = createUntrustedPipelineBundle()
-		Expect(err).NotTo(HaveOccurred())
 		klog.Info(untrustedPipelineBundle)
+		Expect(err).NotTo(HaveOccurred())
 		f, err = framework.NewFramework(utils.GetGeneratedNamespace(testNamespacePrefix))
 		Expect(err).NotTo(HaveOccurred())
 		userNamespace = f.UserNamespace
@@ -228,6 +236,8 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 			}
 
 			Expect(f.AsKubeAdmin.CommonController.KubeRest().Create(context.TODO(), ps)).To(Succeed())
+			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(appName, userNamespace, BundleURL, InPipelineName)
+			Expect(err).ShouldNot(HaveOccurred())
 		})
 
 		It("sample app can be built successfully", func() {
@@ -257,6 +267,28 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 				GinkgoWriter.Printf("snapshot %s is found\n", snapshot.Name)
 				return true
 			}, snapshotTimeout, snapshotPollingInterval).Should(BeTrue(), "timed out when trying to check if the Snapshot exists")
+		})
+
+		It("Integration Test PipelineRun is created", func() {
+			Eventually(func() bool {
+				testPipelinerun, err = f.AsKubeAdmin.IntegrationController.GetIntegrationPipelineRun(integrationTestScenario.Name, snapshot.Name, userNamespace)
+				if err != nil {
+					GinkgoWriter.Printf("failed to get Integration test PipelineRun for a snapshot '%s' in '%s' namespace: %+v\n", snapshot.Name, userNamespace, err)
+					return false
+				}
+				return testPipelinerun.HasStarted()
+			}, pipelineRunStartedTimeout, defaultPollingInterval).Should(BeTrue())
+			Expect(testPipelinerun.Spec.PipelineRef.Bundle).To(ContainSubstring(integrationTestScenario.Spec.Bundle))
+			Expect(testPipelinerun.Labels["appstudio.openshift.io/snapshot"]).To(ContainSubstring(snapshot.Name))
+			Expect(testPipelinerun.Labels["test.appstudio.openshift.io/scenario"]).To(ContainSubstring(integrationTestScenario.Name))
+		})
+
+		It("Integration Test PipelineRun should eventually succeed", func() {
+			Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(f.AsKubeAdmin.CommonController, integrationTestScenario, snapshot, appName, userNamespace)).To(Succeed(), "Error when waiting for a integration pipeline to finish")
+		})
+
+		It("Snapshot is marked as passed", func() {
+			Expect(f.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot)).To(BeTrue())
 		})
 
 		It("Release is created", func() {
@@ -458,9 +490,15 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		})
 
 		It("Release is created and Release PipelineRun is triggered and Release status is updated", func() {
-			release, err = f.AsKubeAdmin.ReleaseController.GetRelease("", snapshot.Name, userNamespace)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(release.Name).ToNot(BeEmpty())
+			Eventually(func() bool {
+				release, err = f.AsKubeAdmin.ReleaseController.GetRelease("", snapshot.Name, userNamespace)
+				if err!=nil || len(release.Name) == 0 {
+					GinkgoWriter.Printf("cannot get the release: %v\n", err)
+					return false
+				}
+				GinkgoWriter.Printf("release %s is found\n", release.Name)
+                                return true
+			}, releaseTimeout, releasePollingInterval).Should(BeTrue(), "timed out when trying to check if the release exists")
 
 			errStr := ""
 			Eventually(func() bool {
