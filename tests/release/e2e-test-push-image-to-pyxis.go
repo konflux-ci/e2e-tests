@@ -3,6 +3,7 @@ package release
 import (
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"knative.dev/pkg/apis"
 
@@ -223,7 +225,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 						}
 					}
 				}
-				// GinkgoWriter.Printf(err.Error()
+
 				GinkgoWriter.Printf("\nFirst Release PirpelineRun:\n %s", releasePrName)
 				GinkgoWriter.Printf("\nSecond Release PirpelineRun:\n %s", additionalReleasePrName)
 
@@ -251,7 +253,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("validate the result of task create-pyxis-image contains two image ids.", func() {
+		It("validate the result of task create-pyxis-image contains image ids.", func() {
 			Eventually(func() bool {
 				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
 				if prList == nil || err != nil || len(prList.Items) < 1 {
@@ -293,10 +295,10 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		})
 
 		It("validates that imageIds from task create-pyxis-image exist in Pyxis.", func() {
-			Eventually(func() bool {
-				isImageExist := 0
-				for _, imageId := range imageIDs {
 
+			isImageExist := 0
+			for _, imageId := range imageIDs {
+				Eventually(func() bool {
 					url := fmt.Sprintf("%s%s", pyxisStageURL, imageId)
 
 					// Create a TLS configuration with the key and certificate
@@ -337,16 +339,24 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 						Expect(err).NotTo(HaveOccurred())
 					}
 
-					// Print the response
-					if strings.Contains(string(body), imageId) {
-						fmt.Println("The body:\n ", string(body))
-						isImageExist++
+					sbomImage := &release.Image{}
+					err = json.Unmarshal(body, sbomImage)
+					if err != nil {
+						fmt.Println("Error json unmarshal body sbomPurl:", err)
+						Expect(err).NotTo(HaveOccurred())
 					}
 
-				}
+					if sbomImage.ContentManifestComponents == nil {
+						fmt.Println("Content Mainfest Components is empty.")
+						return false
+					}
 
-				return isImageExist == len(imageIDs)
-			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
+					isImageExist = isImageExist + len(sbomImage.ContentManifestComponents)
+
+					return isImageExist > 1
+				}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
+			}
+
 		})
 	})
 })
