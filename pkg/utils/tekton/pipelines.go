@@ -1,12 +1,14 @@
 package tekton
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
 
+	app "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -84,6 +86,23 @@ type VerifyEnterpriseContract struct {
 }
 
 func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
+	var snapshot app.SnapshotSpec
+	err := json.Unmarshal([]byte(p.Image), &snapshot)
+	if err != nil {
+		fmt.Printf("Application Snapshot doesn't exist: %s\n", err)
+	}
+
+	if len(snapshot.Components) == 0 {
+		p.Image = `{
+			"application": "` + p.ApplicationName + `",
+			"components": [
+			  {
+				"name": "` + p.ComponentName + `",
+				"containerImage": "` + p.Image + `"
+			  }
+			]
+		  }`
+	}
 	return &v1beta1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-run-", p.Name),
@@ -102,16 +121,8 @@ func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
 							{
 								Name: "IMAGES",
 								Value: v1beta1.ArrayOrString{
-									Type: v1beta1.ParamTypeString,
-									StringVal: `{
-							"application": "` + p.ApplicationName + `",
-							"components": [
-							  {
-								"name": "` + p.ComponentName + `",
-								"containerImage": "` + p.Image + `"
-							  }
-							]
-						  }`,
+									Type:      v1beta1.ParamTypeString,
+									StringVal: p.Image,
 								},
 							},
 							{
