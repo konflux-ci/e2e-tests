@@ -25,6 +25,32 @@ jobs:
         with:
           # Path to SARIF file relative to the root of the repository
           sarif_file: results.sarif
+  crdascan:
+    name: CRDA
+    runs-on: ubuntu-latest
+    permissions:
+      # required for all workflows
+      security-events: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - name: Install Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19.x
+      - name: Install CRDA
+        uses: redhat-actions/openshift-tools-installer@v1
+        with:
+          source: github
+          crda: latest
+      - name: CRDA Scan
+        id: crda_scan
+        uses: redhat-actions/crda@v1
+        with:
+          crda_key: ${{ secrets.CRDA_KEY }}
+      - name: Print Report Link
+        run: echo ${{ steps.crda_scan.outputs.report_link }}
 
   image_build:
     name: Check docker build
