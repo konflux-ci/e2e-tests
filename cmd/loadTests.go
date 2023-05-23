@@ -8,7 +8,6 @@ import (
 	"os"
 	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -17,7 +16,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-e2e/setup/metrics"
 	"github.com/codeready-toolchain/toolchain-e2e/setup/metrics/queries"
 	"github.com/codeready-toolchain/toolchain-e2e/setup/terminal"
-	"github.com/google/uuid"
 	"github.com/gosuri/uiprogress"
 	"github.com/gosuri/uitable/util/strutil"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
@@ -541,8 +539,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			}
 
 			for _, compStub := range cdq.Status.ComponentDetected {
-				ComponentContainerImage := fmt.Sprintf("quay.io/%s/test-images:%s-%s", utils.GetQuayIOOrganization(), username, strings.Replace(uuid.New().String(), "-", "", -1))
-				component, err := framework.AsKubeDeveloper.HasController.CreateComponentFromStub(compStub, usernamespace, ComponentContainerImage, "", ApplicationName)
+				component, err := framework.AsKubeDeveloper.HasController.CreateComponentFromStub(compStub, usernamespace, "", "", ApplicationName)
 
 				if err != nil {
 					logError(6, fmt.Sprintf("Unable to create the Component %s: %v", compStub.ComponentStub.ComponentName, err))

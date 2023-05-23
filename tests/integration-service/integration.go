@@ -2,11 +2,9 @@ package integration
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/devfile/library/pkg/util"
-	"github.com/google/uuid"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
@@ -36,7 +34,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	var f *framework.Framework
 	var err error
 
-	var applicationName, componentName, appStudioE2EApplicationsNamespace, outputContainerImage string
+	var applicationName, componentName, appStudioE2EApplicationsNamespace string
 	var timeout, interval time.Duration
 	var originalComponent *appstudioApi.Component
 	var snapshot *appstudioApi.Snapshot
@@ -61,11 +59,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		createComponent := func() {
 			componentName = fmt.Sprintf("integration-suite-test-component-git-source-%s", util.GenerateRandomString(4))
-			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 			timeout = time.Minute * 4
 			interval = time.Second * 1
 			// Create a component with Git Source URL being defined
-			originalComponent, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", "", outputContainerImage, "", true)
+			originalComponent, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", "", "", "", true)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(originalComponent).NotTo(BeNil())
 

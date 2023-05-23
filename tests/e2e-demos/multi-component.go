@@ -3,10 +3,8 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -210,8 +208,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 
 				It(fmt.Sprintf("creates multiple components in application %s", suite.ApplicationName), func() {
 					for _, component := range cdq.Status.ComponentDetected {
-						outputContainerImg := fmt.Sprintf("quay.io/%s/test-images:%s-%s", utils.GetQuayIOOrganization(), fw.UserName, strings.Replace(uuid.New().String(), "-", "", -1))
-						c, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(component, namespace, outputContainerImg, SPIGithubSecretName, application.Name)
+						c, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(component, namespace, "", SPIGithubSecretName, application.Name)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(c.Name).To(Equal(component.ComponentStub.ComponentName))
 						Expect(utils.Contains(runtimeSupported, component.ProjectType), "unsupported runtime used for multi component tests")
