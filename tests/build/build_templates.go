@@ -4,12 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/devfile/library/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
-	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	kubeapi "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
@@ -33,7 +31,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	defer GinkgoRecover()
 	Describe("HACBS pipelines", Ordered, Label("pipeline"), func() {
 
-		var applicationName, componentName, testNamespace, outputContainerImage string
+		var applicationName, componentName, testNamespace string
 		var kubeadminClient *framework.ControllerHub
 
 		BeforeAll(func() {
@@ -77,9 +75,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				gitUrl := gitUrl
 				componentName = fmt.Sprintf("%s-%s", "test-component", util.GenerateRandomString(4))
 				componentNames = append(componentNames, componentName)
-				outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 				// Create a component with Git Source URL being defined
-				_, err := kubeadminClient.HasController.CreateComponent(applicationName, componentName, testNamespace, gitUrl, "", "", outputContainerImage, "", false)
+				_, err := kubeadminClient.HasController.CreateComponent(applicationName, componentName, testNamespace, gitUrl, "", "", "", "", false)
 				Expect(err).ShouldNot(HaveOccurred())
 			}
 		})

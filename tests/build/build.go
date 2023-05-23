@@ -78,7 +78,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			componentName = fmt.Sprintf("%s-%s", "test-component-pac", util.GenerateRandomString(4))
 			pacBranchName = pacPRBranchPrefix + componentName
 			componentBaseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(4))
-			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images", utils.GetQuayIOOrganization())
 
 			err = f.AsKubeAdmin.CommonController.Github.CreateRef(helloWorldComponentGitSourceRepoName, helloWorldComponentDefaultBranch, componentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
@@ -517,8 +516,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			}
 
 			Expect(f.AsKubeAdmin.CommonController.KubeRest().Create(context.TODO(), ps)).To(Succeed())
-
-			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 
 			timeout = time.Second * 600
 			interval = time.Second * 1
