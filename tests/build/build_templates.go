@@ -207,7 +207,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					records, err := resultClient.GetRecords(testNamespace, string(pipelineRun.GetUID()))
 					// temporary logs due to RHTAPBUGS-213
 					GinkgoWriter.Printf("records for PipelineRun %s:\n%s\n", pipelineRun.Name, records)
-					GinkgoWriter.Printf("got error getting records: %s\n", err.Error())
+					GinkgoWriter.Printf("got error getting records: %v\n", err)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(len(records.Record)).NotTo(BeZero(), "No records found for PipelineRun %s", pipelineRun.Name)
 				})
@@ -217,7 +217,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					// temporary logs due to RHTAPBUGS-213
 					logs, err := resultClient.GetLogs(testNamespace, string(pipelineRun.GetUID()))
 					GinkgoWriter.Printf("logs for PipelineRun %s:\n%s\n", pipelineRun.Name, logs)
-					GinkgoWriter.Printf("got error getting logs: %s\n", err.Error())
+					GinkgoWriter.Printf("got error getting logs: %v\n", err)
 					Expect(err).NotTo(HaveOccurred())
 
 					timeout := time.Minute * 2
@@ -227,7 +227,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						// temporary logs due to RHTAPBUGS-213
 						logs, err = resultClient.GetLogs(testNamespace, string(pipelineRun.GetUID()))
 						GinkgoWriter.Printf("logs for PipelineRun %s:\n%s\n", pipelineRun.Name, logs)
-						GinkgoWriter.Printf("got error getting logs: %s\n", err.Error())
+						GinkgoWriter.Printf("got error getting logs: %v\n", err)
 						Expect(err).NotTo(HaveOccurred())
 
 						return len(logs.Record) != 0
@@ -237,7 +237,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					// temporary logs due to RHTAPBUGS-213
 					log, err := resultClient.GetLogByName(logs.Record[0].Name)
 					GinkgoWriter.Printf("log for record %s:\n%s\n", logs.Record[0].Name, log)
-					GinkgoWriter.Printf("got error getting logs: %s\n", err.Error())
+					GinkgoWriter.Printf("got error getting logs: %v\n", err)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(len(log)).NotTo(BeZero(), "No log content '%s' found for PipelineRun %s", logs.Record[0].Name, pipelineRun.Name)
 				})
