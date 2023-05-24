@@ -543,5 +543,5 @@ func (h *SuiteController) GetEnvironments(namespace string) (*appstudioApi.Envir
 		return nil, fmt.Errorf("error occurred while trying to list environments in %s namespace: %v", namespace, err)
 	}
 
-	return environmentList, err
+	return environmentList, nil
 }
