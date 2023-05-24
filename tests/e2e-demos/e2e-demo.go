@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	e2eConfig "github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
 	"github.com/spf13/viper"
 	appsv1 "k8s.io/api/apps/v1"
@@ -183,36 +181,14 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				}
 
 				// Start to watch the pipeline until is finished
-				It(fmt.Sprintf("waits %s component %s pipeline to be finished", componentTest.Type, componentTest.Name), FlakeAttempts(3), func() {
+				It(fmt.Sprintf("waits %s component %s pipeline to be finished", componentTest.Type, componentTest.Name), func() {
 					if componentTest.ContainerSource != "" {
 						Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skipping pipelinerun check.", componentTest.Name))
 					}
 					component, err = fw.AsKubeAdmin.HasController.GetHasComponent(component.Name, namespace)
 					Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
 
-					// If we are attempting more than 1 time lets retrigger the pipelinerun
-					if CurrentSpecReport().NumAttempts > 1 {
-						pipelineRun, err := fw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, application.Name, namespace, "")
-						Expect(err).ShouldNot(HaveOccurred(), "\nfailed to get pipelinerun: %v", err)
-
-						// Store failed pipelineRun logs and yamls under the ARTIFACT_DIR
-						err = tekton.StorePipelineRun(pipelineRun, "e2e-demo-tests", fw.AsKubeAdmin.CommonController)
-						if err != nil {
-							GinkgoWriter.Printf("\nfailed to store pipelineRun: %s\n", err.Error())
-						}
-
-						err = fw.AsKubeAdmin.TektonController.DeletePipelineRun(pipelineRun.Name, namespace)
-						Expect(err).ShouldNot(HaveOccurred(), "failed to delete pipelinerun when retriger: %v", err)
-
-						delete(component.Annotations, constants.ComponentInitialBuildAnnotationKey)
-						err = fw.AsKubeDeveloper.HasController.KubeRest().Update(context.Background(), component)
-						Expect(err).ShouldNot(HaveOccurred(), "failed to update component to trigger another pipeline build: %v", err)
-					}
-
-					err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeAdmin.CommonController, component.Name, application.Name, namespace, "")
-					if err != nil {
-						Fail(fmt.Sprint(err))
-					}
+					Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
 				})
 
 				It("finds the snapshot and checks if it is marked as successful", func() {

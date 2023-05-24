@@ -276,7 +276,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+							failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController.KubeRest(), f.AsKubeAdmin.CommonController.KubeInterface(), pipelineRun)
 							if err != nil {
 								GinkgoWriter.Printf("failed to get logs for pipelinerun %s: %+v\n", pipelineRun.Name, err)
 							}
@@ -372,7 +372,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+							failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController.KubeRest(), f.AsKubeAdmin.CommonController.KubeInterface(), pipelineRun)
 							if err != nil {
 								GinkgoWriter.Printf("failed to get logs for pipelinerun %s: %+v\n", pipelineRun.Name, err)
 							}
@@ -445,7 +445,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						}
 
 						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+							failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController.KubeRest(), f.AsKubeAdmin.CommonController.KubeInterface(), pipelineRun)
 							if err != nil {
 								GinkgoWriter.Printf("failed to get logs for pipelinerun %s: %+v\n", pipelineRun.Name, err)
 							}

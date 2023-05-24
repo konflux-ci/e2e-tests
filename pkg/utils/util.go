@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/base64"
@@ -15,9 +16,11 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/apis"
 
 	devfilePkg "github.com/devfile/library/pkg/devfile"
@@ -343,4 +346,25 @@ func HostIsAccessible(host string) bool {
 
 func PipelineRunFailed(pr *v1beta1.PipelineRun) bool {
 	return pr.IsDone() && pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsFalse()
+}
+
+// Return a container logs from a given pod and namespace
+func GetContainerLogs(ki kubernetes.Interface, podName, containerName, namespace string) (string, error) {
+	podLogOpts := corev1.PodLogOptions{
+		Container: containerName,
+	}
+
+	req := ki.CoreV1().Pods(namespace).GetLogs(podName, &podLogOpts)
+	podLogs, err := req.Stream(context.TODO())
+	if err != nil {
+		return "", fmt.Errorf("error in opening the stream: %v", err)
+	}
+	defer podLogs.Close()
+
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, podLogs)
+	if err != nil {
+		return "", fmt.Errorf("error in copying logs to buf, %v", err)
+	}
+	return buf.String(), nil
 }

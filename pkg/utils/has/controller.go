@@ -9,7 +9,6 @@ import (
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"knative.dev/pkg/apis"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -443,7 +442,7 @@ func (h *SuiteController) GetComponentPipelineRun(componentName, applicationName
 		return &list.Items[0], nil
 	}
 
-	return &v1beta1.PipelineRun{}, fmt.Errorf("no pipelinerun found for component %s", componentName)
+	return nil, fmt.Errorf("no pipelinerun found for component %s", componentName)
 }
 
 // GetEventListenerRoute returns the route for a given component name's event listener
@@ -490,30 +489,69 @@ func (h *SuiteController) GetComponentService(componentName string, componentNam
 	return service, nil
 }
 
-func (h *SuiteController) WaitForComponentPipelineToBeFinished(c *common.SuiteController, componentName, applicationName, componentNamespace, sha string) error {
-	return wait.PollImmediate(20*time.Second, 30*time.Minute, func() (done bool, err error) {
-		pipelineRun, err := h.GetComponentPipelineRun(componentName, applicationName, componentNamespace, sha)
+func (h *SuiteController) WaitForComponentPipelineToBeFinished(component *appservice.Component, sha string, maxRetries int) error {
+	attempts := 1
+	app := component.Spec.Application
+	var pr *v1beta1.PipelineRun
 
-		if err != nil {
-			GinkgoWriter.Println("PipelineRun has not been created yet")
-			return false, nil
-		}
+	for {
+		err := wait.PollImmediate(20*time.Second, 30*time.Minute, func() (done bool, err error) {
+			pr, err = h.GetComponentPipelineRun(component.GetName(), app, component.GetNamespace(), sha)
 
-		for _, condition := range pipelineRun.Status.Conditions {
-			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
-
-			if !pipelineRun.IsDone() {
+			if err != nil {
+				GinkgoWriter.Println("PipelineRun has not been created yet")
 				return false, nil
 			}
 
-			if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-				return true, nil
-			} else {
-				return false, fmt.Errorf(tekton.GetFailedPipelineRunLogs(c, pipelineRun))
+			for _, condition := range pr.Status.Conditions {
+				GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pr.Name, condition.Reason)
+
+				if !pr.IsDone() {
+					return false, nil
+				}
+
+				if pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+					return true, nil
+				} else {
+					err = tekton.StorePipelineRun(pr, h.KubeRest(), h.KubeInterface())
+					if err != nil {
+						GinkgoWriter.Printf("failed to store pipelineRun: %s\n", err.Error())
+					}
+					return false, fmt.Errorf(tekton.GetFailedPipelineRunLogs(h.KubeRest(), h.KubeInterface(), pr))
+				}
 			}
+			return false, nil
+		})
+
+		if err != nil {
+			if attempts == maxRetries+1 {
+				return err
+			}
+			GinkgoWriter.Printf("attempt %s/%s: PipelineRun %q failed: %+v", attempts, maxRetries+1, pr.GetName(), err)
+			if err = h.KubeRest().Delete(context.TODO(), pr); err != nil {
+				return fmt.Errorf("failed to delete PipelineRun %q from %q namespace", pr.GetName(), pr.GetNamespace())
+			}
+
+			if err := utils.WaitUntil(h.PipelineRunDeleted(pr), 1*time.Minute); err != nil {
+				return fmt.Errorf("timed out waiting for PipelineRun %q from namespace %q to get deleted: %+v", pr.GetName(), pr.GetNamespace(), err)
+			}
+
+			component, err := h.GetHasComponent(component.GetName(), component.GetNamespace())
+			if err != nil {
+				return fmt.Errorf("failed to get component %q for PipelineRun %q in %q namespace: %+v", component.GetName(), pr.GetName(), pr.GetNamespace(), err)
+			}
+			delete(component.Annotations, constants.ComponentInitialBuildAnnotationKey)
+
+			if err = h.KubeRest().Update(context.Background(), component); err != nil {
+				return fmt.Errorf("failed to update Component %q in %q namespace", component.GetName(), component.GetNamespace())
+			}
+			attempts++
+		} else {
+			break
 		}
-		return false, nil
-	})
+	}
+
+	return nil
 
 }
 
@@ -619,5 +657,13 @@ func (s *SuiteController) ApplicationGitopsRepoExists(devfileContent string) wai
 	return func() (bool, error) {
 		gitOpsRepoURL := utils.ObtainGitOpsRepositoryName(devfileContent)
 		return s.Github.CheckIfRepositoryExist(gitOpsRepoURL), nil
+	}
+}
+
+func (h *SuiteController) PipelineRunDeleted(pr *v1beta1.PipelineRun) wait.ConditionFunc {
+	return func() (bool, error) {
+		o := &v1beta1.PipelineRun{}
+		err := h.KubeRest().Get(context.TODO(), types.NamespacedName{Name: pr.GetName(), Namespace: pr.GetNamespace()}, o)
+		return err != nil && k8sErrors.IsNotFound(err), nil
 	}
 }
