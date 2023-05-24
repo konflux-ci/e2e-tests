@@ -1,5 +1,15 @@
+/* SBOM of type structures matches Pyxis structure
+
+When SBOM files are uploaded to Pyxis it's required to be modified according to
+Pyxis's requirment where the CamelBack method does not match,
+in scrip https://github.com/redhat-appstudio/release-service-utils/blob/main/pyxis/upload_sbom.py
+was made this match, underscore was between two words instead of CamelBack.
+
+*/
+
 package release
 
+// Links defines structure of all links can be in SBOM of Pyxis style
 type Links struct {
 	Artifacts       ArtifactLinks        `json:"artifacts"`
 	Requests        RequestLinks         `json:"requests"`
@@ -28,10 +38,12 @@ type VulnerabilitiesLinks struct {
 	Href string `json:"href"`
 }
 
+// ContentManifest id of content manifest
 type ContentManifest struct {
 	ID string `json:"_id"`
 }
 
+// ContentManifestComponent contains information of components in SBOM
 type ContentManifestComponent struct {
 	ID      string `json:"_id"`
 	Name    string `json:"name"`
@@ -46,12 +58,14 @@ type FreshnessGrade struct {
 	StartDate    string `json:"start_date"`
 }
 
+// ParsedData general details of env
 type ParsedData struct {
 	Architecture  string   `json:"architecture"`
 	DockerVersion string   `json:"docker_version"`
 	EnvVariables  []string `json:"env_variables"`
 }
 
+// Image contains all information of all structured SBOM Pyxis style
 type Image struct {
 	ID                        string                     `json:"_id"`
 	Links                     Links                      `json:"_links"`
