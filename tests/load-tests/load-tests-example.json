@@ -1,33 +1,38 @@
 {
-  "timestamp": "2023-04-24T14:53:11+03:00",
-  "endTimestamp": "2023-04-24T14:56:29+03:00",
-  "machineName": "nshprai",
-  "binaryDetails": "Built with go1.19.6 for linux/amd64",
-  "threads": 3,
+  "timestamp": "2023-05-26T13:25:32+02:00",
+  "endTimestamp": "2023-05-26T13:29:58+02:00",
+  "machineName": "orion",
+  "binaryDetails": "Built with go1.19.5 for linux/amd64",
+  "componentRepoUrl": "https://github.com/devfile-samples/devfile-sample-code-with-quarkus",
+  "threads": 5,
   "usersPerThread": 2,
-  "threadBatchSize": 1,
-  "totalUsers": 6,
+  "totalUsers": 10,
   "status": "Completed",
-  "createUserTimeAvg": 2,
-  "createResourcesTimeAvg": 6,
-  "runPipelineTimeAvg": 169.66666666666666,
-  "createUserFailures": 1,
-  "createUserFailureRate": 0.16666666666666,
+  "createUserTimeAvg": 14.9243592609,
+  "createResourcesTimeAvg": 9.0239237441,
+  "runPipelineSucceededTimeAvg": 205.125,
+  "runPipelineFailedTimeAvg": 145,
+  "createUserFailures": 0,
+  "createUserFailureRate": 0,
   "createResourcesFailures": 0,
   "createResourcesFailureRate": 0,
-  "runPipelineFailures": 0,
-  "runPipelineFailureRate": 0,
+  "runPipelineFailures": 2,
+  "runPipelineFailureRate": 0.2,
   "errorCounts": [
     {
-      "errorCode": 1,
-      "count": 1
+      "errorCode": 14,
+      "count": 2
     }
   ],
   "errors": [
     {
-      "errorCode": 1,
-      "message": "Unable to provision user 'ban-0004': usersignups.toolchain.dev.openshift.com \"ban-0004\" already exists"
+      "errorCode": 14,
+      "message": "Pipeline run for one-0003-app/devfile-sample-code-with-quarkus-uqhl failed due to PipelineValidationFailed: invalid pipelineresults [IMAGE_URL IMAGE_DIGEST JAVA_COMMUNITY_DEPENDENCIES], the referred results don't exist"
+    },
+    {
+      "errorCode": 14,
+      "message": "Pipeline run for one-0010-app/devfile-sample-code-with-quarkus-w2no failed due to PipelineValidationFailed: invalid pipelineresults [IMAGE_URL IMAGE_DIGEST JAVA_COMMUNITY_DEPENDENCIES], the referred results don't exist"
     }
   ],
-  "errorsTotal": 1
+  "errorsTotal": 2
 }
