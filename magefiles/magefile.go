@@ -242,7 +242,7 @@ func RunE2ETests() error {
 	cwd, _ := os.Getwd()
 
 	// added --output-interceptor-mode=none to mitigate RHTAPBUGS-34
-	return sh.RunV("ginkgo", "-p", "--output-interceptor-mode=none", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", fmt.Sprintf("--config-suites=%s/tests/e2e-demos/config/default.yaml", cwd), "--generate-rppreproc-report=true", fmt.Sprintf("--rp-preproc-dir=%s", artifactDir))
+	return sh.RunV("ginkgo", "-p", "-vv", "--output-interceptor-mode=none", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", fmt.Sprintf("--config-suites=%s/tests/e2e-demos/config/default.yaml", cwd), "--generate-rppreproc-report=true", fmt.Sprintf("--rp-preproc-dir=%s", artifactDir))
 }
 
 func PreflightChecks() error {
