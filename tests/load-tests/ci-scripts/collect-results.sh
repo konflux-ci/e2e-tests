@@ -23,33 +23,84 @@ component_timestamps=$ARTIFACT_DIR/components.appstudio.redhat.com_timestamps.cs
 pipelinerun_timestamps=$ARTIFACT_DIR/pipelineruns.tekton.dev_timestamps.csv
 application_service_log=$ARTIFACT_DIR/application-service.log
 application_service_log_segments=$ARTIFACT_DIR/application-service-log-segments
+csv_delim=";"
+csv_delim_quoted="\"$csv_delim\""
+dt_format='"%Y-%m-%dT%H:%M:%SZ"'
 ## Application timestamps
 echo "Collecting Application timestamps..."
-echo "Application;StatusSucceeded;StatusMessage;CreatedTimestamp;SucceededTimestamp" >"$application_timestamps_csv"
-oc get applications.appstudio.redhat.com -A -o json | jq -rc '.items[] | (.metadata.name) + ";" + (.status.conditions[0].status) + ";" + (.status.conditions[0].message) + ";" + (.metadata.creationTimestamp) + ";" + (.status.conditions[0].lastTransitionTime)' | sed -e 's,Z,,g' >>"$application_timestamps_csv"
+echo "Application${csv_delim}StatusSucceeded${csv_delim}StatusMessage${csv_delim}CreatedTimestamp${csv_delim}SucceededTimestamp${csv_delim}Duration" >"$application_timestamps_csv"
+jq_cmd=".items[] | (.metadata.name) \
++ $csv_delim_quoted + (.status.conditions[0].status) \
++ $csv_delim_quoted + (.status.conditions[0].message) \
++ $csv_delim_quoted + (.metadata.creationTimestamp) \
++ $csv_delim_quoted + (.status.conditions[0].lastTransitionTime) \
++ $csv_delim_quoted + ((.status.conditions[0].lastTransitionTime | strptime($dt_format) | mktime) - (.metadata.creationTimestamp | strptime($dt_format) | mktime) | tostring)"
+oc get applications.appstudio.redhat.com -A -o json | jq -rc "$jq_cmd" | sed -e 's,Z,,g' >>"$application_timestamps_csv"
 oc get applications.appstudio.redhat.com -A -o 'custom-columns=NAME:.metadata.name,CREATED:.metadata.creationTimestamp,LAST_UPDATED:.status.conditions[0].lastTransitionTime,STATUS:.status.conditions[0].reason,MESSAGE:.status.conditions[0].message' >"$application_timestamps_txt"
+
 ## ComponentDetectionQuery timestamps
 echo "Collecting ComponentDetectionQuery timestamps..."
-echo "ComponentDetectionQuery;Namespace;CreationTimestamp;Completed;Completed.Reason;Completed.Mesasge" >"$componentdetectionquery_timestamps"
-oc get componentdetectionqueries.appstudio.redhat.com -A -o json | jq -rc '.items[] | (.metadata.name) + ";" + (.metadata.namespace) + ";" + (.metadata.creationTimestamp) + ";" + (.status.conditions[] | select(.type == "Completed") | .lastTransitionTime + ";" + .reason + ";" + .message + "")' | sed -e 's,Z,,g' >>"$componentdetectionquery_timestamps"
+echo "ComponentDetectionQuery${csv_delim}Namespace${csv_delim}CreationTimestamp${csv_delim}Completed${csv_delim}Completed.Reason${csv_delim}Completed.Mesasge${csv_delim}Duration" >"$componentdetectionquery_timestamps"
+jq_cmd=".items[] | (.metadata.name) \
++ $csv_delim_quoted + (.metadata.namespace) \
++ $csv_delim_quoted + (.metadata.creationTimestamp) \
++ $csv_delim_quoted + (.status.conditions[] | select(.type == \"Completed\") | .lastTransitionTime + $csv_delim_quoted + .reason + $csv_delim_quoted + .message) \
++ $csv_delim_quoted + ((.status.conditions[] | select(.type == \"Completed\") | .lastTransitionTime | strptime($dt_format) | mktime) - (.metadata.creationTimestamp | strptime($dt_format) | mktime) | tostring)"
+oc get componentdetectionqueries.appstudio.redhat.com -A -o json | jq -rc "$jq_cmd" | sed -e 's,Z,,g' >>"$componentdetectionquery_timestamps"
+
 ## Component timestamps
 echo "Collecting Component timestamps..."
-echo "Component;Namespace;CreationTimestamp;Created;Created.Reason;Create.Mesasge;GitOpsResourcesGenerated;GitOpsResourcesGenerated.Reason;GitOpsResourcesGenerated.Message;Updated;Updated.Reason;Updated.Message" >"$component_timestamps"
-oc get components.appstudio.redhat.com -A -o json | jq -rc '.items[] | (.metadata.name) + ";" + (.metadata.namespace) + ";" + (.metadata.creationTimestamp) + ";" + (.status.conditions[] | select(.type == "Created") | .lastTransitionTime + ";" + .reason + ";" + (.message|split(";")|join("_"))) + ";" + (.status.conditions[] | select(.type == "GitOpsResourcesGenerated") | .lastTransitionTime + ";" + .reason + ";" + (.message|split(";")|join("_"))) + ";" + (.status.conditions[] | select(.type == "Updated") | .lastTransitionTime + ";" + .reason + ";" + (.message|split(";")|join("_")))' | sed -e 's,Z,,g' >>"$component_timestamps"
+echo "Component${csv_delim}Namespace${csv_delim}CreationTimestamp${csv_delim}Created${csv_delim}Created.Reason${csv_delim}Create.Mesasge${csv_delim}GitOpsResourcesGenerated${csv_delim}GitOpsResourcesGenerated.Reason${csv_delim}GitOpsResourcesGenerated.Message${csv_delim}Updated${csv_delim}Updated.Reason${csv_delim}Updated.Message${csv_delim}CreationTimestamp->Created${csv_delim}Created->GitOpsResourcesGenerated${csv_delim}GitOpsResourcesGenerated->Updated${csv_delim}Duration" >"$component_timestamps"
+jq_cmd=".items[] | (.metadata.name) \
++ $csv_delim_quoted + (.metadata.namespace) \
++ $csv_delim_quoted + (.metadata.creationTimestamp) \
++ $csv_delim_quoted + (.status.conditions[] | select(.type == \"Created\") | .lastTransitionTime \
++ $csv_delim_quoted + .reason \
++ $csv_delim_quoted + (.message|split($csv_delim_quoted)|join(\"_\"))) \
++ $csv_delim_quoted + (.status.conditions[] | select(.type == \"GitOpsResourcesGenerated\") | .lastTransitionTime \
++ $csv_delim_quoted + .reason \
++ $csv_delim_quoted + (.message|split($csv_delim_quoted)|join(\"_\"))) \
++ $csv_delim_quoted + (.status.conditions[] | select(.type == \"Updated\") | .lastTransitionTime \
++ $csv_delim_quoted + .reason \
++ $csv_delim_quoted + (.message|split($csv_delim_quoted)|join(\"_\"))) \
++ $csv_delim_quoted + ((.status.conditions[] | select(.type == \"Created\") | .lastTransitionTime | strptime($dt_format) | mktime) - (.metadata.creationTimestamp | strptime($dt_format) | mktime) | tostring) \
++ $csv_delim_quoted + ((.status.conditions[] | select(.type == \"GitOpsResourcesGenerated\") | .lastTransitionTime | strptime($dt_format) | mktime) - (.status.conditions[] | select(.type == \"Created\") | .lastTransitionTime | strptime($dt_format) | mktime) | tostring) \
++ $csv_delim_quoted + ((.status.conditions[] | select(.type == \"Updated\") | .lastTransitionTime | strptime($dt_format) | mktime) - (.status.conditions[] | select(.type == \"GitOpsResourcesGenerated\") | .lastTransitionTime | strptime($dt_format) | mktime) | tostring) \
++ $csv_delim_quoted + ((.status.conditions[] | select(.type == \"Updated\") | .lastTransitionTime | strptime($dt_format) | mktime) - (.metadata.creationTimestamp | strptime($dt_format) | mktime) | tostring)"
+oc get components.appstudio.redhat.com -A -o json | jq -rc "$jq_cmd" | sed -e 's,Z,,g' >>"$component_timestamps"
+
 ## PipelineRun timestamps
 echo "Collecting PipelineRun timestamps..."
-echo "PipelineRun;Namespace;Succeeded;Reason;Message;Created;Started;FinallyStarted;Completed" >"$pipelinerun_timestamps"
-oc get pipelineruns.tekton.dev -A -o json | jq -r '.items[] | (.metadata.name) + ";" + (.metadata.namespace) + ";" + (.status.conditions[0].status) + ";" + (.status.conditions[0].reason) + ";" + (.status.conditions[0].message) + ";"  + (.metadata.creationTimestamp) + ";" + (.status.startTime) + ";" + (.status.finallyStartTime) + ";" + (.status.completionTime)' >>"$pipelinerun_timestamps"
+echo "PipelineRun${csv_delim}Namespace${csv_delim}Succeeded${csv_delim}Reason${csv_delim}Message${csv_delim}Created${csv_delim}Started${csv_delim}FinallyStarted${csv_delim}Completed${csv_delim}Created->Started${csv_delim}Started->FinallyStarted${csv_delim}FinallyStarted->Completed${csv_delim}Duration" >"$pipelinerun_timestamps"
+jq_cmd=".items[] | (.metadata.name) \
++ $csv_delim_quoted + (.metadata.namespace) \
++ $csv_delim_quoted + (.status.conditions[0].status) \
++ $csv_delim_quoted + (.status.conditions[0].reason) \
++ $csv_delim_quoted + (.status.conditions[0].message|split($csv_delim_quoted)|join(\"_\")) \
++ $csv_delim_quoted + (.metadata.creationTimestamp) \
++ $csv_delim_quoted + (.status.startTime) \
++ $csv_delim_quoted + (.status.finallyStartTime) \
++ $csv_delim_quoted + (.status.completionTime) \
++ $csv_delim_quoted + (if .status.startTime != null and .metadata.creationTimestamp != null then ((.status.startTime | strptime($dt_format) | mktime) - (.metadata.creationTimestamp | strptime($dt_format) | mktime) | tostring) else \"\" end) \
++ $csv_delim_quoted + (if .status.finallyStartTime != null and .status.startTime != null then ((.status.finallyStartTime | strptime($dt_format) | mktime) - (.status.startTime | strptime($dt_format) | mktime) | tostring) else \"\" end) \
++ $csv_delim_quoted + (if .status.completionTime != null and .status.finallyStartTime != null then ((.status.completionTime | strptime($dt_format) | mktime) - (.status.finallyStartTime | strptime($dt_format) | mktime) | tostring) else \"\" end) \
++ $csv_delim_quoted + (if .status.completionTime != null and .metadata.creationTimestamp != null then ((.status.completionTime | strptime($dt_format) | mktime) - (.metadata.creationTimestamp | strptime($dt_format) | mktime) | tostring) else \"\" end)"
+oc get pipelineruns.tekton.dev -A -o json | jq "$jq_cmd" | sed -e "s/\n//g" -e "s/^\"//g" -e "s/\"$//g" >>$pipelinerun_timestamps
+
 ## Application service log segments per user app
 echo "Collecting application service log segments per user app..."
 oc logs -l "control-plane=controller-manager" --tail=-1 -n application-service >"$application_service_log"
 mkdir -p "$application_service_log_segments"
 for i in $(grep -Eo "${USER_PREFIX}-....-app" "$application_service_log" | sort | uniq); do grep "$i" "$application_service_log" >"$application_service_log_segments/$i.log"; done
 ## Error summary
-echo "Number of errors occurred in load test log:"
-grep -Eo "Error #[0-9]+" "$load_test_log" | sort | uniq | while read -r i; do
-    echo -n " - $i: "
-    grep -c "$i" "$load_test_log"
-done | sort -V
-
+echo "Error summary:"
+if [ -f "$load_test_log" ]; then
+    grep -Eo "Error #[0-9]+" "$load_test_log" | sort | uniq | while read -r i; do
+        echo -n " - $i: "
+        grep -c "$i" "$load_test_log"
+    done | sort -V || :
+else
+    echo "File $load_test_log does not exist!"
+    exit 1
+fi
 popd

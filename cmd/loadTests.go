@@ -50,7 +50,7 @@ var (
 	FailedPipelineRuns                 []int64
 	frameworkMap                       *sync.Map
 	userComponentMap                   *sync.Map
-	errorOccurredMap                   map[int]ErrorOccurrence
+	errorCountMap                      map[int]ErrorCount
 	errorMutex                         = &sync.Mutex{}
 	usersBarMutex                      = &sync.Mutex{}
 	resourcesBarMutex                  = &sync.Mutex{}
@@ -60,9 +60,13 @@ var (
 )
 
 type ErrorOccurrence struct {
-	ErrorCode     int    `json:"errorCode"`
-	LatestMessage string `json:"latestMessage"`
-	Count         int    `json:"count"`
+	ErrorCode int    `json:"errorCode"`
+	Message   string `json:"message"`
+}
+
+type ErrorCount struct {
+	ErrorCode int `json:"errorCode"`
+	Count     int `json:"count"`
 }
 
 type LogData struct {
@@ -84,7 +88,8 @@ type LogData struct {
 	ResourceCreationFailureRate  float64           `json:"createResourcesFailureRate"`
 	PipelineRunFailureCount      int64             `json:"runPipelineFailures"`
 	PipelineRunFailureRate       float64           `json:"runPipelineFailureRate"`
-	ErrorsOccurred               []ErrorOccurrence `json:"errors"`
+	ErrorCounts                  []ErrorCount      `json:"errorCounts"`
+	Errors                       []ErrorOccurrence `json:"errors"`
 	ErrorsTotal                  int               `json:"errorsTotal"`
 }
 
@@ -141,20 +146,23 @@ func logError(errCode int, message string) {
 	}
 	errorMutex.Lock()
 	defer errorMutex.Unlock()
-	errorOccurrence, ok := errorOccurredMap[errCode]
+
+	errorCount, ok := errorCountMap[errCode]
 	if ok {
-		errorOccurrence.Count += 1
-		errorOccurrence.LatestMessage = message
-		errorOccurredMap[errCode] = errorOccurrence
+		errorCount.Count = errorCount.Count + 1
+		errorCountMap[errCode] = errorCount
 	} else {
-		errorOccurrence := ErrorOccurrence{
-			ErrorCode:     errCode,
-			LatestMessage: message,
-			Count:         1,
+		errorCountMap[errCode] = ErrorCount{
+			ErrorCode: errCode,
+			Count:     1,
 		}
-		errorOccurredMap[errCode] = errorOccurrence
 	}
-	logData.ErrorsTotal += 1
+
+	errorOccurrence := ErrorOccurrence{
+		ErrorCode: errCode,
+		Message:   message,
+	}
+	logData.Errors = append(logData.Errors, errorOccurrence)
 }
 
 func setKlogFlag(fs flag.FlagSet, name string, value string) {
@@ -252,6 +260,8 @@ func setup(cmd *cobra.Command, args []string) {
 		NumberOfThreads:        threadCount,
 		NumberOfUsersPerThread: numberOfUsers,
 		NumberOfUsers:          overallCount,
+		Errors:                 []ErrorOccurrence{},
+		ErrorCounts:            []ErrorCount{},
 	}
 
 	klog.Infof("🍿 provisioning users...\n")
@@ -281,7 +291,7 @@ func setup(cmd *cobra.Command, args []string) {
 	FailedPipelineRuns = make([]int64, threadCount)
 	frameworkMap = &sync.Map{}
 	userComponentMap = &sync.Map{}
-	errorOccurredMap = make(map[int]ErrorOccurrence)
+	errorCountMap = make(map[int]ErrorCount)
 
 	rand.Seed(time.Now().UnixNano())
 
@@ -335,12 +345,12 @@ func setup(cmd *cobra.Command, args []string) {
 	klog.Infof("Number of times user creation failed: %d (%.2f %%)", userCreationFailureCount, userCreationFailureRate*100)
 	klog.Infof("Number of times resource creation failed: %d (%.2f %%)", resourceCreationFailureCount, resourceCreationFailureRate*100)
 	klog.Infof("Number of times pipeline run failed: %d (%.2f %%)", pipelineRunFailureCount, pipelineRunFailureRate*100)
-	errorOccurredList := []ErrorOccurrence{}
-	for _, errorOccurrence := range errorOccurredMap {
-		errorOccurredList = append(errorOccurredList, errorOccurrence)
-		klog.Infof("Number of error #%d occured: %d", errorOccurrence.ErrorCode, errorOccurrence.Count)
+	klog.Infoln("Error summary:")
+	for _, errorCount := range errorCountMap {
+		klog.Infof("Number of error #%d occured: %d", errorCount.ErrorCode, errorCount.Count)
+		logData.ErrorCounts = append(logData.ErrorCounts, errorCount)
 	}
-	logData.ErrorsOccurred = errorOccurredList
+	logData.ErrorsTotal = len(logData.Errors)
 	klog.Infof("Total number of errors occured: %d", logData.ErrorsTotal)
 
 	err = createLogDataJSON("load-tests.json", logData)
