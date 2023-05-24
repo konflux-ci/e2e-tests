@@ -192,7 +192,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					resultSecret, err = kubeadminClient.CommonController.GetSecret(testNamespace, resultSecret.Name)
 					Expect(err).ToNot(HaveOccurred())
 					token := resultSecret.Data["token"]
-					fmt.Println("token:", string(token))
 
 					// Retrieve Result REST API url
 					resultRoute, err := kubeadminClient.CommonController.GetOpenshiftRoute("tekton-results", "tekton-results")
@@ -203,27 +202,49 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					pipelineRun, err = kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
 					Expect(err).ShouldNot(HaveOccurred())
 				})
+
 				It("should have Pipeline Records", func() {
-					// Verify Records
 					records, err := resultClient.GetRecords(testNamespace, string(pipelineRun.GetUID()))
+					// temporary logs due to RHTAPBUGS-213
+					GinkgoWriter.Printf("records for PipelineRun %s:\n%s\n", pipelineRun.Name, records)
+					GinkgoWriter.Printf("got error getting records: %s\n", err.Error())
 					Expect(err).NotTo(HaveOccurred())
 					Expect(len(records.Record)).NotTo(BeZero(), "No records found for PipelineRun %s", pipelineRun.Name)
 				})
 
 				It("should have Pipeline Logs", func() {
 					// Verify if result is stored in Database
+					// temporary logs due to RHTAPBUGS-213
 					logs, err := resultClient.GetLogs(testNamespace, string(pipelineRun.GetUID()))
+					GinkgoWriter.Printf("logs for PipelineRun %s:\n%s\n", pipelineRun.Name, logs)
+					GinkgoWriter.Printf("got error getting logs: %s\n", err.Error())
 					Expect(err).NotTo(HaveOccurred())
-					Expect(len(logs.Record)).NotTo(BeZero(), "No logs found for PipelineRun %s", pipelineRun.Name)
+
+					timeout := time.Minute * 2
+					interval := time.Second * 10
+					// temporary timeout  due to RHTAPBUGS-213
+					Eventually(func() bool {
+						// temporary logs due to RHTAPBUGS-213
+						logs, err = resultClient.GetLogs(testNamespace, string(pipelineRun.GetUID()))
+						GinkgoWriter.Printf("logs for PipelineRun %s:\n%s\n", pipelineRun.Name, logs)
+						GinkgoWriter.Printf("got error getting logs: %s\n", err.Error())
+						Expect(err).NotTo(HaveOccurred())
+
+						return len(logs.Record) != 0
+					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when getting logs for PipelineRun %s", pipelineRun.Name))
+
 					// Verify if result is stored in S3
+					// temporary logs due to RHTAPBUGS-213
 					log, err := resultClient.GetLogByName(logs.Record[0].Name)
+					GinkgoWriter.Printf("log for record %s:\n%s\n", logs.Record[0].Name, log)
+					GinkgoWriter.Printf("got error getting logs: %s\n", err.Error())
 					Expect(err).NotTo(HaveOccurred())
-					Expect(len(log)).NotTo(BeZero(), "No log content found for PipelineRun %s", pipelineRun.Name)
+					Expect(len(log)).NotTo(BeZero(), "No log content '%s' found for PipelineRun %s", logs.Record[0].Name, pipelineRun.Name)
 				})
 			})
 
 			It("should validate tekton taskrun test results", Label(buildTemplatesTestLabel), func() {
-				pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, "")
+				pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(build.ValidateBuildPipelineTestResults(pipelineRun, kubeadminClient.CommonController.KubeRest())).To(Succeed())
 			})
