@@ -2,7 +2,7 @@
 
 When SBOM files are uploaded to Pyxis it's required to be modified according to
 Pyxis's requirment where the CamelBack method does not match,
-in scrip https://github.com/redhat-appstudio/release-service-utils/blob/main/pyxis/upload_sbom.py
+in script https://github.com/redhat-appstudio/release-service-utils/blob/main/pyxis/upload_sbom.py
 was made this match, underscore was between two words instead of CamelBack.
 
 */

@@ -40,8 +40,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 
 	BeforeAll(func() {
 		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("e2e-pyxis"))
-		fmt.Println("NewFramework:", fw)
-		fmt.Println("NewFramework Error:", err)
 		Expect(err).NotTo(HaveOccurred())
 
 		kubeController = tekton.KubeController{
@@ -83,13 +81,10 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		Expect(err).ToNot(HaveOccurred())
 
 		// Creating k8s secret to access Pyxis stage based on base64 decoded of key and cert
-		rawDecodedTextStringData, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(keyPyxisStage)))
+		pyxisKeyDecoded, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(keyPyxisStage)))
 		Expect(err).ToNot(HaveOccurred())
-		rawDecodedTextData, err := base64.StdEncoding.DecodeString(string(certPyxisStage))
+		pyxisCertDecoded, err := base64.StdEncoding.DecodeString(string(certPyxisStage))
 		Expect(err).ToNot(HaveOccurred())
-
-		pyxisKeyDecoded = rawDecodedTextStringData
-		pyxisCertDecoded = rawDecodedTextData
 
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -98,8 +93,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			},
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{
-				"cert": rawDecodedTextData,
-				"key":  rawDecodedTextStringData,
+				"cert": pyxisCertDecoded,
+				"key":  pyxisKeyDecoded,
 			},
 		}
 
@@ -149,7 +144,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		_, err = fw.AsKubeAdmin.HasController.CreateComponent(applicationNameDefault, componentName, devNamespace, gitSourceComponentUrl, "", containerImageUrl, "", "", true)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.HasController.CreateComponent(applicationNameDefault, additionalComponentName, devNamespace, additionalgitSourceComponentUrl, "", "", addtionalOutputContainerImage, "", false)
+		_, err = fw.AsKubeAdmin.HasController.CreateComponent(applicationNameDefault, additionalComponentName, devNamespace, additionalGitSourceComponentUrl, "", "", addtionalOutputContainerImage, "", false)
 		Expect(err).NotTo(HaveOccurred())
 
 	})
@@ -164,7 +159,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 
 	var _ = Describe("Post-release verification", func() {
 
-		It("verifies that a PipelineRun is created in dev namespace.", func() {
+		It("verifies that a PipelineRuns is created in dev namespace.", func() {
 			Eventually(func() bool {
 				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(devNamespace)
 				if err != nil || prList == nil || len(prList.Items) < 1 {
@@ -189,7 +184,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("verifies that the build PipelineRun in dev namespace succeeded.", func() {
+		It("verifies that the build PipelineRuns in dev namespace succeeded.", func() {
 			Eventually(func() bool {
 				buildPr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(buildPrName, devNamespace)
 				if err != nil {
@@ -197,7 +192,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 					return false
 				}
 				additionalBuildPr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(additionalBuildPrName, devNamespace)
-				if err != nil || additionalBuildPr == nil {
+				if err != nil {
 					GinkgoWriter.Printf("\nError getting PirpelineRun %s:\n %s", additionalBuildPr, err)
 					return false
 				}
@@ -255,28 +250,34 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 
 		It("validate the result of task create-pyxis-image contains image ids.", func() {
 			Eventually(func() bool {
-				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
-				if prList == nil || err != nil || len(prList.Items) < 1 {
+
+				releasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(releasePrName, managedNamespace)
+				if err != nil {
+					GinkgoWriter.Printf("\nError getting Release PirpelineRun %s:\n %s", releasePr, err)
 					return false
 				}
+				additionalRleasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(additionalReleasePrName, managedNamespace)
+				if err != nil {
+					GinkgoWriter.Printf("\nError getting PirpelineRun %s:\n %s", additionalRleasePr, err)
+					return false
+				}
+				re := regexp.MustCompile("[a-fA-F0-9]{24}")
 
-				for _, pr := range prList.Items {
-					pr, err := kubeController.Tektonctrl.GetPipelineRun(pr.Name, managedNamespace)
-					if err != nil {
-						Expect(err).NotTo(HaveOccurred())
-					}
+				trReleasePr, err := kubeController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), releasePr, "create-pyxis-image")
+				if err != nil {
+					Expect(err).NotTo(HaveOccurred())
+				}
 
-					tr, err := kubeController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), pr, "create-pyxis-image")
-					if err != nil {
-						Expect(err).NotTo(HaveOccurred())
-					}
+				trAdditionalReleasePr, err := kubeController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), additionalRleasePr, "create-pyxis-image")
+				if err != nil {
+					Expect(err).NotTo(HaveOccurred())
+				}
 
-					re := regexp.MustCompile("[a-fA-F0-9]{24}")
-					returnedImageID := re.FindAllString(tr.Status.TaskRunResults[0].Value.StringVal, -1)
-
-					if len(returnedImageID) > len(imageIDs) {
-						imageIDs = returnedImageID
-					}
+				if len(re.FindAllString(trReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)) >
+					len(re.FindAllString(trAdditionalReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)) {
+					imageIDs = re.FindAllString(trReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)
+				} else {
+					imageIDs = re.FindAllString(trAdditionalReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)
 				}
 
 				return len(imageIDs[0]) > 10 && len(imageIDs[1]) > 10

@@ -43,7 +43,7 @@ const (
 	roleName                             string = "role-release-service-account"
 
 	additionalComponentName         string = "simple-python"
-	additionalgitSourceComponentUrl string = "https://github.com/devfile-samples/devfile-sample-python-basic"
+	additionalGitSourceComponentUrl string = "https://github.com/devfile-samples/devfile-sample-python-basic"
 	addtionalOutputContainerImage   string = "quay.io/redhat-appstudio-qe/test-release-images"
 	pyxisStageURL                   string = "https://pyxis.preprod.api.redhat.com/v1/images/id/"
 
