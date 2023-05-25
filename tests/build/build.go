@@ -9,6 +9,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/google/go-github/v44/github"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 
 	"github.com/devfile/library/pkg/util"
@@ -36,8 +37,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	var err error
 	defer GinkgoRecover()
 
-	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline"), func() {
-		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, outputContainerImage, pacControllerHost, defaultBranchTestComponentName string
+	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), func() {
+		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, pacControllerHost, defaultBranchTestComponentName, imageRepoName, robotAccountName string
 
 		var timeout, interval time.Duration
 
@@ -116,11 +117,17 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					break
 				}
 			}
+
+			//Delete the quay image repo since we are setting delete-repo=false
+			_, err = build.DeleteImageRepo(imageRepoName)
+			Expect(err).NotTo(HaveOccurred(), "Failed to delete image repo with error: %+v", err)
+
 		})
 
 		When("a new component without specified branch is created", Label("pac-custom-default-branch"), func() {
 			BeforeAll(func() {
-				_, err = f.AsKubeDeveloper.HasController.CreateComponentWithPaCEnabled(applicationName, defaultBranchTestComponentName, testNamespace, helloWorldComponentGitSourceURL, "", outputContainerImage)
+				deleteRepo := false
+				_, err = f.AsKubeDeveloper.HasController.CreateComponentWithPaCEnabled(applicationName, defaultBranchTestComponentName, testNamespace, helloWorldComponentGitSourceURL, "", deleteRepo)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -151,6 +158,24 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					}
 					return pipelineRun.HasStarted()
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
+			})
+			It("image repo and robot account created successfully", func() {
+				component, err := f.AsKubeAdmin.HasController.GetHasComponent(defaultBranchTestComponentName, testNamespace)
+				Expect(err).ShouldNot(HaveOccurred(), "could not get component %s in the %s namespace", defaultBranchTestComponentName, testNamespace)
+
+				annotations := component.GetAnnotations()
+				imageRepoName, err = build.GetQuayImageName(annotations)
+				Expect(err).ShouldNot(HaveOccurred(), "failed to read image repo name from %+v", annotations)
+
+				imageExist, err := build.DoesImageRepoExistInQuay(imageRepoName)
+				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if image repo exists in quay with error: %+v", err)
+				Expect(imageExist).To(BeTrue(), "quay image does not exists")
+
+				robotAccountName = build.GetRobotAccountName(imageRepoName)
+				robotAccountExist, err := build.DoesRobotAccountExistInQuay(robotAccountName)
+				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if robot account exists in quay with error: %+v", err)
+				Expect(robotAccountExist).To(BeTrue(), "quay robot account does not exists")
+
 			})
 			It("a related PipelineRun and Github webhook should be deleted after deleting the component", func() {
 				timeout = time.Second * 60
@@ -184,12 +209,26 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return exists
 				}, timeout, interval).Should(BeFalse(), "timed out when waiting for the branch to be deleted")
 			})
+			It("related image repo should not be deleted but the robot account should be deleted after deleting the component", func() {
+				timeout = time.Second * 60
+				interval = time.Second * 1
+				// Check image repo should not be deleted
+				Eventually(func() (bool, error) {
+					return build.DoesImageRepoExistInQuay(imageRepoName)
+				}, timeout, interval).Should(BeTrue(), "timed out when checking if image repo got deleted")
+				// Check robot account should be deleted
+				Eventually(func() (bool, error) {
+					return build.DoesRobotAccountExistInQuay(robotAccountName)
+				}, timeout, interval).Should(BeFalse(), "timed out when checking if robot account got deleted")
+
+			})
 		})
 
 		When("a new component with specified custom branch branch is created", func() {
 			BeforeAll(func() {
-				// Create a component with Git Source URL and a specified git branch
-				_, err = f.AsKubeAdmin.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, componentBaseBranchName, outputContainerImage)
+				// Create a component with Git Source URL, a specified git branch and marking delete-repo=true
+				deleteRepo := true
+				_, err = f.AsKubeAdmin.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, componentBaseBranchName, deleteRepo)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 			It("triggers a PipelineRun", func() {
@@ -246,6 +285,31 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					}
 					return true
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
+			})
+			It("image repo and robot account created successfully", func() {
+
+				component, err := f.AsKubeAdmin.HasController.GetHasComponent(componentName, testNamespace)
+				Expect(err).ShouldNot(HaveOccurred(), "could not get component %s in the %s namespace", componentName, testNamespace)
+
+				annotations := component.GetAnnotations()
+				imageRepoName, err = build.GetQuayImageName(annotations)
+				Expect(err).ShouldNot(HaveOccurred(), "failed to read image repo name from %+v", annotations)
+
+				imageExist, err := build.DoesImageRepoExistInQuay(imageRepoName)
+				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if image repo exists in quay with error: %+v", err)
+				Expect(imageExist).To(BeTrue(), "quay image does not exists")
+
+				robotAccountName = build.GetRobotAccountName(imageRepoName)
+				robotAccountExist, err := build.DoesRobotAccountExistInQuay(robotAccountName)
+				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if robot account exists in quay with error: %+v")
+				Expect(robotAccountExist).To(BeTrue(), "quay robot account does not exists")
+
+			})
+			It("image tag is updated successfully", func() {
+				//TODO: check if image tag present once below issue is resolved
+				// https://issues.redhat.com/browse/SRVKP-3064
+				// https://github.com/openshift-pipelines/pipeline-service/pull/632
+
 			})
 			It("eventually leads to a creation of a PR comment with the PipelineRun status report", func() {
 				var comments []*github.IssueComment
@@ -395,14 +459,25 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 		When("the component is removed and recreated (with the same name in the same namespace)", func() {
 			BeforeAll(func() {
-				Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, testNamespace, true)).To(Succeed())
 
+				timeout := 1 * time.Minute
+				interval := 1 * time.Second
 				Eventually(func() bool {
 					_, err := f.AsKubeAdmin.HasController.GetHasComponent(componentName, testNamespace)
 					return errors.IsNotFound(err)
-				}, time.Minute*1, time.Second*1).Should(BeTrue(), "timed out when waiting for the app %s to be deleted in %s namespace", applicationName, testNamespace)
+				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the app %s to be deleted in %s namespace", applicationName, testNamespace)
+				// Check removal of image repo
+				Eventually(func() (bool, error) {
+					return build.DoesImageRepoExistInQuay(imageRepoName)
+				}, timeout, interval).Should(BeFalse(), "timed out when waiting for image repo to be deleted")
+				// Check removal of robot account
+				Eventually(func() (bool, error) {
+					return build.DoesRobotAccountExistInQuay(robotAccountName)
+				}, timeout, interval).Should(BeFalse(), "timed out when waiting for robot account to be deleted")
 
-				_, err = f.AsKubeAdmin.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, componentBaseBranchName, outputContainerImage)
+				deleteRepo := true
+				_, err = f.AsKubeAdmin.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, componentBaseBranchName, deleteRepo)
 			})
 
 			It("should no longer lead to a creation of a PaC PR", func() {
