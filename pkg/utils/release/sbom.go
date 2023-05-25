@@ -1,9 +1,10 @@
 /* SBOM of type structures matches Pyxis structure
 
-When SBOM files are uploaded to Pyxis it's required to be modified according to
-Pyxis's requirment where the CamelBack method does not match,
-in script https://github.com/redhat-appstudio/release-service-utils/blob/main/pyxis/upload_sbom.py
-was made this match, underscore was between two words instead of CamelBack.
+When SBOM components are uploaded to Pyxis, key names have to be modified
+to conform to GraphQL naming conventions.
+1. Use _ instead of camel case, e.g. camelCase -> camel_case
+2. Use _ instead of -, e.g. key-with-dash -> key_with_dash
+See https://github.com/redhat-appstudio/release-service-utils/blob/main/pyxis/upload_sbom.py
 
 */
 

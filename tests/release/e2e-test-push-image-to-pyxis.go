@@ -1,12 +1,8 @@
 package release
 
 import (
-	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -81,9 +77,9 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		Expect(err).ToNot(HaveOccurred())
 
 		// Creating k8s secret to access Pyxis stage based on base64 decoded of key and cert
-		pyxisKeyDecoded, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(keyPyxisStage)))
+		pyxisKeyDecoded, err = base64.StdEncoding.DecodeString(string(keyPyxisStage))
 		Expect(err).ToNot(HaveOccurred())
-		pyxisCertDecoded, err := base64.StdEncoding.DecodeString(string(certPyxisStage))
+		pyxisCertDecoded, err = base64.StdEncoding.DecodeString(string(certPyxisStage))
 		Expect(err).ToNot(HaveOccurred())
 
 		secret := &corev1.Secret{
@@ -177,8 +173,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 					}
 				}
 
-				GinkgoWriter.Printf("\nFirst Build PirpelineRun:\n %s", buildPrName)
-				GinkgoWriter.Printf("\nSecond Build PirpelineRun:\n %s", additionalBuildPrName)
+				GinkgoWriter.Printf("\nFirst Build PipelineRun:\n %s", buildPrName)
+				GinkgoWriter.Printf("\nSecond Build PipelineRun:\n %s", additionalBuildPrName)
 
 				return componentHasBuildPr && additionalComponentHasBuildPr
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
@@ -188,12 +184,12 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			Eventually(func() bool {
 				buildPr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(buildPrName, devNamespace)
 				if err != nil {
-					GinkgoWriter.Printf("\nError getting PirpelineRun %s:\n %s", buildPrName, err)
+					GinkgoWriter.Printf("\nError getting PipelineRun %s:\n %s", buildPrName, err)
 					return false
 				}
 				additionalBuildPr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(additionalBuildPrName, devNamespace)
 				if err != nil {
-					GinkgoWriter.Printf("\nError getting PirpelineRun %s:\n %s", additionalBuildPr, err)
+					GinkgoWriter.Printf("\nError getting PipelineRun %s:\n %s", additionalBuildPr, err)
 					return false
 				}
 
@@ -202,11 +198,11 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("verifies that a PipelineRun is created in managed namespace.", func() {
+		It("verifies that a release PipelineRun for each Component is created in managed namespace.", func() {
 			Eventually(func() bool {
 				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
 				if err != nil || prList == nil || len(prList.Items) < 1 {
-					GinkgoWriter.Printf("Error getting Release PirpelineRun:\n %s", err)
+					GinkgoWriter.Printf("Error getting Release PipelineRun:\n %s", err)
 					return false
 				}
 				foudFirstReleasePr := false
@@ -221,30 +217,30 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 					}
 				}
 
-				GinkgoWriter.Printf("\nFirst Release PirpelineRun:\n %s", releasePrName)
-				GinkgoWriter.Printf("\nSecond Release PirpelineRun:\n %s", additionalReleasePrName)
+				GinkgoWriter.Printf("\nFirst Release PipelineRun:\n %s", releasePrName)
+				GinkgoWriter.Printf("\nSecond Release PipelineRun:\n %s", additionalReleasePrName)
 
 				return strings.Contains(releasePrName, "release-pipelinerun") &&
 					strings.Contains(additionalReleasePrName, "release-pipelinerun")
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("verifies a PipelineRun started in managed namespace and succeeded.", func() {
+		It("verifies a release PipelineRun for each component started in managed namespace and succeeded.", func() {
 			Eventually(func() bool {
 
 				releasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(releasePrName, managedNamespace)
 				if err != nil {
-					GinkgoWriter.Printf("\nError getting Release PirpelineRun %s:\n %s", releasePr, err)
+					GinkgoWriter.Printf("\nError getting Release PipelineRun %s:\n %s", releasePr, err)
 					return false
 				}
-				additionalRleasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(additionalReleasePrName, managedNamespace)
+				additionalReleasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(additionalReleasePrName, managedNamespace)
 				if err != nil {
-					GinkgoWriter.Printf("\nError getting PirpelineRun %s:\n %s", additionalRleasePr, err)
+					GinkgoWriter.Printf("\nError getting PipelineRun %s:\n %s", additionalReleasePr, err)
 					return false
 				}
 
 				return releasePr.HasStarted() && releasePr.IsDone() && releasePr.Status.GetCondition(apis.ConditionSucceeded).IsTrue() &&
-					additionalRleasePr.HasStarted() && additionalRleasePr.IsDone() && additionalRleasePr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
+					additionalReleasePr.HasStarted() && additionalReleasePr.IsDone() && additionalReleasePr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
 
@@ -253,12 +249,12 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 
 				releasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(releasePrName, managedNamespace)
 				if err != nil {
-					GinkgoWriter.Printf("\nError getting Release PirpelineRun %s:\n %s", releasePr, err)
+					GinkgoWriter.Printf("\nError getting Release PipelineRun %s:\n %s", releasePr, err)
 					return false
 				}
-				additionalRleasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(additionalReleasePrName, managedNamespace)
+				additionalReleasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(additionalReleasePrName, managedNamespace)
 				if err != nil {
-					GinkgoWriter.Printf("\nError getting PirpelineRun %s:\n %s", additionalRleasePr, err)
+					GinkgoWriter.Printf("\nError getting PipelineRun %s:\n %s", additionalReleasePr, err)
 					return false
 				}
 				re := regexp.MustCompile("[a-fA-F0-9]{24}")
@@ -268,9 +264,15 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 					Expect(err).NotTo(HaveOccurred())
 				}
 
-				trAdditionalReleasePr, err := kubeController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), additionalRleasePr, "create-pyxis-image")
+				trAdditionalReleasePr, err := kubeController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), additionalReleasePr, "create-pyxis-image")
 				if err != nil {
 					Expect(err).NotTo(HaveOccurred())
+				}
+
+				if len(re.FindAllString(trReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)) < 1 &&
+					len(re.FindAllString(trAdditionalReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)) < 1 {
+					GinkgoWriter.Printf("\n Invalid ImageID in results of task create-pyxis-image..")
+					return false
 				}
 
 				if len(re.FindAllString(trReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)) >
@@ -280,7 +282,12 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 					imageIDs = re.FindAllString(trAdditionalReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)
 				}
 
-				return len(imageIDs[0]) > 10 && len(imageIDs[1]) > 10
+				if len(imageIDs) != 2 {
+					GinkgoWriter.Printf("\nExpected two imageIDs, current is %s:\n", len(imageIDs))
+					return false
+				}
+
+				return len(imageIDs[0]) == 24 && len(imageIDs[1]) == 24
 			}).Should(BeTrue())
 		})
 
@@ -297,64 +304,29 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 
 		It("validates that imageIds from task create-pyxis-image exist in Pyxis.", func() {
 
-			isImageExist := 0
-			for _, imageId := range imageIDs {
+			for _, imageID := range imageIDs {
 				Eventually(func() bool {
-					url := fmt.Sprintf("%s%s", pyxisStageURL, imageId)
 
-					// Create a TLS configuration with the key and certificate
-					cert, err := tls.X509KeyPair(pyxisCertDecoded, pyxisKeyDecoded)
+					body, err := fw.AsKubeAdmin.ReleaseController.GetSbomPyxisByImageID(pyxisStageURL, imageID,
+						[]byte(pyxisCertDecoded), []byte(pyxisKeyDecoded))
 					if err != nil {
-						fmt.Println("Error creating TLS certificate and key:", err)
-						Expect(err).NotTo(HaveOccurred())
-					}
-
-					// Create a client with the custom TLS configuration
-					client := &http.Client{
-						Transport: &http.Transport{
-							TLSClientConfig: &tls.Config{
-								Certificates: []tls.Certificate{cert},
-							},
-						},
-					}
-
-					// Send GET request
-					request, err := http.NewRequest("GET", url, nil)
-					if err != nil {
-						fmt.Println("Error creating GET request:", err)
-						Expect(err).NotTo(HaveOccurred())
-					}
-
-					response, err := client.Do(request)
-					if err != nil {
-						fmt.Println("Error sending GET request:", err)
-						Expect(err).NotTo(HaveOccurred())
-					}
-
-					defer response.Body.Close()
-
-					// Read the response body
-					body, err := io.ReadAll(response.Body)
-					if err != nil {
-						fmt.Println("Error reading response body:", err)
+						GinkgoWriter.Printf("Error getting response body:", err)
 						Expect(err).NotTo(HaveOccurred())
 					}
 
 					sbomImage := &release.Image{}
 					err = json.Unmarshal(body, sbomImage)
 					if err != nil {
-						fmt.Println("Error json unmarshal body sbomPurl:", err)
+						GinkgoWriter.Printf("Error json unmarshal body content.", err)
 						Expect(err).NotTo(HaveOccurred())
 					}
 
 					if sbomImage.ContentManifestComponents == nil {
-						fmt.Println("Content Mainfest Components is empty.")
+						GinkgoWriter.Printf("Content Mainfest Components is empty.")
 						return false
 					}
 
-					isImageExist = isImageExist + len(sbomImage.ContentManifestComponents)
-
-					return isImageExist > 1
+					return len(sbomImage.ContentManifestComponents) > 1
 				}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 			}
 
