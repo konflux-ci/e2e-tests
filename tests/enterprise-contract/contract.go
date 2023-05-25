@@ -190,7 +190,8 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			Expect(reportLog).Should(ContainSubstring("msg: Pipeline task 'build-container' uses an unacceptable task bundle"))
 		})
 
-		It("verifies the release policy: Task bundle is out of date", func() {
+		// Test disabled temporarily until https://issues.redhat.com/browse/HACBS-2259
+		It("verifies the release policy: Task bundle is out of date", Pending, func() {
 			policy := ecp.EnterpriseContractPolicySpec{
 				Sources: []ecp.Source{
 					{
