@@ -28,7 +28,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 	var namespace string
 
 	BeforeAll(func() {
-		fwk, err = framework.NewFramework(constants.TEKTON_CHAINS_E2E_USER)
+		fwk, err = framework.NewFramework(utils.GetGeneratedNamespace(constants.TEKTON_CHAINS_E2E_USER))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(fwk.UserNamespace).NotTo(BeNil(), "failed to create sandbox user")
 		namespace = fwk.UserNamespace
