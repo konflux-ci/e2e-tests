@@ -9,6 +9,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/google/go-github/v44/github"
+	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 
@@ -27,7 +28,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"knative.dev/pkg/apis"
 )
 
 var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "HACBS"), func() {
@@ -39,6 +39,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), func() {
 		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, pacControllerHost, defaultBranchTestComponentName, imageRepoName, robotAccountName string
+		var component *appservice.Component
 
 		var timeout, interval time.Duration
 
@@ -77,7 +78,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			)
 
 			componentName = fmt.Sprintf("%s-%s", "test-component-pac", util.GenerateRandomString(4))
-			pacBranchName = pacPRBranchPrefix + componentName
+			pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
 			componentBaseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(4))
 
 			err = f.AsKubeAdmin.CommonController.Github.CreateRef(helloWorldComponentGitSourceRepoName, helloWorldComponentDefaultBranch, componentBaseBranchName)
@@ -101,7 +102,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 			}
-			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, pacPRBranchPrefix+defaultBranchTestComponentName)
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, constants.PaCPullRequestBranchPrefix+defaultBranchTestComponentName)
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 			}
@@ -139,7 +140,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, pr := range prs {
-						if pr.Head.GetRef() == pacPRBranchPrefix+defaultBranchTestComponentName {
+						if pr.Head.GetRef() == constants.PaCPullRequestBranchPrefix+defaultBranchTestComponentName {
 							Expect(pr.GetBase().GetRef()).To(Equal(helloWorldComponentDefaultBranch))
 							return true
 						}
@@ -204,7 +205,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				timeout = time.Second * 60
 				interval = time.Second * 1
 				Eventually(func() bool {
-					exists, err := f.AsKubeAdmin.CommonController.Github.ExistsRef(helloWorldComponentGitSourceRepoName, pacPRBranchPrefix+defaultBranchTestComponentName)
+					exists, err := f.AsKubeAdmin.CommonController.Github.ExistsRef(helloWorldComponentGitSourceRepoName, constants.PaCPullRequestBranchPrefix+defaultBranchTestComponentName)
 					Expect(err).ShouldNot(HaveOccurred())
 					return exists
 				}, timeout, interval).Should(BeFalse(), "timed out when waiting for the branch to be deleted")
@@ -224,11 +225,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 		})
 
-		When("a new component with specified custom branch branch is created", func() {
+		When("a new Component with specified custom branch is created", Label("custom-branch"), func() {
 			BeforeAll(func() {
 				// Create a component with Git Source URL, a specified git branch and marking delete-repo=true
 				deleteRepo := true
-				_, err = f.AsKubeAdmin.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, componentBaseBranchName, deleteRepo)
+				component, err = f.AsKubeAdmin.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, componentBaseBranchName, deleteRepo)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 			It("triggers a PipelineRun", func() {
@@ -262,29 +263,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for init PaC PR to be created")
 			})
 			It("the PipelineRun should eventually finish successfully", func() {
-				timeout = time.Minute * 30
-				interval = time.Second * 10
-				Eventually(func() bool {
-					pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-					Expect(err).ShouldNot(HaveOccurred())
-
-					for _, condition := range pipelineRun.Status.Conditions {
-						GinkgoWriter.Printf("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
-
-						if !pipelineRun.IsDone() {
-							return false
-						}
-
-						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController.KubeRest(), f.AsKubeAdmin.CommonController.KubeInterface(), pipelineRun)
-							if err != nil {
-								GinkgoWriter.Printf("failed to get logs for pipelinerun %s: %+v\n", pipelineRun.Name, err)
-							}
-							Fail(failMessage)
-						}
-					}
-					return true
-				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
 			})
 			It("image repo and robot account created successfully", func() {
 
@@ -357,30 +336,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
 			})
 			It("PipelineRun should eventually finish", func() {
-				timeout = time.Minute * 50
-				interval = time.Second * 10
-
-				Eventually(func() bool {
-					pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, createdFileSHA)
-					Expect(err).ShouldNot(HaveOccurred())
-
-					for _, condition := range pipelineRun.Status.Conditions {
-						GinkgoWriter.Printf("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
-
-						if !pipelineRun.IsDone() {
-							return false
-						}
-
-						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController.KubeRest(), f.AsKubeAdmin.CommonController.KubeInterface(), pipelineRun)
-							if err != nil {
-								GinkgoWriter.Printf("failed to get logs for pipelinerun %s: %+v\n", pipelineRun.Name, err)
-							}
-							Fail(failMessage)
-						}
-					}
-					return true
-				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, createdFileSHA, 2)).To(Succeed())
 			})
 			It("eventually leads to another update of a PR with a comment about the PipelineRun status report", func() {
 				var comments []*github.IssueComment
@@ -430,30 +386,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 
 			It("pipelineRun should eventually finish", func() {
-				timeout = time.Minute * 50
-				interval = time.Second * 10
-
-				Eventually(func() bool {
-					pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, mergeResultSha)
-					Expect(err).ShouldNot(HaveOccurred())
-
-					for _, condition := range pipelineRun.Status.Conditions {
-						GinkgoWriter.Printf("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
-
-						if !pipelineRun.IsDone() {
-							return false
-						}
-
-						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController.KubeRest(), f.AsKubeAdmin.CommonController.KubeInterface(), pipelineRun)
-							if err != nil {
-								GinkgoWriter.Printf("failed to get logs for pipelinerun %s: %+v\n", pipelineRun.Name, err)
-							}
-							Fail(failMessage)
-						}
-					}
-					return true
-				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResultSha, 2)).To(Succeed())
 			})
 		})
 

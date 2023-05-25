@@ -11,6 +11,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"knative.dev/pkg/apis"
 
+	"github.com/devfile/library/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	routev1 "github.com/openshift/api/route/v1"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -503,47 +504,83 @@ func (h *SuiteController) WaitForComponentPipelineToBeFinished(component *appser
 				return false, nil
 			}
 
-			for _, condition := range pr.Status.Conditions {
-				GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pr.Name, condition.Reason)
+			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pr.Name, pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
 
-				if !pr.IsDone() {
-					return false, nil
-				}
-
-				if pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-					return true, nil
-				} else {
-					err = tekton.StorePipelineRun(pr, h.KubeRest(), h.KubeInterface())
-					if err != nil {
-						GinkgoWriter.Printf("failed to store pipelineRun: %s\n", err.Error())
-					}
-					return false, fmt.Errorf(tekton.GetFailedPipelineRunLogs(h.KubeRest(), h.KubeInterface(), pr))
-				}
+			if !pr.IsDone() {
+				return false, nil
 			}
-			return false, nil
+
+			if pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+				return true, nil
+			} else {
+				err = tekton.StorePipelineRun(pr, h.KubeRest(), h.KubeInterface())
+				if err != nil {
+					GinkgoWriter.Printf("failed to store pipelineRun: %s\n", err.Error())
+				}
+				return false, fmt.Errorf(tekton.GetFailedPipelineRunLogs(h.KubeRest(), h.KubeInterface(), pr))
+			}
 		})
 
 		if err != nil {
-			if attempts == maxRetries+1 {
+			// Retry the PipelineRun only in case we hit the known issue https://issues.redhat.com/browse/SRVKP-2749
+			if attempts == maxRetries+1 || pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason() != "CouldntGetTask" {
 				return err
 			}
-			GinkgoWriter.Printf("attempt %s/%s: PipelineRun %q failed: %+v", attempts, maxRetries+1, pr.GetName(), err)
+			GinkgoWriter.Printf("attempt %d/%d: PipelineRun %q failed: %+v", attempts, maxRetries+1, pr.GetName(), err)
 			if err = h.KubeRest().Delete(context.TODO(), pr); err != nil {
 				return fmt.Errorf("failed to delete PipelineRun %q from %q namespace", pr.GetName(), pr.GetNamespace())
 			}
 
-			if err := utils.WaitUntil(h.PipelineRunDeleted(pr), 1*time.Minute); err != nil {
+			if err := utils.WaitUntil(h.PipelineRunDeleted(pr), 5*time.Minute); err != nil {
 				return fmt.Errorf("timed out waiting for PipelineRun %q from namespace %q to get deleted: %+v", pr.GetName(), pr.GetNamespace(), err)
 			}
 
-			component, err := h.GetHasComponent(component.GetName(), component.GetNamespace())
-			if err != nil {
-				return fmt.Errorf("failed to get component %q for PipelineRun %q in %q namespace: %+v", component.GetName(), pr.GetName(), pr.GetNamespace(), err)
-			}
-			delete(component.Annotations, constants.ComponentInitialBuildAnnotationKey)
+			prLabels := pr.GetLabels()
+			// In case of PipelineRun managed by PaC we are able to retrigger the pipeline only
+			// by updating the related branch
+			if prLabels["app.kubernetes.io/managed-by"] == "pipelinesascode.tekton.dev" {
+				var ok bool
+				var repoName, eventType, branchName string
+				pacRepoNameLabelName := "pipelinesascode.tekton.dev/url-repository"
+				pacEventTypeLabelName := "pipelinesascode.tekton.dev/event-type"
+				componentLabelName := "appstudio.openshift.io/component"
+				targetBranchAnnotationName := "build.appstudio.redhat.com/target_branch"
 
-			if err = h.KubeRest().Update(context.Background(), component); err != nil {
-				return fmt.Errorf("failed to update Component %q in %q namespace", component.GetName(), component.GetNamespace())
+				if repoName, ok = prLabels[pacRepoNameLabelName]; !ok {
+					return fmt.Errorf("cannot retrigger PipelineRun - required label %q not found", pacRepoNameLabelName)
+				}
+				if eventType, ok = prLabels[pacEventTypeLabelName]; !ok {
+					return fmt.Errorf("cannot retrigger PipelineRun - required label %q not found", pacEventTypeLabelName)
+				}
+				// PipelineRun is triggered from a pull request, need to update the PaC PR source branch
+				if eventType == "pull_request" {
+					if len(prLabels[componentLabelName]) < 1 {
+						return fmt.Errorf("cannot retrigger PipelineRun - required label %q not found", componentLabelName)
+					}
+					branchName = constants.PaCPullRequestBranchPrefix + prLabels[componentLabelName]
+				} else {
+					// No straightforward way to get a target branch from PR labels -> using annotation
+					if branchName, ok = pr.GetAnnotations()[targetBranchAnnotationName]; !ok {
+						return fmt.Errorf("cannot retrigger PipelineRun - required annotation %q not found", targetBranchAnnotationName)
+					}
+				}
+				file, err := h.Github.CreateFile(repoName, util.GenerateRandomString(5), "test", branchName)
+				if err != nil {
+					return fmt.Errorf("failed to retrigger PipelineRun %s in %s namespace: %+v", pr.GetName(), pr.GetNamespace(), err)
+				}
+				sha = file.GetSHA()
+
+				// To retrigger simple build PipelineRun we just need to update the initial build annotation
+				// in Component CR
+			} else {
+				component, err := h.GetHasComponent(component.GetName(), component.GetNamespace())
+				if err != nil {
+					return fmt.Errorf("failed to get component %q for PipelineRun %q in %q namespace: %+v", component.GetName(), pr.GetName(), pr.GetNamespace(), err)
+				}
+				delete(component.Annotations, constants.ComponentInitialBuildAnnotationKey)
+				if err = h.KubeRest().Update(context.Background(), component); err != nil {
+					return fmt.Errorf("failed to update Component %q in %q namespace", component.GetName(), component.GetNamespace())
+				}
 			}
 			attempts++
 		} else {
