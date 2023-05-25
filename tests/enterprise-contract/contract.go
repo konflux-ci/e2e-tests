@@ -103,6 +103,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 
 	Context("Release Policy", func() {
 		BeforeAll(func() {
+			Skip("Skip until: https://issues.redhat.com/browse/RHTAPBUGS-342 it is closed")
 			secretName := fmt.Sprintf("golden-image-public-key%s", util.GenerateRandomString(10))
 			//The staging public key for verificaiton image
 			publicKey := []byte("-----BEGIN PUBLIC KEY-----\n" +
