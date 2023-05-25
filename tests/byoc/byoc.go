@@ -274,8 +274,11 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 					if len(ingress.Spec.Rules) == 0 {
 						Fail("kubernetes ingress set any rule during component creation")
 					}
+
+					// Add complex endpoint checks when: https://issues.redhat.com/browse/DEVHAS-367 is ready
 					Eventually(func() bool {
-						return utils.HostEndpointIsAccessible(fmt.Sprintf("http://%s", ingress.Spec.Rules[0].Host), QuarkusComponentEndpoint)
+						// Add endpoint of component when: https://issues.redhat.com/browse/DEVHAS-367 is ready
+						return utils.HostIsAccessible(fmt.Sprintf("http://%s", ingress.Spec.Rules[0].Host))
 					}, 10*time.Minute, 10*time.Second).Should(BeTrue(), fmt.Sprintf("ingress is not accessible: %+v", ingress))
 				})
 			}
