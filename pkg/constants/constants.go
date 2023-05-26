@@ -27,7 +27,7 @@ const (
 	TEKTON_CHAINS_NS string = "tekton-chains" // #nosec
 
 	// User for running the end-to-end Tekton Chains tests
-	TEKTON_CHAINS_E2E_USER string = "tekton-chains-e2e"
+	TEKTON_CHAINS_E2E_USER string = "chains-e2e"
 
 	//base64 Encoded docker config json value to create registry pull secret
 	DOCKER_CONFIG_JSON string = "DOCKER_CONFIG_JSON"
