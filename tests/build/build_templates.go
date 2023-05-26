@@ -207,8 +207,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					records, err := resultClient.GetRecords(testNamespace, string(pipelineRun.GetUID()))
 					// temporary logs due to RHTAPBUGS-213
 					GinkgoWriter.Printf("records for PipelineRun %s:\n%s\n", pipelineRun.Name, records)
-					GinkgoWriter.Printf("got error getting records: %v\n", err)
-					Expect(err).NotTo(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred(), "got error getting records for PipelineRun %s: %v", pipelineRun.Name, err)
 					Expect(len(records.Record)).NotTo(BeZero(), "No records found for PipelineRun %s", pipelineRun.Name)
 				})
 
@@ -217,29 +216,26 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					// temporary logs due to RHTAPBUGS-213
 					logs, err := resultClient.GetLogs(testNamespace, string(pipelineRun.GetUID()))
 					GinkgoWriter.Printf("logs for PipelineRun %s:\n%s\n", pipelineRun.Name, logs)
-					GinkgoWriter.Printf("got error getting logs: %v\n", err)
-					Expect(err).NotTo(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred(), "got error getting logs for PipelineRun %s: %v", pipelineRun.Name, err)
 
 					timeout := time.Minute * 2
 					interval := time.Second * 10
 					// temporary timeout  due to RHTAPBUGS-213
-					Eventually(func() bool {
+					Eventually(func() (bool, error) {
 						// temporary logs due to RHTAPBUGS-213
 						logs, err = resultClient.GetLogs(testNamespace, string(pipelineRun.GetUID()))
 						GinkgoWriter.Printf("logs for PipelineRun %s:\n%s\n", pipelineRun.Name, logs)
-						GinkgoWriter.Printf("got error getting logs: %v\n", err)
-						Expect(err).NotTo(HaveOccurred())
+						Expect(err).NotTo(HaveOccurred(), "got error getting logs for PipelineRun %s: %v", pipelineRun.Name, err)
 
-						return len(logs.Record) != 0
+						return len(logs.Record) != 0, err
 					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when getting logs for PipelineRun %s", pipelineRun.Name))
 
 					// Verify if result is stored in S3
 					// temporary logs due to RHTAPBUGS-213
 					log, err := resultClient.GetLogByName(logs.Record[0].Name)
 					GinkgoWriter.Printf("log for record %s:\n%s\n", logs.Record[0].Name, log)
-					GinkgoWriter.Printf("got error getting logs: %v\n", err)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(len(log)).NotTo(BeZero(), "No log content '%s' found for PipelineRun %s", logs.Record[0].Name, pipelineRun.Name)
+					Expect(err).NotTo(HaveOccurred(), "got error getting log '%s' for PipelineRun %s: %v", logs.Record[0].Name, pipelineRun.Name, err)
+					Expect(len(log)).NotTo(BeZero(), "no log content '%s' found for PipelineRun %s", logs.Record[0].Name, pipelineRun.Name)
 				})
 			})
 
