@@ -208,7 +208,7 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 		containerImage = containerImageSource
 	} else {
 		// When no image image is selected then add annotatation to generate new image repository
-		annotations = utils.MergeMaps(annotations, constants.ComponentWithImageControllerAnnotation)
+		annotations = utils.MergeMaps(annotations, constants.ImageControllerAnnotationDeleteRepoTrue)
 	}
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
@@ -269,10 +269,18 @@ func (h *SuiteController) ComponentDeleted(component *appservice.Component) wait
 }
 
 // CreateComponentWithPaCEnabled creates a component with "pipelinesascode: '1'" annotation that is used for triggering PaC builds
-func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, componentName, namespace, gitSourceURL, baseBranch, outputContainerImage string) (*appservice.Component, error) {
+func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, componentName, namespace, gitSourceURL, baseBranch string, deleteRepo bool) (*appservice.Component, error) {
+
+	var annotations map[string]string
+	if deleteRepo {
+		annotations = utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationDeleteRepoTrue)
+	} else {
+		annotations = utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationDeleteRepoFalse)
+	}
+
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ComponentWithImageControllerAnnotation),
+			Annotations: annotations,
 			Name:        componentName,
 			Namespace:   namespace,
 		},
@@ -287,7 +295,6 @@ func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, compone
 					},
 				},
 			},
-			ContainerImage: outputContainerImage,
 		},
 	}
 	err := h.KubeRest().Create(context.TODO(), component)
@@ -318,7 +325,7 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 	if outputContainerImage != "" {
 		component.Spec.ContainerImage = outputContainerImage
 	} else {
-		component.Annotations = utils.MergeMaps(component.Annotations, constants.ComponentWithImageControllerAnnotation)
+		component.Annotations = utils.MergeMaps(component.Annotations, constants.ImageControllerAnnotationDeleteRepoTrue)
 	}
 
 	if component.Spec.TargetPort == 0 {
@@ -535,7 +542,7 @@ func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentN
 	} else if containerImageSource != "" {
 		component.Spec.ContainerImage = containerImageSource
 	} else {
-		component.Annotations = constants.ComponentWithImageControllerAnnotation
+		component.Annotations = constants.ImageControllerAnnotationDeleteRepoTrue
 	}
 	err := h.KubeRest().Create(context.TODO(), component)
 	if err != nil {
