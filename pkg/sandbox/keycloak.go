@@ -5,11 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
@@ -64,7 +66,7 @@ func (k *SandboxController) GetKeycloakToken(clientID string, userName string, p
 }
 
 /*
-RegisterKeyclokUser create a username in keycloak service and return if succeed or not
+RegisterKeycloakUser create a username in keycloak service and return if succeed or not
 curl --location --request POST 'https://<keycloak-route>/auth/admin/realms/testrealm/users' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJyS2VyZnczU2tzV2hBUF9TeUJuMDRaRm5Pa09ITVFRRmpnOGhjaG12X3VVIn0.eyJleHAiOjE2NzQ3NTkyODksImlhdCI6MTY3NDc1OTIyOSwianRpIjoiY2ZjNzNjMjEtZDU5Mi00MmI4LTk4MWMtYjc5MjAxNzI3OTJhIiwiaXNzIjoiaHR0cHM6Ly9rZXljbG9hay1kZXYtc3NvLmFwcHMuY2x1c3Rlci05cm05ei45cm05ei5zYW5kYm94MTE3OS5vcGVudGxjLmNvbS9hdXRoL3JlYWxtcy9tYXN0ZXIiLCJzdWIiOiI4ODcxMmJjOS1kZDBiLTQxNTktOGE1Ny1mZTRjMDlmYzBhM2IiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJhZG1pbi1jbGkiLCJzZXNzaW9uX3N0YXRlIjoiM2I3MDM5NmItMzk4Yy00MjQyLTljZDMtZGJlYjM0ZWVjYmE0IiwiYWNyIjoiMSIsInNjb3BlIjoicHJvZmlsZSBlbWFpbCIsInNpZCI6IjNiNzAzOTZiLTM5OGMtNDI0Mi05Y2QzLWRiZWIzNGVlY2JhNCIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwicHJlZmVycmVkX3VzZXJuYW1lIjoiYWRtaW4ifQ.GBHKQC0VZk4nEWVXDYC-Npk5Z503xlkDNbcrgd9nRTWcLZdD6HmgKnvGgoVYBssiSQyBYnAAqVQLGslbENjtohOlU4UxV0-Tsr2OpJUlKP0oMBVcna745UHAxU2JcVraVR4UkiryZbAOTJyUYKdhszqmfkGWPukTAo4lB2GO7HdfyU1UAwp8mzfLQ6WWV-LmeFjUUpwGOUed3Ztoa4DMBnVNFp7WHqoFyPO6xSTqq59ai__bJ8_8W7KfUTI6Rmfcno-6_9PtWFC8_bvs8bRBV7Xs8j4wn-7Y2-f9WTGC8EfUTacVGTf1ma-lBUEzWKodc7XH_5O18Huko3eS3RMDTA' \
@@ -84,7 +86,7 @@ curl --location --request POST 'https://<keycloak-route>/auth/admin/realms/testr
 	                                 ]
 	                 }"
 */
-func (k *SandboxController) RegisterKeyclokUser(userName string, keycloakToken string, realm string) (user *KeycloakUser, err error) {
+func (k *SandboxController) RegisterKeycloakUser(userName string, keycloakToken string, realm string) (user *KeycloakUser, err error) {
 	user = k.getKeycloakUserSpec(userName)
 	payload, err := json.Marshal(user)
 	if err != nil {
@@ -137,9 +139,7 @@ func (s *SandboxController) IsKeycloakRunning() error {
 		sets, err := s.KubeClient.AppsV1().StatefulSets(DEFAULT_KEYCLOAK_NAMESPACE).Get(context.Background(), DEFAULT_KEYCLOAK_INSTANCE_NAME, metav1.GetOptions{})
 
 		if err != nil {
-			klog.Infof("keycloak instance is not ready. Please check keycloak deployment: %v", err)
-
-			return false, err
+			return false, fmt.Errorf("keycloak instance is not ready. Please check keycloak deployment: %+v", err)
 		}
 
 		if sets.Status.ReadyReplicas == *sets.Spec.Replicas {
@@ -170,10 +170,9 @@ func (s *SandboxController) GetKeycloakAdminSecret() (adminPassword string, err 
 func (s *SandboxController) KeycloakUserExists(realm string, token string, username string) bool {
 	///{realm}/users?username=toto
 	///admin/realms/{my-realm}/users?search={username}
-	request, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/auth/admin/realms/%s/users?search=%s", s.KeycloakUrl, realm, username), strings.NewReader(""))
-
+	request, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/auth/admin/realms/%s/users?username=%s", s.KeycloakUrl, realm, username), strings.NewReader(""))
 	if err != nil {
-		klog.Errorf("failed to get user: %v", err)
+		GinkgoWriter.Printf("failed to create an HTTP request in order to get a keycloak user: %+v\n", err)
 		return false
 	}
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -181,10 +180,24 @@ func (s *SandboxController) KeycloakUserExists(realm string, token string, usern
 
 	response, err := s.HttpClient.Do(request)
 
-	if err != nil || response.StatusCode != 200 {
+	if err != nil {
+		GinkgoWriter.Printf("failed when searching for a keycloak user: %+v\n", err)
 		return false
 	}
 	defer response.Body.Close()
 
-	return true
+	body, _ := io.ReadAll(response.Body)
+	if err != nil {
+		GinkgoWriter.Printf("failed to read a response body from keycloak server: %+v\n", err)
+		return false
+	}
+	// Keycloak API server returns status code 200 even if no user is found, thus we need to parse the response body
+	// https://www.keycloak.org/docs-api/18.0/rest-api/#_users_resource
+	var users []any
+	err = json.Unmarshal(body, &users)
+	if err != nil {
+		GinkgoWriter.Printf("failed when unmarshalling response body: %+v\n", err)
+	}
+
+	return len(users) > 0
 }

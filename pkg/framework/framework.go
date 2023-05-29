@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	. "github.com/onsi/ginkgo/v2"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/sandbox"
@@ -48,12 +49,19 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration) (*Framework
 	var err error
 	var k *kubeCl.K8SClient
 
+	// https://issues.redhat.com/browse/CRT-1670
+	if len(userName) > 20 {
+		GinkgoWriter.Printf("WARNING: username %q is longer than 20 characters - the tenant namespace prefix will be shortened to %s\n", userName, userName[:20])
+	}
+
 	// in some very rare cases fail to get the client for some timeout in member operator.
 	// Just try several times to get the user kubeconfig
+
 	err = retry.Do(
 		func() error {
-			k, err = kubeCl.NewDevSandboxProxyClient(userName)
-
+			if k, err = kubeCl.NewDevSandboxProxyClient(userName); err != nil {
+				GinkgoWriter.Printf("error when creating dev sandbox proxy client: %+v", err)
+			}
 			return err
 		},
 		retry.Attempts(20),
