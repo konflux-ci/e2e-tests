@@ -60,7 +60,7 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration) (*Framework
 	err = retry.Do(
 		func() error {
 			if k, err = kubeCl.NewDevSandboxProxyClient(userName); err != nil {
-				GinkgoWriter.Printf("error when creating dev sandbox proxy client: %+v", err)
+				GinkgoWriter.Printf("error when creating dev sandbox proxy client: %+v\n", err)
 			}
 			return err
 		},

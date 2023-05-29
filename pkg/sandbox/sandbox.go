@@ -223,6 +223,10 @@ func (s *SandboxController) RegisterSandboxUser(userName string) (compliantUsern
 		for _, condition := range userSignup.Status.Conditions {
 			if condition.Type == toolchainApi.UserSignupComplete && condition.Status == corev1.ConditionTrue {
 				compliantUsername = userSignup.Status.CompliantUsername
+				if len(compliantUsername) < 1 {
+					GinkgoWriter.Printf("Status.CompliantUsername field in UserSignup CR %s in %s namespace is empty\n", userSignup.GetName(), userSignup.GetNamespace())
+					return false, nil
+				}
 				return true, nil
 			}
 		}
