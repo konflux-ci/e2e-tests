@@ -223,6 +223,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		When("a new Component with specified custom branch is created", Label("custom-branch"), func() {
+			var outputImage string
 			BeforeAll(func() {
 				// Create a component with Git Source URL, a specified git branch and marking delete-repo=true
 				component, err = f.AsKubeAdmin.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, componentBaseBranchName)
@@ -280,12 +281,22 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(robotAccountExist).To(BeTrue(), "quay robot account does not exists")
 
 			})
-		})
 
-		When("image tag is updated successfully", func() {
-			//TODO: check if image tag present once below issue is resolved
-			// https://issues.redhat.com/browse/SRVKP-3064
-			// https://github.com/openshift-pipelines/pipeline-service/pull/632
+			It("image tag is updated successfully", func() {
+				// check if the image tag exists in quay
+				pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+				Expect(err).ShouldNot(HaveOccurred())
+
+				for _, p := range pipelineRun.Spec.Params {
+					if p.Name == "output-image" {
+						outputImage = p.Value.StringVal
+					}
+				}
+				Expect(outputImage).ToNot(BeEmpty(), "output image %s of the component could not be found", outputImage)
+				isExists, err := build.DoesTagExistsInQuay(outputImage)
+				Expect(err).ShouldNot(HaveOccurred(), "error while checking if the output image %s exists in quay", outputImage)
+				Expect(isExists).To(BeTrue(), "image tag does not exists in quay")
+			})
 
 			It("should ensure pruning labels are set", func() {
 				pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
