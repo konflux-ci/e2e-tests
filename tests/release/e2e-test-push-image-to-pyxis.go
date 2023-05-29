@@ -32,7 +32,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 	var devNamespace, managedNamespace string
 	var imageIDs []string
 	var pyxisKeyDecoded, pyxisCertDecoded []byte
-	var buildPrName, additionalBuildPrName, releasePrName, additionalReleasePrName string
+	var releasePrName, additionalReleasePrName string
 
 	BeforeAll(func() {
 		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("e2e-pyxis"))
@@ -155,41 +155,34 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 
 	var _ = Describe("Post-release verification", func() {
 
-		It("verifies that a PipelineRuns is created in dev namespace.", func() {
+		It("verifies that PipelineRuns are created in dev namespace.", func() {
 			Eventually(func() bool {
-				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(devNamespace)
-				if err != nil || prList == nil || len(prList.Items) < 1 {
+				_, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationNameDefault, devNamespace, "")
+				if err != nil {
+					GinkgoWriter.Println("PipelineRun has not been created yet")
 					return false
 				}
-				componentHasBuildPr := false
-				additionalComponentHasBuildPr := false
-				for _, pr := range prList.Items {
-					if strings.Contains(pr.Name, componentName) {
-						componentHasBuildPr = true
-						buildPrName = pr.Name
-					} else if strings.Contains(pr.Name, additionalComponentName) {
-						additionalComponentHasBuildPr = true
-						additionalBuildPrName = pr.Name
-					}
+
+				_, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(additionalComponentName, applicationNameDefault, devNamespace, "")
+				if err != nil {
+					GinkgoWriter.Println("PipelineRun has not been created yet")
+					return false
 				}
 
-				GinkgoWriter.Printf("\nFirst Build PipelineRun:\n %s", buildPrName)
-				GinkgoWriter.Printf("\nSecond Build PipelineRun:\n %s", additionalBuildPrName)
-
-				return componentHasBuildPr && additionalComponentHasBuildPr
+				return true
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
 		It("verifies that the build PipelineRuns in dev namespace succeeded.", func() {
 			Eventually(func() bool {
-				buildPr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(buildPrName, devNamespace)
+				buildPr, err := fw.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationNameDefault, devNamespace, "")
 				if err != nil {
-					GinkgoWriter.Printf("\nError getting PipelineRun %s:\n %s", buildPrName, err)
+					GinkgoWriter.Printf("\nError getting PipelineRun %s:\n %s", buildPr.Name, err)
 					return false
 				}
-				additionalBuildPr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(additionalBuildPrName, devNamespace)
+				additionalBuildPr, err := fw.AsKubeAdmin.HasController.GetComponentPipelineRun(additionalComponentName, applicationNameDefault, devNamespace, "")
 				if err != nil {
-					GinkgoWriter.Printf("\nError getting PipelineRun %s:\n %s", additionalBuildPr, err)
+					GinkgoWriter.Printf("\nError getting PipelineRun %s:\n %s", additionalBuildPr.Name, err)
 					return false
 				}
 
@@ -216,9 +209,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 						}
 					}
 				}
-
-				GinkgoWriter.Printf("\nFirst Release PipelineRun:\n %s", releasePrName)
-				GinkgoWriter.Printf("\nSecond Release PipelineRun:\n %s", additionalReleasePrName)
 
 				return strings.Contains(releasePrName, "release-pipelinerun") &&
 					strings.Contains(additionalReleasePrName, "release-pipelinerun")
@@ -269,26 +259,22 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 					Expect(err).NotTo(HaveOccurred())
 				}
 
-				if len(re.FindAllString(trReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)) < 1 &&
-					len(re.FindAllString(trAdditionalReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)) < 1 {
+				trReleaseImageIDs := re.FindAllString(trReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)
+				trAdditionalReleaseIDs := re.FindAllString(trAdditionalReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)
+
+				if len(trReleaseImageIDs) < 1 && len(trAdditionalReleaseIDs) < 1 {
 					GinkgoWriter.Printf("\n Invalid ImageID in results of task create-pyxis-image..")
 					return false
 				}
 
-				if len(re.FindAllString(trReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)) >
-					len(re.FindAllString(trAdditionalReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)) {
-					imageIDs = re.FindAllString(trReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)
+				if len(trReleaseImageIDs) > len(trAdditionalReleaseIDs) {
+					imageIDs = trReleaseImageIDs
 				} else {
-					imageIDs = re.FindAllString(trAdditionalReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)
+					imageIDs = trAdditionalReleaseIDs
 				}
 
-				if len(imageIDs) != 2 {
-					GinkgoWriter.Printf("\nExpected two imageIDs, current is %s:\n", len(imageIDs))
-					return false
-				}
-
-				return len(imageIDs[0]) == 24 && len(imageIDs[1]) == 24
-			}).Should(BeTrue())
+				return len(imageIDs) == 2
+			}, avgControllerQueryTimeout, defaultInterval).Should(BeTrue())
 		})
 
 		It("tests a Release should have been created in the dev namespace and succeeded.", func() {

@@ -10,7 +10,8 @@ See https://github.com/redhat-appstudio/release-service-utils/blob/main/pyxis/up
 
 package release
 
-// Links defines structure of all links can be in SBOM of Pyxis style
+// Defines a struct Links with fields for various types of links including artifacts, requests, RPM manifests,
+// test results, and vulnerabilities. Each field is represented by a corresponding struct type.
 type Links struct {
 	Artifacts       ArtifactLinks        `json:"artifacts"`
 	Requests        RequestLinks         `json:"requests"`
@@ -19,22 +20,27 @@ type Links struct {
 	Vulnerabilities VulnerabilitiesLinks `json:"vulnerabilities"`
 }
 
+// Defines a struct ArtifactLinks with a single field Href for storing a link related to an artifact.
 type ArtifactLinks struct {
 	Href string `json:"href"`
 }
 
+// Defines a struct RequestLinks with a single field Href for storing a link related to a request.
 type RequestLinks struct {
 	Href string `json:"href"`
 }
 
+// Defines a struct RpmManifestLinks with a single field Href for storing a link to an RPM manifest.
 type RpmManifestLinks struct {
 	Href string `json:"href"`
 }
 
+// Defines a struct TestResultsLinks with a single field Href for storing a link to test results.
 type TestResultsLinks struct {
 	Href string `json:"href"`
 }
 
+// Defines a struct VulnerabilitiesLinks with a single field Href for storing a link.
 type VulnerabilitiesLinks struct {
 	Href string `json:"href"`
 }
@@ -53,6 +59,7 @@ type ContentManifestComponent struct {
 	Version string `json:"version"`
 }
 
+// Defines a struct FreshnessGrade with fields for creation date, grade, and start date.
 type FreshnessGrade struct {
 	CreationDate string `json:"creation_date"`
 	Grade        string `json:"grade"`
@@ -66,7 +73,10 @@ type ParsedData struct {
 	EnvVariables  []string `json:"env_variables"`
 }
 
-// Image contains all information of all structured SBOM Pyxis style
+// Defines a struct Image with various fields representing image properties and metadata.
+// It includes fields for ID, links, architecture, certification status, content manifest,
+// content manifest components, creator information, creation date, Docker image digest,
+// freshness grades, image ID, last update date, last updated by, object type, and parsed data.
 type Image struct {
 	ID                        string                     `json:"_id"`
 	Links                     Links                      `json:"_links"`

@@ -362,8 +362,7 @@ func (s *SuiteController) GetSbomPyxisByImageID(pyxisStageURL, imageID string,
 	// Create a TLS configuration with the key and certificate
 	cert, err := tls.X509KeyPair(pyxisCertDecoded, pyxisKeyDecoded)
 	if err != nil {
-		fmt.Printf("\nError creating TLS certificate and key:%s", err)
-		return nil, err
+		return nil, fmt.Errorf("error creating TLS certificate and key: %s", err)
 	}
 
 	// Create a client with the custom TLS configuration
@@ -378,14 +377,12 @@ func (s *SuiteController) GetSbomPyxisByImageID(pyxisStageURL, imageID string,
 	// Send GET request
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		fmt.Printf("\nError creating GET request:%s", err)
-		return nil, err
+		return nil, fmt.Errorf("error creating GET request: %s", err)
 	}
 
 	response, err := client.Do(request)
 	if err != nil {
-		fmt.Printf("\nError sending GET request:%s", err)
-		return nil, err
+		return nil, fmt.Errorf("error sending GET request: %s", err)
 	}
 
 	defer response.Body.Close()
@@ -393,8 +390,7 @@ func (s *SuiteController) GetSbomPyxisByImageID(pyxisStageURL, imageID string,
 	// Read the response body
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		fmt.Printf("\nError reading response body:%s", err)
-		return nil, err
+		return nil, fmt.Errorf("error reading response body: %s", err)
 	}
 	return body, nil
 }
