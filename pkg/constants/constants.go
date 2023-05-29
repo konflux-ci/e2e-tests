@@ -27,7 +27,7 @@ const (
 	TEKTON_CHAINS_NS string = "tekton-chains" // #nosec
 
 	// User for running the end-to-end Tekton Chains tests
-	TEKTON_CHAINS_E2E_USER string = "tekton-chains-e2e"
+	TEKTON_CHAINS_E2E_USER string = "chains-e2e"
 
 	//base64 Encoded docker config json value to create registry pull secret
 	DOCKER_CONFIG_JSON string = "DOCKER_CONFIG_JSON"
@@ -110,11 +110,9 @@ const (
 )
 
 var (
-	ComponentDefaultLabel                  = map[string]string{"e2e-test": "true"}
-	ComponentDefaultAnnotation             = map[string]string{ComponentInitialBuildAnnotationKey: "processed"}
-	ComponentPaCRequestAnnotation          = map[string]string{"appstudio.openshift.io/pac-provision": "request"}
-	ComponentWithImageControllerAnnotation = map[string]string{
-		"image.redhat.com/generate":          "true",
-		"image.redhat.com/delete-image-repo": "true",
-	}
+	ComponentDefaultLabel                    = map[string]string{"e2e-test": "true"}
+	ComponentDefaultAnnotation               = map[string]string{ComponentInitialBuildAnnotationKey: "processed"}
+	ComponentPaCRequestAnnotation            = map[string]string{"appstudio.openshift.io/pac-provision": "request"}
+	ImageControllerAnnotationDeleteRepoTrue  = map[string]string{"image.redhat.com/generate": "true", "image.redhat.com/delete-image-repo": "true"}
+	ImageControllerAnnotationDeleteRepoFalse = map[string]string{"image.redhat.com/generate": "true", "image.redhat.com/delete-image-repo": "false"}
 )

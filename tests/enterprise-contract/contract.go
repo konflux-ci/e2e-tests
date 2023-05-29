@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
@@ -29,7 +30,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 	publicSecretName := "cosign-public-key"
 
 	BeforeAll(func() {
-		fwk, err = framework.NewFramework(constants.TEKTON_CHAINS_E2E_USER)
+		fwk, err = framework.NewFramework(utils.GetGeneratedNamespace(constants.TEKTON_CHAINS_E2E_USER))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(fwk.UserNamespace).NotTo(BeNil(), "failed to create sandbox user")
 		namespace = fwk.UserNamespace

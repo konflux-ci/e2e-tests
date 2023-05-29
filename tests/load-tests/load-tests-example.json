@@ -11,17 +11,22 @@
   "createUserTimeAvg": 2,
   "createResourcesTimeAvg": 6,
   "runPipelineTimeAvg": 169.66666666666666,
-  "createUserFailures": 0,
-  "createUserFailureRate": 0,
+  "createUserFailures": 1,
+  "createUserFailureRate": 0.16666666666666,
   "createResourcesFailures": 0,
   "createResourcesFailureRate": 0,
-  "runPipelineFailures": 6,
-  "runPipelineFailureRate": 100,
+  "runPipelineFailures": 0,
+  "runPipelineFailureRate": 0,
+  "errorCounts": [
+    {
+      "errorCode": 1,
+      "count": 1
+    }
+  ],
   "errors": [
     {
       "errorCode": 1,
-      "latestMessage": "Unable to provision user 'ban-0004': usersignups.toolchain.dev.openshift.com \"ban-0004\" already exists",
-      "count": 10
+      "message": "Unable to provision user 'ban-0004': usersignups.toolchain.dev.openshift.com \"ban-0004\" already exists"
     }
   ],
   "errorsTotal": 1
