@@ -6,7 +6,7 @@ repo_list=$(mktemp)
 
 curl_args='-s -H "Accept: application/vnd.github+json" -H "Authorization: token '$GITHUB_TOKEN'" -H "X-GitHub-Api-Version: 2022-11-28" -D '$response_headers
 
-echo -n "Collecting list of repos in '${MY_GITHUB_ORG}' organization to delete"
+echo -n "Collecting list of repos with prefix '${USER_PREFIX}' in '${MY_GITHUB_ORG}' organization to delete"
 page=1
 while true; do
     echo -n "."
