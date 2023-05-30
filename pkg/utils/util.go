@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"knative.dev/pkg/apis"
 
 	devfilePkg "github.com/devfile/library/pkg/devfile"
 	"github.com/devfile/library/pkg/devfile/parser"
@@ -338,4 +339,8 @@ func HostIsAccessible(host string) bool {
 		return false
 	}
 	return true
+}
+
+func PipelineRunFailed(pr *v1beta1.PipelineRun) bool {
+	return pr.IsDone() && pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsFalse()
 }
