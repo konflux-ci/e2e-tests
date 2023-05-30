@@ -821,3 +821,23 @@ func (h *SuiteController) DeleteAllTasksInASpecificNamespace(namespace string) e
 func (h *SuiteController) DeleteAllTaskRunsInASpecificNamespace(namespace string) error {
 	return h.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.TaskRun{}, crclient.InNamespace(namespace))
 }
+
+// GetTask returns the requested Task object
+func (s *SuiteController) GetTask(name, namespace string) (*v1beta1.Task, error) {
+	namespacedName := types.NamespacedName{
+		Name:      name,
+		Namespace: namespace,
+	}
+
+	task := v1beta1.Task{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+	err := s.KubeRest().Get(context.TODO(), namespacedName, &task)
+	if err != nil {
+		return nil, err
+	}
+	return &task, nil
+}
