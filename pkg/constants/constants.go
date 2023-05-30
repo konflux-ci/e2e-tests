@@ -42,7 +42,7 @@ const (
 	SKIP_HAS_SECRET_CHECK_ENV string = "SKIP_HAS_SECRET_CHECK"
 
 	// Sandbox kubeconfig user path
-	USER_USER_KUBE_CONFIG_PATH_ENV string = "USER_KUBE_CONFIG_PATH"
+	USER_KUBE_CONFIG_PATH_ENV string = "USER_KUBE_CONFIG_PATH"
 	// Release e2e auth for build and release quay keys
 
 	QUAY_OAUTH_TOKEN_RELEASE_SOURCE string = "QUAY_OAUTH_TOKEN_RELEASE_SOURCE"
