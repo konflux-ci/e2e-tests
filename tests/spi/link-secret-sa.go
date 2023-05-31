@@ -90,16 +90,16 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "link-secret-sa"), func() 
 					test.IsImagePullSecret,
 					test.IsManagedServiceAccount)
 				Expect(err).NotTo(HaveOccurred())
+
+				binding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(binding.Name, namespace)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			// start of upload token
 			It("SPITokenBinding to be in AwaitingTokenData phase", func() {
 				Eventually(func() bool {
 					binding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(binding.Name, namespace)
-
-					if err != nil {
-						return false
-					}
+					Expect(err).NotTo(HaveOccurred())
 
 					return (binding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData)
 				}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in AwaitingTokenData phase")
@@ -109,10 +109,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "link-secret-sa"), func() 
 				// the UploadUrl in SPITokenBinding should be available before uploading the token
 				Eventually(func() bool {
 					binding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(binding.Name, namespace)
-
-					if err != nil {
-						return false
-					}
+					Expect(err).NotTo(HaveOccurred())
 
 					return binding.Status.UploadUrl != ""
 				}, 1*time.Minute, 10*time.Second).Should(BeTrue(), "uploadUrl not set")
