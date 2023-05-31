@@ -501,6 +501,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		})
 
 		It("Release PipelineRun should eventually succeed and associated Release should be marked as succeeded", func() {
+			Skip("Skip until bug is fixed: https://issues.redhat.com/browse/RHTAPBUGS-356")
 			Eventually(func() (bool, error) {
 				pipelineRun, err = f.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
 				if err != nil {
