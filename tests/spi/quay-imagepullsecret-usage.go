@@ -88,6 +88,9 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 		It("creates SPITokenBinding", func() {
 			SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.CreateSPIAccessTokenBinding(QuaySPITokenBindingName, namespace, TestQuayPrivateRepoURL, SecretName, corev1.SecretTypeDockerConfigJson)
 			Expect(err).NotTo(HaveOccurred())
+
+			SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		// start of upload token
@@ -95,10 +98,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 			// wait SPITokenBinding to be in AwaitingTokenData phase before trying to upload a token
 			Eventually(func() bool {
 				SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
-
-				if err != nil {
-					return false
-				}
+				Expect(err).NotTo(HaveOccurred())
 
 				return (SPITokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData)
 			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in AwaitingTokenData phase")
@@ -108,10 +108,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 			// the UploadUrl in SPITokenBinding should be available before uploading the token
 			Eventually(func() bool {
 				SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
-
-				if err != nil {
-					return false
-				}
+				Expect(err).NotTo(HaveOccurred())
 
 				return SPITokenBinding.Status.UploadUrl != ""
 			}, 1*time.Minute, 10*time.Second).Should(BeTrue(), "uploadUrl not set")
@@ -175,12 +172,13 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 				}}
 
 			pod, err = fw.AsKubeAdmin.CommonController.KubeInterface().CoreV1().Pods(namespace).Create(context.Background(), pod, metav1.CreateOptions{})
+			pod, err := fw.AsKubeAdmin.CommonController.GetPod(namespace, pod.Name)
+			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() bool {
 				pod, err := fw.AsKubeAdmin.CommonController.GetPod(namespace, pod.Name)
-				if err != nil {
-					return false
-				}
+				Expect(err).NotTo(HaveOccurred())
+
 				return pod.Status.Phase == corev1.PodRunning
 			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "Pod not created successfully")
 		})
@@ -191,6 +189,9 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 			It("creates skopeo copy task", func() {
 				err := fw.AsKubeAdmin.TektonController.CreateSkopeoCopyTask(namespace)
 				Expect(err).NotTo(HaveOccurred())
+
+				_, err = fw.AsKubeDeveloper.TektonController.GetTask("skopeo-copy", namespace)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("creates service account for the TaskRun referencing the docker config json secret", func() {
@@ -198,6 +199,8 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 					{Name: SecretName},
 				}
 				_, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(serviceAccountName, namespace, secrets)
+				Expect(err).NotTo(HaveOccurred())
+				_, err = fw.AsKubeAdmin.CommonController.GetServiceAccount(serviceAccountName, namespace)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -211,15 +214,14 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 
 				TaskRun, err = fw.AsKubeAdmin.TektonController.CreateTaskRunCopy(taskRunName, namespace, serviceAccountName, srcImageURL, destImageURL)
 				Expect(err).NotTo(HaveOccurred())
+				TaskRun, err = fw.AsKubeDeveloper.TektonController.GetTaskRun(taskRunName, namespace)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("checks if taskrun is complete", func() {
 				Eventually(func() bool {
 					TaskRun, err = fw.AsKubeDeveloper.TektonController.GetTaskRun(taskRunName, namespace)
-
-					if err != nil {
-						return false
-					}
+					Expect(err).NotTo(HaveOccurred())
 
 					return TaskRun.Status.CompletionTime != nil
 				}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "taskrun is not complete")
