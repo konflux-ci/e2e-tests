@@ -223,6 +223,7 @@ func (s *SuiteController) CreateReleasePlan(name, namespace, application, target
 			Namespace:    namespace,
 			Labels: map[string]string{
 				releaseMetadata.AutoReleaseLabel: autoReleaseLabel,
+				releaseMetadata.AuthorLabel:      "username",
 			},
 		},
 		Spec: releaseApi.ReleasePlanSpec{
