@@ -267,6 +267,7 @@ func (h *SuiteController) CreateReleasePlan(applicationName, namespace string) (
 			Namespace:    namespace,
 			Labels: map[string]string{
 				releasemetadata.AutoReleaseLabel: "true",
+				releasemetadata.AuthorLabel:      "username",
 			},
 		},
 		Spec: releasev1alpha1.ReleasePlanSpec{
