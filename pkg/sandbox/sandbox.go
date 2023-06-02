@@ -95,9 +95,11 @@ type HttpClient struct {
 
 // NewHttpClient creates http client wrapper with helper functions for rest models call
 func NewHttpClient() (*http.Client, error) {
-	client := &http.Client{Transport: &http.Transport{
+	client := &http.Client{Transport: LoggingRoundTripper{&http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}}
+	},
+	},
+	}
 	return client, nil
 }
 
@@ -113,6 +115,28 @@ func NewDevSandboxController(kube kubernetes.Interface, kubeRest crclient.Client
 		KubeClient: kube,
 		KubeRest:   kubeRest,
 	}, nil
+}
+
+// This type implements the http.RoundTripper interface
+type LoggingRoundTripper struct {
+	Proxied http.RoundTripper
+}
+
+func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (res *http.Response, e error) {
+	// Do "before sending requests" actions here.
+	GinkgoWriter.Printf("Sandbox proxy sending request to %v:%v %v\n", req.URL, req.Header, req.Body)
+
+	// Send the request, get the response (or the error)
+	res, e = lrt.Proxied.RoundTrip(req)
+
+	// Handle the result.
+	if e != nil {
+		GinkgoWriter.Printf("Sandbox proxy error: %v", e)
+	} else {
+		GinkgoWriter.Printf("Sandbox proxy received %v response\n", res.Status)
+	}
+
+	return
 }
 
 // ReconcileUserCreation create a user in sandbox and return a valid kubeconfig for user to be used for the tests
