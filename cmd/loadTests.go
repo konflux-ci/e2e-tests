@@ -29,16 +29,17 @@ import (
 )
 
 var (
-	componentRepoUrl string = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
-	usernamePrefix   string = "testuser"
-	numberOfUsers    int
-	waitPipelines    bool
-	verbose          bool
-	token            string
-	logConsole       bool
-	failFast         bool
-	disableMetrics   bool
-	threadCount      int
+	componentRepoUrl          string = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
+	usernamePrefix            string = "testuser"
+	numberOfUsers             int
+	waitPipelines             bool
+	verbose                   bool
+	token                     string
+	logConsole                bool
+	failFast                  bool
+	disableMetrics            bool
+	threadCount               int
+	pipelineSkipInitialChecks bool
 )
 
 var (
@@ -82,6 +83,7 @@ type LogData struct {
 	NumberOfThreads                   int               `json:"threads"`
 	NumberOfUsersPerThread            int               `json:"usersPerThread"`
 	NumberOfUsers                     int               `json:"totalUsers"`
+	PipelineSkipInitialChecks         bool              `json:"pipelineSkipInitialChecks"`
 	LoadTestCompletionStatus          string            `json:"status"`
 	AverageTimeToSpinUpUsers          float64           `json:"createUserTimeAvg"`
 	AverageTimeToCreateResources      float64           `json:"createResourcesTimeAvg"`
@@ -140,6 +142,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&failFast, "fail-fast", false, "if you want the test to fail fast at first failure")
 	rootCmd.Flags().BoolVar(&disableMetrics, "disable-metrics", false, "if you want to disable metrics gathering")
 	rootCmd.Flags().IntVarP(&threadCount, "threads", "t", 1, "number of concurrent threads to execute")
+	rootCmd.Flags().BoolVar(&pipelineSkipInitialChecks, "pipeline-skip-initial-checks", true, "if pipeline runs' initial checks are to be skipped")
 }
 
 func logError(errCode int, message string) {
@@ -196,6 +199,7 @@ func setup(cmd *cobra.Command, args []string) {
 	klog.Infof("Number of threads: %d", threadCount)
 	klog.Infof("Number of users per thread: %d", numberOfUsers)
 	klog.Infof("Number of users overall: %d", overallCount)
+	klog.Infof("Pipeline run initial checks skipped: %t", pipelineSkipInitialChecks)
 
 	klog.Infof("🕖 initializing...\n")
 	globalframework, err := framework.NewFramework("load-tests")
@@ -258,15 +262,16 @@ func setup(cmd *cobra.Command, args []string) {
 	binaryDetails := fmt.Sprintf("Built with %s for %s/%s", goVersion, goOS, goArch)
 
 	logData = LogData{
-		Timestamp:              time.Now().Format("2006-01-02T15:04:05Z07:00"),
-		MachineName:            machineName,
-		BinaryDetails:          binaryDetails,
-		ComponentRepoUrl:       componentRepoUrl,
-		NumberOfThreads:        threadCount,
-		NumberOfUsersPerThread: numberOfUsers,
-		NumberOfUsers:          overallCount,
-		Errors:                 []ErrorOccurrence{},
-		ErrorCounts:            []ErrorCount{},
+		Timestamp:                 time.Now().Format("2006-01-02T15:04:05Z07:00"),
+		MachineName:               machineName,
+		BinaryDetails:             binaryDetails,
+		ComponentRepoUrl:          componentRepoUrl,
+		NumberOfThreads:           threadCount,
+		NumberOfUsersPerThread:    numberOfUsers,
+		NumberOfUsers:             overallCount,
+		PipelineSkipInitialChecks: pipelineSkipInitialChecks,
+		Errors:                    []ErrorOccurrence{},
+		ErrorCounts:               []ErrorCount{},
 	}
 
 	klog.Infof("🍿 provisioning users...\n")
@@ -578,7 +583,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			}
 
 			for _, compStub := range cdq.Status.ComponentDetected {
-				component, err := framework.AsKubeDeveloper.HasController.CreateComponentFromStub(compStub, usernamespace, "", "", ApplicationName)
+				component, err := framework.AsKubeDeveloper.HasController.CreateComponentFromStubSkipInitialChecks(compStub, usernamespace, "", "", ApplicationName, pipelineSkipInitialChecks)
 
 				if err != nil {
 					logError(9, fmt.Sprintf("Unable to create the Component %s: %v", compStub.ComponentStub.ComponentName, err))
