@@ -25,6 +25,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -33,7 +34,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 
 	"sigs.k8s.io/yaml"
@@ -45,10 +45,12 @@ const (
 	componentDefaultBranchName = "main"
 
 	// Kubernetes resource names
-	testNamespacePrefix = "mvp-demo-dev-namespace"
-	managedNamespace    = "mvp-demo-managed-namespace"
+	testNamespacePrefix = "mvp-dev"
+	managedNamespace    = "mvp-managed"
 
-	appName = "mvp-test-app"
+	appName        = "mvp-test-app"
+	BundleURL      = "quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-pass"
+	InPipelineName = "integration-pipeline-pass"
 
 	// Timeouts
 	appDeployTimeout            = time.Minute * 20
@@ -59,11 +61,16 @@ const (
 	pipelineRunStartedTimeout   = time.Minute * 5
 	pullRequestCreationTimeout  = time.Minute * 5
 	releasePipelineTimeout      = time.Minute * 15
+	snapshotTimeout             = time.Minute * 4
+	releaseTimeout              = time.Minute * 4
+	testPipelineTimeout         = time.Minute * 15
 
 	// Intervals
 	defaultPollingInterval     = time.Second * 2
 	jvmRebuildPollingInterval  = time.Second * 10
 	pipelineRunPollingInterval = time.Second * 10
+	snapshotPollingInterval    = time.Second * 1
+	releasePollingInterval     = time.Second * 1
 )
 
 var sampleRepoURL = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), sampleRepoName)
@@ -81,17 +88,21 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 
 	var kc tekton.KubeController
 
-	var pipelineRun *tektonapi.PipelineRun
-	var release *releaseApi.Release
-	var snapshot *appstudioApi.Snapshot
+	// set vs. simply declare these pointers so we can use them in debug, where an empty name is indicative of Get's failing
+	pipelineRun := &tektonapi.PipelineRun{}
+	release := &releaseApi.Release{}
+	snapshot := &appstudioApi.Snapshot{}
+	testPipelinerun := &tektonapi.PipelineRun{}
+	integrationTestScenario := &integrationv1alpha1.IntegrationTestScenario{}
 
 	BeforeAll(func() {
 		// This pipeline contains an image that comes from "not allowed" container image registry repo
 		// https://github.com/hacbs-contract/ec-policies/blob/de8afa912e7a80d02abb82358ce7b23cf9a286c8/data/rule_data.yml#L9-L12
 		// It is required in order to test that the release of the image failed based on a failed check in EC
 		untrustedPipelineBundle, err = createUntrustedPipelineBundle()
-		klog.Info(untrustedPipelineBundle)
 		Expect(err).NotTo(HaveOccurred())
+		GinkgoWriter.Printf("generated untrusted pipeline bundle: %s", untrustedPipelineBundle)
+
 		f, err = framework.NewFramework(utils.GetGeneratedNamespace(testNamespacePrefix))
 		Expect(err).NotTo(HaveOccurred())
 		userNamespace = f.UserNamespace
@@ -100,8 +111,8 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		componentName = fmt.Sprintf("test-mvp-component-%s", util.GenerateRandomString(4))
 		componentNewBaseBranch = fmt.Sprintf("base-%s", util.GenerateRandomString(4))
 
-		sharedSecret, err = f.AsKubeAdmin.CommonController.GetSecret(constants.SharedPullSecretNamespace, constants.SharedPullSecretName)
-		Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error when getting shared secret - make sure the secret %s in %s userNamespace is created", constants.SharedPullSecretName, constants.SharedPullSecretNamespace))
+		sharedSecret, err = f.AsKubeAdmin.CommonController.GetSecret(constants.QuayRepositorySecretNamespace, constants.QuayRepositorySecretName)
+		Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error when getting shared secret - make sure the secret %s in %s userNamespace is created", constants.QuayRepositorySecretName, constants.QuayRepositorySecretNamespace))
 
 		// Release configuration
 		kc = tekton.KubeController{
@@ -224,10 +235,12 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 			}
 
 			Expect(f.AsKubeAdmin.CommonController.KubeRest().Create(context.TODO(), ps)).To(Succeed())
+			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(appName, userNamespace, BundleURL, InPipelineName)
+			Expect(err).ShouldNot(HaveOccurred())
 		})
 
 		It("sample app can be built successfully", func() {
-			_, err = f.AsKubeAdmin.HasController.CreateComponent(appName, componentName, userNamespace, sampleRepoURL, componentNewBaseBranch, "", constants.DefaultImagePushRepo, "", true)
+			_, err = f.AsKubeAdmin.HasController.CreateComponent(appName, componentName, userNamespace, sampleRepoURL, componentNewBaseBranch, "", "", "", true)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(f.AsKubeAdmin.CommonController, componentName, appName, userNamespace, "")).To(Succeed())
 		})
@@ -241,9 +254,36 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		})
 
 		It("Snapshot is created", func() {
-			snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", "", componentName, userNamespace)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(snapshot.Name).ToNot(BeEmpty())
+			Eventually(func() (bool, error) {
+				snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", "", componentName, userNamespace)
+				if err != nil {
+					GinkgoWriter.Printf("cannot get the Snapshot: %v\n", err)
+					return false, err
+				}
+				return true, nil
+			}, snapshotTimeout, snapshotPollingInterval).Should(BeTrue())
+		})
+
+		It("Integration Test PipelineRun is created", func() {
+			Eventually(func() (bool, error) {
+				testPipelinerun, err = f.AsKubeAdmin.IntegrationController.GetIntegrationPipelineRun(integrationTestScenario.Name, snapshot.Name, userNamespace)
+				if err != nil {
+					GinkgoWriter.Printf("failed to get Integration test PipelineRun for a snapshot '%s' in '%s' namespace: %+v\n", snapshot.Name, userNamespace, err)
+					return false, err
+				}
+				return testPipelinerun.HasStarted(), nil
+			}, pipelineRunStartedTimeout, defaultPollingInterval).Should(BeTrue())
+			Expect(testPipelinerun.Spec.PipelineRef.Bundle).To(ContainSubstring(integrationTestScenario.Spec.Bundle))
+			Expect(testPipelinerun.Labels["appstudio.openshift.io/snapshot"]).To(ContainSubstring(snapshot.Name))
+			Expect(testPipelinerun.Labels["test.appstudio.openshift.io/scenario"]).To(ContainSubstring(integrationTestScenario.Name))
+		})
+
+		It("Integration Test PipelineRun should eventually succeed", func() {
+			Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(f.AsKubeAdmin.CommonController, integrationTestScenario, snapshot, appName, userNamespace)).To(Succeed(), "Error when waiting for a integration pipeline to finish")
+		})
+
+		It("Snapshot is marked as passed", func() {
+			Expect(f.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot)).To(BeTrue())
 		})
 
 		It("Release is created", func() {
@@ -253,36 +293,36 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		})
 
 		It("Release PipelineRun is triggered", func() {
-			Eventually(func() bool {
+			Eventually(func() (bool, error) {
 				pipelineRun, err = f.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
 				if err != nil {
 					GinkgoWriter.Printf("pipelineRun for component '%s' in namespace '%s' not created yet: %+v\n", componentName, managedNamespace, err)
-					return false
+					return false, err
 				}
-				return pipelineRun.HasStarted()
-			}, pipelineRunStartedTimeout, defaultPollingInterval).Should(BeTrue())
+				return pipelineRun.HasStarted(), nil
+			}, pipelineRunStartedTimeout, defaultPollingInterval).Should(BeTrue(), fmt.Sprintf("component %q did not start a pipelinerun named %q in namespace %q from release %q in namespace %q in time", componentName, pipelineRun.Name, managedNamespace, release.Name, release.Namespace))
 		})
 
 		It("Release PipelineRun should eventually fail", func() {
-			Eventually(func() bool {
+			Eventually(func() (bool, error) {
 				pipelineRun, err = f.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
 				if err != nil {
 					GinkgoWriter.Printf("failed to get PipelineRun for a release '%s' in '%s' namespace: %+v\n", release.Name, managedNamespace, err)
-					return false
+					return false, err
 				}
-				return pipelineRun.IsDone()
-			}, releasePipelineTimeout, pipelineRunPollingInterval).Should(BeTrue())
+				return pipelineRun.IsDone(), nil
+			}, releasePipelineTimeout, pipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("the pipelinerun %q in namespace %q for release %q in namespace %q did not fail in time", pipelineRun.Name, managedNamespace, release.Name, release.Namespace))
 		})
 
 		It("associated Release should be marked as failed", func() {
-			Eventually(func() bool {
+			Eventually(func() (bool, error) {
 				release, err = f.AsKubeAdmin.ReleaseController.GetRelease(release.Name, "", userNamespace)
 				if err != nil {
 					GinkgoWriter.Printf("failed to get Release CR in '%s' namespace: %+v\n", managedNamespace, err)
-					return false
+					return false, err
 				}
-				return release.HasReleaseFinished() && !release.IsReleased()
-			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue())
+				return release.HasReleaseFinished() && !release.IsReleased(), nil
+			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue(), fmt.Sprintf("the release %q in namespace %q was not marked as released but failed", release.Name, release.Namespace))
 		})
 
 	})
@@ -352,29 +392,30 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 			pacBranchName := fmt.Sprintf("appstudio-%s", componentName)
 
 			var prSHA string
-			Eventually(func() bool {
+			Eventually(func() (bool, error) {
 				prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(sampleRepoName)
-				Expect(err).ShouldNot(HaveOccurred())
-
+				if err != nil {
+					return false, err
+				}
 				for _, pr := range prs {
 					if pr.Head.GetRef() == pacBranchName {
 						prNumber = pr.GetNumber()
 						prSHA = pr.GetHead().GetSHA()
-						return true
+						return true, nil
 					}
 				}
-				return false
-			}, pullRequestCreationTimeout, defaultPollingInterval).Should(BeTrue(), "timed out when waiting for init PaC PR to be created")
+				return false, fmt.Errorf("could not get the expected PaC branch name %s", pacBranchName)
+			}, pullRequestCreationTimeout, defaultPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR to be created against the %q repo", sampleRepoName))
 
 			// We actually don't need the "on-pull-request" PipelineRun to complete, so we can delete it
-			Eventually(func() bool {
+			Eventually(func() (bool, error) {
 				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, appName, userNamespace, prSHA)
 				if err == nil {
 					Expect(kc.Tektonctrl.DeletePipelineRun(pipelineRun.Name, pipelineRun.Namespace)).To(Succeed())
-					return true
+					return true, nil
 				}
-				return false
-			}, pipelineRunStartedTimeout, pipelineRunPollingInterval).Should(BeTrue(), "timed out when waiting for init PaC PipelineRun to be present in the user namespace")
+				return false, err
+			}, pipelineRunStartedTimeout, pipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PipelineRun to be present in the user namespace %q for component %q with a label pointing to %q", userNamespace, componentName, appName))
 
 		})
 
@@ -386,14 +427,14 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 
 			mergeResultSha = mergeResult.GetSHA()
 
-			Eventually(func() bool {
+			Eventually(func() (bool, error) {
 				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, appName, userNamespace, mergeResultSha)
 				if err != nil {
 					GinkgoWriter.Println("PipelineRun has not been created yet")
-					return false
+					return false, err
 				}
-				return pipelineRun.HasStarted()
-			}, pipelineRunStartedTimeout, pipelineRunPollingInterval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
+				return pipelineRun.HasStarted(), nil
+			}, pipelineRunStartedTimeout, pipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for a PipelineRun in namespace %q with label component label %q and application label %q and sha label %q to start", userNamespace, componentName, appName, mergeResultSha))
 		})
 
 		It("SLSA level 3 customizable pipeline completes successfully", func() {
@@ -401,9 +442,6 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		})
 
 		It("resulting SBOM file can be downloaded", func() {
-			pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, appName, userNamespace, "")
-			Expect(err).ShouldNot(HaveOccurred())
-
 			var outputImage string
 			for _, p := range pipelineRun.Spec.Params {
 				if p.Name == "output-image" {
@@ -414,85 +452,102 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 
 			_, _, err = build.GetParsedSbomFilesContentFromImage(outputImage)
 			Expect(err).NotTo(HaveOccurred())
+		})
 
+		It("validation of Tekton TaskRun test results completes successfully", func() {
+			pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, appName, userNamespace, mergeResultSha)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(build.ValidateBuildPipelineTestResults(pipelineRun, f.AsKubeAdmin.CommonController.KubeRest())).To(Succeed())
 		})
 
 		It("Snapshot is created", func() {
-			snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", userNamespace)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(snapshot.Name).ToNot(BeEmpty())
+			Eventually(func() (bool, error) {
+				snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", userNamespace)
+				if err != nil {
+					GinkgoWriter.Printf("cannot get the Snapshot: %v\n", err)
+					return false, err
+				}
+				return true, nil
+			}, snapshotTimeout, snapshotPollingInterval).Should(BeTrue(), "timed out when trying to check if the Snapshot exists")
 		})
 
 		It("Release is created and Release PipelineRun is triggered and Release status is updated", func() {
-			release, err = f.AsKubeAdmin.ReleaseController.GetRelease("", snapshot.Name, userNamespace)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(release.Name).ToNot(BeEmpty())
+			Eventually(func() (bool, error) {
+				release, err = f.AsKubeAdmin.ReleaseController.GetRelease("", snapshot.Name, userNamespace)
+				if err != nil {
+					GinkgoWriter.Printf("cannot get the release: %v\n", err)
+					return false, err
+				}
+				return true, nil
+			}, releaseTimeout, releasePollingInterval).Should(BeTrue(), "timed out when trying to check if the release exists")
 
-			Eventually(func() bool {
+			Eventually(func() (bool, error) {
 				pipelineRun, err = f.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
 				if err != nil {
 					GinkgoWriter.Printf("pipelineRun for component '%s' in namespace '%s' not created yet: %+v\n", componentName, managedNamespace, err)
-					return false
+					return false, err
 				}
-				return pipelineRun.HasStarted()
-			}, pipelineRunStartedTimeout, defaultPollingInterval).Should(BeTrue())
+				return pipelineRun.HasStarted(), nil
+			}, pipelineRunStartedTimeout, defaultPollingInterval).Should(BeTrue(), fmt.Sprintf("failed to get pipelinerun named %q in namespace %q with label to release %q in namespace %q to start", pipelineRun.Name, managedNamespace, release.Name, release.Namespace))
 
-			Eventually(func() bool {
+			Eventually(func() (bool, error) {
 				release, err = f.AsKubeAdmin.ReleaseController.GetRelease(release.Name, "", userNamespace)
 				if err != nil {
 					GinkgoWriter.Printf("failed to get Release CR in '%s' namespace: %+v\n", managedNamespace, err)
-					return false
+					return false, err
 				}
-				return release.IsReleasing()
-			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue())
+				return release.IsReleasing(), nil
+			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue(), fmt.Sprintf("failed to get release %q in namespace %q to releasing state", release.Name, userNamespace))
 		})
 
 		It("Release PipelineRun should eventually succeed and associated Release should be marked as succeeded", func() {
-			Eventually(func() bool {
+			Skip("Skip until bug is fixed: https://issues.redhat.com/browse/RHTAPBUGS-356")
+			Eventually(func() (bool, error) {
 				pipelineRun, err = f.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
 				if err != nil {
 					GinkgoWriter.Printf("failed to get PipelineRun for a release '%s' in '%s' namespace: %+v\n", release.Name, managedNamespace, err)
-					return false
+					return false, err
 				}
-				return pipelineRun.IsDone() && pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue()
-			}, releasePipelineTimeout, pipelineRunPollingInterval).Should(BeTrue())
+				Expect(utils.PipelineRunFailed(pipelineRun)).NotTo(BeTrue(), fmt.Sprintf("did not expect PipelineRun %s:%s to fail", pipelineRun.GetNamespace(), pipelineRun.GetName()))
+				return pipelineRun.IsDone() && pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue(), nil
+			}, releasePipelineTimeout, pipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("failed to see pipelinerun %q in namespace %q with a label pointing to release %q in namespace %q to complete successfully", pipelineRun.Name, managedNamespace, release.Name, release.Namespace))
 
-			Eventually(func() bool {
+			Eventually(func() (bool, error) {
 				release, err = f.AsKubeAdmin.ReleaseController.GetRelease(release.Name, "", userNamespace)
 				if err != nil {
 					GinkgoWriter.Printf("failed to get Release CR in '%s' namespace: %+v\n", managedNamespace, err)
-					return false
+					return false, err
 				}
-				return release.IsReleased()
-			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue())
+				return release.IsReleased(), nil
+			}, customResourceUpdateTimeout, defaultPollingInterval).Should(BeTrue(), fmt.Sprintf("failed to see release %q in namespace %q get marked as released", release.Name, userNamespace))
 		})
 
 		It("JVM Build Service is used for rebuilding dependencies and completes rebuild of all artifacts and dependencies", func() {
-			Eventually(func() bool {
+			Eventually(func() (bool, error) {
 				abList, err := f.AsKubeAdmin.JvmbuildserviceController.ListArtifactBuilds(userNamespace)
 				if err != nil {
 					GinkgoWriter.Printf("error listing artifactbuilds: %s\n", err.Error())
-					return false
+					return false, err
 				}
 				for _, ab := range abList.Items {
 					if ab.Status.State != v1alpha1.ArtifactBuildStateComplete {
 						GinkgoWriter.Printf("artifactbuild %s not complete\n", ab.Spec.GAV)
-						return false
+						return false, err
 					}
 				}
 				dbList, err := f.AsKubeAdmin.JvmbuildserviceController.ListDependencyBuilds(userNamespace)
 				if err != nil {
 					GinkgoWriter.Printf("error listing dependencybuilds: %s\n", err.Error())
-					return false
+					return false, err
 				}
 				for _, db := range dbList.Items {
 					if db.Status.State != v1alpha1.DependencyBuildStateComplete {
 						GinkgoWriter.Printf("dependencybuild %s not complete\n", db.Spec.ScmInfo.SCMURL)
-						return false
+						return false, err
 					}
 				}
-				return true
-			}, jvmRebuildTimeout, jvmRebuildPollingInterval).Should(BeTrue(), "timed out when waiting for all artifactbuilds and dependencybuilds to complete")
+				return true, nil
+			}, jvmRebuildTimeout, jvmRebuildPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for all artifactbuilds and dependencybuilds to complete in namespace %q", userNamespace))
 		})
 
 	})

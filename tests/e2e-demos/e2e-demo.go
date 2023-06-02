@@ -3,10 +3,8 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -19,6 +17,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -67,6 +66,10 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				namespace = fw.UserNamespace
 				Expect(namespace).NotTo(BeEmpty())
 
+				// collect SPI ResourceQuota metrics (temporary)
+				err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("e2e-demo", namespace, "appstudio-crds-spi")
+				Expect(err).NotTo(HaveOccurred())
+
 				suiteConfig, _ := GinkgoConfiguration()
 				GinkgoWriter.Printf("Parallel processes: %d\n", suiteConfig.ParallelTotal)
 				GinkgoWriter.Printf("Running on namespace: %s\n", namespace)
@@ -79,6 +82,10 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 			// Remove all resources created by the tests
 			AfterAll(func() {
+				// collect SPI ResourceQuota metrics (temporary)
+				err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("e2e-demo", namespace, "appstudio-crds-spi")
+				Expect(err).NotTo(HaveOccurred())
+
 				if !CurrentSpecReport().Failed() {
 					Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
@@ -160,12 +167,11 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				} else if componentTest.GitSourceUrl != "" {
 					It(fmt.Sprintf("creates component %s from %s git source %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl), func() {
 						for _, compDetected := range cdq.Status.ComponentDetected {
-							outputContainerImg := fmt.Sprintf("quay.io/%s/test-images:%s-%s", utils.GetQuayIOOrganization(), fw.UserName, strings.Replace(uuid.New().String(), "-", "", -1))
 							if componentTest.Type == "private" {
-								component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, namespace, outputContainerImg, SPIGithubSecretName, appTest.ApplicationName)
+								component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, namespace, "", SPIGithubSecretName, appTest.ApplicationName)
 								Expect(err).NotTo(HaveOccurred())
 							} else if componentTest.Type == "public" {
-								component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, namespace, outputContainerImg, "", appTest.ApplicationName)
+								component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, namespace, "", "", appTest.ApplicationName)
 								Expect(err).NotTo(HaveOccurred())
 							}
 						}
@@ -269,17 +275,17 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 						Expect(err).NotTo(HaveOccurred())
 						err = fw.AsKubeDeveloper.GitOpsController.CheckGitOpsEndpoint(gitOpsRoute, componentTest.HealthEndpoint)
 						if err != nil {
-							GinkgoWriter.Println("Failed to request component endpoint. retrying...")
+							GinkgoWriter.Printf("Failed to request component endpoint: %+v\n retrying...\n", err)
 						}
 						return true
 					}, 5*time.Minute, 10*time.Second).Should(BeTrue())
 				})
 
-				if componentTest.K8sSpec != (e2eConfig.K8sSpec{}) && *componentTest.K8sSpec.Replicas > 1 {
+				if componentTest.K8sSpec != (e2eConfig.K8sSpec{}) && componentTest.K8sSpec.Replicas > 1 {
 					It(fmt.Sprintf("scales component %s replicas", component.Name), Pending, func() {
 						component, err := fw.AsKubeDeveloper.HasController.GetHasComponent(component.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())
-						_, err = fw.AsKubeDeveloper.HasController.ScaleComponentReplicas(component, int(*componentTest.K8sSpec.Replicas))
+						_, err = fw.AsKubeDeveloper.HasController.ScaleComponentReplicas(component, pointer.Int(componentTest.K8sSpec.Replicas))
 						Expect(err).NotTo(HaveOccurred())
 
 						Eventually(func() bool {
@@ -287,7 +293,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 							if err != nil && !errors.IsNotFound(err) {
 								return false
 							}
-							if deployment.Status.AvailableReplicas == *componentTest.K8sSpec.Replicas {
+							if int(deployment.Status.AvailableReplicas) == componentTest.K8sSpec.Replicas {
 								GinkgoWriter.Printf("Replicas scaled to %s\n", componentTest.K8sSpec.Replicas)
 								return true
 							}

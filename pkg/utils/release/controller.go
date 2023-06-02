@@ -2,18 +2,23 @@ package release
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"io"
+	"net/http"
 	"time"
 
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
+	releaseMetadata "github.com/redhat-appstudio/release-service/metadata"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -220,7 +225,8 @@ func (s *SuiteController) CreateReleasePlan(name, namespace, application, target
 			Name:         name,
 			Namespace:    namespace,
 			Labels: map[string]string{
-				releaseApi.AutoReleaseLabel: autoReleaseLabel,
+				releaseMetadata.AutoReleaseLabel: autoReleaseLabel,
+				releaseMetadata.AuthorLabel:      "username",
 			},
 		},
 		Spec: releaseApi.ReleasePlanSpec{
@@ -230,9 +236,9 @@ func (s *SuiteController) CreateReleasePlan(name, namespace, application, target
 		},
 	}
 	if autoReleaseLabel == "" || autoReleaseLabel == "true" {
-		releasePlan.ObjectMeta.Labels[releaseApi.AutoReleaseLabel] = "true"
+		releasePlan.ObjectMeta.Labels[releaseMetadata.AutoReleaseLabel] = "true"
 	} else {
-		releasePlan.ObjectMeta.Labels[releaseApi.AutoReleaseLabel] = "false"
+		releasePlan.ObjectMeta.Labels[releaseMetadata.AutoReleaseLabel] = "false"
 	}
 
 	return releasePlan, s.KubeRest().Create(context.TODO(), releasePlan)
@@ -281,7 +287,7 @@ func (s *SuiteController) CreateReleasePlanAdmission(name, originNamespace, appl
 		},
 	}
 	if autoRelease != "" {
-		releasePlanAdmission.ObjectMeta.Labels[releaseApi.AutoReleaseLabel] = autoRelease
+		releasePlanAdmission.ObjectMeta.Labels[releaseMetadata.AutoReleaseLabel] = autoRelease
 	}
 	return releasePlanAdmission, s.KubeRest().Create(context.TODO(), releasePlanAdmission)
 }
@@ -335,7 +341,7 @@ func (s *SuiteController) CreateComponentWithDockerSource(applicationName, compo
 			},
 			Secret:         secret,
 			ContainerImage: outputContainerImage,
-			Replicas:       1,
+			Replicas:       pointer.Int(1),
 			TargetPort:     8081,
 			Route:          "",
 		},
@@ -345,4 +351,46 @@ func (s *SuiteController) CreateComponentWithDockerSource(applicationName, compo
 		return nil, err
 	}
 	return component, nil
+}
+
+// CreateComponentWithDockerSource creates a component based on container image source.
+func (s *SuiteController) GetSbomPyxisByImageID(pyxisStageURL, imageID string,
+	pyxisCertDecoded, pyxisKeyDecoded []byte) ([]byte, error) {
+
+	url := fmt.Sprintf("%s%s", pyxisStageURL, imageID)
+
+	// Create a TLS configuration with the key and certificate
+	cert, err := tls.X509KeyPair(pyxisCertDecoded, pyxisKeyDecoded)
+	if err != nil {
+		return nil, fmt.Errorf("error creating TLS certificate and key: %s", err)
+	}
+
+	// Create a client with the custom TLS configuration
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				Certificates: []tls.Certificate{cert},
+			},
+		},
+	}
+
+	// Send GET request
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating GET request: %s", err)
+	}
+
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, fmt.Errorf("error sending GET request: %s", err)
+	}
+
+	defer response.Body.Close()
+
+	// Read the response body
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %s", err)
+	}
+	return body, nil
 }

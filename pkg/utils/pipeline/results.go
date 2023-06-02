@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -44,6 +45,7 @@ func (c *ResultClient) sendRequest(path string) (body []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
+
 	body, err = io.ReadAll(res.Body)
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to access Tekton Result Service with status code: %d and\nbody: %s", res.StatusCode, string(body))
@@ -85,6 +87,27 @@ func (c *ResultClient) GetLogs(namespace, resultId string) (*Logs, error) {
 	return logs, nil
 }
 
+func (c *ResultClient) GetLogByName(logName string) (string, error) {
+	path := fmt.Sprintf("apis/results.tekton.dev/v1alpha2/parents/%s", logName)
+
+	body, err := c.sendRequest(path)
+	if err != nil {
+		return "", err
+	}
+
+	var result *Result
+
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return "", err
+	}
+	data, err := base64.StdEncoding.DecodeString(result.Result.Data)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
 type Record struct {
 	Name string `json:"name"`
 	ID   string `json:"id"`
@@ -102,4 +125,13 @@ type Log struct {
 }
 type Logs struct {
 	Record []Record `json:"records"`
+}
+
+type Result struct {
+	Result Data `json:"result"`
+}
+
+type Data struct {
+	Name string `json:"name"`
+	Data string `json:"data"`
 }

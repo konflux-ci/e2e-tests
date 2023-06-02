@@ -47,6 +47,7 @@ type K8SClient struct {
 	AsKubeDeveloper   *CustomClient
 	SandboxController *sandbox.SandboxController
 	UserName          string
+	UserNamespace     string
 }
 
 var (
@@ -134,6 +135,7 @@ func NewDevSandboxProxyClient(userName string) (*K8SClient, error) {
 		AsKubeAdmin:       asAdminClient,
 		AsKubeDeveloper:   sandboxProxyClient,
 		UserName:          userAuthInfo.UserName,
+		UserNamespace:     userAuthInfo.UserNamespace,
 		SandboxController: sandboxController,
 	}, nil
 }
@@ -145,6 +147,20 @@ func NewAdminKubernetesClient() (*CustomClient, error) {
 	}
 
 	return createCustomClient(*adminKubeconfig)
+}
+
+func NewKubeFromKubeConfigFile(kubeconfig string) (*kubernetes.Clientset, error) {
+	kubeConfData, err := os.ReadFile(kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	config, err := clientcmd.RESTConfigFromKubeConfig(kubeConfData)
+	if err != nil {
+		return nil, err
+	}
+
+	return kubernetes.NewForConfig(config)
 }
 
 func createCustomClient(cfg rest.Config) (*CustomClient, error) {

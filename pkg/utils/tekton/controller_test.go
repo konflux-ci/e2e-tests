@@ -1,14 +1,11 @@
 package tekton
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/h2non/gock"
 	"github.com/stretchr/testify/assert"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestCosignResultShouldPresence(t *testing.T) {
@@ -45,74 +42,80 @@ func TestCosignResultMissingFormat(t *testing.T) {
 	}.Missing("prefix"))
 }
 
-func newTag(name string, hash string, noLayers int) client.Object {
-	tag := unstructured.Unstructured{}
-	tag.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "image.openshift.io",
-		Kind:    "ImageStreamTag",
-		Version: "v1",
-	})
-	tag.SetNamespace("test-namespace")
-	tag.SetName(name)
-	layers := make([]interface{}, noLayers)
-	tag.Object["image"] = map[string]interface{}{
-		"dockerImageLayers": layers,
+func createHttpMock(urlPath, tag string, response any) {
+	s := gock.New("https://quay.io/api/v1")
+	if len(tag) > 0 {
+		s.MatchParam("specificTag", tag)
 	}
-
-	if hash != "" {
-		if err := unstructured.SetNestedField(tag.Object, hash, "image", "metadata", "name"); err != nil {
-			panic(err)
-		}
-	}
-
-	return &tag
+	s.Get(urlPath).
+		Reply(200).
+		JSON(response)
 }
 
 func TestFindingCosignResults(t *testing.T) {
+	const imageRegistryName = "quay.io"
+	const imageRepo = "test/repo"
+	const imageTag = "123"
+	const imageDigest = "sha256:abc"
+	const cosignImageTag = "sha256-abc"
+	const imageRef = imageRegistryName + "/" + imageRepo + ":" + imageTag + "@" + imageDigest
+	const signatureImageDigest = "sha256:signature"
+	const attestationImageDigest = "sha256:attestation"
+	const signatureImageRef = imageRegistryName + "/" + imageRepo + "@" + signatureImageDigest
+	const attestationImageRef = imageRegistryName + "/" + imageRepo + "@" + attestationImageDigest
+
 	cases := []struct {
-		Name          string
-		Tags          []client.Object
-		ExpectedError string
-		Result        *CosignResult
+		Name                    string
+		SignatureImagePresent   bool
+		AttestationImagePresent bool
+		AttestationImageLayers  []any
+		ExpectedErrors          []string
+		Result                  *CosignResult
 	}{
-		{"happy day", []client.Object{
-			newTag("test-image:latest", "sha256:hash", 1),
-			newTag("test-image:sha256-hash.sig", "", 1),
-			newTag("test-image:sha256-hash.att", "", 2),
-		}, "", &CosignResult{
-			signatureImageRef:   "test-image:sha256-hash.sig",
-			attestationImageRef: "test-image:sha256-hash.att",
+		{"happy day", true, true, []any{"", ""}, []string{}, &CosignResult{
+			signatureImageRef:   signatureImageRef,
+			attestationImageRef: attestationImageRef,
 		}},
-		{"missing signature", []client.Object{
-			newTag("test-image:latest", "sha256:hash", 1),
-			newTag("test-image:sha256-hash.att", "", 2),
-		}, "ImageStreamTag.image.openshift.io \"test-image:sha256-hash.sig\" not found", nil},
-		{"missing attestation", []client.Object{
-			newTag("test-image:latest", "sha256:hash", 1),
-			newTag("test-image:sha256-hash.sig", "", 1),
-		}, "ImageStreamTag.image.openshift.io \"test-image:sha256-hash.att\" not found", nil},
-		{"missing signature and attestation", []client.Object{
-			newTag("test-image:latest", "sha256:hash", 1),
-		}, "ImageStreamTag.image.openshift.io \"test-image:sha256-hash.sig and test-image:sha256-hash.att\" not found", nil},
-		{"everything missing", []client.Object{}, "ImageStreamTag.image.openshift.io \"test-image:sha256-hash.sig and test-image:sha256-hash.att\" not found", nil},
-		{"missing layer in attestation", []client.Object{
-			newTag("test-image:latest", "sha256:hash", 1),
-			newTag("test-image:sha256-hash.sig", "", 1),
-			newTag("test-image:sha256-hash.att", "", 1),
-		}, "ImageStreamTag.image.openshift.io \"test-image:sha256-hash.att\" not found", nil},
+		{"missing signature", false, true, []any{"", ""}, []string{"error when getting signature"}, &CosignResult{
+			signatureImageRef:   "",
+			attestationImageRef: attestationImageRef,
+		}},
+		{"missing attestation", true, false, []any{"", ""}, []string{"error when getting attestation"}, &CosignResult{
+			signatureImageRef:   signatureImageRef,
+			attestationImageRef: "",
+		}},
+		{"missing signature and attestation", false, false, []any{"", ""}, []string{"error when getting attestation", "error when getting signature"}, &CosignResult{
+			signatureImageRef:   "",
+			attestationImageRef: "",
+		}},
+		{"missing layer in attestation", true, true, []any{""}, []string{"attestation tag doesn't have the expected number of layers"}, &CosignResult{
+			signatureImageRef:   signatureImageRef,
+			attestationImageRef: attestationImageRef,
+		}},
 	}
 
 	for _, cse := range cases {
 		t.Run(cse.Name, func(t *testing.T) {
-			client := fake.NewClientBuilder().WithObjects(cse.Tags...).Build()
+			defer gock.Off()
 
-			result, err := findCosignResultsForImage("image-registry.openshift-image-registry.svc:5000/test-namespace/test-image@sha256-hash", client)
-
-			if err != nil || cse.ExpectedError != "" {
-				assert.EqualError(t, err, cse.ExpectedError)
-				assert.True(t, errors.IsNotFound(err))
+			if cse.SignatureImagePresent {
+				createHttpMock(fmt.Sprintf("/repository/%s/tag", imageRepo), cosignImageTag+".sig", &TagResponse{Tags: []Tag{{Digest: signatureImageDigest}}})
 			}
+			if cse.AttestationImagePresent {
+				createHttpMock(fmt.Sprintf("/repository/%s/tag", imageRepo), cosignImageTag+".att", &TagResponse{Tags: []Tag{{Digest: attestationImageDigest}}})
+			}
+			createHttpMock(fmt.Sprintf("/repository/%s/manifest/%s", imageRepo, attestationImageDigest), "", &ManifestResponse{Layers: cse.AttestationImageLayers})
 
+			result, err := findCosignResultsForImage(imageRef)
+
+			if err != nil {
+				assert.NotEmpty(t, cse.ExpectedErrors)
+				for _, errSubstring := range cse.ExpectedErrors {
+					assert.Contains(t, err.Error(), errSubstring)
+				}
+			} else {
+				assert.Empty(t, cse.ExpectedErrors)
+			}
 			assert.Equal(t, cse.Result, result)
 		})
 	}

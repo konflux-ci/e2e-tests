@@ -27,7 +27,7 @@ const (
 	TEKTON_CHAINS_NS string = "tekton-chains" // #nosec
 
 	// User for running the end-to-end Tekton Chains tests
-	TEKTON_CHAINS_E2E_USER string = "tekton-chains-e2e"
+	TEKTON_CHAINS_E2E_USER string = "chains-e2e"
 
 	//base64 Encoded docker config json value to create registry pull secret
 	DOCKER_CONFIG_JSON string = "DOCKER_CONFIG_JSON"
@@ -42,7 +42,7 @@ const (
 	SKIP_HAS_SECRET_CHECK_ENV string = "SKIP_HAS_SECRET_CHECK"
 
 	// Sandbox kubeconfig user path
-	USER_USER_KUBE_CONFIG_PATH_ENV string = "USER_KUBE_CONFIG_PATH"
+	USER_KUBE_CONFIG_PATH_ENV string = "USER_KUBE_CONFIG_PATH"
 	// Release e2e auth for build and release quay keys
 
 	QUAY_OAUTH_TOKEN_RELEASE_SOURCE string = "QUAY_OAUTH_TOKEN_RELEASE_SOURCE"
@@ -80,8 +80,8 @@ const (
 
 	RegistryAuthSecretName = "redhat-appstudio-registry-pull-secret"
 
-	SharedPullSecretName      = "redhat-appstudio-user-workload"
-	SharedPullSecretNamespace = "build-templates"
+	QuayRepositorySecretName      = "quay-repository"
+	QuayRepositorySecretNamespace = "e2e-secrets"
 
 	JVMBuildImageSecretName = "jvm-build-image-secrets"
 	JBSConfigName           = "jvm-build-config"
@@ -95,7 +95,7 @@ const (
 
 	ComponentInitialBuildAnnotationKey = "appstudio.openshift.io/component-initial-build"
 
-	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.10"
+	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.11"
 
 	// TODO
 	// delete this constant and all its occurrences in the code base
@@ -103,14 +103,16 @@ const (
 	OldTektonTaskTestOutputName = "HACBS_TEST_OUTPUT"
 
 	TektonTaskTestOutputName = "TEST_OUTPUT"
+
+	DefaultPipelineServiceAccount            = "appstudio-pipeline"
+	DefaultPipelineServiceAccountRoleBinding = "appstudio-pipelines-runner-rolebinding"
+	DefaultPipelineServiceAccountClusterRole = "appstudio-pipelines-runner"
 )
 
 var (
-	ComponentDefaultLabel                  = map[string]string{"e2e-test": "true"}
-	ComponentDefaultAnnotation             = map[string]string{ComponentInitialBuildAnnotationKey: "processed"}
-	ComponentPaCRequestAnnotation          = map[string]string{"appstudio.openshift.io/pac-provision": "request"}
-	ComponentWithImageControllerAnnotation = map[string]string{
-		"image.redhat.com/generate":          "true",
-		"image.redhat.com/delete-image-repo": "true",
-	}
+	ComponentDefaultLabel                    = map[string]string{"e2e-test": "true"}
+	ComponentDefaultAnnotation               = map[string]string{ComponentInitialBuildAnnotationKey: "processed"}
+	ComponentPaCRequestAnnotation            = map[string]string{"appstudio.openshift.io/pac-provision": "request"}
+	ImageControllerAnnotationDeleteRepoTrue  = map[string]string{"image.redhat.com/generate": "true", "image.redhat.com/delete-image-repo": "true"}
+	ImageControllerAnnotationDeleteRepoFalse = map[string]string{"image.redhat.com/generate": "true", "image.redhat.com/delete-image-repo": "false"}
 )

@@ -13,7 +13,9 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
+	codereadytoolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	releasev1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
+	releasemetadata "github.com/redhat-appstudio/release-service/metadata"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -264,7 +266,8 @@ func (h *SuiteController) CreateReleasePlan(applicationName, namespace string) (
 			GenerateName: "test-releaseplan-",
 			Namespace:    namespace,
 			Labels: map[string]string{
-				releasev1alpha1.AutoReleaseLabel: "true",
+				releasemetadata.AutoReleaseLabel: "true",
+				releasemetadata.AuthorLabel:      "username",
 			},
 		},
 		Spec: releasev1alpha1.ReleasePlanSpec{
@@ -329,6 +332,33 @@ func (h *SuiteController) CreateIntegrationTestScenario(applicationName, namespa
 			Application: applicationName,
 			Bundle:      bundleURL,
 			Pipeline:    pipelineName,
+		},
+	}
+
+	err := h.KubeRest().Create(context.TODO(), integrationTestScenario)
+	if err != nil {
+		return nil, err
+	}
+	return integrationTestScenario, nil
+}
+
+func (h *SuiteController) CreateIntegrationTestScenarioWithEnvironment(applicationName, namespace, bundleURL, pipelineName, environmentName string) (*integrationv1alpha1.IntegrationTestScenario, error) {
+	integrationTestScenario := &integrationv1alpha1.IntegrationTestScenario{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "example-pass-" + util.GenerateRandomString(4),
+			Namespace: namespace,
+			Labels: map[string]string{
+				"test.appstudio.openshift.io/optional": "false",
+			},
+		},
+		Spec: integrationv1alpha1.IntegrationTestScenarioSpec{
+			Application: applicationName,
+			Bundle:      bundleURL,
+			Pipeline:    pipelineName,
+			Environment: integrationv1alpha1.TestEnvironment{
+				Name: environmentName,
+				Type: "POC",
+			},
 		},
 	}
 
@@ -435,4 +465,84 @@ func (h *SuiteController) GetSnapshotEnvironmentBinding(applicationName string, 
 	}
 
 	return &appstudioApi.SnapshotEnvironmentBinding{}, fmt.Errorf("no SnapshotEnvironmentBinding found in environment %s %s", environment.Name, utils.GetAdditionalInfo(applicationName, namespace))
+}
+
+// HaveAvailableDeploymentTargetClassExist attempts to find a DeploymentTargetClass with appstudioApi.Provisioner_Devsandbox as provisioner.
+// reurn nil if not found
+func (h *SuiteController) HaveAvailableDeploymentTargetClassExist() (*appstudioApi.DeploymentTargetClass, error) {
+	deploymentTargetClassList := &appstudioApi.DeploymentTargetClassList{}
+	err := h.KubeRest().List(context.TODO(), deploymentTargetClassList)
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error occurred while trying to list all the available DeploymentTargetClass: %v", err)
+	}
+
+	for _, dtcls := range deploymentTargetClassList.Items {
+		if dtcls.Spec.Provisioner == appstudioApi.Provisioner_Devsandbox {
+			return &dtcls, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func (h *SuiteController) GetSpaceRequests(namespace string) (*codereadytoolchainv1alpha1.SpaceRequestList, error) {
+	spaceRequestList := &codereadytoolchainv1alpha1.SpaceRequestList{}
+
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+
+	err := h.KubeRest().List(context.Background(), spaceRequestList, opts...)
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error occurred while trying to list spaceRequests in %s namespace: %v", namespace, err)
+	}
+
+	return spaceRequestList, nil
+}
+
+func (h *SuiteController) GetDeploymentTargets(namespace string) (*appstudioApi.DeploymentTargetList, error) {
+	deploymentTargetList := &appstudioApi.DeploymentTargetList{}
+
+
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+
+	err := h.KubeRest().List(context.Background(), deploymentTargetList, opts...)
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error occurred while trying to list deploymentTargets in %s namespace: %v", namespace, err)
+	}
+
+	return deploymentTargetList, nil
+}
+
+func (h *SuiteController) GetDeploymentTargetClaims(namespace string) (*appstudioApi.DeploymentTargetClaimList, error) {
+	deploymentTargetClaimList := &appstudioApi.DeploymentTargetClaimList{}
+
+
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+
+	err := h.KubeRest().List(context.Background(), deploymentTargetClaimList, opts...)
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error occurred while trying to list DeploymentTargetClaim in %s namespace: %v", namespace, err)
+	}
+
+	return deploymentTargetClaimList, nil
+}
+
+func (h *SuiteController) GetEnvironments(namespace string) (*appstudioApi.EnvironmentList, error) {
+	environmentList := &appstudioApi.EnvironmentList{}
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+
+	err := h.KubeRest().List(context.TODO(), environmentList, opts...)
+
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error occurred while trying to list environments in %s namespace: %v", namespace, err)
+	}
+
+	return environmentList, nil
 }

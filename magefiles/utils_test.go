@@ -66,7 +66,7 @@ func (m *QuayClientMock) DeleteTag(organization, repository, tag string) (bool, 
 }
 
 // Dummy functions
-func (m *QuayClientMock) AddPermissionsToRobotAccount(organization, imageRepository, robotAccountName string) error {
+func (m *QuayClientMock) AddWritePermissionsToRobotAccount(organization, imageRepository, robotAccountName string) error {
 	return nil
 }
 
@@ -75,6 +75,10 @@ func (m *QuayClientMock) CreateRepository(r quay.RepositoryRequest) (*quay.Repos
 }
 
 func (m *QuayClientMock) CreateRobotAccount(organization string, robotName string) (*quay.RobotAccount, error) {
+	return nil, nil
+}
+
+func (m *QuayClientMock) GetRobotAccount(organization string, robotName string) (*quay.RobotAccount, error) {
 	return nil, nil
 }
 

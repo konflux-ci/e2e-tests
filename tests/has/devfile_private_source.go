@@ -136,8 +136,7 @@ var _ = framework.HASSuiteDescribe("[test_id:02] private devfile source", Label(
 	})
 
 	It("creates Red Hat AppStudio Quarkus component", func() {
-		outputContainerImg := fmt.Sprintf("quay.io/%s/test-images:%s-%s", utils.GetQuayIOOrganization(), fw.UserName, strings.Replace(uuid.New().String(), "-", "", -1))
-		_, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, testNamespace, outputContainerImg, oauthSecretName, applicationName)
+		_, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, testNamespace, "", oauthSecretName, applicationName)
 		Expect(err).NotTo(HaveOccurred())
 	})
 })

@@ -3,7 +3,6 @@ package has
 import (
 	"context"
 	"fmt"
-	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -27,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/pointer"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -168,7 +168,7 @@ func (h *SuiteController) GetHasComponent(name, namespace string) (*appservice.C
 }
 
 // ScaleDeploymentReplicas scales the replicas of a given deployment
-func (h *SuiteController) ScaleComponentReplicas(component *appservice.Component, replicas int) (*appservice.Component, error) {
+func (h *SuiteController) ScaleComponentReplicas(component *appservice.Component, replicas *int) (*appservice.Component, error) {
 	component.Spec.Replicas = replicas
 
 	err := h.KubeRest().Update(context.TODO(), component, &rclient.UpdateOptions{})
@@ -198,20 +198,24 @@ func (h *SuiteController) DeleteHasComponent(name string, namespace string, repo
 // CreateComponent create an has component from a given name, namespace, application, devfile and a container image
 func (h *SuiteController) CreateComponent(applicationName, componentName, namespace, gitSourceURL, gitSourceRevision, containerImageSource, outputContainerImage, secret string, skipInitialChecks bool) (*appservice.Component, error) {
 	var containerImage string
+	annotations := map[string]string{
+		// PLNSRVCE-957 - if true, run only basic build pipeline tasks
+		"skip-initial-checks": strconv.FormatBool(skipInitialChecks),
+	}
 	if outputContainerImage != "" {
 		containerImage = outputContainerImage
-	} else {
+	} else if containerImageSource != "" {
 		containerImage = containerImageSource
+	} else {
+		// When no image image is selected then add annotatation to generate new image repository
+		annotations = utils.MergeMaps(annotations, constants.ImageControllerAnnotationDeleteRepoTrue)
 	}
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				// PLNSRVCE-957 - if true, run only basic build pipeline tasks
-				"skip-initial-checks": strconv.FormatBool(skipInitialChecks),
-			},
-			Labels:    constants.ComponentDefaultLabel,
-			Name:      componentName,
-			Namespace: namespace,
+			Annotations: annotations,
+			Labels:      constants.ComponentDefaultLabel,
+			Name:        componentName,
+			Namespace:   namespace,
 		},
 		Spec: appservice.ComponentSpec{
 			ComponentName: componentName,
@@ -226,7 +230,7 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 			},
 			Secret:         secret,
 			ContainerImage: containerImage,
-			Replicas:       1,
+			Replicas:       pointer.Int(1),
 			TargetPort:     8081,
 			Route:          "",
 		},
@@ -265,10 +269,18 @@ func (h *SuiteController) ComponentDeleted(component *appservice.Component) wait
 }
 
 // CreateComponentWithPaCEnabled creates a component with "pipelinesascode: '1'" annotation that is used for triggering PaC builds
-func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, componentName, namespace, gitSourceURL, baseBranch, outputContainerImage string) (*appservice.Component, error) {
+func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, componentName, namespace, gitSourceURL, baseBranch string, deleteRepo bool) (*appservice.Component, error) {
+
+	var annotations map[string]string
+	if deleteRepo {
+		annotations = utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationDeleteRepoTrue)
+	} else {
+		annotations = utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationDeleteRepoFalse)
+	}
+
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ComponentWithImageControllerAnnotation),
+			Annotations: annotations,
 			Name:        componentName,
 			Namespace:   namespace,
 		},
@@ -283,7 +295,6 @@ func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, compone
 					},
 				},
 			},
-			ContainerImage: outputContainerImage,
 		},
 	}
 	err := h.KubeRest().Create(context.TODO(), component)
@@ -303,9 +314,7 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
-				"skip-initial-checks":                "true",
-				"image.redhat.com/generate":          "true",
-				"image.redhat.com/delete-image-repo": "true",
+				"skip-initial-checks": "true",
 			},
 			Name:      compDetected.ComponentStub.ComponentName,
 			Namespace: namespace,
@@ -315,6 +324,8 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 
 	if outputContainerImage != "" {
 		component.Spec.ContainerImage = outputContainerImage
+	} else {
+		component.Annotations = utils.MergeMaps(component.Annotations, constants.ImageControllerAnnotationDeleteRepoTrue)
 	}
 
 	if component.Spec.TargetPort == 0 {
@@ -348,6 +359,11 @@ func (h *SuiteController) DeleteHasComponentDetectionQuery(name string, namespac
 
 // CreateComponentDetectionQuery create a has componentdetectionquery from a given name, namespace, and git source
 func (h *SuiteController) CreateComponentDetectionQuery(cdqName, namespace, gitSourceURL, gitSourceRevision, gitSourceContext, secret string, isMultiComponent bool) (*appservice.ComponentDetectionQuery, error) {
+	return h.CreateComponentDetectionQueryWithTimeout(cdqName, namespace, gitSourceURL, gitSourceRevision, gitSourceContext, secret, isMultiComponent, 5*time.Minute)
+}
+
+// CreateComponentDetectionQueryWithTimeout create a has componentdetectionquery from a given name, namespace, and git source and waits for it to be read
+func (h *SuiteController) CreateComponentDetectionQueryWithTimeout(cdqName, namespace, gitSourceURL, gitSourceRevision, gitSourceContext, secret string, isMultiComponent bool, timeout time.Duration) (*appservice.ComponentDetectionQuery, error) {
 	componentDetectionQuery := &appservice.ComponentDetectionQuery{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cdqName,
@@ -378,7 +394,7 @@ func (h *SuiteController) CreateComponentDetectionQuery(cdqName, namespace, gitS
 			}
 		}
 		return false, nil
-	}, 3*time.Minute)
+	}, timeout)
 
 	if err != nil {
 		return nil, fmt.Errorf("error waiting for cdq to be ready: %v", err)
@@ -499,12 +515,6 @@ func (h *SuiteController) WaitForComponentPipelineToBeFinished(c *common.SuiteCo
 
 // CreateComponentFromDevfile creates a has component from a given name, namespace, application, devfile and a container image
 func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentName, namespace, gitSourceURL, devfile, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
-	var containerImage string
-	if outputContainerImage != "" {
-		containerImage = outputContainerImage
-	} else {
-		containerImage = containerImageSource
-	}
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      componentName,
@@ -521,12 +531,18 @@ func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentN
 					},
 				},
 			},
-			Secret:         secret,
-			ContainerImage: containerImage,
-			Replicas:       1,
-			TargetPort:     8080,
-			Route:          "",
+			Secret:     secret,
+			Replicas:   pointer.Int(1),
+			TargetPort: 8080,
+			Route:      "",
 		},
+	}
+	if outputContainerImage != "" {
+		component.Spec.ContainerImage = outputContainerImage
+	} else if containerImageSource != "" {
+		component.Spec.ContainerImage = containerImageSource
+	} else {
+		component.Annotations = constants.ImageControllerAnnotationDeleteRepoTrue
 	}
 	err := h.KubeRest().Create(context.TODO(), component)
 	if err != nil {
@@ -578,35 +594,6 @@ func (h *SuiteController) GetHasComponentConditionStatusMessages(name, namespace
 		messages = append(messages, condition.Message)
 	}
 	return
-}
-
-// CreateSnapshotEnvironmentBinding creates a new SnapshotEnvironmentBinding
-func (h *SuiteController) CreateSnapshotEnvironmentBinding(name, namespace, applicationName, snapshotName, environmentName string, component *appservice.Component) (*appservice.SnapshotEnvironmentBinding, error) {
-	bindingComponents := make([]appservice.BindingComponent, 0)
-	snapshotEnvironmentBinding := &appservice.SnapshotEnvironmentBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: appservice.SnapshotEnvironmentBindingSpec{
-			Application: applicationName,
-			Environment: environmentName,
-			Components: append(bindingComponents,
-				appservice.BindingComponent{
-					Configuration: appservice.BindingComponentConfiguration{
-						Replicas: int(math.Max(1, float64(component.Spec.Replicas))),
-					},
-					Name: component.Name,
-				}),
-			Snapshot: snapshotName,
-		},
-	}
-
-	err := h.KubeRest().Create(context.TODO(), snapshotEnvironmentBinding)
-	if err != nil {
-		return nil, err
-	}
-	return snapshotEnvironmentBinding, nil
 }
 
 // DeleteAllSnapshotEnvBindingsInASpecificNamespace removes all snapshotEnvironmentBindings from a specific namespace. Useful when creating a lot of resources and want to remove all of them

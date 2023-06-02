@@ -49,10 +49,18 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-k8s"), func(
 			Expect(err).NotTo(HaveOccurred())
 			namespace = fw.UserNamespace
 			Expect(namespace).NotTo(BeEmpty())
+
+			// collect SPI ResourceQuota metrics (temporary)
+			err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("token-upload-rest-endpoint", namespace, "appstudio-crds-spi")
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		// Clean up after running these tests and before the next tests block: can't have multiple AccessTokens in Injected phase
 		AfterAll(func() {
+			// collect SPI ResourceQuota metrics (temporary)
+			err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("token-upload-k8s", namespace, "appstudio-crds-spi")
+			Expect(err).NotTo(HaveOccurred())
+
 			if !CurrentSpecReport().Failed() {
 				Expect(fw.AsKubeAdmin.SPIController.DeleteAllBindingTokensInASpecificNamespace(namespace)).To(Succeed())
 				Expect(fw.AsKubeAdmin.SPIController.DeleteAllAccessTokensInASpecificNamespace(namespace)).To(Succeed())
@@ -69,15 +77,15 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-k8s"), func(
 		It("creates SPITokenBinding", func() {
 			SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.CreateSPIAccessTokenBinding(tokenBindingName, namespace, RepoURL, "", "kubernetes.io/basic-auth")
 			Expect(err).NotTo(HaveOccurred())
+
+			SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("creates secret with access token and associate it to an existing SPIAccessToken", func() {
 			Eventually(func() bool {
 				SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
-
-				if err != nil {
-					return false
-				}
+				Expect(err).NotTo(HaveOccurred())
 
 				return (SPITokenBinding.Status.LinkedAccessTokenName != "")
 			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "LinkedAccessTokenName should not be empty")
@@ -93,9 +101,8 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-k8s"), func(
 		It("SPITokenBinding should be in Injected phase", func() {
 			Eventually(func() bool {
 				SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
-				if err != nil {
-					return false
-				}
+				Expect(err).NotTo(HaveOccurred())
+
 				return SPITokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected
 			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in Injected phase")
 		})
@@ -133,10 +140,18 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-k8s"), func(
 			Expect(err).NotTo(HaveOccurred())
 			namespace = fw.UserNamespace
 			Expect(namespace).NotTo(BeEmpty())
+
+			// collect SPI ResourceQuota metrics (temporary)
+			err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("token-upload-rest-endpoint", namespace, "appstudio-crds-spi")
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		// Clean up after running these tests and before the next tests block: can't have multiple AccessTokens in Injected phase
 		AfterAll(func() {
+			// collect SPI ResourceQuota metrics (temporary)
+			err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("token-upload-k8s", namespace, "appstudio-crds-spi")
+			Expect(err).NotTo(HaveOccurred())
+
 			if !CurrentSpecReport().Failed() {
 				Expect(fw.AsKubeAdmin.SPIController.DeleteAllBindingTokensInASpecificNamespace(namespace)).To(Succeed())
 				Expect(fw.AsKubeAdmin.SPIController.DeleteAllAccessTokensInASpecificNamespace(namespace)).To(Succeed())

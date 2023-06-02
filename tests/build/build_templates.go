@@ -4,12 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/devfile/library/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
-	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	kubeapi "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
@@ -19,6 +17,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/pipeline"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,7 +31,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	defer GinkgoRecover()
 	Describe("HACBS pipelines", Ordered, Label("pipeline"), func() {
 
-		var applicationName, componentName, testNamespace, outputContainerImage string
+		var applicationName, componentName, testNamespace string
 		var kubeadminClient *framework.ControllerHub
 
 		BeforeAll(func() {
@@ -76,9 +75,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				gitUrl := gitUrl
 				componentName = fmt.Sprintf("%s-%s", "test-component", util.GenerateRandomString(4))
 				componentNames = append(componentNames, componentName)
-				outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 				// Create a component with Git Source URL being defined
-				_, err := kubeadminClient.HasController.CreateComponent(applicationName, componentName, testNamespace, gitUrl, "", "", outputContainerImage, "", false)
+				_, err := kubeadminClient.HasController.CreateComponent(applicationName, componentName, testNamespace, gitUrl, "", "", "", "", false)
 				Expect(err).ShouldNot(HaveOccurred())
 			}
 		})
@@ -166,93 +164,85 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(len(sbom.Components)).To(BeNumerically(">=", 1))
 			})
 
-			It("should validate Tekton Results", func() {
-				// Create an Service account and a token associating it with the service account
-				resultSA := "tekton-results-tests"
-				_, err := kubeadminClient.CommonController.CreateServiceAccount(resultSA, testNamespace, nil)
-				Expect(err).NotTo(HaveOccurred())
-				_, err = kubeadminClient.CommonController.CreateRoleBinding("tekton-results-tests", testNamespace, "ServiceAccount", resultSA, "ClusterRole", "tekton-results-readonly", "rbac.authorization.k8s.io")
-				Expect(err).NotTo(HaveOccurred())
+			When("Pipeline Results are stored", func() {
+				var resultClient *pipeline.ResultClient
+				var pipelineRun *v1beta1.PipelineRun
 
-				resultSecret := &v1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "tekton-results-tests",
-						Annotations: map[string]string{"kubernetes.io/service-account.name": resultSA},
-					},
-					Type: v1.SecretTypeServiceAccountToken,
-				}
+				BeforeAll(func() {
+					// Create an Service account and a token associating it with the service account
+					resultSA := "tekton-results-tests"
+					_, err := kubeadminClient.CommonController.CreateServiceAccount(resultSA, testNamespace, nil)
+					Expect(err).NotTo(HaveOccurred())
+					_, err = kubeadminClient.CommonController.CreateRoleBinding("tekton-results-tests", testNamespace, "ServiceAccount", resultSA, "ClusterRole", "tekton-results-readonly", "rbac.authorization.k8s.io")
+					Expect(err).NotTo(HaveOccurred())
 
-				_, err = kubeadminClient.CommonController.CreateSecret(testNamespace, resultSecret)
-				Expect(err).ToNot(HaveOccurred())
-				err = kubeadminClient.CommonController.LinkSecretToServiceAccount(testNamespace, resultSecret.Name, resultSA, false)
-				Expect(err).ToNot(HaveOccurred())
+					resultSecret := &v1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "tekton-results-tests",
+							Annotations: map[string]string{"kubernetes.io/service-account.name": resultSA},
+						},
+						Type: v1.SecretTypeServiceAccountToken,
+					}
 
-				resultSecret, err = kubeadminClient.CommonController.GetSecret(testNamespace, resultSecret.Name)
-				Expect(err).ToNot(HaveOccurred())
-				token := resultSecret.Data["token"]
+					_, err = kubeadminClient.CommonController.CreateSecret(testNamespace, resultSecret)
+					Expect(err).ToNot(HaveOccurred())
+					err = kubeadminClient.CommonController.LinkSecretToServiceAccount(testNamespace, resultSecret.Name, resultSA, false)
+					Expect(err).ToNot(HaveOccurred())
 
-				// Retrive Result REST API url
-				resultRoute, err := kubeadminClient.CommonController.GetOpenshiftRoute("tekton-results", "tekton-results")
-				Expect(err).NotTo(HaveOccurred())
-				resultUrl := fmt.Sprintf("https://%s", resultRoute.Spec.Host)
-				resultClient := pipeline.NewClient(resultUrl, string(token))
+					resultSecret, err = kubeadminClient.CommonController.GetSecret(testNamespace, resultSecret.Name)
+					Expect(err).ToNot(HaveOccurred())
+					token := resultSecret.Data["token"]
 
-				pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
-				Expect(err).ShouldNot(HaveOccurred())
+					// Retrieve Result REST API url
+					resultRoute, err := kubeadminClient.CommonController.GetOpenshiftRoute("tekton-results", "tekton-results")
+					Expect(err).NotTo(HaveOccurred())
+					resultUrl := fmt.Sprintf("https://%s", resultRoute.Spec.Host)
+					resultClient = pipeline.NewClient(resultUrl, string(token))
 
-				// Verify Records
-				records, err := resultClient.GetRecords(testNamespace, string(pipelineRun.GetUID()))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(len(records.Record)).NotTo(BeZero())
-				// Verify Logs
-				logs, err := resultClient.GetLogs(testNamespace, string(pipelineRun.GetUID()))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(len(logs.Record)).NotTo(BeZero())
+					pipelineRun, err = kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
+					Expect(err).ShouldNot(HaveOccurred())
+				})
+
+				It("should have Pipeline Records", func() {
+					records, err := resultClient.GetRecords(testNamespace, string(pipelineRun.GetUID()))
+					// temporary logs due to RHTAPBUGS-213
+					GinkgoWriter.Printf("records for PipelineRun %s:\n%s\n", pipelineRun.Name, records)
+					Expect(err).NotTo(HaveOccurred(), "got error getting records for PipelineRun %s: %v", pipelineRun.Name, err)
+					Expect(len(records.Record)).NotTo(BeZero(), "No records found for PipelineRun %s", pipelineRun.Name)
+				})
+
+				It("should have Pipeline Logs", func() {
+					// Verify if result is stored in Database
+					// temporary logs due to RHTAPBUGS-213
+					logs, err := resultClient.GetLogs(testNamespace, string(pipelineRun.GetUID()))
+					GinkgoWriter.Printf("logs for PipelineRun %s:\n%s\n", pipelineRun.Name, logs)
+					Expect(err).NotTo(HaveOccurred(), "got error getting logs for PipelineRun %s: %v", pipelineRun.Name, err)
+
+					timeout := time.Minute * 2
+					interval := time.Second * 10
+					// temporary timeout  due to RHTAPBUGS-213
+					Eventually(func() (bool, error) {
+						// temporary logs due to RHTAPBUGS-213
+						logs, err = resultClient.GetLogs(testNamespace, string(pipelineRun.GetUID()))
+						GinkgoWriter.Printf("logs for PipelineRun %s:\n%s\n", pipelineRun.Name, logs)
+						Expect(err).NotTo(HaveOccurred(), "got error getting logs for PipelineRun %s: %v", pipelineRun.Name, err)
+
+						return len(logs.Record) != 0, err
+					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when getting logs for PipelineRun %s", pipelineRun.Name))
+
+					// Verify if result is stored in S3
+					// temporary logs due to RHTAPBUGS-213
+					log, err := resultClient.GetLogByName(logs.Record[0].Name)
+					GinkgoWriter.Printf("log for record %s:\n%s\n", logs.Record[0].Name, log)
+					Expect(err).NotTo(HaveOccurred(), "got error getting log '%s' for PipelineRun %s: %v", logs.Record[0].Name, pipelineRun.Name, err)
+					Expect(len(log)).NotTo(BeZero(), "no log content '%s' found for PipelineRun %s", logs.Record[0].Name, pipelineRun.Name)
+				})
 			})
 
-			It("should validate tekton taskrun test results", func() {
-				// List Of Taskruns Expected to Get Taskrun Results
-				gatherResult := []string{"clair-scan", "inspect-image", "label-check", "sbom-json-check"}
-				// TODO: once we migrate "build" e2e tests to kcp, remove this condition
-				// and add the 'sbom-json-check' taskrun to gatherResults slice
-				s, _ := GinkgoConfiguration()
-				if strings.Contains(s.LabelFilter, buildTemplatesKcpTestLabel) {
-					gatherResult = append(gatherResult, "sbom-json-check")
-				}
-				pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[0], applicationName, testNamespace, "")
+			It("should validate tekton taskrun test results", Label(buildTemplatesTestLabel), func() {
+				pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
-
-				for i := range gatherResult {
-					if gatherResult[i] == "inspect-image" {
-						// Fetching BASE_IMAGE shouldn't fail
-						result, err := build.FetchImageTaskRunResult(kubeadminClient.CommonController.KubeRest(), pipelineRun, gatherResult[i], "BASE_IMAGE")
-						Expect(err).ShouldNot(HaveOccurred())
-						ret := build.ValidateImageTaskRunResults(gatherResult[i], result)
-						Expect(ret).Should(BeTrue())
-					} else if gatherResult[i] == "clair-scan" {
-						// Fetching HACBS_TEST_OUTPUT || TEST_OUTPUT shouldn't fail
-						result, err := build.FetchTaskRunResult(kubeadminClient.CommonController.KubeRest(), pipelineRun, gatherResult[i], constants.TektonTaskTestOutputName)
-						// TODO: delete this condition after https://issues.redhat.com/browse/RHTAP-810 is completed
-						if err != nil {
-							result, err = build.FetchTaskRunResult(kubeadminClient.CommonController.KubeRest(), pipelineRun, gatherResult[i], constants.OldTektonTaskTestOutputName)
-						}
-						Expect(err).ShouldNot(HaveOccurred())
-						ret := build.ValidateTaskRunResults(gatherResult[i], result)
-						// Vulnerabilities should get periodically eliminated with image rebuild, so the result of that task might be different
-						// This should not block e2e tests with errors.
-						GinkgoWriter.Printf("retcode for validate taskrun result is %s\n", ret)
-					} else {
-						// Fetching HACBS_TEST_OUTPUT || TEST_OUTPUT shouldn't fail
-						result, err := build.FetchTaskRunResult(kubeadminClient.CommonController.KubeRest(), pipelineRun, gatherResult[i], constants.TektonTaskTestOutputName)
-						// TODO: delete this condition after https://issues.redhat.com/browse/RHTAP-810 is completed
-						if err != nil {
-							result, err = build.FetchTaskRunResult(kubeadminClient.CommonController.KubeRest(), pipelineRun, gatherResult[i], constants.OldTektonTaskTestOutputName)
-						}
-						Expect(err).ShouldNot(HaveOccurred())
-						ret := build.ValidateTaskRunResults(gatherResult[i], result)
-						Expect(ret).Should(BeTrue())
-					}
-				}
+				Expect(build.ValidateBuildPipelineTestResults(pipelineRun, kubeadminClient.CommonController.KubeRest())).To(Succeed())
 			})
 
 			When("the container image is created and pushed to container registry", Label("sbom", "slow"), func() {
@@ -276,6 +266,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					}
 				})
 				It("verify-enterprice-contract check should pass", Label(buildTemplatesTestLabel), func() {
+					Skip("Skip until RHTAP bug is solved: https://issues.redhat.com/browse/RHTAPBUGS-352")
 					cm, err := kubeController.Commonctrl.GetConfigMap("ec-defaults", "enterprise-contract-service")
 					Expect(err).ToNot(HaveOccurred())
 

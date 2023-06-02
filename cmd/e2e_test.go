@@ -13,6 +13,7 @@ import (
 	"github.com/onsi/gomega"
 
 	_ "github.com/redhat-appstudio/e2e-tests/tests/build"
+	_ "github.com/redhat-appstudio/e2e-tests/tests/byoc"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/cluster-registration"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/e2e-demos"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/enterprise-contract"
