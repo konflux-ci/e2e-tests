@@ -61,15 +61,15 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "get-file-content"), func(
 		It("creates SPIFileContentRequest", func() {
 			SPIFcr, err = fw.AsKubeDeveloper.SPIController.CreateSPIFileContentRequest("gh-spi-filecontent-request", namespace, GithubPrivateRepoURL, GithubPrivateRepoFilePath)
 			Expect(err).NotTo(HaveOccurred())
+
+			SPIFcr, err = fw.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(SPIFcr.Name, namespace)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("SPIFileContentRequest should be in AwaitingTokenData phase", func() {
 			Eventually(func() bool {
 				SPIFcr, err = fw.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(SPIFcr.Name, namespace)
-
-				if err != nil {
-					return false
-				}
+				Expect(err).NotTo(HaveOccurred())
 
 				return SPIFcr.Status.Phase == v1beta1.SPIFileContentRequestPhaseAwaitingTokenData
 			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "")
@@ -80,10 +80,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "get-file-content"), func(
 			// the UploadUrl in SPITokenBinding should be available before uploading the token
 			Eventually(func() bool {
 				SPIFcr, err = fw.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(SPIFcr.Name, namespace)
-
-				if err != nil {
-					return false
-				}
+				Expect(err).NotTo(HaveOccurred())
 
 				return SPIFcr.Status.TokenUploadUrl != ""
 			}, 1*time.Minute, 10*time.Second).Should(BeTrue(), "uploadUrl not set")
@@ -107,10 +104,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "get-file-content"), func(
 		It("SPIFileContentRequest should be in Delivered phase and content should be provided", func() {
 			Eventually(func() bool {
 				SPIFcr, err = fw.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(SPIFcr.Name, namespace)
-
-				if err != nil {
-					return false
-				}
+				Expect(err).NotTo(HaveOccurred())
 
 				return SPIFcr.Status.Phase == v1beta1.SPIFileContentRequestPhaseDelivered && SPIFcr.Status.Content != ""
 			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "content not provided by SPIFileContentRequest")

@@ -2,11 +2,9 @@ package has
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/devfile/library/pkg/util"
-	"github.com/google/uuid"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -19,10 +17,6 @@ import (
 
 const (
 	DEFAULT_USER_PRIVATE_REPOS = "has-e2e-private"
-)
-
-var (
-	ComponentContainerImage string = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 )
 
 /*
@@ -126,19 +120,17 @@ var _ = framework.HASSuiteDescribe("[test_id:01] DEVHAS-62 devfile source", Labe
 	})
 
 	It("creates Red Hat AppStudio Quarkus component", func() {
-		outputContainerImg := fmt.Sprintf("quay.io/%s/test-images:%s-%s", utils.GetQuayIOOrganization(), fw.UserName, strings.Replace(uuid.New().String(), "-", "", -1))
-		_, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, testNamespace, outputContainerImg, "", applicationName)
+		_, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, testNamespace, "", "", applicationName)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("gitops Repository should not be deleted when component gets deleted", func() {
 		comp2Detected := appservice.ComponentDetectionDescription{}
-		outputContainerImg := fmt.Sprintf("quay.io/%s/test-images:%s-%s", utils.GetQuayIOOrganization(), fw.UserName, strings.Replace(uuid.New().String(), "-", "", -1))
 
 		for _, comp2Detected = range cdq.Status.ComponentDetected {
 			comp2Detected.ComponentStub.ComponentName = "java-quarkus2"
 		}
-		component2, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(comp2Detected, testNamespace, outputContainerImg, "", applicationName)
+		component2, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(comp2Detected, testNamespace, "", "", applicationName)
 		Expect(err).NotTo(HaveOccurred())
 
 		err = fw.AsKubeDeveloper.HasController.DeleteHasComponent(component2.Name, testNamespace, false)

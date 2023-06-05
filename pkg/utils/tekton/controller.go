@@ -2,8 +2,10 @@ package tekton
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os/exec"
 	"strings"
 	"time"
@@ -24,15 +26,15 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	g "github.com/onsi/ginkgo/v2"
 )
+
+const quayBaseUrl = "https://quay.io/api/v1"
 
 type KubeController struct {
 	Commonctrl common.SuiteController
@@ -45,6 +47,21 @@ type Bundles struct {
 	DockerBuildBundle   string
 	JavaBuilderBundle   string
 	NodeJSBuilderBundle string
+}
+
+type QuayImageInfo struct {
+	ImageRef string
+	Layers   []any
+}
+
+type TagResponse struct {
+	Tags []Tag `json:"tags"`
+}
+type Tag struct {
+	Digest string `json:"manifest_digest"`
+}
+type ManifestResponse struct {
+	Layers []any `json:"layers"`
 }
 
 // Create the struct for kubernetes clients
@@ -441,11 +458,8 @@ func createPVC(pvcs v1.PersistentVolumeClaimInterface, pvcName string) error {
 func (k KubeController) AwaitAttestationAndSignature(image string, timeout time.Duration) error {
 	return wait.PollImmediate(time.Second, timeout, func() (done bool, err error) {
 		if _, err := k.FindCosignResultsForImage(image); err != nil {
-			if errors.IsNotFound(err) {
-				return false, nil
-			}
-
-			return true, err
+			g.GinkgoWriter.Printf("failed to get cosign result for image %s: %+v\n", image, err)
+			return false, nil
 		}
 
 		return true, nil
@@ -464,72 +478,97 @@ func (k KubeController) createAndWait(pr *v1beta1.PipelineRun, taskTimeout int) 
 // FindCosignResultsForImage looks for .sig and .att image tags in the OpenShift image stream for the provided image reference.
 // If none can be found errors.IsNotFound(err) is true, when err is nil CosignResult contains image references for signature and attestation images, otherwise other errors could be returned.
 func (k KubeController) FindCosignResultsForImage(imageRef string) (*CosignResult, error) {
-	return findCosignResultsForImage(imageRef, k.Commonctrl.KubeRest())
+	return findCosignResultsForImage(imageRef)
 }
 
-func findCosignResultsForImage(imageRef string, client crclient.Client) (*CosignResult, error) {
-	imageInfo := strings.Split(imageRef, "/")
-	namespace := imageInfo[1]
-	// When using the integrated OpenShift registry, the name of the repository corresponds to
-	// an ImageStream resource of the same name. We use this name to easily find the tags later.
-	imageNameInfo := strings.Split(imageInfo[2], "@")
-	imageStreamName, imageDigest := imageNameInfo[0], imageNameInfo[1]
-
+func findCosignResultsForImage(imageRef string) (*CosignResult, error) {
+	var errMsg string
+	// Split the image ref into image repo+tag (e.g quay.io/repo/name:tag), and image digest (sha256:abcd...)
+	imageInfo := strings.Split(imageRef, "@")
+	imageRegistryName := strings.Split(imageInfo[0], "/")[0]
+	// imageRepoName is stripped from container registry name and a tag e.g. "quay.io/<org>/<repo>:tagprefix" => "<org>/<repo>"
+	imageRepoName := strings.Split(strings.TrimPrefix(imageInfo[0], fmt.Sprintf("%s/", imageRegistryName)), ":")[0]
 	// Cosign creates tags for attestation and signature based on the image digest. Compute
 	// the expected prefix for later usage: sha256:abcd... -> sha256-abcd...
-	// Also, this prefix is really the prefix of the ImageStreamTag resource which follows the
-	// format: <image stream name>:<tag-name>
-	cosignImagePrefix := fmt.Sprintf("%s:%s", imageStreamName, strings.Replace(imageDigest, ":", "-", 1))
+	// Also, this prefix is really the prefix of the image tag resource which follows the
+	// format: <image-repo>:<tag-name>
+	imageTagPrefix := strings.Replace(imageInfo[1], ":", "-", 1)
 
 	results := CosignResult{}
-
-	if signatureTag, err := findTagWithName(client, namespace, cosignImagePrefix+".sig"); err == nil {
-		results.signatureImageRef = signatureTag.GetName()
+	signatureTag, err := getImageInfoFromQuay(imageRepoName, imageTagPrefix+".sig")
+	if err != nil {
+		errMsg += fmt.Sprintf("error when getting signature tag: %+v\n", err)
+	} else {
+		results.signatureImageRef = signatureTag.ImageRef
 	}
 
-	if attestationTag, err := findTagWithName(client, namespace, cosignImagePrefix+".att"); err == nil {
+	attestationTag, err := getImageInfoFromQuay(imageRepoName, imageTagPrefix+".att")
+	if err != nil {
+		errMsg += fmt.Sprintf("error when getting attestation tag: %+v\n", err)
+	} else {
+		results.attestationImageRef = attestationTag.ImageRef
 		// we want two layers, one for TaskRun and one for PipelineRun
 		// attestations, i.e. that the Chains controller reconciled both and
 		// uploaded them as layers
-		img, ok := attestationTag.Object["image"]
-		if ok {
-			img, ok = img.(map[string]interface{})
-		}
-		var layers []interface{}
-		if ok {
-			layers, ok = img.(map[string]interface{})["dockerImageLayers"].([]interface{})
-		}
+		//
 		// this needs to change if/when Chains controller does not produce two layers
-		if ok && len(layers) == 2 {
-			results.attestationImageRef = attestationTag.GetName()
+		layersExpected := 2
+		if len(attestationTag.Layers) < layersExpected {
+			errMsg += fmt.Sprintf("attestation tag doesn't have the expected number of layers (%d)\n", layersExpected)
 		}
 	}
 
-	// we found both
-	if results.IsPresent() {
-		return &results, nil
+	if len(errMsg) > 0 {
+		return &results, fmt.Errorf("failed to find cosign results for image %s: %s", imageRef, errMsg)
 	}
 
-	return nil, errors.NewNotFound(schema.GroupResource{
-		Group:    "image.openshift.io",
-		Resource: "ImageStreamTag",
-	}, results.Missing(cosignImagePrefix))
+	return &results, nil
 }
 
-func findTagWithName(client crclient.Client, namespace, name string) (*unstructured.Unstructured, error) {
-	tag := unstructured.Unstructured{}
-	tag.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "image.openshift.io",
-		Kind:    "ImageStreamTag",
-		Version: "v1",
-	})
-	tag.SetName(name)
-	tag.SetNamespace(namespace)
-	if err := client.Get(context.TODO(), crclient.ObjectKeyFromObject(&tag), &tag); err != nil {
-		return nil, err
+func getImageInfoFromQuay(imageRepo, imageTag string) (*QuayImageInfo, error) {
+
+	res, err := http.Get(fmt.Sprintf("%s/repository/%s/tag/?specificTag=%s", quayBaseUrl, imageRepo, imageTag))
+	if err != nil {
+		return nil, fmt.Errorf("cannot get quay.io/%s:%s image from container registry: %+v", imageRepo, imageTag, err)
+	}
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read body of a response from quay.io regarding quay.io/%s:%s image %+v", imageRepo, imageTag, err)
 	}
 
-	return &tag, nil
+	tagResponse := &TagResponse{}
+	if err = json.Unmarshal(body, tagResponse); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response from quay.io regarding quay.io/%s:%s image %+v", imageRepo, imageTag, err)
+	}
+
+	if len(tagResponse.Tags) < 1 {
+		return nil, fmt.Errorf("cannot get manifest digest from quay.io/%s:%s image. response body: %+v", imageRepo, imageTag, string(body))
+	}
+
+	quayImageInfo := &QuayImageInfo{}
+	quayImageInfo.ImageRef = fmt.Sprintf("quay.io/%s@%s", imageRepo, tagResponse.Tags[0].Digest)
+
+	if strings.Contains(imageTag, ".att") {
+		res, err = http.Get(fmt.Sprintf("%s/repository/%s/manifest/%s", quayBaseUrl, imageRepo, tagResponse.Tags[0].Digest))
+		if err != nil {
+			return nil, fmt.Errorf("cannot get quay.io/%s@%s image from container registry: %+v", imageRepo, quayImageInfo.ImageRef, err)
+		}
+		body, err = io.ReadAll(res.Body)
+		if err != nil {
+			return nil, fmt.Errorf("cannot read body of a response from quay.io regarding %s image: %+v", quayImageInfo.ImageRef, err)
+		}
+		manifestResponse := &ManifestResponse{}
+		if err := json.Unmarshal(body, manifestResponse); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal response from quay.io regarding %s image: %+v", quayImageInfo.ImageRef, err)
+		}
+
+		if len(manifestResponse.Layers) < 1 {
+			return nil, fmt.Errorf("cannot get layers from %s image. response body: %+v", quayImageInfo.ImageRef, string(body))
+		}
+		quayImageInfo.Layers = manifestResponse.Layers
+	}
+
+	return quayImageInfo, nil
 }
 
 func (k KubeController) CreateOrUpdateSigningSecret(publicKey []byte, name, namespace string) (err error) {
@@ -781,4 +820,24 @@ func (h *SuiteController) DeleteAllTasksInASpecificNamespace(namespace string) e
 // Remove all TaskRuns from a given repository. Useful when creating a lot of resources and wanting to remove all of them
 func (h *SuiteController) DeleteAllTaskRunsInASpecificNamespace(namespace string) error {
 	return h.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.TaskRun{}, crclient.InNamespace(namespace))
+}
+
+// GetTask returns the requested Task object
+func (s *SuiteController) GetTask(name, namespace string) (*v1beta1.Task, error) {
+	namespacedName := types.NamespacedName{
+		Name:      name,
+		Namespace: namespace,
+	}
+
+	task := v1beta1.Task{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+	err := s.KubeRest().Get(context.TODO(), namespacedName, &task)
+	if err != nil {
+		return nil, err
+	}
+	return &task, nil
 }

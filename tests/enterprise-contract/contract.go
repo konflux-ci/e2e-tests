@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
@@ -29,7 +30,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 	publicSecretName := "cosign-public-key"
 
 	BeforeAll(func() {
-		fwk, err = framework.NewFramework(constants.TEKTON_CHAINS_E2E_USER)
+		fwk, err = framework.NewFramework(utils.GetGeneratedNamespace(constants.TEKTON_CHAINS_E2E_USER))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(fwk.UserNamespace).NotTo(BeNil(), "failed to create sandbox user")
 		namespace = fwk.UserNamespace
@@ -124,6 +125,39 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			}
 			pipelineRunTimeout = int(time.Duration(5) * time.Minute)
 		})
+
+		It("verifies ec validate accepts a list of image references", func() {
+			policy := ecp.EnterpriseContractPolicySpec{
+				Sources: policySource,
+				Configuration: &ecp.EnterpriseContractPolicyConfiguration{
+					Include: []string{"minimal"},
+				},
+			}
+			Expect(kubeController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
+
+			generator.Image = snapshotComponent
+			pr, err := kubeController.RunPipeline(generator, pipelineRunTimeout)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(kubeController.WatchPipelineRun(pr.Name, pipelineRunTimeout)).To(Succeed())
+
+			pr, err = kubeController.Tektonctrl.GetPipelineRun(pr.Name, pr.Namespace)
+			Expect(err).NotTo(HaveOccurred())
+
+			tr, err := kubeController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(tr.Status.TaskRunResults).Should(Or(
+				// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
+				ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
+				ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
+			))
+			//Get container step-report log details from pod
+			reportLog, err := kubeController.Commonctrl.GetContainerLogs(tr.Status.PodName, "step-report", namespace)
+			GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, "step-report", reportLog)
+			Expect(err).NotTo(HaveOccurred())
+
+		})
+
 		It("verifies the release policy: Task bundle is not acceptable", func() {
 			policy := ecp.EnterpriseContractPolicySpec{
 				Sources: policySource,

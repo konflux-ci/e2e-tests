@@ -2,17 +2,17 @@ package integration
 
 import (
 	"fmt"
-	"strings"
 	"time"
+	"strings"
 
 	"github.com/devfile/library/pkg/util"
-	"github.com/google/uuid"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"knative.dev/pkg/apis"
 
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -36,12 +36,13 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	var f *framework.Framework
 	var err error
 
-	var applicationName, componentName, appStudioE2EApplicationsNamespace, outputContainerImage string
+	var applicationName, componentName, appStudioE2EApplicationsNamespace string
 	var timeout, interval time.Duration
 	var originalComponent *appstudioApi.Component
 	var snapshot *appstudioApi.Snapshot
 	var snapshot_push *appstudioApi.Snapshot
 	var env *appstudioApi.Environment
+	var integrationTestScenario *integrationv1alpha1.IntegrationTestScenario
 
 	Describe("the component with git source (GitHub) is created", Ordered, func() {
 
@@ -61,11 +62,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		createComponent := func() {
 			componentName = fmt.Sprintf("integration-suite-test-component-git-source-%s", util.GenerateRandomString(4))
-			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
 			timeout = time.Minute * 4
 			interval = time.Second * 1
 			// Create a component with Git Source URL being defined
-			originalComponent, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", "", outputContainerImage, "", true)
+			originalComponent, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", "", "", "", true)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(originalComponent).NotTo(BeNil())
 
@@ -381,6 +381,72 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				// global candidate is not updated
 				Expect(component.Spec.ContainerImage == originalComponent.Spec.ContainerImage).To(BeTrue())
 
+			})
+		})
+
+		Describe("valid dtcls doesn't exist", Ordered, func() {
+			BeforeAll(func() {
+				// Initialize the tests controllers
+				f, err = framework.NewFramework(IntegrationServiceUser)
+				Expect(err).NotTo(HaveOccurred())
+
+				createApp()
+				createComponent()
+
+				integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenarioWithEnvironment(applicationName, appStudioE2EApplicationsNamespace, BundleURL, InPipelineName, EnvironmentName)
+				Expect(err).ShouldNot(HaveOccurred())
+				env, err = f.AsKubeAdmin.IntegrationController.CreateEnvironment(appStudioE2EApplicationsNamespace, EnvironmentName)
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+
+			AfterAll(func() {
+				if !CurrentSpecReport().Failed() {
+					cleanup()
+
+					Expect(f.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(appStudioE2EApplicationsNamespace, 30*time.Second)).To(Succeed())
+					Expect(f.AsKubeAdmin.IntegrationController.DeleteSnapshot(snapshot_push, appStudioE2EApplicationsNamespace)).To(BeNil())
+				}
+			})
+
+			It("valid deploymentTargetClass doesn't exist", func() {
+				validDTCLS, err := f.AsKubeAdmin.IntegrationController.HaveAvailableDeploymentTargetClassExist()
+				Expect(validDTCLS).To(BeNil())
+				Expect(err).To(BeNil())
+			})
+
+			It("creates a snapshot of push event", func() {
+				sampleImage := "quay.io/redhat-appstudio/sample-image@sha256:841328df1b9f8c4087adbdcfec6cc99ac8308805dea83f6d415d6fb8d40227c1"
+				snapshot_push, err = f.AsKubeAdmin.IntegrationController.CreateSnapshot(applicationName, appStudioE2EApplicationsNamespace, componentName, sampleImage)
+				Expect(err).ShouldNot(HaveOccurred())
+				GinkgoWriter.Printf("snapshot %s is found\n", snapshot_push.Name)
+			})
+
+			When("nonexisting valid deploymentTargetClass", func() {
+				It("check no GitOpsCR is created for the dtc with nonexisting deploymentTargetClass", func() {
+					spaceRequestList, err := f.AsKubeAdmin.IntegrationController.GetSpaceRequests(appStudioE2EApplicationsNamespace)
+					Expect(err).To(BeNil())
+					Expect(len(spaceRequestList.Items) > 0).To(BeFalse())
+
+					deploymentTargetList, err := f.AsKubeAdmin.IntegrationController.GetDeploymentTargets(appStudioE2EApplicationsNamespace)
+					Expect(err).To(BeNil())
+					Expect(len(deploymentTargetList.Items) > 0).To(BeFalse())
+
+					deploymentTargetClaimList, err := f.AsKubeAdmin.IntegrationController.GetDeploymentTargetClaims(appStudioE2EApplicationsNamespace)
+					Expect(err).To(BeNil())
+					Expect(len(deploymentTargetClaimList.Items) > 0).To(BeFalse())
+
+					environmentList, err := f.AsKubeAdmin.IntegrationController.GetEnvironments(appStudioE2EApplicationsNamespace)
+					Expect(err).To(BeNil())
+					Expect(len(environmentList.Items) > 1).To(BeFalse())
+
+					pipelineRun, err := f.AsKubeAdmin.IntegrationController.GetIntegrationPipelineRun(integrationTestScenario.Name, snapshot_push.Name, appStudioE2EApplicationsNamespace)
+					Expect(pipelineRun.Name == "" && strings.Contains(err.Error(), "no pipelinerun found")).To(BeTrue())
+				})
+				It("checks if snapshot is not marked as passed", func() {
+					snapshot, err := f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot_push.Name, "", "", appStudioE2EApplicationsNamespace)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(f.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot)).To(BeFalse())
+				})
 			})
 		})
 	})
