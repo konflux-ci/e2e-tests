@@ -24,6 +24,7 @@ Requirements for installing AppStudio in E2E mode and running the E2E tests:
   * yq
   * jq
   * git
+  * helm
 * Tokens
   * Github Token with the following permissions
     * `repo`
@@ -111,6 +112,7 @@ In that case, before you run the test, make sure you have created
 * forked following GitHub repositories to your org (specified in `MY_GITHUB_ORG` env var)
   * https://github.com/redhat-appstudio-qe/devfile-sample-hello-world (for running build-service tests)
   * https://github.com/redhat-appstudio-qe/hacbs-test-project (for mvp-demo test)
+  * https://github.com/redhat-appstudio-qe/strategy-configs (for mvp-demo test)
 
    ```bash
     `./bin/e2e-appstudio`

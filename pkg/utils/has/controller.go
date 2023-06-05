@@ -198,20 +198,24 @@ func (h *SuiteController) DeleteHasComponent(name string, namespace string, repo
 // CreateComponent create an has component from a given name, namespace, application, devfile and a container image
 func (h *SuiteController) CreateComponent(applicationName, componentName, namespace, gitSourceURL, gitSourceRevision, containerImageSource, outputContainerImage, secret string, skipInitialChecks bool) (*appservice.Component, error) {
 	var containerImage string
+	annotations := map[string]string{
+		// PLNSRVCE-957 - if true, run only basic build pipeline tasks
+		"skip-initial-checks": strconv.FormatBool(skipInitialChecks),
+	}
 	if outputContainerImage != "" {
 		containerImage = outputContainerImage
-	} else {
+	} else if containerImageSource != "" {
 		containerImage = containerImageSource
+	} else {
+		// When no image image is selected then add annotatation to generate new image repository
+		annotations = utils.MergeMaps(annotations, constants.ImageControllerAnnotationDeleteRepoTrue)
 	}
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				// PLNSRVCE-957 - if true, run only basic build pipeline tasks
-				"skip-initial-checks": strconv.FormatBool(skipInitialChecks),
-			},
-			Labels:    constants.ComponentDefaultLabel,
-			Name:      componentName,
-			Namespace: namespace,
+			Annotations: annotations,
+			Labels:      constants.ComponentDefaultLabel,
+			Name:        componentName,
+			Namespace:   namespace,
 		},
 		Spec: appservice.ComponentSpec{
 			ComponentName: componentName,
@@ -265,10 +269,18 @@ func (h *SuiteController) ComponentDeleted(component *appservice.Component) wait
 }
 
 // CreateComponentWithPaCEnabled creates a component with "pipelinesascode: '1'" annotation that is used for triggering PaC builds
-func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, componentName, namespace, gitSourceURL, baseBranch, outputContainerImage string) (*appservice.Component, error) {
+func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, componentName, namespace, gitSourceURL, baseBranch string, deleteRepo bool) (*appservice.Component, error) {
+
+	var annotations map[string]string
+	if deleteRepo {
+		annotations = utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationDeleteRepoTrue)
+	} else {
+		annotations = utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationDeleteRepoFalse)
+	}
+
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ComponentWithImageControllerAnnotation),
+			Annotations: annotations,
 			Name:        componentName,
 			Namespace:   namespace,
 		},
@@ -283,7 +295,6 @@ func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, compone
 					},
 				},
 			},
-			ContainerImage: outputContainerImage,
 		},
 	}
 	err := h.KubeRest().Create(context.TODO(), component)
@@ -297,15 +308,11 @@ func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, compone
 	return component, nil
 }
 
-// CreateComponentFromCDQ create a HAS Component resource from a Completed CDQ resource, which includes a stub Component CR
-// The Component from the CDQ is only a template, and needs things like name filled in
-func (h *SuiteController) CreateComponentFromStub(compDetected appservice.ComponentDetectionDescription, namespace string, outputContainerImage string, secret string, applicationName string) (*appservice.Component, error) {
+func (h *SuiteController) CreateComponentFromStubSkipInitialChecks(compDetected appservice.ComponentDetectionDescription, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool) (*appservice.Component, error) {
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
-				"skip-initial-checks":                "true",
-				"image.redhat.com/generate":          "true",
-				"image.redhat.com/delete-image-repo": "true",
+				"skip-initial-checks": strconv.FormatBool(skipInitialChecks),
 			},
 			Name:      compDetected.ComponentStub.ComponentName,
 			Namespace: namespace,
@@ -315,6 +322,8 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 
 	if outputContainerImage != "" {
 		component.Spec.ContainerImage = outputContainerImage
+	} else {
+		component.Annotations = utils.MergeMaps(component.Annotations, constants.ImageControllerAnnotationDeleteRepoTrue)
 	}
 
 	if component.Spec.TargetPort == 0 {
@@ -333,6 +342,12 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", compDetected.ComponentStub.ComponentName, namespace, utils.ToPrettyJSONString(component))
 	}
 	return component, nil
+}
+
+// CreateComponentFromStub create a HAS Component resource from a Completed CDQ resource, which includes a stub Component CR
+// The Component from the CDQ is only a template, and needs things like name filled in
+func (h *SuiteController) CreateComponentFromStub(compDetected appservice.ComponentDetectionDescription, namespace string, outputContainerImage string, secret string, applicationName string) (*appservice.Component, error) {
+	return h.CreateComponentFromStubSkipInitialChecks(compDetected, namespace, outputContainerImage, secret, applicationName, true)
 }
 
 // DeleteHasComponent delete an has component from a given name and namespace
@@ -504,12 +519,6 @@ func (h *SuiteController) WaitForComponentPipelineToBeFinished(c *common.SuiteCo
 
 // CreateComponentFromDevfile creates a has component from a given name, namespace, application, devfile and a container image
 func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentName, namespace, gitSourceURL, devfile, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
-	var containerImage string
-	if outputContainerImage != "" {
-		containerImage = outputContainerImage
-	} else {
-		containerImage = containerImageSource
-	}
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      componentName,
@@ -526,12 +535,18 @@ func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentN
 					},
 				},
 			},
-			Secret:         secret,
-			ContainerImage: containerImage,
-			Replicas:       pointer.Int(1),
-			TargetPort:     8080,
-			Route:          "",
+			Secret:     secret,
+			Replicas:   pointer.Int(1),
+			TargetPort: 8080,
+			Route:      "",
 		},
+	}
+	if outputContainerImage != "" {
+		component.Spec.ContainerImage = outputContainerImage
+	} else if containerImageSource != "" {
+		component.Spec.ContainerImage = containerImageSource
+	} else {
+		component.Annotations = constants.ImageControllerAnnotationDeleteRepoTrue
 	}
 	err := h.KubeRest().Create(context.TODO(), component)
 	if err != nil {

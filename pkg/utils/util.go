@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"knative.dev/pkg/apis"
 
 	devfilePkg "github.com/devfile/library/pkg/devfile"
 	"github.com/devfile/library/pkg/devfile/parser"
@@ -340,16 +341,6 @@ func HostIsAccessible(host string) bool {
 	return true
 }
 
-func HostEndpointIsAccessible(host string, endpoint string) bool {
-	tc := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-	}
-	client := http.Client{Transport: tc}
-	res, err := client.Get(host)
-	if err != nil || res.StatusCode == 200 {
-		return false
-	}
-	return true
+func PipelineRunFailed(pr *v1beta1.PipelineRun) bool {
+	return pr.IsDone() && pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsFalse()
 }

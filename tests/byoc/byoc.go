@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/devfile/library/pkg/util"
-	"github.com/google/uuid"
 	"github.com/magefile/mage/sh"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -218,10 +216,8 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 			})
 
 			It("creates Red Hat AppStudio Quarkus component", func() {
-				outputContainerImg := fmt.Sprintf("quay.io/%s/test-images:%s-%s", utils.GetQuayIOOrganization(), fw.UserName, strings.Replace(uuid.New().String(), "-", "", -1))
-
 				compDetected.ComponentStub.ComponentName = util.GenerateRandomString(4)
-				componentObj, err = fw.AsKubeAdmin.HasController.CreateComponentFromStub(compDetected, fw.UserNamespace, outputContainerImg, "", applicationName)
+				componentObj, err = fw.AsKubeAdmin.HasController.CreateComponentFromStub(compDetected, fw.UserNamespace, "", "", applicationName)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -278,8 +274,11 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 					if len(ingress.Spec.Rules) == 0 {
 						Fail("kubernetes ingress set any rule during component creation")
 					}
+
+					// Add complex endpoint checks when: https://issues.redhat.com/browse/DEVHAS-367 is ready
 					Eventually(func() bool {
-						return utils.HostEndpointIsAccessible(fmt.Sprintf("http://%s", ingress.Spec.Rules[0].Host), QuarkusComponentEndpoint)
+						// Add endpoint of component when: https://issues.redhat.com/browse/DEVHAS-367 is ready
+						return utils.HostIsAccessible(fmt.Sprintf("http://%s", ingress.Spec.Rules[0].Host))
 					}, 10*time.Minute, 10*time.Second).Should(BeTrue(), fmt.Sprintf("ingress is not accessible: %+v", ingress))
 				})
 			}

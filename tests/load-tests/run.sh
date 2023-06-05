@@ -1,5 +1,6 @@
 #!/bin/bash
-export DOCKER_CONFIG_JSON=${DOCKER_CONFIG_JSON:-}
+export DOCKER_CONFIG_JSON MY_GITHUB_ORG GITHUB_TOKEN
+DOCKER_CONFIG_JSON=${DOCKER_CONFIG_JSON:-}
 
 if [ -z ${DOCKER_CONFIG_JSON+x} ]; then
     echo "env DOCKER_CONFIG_JSON need to be defined"
@@ -13,6 +14,14 @@ if [ ${#USER_PREFIX} -gt 15 ]; then
     echo "Maximal allowed length of user prefix is 15 characters. The '$USER_PREFIX' length of ${#USER_PREFIX} exceeds the limit."
     exit 1
 else
-    go run loadtest.go --username "$USER_PREFIX" --users "${USERS_PER_THREAD:-50}" -w -l -t "${THREADS:-1}" --disable-metrics &&
+    go run loadtest.go \
+        --component-repo "${COMPONENT_REPO:-https://github.com/devfile-samples/devfile-sample-code-with-quarkus}" \
+        --username "$USER_PREFIX" \
+        --users "${USERS_PER_THREAD:-50}" \
+        -w \
+        -l \
+        -t "${THREADS:-1}" \
+        --disable-metrics \
+        --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}" &&
         DRY_RUN=false ./clear.sh "$USER_PREFIX"
 fi
