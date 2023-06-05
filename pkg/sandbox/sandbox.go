@@ -136,7 +136,7 @@ func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (res *http.Response,
 		GinkgoWriter.Printf("Sandbox proxy received %v response\n", res.Status)
 	}
 
-	return
+	return res, e
 }
 
 // ReconcileUserCreation create a user in sandbox and return a valid kubeconfig for user to be used for the tests
