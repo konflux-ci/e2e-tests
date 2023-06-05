@@ -7,6 +7,7 @@
   "threads": 5,
   "usersPerThread": 2,
   "totalUsers": 10,
+  "pipelineSkipInitialChecks": true,
   "status": "Completed",
   "createUserTimeAvg": 14.9243592609,
   "createResourcesTimeAvg": 9.0239237441,
