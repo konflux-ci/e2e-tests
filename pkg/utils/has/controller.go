@@ -308,13 +308,11 @@ func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, compone
 	return component, nil
 }
 
-// CreateComponentFromCDQ create a HAS Component resource from a Completed CDQ resource, which includes a stub Component CR
-// The Component from the CDQ is only a template, and needs things like name filled in
-func (h *SuiteController) CreateComponentFromStub(compDetected appservice.ComponentDetectionDescription, namespace string, outputContainerImage string, secret string, applicationName string) (*appservice.Component, error) {
+func (h *SuiteController) CreateComponentFromStubSkipInitialChecks(compDetected appservice.ComponentDetectionDescription, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool) (*appservice.Component, error) {
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
-				"skip-initial-checks": "true",
+				"skip-initial-checks": strconv.FormatBool(skipInitialChecks),
 			},
 			Name:      compDetected.ComponentStub.ComponentName,
 			Namespace: namespace,
@@ -344,6 +342,12 @@ func (h *SuiteController) CreateComponentFromStub(compDetected appservice.Compon
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", compDetected.ComponentStub.ComponentName, namespace, utils.ToPrettyJSONString(component))
 	}
 	return component, nil
+}
+
+// CreateComponentFromStub create a HAS Component resource from a Completed CDQ resource, which includes a stub Component CR
+// The Component from the CDQ is only a template, and needs things like name filled in
+func (h *SuiteController) CreateComponentFromStub(compDetected appservice.ComponentDetectionDescription, namespace string, outputContainerImage string, secret string, applicationName string) (*appservice.Component, error) {
+	return h.CreateComponentFromStubSkipInitialChecks(compDetected, namespace, outputContainerImage, secret, applicationName, true)
 }
 
 // DeleteHasComponent delete an has component from a given name and namespace
