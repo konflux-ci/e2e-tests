@@ -252,8 +252,15 @@ func (ci CI) TestE2E() error {
 }
 
 func RunE2ETests() error {
-	// added --output-interceptor-mode=none to mitigate RHTAPBUGS-34
-	return sh.RunV("ginkgo", "-p", "--output-interceptor-mode=none", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", "--generate-rppreproc-report=true", fmt.Sprintf("--rp-preproc-dir=%s", artifactDir))
+	labelsToSkip := "!upgrade-create && !upgrade-verify && !upgrade-cleanup"
+	labelFilter := os.Getenv("$E2E_TEST_SUITE_LABEL")
+	if labelFilter == "" {
+		labelFilter = labelsToSkip
+	} else {
+		labelFilter = labelFilter + " && " + labelsToSkip
+	}
+
+	return runTests(labelFilter, "e2e-report.xml")
 }
 
 func PreflightChecks() error {
@@ -788,4 +795,96 @@ func unregisterPacServer() error {
 	}
 	klog.Infof("Registered pac server %s, servers: %v", pacControllerHost, servers)
 	return nil
+}
+
+// Run upgrade testss locally(bootstrap cluster, create workload, upgrade, verify)
+func (Local) TestUpgrade() error {
+	if err := PreflightChecks(); err != nil {
+		return fmt.Errorf("error when running preflight checks: %v", err)
+	}
+
+	ic, err := BootstrapClusterForUpgrade()
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = CheckClusterAfterUpgrade(ic)
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = CreateWorkload()
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = VerifyWorkload()
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = UpgradeCluster()
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = CheckClusterAfterUpgrade(ic)
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = VerifyWorkload()
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = CleanWorkload()
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	return nil
+}
+
+func BootstrapClusterForUpgrade() (*installation.InstallAppStudio, error) {
+	ic, err := installation.NewAppStudioInstallControllerDefault()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize installation controller: %+v", err)
+	}
+
+	return ic, ic.InstallAppStudioPreviewMode()
+}
+
+func UpgradeCluster() error {
+	return installation.MergePRInRemote(utils.GetEnv("UPGRADE_BRANCH", ""), utils.GetEnv("UPGRADE_FORK", ""), "./tmp/infra-deployments-upgrade")
+}
+
+func CheckClusterAfterUpgrade(ic *installation.InstallAppStudio) error {
+	return ic.CheckOperatorsReady()
+}
+
+func CreateWorkload() error {
+	return runTests("upgrade-create", "upgrade-create-report.xml")
+}
+
+func VerifyWorkload() error {
+	return runTests("upgrade-verify", "upgrade-verify-report.xml")
+}
+
+func CleanWorkload() error {
+	return runTests("upgrade-cleanup", "upgrade-verify-report.xml")
+}
+
+func runTests(labelsToRun string, junitReportFile string) error {
+	cwd, _ := os.Getwd()
+	// added --output-interceptor-mode=none to mitigate RHTAPBUGS-34
+	return sh.RunV("ginkgo", "-p", "--output-interceptor-mode=none", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report="+junitReportFile, "--label-filter="+labelsToRun, "./cmd", "--", "--generate-rppreproc-report=true", fmt.Sprintf("--rp-preproc-dir=%s", artifactDir))
 }

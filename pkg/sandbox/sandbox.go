@@ -266,8 +266,18 @@ func (s *SandboxController) GetKubeconfigPathForSpecificUser(isStage bool, toolc
 }
 
 func (s *SandboxController) RegisterSandboxUser(userName string) (compliantUsername string, err error) {
-	userSignup := getUserSignupSpecs(userName)
+	return s.RegisterSandboxUserUserWithSignUp(userName, GetUserSignupSpecs(userName))
+}
 
+func (s *SandboxController) RegisterBannedSandboxUser(userName string) (compliantUsername string, err error) {
+	return s.RegisterSandboxUserUserWithSignUp(userName, GetUserSignupSpecsBanned(userName))
+}
+
+func (s *SandboxController) RegisterDeactivatedSandboxUser(userName string) (compliantUsername string, err error) {
+	return s.RegisterSandboxUserUserWithSignUp(userName, GetUserSignupSpecsDeactivated(userName))
+}
+
+func (s *SandboxController) RegisterSandboxUserUserWithSignUp(userName string, userSignup *toolchainApi.UserSignup) (compliantUsername string, err error) {
 	if err := s.KubeRest.Create(context.TODO(), userSignup); err != nil {
 		if k8sErrors.IsAlreadyExists(err) {
 			GinkgoWriter.Printf("User %s already exists\n", userName)
@@ -276,6 +286,19 @@ func (s *SandboxController) RegisterSandboxUser(userName string) (compliantUsern
 		}
 	}
 
+	compliantUsername, err = s.CheckUserCreatedWithSignUp(userName, userSignup)
+
+	if err != nil {
+		return "", err
+	}
+	return compliantUsername, nil
+}
+
+func (s *SandboxController) CheckUserCreated(userName string) (compliantUsername string, err error) {
+	return s.CheckUserCreatedWithSignUp(userName, GetUserSignupSpecs(userName))
+}
+
+func (s *SandboxController) CheckUserCreatedWithSignUp(userName string, userSignup *toolchainApi.UserSignup) (compliantUsername string, err error) {
 	err = utils.WaitUntil(func() (done bool, err error) {
 		err = s.KubeRest.Get(context.TODO(), types.NamespacedName{
 			Namespace: DEFAULT_TOOLCHAIN_NAMESPACE,
@@ -303,11 +326,23 @@ func (s *SandboxController) RegisterSandboxUser(userName string) (compliantUsern
 	if err != nil {
 		return "", err
 	}
-	return compliantUsername, nil
 
+	return compliantUsername, nil
 }
 
-func getUserSignupSpecs(username string) *toolchainApi.UserSignup {
+func GetUserSignupSpecs(username string) *toolchainApi.UserSignup {
+	return getUserSignupSpecsWithState(username, toolchainApi.UserSignupStateApproved)
+}
+
+func GetUserSignupSpecsBanned(username string) *toolchainApi.UserSignup {
+	return getUserSignupSpecsWithState(username, toolchainApi.UserSignupStateBanned)
+}
+
+func GetUserSignupSpecsDeactivated(username string) *toolchainApi.UserSignup {
+	return getUserSignupSpecsWithState(username, toolchainApi.UserSignupStateDeactivated)
+}
+
+func getUserSignupSpecsWithState(username string, state toolchainApi.UserSignupState) *toolchainApi.UserSignup {
 	return &toolchainApi.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      username,
@@ -323,7 +358,7 @@ func getUserSignupSpecs(username string) *toolchainApi.UserSignup {
 			Userid:   username,
 			Username: username,
 			States: []toolchainApi.UserSignupState{
-				toolchainApi.UserSignupStateApproved,
+				state,
 			},
 		},
 	}
