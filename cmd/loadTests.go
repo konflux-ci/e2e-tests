@@ -43,6 +43,9 @@ var (
 )
 
 var (
+	UserCreationTimeMaxPerThread         []time.Duration
+	ResourceCreationTimeMaxPerThread     []time.Duration
+	PipelineRunSucceededTimeMaxPerThread []time.Duration
 	UserCreationTimeSumPerThread         []time.Duration
 	ResourceCreationTimeSumPerThread     []time.Duration
 	PipelineRunSucceededTimeSumPerThread []time.Duration
@@ -86,8 +89,11 @@ type LogData struct {
 	PipelineSkipInitialChecks         bool              `json:"pipelineSkipInitialChecks"`
 	LoadTestCompletionStatus          string            `json:"status"`
 	AverageTimeToSpinUpUsers          float64           `json:"createUserTimeAvg"`
+	MaxTimeToSpinUpUsers              float64           `json:"createUserTimeMax"`
 	AverageTimeToCreateResources      float64           `json:"createResourcesTimeAvg"`
+	MaxTimeToCreateResources          float64           `json:"createResourcesTimeMax"`
 	AverageTimeToRunPipelineSucceeded float64           `json:"runPipelineSucceededTimeAvg"`
+	MaxTimeToRunPipelineSucceeded     float64           `json:"runPipelineSucceededTimeMax"`
 	AverageTimeToRunPipelineFailed    float64           `json:"runPipelineFailedTimeAvg"`
 	UserCreationFailureCount          int64             `json:"createUserFailures"`
 	UserCreationFailureRate           float64           `json:"createUserFailureRate"`
@@ -293,6 +299,9 @@ func setup(cmd *cobra.Command, args []string) {
 		return strutil.PadLeft(fmt.Sprintf("Waiting for pipelines to finish (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedPipelineRunsPerThread)), barLength, ' ')
 	})
 
+	UserCreationTimeMaxPerThread = make([]time.Duration, threadCount)
+	ResourceCreationTimeMaxPerThread = make([]time.Duration, threadCount)
+	PipelineRunSucceededTimeMaxPerThread = make([]time.Duration, threadCount)
 	UserCreationTimeSumPerThread = make([]time.Duration, threadCount)
 	ResourceCreationTimeSumPerThread = make([]time.Duration, threadCount)
 	PipelineRunSucceededTimeSumPerThread = make([]time.Duration, threadCount)
@@ -334,6 +343,8 @@ func setup(cmd *cobra.Command, args []string) {
 	}
 	logData.AverageTimeToSpinUpUsers = averageTimeToSpinUpUsers
 
+	logData.MaxTimeToSpinUpUsers = maxDurationFromArray(UserCreationTimeMaxPerThread).Seconds()
+
 	resourceCreationFailureCount := sumFromArray(FailedResourceCreationsPerThread)
 	logData.ResourceCreationFailureCount = resourceCreationFailureCount
 
@@ -344,6 +355,8 @@ func setup(cmd *cobra.Command, args []string) {
 	}
 	logData.AverageTimeToCreateResources = averageTimeToCreateResources
 
+	logData.MaxTimeToCreateResources = maxDurationFromArray(ResourceCreationTimeMaxPerThread).Seconds()
+
 	pipelineRunFailureCount := sumFromArray(FailedPipelineRunsPerThread)
 	logData.PipelineRunFailureCount = pipelineRunFailureCount
 
@@ -353,6 +366,8 @@ func setup(cmd *cobra.Command, args []string) {
 		averageTimeToRunPipelineSucceeded = sumDurationFromArray(PipelineRunSucceededTimeSumPerThread).Seconds() / float64(pipelineRunSuccessCount)
 	}
 	logData.AverageTimeToRunPipelineSucceeded = averageTimeToRunPipelineSucceeded
+
+	logData.MaxTimeToRunPipelineSucceeded = maxDurationFromArray(PipelineRunSucceededTimeMaxPerThread).Seconds()
 
 	averageTimeToRunPipelineFailed := float64(0)
 	if pipelineRunFailureCount > 0 {
@@ -372,8 +387,11 @@ func setup(cmd *cobra.Command, args []string) {
 	klog.Infof("🏁 Load Test Completed!")
 	klog.Infof("📈 Results 📉")
 	klog.Infof("Average Time to spin up users: %.2f s", averageTimeToSpinUpUsers)
+	klog.Infof("Maximal Time to spin up users: %.2f s", logData.MaxTimeToSpinUpUsers)
 	klog.Infof("Average Time to create Resources: %.2f s", averageTimeToCreateResources)
+	klog.Infof("Maximal Time to create Resources: %.2f s", logData.MaxTimeToCreateResources)
 	klog.Infof("Average Time to run Pipelines successfully: %.2f s", averageTimeToRunPipelineSucceeded)
+	klog.Infof("Maximal Time to run Pipelines successfully: %.2f s", logData.MaxTimeToRunPipelineSucceeded)
 	klog.Infof("Average Time to fail Pipelines: %.2f s", averageTimeToRunPipelineFailed)
 	klog.Infof("Number of times user creation failed: %d (%.2f %%)", userCreationFailureCount, userCreationFailureRate*100)
 	klog.Infof("Number of times resource creation failed: %d (%.2f %%)", resourceCreationFailureCount, resourceCreationFailureRate*100)
@@ -397,6 +415,16 @@ func setup(cmd *cobra.Command, args []string) {
 		defer close(stopMetrics)
 		metricsInstance.PrintResults()
 	}
+}
+
+func maxDurationFromArray(durations []time.Duration) time.Duration {
+	max := time.Duration(0)
+	for _, i := range durations {
+		if i > max {
+			max = i
+		}
+	}
+	return max
 }
 
 func sumDurationFromArray(durations []time.Duration) time.Duration {
@@ -500,8 +528,12 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 
 			chUsers <- username
 
-			UserCreationTime := time.Since(startTime)
-			UserCreationTimeSumPerThread[threadIndex] += UserCreationTime
+			userCreationTime := time.Since(startTime)
+			UserCreationTimeSumPerThread[threadIndex] += userCreationTime
+			if userCreationTime > UserCreationTimeMaxPerThread[threadIndex] {
+				UserCreationTimeMaxPerThread[threadIndex] = userCreationTime
+			}
+
 			SuccessfulUserCreationsPerThread[threadIndex] += 1
 			increaseBar(usersBar, usersBarMutex)
 		}
@@ -600,8 +632,11 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				userComponentMap.Store(username, component.Name)
 			}
 
-			ResourceCreationTime := time.Since(startTime)
-			ResourceCreationTimeSumPerThread[threadIndex] += ResourceCreationTime
+			resourceCreationTime := time.Since(startTime)
+			ResourceCreationTimeSumPerThread[threadIndex] += resourceCreationTime
+			if resourceCreationTime > ResourceCreationTimeMaxPerThread[threadIndex] {
+				ResourceCreationTimeMaxPerThread[threadIndex] = resourceCreationTime
+			}
 			SuccessfulResourceCreationsPerThread[threadIndex] += 1
 
 			chPipelines <- username
@@ -663,6 +698,9 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 						} else {
 							dur := pipelineRun.Status.CompletionTime.Sub(pipelineRun.CreationTimestamp.Time)
 							PipelineRunSucceededTimeSumPerThread[threadIndex] += dur
+							if dur > PipelineRunSucceededTimeMaxPerThread[threadIndex] {
+								PipelineRunSucceededTimeMaxPerThread[threadIndex] = dur
+							}
 							SuccessfulPipelineRunsPerThread[threadIndex] += 1
 						}
 						increaseBar(pipelinesBar, pipelinesBarMutex)

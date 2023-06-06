@@ -1,15 +1,20 @@
 package release
 
 import (
+	"fmt"
 	"strings"
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 )
@@ -19,7 +24,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 
 	var fw *framework.Framework
 	var err error
-
+	var compName string
 	var devNamespace = utils.GetGeneratedNamespace("release-dev")
 	var managedNamespace = utils.GetGeneratedNamespace("release-managed")
 
@@ -79,10 +84,36 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 			},
 		}
 
+		// using cdq since git ref is not known
+		compName = componentName
+		var componentDetected appservice.ComponentDetectionDescription
+		cdq, err := fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(compName, devNamespace, gitSourceComponentUrl, "", "", "", false)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+
+		for _, compDetected := range cdq.Status.ComponentDetected {
+			compName = compDetected.ComponentStub.ComponentName
+			componentDetected = compDetected
+		}
+
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineNameDefault, constants.ReleasePipelineImageRef, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategyMvp)
+		components := []release.Component{{Name: compName, Repository: releasedImagePushRepo}}
+		sc := fw.AsKubeAdmin.ReleaseController.GenerateReleaseStrategyConfig(components)
+		scYaml, err := yaml.Marshal(sc)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		scPath := "release-default-bundle.yaml"
+		Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef("strategy-configs", "main", compName)).To(Succeed())
+		_, err = fw.AsKubeAdmin.CommonController.Github.CreateFile("strategy-configs", scPath, string(scYaml), compName)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineNameDefault, constants.ReleasePipelineImageRef, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, []releaseApi.Params{
+			{Name: "extraConfigGitUrl", Value: fmt.Sprintf("https://github.com/%s/strategy-configs.git", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"))},
+			{Name: "extraConfigPath", Value: scPath},
+			{Name: "extraConfigGitRevision", Value: compName},
+		})
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, "", "", releaseStrategyDefaultName)
@@ -94,15 +125,28 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasePvcName, managedNamespace, corev1.ReadWriteOnce)
 		Expect(err).NotTo(HaveOccurred())
 
+		_, err = fw.AsKubeAdmin.CommonController.CreateRole("role-release-service-account", managedNamespace, map[string][]string{
+			"apiGroupsList": {""},
+			"roleResources": {"secrets"},
+			"roleVerbs":     {"get", "list", "watch"},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = fw.AsKubeAdmin.CommonController.CreateRoleBinding("role-release-service-account-binding", managedNamespace, "ServiceAccount", releaseStrategyServiceAccountDefault, "Role", "role-release-service-account", "rbac.authorization.k8s.io")
+		Expect(err).NotTo(HaveOccurred())
+
 		_, err = fw.AsKubeAdmin.HasController.CreateHasApplication(applicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.HasController.CreateComponent(applicationNameDefault, componentName, devNamespace, gitSourceComponentUrl, "", containerImageUrl, "", "", false)
+		_, err = fw.AsKubeAdmin.HasController.CreateComponentFromStubSkipInitialChecks(componentDetected, devNamespace, "", "", applicationNameDefault, false)
 		Expect(err).NotTo(HaveOccurred())
-
 	})
 
 	AfterAll(func() {
+		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef("strategy-configs", compName)
+		if err != nil {
+			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+		}
 		if !CurrentSpecReport().Failed() {
 			Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(devNamespace)).NotTo(HaveOccurred())
 			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
@@ -120,7 +164,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 					return false
 				}
 
-				return strings.Contains(prList.Items[0].Name, componentName)
+				return strings.Contains(prList.Items[0].Name, compName)
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 

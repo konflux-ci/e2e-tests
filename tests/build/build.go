@@ -13,7 +13,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 
 	"github.com/devfile/library/pkg/util"
-	"github.com/google/uuid"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -544,7 +543,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 	Describe("PLNSRVCE-799 - test pipeline selector", Label("pipeline-selector"), Ordered, func() {
 		var timeout, interval time.Duration
-		var componentName, applicationName, testNamespace, outputContainerImage string
+		var componentName, applicationName, testNamespace string
 		var expectedAdditionalPipelineParam buildservice.PipelineParam
 
 		BeforeAll(func() {
@@ -566,35 +565,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Value: "test-custom-param-value",
 			}
 
-			ps := &buildservice.BuildPipelineSelector{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "build-pipeline-selector",
-					Namespace: testNamespace,
-				},
-				Spec: buildservice.BuildPipelineSelectorSpec{Selectors: []buildservice.PipelineSelector{
-					{
-						Name: "user-custom-selector",
-						PipelineRef: v1beta1.PipelineRef{
-							Name:   "docker-build",
-							Bundle: dummyPipelineBundleRef,
-						},
-						PipelineParams: []buildservice.PipelineParam{expectedAdditionalPipelineParam},
-						WhenConditions: buildservice.WhenCondition{
-							ProjectType:        "hello-world",
-							DockerfileRequired: pointer.Bool(true),
-							ComponentName:      componentName,
-							Annotations:        constants.ComponentDefaultAnnotation,
-							Labels:             constants.ComponentDefaultLabel,
-						},
-					},
-				}},
-			}
-
-			Expect(f.AsKubeAdmin.CommonController.KubeRest().Create(context.TODO(), ps)).To(Succeed())
-
 			timeout = time.Second * 600
 			interval = time.Second * 1
-
 		})
 
 		AfterAll(func() {
@@ -607,8 +579,44 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		It("a specific Pipeline bundle should be used and additional pipeline params should be added to the PipelineRun if all WhenConditions match", func() {
-			_, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "", true)
-			Expect(err).ShouldNot(HaveOccurred())
+			// using cdq since git ref is not known
+			cdq, err := f.AsKubeAdmin.HasController.CreateComponentDetectionQuery(componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", "", false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+
+			for _, compDetected := range cdq.Status.ComponentDetected {
+				// Since we only know the component name after cdq creation,
+				// BuildPipelineSelector should be created before component creation and after cdq creation
+				ps := &buildservice.BuildPipelineSelector{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "build-pipeline-selector",
+						Namespace: testNamespace,
+					},
+					Spec: buildservice.BuildPipelineSelectorSpec{Selectors: []buildservice.PipelineSelector{
+						{
+							Name: "user-custom-selector",
+							PipelineRef: v1beta1.PipelineRef{
+								Name:   "docker-build",
+								Bundle: dummyPipelineBundleRef,
+							},
+							PipelineParams: []buildservice.PipelineParam{expectedAdditionalPipelineParam},
+							WhenConditions: buildservice.WhenCondition{
+								ProjectType:        "hello-world",
+								DockerfileRequired: pointer.Bool(true),
+								ComponentName:      compDetected.ComponentStub.ComponentName,
+								Annotations:        constants.ComponentDefaultAnnotation,
+								Labels:             constants.ComponentDefaultLabel,
+							},
+						},
+					}},
+				}
+
+				Expect(f.AsKubeAdmin.CommonController.KubeRest().Create(context.TODO(), ps)).To(Succeed())
+
+				c, err := f.AsKubeAdmin.HasController.CreateComponentFromStub(compDetected, testNamespace, "", "", applicationName)
+				Expect(err).NotTo(HaveOccurred())
+				componentName = c.Name
+			}
 
 			Eventually(func() bool {
 				pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
@@ -630,8 +638,17 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 		It("default Pipeline bundle should be used and no additional Pipeline params should be added to the PipelineRun if one of the WhenConditions does not match", func() {
 			notMatchingComponentName := componentName + util.GenerateRandomString(4)
-			_, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, notMatchingComponentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "", true)
-			Expect(err).ShouldNot(HaveOccurred())
+			// using cdq since git ref is not known
+			cdq, err := f.AsKubeAdmin.HasController.CreateComponentDetectionQuery(notMatchingComponentName, testNamespace, helloWorldComponentGitSourceURL, "", "", "", false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+
+			for _, compDetected := range cdq.Status.ComponentDetected {
+				c, err := f.AsKubeAdmin.HasController.CreateComponentFromStub(compDetected, testNamespace, "", "", applicationName)
+				Expect(err).NotTo(HaveOccurred())
+				notMatchingComponentName = c.Name
+			}
+
 			Eventually(func() bool {
 				pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(notMatchingComponentName, applicationName, testNamespace, "")
 				if err != nil {
@@ -653,7 +670,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 	Describe("A secret with dummy quay.io credentials is created in the testing namespace", Ordered, func() {
 
-		var applicationName, componentName, testNamespace, outputContainerImage string
+		var applicationName, componentName, testNamespace string
 		var timeout, interval time.Duration
 		var err error
 		var kc tekton.KubeController
@@ -701,9 +718,16 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Expect(err).ToNot(HaveOccurred())
 
 			componentName = "build-suite-test-secret-overriding"
-			outputContainerImage = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), strings.Replace(uuid.New().String(), "-", "", -1))
-			_, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", outputContainerImage, "", true)
-			Expect(err).ShouldNot(HaveOccurred())
+			// using cdq since git ref is not known
+			cdq, err := f.AsKubeAdmin.HasController.CreateComponentDetectionQuery(componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", "", false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+
+			for _, compDetected := range cdq.Status.ComponentDetected {
+				c, err := f.AsKubeAdmin.HasController.CreateComponentFromStub(compDetected, testNamespace, "", "", applicationName)
+				Expect(err).NotTo(HaveOccurred())
+				componentName = c.Name
+			}
 		})
 
 		AfterAll(func() {

@@ -73,11 +73,18 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			for _, gitUrl := range componentUrls {
 				gitUrl := gitUrl
-				componentName = fmt.Sprintf("%s-%s", "test-component", util.GenerateRandomString(4))
-				componentNames = append(componentNames, componentName)
+				componentName = fmt.Sprintf("%s-%s", "test-comp", util.GenerateRandomString(4))
 				// Create a component with Git Source URL being defined
-				_, err := kubeadminClient.HasController.CreateComponent(applicationName, componentName, testNamespace, gitUrl, "", "", "", "", false)
+				// using cdq since git ref is not known
+				cdq, err := kubeadminClient.HasController.CreateComponentDetectionQuery(componentName, testNamespace, gitUrl, "", "", "", false)
 				Expect(err).ShouldNot(HaveOccurred())
+				Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+
+				for _, compDetected := range cdq.Status.ComponentDetected {
+					c, err := kubeadminClient.HasController.CreateComponentFromStubSkipInitialChecks(compDetected, testNamespace, "", "", applicationName, false)
+					Expect(err).ShouldNot(HaveOccurred())
+					componentNames = append(componentNames, c.Name)
+				}
 			}
 		})
 

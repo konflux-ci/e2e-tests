@@ -43,9 +43,9 @@ type Component struct {
 	Repository string `json:"repository"`
 }
 
-func (s *SuiteController) GenerateReleaseStrategyConfig(componentName, targetRepository string) *StrategyConfig {
+func (s *SuiteController) GenerateReleaseStrategyConfig(components []Component) *StrategyConfig {
 	return &StrategyConfig{
-		Mapping{Components: []Component{{Name: componentName, Repository: targetRepository}}},
+		Mapping{Components: components},
 	}
 }
 

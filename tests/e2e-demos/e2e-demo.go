@@ -245,8 +245,21 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("time out when trying to check if SnapshotEnvironmentBinding is created (snapshot: %s, env: %s)", snapshot.Name, env.Name))
 				})
 
-				// Deploy the component using gitops and check for the health
+				// Deploy the component using gitops
 				It(fmt.Sprintf("deploys component %s using gitops", component.Name), func() {
+					if componentTest.SkipDeploymentCheck {
+						Skip("component deployment skipped.")
+					}
+					var deployment *appsv1.Deployment
+					Eventually(func() bool {
+						deployment, err = fw.AsKubeDeveloper.CommonController.GetDeployment(component.Name, namespace)
+						return err == nil
+					}, 25*time.Minute, 10*time.Second).Should(BeTrue(), fmt.Sprintf("Component deployment did not exist: %+v", deployment))
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				// Check for the health of the deployed component
+				It(fmt.Sprintf("deployed component %s becomes ready", component.Name), func() {
 					if componentTest.SkipDeploymentCheck {
 						Skip("component deployment skipped.")
 					}

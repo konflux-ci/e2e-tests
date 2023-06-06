@@ -24,6 +24,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
+	r "github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
@@ -145,7 +146,8 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlan("source-releaseplan", userNamespace, appName, managedNamespace, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		sc := f.AsKubeAdmin.ReleaseController.GenerateReleaseStrategyConfig(componentName, constants.DefaultReleasedImagePushRepo)
+		components := []r.Component{{Name: componentName, Repository: constants.DefaultReleasedImagePushRepo}}
+		sc := f.AsKubeAdmin.ReleaseController.GenerateReleaseStrategyConfig(components)
 		scYaml, err := yaml.Marshal(sc)
 		Expect(err).ShouldNot(HaveOccurred())
 
