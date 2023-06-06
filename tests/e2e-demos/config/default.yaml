@@ -37,6 +37,8 @@ tests:
         language: "JavaScript"
         healthz: "/live"
   - name: "DEVHAS-234: create an golang application"
+    # Skip until: https://issues.redhat.com/browse/RHTAPBUGS-386 is fixed
+    skip: true
     applicationName: "e2e-golang"
     components:
       - name: "golang-dockerfile"
