@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	codereadytoolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/devfile/library/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -13,7 +14,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
-	codereadytoolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	releasev1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	releasemetadata "github.com/redhat-appstudio/release-service/metadata"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -267,7 +267,7 @@ func (h *SuiteController) CreateReleasePlan(applicationName, namespace string) (
 			Namespace:    namespace,
 			Labels: map[string]string{
 				releasemetadata.AutoReleaseLabel: "true",
-				releasemetadata.AuthorLabel:      "username",
+				releasemetadata.AttributionLabel: "true",
 			},
 		},
 		Spec: releasev1alpha1.ReleasePlanSpec{
@@ -503,7 +503,6 @@ func (h *SuiteController) GetSpaceRequests(namespace string) (*codereadytoolchai
 func (h *SuiteController) GetDeploymentTargets(namespace string) (*appstudioApi.DeploymentTargetList, error) {
 	deploymentTargetList := &appstudioApi.DeploymentTargetList{}
 
-
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
 	}
@@ -518,7 +517,6 @@ func (h *SuiteController) GetDeploymentTargets(namespace string) (*appstudioApi.
 
 func (h *SuiteController) GetDeploymentTargetClaims(namespace string) (*appstudioApi.DeploymentTargetClaimList, error) {
 	deploymentTargetClaimList := &appstudioApi.DeploymentTargetClaimList{}
-
 
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
