@@ -29,19 +29,23 @@ import (
 )
 
 var (
-	componentRepoUrl string = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
-	usernamePrefix   string = "testuser"
-	numberOfUsers    int
-	waitPipelines    bool
-	verbose          bool
-	token            string
-	logConsole       bool
-	failFast         bool
-	disableMetrics   bool
-	threadCount      int
+	componentRepoUrl          string = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
+	usernamePrefix            string = "testuser"
+	numberOfUsers             int
+	waitPipelines             bool
+	verbose                   bool
+	token                     string
+	logConsole                bool
+	failFast                  bool
+	disableMetrics            bool
+	threadCount               int
+	pipelineSkipInitialChecks bool
 )
 
 var (
+	UserCreationTimeMaxPerThread         []time.Duration
+	ResourceCreationTimeMaxPerThread     []time.Duration
+	PipelineRunSucceededTimeMaxPerThread []time.Duration
 	UserCreationTimeSumPerThread         []time.Duration
 	ResourceCreationTimeSumPerThread     []time.Duration
 	PipelineRunSucceededTimeSumPerThread []time.Duration
@@ -82,10 +86,14 @@ type LogData struct {
 	NumberOfThreads                   int               `json:"threads"`
 	NumberOfUsersPerThread            int               `json:"usersPerThread"`
 	NumberOfUsers                     int               `json:"totalUsers"`
+	PipelineSkipInitialChecks         bool              `json:"pipelineSkipInitialChecks"`
 	LoadTestCompletionStatus          string            `json:"status"`
 	AverageTimeToSpinUpUsers          float64           `json:"createUserTimeAvg"`
+	MaxTimeToSpinUpUsers              float64           `json:"createUserTimeMax"`
 	AverageTimeToCreateResources      float64           `json:"createResourcesTimeAvg"`
+	MaxTimeToCreateResources          float64           `json:"createResourcesTimeMax"`
 	AverageTimeToRunPipelineSucceeded float64           `json:"runPipelineSucceededTimeAvg"`
+	MaxTimeToRunPipelineSucceeded     float64           `json:"runPipelineSucceededTimeMax"`
 	AverageTimeToRunPipelineFailed    float64           `json:"runPipelineFailedTimeAvg"`
 	UserCreationFailureCount          int64             `json:"createUserFailures"`
 	UserCreationFailureRate           float64           `json:"createUserFailureRate"`
@@ -140,6 +148,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&failFast, "fail-fast", false, "if you want the test to fail fast at first failure")
 	rootCmd.Flags().BoolVar(&disableMetrics, "disable-metrics", false, "if you want to disable metrics gathering")
 	rootCmd.Flags().IntVarP(&threadCount, "threads", "t", 1, "number of concurrent threads to execute")
+	rootCmd.Flags().BoolVar(&pipelineSkipInitialChecks, "pipeline-skip-initial-checks", true, "if pipeline runs' initial checks are to be skipped")
 }
 
 func logError(errCode int, message string) {
@@ -196,6 +205,7 @@ func setup(cmd *cobra.Command, args []string) {
 	klog.Infof("Number of threads: %d", threadCount)
 	klog.Infof("Number of users per thread: %d", numberOfUsers)
 	klog.Infof("Number of users overall: %d", overallCount)
+	klog.Infof("Pipeline run initial checks skipped: %t", pipelineSkipInitialChecks)
 
 	klog.Infof("🕖 initializing...\n")
 	globalframework, err := framework.NewFramework("load-tests")
@@ -258,15 +268,16 @@ func setup(cmd *cobra.Command, args []string) {
 	binaryDetails := fmt.Sprintf("Built with %s for %s/%s", goVersion, goOS, goArch)
 
 	logData = LogData{
-		Timestamp:              time.Now().Format("2006-01-02T15:04:05Z07:00"),
-		MachineName:            machineName,
-		BinaryDetails:          binaryDetails,
-		ComponentRepoUrl:       componentRepoUrl,
-		NumberOfThreads:        threadCount,
-		NumberOfUsersPerThread: numberOfUsers,
-		NumberOfUsers:          overallCount,
-		Errors:                 []ErrorOccurrence{},
-		ErrorCounts:            []ErrorCount{},
+		Timestamp:                 time.Now().Format("2006-01-02T15:04:05Z07:00"),
+		MachineName:               machineName,
+		BinaryDetails:             binaryDetails,
+		ComponentRepoUrl:          componentRepoUrl,
+		NumberOfThreads:           threadCount,
+		NumberOfUsersPerThread:    numberOfUsers,
+		NumberOfUsers:             overallCount,
+		PipelineSkipInitialChecks: pipelineSkipInitialChecks,
+		Errors:                    []ErrorOccurrence{},
+		ErrorCounts:               []ErrorCount{},
 	}
 
 	klog.Infof("🍿 provisioning users...\n")
@@ -288,6 +299,9 @@ func setup(cmd *cobra.Command, args []string) {
 		return strutil.PadLeft(fmt.Sprintf("Waiting for pipelines to finish (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedPipelineRunsPerThread)), barLength, ' ')
 	})
 
+	UserCreationTimeMaxPerThread = make([]time.Duration, threadCount)
+	ResourceCreationTimeMaxPerThread = make([]time.Duration, threadCount)
+	PipelineRunSucceededTimeMaxPerThread = make([]time.Duration, threadCount)
 	UserCreationTimeSumPerThread = make([]time.Duration, threadCount)
 	ResourceCreationTimeSumPerThread = make([]time.Duration, threadCount)
 	PipelineRunSucceededTimeSumPerThread = make([]time.Duration, threadCount)
@@ -329,6 +343,8 @@ func setup(cmd *cobra.Command, args []string) {
 	}
 	logData.AverageTimeToSpinUpUsers = averageTimeToSpinUpUsers
 
+	logData.MaxTimeToSpinUpUsers = maxDurationFromArray(UserCreationTimeMaxPerThread).Seconds()
+
 	resourceCreationFailureCount := sumFromArray(FailedResourceCreationsPerThread)
 	logData.ResourceCreationFailureCount = resourceCreationFailureCount
 
@@ -339,6 +355,8 @@ func setup(cmd *cobra.Command, args []string) {
 	}
 	logData.AverageTimeToCreateResources = averageTimeToCreateResources
 
+	logData.MaxTimeToCreateResources = maxDurationFromArray(ResourceCreationTimeMaxPerThread).Seconds()
+
 	pipelineRunFailureCount := sumFromArray(FailedPipelineRunsPerThread)
 	logData.PipelineRunFailureCount = pipelineRunFailureCount
 
@@ -348,6 +366,8 @@ func setup(cmd *cobra.Command, args []string) {
 		averageTimeToRunPipelineSucceeded = sumDurationFromArray(PipelineRunSucceededTimeSumPerThread).Seconds() / float64(pipelineRunSuccessCount)
 	}
 	logData.AverageTimeToRunPipelineSucceeded = averageTimeToRunPipelineSucceeded
+
+	logData.MaxTimeToRunPipelineSucceeded = maxDurationFromArray(PipelineRunSucceededTimeMaxPerThread).Seconds()
 
 	averageTimeToRunPipelineFailed := float64(0)
 	if pipelineRunFailureCount > 0 {
@@ -367,8 +387,11 @@ func setup(cmd *cobra.Command, args []string) {
 	klog.Infof("🏁 Load Test Completed!")
 	klog.Infof("📈 Results 📉")
 	klog.Infof("Average Time to spin up users: %.2f s", averageTimeToSpinUpUsers)
+	klog.Infof("Maximal Time to spin up users: %.2f s", logData.MaxTimeToSpinUpUsers)
 	klog.Infof("Average Time to create Resources: %.2f s", averageTimeToCreateResources)
+	klog.Infof("Maximal Time to create Resources: %.2f s", logData.MaxTimeToCreateResources)
 	klog.Infof("Average Time to run Pipelines successfully: %.2f s", averageTimeToRunPipelineSucceeded)
+	klog.Infof("Maximal Time to run Pipelines successfully: %.2f s", logData.MaxTimeToRunPipelineSucceeded)
 	klog.Infof("Average Time to fail Pipelines: %.2f s", averageTimeToRunPipelineFailed)
 	klog.Infof("Number of times user creation failed: %d (%.2f %%)", userCreationFailureCount, userCreationFailureRate*100)
 	klog.Infof("Number of times resource creation failed: %d (%.2f %%)", resourceCreationFailureCount, resourceCreationFailureRate*100)
@@ -392,6 +415,16 @@ func setup(cmd *cobra.Command, args []string) {
 		defer close(stopMetrics)
 		metricsInstance.PrintResults()
 	}
+}
+
+func maxDurationFromArray(durations []time.Duration) time.Duration {
+	max := time.Duration(0)
+	for _, i := range durations {
+		if i > max {
+			max = i
+		}
+	}
+	return max
 }
 
 func sumDurationFromArray(durations []time.Duration) time.Duration {
@@ -495,8 +528,12 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 
 			chUsers <- username
 
-			UserCreationTime := time.Since(startTime)
-			UserCreationTimeSumPerThread[threadIndex] += UserCreationTime
+			userCreationTime := time.Since(startTime)
+			UserCreationTimeSumPerThread[threadIndex] += userCreationTime
+			if userCreationTime > UserCreationTimeMaxPerThread[threadIndex] {
+				UserCreationTimeMaxPerThread[threadIndex] = userCreationTime
+			}
+
 			SuccessfulUserCreationsPerThread[threadIndex] += 1
 			increaseBar(usersBar, usersBarMutex)
 		}
@@ -578,7 +615,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			}
 
 			for _, compStub := range cdq.Status.ComponentDetected {
-				component, err := framework.AsKubeDeveloper.HasController.CreateComponentFromStub(compStub, usernamespace, "", "", ApplicationName)
+				component, err := framework.AsKubeDeveloper.HasController.CreateComponentFromStubSkipInitialChecks(compStub, usernamespace, "", "", ApplicationName, pipelineSkipInitialChecks)
 
 				if err != nil {
 					logError(9, fmt.Sprintf("Unable to create the Component %s: %v", compStub.ComponentStub.ComponentName, err))
@@ -595,8 +632,11 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				userComponentMap.Store(username, component.Name)
 			}
 
-			ResourceCreationTime := time.Since(startTime)
-			ResourceCreationTimeSumPerThread[threadIndex] += ResourceCreationTime
+			resourceCreationTime := time.Since(startTime)
+			ResourceCreationTimeSumPerThread[threadIndex] += resourceCreationTime
+			if resourceCreationTime > ResourceCreationTimeMaxPerThread[threadIndex] {
+				ResourceCreationTimeMaxPerThread[threadIndex] = resourceCreationTime
+			}
 			SuccessfulResourceCreationsPerThread[threadIndex] += 1
 
 			chPipelines <- username
@@ -658,6 +698,9 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 						} else {
 							dur := pipelineRun.Status.CompletionTime.Sub(pipelineRun.CreationTimestamp.Time)
 							PipelineRunSucceededTimeSumPerThread[threadIndex] += dur
+							if dur > PipelineRunSucceededTimeMaxPerThread[threadIndex] {
+								PipelineRunSucceededTimeMaxPerThread[threadIndex] = dur
+							}
 							SuccessfulPipelineRunsPerThread[threadIndex] += 1
 						}
 						increaseBar(pipelinesBar, pipelinesBarMutex)
