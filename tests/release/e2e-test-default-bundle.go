@@ -105,14 +105,14 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 
 	})
 
-	AfterAll(func() {
-		if !CurrentSpecReport().Failed() {
-			Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(devNamespace)).NotTo(HaveOccurred())
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
-		}
-	})
+	// AfterAll(func() {
+	// 	if !CurrentSpecReport().Failed() {
+	// 		Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(devNamespace)).NotTo(HaveOccurred())
+	// 		Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
+	// 		Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+	// 		Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
+	// 	}
+	// })
 
 	var _ = Describe("Post-release verification", func() {
 
