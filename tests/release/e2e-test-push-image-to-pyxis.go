@@ -39,6 +39,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 	var releasePrName, additionalReleasePrName string
 	scGitRevision := fmt.Sprintf("test-pyxis-%s", util.GenerateRandomString(4))
 
+	var component1, component2 *appservice.Component
+
 	BeforeAll(func() {
 		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("e2e-pyxis"))
 		Expect(err).NotTo(HaveOccurred())
@@ -59,6 +61,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 
 		destinationAuthJson := utils.GetEnv("QUAY_OAUTH_TOKEN_RELEASE_DESTINATION", "")
 		Expect(destinationAuthJson).ToNot(BeEmpty())
+
 		keyPyxisStage := os.Getenv(constants.PYXIS_STAGE_KEY_ENV)
 		Expect(keyPyxisStage).ToNot(BeEmpty())
 
@@ -192,10 +195,10 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		_, err = fw.AsKubeAdmin.HasController.CreateHasApplication(applicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.HasController.CreateComponentFromStub(componentDetected, devNamespace, "", "", applicationNameDefault)
+		component1, err = fw.AsKubeAdmin.HasController.CreateComponentFromStub(componentDetected, devNamespace, "", "", applicationNameDefault)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.HasController.CreateComponentFromStub(additionalComponentDetected, devNamespace, "", "", applicationNameDefault)
+		component2, err = fw.AsKubeAdmin.HasController.CreateComponentFromStub(additionalComponentDetected, devNamespace, "", "", applicationNameDefault)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -212,40 +215,9 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 
 	var _ = Describe("Post-release verification", func() {
 
-		It("verifies that PipelineRuns are created in dev namespace.", func() {
-			Eventually(func() bool {
-				_, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(compName, applicationNameDefault, devNamespace, "")
-				if err != nil {
-					GinkgoWriter.Println("PipelineRun has not been created yet")
-					return false
-				}
-
-				_, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(additionalCompName, applicationNameDefault, devNamespace, "")
-				if err != nil {
-					GinkgoWriter.Println("PipelineRun has not been created yet")
-					return false
-				}
-
-				return true
-			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
-		})
-
-		It("verifies that the build PipelineRuns in dev namespace succeeded.", func() {
-			Eventually(func() bool {
-				buildPr, err := fw.AsKubeAdmin.HasController.GetComponentPipelineRun(compName, applicationNameDefault, devNamespace, "")
-				if err != nil {
-					GinkgoWriter.Printf("\nError getting PipelineRun %s:\n %s", buildPr.Name, err)
-					return false
-				}
-				additionalBuildPr, err := fw.AsKubeAdmin.HasController.GetComponentPipelineRun(additionalCompName, applicationNameDefault, devNamespace, "")
-				if err != nil {
-					GinkgoWriter.Printf("\nError getting PipelineRun %s:\n %s", additionalBuildPr.Name, err)
-					return false
-				}
-
-				return buildPr.HasStarted() && buildPr.IsDone() && buildPr.Status.GetCondition(apis.ConditionSucceeded).IsTrue() &&
-					additionalBuildPr.HasStarted() && additionalBuildPr.IsDone() && additionalBuildPr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
-			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
+		It("verifies that build PipelineRuns are created for each Component in dev namespace and both succeed", func() {
+			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component1, "", 2)).To(Succeed())
+			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component2, "", 2)).To(Succeed())
 		})
 
 		It("verifies that a release PipelineRun for each Component is created in managed namespace.", func() {

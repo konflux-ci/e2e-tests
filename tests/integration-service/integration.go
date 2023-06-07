@@ -107,29 +107,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				}
 				return pipelineRun.HasStarted()
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
-			timeout = time.Second * 2000
-			interval = time.Second * 10
-			Eventually(func() bool {
-				pipelineRun, err := f.AsKubeAdmin.IntegrationController.GetBuildPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false, "")
-				Expect(err).ShouldNot(HaveOccurred())
-
-				for _, condition := range pipelineRun.Status.Conditions {
-					GinkgoWriter.Printf("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
-
-					if !pipelineRun.IsDone() {
-						return false
-					}
-
-					if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-						failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
-						if err != nil {
-							GinkgoWriter.Printf("failed to get logs for pipelinerun %s: %+v\n", pipelineRun.Name, err)
-						}
-						Fail(failMessage)
-					}
-				}
-				return pipelineRun.IsDone()
-			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
+			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", 2)).To(Succeed())
 		}
 
 		assertSnapshotCreated := func() {
@@ -163,7 +141,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				timeout = time.Second * 1000
 				interval = time.Second * 10
 				Eventually(func() bool {
-					Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(f.AsKubeAdmin.CommonController, &testScenario, snapshot, applicationName, appStudioE2EApplicationsNamespace)).To(Succeed(), "Error when waiting for a integration pipeline to finish")
+					Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(&testScenario, snapshot, applicationName, appStudioE2EApplicationsNamespace)).To(Succeed(), "Error when waiting for a integration pipeline to finish")
 					return true
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
 			}
@@ -255,7 +233,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 								}
 
 								if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-									failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+									failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController.KubeRest(), f.AsKubeAdmin.CommonController.KubeInterface(), pipelineRun)
 									if err != nil {
 										GinkgoWriter.Printf("failed to get logs for pipelinerun %s: %+v\n", pipelineRun.Name, err)
 									}
