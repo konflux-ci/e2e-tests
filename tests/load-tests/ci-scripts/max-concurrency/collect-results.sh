@@ -10,7 +10,8 @@ source "/usr/local/ci-secrets/redhat-appstudio-load-test/load-test-scenario.${1:
 pushd "${2:-.}"
 
 echo "Collecting load test results"
-cp -f ./tests/load-tests/load-tests.max-concurrency.*.log "$ARTIFACT_DIR"
+cp -vf ./tests/load-tests/load-tests.max-concurrency.*.log "$ARTIFACT_DIR"
+cp -vf ./tests/load-tests/load-tests.max-concurrency.json "$ARTIFACT_DIR"
 
 echo "Setting up tool to collect monitoring data..."
 python3 -m venv venv
