@@ -72,21 +72,17 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		}
 
 		cleanup := func() {
-			Expect(f.AsKubeAdmin.HasController.DeleteHasApplication(applicationName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
-			Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
-			integrationTestScenarios, err := f.AsKubeAdmin.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			for _, testScenario := range *integrationTestScenarios {
-				err = f.AsKubeAdmin.IntegrationController.DeleteIntegrationTestScenario(&testScenario, appStudioE2EApplicationsNamespace)
+			if !CurrentSpecReport().Failed() {
+				Expect(f.AsKubeAdmin.HasController.DeleteHasApplication(applicationName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
+				integrationTestScenarios, err := f.AsKubeAdmin.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				for _, testScenario := range *integrationTestScenarios {
-					err = f.AsKubeAdmin.IntegrationController.DeleteIntegrationTestScenario(&testScenario, appStudioE2EApplicationsNamespace)
-					Expect(err).ShouldNot(HaveOccurred())
+					Expect(f.AsKubeAdmin.IntegrationController.DeleteIntegrationTestScenario(&testScenario, appStudioE2EApplicationsNamespace)).To(Succeed())
 				}
+				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
 			}
-			Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
 		}
 
 		assertBuildPipelineRunFinished := func() {
@@ -157,8 +153,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				if !CurrentSpecReport().Failed() {
 					cleanup()
 
-					err = f.AsKubeAdmin.IntegrationController.DeleteSnapshot(snapshot_push, appStudioE2EApplicationsNamespace)
-					Expect(err).ShouldNot(HaveOccurred())
+					Expect(f.AsKubeAdmin.IntegrationController.DeleteSnapshot(snapshot_push, appStudioE2EApplicationsNamespace)).To(Succeed())
 				}
 			})
 
