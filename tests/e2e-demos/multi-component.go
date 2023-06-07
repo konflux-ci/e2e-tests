@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"knative.dev/pkg/apis"
 )
 
 // All multiple components scenarios are supported in the next jira: https://issues.redhat.com/browse/DEVHAS-305
@@ -217,31 +215,9 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 					}
 				})
 
-				It(fmt.Sprintf("waits application %s components pipelines to be finished", suite.ApplicationName), FlakeAttempts(3), func() {
-					// Create an array with the components build which failed and rerun them again
-					componentToRetest := make([]string, 0)
-
+				It(fmt.Sprintf("waits application %s components pipelines to be finished", suite.ApplicationName), func() {
 					for _, component := range componentList {
-						if CurrentSpecReport().NumAttempts > 1 && utils.Contains(componentToRetest, component.Name) {
-							pipelineRun, err := fw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, application.Name, namespace, "")
-							Expect(err).ShouldNot(HaveOccurred(), "failed to get pipelinerun: %v", err)
-
-							if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsFalse() {
-								err = fw.AsKubeAdmin.TektonController.DeletePipelineRun(pipelineRun.Name, namespace)
-								Expect(err).ShouldNot(HaveOccurred(), "failed to delete pipelinerun when retriger: %v", err)
-
-								delete(component.Annotations, constants.ComponentInitialBuildAnnotationKey)
-								err = fw.AsKubeDeveloper.HasController.KubeRest().Update(context.Background(), component)
-								Expect(err).ShouldNot(HaveOccurred(), "failed to update component to trigger another pipeline build: %v", err)
-							}
-						}
-
-						if err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeAdmin.CommonController, component.Name, application.Name, namespace, ""); err != nil {
-							if !utils.Contains(componentToRetest, component.Name) {
-								componentToRetest = append(componentToRetest, component.Name)
-							}
-							Expect(err).ShouldNot(HaveOccurred(), "pipeline didnt finish successfully: %v", err)
-						}
+						Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
 					}
 				})
 

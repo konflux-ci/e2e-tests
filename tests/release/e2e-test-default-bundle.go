@@ -6,6 +6,7 @@ import (
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -22,6 +23,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 
 	var devNamespace = utils.GetGeneratedNamespace("release-dev")
 	var managedNamespace = utils.GetGeneratedNamespace("release-managed")
+
+	var component *appstudioApi.Component
 
 	BeforeAll(func() {
 		// Initialize the tests controllers
@@ -97,7 +100,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 		_, err = fw.AsKubeAdmin.HasController.CreateHasApplication(applicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.HasController.CreateComponent(applicationNameDefault, componentName, devNamespace, gitSourceComponentUrl, "", containerImageUrl, "", "", false)
+		component, err = fw.AsKubeAdmin.HasController.CreateComponent(applicationNameDefault, componentName, devNamespace, gitSourceComponentUrl, "", containerImageUrl, "", "", false)
 		Expect(err).NotTo(HaveOccurred())
 
 	})
@@ -113,26 +116,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 
 	var _ = Describe("Post-release verification", func() {
 
-		It("verifies that in dev namespace will be created a PipelineRun.", func() {
-			Eventually(func() bool {
-				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(devNamespace)
-				if err != nil || prList == nil || len(prList.Items) < 1 {
-					return false
-				}
-
-				return strings.Contains(prList.Items[0].Name, componentName)
-			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
-		})
-
-		It("verifies that the PipelineRun in dev namespace succeeded.", func() {
-			Eventually(func() bool {
-				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(devNamespace)
-				if prList == nil || err != nil || len(prList.Items) < 1 {
-					return false
-				}
-
-				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
-			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
+		It("verifies that a build PipelineRun is created in dev namespace and succeeds", func() {
+			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
 		})
 
 		It("verifies that in managed namespace will be created a PipelineRun.", func() {

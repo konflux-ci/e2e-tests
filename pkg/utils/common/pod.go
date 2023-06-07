@@ -1,10 +1,8 @@
 package common
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"time"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -71,27 +69,6 @@ func (s *SuiteController) ListPods(namespace, labelKey, labelValue string, selec
 		Limit:         selectionLimit,
 	}
 	return s.KubeInterface().CoreV1().Pods(namespace).List(context.TODO(), listOptions)
-}
-
-// Return a container logs from a given pod and namespace
-func (s *SuiteController) GetContainerLogs(podName, containerName, namespace string) (string, error) {
-	podLogOpts := corev1.PodLogOptions{
-		Container: containerName,
-	}
-
-	req := s.KubeInterface().CoreV1().Pods(namespace).GetLogs(podName, &podLogOpts)
-	podLogs, err := req.Stream(context.TODO())
-	if err != nil {
-		return "", fmt.Errorf("error in opening the stream: %v", err)
-	}
-	defer podLogs.Close()
-
-	buf := new(bytes.Buffer)
-	_, err = io.Copy(buf, podLogs)
-	if err != nil {
-		return "", fmt.Errorf("error in copying logs to buf, %v", err)
-	}
-	return buf.String(), nil
 }
 
 // Wait for a pod selector until exists
