@@ -89,6 +89,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 	var kc tekton.KubeController
 
 	// set vs. simply declare these pointers so we can use them in debug, where an empty name is indicative of Get's failing
+	component := &appstudioApi.Component{}
 	pipelineRun := &tektonapi.PipelineRun{}
 	release := &releaseApi.Release{}
 	snapshot := &appstudioApi.Snapshot{}
@@ -240,9 +241,9 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		})
 
 		It("sample app can be built successfully", func() {
-			_, err = f.AsKubeAdmin.HasController.CreateComponent(appName, componentName, userNamespace, sampleRepoURL, componentNewBaseBranch, "", "", "", true)
+			component, err = f.AsKubeAdmin.HasController.CreateComponent(appName, componentName, userNamespace, sampleRepoURL, componentNewBaseBranch, "", "", "", true)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(f.AsKubeAdmin.CommonController, componentName, appName, userNamespace, "")).To(Succeed())
+			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
 		})
 
 		It("sample app is successfully deployed to dev environment", func() {
@@ -279,7 +280,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		})
 
 		It("Integration Test PipelineRun should eventually succeed", func() {
-			Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(f.AsKubeAdmin.CommonController, integrationTestScenario, snapshot, appName, userNamespace)).To(Succeed(), "Error when waiting for a integration pipeline to finish")
+			Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenario, snapshot, appName, userNamespace)).To(Succeed(), "Error when waiting for a integration pipeline to finish")
 		})
 
 		It("Snapshot is marked as passed", func() {
@@ -438,7 +439,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		})
 
 		It("SLSA level 3 customizable pipeline completes successfully", func() {
-			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(f.AsKubeAdmin.CommonController, componentName, appName, userNamespace, mergeResultSha)).To(Succeed())
+			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResultSha, 2)).To(Succeed())
 		})
 
 		It("resulting SBOM file can be downloaded", func() {
