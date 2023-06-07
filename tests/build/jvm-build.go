@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	spi "github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	"os"
 	"strings"
 	"time"
@@ -182,13 +183,31 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		_, err = f.AsKubeAdmin.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, testNamespace, utils.GetQuayIOOrganization())
 		Expect(err).ShouldNot(HaveOccurred())
 
-		sharedSecret, err := f.AsKubeAdmin.CommonController.GetSecret(constants.QuayRepositorySecretNamespace, constants.QuayRepositorySecretName)
-		Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error when getting shared secret - make sure the secret %s in %s namespace is created", constants.QuayRepositorySecretName, constants.QuayRepositorySecretNamespace))
+		var SPITokenBinding *spi.SPIAccessTokenBinding
+		//this should result in the creation of an SPIAccessTokenBinding
+		Eventually(func() bool {
+			SPITokenBinding, err = f.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(constants.JVMBuildImageSecretName, testNamespace)
 
-		jvmBuildSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: constants.JVMBuildImageSecretName, Namespace: testNamespace},
-			Data: map[string][]byte{".dockerconfigjson": sharedSecret.Data[".dockerconfigjson"]}}
-		_, err = f.AsKubeAdmin.CommonController.CreateSecret(testNamespace, jvmBuildSecret)
-		Expect(err).ShouldNot(HaveOccurred())
+			if err != nil {
+				return false
+			}
+
+			return SPITokenBinding.Status.LinkedAccessTokenName != "" && SPITokenBinding.Status.UploadUrl != ""
+		}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "LinkedAccessTokenName and UploadUrl should not be empty")
+
+		// get the url to manually upload the token
+		uploadURL := SPITokenBinding.Status.UploadUrl
+		Expect(uploadURL).NotTo(BeEmpty())
+
+		// Get the token for the current openshift user
+		bearerToken, err := utils.GetOpenshiftToken()
+		Expect(err).NotTo(HaveOccurred())
+
+		// build and upload the payload using the uploadURL. it should return 204
+		oauthCredentials := `{"access_token":"` + utils.GetEnv(constants.QUAY_OAUTH_TOKEN_ENV, "") + `", "username":"` + utils.GetEnv(constants.QUAY_OAUTH_USER_ENV, "") + `"}`
+		statusCode, err := f.AsKubeDeveloper.SPIController.UploadWithRestEndpoint(uploadURL, oauthCredentials, bearerToken)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(statusCode).Should(Equal(204))
 
 		customJavaPipelineBundleRef := os.Getenv(constants.CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV)
 		if len(customJavaPipelineBundleRef) > 0 {

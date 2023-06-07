@@ -1,0 +1,31 @@
+- name: measurements.tekton_pipelines_controller_running_pipelineruns_count
+  monitoring_query: sum(tekton_pipelines_controller_running_pipelineruns_count)
+  monitoring_step: 15
+
+- name: measurements.tekton_pipelines_controller_running_pipelineruns_count
+  monitoring_query: sum(tekton_pipelines_controller_running_pipelineruns_count)
+  monitoring_step: 15
+
+- name: measurements.storage_count_attachable_volumes_in_use
+  monitoring_query: sum(storage_count_attachable_volumes_in_use)
+  monitoring_step: 15
+
+- name: measurements.cluster_cpu_usage_seconds_total_rate
+  monitoring_query: sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster=""})
+  monitoring_step: 15
+
+- name: measurements.cluster_memory_usage_rss_total
+  monitoring_query: sum(container_memory_rss{job="kubelet", metrics_path="/metrics/cadvisor", cluster="", container!=""})
+  monitoring_step: 15
+
+- name: measurements.cluster_disk_throughput_total
+  monitoring_query: sum (rate(container_fs_reads_bytes_total{id!="", device=~"(/dev.+)|mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|dasd.+", cluster=""}[5m]) + rate(container_fs_writes_bytes_total{id!="", device=~"(/dev.+)|mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|dasd.+", cluster=""}[5m]))
+  monitoring_step: 15
+
+- name: measurements.cluster_pods_count
+  monitoring_query: count(kube_pod_info)
+  monitoring_step: 15
+
+- name: measurements.tekton_tekton_pipelines_controller_workqueue_depth
+  monitoring_query: sum(tekton_pipelines_controller_workqueue_depth)
+  monitoring_step: 15
