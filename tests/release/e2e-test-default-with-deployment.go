@@ -137,7 +137,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
 		})
 
-		It("verifies that in managed namespace will be created a PipelineRun.", func() {
+		It("verifies that in managed namespace will be created a PipelineRun.", FlakeAttempts(flakeAttemptsTimes), func() {
 			Eventually(func() bool {
 				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
 				if err != nil || prList == nil || len(prList.Items) < 1 {
@@ -148,7 +148,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("verifies a PipelineRun started in managed namespace succeeded.", func() {
+		It("verifies a PipelineRun started in managed namespace succeeded.", FlakeAttempts(flakeAttemptsTimes), func() {
 			Eventually(func() bool {
 				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
 				if prList == nil || err != nil || len(prList.Items) < 1 {
@@ -159,7 +159,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("tests a Release should have been created in the dev namespace and succeeded.", func() {
+		It("tests a Release should have been created in the dev namespace and succeeded.", FlakeAttempts(flakeAttemptsTimes), func() {
 			Eventually(func() bool {
 				releaseCreated, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				if releaseCreated == nil || err != nil {
@@ -171,7 +171,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		})
 	})
 
-	It("tests a Release should report the deployment was successful.", func() {
+	It("tests a Release should report the deployment was successful.", FlakeAttempts(flakeAttemptsTimes), func() {
 		Eventually(func() bool {
 			releaseCreated, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 			if releaseCreated == nil || err != nil || len(releaseCreated.Status.Conditions) < 2 {

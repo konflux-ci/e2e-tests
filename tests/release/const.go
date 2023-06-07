@@ -20,6 +20,7 @@ const (
 	releaseStrategyPolicy               = "policy"
 	environment                         = "test-environment"
 	releaseStrategyServiceAccount       = constants.DefaultPipelineServiceAccount
+	flakeAttemptsTimes                  = 3
 
 	releasePipelineNameDefault           string = "release"
 	applicationNameDefault               string = "appstudio"

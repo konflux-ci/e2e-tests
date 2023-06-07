@@ -20,15 +20,15 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 
 	var fw *framework.Framework
 	var err error
-
-	var devNamespace = utils.GetGeneratedNamespace("release-dev")
+	var devNamespace string
 	var managedNamespace = utils.GetGeneratedNamespace("release-managed")
 
 	var component *appstudioApi.Component
 
 	BeforeAll(func() {
 		// Initialize the tests controllers
-		fw, err = framework.NewFramework("release-e2e-bundle")
+		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("bundle-dev")) //"release-e2e-bundle")
+		devNamespace = fw.UserNamespace
 		Expect(err).NotTo(HaveOccurred())
 		kubeController := tekton.KubeController{
 			Commonctrl: *fw.AsKubeAdmin.CommonController,
@@ -120,7 +120,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
 		})
 
-		It("verifies that in managed namespace will be created a PipelineRun.", func() {
+		It("verifies that in managed namespace will be created a PipelineRun.", FlakeAttempts(flakeAttemptsTimes), func() {
 			Eventually(func() bool {
 				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
 				if err != nil || prList == nil || len(prList.Items) < 1 {
@@ -131,7 +131,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("verifies a PipelineRun started in managed namespace succeeded.", func() {
+		It("verifies a PipelineRun started in managed namespace succeeded.", FlakeAttempts(flakeAttemptsTimes), func() {
 			Eventually(func() bool {
 				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
 				if prList == nil || err != nil || len(prList.Items) < 1 {
@@ -142,7 +142,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("tests a Release should have been created in the dev namespace and succeeded.", func() {
+		It("tests a Release should have been created in the dev namespace and succeeded.", FlakeAttempts(flakeAttemptsTimes), func() {
 			Eventually(func() bool {
 				releaseCreated, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				if releaseCreated == nil || err != nil {

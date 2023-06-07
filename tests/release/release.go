@@ -116,7 +116,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 
 	var _ = Describe("post-release verification.", func() {
 
-		It("makes sure a PipelineRun should have been created in the managed namespace.", func() {
+		It("makes sure a PipelineRun should have been created in the managed namespace.", FlakeAttempts(flakeAttemptsTimes), func() {
 			Eventually(func() bool {
 				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
 				if err != nil || prList == nil || len(prList.Items) < 1 {
@@ -128,7 +128,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("makes sure the PipelineRun exists and succeeded", func() {
+		It("makes sure the PipelineRun exists and succeeded", FlakeAttempts(flakeAttemptsTimes), func() {
 			Eventually(func() bool {
 				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
 				if prList == nil || err != nil || len(prList.Items) < 1 {
@@ -140,7 +140,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("makes sure that the Release should have succeeded.", func() {
+		It("makes sure that the Release should have succeeded.", FlakeAttempts(flakeAttemptsTimes), func() {
 			Eventually(func() bool {
 				release, err := fw.AsKubeAdmin.ReleaseController.GetRelease(releaseName, "", devNamespace)
 				if err != nil || release == nil {

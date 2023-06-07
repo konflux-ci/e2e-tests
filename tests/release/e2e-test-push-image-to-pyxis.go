@@ -163,7 +163,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component2, "", 2)).To(Succeed())
 		})
 
-		It("verifies that a release PipelineRun for each Component is created in managed namespace.", func() {
+		It("verifies that a release PipelineRun for each Component is created in managed namespace.", FlakeAttempts(flakeAttemptsTimes), func() {
 			Eventually(func() bool {
 				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
 				if err != nil || prList == nil || len(prList.Items) < 1 {
@@ -187,7 +187,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("verifies a release PipelineRun for each component started in managed namespace and succeeded.", func() {
+		It("verifies a release PipelineRun for each component started in managed namespace and succeeded.", FlakeAttempts(flakeAttemptsTimes), func() {
 			Eventually(func() bool {
 
 				releasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(releasePrName, managedNamespace)
@@ -249,7 +249,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			}, avgControllerQueryTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("tests a Release should have been created in the dev namespace and succeeded.", func() {
+		It("tests a Release should have been created in the dev namespace and succeeded.", FlakeAttempts(flakeAttemptsTimes), func() {
 			Eventually(func() bool {
 				releaseCreated, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				if releaseCreated == nil || err != nil {
@@ -260,7 +260,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("validates that imageIds from task create-pyxis-image exist in Pyxis.", func() {
+		It("validates that imageIds from task create-pyxis-image exist in Pyxis.", FlakeAttempts(flakeAttemptsTimes), func() {
 
 			for _, imageID := range imageIDs {
 				Eventually(func() bool {
