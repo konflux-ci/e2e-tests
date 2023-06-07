@@ -311,6 +311,8 @@ func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, compone
 func (h *SuiteController) CreateComponentFromStubSkipInitialChecks(compDetected appservice.ComponentDetectionDescription, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool) (*appservice.Component, error) {
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
+			// adding default label because of the BuildPipelineSelector in build test
+			Labels: constants.ComponentDefaultLabel,
 			Annotations: map[string]string{
 				"skip-initial-checks": strconv.FormatBool(skipInitialChecks),
 			},
