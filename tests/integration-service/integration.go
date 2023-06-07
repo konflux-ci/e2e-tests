@@ -2,8 +2,8 @@ package integration
 
 import (
 	"fmt"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/devfile/library/pkg/util"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
@@ -65,10 +65,17 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			timeout = time.Minute * 4
 			interval = time.Second * 1
 			// Create a component with Git Source URL being defined
-			originalComponent, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", "", "", "", true)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(originalComponent).NotTo(BeNil())
+			// using cdq since git ref is not known
+			cdq, err := f.AsKubeAdmin.HasController.CreateComponentDetectionQuery(componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", "", "", false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
 
+			for _, compDetected := range cdq.Status.ComponentDetected {
+				originalComponent, err = f.AsKubeAdmin.HasController.CreateComponentFromStub(compDetected, appStudioE2EApplicationsNamespace, "", "", applicationName)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(originalComponent).NotTo(BeNil())
+				componentName = originalComponent.Name
+			}
 		}
 
 		cleanup := func() {
