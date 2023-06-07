@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/pointer"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -701,13 +702,20 @@ func (h *SuiteController) RetriggerComponentPipelineRun(component *appservice.Co
 		// To retrigger simple build PipelineRun we just need to update the initial build annotation
 		// in Component CR
 	} else {
-		component, err := h.GetHasComponent(component.GetName(), component.GetNamespace())
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			component, err := h.GetHasComponent(component.GetName(), component.GetNamespace())
+			if err != nil {
+				return fmt.Errorf("failed to get component for PipelineRun %q in %q namespace: %+v", pr.GetName(), pr.GetNamespace(), err)
+			}
+			delete(component.Annotations, constants.ComponentInitialBuildAnnotationKey)
+			if err = h.KubeRest().Update(context.Background(), component); err != nil {
+				return fmt.Errorf("failed to update Component %q in %q namespace", component.GetName(), component.GetNamespace())
+			}
+			return err
+		})
+
 		if err != nil {
-			return "", fmt.Errorf("failed to get component %q for PipelineRun %q in %q namespace: %+v", component.GetName(), pr.GetName(), pr.GetNamespace(), err)
-		}
-		delete(component.Annotations, constants.ComponentInitialBuildAnnotationKey)
-		if err = h.KubeRest().Update(context.Background(), component); err != nil {
-			return "", fmt.Errorf("failed to update Component %q in %q namespace", component.GetName(), component.GetNamespace())
+			return "", err
 		}
 	}
 	watch, err := h.PipelineClient().TektonV1beta1().PipelineRuns(component.GetNamespace()).Watch(context.Background(), metav1.ListOptions{})
