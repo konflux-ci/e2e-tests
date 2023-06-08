@@ -30,7 +30,7 @@ else
     output=load-tests.max-concurrency.json
     maxThreads=${MAX_THREADS:-10}
     threshold=${THRESHOLD:-300}
-    echo '{"maxThreads": '"$maxThreads"', "threshold": '"$threshold"', "maxConcurrencyReached": 0, "steps": []}' | jq >"$output"
+    echo '{"maxThreads": '"$maxThreads"', "threshold": '"$threshold"', "maxConcurrencyReached": 0}' | jq >"$output"
     for t in $(seq 1 "${MAX_THREADS:-10}"); do
         oc get usersignups.toolchain.dev.openshift.com -A -o name | grep "$USER_PREFIX" | xargs oc delete -n toolchain-host-operator
         while true; do
@@ -39,8 +39,9 @@ else
             sleep 5s
         done
         load_test "$t"
-        jq --slurpfile result "load-tests.json" '.steps += $result' "$output" >$$.json && mv -f $$.json "$output"
-        mv -f load-tests.log "load-tests.max-concurrency.$(printf "%04d" "$t").log"
+        index=$(printf "%04d" "$t")
+        mv -f load-tests.json "load-tests.max-concurrency.$index.json"
+        mv -f load-tests.log "load-tests.max-concurrency.$index.log"
         pipelineRunThresholdExceeded=$(jq -rc ".runPipelineSucceededTimeMax > $threshold" load-tests.json)
         pipelineRunKPI=$(jq -rc ".runPipelineSucceededTimeMax" load-tests.json)
         if [ "$pipelineRunThresholdExceeded" = "true" ]; then
