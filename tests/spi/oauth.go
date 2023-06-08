@@ -15,7 +15,7 @@ import (
 
 /*
  * Component: spi
- * Description: SVPI-402 - Get file content from a private Github repository
+ * Description: SVPI-395 - Github OAuth flow to upload token
  */
 
 var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
@@ -28,8 +28,6 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 	var CYPRESS_GH_USER string
 	var CYPRESS_GH_PASSWORD string
 	var CYPRESS_GH_2FA_CODE string
-
-	var OAUTH_REDIRECT_PROXY_URL string = "https://spi-oauth-redirect-proxy-pj7h-rhtap-qe-shared-tenant.apps.stone-prd-m01.84db.p1.openshiftapps.com/oauth/callback"
 
 	Describe("SVPI-395 - Github OAuth flow to upload token", Ordered, func() {
 		BeforeAll(func() {
@@ -54,44 +52,34 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 		AfterAll(func() {
 
 			if !CurrentSpecReport().Failed() {
-				//Expect(fw.AsKubeAdmin.SPIController.DeleteAllBindingTokensInASpecificNamespace(namespace)).To(Succeed())
-				//Expect(fw.AsKubeAdmin.SPIController.DeleteAllAccessTokensInASpecificNamespace(namespace)).To(Succeed())
+				Expect(fw.AsKubeAdmin.SPIController.DeleteAllBindingTokensInASpecificNamespace(namespace)).To(Succeed())
+				Expect(fw.AsKubeAdmin.SPIController.DeleteAllAccessTokensInASpecificNamespace(namespace)).To(Succeed())
 			}
 		})
 
 		var SPITokenBinding *v1beta1.SPIAccessTokenBinding
 		var CYPRESS_SPI_OAUTH_URL string
 		tokenBindingName := "spi-token-binding-oauth-"
+		OAUTH_REDIRECT_PROXY_URL := utils.GetEnv("OAUTH_REDIRECT_PROXY_URL", "")
 
-		It("ensure OauthRedirectProxyUrl is set", func() {
-			spiNamespace := "spi-system"
-			config, err := fw.AsKubeAdmin.CommonController.GetConfigMap("spi-oauth-service-environment-config", spiNamespace)
-			Expect(err).NotTo(HaveOccurred())
+		if utils.GetEnv("CI", "") == "true" || OAUTH_REDIRECT_PROXY_URL != "" {
+			/*
+				If we are running this test in CI, we need to handle the dynamic url the cluster is assigned with.
+				To do that, we use a redirect proxy that allows us to have a static oauth url in the providers configuration and, at the same time,
+				will redirect the callback call to the spi component in our cluster. OAUTH_REDIRECT_PROXY_URL env should containt the url of such proxy.
+				If not running in CI, SPI expects that the callback url in the provider configuration is set to the default one: homepage URL + /oauth/callback
+			*/
+			It("ensure OauthRedirectProxyUrl is set", func() {
 
-			_, redirectUrlSet := config.Data["OAUTH_REDIRECT_PROXY_URL"]
+				Expect(OAUTH_REDIRECT_PROXY_URL).NotTo(BeEmpty(), "OAUTH_REDIRECT_PROXY_URL env is not set")
 
-			if redirectUrlSet {
-				config.Data["OAUTH_REDIRECT_PROXY_URL"] = OAUTH_REDIRECT_PROXY_URL
-				_, err = fw.AsKubeAdmin.CommonController.UpdateConfigMap(config, spiNamespace)
+				spiNamespace := "spi-system"
+				config, err := fw.AsKubeAdmin.CommonController.GetConfigMap("spi-oauth-service-environment-config", spiNamespace)
 				Expect(err).NotTo(HaveOccurred())
-				_, err := fw.AsKubeAdmin.CommonController.RolloutRestartDeployment("spi-oauth-service", spiNamespace)
-				Expect(err).NotTo(HaveOccurred())
+				Expect(config.Data["OAUTH_REDIRECT_PROXY_URL"]).NotTo(BeEmpty())
 
-				Eventually(func() bool {
-					deployment, err := fw.AsKubeAdmin.CommonController.GetDeployment("spi-oauth-service", spiNamespace)
-					Expect(err).NotTo(HaveOccurred())
-					return deployment.Status.AvailableReplicas == 1
-				}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in Injected phase")
-
-			}
-
-			config, err = fw.AsKubeAdmin.CommonController.GetConfigMap("spi-oauth-service-environment-config", spiNamespace)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(config.Data["OAUTH_REDIRECT_PROXY_URL"]).NotTo(BeEmpty())
-
-			// TBD -> check/ensure shared-config is provided for oauth providers
-
-		})
+			})
+		}
 
 		It("creates SPITokenBinding", func() {
 			SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.CreateSPIAccessTokenBinding(tokenBindingName, namespace, RepoURL, "", "kubernetes.io/basic-auth")
@@ -107,7 +95,6 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(k8s_token).NotTo(BeEmpty())
 
-			// TBD -> get normal user token??
 			CYPRESS_SPI_OAUTH_URL = CYPRESS_SPI_OAUTH_URL + "&k8s_token=" + k8s_token
 		})
 
@@ -167,8 +154,15 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 				return (pod.Status.Phase == corev1.PodSucceeded)
 			}, 5*time.Minute, 5*time.Second).Should(BeTrue(), "Cypress pod did not completed oauth flow")
 
-			// check tokenbinding is injected
+		})
 
+		It("SPITokenBinding should be in Injected phase", func() {
+			Eventually(func() bool {
+				SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
+				Expect(err).NotTo(HaveOccurred())
+
+				return SPITokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected
+			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in Injected phase")
 		})
 
 	})

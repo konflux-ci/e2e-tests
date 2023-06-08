@@ -47,7 +47,14 @@ EOF
 )
 
 echo "Please go to https://github.com/settings/developers."
-echo "And register new Github OAuth application for callback https://"$OAUTH_URL"/github/callback"
+
+# add OAUTH_REDIRECT_PROXY_URL to spi-oauth-service-environment-config
+if [[ -z "${OAUTH_REDIRECT_PROXY_URL}" ]]; then
+  echo "And register new Github OAuth application for callback https://"$OAUTH_URL"/github/callback"
+else
+  kubectl patch configmap spi-oauth-service-environment-config -n spi-system --patch '{"data": {"OAUTH_REDIRECT_PROXY_URL": "'$OAUTH_REDIRECT_PROXY_URL'"}}'
+  echo "And register new Github OAuth application for callback "$OAUTH_REDIRECT_PROXY_URL
+fi
 
 oc create namespace spi-system --dry-run=client -o yaml | oc apply -f -
 
