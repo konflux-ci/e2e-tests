@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -206,12 +207,16 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 
 				It(fmt.Sprintf("creates multiple components in application %s", suite.ApplicationName), func() {
 					for _, component := range cdq.Status.ComponentDetected {
-						c, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(component, namespace, "", SPIGithubSecretName, application.Name)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(c.Name).To(Equal(component.ComponentStub.ComponentName))
-						Expect(utils.Contains(runtimeSupported, component.ProjectType), "unsupported runtime used for multi component tests")
+						// Skip https://github.com/redhat-appstudio/quality-dashboard/tree/main/frontend because takes to much to much ton push to quay.io and analyze sbom due huge image and is make
+						// ci to be slow
+						if !strings.Contains(component.ComponentStub.ComponentName, "frontend-quality") {
+							c, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(component, namespace, "", SPIGithubSecretName, application.Name)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(c.Name).To(Equal(component.ComponentStub.ComponentName))
+							Expect(utils.Contains(runtimeSupported, component.ProjectType), "unsupported runtime used for multi component tests")
 
-						componentList = append(componentList, c)
+							componentList = append(componentList, c)
+						}
 					}
 				})
 
