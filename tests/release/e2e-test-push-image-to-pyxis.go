@@ -49,6 +49,9 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating managedNamespace: ", err)
 
+		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
+		Expect(sourceAuthJson).ToNot(BeEmpty())
+
 		destinationAuthJson := utils.GetEnv("QUAY_OAUTH_TOKEN_RELEASE_DESTINATION", "")
 		Expect(destinationAuthJson).ToNot(BeEmpty())
 
@@ -58,8 +61,16 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		certPyxisStage := os.Getenv(constants.PYXIS_STAGE_CERT_ENV)
 		Expect(certPyxisStage).ToNot(BeEmpty())
 
+		// Create secret for the build registry repo "redhat-appstudio-qe".
+		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(hacbsReleaseTestsTokenSecret, devNamespace, sourceAuthJson)
+		Expect(err).ToNot(HaveOccurred())
+
 		// Create secret for the release registry repo "hacbs-release-tests".
 		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(redhatAppstudioUserSecret, managedNamespace, destinationAuthJson)
+		Expect(err).ToNot(HaveOccurred())
+
+		// Linking the build secret to the pipline service account in dev namespace.
+		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, hacbsReleaseTestsTokenSecret, serviceAccount, true)
 		Expect(err).ToNot(HaveOccurred())
 
 		publicKey, err := kubeController.GetTektonChainsPublicKey()

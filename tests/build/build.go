@@ -671,7 +671,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Namespace:  testNamespace,
 			}
 
-			if err = f.AsKubeAdmin.CommonController.UnlinkSecretFromServiceAccount(testNamespace, constants.RegistryAuthSecretName, "pipeline", true); err != nil {
+			if err = f.AsKubeAdmin.CommonController.UnlinkSecretFromServiceAccount(testNamespace, constants.RegistryAuthSecretName, constants.DefaultPipelineServiceAccount, true); err != nil {
 				GinkgoWriter.Println(fmt.Sprintf("Failed to unlink registry auth secret from service account: %s\n", err))
 			}
 

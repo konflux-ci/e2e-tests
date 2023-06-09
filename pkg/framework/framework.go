@@ -87,7 +87,7 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration) (*Framework
 	}
 
 	if err = asAdmin.CommonController.AddRegistryAuthSecretToSA("QUAY_TOKEN", k.UserNamespace); err != nil {
-		GinkgoWriter.Println(fmt.Sprintf("Failed to add registry auth secret to service account: %s\n", err))
+		GinkgoWriter.Println(fmt.Sprintf("Failed to add registry auth secret to service account: %v\n", err))
 	}
 
 	return &Framework{

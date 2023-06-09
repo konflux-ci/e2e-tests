@@ -118,7 +118,7 @@ func (s *SuiteController) AddRegistryAuthSecretToSA(registryAuth, namespace stri
 		return err
 	}
 
-	err = s.LinkSecretToServiceAccount(namespace, RegistryAuthSecretName, "pipeline", true)
+	err = s.LinkSecretToServiceAccount(namespace, RegistryAuthSecretName, DefaultPipelineServiceAccount, true)
 	if err != nil {
 		return err
 	}
