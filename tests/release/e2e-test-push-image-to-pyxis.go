@@ -42,6 +42,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 	var component1, component2 *appservice.Component
 
 	BeforeAll(func() {
+		Skip("Skip until bug: https://issues.redhat.com/browse/RHTAPBUGS-406 is fixed")
 		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("e2e-pyxis"))
 		Expect(err).NotTo(HaveOccurred())
 
