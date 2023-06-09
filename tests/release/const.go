@@ -41,6 +41,8 @@ const (
 	destinationKeyName                   string = "redhat-appstudio-qe+redhat_appstudio_quality"
 	containerImageUrl                    string = "quay.io/redhat-appstudio-qe/dcmetromap:latest"
 	roleName                             string = "role-release-service-account"
+	releasedImagePushRepo                string = "quay.io/hacbs-release-tests/dcmetromap"
+	additionalReleasedImagePushRepo      string = "quay.io/hacbs-release-tests/simplepython"
 
 	additionalComponentName         string = "simple-python"
 	additionalGitSourceComponentUrl string = "https://github.com/devfile-samples/devfile-sample-python-basic"
@@ -62,21 +64,6 @@ const (
 
 	defaultInterval = 100 * time.Millisecond
 )
-
-var paramsReleaseStrategyPyxis = []appstudiov1alpha1.Params{
-	{Name: "extraConfigGitUrl", Value: "https://github.com/hacbs-release/strategy-configs"},
-	{Name: "extraConfigPath", Value: "mvp.yaml"},
-	{Name: "extraConfigGitRevision", Value: "main"},
-	{Name: "pyxisServerType", Value: "stage"},
-	{Name: "pyxisSecret", Value: "pyxis"},
-	{Name: "tag", Value: "latest"},
-}
-
-var paramsReleaseStrategyMvp = []appstudiov1alpha1.Params{
-	{Name: "extraConfigGitUrl", Value: "https://github.com/hacbs-release/strategy-configs"},
-	{Name: "extraConfigPath", Value: "mvp.yaml"},
-	{Name: "extraConfigGitRevision", Value: "main"},
-}
 
 var paramsReleaseStrategyM6 = []appstudiov1alpha1.Params{
 	{Name: "extraConfigGitUrl", Value: "https://github.com/hacbs-release/strategy-configs"},
