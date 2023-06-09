@@ -10,10 +10,11 @@ import (
 
 	app "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
 
@@ -173,28 +174,28 @@ func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
 }
 
 // GetFailedPipelineRunLogs gets the logs of the pipelinerun failed task
-func GetFailedPipelineRunLogs(c *common.SuiteController, pipelineRun *v1beta1.PipelineRun) (string, error) {
+func GetFailedPipelineRunLogs(c crclient.Client, ki kubernetes.Interface, pipelineRun *v1beta1.PipelineRun) (string, error) {
 	var d *utils.FailedPipelineRunDetails
 	var err error
 	failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
-	if d, err = utils.GetFailedPipelineRunDetails(c.KubeRest(), pipelineRun); err != nil {
+	if d, err = utils.GetFailedPipelineRunDetails(c, pipelineRun); err != nil {
 		return "", err
 	}
 	if d.FailedContainerName != "" {
-		logs, _ := c.GetContainerLogs(d.PodName, d.FailedContainerName, pipelineRun.Namespace)
+		logs, _ := utils.GetContainerLogs(ki, d.PodName, d.FailedContainerName, pipelineRun.Namespace)
 		failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
 	}
 	return failMessage, nil
 }
 
-// StorePipelineRunLogs stores logs and parsed yamls of pipelineRuns into directory of given testName under ARTIFACT_DIR env.
+// StorePipelineRunLogs stores logs and parsed yamls of pipelineRuns into directory of pipelineruns' namespace under ARTIFACT_DIR env.
 // In case the files can't be stored in ARTIFACT_DIR, they will be recorder in GinkgoWriter.
-func StorePipelineRun(pipelineRun *v1beta1.PipelineRun, testName string, suiteController *common.SuiteController) error {
+func StorePipelineRun(pipelineRun *v1beta1.PipelineRun, c crclient.Client, ki kubernetes.Interface) error {
 	wd, _ := os.Getwd()
 	artifactDir := utils.GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
-	testLogsDir := fmt.Sprintf("%s/%s", artifactDir, testName)
+	testLogsDir := fmt.Sprintf("%s/%s", artifactDir, pipelineRun.GetNamespace())
 
-	pipelineRunLog, err := GetFailedPipelineRunLogs(suiteController, pipelineRun)
+	pipelineRunLog, err := GetFailedPipelineRunLogs(c, ki, pipelineRun)
 	if err != nil {
 		return fmt.Errorf("failed to store PipelineRun: %+v", err)
 	}

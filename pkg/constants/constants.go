@@ -107,6 +107,8 @@ const (
 	DefaultPipelineServiceAccount            = "appstudio-pipeline"
 	DefaultPipelineServiceAccountRoleBinding = "appstudio-pipelines-runner-rolebinding"
 	DefaultPipelineServiceAccountClusterRole = "appstudio-pipelines-runner"
+
+	PaCPullRequestBranchPrefix = "appstudio-"
 )
 
 var (

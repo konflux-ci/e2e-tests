@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	spi "github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	"os"
 	"strings"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/devfile/library/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
@@ -23,7 +25,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"knative.dev/pkg/apis"
 )
 
 var (
@@ -39,6 +40,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 	var testNamespace, applicationName, componentName string
 	var componentPipelineRun *v1beta1.PipelineRun
+	var component *appservice.Component
 	var timeout, interval time.Duration
 	var doCollectLogs bool
 
@@ -80,7 +82,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				containers = append(containers, pod.Spec.InitContainers...)
 				containers = append(containers, pod.Spec.Containers...)
 				for _, c := range containers {
-					cLog, cerr := f.AsKubeAdmin.CommonController.GetContainerLogs(pod.Name, c.Name, pod.Namespace)
+					cLog, cerr := utils.GetContainerLogs(f.AsKubeAdmin.CommonController.KubeInterface(), pod.Name, c.Name, pod.Namespace)
 					if cerr != nil {
 						GinkgoWriter.Printf("error getting logs for pod/container %s/%s: %s\n", pod.Name, c.Name, cerr.Error())
 						continue
@@ -182,13 +184,31 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		_, err = f.AsKubeAdmin.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, testNamespace, utils.GetQuayIOOrganization())
 		Expect(err).ShouldNot(HaveOccurred())
 
-		sharedSecret, err := f.AsKubeAdmin.CommonController.GetSecret(constants.QuayRepositorySecretNamespace, constants.QuayRepositorySecretName)
-		Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error when getting shared secret - make sure the secret %s in %s namespace is created", constants.QuayRepositorySecretName, constants.QuayRepositorySecretNamespace))
+		var SPITokenBinding *spi.SPIAccessTokenBinding
+		//this should result in the creation of an SPIAccessTokenBinding
+		Eventually(func() bool {
+			SPITokenBinding, err = f.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(constants.JVMBuildImageSecretName, testNamespace)
 
-		jvmBuildSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: constants.JVMBuildImageSecretName, Namespace: testNamespace},
-			Data: map[string][]byte{".dockerconfigjson": sharedSecret.Data[".dockerconfigjson"]}}
-		_, err = f.AsKubeAdmin.CommonController.CreateSecret(testNamespace, jvmBuildSecret)
-		Expect(err).ShouldNot(HaveOccurred())
+			if err != nil {
+				return false
+			}
+
+			return SPITokenBinding.Status.LinkedAccessTokenName != "" && SPITokenBinding.Status.UploadUrl != ""
+		}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "LinkedAccessTokenName and UploadUrl should not be empty")
+
+		// get the url to manually upload the token
+		uploadURL := SPITokenBinding.Status.UploadUrl
+		Expect(uploadURL).NotTo(BeEmpty())
+
+		// Get the token for the current openshift user
+		bearerToken, err := utils.GetOpenshiftToken()
+		Expect(err).NotTo(HaveOccurred())
+
+		// build and upload the payload using the uploadURL. it should return 204
+		oauthCredentials := `{"access_token":"` + utils.GetEnv(constants.QUAY_OAUTH_TOKEN_ENV, "") + `", "username":"` + utils.GetEnv(constants.QUAY_OAUTH_USER_ENV, "") + `"}`
+		statusCode, err := f.AsKubeDeveloper.SPIController.UploadWithRestEndpoint(uploadURL, oauthCredentials, bearerToken)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(statusCode).Should(Equal(204))
 
 		customJavaPipelineBundleRef := os.Getenv(constants.CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV)
 		if len(customJavaPipelineBundleRef) > 0 {
@@ -224,7 +244,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		componentName = fmt.Sprintf("jvm-build-suite-component-%s", util.GenerateRandomString(4))
 
 		// Create a component with Git Source URL being defined
-		_, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, testNamespace, testProjectGitUrl, testProjectRevision, "", "", "", true)
+		component, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, testNamespace, testProjectGitUrl, testProjectRevision, "", "", "", true)
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
@@ -282,21 +302,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		})
 
 		It("that PipelineRun completes successfully", func() {
-			Eventually(func() bool {
-				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-				if err != nil {
-					GinkgoWriter.Printf("get of pr %s returned error: %s\n", pr.Name, err.Error())
-					return false
-				}
-				if !pr.IsDone() {
-					GinkgoWriter.Printf("pipeline run %s not done\n", pr.Name)
-					return false
-				}
-				if !pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-					Fail("component pipeline run did not succeed")
-				}
-				return true
-			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the pipeline run to complete")
+			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
 		})
 
 		It("artifactbuilds and dependencybuilds are generated", func() {
@@ -460,7 +466,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 							if !strings.Contains(container.Name, "analyse-dependecies") {
 								continue
 							}
-							cLog, err := f.AsKubeAdmin.CommonController.GetContainerLogs(pods[0].Name, container.Name, testNamespace)
+							cLog, err := utils.GetContainerLogs(f.AsKubeAdmin.CommonController.KubeInterface(), pods[0].Name, container.Name, testNamespace)
 							Expect(err).ShouldNot(HaveOccurred(), "getting container logs failed")
 							if strings.Contains(cLog, "\"publisher\" : \"central\"") {
 								Fail(fmt.Sprintf("pipelinerun %s has container %s with dep analysis still pointing to central %s", pr.Name, container.Name, cLog))

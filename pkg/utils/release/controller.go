@@ -43,9 +43,9 @@ type Component struct {
 	Repository string `json:"repository"`
 }
 
-func (s *SuiteController) GenerateReleaseStrategyConfig(componentName, targetRepository string) *StrategyConfig {
+func (s *SuiteController) GenerateReleaseStrategyConfig(components []Component) *StrategyConfig {
 	return &StrategyConfig{
-		Mapping{Components: []Component{{Name: componentName, Repository: targetRepository}}},
+		Mapping{Components: components},
 	}
 }
 
@@ -226,7 +226,7 @@ func (s *SuiteController) CreateReleasePlan(name, namespace, application, target
 			Namespace:    namespace,
 			Labels: map[string]string{
 				releaseMetadata.AutoReleaseLabel: autoReleaseLabel,
-				releaseMetadata.AuthorLabel:      "username",
+				releaseMetadata.AttributionLabel: "true",
 			},
 		},
 		Spec: releaseApi.ReleasePlanSpec{
