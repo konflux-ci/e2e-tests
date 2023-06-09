@@ -71,6 +71,12 @@ type SandboxUserAuthInfo struct {
 
 	// Add a description about kubeconfigpath
 	KubeconfigPath string
+
+	// Url of user api to access kubernetes host
+	ProxyUrl string
+
+	// User token used as bearer to authenticate against kubernetes host
+	UserToken string
 }
 
 // Values to create a valid user for testing purposes
@@ -220,6 +226,8 @@ func (s *SandboxController) GetKubeconfigPathForSpecificUser(toolchainApiUrl str
 		UserName:       userName,
 		UserNamespace:  ns,
 		KubeconfigPath: kubeconfigPath,
+		ProxyUrl:       toolchainApiUrl,
+		UserToken:      keycloakAuth.AccessToken,
 	}, nil
 }
 
