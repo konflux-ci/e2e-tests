@@ -244,7 +244,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("verifies a release PipelineRun for each component started in managed namespace and succeeded.", func() {
+		It("verifies a release PipelineRun for first component started in managed namespace and succeeded.", func() {
 			Eventually(func() bool {
 
 				releasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(releasePrName, managedNamespace)
@@ -252,14 +252,21 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 					GinkgoWriter.Printf("\nError getting Release PipelineRun %s:\n %s", releasePr, err)
 					return false
 				}
+
+				return releasePr.HasStarted() && releasePr.IsDone() && releasePr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
+			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
+		})
+
+		It("verifies a release PipelineRun for second component started in managed namespace and succeeded.", func() {
+			Eventually(func() bool {
+
 				additionalReleasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(additionalReleasePrName, managedNamespace)
 				if err != nil {
 					GinkgoWriter.Printf("\nError getting PipelineRun %s:\n %s", additionalReleasePr, err)
 					return false
 				}
 
-				return releasePr.HasStarted() && releasePr.IsDone() && releasePr.Status.GetCondition(apis.ConditionSucceeded).IsTrue() &&
-					additionalReleasePr.HasStarted() && additionalReleasePr.IsDone() && additionalReleasePr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
+				return additionalReleasePr.HasStarted() && additionalReleasePr.IsDone() && additionalReleasePr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
 
