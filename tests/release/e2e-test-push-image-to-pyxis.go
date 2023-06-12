@@ -257,6 +257,11 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 					return false
 				}
 
+				if utils.PipelineRunFailed(releasePr) || utils.PipelineRunFailed(additionalReleasePr) {
+					GinkgoWriter.Printf("\n One of two PipelineRuns failed: %s   %s", releasePr.Name, additionalReleasePr.Name)
+					return false
+				}
+
 				return releasePr.HasStarted() && releasePr.IsDone() && releasePr.Status.GetCondition(apis.ConditionSucceeded).IsTrue() &&
 					additionalReleasePr.HasStarted() && additionalReleasePr.IsDone() && additionalReleasePr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
