@@ -124,7 +124,6 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 			})
 
 			It("initializes byoc cluster connection and creates targetNamespace", func() {
-
 				config, err := clientcmd.BuildConfigFromFlags("", byocKubeconfig)
 				Expect(err).NotTo(HaveOccurred())
 				byocAPIServerURL = config.Host
