@@ -564,7 +564,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 								ProjectType:        "hello-world",
 								DockerfileRequired: pointer.Bool(true),
 								ComponentName:      compDetected.ComponentStub.ComponentName,
-								Annotations:        constants.ComponentDefaultAnnotation,
+								Annotations:        map[string]string{"skip-initial-checks": "true"},
 								Labels:             constants.ComponentDefaultLabel,
 							},
 						},
