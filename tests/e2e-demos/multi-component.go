@@ -1,8 +1,8 @@
 package e2e
 
 import (
-	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -14,7 +14,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"knative.dev/pkg/apis"
 )
 
 // All multiple components scenarios are supported in the next jira: https://issues.redhat.com/browse/DEVHAS-305
@@ -208,40 +207,22 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 
 				It(fmt.Sprintf("creates multiple components in application %s", suite.ApplicationName), func() {
 					for _, component := range cdq.Status.ComponentDetected {
-						c, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(component, namespace, "", SPIGithubSecretName, application.Name)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(c.Name).To(Equal(component.ComponentStub.ComponentName))
-						Expect(utils.Contains(runtimeSupported, component.ProjectType), "unsupported runtime used for multi component tests")
+						// Skip https://github.com/redhat-appstudio/quality-dashboard/tree/main/frontend because takes to much to much ton push to quay.io and analyze sbom due huge image and is make
+						// ci to be slow
+						if !strings.Contains(component.ComponentStub.ComponentName, "frontend-quality") {
+							c, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(component, namespace, "", SPIGithubSecretName, application.Name)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(c.Name).To(Equal(component.ComponentStub.ComponentName))
+							Expect(utils.Contains(runtimeSupported, component.ProjectType), "unsupported runtime used for multi component tests")
 
-						componentList = append(componentList, c)
+							componentList = append(componentList, c)
+						}
 					}
 				})
 
-				It(fmt.Sprintf("waits application %s components pipelines to be finished", suite.ApplicationName), FlakeAttempts(3), func() {
-					// Create an array with the components build which failed and rerun them again
-					componentToRetest := make([]string, 0)
-
+				It(fmt.Sprintf("waits application %s components pipelines to be finished", suite.ApplicationName), func() {
 					for _, component := range componentList {
-						if CurrentSpecReport().NumAttempts > 1 && utils.Contains(componentToRetest, component.Name) {
-							pipelineRun, err := fw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, application.Name, namespace, "")
-							Expect(err).ShouldNot(HaveOccurred(), "failed to get pipelinerun: %v", err)
-
-							if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsFalse() {
-								err = fw.AsKubeAdmin.TektonController.DeletePipelineRun(pipelineRun.Name, namespace)
-								Expect(err).ShouldNot(HaveOccurred(), "failed to delete pipelinerun when retriger: %v", err)
-
-								delete(component.Annotations, constants.ComponentInitialBuildAnnotationKey)
-								err = fw.AsKubeDeveloper.HasController.KubeRest().Update(context.Background(), component)
-								Expect(err).ShouldNot(HaveOccurred(), "failed to update component to trigger another pipeline build: %v", err)
-							}
-						}
-
-						if err := fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeAdmin.CommonController, component.Name, application.Name, namespace, ""); err != nil {
-							if !utils.Contains(componentToRetest, component.Name) {
-								componentToRetest = append(componentToRetest, component.Name)
-							}
-							Expect(err).ShouldNot(HaveOccurred(), "pipeline didnt finish successfully: %v", err)
-						}
+						Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
 					}
 				})
 

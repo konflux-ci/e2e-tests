@@ -2,8 +2,8 @@ package integration
 
 import (
 	"fmt"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/devfile/library/pkg/util"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
@@ -65,28 +65,31 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			timeout = time.Minute * 4
 			interval = time.Second * 1
 			// Create a component with Git Source URL being defined
-			originalComponent, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", "", "", "", true)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(originalComponent).NotTo(BeNil())
+			// using cdq since git ref is not known
+			cdq, err := f.AsKubeAdmin.HasController.CreateComponentDetectionQuery(componentName, appStudioE2EApplicationsNamespace, gitSourceURL, "", "", "", false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
 
+			for _, compDetected := range cdq.Status.ComponentDetected {
+				originalComponent, err = f.AsKubeAdmin.HasController.CreateComponentFromStub(compDetected, appStudioE2EApplicationsNamespace, "", "", applicationName)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(originalComponent).NotTo(BeNil())
+				componentName = originalComponent.Name
+			}
 		}
 
 		cleanup := func() {
-			Expect(f.AsKubeAdmin.HasController.DeleteHasApplication(applicationName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
-			Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
-			integrationTestScenarios, err := f.AsKubeAdmin.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			for _, testScenario := range *integrationTestScenarios {
-				err = f.AsKubeAdmin.IntegrationController.DeleteIntegrationTestScenario(&testScenario, appStudioE2EApplicationsNamespace)
+			if !CurrentSpecReport().Failed() {
+				Expect(f.AsKubeAdmin.HasController.DeleteHasApplication(applicationName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
+				integrationTestScenarios, err := f.AsKubeAdmin.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				for _, testScenario := range *integrationTestScenarios {
-					err = f.AsKubeAdmin.IntegrationController.DeleteIntegrationTestScenario(&testScenario, appStudioE2EApplicationsNamespace)
-					Expect(err).ShouldNot(HaveOccurred())
+					Expect(f.AsKubeAdmin.IntegrationController.DeleteIntegrationTestScenario(&testScenario, appStudioE2EApplicationsNamespace)).To(Succeed())
 				}
+				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
 			}
-			Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
 		}
 
 		assertBuildPipelineRunFinished := func() {
@@ -100,29 +103,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				}
 				return pipelineRun.HasStarted()
 			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
-			timeout = time.Second * 2000
-			interval = time.Second * 10
-			Eventually(func() bool {
-				pipelineRun, err := f.AsKubeAdmin.IntegrationController.GetBuildPipelineRun(componentName, applicationName, appStudioE2EApplicationsNamespace, false, "")
-				Expect(err).ShouldNot(HaveOccurred())
-
-				for _, condition := range pipelineRun.Status.Conditions {
-					GinkgoWriter.Printf("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
-
-					if !pipelineRun.IsDone() {
-						return false
-					}
-
-					if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-						failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
-						if err != nil {
-							GinkgoWriter.Printf("failed to get logs for pipelinerun %s: %+v\n", pipelineRun.Name, err)
-						}
-						Fail(failMessage)
-					}
-				}
-				return pipelineRun.IsDone()
-			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
+			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", 2)).To(Succeed())
 		}
 
 		assertSnapshotCreated := func() {
@@ -156,7 +137,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				timeout = time.Second * 1000
 				interval = time.Second * 10
 				Eventually(func() bool {
-					Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(f.AsKubeAdmin.CommonController, &testScenario, snapshot, applicationName, appStudioE2EApplicationsNamespace)).To(Succeed(), "Error when waiting for a integration pipeline to finish")
+					Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(&testScenario, snapshot, applicationName, appStudioE2EApplicationsNamespace)).To(Succeed(), "Error when waiting for a integration pipeline to finish")
 					return true
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
 			}
@@ -179,8 +160,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				if !CurrentSpecReport().Failed() {
 					cleanup()
 
-					err = f.AsKubeAdmin.IntegrationController.DeleteSnapshot(snapshot_push, appStudioE2EApplicationsNamespace)
-					Expect(err).ShouldNot(HaveOccurred())
+					Expect(f.AsKubeAdmin.IntegrationController.DeleteSnapshot(snapshot_push, appStudioE2EApplicationsNamespace)).To(Succeed())
 				}
 			})
 
@@ -248,7 +228,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 								}
 
 								if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-									failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController, pipelineRun)
+									failMessage, err := tekton.GetFailedPipelineRunLogs(f.AsKubeAdmin.CommonController.KubeRest(), f.AsKubeAdmin.CommonController.KubeInterface(), pipelineRun)
 									if err != nil {
 										GinkgoWriter.Printf("failed to get logs for pipelinerun %s: %+v\n", pipelineRun.Name, err)
 									}

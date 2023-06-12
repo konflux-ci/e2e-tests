@@ -11,7 +11,6 @@ import (
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	releasev1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
@@ -369,7 +368,7 @@ func (h *SuiteController) CreateIntegrationTestScenarioWithEnvironment(applicati
 	return integrationTestScenario, nil
 }
 
-func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(c *common.SuiteController, testScenario *integrationv1alpha1.IntegrationTestScenario, snapshot *appstudioApi.Snapshot, applicationName string, appNamespace string) error {
+func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(testScenario *integrationv1alpha1.IntegrationTestScenario, snapshot *appstudioApi.Snapshot, applicationName string, appNamespace string) error {
 	return wait.PollImmediate(20*time.Second, 100*time.Minute, func() (done bool, err error) {
 		pipelineRun, _ := h.GetIntegrationPipelineRun(testScenario.Name, snapshot.Name, appNamespace)
 
@@ -383,7 +382,7 @@ func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(c *common.Suite
 			if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
 				return true, nil
 			} else {
-				return false, fmt.Errorf(tekton.GetFailedPipelineRunLogs(c, pipelineRun))
+				return false, fmt.Errorf(tekton.GetFailedPipelineRunLogs(h.KubeRest(), h.KubeInterface(), pipelineRun))
 			}
 		}
 		return false, nil

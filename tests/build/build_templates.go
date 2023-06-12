@@ -21,7 +21,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/pkg/apis"
 )
 
 var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "HACBS"), func() {
@@ -73,11 +72,18 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			for _, gitUrl := range componentUrls {
 				gitUrl := gitUrl
-				componentName = fmt.Sprintf("%s-%s", "test-component", util.GenerateRandomString(4))
-				componentNames = append(componentNames, componentName)
+				componentName = fmt.Sprintf("%s-%s", "test-comp", util.GenerateRandomString(4))
 				// Create a component with Git Source URL being defined
-				_, err := kubeadminClient.HasController.CreateComponent(applicationName, componentName, testNamespace, gitUrl, "", "", "", "", false)
+				// using cdq since git ref is not known
+				cdq, err := kubeadminClient.HasController.CreateComponentDetectionQuery(componentName, testNamespace, gitUrl, "", "", "", false)
 				Expect(err).ShouldNot(HaveOccurred())
+				Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+
+				for _, compDetected := range cdq.Status.ComponentDetected {
+					c, err := kubeadminClient.HasController.CreateComponentFromStubSkipInitialChecks(compDetected, testNamespace, "", "", applicationName, false)
+					Expect(err).ShouldNot(HaveOccurred())
+					componentNames = append(componentNames, c.Name)
+				}
 			}
 		})
 
@@ -118,29 +124,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			gitUrl := gitUrl
 
 			It(fmt.Sprintf("should eventually finish successfully for component with source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
-				timeout := time.Second * 1800
-				interval := time.Second * 10
-				Eventually(func() bool {
-					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
-					Expect(err).ShouldNot(HaveOccurred())
-
-					for _, condition := range pipelineRun.Status.Conditions {
-						GinkgoWriter.Printf("PipelineRun %s Status.Conditions.Reason: %s\n", pipelineRun.Name, condition.Reason)
-
-						if !pipelineRun.IsDone() {
-							return false
-						}
-
-						if !pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-							failMessage, err := tekton.GetFailedPipelineRunLogs(kubeadminClient.CommonController, pipelineRun)
-							if err != nil {
-								GinkgoWriter.Printf("failed to get logs for pipelinerun %s: %+v\n", pipelineRun.Name, err)
-							}
-							Fail(failMessage)
-						}
-					}
-					return true
-				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to finish")
+				component, err := kubeadminClient.HasController.GetHasComponent(componentNames[i], testNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
 			})
 
 			It("should ensure SBOM is shown", Label(buildTemplatesTestLabel), func() {
@@ -204,6 +190,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				})
 
 				It("should have Pipeline Records", func() {
+					Skip("Skip until product bug: https://issues.redhat.com/browse/RHTAPBUGS-202 is resolved.")
 					records, err := resultClient.GetRecords(testNamespace, string(pipelineRun.GetUID()))
 					// temporary logs due to RHTAPBUGS-213
 					GinkgoWriter.Printf("records for PipelineRun %s:\n%s\n", pipelineRun.Name, records)
@@ -212,6 +199,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				})
 
 				It("should have Pipeline Logs", func() {
+					Skip("Skip until product bug: https://issues.redhat.com/browse/RHTAPBUGS-202 is resolved.")
 					// Verify if result is stored in Database
 					// temporary logs due to RHTAPBUGS-213
 					logs, err := resultClient.GetLogs(testNamespace, string(pipelineRun.GetUID()))

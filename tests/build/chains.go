@@ -369,7 +369,7 @@ func printTaskRunStatus(tr *v1beta1.PipelineRunTaskRunStatus, namespace string, 
 	}
 
 	for _, s := range tr.Status.TaskRunStatusFields.Steps {
-		if logs, err := sc.GetContainerLogs(tr.Status.PodName, s.ContainerName, namespace); err == nil {
+		if logs, err := utils.GetContainerLogs(sc.KubeInterface(), tr.Status.PodName, s.ContainerName, namespace); err == nil {
 			GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, s.ContainerName, logs)
 		} else {
 			GinkgoWriter.Printf("*** Can't fetch logs from pod '%s', container '%s': %s\n", tr.Status.PodName, s.ContainerName, err)

@@ -10,8 +10,40 @@ source "/usr/local/ci-secrets/redhat-appstudio-load-test/load-test-scenario.${1:
 pushd "${2:-.}"
 
 echo "Collecting load test results"
-cp -vf ./tests/load-tests/load-tests.max-concurrency.*.log "$ARTIFACT_DIR"
-cp -vf ./tests/load-tests/load-tests.max-concurrency.json "$ARTIFACT_DIR"
+cp -f ./tests/load-tests/load-tests.max-concurrency.*.log "$ARTIFACT_DIR"
+
+echo "Setting up tool to collect monitoring data..."
+python3 -m venv venv
+set +u
+source venv/bin/activate
+set -u
+python3 -m pip install -U pip
+python3 -m pip install -U pip
+python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team-core&subdirectory=core"
+
+for monitoring_collection_data in ./tests/load-tests/load-tests.max-concurrency.*.json; do
+    cp -f "$monitoring_collection_data" "$ARTIFACT_DIR"
+    index=$(echo "$monitoring_collection_data" | sed -e 's,.*/load-tests.max-concurrency.\([0-9]\+\).json,\1,')
+    monitoring_collection_log="$ARTIFACT_DIR/monitoring-collection.$index.log"
+
+    ## Monitoring data
+    echo "Collecting monitoring data for step $index..."
+    mstart=$(date --utc --date "$(status_data.py --status-data-file "$monitoring_collection_data" --get timestamp)" --iso-8601=seconds)
+    mend=$(date --utc --date "$(status_data.py --status-data-file "$monitoring_collection_data" --get endTimestamp)" --iso-8601=seconds)
+    mhost=$(oc -n openshift-monitoring get route -l app.kubernetes.io/name=thanos-query -o json | jq --raw-output '.items[0].spec.host')
+    status_data.py \
+        --status-data-file "$monitoring_collection_data" \
+        --additional ./tests/load-tests/cluster_read_config.yaml \
+        --monitoring-start "$mstart" \
+        --monitoring-end "$mend" \
+        --prometheus-host "https://$mhost" \
+        --prometheus-port 443 \
+        --prometheus-token "$(oc whoami -t)" \
+        -d &>$monitoring_collection_log
+done
+set +u
+deactivate
+set -u
 
 csv_delim=";"
 csv_delim_quoted="\"$csv_delim\""

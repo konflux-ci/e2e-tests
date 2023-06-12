@@ -14,6 +14,7 @@ import (
 	"github.com/devfile/library/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
@@ -24,7 +25,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"knative.dev/pkg/apis"
 )
 
 var (
@@ -40,6 +40,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 	var testNamespace, applicationName, componentName string
 	var componentPipelineRun *v1beta1.PipelineRun
+	var component *appservice.Component
 	var timeout, interval time.Duration
 	var doCollectLogs bool
 
@@ -81,7 +82,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				containers = append(containers, pod.Spec.InitContainers...)
 				containers = append(containers, pod.Spec.Containers...)
 				for _, c := range containers {
-					cLog, cerr := f.AsKubeAdmin.CommonController.GetContainerLogs(pod.Name, c.Name, pod.Namespace)
+					cLog, cerr := utils.GetContainerLogs(f.AsKubeAdmin.CommonController.KubeInterface(), pod.Name, c.Name, pod.Namespace)
 					if cerr != nil {
 						GinkgoWriter.Printf("error getting logs for pod/container %s/%s: %s\n", pod.Name, c.Name, cerr.Error())
 						continue
@@ -243,7 +244,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		componentName = fmt.Sprintf("jvm-build-suite-component-%s", util.GenerateRandomString(4))
 
 		// Create a component with Git Source URL being defined
-		_, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, testNamespace, testProjectGitUrl, testProjectRevision, "", "", "", true)
+		component, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, testNamespace, testProjectGitUrl, testProjectRevision, "", "", "", true)
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
@@ -301,21 +302,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		})
 
 		It("that PipelineRun completes successfully", func() {
-			Eventually(func() bool {
-				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-				if err != nil {
-					GinkgoWriter.Printf("get of pr %s returned error: %s\n", pr.Name, err.Error())
-					return false
-				}
-				if !pr.IsDone() {
-					GinkgoWriter.Printf("pipeline run %s not done\n", pr.Name)
-					return false
-				}
-				if !pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-					Fail("component pipeline run did not succeed")
-				}
-				return true
-			}, timeout, interval).Should(BeTrue(), "timed out when waiting for the pipeline run to complete")
+			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
 		})
 
 		It("artifactbuilds and dependencybuilds are generated", func() {
@@ -479,7 +466,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 							if !strings.Contains(container.Name, "analyse-dependecies") {
 								continue
 							}
-							cLog, err := f.AsKubeAdmin.CommonController.GetContainerLogs(pods[0].Name, container.Name, testNamespace)
+							cLog, err := utils.GetContainerLogs(f.AsKubeAdmin.CommonController.KubeInterface(), pods[0].Name, container.Name, testNamespace)
 							Expect(err).ShouldNot(HaveOccurred(), "getting container logs failed")
 							if strings.Contains(cLog, "\"publisher\" : \"central\"") {
 								Fail(fmt.Sprintf("pipelinerun %s has container %s with dep analysis still pointing to central %s", pr.Name, container.Name, cLog))

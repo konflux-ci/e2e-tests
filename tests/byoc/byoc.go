@@ -13,7 +13,6 @@ import (
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	client "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/apis/vcluster"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
@@ -23,7 +22,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"knative.dev/pkg/apis"
 )
 
 const (
@@ -126,7 +124,6 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 			})
 
 			It("initializes byoc cluster connection and creates targetNamespace", func() {
-
 				config, err := clientcmd.BuildConfigFromFlags("", byocKubeconfig)
 				Expect(err).NotTo(HaveOccurred())
 				byocAPIServerURL = config.Host
@@ -221,24 +218,9 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("waits component pipeline to finish", FlakeAttempts(3), func() {
-				if CurrentSpecReport().NumAttempts > 1 {
-					pipelineRun, err := fw.AsKubeAdmin.HasController.GetComponentPipelineRun(componentObj.Name, application.Name, fw.UserNamespace, "")
-					Expect(err).ShouldNot(HaveOccurred(), "failed to get pipelinerun: %v", err)
+			It("waits component pipeline to finish", func() {
 
-					if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsFalse() {
-						err = fw.AsKubeAdmin.TektonController.DeletePipelineRun(pipelineRun.Name, fw.UserNamespace)
-						Expect(err).ShouldNot(HaveOccurred(), "failed to delete pipelinerun when retriger: %v", err)
-
-						delete(componentObj.Annotations, constants.ComponentInitialBuildAnnotationKey)
-						err = fw.AsKubeAdmin.HasController.KubeRest().Update(context.Background(), componentObj)
-						Expect(err).ShouldNot(HaveOccurred(), "failed to update component to trigger another pipeline build: %v", err)
-					}
-				}
-
-				if err := fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(fw.AsKubeAdmin.CommonController, componentObj.Name, application.Name, fw.UserNamespace, ""); err != nil {
-					Expect(err).ShouldNot(HaveOccurred(), "pipeline didnt finish successfully: %v", err)
-				}
+				Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(componentObj, "", 2)).To(Succeed())
 			})
 
 			// Deploy the component using gitops and check for the health
