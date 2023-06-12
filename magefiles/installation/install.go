@@ -5,6 +5,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"time"
+
+	appsv1 "k8s.io/api/apps/v1"
 
 	"github.com/devfile/library/pkg/util"
 	"github.com/go-git/go-git/v5"
@@ -16,6 +19,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 )
 
@@ -101,6 +105,8 @@ func (i *InstallAppStudio) InstallAppStudioPreviewMode() error {
 	if err := utils.ExecuteCommandInASpecificDirectory("hack/bootstrap-cluster.sh", previewInstallArgs, i.InfraDeploymentsCloneDir); err != nil {
 		return err
 	}
+
+	i.addSPIOauthRedirectProxyUrl()
 
 	return i.createE2EQuaySecret()
 }
@@ -197,6 +203,56 @@ func (i *InstallAppStudio) createE2EQuaySecret() error {
 				return fmt.Errorf("error when updating secret '%s' namespace: %v", secretName, err)
 			}
 		}
+	}
+
+	return nil
+}
+
+// Update spi-oauth-service-environment-config to add OAUTH_REDIRECT_PROXY_URL property for oauth tests
+func (i *InstallAppStudio) addSPIOauthRedirectProxyUrl() error {
+	OauthRedirectProxyUrl := os.Getenv("OAUTH_REDIRECT_PROXY_URL")
+	if OauthRedirectProxyUrl == "" {
+		klog.Infof("OAUTH_REDIRECT_PROXY_URL not set: not updating spi configuration")
+		return nil
+	}
+
+	namespace := "spi-system"
+	configMapName := "spi-oauth-service-environment-config"
+	deploymentName := "spi-oauth-service"
+
+	patchData := []byte(fmt.Sprintf(`{"data": {"OAUTH_REDIRECT_PROXY_URL": "%s"}}`, OauthRedirectProxyUrl))
+	_, err := i.KubernetesClient.KubeInterface().CoreV1().ConfigMaps(namespace).Patch(context.TODO(), configMapName, types.MergePatchType, patchData, metav1.PatchOptions{})
+	if err != nil {
+		klog.Error(err)
+		return err
+	}
+
+	namespacedName := types.NamespacedName{
+		Name:      deploymentName,
+		Namespace: namespace,
+	}
+
+	deployment := &appsv1.Deployment{}
+	err = i.KubernetesClient.KubeRest().Get(context.TODO(), namespacedName, deployment)
+	if err != nil {
+		klog.Error(err)
+		return err
+	}
+
+	newDeployment := deployment.DeepCopy()
+	ann := newDeployment.ObjectMeta.Annotations
+	if ann == nil {
+		ann = make(map[string]string)
+	}
+	ann["kubectl.kubernetes.io/restartedAt"] = time.Now().Format(time.RFC3339)
+	var replicas int32 = 0
+	newDeployment.Spec.Replicas = &replicas
+	newDeployment.SetAnnotations(ann)
+
+	_, err = i.KubernetesClient.KubeInterface().AppsV1().Deployments(namespace).Update(context.TODO(), newDeployment, metav1.UpdateOptions{})
+	if err != nil {
+		klog.Error(err)
+		return err
 	}
 
 	return nil
