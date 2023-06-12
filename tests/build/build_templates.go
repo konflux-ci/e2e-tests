@@ -190,28 +190,26 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				})
 
 				It("should have Pipeline Records", func() {
-					Skip("Skip until product bug: https://issues.redhat.com/browse/RHTAPBUGS-202 is resolved.")
-					records, err := resultClient.GetRecords(testNamespace, string(pipelineRun.GetUID()))
-					// temporary logs due to RHTAPBUGS-213
-					GinkgoWriter.Printf("records for PipelineRun %s:\n%s\n", pipelineRun.Name, records)
-					Expect(err).NotTo(HaveOccurred(), "got error getting records for PipelineRun %s: %v", pipelineRun.Name, err)
-					Expect(len(records.Record)).NotTo(BeZero(), "No records found for PipelineRun %s", pipelineRun.Name)
+					timeout := time.Minute * 2
+					interval := time.Second * 10
+					Eventually(func() (bool, error) {
+						records, err := resultClient.GetRecords(testNamespace, string(pipelineRun.GetUID()))
+						GinkgoWriter.Printf("records for PipelineRun %s:\n%s\n", pipelineRun.Name, records)
+						Expect(err).NotTo(HaveOccurred(), "got error getting records for PipelineRun %s: %v", pipelineRun.Name, err)
+
+						return len(records.Record) != 0, err
+					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when getting records for PipelineRun %s", pipelineRun.Name))
+
 				})
 
 				It("should have Pipeline Logs", func() {
-					Skip("Skip until product bug: https://issues.redhat.com/browse/RHTAPBUGS-202 is resolved.")
-					// Verify if result is stored in Database
-					// temporary logs due to RHTAPBUGS-213
-					logs, err := resultClient.GetLogs(testNamespace, string(pipelineRun.GetUID()))
-					GinkgoWriter.Printf("logs for PipelineRun %s:\n%s\n", pipelineRun.Name, logs)
-					Expect(err).NotTo(HaveOccurred(), "got error getting logs for PipelineRun %s: %v", pipelineRun.Name, err)
-
 					timeout := time.Minute * 2
 					interval := time.Second * 10
 					// temporary timeout  due to RHTAPBUGS-213
+					var logs pipeline.Logs
 					Eventually(func() (bool, error) {
 						// temporary logs due to RHTAPBUGS-213
-						logs, err = resultClient.GetLogs(testNamespace, string(pipelineRun.GetUID()))
+						logs, err := resultClient.GetLogs(testNamespace, string(pipelineRun.GetUID()))
 						GinkgoWriter.Printf("logs for PipelineRun %s:\n%s\n", pipelineRun.Name, logs)
 						Expect(err).NotTo(HaveOccurred(), "got error getting logs for PipelineRun %s: %v", pipelineRun.Name, err)
 
