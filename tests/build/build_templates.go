@@ -190,6 +190,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				})
 
 				It("should have Pipeline Records", func() {
+					Skip("Skip until product bug: https://issues.redhat.com/browse/RHTAPBUGS-202 is resolved.")
 					records, err := resultClient.GetRecords(testNamespace, string(pipelineRun.GetUID()))
 					// temporary logs due to RHTAPBUGS-213
 					GinkgoWriter.Printf("records for PipelineRun %s:\n%s\n", pipelineRun.Name, records)
@@ -198,6 +199,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				})
 
 				It("should have Pipeline Logs", func() {
+					Skip("Skip until product bug: https://issues.redhat.com/browse/RHTAPBUGS-202 is resolved.")
 					// Verify if result is stored in Database
 					// temporary logs due to RHTAPBUGS-213
 					logs, err := resultClient.GetLogs(testNamespace, string(pipelineRun.GetUID()))
