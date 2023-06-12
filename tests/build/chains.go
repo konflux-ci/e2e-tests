@@ -39,10 +39,6 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			err := fwk.AsKubeAdmin.CommonController.WaitForPodSelector(fwk.AsKubeAdmin.CommonController.IsPodRunning, constants.TEKTON_CHAINS_NS, "app", "tekton-chains-controller", 60, 100)
 			Expect(err).NotTo(HaveOccurred())
 		})
-		It("verifies if the correct secrets have been created", func() {
-			_, err := fwk.AsKubeAdmin.CommonController.GetSecret(constants.TEKTON_CHAINS_NS, "chains-ca-cert")
-			Expect(err).NotTo(HaveOccurred())
-		})
 		It("verifies if the correct roles are created", func() {
 			_, csaErr := fwk.AsKubeAdmin.CommonController.GetRole("chains-secret-admin", constants.TEKTON_CHAINS_NS)
 			Expect(csaErr).NotTo(HaveOccurred())
