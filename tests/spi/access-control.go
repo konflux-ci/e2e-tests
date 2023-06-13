@@ -219,6 +219,7 @@ spec:
 `, spiFcrName, primaryUser.Framework.UserNamespace, GithubPrivateRepoURL)
 			readRequest := fmt.Sprintf(
 				"curl '%s' \\"+
+					"-k \\"+
 					"-H 'Authorization: Bearer %s' \\"+
 					"-X POST \\"+
 					"-H 'Content-Type: application/yaml' \\"+
