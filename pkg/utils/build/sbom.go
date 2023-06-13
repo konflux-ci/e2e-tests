@@ -4,34 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-
-	. "github.com/onsi/ginkgo/v2"
-	"github.com/openshift/library-go/pkg/image/reference"
-	"github.com/openshift/oc/pkg/cli/image/extract"
-	"github.com/openshift/oc/pkg/cli/image/imagesource"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
 func GetParsedSbomFilesContentFromImage(image string) (*SbomPurl, *SbomCyclonedx, error) {
-	dockerImageRef, err := reference.Parse(image)
-	if err != nil {
-		return nil, nil, fmt.Errorf("cannot parse docker pull spec (image) %s, error: %+v", image, err)
-	}
-	tmpDir, err := os.MkdirTemp(os.TempDir(), "sbom")
+	tmpDir, err := ExtractImage(image)
 	defer os.RemoveAll(tmpDir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error when creating a temp directory for extracting files: %+v", err)
-	}
-	GinkgoWriter.Printf("extracting contents of container image %s to dir: %s\n", image, tmpDir)
-	eMapping := extract.Mapping{
-		ImageRef: imagesource.TypedImageReference{Type: "docker", Ref: dockerImageRef},
-		To:       tmpDir,
-	}
-	e := extract.NewExtractOptions(genericclioptions.IOStreams{Out: os.Stdout, ErrOut: os.Stderr})
-	e.Mappings = []extract.Mapping{eMapping}
-
-	if err := e.Run(); err != nil {
-		return nil, nil, fmt.Errorf("error: %+v", err)
+		return nil, nil, err
 	}
 
 	purl, err := getSbomPurlContent(tmpDir)
