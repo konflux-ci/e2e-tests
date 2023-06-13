@@ -2,6 +2,8 @@ package spi
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -31,6 +33,9 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 
 	Describe("SVPI-395 - Github OAuth flow to upload token", Ordered, func() {
 		BeforeAll(func() {
+			if os.Getenv("CI") != "true" {
+				Skip(fmt.Sprintln("test skipped on local execution"))
+			}
 			// Initialize the tests controllers
 			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("spi-demos-oauth"))
 			Expect(err).NotTo(HaveOccurred())
@@ -62,7 +67,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 		tokenBindingName := "spi-token-binding-oauth-"
 		OAUTH_REDIRECT_PROXY_URL := utils.GetEnv("OAUTH_REDIRECT_PROXY_URL", "")
 
-		if utils.GetEnv("CI", "") == "true" || OAUTH_REDIRECT_PROXY_URL != "" {
+		if utils.GetEnv("CI", "") == "true" {
 			/*
 				If we are running this test in CI, we need to handle the dynamic url the cluster is assigned with.
 				To do that, we use a redirect proxy that allows us to have a static oauth url in the providers configuration and, at the same time,
