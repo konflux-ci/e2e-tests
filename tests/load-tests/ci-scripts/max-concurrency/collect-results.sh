@@ -10,11 +10,13 @@ source "/usr/local/ci-secrets/redhat-appstudio-load-test/load-test-scenario.${1:
 pushd "${2:-.}"
 
 echo "Collecting load test results"
-cp -f ./tests/load-tests/load-tests.max-concurrency.*.log "$ARTIFACT_DIR"
+cp -vf ./tests/load-tests/load-tests.max-concurrency.*.log "$ARTIFACT_DIR"
+cp -vf ./tests/load-tests/load-tests.max-concurrency.json "$ARTIFACT_DIR"
 
 echo "Setting up tool to collect monitoring data..."
 python3 -m venv venv
 set +u
+# shellcheck disable=SC1091
 source venv/bin/activate
 set -u
 python3 -m pip install -U pip
@@ -39,7 +41,7 @@ for monitoring_collection_data in ./tests/load-tests/load-tests.max-concurrency.
         --prometheus-host "https://$mhost" \
         --prometheus-port 443 \
         --prometheus-token "$(oc whoami -t)" \
-        -d &>$monitoring_collection_log
+        -d &>"$monitoring_collection_log"
 done
 set +u
 deactivate
@@ -48,6 +50,42 @@ set -u
 csv_delim=";"
 csv_delim_quoted="\"$csv_delim\""
 dt_format='"%Y-%m-%dT%H:%M:%SZ"'
+
+## Max concurrency scalability
+max_concurrency_csv=$ARTIFACT_DIR/max-concurrency.csv
+echo "Threads\
+${csv_delim}Errors\
+${csv_delim}UserAvgTime\
+${csv_delim}UserMaxTime\
+${csv_delim}ResourcesAvgTime\
+${csv_delim}ResourcesMaxTime\
+${csv_delim}PipelineRunAvgTime\
+${csv_delim}PipelineRunMaxTime\
+${csv_delim}ClusterCPUUsageAvg\
+${csv_delim}ClusterDiskUsageAvg\
+${csv_delim}ClusterMemoryUsageAvg\
+${csv_delim}ClusterPodCountAvg\
+${csv_delim}ClusterPVCInUseAvg\
+${csv_delim}ClusterPipelineRunCountAvg\
+${csv_delim}ClusterPipelineWorkqueueDepthAvg" \
+    >"$max_concurrency_csv"
+cat ./tests/load-tests/load-tests.max-concurrency.*.json |
+    jq -rc "(.threads | tostring) \
+    + $csv_delim_quoted + (.errorsTotal | tostring) \
+    + $csv_delim_quoted + (.createUserTimeAvg | tostring) \
+    + $csv_delim_quoted + (.createUserTimeMax | tostring) \
+    + $csv_delim_quoted + (.createResourcesTimeAvg | tostring) \
+    + $csv_delim_quoted + (.createResourcesTimeMax | tostring) \
+    + $csv_delim_quoted + (.runPipelineSucceededTimeAvg | tostring) \
+    + $csv_delim_quoted + (.runPipelineSucceededTimeMax | tostring) \
+    + $csv_delim_quoted + (.measurements.cluster_cpu_usage_seconds_total_rate.mean | tostring) \
+    + $csv_delim_quoted + (.measurements.cluster_disk_throughput_total.mean | tostring) \
+    + $csv_delim_quoted + (.measurements.cluster_memory_usage_rss_total.mean | tostring) \
+    + $csv_delim_quoted + (.measurements.cluster_pods_count.mean | tostring) \
+    + $csv_delim_quoted + (.measurements.storage_count_attachable_volumes_in_use.mean | tostring) \
+    + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_pipelineruns_count.mean | tostring) \
+    + $csv_delim_quoted + (.measurements.tekton_tekton_pipelines_controller_workqueue_depth.mean | tostring)" \
+        >>"$max_concurrency_csv"
 
 ## PipelineRun timestamps
 echo "Collecting PipelineRun timestamps..."
