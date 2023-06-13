@@ -41,16 +41,21 @@ func (c *ResultClient) sendRequest(path string) (body []byte, err error) {
 	req.Header.Set("Accept", "application/json; charset=utf-8")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.Token))
 
+	// For debug purpose
+	fmt.Printf("Sending request to %s with headers: %v", requestURL, req.Header)
+
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 
-	body, err = io.ReadAll(res.Body)
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to access Tekton Result Service with status code: %d and\nbody: %s", res.StatusCode, string(body))
 	}
 
+	body, err = io.ReadAll(res.Body)
+	// For debug purpose
+	fmt.Printf("Received response with status code %d and body: %s", res.StatusCode, string(body))
 	defer res.Body.Close()
 
 	return body, err
