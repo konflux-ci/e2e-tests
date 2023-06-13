@@ -27,20 +27,21 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 	// Initialize the tests controllers
 	var fw *framework.Framework
 	var err error
-	var compName string
-	var devNamespace = utils.GetGeneratedNamespace("release-dev")
-	var managedNamespace = utils.GetGeneratedNamespace("release-managed")
+	var compName, devNamespace, managedNamespace string
 	var component *appservice.Component
 	scGitRevision := fmt.Sprintf("test-deployment-%s", util.GenerateRandomString(4))
 
 	BeforeAll(func() {
-		fw, err = framework.NewFramework("release-e2e-bundle")
+		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("release-deploy"))
 		Expect(err).NotTo(HaveOccurred())
 
 		kubeController := tekton.KubeController{
 			Commonctrl: *fw.AsKubeAdmin.CommonController,
 			Tektonctrl: *fw.AsKubeAdmin.TektonController,
 		}
+
+		devNamespace = fw.UserNamespace
+		managedNamespace = utils.GetGeneratedNamespace("release-managed")
 
 		_, err := fw.AsKubeAdmin.CommonController.CreateTestNamespace(devNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating devNamespace: %v", err)
@@ -52,9 +53,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 
 		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
 		Expect(sourceAuthJson).ToNot(BeEmpty())
-
-		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(hacbsReleaseTestsTokenSecret, devNamespace, sourceAuthJson)
-		Expect(err).ToNot(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(redhatAppstudioUserSecret, managedNamespace, sourceAuthJson)
 		Expect(err).ToNot(HaveOccurred())
@@ -171,15 +169,16 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 	})
 
 	AfterAll(func() {
-		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef("strategy-configs", scGitRevision)
+
+		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef("strategy-configs", compName)
 		if err != nil {
 			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 		}
-		// TODO: Uncomment this lines once: https://issues.redhat.com/browse/RHTAPBUGS-409 is solved
-		/*if !CurrentSpecReport().Failed() {
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
+		if !CurrentSpecReport().Failed() {
+
 			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-		}*/
+			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
+		}
 	})
 
 	var _ = Describe("Post-release verification", func() {
