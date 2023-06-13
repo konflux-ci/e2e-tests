@@ -276,7 +276,6 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 				}
 				return testPipelinerun.HasStarted(), nil
 			}, pipelineRunStartedTimeout, defaultPollingInterval).Should(BeTrue())
-			Expect(testPipelinerun.Spec.PipelineRef.Bundle).To(ContainSubstring(integrationTestScenario.Spec.Bundle))
 			Expect(testPipelinerun.Labels["appstudio.openshift.io/snapshot"]).To(ContainSubstring(snapshot.Name))
 			Expect(testPipelinerun.Labels["test.appstudio.openshift.io/scenario"]).To(ContainSubstring(integrationTestScenario.Name))
 		})

@@ -62,6 +62,7 @@ The following environment variables are used to launch the Red Hat AppStudio ins
 | `INFRA_DEPLOYMENTS_BRANCH` | no | A valid infra-deployments branch. | `main` |
 | `E2E_TEST_SUITE_LABEL` | no | Run only test suites with the given Giknkgo label | '' |
 | `KLOG_VERBOSITY` | no | Level of verbosity for `klog` | 1 |
+| `IMAGE_TAG_EXPIRATION` | no | Expiration for tags created by pull-request pipelineruns, format: digits + `h` (hours), `d` (days) or `w` (weeks), e. g. `5d` | `6h` |
 
 1. Install dependencies:
 
