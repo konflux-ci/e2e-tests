@@ -26,8 +26,3 @@ tmp/
 
 # RP Preproc output
 rp_preproc/
-
-# cypress subfolder
-resources/cypress/node_modules/
-resources/cypress/cypress/videos/
-resources/cypress/cypress/screenshots/
