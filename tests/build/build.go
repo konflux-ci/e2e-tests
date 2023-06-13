@@ -289,7 +289,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			// https://issues.redhat.com/browse/SRVKP-3064
 			// https://github.com/openshift-pipelines/pipeline-service/pull/632
 
-			It("should ensure pruning labels are set", Label(buildTemplatesTestLabel), func() {
+			It("should ensure pruning labels are set", func() {
 				pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
 
