@@ -95,7 +95,7 @@ const (
 
 	ComponentInitialBuildAnnotationKey = "appstudio.openshift.io/component-initial-build"
 
-	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.11"
+	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.13"
 
 	// TODO
 	// delete this constant and all its occurrences in the code base
@@ -109,11 +109,14 @@ const (
 	DefaultPipelineServiceAccountClusterRole = "appstudio-pipelines-runner"
 
 	PaCPullRequestBranchPrefix = "appstudio-"
+
+	// Expiration for image tags
+	IMAGE_TAG_EXPIRATION_ENV  string = "IMAGE_TAG_EXPIRATION"
+	DefaultImageTagExpiration string = "6h"
 )
 
 var (
 	ComponentDefaultLabel                    = map[string]string{"e2e-test": "true"}
-	ComponentDefaultAnnotation               = map[string]string{ComponentInitialBuildAnnotationKey: "processed"}
 	ComponentPaCRequestAnnotation            = map[string]string{"appstudio.openshift.io/pac-provision": "request"}
 	ImageControllerAnnotationDeleteRepoTrue  = map[string]string{"image.redhat.com/generate": "true", "image.redhat.com/delete-image-repo": "true"}
 	ImageControllerAnnotationDeleteRepoFalse = map[string]string{"image.redhat.com/generate": "true", "image.redhat.com/delete-image-repo": "false"}

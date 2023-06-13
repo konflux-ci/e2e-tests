@@ -26,7 +26,6 @@ import (
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "HACBS"), func() {
@@ -283,11 +282,26 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(robotAccountExist).To(BeTrue(), "quay robot account does not exists")
 
 			})
-			It("image tag is updated successfully", func() {
-				//TODO: check if image tag present once below issue is resolved
-				// https://issues.redhat.com/browse/SRVKP-3064
-				// https://github.com/openshift-pipelines/pipeline-service/pull/632
+		})
 
+		When("image tag is updated successfully", func() {
+			//TODO: check if image tag present once below issue is resolved
+			// https://issues.redhat.com/browse/SRVKP-3064
+			// https://github.com/openshift-pipelines/pipeline-service/pull/632
+
+			It("should ensure pruning labels are set", func() {
+				pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+				Expect(err).ShouldNot(HaveOccurred())
+
+				image, err := build.ImageFromPipelineRun(pipelineRun)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				labels := image.Config.Config.Labels
+				Expect(labels).ToNot(BeEmpty())
+
+				expiration, ok := labels["quay.expires-after"]
+				Expect(ok).To(BeTrue())
+				Expect(expiration).To(Equal(utils.GetEnv(constants.IMAGE_TAG_EXPIRATION_ENV, constants.DefaultImageTagExpiration)))
 			})
 			It("eventually leads to a creation of a PR comment with the PipelineRun status report", func() {
 				var comments []*github.IssueComment
@@ -359,6 +373,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		When("the PaC init branch is merged", func() {
 			var mergeResult *github.PullRequestMergeResult
 			var mergeResultSha string
+			var pipelineRun *v1beta1.PipelineRun
 
 			BeforeAll(func() {
 				Eventually(func() error {
@@ -375,7 +390,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				interval = time.Second * 1
 
 				Eventually(func() bool {
-					pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, mergeResultSha)
+					pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, mergeResultSha)
 					if err != nil {
 						GinkgoWriter.Println("PipelineRun has not been created yet")
 						return false
@@ -387,6 +402,18 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			It("pipelineRun should eventually finish", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResultSha, 2)).To(Succeed())
 			})
+
+			It("does not have expiration set", func() {
+				image, err := build.ImageFromPipelineRun(pipelineRun)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				labels := image.Config.Config.Labels
+				Expect(labels).ToNot(BeEmpty())
+
+				expiration, ok := labels["quay.expires-after"]
+				Expect(ok).To(BeFalse())
+				Expect(expiration).To(BeEmpty())
+			})
 		})
 
 		When("the component is removed and recreated (with the same name in the same namespace)", func() {
@@ -397,7 +424,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				interval := 1 * time.Second
 				Eventually(func() bool {
 					_, err := f.AsKubeAdmin.HasController.GetHasComponent(componentName, testNamespace)
-					return errors.IsNotFound(err)
+					return k8sErrors.IsNotFound(err)
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the app %s to be deleted in %s namespace", applicationName, testNamespace)
 				// Check removal of image repo
 				Eventually(func() (bool, error) {
@@ -537,7 +564,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 								ProjectType:        "hello-world",
 								DockerfileRequired: pointer.Bool(true),
 								ComponentName:      compDetected.ComponentStub.ComponentName,
-								Annotations:        constants.ComponentDefaultAnnotation,
+								Annotations:        map[string]string{"skip-initial-checks": "true"},
 								Labels:             constants.ComponentDefaultLabel,
 							},
 						},
@@ -624,7 +651,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			_, err := f.AsKubeAdmin.CommonController.GetSecret(testNamespace, constants.RegistryAuthSecretName)
 			if err != nil {
 				// If we have an error when getting RegistryAuthSecretName, it should be IsNotFound err
-				Expect(errors.IsNotFound(err)).To(BeTrue())
+				Expect(k8sErrors.IsNotFound(err)).To(BeTrue())
 			} else {
 				Skip("a registry auth secret is already created in testing namespace - skipping....")
 			}

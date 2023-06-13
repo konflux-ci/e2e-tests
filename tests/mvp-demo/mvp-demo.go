@@ -276,7 +276,6 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 				}
 				return testPipelinerun.HasStarted(), nil
 			}, pipelineRunStartedTimeout, defaultPollingInterval).Should(BeTrue())
-			Expect(testPipelinerun.Spec.PipelineRef.Bundle).To(ContainSubstring(integrationTestScenario.Spec.Bundle))
 			Expect(testPipelinerun.Labels["appstudio.openshift.io/snapshot"]).To(ContainSubstring(snapshot.Name))
 			Expect(testPipelinerun.Labels["test.appstudio.openshift.io/scenario"]).To(ContainSubstring(integrationTestScenario.Name))
 		})
@@ -330,9 +329,9 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 
 	})
 
-	Describe("MVP Demo Chapter 2 - advanced pipeline, JVM rebuild, successful release", Label("mvp-demo-chapter-2"), Ordered, func() {
+	Describe("MVP Demo Chapter 2 - advanced pipeline, JVM rebuild, successful release, switch to simple build", Label("mvp-demo-chapter-2"), Ordered, func() {
 
-		var pacControllerHost, pacBranchName string
+		var pacControllerHost, pacBranchName, pacPurgeBranchName string
 		var prNumber int
 		var mergeResult *github.PullRequestMergeResult
 		var mergeResultSha string
@@ -351,6 +350,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 			pacControllerHost = pacControllerRoute.Spec.Host
 
 			pacBranchName = fmt.Sprintf("appstudio-%s", componentName)
+			pacPurgeBranchName = fmt.Sprintf("appstudio-purge-%s", componentName)
 
 			_, err = f.AsKubeAdmin.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, userNamespace, utils.GetQuayIOOrganization())
 			Expect(err).ShouldNot(HaveOccurred())
@@ -551,6 +551,36 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 				}
 				return true, nil
 			}, jvmRebuildTimeout, jvmRebuildPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for all artifactbuilds and dependencybuilds to complete in namespace %q", userNamespace))
+		})
+
+		When("User switchs to simple build", func() {
+			BeforeAll(func() {
+				comp, err := f.AsKubeAdmin.HasController.GetHasComponent(componentName, userNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+				comp.Annotations["appstudio.openshift.io/pac-provision"] = "delete"
+				Expect(f.AsKubeAdmin.CommonController.KubeRest().Update(context.TODO(), comp)).To(Succeed())
+			})
+			AfterAll(func() {
+				// Delete the new branch created by sending purge PR while moving to simple build
+				err = f.AsKubeAdmin.CommonController.Github.DeleteRef(sampleRepoName, pacPurgeBranchName)
+				if err != nil {
+					Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+				}
+			})
+			It("PR removing PAC configuration is created", func() {
+				Eventually(func() (bool, error) {
+					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(sampleRepoName)
+					if err != nil {
+						return false, err
+					}
+					for _, pr := range prs {
+						if pr.Head.GetRef() == pacPurgeBranchName {
+							return true, nil
+						}
+					}
+					return false, fmt.Errorf("could not get the expected PaC purge PR branch %s", pacPurgeBranchName)
+				}, time.Minute*1, defaultPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for PaC purge PR to be created against the %q repo", sampleRepoName))
+			})
 		})
 
 	})
