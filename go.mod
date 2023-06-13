@@ -27,13 +27,13 @@ require (
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
 	github.com/redhat-appstudio/application-api v0.0.0-20230509152222-ef5c4dcebc94
 	github.com/redhat-appstudio/build-service v0.0.0-20230113121706-a9f10055dbc4
-	github.com/redhat-appstudio/image-controller v0.0.0-20230510051618-e2e987ef8f06
+	github.com/redhat-appstudio/image-controller v0.0.0-20230606065013-5c7c65e0db05
 	github.com/redhat-appstudio/integration-service v0.0.0-20230427084439-306b4611389b
-	github.com/redhat-appstudio/jvm-build-service v0.0.0-20230125042419-efd0d0342a2c
+	github.com/redhat-appstudio/jvm-build-service v0.0.0-20230613014138-645bff6e91c0
 	github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001
 	github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0
 	github.com/redhat-appstudio/release-service v0.0.0-20230530123949-005cd468d6a7
-	github.com/redhat-appstudio/service-provider-integration-operator v0.9.1-0.20230412095305-101be612c01e
+	github.com/redhat-appstudio/service-provider-integration-operator v0.9.1-0.20230420083506-cd7210b05b60
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.14.0
 	github.com/stretchr/testify v1.8.2
@@ -93,7 +93,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/devfile/api/v2 v2.2.0 // indirect
 	github.com/docker/cli v23.0.3+incompatible // indirect
-	github.com/docker/distribution v2.8.1+incompatible // indirect
+	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/docker v23.0.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
