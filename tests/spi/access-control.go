@@ -38,7 +38,7 @@ type User struct {
  * Component: spi
  * Description: SVPI-495 - Test automation to ensure that a user can't access and use secrets from another workspace
 
- * User A is the owner of workspace A and have access to the workspace C as maintainer
+ * User A is the owner of workspace A and has access to workspace C as the maintainer
  * User B is the owner of workspace B
  * User C is the owner of workspace C
 
@@ -260,7 +260,7 @@ spec:
 				Stdout: buffer,
 				Stderr: errBuffer,
 			})
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("reason: %v", err))
 			Expect(buffer.String()).NotTo(BeEmpty())
 			Expect(errBuffer.String()).To(BeEmpty())
 		}
