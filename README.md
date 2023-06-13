@@ -53,7 +53,7 @@ The following environment variables are used to launch the Red Hat AppStudio ins
 | `DEFAULT_QUAY_ORG_TOKEN` | yes | A quay token of OAuth application for `DEFAULT_QUAY_ORG` with scopes -  Administer organizations, Adminster repositories, Create Repositories | ''  |
 | `MY_GITHUB_ORG` | no (recommended) | GitHub organization (must be organization, cannot use regular GitHub account!) where to create/push Red Hat AppStudio Applications. You can create your GitHub organization for free  | `redhat-appstudio-qe`  |
 | `QUAY_E2E_ORGANIZATION` | no (recommended) | Quay organization/account where to push components containers. It is recommended to create your own account | `redhat-appstudio-qe` |
-| `E2E_APPLICATIONS_NAMESPACE` | no | Name of the namespace used for running HAS E2E tests | `appstudio-e2e-test` |
+| `E2E_APPLICATIONS_NAMESPACE` | no | Name of the namespace used for running build-templates E2E tests | '' |
 | `PRIVATE_DEVFILE_SAMPLE` | no | The name of the private git repository used in HAS E2E tests. Your GITHUB_TOKEN should be able to read from it. | `https://github.com/redhat-appstudio-qe/private-quarkus-devfile-sample` |
 | `QUAY_OAUTH_USER` | no | A valid quay robot account username to make quay oauth | '' |
 | `QUAY_OAUTH_TOKEN` | no | A valid quay quay robot account token to make oauth against quay.io. | '' |
