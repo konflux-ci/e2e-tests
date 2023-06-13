@@ -121,7 +121,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 							Name:    "cypress-test",
 							Image:   "cypress/included",
 							Command: []string{"/bin/sh", "-c"},
-							Args:    []string{"git clone https://github.com/albarbaro/proxy-sample.git; cd proxy-sample/cypress; npm install; cypress run --spec cypress/e2e/spec.cy.js;"},
+							Args:    []string{"git clone https://github.com/redhat-appstudio-qe/cypress-browser-oauth-flow; cd cypress-browser-oauth-flow; npm install; cypress run --spec cypress/e2e/spec.cy.js;"},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "CYPRESS_GH_USER",
