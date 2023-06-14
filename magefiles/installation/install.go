@@ -70,6 +70,9 @@ type InstallAppStudio struct {
 
 	// Oauth2 token for default quay organization
 	DefaultImageQuayOrgOAuth2Token string
+
+	// Default expiration for image tags
+	DefaultImageTagExpiration string
 }
 
 func NewAppStudioInstallController() (*InstallAppStudio, error) {
@@ -88,10 +91,10 @@ func NewAppStudioInstallController() (*InstallAppStudio, error) {
 		InfraDeploymentsOrganizationName: utils.GetEnv("INFRA_DEPLOYMENTS_ORG", DEFAULT_INFRA_DEPLOYMENTS_GH_ORG),
 		LocalForkName:                    DEFAULT_LOCAL_FORK_NAME,
 		LocalGithubForkOrganization:      utils.GetEnv("MY_GITHUB_ORG", DEFAULT_LOCAL_FORK_ORGANIZATION),
-		E2EApplicationsNamespace:         utils.GetEnv("E2E_APPLICATIONS_NAMESPACE", DEFAULT_E2E_APPLICATIONS_NAMEPSPACE),
 		QuayToken:                        utils.GetEnv("QUAY_TOKEN", ""),
 		DefaultImageQuayOrg:              utils.GetEnv("DEFAULT_QUAY_ORG", DEFAULT_E2E_QUAY_ORG),
 		DefaultImageQuayOrgOAuth2Token:   utils.GetEnv("DEFAULT_QUAY_ORG_TOKEN", ""),
+		DefaultImageTagExpiration:        utils.GetEnv(constants.IMAGE_TAG_EXPIRATION_ENV, constants.DefaultImageTagExpiration),
 	}, nil
 }
 
@@ -115,11 +118,11 @@ func (i *InstallAppStudio) setInstallationEnvironments() {
 	os.Setenv("MY_GITHUB_ORG", i.LocalGithubForkOrganization)
 	os.Setenv("MY_GITHUB_TOKEN", utils.GetEnv("GITHUB_TOKEN", ""))
 	os.Setenv("MY_GIT_FORK_REMOTE", i.LocalForkName)
-	os.Setenv("E2E_APPLICATIONS_NAMESPACE", i.E2EApplicationsNamespace)
 	os.Setenv("TEST_BRANCH_ID", util.GenerateRandomString(4))
 	os.Setenv("QUAY_TOKEN", i.QuayToken)
 	os.Setenv("IMAGE_CONTROLLER_QUAY_ORG", i.DefaultImageQuayOrg)
 	os.Setenv("IMAGE_CONTROLLER_QUAY_TOKEN", i.DefaultImageQuayOrgOAuth2Token)
+	os.Setenv("BUILD_SERVICE_IMAGE_TAG_EXPIRATION", i.DefaultImageTagExpiration)
 }
 
 func (i *InstallAppStudio) cloneInfraDeployments() (*git.Remote, error) {
