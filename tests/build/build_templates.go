@@ -153,7 +153,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(len(sbom.Components)).To(BeNumerically(">=", 1))
 			})
 
-			When("Pipeline Results are stored", func() {
+			When("Pipeline Results are stored", Label("pipeline"), func() {
 				var resultClient *pipeline.ResultClient
 				var pipelineRun *v1beta1.PipelineRun
 
