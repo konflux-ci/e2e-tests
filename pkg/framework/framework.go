@@ -37,8 +37,8 @@ type ControllerHub struct {
 type Framework struct {
 	AsKubeAdmin       *ControllerHub
 	AsKubeDeveloper   *ControllerHub
-	SandboxController *sandbox.SandboxController
 	ProxyUrl          string
+	SandboxController *sandbox.SandboxController
 	UserNamespace     string
 	UserName          string
 	UserToken         string
@@ -95,8 +95,8 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration) (*Framework
 	return &Framework{
 		AsKubeAdmin:       asAdmin,
 		AsKubeDeveloper:   asUser,
-		SandboxController: k.SandboxController,
 		ProxyUrl:          k.ProxyUrl,
+		SandboxController: k.SandboxController,
 		UserNamespace:     k.UserNamespace,
 		UserName:          k.UserName,
 		UserToken:         k.UserToken,
