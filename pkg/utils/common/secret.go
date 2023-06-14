@@ -3,8 +3,11 @@ package common
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"time"
 
+	. "github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -51,6 +54,36 @@ func (s *SuiteController) LinkSecretToServiceAccount(ns, secret, serviceaccount 
 	})
 }
 
+// UnlinkSecretFromServiceAcocount unlinks secret from service account
+func (s *SuiteController) UnlinkSecretFromServiceAccount(namespace, secretName, serviceAccount string, rmImagePullSecrets bool) error {
+	serviceAccountObject, err := s.KubeInterface().CoreV1().ServiceAccounts(namespace).Get(context.TODO(), serviceAccount, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	for index, secret := range serviceAccountObject.Secrets {
+		if secret.Name == secretName {
+			serviceAccountObject.Secrets = append(serviceAccountObject.Secrets[:index], serviceAccountObject.Secrets[index+1:]...)
+			break
+		}
+	}
+
+	if rmImagePullSecrets {
+		for index, secret := range serviceAccountObject.ImagePullSecrets {
+			if secret.Name == secretName {
+				serviceAccountObject.ImagePullSecrets = append(serviceAccountObject.ImagePullSecrets[:index], serviceAccountObject.ImagePullSecrets[index+1:]...)
+				break
+			}
+		}
+	}
+	_, err = s.KubeInterface().CoreV1().ServiceAccounts(namespace).Update(context.TODO(), serviceAccountObject, metav1.UpdateOptions{})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // CreateRegistryAuthSecret create a docker registry secret in a given ns
 func (s *SuiteController) CreateRegistryAuthSecret(secretName, namespace, secretStringData string) (*corev1.Secret, error) {
 	rawDecodedTextStringData, err := base64.StdEncoding.DecodeString(secretStringData)
@@ -71,4 +104,24 @@ func (s *SuiteController) CreateRegistryAuthSecret(secretName, namespace, secret
 		return nil, er
 	}
 	return secret, nil
+}
+
+// AddRegistryAuthSecretToSA adds registry auth secret to service account
+func (s *SuiteController) AddRegistryAuthSecretToSA(registryAuth, namespace string) error {
+	quayToken := utils.GetEnv(registryAuth, "")
+	if quayToken == "" {
+		return errors.New("Failed to get registry auth secret")
+	}
+
+	_, err := s.CreateRegistryAuthSecret(RegistryAuthSecretName, namespace, quayToken)
+	if err != nil {
+		return err
+	}
+
+	err = s.LinkSecretToServiceAccount(namespace, RegistryAuthSecretName, DefaultPipelineServiceAccount, true)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

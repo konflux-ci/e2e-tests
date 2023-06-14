@@ -648,6 +648,14 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Namespace:  testNamespace,
 			}
 
+			if err = f.AsKubeAdmin.CommonController.UnlinkSecretFromServiceAccount(testNamespace, constants.RegistryAuthSecretName, constants.DefaultPipelineServiceAccount, true); err != nil {
+				GinkgoWriter.Println(fmt.Sprintf("Failed to unlink registry auth secret from service account: %v\n", err))
+			}
+
+			if err = f.AsKubeAdmin.CommonController.DeleteSecret(testNamespace, constants.RegistryAuthSecretName); err != nil {
+				GinkgoWriter.Println(fmt.Sprintf("Failed to delete regitry auth secret from namespace: %s\n", err))
+			}
+
 			_, err := f.AsKubeAdmin.CommonController.GetSecret(testNamespace, constants.RegistryAuthSecretName)
 			if err != nil {
 				// If we have an error when getting RegistryAuthSecretName, it should be IsNotFound err
