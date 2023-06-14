@@ -18,9 +18,9 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/pipeline"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "HACBS"), func() {
@@ -32,6 +32,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 		var applicationName, componentName, testNamespace string
 		var kubeadminClient *framework.ControllerHub
+		pipelineCreatedRetryInterval := time.Second * 5
+		pipelineCreatedTimeout := time.Minute * 5
 
 		BeforeAll(func() {
 			if os.Getenv("APP_SUFFIX") != "" {
@@ -97,6 +99,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				} else {
 					Expect(kubeadminClient.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 					Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
+					Expect(kubeadminClient.CommonController.DeleteProxyPlugin("tekton-results", "toolchain-host-operator")).NotTo(BeFalse())
 				}
 			}
 		})
@@ -150,47 +153,30 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(len(sbom.Components)).To(BeNumerically(">=", 1))
 			})
 
-			When("Pipeline Results are stored", func() {
+			When("Pipeline Results are stored", Label("pipeline"), func() {
 				var resultClient *pipeline.ResultClient
 				var pipelineRun *v1beta1.PipelineRun
 
 				BeforeAll(func() {
-					// Create an Service account and a token associating it with the service account
-					resultSA := "tekton-results-tests"
-					_, err := kubeadminClient.CommonController.CreateServiceAccount(resultSA, testNamespace, nil)
-					Expect(err).NotTo(HaveOccurred())
-					_, err = kubeadminClient.CommonController.CreateRoleBinding("tekton-results-tests", testNamespace, "ServiceAccount", resultSA, "ClusterRole", "tekton-results-readonly", "rbac.authorization.k8s.io")
+					// create the proxyplugin for tekton-results
+					_, err = kubeadminClient.CommonController.CreateProxyPlugin("tekton-results", "toolchain-host-operator", "tekton-results", "tekton-results")
 					Expect(err).NotTo(HaveOccurred())
 
-					resultSecret := &v1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:        "tekton-results-tests",
-							Annotations: map[string]string{"kubernetes.io/service-account.name": resultSA},
-						},
-						Type: v1.SecretTypeServiceAccountToken,
-					}
+					regProxyUrl := fmt.Sprintf("%s/plugins/tekton-results", f.ProxyUrl)
+					resultClient = pipeline.NewClient(regProxyUrl, f.UserToken)
 
-					_, err = kubeadminClient.CommonController.CreateSecret(testNamespace, resultSecret)
-					Expect(err).ToNot(HaveOccurred())
-					err = kubeadminClient.CommonController.LinkSecretToServiceAccount(testNamespace, resultSecret.Name, resultSA, false)
-					Expect(err).ToNot(HaveOccurred())
-
-					resultSecret, err = kubeadminClient.CommonController.GetSecret(testNamespace, resultSecret.Name)
-					Expect(err).ToNot(HaveOccurred())
-					token := resultSecret.Data["token"]
-
-					// Retrieve Result REST API url
-					resultRoute, err := kubeadminClient.CommonController.GetOpenshiftRoute("tekton-results", "tekton-results")
-					Expect(err).NotTo(HaveOccurred())
-					resultUrl := fmt.Sprintf("https://%s", resultRoute.Spec.Host)
-					resultClient = pipeline.NewClient(resultUrl, string(token))
-
-					pipelineRun, err = kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
+					err = wait.Poll(pipelineCreatedRetryInterval, pipelineCreatedTimeout, func() (done bool, err error) {
+						pipelineRun, err = f.AsKubeDeveloper.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
+						if err != nil {
+							time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
+							return false, fmt.Errorf("deletion of PipelineRun has been timedout: %v", err)
+						}
+						return true, nil
+					})
 					Expect(err).ShouldNot(HaveOccurred())
 				})
 
 				It("should have Pipeline Records", func() {
-					Skip("Skip until product bug: https://issues.redhat.com/browse/RHTAPBUGS-202 is resolved.")
 					records, err := resultClient.GetRecords(testNamespace, string(pipelineRun.GetUID()))
 					// temporary logs due to RHTAPBUGS-213
 					GinkgoWriter.Printf("records for PipelineRun %s:\n%s\n", pipelineRun.Name, records)
@@ -199,7 +185,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				})
 
 				It("should have Pipeline Logs", func() {
-					Skip("Skip until product bug: https://issues.redhat.com/browse/RHTAPBUGS-202 is resolved.")
 					// Verify if result is stored in Database
 					// temporary logs due to RHTAPBUGS-213
 					logs, err := resultClient.GetLogs(testNamespace, string(pipelineRun.GetUID()))

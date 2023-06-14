@@ -40,6 +40,8 @@ type Framework struct {
 	SandboxController *sandbox.SandboxController
 	UserNamespace     string
 	UserName          string
+	UserToken         string
+	ProxyUrl          string
 }
 
 func NewFramework(userName string) (*Framework, error) {
@@ -96,6 +98,8 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration) (*Framework
 		SandboxController: k.SandboxController,
 		UserNamespace:     k.UserNamespace,
 		UserName:          k.UserName,
+		UserToken:         k.UserToken,
+		ProxyUrl:          k.ProxyUrl,
 	}, nil
 }
 
