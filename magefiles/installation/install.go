@@ -216,6 +216,7 @@ func (i *InstallAppStudio) addSPIOauthRedirectProxyUrl() {
 	OauthRedirectProxyUrl := os.Getenv("OAUTH_REDIRECT_PROXY_URL")
 	if OauthRedirectProxyUrl == "" {
 		klog.Infof("OAUTH_REDIRECT_PROXY_URL not set: not updating spi configuration")
+		return
 	}
 
 	namespace := "spi-system"
@@ -226,6 +227,7 @@ func (i *InstallAppStudio) addSPIOauthRedirectProxyUrl() {
 	_, err := i.KubernetesClient.KubeInterface().CoreV1().ConfigMaps(namespace).Patch(context.TODO(), configMapName, types.MergePatchType, patchData, metav1.PatchOptions{})
 	if err != nil {
 		klog.Error(err)
+		return
 	}
 
 	namespacedName := types.NamespacedName{
@@ -237,6 +239,7 @@ func (i *InstallAppStudio) addSPIOauthRedirectProxyUrl() {
 	err = i.KubernetesClient.KubeRest().Get(context.TODO(), namespacedName, deployment)
 	if err != nil {
 		klog.Error(err)
+		return
 	}
 
 	newDeployment := deployment.DeepCopy()
@@ -252,6 +255,7 @@ func (i *InstallAppStudio) addSPIOauthRedirectProxyUrl() {
 	_, err = i.KubernetesClient.KubeInterface().AppsV1().Deployments(namespace).Update(context.TODO(), newDeployment, metav1.UpdateOptions{})
 	if err != nil {
 		klog.Error(err)
+		return
 	}
 
 }

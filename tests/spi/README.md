@@ -26,7 +26,7 @@ Values can be provided by setting the following environment variables.
 
 ### OAUTH flow tests
 
-The oauth authentication flow involves some steps that can only be executed in the browser; e2e-tests do this by using [cypress](https://github.com/cypress-io/cypress) framework to simulate the user steps. The specs that Cypress will run are located in [this repo](). 
+The oauth authentication flow involves some steps that can only be executed in the browser; e2e-tests do this by using [cypress](https://github.com/cypress-io/cypress) framework to simulate the user steps. The specs that Cypress will run are located in [this repo](https://github.com/redhat-appstudio-qe/cypress-browser-oauth-flow). 
 After creating SPI needed resources, e2e completes the steps a user would perform in a browser by creating a short-lived pod with the Cypress image, injecting the cypress specs by cloning the above repo and running them.
 To complete the authetication, a test user is needed: the tests expect username, password and the 2FA setup key to be provided. 
 
