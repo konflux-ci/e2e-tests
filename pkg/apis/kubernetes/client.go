@@ -15,6 +15,7 @@ import (
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/sandbox"
 	integrationservice "github.com/redhat-appstudio/integration-service/api/v1alpha1"
+	integrationservicev1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	jvmbuildservice "github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	jvmbuildserviceclientset "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
 	gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend-shared/apis/managed-gitops/v1alpha1"
@@ -75,6 +76,7 @@ func init() {
 	utilruntime.Must(release.AddToScheme(scheme))
 	utilruntime.Must(gitopsv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(integrationservice.AddToScheme(scheme))
+	utilruntime.Must(integrationservicev1beta1.AddToScheme(scheme))
 	utilruntime.Must(jvmbuildservice.AddToScheme(scheme))
 	utilruntime.Must(ecp.AddToScheme(scheme))
 	utilruntime.Must(buildservice.AddToScheme(scheme))
