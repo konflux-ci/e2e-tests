@@ -215,7 +215,7 @@ func (i *InstallAppStudio) createE2EQuaySecret() error {
 func (i *InstallAppStudio) addSPIOauthRedirectProxyUrl() {
 	OauthRedirectProxyUrl := os.Getenv("OAUTH_REDIRECT_PROXY_URL")
 	if OauthRedirectProxyUrl == "" {
-		klog.Infof("OAUTH_REDIRECT_PROXY_URL not set: not updating spi configuration")
+		klog.Error("OAUTH_REDIRECT_PROXY_URL not set: not updating spi configuration")
 		return
 	}
 
