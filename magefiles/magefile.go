@@ -295,7 +295,7 @@ func (ci CI) setRequiredEnvVars() error {
 			case strings.Contains(jobName, "application-service"):
 				envVarPrefix = "HAS"
 				imageTagSuffix = "has-image"
-				testSuiteLabel = "has,e2e-demo,byoc"
+				testSuiteLabel = "e2e-demo,byoc"
 			case strings.Contains(jobName, "release-service"):
 				envVarPrefix = "RELEASE_SERVICE"
 				imageTagSuffix = "release-service-image"
