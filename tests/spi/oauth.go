@@ -90,8 +90,12 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 			SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.CreateSPIAccessTokenBinding(tokenBindingName, namespace, RepoURL, "", "kubernetes.io/basic-auth")
 			Expect(err).NotTo(HaveOccurred())
 
-			SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
-			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() bool {
+				SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
+				Expect(err).NotTo(HaveOccurred())
+
+				return (SPITokenBinding.Status.OAuthUrl != "")
+			}, 1*time.Minute, 10*time.Second).Should(BeTrue(), "OAuthUrl should not be empty")
 
 			CYPRESS_SPI_OAUTH_URL = SPITokenBinding.Status.OAuthUrl
 			Expect(CYPRESS_SPI_OAUTH_URL).NotTo(BeEmpty())
