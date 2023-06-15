@@ -30,7 +30,7 @@ const (
 	IntegrationServiceUser = "integration-e2e"
 	gitURL                 = "https://github.com/redhat-appstudio/integration-examples.git"
 	revision               = "main"
-        pathInRepo             = "pipelines/integration_resolver_pipeline_pass.yaml"
+	pathInRepo             = "pipelines/integration_resolver_pipeline_pass.yaml"
 )
 
 var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests", Label("integration-service", "HACBS"), func() {
@@ -136,7 +136,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					}
 					return pipelineRun.HasStarted()
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
-				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(&testScenario, snapshot, applicationName, appStudioE2EApplicationsNamespace)).To(Succeed(), "Error when waiting for a integration pipeline to finish")
+				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(&testScenario, snapshot, appStudioE2EApplicationsNamespace)).To(Succeed(), "Error when waiting for a integration pipeline to finish")
 			}
 		}
 
@@ -268,8 +268,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						if f.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot_push) {
 							releases, err := f.AsKubeAdmin.IntegrationController.GetReleasesWithSnapshot(snapshot_push, appStudioE2EApplicationsNamespace)
 							Expect(err).ShouldNot(HaveOccurred())
-							if len(*releases) != 0 {
-								for _, release := range *releases {
+							if len(releases) != 0 {
+								for _, release := range releases {
 									GinkgoWriter.Printf("Release %s is found\n", release.Name)
 								}
 							} else {

@@ -119,7 +119,7 @@ func (h *SuiteController) GetComponent(applicationName, namespace string) (*apps
 	return &appstudioApi.Component{}, fmt.Errorf("no component found %s", utils.GetAdditionalInfo(applicationName, namespace))
 }
 
-func (h *SuiteController) GetReleasesWithSnapshot(snapshot *appstudioApi.Snapshot, namespace string) (*[]releasev1alpha1.Release, error) {
+func (h *SuiteController) GetReleasesWithSnapshot(snapshot *appstudioApi.Snapshot, namespace string) ([]releasev1alpha1.Release, error) {
 	releases := &releasev1alpha1.ReleaseList{}
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
@@ -134,7 +134,7 @@ func (h *SuiteController) GetReleasesWithSnapshot(snapshot *appstudioApi.Snapsho
 		GinkgoWriter.Printf("Release %s is found\n", release.Name)
 	}
 
-	return &releases.Items, nil
+	return releases.Items, nil
 }
 
 // Get return the status from the Application Custom Resource object
@@ -369,7 +369,7 @@ func (h *SuiteController) CreateIntegrationTestScenarioWithEnvironment(applicati
 	return integrationTestScenario, nil
 }
 
-func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(testScenario *integrationv1beta1.IntegrationTestScenario, snapshot *appstudioApi.Snapshot, applicationName string, appNamespace string) error {
+func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(testScenario *integrationv1beta1.IntegrationTestScenario, snapshot *appstudioApi.Snapshot, appNamespace string) error {
 	return wait.PollImmediate(20*time.Second, 100*time.Minute, func() (done bool, err error) {
 		pipelineRun, _ := h.GetIntegrationPipelineRun(testScenario.Name, snapshot.Name, appNamespace)
 
@@ -560,15 +560,15 @@ func (h *SuiteController) CreateIntegrationTestScenario_beta1(applicationName, n
 				Resolver: "git",
 				Params: []integrationv1beta1.ResolverParameter{
 					{
-						Name: "url",
+						Name:  "url",
 						Value: gitURL,
 					},
 					{
-						Name: "revision",
+						Name:  "revision",
 						Value: revision,
 					},
 					{
-						Name: "pathInRepo",
+						Name:  "pathInRepo",
 						Value: pathInRepo,
 					},
 				},
@@ -577,8 +577,8 @@ func (h *SuiteController) CreateIntegrationTestScenario_beta1(applicationName, n
 	}
 
 	err := h.KubeRest().Create(context.TODO(), integrationTestScenario)
-        if err != nil {
-                return nil, err
-        }
-        return integrationTestScenario, nil
+	if err != nil {
+		return nil, err
+	}
+	return integrationTestScenario, nil
 }
