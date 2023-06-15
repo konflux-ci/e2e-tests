@@ -52,11 +52,11 @@ type CustomClient struct {
 type K8SClient struct {
 	AsKubeAdmin       *CustomClient
 	AsKubeDeveloper   *CustomClient
+	ProxyUrl          string
 	SandboxController *sandbox.SandboxController
 	UserName          string
 	UserNamespace     string
 	UserToken         string
-	ProxyUrl          string
 }
 
 var (
@@ -136,11 +136,11 @@ func NewDevSandboxProxyClient(userName string) (*K8SClient, error) {
 	return &K8SClient{
 		AsKubeAdmin:       asAdminClient,
 		AsKubeDeveloper:   sandboxProxyClient,
+		ProxyUrl:          proxyAuthInfo.ProxyUrl,
+		SandboxController: sandboxController,
 		UserName:          proxyAuthInfo.UserName,
 		UserNamespace:     proxyAuthInfo.UserNamespace,
 		UserToken:         proxyAuthInfo.UserToken,
-		ProxyUrl:          proxyAuthInfo.ProxyUrl,
-		SandboxController: sandboxController,
 	}, nil
 }
 
@@ -181,12 +181,12 @@ func CreateAPIProxyClient(usertoken, proxyURL string) (*CustomClient, error) {
 
 	apiConfig, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
 	if err != nil {
-		return nil, fmt.Errorf("error intializing api proxy client config rules %s", err)
+		return nil, fmt.Errorf("error initializing api proxy client config rules %s", err)
 	}
 
 	defaultConfig, err := clientcmd.NewDefaultClientConfig(*apiConfig, &clientcmd.ConfigOverrides{}).ClientConfig()
 	if err != nil {
-		return nil, fmt.Errorf("error intializing default client configs %s", err)
+		return nil, fmt.Errorf("error initializing default client configs %s", err)
 	}
 	proxyKubeConfig := &rest.Config{
 		Host:            proxyURL,
