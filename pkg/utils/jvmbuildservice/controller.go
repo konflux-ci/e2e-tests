@@ -7,6 +7,7 @@ import (
 
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
+	"github.com/redhat-appstudio/jvm-build-service/pkg/reconciler/jbsconfig"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -37,9 +38,9 @@ func (s *SuiteController) DeleteDependencyBuild(name, namespace string) error {
 	return s.JvmbuildserviceClient().JvmbuildserviceV1alpha1().DependencyBuilds(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
-func (s *SuiteController) CreateJBSConfig(name, namespace, imageRegistryOwner string) (*v1alpha1.JBSConfig, error) {
+func (s *SuiteController) CreateJBSConfig(name, namespace string) (*v1alpha1.JBSConfig, error) {
 	config := &v1alpha1.JBSConfig{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
+		ObjectMeta: metav1.ObjectMeta{Name: name, Annotations: map[string]string{jbsconfig.DeleteImageRepositoryAnnotationName: "true"}},
 		Spec: v1alpha1.JBSConfigSpec{
 			EnableRebuilds:              true,
 			RequireArtifactVerification: true,
@@ -63,8 +64,6 @@ func (s *SuiteController) CreateJBSConfig(name, namespace, imageRegistryOwner st
 				"maven-repository-315-kotlin-kotlin-dependencies": "https://maven.pkg.jetbrains.space/kotlin/p/kotlin/kotlin-dependencies"},
 			ImageRegistry: v1alpha1.ImageRegistry{
 				Host:       "quay.io",
-				Owner:      imageRegistryOwner,
-				Repository: "test-images",
 				PrependTag: strconv.FormatInt(time.Now().UnixMilli(), 10),
 			},
 			CacheSettings: v1alpha1.CacheSettings{
