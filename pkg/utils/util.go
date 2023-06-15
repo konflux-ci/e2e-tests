@@ -116,10 +116,6 @@ func GetQuayIOOrganization() string {
 	return GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
 }
 
-func GetDockerConfigJson() string {
-	return GetEnv(constants.DOCKER_CONFIG_JSON, "")
-}
-
 func IsPrivateHostname(url string) bool {
 	// https://www.ibm.com/docs/en/networkmanager/4.2.0?topic=translation-private-address-ranges
 	privateIPAddressPrefixes := []string{"10.", "172.1", "172.2", "172.3", "192.168"}
