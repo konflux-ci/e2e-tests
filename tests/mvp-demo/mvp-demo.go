@@ -3,6 +3,7 @@ package mvp
 import (
 	"context"
 	"fmt"
+	build2 "github.com/redhat-appstudio/e2e-tests/tests/build"
 	"os"
 	"strings"
 	"time"
@@ -352,14 +353,9 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 			pacBranchName = fmt.Sprintf("appstudio-%s", componentName)
 			pacPurgeBranchName = fmt.Sprintf("appstudio-purge-%s", componentName)
 
-			_, err = f.AsKubeAdmin.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, userNamespace, utils.GetQuayIOOrganization())
+			_, err = f.AsKubeAdmin.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, userNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
-			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: constants.JVMBuildImageSecretName, Namespace: userNamespace},
-				Data: map[string][]byte{".dockerconfigjson": sharedSecret.Data[".dockerconfigjson"]},
-				Type: corev1.SecretTypeDockerConfigJson,
-			}
-			_, err = f.AsKubeAdmin.CommonController.CreateSecret(userNamespace, secret)
-			Expect(err).ShouldNot(HaveOccurred())
+			build2.WaitForCache(f.AsKubeAdmin, userNamespace)
 
 		})
 		AfterAll(func() {
