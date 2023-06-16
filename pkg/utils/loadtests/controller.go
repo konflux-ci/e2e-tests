@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"time"
+
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 )
 
 // User represents a user in the list
@@ -49,4 +52,19 @@ func SelectUsers(userList []User, numberOfUsers, threadCount, maxUsers int) ([]U
 		selectedUsers = append(selectedUsers, userList[i])
 	}
 	return selectedUsers, nil
+}
+
+//Indentify CI and get unique Job Name
+func GetJobName()(string){
+	var jobName string
+	if utils.CheckIfEnvironmentExists("CI"){
+		if utils.CheckIfEnvironmentExists("GITHUB_ACTIONS"){
+			jobName = utils.GetEnv("GITHUB_RUN_ID", "")
+		} else if utils.CheckIfEnvironmentExists("PROW_JOB_ID") && utils.CheckIfEnvironmentExists("BUILD_ID"){
+			jobName = utils.GetEnv("BUILD_ID", "")
+		}
+	}else {
+		jobName = time.Now().String()
+	}
+	return jobName
 }

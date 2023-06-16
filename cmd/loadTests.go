@@ -63,6 +63,8 @@ var (
 	logData                              LogData
 	stageUsers 							[]loadtestUtils.User
 	selectedUsers 						[]loadtestUtils.User
+	CI 									bool
+	JobName 							string
 )
 
 type ErrorOccurrence struct {
@@ -187,6 +189,9 @@ func setKlogFlag(fs flag.FlagSet, name string, value string) {
 func setup(cmd *cobra.Command, args []string) {
 	cmd.SilenceUsage = true
 	
+	//Job Name to Store Metrics Captured During Test
+	JobName = loadtestUtils.GetJobName()	
+	
 	logFile, err := os.Create("load-tests.log")
 	if err != nil {
 		klog.Fatalf("Error creating log file: %v", err)
@@ -290,6 +295,9 @@ func setup(cmd *cobra.Command, args []string) {
 	}
 
 	// Todo add cleanup functions that will delete user signups
+	if stage{
+		StageCleanup(selectedUsers)
+	}
 
 	threadsWG.Wait()
 	uip.Stop()
@@ -376,6 +384,19 @@ func setup(cmd *cobra.Command, args []string) {
 
 	klog.StopFlushDaemon()
 	klog.Flush()
+}
+
+func StageCleanup(users []loadtestUtils.User){
+
+	for _, user := range users {
+		framework := frameworkForUser(user.Username)
+		err := framework.AsKubeDeveloper.HasController.DeleteAllApplicationsInASpecificNamespace(framework.UserNamespace, 60*time.Minute)
+		if err!= nil{
+			klog.Errorf("while deleting resources for user: %s, got error: %v\n",user.Username, err)
+		}
+
+	}
+	
 }
 
 func maxDurationFromArray(durations []time.Duration) time.Duration {
@@ -532,6 +553,15 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				FailedResourceCreationsPerThread[threadIndex] += 1
 				increaseBar(resourcesBar, resourcesBarMutex)
 				continue
+			}
+			//when application got created
+			//app.CreationTimestamp.Time
+			for _, cond := range app.Status.Conditions{
+				if cond.Type == "Created"{
+					//use this this is the actual time when application is ready
+					//applicationCameIntoExistence := cond.LastTransitionTime
+					//applicationCameIntoExistence.Time
+				}
 			}
 			gitopsRepoInterval := 5 * time.Second
 			gitopsRepoTimeout := 60 * time.Minute
