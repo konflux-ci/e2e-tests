@@ -27,7 +27,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	r "github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
-	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
+	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -50,9 +50,11 @@ const (
 	testNamespacePrefix = "mvp-dev"
 	managedNamespace    = "mvp-managed"
 
-	appName        = "mvp-test-app"
-	BundleURL      = "quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-pass"
-	InPipelineName = "integration-pipeline-pass"
+	appName                = "mvp-test-app"
+	testScenarioGitURL     = "https://github.com/redhat-appstudio/integration-examples.git"
+        testScenarioRevision   = "main"
+        testScenarioPathInRepo = "pipelines/integration_resolver_pipeline_pass.yaml"
+
 
 	// Timeouts
 	appDeployTimeout            = time.Minute * 20
@@ -96,7 +98,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 	release := &releaseApi.Release{}
 	snapshot := &appstudioApi.Snapshot{}
 	testPipelinerun := &tektonapi.PipelineRun{}
-	integrationTestScenario := &integrationv1alpha1.IntegrationTestScenario{}
+	integrationTestScenario := &integrationv1beta1.IntegrationTestScenario{}
 
 	BeforeAll(func() {
 		// This pipeline contains an image that comes from "not allowed" container image registry repo
@@ -239,7 +241,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 			}
 
 			Expect(f.AsKubeAdmin.CommonController.KubeRest().Create(context.TODO(), ps)).To(Succeed())
-			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(appName, userNamespace, BundleURL, InPipelineName)
+			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario_beta1(appName, userNamespace, testScenarioGitURL, testScenarioRevision, testScenarioPathInRepo)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
