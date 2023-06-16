@@ -96,10 +96,6 @@ const (
 
 	JsonStageUsersPath = "output.json"
 
-	ToolchainStageApiUrl = "https://api-toolchain-host-operator.apps.stone-stg-host.qc0p.p1.openshiftapps.com"
-
-	StageSSOURL = "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
-
 	// TODO
 	// delete this constant and all its occurrences in the code base
 	// once https://issues.redhat.com/browse/RHTAP-810 is completed
