@@ -114,6 +114,39 @@ func (c *CustomClient) DynamicClient() dynamic.Interface {
 // Creates Kubernetes clients:
 // 1. Will create a kubernetes client from default kubeconfig as kubeadmin
 // 2. Will create a sandbox user and will generate a client using user token a new client to create resources in RHTAP like a normal user
+func NewDevSandboxProxyStageClient(username string, toolchainApiUrl string, keycloakUrl string, offlineToken string) (*K8SClient, error) {
+	sandboxController, err := sandbox.NewDevSandboxStageController()
+	if err != nil {
+		return nil, err
+	}
+	userAuthInfo, err := sandboxController.ReconcileUserCreationStage(username, toolchainApiUrl, keycloakUrl , offlineToken)
+	if err != nil {
+		return nil, err
+	}
+
+	cfgBytes, err := os.ReadFile(userAuthInfo.KubeconfigPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read user kubeconfig %v", err)
+	}
+
+	userCfg, err := clientcmd.RESTConfigFromKubeConfig(cfgBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	sandboxProxyClient, err := createCustomClient(*userCfg)
+	if err != nil {
+		return nil, err
+	}
+	return &K8SClient{
+		AsKubeAdmin: nil,
+		AsKubeDeveloper:   sandboxProxyClient,
+		UserName:          userAuthInfo.UserName,
+		UserNamespace:     userAuthInfo.UserNamespace,
+		SandboxController: sandboxController,
+	}, nil
+}
+
 func NewDevSandboxProxyClient(userName string) (*K8SClient, error) {
 	asAdminClient, err := NewAdminKubernetesClient()
 	if err != nil {

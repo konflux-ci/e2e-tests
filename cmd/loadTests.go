@@ -11,15 +11,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/codeready-toolchain/toolchain-e2e/setup/auth"
-	"github.com/codeready-toolchain/toolchain-e2e/setup/metrics"
-	"github.com/codeready-toolchain/toolchain-e2e/setup/metrics/queries"
-	"github.com/codeready-toolchain/toolchain-e2e/setup/terminal"
 	"github.com/gosuri/uiprogress"
 	"github.com/gosuri/uitable/util/strutil"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	loadtestUtils "github.com/redhat-appstudio/e2e-tests/pkg/utils/loadtests"
 	"github.com/spf13/cobra"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/util/rand"
@@ -34,10 +31,9 @@ var (
 	numberOfUsers             int
 	waitPipelines             bool
 	verbose                   bool
-	token                     string
+	stage					  bool
 	logConsole                bool
 	failFast                  bool
-	disableMetrics            bool
 	threadCount               int
 	pipelineSkipInitialChecks bool
 )
@@ -65,6 +61,8 @@ var (
 	pipelinesBarMutex                    = &sync.Mutex{}
 	threadsWG                            *sync.WaitGroup
 	logData                              LogData
+	stageUsers 							[]loadtestUtils.User
+	selectedUsers 						[]loadtestUtils.User
 )
 
 type ErrorOccurrence struct {
@@ -142,11 +140,11 @@ func init() {
 	rootCmd.Flags().StringVar(&usernamePrefix, "username", usernamePrefix, "the prefix used for usersignup names")
 	// TODO use a custom kubeconfig and introduce debug logging and trace
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "if 'debug' traces should be displayed in the console")
+	rootCmd.Flags().BoolVarP(&stage, "stage", "s", false, "is you want to run the test on stage")
 	rootCmd.Flags().IntVarP(&numberOfUsers, "users", "u", 5, "the number of user accounts to provision per thread")
 	rootCmd.Flags().BoolVarP(&waitPipelines, "waitpipelines", "w", false, "if you want to wait for pipelines to finish")
 	rootCmd.Flags().BoolVarP(&logConsole, "log-to-console", "l", false, "if you want to log to console in addition to the log file")
 	rootCmd.Flags().BoolVar(&failFast, "fail-fast", false, "if you want the test to fail fast at first failure")
-	rootCmd.Flags().BoolVar(&disableMetrics, "disable-metrics", false, "if you want to disable metrics gathering")
 	rootCmd.Flags().IntVarP(&threadCount, "threads", "t", 1, "number of concurrent threads to execute")
 	rootCmd.Flags().BoolVar(&pipelineSkipInitialChecks, "pipeline-skip-initial-checks", true, "if pipeline runs' initial checks are to be skipped")
 }
@@ -188,8 +186,7 @@ func setKlogFlag(fs flag.FlagSet, name string, value string) {
 
 func setup(cmd *cobra.Command, args []string) {
 	cmd.SilenceUsage = true
-	term := terminal.New(cmd.InOrStdin, cmd.OutOrStdout, verbose)
-
+	
 	logFile, err := os.Create("load-tests.log")
 	if err != nil {
 		klog.Fatalf("Error creating log file: %v", err)
@@ -208,53 +205,21 @@ func setup(cmd *cobra.Command, args []string) {
 	klog.Infof("Pipeline run initial checks skipped: %t", pipelineSkipInitialChecks)
 
 	klog.Infof("🕖 initializing...\n")
-	globalframework, err := framework.NewFramework("load-tests")
-	if err != nil {
-		klog.Fatalf("error creating client-go %v", err)
-	}
 
-	if len(token) == 0 {
-		token, err = auth.GetTokenFromOC()
+	if(stage){
+		klog.Infof("Loading Stage Users...\n")
+		stageUsers, err = loadtestUtils.LoadStageUsers(constants.JsonStageUsersPath)
 		if err != nil {
-			tokenRequestURI, err := auth.GetTokenRequestURI(globalframework.AsKubeAdmin.CommonController.KubeRest())
-			if err != nil {
-				klog.Fatalf("a token is required to capture metrics, use oc login to log into the cluster: %v", err)
-			}
-			klog.Fatalf("a token is required to capture metrics, use oc login to log into the cluster. alternatively request a token and use the token flag: %v", tokenRequestURI)
+			klog.Fatalf("Error Loading Stage Users from the given Path Please check file/contents exists: %v", err)
 		}
+
+		selectedUsers, err = loadtestUtils.SelectUsers(stageUsers, numberOfUsers, threadCount, len(stageUsers))
+		if err != nil {
+			klog.Fatalf("Error Selecting the Users Based on thread count: %v", err)
+		}
+		
 	}
 
-	var stopMetrics chan struct{}
-	var metricsInstance *metrics.Gatherer
-	if !disableMetrics {
-		metricsInstance = metrics.NewEmpty(term, globalframework.AsKubeAdmin.CommonController.KubeRest(), 10*time.Minute)
-
-		prometheusClient := metrics.GetPrometheusClient(term, globalframework.AsKubeAdmin.CommonController.KubeRest(), token)
-
-		metricsInstance.AddQueries(
-			queries.QueryClusterCPUUtilisation(prometheusClient),
-			queries.QueryClusterMemoryUtilisation(prometheusClient),
-			queries.QueryNodeMemoryUtilisation(prometheusClient),
-			queries.QueryEtcdMemoryUsage(prometheusClient),
-			queries.QueryWorkloadCPUUsage(prometheusClient, constants.OLMOperatorNamespace, constants.OLMOperatorWorkload),
-			queries.QueryWorkloadMemoryUsage(prometheusClient, constants.OLMOperatorNamespace, constants.OLMOperatorWorkload),
-			queries.QueryOpenshiftKubeAPIMemoryUtilisation(prometheusClient),
-			queries.QueryWorkloadCPUUsage(prometheusClient, constants.OSAPIServerNamespace, constants.OSAPIServerWorkload),
-			queries.QueryWorkloadMemoryUsage(prometheusClient, constants.OSAPIServerNamespace, constants.OSAPIServerWorkload),
-			queries.QueryWorkloadCPUUsage(prometheusClient, constants.HostOperatorNamespace, constants.HostOperatorWorkload),
-			queries.QueryWorkloadMemoryUsage(prometheusClient, constants.HostOperatorNamespace, constants.HostOperatorWorkload),
-			queries.QueryWorkloadCPUUsage(prometheusClient, constants.MemberOperatorNamespace, constants.MemberOperatorWorkload),
-			queries.QueryWorkloadMemoryUsage(prometheusClient, constants.MemberOperatorNamespace, constants.MemberOperatorWorkload),
-			queries.QueryWorkloadCPUUsage(prometheusClient, "application-service", "application-service-application-service-controller-manager"),
-			queries.QueryWorkloadMemoryUsage(prometheusClient, "application-service", "application-service-application-service-controller-manager"),
-			queries.QueryWorkloadCPUUsage(prometheusClient, "build-service", "build-service-controller-manager"),
-			queries.QueryWorkloadMemoryUsage(prometheusClient, "build-service", "build-service-controller-manager"),
-		)
-		stopMetrics = metricsInstance.StartGathering()
-
-		klog.Infof("Sleeping till all metrics queries gets init")
-		time.Sleep(time.Second * 10)
-	}
 
 	machineName, err := os.Hostname()
 	if err != nil {
@@ -411,10 +376,6 @@ func setup(cmd *cobra.Command, args []string) {
 
 	klog.StopFlushDaemon()
 	klog.Flush()
-	if !disableMetrics {
-		defer close(stopMetrics)
-		metricsInstance.PrintResults()
-	}
 }
 
 func maxDurationFromArray(durations []time.Duration) time.Duration {
@@ -475,12 +436,16 @@ func frameworkForUser(username string) *framework.Framework {
 	return nil
 }
 
-func tryNewFramework(username string, timeout time.Duration) (*framework.Framework, error) {
+func tryNewFramework(username string, user loadtestUtils.User,  timeout time.Duration) (*framework.Framework, error) {
 	ch := make(chan *framework.Framework)
 	var fw *framework.Framework
 	var err error
 	go func() {
-		fw, err = framework.NewFrameworkWithTimeout(username, time.Minute*60)
+		if stage {
+			fw, err = framework.NewFrameworkStageWithTimeout(user.Username,user.APIURL,user.SSOURL,user.Token, time.Minute*60)
+		}else {
+			fw, err = framework.NewFrameworkWithTimeout(username, time.Minute*60)
+		}
 		ch <- fw
 	}()
 
@@ -511,12 +476,21 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 		wg.Add(2)
 	}
 
-	go func() {
+	    go func() {
 		defer wg.Done()
 		for userIndex := 1; userIndex <= numberOfUsers; userIndex++ {
 			startTime := time.Now()
 			username := fmt.Sprintf("%s-%04d", usernamePrefix, threadIndex*numberOfUsers+userIndex)
-			framework, err := tryNewFramework(username, 60*time.Minute)
+			var framework *framework.Framework
+			var user loadtestUtils.User
+			var err error
+			if stage {
+				user = selectedUsers[threadIndex*numberOfUsers+userIndex-1]
+				username = user.Username
+				framework, err = tryNewFramework(username, user, 60*time.Minute)
+			}else {
+				framework, err = tryNewFramework(username, user, 60*time.Minute)
+			}
 			if err != nil {
 				logError(1, fmt.Sprintf("Unable to provision user '%s': %v", username, err))
 				FailedUserCreationsPerThread[threadIndex] += 1
