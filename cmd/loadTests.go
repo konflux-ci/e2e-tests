@@ -551,17 +551,6 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				continue
 			}
 			usernamespace := framework.UserNamespace
-			_, errors := framework.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(
-				constants.RegistryAuthSecretName,
-				usernamespace,
-				utils.GetDockerConfigJson(),
-			)
-			if errors != nil {
-				logError(3, fmt.Sprintf("Unable to create the secret %s in namespace %s: %v", constants.RegistryAuthSecretName, usernamespace, errors))
-				FailedResourceCreationsPerThread[threadIndex] += 1
-				increaseBar(resourcesBar, resourcesBarMutex)
-				continue
-			}
 			ApplicationName := fmt.Sprintf("%s-app", username)
 			app, err := framework.AsKubeDeveloper.HasController.CreateHasApplicationWithTimeout(ApplicationName, usernamespace, 60*time.Minute)
 			if err != nil {
