@@ -4,10 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+<<<<<<< HEAD
+=======
 	v1 "k8s.io/api/apps/v1"
+>>>>>>> 2e78b53b59d0705f61911adea033170f5d84c224
 	"os"
 	"strings"
 	"time"
+
+	spi "github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -18,6 +23,7 @@ import (
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -55,13 +61,17 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			GinkgoWriter.Printf("got error fetching dependencybuilds: %s\n", err.Error())
 		}
 
-		if CurrentSpecReport().Failed() || doCollectLogs {
+		if true || CurrentSpecReport().Failed() || doCollectLogs {
+			if err := logs.StoreTestLogs(testNamespace, "jvm-build-service", componentPipelineRun, f.AsKubeAdmin.CommonController, f.AsKubeAdmin.TektonController); err != nil {
+				GinkgoWriter.Printf("error storing test logs: %v\n", err.Error())
+			}
+
 			var testLogsDir string
 			artifactDir := os.Getenv("ARTIFACT_DIR")
 			var storeLogsInFiles bool
 
 			if artifactDir != "" {
-				testLogsDir = fmt.Sprintf("%s/jvm-build-service-test", artifactDir)
+				testLogsDir = fmt.Sprintf("%s/%s", artifactDir, testNamespace)
 				err := os.MkdirAll(testLogsDir, 0755)
 				if err != nil && !os.IsExist(err) {
 					GinkgoWriter.Printf("cannot create a folder %s for storing test logs/resources: %+v\n", testLogsDir, err)
@@ -72,53 +82,9 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			// get jvm-build-service logs
 			toDebug := map[string]string{}
 
-			jvmPodList, jerr := f.AsKubeAdmin.CommonController.KubeInterface().CoreV1().Pods("jvm-build-service").List(context.TODO(), metav1.ListOptions{})
-			if jerr != nil {
-				GinkgoWriter.Printf("error listing jvm-build-service pods: %s\n", jerr.Error())
-			}
-			GinkgoWriter.Printf("found %d pods in jvm-build-service namespace\n", len(jvmPodList.Items))
-			for _, pod := range jvmPodList.Items {
-				var containers []corev1.Container
-				containers = append(containers, pod.Spec.InitContainers...)
-				containers = append(containers, pod.Spec.Containers...)
-				for _, c := range containers {
-					cLog, cerr := utils.GetContainerLogs(f.AsKubeAdmin.CommonController.KubeInterface(), pod.Name, c.Name, pod.Namespace)
-					if cerr != nil {
-						GinkgoWriter.Printf("error getting logs for pod/container %s/%s: %s\n", pod.Name, c.Name, cerr.Error())
-						continue
-					}
-					filename := fmt.Sprintf("%s-pod-%s-%s.log", pod.Namespace, pod.Name, c.Name)
-					toDebug[filename] = cLog
-				}
-			}
 			// In case the test fails before the Component PipelineRun is created,
 			// we are unable to collect following resources
 			if componentPipelineRun != nil {
-				// let's make sure and print the pr that starts the analysis first
-				logs, err := f.AsKubeAdmin.TektonController.GetPipelineRunLogs(componentPipelineRun.Name, testNamespace)
-				if err != nil {
-					GinkgoWriter.Printf("got error fetching PR logs: %s\n", err.Error())
-				}
-				filename := fmt.Sprintf("%s-pr-%s.log", testNamespace, componentPipelineRun.Name)
-				toDebug[filename] = logs
-
-				prList, err := f.AsKubeAdmin.TektonController.ListAllPipelineRuns(testNamespace)
-				if err != nil {
-					GinkgoWriter.Printf("got error fetching PR list: %s\n", err.Error())
-				}
-				GinkgoWriter.Printf("total number of pipeline runs not pruned: %d\n", len(prList.Items))
-				for _, pr := range prList.Items {
-					if pr.Name == componentPipelineRun.Name {
-						continue
-					}
-					prLog, err := f.AsKubeAdmin.TektonController.GetPipelineRunLogs(pr.Name, pr.Namespace)
-					if err != nil {
-						GinkgoWriter.Printf("got error fetching PR logs for %s: %s\n", pr.Name, err.Error())
-					}
-					filename := fmt.Sprintf("%s-pr-%s.log", pr.Namespace, pr.Name)
-					toDebug[filename] = prLog
-				}
-
 				for _, ab := range abList.Items {
 					v, err := json.MarshalIndent(ab, "", "  ")
 					if err != nil {
