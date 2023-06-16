@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	spi "github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
+	v1 "k8s.io/api/apps/v1"
 	"os"
 	"strings"
 	"time"
@@ -181,34 +181,25 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 		GinkgoWriter.Printf("Test namespace: %s\n", testNamespace)
 
-		_, err = f.AsKubeAdmin.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, testNamespace, utils.GetQuayIOOrganization())
+		_, err = f.AsKubeAdmin.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, testNamespace)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		var SPITokenBinding *spi.SPIAccessTokenBinding
-		//this should result in the creation of an SPIAccessTokenBinding
-		Eventually(func() bool {
-			SPITokenBinding, err = f.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(constants.JVMBuildImageSecretName, testNamespace)
+		//TODO: not using SPI at the moment for auto created repos
+		//var SPITokenBinding *spi.SPIAccessTokenBinding
+		////this should result in the creation of an SPIAccessTokenBinding
+		//Eventually(func() bool {
+		//	SPITokenBinding, err = f.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(constants.JVMBuildImageSecretName, testNamespace)
+		//
+		//	if err != nil {
+		//		return false
+		//	}
+		//
+		//	return SPITokenBinding.Status.Phase == spi.SPIAccessTokenBindingPhaseInjected
+		//}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "Access token binding should be created")
 
-			if err != nil {
-				return false
-			}
+		//wait for the cache
 
-			return SPITokenBinding.Status.LinkedAccessTokenName != "" && SPITokenBinding.Status.UploadUrl != ""
-		}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "LinkedAccessTokenName and UploadUrl should not be empty")
-
-		// get the url to manually upload the token
-		uploadURL := SPITokenBinding.Status.UploadUrl
-		Expect(uploadURL).NotTo(BeEmpty())
-
-		// Get the token for the current openshift user
-		bearerToken, err := utils.GetOpenshiftToken()
-		Expect(err).NotTo(HaveOccurred())
-
-		// build and upload the payload using the uploadURL. it should return 204
-		oauthCredentials := `{"access_token":"` + utils.GetEnv(constants.QUAY_OAUTH_TOKEN_ENV, "") + `", "username":"` + utils.GetEnv(constants.QUAY_OAUTH_USER_ENV, "") + `"}`
-		statusCode, err := f.AsKubeDeveloper.SPIController.UploadWithRestEndpoint(uploadURL, oauthCredentials, bearerToken)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(statusCode).Should(Equal(204))
+		WaitForCache(f.AsKubeAdmin, testNamespace)
 
 		customJavaPipelineBundleRef := os.Getenv(constants.CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV)
 		if len(customJavaPipelineBundleRef) > 0 {
@@ -493,3 +484,25 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		})
 	})
 })
+
+func WaitForCache(client *framework.ControllerHub, testNamespace string) bool {
+	return Eventually(func() bool {
+		cache, err := client.CommonController.GetDeployment(v1alpha1.CacheDeploymentName, testNamespace)
+		if err != nil {
+			GinkgoWriter.Printf("get of cache: %s", err.Error())
+			return false
+		}
+		if cache.Status.AvailableReplicas > 0 {
+			GinkgoWriter.Printf("Cache is available")
+			return true
+		}
+		for _, cond := range cache.Status.Conditions {
+			if cond.Type == v1.DeploymentProgressing && cond.Status == "False" {
+				panic("cache deployment failed")
+			}
+
+		}
+		GinkgoWriter.Printf("Cache is progressing")
+		return false
+	}, 5*time.Minute, 5*time.Second).Should(BeTrue(), "Cache should be created and ready")
+}

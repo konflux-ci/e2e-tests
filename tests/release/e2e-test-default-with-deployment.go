@@ -104,7 +104,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		_, err = fw.AsKubeAdmin.CommonController.Github.CreateFile("strategy-configs", scPath, string(scYaml), compName)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-deploy-strategy", managedNamespace, "deploy-release", "quay.io/hacbs-release/pipeline-deploy-release:0.2", releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, []releaseApi.Params{
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-deploy-strategy", managedNamespace, "deploy-release", "quay.io/hacbs-release/pipeline-deploy-release:0.3", releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, []releaseApi.Params{
 			{Name: "extraConfigGitUrl", Value: fmt.Sprintf("https://github.com/%s/strategy-configs.git", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"))},
 			{Name: "extraConfigPath", Value: scPath},
 			{Name: "extraConfigGitRevision", Value: compName},
