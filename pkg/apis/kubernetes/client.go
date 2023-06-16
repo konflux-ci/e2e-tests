@@ -134,12 +134,12 @@ func NewDevSandboxProxyStageClient(username string, toolchainApiUrl string, keyc
 		return nil, err
 	}
 
-	sandboxProxyClient, err := createCustomClient(*userCfg)
+	sandboxProxyClient, err := createClientSetsFromConfig(userCfg)
 	if err != nil {
 		return nil, err
 	}
 	return &K8SClient{
-		AsKubeAdmin: nil,
+		AsKubeAdmin: sandboxProxyClient,
 		AsKubeDeveloper:   sandboxProxyClient,
 		UserName:          userAuthInfo.UserName,
 		UserNamespace:     userAuthInfo.UserNamespace,
