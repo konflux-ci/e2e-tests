@@ -4,15 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-<<<<<<< HEAD
-=======
-	v1 "k8s.io/api/apps/v1"
->>>>>>> 2e78b53b59d0705f61911adea033170f5d84c224
 	"os"
 	"strings"
 	"time"
 
-	spi "github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
+	v1 "k8s.io/api/apps/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
