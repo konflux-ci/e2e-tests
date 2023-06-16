@@ -205,3 +205,8 @@ func (s *SuiteController) namespaceDoesNotExist(namespace string) wait.Condition
 		return err != nil && k8sErrors.IsNotFound(err), nil
 	}
 }
+
+// GetNamespace returns the requested Namespace object
+func (s *SuiteController) GetNamespace(namespace string) (*corev1.Namespace, error) {
+	return s.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
+}
