@@ -45,34 +45,3 @@ func (h *SuiteController) DeploymentIsCompleted(deploymentName, namespace string
 		return false, nil
 	}
 }
-
-// RolloutRestartDeployment restart a deployment by replicating 'restart rollout' bahviour
-func (h *SuiteController) RolloutRestartDeployment(deploymentName string, namespace string) (*appsv1.Deployment, error) {
-	namespacedName := types.NamespacedName{
-		Name:      deploymentName,
-		Namespace: namespace,
-	}
-
-	deployment := &appsv1.Deployment{}
-	err := h.KubeRest().Get(context.TODO(), namespacedName, deployment)
-	if err != nil {
-		return &appsv1.Deployment{}, err
-	}
-
-	newDeployment := deployment.DeepCopy()
-	ann := newDeployment.ObjectMeta.Annotations
-	if ann == nil {
-		ann = make(map[string]string)
-	}
-	ann["kubectl.kubernetes.io/restartedAt"] = time.Now().Format(time.RFC3339)
-	var replicas int32 = 0
-	newDeployment.Spec.Replicas = &replicas
-	newDeployment.SetAnnotations(ann)
-
-	newDep, err := h.KubeInterface().AppsV1().Deployments(namespace).Update(context.TODO(), newDeployment, metav1.UpdateOptions{})
-	if err != nil {
-		return &appsv1.Deployment{}, err
-	}
-
-	return newDep, nil
-}

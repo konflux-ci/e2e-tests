@@ -39,7 +39,7 @@ If tests are running in CI, we need to handle the dynamic url the cluster is ass
 - redirect the callback calls from the authentication providers to the spi component in our cluster. 
 The OAUTH_REDIRECT_PROXY_URL env should containt the url of such proxy and the callback url of you oauth apps should be set with the same url. 
 The proxy is stateless, requires no prior registration and the redirect translation will happen automatically using the state data provided by the SPI component itself.
-The recirect proxy used is in [this repository](https://github.com/redhat-appstudio-qe/cypress-browser-oauth-flow).
+The recirect proxy used is in [this repository](https://github.com/redhat-appstudio-qe/spi-oauth-redirect-proxy).
 
 If not running in CI, SPI expects that the callback url in the provider configuration is set to the default one: homepage URL + /oauth/callback
 
