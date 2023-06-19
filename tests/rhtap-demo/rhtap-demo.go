@@ -402,9 +402,9 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 				Eventually(func() error {
 					pipelineRun, err = f.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
 					Expect(err).ShouldNot(HaveOccurred())
-					Expect(utils.PipelineRunFailed(pipelineRun)).NotTo(BeTrue(), fmt.Sprintf("did not expect PipelineRun %s/%s to fail", pipelineRun.GetNamespace(), pipelineRun.GetName()))
+					Expect(utils.HasPipelineRunFailed(pipelineRun)).NotTo(BeTrue(), fmt.Sprintf("did not expect PipelineRun %s/%s to fail", pipelineRun.GetNamespace(), pipelineRun.GetName()))
 					if pipelineRun.IsDone() {
-						Expect(utils.PipelineRunSucceeded(pipelineRun)).To(BeTrue(), fmt.Sprintf("PipelineRun %s/%s did not succeed", pipelineRun.GetNamespace(), pipelineRun.GetName()))
+						Expect(utils.HasPipelineRunSucceeded(pipelineRun)).To(BeTrue(), fmt.Sprintf("PipelineRun %s/%s did not succeed", pipelineRun.GetNamespace(), pipelineRun.GetName()))
 					}
 					return nil
 				}, releasePipelineTimeout, pipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("failed to see pipelinerun %q in namespace %q with a label pointing to release %q in namespace %q to complete successfully", pipelineRun.Name, managedNamespace, release.Name, release.Namespace))

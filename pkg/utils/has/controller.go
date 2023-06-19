@@ -513,7 +513,7 @@ func (h *SuiteController) WaitForComponentPipelineToBeFinished(component *appser
 				return false, nil
 			}
 
-			if utils.PipelineRunSucceeded(pr) {
+			if utils.HasPipelineRunSucceeded(pr) {
 				return true, nil
 			} else {
 				var prLogs string
