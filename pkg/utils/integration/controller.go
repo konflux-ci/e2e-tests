@@ -13,6 +13,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
+	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	releasev1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	releasemetadata "github.com/redhat-appstudio/release-service/metadata"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -137,18 +138,18 @@ func (h *SuiteController) GetReleasesWithSnapshot(snapshot *appstudioApi.Snapsho
 }
 
 // Get return the status from the Application Custom Resource object
-func (h *SuiteController) GetIntegrationTestScenarios(applicationName, namespace string) (*[]integrationv1alpha1.IntegrationTestScenario, error) {
+func (h *SuiteController) GetIntegrationTestScenarios(applicationName, namespace string) (*[]integrationv1beta1.IntegrationTestScenario, error) {
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
 	}
 
-	integrationTestScenarioList := &integrationv1alpha1.IntegrationTestScenarioList{}
+	integrationTestScenarioList := &integrationv1beta1.IntegrationTestScenarioList{}
 	err := h.KubeRest().List(context.TODO(), integrationTestScenarioList, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	items := make([]integrationv1alpha1.IntegrationTestScenario, 0)
+	items := make([]integrationv1beta1.IntegrationTestScenario, 0)
 	for _, t := range integrationTestScenarioList.Items {
 		if t.Spec.Application == applicationName {
 			items = append(items, t)
@@ -249,7 +250,7 @@ func (h *SuiteController) DeleteSnapshot(hasSnapshot *appstudioApi.Snapshot, nam
 	return err
 }
 
-func (h *SuiteController) DeleteIntegrationTestScenario(testScenario *integrationv1alpha1.IntegrationTestScenario, namespace string) error {
+func (h *SuiteController) DeleteIntegrationTestScenario(testScenario *integrationv1beta1.IntegrationTestScenario, namespace string) error {
 	err := h.KubeRest().Delete(context.TODO(), testScenario)
 	return err
 }
@@ -368,7 +369,7 @@ func (h *SuiteController) CreateIntegrationTestScenarioWithEnvironment(applicati
 	return integrationTestScenario, nil
 }
 
-func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(testScenario *integrationv1alpha1.IntegrationTestScenario, snapshot *appstudioApi.Snapshot, applicationName string, appNamespace string) error {
+func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(testScenario *integrationv1beta1.IntegrationTestScenario, snapshot *appstudioApi.Snapshot, applicationName string, appNamespace string) error {
 	return wait.PollImmediate(20*time.Second, 100*time.Minute, func() (done bool, err error) {
 		pipelineRun, _ := h.GetIntegrationPipelineRun(testScenario.Name, snapshot.Name, appNamespace)
 
@@ -542,4 +543,42 @@ func (h *SuiteController) GetEnvironments(namespace string) (*appstudioApi.Envir
 	}
 
 	return environmentList, nil
+}
+
+func (h *SuiteController) CreateIntegrationTestScenario_beta1(applicationName, namespace, gitURL, revision, pathInRepo string) (*integrationv1beta1.IntegrationTestScenario, error) {
+	integrationTestScenario := &integrationv1beta1.IntegrationTestScenario{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "example-resolver-pass-" + util.GenerateRandomString(4),
+			Namespace: namespace,
+			Labels: map[string]string{
+				"test.appstudio.openshift.io/optional": "false",
+			},
+		},
+		Spec: integrationv1beta1.IntegrationTestScenarioSpec{
+			Application: applicationName,
+			ResolverRef: integrationv1beta1.ResolverRef{
+				Resolver: "git",
+				Params: []integrationv1beta1.ResolverParameter{
+					{
+						Name: "url",
+						Value: gitURL,
+					},
+					{
+						Name: "revision",
+						Value: revision,
+					},
+					{
+						Name: "pathInRepo",
+						Value: pathInRepo,
+					},
+				},
+			},
+		},
+	}
+
+	err := h.KubeRest().Create(context.TODO(), integrationTestScenario)
+        if err != nil {
+                return nil, err
+        }
+        return integrationTestScenario, nil
 }
