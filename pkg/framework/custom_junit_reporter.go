@@ -35,10 +35,12 @@ import (
 	"encoding/xml"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2/reporters"
 	types "github.com/onsi/ginkgo/v2/types"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"k8s.io/klog/v2"
 )
 
@@ -190,6 +192,28 @@ func GenerateRPPreprocReport(report types.Report, rpPreprocParentDir string) {
 					writeLogInFile(filePath+"/failureLocation.log", reportSpec.FailureLocation().FullStackTrace)
 				}
 			}
+		}
+	}
+
+	//Move files stored directly in artifacts dir to rp_preproc subdirectory
+	wd, _ := os.Getwd()
+	artifactDir := utils.GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
+
+	files, err := os.ReadDir(artifactDir)
+	if err != nil {
+		klog.Error(err)
+	}
+
+	for _, file := range files {
+		if file.Name() == "rp_preproc" {
+			continue
+		}
+
+		sourcePath := filepath.Join(artifactDir, file.Name())
+		destPath := filepath.Join(fmt.Sprintf("%s/attachments/xunit/", rpPreprocDir), file.Name())
+
+		if err := os.Rename(sourcePath, destPath); err != nil {
+			klog.Error(err)
 		}
 	}
 }
