@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	v1 "k8s.io/api/apps/v1"
 	"os"
 	"strings"
 	"time"
-
-	v1 "k8s.io/api/apps/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -56,7 +55,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			GinkgoWriter.Printf("got error fetching dependencybuilds: %s\n", err.Error())
 		}
 
-		if true || CurrentSpecReport().Failed() || doCollectLogs {
+		if CurrentSpecReport().Failed() || doCollectLogs {
 			var testLogsDir string
 			artifactDir := os.Getenv("ARTIFACT_DIR")
 			var storeLogsInFiles bool
