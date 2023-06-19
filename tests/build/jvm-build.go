@@ -57,7 +57,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			GinkgoWriter.Printf("got error fetching dependencybuilds: %s\n", err.Error())
 		}
 
-		if true || CurrentSpecReport().Failed() || doCollectLogs {
+		if CurrentSpecReport().Failed() || doCollectLogs {
 			if err := logs.StoreTestLogs(testNamespace, "jvm-build-service", componentPipelineRun, f.AsKubeAdmin.CommonController, f.AsKubeAdmin.TektonController); err != nil {
 				GinkgoWriter.Printf("error storing test logs: %v\n", err.Error())
 			}
