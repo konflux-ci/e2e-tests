@@ -18,10 +18,10 @@ Values can be provided by setting the following environment variables.
 | `QUAY_OAUTH_TOKEN` | yes | A quay.io token used to push/build containers. Note: the token and username must be a robot account with access to your repository | '' |
 | `SPI_GITHUB_CLIENT_ID` | yes | Github Oauth application Client ID  | ''  |
 | `SPI_GITHUB_CLIENT_SECRET` | yes | Github Oauth application Client secret | ''  |
-| `CYPRESS_GH_USER` | yes | Github Oauth application Client ID  | ''  |
-| `CYPRESS_GH_PASSWORD` | yes | Github Oauth application Client ID  | ''  |
-| `CYPRESS_GH_2FA_CODE` | yes | Github Oauth application Client ID  | ''  |
-| `OAUTH_REDIRECT_PROXY_URL` | yes | Github Oauth application Client ID  | ''  |
+| `CYPRESS_GH_USER` | yes | Github user used by Cypress to simulate user's in-browser login  | ''  |
+| `CYPRESS_GH_PASSWORD` | yes | Github password used by Cypress to simulate user's in-browser login  | ''  |
+| `CYPRESS_GH_2FA_CODE` | yes | Github user 2FA code used by Cypress to simulate user's in-browser login | ''  |
+| `OAUTH_REDIRECT_PROXY_URL` | yes | Redirect Proxy public url | ''  |
 
 ### Provate Repositories
 
