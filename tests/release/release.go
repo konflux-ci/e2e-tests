@@ -2,7 +2,6 @@ package release
 
 import (
 	"fmt"
-	"strings"
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	"github.com/google/uuid"
@@ -12,7 +11,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"knative.dev/pkg/apis"
 )
 
 const (
@@ -71,10 +69,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 
 	AfterAll(func() {
 		if !CurrentSpecReport().Failed() {
-			// Delete the dev and managed namespaces with all the resources created in them
-			Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(devNamespace)).NotTo(HaveOccurred())
-			Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(managedNamespace)).NotTo(HaveOccurred())
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
 			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
 			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
 		}
@@ -116,28 +110,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 
 	var _ = Describe("post-release verification.", func() {
 
-		It("makes sure a PipelineRun should have been created in the managed namespace.", func() {
-			Eventually(func() bool {
-				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
-				if err != nil || prList == nil || len(prList.Items) < 1 {
-					GinkgoWriter.Println(err)
-					return false
-				}
-
-				return strings.Contains(prList.Items[0].Name, releaseName)
-			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
-		})
-
-		It("makes sure the PipelineRun exists and succeeded", func() {
-			Eventually(func() bool {
-				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
-				if prList == nil || err != nil || len(prList.Items) < 1 {
-					GinkgoWriter.Println(err)
-					return false
-				}
-
-				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
-			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
+		It("makes sure a release PipelineRun created in managednamespace and succeeded", func() {
+			Expect(fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineRunToBeFinished(managedNamespace, devNamespace, releaseName, nil, 3)).To(Succeed())
 		})
 
 		It("makes sure that the Release should have succeeded.", func() {

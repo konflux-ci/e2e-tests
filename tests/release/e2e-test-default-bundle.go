@@ -2,7 +2,6 @@ package release
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/devfile/library/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
@@ -17,7 +16,6 @@ import (
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
-	"knative.dev/pkg/apis"
 )
 
 var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-pipeline", Label("release", "defaultBundle", "HACBS"), func() {
@@ -26,23 +24,21 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 	var fw *framework.Framework
 	var err error
 	var compName string
-	var devNamespace = utils.GetGeneratedNamespace("release-dev")
-	var managedNamespace = utils.GetGeneratedNamespace("release-managed")
+	var managedNamespace, devNamespace string
 	var component *appservice.Component
 	scGitRevision := fmt.Sprintf("test-bundle-%s", util.GenerateRandomString(4))
 
 	BeforeAll(func() {
 		// Initialize the tests controllers
-		fw, err = framework.NewFramework("release-e2e-bundle")
+		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("release-default"))
 		Expect(err).NotTo(HaveOccurred())
 		kubeController := tekton.KubeController{
 			Commonctrl: *fw.AsKubeAdmin.CommonController,
 			Tektonctrl: *fw.AsKubeAdmin.TektonController,
 		}
 
-		_, err := fw.AsKubeAdmin.CommonController.CreateTestNamespace(devNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating devNamespace: %v", err)
-		GinkgoWriter.Println("Dev Namespace created: %s ", devNamespace)
+		devNamespace = fw.UserNamespace
+		managedNamespace = utils.GetGeneratedNamespace("release-managed")
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating managedNamespace: %v", err)
@@ -61,9 +57,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 		Expect(err).NotTo(HaveOccurred())
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
 		Expect(err).NotTo(HaveOccurred())
-
-		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(hacbsReleaseTestsTokenSecret, devNamespace, sourceAuthJson)
-		Expect(err).ToNot(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(redhatAppstudioUserSecret, managedNamespace, destinationAuthJson)
 		Expect(err).ToNot(HaveOccurred())
@@ -156,10 +149,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 		}
 		if !CurrentSpecReport().Failed() {
-			Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(devNamespace)).NotTo(HaveOccurred())
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
 			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
+			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
 		}
 	})
 
@@ -169,26 +160,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
 		})
 
-		It("verifies that in managed namespace will be created a PipelineRun.", func() {
-			Eventually(func() bool {
-				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
-				if err != nil || prList == nil || len(prList.Items) < 1 {
-					return false
-				}
-
-				return strings.Contains(prList.Items[0].Name, "release")
-			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
-		})
-
-		It("verifies a PipelineRun started in managed namespace succeeded.", func() {
-			Eventually(func() bool {
-				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
-				if prList == nil || err != nil || len(prList.Items) < 1 {
-					return false
-				}
-
-				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
-			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
+		It("verifies a release PipelineRun created in managed namespace and succeeded.", func() {
+			Expect(fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineRunToBeFinished(managedNamespace, devNamespace, "", component, 3)).To(Succeed())
 		})
 
 		It("tests a Release should have been created in the dev namespace and succeeded.", func() {

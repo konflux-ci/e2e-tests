@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	releaseMetadata "github.com/redhat-appstudio/release-service/metadata"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -19,7 +22,9 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/pointer"
+	"knative.dev/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -66,11 +71,12 @@ func (s *SuiteController) CreateSnapshot(name string, namespace string, applicat
 }
 
 // GetSnapshotByComponent returns the first snapshot in namespace if exist, else will return nil
-func (s *SuiteController) GetSnapshotByComponent(namespace string) (*appstudioApi.Snapshot, error) {
+func (s *SuiteController) GetSnapshotByComponent(namespace, componentName string) (*appstudioApi.Snapshot, error) {
 	snapshot := &appstudioApi.SnapshotList{}
 	opts := []client.ListOption{
 		client.MatchingLabels{
 			"test.appstudio.openshift.io/type": "component",
+			"appstudio.openshift.io/component": componentName,
 		},
 		client.InNamespace(namespace),
 	}
@@ -423,4 +429,131 @@ func (s *SuiteController) CreateReleasePipelineRoleBindingForServiceAccount(name
 		return nil, err
 	}
 	return roleBinding, nil
+}
+
+// WaitForReleasePipelineToBeFinished Waits for the release pipelineRun associated to the release and component to finish within a given retries.
+func (s *SuiteController) WaitForReleasePipelineRunToBeFinished(managedNamespace, devNamespace string, releaseName string, component *appstudioApi.Component, maxRetries int) error {
+	attempts := 1
+	var pr *v1beta1.PipelineRun
+	// var prList *v1beta1.PipelineRunList
+
+	for {
+		err := wait.PollImmediate(20*time.Second, 30*time.Minute, func() (done bool, err error) {
+
+			if releaseName != "" {
+				pr, err = s.GetPipelineRunInNamespace(managedNamespace, releaseName, devNamespace)
+				if err != nil {
+					GinkgoWriter.Println("PipelineRun has not been created yet.")
+					return false, nil
+				}
+			} else {
+				pr, err = s.GetReleasePipelineRunMatchComponent(managedNamespace, devNamespace, component)
+				if err != nil {
+					GinkgoWriter.Println("PipelineRun has not been created yet.")
+					return false, nil
+				}
+
+			}
+
+			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pr.Name, pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
+
+			if !pr.IsDone() {
+				return false, nil
+			}
+
+			if pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+				return true, nil
+			} else {
+				var prLogs string
+				if err = tekton.StorePipelineRun(pr, s.KubeRest(), s.KubeInterface()); err != nil {
+					GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
+				}
+				if prLogs, err = tekton.GetFailedPipelineRunLogs(s.KubeRest(), s.KubeInterface(), pr); err != nil {
+					GinkgoWriter.Printf("failed to get logs for PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
+				}
+				return false, fmt.Errorf(prLogs)
+			}
+		})
+
+		if err != nil {
+			GinkgoWriter.Printf("attempt %d/%d: PipelineRun %q failed: %+v", attempts, maxRetries+1, pr.GetName(), err)
+			attempts++
+		} else {
+			break
+		}
+	}
+
+	return nil
+
+}
+
+// GetReleasePipelineRunMatchComponent returns the release pipelineRun in namespace associated with component.
+func (s *SuiteController) GetReleasePipelineRunMatchComponent(managedNamespace, devNamespace string, component *appstudioApi.Component) (*v1beta1.PipelineRun, error) {
+
+	snapshot, err := s.GetSnapshotByComponent(devNamespace, component.Name)
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, err
+	}
+
+	release, err := s.GetReleaseMatchSnapshot(devNamespace, snapshot.Name)
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, err
+	}
+
+	releasePipelineRunList, err := s.GetReleasePipelineRunByAppNameAndReleaseName(managedNamespace, component.Spec.Application, release.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	return &releasePipelineRunList.Items[0], nil
+}
+
+// GetReleaseMatchSnapshot returns a release in namespace with the given snapshot name.
+func (s *SuiteController) GetReleaseMatchSnapshot(namespace, snapshotName string) (*releaseApi.Release, error) {
+	var release *releaseApi.Release
+	releaseList := &releaseApi.ReleaseList{}
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+
+	err := s.KubeRest().List(context.TODO(), releaseList, opts...)
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, err
+	}
+
+	for _, r := range releaseList.Items {
+		if r.Spec.Snapshot == snapshotName {
+			release = &r
+			break
+		}
+	}
+	return release, nil
+}
+
+// GetReleasePipelineRunByAppNameAndReleaseName returns a release pipeline with labels of given application name and release name.
+func (s *SuiteController) GetReleasePipelineRunByAppNameAndReleaseName(namespace, appName, releaseName string) (*v1beta1.PipelineRunList, error) {
+	var releasePipelineruns []v1beta1.PipelineRun
+	list := &v1beta1.PipelineRunList{}
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+		client.MatchingLabels{"appstudio.openshift.io/application": appName},
+	}
+
+	err := s.KubeRest().List(context.TODO(), list, opts...)
+	if err != nil && !k8sErrors.IsNotFound(err) || len(list.Items) < 1 {
+		return nil, err
+	}
+
+	for _, pr := range list.Items {
+		if strings.Contains(pr.Name, "release") &&
+			pr.Labels["release.appstudio.openshift.io/name"] == releaseName {
+			releasePipelineruns = append(releasePipelineruns, pr)
+
+		}
+	}
+
+	if len(releasePipelineruns) > 0 {
+		return list, nil
+	}
+	return nil, nil
 }

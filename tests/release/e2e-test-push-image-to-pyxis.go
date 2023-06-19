@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"strings"
 
 	"github.com/devfile/library/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
@@ -20,7 +19,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
-	"knative.dev/pkg/apis"
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,7 +34,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 	var devNamespace, managedNamespace, compName, additionalCompName string
 	var imageIDs []string
 	var pyxisKeyDecoded, pyxisCertDecoded []byte
-	var releasePrName, additionalReleasePrName string
 	scGitRevision := fmt.Sprintf("test-pyxis-%s", util.GenerateRandomString(4))
 
 	var component1, component2 *appservice.Component
@@ -200,8 +197,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 		}
 		if !CurrentSpecReport().Failed() {
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
 			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
+			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
 		}
 	})
 
@@ -219,64 +216,27 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component2, "", 2)).To(Succeed())
 		})
 
-		It("verifies that a release PipelineRun for each Component is created in managed namespace.", func() {
-			Eventually(func() bool {
-				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
-				if err != nil || prList == nil || len(prList.Items) < 1 {
-					GinkgoWriter.Printf("Error getting Release PipelineRun:\n %s", err)
-					return false
-				}
-				foudFirstReleasePr := false
-				for _, pr := range prList.Items {
-					if strings.Contains(pr.Name, "release-pipelinerun") {
-						if !foudFirstReleasePr {
-							releasePrName = pr.Name
-							foudFirstReleasePr = true
-						} else {
-							additionalReleasePrName = pr.Name
-						}
-					}
-				}
-
-				return strings.Contains(releasePrName, "release-pipelinerun") &&
-					strings.Contains(additionalReleasePrName, "release-pipelinerun")
-			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
-		})
-
 		It("verifies a release PipelineRun for each component started in managed namespace and succeeded.", func() {
-			Eventually(func() bool {
 
-				releasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(releasePrName, managedNamespace)
-				if err != nil {
-					GinkgoWriter.Printf("\nError getting Release PipelineRun %s:\n %s", releasePr, err)
-					return false
-				}
-				additionalReleasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(additionalReleasePrName, managedNamespace)
-				if err != nil {
-					GinkgoWriter.Printf("\nError getting PipelineRun %s:\n %s", additionalReleasePr, err)
-					return false
-				}
-
-				Expect(utils.HasPipelineRunFailed(releasePr)).NotTo(BeTrue(), fmt.Sprintf("did not expect PipelineRun %s:%s to fail", releasePr.GetNamespace(), releasePr.GetName()))
-				Expect(utils.HasPipelineRunFailed(additionalReleasePr)).NotTo(BeTrue(), fmt.Sprintf("did not expect PipelineRun %s:%s to fail", additionalReleasePr.GetNamespace(), additionalReleasePr.GetName()))
-				return releasePr.HasStarted() && releasePr.IsDone() && releasePr.Status.GetCondition(apis.ConditionSucceeded).IsTrue() &&
-					additionalReleasePr.HasStarted() && additionalReleasePr.IsDone() && additionalReleasePr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
-			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
+			Expect(fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineRunToBeFinished(managedNamespace, devNamespace, "", component1, 3)).To(Succeed())
+			Expect(fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineRunToBeFinished(managedNamespace, devNamespace, "", component2, 3)).To(Succeed())
 		})
 
 		It("validate the result of task create-pyxis-image contains image ids.", func() {
 			Eventually(func() bool {
 
-				releasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(releasePrName, managedNamespace)
+				releasePr, err := fw.AsKubeAdmin.ReleaseController.GetReleasePipelineRunMatchComponent(managedNamespace, devNamespace, component1)
 				if err != nil {
-					GinkgoWriter.Printf("\nError getting Release PipelineRun %s:\n %s", releasePr, err)
+					GinkgoWriter.Printf("\nError getting Release PipelineRun match component %s:\n %s", component1.Name, err)
 					return false
 				}
-				additionalReleasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(additionalReleasePrName, managedNamespace)
+
+				additionalReleasePr, err := fw.AsKubeAdmin.ReleaseController.GetReleasePipelineRunMatchComponent(managedNamespace, devNamespace, component2)
 				if err != nil {
-					GinkgoWriter.Printf("\nError getting PipelineRun %s:\n %s", additionalReleasePr, err)
+					GinkgoWriter.Printf("\nError getting Release PipelineRun match component %s:\n %s", component1.Name, err)
 					return false
 				}
+
 				re := regexp.MustCompile("[a-fA-F0-9]{24}")
 
 				trReleasePr, err := kubeController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), releasePr, "create-pyxis-image")
