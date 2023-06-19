@@ -1,11 +1,5 @@
 #!/bin/bash
-export DOCKER_CONFIG_JSON MY_GITHUB_ORG GITHUB_TOKEN
-DOCKER_CONFIG_JSON=${DOCKER_CONFIG_JSON:-}
-
-if [ -z ${DOCKER_CONFIG_JSON+x} ]; then
-    echo "env DOCKER_CONFIG_JSON need to be defined"
-    exit 1
-else echo "DOCKER_CONFIG_JSON is set"; fi
+export MY_GITHUB_ORG GITHUB_TOKEN
 
 USER_PREFIX=${USER_PREFIX:-testuser}
 # Max length of compliant username is 20 characters. We add "-XXXX" suffix for the test users' name so max length of the prefix is 15.
