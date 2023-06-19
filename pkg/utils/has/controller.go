@@ -507,7 +507,7 @@ func (h *SuiteController) WaitForComponentPipelineToBeFinished(component *appser
 				return false, nil
 			}
 
-			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pr.Name, pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
+			GinkgoWriter.Printf("PipelineRun %s/%s reason: %s\n", pr.GetNamespace(), pr.GetName(), pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
 
 			if !pr.IsDone() {
 				return false, nil

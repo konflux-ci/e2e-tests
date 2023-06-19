@@ -1,4 +1,4 @@
-# MVP demo test
+# RHTAP demo test
 
 ### Prerequisites for running this test against your own cluster
 1. Fork https://github.com/redhat-appstudio-qe/hacbs-test-project and https://github.com/redhat-appstudio-qe/strategy-configs to your GitHub org (specified in `MY_GITHUB_ORG` env var)

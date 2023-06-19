@@ -1,4 +1,4 @@
-package mvp
+package rhtap_demo
 
 import (
 	"context"
@@ -39,8 +39,8 @@ const (
 	componentDefaultBranchName = "main"
 
 	// Kubernetes resource names
-	testNamespacePrefix = "mvp-dev"
-	managedNamespace    = "mvp-managed"
+	testNamespacePrefix = "rhtap-demo-dev"
+	managedNamespace    = "rhtap-demo-managed"
 
 	appName                = "mvp-test-app"
 	testScenarioGitURL     = "https://github.com/redhat-appstudio/integration-examples.git"
@@ -70,7 +70,7 @@ const (
 
 var sampleRepoURL = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), sampleRepoName)
 
-var _ = framework.MvpDemoSuiteDescribe("MVP Demo test", Label("mvp-demo"), func() {
+var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func() {
 
 	defer GinkgoRecover()
 	var err error
@@ -97,7 +97,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo test", Label("mvp-demo"), func(
 		userNamespace = f.UserNamespace
 		Expect(userNamespace).NotTo(BeEmpty())
 
-		componentName = fmt.Sprintf("test-mvp-component-%s", util.GenerateRandomString(4))
+		componentName = fmt.Sprintf("rhtap-demo-component-%s", util.GenerateRandomString(4))
 		componentNewBaseBranch = fmt.Sprintf("base-%s", util.GenerateRandomString(4))
 
 		sharedSecret, err = f.AsKubeAdmin.CommonController.GetSecret(constants.QuayRepositorySecretNamespace, constants.QuayRepositorySecretName)
@@ -139,19 +139,19 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo test", Label("mvp-demo"), func(
 		scYaml, err := yaml.Marshal(sc)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		scPath := "mvp-demo.yaml"
+		scPath := "rhtap-demo.yaml"
 		Expect(f.AsKubeAdmin.CommonController.Github.CreateRef("strategy-configs", "main", componentName)).To(Succeed())
 		_, err = f.AsKubeAdmin.CommonController.Github.CreateFile("strategy-configs", scPath, string(scYaml), componentName)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		_, err = f.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-strategy", managedNamespace, "release", constants.ReleasePipelineImageRef, "mvp-policy", "release-service-account", []releaseApi.Params{
+		_, err = f.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("rhtap-demo-strategy", managedNamespace, "release", constants.ReleasePipelineImageRef, "rhtap-demo-policy", "release-service-account", []releaseApi.Params{
 			{Name: "extraConfigGitUrl", Value: fmt.Sprintf("https://github.com/%s/strategy-configs.git", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"))},
 			{Name: "extraConfigPath", Value: scPath},
 			{Name: "extraConfigGitRevision", Value: componentName},
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission("demo", userNamespace, appName, managedNamespace, "", "", "mvp-strategy")
+		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission("demo", userNamespace, appName, managedNamespace, "", "", "rhtap-demo-strategy")
 		Expect(err).NotTo(HaveOccurred())
 
 		defaultEcPolicy, err := kc.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
@@ -166,7 +166,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo test", Label("mvp-demo"), func(
 				Exclude:     []string{"cve"},
 			},
 		}
-		_, err = f.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy("mvp-policy", managedNamespace, defaultEcPolicySpec)
+		_, err = f.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy("rhtap-demo-policy", managedNamespace, defaultEcPolicySpec)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = f.AsKubeAdmin.TektonController.CreatePVCInAccessMode("release-pvc", managedNamespace, corev1.ReadWriteOnce)
@@ -185,7 +185,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo test", Label("mvp-demo"), func(
 		Expect(f.AsKubeAdmin.CommonController.Github.CreateRef(sampleRepoName, componentDefaultBranchName, componentNewBaseBranch)).To(Succeed())
 		_, err = f.AsKubeAdmin.HasController.CreateHasApplication(appName, userNamespace)
 		Expect(err).ShouldNot(HaveOccurred())
-		_, err = f.AsKubeAdmin.IntegrationController.CreateEnvironment(userNamespace, "mvp-test")
+		_, err = f.AsKubeAdmin.IntegrationController.CreateEnvironment(userNamespace, "rhtap-demo-test")
 		Expect(err).ShouldNot(HaveOccurred())
 		integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario_beta1(appName, userNamespace, testScenarioGitURL, testScenarioRevision, testScenarioPathInRepo)
 		Expect(err).ShouldNot(HaveOccurred())
@@ -202,7 +202,8 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo test", Label("mvp-demo"), func(
 		}
 	})
 
-	Describe("RHTAP advanced pipeline, JVM rebuild, successful release, switch to simple build", Label("mvp-demo"), Ordered, func() {
+	Describe("RHTAP advanced pipeline, JVM rebuild, successful release, switch to simple build", Label("rhtap-demo"), Ordered, func() {
+
 		var pacControllerHost, pacBranchName, pacPurgeBranchName string
 		var prNumber int
 		var mergeResult *github.PullRequestMergeResult
@@ -259,20 +260,18 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo test", Label("mvp-demo"), func(
 				pacBranchName := fmt.Sprintf("appstudio-%s", component.GetName())
 
 				var prSHA string
-				Eventually(func() (bool, error) {
+				Eventually(func() error {
 					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(sampleRepoName)
-					if err != nil {
-						return false, err
-					}
+					Expect(err).ShouldNot(HaveOccurred())
 					for _, pr := range prs {
 						if pr.Head.GetRef() == pacBranchName {
 							prNumber = pr.GetNumber()
 							prSHA = pr.GetHead().GetSHA()
-							return true, nil
+							return nil
 						}
 					}
-					return false, fmt.Errorf("could not get the expected PaC branch name %s", pacBranchName)
-				}, pullRequestCreationTimeout, defaultPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch %q) to be created against the %q repo", pacBranchName, sampleRepoName))
+					return fmt.Errorf("could not get the expected PaC branch name %s", pacBranchName)
+				}, pullRequestCreationTimeout, defaultPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for init PaC PR (branch %q) to be created against the %q repo", pacBranchName, sampleRepoName))
 
 				// We actually don't need the "on-pull-request" PipelineRun to complete, so we can delete it
 				Eventually(func() error {
@@ -330,7 +329,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo test", Label("mvp-demo"), func(
 			})
 
 			It("should validate Tekton TaskRun test results successfully", func() {
-				pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, appName, userNamespace, mergeResultSha)
+				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, appName, userNamespace, mergeResultSha)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(build.ValidateBuildPipelineTestResults(pipelineRun, f.AsKubeAdmin.CommonController.KubeRest())).To(Succeed())
 			})
@@ -368,16 +367,17 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo test", Label("mvp-demo"), func(
 		When("Integration Test PipelineRun completes successfully", func() {
 
 			It("should lead to Snapshot CR being marked as passed", func() {
-				Expect(f.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot)).To(BeTrue())
+				snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", userNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(f.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot)).To(BeTrue(), fmt.Sprintf("tests have not succeeded for snapshot %s/%s", snapshot.GetNamespace(), snapshot.GetName()))
 			})
 
-			It("should trigger creation of Release CR is created and Release PipelineRun is triggered and Release status is updated", func() {
+			It("should trigger creation of Release CR", func() {
 				Eventually(func() error {
 					release, err = f.AsKubeAdmin.ReleaseController.GetRelease("", snapshot.Name, userNamespace)
 					return err
 				}, releaseTimeout, releasePollingInterval).Should(Succeed(), fmt.Sprintf("timed out when trying to check if the release exists for snapshot %s/%s", userNamespace, snapshot.GetName()))
 			})
-
 		})
 
 		When("Release CR is created", func() {
