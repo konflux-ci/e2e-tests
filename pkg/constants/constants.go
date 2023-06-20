@@ -113,8 +113,7 @@ const (
 )
 
 var (
-	ComponentDefaultLabel                    = map[string]string{"e2e-test": "true"}
-	ComponentPaCRequestAnnotation            = map[string]string{"appstudio.openshift.io/pac-provision": "request"}
-	ImageControllerAnnotationDeleteRepoTrue  = map[string]string{"image.redhat.com/generate": "true", "image.redhat.com/delete-image-repo": "true"}
-	ImageControllerAnnotationDeleteRepoFalse = map[string]string{"image.redhat.com/generate": "true", "image.redhat.com/delete-image-repo": "false"}
+	ComponentDefaultLabel                      = map[string]string{"e2e-test": "true"}
+	ComponentPaCRequestAnnotation              = map[string]string{"appstudio.openshift.io/pac-provision": "request"}
+	ImageControllerAnnotationRequestPublicRepo = map[string]string{"image.redhat.com/generate": `{"visibility": "public"}`}
 )
