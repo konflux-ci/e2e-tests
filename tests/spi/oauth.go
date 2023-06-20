@@ -71,7 +71,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 			/*
 				If we are running this test in CI, we need to handle the dynamic url the cluster is assigned with.
 				To do that, we use a redirect proxy that allows us to have a static oauth url in the providers configuration and, at the same time,
-				will redirect the callback call to the spi component in our cluster. OAUTH_REDIRECT_PROXY_URL env should containt the url of such proxy.
+				will redirect the callback call to the spi component in our cluster. OAUTH_REDIRECT_PROXY_URL env should contains the url of such proxy.
 				If not running in CI, SPI expects that the callback url in the provider configuration is set to the default one: homepage URL + /oauth/callback
 			*/
 			It("ensure OauthRedirectProxyUrl is set", func() {
