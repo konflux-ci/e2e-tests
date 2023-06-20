@@ -1,0 +1,42 @@
+{
+  "timestamp": "2023-06-19T16:51:38+05:30",
+  "endTimestamp": "2023-06-19T17:05:16+05:30",
+  "machineName": "msawood-mac",
+  "binaryDetails": "Built with go1.20.3 for darwin/amd64",
+  "componentRepoUrl": "https://github.com/devfile-samples/devfile-sample-code-with-quarkus",
+  "threads": 2,
+  "usersPerThread": 3,
+  "totalUsers": 6,
+  "pipelineSkipInitialChecks": true,
+  "status": "Completed",
+  "createUserTimeAvg": 4.5712420064999995,
+  "createUserTimeMax": 7.7277486159999995,
+  "createResourcesTimeAvg": 22.235402011833333,
+  "createResourcesTimeMax": 31.254887219,
+  "runPipelineSucceededTimeAvg": 673.75,
+  "runPipelineSucceededTimeMax": 752,
+  "runPipelineFailedTimeAvg": 233.5,
+  "createUserFailures": 0,
+  "createUserFailureRate": 0,
+  "createResourcesFailures": 0,
+  "createResourcesFailureRate": 0,
+  "runPipelineFailures": 2,
+  "runPipelineFailureRate": 0.3333333333333333,
+  "errorCounts": [
+    {
+      "errorCode": 14,
+      "count": 2
+    }
+  ],
+  "errors": [
+    {
+      "errorCode": 14,
+      "message": "Pipeline run for test-rhtap-1-app/devfile-sample-code-with-quarkus-yyrj failed due to PipelineValidationFailed: invalid pipelineresults [CHAINS-GIT_URL CHAINS-GIT_COMMIT], the referred results don't exist"
+    },
+    {
+      "errorCode": 14,
+      "message": "Pipeline run for test-rhtap-2-app/devfile-sample-code-with-quarkus-eaeg failed due to PipelineValidationFailed: invalid pipelineresults [IMAGE_URL IMAGE_DIGEST JAVA_COMMUNITY_DEPENDENCIES], the referred results don't exist"
+    }
+  ],
+  "errorsTotal": 2
+}

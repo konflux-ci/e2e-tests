@@ -124,22 +124,12 @@ func NewDevSandboxProxyStageClient(username string, toolchainApiUrl string, keyc
 		return nil, err
 	}
 
-	cfgBytes, err := os.ReadFile(userAuthInfo.KubeconfigPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read user kubeconfig %v", err)
-	}
-
-	userCfg, err := clientcmd.RESTConfigFromKubeConfig(cfgBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	sandboxProxyClient, err := createClientSetsFromConfig(userCfg)
+	sandboxProxyClient, err := CreateAPIProxyClient(userAuthInfo.UserToken, userAuthInfo.ProxyUrl)
 	if err != nil {
 		return nil, err
 	}
 	return &K8SClient{
-		AsKubeAdmin: sandboxProxyClient,
+		AsKubeAdmin: 	   sandboxProxyClient,
 		AsKubeDeveloper:   sandboxProxyClient,
 		UserName:          userAuthInfo.UserName,
 		UserNamespace:     userAuthInfo.UserNamespace,

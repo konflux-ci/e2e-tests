@@ -2,7 +2,7 @@
 
 go run loadtest.go \
         --component-repo "${COMPONENT_REPO:-https://github.com/devfile-samples/devfile-sample-code-with-quarkus}" \
-        --users "${USERS_PER_THREAD:-2}" \
+        --users "${USERS_PER_THREAD:-3}" \
         -s \
         -w \
         -l \

@@ -96,7 +96,7 @@ const (
 
 	JsonStageUsersPath = "output.json"
 
-	LoadTestsIngester  = "https://perf-pushgateway.rhtapqe.com"
+	LoadTestsIngesterURL  = "https://perf-pushgateway.rhtapqe.com"
 
 	// TODO
 	// delete this constant and all its occurrences in the code base

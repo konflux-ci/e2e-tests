@@ -18,6 +18,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	loadtestUtils "github.com/redhat-appstudio/e2e-tests/pkg/utils/loadtests"
 	"github.com/spf13/cobra"
+	metrics "github.com/redhat-appstudio-qe/perf-monitoring/metrics"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/util/rand"
 	k8swait "k8s.io/apimachinery/pkg/util/wait"
@@ -65,6 +66,7 @@ var (
 	selectedUsers 						[]loadtestUtils.User
 	CI 									bool
 	JobName 							string
+	metricsController					*metrics.MetricsPush
 )
 
 type ErrorOccurrence struct {
@@ -190,7 +192,9 @@ func setup(cmd *cobra.Command, args []string) {
 	cmd.SilenceUsage = true
 	
 	//Job Name to Store Metrics Captured During Test
-	JobName = loadtestUtils.GetJobName()	
+	JobName = loadtestUtils.GetJobName()
+	metricsController = metrics.NewMetricController(constants.LoadTestsIngesterURL, JobName)
+	metricsController.InitPusher()	
 	
 	logFile, err := os.Create("load-tests.log")
 	if err != nil {
@@ -203,6 +207,7 @@ func setup(cmd *cobra.Command, args []string) {
 	setKlogFlag(fs, "alsologtostderr", strconv.FormatBool(logConsole))
 
 	overallCount := numberOfUsers * threadCount
+	metricsController.PushMetricsTotal(float64(overallCount))
 
 	klog.Infof("Number of threads: %d", threadCount)
 	klog.Infof("Number of users per thread: %d", numberOfUsers)
@@ -295,9 +300,6 @@ func setup(cmd *cobra.Command, args []string) {
 	}
 
 	// Todo add cleanup functions that will delete user signups
-	if stage{
-		StageCleanup(selectedUsers)
-	}
 
 	threadsWG.Wait()
 	uip.Stop()
@@ -358,6 +360,9 @@ func setup(cmd *cobra.Command, args []string) {
 	logData.PipelineRunFailureRate = pipelineRunFailureRate
 
 	klog.Infof("🏁 Load Test Completed!")
+	if stage{
+		StageCleanup(selectedUsers)
+	}
 	klog.Infof("📈 Results 📉")
 	klog.Infof("Average Time to spin up users: %.2f s", averageTimeToSpinUpUsers)
 	klog.Infof("Maximal Time to spin up users: %.2f s", logData.MaxTimeToSpinUpUsers)
@@ -530,6 +535,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			}
 
 			SuccessfulUserCreationsPerThread[threadIndex] += 1
+			metricsController.PushMetricsUsers(float64(FailedUserCreationsPerThread[threadIndex]), float64(SuccessfulUserCreationsPerThread[threadIndex]), float64(userCreationTime))
 			increaseBar(usersBar, usersBarMutex)
 		}
 		close(chUsers)
@@ -545,8 +551,10 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				increaseBar(resourcesBar, resourcesBarMutex)
 				continue
 			}
+			
 			usernamespace := framework.UserNamespace
 			ApplicationName := fmt.Sprintf("%s-app", username)
+			klog.Infof("ns: %s, app: %s, framwork: %v",usernamespace, ApplicationName, framework)
 			app, err := framework.AsKubeDeveloper.HasController.CreateHasApplicationWithTimeout(ApplicationName, usernamespace, 60*time.Minute)
 			if err != nil {
 				logError(4, fmt.Sprintf("Unable to create the Application %s: %v", ApplicationName, err))
@@ -555,12 +563,11 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				continue
 			}
 			//when application got created
-			//app.CreationTimestamp.Time
 			for _, cond := range app.Status.Conditions{
 				if cond.Type == "Created"{
 					//use this this is the actual time when application is ready
-					//applicationCameIntoExistence := cond.LastTransitionTime
-					//applicationCameIntoExistence.Time
+					applicationCameIntoExistence := cond.LastTransitionTime
+					metricsController.PushApplicationMetrics(float64(app.CreationTimestamp.Time.Unix()),float64(applicationCameIntoExistence.Time.Unix()))
 				}
 			}
 			gitopsRepoInterval := 5 * time.Second
@@ -606,6 +613,12 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				increaseBar(resourcesBar, resourcesBarMutex)
 				continue
 			}
+			for _, cond := range cdq.Status.Conditions{
+				if cond.Type == "Completed"{
+					CameIntoExistence := cond.LastTransitionTime
+					metricsController.PushCDQMetrics(float64(cdq.CreationTimestamp.Time.Unix()),float64(CameIntoExistence.Time.Unix()))
+				}
+			}
 
 			for _, compStub := range cdq.Status.ComponentDetected {
 				component, err := framework.AsKubeDeveloper.HasController.CreateComponentFromStubSkipInitialChecks(compStub, usernamespace, "", "", ApplicationName, pipelineSkipInitialChecks)
@@ -622,6 +635,12 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 					increaseBar(resourcesBar, resourcesBarMutex)
 					continue
 				}
+				for _, cond := range component.Status.Conditions{
+					if cond.Type == "Created"{
+						CameIntoExistence := cond.LastTransitionTime
+						metricsController.PushComponentMetrics(float64(component.CreationTimestamp.Time.Unix()),float64(CameIntoExistence.Time.Unix()))
+					}
+				}	
 				userComponentMap.Store(username, component.Name)
 			}
 
@@ -631,6 +650,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				ResourceCreationTimeMaxPerThread[threadIndex] = resourceCreationTime
 			}
 			SuccessfulResourceCreationsPerThread[threadIndex] += 1
+			metricsController.PushMetricsResources(float64(FailedResourceCreationsPerThread[threadIndex]), float64(ResourceCreationTimeSumPerThread[threadIndex]))
 
 			chPipelines <- username
 			increaseBar(resourcesBar, resourcesBarMutex)
@@ -696,6 +716,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 							}
 							SuccessfulPipelineRunsPerThread[threadIndex] += 1
 						}
+						metricsController.PushMetricsPipelines(float64(FailedPipelineRunsPerThread[threadIndex]), float64(PipelineRunSucceededTimeMaxPerThread[threadIndex]))
 						increaseBar(pipelinesBar, pipelinesBarMutex)
 					}
 					return pipelineRun.IsDone(), nil

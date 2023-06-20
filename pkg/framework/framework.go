@@ -111,7 +111,6 @@ func NewFrameworkStageWithTimeout(userName string, toolchainApiUrl string, keycl
 	var err error
 	var k *kubeCl.K8SClient
 
-	// https://issues.redhat.com/browse/CRT-1670
 	if len(userName) > 20 {
 		GinkgoWriter.Printf("WARNING: username %q is longer than 20 characters - the tenant namespace prefix will be shortened to %s\n", userName, userName[:20])
 	}

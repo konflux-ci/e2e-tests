@@ -251,6 +251,8 @@ func (s *SandboxController) GetKubeconfigPathForSpecificUserStage(toolchainApiUr
 		UserName:       userName,
 		UserNamespace:  fmt.Sprintf("%s-tenant", userName),
 		KubeconfigPath: kubeconfigPath,
+		ProxyUrl:       toolchainApiUrl,
+		UserToken:      keycloakAuth.AccessToken,
 	}, nil
 }
 
