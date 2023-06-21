@@ -340,7 +340,11 @@ func HostIsAccessible(host string) bool {
 	return true
 }
 
-func PipelineRunFailed(pr *v1beta1.PipelineRun) bool {
+func HasPipelineRunSucceeded(pr *v1beta1.PipelineRun) bool {
+	return pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue()
+}
+
+func HasPipelineRunFailed(pr *v1beta1.PipelineRun) bool {
 	return pr.IsDone() && pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsFalse()
 }
 
