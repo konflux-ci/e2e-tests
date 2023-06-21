@@ -238,8 +238,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						Namespace:  testNamespace,
 					}
 				})
-				It("verify-enterprice-contract check should pass", Label(buildTemplatesTestLabel), func() {
-					Skip("Skip until RHTAP bug is solved: https://issues.redhat.com/browse/RHTAPBUGS-352")
+				It("verify-enterprise-contract check should pass", Label(buildTemplatesTestLabel), func() {
 					cm, err := kubeController.Commonctrl.GetConfigMap("ec-defaults", "enterprise-contract-service")
 					Expect(err).ToNot(HaveOccurred())
 

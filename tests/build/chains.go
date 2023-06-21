@@ -215,7 +215,6 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			})
 
 			It("succeeds when policy is met", func() {
-				Skip("Skip until RHTAP bug is solved: https://issues.redhat.com/browse/RHTAPBUGS-352")
 				pr, err := kubeController.RunPipeline(generator, pipelineRunTimeout)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeController.WatchPipelineRun(pr.Name, pipelineRunTimeout)).To(Succeed())
