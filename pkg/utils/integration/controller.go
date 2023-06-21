@@ -371,8 +371,11 @@ func (h *SuiteController) CreateIntegrationTestScenarioWithEnvironment(applicati
 
 func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(testScenario *integrationv1beta1.IntegrationTestScenario, snapshot *appstudioApi.Snapshot, appNamespace string) error {
 	return wait.PollImmediate(20*time.Second, 100*time.Minute, func() (done bool, err error) {
-		pipelineRun, _ := h.GetIntegrationPipelineRun(testScenario.Name, snapshot.Name, appNamespace)
-
+		pipelineRun, err := h.GetIntegrationPipelineRun(testScenario.Name, snapshot.Name, appNamespace)
+		if err != nil {
+			GinkgoWriter.Println("PipelineRun has not been created yet for test scenario %s and snapshot %s/%s", testScenario.GetName(), snapshot.GetNamespace(), snapshot.GetName())
+			return false, nil
+		}
 		for _, condition := range pipelineRun.Status.Conditions {
 			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
 
