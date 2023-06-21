@@ -111,7 +111,7 @@ func (h *SuiteController) CreateHasApplicationWithTimeout(name string, namespace
 
 	if err := utils.WaitUntil(h.ApplicationDevfilePresent(application), timeout); err != nil {
 		application = h.refreshApplicationForErrorDebug(application)
-		return nil, fmt.Errorf("timed out when waiting for devfile content creation for application %s in %s namespace: %+v. applicattion: %s", name, namespace, err, utils.ToPrettyJSONString(application))
+		return nil, fmt.Errorf("timed out when waiting for devfile content creation for application %s in %s namespace: %+v. application: %s", name, namespace, err, utils.ToPrettyJSONString(application))
 	}
 
 	return application, nil
@@ -507,21 +507,21 @@ func (h *SuiteController) WaitForComponentPipelineToBeFinished(component *appser
 				return false, nil
 			}
 
-			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pr.Name, pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
+			GinkgoWriter.Printf("PipelineRun %s/%s reason: %s\n", pr.GetNamespace(), pr.GetName(), pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
 
 			if !pr.IsDone() {
 				return false, nil
 			}
 
-			if pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+			if utils.HasPipelineRunSucceeded(pr) {
 				return true, nil
 			} else {
 				var prLogs string
 				if err = tekton.StorePipelineRun(pr, h.KubeRest(), h.KubeInterface()); err != nil {
-					GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
+					GinkgoWriter.Printf("failed to store PipelineRun %s/%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
 				}
 				if prLogs, err = tekton.GetFailedPipelineRunLogs(h.KubeRest(), h.KubeInterface(), pr); err != nil {
-					GinkgoWriter.Printf("failed to get logs for PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
+					GinkgoWriter.Printf("failed to get logs for PipelineRun %s/%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
 				}
 				return false, fmt.Errorf(prLogs)
 			}
@@ -534,16 +534,14 @@ func (h *SuiteController) WaitForComponentPipelineToBeFinished(component *appser
 				return err
 			}
 			if sha, err = h.RetriggerComponentPipelineRun(component, pr); err != nil {
-				return fmt.Errorf("unable to retrigger component %s:%s: %+v", component.GetNamespace(), component.GetName(), err)
+				return fmt.Errorf("unable to retrigger component %s/%s: %+v", component.GetNamespace(), component.GetName(), err)
 			}
 			attempts++
 		} else {
 			break
 		}
 	}
-
 	return nil
-
 }
 
 // CreateComponentFromDevfile creates a has component from a given name, namespace, application, devfile and a container image
@@ -720,13 +718,13 @@ func (h *SuiteController) RetriggerComponentPipelineRun(component *appservice.Co
 	}
 	watch, err := h.PipelineClient().TektonV1beta1().PipelineRuns(component.GetNamespace()).Watch(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		return "", fmt.Errorf("error when initiating watch for new PipelineRun after retriggering it for component %s:%s", component.GetNamespace(), component.GetName())
+		return "", fmt.Errorf("error when initiating watch for new PipelineRun after retriggering it for component %s/%s", component.GetNamespace(), component.GetName())
 	}
 	newPRFound := false
 	for {
 		select {
 		case <-time.After(5 * time.Minute):
-			return "", fmt.Errorf("timed out waiting for new PipelineRun to appear after retriggering it for component %s:%s", component.GetNamespace(), component.GetName())
+			return "", fmt.Errorf("timed out waiting for new PipelineRun to appear after retriggering it for component %s/%s", component.GetNamespace(), component.GetName())
 		case event := <-watch.ResultChan():
 			if event.Object == nil {
 				continue
