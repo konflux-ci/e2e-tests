@@ -48,6 +48,7 @@ require (
 	k8s.io/client-go v1.5.2
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.90.1
+	k8s.io/kubectl v0.24.1
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
 	knative.dev/pkg v0.0.0-20230125083639-408ad0773f47
 	kubevirt.io/qe-tools v0.1.8
@@ -232,7 +233,6 @@ require (
 	k8s.io/apiextensions-apiserver v0.27.0 // indirect
 	k8s.io/component-base v0.27.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20230327201221-f5883ff37f0c // indirect
-	k8s.io/kubectl v0.24.1 // indirect
 	knative.dev/eventing v0.35.5 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kustomize/api v0.12.1 // indirect
