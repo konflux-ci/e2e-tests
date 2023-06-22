@@ -135,7 +135,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						},
 					},
 				}
-				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, constants.ImageControllerAnnotationDeleteRepoFalse)
+
+				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationDeleteRepoFalse))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -245,7 +246,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						},
 					},
 				}
-				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, constants.ImageControllerAnnotationDeleteRepoTrue)
+				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationDeleteRepoFalse))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 			It("triggers a PipelineRun", func() {
@@ -464,7 +465,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						},
 					},
 				}
-				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, constants.ImageControllerAnnotationDeleteRepoTrue)
+				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationDeleteRepoFalse))
 			})
 
 			It("should no longer lead to a creation of a PaC PR", func() {
