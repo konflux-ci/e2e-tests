@@ -144,7 +144,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 		_, err = fw.AsKubeAdmin.HasController.CreateApplication(applicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		component, err = fw.AsKubeAdmin.HasController.CreateComponentFromStubSkipInitialChecks(componentDetected, devNamespace, "", "", applicationNameDefault, false)
+		component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentDetected.ComponentStub, devNamespace, "", "", applicationNameDefault, false, map[string]string{})
 		Expect(err).NotTo(HaveOccurred())
 	})
 

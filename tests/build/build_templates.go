@@ -82,7 +82,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
 
 				for _, compDetected := range cdq.Status.ComponentDetected {
-					c, err := kubeadminClient.HasController.CreateComponentFromStubSkipInitialChecks(compDetected, testNamespace, "", "", applicationName, false)
+					c, err := kubeadminClient.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, false, map[string]string{})
 					Expect(err).ShouldNot(HaveOccurred())
 					componentNames = append(componentNames, c.Name)
 				}

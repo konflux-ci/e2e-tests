@@ -144,7 +144,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		_, err = fw.AsKubeAdmin.HasController.CreateApplication(applicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		component, err = fw.AsKubeAdmin.HasController.CreateComponentFromStub(componentDetected, devNamespace, "", "", applicationNameDefault)
+		component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentDetected.ComponentStub, devNamespace, "", "", applicationNameDefault, true, map[string]string{})
 		Expect(err).NotTo(HaveOccurred())
 
 		workingDir, err := os.Getwd()

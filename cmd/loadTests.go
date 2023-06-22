@@ -604,7 +604,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			}
 
 			for _, compStub := range cdq.Status.ComponentDetected {
-				component, err := framework.AsKubeDeveloper.HasController.CreateComponentFromStubSkipInitialChecks(compStub, usernamespace, "", "", ApplicationName, pipelineSkipInitialChecks)
+				component, err := framework.AsKubeDeveloper.HasController.CreateComponent(compStub.ComponentStub, usernamespace, "", "", ApplicationName, pipelineSkipInitialChecks, map[string]string{})
 
 				if err != nil {
 					logError(9, fmt.Sprintf("Unable to create the Component %s: %v", compStub.ComponentStub.ComponentName, err))

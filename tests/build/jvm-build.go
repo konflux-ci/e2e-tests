@@ -151,7 +151,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				}
 			}
 		} else {
-			Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
+			Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
 			Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 			Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 			Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
@@ -234,7 +234,18 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		componentName = fmt.Sprintf("jvm-build-suite-component-%s", util.GenerateRandomString(4))
 
 		// Create a component with Git Source URL being defined
-		component, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, testNamespace, testProjectGitUrl, testProjectRevision, "", "", "", true)
+		componentObj := appservice.ComponentSpec{
+			ComponentName: fmt.Sprintf("jvm-build-suite-component-%s", util.GenerateRandomString(4)),
+			Source: appservice.ComponentSource{
+				ComponentSourceUnion: appservice.ComponentSourceUnion{
+					GitSource: &appservice.GitSource{
+						URL:      testProjectGitUrl,
+						Revision: testProjectRevision,
+					},
+				},
+			},
+		}
+		component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, map[string]string{})
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 

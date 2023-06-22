@@ -20,41 +20,31 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Contains all methods related with components objects CRUD operations.
 type ComponentsInterface interface {
-	// BLA BLA
+	// Returns an application obj from the kubernetes cluster.
 	GetComponent(name string, namespace string) (*appservice.Component, error)
 
-	// Bla Bla
+	// Returns an pipelinerun obj related with a given component name from the kubernetes cluster.
 	GetComponentPipelineRun(componentName, applicationName, namespace, sha string) (*v1beta1.PipelineRun, error)
 
-	// BLA BLA
+	// Waits for a given component to be finished and in case of hitting issue: https://issues.redhat.com/browse/SRVKP-2749 do a given retries.
 	WaitForComponentPipelineToBeFinished(component *appservice.Component, sha string, maxRetries int) error
 
-	// BLA BLA
-	CreateComponent(applicationName, componentName, namespace, gitSourceURL, gitSourceRevision, containerImageSource, outputContainerImage, secret string, skipInitialChecks bool) (*appservice.Component, error)
+	// Creates an component object in the kubernetes cluster.
+	CreateComponent(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string) (*appservice.Component, error)
 
-	// Bla Bla
-	CreateComponentFromStub(compDetected appservice.ComponentDetectionDescription, namespace string, outputContainerImage string, secret string, applicationName string) (*appservice.Component, error)
-
-	// BLA BLA
-	CreateComponentFromStubSkipInitialChecks(compDetected appservice.ComponentDetectionDescription, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool) (*appservice.Component, error)
-
-	// BLA BLA
-	CreateComponentWithPaCEnabled(applicationName, componentName, namespace, gitSourceURL, baseBranch string, deleteRepo bool) (*appservice.Component, error)
-
-	// BLA BLA
+	// Modifies the replicas of a component.
 	ScaleComponentReplicas(component *appservice.Component, replicas *int) (*appservice.Component, error)
 
-	// BLA BLA
-	DeleteHasComponent(name string, namespace string, reportErrorOnNotFound bool) error
+	// Deletes a component object from the given namespace in the kubernetes cluster.
+	DeleteComponent(name string, namespace string, reportErrorOnNotFound bool) error
 
-	// Bla Bla
+	// Deletes all components from the given namespace in the kubernetes cluster.
 	DeleteAllComponentsInASpecificNamespace(namespace string, timeout time.Duration) error
 }
 
@@ -73,182 +63,8 @@ func (h *hasFactory) GetComponent(name string, namespace string) (*appservice.Co
 	return &component, nil
 }
 
-// DeleteHasComponent delete an has component from a given name and namespace
-func (h *hasFactory) DeleteHasComponent(name string, namespace string, reportErrorOnNotFound bool) error {
-	component := appservice.Component{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-	}
-	if err := h.KubeRest().Delete(context.TODO(), &component); err != nil {
-		if !k8sErrors.IsNotFound(err) || (k8sErrors.IsNotFound(err) && reportErrorOnNotFound) {
-			return fmt.Errorf("error deleting a component: %+v", err)
-		}
-	}
-
-	return utils.WaitUntil(h.ComponentDeleted(&component), 1*time.Minute)
-}
-
-// CreateComponent create an has component from a given name, namespace, application, devfile and a container image
-func (h *hasFactory) CreateComponent(applicationName, componentName, namespace, gitSourceURL, gitSourceRevision, containerImageSource, outputContainerImage, secret string, skipInitialChecks bool) (*appservice.Component, error) {
-	var containerImage string
-	annotations := map[string]string{
-		// PLNSRVCE-957 - if true, run only basic build pipeline tasks
-		"skip-initial-checks": strconv.FormatBool(skipInitialChecks),
-	}
-	if outputContainerImage != "" {
-		containerImage = outputContainerImage
-	} else if containerImageSource != "" {
-		containerImage = containerImageSource
-	} else {
-		// When no image image is selected then add annotatation to generate new image repository
-		annotations = utils.MergeMaps(annotations, constants.ImageControllerAnnotationDeleteRepoTrue)
-	}
-	component := &appservice.Component{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: annotations,
-			Labels:      constants.ComponentDefaultLabel,
-			Name:        componentName,
-			Namespace:   namespace,
-		},
-		Spec: appservice.ComponentSpec{
-			ComponentName: componentName,
-			Application:   applicationName,
-			Source: appservice.ComponentSource{
-				ComponentSourceUnion: appservice.ComponentSourceUnion{
-					GitSource: &appservice.GitSource{
-						URL:      gitSourceURL,
-						Revision: gitSourceRevision,
-					},
-				},
-			},
-			Secret:         secret,
-			ContainerImage: containerImage,
-			Replicas:       pointer.Int(1),
-			TargetPort:     8081,
-			Route:          "",
-		},
-	}
-	err := h.KubeRest().Create(context.TODO(), component)
-	if err != nil {
-		return nil, err
-	}
-	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*10); err != nil {
-		component = h.refreshComponentForErrorDebug(component)
-		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentName, namespace, utils.ToPrettyJSONString(component))
-	}
-	return component, nil
-}
-
-func (h *hasFactory) ComponentReady(component *appservice.Component) wait.ConditionFunc {
-	return func() (bool, error) {
-		messages, err := h.GetHasComponentConditionStatusMessages(component.Name, component.Namespace)
-		if err != nil {
-			return false, nil
-		}
-		for _, m := range messages {
-			if strings.Contains(m, "success") {
-				return true, nil
-			}
-		}
-		return false, nil
-	}
-}
-
-func (h *hasFactory) ComponentDeleted(component *appservice.Component) wait.ConditionFunc {
-	return func() (bool, error) {
-		_, err := h.GetComponent(component.Name, component.Namespace)
-		return err != nil && k8sErrors.IsNotFound(err), nil
-	}
-}
-
-// CreateComponentWithPaCEnabled creates a component with "pipelinesascode: '1'" annotation that is used for triggering PaC builds
-func (h *hasFactory) CreateComponentWithPaCEnabled(applicationName, componentName, namespace, gitSourceURL, baseBranch string, deleteRepo bool) (*appservice.Component, error) {
-
-	var annotations map[string]string
-	if deleteRepo {
-		annotations = utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationDeleteRepoTrue)
-	} else {
-		annotations = utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationDeleteRepoFalse)
-	}
-
-	component := &appservice.Component{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: annotations,
-			Name:        componentName,
-			Namespace:   namespace,
-		},
-		Spec: appservice.ComponentSpec{
-			ComponentName: componentName,
-			Application:   applicationName,
-			Source: appservice.ComponentSource{
-				ComponentSourceUnion: appservice.ComponentSourceUnion{
-					GitSource: &appservice.GitSource{
-						URL:      gitSourceURL,
-						Revision: baseBranch,
-					},
-				},
-			},
-		},
-	}
-	err := h.KubeRest().Create(context.TODO(), component)
-	if err != nil {
-		return nil, err
-	}
-	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*10); err != nil {
-		component = h.refreshComponentForErrorDebug(component)
-		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentName, namespace, utils.ToPrettyJSONString(component))
-	}
-	return component, nil
-}
-
-func (h *hasFactory) CreateComponentFromStubSkipInitialChecks(compDetected appservice.ComponentDetectionDescription, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool) (*appservice.Component, error) {
-	component := &appservice.Component{
-		ObjectMeta: metav1.ObjectMeta{
-			// adding default label because of the BuildPipelineSelector in build test
-			Labels: constants.ComponentDefaultLabel,
-			Annotations: map[string]string{
-				"skip-initial-checks": strconv.FormatBool(skipInitialChecks),
-			},
-			Name:      compDetected.ComponentStub.ComponentName,
-			Namespace: namespace,
-		},
-		Spec: compDetected.ComponentStub,
-	}
-
-	if outputContainerImage != "" {
-		component.Spec.ContainerImage = outputContainerImage
-	} else {
-		component.Annotations = utils.MergeMaps(component.Annotations, constants.ImageControllerAnnotationDeleteRepoTrue)
-	}
-
-	if component.Spec.TargetPort == 0 {
-		component.Spec.TargetPort = 8081
-	}
-
-	component.Spec.Secret = secret
-	component.Spec.Application = applicationName
-
-	err := h.KubeRest().Create(context.TODO(), component)
-	if err != nil {
-		return nil, err
-	}
-	if err = utils.WaitUntil(h.ComponentReady(component), time.Minute*10); err != nil {
-		component = h.refreshComponentForErrorDebug(component)
-		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", compDetected.ComponentStub.ComponentName, namespace, utils.ToPrettyJSONString(component))
-	}
-	return component, nil
-}
-
-// CreateComponentFromStub create a HAS Component resource from a Completed CDQ resource, which includes a stub Component CR
-// The Component from the CDQ is only a template, and needs things like name filled in
-func (h *hasFactory) CreateComponentFromStub(compDetected appservice.ComponentDetectionDescription, namespace string, outputContainerImage string, secret string, applicationName string) (*appservice.Component, error) {
-	return h.CreateComponentFromStubSkipInitialChecks(compDetected, namespace, outputContainerImage, secret, applicationName, true)
-}
-
 // GetComponentPipeline returns the pipeline for a given component labels
-func (h *hasFactory) GetComponentPipelineRun(componentName, applicationName, namespace, sha string) (*v1beta1.PipelineRun, error) {
+func (h *hasFactory) GetComponentPipelineRun(componentName string, applicationName string, namespace, sha string) (*v1beta1.PipelineRun, error) {
 	pipelineRunLabels := map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName}
 
 	if sha != "" {
@@ -269,6 +85,7 @@ func (h *hasFactory) GetComponentPipelineRun(componentName, applicationName, nam
 	return nil, fmt.Errorf("no pipelinerun found for component %s", componentName)
 }
 
+// Waits for a given component to be finished and in case of hitting issue: https://issues.redhat.com/browse/SRVKP-2749 do a given retries.
 func (h *hasFactory) WaitForComponentPipelineToBeFinished(component *appservice.Component, sha string, maxRetries int) error {
 	attempts := 1
 	app := component.Spec.Application
@@ -321,15 +138,69 @@ func (h *hasFactory) WaitForComponentPipelineToBeFinished(component *appservice.
 	return nil
 }
 
-func (h *hasFactory) GetHasComponentConditionStatusMessages(name, namespace string) (messages []string, err error) {
-	c, err := h.GetComponent(name, namespace)
+// Universal method to create a component in the kubernetes clusters.
+func (h *hasFactory) CreateComponent(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string) (*appservice.Component, error) {
+	componentObject := &appservice.Component{
+		ObjectMeta: metav1.ObjectMeta{
+			// adding default label because of the BuildPipelineSelector in build test
+			Labels:    constants.ComponentDefaultLabel,
+			Name:      componentSpec.ComponentName,
+			Namespace: namespace,
+			Annotations: map[string]string{
+				"skip-initial-checks": strconv.FormatBool(skipInitialChecks),
+			},
+		},
+		Spec: componentSpec,
+	}
+	componentObject.Spec.Secret = secret
+	componentObject.Spec.Application = applicationName
+	componentObject.Annotations = utils.MergeMaps(componentObject.Annotations, annotations)
+
+	if componentObject.Spec.TargetPort == 0 {
+		componentObject.Spec.TargetPort = 8081
+	}
+	if outputContainerImage != "" {
+		componentObject.Spec.ContainerImage = outputContainerImage
+	} else {
+		componentObject.Annotations = utils.MergeMaps(componentObject.Annotations, constants.ImageControllerAnnotationDeleteRepoTrue)
+	}
+
+	if err := h.KubeRest().Create(context.TODO(), componentObject); err != nil {
+		return nil, err
+	}
+	if err := utils.WaitUntil(h.ComponentReady(componentObject), time.Minute*10); err != nil {
+		componentObject = h.refreshComponentForErrorDebug(componentObject)
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
+	}
+	return componentObject, nil
+}
+
+// ScaleDeploymentReplicas scales the replicas of a given deployment
+func (h *hasFactory) ScaleComponentReplicas(component *appservice.Component, replicas *int) (*appservice.Component, error) {
+	component.Spec.Replicas = replicas
+
+	err := h.KubeRest().Update(context.TODO(), component, &rclient.UpdateOptions{})
 	if err != nil {
-		return messages, fmt.Errorf("error getting HAS component: %v", err)
+		return &appservice.Component{}, err
 	}
-	for _, condition := range c.Status.Conditions {
-		messages = append(messages, condition.Message)
+	return component, nil
+}
+
+// DeleteComponent delete an has component from a given name and namespace
+func (h *hasFactory) DeleteComponent(name string, namespace string, reportErrorOnNotFound bool) error {
+	component := appservice.Component{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
 	}
-	return
+	if err := h.KubeRest().Delete(context.TODO(), &component); err != nil {
+		if !k8sErrors.IsNotFound(err) || (k8sErrors.IsNotFound(err) && reportErrorOnNotFound) {
+			return fmt.Errorf("error deleting a component: %+v", err)
+		}
+	}
+
+	return utils.WaitUntil(h.ComponentDeleted(&component), 1*time.Minute)
 }
 
 // DeleteAllComponentsInASpecificNamespace removes all component CRs from a specific namespace. Useful when creating a lot of resources and want to remove all of them
@@ -347,6 +218,43 @@ func (h *hasFactory) DeleteAllComponentsInASpecificNamespace(namespace string, t
 	}, timeout)
 }
 
+// Waits for a component to be reconciled in the application service.
+func (h *hasFactory) ComponentReady(component *appservice.Component) wait.ConditionFunc {
+	return func() (bool, error) {
+		messages, err := h.GetHasComponentConditionStatusMessages(component.Name, component.Namespace)
+		if err != nil {
+			return false, nil
+		}
+		for _, m := range messages {
+			if strings.Contains(m, "success") {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
+}
+
+// Waits for a component until is deleted and if not will return an error
+func (h *hasFactory) ComponentDeleted(component *appservice.Component) wait.ConditionFunc {
+	return func() (bool, error) {
+		_, err := h.GetComponent(component.Name, component.Namespace)
+		return err != nil && k8sErrors.IsNotFound(err), nil
+	}
+}
+
+// Get the message from the status of a component. Usefull for debugging purposes.
+func (h *hasFactory) GetHasComponentConditionStatusMessages(name, namespace string) (messages []string, err error) {
+	c, err := h.GetComponent(name, namespace)
+	if err != nil {
+		return messages, fmt.Errorf("error getting HAS component: %v", err)
+	}
+	for _, condition := range c.Status.Conditions {
+		messages = append(messages, condition.Message)
+	}
+	return
+}
+
+// Universal method to retrigger pipelineruns in kubernetes cluster
 func (h *hasFactory) RetriggerComponentPipelineRun(component *appservice.Component, pr *v1beta1.PipelineRun) (sha string, err error) {
 	if err = h.KubeRest().Delete(context.TODO(), pr); err != nil {
 		return "", fmt.Errorf("failed to delete PipelineRun %q from %q namespace", pr.GetName(), pr.GetNamespace())
@@ -435,17 +343,7 @@ func (h *hasFactory) RetriggerComponentPipelineRun(component *appservice.Compone
 	return sha, nil
 }
 
-// ScaleDeploymentReplicas scales the replicas of a given deployment
-func (h *hasFactory) ScaleComponentReplicas(component *appservice.Component, replicas *int) (*appservice.Component, error) {
-	component.Spec.Replicas = replicas
-
-	err := h.KubeRest().Update(context.TODO(), component, &rclient.UpdateOptions{})
-	if err != nil {
-		return &appservice.Component{}, err
-	}
-	return component, nil
-}
-
+// refreshApplicationForErrorDebug return the latest component object from the kubernetes cluster.
 func (h *hasFactory) refreshComponentForErrorDebug(component *appservice.Component) *appservice.Component {
 	retComp := &appservice.Component{}
 	key := rclient.ObjectKeyFromObject(component)

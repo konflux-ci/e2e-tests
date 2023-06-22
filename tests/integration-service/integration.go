@@ -73,7 +73,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
 
 			for _, compDetected := range cdq.Status.ComponentDetected {
-				originalComponent, err = f.AsKubeAdmin.HasController.CreateComponentFromStub(compDetected, appStudioE2EApplicationsNamespace, "", "", applicationName)
+				originalComponent, err = f.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, appStudioE2EApplicationsNamespace, "", "", applicationName, true, map[string]string{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(originalComponent).NotTo(BeNil())
 				componentName = originalComponent.Name
@@ -83,7 +83,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		cleanup := func() {
 			if !CurrentSpecReport().Failed() {
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
 				integrationTestScenarios, err := f.AsKubeAdmin.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 

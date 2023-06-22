@@ -125,8 +125,17 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 		When("a new component without specified branch is created", Label("pac-custom-default-branch"), func() {
 			BeforeAll(func() {
-				deleteRepo := false
-				_, err = f.AsKubeDeveloper.HasController.CreateComponentWithPaCEnabled(applicationName, defaultBranchTestComponentName, testNamespace, helloWorldComponentGitSourceURL, "", deleteRepo)
+				componentObj := appservice.ComponentSpec{
+					ComponentName: componentName,
+					Source: appservice.ComponentSource{
+						ComponentSourceUnion: appservice.ComponentSourceUnion{
+							GitSource: &appservice.GitSource{
+								URL: helloWorldComponentGitSourceURL,
+							},
+						},
+					},
+				}
+				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, constants.ImageControllerAnnotationDeleteRepoFalse)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -179,7 +188,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			It("a related PipelineRun and Github webhook should be deleted after deleting the component", func() {
 				timeout = time.Second * 60
 				interval = time.Second * 1
-				Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(defaultBranchTestComponentName, testNamespace, true)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteComponent(defaultBranchTestComponentName, testNamespace, true)).To(Succeed())
 				// Test removal of PipelineRun
 				Eventually(func() bool {
 					_, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(defaultBranchTestComponentName, applicationName, testNamespace, "")
@@ -225,9 +234,18 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 		When("a new Component with specified custom branch is created", Label("custom-branch"), func() {
 			BeforeAll(func() {
-				// Create a component with Git Source URL, a specified git branch and marking delete-repo=true
-				deleteRepo := true
-				component, err = f.AsKubeAdmin.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, componentBaseBranchName, deleteRepo)
+				componentObj := appservice.ComponentSpec{
+					ComponentName: componentName,
+					Source: appservice.ComponentSource{
+						ComponentSourceUnion: appservice.ComponentSourceUnion{
+							GitSource: &appservice.GitSource{
+								URL:      helloWorldComponentGitSourceURL,
+								Revision: componentBaseBranchName,
+							},
+						},
+					},
+				}
+				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, constants.ImageControllerAnnotationDeleteRepoTrue)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 			It("triggers a PipelineRun", func() {
@@ -418,7 +436,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 		When("the component is removed and recreated (with the same name in the same namespace)", func() {
 			BeforeAll(func() {
-				Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, testNamespace, true)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, true)).To(Succeed())
 
 				timeout := 1 * time.Minute
 				interval := 1 * time.Second
@@ -435,8 +453,18 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return build.DoesRobotAccountExistInQuay(robotAccountName)
 				}, timeout, interval).Should(BeFalse(), "timed out when waiting for robot account to be deleted")
 
-				deleteRepo := true
-				_, err = f.AsKubeAdmin.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, componentBaseBranchName, deleteRepo)
+				componentObj := appservice.ComponentSpec{
+					ComponentName: componentName,
+					Source: appservice.ComponentSource{
+						ComponentSourceUnion: appservice.ComponentSourceUnion{
+							GitSource: &appservice.GitSource{
+								URL:      helloWorldComponentGitSourceURL,
+								Revision: componentBaseBranchName,
+							},
+						},
+					},
+				}
+				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, constants.ImageControllerAnnotationDeleteRepoTrue)
 			})
 
 			It("should no longer lead to a creation of a PaC PR", func() {
@@ -479,14 +507,18 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			timeout = time.Second * 500
 			interval = time.Second * 1
 			// Create a component with containerImageSource being defined
-			_, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, testNamespace, "", "", containerImageSource, outputContainerImage, "", true)
+			component := appservice.ComponentSpec{
+				ComponentName:  fmt.Sprintf("build-suite-test-component-image-source-%s", util.GenerateRandomString(4)),
+				ContainerImage: containerImageSource,
+			}
+			_, err = f.AsKubeAdmin.HasController.CreateComponent(component, testNamespace, outputContainerImage, "", applicationName, true, map[string]string{})
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
 			}
@@ -532,7 +564,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
 			}
@@ -572,8 +604,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}
 
 				Expect(f.AsKubeAdmin.CommonController.KubeRest().Create(context.TODO(), ps)).To(Succeed())
-
-				c, err := f.AsKubeAdmin.HasController.CreateComponentFromStub(compDetected, testNamespace, "", "", applicationName)
+				c, err := f.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, true, map[string]string{})
 				Expect(err).NotTo(HaveOccurred())
 				componentName = c.Name
 			}
@@ -604,7 +635,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
 
 			for _, compDetected := range cdq.Status.ComponentDetected {
-				c, err := f.AsKubeAdmin.HasController.CreateComponentFromStub(compDetected, testNamespace, "", "", applicationName)
+				c, err := f.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, true, map[string]string{})
 				Expect(err).NotTo(HaveOccurred())
 				notMatchingComponentName = c.Name
 			}
@@ -692,7 +723,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
 
 			for _, compDetected := range cdq.Status.ComponentDetected {
-				c, err := f.AsKubeAdmin.HasController.CreateComponentFromStub(compDetected, testNamespace, "", "", applicationName)
+				c, err := f.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, true, map[string]string{})
 				Expect(err).NotTo(HaveOccurred())
 				componentName = c.Name
 			}
@@ -701,7 +732,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
 			}

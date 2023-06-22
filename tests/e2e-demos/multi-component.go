@@ -210,7 +210,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 						// Skip https://github.com/redhat-appstudio/quality-dashboard/tree/main/frontend because takes to much to much ton push to quay.io and analyze sbom due huge image and is make
 						// ci to be slow
 						if !strings.Contains(component.ComponentStub.ComponentName, "frontend-quality") {
-							c, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(component, namespace, "", SPIGithubSecretName, application.Name)
+							c, err := fw.AsKubeDeveloper.HasController.CreateComponent(component.ComponentStub, namespace, "", SPIGithubSecretName, application.Name, true, map[string]string{})
 							Expect(err).NotTo(HaveOccurred())
 							Expect(c.Name).To(Equal(component.ComponentStub.ComponentName))
 							Expect(utils.Contains(runtimeSupported, component.ProjectType), "unsupported runtime used for multi component tests")

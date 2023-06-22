@@ -31,7 +31,6 @@ const (
 
 var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	defer GinkgoRecover()
-	var outputContainerImage = ""
 	var timeout, interval time.Duration
 	var namespace string
 
@@ -157,19 +156,14 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				})
 
 				// Components for now can be imported from gitUrl, container image or a devfile
-				if componentTest.ContainerSource != "" {
-					It(fmt.Sprintf("creates component %s from %s container source", componentTest.Name, componentTest.Type), func() {
-						component, err = fw.AsKubeDeveloper.HasController.CreateComponent(application.Name, componentTest.Name, namespace, "", "", componentTest.ContainerSource, outputContainerImage, SPIQuaySecretName, true)
-						Expect(err).NotTo(HaveOccurred())
-					})
-				} else if componentTest.GitSourceUrl != "" {
+				if componentTest.GitSourceUrl != "" {
 					It(fmt.Sprintf("creates component %s from %s git source %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl), func() {
 						for _, compDetected := range cdq.Status.ComponentDetected {
 							if componentTest.Type == "private" {
-								component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, namespace, "", SPIGithubSecretName, appTest.ApplicationName)
+								component, err = fw.AsKubeDeveloper.HasController.CreateComponent(compDetected.ComponentStub, namespace, "", SPIGithubSecretName, appTest.ApplicationName, true, map[string]string{})
 								Expect(err).NotTo(HaveOccurred())
 							} else if componentTest.Type == "public" {
-								component, err = fw.AsKubeDeveloper.HasController.CreateComponentFromStub(compDetected, namespace, "", "", appTest.ApplicationName)
+								component, err = fw.AsKubeDeveloper.HasController.CreateComponent(compDetected.ComponentStub, namespace, "", "", appTest.ApplicationName, true, map[string]string{})
 								Expect(err).NotTo(HaveOccurred())
 							}
 						}
