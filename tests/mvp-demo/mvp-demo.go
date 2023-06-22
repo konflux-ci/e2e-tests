@@ -3,10 +3,11 @@ package mvp
 import (
 	"context"
 	"fmt"
-	build2 "github.com/redhat-appstudio/e2e-tests/tests/build"
 	"os"
 	"strings"
 	"time"
+
+	build2 "github.com/redhat-appstudio/e2e-tests/tests/build"
 
 	"github.com/devfile/library/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
@@ -52,9 +53,8 @@ const (
 
 	appName                = "mvp-test-app"
 	testScenarioGitURL     = "https://github.com/redhat-appstudio/integration-examples.git"
-        testScenarioRevision   = "main"
-        testScenarioPathInRepo = "pipelines/integration_resolver_pipeline_pass.yaml"
-
+	testScenarioRevision   = "main"
+	testScenarioPathInRepo = "pipelines/integration_resolver_pipeline_pass.yaml"
 
 	// Timeouts
 	appDeployTimeout            = time.Minute * 20
@@ -214,7 +214,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 
 		BeforeAll(func() {
 			Expect(f.AsKubeAdmin.CommonController.Github.CreateRef(sampleRepoName, componentDefaultBranchName, componentNewBaseBranch)).To(Succeed())
-			_, err = f.AsKubeAdmin.HasController.CreateHasApplication(appName, userNamespace)
+			_, err = f.AsKubeAdmin.HasController.CreateApplication(appName, userNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
 			_, err = f.AsKubeAdmin.IntegrationController.CreateEnvironment(userNamespace, "mvp-test")
 			Expect(err).ShouldNot(HaveOccurred())
@@ -382,7 +382,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 		})
 
 		It("upgrading to SLSA level 3 customizable pipeline triggers creation of a PR in the sample repo", func() {
-			comp, err := f.AsKubeAdmin.HasController.GetHasComponent(componentName, userNamespace)
+			comp, err := f.AsKubeAdmin.HasController.GetComponent(componentName, userNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
 			comp.Annotations["skip-initial-checks"] = "false"
 			for k, v := range constants.ComponentPaCRequestAnnotation {
@@ -553,7 +553,7 @@ var _ = framework.MvpDemoSuiteDescribe("MVP Demo tests", Label("mvp-demo"), func
 
 		When("User switchs to simple build", func() {
 			BeforeAll(func() {
-				comp, err := f.AsKubeAdmin.HasController.GetHasComponent(componentName, userNamespace)
+				comp, err := f.AsKubeAdmin.HasController.GetComponent(componentName, userNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 				comp.Annotations["appstudio.openshift.io/pac-provision"] = "delete"
 				Expect(f.AsKubeAdmin.CommonController.KubeRest().Update(context.TODO(), comp)).To(Succeed())

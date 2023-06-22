@@ -148,7 +148,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 			// Create an application in a specific namespace
 			It(fmt.Sprintf("create application %s", suite.ApplicationName), func() {
 				GinkgoWriter.Printf("Parallel process %d\n", GinkgoParallelProcess())
-				application, err := fw.AsKubeDeveloper.HasController.CreateHasApplication(suite.ApplicationName, namespace)
+				application, err := fw.AsKubeDeveloper.HasController.CreateApplication(suite.ApplicationName, namespace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(application.Spec.DisplayName).To(Equal(suite.ApplicationName))
 				Expect(application.Namespace).To(Equal(namespace))
@@ -157,7 +157,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 			// Check the application health and check if a devfile was generated in the status
 			It(fmt.Sprintf("checks if application %s is healthy", suite.ApplicationName), func() {
 				Eventually(func() string {
-					appstudioApp, err := fw.AsKubeDeveloper.HasController.GetHasApplication(suite.ApplicationName, namespace)
+					appstudioApp, err := fw.AsKubeDeveloper.HasController.GetApplication(suite.ApplicationName, namespace)
 					Expect(err).NotTo(HaveOccurred())
 					application = appstudioApp
 

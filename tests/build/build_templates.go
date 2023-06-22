@@ -57,16 +57,16 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				kubeadminClient = f.AsKubeAdmin
 			}
 
-			_, err = kubeadminClient.HasController.GetHasApplication(applicationName, testNamespace)
+			_, err = kubeadminClient.HasController.GetApplication(applicationName, testNamespace)
 			// In case the app with the same name exist in the selected namespace, delete it first
 			if err == nil {
-				Expect(kubeadminClient.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
+				Expect(kubeadminClient.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 				Eventually(func() bool {
-					_, err := kubeadminClient.HasController.GetHasApplication(applicationName, testNamespace)
+					_, err := kubeadminClient.HasController.GetApplication(applicationName, testNamespace)
 					return errors.IsNotFound(err)
 				}, time.Minute*5, time.Second*1).Should(BeTrue(), "timed out when waiting for the app %s to be deleted in %s namespace", applicationName, testNamespace)
 			}
-			app, err := kubeadminClient.HasController.CreateHasApplication(applicationName, testNamespace)
+			app, err := kubeadminClient.HasController.CreateApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(utils.WaitUntil(kubeadminClient.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
 				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
@@ -95,7 +95,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				// Clean up only Application CR (Component and Pipelines are included) in case we are targeting specific namespace
 				// Used e.g. in build-definitions e2e tests, where we are targeting build-templates-e2e namespace
 				if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) != "" {
-					DeferCleanup(kubeadminClient.HasController.DeleteHasApplication, applicationName, testNamespace, false)
+					DeferCleanup(kubeadminClient.HasController.DeleteApplication, applicationName, testNamespace, false)
 				} else {
 					Expect(kubeadminClient.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 					Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
@@ -127,7 +127,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			gitUrl := gitUrl
 
 			It(fmt.Sprintf("should eventually finish successfully for component with source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
-				component, err := kubeadminClient.HasController.GetHasComponent(componentNames[i], testNamespace)
+				component, err := kubeadminClient.HasController.GetComponent(componentNames[i], testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
 			})

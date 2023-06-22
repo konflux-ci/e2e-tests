@@ -85,8 +85,8 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				if !CurrentSpecReport().Failed() {
-					Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+					Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.HasController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.ReleaseController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
@@ -99,7 +99,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 			// Create an application in a specific namespace
 			It("creates an application", func() {
 				GinkgoWriter.Printf("Parallel process %d\n", GinkgoParallelProcess())
-				createdApplication, err := fw.AsKubeDeveloper.HasController.CreateHasApplication(appTest.ApplicationName, namespace)
+				createdApplication, err := fw.AsKubeDeveloper.HasController.CreateApplication(appTest.ApplicationName, namespace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(createdApplication.Spec.DisplayName).To(Equal(appTest.ApplicationName))
 				Expect(createdApplication.Namespace).To(Equal(namespace))
@@ -108,7 +108,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 			// Check the application health and check if a devfile was generated in the status
 			It("checks if application is healthy", func() {
 				Eventually(func() string {
-					appstudioApp, err := fw.AsKubeDeveloper.HasController.GetHasApplication(appTest.ApplicationName, namespace)
+					appstudioApp, err := fw.AsKubeDeveloper.HasController.GetApplication(appTest.ApplicationName, namespace)
 					Expect(err).NotTo(HaveOccurred())
 					application = appstudioApp
 
@@ -185,7 +185,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					if componentTest.ContainerSource != "" {
 						Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skipping pipelinerun check.", componentTest.Name))
 					}
-					component, err = fw.AsKubeAdmin.HasController.GetHasComponent(component.Name, namespace)
+					component, err = fw.AsKubeAdmin.HasController.GetComponent(component.Name, namespace)
 					Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
 
 					Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
@@ -272,11 +272,10 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 				if componentTest.K8sSpec != (e2eConfig.K8sSpec{}) && componentTest.K8sSpec.Replicas > 1 {
 					It(fmt.Sprintf("scales component %s replicas", component.Name), Pending, func() {
-						component, err := fw.AsKubeDeveloper.HasController.GetHasComponent(component.Name, namespace)
+						component, err := fw.AsKubeDeveloper.HasController.GetComponent(component.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())
 						_, err = fw.AsKubeDeveloper.HasController.ScaleComponentReplicas(component, pointer.Int(componentTest.K8sSpec.Replicas))
 						Expect(err).NotTo(HaveOccurred())
-
 						Eventually(func() bool {
 							deployment, _ := fw.AsKubeDeveloper.CommonController.GetDeployment(component.Name, namespace)
 							if err != nil && !errors.IsNotFound(err) {
