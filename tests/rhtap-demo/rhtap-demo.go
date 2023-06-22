@@ -123,7 +123,12 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 		secret.Type = corev1.SecretTypeDockerConfigJson
 		_, err = f.AsKubeAdmin.CommonController.CreateSecret(managedNamespace, secret)
 		Expect(err).ShouldNot(HaveOccurred())
-		_, err = f.AsKubeAdmin.CommonController.CreateServiceAccount("release-service-account", managedNamespace, []corev1.ObjectReference{{Name: secret.Name}})
+		managedServiceAccount, err := f.AsKubeAdmin.CommonController.CreateServiceAccount("release-service-account", managedNamespace, []corev1.ObjectReference{{Name: secret.Name}})
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(userNamespace, managedServiceAccount)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
 		Expect(err).NotTo(HaveOccurred())
 
 		publicKey, err := kc.GetTektonChainsPublicKey()
