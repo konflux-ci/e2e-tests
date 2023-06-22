@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	v1 "k8s.io/api/apps/v1"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/library/pkg/util"
@@ -200,7 +198,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 		//wait for the cache
 
-		WaitForCache(f.AsKubeAdmin, testNamespace)
+		Expect(f.AsKubeAdmin.JvmbuildserviceController.WaitForCache(f.AsKubeAdmin.CommonController, testNamespace)).Should(Succeed())
 
 		customJavaPipelineBundleRef := os.Getenv(constants.CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV)
 		if len(customJavaPipelineBundleRef) > 0 {
@@ -485,25 +483,3 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		})
 	})
 })
-
-func WaitForCache(client *framework.ControllerHub, testNamespace string) bool {
-	return Eventually(func() bool {
-		cache, err := client.CommonController.GetDeployment(v1alpha1.CacheDeploymentName, testNamespace)
-		if err != nil {
-			GinkgoWriter.Printf("get of cache: %s", err.Error())
-			return false
-		}
-		if cache.Status.AvailableReplicas > 0 {
-			GinkgoWriter.Printf("Cache is available")
-			return true
-		}
-		for _, cond := range cache.Status.Conditions {
-			if cond.Type == v1.DeploymentProgressing && cond.Status == "False" {
-				panic("cache deployment failed")
-			}
-
-		}
-		GinkgoWriter.Printf("Cache is progressing")
-		return false
-	}, 5*time.Minute, 5*time.Second).Should(BeTrue(), "Cache should be created and ready")
-}

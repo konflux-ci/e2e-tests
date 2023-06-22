@@ -112,8 +112,8 @@ In that case, before you run the test, make sure you have created
   * also make sure that the docker config, that is encoded in the value of `QUAY_TOKEN` environment variable, contains a correct credentials required to push to `test-images` repo. And make sure the robot account or user account has the **write** permissions set for `test-images` repo which is required by the tests to push the generated artifacts.
 * forked following GitHub repositories to your org (specified in `MY_GITHUB_ORG` env var)
   * https://github.com/redhat-appstudio-qe/devfile-sample-hello-world (for running build-service tests)
-  * https://github.com/redhat-appstudio-qe/hacbs-test-project (for mvp-demo test)
-  * https://github.com/redhat-appstudio-qe/strategy-configs (for mvp-demo test)
+  * https://github.com/redhat-appstudio-qe/hacbs-test-project (for rhtap-demo test)
+  * https://github.com/redhat-appstudio-qe/strategy-configs (for rhtap-demo test)
 
    ```bash
     `./bin/e2e-appstudio`

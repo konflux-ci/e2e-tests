@@ -41,6 +41,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 
 	var component1, component2 *appservice.Component
 
+	var componentDetected, additionalComponentDetected appservice.ComponentDetectionDescription
+
 	BeforeAll(func() {
 		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("e2e-pyxis"))
 		Expect(err).NotTo(HaveOccurred())
@@ -113,7 +115,12 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			},
 		}
 
-		_, err = fw.AsKubeAdmin.CommonController.CreateServiceAccount(releaseStrategyServiceAccountDefault, managedNamespace, managednamespaceSecret)
+		managedServiceAccount, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(releaseStrategyServiceAccountDefault, managedNamespace, managednamespaceSecret)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(devNamespace, managedServiceAccount)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
 		Expect(err).NotTo(HaveOccurred())
 
 		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, redhatAppstudioUserSecret, releaseStrategyServiceAccountDefault, true)
@@ -121,7 +128,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 
 		// using cdq since git ref is not known
 		compName = componentName
-		var componentDetected appservice.ComponentDetectionDescription
 		cdq, err := fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(compName, devNamespace, gitSourceComponentUrl, "", "", "", false)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
@@ -133,7 +139,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 
 		// using cdq since git ref is not known
 		additionalCompName = additionalComponentName
-		var additionalComponentDetected appservice.ComponentDetectionDescription
 		cdq, err = fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(additionalCompName, devNamespace, additionalGitSourceComponentUrl, "", "", "", false)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
@@ -187,12 +192,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 
 		_, err = fw.AsKubeAdmin.HasController.CreateApplication(applicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
-
-		component1, err = fw.AsKubeAdmin.HasController.CreateComponentFromStub(componentDetected, devNamespace, "", "", applicationNameDefault)
-		Expect(err).NotTo(HaveOccurred())
-
-		component2, err = fw.AsKubeAdmin.HasController.CreateComponentFromStub(additionalComponentDetected, devNamespace, "", "", applicationNameDefault)
-		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterAll(func() {
@@ -208,8 +207,15 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 
 	var _ = Describe("Post-release verification", func() {
 
-		It("verifies that build PipelineRuns are created for each Component in dev namespace and both succeed", func() {
+		It("verifies that Component 1 can be created and build PipelineRun is created for it in dev namespace and succeeds", func() {
+			component1, err = fw.AsKubeAdmin.HasController.CreateComponentFromStub(componentDetected, devNamespace, "", "", applicationNameDefault)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component1, "", 2)).To(Succeed())
+		})
+
+		It("verifies that Component 2 can be created and build PipelineRun is created for it in dev namespace and succeeds", func() {
+			component2, err = fw.AsKubeAdmin.HasController.CreateComponentFromStub(additionalComponentDetected, devNamespace, "", "", applicationNameDefault)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component2, "", 2)).To(Succeed())
 		})
 
