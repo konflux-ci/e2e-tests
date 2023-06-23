@@ -154,7 +154,11 @@ func (h *hasFactory) CreateComponent(componentSpec appservice.ComponentSpec, nam
 	}
 	componentObject.Spec.Secret = secret
 	componentObject.Spec.Application = applicationName
-	componentObject.Annotations = utils.MergeMaps(componentObject.Annotations, annotations)
+
+	if len(annotations) > 0 {
+		componentObject.Annotations = utils.MergeMaps(componentObject.Annotations, annotations)
+
+	}
 
 	if componentObject.Spec.TargetPort == 0 {
 		componentObject.Spec.TargetPort = 8081
@@ -162,7 +166,7 @@ func (h *hasFactory) CreateComponent(componentSpec appservice.ComponentSpec, nam
 	if outputContainerImage != "" {
 		componentObject.Spec.ContainerImage = outputContainerImage
 	} else {
-		componentObject.Annotations = utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo)
+		componentObject.Annotations = utils.MergeMaps(componentObject.Annotations, constants.ImageControllerAnnotationRequestPublicRepo)
 	}
 
 	if err := h.KubeRest().Create(context.TODO(), componentObject); err != nil {
