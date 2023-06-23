@@ -77,6 +77,8 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-rest-endpoin
 			})
 
 			var SPIAccessCheck *v1beta1.SPIAccessCheck
+			var SPIAccessToken *v1beta1.SPIAccessToken
+
 			Describe("SVPI-404 - Check access to GitHub repository before token upload", func() {
 				It("creates SPIAccessCheck", func() {
 					SPIAccessCheck, err = fw.AsKubeDeveloper.SPIController.CreateSPIAccessCheck(SPIAccessCheckPrefixName, namespace, test.RepoURL)
@@ -87,14 +89,13 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-rest-endpoin
 				})
 
 				It("checks if repository is accessible", func() {
-					Eventually(func() bool {
+					Eventually(func() v1beta1.SPIAccessCheckAccessibility {
 						SPIAccessCheck, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessCheck(SPIAccessCheck.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())
-
 						// at this stage, before token upload, accessibility should be unknown (in case of private repo) or public (in case of public repo)
-						return SPIAccessCheck.Status.Accessibility == v1beta1.SPIAccessCheckAccessibilityUnknown ||
-							SPIAccessCheck.Status.Accessibility == v1beta1.SPIAccessCheckAccessibilityPublic
-					}, 1*time.Minute, 5*time.Second).Should(BeTrue(), fmt.Sprintf("SPIAccessCheck '%s' has wrong info", SPIAccessCheck.Name))
+						return SPIAccessCheck.Status.Accessibility
+					}, 1*time.Minute, 5*time.Second).Should(Or(Equal(v1beta1.SPIAccessCheckAccessibilityUnknown), Equal(v1beta1.SPIAccessCheckAccessibilityPublic)),
+						fmt.Sprintf("SPIAccessCheck %s/%s has wrong info in '.Status.Accessibility' field", SPIAccessCheck.GetNamespace(), SPIAccessCheck.GetName()))
 
 					if test.Accessibility == v1beta1.SPIAccessCheckAccessibilityPublic {
 						//  if public, the repository should be accessible
@@ -114,22 +115,22 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-rest-endpoin
 			// start of upload token
 			It("SPITokenBinding to be in AwaitingTokenData phase", func() {
 				// wait SPITokenBinding to be in AwaitingTokenData phase before trying to upload a token
-				Eventually(func() bool {
+				Eventually(func() v1beta1.SPIAccessTokenBindingPhase {
 					SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
 					Expect(err).NotTo(HaveOccurred())
 
-					return (SPITokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData)
-				}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in AwaitingTokenData phase")
+					return SPITokenBinding.Status.Phase
+				}, 1*time.Minute, 5*time.Second).Should(Equal(v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData), fmt.Sprintf("SPIAccessTokenBinding %s/%s is not in %s phase", SPITokenBinding.GetNamespace(), SPITokenBinding.GetName(), v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData))
 			})
 
 			It("uploads username and token using rest endpoint", func() {
 				// the UploadUrl in SPITokenBinding should be available before uploading the token
-				Eventually(func() bool {
+				Eventually(func() string {
 					SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
 					Expect(err).NotTo(HaveOccurred())
 
-					return SPITokenBinding.Status.UploadUrl != ""
-				}, 1*time.Minute, 10*time.Second).Should(BeTrue(), "uploadUrl not set")
+					return SPITokenBinding.Status.UploadUrl
+				}, 1*time.Minute, 10*time.Second).ShouldNot(BeEmpty(), fmt.Sprintf(".Status.TokenUploadUrl field in SPIFileContentRequest %s/%s is empty", SPITokenBinding.GetNamespace(), SPITokenBinding.GetName()))
 				Expect(err).NotTo(HaveOccurred())
 
 				// linked accessToken token should exist
@@ -152,23 +153,21 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-rest-endpoin
 			})
 
 			It("SPITokenBinding to be in Injected phase", func() {
-				Eventually(func() bool {
+				Eventually(func() v1beta1.SPIAccessTokenBindingPhase {
 					SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
 					Expect(err).NotTo(HaveOccurred())
-					return SPITokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected
-				}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in Injected phase")
+					return SPITokenBinding.Status.Phase
+				}, 1*time.Minute, 5*time.Second).Should(Equal(v1beta1.SPIAccessTokenBindingPhaseInjected), fmt.Sprintf("SPIAccessTokenBinding %s/%s is not in %s phase", SPITokenBinding.GetNamespace(), SPITokenBinding.GetName(), v1beta1.SPIAccessTokenBindingPhaseInjected))
 			})
 
-			It("SPIAccessToken exists and is in Read phase", func() {
-				Eventually(func() bool {
-					SPIAccessToken, err := fw.AsKubeDeveloper.SPIController.GetSPIAccessToken(SPITokenBinding.Status.LinkedAccessTokenName, namespace)
-
+			It("SPIAccessToken exists and is in Ready phase", func() {
+				Eventually(func() (v1beta1.SPIAccessTokenPhase, error) {
+					SPIAccessToken, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessToken(SPITokenBinding.Status.LinkedAccessTokenName, namespace)
 					if err != nil {
-						return false
+						return "", err
 					}
-
-					return (SPIAccessToken.Status.Phase == v1beta1.SPIAccessTokenPhaseReady)
-				}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "SPIAccessToken should be in ready phase")
+					return SPIAccessToken.Status.Phase, nil
+				}, 2*time.Minute, 5*time.Second).Should(Equal(v1beta1.SPIAccessTokenPhaseReady), fmt.Sprintf("SPIAccessToken for SPITokenBinding %s/%s should be in %s phase", SPITokenBinding.GetNamespace(), SPITokenBinding.GetName(), v1beta1.SPIAccessTokenPhaseReady))
 			})
 			// end of upload token
 

@@ -25,7 +25,7 @@ type TestSpec struct {
 type K8sSpec struct {
 	// If set, will scale the replicas to the desired number
 	// This is a pointer to distinguish between explicit zero and not specified.
-	Replicas int `yaml:"replicas,omitempty"`
+	Replicas int32 `yaml:"replicas,omitempty"`
 }
 
 // Specs for a specific component to create in AppStudio
