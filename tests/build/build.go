@@ -130,7 +130,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Source: appservice.ComponentSource{
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
 							GitSource: &appservice.GitSource{
-								URL: helloWorldComponentGitSourceURL,
+								URL:      helloWorldComponentGitSourceURL,
+								Revision: defaultBranchTestComponentName,
 							},
 						},
 					},
@@ -248,7 +249,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					},
 				}
 				// Create a component with Git Source URL, a specified git branch and marking delete-repo=true
-				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
+				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 			It("triggers a PipelineRun", func() {

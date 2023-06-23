@@ -235,7 +235,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 		// Create a component with Git Source URL being defined
 		componentObj := appservice.ComponentSpec{
-			ComponentName: fmt.Sprintf("jvm-build-suite-component-%s", util.GenerateRandomString(4)),
+			ComponentName: componentName,
 			Source: appservice.ComponentSource{
 				ComponentSourceUnion: appservice.ComponentSourceUnion{
 					GitSource: &appservice.GitSource{
