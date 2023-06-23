@@ -162,7 +162,7 @@ func (h *hasFactory) CreateComponent(componentSpec appservice.ComponentSpec, nam
 	if outputContainerImage != "" {
 		componentObject.Spec.ContainerImage = outputContainerImage
 	} else {
-		componentObject.Annotations = utils.MergeMaps(componentObject.Annotations, constants.ImageControllerAnnotationDeleteRepoTrue)
+		componentObject.Annotations = utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo)
 	}
 
 	if err := h.KubeRest().Create(context.TODO(), componentObject); err != nil {

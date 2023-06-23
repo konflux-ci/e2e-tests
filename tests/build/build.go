@@ -136,7 +136,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					},
 				}
 
-				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationDeleteRepoFalse))
+				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -218,13 +218,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return exists
 				}, timeout, interval).Should(BeFalse(), "timed out when waiting for the branch to be deleted")
 			})
-			It("related image repo should not be deleted but the robot account should be deleted after deleting the component", func() {
+			It("related image repo and the robot account should be deleted after deleting the component", func() {
 				timeout = time.Second * 60
 				interval = time.Second * 1
-				// Check image repo should not be deleted
+				// Check image repo should be deleted
 				Eventually(func() (bool, error) {
 					return build.DoesImageRepoExistInQuay(imageRepoName)
-				}, timeout, interval).Should(BeTrue(), "timed out when checking if image repo got deleted")
+				}, timeout, interval).Should(BeFalse(), "timed out when checking if image repo got deleted")
 				// Check robot account should be deleted
 				Eventually(func() (bool, error) {
 					return build.DoesRobotAccountExistInQuay(robotAccountName)
@@ -237,6 +237,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			BeforeAll(func() {
 				componentObj := appservice.ComponentSpec{
 					ComponentName: componentName,
+					Application:   applicationName,
 					Source: appservice.ComponentSource{
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
 							GitSource: &appservice.GitSource{
@@ -246,7 +247,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						},
 					},
 				}
-				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationDeleteRepoFalse))
+				// Create a component with Git Source URL, a specified git branch and marking delete-repo=true
+				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 			It("triggers a PipelineRun", func() {
@@ -465,7 +467,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						},
 					},
 				}
-				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationDeleteRepoFalse))
+				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
+				Expect(err).ShouldNot(HaveOccurred())
 			})
 
 			It("should no longer lead to a creation of a PaC PR", func() {

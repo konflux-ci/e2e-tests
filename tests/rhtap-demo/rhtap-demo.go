@@ -270,7 +270,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 						},
 					},
 				}
-				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, userNamespace, "", "", appName, false, constants.ImageControllerAnnotationDeleteRepoTrue)
+				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, userNamespace, "", "", appName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
 				Expect(err).ShouldNot(HaveOccurred())
 
 				pacBranchName := fmt.Sprintf("appstudio-%s", component.GetName())
