@@ -259,7 +259,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 		When("Component with PaC is created", func() {
 
 			It("triggers creation of a PR in the sample repo", func() {
-				component, err = f.AsKubeAdmin.HasController.CreateComponentWithPaCEnabled(appName, componentName, userNamespace, sampleRepoURL, componentNewBaseBranch, true)
+				component, err = f.AsKubeAdmin.HasController.CreateComponentWithPaCEnabled(appName, componentName, userNamespace, sampleRepoURL, componentNewBaseBranch)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				pacBranchName := fmt.Sprintf("appstudio-%s", component.GetName())
