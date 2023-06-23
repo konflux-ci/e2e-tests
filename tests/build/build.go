@@ -125,8 +125,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 		When("a new component without specified branch is created", Label("pac-custom-default-branch"), func() {
 			BeforeAll(func() {
-				deleteRepo := false
-				_, err = f.AsKubeDeveloper.HasController.CreateComponentWithPaCEnabled(applicationName, defaultBranchTestComponentName, testNamespace, helloWorldComponentGitSourceURL, "", deleteRepo)
+				_, err = f.AsKubeDeveloper.HasController.CreateComponentWithPaCEnabled(applicationName, defaultBranchTestComponentName, testNamespace, helloWorldComponentGitSourceURL, "")
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -208,13 +207,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return exists
 				}, timeout, interval).Should(BeFalse(), "timed out when waiting for the branch to be deleted")
 			})
-			It("related image repo should not be deleted but the robot account should be deleted after deleting the component", func() {
+			It("related image repo and the robot account should be deleted after deleting the component", func() {
 				timeout = time.Second * 60
 				interval = time.Second * 1
-				// Check image repo should not be deleted
+				// Check image repo should be deleted
 				Eventually(func() (bool, error) {
 					return build.DoesImageRepoExistInQuay(imageRepoName)
-				}, timeout, interval).Should(BeTrue(), "timed out when checking if image repo got deleted")
+				}, timeout, interval).Should(BeFalse(), "timed out when checking if image repo got deleted")
 				// Check robot account should be deleted
 				Eventually(func() (bool, error) {
 					return build.DoesRobotAccountExistInQuay(robotAccountName)
@@ -226,8 +225,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		When("a new Component with specified custom branch is created", Label("custom-branch"), func() {
 			BeforeAll(func() {
 				// Create a component with Git Source URL, a specified git branch and marking delete-repo=true
-				deleteRepo := true
-				component, err = f.AsKubeAdmin.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, componentBaseBranchName, deleteRepo)
+				component, err = f.AsKubeAdmin.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, componentBaseBranchName)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 			It("triggers a PipelineRun", func() {
@@ -435,8 +433,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return build.DoesRobotAccountExistInQuay(robotAccountName)
 				}, timeout, interval).Should(BeFalse(), "timed out when waiting for robot account to be deleted")
 
-				deleteRepo := true
-				_, err = f.AsKubeAdmin.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, componentBaseBranchName, deleteRepo)
+				_, err = f.AsKubeAdmin.HasController.CreateComponentWithPaCEnabled(applicationName, componentName, testNamespace, helloWorldComponentGitSourceURL, componentBaseBranchName)
 			})
 
 			It("should no longer lead to a creation of a PaC PR", func() {

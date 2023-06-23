@@ -209,7 +209,7 @@ func (h *SuiteController) CreateComponent(applicationName, componentName, namesp
 		containerImage = containerImageSource
 	} else {
 		// When no image image is selected then add annotatation to generate new image repository
-		annotations = utils.MergeMaps(annotations, constants.ImageControllerAnnotationDeleteRepoTrue)
+		annotations = utils.MergeMaps(annotations, constants.ImageControllerAnnotationRequestPublicRepo)
 	}
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
@@ -270,14 +270,9 @@ func (h *SuiteController) ComponentDeleted(component *appservice.Component) wait
 }
 
 // CreateComponentWithPaCEnabled creates a component with "pipelinesascode: '1'" annotation that is used for triggering PaC builds
-func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, componentName, namespace, gitSourceURL, baseBranch string, deleteRepo bool) (*appservice.Component, error) {
+func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, componentName, namespace, gitSourceURL, baseBranch string) (*appservice.Component, error) {
 
-	var annotations map[string]string
-	if deleteRepo {
-		annotations = utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationDeleteRepoTrue)
-	} else {
-		annotations = utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationDeleteRepoFalse)
-	}
+	annotations := utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo)
 
 	component := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
@@ -326,7 +321,7 @@ func (h *SuiteController) CreateComponentFromStubSkipInitialChecks(compDetected 
 	if outputContainerImage != "" {
 		component.Spec.ContainerImage = outputContainerImage
 	} else {
-		component.Annotations = utils.MergeMaps(component.Annotations, constants.ImageControllerAnnotationDeleteRepoTrue)
+		component.Annotations = utils.MergeMaps(component.Annotations, constants.ImageControllerAnnotationRequestPublicRepo)
 	}
 
 	if component.Spec.TargetPort == 0 {
@@ -573,7 +568,7 @@ func (h *SuiteController) CreateComponentFromDevfile(applicationName, componentN
 	} else if containerImageSource != "" {
 		component.Spec.ContainerImage = containerImageSource
 	} else {
-		component.Annotations = constants.ImageControllerAnnotationDeleteRepoTrue
+		component.Annotations = constants.ImageControllerAnnotationRequestPublicRepo
 	}
 	err := h.KubeRest().Create(context.TODO(), component)
 	if err != nil {
