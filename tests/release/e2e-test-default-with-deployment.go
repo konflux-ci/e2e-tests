@@ -210,26 +210,38 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("tests a Release should have been created in the dev namespace and succeeded.", func() {
+		It("tests a Release exists", func() {
 			Eventually(func() bool {
 				releaseCreated, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				if releaseCreated == nil || err != nil {
 					return false
 				}
 
+				return true
+			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
+		})
+
+		// phase Deployed happens before phase Released
+		It("tests a Release exists and was deployed successfully", func() {
+			Eventually(func() bool {
+				releaseCreated, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
+				if releaseCreated == nil || err != nil || len(releaseCreated.Status.Conditions) < 1 {
+					return false
+				}
+
+				return releaseCreated.IsDeployed()
+			}, releaseDeploymentTimeout, defaultInterval).Should(BeTrue())
+		})
+
+		It("tests a Release exists and was released successfully.", func() {
+			Eventually(func() bool {
+				releaseCreated, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
+				if releaseCreated == nil || err != nil || len(releaseCreated.Status.Conditions) < 2 {
+					return false
+				}
+
 				return releaseCreated.IsReleased()
 			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 		})
-	})
-
-	It("tests a Release should report the deployment was successful.", func() {
-		Eventually(func() bool {
-			releaseCreated, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
-			if releaseCreated == nil || err != nil || len(releaseCreated.Status.Conditions) < 2 {
-				return false
-			}
-
-			return releaseCreated.IsDeployed()
-		}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 	})
 })
