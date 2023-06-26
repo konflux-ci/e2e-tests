@@ -126,7 +126,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		When("a new component without specified branch is created", Label("pac-custom-default-branch"), func() {
 			BeforeAll(func() {
 				componentObj := appservice.ComponentSpec{
-					ComponentName: componentName,
+					ComponentName: defaultBranchTestComponentName,
 					Application:   applicationName,
 					Source: appservice.ComponentSource{
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
