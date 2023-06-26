@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/devfile/library/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -30,6 +31,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 	var devNamespace = utils.GetGeneratedNamespace("release-dev")
 	var managedNamespace = utils.GetGeneratedNamespace("release-managed")
 	var component *appservice.Component
+	scGitRevision := fmt.Sprintf("test-deployment-%s", util.GenerateRandomString(4))
 
 	BeforeAll(func() {
 		fw, err = framework.NewFramework("release-e2e-bundle")
@@ -100,14 +102,14 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		Expect(err).ShouldNot(HaveOccurred())
 
 		scPath := "release-default-with-deployment.yaml"
-		Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef("strategy-configs", "main", compName)).To(Succeed())
-		_, err = fw.AsKubeAdmin.CommonController.Github.CreateFile("strategy-configs", scPath, string(scYaml), compName)
+		Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef("strategy-configs", "main", scGitRevision)).To(Succeed())
+		_, err = fw.AsKubeAdmin.CommonController.Github.CreateFile("strategy-configs", scPath, string(scYaml), scGitRevision)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-deploy-strategy", managedNamespace, "deploy-release", "quay.io/hacbs-release/pipeline-deploy-release:0.3", releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, []releaseApi.Params{
 			{Name: "extraConfigGitUrl", Value: fmt.Sprintf("https://github.com/%s/strategy-configs.git", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"))},
 			{Name: "extraConfigPath", Value: scPath},
-			{Name: "extraConfigGitRevision", Value: compName},
+			{Name: "extraConfigGitRevision", Value: scGitRevision},
 		})
 		Expect(err).NotTo(HaveOccurred())
 
@@ -123,7 +125,12 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasePvcName, managedNamespace, corev1.ReadWriteOnce)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.CommonController.CreateServiceAccount(releaseStrategyServiceAccountDefault, managedNamespace, managednamespaceSecret)
+		managedServiceAccount, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(releaseStrategyServiceAccountDefault, managedNamespace, managednamespaceSecret)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(devNamespace, managedServiceAccount)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateRole("role-release-service-account", managedNamespace, map[string][]string{
@@ -164,7 +171,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 	})
 
 	AfterAll(func() {
-		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef("strategy-configs", compName)
+		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef("strategy-configs", scGitRevision)
 		if err != nil {
 			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 		}
@@ -203,26 +210,38 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("tests a Release should have been created in the dev namespace and succeeded.", func() {
+		It("tests a Release exists", func() {
 			Eventually(func() bool {
 				releaseCreated, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				if releaseCreated == nil || err != nil {
 					return false
 				}
 
+				return true
+			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
+		})
+
+		// phase Deployed happens before phase Released
+		It("tests a Release exists and was deployed successfully", func() {
+			Eventually(func() bool {
+				releaseCreated, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
+				if releaseCreated == nil || err != nil || len(releaseCreated.Status.Conditions) < 1 {
+					return false
+				}
+
+				return releaseCreated.IsDeployed()
+			}, releaseDeploymentTimeout, defaultInterval).Should(BeTrue())
+		})
+
+		It("tests a Release exists and was released successfully.", func() {
+			Eventually(func() bool {
+				releaseCreated, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
+				if releaseCreated == nil || err != nil || len(releaseCreated.Status.Conditions) < 2 {
+					return false
+				}
+
 				return releaseCreated.IsReleased()
 			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 		})
-	})
-
-	It("tests a Release should report the deployment was successful.", func() {
-		Eventually(func() bool {
-			releaseCreated, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
-			if releaseCreated == nil || err != nil || len(releaseCreated.Status.Conditions) < 2 {
-				return false
-			}
-
-			return releaseCreated.IsDeployed()
-		}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
 	})
 })

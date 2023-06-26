@@ -13,14 +13,14 @@ pushd "${2:-.}"
 echo "Installing app-studio and tweaking cluster configuration"
 go mod tidy
 go mod vendor
-export MY_GITHUB_ORG QUAY_E2E_ORGANIZATION INFRA_DEPLOYMENTS_ORG INFRA_DEPLOYMENTS_BRANCH TEKTON_PERF_THREADS_PER_CONTROLLER TEKTON_PERF_KUBE_API_QPS TEKTON_PERF_KUBE_API_BURST
+export MY_GITHUB_ORG QUAY_E2E_ORGANIZATION INFRA_DEPLOYMENTS_ORG INFRA_DEPLOYMENTS_BRANCH TEKTON_PERF_THREADS_PER_CONTROLLER TEKTON_PERF_KUBE_API_QPS TEKTON_PERF_KUBE_API_BURST TEKTON_PERF_ENABLE_PROFILING TEKTON_PERF_PROFILE_CPU_PERIOD
 MY_GITHUB_ORG=$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/github-org)
 QUAY_E2E_ORGANIZATION=$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/quay-org)
 INFRA_DEPLOYMENTS_ORG=$MY_GITHUB_ORG
 INFRA_DEPLOYMENTS_BRANCH=tekton-tuning-$(mktemp -u XXXX)
-TEKTON_PERF_THREADS_PER_CONTROLLER=${TEKTON_PERF_THREADS_PER_CONTROLLER:-2}
-TEKTON_PERF_KUBE_API_QPS=${TEKTON_PERF_KUBE_API_QPS:-5}
-TEKTON_PERF_KUBE_API_BURST=${TEKTON_PERF_KUBE_API_BURST:-10}
+TEKTON_PERF_THREADS_PER_CONTROLLER=${TEKTON_PERF_THREADS_PER_CONTROLLER:-32}
+TEKTON_PERF_KUBE_API_QPS=${TEKTON_PERF_KUBE_API_QPS:-50}
+TEKTON_PERF_KUBE_API_BURST=${TEKTON_PERF_KUBE_API_BURST:-50}
 
 ## Tweak infra-deployments
 echo "Tweaking infra-deployments"
@@ -39,6 +39,12 @@ rm -rf "$infra_deployment_dir"
 ## Install infra-deployments
 echo "Installing infra-deployments"
 make local/cluster/prepare
+
+## Enable profiling in Tekton controller
+if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
+    echo "Enabling profiling in Tekton controller"
+    oc patch -n openshift-pipelines cm config-observability --type=json -p='[{"op": "add", "path": "/data/profiling.enable", "value": "true"}]'
+fi
 
 ## Patch HAS github secret
 echo "Patching HAS github tokens"

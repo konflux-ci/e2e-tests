@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/devfile/library/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -28,6 +29,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 	var devNamespace = utils.GetGeneratedNamespace("release-dev")
 	var managedNamespace = utils.GetGeneratedNamespace("release-managed")
 	var component *appservice.Component
+	scGitRevision := fmt.Sprintf("test-bundle-%s", util.GenerateRandomString(4))
 
 	BeforeAll(func() {
 		// Initialize the tests controllers
@@ -52,7 +54,12 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 		destinationAuthJson := utils.GetEnv("QUAY_OAUTH_TOKEN_RELEASE_DESTINATION", "")
 		Expect(destinationAuthJson).ToNot(BeEmpty())
 
-		_, err = fw.AsKubeAdmin.CommonController.CreateServiceAccount(releaseStrategyServiceAccountDefault, managedNamespace, managednamespaceSecret)
+		managedServiceAccount, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(releaseStrategyServiceAccountDefault, managedNamespace, managednamespaceSecret)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(devNamespace, managedServiceAccount)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(hacbsReleaseTestsTokenSecret, devNamespace, sourceAuthJson)
@@ -106,14 +113,14 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 		Expect(err).ShouldNot(HaveOccurred())
 
 		scPath := "release-default-bundle.yaml"
-		Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef("strategy-configs", "main", compName)).To(Succeed())
-		_, err = fw.AsKubeAdmin.CommonController.Github.CreateFile("strategy-configs", scPath, string(scYaml), compName)
+		Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef("strategy-configs", "main", scGitRevision)).To(Succeed())
+		_, err = fw.AsKubeAdmin.CommonController.Github.CreateFile("strategy-configs", scPath, string(scYaml), scGitRevision)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineNameDefault, constants.ReleasePipelineImageRef, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, []releaseApi.Params{
 			{Name: "extraConfigGitUrl", Value: fmt.Sprintf("https://github.com/%s/strategy-configs.git", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"))},
 			{Name: "extraConfigPath", Value: scPath},
-			{Name: "extraConfigGitRevision", Value: compName},
+			{Name: "extraConfigGitRevision", Value: scGitRevision},
 		})
 		Expect(err).NotTo(HaveOccurred())
 
@@ -144,7 +151,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 	})
 
 	AfterAll(func() {
-		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef("strategy-configs", compName)
+		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef("strategy-configs", scGitRevision)
 		if err != nil {
 			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 		}

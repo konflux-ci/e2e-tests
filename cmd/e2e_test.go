@@ -18,9 +18,9 @@ import (
 	_ "github.com/redhat-appstudio/e2e-tests/tests/e2e-demos"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/enterprise-contract"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/integration-service"
-	_ "github.com/redhat-appstudio/e2e-tests/tests/mvp-demo"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/o11y"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/release"
+	_ "github.com/redhat-appstudio/e2e-tests/tests/rhtap-demo"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/spi"
 
 	"flag"
@@ -54,7 +54,7 @@ func init() {
 
 	klog.SetLogger(ginkgo.GinkgoLogr)
 
-	verbosity := 1
+	verbosity := 6
 	if v, err := strconv.ParseUint(os.Getenv("KLOG_VERBOSITY"), 10, 8); err == nil {
 		verbosity = int(v)
 	}
