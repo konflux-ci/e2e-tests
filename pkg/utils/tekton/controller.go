@@ -853,10 +853,10 @@ func (s *SuiteController) StorePipelineRuns(componentPipelineRun *v1beta1.Pipeli
 	pipelineLogs, err := s.GetPipelineRunLogs(componentPipelineRun.Name, testNamespace)
 	if err != nil {
 		g.GinkgoWriter.Printf("got error fetching PR logs: %v\n", err.Error())
-	}
-
-	if err := os.WriteFile(filepath, []byte(pipelineLogs), 0644); err != nil {
-		g.GinkgoWriter.Printf("cannot write to %s: %+v\n", filepath, err)
+	} else {
+		if err := os.WriteFile(filepath, []byte(pipelineLogs), 0644); err != nil {
+			g.GinkgoWriter.Printf("cannot write to %s: %+v\n", filepath, err)
+		}
 	}
 
 	pipelineRuns, err := s.ListAllPipelineRuns(testNamespace)
@@ -869,7 +869,8 @@ func (s *SuiteController) StorePipelineRuns(componentPipelineRun *v1beta1.Pipeli
 		filepath := fmt.Sprintf("%s/%s-pr-%s.log", pipelineRunsDir, testNamespace, pipelineRun.Name)
 		pipelineLogs, err := s.GetPipelineRunLogs(pipelineRun.Name, testNamespace)
 		if err != nil {
-			g.GinkgoWriter.Printf("got error fetching PR logs: %s\n", err.Error())
+			g.GinkgoWriter.Printf("got error fetching PR logs: %v\n", err.Error())
+			continue
 		}
 
 		if err := os.WriteFile(filepath, []byte(pipelineLogs), 0644); err != nil {

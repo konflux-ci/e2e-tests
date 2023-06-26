@@ -1,6 +1,7 @@
 package logs
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -21,15 +22,17 @@ func StoreTestLogs(testNamespace, jobName string, componentPipelineRun *v1beta1.
 		return err
 	}
 
-	if err := cs.StorePodLogs(testNamespace, jobName, testLogsDir); err != nil {
-		GinkgoWriter.Printf("Failed to store pod logs: %v", err)
+	var errPods, errPipelineRuns error
+
+	if errPods := cs.StorePodLogs(testNamespace, jobName, testLogsDir); errPods != nil {
+		GinkgoWriter.Printf("Failed to store pod logs: %v", errPods)
 	}
 
 	if componentPipelineRun != nil {
-		if err := t.StorePipelineRuns(componentPipelineRun, testLogsDir, testNamespace); err != nil {
-			GinkgoWriter.Printf("Failed to store pipelineRun logs: %v", err)
+		if errPipelineRuns := t.StorePipelineRuns(componentPipelineRun, testLogsDir, testNamespace); errPipelineRuns != nil {
+			GinkgoWriter.Printf("Failed to store pipelineRun logs: %v", errPipelineRuns)
 		}
 	}
 
-	return nil
+	return errors.Join(errPods, errPipelineRuns)
 }
