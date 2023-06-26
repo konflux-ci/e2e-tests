@@ -32,7 +32,7 @@ type hasFactory struct {
 	*kubeCl.CustomClient
 }
 
-// Intialize all the clients and return interface to operate with application-service controller.
+// Initializes all the clients and return interface to operate with application-service controller.
 func NewSuiteController(kube *kubeCl.CustomClient) (ApplicationService, error) {
 	gh, err := github.NewGithubClient(utils.GetEnv(constants.GITHUB_TOKEN_ENV, ""),
 		utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"))

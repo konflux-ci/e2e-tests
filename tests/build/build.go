@@ -137,7 +137,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						},
 					},
 				}
-				// func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, componentName, namespace, gitSourceURL, baseBranch string) (*appservice.Component, error) {
 				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
 				Expect(err).ShouldNot(HaveOccurred())
 			})

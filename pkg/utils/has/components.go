@@ -48,19 +48,14 @@ type ComponentsInterface interface {
 	DeleteAllComponentsInASpecificNamespace(namespace string, timeout time.Duration) error
 }
 
-// GetHasComponent returns the Appstudio Component Custom Resource object
+// GetComponent return a component object from kubernetes cluster
 func (h *hasFactory) GetComponent(name string, namespace string) (*appservice.Component, error) {
-	namespacedName := types.NamespacedName{
-		Name:      name,
-		Namespace: namespace,
-	}
-
-	component := appservice.Component{}
-	err := h.KubeRest().Get(context.TODO(), namespacedName, &component)
-	if err != nil {
+	component := &appservice.Component{}
+	if err := h.KubeRest().Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, component); err != nil {
 		return nil, err
 	}
-	return &component, nil
+
+	return component, nil
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels
@@ -225,7 +220,7 @@ func (h *hasFactory) DeleteAllComponentsInASpecificNamespace(namespace string, t
 // Waits for a component to be reconciled in the application service.
 func (h *hasFactory) ComponentReady(component *appservice.Component) wait.ConditionFunc {
 	return func() (bool, error) {
-		messages, err := h.GetHasComponentConditionStatusMessages(component.Name, component.Namespace)
+		messages, err := h.GetComponentConditionStatusMessages(component.Name, component.Namespace)
 		if err != nil {
 			return false, nil
 		}
@@ -247,7 +242,7 @@ func (h *hasFactory) ComponentDeleted(component *appservice.Component) wait.Cond
 }
 
 // Get the message from the status of a component. Usefull for debugging purposes.
-func (h *hasFactory) GetHasComponentConditionStatusMessages(name, namespace string) (messages []string, err error) {
+func (h *hasFactory) GetComponentConditionStatusMessages(name, namespace string) (messages []string, err error) {
 	c, err := h.GetComponent(name, namespace)
 	if err != nil {
 		return messages, fmt.Errorf("error getting HAS component: %v", err)
@@ -347,7 +342,7 @@ func (h *hasFactory) RetriggerComponentPipelineRun(component *appservice.Compone
 	return sha, nil
 }
 
-// refreshApplicationForErrorDebug return the latest component object from the kubernetes cluster.
+// refreshComponentForErrorDebug returns the latest component object from the kubernetes cluster.
 func (h *hasFactory) refreshComponentForErrorDebug(component *appservice.Component) *appservice.Component {
 	retComp := &appservice.Component{}
 	key := rclient.ObjectKeyFromObject(component)
