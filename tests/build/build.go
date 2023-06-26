@@ -127,16 +127,17 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			BeforeAll(func() {
 				componentObj := appservice.ComponentSpec{
 					ComponentName: componentName,
+					Application:   applicationName,
 					Source: appservice.ComponentSource{
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
 							GitSource: &appservice.GitSource{
 								URL:      helloWorldComponentGitSourceURL,
-								Revision: defaultBranchTestComponentName,
+								Revision: "",
 							},
 						},
 					},
 				}
-
+				// func (h *SuiteController) CreateComponentWithPaCEnabled(applicationName, componentName, namespace, gitSourceURL, baseBranch string) (*appservice.Component, error) {
 				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
