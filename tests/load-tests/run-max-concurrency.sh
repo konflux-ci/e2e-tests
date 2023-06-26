@@ -3,15 +3,27 @@ export MY_GITHUB_ORG GITHUB_TOKEN
 
 load_test() {
     threads=${1:-1}
+    index=$(printf "%04d" "$threads")
+    ## Enable profiling in Tekton controller
+    if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
+        echo "Starting CPU profiling with pprof"
+        TEKTON_PERF_PROFILE_CPU_PERIOD=${TEKTON_PERF_PROFILE_CPU_PERIOD:-${THRESHOLD:-300}}
+        oc exec -n openshift-pipelines $(oc get pods -n openshift-pipelines -l app=tekton-pipelines-controller -o name) -- bash -c "curl -SsL --max-time $((TEKTON_PERF_PROFILE_CPU_PERIOD + 10)) localhost:8008/debug/pprof/profile?seconds=${TEKTON_PERF_PROFILE_CPU_PERIOD} | base64" | base64 -d >"cpu-profile.$index.pprof" &
+        TEKTON_PROFILER_PID=$!
+    fi
     go run loadtest.go \
         --component-repo "${COMPONENT_REPO:-https://github.com/nodeshift-starters/devfile-sample.git}" \
-        --username "$USER_PREFIX-$(printf "%04d" "$threads")" \
+        --username "$USER_PREFIX-$index" \
         --users 1 \
         -w \
         -l \
         -t "$threads" \
         --disable-metrics \
         --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}"
+    if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
+        echo "Waiting for the Tekton controller profiling to finish up to ${TEKTON_PERF_PROFILE_CPU_PERIOD}s"
+        wait "$TEKTON_PROFILER_PID"
+    fi
 }
 
 USER_PREFIX=${USER_PREFIX:-testuser}
