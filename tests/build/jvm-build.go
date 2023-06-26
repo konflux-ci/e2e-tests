@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	v1 "k8s.io/api/apps/v1"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/library/pkg/util"
