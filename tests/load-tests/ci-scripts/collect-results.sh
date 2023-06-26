@@ -104,24 +104,36 @@ fi
 ## Monitoring data
 echo "Setting up tool to collect monitoring data..."
 python3 -m venv venv
-set +u; source venv/bin/activate; set -u
+set +u
+source venv/bin/activate
+set -u
 python3 -m pip install -U pip
 python3 -m pip install -U pip
 python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team-core&subdirectory=core"
 
 echo "Collecting monitoring data..."
-mstart=$( date --utc --date "$( status_data.py --status-data-file "$monitoring_collection_data" --get timestamp )" --iso-8601=seconds )
-mend=$( date --utc --date "$( status_data.py --status-data-file "$monitoring_collection_data" --get endTimestamp )" --iso-8601=seconds )
-mhost=$( oc -n openshift-monitoring get route -l app.kubernetes.io/name=thanos-query -o json | jq --raw-output '.items[0].spec.host' )
+mstart=$(date --utc --date "$(status_data.py --status-data-file "$monitoring_collection_data" --get timestamp)" --iso-8601=seconds)
+mend=$(date --utc --date "$(status_data.py --status-data-file "$monitoring_collection_data" --get endTimestamp)" --iso-8601=seconds)
+mhost=$(oc -n openshift-monitoring get route -l app.kubernetes.io/name=thanos-query -o json | jq --raw-output '.items[0].spec.host')
 status_data.py \
-      --status-data-file "$monitoring_collection_data" \
-      --additional ./tests/load-tests/cluster_read_config.yaml \
-      --monitoring-start "$mstart" \
-      --monitoring-end "$mend" \
-      --prometheus-host "https://$mhost" \
-      --prometheus-port 443 \
-      --prometheus-token "$( oc whoami -t )" \
-      -d &>$monitoring_collection_log
-set +u; deactivate; set -u
+    --status-data-file "$monitoring_collection_data" \
+    --additional ./tests/load-tests/cluster_read_config.yaml \
+    --monitoring-start "$mstart" \
+    --monitoring-end "$mend" \
+    --prometheus-host "https://$mhost" \
+    --prometheus-port 443 \
+    --prometheus-token "$(oc whoami -t)" \
+    -d &>$monitoring_collection_log
+set +u
+deactivate
+set -u
+
+## Tekton prifiling data
+if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
+    echo "Collecting profiling data from Tekton controller"
+    pprof_profile=tests/load-tests/cpu-profile.pprof
+    go tool pprof -text "$pprof_profile" >$ARTIFACT_DIR/cpu-profile.txt
+    go tool pprof -svg -output="$ARTIFACT_DIR/cpu-profile.svg" "$pprof_profile"
+fi
 
 popd

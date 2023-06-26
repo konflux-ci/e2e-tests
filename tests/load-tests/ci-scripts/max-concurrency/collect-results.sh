@@ -41,6 +41,14 @@ for monitoring_collection_data in ./tests/load-tests/load-tests.max-concurrency.
         --prometheus-token "$(oc whoami -t)" \
         -d &>"$monitoring_collection_log"
     cp -f "$monitoring_collection_data" "$ARTIFACT_DIR"
+    ## Tekton prifiling data
+    if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
+        echo "Collecting profiling data from Tekton controller"
+        pprof_profile="tests/load-tests/cpu-profile.$index.pprof"
+        cp "$pprof_profile" "$ARTIFACT_DIR"
+        go tool pprof -text "$pprof_profile" >"$ARTIFACT_DIR/cpu-profile.$index.txt"
+        go tool pprof -svg -output="$ARTIFACT_DIR/cpu-profile.$index.svg" "$pprof_profile"
+    fi
 done
 set +u
 deactivate
