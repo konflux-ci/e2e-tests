@@ -148,7 +148,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 			// Create an application in a specific namespace
 			It(fmt.Sprintf("create application %s", suite.ApplicationName), func() {
 				GinkgoWriter.Printf("Parallel process %d\n", GinkgoParallelProcess())
-				application, err := fw.AsKubeDeveloper.HasController.CreateHasApplication(suite.ApplicationName, namespace)
+				application, err := fw.AsKubeDeveloper.HasController.CreateApplication(suite.ApplicationName, namespace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(application.Spec.DisplayName).To(Equal(suite.ApplicationName))
 				Expect(application.Namespace).To(Equal(namespace))
@@ -157,7 +157,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 			// Check the application health and check if a devfile was generated in the status
 			It(fmt.Sprintf("checks if application %s is healthy", suite.ApplicationName), func() {
 				Eventually(func() string {
-					appstudioApp, err := fw.AsKubeDeveloper.HasController.GetHasApplication(suite.ApplicationName, namespace)
+					appstudioApp, err := fw.AsKubeDeveloper.HasController.GetApplication(suite.ApplicationName, namespace)
 					Expect(err).NotTo(HaveOccurred())
 					application = appstudioApp
 
@@ -210,7 +210,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 						// Skip https://github.com/redhat-appstudio/quality-dashboard/tree/main/frontend because takes to much to much ton push to quay.io and analyze sbom due huge image and is make
 						// ci to be slow
 						if !strings.Contains(component.ComponentStub.ComponentName, "frontend-quality") {
-							c, err := fw.AsKubeDeveloper.HasController.CreateComponentFromStub(component, namespace, "", SPIGithubSecretName, application.Name)
+							c, err := fw.AsKubeDeveloper.HasController.CreateComponent(component.ComponentStub, namespace, "", SPIGithubSecretName, application.Name, true, map[string]string{})
 							Expect(err).NotTo(HaveOccurred())
 							Expect(c.Name).To(Equal(component.ComponentStub.ComponentName))
 							Expect(utils.Contains(runtimeSupported, component.ProjectType), "unsupported runtime used for multi component tests")

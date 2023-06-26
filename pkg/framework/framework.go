@@ -23,7 +23,7 @@ import (
 )
 
 type ControllerHub struct {
-	HasController             *has.SuiteController
+	HasController             has.ApplicationService
 	CommonController          *common.SuiteController
 	TektonController          *tekton.SuiteController
 	GitOpsController          *gitops.SuiteController
@@ -160,5 +160,4 @@ func InitControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 		JvmbuildserviceController: jvmbuildserviceController,
 		O11yController:            o11yController,
 	}, nil
-
 }

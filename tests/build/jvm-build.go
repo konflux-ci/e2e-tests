@@ -151,8 +151,8 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				}
 			}
 		} else {
-			Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, testNamespace, false)).To(Succeed())
-			Expect(f.AsKubeAdmin.HasController.DeleteHasApplication(applicationName, testNamespace, false)).To(Succeed())
+			Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
+			Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 			Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 			Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
 		}
@@ -225,7 +225,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		interval = time.Second * 10
 
 		applicationName = fmt.Sprintf("jvm-build-suite-application-%s", util.GenerateRandomString(4))
-		app, err := f.AsKubeAdmin.HasController.CreateHasApplication(applicationName, testNamespace)
+		app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
 			Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
@@ -234,7 +234,18 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		componentName = fmt.Sprintf("jvm-build-suite-component-%s", util.GenerateRandomString(4))
 
 		// Create a component with Git Source URL being defined
-		component, err = f.AsKubeAdmin.HasController.CreateComponent(applicationName, componentName, testNamespace, testProjectGitUrl, testProjectRevision, "", "", "", true)
+		componentObj := appservice.ComponentSpec{
+			ComponentName: componentName,
+			Source: appservice.ComponentSource{
+				ComponentSourceUnion: appservice.ComponentSourceUnion{
+					GitSource: &appservice.GitSource{
+						URL:      testProjectGitUrl,
+						Revision: testProjectRevision,
+					},
+				},
+			},
+		}
+		component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, map[string]string{})
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
@@ -392,7 +403,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		It("does rebuild use cached dependencies", func() {
 			prun := &v1beta1.PipelineRun{}
 
-			component, err := f.AsKubeAdmin.HasController.GetHasComponent(componentName, testNamespace)
+			component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred(), "could not get component")
 
 			annotations := component.GetAnnotations()
