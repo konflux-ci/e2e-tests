@@ -20,11 +20,9 @@ set +u
 source venv/bin/activate
 set -u
 python3 -m pip install -U pip
-python3 -m pip install -U pip
 python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team-core&subdirectory=core"
 
 for monitoring_collection_data in ./tests/load-tests/load-tests.max-concurrency.*.json; do
-    cp -f "$monitoring_collection_data" "$ARTIFACT_DIR"
     index=$(echo "$monitoring_collection_data" | sed -e 's,.*/load-tests.max-concurrency.\([0-9]\+\).json,\1,')
     monitoring_collection_log="$ARTIFACT_DIR/monitoring-collection.$index.log"
 
@@ -42,6 +40,15 @@ for monitoring_collection_data in ./tests/load-tests/load-tests.max-concurrency.
         --prometheus-port 443 \
         --prometheus-token "$(oc whoami -t)" \
         -d &>"$monitoring_collection_log"
+    cp -f "$monitoring_collection_data" "$ARTIFACT_DIR"
+    ## Tekton prifiling data
+    if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
+        echo "Collecting profiling data from Tekton controller"
+        pprof_profile="tests/load-tests/cpu-profile.$index.pprof"
+        cp "$pprof_profile" "$ARTIFACT_DIR"
+        go tool pprof -text "$pprof_profile" >"$ARTIFACT_DIR/cpu-profile.$index.txt"
+        go tool pprof -svg -output="$ARTIFACT_DIR/cpu-profile.$index.svg" "$pprof_profile"
+    fi
 done
 set +u
 deactivate

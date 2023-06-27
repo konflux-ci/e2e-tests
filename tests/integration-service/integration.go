@@ -30,7 +30,7 @@ const (
 	IntegrationServiceUser = "integration-e2e"
 	gitURL                 = "https://github.com/redhat-appstudio/integration-examples.git"
 	revision               = "main"
-        pathInRepo             = "pipelines/integration_resolver_pipeline_pass.yaml"
+	pathInRepo             = "pipelines/integration_resolver_pipeline_pass.yaml"
 )
 
 var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests", Label("integration-service", "HACBS"), func() {
@@ -55,7 +55,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			_, err := f.AsKubeAdmin.CommonController.CreateTestNamespace(appStudioE2EApplicationsNamespace)
 			Expect(err).NotTo(HaveOccurred(), "Error when creating/updating '%s' namespace: %v", appStudioE2EApplicationsNamespace, err)
 
-			app, err := f.AsKubeAdmin.HasController.CreateHasApplication(applicationName, appStudioE2EApplicationsNamespace)
+			app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, appStudioE2EApplicationsNamespace)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
 				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
@@ -73,7 +73,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
 
 			for _, compDetected := range cdq.Status.ComponentDetected {
-				originalComponent, err = f.AsKubeAdmin.HasController.CreateComponentFromStub(compDetected, appStudioE2EApplicationsNamespace, "", "", applicationName)
+				originalComponent, err = f.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, appStudioE2EApplicationsNamespace, "", "", applicationName, true, map[string]string{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(originalComponent).NotTo(BeNil())
 				componentName = originalComponent.Name
@@ -82,8 +82,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		cleanup := func() {
 			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.HasController.DeleteHasApplication(applicationName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.HasController.DeleteHasComponent(componentName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, appStudioE2EApplicationsNamespace, false)).To(Succeed())
 				integrationTestScenarios, err := f.AsKubeAdmin.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 
@@ -136,7 +136,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					}
 					return pipelineRun.HasStarted()
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for the PipelineRun to start")
-				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(&testScenario, snapshot, applicationName, appStudioE2EApplicationsNamespace)).To(Succeed(), "Error when waiting for a integration pipeline to finish")
+				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(&testScenario, snapshot, appStudioE2EApplicationsNamespace)).To(Succeed(), "Error when waiting for a integration pipeline to finish")
 			}
 		}
 
@@ -268,8 +268,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						if f.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot_push) {
 							releases, err := f.AsKubeAdmin.IntegrationController.GetReleasesWithSnapshot(snapshot_push, appStudioE2EApplicationsNamespace)
 							Expect(err).ShouldNot(HaveOccurred())
-							if len(*releases) != 0 {
-								for _, release := range *releases {
+							if len(releases) != 0 {
+								for _, release := range releases {
 									GinkgoWriter.Printf("Release %s is found\n", release.Name)
 								}
 							} else {
