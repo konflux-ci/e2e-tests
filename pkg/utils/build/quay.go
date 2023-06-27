@@ -31,6 +31,16 @@ func GetQuayImageName(annotations map[string]string) (string, error) {
 	return strings.Join(tokens[2:], "/"), nil
 }
 
+func IsImageAnnotationPresent(annotations map[string]string) bool {
+	image_annotation_str := annotations["image.redhat.com/image"]
+	return image_annotation_str != ""
+}
+
+func ImageAnnotationGenerateValueIsNotFailed(annotations map[string]string) bool {
+	generate_value_str := annotations["image.redhat.com/generate"]
+	return generate_value_str != "failed"
+}
+
 func GetRobotAccountName(imageName string) string {
 	tokens := strings.Split(imageName, "/")
 	return strings.Join(tokens, "")
