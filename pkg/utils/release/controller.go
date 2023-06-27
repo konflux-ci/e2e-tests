@@ -15,6 +15,7 @@ import (
 	releaseMetadata "github.com/redhat-appstudio/release-service/metadata"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	rbac "k8s.io/api/rbac/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -393,4 +394,33 @@ func (s *SuiteController) GetSbomPyxisByImageID(pyxisStageURL, imageID string,
 		return nil, fmt.Errorf("error reading response body: %s", err)
 	}
 	return body, nil
+}
+
+// CreateReleasePipelineRoleBindingForServiceAccount creates a RoleBinding for the passed serviceAccount to enable
+// retrieving the necessary CRs from the passed namespace.
+func (s *SuiteController) CreateReleasePipelineRoleBindingForServiceAccount(namespace string,
+	serviceAccount *corev1.ServiceAccount) (*rbac.RoleBinding, error) {
+	roleBinding := &rbac.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "release-service-pipeline-rolebinding-",
+			Namespace:    namespace,
+		},
+		RoleRef: rbac.RoleRef{
+			APIGroup: rbac.GroupName,
+			Kind:     "ClusterRole",
+			Name:     "release-pipeline-resource-role",
+		},
+		Subjects: []rbac.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
+			},
+		},
+	}
+	err := s.KubeRest().Create(context.TODO(), roleBinding)
+	if err != nil {
+		return nil, err
+	}
+	return roleBinding, nil
 }

@@ -123,7 +123,12 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 		secret.Type = corev1.SecretTypeDockerConfigJson
 		_, err = f.AsKubeAdmin.CommonController.CreateSecret(managedNamespace, secret)
 		Expect(err).ShouldNot(HaveOccurred())
-		_, err = f.AsKubeAdmin.CommonController.CreateServiceAccount("release-service-account", managedNamespace, []corev1.ObjectReference{{Name: secret.Name}})
+		managedServiceAccount, err := f.AsKubeAdmin.CommonController.CreateServiceAccount("release-service-account", managedNamespace, []corev1.ObjectReference{{Name: secret.Name}})
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(userNamespace, managedServiceAccount)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
 		Expect(err).NotTo(HaveOccurred())
 
 		publicKey, err := kc.GetTektonChainsPublicKey()
@@ -183,7 +188,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(f.AsKubeAdmin.CommonController.Github.CreateRef(sampleRepoName, componentDefaultBranchName, componentNewBaseBranch)).To(Succeed())
-		_, err = f.AsKubeAdmin.HasController.CreateHasApplication(appName, userNamespace)
+		_, err = f.AsKubeAdmin.HasController.CreateApplication(appName, userNamespace)
 		Expect(err).ShouldNot(HaveOccurred())
 		_, err = f.AsKubeAdmin.IntegrationController.CreateEnvironment(userNamespace, "rhtap-demo-test")
 		Expect(err).ShouldNot(HaveOccurred())
@@ -254,7 +259,18 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 		When("Component with PaC is created", func() {
 
 			It("triggers creation of a PR in the sample repo", func() {
-				component, err = f.AsKubeAdmin.HasController.CreateComponentWithPaCEnabled(appName, componentName, userNamespace, sampleRepoURL, componentNewBaseBranch, true)
+				componentObj := appstudioApi.ComponentSpec{
+					ComponentName: componentName,
+					Source: appstudioApi.ComponentSource{
+						ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
+							GitSource: &appstudioApi.GitSource{
+								URL:      sampleRepoURL,
+								Revision: componentNewBaseBranch,
+							},
+						},
+					},
+				}
+				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, userNamespace, "", "", appName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
 				Expect(err).ShouldNot(HaveOccurred())
 
 				pacBranchName := fmt.Sprintf("appstudio-%s", component.GetName())
@@ -448,7 +464,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 
 		When("User switches to simple build", func() {
 			BeforeAll(func() {
-				comp, err := f.AsKubeAdmin.HasController.GetHasComponent(componentName, userNamespace)
+				comp, err := f.AsKubeAdmin.HasController.GetComponent(componentName, userNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 				comp.Annotations["appstudio.openshift.io/pac-provision"] = "delete"
 				Expect(f.AsKubeAdmin.CommonController.KubeRest().Update(context.TODO(), comp)).To(Succeed())

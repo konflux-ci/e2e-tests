@@ -168,13 +168,13 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 			})
 
 			It("creates RHTAP application and check healths", func() {
-				createdApplication, err := fw.AsKubeDeveloper.HasController.CreateHasApplication(applicationName, fw.UserNamespace)
+				createdApplication, err := fw.AsKubeDeveloper.HasController.CreateApplication(applicationName, fw.UserNamespace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(createdApplication.Spec.DisplayName).To(Equal(applicationName))
 				Expect(createdApplication.Namespace).To(Equal(fw.UserNamespace))
 
 				Eventually(func() string {
-					application, err = fw.AsKubeAdmin.HasController.GetHasApplication(applicationName, fw.UserNamespace)
+					application, err = fw.AsKubeAdmin.HasController.GetApplication(applicationName, fw.UserNamespace)
 					Expect(err).NotTo(HaveOccurred())
 
 					return application.Status.Devfile
@@ -214,7 +214,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 
 			It("creates Red Hat AppStudio Quarkus component", func() {
 				compDetected.ComponentStub.ComponentName = util.GenerateRandomString(4)
-				componentObj, err = fw.AsKubeAdmin.HasController.CreateComponentFromStub(compDetected, fw.UserNamespace, "", "", applicationName)
+				componentObj, err = fw.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, fw.UserNamespace, "", "", applicationName, true, map[string]string{})
 				Expect(err).NotTo(HaveOccurred())
 			})
 
