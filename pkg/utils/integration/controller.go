@@ -101,24 +101,6 @@ func (h *SuiteController) GetSnapshot(snapshotName, pipelineRunName, componentNa
 	return nil, fmt.Errorf("no snapshot found for component '%s', pipelineRun '%s' in '%s' namespace", componentName, pipelineRunName, namespace)
 }
 
-func (h *SuiteController) GetComponent(applicationName, namespace string) (*appstudioApi.Component, error) {
-	components := &appstudioApi.ComponentList{}
-	opts := []client.ListOption{
-		client.InNamespace(namespace),
-	}
-	err := h.KubeRest().List(context.TODO(), components, opts...)
-	if err != nil {
-		return nil, err
-	}
-	for _, component := range components.Items {
-		if component.Spec.Application == applicationName {
-			return &component, nil
-		}
-	}
-
-	return &appstudioApi.Component{}, fmt.Errorf("no component found %s", utils.GetAdditionalInfo(applicationName, namespace))
-}
-
 func (h *SuiteController) GetReleasesWithSnapshot(snapshot *appstudioApi.Snapshot, namespace string) ([]releasev1alpha1.Release, error) {
 	releases := &releasev1alpha1.ReleaseList{}
 	opts := []client.ListOption{
@@ -158,65 +140,6 @@ func (h *SuiteController) GetIntegrationTestScenarios(applicationName, namespace
 	return &items, nil
 }
 
-func (h *SuiteController) CreateEnvironment(namespace string, environmenName string) (*appstudioApi.Environment, error) {
-	env := &appstudioApi.Environment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      environmenName,
-			Namespace: namespace,
-		},
-		Spec: appstudioApi.EnvironmentSpec{
-			Type:               "POC",
-			DisplayName:        "my-environment",
-			DeploymentStrategy: appstudioApi.DeploymentStrategy_Manual,
-			ParentEnvironment:  "",
-			Tags:               []string{},
-			Configuration: appstudioApi.EnvironmentConfiguration{
-				Env: []appstudioApi.EnvVarPair{
-					{
-						Name:  "var_name",
-						Value: "test",
-					},
-				},
-			},
-		},
-	}
-
-	if err := h.KubeRest().Create(context.TODO(), env); err != nil {
-		if err != nil {
-			if k8sErrors.IsAlreadyExists(err) {
-				environment := &appstudioApi.Environment{}
-
-				err := h.KubeRest().Get(context.TODO(), types.NamespacedName{
-					Name:      environmenName,
-					Namespace: namespace,
-				}, environment)
-
-				return environment, err
-			} else {
-				return nil, err
-			}
-		}
-	}
-
-	return env, nil
-}
-
-// DeleteEnvironment deletes default Environment from the namespace
-func (h *SuiteController) DeleteEnvironment(namespace string) (*appstudioApi.Environment, error) {
-	env := &appstudioApi.Environment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "envname",
-			Namespace: namespace,
-		},
-	}
-	err := h.KubeRest().Delete(context.TODO(), env)
-	if err != nil {
-		return nil, err
-	}
-
-	return env, err
-}
-
 func (h *SuiteController) CreateSnapshot(applicationName, namespace, componentName, containerImage string) (*appstudioApi.Snapshot, error) {
 	hasSnapshot := &appstudioApi.Snapshot{
 		ObjectMeta: metav1.ObjectMeta{
@@ -254,11 +177,6 @@ func (h *SuiteController) DeleteIntegrationTestScenario(testScenario *integratio
 	err := h.KubeRest().Delete(context.TODO(), testScenario)
 	return err
 }
-
-//func (h *SuiteController) DeleteEnvironment(env *integrationv1alpha1.TestEnvironment, namespace string) error {
-//	err := h.KubeRest().Delete(context.TODO(), env)
-//	return err
-//}
 
 func (h *SuiteController) CreateReleasePlan(applicationName, namespace string) (*releasev1alpha1.ReleasePlan, error) {
 	testReleasePlan := &releasev1alpha1.ReleasePlan{
@@ -470,24 +388,6 @@ func (h *SuiteController) GetSnapshotEnvironmentBinding(applicationName string, 
 	return &appstudioApi.SnapshotEnvironmentBinding{}, fmt.Errorf("no SnapshotEnvironmentBinding found in environment %s %s", environment.Name, utils.GetAdditionalInfo(applicationName, namespace))
 }
 
-// HaveAvailableDeploymentTargetClassExist attempts to find a DeploymentTargetClass with appstudioApi.Provisioner_Devsandbox as provisioner.
-// reurn nil if not found
-func (h *SuiteController) HaveAvailableDeploymentTargetClassExist() (*appstudioApi.DeploymentTargetClass, error) {
-	deploymentTargetClassList := &appstudioApi.DeploymentTargetClassList{}
-	err := h.KubeRest().List(context.TODO(), deploymentTargetClassList)
-	if err != nil && !k8sErrors.IsNotFound(err) {
-		return nil, fmt.Errorf("error occurred while trying to list all the available DeploymentTargetClass: %v", err)
-	}
-
-	for _, dtcls := range deploymentTargetClassList.Items {
-		if dtcls.Spec.Provisioner == appstudioApi.Provisioner_Devsandbox {
-			return &dtcls, nil
-		}
-	}
-
-	return nil, nil
-}
-
 func (h *SuiteController) GetSpaceRequests(namespace string) (*codereadytoolchainv1alpha1.SpaceRequestList, error) {
 	spaceRequestList := &codereadytoolchainv1alpha1.SpaceRequestList{}
 
@@ -501,51 +401,6 @@ func (h *SuiteController) GetSpaceRequests(namespace string) (*codereadytoolchai
 	}
 
 	return spaceRequestList, nil
-}
-
-func (h *SuiteController) GetDeploymentTargets(namespace string) (*appstudioApi.DeploymentTargetList, error) {
-	deploymentTargetList := &appstudioApi.DeploymentTargetList{}
-
-	opts := []client.ListOption{
-		client.InNamespace(namespace),
-	}
-
-	err := h.KubeRest().List(context.Background(), deploymentTargetList, opts...)
-	if err != nil && !k8sErrors.IsNotFound(err) {
-		return nil, fmt.Errorf("error occurred while trying to list deploymentTargets in %s namespace: %v", namespace, err)
-	}
-
-	return deploymentTargetList, nil
-}
-
-func (h *SuiteController) GetDeploymentTargetClaims(namespace string) (*appstudioApi.DeploymentTargetClaimList, error) {
-	deploymentTargetClaimList := &appstudioApi.DeploymentTargetClaimList{}
-
-	opts := []client.ListOption{
-		client.InNamespace(namespace),
-	}
-
-	err := h.KubeRest().List(context.Background(), deploymentTargetClaimList, opts...)
-	if err != nil && !k8sErrors.IsNotFound(err) {
-		return nil, fmt.Errorf("error occurred while trying to list DeploymentTargetClaim in %s namespace: %v", namespace, err)
-	}
-
-	return deploymentTargetClaimList, nil
-}
-
-func (h *SuiteController) GetEnvironments(namespace string) (*appstudioApi.EnvironmentList, error) {
-	environmentList := &appstudioApi.EnvironmentList{}
-	opts := []client.ListOption{
-		client.InNamespace(namespace),
-	}
-
-	err := h.KubeRest().List(context.TODO(), environmentList, opts...)
-
-	if err != nil && !k8sErrors.IsNotFound(err) {
-		return nil, fmt.Errorf("error occurred while trying to list environments in %s namespace: %v", namespace, err)
-	}
-
-	return environmentList, nil
 }
 
 func (h *SuiteController) CreateIntegrationTestScenario_beta1(applicationName, namespace, gitURL, revision, pathInRepo string) (*integrationv1beta1.IntegrationTestScenario, error) {
