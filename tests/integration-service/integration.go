@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	containerImageSource   = "quay.io/redhat-appstudio-qe/busybox-loop:latest"
+	containerImageSource   = "quay.io/redhat-appstudio-qe/busybox-loop@sha256:f698f1f2cf641fe9176d2a277c9052d872f6b1c39e56248a1dd259b96281dda9"
 	gitSourceRepoName      = "devfile-sample-python-basic"
 	gitSourceURL           = "https://github.com/redhat-appstudio-qe/" + gitSourceRepoName
 	BundleURL              = "quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-pass"
@@ -29,7 +29,7 @@ const (
 	EnvironmentName        = "development"
 	IntegrationServiceUser = "integration-e2e"
 	gitURL                 = "https://github.com/redhat-appstudio/integration-examples.git"
-	revision               = "main"
+	revision               = "843f455fe87a6d7f68c238f95a8f3eb304e65ac5"
 	pathInRepo             = "pipelines/integration_resolver_pipeline_pass.yaml"
 )
 
