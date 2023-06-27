@@ -2,18 +2,24 @@ package release
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"io"
+	"net/http"
 	"time"
 
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
+	releaseMetadata "github.com/redhat-appstudio/release-service/metadata"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	rbac "k8s.io/api/rbac/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -38,9 +44,9 @@ type Component struct {
 	Repository string `json:"repository"`
 }
 
-func (s *SuiteController) GenerateReleaseStrategyConfig(componentName, targetRepository string) *StrategyConfig {
+func (s *SuiteController) GenerateReleaseStrategyConfig(components []Component) *StrategyConfig {
 	return &StrategyConfig{
-		Mapping{Components: []Component{{Name: componentName, Repository: targetRepository}}},
+		Mapping{Components: components},
 	}
 }
 
@@ -220,7 +226,8 @@ func (s *SuiteController) CreateReleasePlan(name, namespace, application, target
 			Name:         name,
 			Namespace:    namespace,
 			Labels: map[string]string{
-				releaseApi.AutoReleaseLabel: autoReleaseLabel,
+				releaseMetadata.AutoReleaseLabel: autoReleaseLabel,
+				releaseMetadata.AttributionLabel: "true",
 			},
 		},
 		Spec: releaseApi.ReleasePlanSpec{
@@ -230,9 +237,9 @@ func (s *SuiteController) CreateReleasePlan(name, namespace, application, target
 		},
 	}
 	if autoReleaseLabel == "" || autoReleaseLabel == "true" {
-		releasePlan.ObjectMeta.Labels[releaseApi.AutoReleaseLabel] = "true"
+		releasePlan.ObjectMeta.Labels[releaseMetadata.AutoReleaseLabel] = "true"
 	} else {
-		releasePlan.ObjectMeta.Labels[releaseApi.AutoReleaseLabel] = "false"
+		releasePlan.ObjectMeta.Labels[releaseMetadata.AutoReleaseLabel] = "false"
 	}
 
 	return releasePlan, s.KubeRest().Create(context.TODO(), releasePlan)
@@ -281,7 +288,7 @@ func (s *SuiteController) CreateReleasePlanAdmission(name, originNamespace, appl
 		},
 	}
 	if autoRelease != "" {
-		releasePlanAdmission.ObjectMeta.Labels[releaseApi.AutoReleaseLabel] = autoRelease
+		releasePlanAdmission.ObjectMeta.Labels[releaseMetadata.AutoReleaseLabel] = autoRelease
 	}
 	return releasePlanAdmission, s.KubeRest().Create(context.TODO(), releasePlanAdmission)
 }
@@ -335,7 +342,7 @@ func (s *SuiteController) CreateComponentWithDockerSource(applicationName, compo
 			},
 			Secret:         secret,
 			ContainerImage: outputContainerImage,
-			Replicas:       1,
+			Replicas:       pointer.Int(1),
 			TargetPort:     8081,
 			Route:          "",
 		},
@@ -345,4 +352,75 @@ func (s *SuiteController) CreateComponentWithDockerSource(applicationName, compo
 		return nil, err
 	}
 	return component, nil
+}
+
+// CreateComponentWithDockerSource creates a component based on container image source.
+func (s *SuiteController) GetSbomPyxisByImageID(pyxisStageURL, imageID string,
+	pyxisCertDecoded, pyxisKeyDecoded []byte) ([]byte, error) {
+
+	url := fmt.Sprintf("%s%s", pyxisStageURL, imageID)
+
+	// Create a TLS configuration with the key and certificate
+	cert, err := tls.X509KeyPair(pyxisCertDecoded, pyxisKeyDecoded)
+	if err != nil {
+		return nil, fmt.Errorf("error creating TLS certificate and key: %s", err)
+	}
+
+	// Create a client with the custom TLS configuration
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				Certificates: []tls.Certificate{cert},
+			},
+		},
+	}
+
+	// Send GET request
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating GET request: %s", err)
+	}
+
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, fmt.Errorf("error sending GET request: %s", err)
+	}
+
+	defer response.Body.Close()
+
+	// Read the response body
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %s", err)
+	}
+	return body, nil
+}
+
+// CreateReleasePipelineRoleBindingForServiceAccount creates a RoleBinding for the passed serviceAccount to enable
+// retrieving the necessary CRs from the passed namespace.
+func (s *SuiteController) CreateReleasePipelineRoleBindingForServiceAccount(namespace string,
+	serviceAccount *corev1.ServiceAccount) (*rbac.RoleBinding, error) {
+	roleBinding := &rbac.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "release-service-pipeline-rolebinding-",
+			Namespace:    namespace,
+		},
+		RoleRef: rbac.RoleRef{
+			APIGroup: rbac.GroupName,
+			Kind:     "ClusterRole",
+			Name:     "release-pipeline-resource-role",
+		},
+		Subjects: []rbac.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
+			},
+		},
+	}
+	err := s.KubeRest().Create(context.TODO(), roleBinding)
+	if err != nil {
+		return nil, err
+	}
+	return roleBinding, nil
 }

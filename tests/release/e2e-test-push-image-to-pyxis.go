@@ -2,17 +2,24 @@ package release
 
 import (
 	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"os"
 	"regexp"
 	"strings"
 
+	"github.com/devfile/library/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"gopkg.in/yaml.v2"
 
+	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	"knative.dev/pkg/apis"
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
@@ -26,12 +33,18 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 	var fw *framework.Framework
 	var err error
 	var kubeController tekton.KubeController
+	var devNamespace, managedNamespace, compName, additionalCompName string
+	var imageIDs []string
+	var pyxisKeyDecoded, pyxisCertDecoded []byte
+	var releasePrName, additionalReleasePrName string
+	scGitRevision := fmt.Sprintf("test-pyxis-%s", util.GenerateRandomString(4))
 
-	var devNamespace, managedNamespace string
+	var component1, component2 *appservice.Component
+
+	var componentDetected, additionalComponentDetected appservice.ComponentDetectionDescription
 
 	BeforeAll(func() {
-
-		fw, err = framework.NewFramework("release-e2e-pyxis")
+		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("e2e-pyxis"))
 		Expect(err).NotTo(HaveOccurred())
 
 		kubeController = tekton.KubeController{
@@ -40,13 +53,10 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		}
 
 		devNamespace = fw.UserNamespace
-		managedNamespace = utils.GetGeneratedNamespace("release-pushpx-managed")
+		managedNamespace = utils.GetGeneratedNamespace("pyxis-managed")
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating managedNamespace: ", err)
-
-		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
-		Expect(sourceAuthJson).ToNot(BeEmpty())
 
 		destinationAuthJson := utils.GetEnv("QUAY_OAUTH_TOKEN_RELEASE_DESTINATION", "")
 		Expect(destinationAuthJson).ToNot(BeEmpty())
@@ -57,25 +67,21 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		certPyxisStage := os.Getenv(constants.PYXIS_STAGE_CERT_ENV)
 		Expect(certPyxisStage).ToNot(BeEmpty())
 
-		// Create secret for the build registry repo "redhat-appstudio-qe".
-		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(hacbsReleaseTestsTokenSecret, devNamespace, sourceAuthJson)
-		Expect(err).ToNot(HaveOccurred())
-
 		// Create secret for the release registry repo "hacbs-release-tests".
 		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(redhatAppstudioUserSecret, managedNamespace, destinationAuthJson)
 		Expect(err).ToNot(HaveOccurred())
 
-		// Linking the build secret to the pipline service account in dev namespace.
-		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, hacbsReleaseTestsTokenSecret, "pipeline", true)
+		// Linking the build secret to the pipeline service account in dev namespace.
+		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, hacbsReleaseTestsTokenSecret, serviceAccount, true)
 		Expect(err).ToNot(HaveOccurred())
 
 		publicKey, err := kubeController.GetTektonChainsPublicKey()
 		Expect(err).ToNot(HaveOccurred())
 
 		// Creating k8s secret to access Pyxis stage based on base64 decoded of key and cert
-		rawDecodedTextStringData, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(keyPyxisStage)))
+		pyxisKeyDecoded, err = base64.StdEncoding.DecodeString(string(keyPyxisStage))
 		Expect(err).ToNot(HaveOccurred())
-		rawDecodedTextData, err := base64.StdEncoding.DecodeString(string(certPyxisStage))
+		pyxisCertDecoded, err = base64.StdEncoding.DecodeString(string(certPyxisStage))
 		Expect(err).ToNot(HaveOccurred())
 
 		secret := &corev1.Secret{
@@ -85,8 +91,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			},
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{
-				"cert": rawDecodedTextData,
-				"key":  rawDecodedTextStringData,
+				"cert": pyxisCertDecoded,
+				"key":  pyxisKeyDecoded,
 			},
 		}
 
@@ -104,21 +110,65 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			PublicKey:   string(publicKey),
 			Sources:     defaultEcPolicy.Spec.Sources,
 			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-				Collections: []string{"minimal"},
+				Collections: []string{"minimal", "slsa2"},
 				Exclude:     []string{"cve"},
 			},
 		}
 
-		_, err = fw.AsKubeAdmin.CommonController.CreateServiceAccount(releaseStrategyServiceAccountDefault, managedNamespace, managednamespaceSecret)
+		managedServiceAccount, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(releaseStrategyServiceAccountDefault, managedNamespace, managednamespaceSecret)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(devNamespace, managedServiceAccount)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
 		Expect(err).NotTo(HaveOccurred())
 
 		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, redhatAppstudioUserSecret, releaseStrategyServiceAccountDefault, true)
 		Expect(err).ToNot(HaveOccurred())
 
+		// using cdq since git ref is not known
+		compName = componentName
+		cdq, err := fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(compName, devNamespace, gitSourceComponentUrl, "", "", "", false)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+
+		for _, compDetected := range cdq.Status.ComponentDetected {
+			compName = compDetected.ComponentStub.ComponentName
+			componentDetected = compDetected
+		}
+
+		// using cdq since git ref is not known
+		additionalCompName = additionalComponentName
+		cdq, err = fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(additionalCompName, devNamespace, additionalGitSourceComponentUrl, "", "", "", false)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+
+		for _, compDetected := range cdq.Status.ComponentDetected {
+			additionalCompName = compDetected.ComponentStub.ComponentName
+			additionalComponentDetected = compDetected
+		}
+
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-push-to-external-registry-strategy", managedNamespace, "push-to-external-registry", "quay.io/hacbs-release/pipeline-push-to-external-registry:main", releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, paramsReleaseStrategyPyxis)
+		components := []release.Component{{Name: compName, Repository: releasedImagePushRepo}, {Name: additionalCompName, Repository: additionalReleasedImagePushRepo}}
+		sc := fw.AsKubeAdmin.ReleaseController.GenerateReleaseStrategyConfig(components)
+		scYaml, err := yaml.Marshal(sc)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		scPath := "release-push-to-pyxis.yaml"
+		Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef("strategy-configs", "main", scGitRevision)).To(Succeed())
+		_, err = fw.AsKubeAdmin.CommonController.Github.CreateFile("strategy-configs", scPath, string(scYaml), scGitRevision)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-push-to-external-registry-strategy", managedNamespace, "push-to-external-registry", "quay.io/hacbs-release/pipeline-push-to-external-registry:0.11", releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, []releaseApi.Params{
+			{Name: "extraConfigGitUrl", Value: fmt.Sprintf("https://github.com/%s/strategy-configs.git", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"))},
+			{Name: "extraConfigPath", Value: scPath},
+			{Name: "extraConfigGitRevision", Value: scGitRevision},
+			{Name: "pyxisServerType", Value: "stage"},
+			{Name: "pyxisSecret", Value: "pyxis"},
+			{Name: "tag", Value: "latest"},
+		})
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, "", "", "mvp-push-to-external-registry-strategy")
@@ -130,16 +180,25 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasePvcName, managedNamespace, corev1.ReadWriteOnce)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.HasController.CreateHasApplication(applicationNameDefault, devNamespace)
+		_, err = fw.AsKubeAdmin.CommonController.CreateRole("role-release-service-account", managedNamespace, map[string][]string{
+			"apiGroupsList": {""},
+			"roleResources": {"secrets"},
+			"roleVerbs":     {"get", "list", "watch"},
+		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.HasController.CreateComponent(applicationNameDefault, componentName, devNamespace, gitSourceComponentUrl, "", containerImageUrl, "", "", true)
+		_, err = fw.AsKubeAdmin.CommonController.CreateRoleBinding("role-release-service-account-binding", managedNamespace, "ServiceAccount", releaseStrategyServiceAccountDefault, "Role", "role-release-service-account", "rbac.authorization.k8s.io")
 		Expect(err).NotTo(HaveOccurred())
 
+		_, err = fw.AsKubeAdmin.HasController.CreateApplication(applicationNameDefault, devNamespace)
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterAll(func() {
-
+		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef("strategy-configs", scGitRevision)
+		if err != nil {
+			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+		}
 		if !CurrentSpecReport().Failed() {
 			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
 			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
@@ -148,69 +207,102 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 
 	var _ = Describe("Post-release verification", func() {
 
-		It("verifies that a PipelineRun is created in dev namespace.", func() {
-			Eventually(func() bool {
-				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(devNamespace)
-				if err != nil || prList == nil || len(prList.Items) < 1 {
-					return false
-				}
-
-				return strings.Contains(prList.Items[0].Name, componentName)
-			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
+		It("verifies that Component 1 can be created and build PipelineRun is created for it in dev namespace and succeeds", func() {
+			component1, err = fw.AsKubeAdmin.HasController.CreateComponent(componentDetected.ComponentStub, devNamespace, "", "", applicationNameDefault, true, map[string]string{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component1, "", 2)).To(Succeed())
 		})
 
-		It("verifies that the PipelineRun in dev namespace succeeded.", func() {
-			Eventually(func() bool {
-				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(devNamespace)
-				if prList == nil || err != nil || len(prList.Items) < 1 {
-					return false
-				}
-
-				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
-			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
+		It("verifies that Component 2 can be created and build PipelineRun is created for it in dev namespace and succeeds", func() {
+			component2, err = fw.AsKubeAdmin.HasController.CreateComponent(additionalComponentDetected.ComponentStub, devNamespace, "", "", applicationNameDefault, true, map[string]string{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component2, "", 2)).To(Succeed())
 		})
 
-		It("verifies that a PipelineRun is created in managed namespace.", func() {
+		It("verifies that a release PipelineRun for each Component is created in managed namespace.", func() {
 			Eventually(func() bool {
 				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
 				if err != nil || prList == nil || len(prList.Items) < 1 {
+					GinkgoWriter.Printf("Error getting Release PipelineRun:\n %s", err)
 					return false
 				}
+				foudFirstReleasePr := false
+				for _, pr := range prList.Items {
+					if strings.Contains(pr.Name, "release-pipelinerun") {
+						if !foudFirstReleasePr {
+							releasePrName = pr.Name
+							foudFirstReleasePr = true
+						} else {
+							additionalReleasePrName = pr.Name
+						}
+					}
+				}
 
-				return strings.Contains(prList.Items[0].Name, "release")
+				return strings.Contains(releasePrName, "release-pipelinerun") &&
+					strings.Contains(additionalReleasePrName, "release-pipelinerun")
 			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("verifies a PipelineRun started in managed namespace succeeded.", func() {
+		It("verifies a release PipelineRun for each component started in managed namespace and succeeded.", func() {
 			Eventually(func() bool {
-				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
-				if prList == nil || err != nil || len(prList.Items) < 1 {
+
+				releasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(releasePrName, managedNamespace)
+				if err != nil {
+					GinkgoWriter.Printf("\nError getting Release PipelineRun %s:\n %s", releasePr, err)
+					return false
+				}
+				additionalReleasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(additionalReleasePrName, managedNamespace)
+				if err != nil {
+					GinkgoWriter.Printf("\nError getting PipelineRun %s:\n %s", additionalReleasePr, err)
 					return false
 				}
 
-				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
+				return releasePr.HasStarted() && releasePr.IsDone() && releasePr.Status.GetCondition(apis.ConditionSucceeded).IsTrue() &&
+					additionalReleasePr.HasStarted() && additionalReleasePr.IsDone() && additionalReleasePr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
 		})
 
-		It("validate the result of task create-pyxis-image contains id and succeeded.", func() {
+		It("validate the result of task create-pyxis-image contains image ids.", func() {
 			Eventually(func() bool {
-				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
-				if prList == nil || err != nil || len(prList.Items) < 1 {
+
+				releasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(releasePrName, managedNamespace)
+				if err != nil {
+					GinkgoWriter.Printf("\nError getting Release PipelineRun %s:\n %s", releasePr, err)
+					return false
+				}
+				additionalReleasePr, err := fw.AsKubeAdmin.TektonController.GetPipelineRun(additionalReleasePrName, managedNamespace)
+				if err != nil {
+					GinkgoWriter.Printf("\nError getting PipelineRun %s:\n %s", additionalReleasePr, err)
+					return false
+				}
+				re := regexp.MustCompile("[a-fA-F0-9]{24}")
+
+				trReleasePr, err := kubeController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), releasePr, "create-pyxis-image")
+				if err != nil {
+					Expect(err).NotTo(HaveOccurred())
+				}
+
+				trAdditionalReleasePr, err := kubeController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), additionalReleasePr, "create-pyxis-image")
+				if err != nil {
+					Expect(err).NotTo(HaveOccurred())
+				}
+
+				trReleaseImageIDs := re.FindAllString(trReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)
+				trAdditionalReleaseIDs := re.FindAllString(trAdditionalReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)
+
+				if len(trReleaseImageIDs) < 1 && len(trAdditionalReleaseIDs) < 1 {
+					GinkgoWriter.Printf("\n Invalid ImageID in results of task create-pyxis-image..")
 					return false
 				}
 
-				pr, err := kubeController.Tektonctrl.GetPipelineRun(prList.Items[0].Name, managedNamespace)
-				Expect(err).NotTo(HaveOccurred())
+				if len(trReleaseImageIDs) > len(trAdditionalReleaseIDs) {
+					imageIDs = trReleaseImageIDs
+				} else {
+					imageIDs = trAdditionalReleaseIDs
+				}
 
-				tr, err := kubeController.GetTaskRunStatus(pr, "create-pyxis-image")
-				Expect(err).NotTo(HaveOccurred())
-
-				re := regexp.MustCompile("^[0-9a-z]{10,50}")
-				returnedImageID := re.FindString(tr.Status.TaskRunResults[0].Value.StringVal)
-
-				return strings.Contains(string(tr.Status.Status.Conditions[0].Status), "True") &&
-					strings.Contains(string(tr.Status.TaskRunResults[0].Name), "containerImageIDs") && len(returnedImageID) > 10
-			}).Should(BeTrue())
+				return len(imageIDs) == 2
+			}, avgControllerQueryTimeout, defaultInterval).Should(BeTrue())
 		})
 
 		It("tests a Release should have been created in the dev namespace and succeeded.", func() {
@@ -220,8 +312,38 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 					return false
 				}
 
-				return releaseCreated.HasStarted() && releaseCreated.IsDone() && releaseCreated.Status.Conditions[0].Status == "True"
+				return releaseCreated.IsReleased()
 			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
+		})
+
+		It("validates that imageIds from task create-pyxis-image exist in Pyxis.", func() {
+
+			for _, imageID := range imageIDs {
+				Eventually(func() bool {
+
+					body, err := fw.AsKubeAdmin.ReleaseController.GetSbomPyxisByImageID(pyxisStageURL, imageID,
+						[]byte(pyxisCertDecoded), []byte(pyxisKeyDecoded))
+					if err != nil {
+						GinkgoWriter.Printf("Error getting response body:", err)
+						Expect(err).NotTo(HaveOccurred())
+					}
+
+					sbomImage := &release.Image{}
+					err = json.Unmarshal(body, sbomImage)
+					if err != nil {
+						GinkgoWriter.Printf("Error json unmarshal body content.", err)
+						Expect(err).NotTo(HaveOccurred())
+					}
+
+					if sbomImage.ContentManifestComponents == nil {
+						GinkgoWriter.Printf("Content Mainfest Components is empty.")
+						return false
+					}
+
+					return len(sbomImage.ContentManifestComponents) > 1
+				}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
+			}
+
 		})
 	})
 })

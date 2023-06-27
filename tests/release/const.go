@@ -3,6 +3,7 @@ package release
 import (
 	"time"
 
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	appstudiov1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -15,10 +16,10 @@ const (
 	releasePipelineName                 = "release-pipeline"
 	applicationName                     = "application"
 	releasePipelineBundle               = "quay.io/hacbs-release/demo:m5-alpine"
-	serviceAccount                      = "pipeline"
+	serviceAccount                      = constants.DefaultPipelineServiceAccount
 	releaseStrategyPolicy               = "policy"
 	environment                         = "test-environment"
-	releaseStrategyServiceAccount       = "pipeline"
+	releaseStrategyServiceAccount       = constants.DefaultPipelineServiceAccount
 
 	releasePipelineNameDefault           string = "release"
 	applicationNameDefault               string = "appstudio"
@@ -40,6 +41,13 @@ const (
 	destinationKeyName                   string = "redhat-appstudio-qe+redhat_appstudio_quality"
 	containerImageUrl                    string = "quay.io/redhat-appstudio-qe/dcmetromap:latest"
 	roleName                             string = "role-release-service-account"
+	releasedImagePushRepo                string = "quay.io/hacbs-release-tests/dcmetromap"
+	additionalReleasedImagePushRepo      string = "quay.io/hacbs-release-tests/simplepython"
+
+	additionalComponentName         string = "simple-python"
+	additionalGitSourceComponentUrl string = "https://github.com/devfile-samples/devfile-sample-python-basic"
+	addtionalOutputContainerImage   string = constants.DefaultReleasedImagePushRepo
+	pyxisStageURL                   string = "https://pyxis.preprod.api.redhat.com/v1/images/id/"
 
 	namespaceCreationTimeout              = 5 * time.Minute
 	namespaceDeletionTimeout              = 5 * time.Minute
@@ -53,28 +61,14 @@ const (
 	releasePipelineRunCompletionTimeout   = 40 * time.Minute
 	avgControllerQueryTimeout             = 5 * time.Minute
 	pipelineServiceAccountCreationTimeout = 7 * time.Minute
+	releaseDeploymentTimeout              = 10 * time.Minute
 
 	defaultInterval = 100 * time.Millisecond
 )
 
-var paramsReleaseStrategyPyxis = []appstudiov1alpha1.Params{
-	{Name: "extraConfigGitUrl", Value: "https://github.com/hacbs-release/strategy-configs"},
-	{Name: "extraConfigPath", Value: "mvp.yaml"},
-	{Name: "extraConfigGitRevision", Value: "main"},
-	{Name: "pyxisServerType", Value: "stage"},
-	{Name: "pyxisSecret", Value: "pyxis"},
-	{Name: "tag", Value: "latest"},
-}
-
-var paramsReleaseStrategyMvp = []appstudiov1alpha1.Params{
-	{Name: "extraConfigGitUrl", Value: "https://github.com/hacbs-release/strategy-configs"},
-	{Name: "extraConfigPath", Value: "mvp.yaml"},
-	{Name: "extraConfigGitRevision", Value: "main"},
-}
-
 var paramsReleaseStrategyM6 = []appstudiov1alpha1.Params{
 	{Name: "extraConfigGitUrl", Value: "https://github.com/hacbs-release/strategy-configs"},
-	{Name: "extraConfigPath", Value: "m6.yaml"},
+	{Name: "extraConfigPath", Value: "mvp.yaml"},
 	{Name: "extraConfigGitRevision", Value: "main"},
 }
 

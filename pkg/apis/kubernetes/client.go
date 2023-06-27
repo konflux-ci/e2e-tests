@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 	"os"
+	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
@@ -14,6 +15,7 @@ import (
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/sandbox"
 	integrationservice "github.com/redhat-appstudio/integration-service/api/v1alpha1"
+	integrationservicev1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	jvmbuildservice "github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	jvmbuildserviceclientset "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
 	gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend-shared/apis/managed-gitops/v1alpha1"
@@ -24,6 +26,7 @@ import (
 	pipelineclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -31,6 +34,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+)
+
+const (
+	DefaultRetryInterval = time.Millisecond * 100 // make it short because a "retry interval" is waited before the first test
+	DefaultTimeout       = time.Second * 240
 )
 
 type CustomClient struct {
@@ -45,8 +53,11 @@ type CustomClient struct {
 type K8SClient struct {
 	AsKubeAdmin       *CustomClient
 	AsKubeDeveloper   *CustomClient
+	ProxyUrl          string
 	SandboxController *sandbox.SandboxController
 	UserName          string
+	UserNamespace     string
+	UserToken         string
 }
 
 var (
@@ -65,6 +76,7 @@ func init() {
 	utilruntime.Must(release.AddToScheme(scheme))
 	utilruntime.Must(gitopsv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(integrationservice.AddToScheme(scheme))
+	utilruntime.Must(integrationservicev1beta1.AddToScheme(scheme))
 	utilruntime.Must(jvmbuildservice.AddToScheme(scheme))
 	utilruntime.Must(ecp.AddToScheme(scheme))
 	utilruntime.Must(buildservice.AddToScheme(scheme))
@@ -99,6 +111,9 @@ func (c *CustomClient) DynamicClient() dynamic.Interface {
 	return c.dynamicClient
 }
 
+// Creates Kubernetes clients:
+// 1. Will create a kubernetes client from default kubeconfig as kubeadmin
+// 2. Will create a sandbox user and will generate a client using user token a new client to create resources in RHTAP like a normal user
 func NewDevSandboxProxyClient(userName string) (*K8SClient, error) {
 	asAdminClient, err := NewAdminKubernetesClient()
 	if err != nil {
@@ -110,22 +125,12 @@ func NewDevSandboxProxyClient(userName string) (*K8SClient, error) {
 		return nil, err
 	}
 
-	userAuthInfo, err := sandboxController.ReconcileUserCreation(userName)
+	proxyAuthInfo, err := sandboxController.ReconcileUserCreation(userName)
 	if err != nil {
 		return nil, err
 	}
 
-	cfgBytes, err := os.ReadFile(userAuthInfo.KubeconfigPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read user kubeconfig %v", err)
-	}
-
-	userCfg, err := clientcmd.RESTConfigFromKubeConfig(cfgBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	sandboxProxyClient, err := createCustomClient(*userCfg)
+	sandboxProxyClient, err := CreateAPIProxyClient(proxyAuthInfo.UserToken, proxyAuthInfo.ProxyUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -133,54 +138,131 @@ func NewDevSandboxProxyClient(userName string) (*K8SClient, error) {
 	return &K8SClient{
 		AsKubeAdmin:       asAdminClient,
 		AsKubeDeveloper:   sandboxProxyClient,
-		UserName:          userAuthInfo.UserName,
+		ProxyUrl:          proxyAuthInfo.ProxyUrl,
 		SandboxController: sandboxController,
+		UserName:          proxyAuthInfo.UserName,
+		UserNamespace:     proxyAuthInfo.UserNamespace,
+		UserToken:         proxyAuthInfo.UserToken,
 	}, nil
 }
 
+// Creates a kubernetes client from default kubeconfig. Will take it from KUBECONFIG env if it is defined and if in case is not defined
+// will create the client from $HOME/.kube/config
 func NewAdminKubernetesClient() (*CustomClient, error) {
 	adminKubeconfig, err := config.GetConfig()
 	if err != nil {
 		return nil, err
 	}
-
-	return createCustomClient(*adminKubeconfig)
-}
-
-func createCustomClient(cfg rest.Config) (*CustomClient, error) {
-	client, err := kubernetes.NewForConfig(&cfg)
+	clientSets, err := createClientSetsFromConfig(adminKubeconfig)
 	if err != nil {
 		return nil, err
 	}
 
-	dynamicClient, err := dynamic.NewForConfig(&cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	crClient, err := crclient.New(&cfg, crclient.Options{
+	crClient, err := crclient.New(adminKubeconfig, crclient.Options{
 		Scheme: scheme,
 	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	pipelineClient, err := pipelineclientset.NewForConfig(&cfg)
+	return &CustomClient{
+		kubeClient:            clientSets.kubeClient,
+		pipelineClient:        clientSets.pipelineClient,
+		dynamicClient:         clientSets.dynamicClient,
+		jvmbuildserviceClient: clientSets.jvmbuildserviceClient,
+		routeClient:           clientSets.routeClient,
+		crClient:              crClient,
+	}, nil
+}
+
+// CreateAPIProxyClient creates a client to the RHTAP api proxy using the given user token
+func CreateAPIProxyClient(usertoken, proxyURL string) (*CustomClient, error) {
+	var proxyCl crclient.Client
+	var initProxyClError error
+
+	apiConfig, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
+	if err != nil {
+		return nil, fmt.Errorf("error initializing api proxy client config rules %s", err)
+	}
+
+	defaultConfig, err := clientcmd.NewDefaultClientConfig(*apiConfig, &clientcmd.ConfigOverrides{}).ClientConfig()
+	if err != nil {
+		return nil, fmt.Errorf("error initializing default client configs %s", err)
+	}
+	proxyKubeConfig := &rest.Config{
+		Host:            proxyURL,
+		TLSClientConfig: defaultConfig.TLSClientConfig,
+		BearerToken:     usertoken,
+	}
+
+	// Getting the proxy client can fail from time to time if the proxy's informer cache has not been
+	// updated yet and we try to create the client to quickly so retry to reduce flakiness.
+	waitErr := wait.Poll(DefaultRetryInterval, DefaultTimeout, func() (done bool, err error) {
+		proxyCl, initProxyClError = crclient.New(proxyKubeConfig, crclient.Options{Scheme: scheme})
+		return initProxyClError == nil, nil
+	})
+	if waitErr != nil {
+		return nil, initProxyClError
+	}
+
+	clientSets, err := createClientSetsFromConfig(proxyKubeConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	jvmbuildserviceClient, err := jvmbuildserviceclientset.NewForConfig(&cfg)
+	return &CustomClient{
+		kubeClient:            clientSets.kubeClient,
+		pipelineClient:        clientSets.pipelineClient,
+		dynamicClient:         clientSets.dynamicClient,
+		jvmbuildserviceClient: clientSets.jvmbuildserviceClient,
+		routeClient:           clientSets.routeClient,
+		crClient:              proxyCl,
+	}, nil
+}
+
+func NewKubeFromKubeConfigFile(kubeconfig string) (*kubernetes.Clientset, error) {
+	kubeConfData, err := os.ReadFile(kubeconfig)
 	if err != nil {
 		return nil, err
 	}
-	routeClient, err := routeclientset.NewForConfig(&cfg)
+
+	config, err := clientcmd.RESTConfigFromKubeConfig(kubeConfData)
 	if err != nil {
 		return nil, err
 	}
+
+	return kubernetes.NewForConfig(config)
+}
+
+func createClientSetsFromConfig(cfg *rest.Config) (*CustomClient, error) {
+	client, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	dynamicClient, err := dynamic.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	pipelineClient, err := pipelineclientset.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	jvmbuildserviceClient, err := jvmbuildserviceclientset.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	routeClient, err := routeclientset.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	return &CustomClient{
 		kubeClient:            client,
-		crClient:              crClient,
 		pipelineClient:        pipelineClient,
 		dynamicClient:         dynamicClient,
 		jvmbuildserviceClient: jvmbuildserviceClient,

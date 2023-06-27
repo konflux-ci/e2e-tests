@@ -26,3 +26,6 @@ tmp/
 
 # RP Preproc output
 rp_preproc/
+
+# Files likely to be created by users
+user.env

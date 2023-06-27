@@ -11,6 +11,7 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -25,8 +26,6 @@ const (
 	DEFAULT_LOCAL_FORK_NAME             = "qe"
 	DEFAULT_LOCAL_FORK_ORGANIZATION     = "redhat-appstudio-qe"
 	DEFAULT_E2E_APPLICATIONS_NAMEPSPACE = "appstudio-e2e-test"
-	DEFAULT_SHARED_SECRETS_NAMESPACE    = "build-templates"
-	DEFAULT_SHARED_SECRET_NAME          = "redhat-appstudio-user-workload"
 	DEFAULT_E2E_QUAY_ORG                = "redhat-appstudio-qe"
 )
 
@@ -59,12 +58,6 @@ type InstallAppStudio struct {
 	// Namespace where build applications will be placed
 	E2EApplicationsNamespace string
 
-	// A namespace used for storing a build secret which will be shared across all namespaces
-	SharedSecretNamespace string
-
-	// Default quay image repository
-	HasDefaultImageRepository string
-
 	// base64-encoded content of a docker/config.json file which contains a valid login credentials for quay.io
 	QuayToken string
 
@@ -73,6 +66,9 @@ type InstallAppStudio struct {
 
 	// Oauth2 token for default quay organization
 	DefaultImageQuayOrgOAuth2Token string
+
+	// Default expiration for image tags
+	DefaultImageTagExpiration string
 }
 
 func NewAppStudioInstallController() (*InstallAppStudio, error) {
@@ -91,12 +87,10 @@ func NewAppStudioInstallController() (*InstallAppStudio, error) {
 		InfraDeploymentsOrganizationName: utils.GetEnv("INFRA_DEPLOYMENTS_ORG", DEFAULT_INFRA_DEPLOYMENTS_GH_ORG),
 		LocalForkName:                    DEFAULT_LOCAL_FORK_NAME,
 		LocalGithubForkOrganization:      utils.GetEnv("MY_GITHUB_ORG", DEFAULT_LOCAL_FORK_ORGANIZATION),
-		E2EApplicationsNamespace:         utils.GetEnv("E2E_APPLICATIONS_NAMESPACE", DEFAULT_E2E_APPLICATIONS_NAMEPSPACE),
-		SharedSecretNamespace:            DEFAULT_SHARED_SECRETS_NAMESPACE,
-		HasDefaultImageRepository:        utils.GetEnv("HAS_DEFAULT_IMAGE_REPOSITORY", fmt.Sprintf("quay.io/%s/test-images-protected", DEFAULT_E2E_QUAY_ORG)),
 		QuayToken:                        utils.GetEnv("QUAY_TOKEN", ""),
 		DefaultImageQuayOrg:              utils.GetEnv("DEFAULT_QUAY_ORG", DEFAULT_E2E_QUAY_ORG),
 		DefaultImageQuayOrgOAuth2Token:   utils.GetEnv("DEFAULT_QUAY_ORG_TOKEN", ""),
+		DefaultImageTagExpiration:        utils.GetEnv(constants.IMAGE_TAG_EXPIRATION_ENV, constants.DefaultImageTagExpiration),
 	}, nil
 }
 
@@ -111,20 +105,18 @@ func (i *InstallAppStudio) InstallAppStudioPreviewMode() error {
 		return err
 	}
 
-	return i.createSharedSecret()
+	return i.createE2EQuaySecret()
 }
 
 func (i *InstallAppStudio) setInstallationEnvironments() {
 	os.Setenv("MY_GITHUB_ORG", i.LocalGithubForkOrganization)
 	os.Setenv("MY_GITHUB_TOKEN", utils.GetEnv("GITHUB_TOKEN", ""))
 	os.Setenv("MY_GIT_FORK_REMOTE", i.LocalForkName)
-	os.Setenv("E2E_APPLICATIONS_NAMESPACE", i.E2EApplicationsNamespace)
-	os.Setenv("SHARED_SECRET_NAMESPACE", i.SharedSecretNamespace)
 	os.Setenv("TEST_BRANCH_ID", util.GenerateRandomString(4))
-	os.Setenv("HAS_DEFAULT_IMAGE_REPOSITORY", i.HasDefaultImageRepository)
 	os.Setenv("QUAY_TOKEN", i.QuayToken)
 	os.Setenv("IMAGE_CONTROLLER_QUAY_ORG", i.DefaultImageQuayOrg)
 	os.Setenv("IMAGE_CONTROLLER_QUAY_TOKEN", i.DefaultImageQuayOrgOAuth2Token)
+	os.Setenv("BUILD_SERVICE_IMAGE_TAG_EXPIRATION", i.DefaultImageTagExpiration)
 }
 
 func (i *InstallAppStudio) cloneInfraDeployments() (*git.Remote, error) {
@@ -151,8 +143,8 @@ func (i *InstallAppStudio) cloneInfraDeployments() (*git.Remote, error) {
 	return repo.CreateRemote(&config.RemoteConfig{Name: i.LocalForkName, URLs: []string{fmt.Sprintf("https://github.com/%s/infra-deployments.git", i.LocalGithubForkOrganization)}})
 }
 
-// createSharedSecret make sure that redhat-appstudio-user-workload secret is created in the build-templates namespace for build purposes
-func (i *InstallAppStudio) createSharedSecret() error {
+// Create secret in e2e-secrets which can be copied to testing namespaces
+func (i *InstallAppStudio) createE2EQuaySecret() error {
 	quayToken := os.Getenv("QUAY_TOKEN")
 	if quayToken == "" {
 		return fmt.Errorf("failed to obtain quay token from 'QUAY_TOKEN' env; make sure the env exists")
@@ -163,14 +155,32 @@ func (i *InstallAppStudio) createSharedSecret() error {
 		return fmt.Errorf("failed to decode quay token. Make sure that QUAY_TOKEN env contain a base64 token")
 	}
 
-	sharedSecret, err := i.KubernetesClient.KubeInterface().CoreV1().Secrets(i.SharedSecretNamespace).Get(context.Background(), DEFAULT_SHARED_SECRET_NAME, metav1.GetOptions{})
+	namespace := constants.QuayRepositorySecretNamespace
+	_, err = i.KubernetesClient.KubeInterface().CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			_, err := i.KubernetesClient.KubeInterface().CoreV1().Namespaces().Create(context.Background(), &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
+				},
+			}, metav1.CreateOptions{})
+			if err != nil {
+				return fmt.Errorf("error when creating namespace %s : %v", namespace, err)
+			}
+		} else {
+			return fmt.Errorf("error when getting namespace %s : %v", namespace, err)
+		}
+	}
+
+	secretName := constants.QuayRepositorySecretName
+	secret, err := i.KubernetesClient.KubeInterface().CoreV1().Secrets(namespace).Get(context.Background(), secretName, metav1.GetOptions{})
 
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
-			_, err := i.KubernetesClient.KubeInterface().CoreV1().Secrets(i.SharedSecretNamespace).Create(context.Background(), &corev1.Secret{
+			_, err := i.KubernetesClient.KubeInterface().CoreV1().Secrets(namespace).Create(context.Background(), &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      DEFAULT_SHARED_SECRET_NAME,
-					Namespace: DEFAULT_SHARED_SECRETS_NAMESPACE,
+					Name:      secretName,
+					Namespace: namespace,
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
 				Data: map[string][]byte{
@@ -179,15 +189,15 @@ func (i *InstallAppStudio) createSharedSecret() error {
 			}, metav1.CreateOptions{})
 
 			if err != nil {
-				return fmt.Errorf("error when creating secret %s : %v", DEFAULT_SHARED_SECRET_NAME, err)
+				return fmt.Errorf("error when creating secret %s : %v", secretName, err)
 			}
 		} else {
-			sharedSecret.Data = map[string][]byte{
+			secret.Data = map[string][]byte{
 				corev1.DockerConfigJsonKey: decodedToken,
 			}
-			_, err = i.KubernetesClient.KubeInterface().CoreV1().Secrets(i.SharedSecretNamespace).Update(context.TODO(), sharedSecret, metav1.UpdateOptions{})
+			_, err = i.KubernetesClient.KubeInterface().CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
 			if err != nil {
-				return fmt.Errorf("error when updating secret '%s' namespace: %v", DEFAULT_SHARED_SECRET_NAME, err)
+				return fmt.Errorf("error when updating secret '%s' namespace: %v", secretName, err)
 			}
 		}
 	}

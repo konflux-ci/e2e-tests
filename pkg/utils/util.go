@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -14,8 +16,12 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
+	"knative.dev/pkg/apis"
 
 	devfilePkg "github.com/devfile/library/pkg/devfile"
 	"github.com/devfile/library/pkg/devfile/parser"
@@ -33,6 +39,8 @@ import (
 	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/yaml"
+
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type FailedPipelineRunDetails struct {
@@ -108,10 +116,6 @@ func GetQuayIOOrganization() string {
 	return GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
 }
 
-func GetDockerConfigJson() string {
-	return GetEnv(constants.DOCKER_CONFIG_JSON, "")
-}
-
 func IsPrivateHostname(url string) bool {
 	// https://www.ibm.com/docs/en/networkmanager/4.2.0?topic=translation-private-address-ranges
 	privateIPAddressPrefixes := []string{"10.", "172.1", "172.2", "172.3", "192.168"}
@@ -139,31 +143,40 @@ func GetOpenshiftToken() (token string, err error) {
 	return strings.TrimSuffix(string(tokenBytes), "\n"), nil
 }
 
-func GetFailedPipelineRunDetails(pipelineRun *v1beta1.PipelineRun) *FailedPipelineRunDetails {
+func GetFailedPipelineRunDetails(c crclient.Client, pipelineRun *v1beta1.PipelineRun) (*FailedPipelineRunDetails, error) {
 	d := &FailedPipelineRunDetails{}
-	for trName, trs := range pipelineRun.Status.PipelineRunStatusFields.TaskRuns {
-		for _, c := range trs.Status.Conditions {
+	for _, chr := range pipelineRun.Status.PipelineRunStatusFields.ChildReferences {
+		taskRun := &v1beta1.TaskRun{}
+		taskRunKey := types.NamespacedName{Namespace: pipelineRun.Namespace, Name: chr.Name}
+		if err := c.Get(context.TODO(), taskRunKey, taskRun); err != nil {
+			return nil, fmt.Errorf("failed to get details for PR %s: %+v", pipelineRun.GetName(), err)
+		}
+		for _, c := range taskRun.Status.Conditions {
 			if c.Reason == "Failed" {
-				d.FailedTaskRunName = trName
-				d.PodName = trs.Status.PodName
-				for _, s := range trs.Status.TaskRunStatusFields.Steps {
+				d.FailedTaskRunName = taskRun.Name
+				d.PodName = taskRun.Status.PodName
+				for _, s := range taskRun.Status.TaskRunStatusFields.Steps {
 					if s.Terminated.Reason == "Error" {
 						d.FailedContainerName = s.ContainerName
-						return d
+						return d, nil
 					}
 				}
 			}
 		}
 	}
-	return d
+	return d, nil
 }
 
 func GetGeneratedNamespace(name string) string {
 	return name + "-" + util.GenerateRandomString(4)
 }
 
+func WaitUntilWithInterval(cond wait.ConditionFunc, interval time.Duration, timeout time.Duration) error {
+	return wait.PollImmediate(interval, timeout, cond)
+}
+
 func WaitUntil(cond wait.ConditionFunc, timeout time.Duration) error {
-	return wait.PollImmediate(time.Second, timeout, cond)
+	return WaitUntilWithInterval(cond, time.Second, timeout)
 }
 
 func ExecuteCommandInASpecificDirectory(command string, args []string, directory string) error {
@@ -311,4 +324,47 @@ func ParseDevfileModel(devfileModel string) (data.DevfileData, error) {
 	}
 	devfileObj, _, err := devfilePkg.ParseDevfileAndValidate(parserArgs)
 	return devfileObj.Data, err
+}
+
+func HostIsAccessible(host string) bool {
+	tc := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
+	client := http.Client{Transport: tc}
+	res, err := client.Get(host)
+	if err != nil || res.StatusCode > 499 {
+		return false
+	}
+	return true
+}
+
+func HasPipelineRunSucceeded(pr *v1beta1.PipelineRun) bool {
+	return pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue()
+}
+
+func HasPipelineRunFailed(pr *v1beta1.PipelineRun) bool {
+	return pr.IsDone() && pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsFalse()
+}
+
+// Return a container logs from a given pod and namespace
+func GetContainerLogs(ki kubernetes.Interface, podName, containerName, namespace string) (string, error) {
+	podLogOpts := corev1.PodLogOptions{
+		Container: containerName,
+	}
+
+	req := ki.CoreV1().Pods(namespace).GetLogs(podName, &podLogOpts)
+	podLogs, err := req.Stream(context.TODO())
+	if err != nil {
+		return "", fmt.Errorf("error in opening the stream: %v", err)
+	}
+	defer podLogs.Close()
+
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, podLogs)
+	if err != nil {
+		return "", fmt.Errorf("error in copying logs to buf, %v", err)
+	}
+	return buf.String(), nil
 }

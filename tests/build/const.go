@@ -17,7 +17,6 @@ const (
 	buildTemplatesTestLabel     = "build-templates-e2e"
 	buildTemplatesKcpTestLabel  = "build-templates-kcp-e2e"
 
-	pacPRBranchPrefix                    = "appstudio-"
 	helloWorldComponentGitSourceRepoName = "devfile-sample-hello-world"
 	helloWorldComponentDefaultBranch     = "default"
 )

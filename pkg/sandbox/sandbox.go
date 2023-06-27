@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	toolchainApi "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-e2e/testsupport/md5"
+	. "github.com/onsi/ginkgo/v2"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -21,7 +23,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
-	"k8s.io/klog/v2"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -65,8 +66,17 @@ type SandboxUserAuthInfo struct {
 	// Add a description about user
 	UserName string
 
+	// Returns the username namespace provisioned by toolchain
+	UserNamespace string
+
 	// Add a description about kubeconfigpath
 	KubeconfigPath string
+
+	// Url of user api to access kubernetes host
+	ProxyUrl string
+
+	// User token used as bearer to authenticate against kubernetes host
+	UserToken string
 }
 
 // Values to create a valid user for testing purposes
@@ -91,9 +101,11 @@ type HttpClient struct {
 
 // NewHttpClient creates http client wrapper with helper functions for rest models call
 func NewHttpClient() (*http.Client, error) {
-	client := &http.Client{Transport: &http.Transport{
+	client := &http.Client{Transport: LoggingRoundTripper{&http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}}
+	},
+	},
+	}
 	return client, nil
 }
 
@@ -111,14 +123,36 @@ func NewDevSandboxController(kube kubernetes.Interface, kubeRest crclient.Client
 	}, nil
 }
 
+// This type implements the http.RoundTripper interface
+type LoggingRoundTripper struct {
+	Proxied http.RoundTripper
+}
+
+func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (res *http.Response, e error) {
+	// Do "before sending requests" actions here.
+	GinkgoWriter.Printf("Sandbox proxy sending request to %v:%v %v\n", req.URL, req.Header, req.Body)
+
+	// Send the request, get the response (or the error)
+	res, e = lrt.Proxied.RoundTrip(req)
+
+	// Handle the result.
+	if e != nil {
+		GinkgoWriter.Printf("Sandbox proxy error: %v", e)
+	} else {
+		GinkgoWriter.Printf("Sandbox proxy received %v response\n", res.Status)
+	}
+
+	return res, e
+}
+
 // ReconcileUserCreation create a user in sandbox and return a valid kubeconfig for user to be used for the tests
 func (s *SandboxController) ReconcileUserCreation(userName string) (*SandboxUserAuthInfo, error) {
-	userSignup := &toolchainApi.UserSignup{}
+	var compliantUsername string
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
-	kubeconfigPath := utils.GetEnv(constants.USER_USER_KUBE_CONFIG_PATH_ENV, fmt.Sprintf("%s/tmp/%s.kubeconfig", wd, userName))
+	kubeconfigPath := utils.GetEnv(constants.USER_KUBE_CONFIG_PATH_ENV, fmt.Sprintf("%s/tmp/%s.kubeconfig", wd, userName))
 
 	toolchainApiUrl, err := s.GetOpenshiftRouteHost(DEFAULT_TOOLCHAIN_NAMESPACE, DEFAULT_TOOLCHAIN_INSTANCE_NAME)
 	if err != nil {
@@ -127,26 +161,6 @@ func (s *SandboxController) ReconcileUserCreation(userName string) (*SandboxUser
 
 	if s.KeycloakUrl, err = s.GetOpenshiftRouteHost(DEFAULT_KEYCLOAK_NAMESPACE, DEFAULT_KEYCLOAK_INSTANCE_NAME); err != nil {
 		return nil, err
-	}
-
-	err = s.KubeRest.Get(context.Background(), types.NamespacedName{
-		Name:      userName,
-		Namespace: DEFAULT_TOOLCHAIN_NAMESPACE,
-	}, userSignup)
-	if err != nil {
-		if k8sErrors.IsNotFound(err) {
-			klog.Infof("user %s don't exists... recreating", userName)
-		}
-	} else {
-		userToken, err := s.GetKeycloakToken(DEFAULT_KEYCLOAK_TEST_CLIENT_ID, userName, userName, DEFAULT_KEYCLOAK_TESTING_REALM)
-		if err != nil {
-			return nil, err
-		}
-		if err := s.RegisterSandboxUser(userName); err != nil {
-			return nil, err
-		}
-
-		return s.GetKubeconfigPathForSpecificUser(toolchainApiUrl, userName, kubeconfigPath, userToken)
 	}
 
 	if err := s.IsKeycloakRunning(); err != nil {
@@ -163,15 +177,15 @@ func (s *SandboxController) ReconcileUserCreation(userName string) (*SandboxUser
 		return nil, err
 	}
 
-	if s.KeycloakUserExists(DEFAULT_KEYCLOAK_TESTING_REALM, adminToken.AccessToken, userName) {
-		registerUser, err := s.RegisterKeyclokUser(userName, adminToken.AccessToken, DEFAULT_KEYCLOAK_TESTING_REALM)
+	if compliantUsername, err = s.RegisterSandboxUser(userName); err != nil {
+		return nil, err
+	}
+
+	if !s.KeycloakUserExists(DEFAULT_KEYCLOAK_TESTING_REALM, adminToken.AccessToken, userName) {
+		registerUser, err := s.RegisterKeycloakUser(userName, adminToken.AccessToken, DEFAULT_KEYCLOAK_TESTING_REALM)
 		if err != nil && registerUser.Username == "" {
 			return nil, errors.New("failed to register user in keycloak: " + err.Error())
 		}
-	}
-
-	if err := s.RegisterSandboxUser(userName); err != nil {
-		return nil, err
 	}
 
 	userToken, err := s.GetKeycloakToken(DEFAULT_KEYCLOAK_TEST_CLIENT_ID, userName, userName, DEFAULT_KEYCLOAK_TESTING_REALM)
@@ -179,7 +193,7 @@ func (s *SandboxController) ReconcileUserCreation(userName string) (*SandboxUser
 		return nil, err
 	}
 
-	return s.GetKubeconfigPathForSpecificUser(toolchainApiUrl, userName, kubeconfigPath, userToken)
+	return s.GetKubeconfigPathForSpecificUser(toolchainApiUrl, compliantUsername, kubeconfigPath, userToken)
 }
 
 func (s *SandboxController) GetKubeconfigPathForSpecificUser(toolchainApiUrl string, userName string, kubeconfigPath string, keycloakAuth *KeycloakAuth) (*SandboxUserAuthInfo, error) {
@@ -203,23 +217,32 @@ func (s *SandboxController) GetKubeconfigPathForSpecificUser(toolchainApiUrl str
 		return nil, fmt.Errorf("error writing sandbox user kubeconfig to %s path: %v", kubeconfigPath, err)
 	}
 
+	ns, err := s.GetUserProvisionedNamespace(userName)
+	if err != nil {
+		return nil, fmt.Errorf("error getting provisioned usernamespace: %v", err)
+	}
+
 	return &SandboxUserAuthInfo{
 		UserName:       userName,
+		UserNamespace:  ns,
 		KubeconfigPath: kubeconfigPath,
+		ProxyUrl:       toolchainApiUrl,
+		UserToken:      keycloakAuth.AccessToken,
 	}, nil
 }
 
-func (s *SandboxController) RegisterSandboxUser(userName string) error {
+func (s *SandboxController) RegisterSandboxUser(userName string) (compliantUsername string, err error) {
 	userSignup := getUserSignupSpecs(userName)
+
 	if err := s.KubeRest.Create(context.TODO(), userSignup); err != nil {
 		if k8sErrors.IsAlreadyExists(err) {
-			klog.Infof("User %s already exists", userName)
-			return nil
+			GinkgoWriter.Printf("User %s already exists\n", userName)
+		} else {
+			return "", err
 		}
-		return err
 	}
 
-	return utils.WaitUntil(func() (done bool, err error) {
+	err = utils.WaitUntil(func() (done bool, err error) {
 		err = s.KubeRest.Get(context.TODO(), types.NamespacedName{
 			Namespace: DEFAULT_TOOLCHAIN_NAMESPACE,
 			Name:      userName,
@@ -229,14 +252,25 @@ func (s *SandboxController) RegisterSandboxUser(userName string) error {
 			return false, err
 		}
 
-		klog.Info("Waiting...\n", userSignup)
 		for _, condition := range userSignup.Status.Conditions {
 			if condition.Type == toolchainApi.UserSignupComplete && condition.Status == corev1.ConditionTrue {
+				compliantUsername = userSignup.Status.CompliantUsername
+				if len(compliantUsername) < 1 {
+					GinkgoWriter.Printf("Status.CompliantUsername field in UserSignup CR %s in %s namespace is empty\n", userSignup.GetName(), userSignup.GetNamespace())
+					return false, nil
+				}
 				return true, nil
 			}
 		}
+		GinkgoWriter.Printf("Waiting for UserSignup %s to have condition Complete:True\n", userSignup.GetName())
 		return false, nil
 	}, 4*time.Minute)
+
+	if err != nil {
+		return "", err
+	}
+	return compliantUsername, nil
+
 }
 
 func getUserSignupSpecs(username string) *toolchainApi.UserSignup {
@@ -259,6 +293,48 @@ func getUserSignupSpecs(username string) *toolchainApi.UserSignup {
 			},
 		},
 	}
+}
+
+func (s *SandboxController) GetUserProvisionedNamespace(userName string) (namespace string, err error) {
+	ns, err := s.waitForNamespaceToBeProvisioned(userName)
+	if err != nil {
+		return "", err
+	}
+
+	return ns, err
+}
+
+func (s *SandboxController) waitForNamespaceToBeProvisioned(userName string) (provisionedNamespace string, err error) {
+	err = utils.WaitUntil(func() (done bool, err error) {
+		var namespaceProvisioned bool
+		userSpace := &toolchainApi.Space{}
+		err = s.KubeRest.Get(context.TODO(), types.NamespacedName{
+			Namespace: DEFAULT_TOOLCHAIN_NAMESPACE,
+			Name:      userName,
+		}, userSpace)
+
+		if err != nil {
+			return false, err
+		}
+
+		// check if a namespace with the username prefix was provisioned
+		for _, pns := range userSpace.Status.ProvisionedNamespaces {
+			if strings.Contains(pns.Name, userName) {
+				namespaceProvisioned = true
+				provisionedNamespace = pns.Name
+			}
+		}
+
+		for _, condition := range userSpace.Status.Conditions {
+			if condition.Reason == toolchainApi.SpaceProvisionedReason && condition.Status == corev1.ConditionTrue && namespaceProvisioned {
+				return true, nil
+			}
+		}
+
+		return false, nil
+	}, 4*time.Minute)
+
+	return provisionedNamespace, err
 }
 
 func (s *SandboxController) GetOpenshiftRouteHost(namespace string, name string) (string, error) {

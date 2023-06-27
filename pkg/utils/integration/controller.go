@@ -5,15 +5,17 @@ import (
 	"fmt"
 	"time"
 
+	codereadytoolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/devfile/library/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
+	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	releasev1alpha1 "github.com/redhat-appstudio/release-service/api/v1alpha1"
+	releasemetadata "github.com/redhat-appstudio/release-service/metadata"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -34,18 +36,20 @@ func NewSuiteController(kube *kubeCl.CustomClient) (*SuiteController, error) {
 	}, nil
 }
 
-func (h *SuiteController) HaveHACBSTestsSucceeded(snapshot *appstudioApi.Snapshot) bool {
-	return meta.IsStatusConditionTrue(snapshot.Status.Conditions, "HACBSTestSucceeded")
+func (h *SuiteController) HaveTestsSucceeded(snapshot *appstudioApi.Snapshot) bool {
+	return meta.IsStatusConditionTrue(snapshot.Status.Conditions, "HACBSTestSucceeded") ||
+		meta.IsStatusConditionTrue(snapshot.Status.Conditions, "AppStudioTestSucceeded")
 }
 
-func (h *SuiteController) HaveHACBSTestsFinished(snapshot *appstudioApi.Snapshot) bool {
-	return meta.FindStatusCondition(snapshot.Status.Conditions, "HACBSTestSucceeded") != nil
+func (h *SuiteController) HaveTestsFinished(snapshot *appstudioApi.Snapshot) bool {
+	return meta.FindStatusCondition(snapshot.Status.Conditions, "HACBSTestSucceeded") != nil ||
+		meta.FindStatusCondition(snapshot.Status.Conditions, "AppStudioTestSucceeded") != nil
 }
 
-func (h *SuiteController) MarkHACBSTestsSucceeded(snapshot *appstudioApi.Snapshot) (*appstudioApi.Snapshot, error) {
+func (h *SuiteController) MarkTestsSucceeded(snapshot *appstudioApi.Snapshot) (*appstudioApi.Snapshot, error) {
 	patch := client.MergeFrom(snapshot.DeepCopy())
 	meta.SetStatusCondition(&snapshot.Status.Conditions, metav1.Condition{
-		Type:    "HACBSTestSucceeded",
+		Type:    "AppStudioTestSucceeded",
 		Status:  metav1.ConditionTrue,
 		Reason:  "Passed",
 		Message: "Snapshot Passed",
@@ -115,7 +119,7 @@ func (h *SuiteController) GetComponent(applicationName, namespace string) (*apps
 	return &appstudioApi.Component{}, fmt.Errorf("no component found %s", utils.GetAdditionalInfo(applicationName, namespace))
 }
 
-func (h *SuiteController) GetReleasesWithSnapshot(snapshot *appstudioApi.Snapshot, namespace string) (*[]releasev1alpha1.Release, error) {
+func (h *SuiteController) GetReleasesWithSnapshot(snapshot *appstudioApi.Snapshot, namespace string) ([]releasev1alpha1.Release, error) {
 	releases := &releasev1alpha1.ReleaseList{}
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
@@ -130,22 +134,22 @@ func (h *SuiteController) GetReleasesWithSnapshot(snapshot *appstudioApi.Snapsho
 		GinkgoWriter.Printf("Release %s is found\n", release.Name)
 	}
 
-	return &releases.Items, nil
+	return releases.Items, nil
 }
 
 // Get return the status from the Application Custom Resource object
-func (h *SuiteController) GetIntegrationTestScenarios(applicationName, namespace string) (*[]integrationv1alpha1.IntegrationTestScenario, error) {
+func (h *SuiteController) GetIntegrationTestScenarios(applicationName, namespace string) (*[]integrationv1beta1.IntegrationTestScenario, error) {
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
 	}
 
-	integrationTestScenarioList := &integrationv1alpha1.IntegrationTestScenarioList{}
+	integrationTestScenarioList := &integrationv1beta1.IntegrationTestScenarioList{}
 	err := h.KubeRest().List(context.TODO(), integrationTestScenarioList, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	items := make([]integrationv1alpha1.IntegrationTestScenario, 0)
+	items := make([]integrationv1beta1.IntegrationTestScenario, 0)
 	for _, t := range integrationTestScenarioList.Items {
 		if t.Spec.Application == applicationName {
 			items = append(items, t)
@@ -246,7 +250,7 @@ func (h *SuiteController) DeleteSnapshot(hasSnapshot *appstudioApi.Snapshot, nam
 	return err
 }
 
-func (h *SuiteController) DeleteIntegrationTestScenario(testScenario *integrationv1alpha1.IntegrationTestScenario, namespace string) error {
+func (h *SuiteController) DeleteIntegrationTestScenario(testScenario *integrationv1beta1.IntegrationTestScenario, namespace string) error {
 	err := h.KubeRest().Delete(context.TODO(), testScenario)
 	return err
 }
@@ -262,7 +266,8 @@ func (h *SuiteController) CreateReleasePlan(applicationName, namespace string) (
 			GenerateName: "test-releaseplan-",
 			Namespace:    namespace,
 			Labels: map[string]string{
-				releasev1alpha1.AutoReleaseLabel: "true",
+				releasemetadata.AutoReleaseLabel: "true",
+				releasemetadata.AttributionLabel: "true",
 			},
 		},
 		Spec: releasev1alpha1.ReleasePlanSpec{
@@ -327,10 +332,32 @@ func (h *SuiteController) CreateIntegrationTestScenario(applicationName, namespa
 			Application: applicationName,
 			Bundle:      bundleURL,
 			Pipeline:    pipelineName,
+		},
+	}
+
+	err := h.KubeRest().Create(context.TODO(), integrationTestScenario)
+	if err != nil {
+		return nil, err
+	}
+	return integrationTestScenario, nil
+}
+
+func (h *SuiteController) CreateIntegrationTestScenarioWithEnvironment(applicationName, namespace, bundleURL, pipelineName, environmentName string) (*integrationv1alpha1.IntegrationTestScenario, error) {
+	integrationTestScenario := &integrationv1alpha1.IntegrationTestScenario{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "example-pass-" + util.GenerateRandomString(4),
+			Namespace: namespace,
+			Labels: map[string]string{
+				"test.appstudio.openshift.io/optional": "false",
+			},
+		},
+		Spec: integrationv1alpha1.IntegrationTestScenarioSpec{
+			Application: applicationName,
+			Bundle:      bundleURL,
+			Pipeline:    pipelineName,
 			Environment: integrationv1alpha1.TestEnvironment{
-				Name:   "envname",
-				Type:   "POC",
-				Params: []string{},
+				Name: environmentName,
+				Type: "POC",
 			},
 		},
 	}
@@ -342,10 +369,13 @@ func (h *SuiteController) CreateIntegrationTestScenario(applicationName, namespa
 	return integrationTestScenario, nil
 }
 
-func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(c *common.SuiteController, testScenario *integrationv1alpha1.IntegrationTestScenario, snapshot *appstudioApi.Snapshot, applicationName string, appNamespace string) error {
+func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(testScenario *integrationv1beta1.IntegrationTestScenario, snapshot *appstudioApi.Snapshot, appNamespace string) error {
 	return wait.PollImmediate(20*time.Second, 100*time.Minute, func() (done bool, err error) {
-		pipelineRun, _ := h.GetIntegrationPipelineRun(testScenario.Name, snapshot.Name, appNamespace)
-
+		pipelineRun, err := h.GetIntegrationPipelineRun(testScenario.Name, snapshot.Name, appNamespace)
+		if err != nil {
+			GinkgoWriter.Println("PipelineRun has not been created yet for test scenario %s and snapshot %s/%s", testScenario.GetName(), snapshot.GetNamespace(), snapshot.GetName())
+			return false, nil
+		}
 		for _, condition := range pipelineRun.Status.Conditions {
 			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
 
@@ -356,7 +386,7 @@ func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(c *common.Suite
 			if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
 				return true, nil
 			} else {
-				return false, fmt.Errorf(tekton.GetFailedPipelineRunLogs(c, pipelineRun))
+				return false, fmt.Errorf(tekton.GetFailedPipelineRunLogs(h.KubeRest(), h.KubeInterface(), pipelineRun))
 			}
 		}
 		return false, nil
@@ -438,4 +468,120 @@ func (h *SuiteController) GetSnapshotEnvironmentBinding(applicationName string, 
 	}
 
 	return &appstudioApi.SnapshotEnvironmentBinding{}, fmt.Errorf("no SnapshotEnvironmentBinding found in environment %s %s", environment.Name, utils.GetAdditionalInfo(applicationName, namespace))
+}
+
+// HaveAvailableDeploymentTargetClassExist attempts to find a DeploymentTargetClass with appstudioApi.Provisioner_Devsandbox as provisioner.
+// reurn nil if not found
+func (h *SuiteController) HaveAvailableDeploymentTargetClassExist() (*appstudioApi.DeploymentTargetClass, error) {
+	deploymentTargetClassList := &appstudioApi.DeploymentTargetClassList{}
+	err := h.KubeRest().List(context.TODO(), deploymentTargetClassList)
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error occurred while trying to list all the available DeploymentTargetClass: %v", err)
+	}
+
+	for _, dtcls := range deploymentTargetClassList.Items {
+		if dtcls.Spec.Provisioner == appstudioApi.Provisioner_Devsandbox {
+			return &dtcls, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func (h *SuiteController) GetSpaceRequests(namespace string) (*codereadytoolchainv1alpha1.SpaceRequestList, error) {
+	spaceRequestList := &codereadytoolchainv1alpha1.SpaceRequestList{}
+
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+
+	err := h.KubeRest().List(context.Background(), spaceRequestList, opts...)
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error occurred while trying to list spaceRequests in %s namespace: %v", namespace, err)
+	}
+
+	return spaceRequestList, nil
+}
+
+func (h *SuiteController) GetDeploymentTargets(namespace string) (*appstudioApi.DeploymentTargetList, error) {
+	deploymentTargetList := &appstudioApi.DeploymentTargetList{}
+
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+
+	err := h.KubeRest().List(context.Background(), deploymentTargetList, opts...)
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error occurred while trying to list deploymentTargets in %s namespace: %v", namespace, err)
+	}
+
+	return deploymentTargetList, nil
+}
+
+func (h *SuiteController) GetDeploymentTargetClaims(namespace string) (*appstudioApi.DeploymentTargetClaimList, error) {
+	deploymentTargetClaimList := &appstudioApi.DeploymentTargetClaimList{}
+
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+
+	err := h.KubeRest().List(context.Background(), deploymentTargetClaimList, opts...)
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error occurred while trying to list DeploymentTargetClaim in %s namespace: %v", namespace, err)
+	}
+
+	return deploymentTargetClaimList, nil
+}
+
+func (h *SuiteController) GetEnvironments(namespace string) (*appstudioApi.EnvironmentList, error) {
+	environmentList := &appstudioApi.EnvironmentList{}
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+
+	err := h.KubeRest().List(context.TODO(), environmentList, opts...)
+
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error occurred while trying to list environments in %s namespace: %v", namespace, err)
+	}
+
+	return environmentList, nil
+}
+
+func (h *SuiteController) CreateIntegrationTestScenario_beta1(applicationName, namespace, gitURL, revision, pathInRepo string) (*integrationv1beta1.IntegrationTestScenario, error) {
+	integrationTestScenario := &integrationv1beta1.IntegrationTestScenario{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "example-resolver-pass-" + util.GenerateRandomString(4),
+			Namespace: namespace,
+			Labels: map[string]string{
+				"test.appstudio.openshift.io/optional": "false",
+			},
+		},
+		Spec: integrationv1beta1.IntegrationTestScenarioSpec{
+			Application: applicationName,
+			ResolverRef: integrationv1beta1.ResolverRef{
+				Resolver: "git",
+				Params: []integrationv1beta1.ResolverParameter{
+					{
+						Name:  "url",
+						Value: gitURL,
+					},
+					{
+						Name:  "revision",
+						Value: revision,
+					},
+					{
+						Name:  "pathInRepo",
+						Value: pathInRepo,
+					},
+				},
+			},
+		},
+	}
+
+	err := h.KubeRest().Create(context.TODO(), integrationTestScenario)
+	if err != nil {
+		return nil, err
+	}
+	return integrationTestScenario, nil
 }

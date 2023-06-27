@@ -24,6 +24,7 @@ Requirements for installing AppStudio in E2E mode and running the E2E tests:
   * yq
   * jq
   * git
+  * helm
 * Tokens
   * Github Token with the following permissions
     * `repo`
@@ -40,29 +41,9 @@ Before executing the e2e suites you need to have deployed AppStudio in E2E Mode 
     oc login -u <user> -p <password> --server=<oc_api_url>
    ```
 
-2. Export required (and recommended) environment variables (i.e. `export ENV_VAR_NAME=value ENV_VAR2_NAME=value`) from the table below.
+2. Export required (and recommended) environment variables from [default.env](default.env). Copy the file (`cp default.env user.env`), edit the required variables and source it (`source user.env`).
 
-The following environment variables are used to launch the Red Hat AppStudio installation in E2E mode and the tests execution (tokens are also used for running the tests):
-
-| Variable | Required | Explanation | Default Value |
-|---|---|---|---|
-| `GITHUB_TOKEN` | yes | A github token used to create AppStudio applications in github  | ''  |
-| `QUAY_TOKEN` | yes | A quay token to push components images to quay.io. Note the quay token must be your dockerconfigjson encoded in base64 format. Example: `export QUAY_TOKEN=$(base64 < ~/.docker/config.json)` | '' |
-| `DEFAULT_QUAY_ORG` | yes | A quay organization where repositories for component images will be created  | 'redhat-appstudio-qe'  |
-| `DEFAULT_QUAY_ORG_TOKEN` | yes | A quay token of OAuth application for `DEFAULT_QUAY_ORG` with scopes -  Administer organizations, Adminster repositories, Create Repositories | ''  |
-| `MY_GITHUB_ORG` | no (recommended) | GitHub organization (must be organization, cannot use regular GitHub account!) where to create/push Red Hat AppStudio Applications. You can create your GitHub organization for free  | `redhat-appstudio-qe`  |
-| `QUAY_E2E_ORGANIZATION` | no (recommended) | Quay organization/account where to push components containers. It is recommended to create your own account | `redhat-appstudio-qe` |
-| `E2E_APPLICATIONS_NAMESPACE` | no | Name of the namespace used for running HAS E2E tests | `appstudio-e2e-test` |
-| `PRIVATE_DEVFILE_SAMPLE` | no | The name of the private git repository used in HAS E2E tests. Your GITHUB_TOKEN should be able to read from it. | `https://github.com/redhat-appstudio-qe/private-quarkus-devfile-sample` |
-| `QUAY_OAUTH_USER` | no | A valid quay robot account username to make quay oauth | '' |
-| `QUAY_OAUTH_TOKEN` | no | A valid quay quay robot account token to make oauth against quay.io. | '' |
-| `DOCKER_IO_AUTH` | no | A valid docker.io token to avoid pull limits in the format: username:access_token, eg. `export DOCKER_IO_AUTH=susdas:43228532-b374-11ec-989b-98fa9b70b97d` | '' |
-| `INFRA_DEPLOYMENTS_ORG` | no | A specific github organization from where to download infra-deployments repository | `redhat-appstudio` |
-| `INFRA_DEPLOYMENTS_BRANCH` | no | A valid infra-deployments branch. | `main` |
-| `E2E_TEST_SUITE_LABEL` | no | Run only test suites with the given Giknkgo label | '' |
-| `KLOG_VERBOSITY` | no | Level of verbosity for `klog` | 1 |
-
-1. Install dependencies:
+3. Install dependencies:
 
 ``` bash
 # Install dependencies
@@ -110,7 +91,8 @@ In that case, before you run the test, make sure you have created
   * also make sure that the docker config, that is encoded in the value of `QUAY_TOKEN` environment variable, contains a correct credentials required to push to `test-images` repo. And make sure the robot account or user account has the **write** permissions set for `test-images` repo which is required by the tests to push the generated artifacts.
 * forked following GitHub repositories to your org (specified in `MY_GITHUB_ORG` env var)
   * https://github.com/redhat-appstudio-qe/devfile-sample-hello-world (for running build-service tests)
-  * https://github.com/redhat-appstudio-qe/hacbs-test-project (for mvp-demo test)
+  * https://github.com/redhat-appstudio-qe/hacbs-test-project (for rhtap-demo test)
+  * https://github.com/redhat-appstudio-qe/strategy-configs (for rhtap-demo test)
 
    ```bash
     `./bin/e2e-appstudio`

@@ -1,74 +1,135 @@
 package cmd
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
+	"runtime"
 	"strconv"
-	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/codeready-toolchain/toolchain-e2e/setup/auth"
-	"github.com/codeready-toolchain/toolchain-e2e/setup/configuration"
 	"github.com/codeready-toolchain/toolchain-e2e/setup/metrics"
 	"github.com/codeready-toolchain/toolchain-e2e/setup/metrics/queries"
 	"github.com/codeready-toolchain/toolchain-e2e/setup/terminal"
-	"github.com/codeready-toolchain/toolchain-e2e/setup/users"
-	"github.com/codeready-toolchain/toolchain-e2e/setup/wait"
-	"github.com/google/uuid"
 	"github.com/gosuri/uiprogress"
 	"github.com/gosuri/uitable/util/strutil"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/spf13/cobra"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"k8s.io/apimachinery/pkg/util/rand"
 	k8swait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"knative.dev/pkg/apis"
 )
 
 var (
-	usernamePrefix       = "testuser"
-	numberOfUsers        int
-	userBatches          int
-	waitPipelines        bool
-	verbose              bool
-	QuarkusDevfileSource string = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
-	token                string
-	logConsole           bool
-	failFast             bool
-	disableMetrics       bool
-	threadCount          int
+	componentRepoUrl          string = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
+	usernamePrefix            string = "testuser"
+	numberOfUsers             int
+	waitPipelines             bool
+	verbose                   bool
+	token                     string
+	logConsole                bool
+	failFast                  bool
+	disableMetrics            bool
+	threadCount               int
+	pipelineSkipInitialChecks bool
 )
 
 var (
-	AverageUserCreationTime            []time.Duration
-	AverageResourceCreationTimePerUser []time.Duration
-	AveragePipelineRunTimePerUser      []time.Duration
-	FailedUserCreations                []int64
-	FailedResourceCreations            []int64
-	FailedPipelineRuns                 []int64
-	threadsWG                          sync.WaitGroup
+	UserCreationTimeMaxPerThread         []time.Duration
+	ResourceCreationTimeMaxPerThread     []time.Duration
+	PipelineRunSucceededTimeMaxPerThread []time.Duration
+	UserCreationTimeSumPerThread         []time.Duration
+	ResourceCreationTimeSumPerThread     []time.Duration
+	PipelineRunSucceededTimeSumPerThread []time.Duration
+	PipelineRunFailedTimeSumPerThread    []time.Duration
+	SuccessfulUserCreationsPerThread     []int64
+	SuccessfulResourceCreationsPerThread []int64
+	SuccessfulPipelineRunsPerThread      []int64
+	FailedUserCreationsPerThread         []int64
+	FailedResourceCreationsPerThread     []int64
+	FailedPipelineRunsPerThread          []int64
+	frameworkMap                         *sync.Map
+	userComponentMap                     *sync.Map
+	errorCountMap                        map[int]ErrorCount
+	errorMutex                           = &sync.Mutex{}
+	usersBarMutex                        = &sync.Mutex{}
+	resourcesBarMutex                    = &sync.Mutex{}
+	pipelinesBarMutex                    = &sync.Mutex{}
+	threadsWG                            *sync.WaitGroup
+	logData                              LogData
 )
 
-// rootCmd represents the base command when called without any subcommands
+type ErrorOccurrence struct {
+	ErrorCode int    `json:"errorCode"`
+	Message   string `json:"message"`
+}
+
+type ErrorCount struct {
+	ErrorCode int `json:"errorCode"`
+	Count     int `json:"count"`
+}
+
+type LogData struct {
+	Timestamp                         string            `json:"timestamp"`
+	EndTimestamp                      string            `json:"endTimestamp"`
+	MachineName                       string            `json:"machineName"`
+	BinaryDetails                     string            `json:"binaryDetails"`
+	ComponentRepoUrl                  string            `json:"componentRepoUrl"`
+	NumberOfThreads                   int               `json:"threads"`
+	NumberOfUsersPerThread            int               `json:"usersPerThread"`
+	NumberOfUsers                     int               `json:"totalUsers"`
+	PipelineSkipInitialChecks         bool              `json:"pipelineSkipInitialChecks"`
+	LoadTestCompletionStatus          string            `json:"status"`
+	AverageTimeToSpinUpUsers          float64           `json:"createUserTimeAvg"`
+	MaxTimeToSpinUpUsers              float64           `json:"createUserTimeMax"`
+	AverageTimeToCreateResources      float64           `json:"createResourcesTimeAvg"`
+	MaxTimeToCreateResources          float64           `json:"createResourcesTimeMax"`
+	AverageTimeToRunPipelineSucceeded float64           `json:"runPipelineSucceededTimeAvg"`
+	MaxTimeToRunPipelineSucceeded     float64           `json:"runPipelineSucceededTimeMax"`
+	AverageTimeToRunPipelineFailed    float64           `json:"runPipelineFailedTimeAvg"`
+	UserCreationFailureCount          int64             `json:"createUserFailures"`
+	UserCreationFailureRate           float64           `json:"createUserFailureRate"`
+	ResourceCreationFailureCount      int64             `json:"createResourcesFailures"`
+	ResourceCreationFailureRate       float64           `json:"createResourcesFailureRate"`
+	PipelineRunFailureCount           int64             `json:"runPipelineFailures"`
+	PipelineRunFailureRate            float64           `json:"runPipelineFailureRate"`
+	ErrorCounts                       []ErrorCount      `json:"errorCounts"`
+	Errors                            []ErrorOccurrence `json:"errors"`
+	ErrorsTotal                       int               `json:"errorsTotal"`
+}
+
+func createLogDataJSON(outputFile string, logDataInput LogData) error {
+	jsonData, err := json.MarshalIndent(logDataInput, "", "  ")
+	if err != nil {
+		return fmt.Errorf("error marshalling JSON: %v", err)
+	}
+
+	err = os.WriteFile(outputFile, jsonData, 0644)
+	if err != nil {
+		return fmt.Errorf("error writing JSON file: %v", err)
+	}
+
+	return nil
+}
+
 var rootCmd = &cobra.Command{
-	Use:   "load-test",
-	Short: "Used to Generate Users and Run Load Tests on AppStudio.",
-	Long:  `Used to Generate Users and Run Load Tests on AppStudio.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	Use:           "load-test",
+	Short:         "Used to Generate Users and Run Load Tests on AppStudio.",
+	Long:          `Used to Generate Users and Run Load Tests on AppStudio.`,
 	SilenceErrors: true,
 	SilenceUsage:  false,
 	Args:          cobra.NoArgs,
 	Run:           setup,
 }
 
-// ExecuteLoadTest adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
 func ExecuteLoadTest() {
 	err := rootCmd.Execute()
 	if err != nil {
@@ -77,21 +138,17 @@ func ExecuteLoadTest() {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
+	rootCmd.Flags().StringVar(&componentRepoUrl, "component-repo", componentRepoUrl, "the component repo URL to be used")
 	rootCmd.Flags().StringVar(&usernamePrefix, "username", usernamePrefix, "the prefix used for usersignup names")
 	// TODO use a custom kubeconfig and introduce debug logging and trace
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "if 'debug' traces should be displayed in the console")
-	rootCmd.Flags().IntVarP(&numberOfUsers, "users", "u", 5, "the number of user accounts to provision")
-	rootCmd.Flags().IntVarP(&userBatches, "batch", "b", 5, "create user accounts in batches of N, increasing batch size may cause performance problems")
+	rootCmd.Flags().IntVarP(&numberOfUsers, "users", "u", 5, "the number of user accounts to provision per thread")
 	rootCmd.Flags().BoolVarP(&waitPipelines, "waitpipelines", "w", false, "if you want to wait for pipelines to finish")
 	rootCmd.Flags().BoolVarP(&logConsole, "log-to-console", "l", false, "if you want to log to console in addition to the log file")
 	rootCmd.Flags().BoolVar(&failFast, "fail-fast", false, "if you want the test to fail fast at first failure")
 	rootCmd.Flags().BoolVar(&disableMetrics, "disable-metrics", false, "if you want to disable metrics gathering")
 	rootCmd.Flags().IntVarP(&threadCount, "threads", "t", 1, "number of concurrent threads to execute")
+	rootCmd.Flags().BoolVar(&pipelineSkipInitialChecks, "pipeline-skip-initial-checks", true, "if pipeline runs' initial checks are to be skipped")
 }
 
 func logError(errCode int, message string) {
@@ -99,8 +156,27 @@ func logError(errCode int, message string) {
 	if failFast {
 		klog.Fatalln(msg)
 	} else {
-		klog.Infoln(msg)
+		klog.Errorln(msg)
 	}
+	errorMutex.Lock()
+	defer errorMutex.Unlock()
+
+	errorCount, ok := errorCountMap[errCode]
+	if ok {
+		errorCount.Count = errorCount.Count + 1
+		errorCountMap[errCode] = errorCount
+	} else {
+		errorCountMap[errCode] = ErrorCount{
+			ErrorCode: errCode,
+			Count:     1,
+		}
+	}
+
+	errorOccurrence := ErrorOccurrence{
+		ErrorCode: errCode,
+		Message:   message,
+	}
+	logData.Errors = append(logData.Errors, errorOccurrence)
 }
 
 func setKlogFlag(fs flag.FlagSet, name string, value string) {
@@ -124,17 +200,15 @@ func setup(cmd *cobra.Command, args []string) {
 	setKlogFlag(fs, "logtostderr", "false")
 	setKlogFlag(fs, "alsologtostderr", strconv.FormatBool(logConsole))
 
-	if numberOfUsers%userBatches != 0 {
-		klog.Fatalf("Please Provide Correct Batches!")
-		os.Exit(1)
-	}
+	overallCount := numberOfUsers * threadCount
 
 	klog.Infof("Number of threads: %d", threadCount)
 	klog.Infof("Number of users per thread: %d", numberOfUsers)
-	klog.Infof("Batch Size per thread: %d", userBatches)
+	klog.Infof("Number of users overall: %d", overallCount)
+	klog.Infof("Pipeline run initial checks skipped: %t", pipelineSkipInitialChecks)
 
 	klog.Infof("🕖 initializing...\n")
-	framework, err := framework.NewFramework("load-tests")
+	globalframework, err := framework.NewFramework("load-tests")
 	if err != nil {
 		klog.Fatalf("error creating client-go %v", err)
 	}
@@ -142,7 +216,7 @@ func setup(cmd *cobra.Command, args []string) {
 	if len(token) == 0 {
 		token, err = auth.GetTokenFromOC()
 		if err != nil {
-			tokenRequestURI, err := auth.GetTokenRequestURI(framework.AsKubeAdmin.CommonController.KubeRest()) // authorization.FindTokenRequestURI(framework.CommonController.KubeRest())
+			tokenRequestURI, err := auth.GetTokenRequestURI(globalframework.AsKubeAdmin.CommonController.KubeRest())
 			if err != nil {
 				klog.Fatalf("a token is required to capture metrics, use oc login to log into the cluster: %v", err)
 			}
@@ -153,9 +227,9 @@ func setup(cmd *cobra.Command, args []string) {
 	var stopMetrics chan struct{}
 	var metricsInstance *metrics.Gatherer
 	if !disableMetrics {
-		metricsInstance = metrics.NewEmpty(term, framework.AsKubeAdmin.CommonController.KubeRest(), 10*time.Minute)
+		metricsInstance = metrics.NewEmpty(term, globalframework.AsKubeAdmin.CommonController.KubeRest(), 10*time.Minute)
 
-		prometheusClient := metrics.GetPrometheusClient(term, framework.AsKubeAdmin.CommonController.KubeRest(), token)
+		prometheusClient := metrics.GetPrometheusClient(term, globalframework.AsKubeAdmin.CommonController.KubeRest(), token)
 
 		metricsInstance.AddQueries(
 			queries.QueryClusterCPUUtilisation(prometheusClient),
@@ -182,49 +256,159 @@ func setup(cmd *cobra.Command, args []string) {
 		time.Sleep(time.Second * 10)
 	}
 
-	klog.Infof("🍿 provisioning users...\n")
+	machineName, err := os.Hostname()
+	if err != nil {
+		klog.Errorf("error getting hostname: %v\n", err)
+		return
+	}
 
-	overallCount := numberOfUsers * threadCount
+	goVersion := runtime.Version()
+	goOS := runtime.GOOS
+	goArch := runtime.GOARCH
+	binaryDetails := fmt.Sprintf("Built with %s for %s/%s", goVersion, goOS, goArch)
+
+	logData = LogData{
+		Timestamp:                 time.Now().Format("2006-01-02T15:04:05Z07:00"),
+		MachineName:               machineName,
+		BinaryDetails:             binaryDetails,
+		ComponentRepoUrl:          componentRepoUrl,
+		NumberOfThreads:           threadCount,
+		NumberOfUsersPerThread:    numberOfUsers,
+		NumberOfUsers:             overallCount,
+		PipelineSkipInitialChecks: pipelineSkipInitialChecks,
+		Errors:                    []ErrorOccurrence{},
+		ErrorCounts:               []ErrorCount{},
+	}
+
+	klog.Infof("🍿 provisioning users...\n")
 
 	uip := uiprogress.New()
 	uip.Start()
 
+	barLength := 60
+
 	AppStudioUsersBar := uip.AddBar(overallCount).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
-		return strutil.PadLeft(fmt.Sprintf("Creating AppStudio Users (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedUserCreations)), userBatches, ' ')
+		return strutil.PadLeft(fmt.Sprintf("Creating AppStudio Users (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedUserCreationsPerThread)), barLength, ' ')
 	})
 
 	ResourcesBar := uip.AddBar(overallCount).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
-		return strutil.PadLeft(fmt.Sprintf("Creating AppStudio User Resources (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedResourceCreations)), userBatches, ' ')
+		return strutil.PadLeft(fmt.Sprintf("Creating AppStudio User Resources (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedResourceCreationsPerThread)), barLength, ' ')
 	})
 
 	PipelinesBar := uip.AddBar(overallCount).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
-		return strutil.PadLeft(fmt.Sprintf("Waiting for pipelines to finish (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedPipelineRuns)), userBatches, ' ')
+		return strutil.PadLeft(fmt.Sprintf("Waiting for pipelines to finish (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedPipelineRunsPerThread)), barLength, ' ')
 	})
 
-	AverageUserCreationTime = make([]time.Duration, threadCount)
-	AverageResourceCreationTimePerUser = make([]time.Duration, threadCount)
-	AveragePipelineRunTimePerUser = make([]time.Duration, threadCount)
-	FailedUserCreations = make([]int64, threadCount)
-	FailedResourceCreations = make([]int64, threadCount)
-	FailedPipelineRuns = make([]int64, threadCount)
+	UserCreationTimeMaxPerThread = make([]time.Duration, threadCount)
+	ResourceCreationTimeMaxPerThread = make([]time.Duration, threadCount)
+	PipelineRunSucceededTimeMaxPerThread = make([]time.Duration, threadCount)
+	UserCreationTimeSumPerThread = make([]time.Duration, threadCount)
+	ResourceCreationTimeSumPerThread = make([]time.Duration, threadCount)
+	PipelineRunSucceededTimeSumPerThread = make([]time.Duration, threadCount)
+	PipelineRunFailedTimeSumPerThread = make([]time.Duration, threadCount)
+	SuccessfulUserCreationsPerThread = make([]int64, threadCount)
+	SuccessfulResourceCreationsPerThread = make([]int64, threadCount)
+	SuccessfulPipelineRunsPerThread = make([]int64, threadCount)
+	FailedUserCreationsPerThread = make([]int64, threadCount)
+	FailedResourceCreationsPerThread = make([]int64, threadCount)
+	FailedPipelineRunsPerThread = make([]int64, threadCount)
+	frameworkMap = &sync.Map{}
+	userComponentMap = &sync.Map{}
+	errorCountMap = make(map[int]ErrorCount)
 
+	rand.Seed(time.Now().UnixNano())
+
+	threadsWG = &sync.WaitGroup{}
 	threadsWG.Add(threadCount)
 	for thread := 0; thread < threadCount; thread++ {
-		go userJourneyThread(framework, thread, AppStudioUsersBar, ResourcesBar, PipelinesBar)
+		go userJourneyThread(frameworkMap, threadsWG, thread, AppStudioUsersBar, ResourcesBar, PipelinesBar)
 	}
 
 	// Todo add cleanup functions that will delete user signups
 
 	threadsWG.Wait()
 	uip.Stop()
+
+	logData.EndTimestamp = time.Now().Format("2006-01-02T15:04:05Z07:00")
+
+	logData.LoadTestCompletionStatus = "Completed"
+
+	userCreationFailureCount := sumFromArray(FailedUserCreationsPerThread)
+	logData.UserCreationFailureCount = userCreationFailureCount
+
+	averageTimeToSpinUpUsers := float64(0)
+	userCreationSuccessCount := sumFromArray(SuccessfulUserCreationsPerThread)
+	if userCreationSuccessCount > 0 {
+		averageTimeToSpinUpUsers = sumDurationFromArray(UserCreationTimeSumPerThread).Seconds() / float64(userCreationSuccessCount)
+	}
+	logData.AverageTimeToSpinUpUsers = averageTimeToSpinUpUsers
+
+	logData.MaxTimeToSpinUpUsers = maxDurationFromArray(UserCreationTimeMaxPerThread).Seconds()
+
+	resourceCreationFailureCount := sumFromArray(FailedResourceCreationsPerThread)
+	logData.ResourceCreationFailureCount = resourceCreationFailureCount
+
+	averageTimeToCreateResources := float64(0)
+	resourceCreationSuccessCount := sumFromArray(SuccessfulResourceCreationsPerThread)
+	if resourceCreationSuccessCount > 0 {
+		averageTimeToCreateResources = sumDurationFromArray(ResourceCreationTimeSumPerThread).Seconds() / float64(resourceCreationSuccessCount)
+	}
+	logData.AverageTimeToCreateResources = averageTimeToCreateResources
+
+	logData.MaxTimeToCreateResources = maxDurationFromArray(ResourceCreationTimeMaxPerThread).Seconds()
+
+	pipelineRunFailureCount := sumFromArray(FailedPipelineRunsPerThread)
+	logData.PipelineRunFailureCount = pipelineRunFailureCount
+
+	averageTimeToRunPipelineSucceeded := float64(0)
+	pipelineRunSuccessCount := sumFromArray(SuccessfulPipelineRunsPerThread)
+	if pipelineRunSuccessCount > 0 {
+		averageTimeToRunPipelineSucceeded = sumDurationFromArray(PipelineRunSucceededTimeSumPerThread).Seconds() / float64(pipelineRunSuccessCount)
+	}
+	logData.AverageTimeToRunPipelineSucceeded = averageTimeToRunPipelineSucceeded
+
+	logData.MaxTimeToRunPipelineSucceeded = maxDurationFromArray(PipelineRunSucceededTimeMaxPerThread).Seconds()
+
+	averageTimeToRunPipelineFailed := float64(0)
+	if pipelineRunFailureCount > 0 {
+		averageTimeToRunPipelineFailed = sumDurationFromArray(PipelineRunFailedTimeSumPerThread).Seconds() / float64(pipelineRunFailureCount)
+	}
+	logData.AverageTimeToRunPipelineFailed = averageTimeToRunPipelineFailed
+
+	userCreationFailureRate := float64(userCreationFailureCount) / float64(overallCount)
+	logData.UserCreationFailureRate = userCreationFailureRate
+
+	resourceCreationFailureRate := float64(resourceCreationFailureCount) / float64(overallCount)
+	logData.ResourceCreationFailureRate = resourceCreationFailureRate
+
+	pipelineRunFailureRate := float64(pipelineRunFailureCount) / float64(overallCount)
+	logData.PipelineRunFailureRate = pipelineRunFailureRate
+
 	klog.Infof("🏁 Load Test Completed!")
 	klog.Infof("📈 Results 📉")
-	klog.Infof("Average Time taken to spin up users: %.2f s", averageDurationFromArray(AverageUserCreationTime, overallCount))
-	klog.Infof("Average Time taken to Create Resources: %.2f s", averageDurationFromArray(AverageResourceCreationTimePerUser, overallCount))
-	klog.Infof("Average Time taken to Run Pipelines: %.2f s", averageDurationFromArray(AveragePipelineRunTimePerUser, overallCount))
-	klog.Infof("Number of times user creation failed: %d (%.2f %%)", sumFromArray(FailedUserCreations), 100*float64(sumFromArray(FailedUserCreations))/float64(overallCount))
-	klog.Infof("Number of times resource creation failed: %d (%.2f %%)", sumFromArray(FailedResourceCreations), 100*float64(sumFromArray(FailedResourceCreations))/float64(overallCount))
-	klog.Infof("Number of times pipeline run failed: %d (%.2f %%)", sumFromArray(FailedPipelineRuns), 100*float64(sumFromArray(FailedPipelineRuns))/float64(overallCount))
+	klog.Infof("Average Time to spin up users: %.2f s", averageTimeToSpinUpUsers)
+	klog.Infof("Maximal Time to spin up users: %.2f s", logData.MaxTimeToSpinUpUsers)
+	klog.Infof("Average Time to create Resources: %.2f s", averageTimeToCreateResources)
+	klog.Infof("Maximal Time to create Resources: %.2f s", logData.MaxTimeToCreateResources)
+	klog.Infof("Average Time to run Pipelines successfully: %.2f s", averageTimeToRunPipelineSucceeded)
+	klog.Infof("Maximal Time to run Pipelines successfully: %.2f s", logData.MaxTimeToRunPipelineSucceeded)
+	klog.Infof("Average Time to fail Pipelines: %.2f s", averageTimeToRunPipelineFailed)
+	klog.Infof("Number of times user creation failed: %d (%.2f %%)", userCreationFailureCount, userCreationFailureRate*100)
+	klog.Infof("Number of times resource creation failed: %d (%.2f %%)", resourceCreationFailureCount, resourceCreationFailureRate*100)
+	klog.Infof("Number of times pipeline run failed: %d (%.2f %%)", pipelineRunFailureCount, pipelineRunFailureRate*100)
+	klog.Infoln("Error summary:")
+	for _, errorCount := range errorCountMap {
+		klog.Infof("Number of error #%d occured: %d", errorCount.ErrorCode, errorCount.Count)
+		logData.ErrorCounts = append(logData.ErrorCounts, errorCount)
+	}
+	logData.ErrorsTotal = len(logData.Errors)
+	klog.Infof("Total number of errors occured: %d", logData.ErrorsTotal)
+
+	err = createLogDataJSON("load-tests.json", logData)
+	if err != nil {
+		klog.Errorf("error while marshalling JSON: %v\n", err)
+	}
+
 	klog.StopFlushDaemon()
 	klog.Flush()
 	if !disableMetrics {
@@ -233,12 +417,22 @@ func setup(cmd *cobra.Command, args []string) {
 	}
 }
 
-func averageDurationFromArray(duration []time.Duration, count int) float64 {
-	avg := 0
-	for _, i := range duration {
-		avg += int(i.Seconds())
+func maxDurationFromArray(durations []time.Duration) time.Duration {
+	max := time.Duration(0)
+	for _, i := range durations {
+		if i > max {
+			max = i
+		}
 	}
-	return float64(avg) / float64(count)
+	return max
+}
+
+func sumDurationFromArray(durations []time.Duration) time.Duration {
+	sum := time.Duration(0)
+	for _, i := range durations {
+		sum += i
+	}
+	return sum
 }
 
 func sumFromArray(array []int64) int64 {
@@ -249,11 +443,67 @@ func sumFromArray(array []int64) int64 {
 	return sum
 }
 
-func userJourneyThread(framework *framework.Framework, threadIndex int, usersBar *uiprogress.Bar, resourcesBar *uiprogress.Bar, pipelinesBar *uiprogress.Bar) {
-	chUsers := make(chan int, numberOfUsers)
-	chPipelines := make(chan int, numberOfUsers)
+func increaseBar(bar *uiprogress.Bar, mutex *sync.Mutex) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	bar.Incr()
+}
 
-	var wg sync.WaitGroup
+func componentForUser(username string) string {
+	val, ok := userComponentMap.Load(username)
+	if ok {
+		componentName, ok2 := val.(string)
+		if ok2 {
+			return componentName
+		} else {
+			klog.Errorf("Invalid type of map value: %+v", val)
+		}
+	}
+	return ""
+}
+
+func frameworkForUser(username string) *framework.Framework {
+	val, ok := frameworkMap.Load(username)
+	if ok {
+		framework, ok2 := val.(*framework.Framework)
+		if ok2 {
+			return framework
+		} else {
+			klog.Errorf("Invalid type of map value: %+v", val)
+		}
+	}
+	return nil
+}
+
+func tryNewFramework(username string, timeout time.Duration) (*framework.Framework, error) {
+	ch := make(chan *framework.Framework)
+	var fw *framework.Framework
+	var err error
+	go func() {
+		fw, err = framework.NewFrameworkWithTimeout(username, time.Minute*60)
+		ch <- fw
+	}()
+
+	var ret *framework.Framework
+
+	select {
+	case result := <-ch:
+		ret = result
+	case <-time.After(timeout):
+		ret = nil
+		err = fmt.Errorf("unable to create new framework for user %s within %v", username, timeout)
+	}
+
+	return ret, err
+}
+
+func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, threadIndex int, usersBar *uiprogress.Bar, resourcesBar *uiprogress.Bar, pipelinesBar *uiprogress.Bar) {
+	chUsers := make(chan string, numberOfUsers)
+	chPipelines := make(chan string, numberOfUsers)
+
+	defer threadWaitGroup.Done()
+
+	var wg *sync.WaitGroup = &sync.WaitGroup{}
 
 	if waitPipelines {
 		wg.Add(3)
@@ -262,135 +512,198 @@ func userJourneyThread(framework *framework.Framework, threadIndex int, usersBar
 	}
 
 	go func() {
-	UserLoop:
+		defer wg.Done()
 		for userIndex := 1; userIndex <= numberOfUsers; userIndex++ {
 			startTime := time.Now()
 			username := fmt.Sprintf("%s-%04d", usernamePrefix, threadIndex*numberOfUsers+userIndex)
-			if err := users.Create(framework.AsKubeAdmin.CommonController.KubeRest(), username, constants.HostOperatorNamespace, constants.MemberOperatorNamespace); err != nil {
+			framework, err := tryNewFramework(username, 60*time.Minute)
+			if err != nil {
 				logError(1, fmt.Sprintf("Unable to provision user '%s': %v", username, err))
-				atomic.StoreInt64(&FailedUserCreations[threadIndex], atomic.AddInt64(&FailedUserCreations[threadIndex], 1))
+				FailedUserCreationsPerThread[threadIndex] += 1
+				increaseBar(usersBar, usersBarMutex)
 				continue
+			} else {
+				frameworkMap.Store(username, framework)
 			}
-			if userIndex%userBatches == 0 {
-				for i := userIndex - userBatches + 1; i <= userIndex; i++ {
-					usernamespace := fmt.Sprintf("%s-%04d-tenant", usernamePrefix, threadIndex*numberOfUsers+userIndex)
-					if err := wait.ForNamespace(framework.AsKubeAdmin.CommonController.KubeRest(), usernamespace); err != nil {
-						logError(2, fmt.Sprintf("Unable to find namespace '%s' within %v: %v", usernamespace, configuration.DefaultTimeout, err))
-						atomic.StoreInt64(&FailedUserCreations[threadIndex], atomic.AddInt64(&FailedUserCreations[threadIndex], 1))
-						continue UserLoop
-					}
-					chUsers <- i
-				}
+
+			chUsers <- username
+
+			userCreationTime := time.Since(startTime)
+			UserCreationTimeSumPerThread[threadIndex] += userCreationTime
+			if userCreationTime > UserCreationTimeMaxPerThread[threadIndex] {
+				UserCreationTimeMaxPerThread[threadIndex] = userCreationTime
 			}
-			UserCreationTime := time.Since(startTime)
-			AverageUserCreationTime[threadIndex] += UserCreationTime
-			usersBar.Incr()
+
+			SuccessfulUserCreationsPerThread[threadIndex] += 1
+			increaseBar(usersBar, usersBarMutex)
 		}
 		close(chUsers)
-		wg.Done()
 	}()
 
 	go func() {
-		for userIndex := range chUsers {
+		defer wg.Done()
+		for username := range chUsers {
 			startTime := time.Now()
-			username := fmt.Sprintf("%s-%04d", usernamePrefix, threadIndex*numberOfUsers+userIndex)
-			usernamespace := fmt.Sprintf("%s-tenant", username)
-			_, errors := framework.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(
-				constants.RegistryAuthSecretName,
-				usernamespace,
-				utils.GetDockerConfigJson(),
-			)
-			if errors != nil {
-				logError(3, fmt.Sprintf("Unable to create the secret %s in namespace %s: %v", constants.RegistryAuthSecretName, usernamespace, errors))
-				atomic.StoreInt64(&FailedResourceCreations[threadIndex], atomic.AddInt64(&FailedResourceCreations[threadIndex], 1))
+			framework := frameworkForUser(username)
+			if framework == nil {
+				logError(2, fmt.Sprintf("Framework not found for username %s", username))
+				increaseBar(resourcesBar, resourcesBarMutex)
 				continue
 			}
-			// time.Sleep(time.Second * 2)
+			usernamespace := framework.UserNamespace
 			ApplicationName := fmt.Sprintf("%s-app", username)
-			app, err := framework.AsKubeAdmin.HasController.CreateHasApplication(ApplicationName, usernamespace)
+			app, err := framework.AsKubeDeveloper.HasController.CreateApplicationWithTimeout(ApplicationName, usernamespace, 60*time.Minute)
 			if err != nil {
 				logError(4, fmt.Sprintf("Unable to create the Application %s: %v", ApplicationName, err))
-				atomic.StoreInt64(&FailedResourceCreations[threadIndex], atomic.AddInt64(&FailedResourceCreations[threadIndex], 1))
+				FailedResourceCreationsPerThread[threadIndex] += 1
+				increaseBar(resourcesBar, resourcesBarMutex)
 				continue
 			}
-			gitopsRepoTimeout := 60 * time.Second
-			if err := utils.WaitUntil(framework.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), gitopsRepoTimeout); err != nil {
-				logError(5, fmt.Sprintf("Unable to create application %s gitops repo within %v: %v", ApplicationName, gitopsRepoTimeout, err))
-				atomic.StoreInt64(&FailedResourceCreations[threadIndex], atomic.AddInt64(&FailedResourceCreations[threadIndex], 1))
-				continue
-			}
-			ComponentName := fmt.Sprintf("%s-component", username)
-			ComponentContainerImage := fmt.Sprintf("quay.io/%s/test-images:%s-%s", utils.GetQuayIOOrganization(), username, strings.Replace(uuid.New().String(), "-", "", -1))
-			component, err := framework.AsKubeAdmin.HasController.CreateComponent(
-				ApplicationName,
-				ComponentName,
-				usernamespace,
-				QuarkusDevfileSource,
-				"",
-				"",
-				ComponentContainerImage,
-				"",
-				true,
-			)
-			if err != nil {
-				logError(6, fmt.Sprintf("Unable to create the Component %s: %v", ComponentName, err))
-				atomic.StoreInt64(&FailedResourceCreations[threadIndex], atomic.AddInt64(&FailedResourceCreations[threadIndex], 1))
-				continue
-			}
-			if component.Name != ComponentName {
-				logError(7, fmt.Sprintf("Actual component name (%s) does not match expected (%s): %v", component.Name, ComponentName, err))
-				atomic.StoreInt64(&FailedResourceCreations[threadIndex], atomic.AddInt64(&FailedResourceCreations[threadIndex], 1))
-				continue
-			}
-			if userIndex%userBatches == 0 {
-				for i := userIndex - userBatches + 1; i <= userIndex; i++ {
-					time.Sleep(time.Second * 1)
-					// Todo Add validation after each batch
+			gitopsRepoInterval := 5 * time.Second
+			gitopsRepoTimeout := 60 * time.Minute
+			repoUrl := utils.ObtainGitOpsRepositoryUrl(app.Status.Devfile)
+			if err := utils.WaitUntilWithInterval(func() (done bool, err error) {
+				resp, err := http.Get(repoUrl)
+				if err != nil {
+					return false, fmt.Errorf("unable to request gitops repo %s: %+v", repoUrl, err)
 				}
+				defer resp.Body.Close()
+				if resp.StatusCode == 404 {
+					return false, nil
+				} else if resp.StatusCode == 200 {
+					return true, nil
+				} else {
+					return false, fmt.Errorf("unexpected response code when requesting gitop repo %s: %v", repoUrl, err)
+				}
+			}, gitopsRepoInterval, gitopsRepoTimeout); err != nil {
+				logError(5, fmt.Sprintf("Unable to create application %s gitops repo within %v: %v", ApplicationName, gitopsRepoTimeout, err))
+				FailedResourceCreationsPerThread[threadIndex] += 1
+				increaseBar(resourcesBar, resourcesBarMutex)
+				continue
 			}
-			ResourceCreationTime := time.Since(startTime)
-			AverageResourceCreationTimePerUser[threadIndex] += ResourceCreationTime
-			chPipelines <- userIndex
-			resourcesBar.Incr()
+
+			ComponentDetectionQueryName := fmt.Sprintf("%s-cdq", username)
+			cdq, err := framework.AsKubeDeveloper.HasController.CreateComponentDetectionQueryWithTimeout(ComponentDetectionQueryName, usernamespace, componentRepoUrl, "", "", "", false, 60*time.Minute)
+			if err != nil {
+				logError(6, fmt.Sprintf("Unable to create ComponentDetectionQuery %s: %v", ComponentDetectionQueryName, err))
+				FailedResourceCreationsPerThread[threadIndex] += 1
+				increaseBar(resourcesBar, resourcesBarMutex)
+				continue
+			}
+			if cdq.Name != ComponentDetectionQueryName {
+				logError(7, fmt.Sprintf("Actual cdq name (%s) does not match expected (%s): %v", cdq.Name, ComponentDetectionQueryName, err))
+				FailedResourceCreationsPerThread[threadIndex] += 1
+				increaseBar(resourcesBar, resourcesBarMutex)
+				continue
+			}
+			if len(cdq.Status.ComponentDetected) > 1 {
+				logError(8, fmt.Sprintf("cdq (%s) detected more than 1 component", cdq.Name))
+				FailedResourceCreationsPerThread[threadIndex] += 1
+				increaseBar(resourcesBar, resourcesBarMutex)
+				continue
+			}
+
+			for _, compStub := range cdq.Status.ComponentDetected {
+				component, err := framework.AsKubeDeveloper.HasController.CreateComponent(compStub.ComponentStub, usernamespace, "", "", ApplicationName, pipelineSkipInitialChecks, map[string]string{})
+
+				if err != nil {
+					logError(9, fmt.Sprintf("Unable to create the Component %s: %v", compStub.ComponentStub.ComponentName, err))
+					FailedResourceCreationsPerThread[threadIndex] += 1
+					increaseBar(resourcesBar, resourcesBarMutex)
+					continue
+				}
+				if component.Name != compStub.ComponentStub.ComponentName {
+					logError(10, fmt.Sprintf("Actual component name (%s) does not match expected (%s): %v", component.Name, compStub.ComponentStub.ComponentName, err))
+					FailedResourceCreationsPerThread[threadIndex] += 1
+					increaseBar(resourcesBar, resourcesBarMutex)
+					continue
+				}
+				userComponentMap.Store(username, component.Name)
+			}
+
+			resourceCreationTime := time.Since(startTime)
+			ResourceCreationTimeSumPerThread[threadIndex] += resourceCreationTime
+			if resourceCreationTime > ResourceCreationTimeMaxPerThread[threadIndex] {
+				ResourceCreationTimeMaxPerThread[threadIndex] = resourceCreationTime
+			}
+			SuccessfulResourceCreationsPerThread[threadIndex] += 1
+
+			chPipelines <- username
+			increaseBar(resourcesBar, resourcesBarMutex)
 		}
 		close(chPipelines)
-		wg.Done()
 	}()
 
 	if waitPipelines {
 		go func() {
-			for userIndex := range chPipelines {
-				username := fmt.Sprintf("%s-%04d", usernamePrefix, threadIndex*numberOfUsers+userIndex)
-				usernamespace := fmt.Sprintf("%s-tenant", username)
-				ComponentName := fmt.Sprintf("%s-component", username)
-				ApplicationName := fmt.Sprintf("%s-app", username)
-				DefaultRetryInterval := time.Millisecond * 200
-				DefaultTimeout := time.Minute * 17
-				error := k8swait.Poll(DefaultRetryInterval, DefaultTimeout, func() (done bool, err error) {
-					pipelineRun, err := framework.AsKubeAdmin.HasController.GetComponentPipelineRun(ComponentName, ApplicationName, usernamespace, "")
+			defer wg.Done()
+			for username := range chPipelines {
+				framework := frameworkForUser(username)
+				if framework == nil {
+					logError(11, fmt.Sprintf("Framework not found for username %s", username))
+					increaseBar(pipelinesBar, pipelinesBarMutex)
+					continue
+				}
+				usernamespace := framework.UserNamespace
+				componentName := componentForUser(username)
+				if componentName == "" {
+					logError(12, fmt.Sprintf("Component not found for username %s", username))
+					increaseBar(pipelinesBar, pipelinesBarMutex)
+					continue
+				}
+				applicationName := fmt.Sprintf("%s-app", username)
+				pipelineCreatedRetryInterval := time.Second * 5
+				pipelineCreatedTimeout := time.Minute * 15
+				var pipelineRun *v1beta1.PipelineRun
+				err := k8swait.Poll(pipelineCreatedRetryInterval, pipelineCreatedTimeout, func() (done bool, err error) {
+					pipelineRun, err = framework.AsKubeDeveloper.HasController.GetComponentPipelineRun(componentName, applicationName, usernamespace, "")
 					if err != nil {
+						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
+						return false, nil
+					}
+					return true, nil
+				})
+				if err != nil {
+					logError(13, fmt.Sprintf("PipelineRun for %s/%s has not been created within %v: %v", applicationName, componentName, pipelineCreatedTimeout, err))
+					FailedPipelineRunsPerThread[threadIndex] += 1
+					increaseBar(pipelinesBar, pipelinesBarMutex)
+					continue
+				}
+				pipelineRunRetryInterval := time.Second * 5
+				pipelineRunTimeout := time.Minute * 60
+				err = k8swait.Poll(pipelineRunRetryInterval, pipelineRunTimeout, func() (done bool, err error) {
+					pipelineRun, err = framework.AsKubeDeveloper.HasController.GetComponentPipelineRun(componentName, applicationName, usernamespace, "")
+					if err != nil {
+						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
 						return false, nil
 					}
 					if pipelineRun.IsDone() {
-						AveragePipelineRunTimePerUser[threadIndex] += pipelineRun.Status.CompletionTime.Sub(pipelineRun.CreationTimestamp.Time)
 						succeededCondition := pipelineRun.Status.GetCondition(apis.ConditionSucceeded)
 						if succeededCondition.IsFalse() {
-							logError(8, fmt.Sprintf("Pipeline run for %s/%s failed due to %v: %v", ApplicationName, ComponentName, succeededCondition.Reason, succeededCondition.Message))
-							atomic.StoreInt64(&FailedPipelineRuns[threadIndex], atomic.AddInt64(&FailedPipelineRuns[threadIndex], 1))
+							dur := pipelineRun.Status.CompletionTime.Sub(pipelineRun.CreationTimestamp.Time)
+							PipelineRunFailedTimeSumPerThread[threadIndex] += dur
+							logError(14, fmt.Sprintf("Pipeline run for %s/%s failed due to %v: %v", applicationName, componentName, succeededCondition.Reason, succeededCondition.Message))
+							FailedPipelineRunsPerThread[threadIndex] += 1
+						} else {
+							dur := pipelineRun.Status.CompletionTime.Sub(pipelineRun.CreationTimestamp.Time)
+							PipelineRunSucceededTimeSumPerThread[threadIndex] += dur
+							if dur > PipelineRunSucceededTimeMaxPerThread[threadIndex] {
+								PipelineRunSucceededTimeMaxPerThread[threadIndex] = dur
+							}
+							SuccessfulPipelineRunsPerThread[threadIndex] += 1
 						}
-						pipelinesBar.Incr()
+						increaseBar(pipelinesBar, pipelinesBarMutex)
 					}
 					return pipelineRun.IsDone(), nil
 				})
-				if error != nil {
-					logError(9, fmt.Sprintf("Pipeline run for %s/%s failed to succeed within %v: %v", ApplicationName, ComponentName, DefaultTimeout, error))
-					atomic.StoreInt64(&FailedPipelineRuns[threadIndex], atomic.AddInt64(&FailedPipelineRuns[threadIndex], 1))
+				if err != nil {
+					logError(15, fmt.Sprintf("Pipeline run for %s/%s failed to succeed within %v: %v", applicationName, componentName, pipelineRunTimeout, err))
+					FailedPipelineRunsPerThread[threadIndex] += 1
+					increaseBar(pipelinesBar, pipelinesBarMutex)
 					continue
 				}
 			}
-			wg.Done()
 		}()
 	}
 	wg.Wait()
-	threadsWG.Done()
 }

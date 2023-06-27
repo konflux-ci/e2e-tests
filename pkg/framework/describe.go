@@ -43,8 +43,8 @@ func IntegrationServiceSuiteDescribe(text string, args ...interface{}) bool {
 	return Describe("[integration-service-suite "+text+"]", args, Ordered)
 }
 
-func MvpDemoSuiteDescribe(text string, args ...interface{}) bool {
-	return Describe("[mvp-demo-suite "+text+"]", args, Ordered)
+func RhtapDemoSuiteDescribe(text string, args ...interface{}) bool {
+	return Describe("[rhtap-demo-suite "+text+"]", args, Ordered)
 }
 
 func O11ySuiteDescribe(text string, args ...interface{}) bool {
@@ -53,4 +53,8 @@ func O11ySuiteDescribe(text string, args ...interface{}) bool {
 
 func SPISuiteDescribe(args ...interface{}) bool {
 	return Describe("[spi-suite]", args, Ordered)
+}
+
+func EnterpriseContractSuiteDescribe(text string, args ...interface{}) bool {
+	return Describe("[enterprise-contract-suite "+text+"]", args, Ordered)
 }

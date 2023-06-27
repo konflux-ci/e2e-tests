@@ -28,7 +28,7 @@ var (
 		{
 			TestName:        "private GitHub repository",
 			Accessibility:   v1beta1.SPIAccessCheckAccessibilityPrivate,
-			RepoURL:         "https://github.com/redhat-appstudio-qe/private-quarkus-devfile-sample",
+			RepoURL:         GithubPrivateRepoURL,
 			RepoType:        v1beta1.SPIRepoTypeGit,
 			ServiceProvider: v1beta1.ServiceProviderTypeGitHub,
 		},

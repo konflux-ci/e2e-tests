@@ -34,7 +34,7 @@ import (
 )
 
 var (
-	requiredBinaries = []string{"jq", "kubectl", "oc", "yq", "git"}
+	requiredBinaries = []string{"jq", "kubectl", "oc", "yq", "git", "helm"}
 	artifactDir      = utils.GetEnv("ARTIFACT_DIR", ".")
 	openshiftJobSpec = &OpenshiftJobSpec{}
 	pr               = &PullRequestMetadata{}
@@ -181,7 +181,7 @@ func (Local) CleanupGithubOrg() error {
 }
 
 // Deletes Quay repos and robot accounts older than 24 hours with prefixes `has-e2e` and `e2e-demos`, uses env vars DEFAULT_QUAY_ORG and DEFAULT_QUAY_ORG_TOKEN
-func (Local) CleanupQuay() error {
+func (Local) CleanupQuayReposAndRobots() error {
 	quayOrgToken := os.Getenv("DEFAULT_QUAY_ORG_TOKEN")
 	if quayOrgToken == "" {
 		return fmt.Errorf("DEFAULT_QUAY_ORG_TOKEN env var was not found")
@@ -189,7 +189,19 @@ func (Local) CleanupQuay() error {
 	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
 
 	quayClient := quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayOrgToken, "https://quay.io/api/v1")
-	return cleanupQuay(&quayClient, quayOrg)
+	return cleanupQuayReposAndRobots(&quayClient, quayOrg)
+}
+
+// Deletes Quay Tags older than 7 days in `test-images` repository
+func (Local) CleanupQuayTags() error {
+	quayOrgToken := os.Getenv("DEFAULT_QUAY_ORG_TOKEN")
+	if quayOrgToken == "" {
+		return fmt.Errorf("DEFAULT_QUAY_ORG_TOKEN env var was not found")
+	}
+	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
+
+	quayClient := quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayOrgToken, "https://quay.io/api/v1")
+	return cleanupQuayTags(&quayClient, quayOrg, "test-images")
 }
 
 func (ci CI) TestE2E() error {
@@ -230,7 +242,7 @@ func RunE2ETests() error {
 	cwd, _ := os.Getwd()
 
 	// added --output-interceptor-mode=none to mitigate RHTAPBUGS-34
-	return sh.RunV("ginkgo", "-p", "--output-interceptor-mode=none", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", fmt.Sprintf("--config-suites=%s/tests/e2e-demos/config/default.yaml", cwd), "--generate-rppreproc-report=true", fmt.Sprintf("--rp-preproc-dir=%s", artifactDir))
+	return sh.RunV("ginkgo", "-p", "-v", "--output-interceptor-mode=none", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", fmt.Sprintf("--config-suites=%s/tests/e2e-demos/config/default.yaml", cwd), "--generate-rppreproc-report=true", fmt.Sprintf("--rp-preproc-dir=%s", artifactDir))
 }
 
 func PreflightChecks() error {
@@ -283,7 +295,7 @@ func (ci CI) setRequiredEnvVars() error {
 			case strings.Contains(jobName, "application-service"):
 				envVarPrefix = "HAS"
 				imageTagSuffix = "has-image"
-				testSuiteLabel = "has,e2e-demo"
+				testSuiteLabel = "e2e-demo,byoc"
 			case strings.Contains(jobName, "release-service"):
 				envVarPrefix = "RELEASE_SERVICE"
 				imageTagSuffix = "release-service-image"
@@ -368,7 +380,7 @@ func (ci CI) setRequiredEnvVars() error {
 			case strings.Contains(jobName, "image-controller"):
 				envVarPrefix = "IMAGE_CONTROLLER"
 				imageTagSuffix = "image-controller-image"
-				testSuiteLabel = "pac-build"
+				testSuiteLabel = "image-controller"
 			}
 
 			os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", envVarPrefix), sp[0])
@@ -384,7 +396,7 @@ func (ci CI) setRequiredEnvVars() error {
 		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
-			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,mvp-demo,spi-suite,integration-service,o11y")
+			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,spi-suite,integration-service,o11y,ec,byoc")
 		}
 	} else {
 		if ci.isPRPairingRequired("infra-deployments") {

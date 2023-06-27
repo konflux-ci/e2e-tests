@@ -47,10 +47,18 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-rest-endpoin
 				Expect(err).NotTo(HaveOccurred())
 				namespace = fw.UserNamespace
 				Expect(namespace).NotTo(BeEmpty())
+
+				// collect SPI ResourceQuota metrics (temporary)
+				err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("token-upload-rest-endpoint", namespace, "appstudio-crds-spi")
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			// Clean up after running these tests and before the next tests block: can't have multiple AccessTokens in Injected phase
 			AfterAll(func() {
+				// collect SPI ResourceQuota metrics (temporary)
+				err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("token-upload-rest-endpoint", namespace, "appstudio-crds-spi")
+				Expect(err).NotTo(HaveOccurred())
+
 				if !CurrentSpecReport().Failed() {
 					Expect(fw.AsKubeAdmin.SPIController.DeleteAllBindingTokensInASpecificNamespace(namespace)).To(Succeed())
 					Expect(fw.AsKubeAdmin.SPIController.DeleteAllAccessTokensInASpecificNamespace(namespace)).To(Succeed())
@@ -63,6 +71,9 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-rest-endpoin
 			It("creates SPITokenBinding", func() {
 				SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.CreateSPIAccessTokenBinding(SPITokenBindingName, namespace, test.RepoURL, "", "kubernetes.io/basic-auth")
 				Expect(err).NotTo(HaveOccurred())
+
+				SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			var SPIAccessCheck *v1beta1.SPIAccessCheck
@@ -70,12 +81,12 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-rest-endpoin
 				It("creates SPIAccessCheck", func() {
 					SPIAccessCheck, err = fw.AsKubeDeveloper.SPIController.CreateSPIAccessCheck(SPIAccessCheckPrefixName, namespace, test.RepoURL)
 					Expect(err).NotTo(HaveOccurred())
+
+					SPIAccessCheck, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessCheck(SPIAccessCheck.Name, namespace)
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("checks if repository is accessible", func() {
-					SPIAccessCheck, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessCheck(SPIAccessCheck.Name, namespace)
-					Expect(err).NotTo(HaveOccurred())
-
 					Eventually(func() bool {
 						SPIAccessCheck, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessCheck(SPIAccessCheck.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())
@@ -105,10 +116,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-rest-endpoin
 				// wait SPITokenBinding to be in AwaitingTokenData phase before trying to upload a token
 				Eventually(func() bool {
 					SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
-
-					if err != nil {
-						return false
-					}
+					Expect(err).NotTo(HaveOccurred())
 
 					return (SPITokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData)
 				}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in AwaitingTokenData phase")
@@ -118,16 +126,13 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-rest-endpoin
 				// the UploadUrl in SPITokenBinding should be available before uploading the token
 				Eventually(func() bool {
 					SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
-
-					if err != nil {
-						return false
-					}
+					Expect(err).NotTo(HaveOccurred())
 
 					return SPITokenBinding.Status.UploadUrl != ""
 				}, 1*time.Minute, 10*time.Second).Should(BeTrue(), "uploadUrl not set")
 				Expect(err).NotTo(HaveOccurred())
 
-				// linked accessToken token should exsist
+				// linked accessToken token should exist
 				linkedAccessTokenName := SPITokenBinding.Status.LinkedAccessTokenName
 				Expect(linkedAccessTokenName).NotTo(BeEmpty())
 
@@ -170,6 +175,9 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-rest-endpoin
 			Describe("SVPI-404 - Check access to GitHub repository after token upload", func() {
 				It("creates SPIAccessCheck", func() {
 					SPIAccessCheck, err = fw.AsKubeDeveloper.SPIController.CreateSPIAccessCheck(SPIAccessCheckPrefixName, namespace, test.RepoURL)
+					Expect(err).NotTo(HaveOccurred())
+
+					SPIAccessCheck, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessCheck(SPIAccessCheck.Name, namespace)
 					Expect(err).NotTo(HaveOccurred())
 				})
 

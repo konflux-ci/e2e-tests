@@ -2,13 +2,20 @@ package jvmbuildservice
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
-	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
-	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
+	. "github.com/onsi/ginkgo/v2"
 
+	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
+	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
+	"github.com/redhat-appstudio/jvm-build-service/pkg/reconciler/jbsconfig"
+
+	v1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 type SuiteController struct {
@@ -37,9 +44,9 @@ func (s *SuiteController) DeleteDependencyBuild(name, namespace string) error {
 	return s.JvmbuildserviceClient().JvmbuildserviceV1alpha1().DependencyBuilds(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
-func (s *SuiteController) CreateJBSConfig(name, namespace, imageRegistryOwner string) (*v1alpha1.JBSConfig, error) {
+func (s *SuiteController) CreateJBSConfig(name, namespace string) (*v1alpha1.JBSConfig, error) {
 	config := &v1alpha1.JBSConfig{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
+		ObjectMeta: metav1.ObjectMeta{Name: name, Annotations: map[string]string{jbsconfig.DeleteImageRepositoryAnnotationName: "true"}},
 		Spec: v1alpha1.JBSConfigSpec{
 			EnableRebuilds:              true,
 			RequireArtifactVerification: true,
@@ -63,8 +70,6 @@ func (s *SuiteController) CreateJBSConfig(name, namespace, imageRegistryOwner st
 				"maven-repository-315-kotlin-kotlin-dependencies": "https://maven.pkg.jetbrains.space/kotlin/p/kotlin/kotlin-dependencies"},
 			ImageRegistry: v1alpha1.ImageRegistry{
 				Host:       "quay.io",
-				Owner:      imageRegistryOwner,
-				Repository: "test-images",
 				PrependTag: strconv.FormatInt(time.Now().UnixMilli(), 10),
 			},
 			CacheSettings: v1alpha1.CacheSettings{
@@ -97,4 +102,25 @@ func (s *SuiteController) CreateJBSConfig(name, namespace, imageRegistryOwner st
 		},
 	}
 	return s.JvmbuildserviceClient().JvmbuildserviceV1alpha1().JBSConfigs(namespace).Create(context.TODO(), config, metav1.CreateOptions{})
+}
+
+func (s *SuiteController) WaitForCache(commonctrl *common.SuiteController, testNamespace string) error {
+	return wait.PollImmediate(5*time.Second, 5*time.Minute, func() (bool, error) {
+		cache, err := commonctrl.GetDeployment(v1alpha1.CacheDeploymentName, testNamespace)
+		if err != nil {
+			GinkgoWriter.Printf("failed to get JBS cache deployment: %s\n", err.Error())
+			return false, nil
+		}
+		if cache.Status.AvailableReplicas > 0 {
+			GinkgoWriter.Printf("JBS cache is available\n")
+			return true, nil
+		}
+		for _, cond := range cache.Status.Conditions {
+			if cond.Type == v1.DeploymentProgressing && cond.Status == "False" {
+				return false, fmt.Errorf("JBS cache %s/%s deployment failed", testNamespace, v1alpha1.CacheDeploymentName)
+			}
+		}
+		GinkgoWriter.Printf("JBS cache %s/%s is progressing\n", testNamespace, v1alpha1.CacheDeploymentName)
+		return false, nil
+	})
 }

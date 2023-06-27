@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
+
 	"github.com/avast/retry-go/v4"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/sandbox"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
@@ -20,7 +23,7 @@ import (
 )
 
 type ControllerHub struct {
-	HasController             *has.SuiteController
+	HasController             has.ApplicationService
 	CommonController          *common.SuiteController
 	TektonController          *tekton.SuiteController
 	GitOpsController          *gitops.SuiteController
@@ -34,21 +37,34 @@ type ControllerHub struct {
 type Framework struct {
 	AsKubeAdmin       *ControllerHub
 	AsKubeDeveloper   *ControllerHub
+	ProxyUrl          string
 	SandboxController *sandbox.SandboxController
 	UserNamespace     string
 	UserName          string
+	UserToken         string
 }
 
 func NewFramework(userName string) (*Framework, error) {
+	return NewFrameworkWithTimeout(userName, time.Second*60)
+}
+
+func NewFrameworkWithTimeout(userName string, timeout time.Duration) (*Framework, error) {
 	var err error
 	var k *kubeCl.K8SClient
 
+	// https://issues.redhat.com/browse/CRT-1670
+	if len(userName) > 20 {
+		GinkgoWriter.Printf("WARNING: username %q is longer than 20 characters - the tenant namespace prefix will be shortened to %s\n", userName, userName[:20])
+	}
+
 	// in some very rare cases fail to get the client for some timeout in member operator.
 	// Just try several times to get the user kubeconfig
+
 	err = retry.Do(
 		func() error {
-			k, err = kubeCl.NewDevSandboxProxyClient(userName)
-
+			if k, err = kubeCl.NewDevSandboxProxyClient(userName); err != nil {
+				GinkgoWriter.Printf("error when creating dev sandbox proxy client: %+v\n", err)
+			}
 			return err
 		},
 		retry.Attempts(20),
@@ -68,19 +84,22 @@ func NewFramework(userName string) (*Framework, error) {
 		return nil, fmt.Errorf("error when initializing appstudio hub controllers for sandbox user: %v", err)
 	}
 
-	// "pipeline" service account needs to be present in the namespace before we start with creating tekton resources
-	// TODO: STONE-442 - decrease the timeout here back to 30 seconds once this issue is resolved.
-	userNamespace := fmt.Sprintf("%s-tenant", k.UserName)
-	if err = utils.WaitUntil(asAdmin.CommonController.ServiceaccountPresent("pipeline", userNamespace), time.Second*60); err != nil {
-		return nil, fmt.Errorf("'pipeline' service account wasn't created in %s namespace: %+v", userNamespace, err)
+	if err = utils.WaitUntil(asAdmin.CommonController.ServiceaccountPresent(constants.DefaultPipelineServiceAccount, k.UserNamespace), timeout); err != nil {
+		return nil, fmt.Errorf("'%s' service account wasn't created in %s namespace: %+v", constants.DefaultPipelineServiceAccount, k.UserNamespace, err)
+	}
+
+	if err = asAdmin.CommonController.AddRegistryAuthSecretToSA("QUAY_TOKEN", k.UserNamespace); err != nil {
+		GinkgoWriter.Println(fmt.Sprintf("Failed to add registry auth secret to service account: %v\n", err))
 	}
 
 	return &Framework{
 		AsKubeAdmin:       asAdmin,
 		AsKubeDeveloper:   asUser,
+		ProxyUrl:          k.ProxyUrl,
 		SandboxController: k.SandboxController,
-		UserNamespace:     userNamespace,
+		UserNamespace:     k.UserNamespace,
 		UserName:          k.UserName,
+		UserToken:         k.UserToken,
 	}, nil
 }
 
@@ -141,5 +160,4 @@ func InitControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 		JvmbuildserviceController: jvmbuildserviceController,
 		O11yController:            o11yController,
 	}, nil
-
 }
