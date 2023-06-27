@@ -26,8 +26,9 @@ func (g *Github) CreateRef(repository, baseBranchName, sha, newBranchName string
 		return fmt.Errorf("error when getting the base branch name '%s' for the repo '%s': %+v", baseBranchName, repository, err)
 	}
 
+	ref.Ref = github.String(fmt.Sprintf("heads/%s", newBranchName))
+
 	if sha != "" {
-		ref.Ref = github.String(fmt.Sprintf("heads/%s", newBranchName))
 		ref.Object.SHA = &sha
 
 		refURL := fmt.Sprintf("%s/%s", (*ref.Object.URL)[:strings.LastIndex(*ref.Object.URL, "/")], sha)
