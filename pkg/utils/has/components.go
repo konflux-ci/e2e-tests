@@ -12,6 +12,7 @@ import (
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -170,6 +171,9 @@ func (h *hasFactory) CreateComponent(componentSpec appservice.ComponentSpec, nam
 	if err := utils.WaitUntil(h.ComponentReady(componentObject), time.Minute*10); err != nil {
 		componentObject = h.refreshComponentForErrorDebug(componentObject)
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
+	}
+	if err := utils.WaitUntil(h.CheckForImageAnnotation(componentObject), time.Minute*1); err != nil {
+		return nil, fmt.Errorf("timed out when waiting for image-controller annotations to be updated on component %s in namespace %s. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
 	}
 	return componentObject, nil
 }
@@ -352,4 +356,15 @@ func (h *hasFactory) refreshComponentForErrorDebug(component *appservice.Compone
 		return component
 	}
 	return retComp
+}
+
+func (h *hasFactory) CheckForImageAnnotation(component *appservice.Component) wait.ConditionFunc {
+	return func() (bool, error) {
+		componentCR, err := h.GetComponent(component.Name, component.Namespace)
+		if err != nil {
+			return false, err
+		}
+		annotations := componentCR.GetAnnotations()
+		return build.IsImageAnnotationPresent(annotations) && build.ImageAnnotationGenerateValueIsNotFailed(annotations), nil
+	}
 }
