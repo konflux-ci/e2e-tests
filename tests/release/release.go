@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	applicationapiv1alpha1 "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"knative.dev/pkg/apis"
@@ -50,23 +51,13 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 
 		GinkgoWriter.Println("Managed Namespace :", managedNamespace)
 
-		// get the ec configmap to configure the policy and data sources
-		cm, err := fw.AsKubeAdmin.CommonController.GetConfigMap("ec-defaults", "enterprise-contract-service")
-		Expect(err).ToNot(HaveOccurred())
-		// the default policy source
-		ecPolicy = ecp.EnterpriseContractPolicySpec{
-			Description: "Red Hat's enterprise requirements",
-			Sources: []ecp.Source{
-				{
-					Name:   "ec-policies",
-					Policy: []string{cm.Data["ec_policy_source"]},
-					Data:   []string{cm.Data["ec_data_source"]},
-				},
-			},
-			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-				Exclude: []string{"tasks", "attestation_task_bundle", "java", "test", "not_useful"},
-			},
-		}
+		// Get the Spec from the default EnterpriseContractPolicy. This resource has up to date
+		// references and contains a small set of policy rules that should always pass during
+		// normal execution.
+		k := tekton.KubeController{Tektonctrl: *fw.AsKubeAdmin.TektonController}
+		defaultECP, err := k.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+		Expect(err).NotTo(HaveOccurred(), "Error when fetching the default ECP: %v", err)
+		ecPolicy = defaultECP.Spec
 	})
 
 	AfterAll(func() {
