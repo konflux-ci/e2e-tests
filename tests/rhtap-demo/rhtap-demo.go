@@ -191,7 +191,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 		Expect(f.AsKubeAdmin.CommonController.Github.CreateRef(sampleRepoName, componentDefaultBranchName, componentRevision, componentNewBaseBranch)).To(Succeed())
 		_, err = f.AsKubeAdmin.HasController.CreateApplication(appName, userNamespace)
 		Expect(err).ShouldNot(HaveOccurred())
-		_, err = f.AsKubeAdmin.IntegrationController.CreateEnvironment(userNamespace, "rhtap-demo-test")
+		_, err = f.AsKubeAdmin.GitOpsController.CreatePocEnvironment("rhtap-demo-test", userNamespace)
 		Expect(err).ShouldNot(HaveOccurred())
 		integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario_beta1(appName, userNamespace, testScenarioGitURL, testScenarioRevision, testScenarioPathInRepo)
 		Expect(err).ShouldNot(HaveOccurred())

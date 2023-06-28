@@ -180,7 +180,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			It("creates a ReleasePlan and an environment", func() {
 				_, err = f.AsKubeAdmin.IntegrationController.CreateReleasePlan(applicationName, appStudioE2EApplicationsNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
-				env, err = f.AsKubeAdmin.IntegrationController.CreateEnvironment(appStudioE2EApplicationsNamespace, EnvironmentName)
+				env, err = f.AsKubeAdmin.GitOpsController.CreatePocEnvironment(EnvironmentName, appStudioE2EApplicationsNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 				testScenarios, err := f.AsKubeAdmin.IntegrationController.GetIntegrationTestScenarios(applicationName, appStudioE2EApplicationsNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -244,7 +244,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					interval = time.Second * 10
 					Eventually(func() bool {
 						if f.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot_push) {
-							component, err := f.AsKubeAdmin.IntegrationController.GetComponent(applicationName, appStudioE2EApplicationsNamespace)
+							component, err := f.AsKubeAdmin.HasController.GetComponentByApplicationName(applicationName, appStudioE2EApplicationsNamespace)
 							if err != nil {
 								GinkgoWriter.Println("component has not been found yet")
 								return false
@@ -353,7 +353,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				// give some time to do eventual updates in component
 				time.Sleep(60 * time.Second)
 
-				component, err := f.AsKubeAdmin.IntegrationController.GetComponent(applicationName, appStudioE2EApplicationsNamespace)
+				component, err := f.AsKubeAdmin.HasController.GetComponentByApplicationName(applicationName, appStudioE2EApplicationsNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				// global candidate is not updated
@@ -374,7 +374,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 				integrationTestScenario_alpha1, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenarioWithEnvironment(applicationName, appStudioE2EApplicationsNamespace, BundleURL, InPipelineName, EnvironmentName)
 				Expect(err).ShouldNot(HaveOccurred())
-				env, err = f.AsKubeAdmin.IntegrationController.CreateEnvironment(appStudioE2EApplicationsNamespace, EnvironmentName)
+				env, err = f.AsKubeAdmin.GitOpsController.CreatePocEnvironment(EnvironmentName, appStudioE2EApplicationsNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -388,7 +388,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("valid deploymentTargetClass doesn't exist", func() {
-				validDTCLS, err := f.AsKubeAdmin.IntegrationController.HaveAvailableDeploymentTargetClassExist()
+				validDTCLS, err := f.AsKubeAdmin.GitOpsController.HaveAvailableDeploymentTargetClassExist()
 				Expect(validDTCLS).To(BeNil())
 				Expect(err).To(BeNil())
 			})
@@ -406,15 +406,15 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					Expect(err).To(BeNil())
 					Expect(len(spaceRequestList.Items) > 0).To(BeFalse())
 
-					deploymentTargetList, err := f.AsKubeAdmin.IntegrationController.GetDeploymentTargets(appStudioE2EApplicationsNamespace)
+					deploymentTargetList, err := f.AsKubeAdmin.GitOpsController.GetDeploymentTargetsList(appStudioE2EApplicationsNamespace)
 					Expect(err).To(BeNil())
 					Expect(len(deploymentTargetList.Items) > 0).To(BeFalse())
 
-					deploymentTargetClaimList, err := f.AsKubeAdmin.IntegrationController.GetDeploymentTargetClaims(appStudioE2EApplicationsNamespace)
+					deploymentTargetClaimList, err := f.AsKubeAdmin.GitOpsController.GetDeploymentTargetClaimsList(appStudioE2EApplicationsNamespace)
 					Expect(err).To(BeNil())
 					Expect(len(deploymentTargetClaimList.Items) > 0).To(BeFalse())
 
-					environmentList, err := f.AsKubeAdmin.IntegrationController.GetEnvironments(appStudioE2EApplicationsNamespace)
+					environmentList, err := f.AsKubeAdmin.GitOpsController.GetEnvironmentsList(appStudioE2EApplicationsNamespace)
 					Expect(err).To(BeNil())
 					Expect(len(environmentList.Items) > 1).To(BeFalse())
 
