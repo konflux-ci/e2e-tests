@@ -90,7 +90,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					Expect(fw.AsKubeAdmin.ReleaseController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)).To(Succeed())
-					Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllGitOpsDeploymentInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+					Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllGitOpsDeploymentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 					Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
 				}
 			})
@@ -123,7 +123,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 			// Create an environment in a specific namespace
 			It("creates an environment", func() {
-				env, err = fw.AsKubeDeveloper.IntegrationController.CreateEnvironment(namespace, EnvironmentName)
+				env, err = fw.AsKubeDeveloper.GitOpsController.CreatePocEnvironment(EnvironmentName, namespace)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -256,7 +256,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					Eventually(func() bool {
 						gitOpsRoute, err := fw.AsKubeDeveloper.CommonController.GetOpenshiftRouteByComponentName(component.Name, namespace)
 						Expect(err).NotTo(HaveOccurred())
-						err = fw.AsKubeDeveloper.GitOpsController.CheckGitOpsEndpoint(gitOpsRoute, componentTest.HealthEndpoint)
+						err = fw.AsKubeDeveloper.CommonController.RouteEndpointIsAccessible(gitOpsRoute, componentTest.HealthEndpoint)
 						if err != nil {
 							GinkgoWriter.Printf("Failed to request component endpoint: %+v\n retrying...\n", err)
 						}

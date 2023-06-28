@@ -26,7 +26,7 @@ type ControllerHub struct {
 	HasController             has.ApplicationService
 	CommonController          *common.SuiteController
 	TektonController          *tekton.SuiteController
-	GitOpsController          *gitops.SuiteController
+	GitOpsController          gitops.Gitops
 	SPIController             *spi.SuiteController
 	ReleaseController         *release.SuiteController
 	IntegrationController     *integration.SuiteController
