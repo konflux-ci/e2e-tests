@@ -45,15 +45,15 @@ func (h *gitopsFactory) GetEnvironmentsList(namespace string) (*appservice.Envir
 }
 
 /*
-* CreateEphemeralEnvironment: create an RHTAP environment pointing to a valid Kubernetes/Openshift cluster
+* CreateEphemeralEnvironment: create an RHTAP environment pointing to a valid Kubernetes/Openshift cluster.
 * Args:
-*	- name: Environment name
-*	- namespace: Namespace where to create the environment. Note: Should be in the same namespace where cluster credential secret it is
-*	- targetNamespace: Cluster namespace where to create Gitops resources
-*	- serverApi: A valid API kubernetes server for a specific Kubernetes/Openshift cluster
-*   - clusterCredentialsSecret: Secret with a valid kubeconfig credentials
-*   - clusterType: Openshift/Kubernetes
-*   - kubeIngressDomain: If clusterType == "Kubernetes", ingressDomain is mandatory and is enforced by the webhook validation
+*  - name: Environment name
+*  - namespace: Namespace where to create the environment. Note: Should be in the same namespace where cluster credential secret it is
+*  - targetNamespace: Cluster namespace where to create Gitops resources
+*  - serverApi: A valid API kubernetes server for a specific Kubernetes/Openshift cluster
+*  - clusterCredentialsSecret: Secret with a valid kubeconfig credentials
+*  - clusterType: Openshift/Kubernetes
+*  - kubeIngressDomain: If clusterType == "Kubernetes", ingressDomain is mandatory and is enforced by the webhook validation
  */
 func (g *gitopsFactory) CreateEphemeralEnvironment(name string, namespace string, targetNamespace string, serverApi string, clusterCredentialsSecret string, clusterType appservice.ConfigurationClusterType, kubeIngressDomain string) (*appservice.Environment, error) {
 	ephemeralEnvironmentObj := &appservice.Environment{
@@ -107,7 +107,7 @@ func (g *gitopsFactory) CreateEphemeralEnvironment(name string, namespace string
 	return ephemeralEnvironmentObj, nil
 }
 
-// CreateEnvironment creates a new poc environment in the kubernetes cluster and returns the created object from the cluster.
+// CreatePocEnvironment creates a new POC environment in the kubernetes cluster and returns the created object from the cluster.
 func (h *gitopsFactory) CreatePocEnvironment(name string, namespace string) (*appservice.Environment, error) {
 	environmentObject := &appservice.Environment{
 		ObjectMeta: metav1.ObjectMeta{
