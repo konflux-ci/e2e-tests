@@ -45,8 +45,8 @@ func (h *hasFactory) CreateComponentDetectionQuery(name string, namespace string
 func (h *hasFactory) CreateComponentDetectionQueryWithTimeout(name string, namespace string, gitSourceURL string, gitSourceRevision string, gitSourceContext string, secret string, isMultiComponent bool, timeout time.Duration) (*appservice.ComponentDetectionQuery, error) {
 	componentDetectionQuery := &appservice.ComponentDetectionQuery{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+			GenerateName: fmt.Sprintf("%s-", name),
+			Namespace:    namespace,
 		},
 		Spec: appservice.ComponentDetectionQuerySpec{
 			GitSource: appservice.GitSource{
