@@ -4,28 +4,28 @@ import kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 
 // Contains all embebed interfaces for release operations.
 type ReleaseService interface {
-	// Interface for all component related operations
+	// Interface for all component related operations.
 	ComponentsInterface
 
-	// Interface for all pipeline related operations
+	// Interface for all pipeline related operations.
 	PipelinesInterface
 
-	// Interface for all plan related operations
+	// Interface for all plan related operations.
 	PlansInterface
 
-	// Interface for all release related operations
+	// Interface for all release related operations.
 	ReleasesInterface
 
-	// Interface for all sbom related operations
+	// Interface for all sbom related operations.
 	SbomInterface
 
-	// Interface for all secret related operations
+	// Interface for all secret related operations.
 	SecretsInterface
 
-	// Interface for all snapshot related operations
+	// Interface for all snapshot related operations.
 	SnapshotsInterface
 
-	// Interface for all strategy related operations
+	// Interface for all strategy related operations.
 	StrategiesInterface
 }
 
