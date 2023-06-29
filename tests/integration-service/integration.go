@@ -19,7 +19,6 @@ import (
 )
 
 const (
-	containerImageSource   = "quay.io/redhat-appstudio-qe/busybox-loop@sha256:f698f1f2cf641fe9176d2a277c9052d872f6b1c39e56248a1dd259b96281dda9"
 	gitSourceRepoName      = "devfile-sample-python-basic"
 	gitSourceURL           = "https://github.com/redhat-appstudio-qe/" + gitSourceRepoName
 	BundleURL              = "quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-pass"
