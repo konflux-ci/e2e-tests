@@ -83,7 +83,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 	var _ = Describe("Creation of the 'Happy path' resources", func() {
 
 		It("creates a Snapshot in dev namespace.", func(ctx SpecContext) {
-			_, err := fw.AsKubeAdmin.ReleaseController.CreateSnapshot(snapshotName, devNamespace, applicationName, snapshotComponents)
+			_, err := fw.AsKubeAdmin.IntegrationController.CreateSnapshotWithComponents(snapshotName, devNamespace, applicationName, snapshotComponents)
 			Expect(err).NotTo(HaveOccurred())
 			// We add the namespace creation timeout as this is the first test so must also take into account the code in BeforeAll
 		}, SpecTimeout(snapshotCreationTimeout+namespaceCreationTimeout*2))

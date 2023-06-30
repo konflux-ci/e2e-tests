@@ -140,7 +140,7 @@ func (h *SuiteController) GetIntegrationTestScenarios(applicationName, namespace
 	return &items, nil
 }
 
-func (h *SuiteController) CreateSnapshot(applicationName, namespace, componentName, containerImage string) (*appstudioApi.Snapshot, error) {
+func (h *SuiteController) CreateSnapshotWithImage(applicationName, namespace, componentName, containerImage string) (*appstudioApi.Snapshot, error) {
 	hasSnapshot := &appstudioApi.Snapshot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "snapshot-sample-" + util.GenerateRandomString(4),
@@ -439,4 +439,51 @@ func (h *SuiteController) CreateIntegrationTestScenario_beta1(applicationName, n
 		return nil, err
 	}
 	return integrationTestScenario, nil
+}
+
+// CreateSnapshot creates a Snapshot using the given parameters.
+func (h *SuiteController) CreateSnapshotWithComponents(name string, namespace string, applicationName string, snapshotComponents []appstudioApi.SnapshotComponent) (*appstudioApi.Snapshot, error) {
+	snapshot := &appstudioApi.Snapshot{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: appstudioApi.SnapshotSpec{
+			Application: applicationName,
+			Components:  snapshotComponents,
+		},
+	}
+	return snapshot, h.KubeRest().Create(context.TODO(), snapshot)
+}
+
+// GetSnapshotByComponent returns the first snapshot in namespace if exist, else will return nil
+func (h *SuiteController) GetSnapshotByComponent(namespace string) (*appstudioApi.Snapshot, error) {
+	snapshot := &appstudioApi.SnapshotList{}
+	opts := []client.ListOption{
+		client.MatchingLabels{
+			"test.appstudio.openshift.io/type": "component",
+		},
+		client.InNamespace(namespace),
+	}
+	err := h.KubeRest().List(context.TODO(), snapshot, opts...)
+
+	if err == nil && len(snapshot.Items) > 0 {
+		return &snapshot.Items[0], nil
+	}
+	return nil, err
+}
+
+// DeleteAllSnapshotsInASpecificNamespace removes all snapshots from a specific namespace. Useful when creating a lot of resources and want to remove all of them
+func (h *SuiteController) DeleteAllSnapshotsInASpecificNamespace(namespace string, timeout time.Duration) error {
+	if err := h.KubeRest().DeleteAllOf(context.TODO(), &appstudioApi.Snapshot{}, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("error deleting snapshots from the namespace %s: %+v", namespace, err)
+	}
+
+	snapshotList := &appstudioApi.SnapshotList{}
+	return utils.WaitUntil(func() (done bool, err error) {
+		if err := h.KubeRest().List(context.Background(), snapshotList, &client.ListOptions{Namespace: namespace}); err != nil {
+			return false, nil
+		}
+		return len(snapshotList.Items) == 0, nil
+	}, timeout)
 }

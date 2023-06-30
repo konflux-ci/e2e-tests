@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,6 +43,9 @@ type ComponentsInterface interface {
 
 	// Creates an component object in the kubernetes cluster.
 	CreateComponent(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string) (*appservice.Component, error)
+
+	// Creates a component based on container image.
+	CreateComponentWithDockerSource(applicationName, componentName, namespace, gitSourceURL, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error)
 
 	// Modifies the replicas of a component.
 	ScaleComponentReplicas(component *appservice.Component, replicas *int) (*appservice.Component, error)
@@ -199,6 +203,38 @@ func (h *hasFactory) CreateComponent(componentSpec appservice.ComponentSpec, nam
 		return nil, fmt.Errorf("timed out when waiting for image-controller annotations to be updated on component %s in namespace %s. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
 	}
 	return componentObject, nil
+}
+
+// CreateComponentWithDockerSource creates a component based on container image source.
+func (h *hasFactory) CreateComponentWithDockerSource(applicationName, componentName, namespace, gitSourceURL, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
+	component := &appservice.Component{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      componentName,
+			Namespace: namespace,
+		},
+		Spec: appservice.ComponentSpec{
+			ComponentName: componentName,
+			Application:   applicationName,
+			Source: appservice.ComponentSource{
+				ComponentSourceUnion: appservice.ComponentSourceUnion{
+					GitSource: &appservice.GitSource{
+						URL:           gitSourceURL,
+						DockerfileURL: containerImageSource,
+					},
+				},
+			},
+			Secret:         secret,
+			ContainerImage: outputContainerImage,
+			Replicas:       pointer.Int(1),
+			TargetPort:     8081,
+			Route:          "",
+		},
+	}
+	err := h.KubeRest().Create(context.TODO(), component)
+	if err != nil {
+		return nil, err
+	}
+	return component, nil
 }
 
 // ScaleDeploymentReplicas scales the replicas of a given deployment

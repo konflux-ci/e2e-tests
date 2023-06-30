@@ -5,6 +5,9 @@ import (
 	"fmt"
 
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	corev1 "k8s.io/api/core/v1"
+	rbac "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -15,6 +18,9 @@ type ReleasesInterface interface {
 	// Creates a release.
 	CreateRelease(name, namespace, snapshot, releasePlan string) (*releaseApi.Release, error)
 
+	//Creates a pipeline RoleBinding for service account.
+	CreateReleasePipelineRoleBindingForServiceAccount(namespace string, serviceAccount *corev1.ServiceAccount) (*rbac.RoleBinding, error)
+
 	// Returns a release.
 	GetRelease(releaseName, snapshotName, namespace string) (*releaseApi.Release, error)
 
@@ -23,6 +29,9 @@ type ReleasesInterface interface {
 
 	// Returns the first release in a namespace.
 	GetFirstReleaseInNamespace(namespace string) (*releaseApi.Release, error)
+
+	// Returns pipelirun referencing given release.
+	GetPipelineRunInNamespace(namespace, releaseName, releaseNamespace string) (*v1beta1.PipelineRun, error)
 }
 
 // CreateRelease creates a new Release using the given parameters.
@@ -39,6 +48,34 @@ func (r *releaseFactory) CreateRelease(name, namespace, snapshot, releasePlan st
 	}
 
 	return release, r.KubeRest().Create(context.TODO(), release)
+}
+
+// CreateReleasePipelineRoleBindingForServiceAccount creates a RoleBinding for the passed serviceAccount to enable
+// retrieving the necessary CRs from the passed namespace.
+func (r *releaseFactory) CreateReleasePipelineRoleBindingForServiceAccount(namespace string, serviceAccount *corev1.ServiceAccount) (*rbac.RoleBinding, error) {
+	roleBinding := &rbac.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "release-service-pipeline-rolebinding-",
+			Namespace:    namespace,
+		},
+		RoleRef: rbac.RoleRef{
+			APIGroup: rbac.GroupName,
+			Kind:     "ClusterRole",
+			Name:     "release-pipeline-resource-role",
+		},
+		Subjects: []rbac.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
+			},
+		},
+	}
+	err := r.KubeRest().Create(context.TODO(), roleBinding)
+	if err != nil {
+		return nil, err
+	}
+	return roleBinding, nil
 }
 
 // GetRelease returns the release with in the given namespace.
@@ -81,14 +118,30 @@ func (r *releaseFactory) GetReleases(namespace string) (*releaseApi.ReleaseList,
 
 // GetFirstReleaseInNamespace returns the first Release from  list of releases in the given namespace.
 func (r *releaseFactory) GetFirstReleaseInNamespace(namespace string) (*releaseApi.Release, error) {
-	releaseList := &releaseApi.ReleaseList{}
-	opts := []client.ListOption{
-		client.InNamespace(namespace),
-	}
+	releaseList, err := r.GetReleases(namespace)
 
-	err := r.KubeRest().List(context.TODO(), releaseList, opts...)
 	if err != nil || len(releaseList.Items) < 1 {
 		return nil, fmt.Errorf("could not find any Releases in namespace %s: %+v", namespace, err)
 	}
 	return &releaseList.Items[0], nil
+}
+
+// GetPipelineRunInNamespace returns the Release PipelineRun referencing the given release.
+func (r *releaseFactory) GetPipelineRunInNamespace(namespace, releaseName, releaseNamespace string) (*v1beta1.PipelineRun, error) {
+	pipelineRuns := &v1beta1.PipelineRunList{}
+	opts := []client.ListOption{
+		client.MatchingLabels{
+			"release.appstudio.openshift.io/name":      releaseName,
+			"release.appstudio.openshift.io/namespace": releaseNamespace,
+		},
+		client.InNamespace(namespace),
+	}
+
+	err := r.KubeRest().List(context.TODO(), pipelineRuns, opts...)
+
+	if err == nil && len(pipelineRuns.Items) > 0 {
+		return &pipelineRuns.Items[0], nil
+	}
+
+	return nil, fmt.Errorf("couldn't find PipelineRun in managed namespace '%s' for a release '%s' in '%s' namespace", namespace, releaseName, releaseNamespace)
 }
