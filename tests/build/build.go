@@ -341,12 +341,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				timeout = time.Minute * 15
 				interval = time.Second * 10
 
-				Eventually(func() bool {
+				Eventually(func() []*github.IssueComment {
 					comments, err = f.AsKubeAdmin.CommonController.Github.ListPullRequestCommentsSince(helloWorldComponentGitSourceRepoName, prNumber, prCreationTime)
 					Expect(err).ShouldNot(HaveOccurred())
 
-					return len(comments) != 0
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for the PaC PR comment about the pipelinerun status to appear in the component repo %s in PR #%d", helloWorldComponentGitSourceRepoName, prNumber))
+					return comments
+				}, timeout, interval).ShouldNot(HaveLen(0), fmt.Sprintf("timed out when waiting for the PaC PR comment about the pipelinerun status to appear in the component repo %s in PR #%d", helloWorldComponentGitSourceRepoName, prNumber))
 
 				// TODO uncomment once https://issues.redhat.com/browse/SRVKP-2471 is sorted
 				//Expect(comments).To(HaveLen(1), fmt.Sprintf("the initial PR has more than 1 comment after a single pipelinerun. repo: %s, pr number: %d, comments content: %v", helloWorldComponentGitSourceURL, prNumber, comments))
@@ -392,12 +392,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				timeout = time.Minute * 20
 				interval = time.Second * 5
 
-				Eventually(func() bool {
+				Eventually(func() []*github.IssueComment {
 					comments, err = f.AsKubeAdmin.CommonController.Github.ListPullRequestCommentsSince(helloWorldComponentGitSourceRepoName, prNumber, branchUpdateTimestamp)
 					Expect(err).ShouldNot(HaveOccurred())
 
-					return len(comments) != 0
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for the PaC PR comment about the pipelinerun status to appear in the component repo %s in PR #%d", helloWorldComponentGitSourceRepoName, prNumber))
+					return comments
+				}, timeout, interval).ShouldNot(HaveLen(0), fmt.Sprintf("timed out when waiting for the PaC PR comment about the pipelinerun status to appear in the component repo %s in PR #%d", helloWorldComponentGitSourceRepoName, prNumber))
 
 				// TODO uncomment once https://issues.redhat.com/browse/SRVKP-2471 is sorted
 				//Expect(comments).To(HaveLen(1), fmt.Sprintf("the updated PaC PR has more than 1 comment after a single branch update. repo: %s, pr number: %d, comments content: %v", helloWorldComponentGitSourceURL, prNumber, comments))

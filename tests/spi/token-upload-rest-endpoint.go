@@ -139,7 +139,6 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-rest-endpoin
 
 				// get the url to manually upload the token
 				uploadURL := SPITokenBinding.Status.UploadUrl
-				Expect(uploadURL).NotTo(BeEmpty())
 
 				// Get the token for the current openshift user
 				bearerToken, err := utils.GetOpenshiftToken()

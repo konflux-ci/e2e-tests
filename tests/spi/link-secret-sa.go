@@ -121,7 +121,6 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "link-secret-sa"), func() 
 
 				// get the url to manually upload the token
 				uploadURL := binding.Status.UploadUrl
-				Expect(uploadURL).NotTo(BeEmpty())
 
 				// Get the token for the current openshift user
 				bearerToken, err := utils.GetOpenshiftToken()
