@@ -15,7 +15,24 @@ else
         oc exec -n openshift-pipelines $(oc get pods -n openshift-pipelines -l app=tekton-pipelines-controller -o name) -- bash -c "curl -SsL --max-time $((TEKTON_PERF_PROFILE_CPU_PERIOD + 10)) localhost:8008/debug/pprof/profile?seconds=${TEKTON_PERF_PROFILE_CPU_PERIOD} | base64" | base64 -d >cpu-profile.pprof &
         TEKTON_PROFILER_PID=$!
     fi
-
+    ## Switch KubeScheduler Debugging on
+    if [ -n "$KUBE_SCHEDULER_LOG_LEVEL" ]; then
+        echo "Checking KubeScheduler log level"
+        if [ "$(oc get KubeScheduler cluster -o jsonpath="{.spec.logLevel}")" == "$KUBE_SCHEDULER_LOG_LEVEL" ]; then
+            echo "KubeScheduler log level is already at $KUBE_SCHEDULER_LOG_LEVEL level"
+        else
+            echo "Setting KubeScheduler log level to $KUBE_SCHEDULER_LOG_LEVEL"
+            oc patch KubeScheduler cluster --type=json -p='[{"op": "add", "path": "/spec/logLevel", "value": "'"$KUBE_SCHEDULER_LOG_LEVEL"'"}]'
+            echo "Waiting for kube scheduler to start NodeInstallerProgressing"
+            oc wait --for=condition=NodeInstallerProgressing kubescheduler/cluster -n openshift-kube-scheduler --timeout=300s
+        fi
+        echo "Waiting for all kube scheduler pods to finish NodeInstallerProgressing"
+        oc wait --for=condition=NodeInstallerProgressing=False kubescheduler/cluster -n openshift-kube-scheduler --timeout=900s
+        echo "All kube scheduler pods are now at log level $KUBE_SCHEDULER_LOG_LEVEL, starting to capture logs"
+        oc logs -f -n openshift-kube-scheduler --prefix -l app=openshift-kube-scheduler --tail=-1 2>&1 >openshift-kube-scheduler.log &
+        KUBE_SCHEDULER_LOG_PID=$!
+    fi
+    ## Run the actual load test
     go run loadtest.go \
         --component-repo "${COMPONENT_REPO:-https://github.com/devfile-samples/devfile-sample-code-with-quarkus}" \
         --username "$USER_PREFIX" \
@@ -30,5 +47,9 @@ else
     if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
         echo "Waiting for the Tekton controller profiling to finish up to ${TEKTON_PERF_PROFILE_CPU_PERIOD}s"
         wait "$TEKTON_PROFILER_PID"
+    fi
+    if [ -n "$KUBE_SCHEDULER_LOG_LEVEL" ]; then
+        echo "Killing kube collector log collector"
+        kill "$KUBE_SCHEDULER_LOG_PID"
     fi
 fi
