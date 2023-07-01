@@ -35,7 +35,7 @@ func (gst *GinkgosSpecTranslator) FromFile(file string) (TestOutline, error) {
 	}
 	err = json.Unmarshal([]byte(output), &nodes)
 	if err != nil {
-		klog.Error("Failed ot unmarshal spec outline")
+		klog.Error("Failed to unmarshal spec outline")
 		return nil, err
 	}
 	markInnerParentContainer(nodes)
@@ -111,7 +111,9 @@ func generateGinkgoSpec(destination string, dataFile string) error {
 	// Note I change into the directory and rename things because ginkgo
 	// by default generates the test file name as <package>_test.go.
 	// Since that is not a semantic we follow I perform this action.
-	ginkgoFileName := fmt.Sprintf("%s_test.go", strings.Split(filepath.Dir(destination), "/")[1])
+	dirs := strings.Split(filepath.Dir(destination), "/")
+	dir := dirs[len(dirs)-1]
+	ginkgoFileName := fmt.Sprintf("%s_test.go", dir)
 	postFileName := filepath.Base(destination)
 	err = os.Chdir(filepath.Dir(destination))
 	if err != nil {
@@ -158,15 +160,43 @@ func generateGinkgoSpec(destination string, dataFile string) error {
 	return err
 }
 
-// createTestPath will crate the full test path passed in the tests
+// createTestPath will create the full test path in the tests
 // directory if it doesn't exit
 func createTestPath(destination string) (string, error) {
 
-	if !strings.Contains(strings.Split(filepath.Dir(destination), "/")[0], "test") {
-		destination = filepath.Join("tests", destination)
+	destination, err := filepath.Abs(destination)
+	if err != nil {
+		klog.Error("failed to get absolute path of destination")
+		return "", err
 	}
+	e2ePath, err := os.Getwd()
+	if err != nil {
+		klog.Error("failed to get current directory")
+		return "", err
+	}
+	testPath := filepath.Join(e2ePath, "tests")
+	klog.Info(testPath)
+	if !strings.Contains(destination, testPath) {
+
+		return "", fmt.Errorf("the destination path must be to the `e2e-tests/tests` directory")
+	}
+
+	testDir, _ := filepath.Split(destination)
+	dirs := strings.Split(testDir, "/")
+	// remove whitespaces trailing (/) from filepath split
+	length := len(dirs)
+	dirs = dirs[:length-1]
+
+	if strings.Contains(dirs[len(dirs)-1], "tests") {
+
+		return "", fmt.Errorf("the destination path must be to `e2e-tests/tests/<sub-path>` directory")
+	}
+
+	//if !strings.Contains(strings.Split(filepath.Dir(destination), "/")[0], "tests") {
+	//	destination = filepath.Join("tests", destination)
+	//}
 	dir := filepath.Dir(destination)
-	err := os.MkdirAll(dir, 0775)
+	err = os.MkdirAll(dir, 0775)
 	if err != nil {
 		klog.Error("failed to create package directory, %s", dir)
 		return "", err

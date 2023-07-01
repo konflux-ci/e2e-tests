@@ -2,49 +2,34 @@
 
 ## Context
 
-We rely on Ginkgo and Gomega as the core of our E2E functional test framework. Ginkgo allows you to write expressive BDD style tests that act as specfications by example. The intent is to allow a team to write a specifications, which we call an spec outline, that look like this:
+We rely on Ginkgo and Gomega as the core of our E2E functional test framework. Ginkgo allows you to write expressive BDD style tests that act as specfications by example. The intent is to allow a team to write specifications, which we call a spec outline, that look like this:
 
 ```
 BookSuiteDescribe: Book service E2E tests
     Describe: Categorizing book length @book
         When: the book has more than 300 pages @slow
-            It: Should be a novel
+            It: should be a novel
         When: the book has fewer than 300 pages @fast
             It: should be a short story
 
     Describe: Creating bookmarks in a book @book, @bookmark, @parallel
-        It: Has no bookmarks by default
-        It: Can add bookmarks
+        It: has no bookmarks by default
+        It: can add bookmarks
 
 ```
 
-and be able to generate Ginkgo Test Files that look like this:
+and be able to generate skeleton Ginkgo Test Files that look like this:
 
 ```golang
 package books
 
 /* This was generated from a template file. Please feel free to update as necessary!
+   a couple things to note:
+    - Remember to implement specific logic of the service/domain you are trying to test if it not already there in the pkg/
 
- In Gingko, "Describe", "Context", "When" are functionaly the same. They are container nodes that hierarchically
- organize the specs, used to make the flow read better. The core piece of the spec is the subject container, "It",
- this is where the meat of the test is written.
-
- Ginkgo's default behavior is to only randomize the order of top-level containers -- the specs within those containers
- continue to run in the order in which they are specified in the test files. That being said, Ginko does provide the
- option to randomize ALL specs. So it is important to design and write test cases for randomization and parallelization
- in mind. Tips to do so:
-
-  - Declare variables in "Describe" containers, initialize in "BeforeEach/All" containers
-  - Move all setup code into "BeforeEach/All" closures
-  - "It" containers should be independent of each other. If you require the "It" tests to be dependent on each other for
-    complex test scenarios, append into the "Describe" the "Ordered" decorator.
-
-a couple things to note:
-  - Remember to implement specific logic of the service/domain you are trying to test if it not already there in the pkg/
-
-  - To include the tests as part of the E2E Test suite:
-     - Update the pkg/framework/describe.go to include the `Describe func` of this new test suite, If you haven't already done so.
-     - Import this new package into the cmd/e2e_test.go
+    - To include the tests as part of the E2E Test suite:
+       - Update the pkg/framework/describe.go to include the `Describe func` of this new test suite, If you haven't already done so.
+       - Import this new package into the cmd/e2e_test.go
 */
 
 import (
@@ -75,12 +60,12 @@ var _ = framework.BookSuiteDescribe("Book service E2E tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	Describe("Categorizing book length ", Label("book"), func() {
+	Describe("Categorizing book length  ", Label("book"), func() {
 		// Declare variables here.
 
-		When("the book has more than 300 pages ", Label("slow"), func() {
+		When("the book has more than 300 pages  ", Label("slow"), func() {
 
-			It("Should be a novel", func() {
+			It("should be a novel", func() {
 
 				// Implement test and assertions here
 
@@ -88,7 +73,7 @@ var _ = framework.BookSuiteDescribe("Book service E2E tests", func() {
 
 		})
 
-		When("the book has fewer than 300 pages ", Label("fast"), func() {
+		When("the book has fewer than 300 pages  ", Label("fast"), func() {
 
 			It("should be a short story", func() {
 
@@ -100,16 +85,16 @@ var _ = framework.BookSuiteDescribe("Book service E2E tests", func() {
 
 	})
 
-	Describe("Creating bookmarks in a book ", Label("book"), Label("bookmark"), Label("parallel"), func() {
+	Describe("Creating bookmarks in a book  ", Label("book"), Label("bookmark"), Label("parallel"), func() {
 		// Declare variables here.
 
-		It("Has no bookmarks by default", func() {
+		It("has no bookmarks by default", func() {
 
 			// Implement test and assertions here
 
 		})
 
-		It("Can add bookmarks", func() {
+		It("can add bookmarks", func() {
 
 			// Implement test and assertions here
 
@@ -121,7 +106,7 @@ var _ = framework.BookSuiteDescribe("Book service E2E tests", func() {
 
 ```
 
-or parse Ginkgo Test Files that have large amount of code, like [build.go](../tests/build/build.go), and generate spec outline so that they can be easily evaluated.
+or parse Ginkgo Test Files that have large amounts of code, like [build.go](../tests/build/build.go), and generate spec outlines that looks like this.
 
 ```
 BuildSuiteDescribe: Build service E2E tests @build, @HACBS
@@ -169,23 +154,23 @@ We leverage existing Ginkgo's tool set to be able to do this translation back an
 
 The text outline file must be in the following format:
 
- * Each line MUST be in key/value format using `:` as delimeter
-    * Each key MUST be a Ginkgo DSL for Container and Subject containers, `Describe/When/Context/It/By/DescribeTable/Entry`
-    * The value is essentially the Description text of the container
+ * Each line MUST be in key/value format using `:` as delimiter
+    * Each key MUST be a Ginkgo DSL word for Container and Subject nodes, `Describe/When/Context/It/By/DescribeTable/Entry`
+    * The value is essentially the description text of the container
  * All lines MUST be nested, by using spaces, to represent the logical tree hierarchy of the specification
  * The first line MUST be a framework decorator function type `Describe` node that will get implemented in `/pkg/framework/describe.go`
  * To assign Labels: 
  		* each string intended to be a label MUST be prefixed with `@`
     * the set of labels MUST be a comma separated list
     * they MUST be assigned AFTER the description text
- * When using `DescribeTable` key, the proceeding nested lines MUST have the `Entry` or `By` key or Ginkgo will not render the template properly
+ * When using the `DescribeTable` key, the proceeding nested lines MUST have the `Entry` or `By` key or Ginkgo will not render the template properly
 
-For the time being we don't support any of Ginkgo's Setup/Teardown containers. We could technically graph it together from the text outline but it won't render with our base template. The important thing is to expressively model the behavior to test. Test developers will be able to insert Setup/Teardown containers where they see fit. 
+For the time being we don't support any of Ginkgo's Setup/Teardown nodes. We could technically graph it together from the text outline but it won't render with our base template. The important thing is to expressively model the behavior to test. Test developers will be able to insert Setup/Teardown nodes where they see fit when the spec has been rendered. 
 
 
-## Prequisite
+## Prerequisite
 
-Before generating anything make sure you have Ginkgo in place. To install Gingkgo:
+Before generating anything make sure you have Ginkgo in place. To install Ginkgo:
 
 `go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo`
 
@@ -246,7 +231,7 @@ I0622 22:14:22.140841   20356 ginkgosspec.go:242] Creating new test package dire
 
 
  ```
- As noted above, this command will create a new package under the `tests/`directory and a test spec file `<filename>.go` for you. It will contain some basic imports but more importantly it will generate a basic structured Ginkgo spec skeleton that you can code against.
+As noted above, this command will create a new package under the `tests/` directory and a test spec file `<filename>.go` for you. It will contain some basic imports but more importantly it will generate a basic structured Ginkgo spec skeleton that you can code against.
 
 ### Printing a text outline in JSON format of an existing ginkgo spec file
  This will generate the outline and output to your terminal in JSON format. This is the format we use when rendering the template. You can pipe this output to tools like `jq` for formatting and filtering. This would only be useful for troubleshooting purposes 

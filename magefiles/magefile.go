@@ -667,7 +667,7 @@ func AppendFrameworkDescribeGoFile(specFile string) error {
 
 	if reflect.ValueOf(node).IsZero() {
 		klog.Info("Did not find a framework describe decorator function so nothing to append.")
-		// we assume its a normal Ginkgo Spec file so return it
+		// we assume its a normal Ginkgo Spec file so that is fine
 		return nil
 	}
 	outline := testspecs.TestOutline{node}

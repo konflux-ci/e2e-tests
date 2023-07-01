@@ -121,29 +121,12 @@ func createTestSpecNodesFromString(part string) TestSpecNode {
 func graphNodeToTestSpecOutline(nodes TestOutline, node TestSpecNode) TestOutline {
 
 	if len(nodes) == 0 {
-		//for _, g := range stack {
-		//	nodes = append(nodes, g)
-		//	continue
-		//}
+
 		nodes = append(nodes, node)
 		return nodes
 	}
 
 	if len(nodes) > 0 {
-		//for _, g := range stack {
-
-		//	if nodes[len(nodes)-1].LineSpaceLevel == g.LineSpaceLevel {
-		//		nodes = append(nodes, g)
-		//		return nodes
-		//	}
-
-		//	if nodes[len(nodes)-1].LineSpaceLevel < g.LineSpaceLevel {
-		//		nodes[len(nodes)-1].Nodes = graphNodeToTestSpecOutline(nodes[len(nodes)-1].Nodes, stack)
-		//		return nodes
-
-		//	}
-
-		//}
 
 		if nodes[len(nodes)-1].LineSpaceLevel == node.LineSpaceLevel {
 			nodes = append(nodes, node)

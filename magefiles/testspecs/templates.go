@@ -20,8 +20,21 @@ var templates = map[string]string{
 
 func NewTemplateData(specOutline TestOutline, destination string) *TemplateData {
 
-	re := regexp.MustCompile(`[A-Z][^A-Z]*`)
+	// This regex will find all the words that start with capital letter
+	// followed by lower case in the string
+	name := specOutline[0].Name
+	re := regexp.MustCompile(`(?:[A-Z][a-z]+[\s-]*)`)
 	parts := re.FindAllString(specOutline[0].Name, -1)
+
+	// Lets find the index of the first regex match. If it doesn't start
+	// at index 0 then assume it starts with a capitalized acronym
+	// i.e. O11y/SPI/JVM, etc. and append it to the regex list at index 0
+	nidx := strings.Index(name, parts[0])
+	if nidx != 0 {
+		n := strings.ToLower(name[:nidx])
+		parts = append(parts[:1], parts[0:]...)
+		parts[0] = n[:nidx]
+	}
 
 	for i, word := range parts {
 		parts[i] = strings.ToLower(word)
