@@ -257,6 +257,10 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 					return false
 				}
 
+				//Fail the test if any of the two release pipelineruns failed.
+				Expect(utils.HasPipelineRunFailed(releasePr)).To(BeTrue(), fmt.Sprintf("did not expect PipelineRun %s/%s to fail", releasePr.GetNamespace(), releasePr.GetName()))
+				Expect(utils.HasPipelineRunFailed(additionalReleasePr)).To(BeTrue(), fmt.Sprintf("did not expect PipelineRun %s/%s to fail", additionalReleasePr.GetNamespace(), additionalReleasePr.GetName()))
+
 				return releasePr.HasStarted() && releasePr.IsDone() && releasePr.Status.GetCondition(apis.ConditionSucceeded).IsTrue() &&
 					additionalReleasePr.HasStarted() && additionalReleasePr.IsDone() && additionalReleasePr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
