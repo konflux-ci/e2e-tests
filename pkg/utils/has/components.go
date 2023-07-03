@@ -115,11 +115,11 @@ func (h *hasFactory) WaitForComponentPipelineToBeFinished(component *appservice.
 	var pr *v1beta1.PipelineRun
 
 	for {
-		err := wait.PollImmediate(20*time.Second, 30*time.Minute, func() (done bool, err error) {
+		err := wait.PollImmediate(constants.PipelineRunPollingInterval, 30*time.Minute, func() (done bool, err error) {
 			pr, err = h.GetComponentPipelineRun(component.GetName(), app, component.GetNamespace(), sha)
 
 			if err != nil {
-				GinkgoWriter.Println("PipelineRun has not been created yet")
+				GinkgoWriter.Printf("PipelineRun has not been created yet for the Component %s/%s\n", component.GetNamespace, component.GetName())
 				return false, nil
 			}
 

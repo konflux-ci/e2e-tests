@@ -1,5 +1,7 @@
 package constants
 
+import "time"
+
 // Global constants
 const (
 	// A github token is required to run the tests. The token need to have permissions to the given github organization. By default the e2e use redhat-appstudio-qe github organization.
@@ -110,6 +112,8 @@ const (
 	// Expiration for image tags
 	IMAGE_TAG_EXPIRATION_ENV  string = "IMAGE_TAG_EXPIRATION"
 	DefaultImageTagExpiration string = "6h"
+
+	PipelineRunPollingInterval = 10 * time.Second
 )
 
 var (

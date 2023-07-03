@@ -1,6 +1,7 @@
 package spi
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
@@ -70,6 +71,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-k8s"), func(
 
 		// create a new SPITokenBinding and get the generated SPIAccessToken; we will associate the secret to it
 		var SPITokenBinding *v1beta1.SPIAccessTokenBinding
+		var SPIAccessToken *v1beta1.SPIAccessToken
 		var K8sSecret *v1.Secret
 		secretName := "access-token-binding-k8s-secret"
 		tokenBindingName := "spi-token-binding-k8s-"
@@ -83,12 +85,12 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-k8s"), func(
 		})
 
 		It("creates secret with access token and associate it to an existing SPIAccessToken", func() {
-			Eventually(func() bool {
+			Eventually(func() string {
 				SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
 				Expect(err).NotTo(HaveOccurred())
 
-				return (SPITokenBinding.Status.LinkedAccessTokenName != "")
-			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "LinkedAccessTokenName should not be empty")
+				return SPITokenBinding.Status.LinkedAccessTokenName
+			}, 1*time.Minute, 5*time.Second).ShouldNot(BeEmpty(), fmt.Sprintf("SPITokenBinding %s/%s '.Status.LinkedAccessTokenName' field should not be empty", SPITokenBinding.GetNamespace(), SPITokenBinding.GetName()))
 
 			linkedAccessTokenName := SPITokenBinding.Status.LinkedAccessTokenName
 			tokenData := utils.GetEnv(constants.GITHUB_TOKEN_ENV, "")
@@ -99,36 +101,32 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-k8s"), func(
 		})
 
 		It("SPITokenBinding should be in Injected phase", func() {
-			Eventually(func() bool {
+			Eventually(func() v1beta1.SPIAccessTokenBindingPhase {
 				SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
 				Expect(err).NotTo(HaveOccurred())
 
-				return SPITokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected
-			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in Injected phase")
+				return SPITokenBinding.Status.Phase
+			}, 2*time.Minute, 5*time.Second).Should(Equal(v1beta1.SPIAccessTokenBindingPhaseInjected), fmt.Sprintf("SPIAccessTokenBinding %s/%s is not in %s phase", SPITokenBinding.GetNamespace(), SPITokenBinding.GetName(), v1beta1.SPIAccessTokenBindingPhaseInjected))
 		})
 
 		It("upload secret should be automatically be removed", func() {
 			Eventually(func() bool {
 				_, err := fw.AsKubeDeveloper.CommonController.GetSecret(namespace, K8sSecret.Name)
-
 				if err == nil {
 					return false
 				}
-
 				return k8sErrors.IsNotFound(err)
-			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "upload secret not removed")
+			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), fmt.Sprintf("timed out waiting for upload secret %s/%s to be removed", K8sSecret.GetNamespace(), K8sSecret.GetName()))
 		})
 
-		It("SPIAccessToken exists and is in Read phase", func() {
-			Eventually(func() bool {
-				SPIAccessToken, err := fw.AsKubeDeveloper.SPIController.GetSPIAccessToken(SPITokenBinding.Status.LinkedAccessTokenName, namespace)
-
+		It("SPIAccessToken exists and is in Ready phase", func() {
+			Eventually(func() (v1beta1.SPIAccessTokenPhase, error) {
+				SPIAccessToken, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessToken(SPITokenBinding.Status.LinkedAccessTokenName, namespace)
 				if err != nil {
-					return false
+					return "", err
 				}
-
-				return (SPIAccessToken.Status.Phase == v1beta1.SPIAccessTokenPhaseReady)
-			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "SPIAccessToken should be in ready phase")
+				return SPIAccessToken.Status.Phase, nil
+			}, 1*time.Minute, 5*time.Second).Should(Equal(v1beta1.SPIAccessTokenPhaseReady), fmt.Sprintf("SPIAccessToken for SPITokenBinding %s/%s should be in %s phase", SPITokenBinding.GetNamespace(), SPITokenBinding.GetName(), v1beta1.SPIAccessTokenPhaseReady))
 
 		})
 	})
@@ -161,6 +159,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-k8s"), func(
 
 		// we create a secret specifying a non-existing SPIAccessToken name: it should be created automatically by SPI
 		var K8sSecret *v1.Secret
+		var SPIAccessToken *v1beta1.SPIAccessToken
 		secretName := "access-token-k8s-secret"
 		nonExistingAccessTokenName := "new-access-token-k8s"
 
@@ -175,25 +174,21 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-k8s"), func(
 		It("upload secret should be automatically be removed", func() {
 			Eventually(func() bool {
 				_, err := fw.AsKubeDeveloper.CommonController.GetSecret(namespace, K8sSecret.Name)
-
 				if err == nil {
 					return false
 				}
-
 				return k8sErrors.IsNotFound(err)
-			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "upload secret not removed")
+			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), fmt.Sprintf("timed out waiting for upload secret %s/%s to be removed", K8sSecret.GetNamespace(), K8sSecret.GetName()))
 		})
 
-		It("SPIAccessToken exists and is in Read phase", func() {
-			Eventually(func() bool {
-				SPIAccessToken, err := fw.AsKubeDeveloper.SPIController.GetSPIAccessToken(nonExistingAccessTokenName, namespace)
-
+		It("SPIAccessToken exists and is in Ready phase", func() {
+			Eventually(func() (v1beta1.SPIAccessTokenPhase, error) {
+				SPIAccessToken, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessToken(nonExistingAccessTokenName, namespace)
 				if err != nil {
-					return false
+					return "", err
 				}
-
-				return (SPIAccessToken.Status.Phase == v1beta1.SPIAccessTokenPhaseReady)
-			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "SPIAccessToken should be in ready phase")
+				return SPIAccessToken.Status.Phase, nil
+			}, 2*time.Minute, 5*time.Second).Should(Equal(v1beta1.SPIAccessTokenPhaseReady), fmt.Sprintf("SPIAccessToken for access token %s/%s should be in %s phase", namespace, nonExistingAccessTokenName, v1beta1.SPIAccessTokenPhaseReady))
 
 		})
 	})

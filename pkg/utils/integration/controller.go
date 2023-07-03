@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
@@ -288,7 +289,7 @@ func (h *SuiteController) CreateIntegrationTestScenarioWithEnvironment(applicati
 }
 
 func (h *SuiteController) WaitForIntegrationPipelineToBeFinished(testScenario *integrationv1beta1.IntegrationTestScenario, snapshot *appstudioApi.Snapshot, appNamespace string) error {
-	return wait.PollImmediate(20*time.Second, 100*time.Minute, func() (done bool, err error) {
+	return wait.PollImmediate(constants.PipelineRunPollingInterval, 20*time.Minute, func() (done bool, err error) {
 		pipelineRun, err := h.GetIntegrationPipelineRun(testScenario.Name, snapshot.Name, appNamespace)
 		if err != nil {
 			GinkgoWriter.Println("PipelineRun has not been created yet for test scenario %s and snapshot %s/%s", testScenario.GetName(), snapshot.GetNamespace(), snapshot.GetName())
@@ -385,7 +386,7 @@ func (h *SuiteController) GetSnapshotEnvironmentBinding(applicationName string, 
 		}
 	}
 
-	return &appstudioApi.SnapshotEnvironmentBinding{}, fmt.Errorf("no SnapshotEnvironmentBinding found in environment %s %s", environment.Name, utils.GetAdditionalInfo(applicationName, namespace))
+	return nil, fmt.Errorf("no SnapshotEnvironmentBinding found in environment %s %s", environment.Name, utils.GetAdditionalInfo(applicationName, namespace))
 }
 
 func (h *SuiteController) GetSpaceRequests(namespace string) (*codereadytoolchainv1alpha1.SpaceRequestList, error) {

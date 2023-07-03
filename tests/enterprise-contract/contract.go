@@ -36,7 +36,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 	BeforeAll(func() {
 		fwk, err = framework.NewFramework(utils.GetGeneratedNamespace(constants.TEKTON_CHAINS_E2E_USER))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(fwk.UserNamespace).NotTo(BeNil(), "failed to create sandbox user")
+		Expect(fwk.UserNamespace).NotTo(BeEmpty(), "failed to create sandbox user")
 		namespace = fwk.UserNamespace
 		kubeController = tekton.KubeController{
 			Commonctrl: *fwk.AsKubeAdmin.CommonController,
