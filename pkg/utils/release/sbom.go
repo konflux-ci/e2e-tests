@@ -103,14 +103,8 @@ type Image struct {
 	ParsedData                ParsedData                 `json:"parsed_data"`
 }
 
-// Contains all methods related with sbom objects CRUD operations.
-type SbomInterface interface {
-	// Returns an sbom.
-	GetSbomPyxisByImageID(pyxisStageURL, imageID string, pyxisCertDecoded, pyxisKeyDecoded []byte) ([]byte, error)
-}
-
 // GetSbomPyxisByImageID returns sbom specified by image id.
-func (r *releaseFactory) GetSbomPyxisByImageID(pyxisStageURL, imageID string, pyxisCertDecoded, pyxisKeyDecoded []byte) ([]byte, error) {
+func (r *ReleaseController) GetSbomPyxisByImageID(pyxisStageURL, imageID string, pyxisCertDecoded, pyxisKeyDecoded []byte) ([]byte, error) {
 
 	url := fmt.Sprintf("%s%s", pyxisStageURL, imageID)
 

@@ -10,29 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// Contains all methods related with plan objects CRUD operations.
-type PlansInterface interface {
-	// Creates a release plan.
-	CreateReleasePlan(name, namespace, application, targetNamespace, autoReleaseLabel string) (*releaseApi.ReleasePlan, error)
-
-	// Creates a release plan admission.
-	CreateReleasePlanAdmission(name, originNamespace, application, namespace, environment, autoRelease, releaseStrategy string) (*releaseApi.ReleasePlanAdmission, error)
-
-	// Returns a release plan.
-	GetReleasePlan(name, namespace string) (*releaseApi.ReleasePlan, error)
-
-	// Returns a release plan admission.
-	GetReleasePlanAdmission(name, namespace string) (*releaseApi.ReleasePlanAdmission, error)
-
-	// Deletes a release plan.
-	DeleteReleasePlan(name, namespace string, failOnNotFound bool) error
-
-	// Deletes a release plan admission.
-	DeleteReleasePlanAdmission(name, namespace string, failOnNotFound bool) error
-}
-
 // CreateReleasePlan creates a new ReleasePlan using the given parameters.
-func (r *releaseFactory) CreateReleasePlan(name, namespace, application, targetNamespace, autoReleaseLabel string) (*releaseApi.ReleasePlan, error) {
+func (r *ReleaseController) CreateReleasePlan(name, namespace, application, targetNamespace, autoReleaseLabel string) (*releaseApi.ReleasePlan, error) {
 	var releasePlan *releaseApi.ReleasePlan = &releaseApi.ReleasePlan{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: name,
@@ -59,7 +38,7 @@ func (r *releaseFactory) CreateReleasePlan(name, namespace, application, targetN
 }
 
 // CreateReleasePlanAdmission creates a new ReleasePlanAdmission using the given parameters.
-func (r *releaseFactory) CreateReleasePlanAdmission(name, originNamespace, application, namespace, environment, autoRelease, releaseStrategy string) (*releaseApi.ReleasePlanAdmission, error) {
+func (r *ReleaseController) CreateReleasePlanAdmission(name, originNamespace, application, namespace, environment, autoRelease, releaseStrategy string) (*releaseApi.ReleasePlanAdmission, error) {
 	var releasePlanAdmission *releaseApi.ReleasePlanAdmission = &releaseApi.ReleasePlanAdmission{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -80,7 +59,7 @@ func (r *releaseFactory) CreateReleasePlanAdmission(name, originNamespace, appli
 }
 
 // GetReleasePlan returns the ReleasePlan with the given name in the given namespace.
-func (r *releaseFactory) GetReleasePlan(name, namespace string) (*releaseApi.ReleasePlan, error) {
+func (r *ReleaseController) GetReleasePlan(name, namespace string) (*releaseApi.ReleasePlan, error) {
 	releasePlan := &releaseApi.ReleasePlan{}
 
 	err := r.KubeRest().Get(context.TODO(), types.NamespacedName{
@@ -92,7 +71,7 @@ func (r *releaseFactory) GetReleasePlan(name, namespace string) (*releaseApi.Rel
 }
 
 // GetReleasePlanAdmission returns the ReleasePlanAdmission with the given name in the given namespace.
-func (r *releaseFactory) GetReleasePlanAdmission(name, namespace string) (*releaseApi.ReleasePlanAdmission, error) {
+func (r *ReleaseController) GetReleasePlanAdmission(name, namespace string) (*releaseApi.ReleasePlanAdmission, error) {
 	releasePlanAdmission := &releaseApi.ReleasePlanAdmission{}
 
 	err := r.KubeRest().Get(context.TODO(), types.NamespacedName{
@@ -104,7 +83,7 @@ func (r *releaseFactory) GetReleasePlanAdmission(name, namespace string) (*relea
 }
 
 // DeleteReleasePlan deletes a given ReleasePlan name in given namespace.
-func (r *releaseFactory) DeleteReleasePlan(name, namespace string, failOnNotFound bool) error {
+func (r *ReleaseController) DeleteReleasePlan(name, namespace string, failOnNotFound bool) error {
 	releasePlan := &releaseApi.ReleasePlan{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -121,7 +100,7 @@ func (r *releaseFactory) DeleteReleasePlan(name, namespace string, failOnNotFoun
 // DeleteReleasePlanAdmission deletes the ReleasePlanAdmission resource with the given name from the given namespace.
 // Optionally, it can avoid returning an error if the resource did not exist:
 // specify 'false', if it's likely the ReleasePlanAdmission has already been deleted (for example, because the Namespace was deleted)
-func (r *releaseFactory) DeleteReleasePlanAdmission(name, namespace string, failOnNotFound bool) error {
+func (r *ReleaseController) DeleteReleasePlanAdmission(name, namespace string, failOnNotFound bool) error {
 	releasePlanAdmission := releaseApi.ReleasePlanAdmission{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,

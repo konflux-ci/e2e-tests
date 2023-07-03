@@ -28,7 +28,7 @@ type ControllerHub struct {
 	TektonController          *tekton.SuiteController
 	GitOpsController          gitops.Gitops
 	SPIController             *spi.SuiteController
-	ReleaseController         release.ReleaseService
+	ReleaseController         *release.ReleaseController
 	IntegrationController     *integration.SuiteController
 	JvmbuildserviceController *jvmbuildservice.SuiteController
 	O11yController            *o11y.SuiteController

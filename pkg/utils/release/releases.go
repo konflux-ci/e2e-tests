@@ -13,29 +13,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Contains all methods related with release objects CRUD operations.
-type ReleasesInterface interface {
-	// Creates a release.
-	CreateRelease(name, namespace, snapshot, releasePlan string) (*releaseApi.Release, error)
-
-	//Creates a pipeline RoleBinding for service account.
-	CreateReleasePipelineRoleBindingForServiceAccount(namespace string, serviceAccount *corev1.ServiceAccount) (*rbac.RoleBinding, error)
-
-	// Returns a release.
-	GetRelease(releaseName, snapshotName, namespace string) (*releaseApi.Release, error)
-
-	// Returns all releases in a namespace.
-	GetReleases(namespace string) (*releaseApi.ReleaseList, error)
-
-	// Returns the first release in a namespace.
-	GetFirstReleaseInNamespace(namespace string) (*releaseApi.Release, error)
-
-	// Returns pipelirun referencing given release.
-	GetPipelineRunInNamespace(namespace, releaseName, releaseNamespace string) (*v1beta1.PipelineRun, error)
-}
-
 // CreateRelease creates a new Release using the given parameters.
-func (r *releaseFactory) CreateRelease(name, namespace, snapshot, releasePlan string) (*releaseApi.Release, error) {
+func (r *ReleaseController) CreateRelease(name, namespace, snapshot, releasePlan string) (*releaseApi.Release, error) {
 	release := &releaseApi.Release{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -52,7 +31,7 @@ func (r *releaseFactory) CreateRelease(name, namespace, snapshot, releasePlan st
 
 // CreateReleasePipelineRoleBindingForServiceAccount creates a RoleBinding for the passed serviceAccount to enable
 // retrieving the necessary CRs from the passed namespace.
-func (r *releaseFactory) CreateReleasePipelineRoleBindingForServiceAccount(namespace string, serviceAccount *corev1.ServiceAccount) (*rbac.RoleBinding, error) {
+func (r *ReleaseController) CreateReleasePipelineRoleBindingForServiceAccount(namespace string, serviceAccount *corev1.ServiceAccount) (*rbac.RoleBinding, error) {
 	roleBinding := &rbac.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "release-service-pipeline-rolebinding-",
@@ -80,7 +59,7 @@ func (r *releaseFactory) CreateReleasePipelineRoleBindingForServiceAccount(names
 
 // GetRelease returns the release with in the given namespace.
 // It can find a Release CR based on provided name or a name of an associated Snapshot
-func (r *releaseFactory) GetRelease(releaseName, snapshotName, namespace string) (*releaseApi.Release, error) {
+func (r *ReleaseController) GetRelease(releaseName, snapshotName, namespace string) (*releaseApi.Release, error) {
 	ctx := context.Background()
 	if len(releaseName) > 0 {
 		release := &releaseApi.Release{}
@@ -106,7 +85,7 @@ func (r *releaseFactory) GetRelease(releaseName, snapshotName, namespace string)
 }
 
 // GetRelease returns the list of Release CR in the given namespace.
-func (r *releaseFactory) GetReleases(namespace string) (*releaseApi.ReleaseList, error) {
+func (r *ReleaseController) GetReleases(namespace string) (*releaseApi.ReleaseList, error) {
 	releaseList := &releaseApi.ReleaseList{}
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
@@ -117,7 +96,7 @@ func (r *releaseFactory) GetReleases(namespace string) (*releaseApi.ReleaseList,
 }
 
 // GetFirstReleaseInNamespace returns the first Release from  list of releases in the given namespace.
-func (r *releaseFactory) GetFirstReleaseInNamespace(namespace string) (*releaseApi.Release, error) {
+func (r *ReleaseController) GetFirstReleaseInNamespace(namespace string) (*releaseApi.Release, error) {
 	releaseList, err := r.GetReleases(namespace)
 
 	if err != nil || len(releaseList.Items) < 1 {
@@ -127,7 +106,7 @@ func (r *releaseFactory) GetFirstReleaseInNamespace(namespace string) (*releaseA
 }
 
 // GetPipelineRunInNamespace returns the Release PipelineRun referencing the given release.
-func (r *releaseFactory) GetPipelineRunInNamespace(namespace, releaseName, releaseNamespace string) (*v1beta1.PipelineRun, error) {
+func (r *ReleaseController) GetPipelineRunInNamespace(namespace, releaseName, releaseNamespace string) (*v1beta1.PipelineRun, error) {
 	pipelineRuns := &v1beta1.PipelineRunList{}
 	opts := []client.ListOption{
 		client.MatchingLabels{

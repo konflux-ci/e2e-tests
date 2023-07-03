@@ -7,15 +7,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Contains all methods related with snapshot objects CRUD operations.
-type StrategiesInterface interface {
-	// Creates a release strategy.
-	CreateReleaseStrategy(name, namespace, pipelineName, bundle string, policy string, serviceAccount string, params []releaseApi.Params) (*releaseApi.ReleaseStrategy, error)
-
-	// Generates a release strategy config.
-	GenerateReleaseStrategyConfig(components []Component) *StrategyConfig
-}
-
 type StrategyConfig struct {
 	Mapping Mapping `json:"mapping"`
 }
@@ -28,7 +19,7 @@ type Component struct {
 }
 
 // CreateReleaseStrategy creates a new ReleaseStrategy using the given parameters.
-func (r *releaseFactory) CreateReleaseStrategy(name, namespace, pipelineName, bundle string, policy string, serviceAccount string, params []releaseApi.Params) (*releaseApi.ReleaseStrategy, error) {
+func (r *ReleaseController) CreateReleaseStrategy(name, namespace, pipelineName, bundle string, policy string, serviceAccount string, params []releaseApi.Params) (*releaseApi.ReleaseStrategy, error) {
 	releaseStrategy := &releaseApi.ReleaseStrategy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -47,7 +38,7 @@ func (r *releaseFactory) CreateReleaseStrategy(name, namespace, pipelineName, bu
 }
 
 // GenerateReleaseStrategyConfig generates release strategy config.
-func (r *releaseFactory) GenerateReleaseStrategyConfig(components []Component) *StrategyConfig {
+func (r *ReleaseController) GenerateReleaseStrategyConfig(components []Component) *StrategyConfig {
 	return &StrategyConfig{
 		Mapping{Components: components},
 	}
