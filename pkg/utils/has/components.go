@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 	"knative.dev/pkg/apis"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -29,6 +30,9 @@ import (
 type ComponentsInterface interface {
 	// Returns an application obj from the kubernetes cluster.
 	GetComponent(name string, namespace string) (*appservice.Component, error)
+
+	// Returns a component from kubernetes cluster given a application name.
+	GetComponentByApplicationName(applicationName string, namespace string) (*appservice.Component, error)
 
 	// Returns an pipelinerun obj related with a given component name from the kubernetes cluster.
 	GetComponentPipelineRun(componentName, applicationName, namespace, sha string) (*v1beta1.PipelineRun, error)
@@ -57,6 +61,25 @@ func (h *hasFactory) GetComponent(name string, namespace string) (*appservice.Co
 	}
 
 	return component, nil
+}
+
+// GetComponentByApplicationName returns a component from kubernetes cluster given a application name.
+func (h *hasFactory) GetComponentByApplicationName(applicationName string, namespace string) (*appservice.Component, error) {
+	components := &appservice.ComponentList{}
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+	err := h.KubeRest().List(context.TODO(), components, opts...)
+	if err != nil {
+		return nil, err
+	}
+	for _, component := range components.Items {
+		if component.Spec.Application == applicationName {
+			return &component, nil
+		}
+	}
+
+	return &appservice.Component{}, fmt.Errorf("no component found %s", utils.GetAdditionalInfo(applicationName, namespace))
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels
@@ -88,11 +111,11 @@ func (h *hasFactory) WaitForComponentPipelineToBeFinished(component *appservice.
 	var pr *v1beta1.PipelineRun
 
 	for {
-		err := wait.PollImmediate(20*time.Second, 30*time.Minute, func() (done bool, err error) {
+		err := wait.PollImmediate(constants.PipelineRunPollingInterval, 30*time.Minute, func() (done bool, err error) {
 			pr, err = h.GetComponentPipelineRun(component.GetName(), app, component.GetNamespace(), sha)
 
 			if err != nil {
-				GinkgoWriter.Println("PipelineRun has not been created yet")
+				GinkgoWriter.Printf("PipelineRun has not been created yet for the Component %s/%s\n", component.GetNamespace, component.GetName())
 				return false, nil
 			}
 
