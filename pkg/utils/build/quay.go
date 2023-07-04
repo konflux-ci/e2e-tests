@@ -37,9 +37,9 @@ func IsImageAnnotationPresent(annotations map[string]string) bool {
 	return image_annotation_str != ""
 }
 
-func ImageAnnotationGenerateValueIsNotFailed(annotations map[string]string) bool {
-	generate_value_str := annotations["image.redhat.com/generate"]
-	return generate_value_str != "failed"
+func ImageRepoCreationFailed(annotations map[string]string) bool {
+	imageAnnotationValue := annotations["image.redhat.com/image"]
+	return !strings.Contains(imageAnnotationValue, "failed to generete image repository")
 }
 
 func GetRobotAccountName(imageName string) string {
