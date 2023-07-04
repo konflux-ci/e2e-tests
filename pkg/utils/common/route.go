@@ -72,7 +72,12 @@ func (h *SuiteController) RouteHostnameIsAccessible(routeName string, namespace 
 // Checks that the deployed route endpoint is actually reachable and returns 200
 func (h *SuiteController) RouteEndpointIsAccessible(route *routev1.Route, endpoint string) error {
 	if len(route.Spec.Host) > 0 {
-		routeUrl := "https://" + route.Spec.Host + endpoint
+		protocol := "https"
+		// Insecure route -> use http
+		if route.Spec.TLS == nil {
+			protocol = "http"
+		}
+		routeUrl := protocol + "://" + route.Spec.Host + endpoint
 
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		resp, err := http.Get(routeUrl)
