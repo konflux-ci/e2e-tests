@@ -3,7 +3,6 @@ package release
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/devfile/library/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
@@ -16,7 +15,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	"gopkg.in/yaml.v2"
-	"knative.dev/pkg/apis"
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -28,33 +26,29 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 	var fw *framework.Framework
 	var err error
 	var compName string
-	var devNamespace = utils.GetGeneratedNamespace("release-dev")
-	var managedNamespace = utils.GetGeneratedNamespace("release-managed")
+	var devNamespace string
+
 	var component *appservice.Component
+	var releaseCR *releaseApi.Release
+	var managedNamespace = utils.GetGeneratedNamespace("release-e2e-deploy-managed")
+
 	scGitRevision := fmt.Sprintf("test-deployment-%s", util.GenerateRandomString(4))
 
 	BeforeAll(func() {
-		fw, err = framework.NewFramework("release-e2e-bundle")
+		fw, err = framework.NewFramework("release-e2e-deploy")
 		Expect(err).NotTo(HaveOccurred())
+		devNamespace = fw.UserNamespace
 
 		kubeController := tekton.KubeController{
 			Commonctrl: *fw.AsKubeAdmin.CommonController,
 			Tektonctrl: *fw.AsKubeAdmin.TektonController,
 		}
 
-		_, err := fw.AsKubeAdmin.CommonController.CreateTestNamespace(devNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating devNamespace: %v", err)
-		GinkgoWriter.Println("Dev Namespace created: %s ", devNamespace)
-
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating managedNamespace: %v", err)
-		GinkgoWriter.Println("Managed Namespace created: %s ", managedNamespace)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating managed namespace: %v", err)
 
 		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
 		Expect(sourceAuthJson).ToNot(BeEmpty())
-
-		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(hacbsReleaseTestsTokenSecret, devNamespace, sourceAuthJson)
-		Expect(err).ToNot(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(redhatAppstudioUserSecret, managedNamespace, sourceAuthJson)
 		Expect(err).ToNot(HaveOccurred())
@@ -113,7 +107,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.GitOpsController.CreateEnvironment(releaseEnvironment, managedNamespace)
+		_, err = fw.AsKubeAdmin.GitOpsController.CreatePocEnvironment(releaseEnvironment, managedNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, releaseEnvironment, "", "mvp-deploy-strategy")
@@ -155,18 +149,16 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		}
 
 		// Download copy-applications.sh script from release-utils repo
-		args := []string{"https://raw.githubusercontent.com/hacbs-release/release-utils/main/copy-application.sh", "-o", "copy-application.sh"}
-		err = utils.ExecuteCommandInASpecificDirectory("curl", args, workingDir)
-		Expect(err).NotTo(HaveOccurred())
+		scriptFileName := "copy-application.sh"
+		args := []string{"https://raw.githubusercontent.com/hacbs-release/release-utils/main/copy-application.sh", "-o", scriptFileName}
+		Expect(utils.ExecuteCommandInASpecificDirectory("curl", args, workingDir)).To(Succeed())
+		defer os.Remove(fmt.Sprintf("%s/%s", workingDir, scriptFileName))
 
 		args = []string{"775", "copy-application.sh"}
-		err = utils.ExecuteCommandInASpecificDirectory("chmod", args, workingDir)
-		Expect(err).NotTo(HaveOccurred())
-
+		Expect(utils.ExecuteCommandInASpecificDirectory("chmod", args, workingDir)).To(Succeed())
 		// Copying application in dev namespace to managed namespace
 		args = []string{managedNamespace, "-a", devNamespace + "/" + applicationNameDefault}
-		err = utils.ExecuteCommandInASpecificDirectory("./copy-application.sh", args, workingDir)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(utils.ExecuteCommandInASpecificDirectory("./copy-application.sh", args, workingDir)).To(Succeed())
 
 	})
 
@@ -188,60 +180,62 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
 		})
 
-		It("verifies that in managed namespace will be created a PipelineRun.", func() {
-			Eventually(func() bool {
-				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
-				if err != nil || prList == nil || len(prList.Items) < 1 {
-					return false
-				}
-
-				return strings.Contains(prList.Items[0].Name, "release")
-			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
+		It("tests an associated Release CR is created", func() {
+			Eventually(func() error {
+				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
+				return err
+			}, releaseCreationTimeout, defaultInterval).Should(Succeed())
 		})
 
-		It("verifies a PipelineRun started in managed namespace succeeded.", func() {
-			Eventually(func() bool {
-				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
-				if prList == nil || err != nil || len(prList.Items) < 1 {
-					return false
+		It("verifies that Release PipelineRun is triggered", func() {
+			Eventually(func() error {
+				pr, err := fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
+				if err != nil {
+					GinkgoWriter.Printf("release pipelineRun for release '%s' in namespace '%s' not created yet: %+v\n", releaseCR.GetName(), releaseCR.GetNamespace(), err)
+					return err
 				}
-
-				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
-			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
+				if !pr.HasStarted() {
+					return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
+				}
+				return nil
+			}, releasePipelineRunCreationTimeout, defaultInterval).Should(Succeed(), fmt.Sprintf("timed out waiting for a pipelinerun to start for a release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
 		})
 
-		It("tests a Release exists", func() {
-			Eventually(func() bool {
-				releaseCreated, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
-				if releaseCreated == nil || err != nil {
-					return false
+		It("verifies that Release PipelineRun should eventually succeed", func() {
+			Eventually(func() error {
+				pr, err := fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
+				Expect(err).ShouldNot(HaveOccurred())
+				if !pr.IsDone() {
+					return fmt.Errorf("release pipelinerun %s/%s did not finish yet", pr.GetNamespace(), pr.GetName())
 				}
-
-				return true
-			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
+				Expect(utils.HasPipelineRunSucceeded(pr)).To(BeTrue(), fmt.Sprintf("release pipelinerun %s/%s did not succeed", pr.GetNamespace(), pr.GetName()))
+				return nil
+			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(Succeed())
 		})
-
 		// phase Deployed happens before phase Released
-		It("tests a Release exists and was deployed successfully", func() {
-			Eventually(func() bool {
-				releaseCreated, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
-				if releaseCreated == nil || err != nil || len(releaseCreated.Status.Conditions) < 1 {
-					return false
+		It("tests a Release CR reports that the deployment was successful", func() {
+			Eventually(func() error {
+				releaseCR, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
+				if err != nil {
+					return err
 				}
-
-				return releaseCreated.IsDeployed()
-			}, releaseDeploymentTimeout, defaultInterval).Should(BeTrue())
+				if !releaseCR.IsDeployed() {
+					return fmt.Errorf("release %s/%s is not marked as deployed yet", releaseCR.GetNamespace(), releaseCR.GetName())
+				}
+				return nil
+			}, releaseCreationTimeout, defaultInterval).Should(Succeed())
 		})
-
-		It("tests a Release exists and was released successfully.", func() {
-			Eventually(func() bool {
-				releaseCreated, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
-				if releaseCreated == nil || err != nil || len(releaseCreated.Status.Conditions) < 2 {
-					return false
+		It("tests a Release CR is marked as successfully deployed", func() {
+			Eventually(func() error {
+				releaseCR, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
+				if err != nil {
+					return err
 				}
-
-				return releaseCreated.IsReleased()
-			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
+				if !releaseCR.IsReleased() {
+					return fmt.Errorf("release %s/%s is not marked as finished yet", releaseCR.GetNamespace(), releaseCR.GetName())
+				}
+				return nil
+			}, releaseDeploymentTimeout, defaultInterval).Should(Succeed())
 		})
 	})
 })
