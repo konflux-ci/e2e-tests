@@ -61,11 +61,10 @@ const (
 	testPipelineTimeout         = time.Minute * 15
 
 	// Intervals
-	defaultPollingInterval     = time.Second * 2
-	jvmRebuildPollingInterval  = time.Second * 10
-	pipelineRunPollingInterval = time.Second * 10
-	snapshotPollingInterval    = time.Second * 1
-	releasePollingInterval     = time.Second * 1
+	defaultPollingInterval    = time.Second * 2
+	jvmRebuildPollingInterval = time.Second * 10
+	snapshotPollingInterval   = time.Second * 1
+	releasePollingInterval    = time.Second * 1
 )
 
 var sampleRepoURL = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), sampleRepoName)
@@ -188,9 +187,9 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(f.AsKubeAdmin.CommonController.Github.CreateRef(sampleRepoName, componentDefaultBranchName, componentNewBaseBranch)).To(Succeed())
-		_, err = f.AsKubeAdmin.HasController.CreateHasApplication(appName, userNamespace)
+		_, err = f.AsKubeAdmin.HasController.CreateApplication(appName, userNamespace)
 		Expect(err).ShouldNot(HaveOccurred())
-		_, err = f.AsKubeAdmin.IntegrationController.CreateEnvironment(userNamespace, "rhtap-demo-test")
+		_, err = f.AsKubeAdmin.GitOpsController.CreatePocEnvironment("rhtap-demo-test", userNamespace)
 		Expect(err).ShouldNot(HaveOccurred())
 		integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario_beta1(appName, userNamespace, testScenarioGitURL, testScenarioRevision, testScenarioPathInRepo)
 		Expect(err).ShouldNot(HaveOccurred())
@@ -259,7 +258,18 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 		When("Component with PaC is created", func() {
 
 			It("triggers creation of a PR in the sample repo", func() {
-				component, err = f.AsKubeAdmin.HasController.CreateComponentWithPaCEnabled(appName, componentName, userNamespace, sampleRepoURL, componentNewBaseBranch)
+				componentObj := appstudioApi.ComponentSpec{
+					ComponentName: componentName,
+					Source: appstudioApi.ComponentSource{
+						ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
+							GitSource: &appstudioApi.GitSource{
+								URL:      sampleRepoURL,
+								Revision: componentNewBaseBranch,
+							},
+						},
+					},
+				}
+				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, userNamespace, "", "", appName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
 				Expect(err).ShouldNot(HaveOccurred())
 
 				pacBranchName := fmt.Sprintf("appstudio-%s", component.GetName())
@@ -286,7 +296,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 						return nil
 					}
 					return err
-				}, pipelineRunStartedTimeout, pipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for init PaC PipelineRun to be present in the user namespace %q for component %q with a label pointing to %q", userNamespace, componentName, appName))
+				}, pipelineRunStartedTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for init PaC PipelineRun to be present in the user namespace %q for component %q with a label pointing to %q", userNamespace, componentName, appName))
 
 			})
 
@@ -301,14 +311,14 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 				Eventually(func() error {
 					pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, appName, userNamespace, mergeResultSha)
 					if err != nil {
-						GinkgoWriter.Println("PipelineRun has not been created yet")
+						GinkgoWriter.Printf("PipelineRun has not been created yet for component %s/%s\n", userNamespace, componentName)
 						return err
 					}
 					if !pipelineRun.HasStarted() {
 						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
 					}
 					return nil
-				}, pipelineRunStartedTimeout, pipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for a PipelineRun in namespace %q with label component label %q and application label %q and sha label %q to start", userNamespace, componentName, appName, mergeResultSha))
+				}, pipelineRunStartedTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for a PipelineRun in namespace %q with label component label %q and application label %q and sha label %q to start", userNamespace, componentName, appName, mergeResultSha))
 			})
 
 		})
@@ -412,7 +422,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 						Expect(utils.HasPipelineRunSucceeded(pipelineRun)).To(BeTrue(), fmt.Sprintf("PipelineRun %s/%s did not succeed", pipelineRun.GetNamespace(), pipelineRun.GetName()))
 					}
 					return nil
-				}, releasePipelineTimeout, pipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("failed to see pipelinerun %q in namespace %q with a label pointing to release %q in namespace %q to complete successfully", pipelineRun.Name, managedNamespace, release.Name, release.Namespace))
+				}, releasePipelineTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("failed to see pipelinerun %q in namespace %q with a label pointing to release %q in namespace %q to complete successfully", pipelineRun.Name, managedNamespace, release.Name, release.Namespace))
 			})
 		})
 		When("Release PipelineRun is completed", func() {
@@ -453,7 +463,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 
 		When("User switches to simple build", func() {
 			BeforeAll(func() {
-				comp, err := f.AsKubeAdmin.HasController.GetHasComponent(componentName, userNamespace)
+				comp, err := f.AsKubeAdmin.HasController.GetComponent(componentName, userNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 				comp.Annotations["appstudio.openshift.io/pac-provision"] = "delete"
 				Expect(f.AsKubeAdmin.CommonController.KubeRest().Update(context.TODO(), comp)).To(Succeed())

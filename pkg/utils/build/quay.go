@@ -2,6 +2,7 @@ package build
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -29,6 +30,16 @@ func GetQuayImageName(annotations map[string]string) (string, error) {
 	}
 	tokens := strings.Split(ia.Image, "/")
 	return strings.Join(tokens[2:], "/"), nil
+}
+
+func IsImageAnnotationPresent(annotations map[string]string) bool {
+	image_annotation_str := annotations["image.redhat.com/image"]
+	return image_annotation_str != ""
+}
+
+func ImageAnnotationGenerateValueIsNotFailed(annotations map[string]string) bool {
+	generate_value_str := annotations["image.redhat.com/generate"]
+	return generate_value_str != "failed"
 }
 
 func GetRobotAccountName(imageName string) string {
@@ -65,4 +76,27 @@ func DeleteImageRepo(imageName string) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+// imageURL format example: quay.io/redhat-appstudio-qe/devfile-go-rhtap-uvv7:build-66d4e-1685533053
+func DoesTagExistsInQuay(imageURL string) (bool, error) {
+	urlParts := strings.Split(imageURL, ":")
+	if len(urlParts) != 2 {
+		return false, fmt.Errorf("Image URL %s has incorrect format", imageURL)
+	}
+	repoParts := strings.Split(urlParts[0], "/")
+	if len(repoParts) <= 2 {
+		return false, fmt.Errorf("Image URL %s is not complete", imageURL)
+	}
+	repoName := strings.Join(repoParts[2:], "/")
+	tagList, _, err := quayClient.GetTagsFromPage(quayOrg, repoName, 0)
+	if err != nil {
+		return false, err
+	}
+	for _, tag := range tagList {
+		if tag.Name == urlParts[1] {
+			return true, nil
+		}
+	}
+	return false, nil
 }

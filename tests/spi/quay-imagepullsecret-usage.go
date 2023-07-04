@@ -81,6 +81,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 		})
 
 		var SPITokenBinding *v1beta1.SPIAccessTokenBinding
+		var SPIAccessToken *v1beta1.SPIAccessToken
 		var QuaySPITokenBindingName = "quay-spi-token-binding"
 		var SecretName = "test-secret-dockerconfigjson"
 		var TestQuayPrivateRepoURL = fmt.Sprintf("%s:test", QuayPrivateRepoURL)
@@ -96,22 +97,22 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 		// start of upload token
 		It("SPITokenBinding to be in AwaitingTokenData phase", func() {
 			// wait SPITokenBinding to be in AwaitingTokenData phase before trying to upload a token
-			Eventually(func() bool {
+			Eventually(func() v1beta1.SPIAccessTokenBindingPhase {
 				SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
 				Expect(err).NotTo(HaveOccurred())
 
-				return (SPITokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData)
-			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in AwaitingTokenData phase")
+				return SPITokenBinding.Status.Phase
+			}, 1*time.Minute, 5*time.Second).Should(Equal(v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData), fmt.Sprintf("SPIAccessTokenBinding %s/%s is not in %s phase", SPITokenBinding.GetNamespace(), SPITokenBinding.GetName(), v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData))
 		})
 
 		It("uploads username and token using rest endpoint", func() {
 			// the UploadUrl in SPITokenBinding should be available before uploading the token
-			Eventually(func() bool {
+			Eventually(func() string {
 				SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
 				Expect(err).NotTo(HaveOccurred())
 
-				return SPITokenBinding.Status.UploadUrl != ""
-			}, 1*time.Minute, 10*time.Second).Should(BeTrue(), "uploadUrl not set")
+				return SPITokenBinding.Status.UploadUrl
+			}, 1*time.Minute, 10*time.Second).ShouldNot(BeEmpty(), fmt.Sprintf(".Status.UploadUrl for SPIAccessTokenBinding %s/%s is not set", SPITokenBinding.GetNamespace(), SPITokenBinding.GetName()))
 			Expect(err).NotTo(HaveOccurred())
 
 			// linked accessToken token should exist
@@ -120,7 +121,6 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 
 			// get the url to manually upload the token
 			uploadURL := SPITokenBinding.Status.UploadUrl
-			Expect(uploadURL).NotTo(BeEmpty())
 
 			// Get the token for the current openshift user
 			bearerToken, err := utils.GetOpenshiftToken()
@@ -134,23 +134,21 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 		})
 
 		It("SPITokenBinding to be in Injected phase", func() {
-			Eventually(func() bool {
+			Eventually(func() v1beta1.SPIAccessTokenBindingPhase {
 				SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
 				Expect(err).NotTo(HaveOccurred())
-				return SPITokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected
-			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in Injected phase")
+				return SPITokenBinding.Status.Phase
+			}, 1*time.Minute, 5*time.Second).Should(Equal(v1beta1.SPIAccessTokenBindingPhaseInjected), fmt.Sprintf("SPIAccessTokenBinding %s/%s is not in %s phase", SPITokenBinding.GetNamespace(), SPITokenBinding.GetName(), v1beta1.SPIAccessTokenBindingPhaseInjected))
 		})
 
-		It("SPIAccessToken exists and is in Read phase", func() {
-			Eventually(func() bool {
-				SPIAccessToken, err := fw.AsKubeDeveloper.SPIController.GetSPIAccessToken(SPITokenBinding.Status.LinkedAccessTokenName, namespace)
-
+		It("SPIAccessToken exists and is in Ready phase", func() {
+			Eventually(func() (v1beta1.SPIAccessTokenPhase, error) {
+				SPIAccessToken, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessToken(SPITokenBinding.Status.LinkedAccessTokenName, namespace)
 				if err != nil {
-					return false
+					return "", err
 				}
-
-				return (SPIAccessToken.Status.Phase == v1beta1.SPIAccessTokenPhaseReady)
-			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "SPIAccessToken should be in ready phase")
+				return SPIAccessToken.Status.Phase, nil
+			}, 2*time.Minute, 5*time.Second).Should(Equal(v1beta1.SPIAccessTokenPhaseReady), "SPIAccessToken for SPITokenBinding %s/%s should be in %s phase", SPITokenBinding.GetNamespace(), SPITokenBinding.GetName(), v1beta1.SPIAccessTokenPhaseReady)
 		})
 
 		// Create a pod using the generated ImagePullSecret to pull a private quay image
@@ -175,12 +173,12 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 			pod, err := fw.AsKubeAdmin.CommonController.GetPod(namespace, pod.Name)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(func() bool {
+			Eventually(func() corev1.PodPhase {
 				pod, err := fw.AsKubeAdmin.CommonController.GetPod(namespace, pod.Name)
 				Expect(err).NotTo(HaveOccurred())
 
-				return pod.Status.Phase == corev1.PodRunning
-			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "Pod not created successfully")
+				return pod.Status.Phase
+			}, 1*time.Minute, 5*time.Second).Should(Equal(corev1.PodRunning), fmt.Sprintf("Pod %s/%s did not have the status %s", pod.GetNamespace(), pod.GetName(), corev1.PodRunning))
 		})
 
 		Describe("SVPI-408 - Check the secret that can be used with skopeo Tekton task to authorize a copy of one private Quay image to the second Quay image repository", Ordered, func() {
@@ -210,7 +208,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 			It("creates taskrun", func() {
 				srcImageURL := fmt.Sprintf("docker://%s", TestQuayPrivateRepoURL)
 				destTag := fmt.Sprintf("spi-test-%s", strings.Replace(uuid.New().String(), "-", "", -1))
-				destImageURL := fmt.Sprintf("docker://%s:%s", QuayPrivateRepoURL, destTag)
+				destImageURL := fmt.Sprintf("docker://%s/%s", QuayPrivateRepoURL, destTag)
 
 				TaskRun, err = fw.AsKubeAdmin.TektonController.CreateTaskRunCopy(taskRunName, namespace, serviceAccountName, srcImageURL, destImageURL)
 				Expect(err).NotTo(HaveOccurred())
@@ -219,12 +217,12 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 			})
 
 			It("checks if taskrun is complete", func() {
-				Eventually(func() bool {
+				Eventually(func() *metav1.Time {
 					TaskRun, err = fw.AsKubeDeveloper.TektonController.GetTaskRun(taskRunName, namespace)
 					Expect(err).NotTo(HaveOccurred())
 
-					return TaskRun.Status.CompletionTime != nil
-				}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "taskrun is not complete")
+					return TaskRun.Status.CompletionTime
+				}, 1*time.Minute, 5*time.Second).ShouldNot(BeNil(), "timed out waiting for taskrun %s/%s to get completed", TaskRun.GetNamespace(), TaskRun.GetName())
 			})
 
 			It("checks if taskrun is successful", func() {

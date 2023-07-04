@@ -9,7 +9,7 @@ source "/usr/local/ci-secrets/redhat-appstudio-load-test/load-test-scenario.${1:
 
 pushd "${2:-./tests/load-tests}"
 
-export QUAY_E2E_ORGANIZATION MY_GITHUB_ORG GITHUB_TOKEN TEKTON_PERF_ENABLE_PROFILING TEKTON_PERF_PROFILE_CPU_PERIOD
+export QUAY_E2E_ORGANIZATION MY_GITHUB_ORG GITHUB_TOKEN TEKTON_PERF_ENABLE_PROFILING TEKTON_PERF_PROFILE_CPU_PERIOD KUBE_SCHEDULER_LOG_LEVEL
 QUAY_E2E_ORGANIZATION=$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/quay-org)
 MY_GITHUB_ORG=$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/github-org)
 
