@@ -37,7 +37,7 @@ func IsImageAnnotationPresent(annotations map[string]string) bool {
 	return image_annotation_str != ""
 }
 
-func ImageRepoCreationFailed(annotations map[string]string) bool {
+func ImageRepoCreationSucceeded(annotations map[string]string) bool {
 	imageAnnotationValue := annotations["image.redhat.com/image"]
 	return !strings.Contains(imageAnnotationValue, "failed to generete image repository")
 }
