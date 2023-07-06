@@ -424,6 +424,6 @@ func (h *hasFactory) CheckForImageAnnotation(component *appservice.Component) wa
 			return false, err
 		}
 		annotations := componentCR.GetAnnotations()
-		return build.IsImageAnnotationPresent(annotations) && build.ImageAnnotationGenerateValueIsNotFailed(annotations), nil
+		return build.IsImageAnnotationPresent(annotations) && build.ImageRepoCreationSucceeded(annotations), nil
 	}
 }
