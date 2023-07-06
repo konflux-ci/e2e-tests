@@ -54,7 +54,7 @@ func init() {
 
 	klog.SetLogger(ginkgo.GinkgoLogr)
 
-	verbosity := 6
+	verbosity := 1
 	if v, err := strconv.ParseUint(os.Getenv("KLOG_VERBOSITY"), 10, 8); err == nil {
 		verbosity = int(v)
 	}
