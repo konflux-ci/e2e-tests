@@ -10,14 +10,8 @@ import (
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Contains all methods related with components objects CRUD operations.
-type SnapshotEnvironmentBindingsInterface interface {
-	// Deletes all snapshotenvironmentbinding from the given namespace in the kubernetes cluster.
-	DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace string, timeout time.Duration) error
-}
-
 // DeleteAllSnapshotEnvBindingsInASpecificNamespace removes all snapshotEnvironmentBindings from a specific namespace. Useful when creating a lot of resources and want to remove all of them
-func (h *hasFactory) DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace string, timeout time.Duration) error {
+func (h *HasController) DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace string, timeout time.Duration) error {
 	if err := h.KubeRest().DeleteAllOf(context.TODO(), &appservice.SnapshotEnvironmentBinding{}, rclient.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting snapshotEnvironmentBindings from the namespace %s: %+v", namespace, err)
 	}
