@@ -507,15 +507,6 @@ func findCosignResultsForImage(imageRef string) (*CosignResult, error) {
 		errMsg += fmt.Sprintf("error when getting attestation tag: %+v\n", err)
 	} else {
 		results.attestationImageRef = attestationTag.ImageRef
-		// we want two layers, one for TaskRun and one for PipelineRun
-		// attestations, i.e. that the Chains controller reconciled both and
-		// uploaded them as layers
-		//
-		// this needs to change if/when Chains controller does not produce two layers
-		layersExpected := 2
-		if len(attestationTag.Layers) < layersExpected {
-			errMsg += fmt.Sprintf("attestation tag doesn't have the expected number of layers (%d)\n", layersExpected)
-		}
 	}
 
 	if len(errMsg) > 0 {
