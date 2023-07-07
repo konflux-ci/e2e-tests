@@ -235,7 +235,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 					return fmt.Errorf("release %s/%s is not marked as finished yet", releaseCR.GetNamespace(), releaseCR.GetName())
 				}
 				return nil
-			}, releaseCreationTimeout, defaultInterval).Should(Succeed())
+			}, releaseFinishedTimeout, defaultInterval).Should(Succeed())
 		})
 	})
 })
