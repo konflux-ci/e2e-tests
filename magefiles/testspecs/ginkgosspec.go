@@ -55,15 +55,23 @@ func (gst *GinkgosSpecTranslator) FromFile(file string) (TestOutline, error) {
 
 // ToFile generates a Ginkgo test file from a TestOutline
 func (gst *GinkgosSpecTranslator) ToFile(destination string, outline TestOutline) error {
-	testFilePath, err := createTestPath(destination)
+
+	e2ePath, err := os.Getwd()
+	if err != nil {
+		klog.Error("failed to get current directory")
+		return err
+	}
+
+	testFilePath, err := createTestPath(e2ePath, destination)
 	if err != nil {
 		return err
 	}
-	dataFile, err := writeTemplateDataFile(testFilePath, outline)
+	dataFile, err := writeTemplateDataFile(e2ePath, testFilePath, outline)
 	if err != nil {
 		return err
 	}
-	return generateGinkgoSpec(testFilePath, dataFile)
+
+	return generateGinkgoSpec(e2ePath, testFilePath, dataFile)
 
 }
 
@@ -104,7 +112,7 @@ func excludeSetupTeardownNodes(nodes TestOutline) TestOutline {
 // generateGinkgoSpec will call the ginkgo generate command
 // to generate the ginkgo data json file we created and
 // the template located in out templates directory
-func generateGinkgoSpec(destination string, dataFile string) error {
+func generateGinkgoSpec(cwd string, destination string, dataFile string) error {
 
 	var err error
 
@@ -130,7 +138,9 @@ func generateGinkgoSpec(destination string, dataFile string) error {
 	if err != nil {
 		return err
 	}
-	fullTemplatePath := fmt.Sprintf("../../%s", tmpl)
+
+	fullTemplatePath := fmt.Sprintf("%s/%s", cwd, tmpl)
+
 	klog.Infof("Creating new test package directory and spec file %s.\n", destination)
 	_, err = ginkgoGenerateSpecCmd("--template", fullTemplatePath, "--template-data", dataFile)
 	if err != nil {
@@ -153,7 +163,7 @@ func generateGinkgoSpec(destination string, dataFile string) error {
 	if err != nil {
 		return err
 	}
-	err = os.Chdir("../..")
+	err = os.Chdir(cwd)
 	if err != nil {
 		return err
 	}
@@ -162,20 +172,15 @@ func generateGinkgoSpec(destination string, dataFile string) error {
 
 // createTestPath will create the full test path in the tests
 // directory if it doesn't exit
-func createTestPath(destination string) (string, error) {
+func createTestPath(cwd string, destination string) (string, error) {
 
 	destination, err := filepath.Abs(destination)
 	if err != nil {
 		klog.Error("failed to get absolute path of destination")
 		return "", err
 	}
-	e2ePath, err := os.Getwd()
-	if err != nil {
-		klog.Error("failed to get current directory")
-		return "", err
-	}
-	testPath := filepath.Join(e2ePath, "tests")
-	klog.Info(testPath)
+
+	testPath := filepath.Join(cwd, "tests")
 	if !strings.Contains(destination, testPath) {
 
 		return "", fmt.Errorf("the destination path must be to the `e2e-tests/tests` directory")
@@ -192,9 +197,6 @@ func createTestPath(destination string) (string, error) {
 		return "", fmt.Errorf("the destination path must be to `e2e-tests/tests/<sub-path>` directory")
 	}
 
-	//if !strings.Contains(strings.Split(filepath.Dir(destination), "/")[0], "tests") {
-	//	destination = filepath.Join("tests", destination)
-	//}
 	dir := filepath.Dir(destination)
 	err = os.MkdirAll(dir, 0775)
 	if err != nil {
@@ -206,12 +208,12 @@ func createTestPath(destination string) (string, error) {
 
 // writeTemplateDataFile out the data as a json file to the directory that will be used by
 // ginkgo generate command
-func writeTemplateDataFile(destination string, outline TestOutline) (string, error) {
+func writeTemplateDataFile(cwd string, destination string, outline TestOutline) (string, error) {
 
 	tmplData := NewTemplateData(outline, destination)
 	data, err := json.Marshal(tmplData)
 	if err != nil {
-		klog.Errorf("error marshalling to json: %s", err)
+		klog.Errorf("error marshalling template data to json: %s", err)
 		return "", err
 	}
 	dataName := strings.Split(filepath.Base(destination), ".")[0]
@@ -226,10 +228,10 @@ func writeTemplateDataFile(destination string, outline TestOutline) (string, err
 	}
 	// Doing this to avoid errcheck flagging this in a defer.
 	// Refer to https://github.com/kisielk/errcheck
-	err = os.Chdir("../..")
+	err = os.Chdir(cwd)
 	if err != nil {
 		return "", err
 	}
-	//defer os.Chdir("../..")
+
 	return dataFile, nil
 }
