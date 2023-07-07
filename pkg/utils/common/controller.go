@@ -1,17 +1,10 @@
 package common
 
 import (
-	"context"
-	"fmt"
-	"os"
-
-	. "github.com/onsi/ginkgo/v2"
 	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Create the struct for kubernetes and github clients.
@@ -36,37 +29,4 @@ func NewSuiteController(kubeC *kubeCl.CustomClient) (*SuiteController, error) {
 		kubeC,
 		gh,
 	}, nil
-}
-
-func (cs *SuiteController) StorePodLogs(testNamespace, jobName, testLogsDir string) error {
-	podsDir := fmt.Sprintf("%s/pods", testLogsDir)
-	if err := os.MkdirAll(podsDir, os.ModePerm); err != nil {
-		return err
-	}
-
-	podList, err := cs.KubeInterface().CoreV1().Pods(jobName).List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return fmt.Errorf("error listing %s pods: %s\n", testNamespace, err.Error())
-	}
-
-	GinkgoWriter.Printf("found %d pods in namespace: %s\n", len(podList.Items), testNamespace)
-
-	for _, pod := range podList.Items {
-		var containers []corev1.Container
-		containers = append(containers, pod.Spec.InitContainers...)
-		containers = append(containers, pod.Spec.Containers...)
-		for _, c := range containers {
-			log, err := utils.GetContainerLogs(cs.KubeInterface(), pod.Name, c.Name, pod.Namespace)
-			if err != nil {
-				GinkgoWriter.Printf("error getting logs for pod/container %s/%s: %v\n", pod.Name, c.Name, err.Error())
-				continue
-			}
-
-			filepath := fmt.Sprintf("%s/%s-pod-%s-%s.log", podsDir, pod.Namespace, pod.Name, c.Name)
-			if err := os.WriteFile(filepath, []byte(log), 0644); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }

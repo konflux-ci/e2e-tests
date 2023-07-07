@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -841,42 +840,4 @@ func (s *SuiteController) GetTask(name, namespace string) (*v1beta1.Task, error)
 		return nil, err
 	}
 	return &task, nil
-}
-
-func (s *SuiteController) StorePipelineRuns(componentPipelineRun *v1beta1.PipelineRun, testLogsDir, testNamespace string) error {
-	pipelineRunsDir := fmt.Sprintf("%s/pipeline-runs", testLogsDir)
-	if err := os.MkdirAll(pipelineRunsDir, os.ModePerm); err != nil {
-		return err
-	}
-
-	filepath := fmt.Sprintf("%s/%s-pr-%s.log", pipelineRunsDir, testNamespace, componentPipelineRun.Name)
-	pipelineLogs, err := s.GetPipelineRunLogs(componentPipelineRun.Name, testNamespace)
-	if err != nil {
-		g.GinkgoWriter.Printf("got error fetching PR logs: %v\n", err.Error())
-	} else {
-		if err := os.WriteFile(filepath, []byte(pipelineLogs), 0644); err != nil {
-			g.GinkgoWriter.Printf("cannot write to %s: %+v\n", filepath, err)
-		}
-	}
-
-	pipelineRuns, err := s.ListAllPipelineRuns(testNamespace)
-
-	if err != nil {
-		return fmt.Errorf("got error fetching PR list: %v\n", err.Error())
-	}
-
-	for _, pipelineRun := range pipelineRuns.Items {
-		filepath := fmt.Sprintf("%s/%s-pr-%s.log", pipelineRunsDir, testNamespace, pipelineRun.Name)
-		pipelineLogs, err := s.GetPipelineRunLogs(pipelineRun.Name, testNamespace)
-		if err != nil {
-			g.GinkgoWriter.Printf("got error fetching PR logs: %v\n", err.Error())
-			continue
-		}
-
-		if err := os.WriteFile(filepath, []byte(pipelineLogs), 0644); err != nil {
-			g.GinkgoWriter.Printf("cannot write to %s: %+v\n", filepath, err)
-		}
-	}
-
-	return nil
 }

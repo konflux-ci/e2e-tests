@@ -12,10 +12,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 )
 
-func StoreTestLogs(testNamespace, jobName string, componentPipelineRun *v1beta1.PipelineRun, cs *common.SuiteController, t *tekton.SuiteController) error {
+func StoreTestLogs(classname, testNamespace, jobName string, componentPipelineRun *v1beta1.PipelineRun, cs *common.SuiteController, t *tekton.SuiteController) error {
 	wd, _ := os.Getwd()
 	artifactDir := GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
-	testLogsDir := fmt.Sprintf("%s/%s", artifactDir, testNamespace)
+	testLogsDir := fmt.Sprintf("%s/%s", artifactDir, classname)
 
 	if err := os.MkdirAll(testLogsDir, os.ModePerm); err != nil {
 		return err
