@@ -167,11 +167,10 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		if err != nil {
 			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 		}
-		// TODO: Uncomment this lines once: https://issues.redhat.com/browse/RHTAPBUGS-409 is solved
-		/*if !CurrentSpecReport().Failed() {
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
+		if !CurrentSpecReport().Failed() {
 			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-		}*/
+			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
+		}
 	})
 
 	var _ = Describe("Post-release verification", func() {
