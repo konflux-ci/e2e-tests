@@ -1,9 +1,0 @@
-# Configuration file for sending webhooks
-
-webhookConfig:
-  saltSecret: "${webhook_salt}"
-  webhookTarget: "${webhook_target}"
-  repositoryURL: "${webhook_repositoryURL}"
-  repository:
-    fullName: "${webhook_repositoryFullName}"
-    pullNumber: "${webhook_pullNumber}"
