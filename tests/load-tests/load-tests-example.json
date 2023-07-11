@@ -15,10 +15,13 @@
   "createResourcesTimeMax": 12.397832976,
   "runPipelineSucceededTimeAvg": 269.6,
   "runPipelineSucceededTimeMax": 471,
-  "runPipelineFailedTimeAvg": 0,
+  "runPipelineFailedTimeAvg": 121.456,
   "deploymentSucceededTimeAvg": 4.733333333333333,
   "deploymentSucceededTimeMax": 7,
   "deploymentFailedTimeAvg": 0,
+  "integrationTestsRunPipelineSucceededTimeAvg": 14.938775510204081,
+  "integrationTestsRunPipelineSucceededTimeMax": 85,
+  "integrationTestsRunPipelineFailedTimeAvg": 0,
   "createUserFailures": 0,
   "createUserFailureRate": 0,
   "createResourcesFailures": 0,
@@ -27,6 +30,8 @@
   "runPipelineFailureRate": 0.2,
   "deploymentFailures": 0,
   "deploymentFailureRate": 0,
+  "integrationTestsRunPipelineFailures": 0,
+  "integrationTestsRunPipelineFailureRate": 0,
   "errorCounts": [
     {
       "errorCode": 14,

@@ -168,7 +168,7 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 		componentObject = h.refreshComponentForErrorDebug(componentObject)
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
 	}
-	if err := utils.WaitUntil(h.CheckForImageAnnotation(componentObject), time.Minute*1); err != nil {
+	if err := utils.WaitUntil(h.CheckForImageAnnotation(componentObject), time.Minute*5); err != nil {
 		return nil, fmt.Errorf("timed out when waiting for image-controller annotations to be updated on component %s in namespace %s. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
 	}
 	return componentObject, nil
