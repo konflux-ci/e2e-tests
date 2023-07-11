@@ -316,7 +316,7 @@ func (ci CI) setRequiredEnvVars() error {
 				os.Setenv(fmt.Sprintf("%s_REQPROCESSOR_IMAGE", envVarPrefix), os.Getenv("CI_JBS_REQPROCESSOR_IMAGE"))
 				os.Setenv(fmt.Sprintf("%s_CACHE_IMAGE", envVarPrefix), os.Getenv("CI_JBS_CACHE_IMAGE"))
 
-				klog.Infof("going to override default Tekton bundle for the purpose of testing jvm-build-service PR")
+				klog.Infof("going to override default Tekton bundle s2i-java task for the purpose of testing jvm-build-service PR")
 				var err error
 				var defaultBundleRef string
 				var tektonObj runtime.Object
@@ -340,9 +340,21 @@ func (ci CI) setRequiredEnvVars() error {
 
 				var currentS2iJavaTaskRef string
 				for _, t := range javaPipelineObj.PipelineSpec().Tasks {
-					if t.TaskRef.Name == "s2i-java" {
-						currentS2iJavaTaskRef = t.TaskRef.Bundle
-						t.TaskRef.Bundle = newS2iJavaTaskRef.String()
+					params := t.TaskRef.Params
+					var lastBundle *tektonapi.Param
+					s2iTask := false
+					for i, param := range params {
+						if param.Name == "bundle" {
+							lastBundle = &t.TaskRef.Params[i]
+						} else if param.Name == "name" && param.Value.StringVal == "s2i-java" {
+							s2iTask = true
+						}
+					}
+					if s2iTask {
+						currentS2iJavaTaskRef = lastBundle.Value.StringVal
+						klog.Infof("Found current task ref %s", currentS2iJavaTaskRef)
+						lastBundle.Value = *tektonapi.NewStructuredValues(newS2iJavaTaskRef.String())
+						break
 					}
 				}
 				if tektonObj, err = utils.ExtractTektonObjectFromBundle(currentS2iJavaTaskRef, "task", "s2i-java"); err != nil {
