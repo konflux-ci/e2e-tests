@@ -2,21 +2,18 @@ package release
 
 import (
 	"fmt"
-	"strings"
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
-	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	applicationapiv1alpha1 "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"knative.dev/pkg/apis"
-)
-
-const (
-	DEFAULT_RELEASE_SERVICE_USER = "release-service-e2e"
 )
 
 var snapshotComponents = []applicationapiv1alpha1.SnapshotComponent{
@@ -31,144 +28,94 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 	var fw *framework.Framework
 	var err error
 
-	var devNamespace = uuid.New().String()
-	var managedNamespace = uuid.New().String()
+	var devNamespace, managedNamespace string
 	var ecPolicy ecp.EnterpriseContractPolicySpec
+
+	var releaseCR *releaseApi.Release
+	var pr *v1beta1.PipelineRun
 
 	BeforeAll(func() {
 		// Initialize the tests controllers
-		fw, err = framework.NewFramework(DEFAULT_RELEASE_SERVICE_USER)
+		fw, err = framework.NewFramework("release-service-e2e")
 		Expect(err).NotTo(HaveOccurred())
-		// Create the dev namespace
-		_, err := fw.AsKubeAdmin.CommonController.CreateTestNamespace(devNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", devNamespace, err)
-		GinkgoWriter.Println("Dev Namespace :", devNamespace)
+		devNamespace = fw.UserNamespace
 
 		// Create the managed namespace
+		managedNamespace = "release-service-e2e-managed"
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", managedNamespace, err)
 
-		GinkgoWriter.Println("Managed Namespace :", managedNamespace)
+		// Get the Spec from the default EnterpriseContractPolicy. This resource has up to date
+		// references and contains a small set of policy rules that should always pass during
+		// normal execution.
+		k := tekton.KubeController{Tektonctrl: *fw.AsKubeAdmin.TektonController}
+		defaultECP, err := k.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+		Expect(err).NotTo(HaveOccurred(), "Error when fetching the default ECP: %v", err)
+		ecPolicy = defaultECP.Spec
 
-		// get the ec configmap to configure the policy and data sources
-		cm, err := fw.AsKubeAdmin.CommonController.GetConfigMap("ec-defaults", "enterprise-contract-service")
-		Expect(err).ToNot(HaveOccurred())
-		// the default policy source
-		ecPolicy = ecp.EnterpriseContractPolicySpec{
-			Description: "Red Hat's enterprise requirements",
-			Sources: []ecp.Source{
-				{
-					Name:   "ec-policies",
-					Policy: []string{cm.Data["ec_policy_source"]},
-					Data:   []string{cm.Data["ec_data_source"]},
-				},
-			},
-			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-				Exclude: []string{"tasks", "attestation_task_bundle", "java", "test", "not_useful"},
-			},
-		}
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateSnapshot(snapshotName, devNamespace, applicationName, snapshotComponents)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, serviceAccount, paramsReleaseStrategyM6)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationName, managedNamespace, "")
+		Expect(err).NotTo(HaveOccurred())
+		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicy, managedNamespace, ecPolicy)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(destinationReleasePlanAdmissionName, devNamespace, applicationName, managedNamespace, "", "", releaseStrategyName)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, sourceReleasePlanName)
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterAll(func() {
 		if !CurrentSpecReport().Failed() {
-			// Delete the dev and managed namespaces with all the resources created in them
-			Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(devNamespace)).NotTo(HaveOccurred())
-			Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(managedNamespace)).NotTo(HaveOccurred())
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
 			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
 			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
 		}
 	})
 
-	var _ = Describe("Creation of the 'Happy path' resources", func() {
-
-		It("creates a Snapshot in dev namespace.", func(ctx SpecContext) {
-			_, err := fw.AsKubeAdmin.ReleaseController.CreateSnapshot(snapshotName, devNamespace, applicationName, snapshotComponents)
-			Expect(err).NotTo(HaveOccurred())
-			// We add the namespace creation timeout as this is the first test so must also take into account the code in BeforeAll
-		}, SpecTimeout(snapshotCreationTimeout+namespaceCreationTimeout*2))
-
-		It("creates Release Strategy in managed namespace.", func(ctx SpecContext) {
-			_, err := fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, serviceAccount, paramsReleaseStrategyM6)
-			Expect(err).NotTo(HaveOccurred())
-		}, SpecTimeout(releaseStrategyCreationTimeout))
-
-		It("creates ReleasePlan in dev namespace.", func(ctx SpecContext) {
-			_, err := fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationName, managedNamespace, "")
-			Expect(err).NotTo(HaveOccurred())
-		}, SpecTimeout(releasePlanCreationTimeout))
-
-		It("creates EnterpriseContractPolicy in managed namespace.", func(ctx SpecContext) {
-			_, err := fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicy, managedNamespace, ecPolicy)
-			Expect(err).NotTo(HaveOccurred())
-		}, SpecTimeout(EnterpriseContractPolicyTimeout))
-
-		It("creates ReleasePlanAdmission in managed namespace.", func(ctx SpecContext) {
-			_, err := fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(destinationReleasePlanAdmissionName, devNamespace, applicationName, managedNamespace, "", "", releaseStrategyName)
-			Expect(err).NotTo(HaveOccurred())
-		}, SpecTimeout(releasePlanAdmissionCreationTimeout))
-
-		It("creates a Release in dev namespace.", func(ctx SpecContext) {
-			_, err := fw.AsKubeAdmin.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, sourceReleasePlanName)
-			Expect(err).NotTo(HaveOccurred())
-		}, SpecTimeout(releaseCreationTimeout))
-	})
-
 	var _ = Describe("post-release verification.", func() {
 
-		It("makes sure a PipelineRun should have been created in the managed namespace.", func() {
-			Eventually(func() bool {
-				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
-				if err != nil || prList == nil || len(prList.Items) < 1 {
-					GinkgoWriter.Println(err)
-					return false
-				}
+		It("tests an associated Release CR is created", func() {
+			Eventually(func() error {
+				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetRelease(releaseName, "", devNamespace)
+				return err
+			}, releaseCreationTimeout, defaultInterval).Should(Succeed())
+		})
 
-				return strings.Contains(prList.Items[0].Name, releaseName)
-			}, releasePipelineRunCreationTimeout, defaultInterval).Should(BeTrue())
+		It("makes sure a Release PipelineRun is created in the managed namespace", func() {
+			Eventually(func() error {
+				_, err := fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
+				return err
+			}, releasePipelineRunCreationTimeout, constants.PipelineRunPollingInterval).Should(Succeed())
 		})
 
 		It("makes sure the PipelineRun exists and succeeded", func() {
-			Eventually(func() bool {
-				prList, err := fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
-				if prList == nil || err != nil || len(prList.Items) < 1 {
-					GinkgoWriter.Println(err)
-					return false
+			Eventually(func() error {
+				pr, err = fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(utils.HasPipelineRunFailed(pr)).ToNot(BeTrue(), fmt.Sprintf("Release PipelineRun %s/%s failed", pr.GetNamespace(), pr.GetName()))
+				if !pr.IsDone() {
+					return fmt.Errorf("release PipelineRun %s/%s did not finish yet", pr.GetNamespace(), pr.GetName())
 				}
-
-				return prList.Items[0].HasStarted() && prList.Items[0].IsDone() && prList.Items[0].Status.GetCondition(apis.ConditionSucceeded).IsTrue()
-			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(BeTrue())
+				Expect(utils.HasPipelineRunSucceeded(pr)).To(BeTrue(), fmt.Sprintf("Release PipelineRun %s/%s did not succceed", pr.GetNamespace(), pr.GetName()))
+				return nil
+			}, releasePipelineRunCompletionTimeout, constants.PipelineRunPollingInterval).Should(Succeed())
 		})
 
-		It("makes sure that the Release should have succeeded.", func() {
-			Eventually(func() bool {
-				release, err := fw.AsKubeAdmin.ReleaseController.GetRelease(releaseName, "", devNamespace)
-				if err != nil || release == nil {
-					return false
+		It("tests a Release CR is marked as successful", func() {
+			Eventually(func() error {
+				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetRelease(releaseName, "", devNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+				if !releaseCR.IsReleased() {
+					return fmt.Errorf("release CR %s/%s did not finish successfully yet", releaseCR.GetNamespace(), releaseCR.GetName())
 				}
-
-				return release.IsReleased()
-			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
+				return nil
+			}, releaseCreationTimeout, defaultInterval).Should(Succeed())
 		})
 
-		It("makes sure the Release references the release PipelineRun.", func(ctx SpecContext) {
-			var pipelineRunList *v1beta1.PipelineRunList
-
-			Eventually(func() bool {
-				pipelineRunList, err = fw.AsKubeAdmin.TektonController.ListAllPipelineRuns(managedNamespace)
-				if err != nil || pipelineRunList == nil {
-					return false
-				}
-
-				return len(pipelineRunList.Items) > 0 && err == nil
-			}, avgControllerQueryTimeout, defaultInterval).Should(BeTrue())
-
-			release, err := fw.AsKubeAdmin.ReleaseController.GetRelease(releaseName, "", devNamespace)
-			if err != nil {
-				GinkgoWriter.Println(err)
-			}
-			Expect(release.Status.Processing.PipelineRun == (fmt.Sprintf("%s/%s", pipelineRunList.Items[0].Namespace, pipelineRunList.Items[0].Name))).Should(BeTrue())
-			// We add the namespace deletion timeout as this is the last test so must also take into account the code in AfterAll
-		}, SpecTimeout(avgControllerQueryTimeout*2+namespaceDeletionTimeout*2))
+		It("makes sure the Release references the release PipelineRun.", func() {
+			Expect(releaseCR.Status.Processing.PipelineRun).To(Equal(fmt.Sprintf("%s/%s", pr.GetNamespace(), pr.GetName())))
+		})
 	})
 })

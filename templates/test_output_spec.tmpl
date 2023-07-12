@@ -1,0 +1,172 @@
+package {{ .CustomData.PackageName }}
+
+/* This was generated from a template file. Please feel free to update as necessary!
+   a couple things to note:
+    - Remember to implement specific logic of the service/domain you are trying to test if it not already there in the pkg/
+
+    - To include the tests as part of the E2E Test suite:
+       - Update the pkg/framework/describe.go to include the `Describe func` of this new test suite, If you haven't already done so.
+       - Import this new package into the cmd/e2e_test.go 
+*/
+
+import (
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+    "fmt"
+	"strings"
+	"time"
+    "encoding/json"
+    "context"
+
+
+    "github.com/redhat-appstudio/e2e-tests/pkg/framework"
+    //framework imports edit as required
+    "github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+
+)
+
+{{ range .CustomData.Outline }}
+var _ = framework.{{ .Name }}("{{ .Text }}", {{range .Labels }}Label("{{.}}"), {{ end }} func() {
+
+	defer GinkgoRecover()
+    var err error
+    var f *framework.Framework
+    // use 'f' to access common controllers or the specific service controllers within the framework
+	BeforeAll(func() {
+		// Initialize the tests controllers
+		f, err = framework.NewFramework()
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+    {{ range .Nodes }}
+    {{ if eq .Name "DescribeTable" }}
+    {{ .Name }}("{{ .Text }} is table", 
+        func() {
+        {{range .Nodes }}
+        {{ if eq .Name "By" }}
+        {{ .Name }}("{{ .Text }}")
+        {{ end -}}
+        {{ end -}}
+
+        },
+        {{range .Nodes }}
+        {{ if eq .Name "Entry" }}
+        {{ .Name }}("{{ .Text }}",),
+        {{ end -}}
+        {{ end -}}
+    )
+    {{ end }}
+    {{ if ne .Name "DescribeTable" }}
+    {{ .Name }}("{{ .Text }}", {{range .Labels }}Label("{{.}}"), {{ end }}func() {
+        // Declare variables here.
+
+        {{range .Nodes }}
+        {{ if eq .Name "DescribeTable" }}
+        {{ .Name }}("{{ .Text }}", 
+        func() {
+        {{range .Nodes }}
+        {{ if eq .Name "By" }}
+        {{ .Name }}("{{ .Text }}")
+        {{ end -}}
+        {{ end -}}
+
+        },
+        {{range .Nodes }}
+        {{ if eq .Name "Entry" }}
+        {{ .Name }}("{{ .Text }}",),
+        {{ end -}}
+        {{ end -}}
+        )
+        {{ end }}
+        {{ if eq .Name "By" }}
+        {{ .Name }}("{{ .Text }}")
+        {{ continue }}
+        {{ end }}
+        {{ if eq .Name "Entry" }}
+        {{ continue }}
+        {{ end }}
+        {{ if ne .Name "DescribeTable" }}
+        {{ .Name }}("{{ .Text }}", {{range .Labels }}Label("{{.}}"), {{ end }} func() { 
+        {{ if eq .Name "It" }}
+        // Implement test and assertions here
+        {{ end }}
+            {{ range .Nodes }}
+            {{ if eq .Name "DescribeTable" }}
+            {{ .Name }}("{{ .Text }}", 
+            func() {
+            {{range .Nodes }}
+            {{ if eq .Name "By" }}
+            {{ .Name }}("{{ .Text }}")
+            {{ end -}}
+            {{ end -}}
+
+            },
+            {{range .Nodes }}
+            {{ if eq .Name "Entry" }}
+            {{ .Name }}("{{ .Text }}",),
+            {{ end -}}
+            {{ end -}}
+            )
+            {{ end }}
+            {{ if eq .Name "By" }}
+            {{ .Name }}("{{ .Text }}")
+            {{ continue }}
+            {{ end }}
+            {{ if eq .Name "Entry" }}
+            {{ continue }}
+            {{ end }}
+            {{ if ne .Name "DescribeTable" }}
+            {{ .Name }}("{{ .Text }}", {{range .Labels }}Label("{{.}}"), {{ end }} func() {
+            {{ if eq .Name "It" }}
+            // Implement test and assertions here
+            {{ end }}
+                 {{ range .Nodes }}
+                 {{ if eq .Name "DescribeTable" }}
+                 {{ .Name }}("{{ .Text }}", 
+                 func() {
+                 {{range .Nodes }}
+                 {{ if eq .Name "By" }}
+                 {{ .Name }}("{{ .Text }}")
+                 {{ end -}}
+                 {{ end -}}
+
+                 },
+                 {{range .Nodes }}
+                 {{ if eq .Name "Entry" }}
+                 {{ .Name }}("{{ .Text }}",),
+                 {{ end -}}
+                 {{ end -}}
+                 )
+                 {{ end }}
+                 {{ if eq .Name "By" }}
+                 {{ .Name }}("{{ .Text }}")
+                 {{ continue }}
+                 {{ end }}
+                 {{ if eq .Name "Entry" }}
+                 {{ continue }}
+                 {{ end }}
+                 {{ if ne .Name "DescribeTable" }}
+                 {{ .Name }}("{{ .Text }}", {{range .Labels }}Label("{{.}}"), {{ end }} func() {
+                 {{ if eq .Name "It" }}
+                 // Implement test and assertions here
+                 {{ end }}
+
+                 })
+                 {{ end }}
+                 {{ end }}
+            })
+            {{ end }}
+            {{ end }}
+        
+        })
+        {{ end }}
+        {{ end }}
+    
+    })
+    {{ end }}
+    {{ end }}
+
+})
+{{ end }}

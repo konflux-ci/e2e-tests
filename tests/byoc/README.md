@@ -15,8 +15,8 @@
 
 ### Description
 
-This tests try to simulate user workflow from creating an Openshift/Kubernetes envionment in RHTAP to deploy the applications to the given environment.
-The tests are creating a virtual cluster in ur RHTAP cluster to test pure kubernetes environments.
+This tests try to simulate user workflow from creating an Openshift/Kubernetes environment in RHTAP to deploy the applications to the given environment.
+The tests are creating a virtual cluster in your RHTAP cluster to test pure kubernetes environments.
 
 #### What is virtual Cluster?
 Virtual clusters are Kubernetes clusters that run on top of other Kubernetes clusters. Compared to fully separate "real" clusters, virtual clusters do not have their own node pools or networking.

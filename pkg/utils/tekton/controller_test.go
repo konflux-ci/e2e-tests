@@ -72,25 +72,29 @@ func TestFindingCosignResults(t *testing.T) {
 		ExpectedErrors          []string
 		Result                  *CosignResult
 	}{
-		{"happy day", true, true, []any{"", ""}, []string{}, &CosignResult{
+		{"happy day", true, true, []any{""}, []string{}, &CosignResult{
 			signatureImageRef:   signatureImageRef,
 			attestationImageRef: attestationImageRef,
 		}},
-		{"missing signature", false, true, []any{"", ""}, []string{"error when getting signature"}, &CosignResult{
+		{"happy day multiple attestations", true, true, []any{"", ""}, []string{}, &CosignResult{
+			signatureImageRef:   signatureImageRef,
+			attestationImageRef: attestationImageRef,
+		}},
+		{"missing signature", false, true, []any{""}, []string{"error when getting signature"}, &CosignResult{
 			signatureImageRef:   "",
 			attestationImageRef: attestationImageRef,
 		}},
-		{"missing attestation", true, false, []any{"", ""}, []string{"error when getting attestation"}, &CosignResult{
+		{"missing attestation", true, false, []any{""}, []string{"error when getting attestation"}, &CosignResult{
 			signatureImageRef:   signatureImageRef,
 			attestationImageRef: "",
 		}},
-		{"missing signature and attestation", false, false, []any{"", ""}, []string{"error when getting attestation", "error when getting signature"}, &CosignResult{
+		{"missing signature and attestation", false, false, []any{""}, []string{"error when getting attestation", "error when getting signature"}, &CosignResult{
 			signatureImageRef:   "",
 			attestationImageRef: "",
 		}},
-		{"missing layer in attestation", true, true, []any{""}, []string{"attestation tag doesn't have the expected number of layers"}, &CosignResult{
+		{"missing layers in attestation", true, true, []any{}, []string{"cannot get layers from"}, &CosignResult{
 			signatureImageRef:   signatureImageRef,
-			attestationImageRef: attestationImageRef,
+			attestationImageRef: "",
 		}},
 	}
 
