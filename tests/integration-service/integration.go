@@ -9,6 +9,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
@@ -94,9 +95,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		}
 
 		assertBuildPipelineRunFinished := func() {
+			var pipelineRun *v1beta1.PipelineRun
 			timeout = time.Minute * 10
 			Eventually(func() error {
-				pipelineRun, err := f.AsKubeAdmin.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
+				pipelineRun, err = f.AsKubeAdmin.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
 				if err != nil {
 					GinkgoWriter.Printf("PipelineRun has not been created yet for Component %s/%s\n", testNamespace, componentName)
 					return err
@@ -107,6 +109,21 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				return nil
 			}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
 			Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", 2)).To(Succeed())
+			Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(""))
+		}
+
+		assertBuildPipelineRunSigned := func() {
+			Eventually(func() error {
+				pipelineRun, err := f.AsKubeAdmin.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
+				if err != nil {
+					GinkgoWriter.Printf("PipelineRun for Component %s/%s can't be gotten successfully\n", testNamespace, componentName)
+					return err
+				}
+				if (pipelineRun.Annotations["chains.tekton.dev/signed"] != "true") {
+					return fmt.Errorf("pipelinerun %s/%s hasn't been signed yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
+				}
+				return nil
+			}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to be signed for component %s/%s", testNamespace, componentName))
 		}
 
 		assertSnapshotCreated := func() {
@@ -118,6 +135,17 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				}
 				return nil
 			}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out when trying to check if the Snapshot for component %s/%s exists", testNamespace, componentName))
+			Eventually(func() error {
+				pipelineRun, err := f.AsKubeAdmin.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
+				if err != nil {
+					GinkgoWriter.Printf("PipelineRun for Component %s/%s can't be gotten successfully\n", testNamespace, componentName)
+					return err
+				}
+				if pipelineRun.Annotations["appstudio.openshift.io/snapshot"] != snapshot.GetName() {
+					return fmt.Errorf("build pipelinerun %s/%s hasn't been annotated with snapshot name", pipelineRun.GetNamespace(), pipelineRun.GetName())
+				}
+				return nil
+			}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the buildPipelineRun annotated with Snapshot name %s", snapshot.GetName()))
 		}
 
 		assertIntegrationPipelineRunFinished := func() {
@@ -168,6 +196,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			When("the build pipelineRun run succeeded", func() {
+				It("checks if the BuildPipelineRun is signed", func() {
+					assertBuildPipelineRunSigned()
+				})
+
 				It("checks if the Snapshot is created", func() {
 					assertSnapshotCreated()
 				})
@@ -277,6 +309,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			It("triggers a build PipelineRun", Label("integration-service"), func() {
 				assertBuildPipelineRunFinished()
+			})
+
+			It("checks if the BuildPipelineRun is signed", func() {
+				assertBuildPipelineRunSigned()
 			})
 
 			It("checks if the Snapshot is created", func() {
