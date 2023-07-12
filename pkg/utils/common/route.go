@@ -43,7 +43,7 @@ func (h *SuiteController) GetOpenshiftRouteByComponentName(componentName string,
 	return &routeList.Items[0], nil
 }
 
-func (h *SuiteController) RouteHostnameIsAccessible(routeName, namespace string) wait.ConditionFunc {
+func (h *SuiteController) RouteHostnameIsAccessible(routeName string, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
 		namespacedName := types.NamespacedName{
 			Name:      routeName,
@@ -67,4 +67,29 @@ func (h *SuiteController) RouteHostnameIsAccessible(routeName, namespace string)
 
 		return true, nil
 	}
+}
+
+// Checks that the deployed route endpoint is actually reachable and returns 200
+func (h *SuiteController) RouteEndpointIsAccessible(route *routev1.Route, endpoint string) error {
+	if len(route.Spec.Host) > 0 {
+		protocol := "https"
+		// Insecure route -> use http
+		if route.Spec.TLS == nil {
+			protocol = "http"
+		}
+		routeUrl := protocol + "://" + route.Spec.Host + endpoint
+
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		resp, err := http.Get(routeUrl)
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode != 200 {
+			return fmt.Errorf("route responded with '%d' status code", resp.StatusCode)
+		}
+	} else {
+		return fmt.Errorf("route is invalid: '%s'", route.Spec.Host)
+	}
+
+	return nil
 }

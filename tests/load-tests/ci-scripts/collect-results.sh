@@ -11,7 +11,7 @@ pushd "${2:-.}"
 
 echo "Collecting load test results"
 load_test_log=$ARTIFACT_DIR/load-tests.log
-cp -vf ./tests/load-tests/load-tests.log "$load_test_log"
+cp -vf ./tests/load-tests/*.log "$ARTIFACT_DIR"
 cp -vf ./tests/load-tests/load-tests.json "$ARTIFACT_DIR"
 cp -vf ./tests/load-tests/gh-rate-limits-remaining.csv "$ARTIFACT_DIR"
 
@@ -28,6 +28,7 @@ monitoring_collection_data=$ARTIFACT_DIR/load-tests.json
 csv_delim=";"
 csv_delim_quoted="\"$csv_delim\""
 dt_format='"%Y-%m-%dT%H:%M:%SZ"'
+
 ## Application timestamps
 echo "Collecting Application timestamps..."
 echo "Application${csv_delim}StatusSucceeded${csv_delim}StatusMessage${csv_delim}CreatedTimestamp${csv_delim}SucceededTimestamp${csv_delim}Duration" >"$application_timestamps_csv"
@@ -104,24 +105,64 @@ fi
 ## Monitoring data
 echo "Setting up tool to collect monitoring data..."
 python3 -m venv venv
-set +u; source venv/bin/activate; set -u
-python3 -m pip install -U pip
+set +u
+source venv/bin/activate
+set -u
 python3 -m pip install -U pip
 python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team-core&subdirectory=core"
 
 echo "Collecting monitoring data..."
-mstart=$( date --utc --date "$( status_data.py --status-data-file "$monitoring_collection_data" --get timestamp )" --iso-8601=seconds )
-mend=$( date --utc --date "$( status_data.py --status-data-file "$monitoring_collection_data" --get endTimestamp )" --iso-8601=seconds )
-mhost=$( oc -n openshift-monitoring get route -l app.kubernetes.io/name=thanos-query -o json | jq --raw-output '.items[0].spec.host' )
+mstart=$(date --utc --date "$(status_data.py --status-data-file "$monitoring_collection_data" --get timestamp)" --iso-8601=seconds)
+mend=$(date --utc --date "$(status_data.py --status-data-file "$monitoring_collection_data" --get endTimestamp)" --iso-8601=seconds)
+mhost=$(oc -n openshift-monitoring get route -l app.kubernetes.io/name=thanos-query -o json | jq --raw-output '.items[0].spec.host')
 status_data.py \
-      --status-data-file "$monitoring_collection_data" \
-      --additional ./tests/load-tests/cluster_read_config.yaml \
-      --monitoring-start "$mstart" \
-      --monitoring-end "$mend" \
-      --prometheus-host "https://$mhost" \
-      --prometheus-port 443 \
-      --prometheus-token "$( oc whoami -t )" \
-      -d &>$monitoring_collection_log
-set +u; deactivate; set -u
+    --status-data-file "$monitoring_collection_data" \
+    --additional ./tests/load-tests/cluster_read_config.yaml \
+    --monitoring-start "$mstart" \
+    --monitoring-end "$mend" \
+    --prometheus-host "https://$mhost" \
+    --prometheus-port 443 \
+    --prometheus-token "$(oc whoami -t)" \
+    -d &>$monitoring_collection_log
+set +u
+deactivate
+set -u
+
+## Tekton prifiling data
+if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
+    echo "Collecting profiling data from Tekton controller"
+    pprof_profile=tests/load-tests/cpu-profile.pprof
+    go tool pprof -text "$pprof_profile" >$ARTIFACT_DIR/cpu-profile.txt
+    go tool pprof -svg -output="$ARTIFACT_DIR/cpu-profile.svg" "$pprof_profile"
+fi
+
+## Pods on Nodes distribution
+node_info_csv=$ARTIFACT_DIR/node-info.csv
+echo "Collecting node specs"
+echo "Node;CPUs;Memory;InstanceType;NodeType;Zone" >"$node_info_csv"
+jq_cmd=".items[] | .metadata.name \
++ $csv_delim_quoted + .status.capacity.cpu \
++ $csv_delim_quoted + .status.capacity.memory \
++ $csv_delim_quoted + .metadata.labels.\"node.kubernetes.io/instance-type\" \
++ $csv_delim_quoted + (if .metadata.labels.\"node-role.kubernetes.io/worker\" != null then \"worker\" else \"master\" end) \
++ $csv_delim_quoted + .metadata.labels.\"topology.kubernetes.io/zone\""
+oc get nodes -o json | jq -r "$jq_cmd" >>"$node_info_csv"
+
+oc get pods -A -o json >pods.json
+pods_on_nodes_csv=$ARTIFACT_DIR/pods-on-nodes.csv
+all_pods_distribution_csv=$ARTIFACT_DIR/all-pods-distribution.csv
+task_pods_distribution_csv=$ARTIFACT_DIR/task-pods-distribution.csv
+echo "Collecting pod distribution over nodes"
+echo "Node;Namespace;Pod" >"$pods_on_nodes_csv"
+jq_cmd=".items[] | select(.metadata.labels.\"appstudio.openshift.io/application\" != null) \
+| select(.metadata.labels.\"appstudio.openshift.io/application\" | startswith(\"$USER_PREFIX\")) \
+| .spec.nodeName \
++ $csv_delim_quoted + .metadata.namespace \
++ $csv_delim_quoted + .metadata.name"
+jq -r "$jq_cmd" pods.json | sort -V >>"$pods_on_nodes_csv"
+echo "Node;Pods" >"$all_pods_distribution_csv"
+jq -r ".items[] | .spec.nodeName" pods.json | sort | uniq -c | sed -e 's,\s\+\([0-9]\+\)\s\+\(.*\),\2;\1,g' >>"$all_pods_distribution_csv"
+echo "Node;Pods" >"$task_pods_distribution_csv"
+jq -r '.items[] | select(.metadata.labels."appstudio.openshift.io/application" != null).spec.nodeName' pods.json | sort | uniq -c | sed -e 's,\s\+\([0-9]\+\)\s\+\(.*\),\2;\1,g' >>"$task_pods_distribution_csv"
 
 popd

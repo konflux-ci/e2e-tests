@@ -4,11 +4,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 )
 
-// HASSuiteDescribe annotates the application service tests with the application label.
-func HASSuiteDescribe(text string, args ...interface{}) bool {
-	return Describe("[has-suite "+text+"]", args, Ordered)
-}
-
 // E2ESuiteDescribe annotates the e2e scenarios tests with the e2e-scenarios label.
 func E2ESuiteDescribe(args ...interface{}) bool {
 	return Describe("[e2e-demos-suite]", args)
