@@ -20,6 +20,7 @@ import (
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -590,7 +591,7 @@ func (k KubeController) CreateOrUpdateSigningSecret(publicKey []byte, name, name
 }
 
 func (k KubeController) GetTektonChainsPublicKey() ([]byte, error) {
-	namespace := "tekton-chains"
+	namespace := constants.TEKTON_CHAINS_KEY_NS
 	secretName := "public-key"
 	dataKey := "cosign.pub"
 
@@ -645,7 +646,7 @@ func (k KubeController) CreateOrUpdatePolicyConfiguration(namespace string, poli
 }
 
 func (k KubeController) GetRekorHost() (rekorHost string, err error) {
-	api := k.Tektonctrl.KubeInterface().CoreV1().ConfigMaps("tekton-chains")
+	api := k.Tektonctrl.KubeInterface().CoreV1().ConfigMaps(constants.TEKTON_CHAINS_DEPLOYMENT_NS)
 	ctx := context.TODO()
 
 	cm, err := api.Get(ctx, "chains-config", metav1.GetOptions{})
