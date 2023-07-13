@@ -354,11 +354,12 @@ func (s *SuiteController) CreateComponentWithDockerSource(applicationName, compo
 	return component, nil
 }
 
-// CreateComponentWithDockerSource creates a component based on container image source.
-func (s *SuiteController) GetSbomPyxisByImageID(pyxisStageURL, imageID string,
+// GetPyxisImageByImageID makes a GET request to stage Pyxis to get an image
+// and returns it.
+func (s *SuiteController) GetPyxisImageByImageID(pyxisStageImagesApiEndpoint, imageID string,
 	pyxisCertDecoded, pyxisKeyDecoded []byte) ([]byte, error) {
 
-	url := fmt.Sprintf("%s%s", pyxisStageURL, imageID)
+	url := fmt.Sprintf("%s%s", pyxisStageImagesApiEndpoint, imageID)
 
 	// Create a TLS configuration with the key and certificate
 	cert, err := tls.X509KeyPair(pyxisCertDecoded, pyxisKeyDecoded)

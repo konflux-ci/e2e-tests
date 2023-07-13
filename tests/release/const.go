@@ -47,7 +47,7 @@ const (
 	additionalComponentName         string = "simple-python"
 	additionalGitSourceComponentUrl string = "https://github.com/devfile-samples/devfile-sample-python-basic"
 	addtionalOutputContainerImage   string = constants.DefaultReleasedImagePushRepo
-	pyxisStageURL                   string = "https://pyxis.preprod.api.redhat.com/v1/images/id/"
+	pyxisStageImagesApiEndpoint     string = "https://pyxis.preprod.api.redhat.com/v1/images/id/"
 
 	namespaceCreationTimeout              = 5 * time.Minute
 	namespaceDeletionTimeout              = 5 * time.Minute

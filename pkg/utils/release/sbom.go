@@ -50,15 +50,6 @@ type ContentManifest struct {
 	ID string `json:"_id"`
 }
 
-// ContentManifestComponent contains information of components in SBOM
-type ContentManifestComponent struct {
-	ID      string `json:"_id"`
-	Name    string `json:"name"`
-	Purl    string `json:"purl"`
-	Type    string `json:"type"`
-	Version string `json:"version"`
-}
-
 // Defines a struct FreshnessGrade with fields for creation date, grade, and start date.
 type FreshnessGrade struct {
 	CreationDate string `json:"creation_date"`
@@ -78,20 +69,19 @@ type ParsedData struct {
 // content manifest components, creator information, creation date, Docker image digest,
 // freshness grades, image ID, last update date, last updated by, object type, and parsed data.
 type Image struct {
-	ID                        string                     `json:"_id"`
-	Links                     Links                      `json:"_links"`
-	Architecture              string                     `json:"architecture"`
-	Certified                 bool                       `json:"certified"`
-	ContentManifest           ContentManifest            `json:"content_manifest"`
-	ContentManifestComponents []ContentManifestComponent `json:"content_manifest_components"`
-	CreatedBy                 string                     `json:"created_by"`
-	CreatedOnBehalfOf         interface{}                `json:"created_on_behalf_of"`
-	CreationDate              string                     `json:"creation_date"`
-	DockerImageDigest         string                     `json:"docker_image_digest"`
-	FreshnessGrades           []FreshnessGrade           `json:"freshness_grades"`
-	ImageID                   string                     `json:"image_id"`
-	LastUpdateDate            string                     `json:"last_update_date"`
-	LastUpdatedBy             string                     `json:"last_updated_by"`
-	ObjectType                string                     `json:"object_type"`
-	ParsedData                ParsedData                 `json:"parsed_data"`
+	ID                string           `json:"_id"`
+	Links             Links            `json:"_links"`
+	Architecture      string           `json:"architecture"`
+	Certified         bool             `json:"certified"`
+	ContentManifest   ContentManifest  `json:"content_manifest"`
+	CreatedBy         string           `json:"created_by"`
+	CreatedOnBehalfOf interface{}      `json:"created_on_behalf_of"`
+	CreationDate      string           `json:"creation_date"`
+	DockerImageDigest string           `json:"docker_image_digest"`
+	FreshnessGrades   []FreshnessGrade `json:"freshness_grades"`
+	ImageID           string           `json:"image_id"`
+	LastUpdateDate    string           `json:"last_update_date"`
+	LastUpdatedBy     string           `json:"last_updated_by"`
+	ObjectType        string           `json:"object_type"`
+	ParsedData        ParsedData       `json:"parsed_data"`
 }
