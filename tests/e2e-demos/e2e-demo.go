@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/devfile/library/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -15,7 +14,6 @@ import (
 	"github.com/spf13/viper"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/pointer"
 )
 
@@ -156,13 +154,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 						It(fmt.Sprintf("creates component %s from %s git source %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl), func() {
 							for _, compDetected := range cdq.Status.ComponentDetected {
 								component, err = fw.AsKubeDeveloper.HasController.CreateComponent(compDetected.ComponentStub, namespace, "", secret, appTest.ApplicationName, true, map[string]string{})
-								// Workaround until https://issues.redhat.com/browse/RHTAPBUGS-441 is resolved
-								if err != nil && errors.IsAlreadyExists(err) {
-									compDetected.ComponentStub.ComponentName = fmt.Sprintf("%s-%s", compDetected.ComponentStub.ComponentName, util.GenerateRandomString(4))
-									component, err = fw.AsKubeDeveloper.HasController.CreateComponent(compDetected.ComponentStub, namespace, "", secret, appTest.ApplicationName, true, map[string]string{})
-								}
 								Expect(err).NotTo(HaveOccurred())
-
 							}
 						})
 					} else {
