@@ -351,15 +351,15 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		It("validates that imageIds from task create-pyxis-image exist in Pyxis.", func() {
 			for _, imageID := range imageIDs {
 				Eventually(func() error {
-					body, err := fw.AsKubeAdmin.ReleaseController.GetSbomPyxisByImageID(pyxisStageURL, imageID,
+					body, err := fw.AsKubeAdmin.ReleaseController.GetPyxisImageByImageID(pyxisStageImagesApiEndpoint, imageID,
 						[]byte(pyxisCertDecoded), []byte(pyxisKeyDecoded))
 					Expect(err).NotTo(HaveOccurred(), "failed to get response body")
 
 					sbomImage := release.Image{}
 					Expect(json.Unmarshal(body, &sbomImage)).To(Succeed(), "failed to unmarshal body content: %s", string(body))
 
-					if len(sbomImage.ContentManifestComponents) < 1 {
-						return fmt.Errorf("ContentManifestComponents field is empty for sbom image: %+v", sbomImage)
+					if sbomImage.ContentManifest.ID == "" {
+						return fmt.Errorf("ContentManifest field is empty for sbom image: %+v", sbomImage)
 					}
 
 					return nil

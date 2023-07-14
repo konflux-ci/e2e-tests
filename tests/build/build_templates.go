@@ -230,7 +230,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					}
 				})
 				It("verify-enterprise-contract check should pass", Label(buildTemplatesTestLabel), func() {
-					Skip("Skip until RHTAP bug is solved: https://issues.redhat.com/browse/RHTAPBUGS-352")
 					cm, err := kubeController.Commonctrl.GetConfigMap("ec-defaults", "enterprise-contract-service")
 					Expect(err).ToNot(HaveOccurred())
 

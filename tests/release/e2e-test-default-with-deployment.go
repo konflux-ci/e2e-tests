@@ -167,11 +167,10 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		if err != nil {
 			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 		}
-		// TODO: Uncomment this lines once: https://issues.redhat.com/browse/RHTAPBUGS-409 is solved
-		/*if !CurrentSpecReport().Failed() {
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(devNamespace)).NotTo(HaveOccurred())
+		if !CurrentSpecReport().Failed() {
 			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-		}*/
+			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
+		}
 	})
 
 	var _ = Describe("Post-release verification", func() {
@@ -223,7 +222,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 					return fmt.Errorf("release %s/%s is not marked as deployed yet", releaseCR.GetNamespace(), releaseCR.GetName())
 				}
 				return nil
-			}, releaseCreationTimeout, defaultInterval).Should(Succeed())
+			}, releaseDeploymentTimeout, defaultInterval).Should(Succeed())
 		})
 		It("tests a Release CR is marked as successfully deployed", func() {
 			Eventually(func() error {
@@ -235,7 +234,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 					return fmt.Errorf("release %s/%s is not marked as finished yet", releaseCR.GetNamespace(), releaseCR.GetName())
 				}
 				return nil
-			}, releaseDeploymentTimeout, defaultInterval).Should(Succeed())
+			}, releaseFinishedTimeout, defaultInterval).Should(Succeed())
 		})
 	})
 })
