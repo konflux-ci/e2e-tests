@@ -42,7 +42,8 @@ func (h *HasController) CreateComponentDetectionQueryWithTimeout(name string, na
 				Revision: gitSourceRevision,
 				Context:  gitSourceContext,
 			},
-			Secret: secret,
+			Secret:                secret,
+			GenerateComponentName: true,
 		},
 	}
 
