@@ -10,6 +10,13 @@ See https://github.com/redhat-appstudio/release-service-utils/blob/main/pyxis/up
 
 package release
 
+import (
+	"crypto/tls"
+	"fmt"
+	"io"
+	"net/http"
+)
+
 // Defines a struct Links with fields for various types of links including artifacts, requests, RPM manifests,
 // test results, and vulnerabilities. Each field is represented by a corresponding struct type.
 type Links struct {
@@ -84,4 +91,47 @@ type Image struct {
 	LastUpdatedBy     string           `json:"last_updated_by"`
 	ObjectType        string           `json:"object_type"`
 	ParsedData        ParsedData       `json:"parsed_data"`
+}
+
+// GetPyxisImageByImageID makes a GET request to stage Pyxis to get an image
+// and returns it.
+func (r *ReleaseController) GetPyxisImageByImageID(pyxisStageImagesApiEndpoint, imageID string,
+	pyxisCertDecoded, pyxisKeyDecoded []byte) ([]byte, error) {
+
+	url := fmt.Sprintf("%s%s", pyxisStageImagesApiEndpoint, imageID)
+
+	// Create a TLS configuration with the key and certificate
+	cert, err := tls.X509KeyPair(pyxisCertDecoded, pyxisKeyDecoded)
+	if err != nil {
+		return nil, fmt.Errorf("error creating TLS certificate and key: %s", err)
+	}
+
+	// Create a client with the custom TLS configuration
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				Certificates: []tls.Certificate{cert},
+			},
+		},
+	}
+
+	// Send GET request
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating GET request: %s", err)
+	}
+
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, fmt.Errorf("error sending GET request: %s", err)
+	}
+
+	defer response.Body.Close()
+
+	// Read the response body
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %s", err)
+	}
+	return body, nil
 }
