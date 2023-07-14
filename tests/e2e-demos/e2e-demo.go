@@ -119,12 +119,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					}, 1*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("timed out waiting for HAS controller to create gitops repository for the %s application in %s namespace", appTest.ApplicationName, fw.UserNamespace))
 				})
 
-				// Create an environment in a specific namespace
-				It("creates an environment", func() {
-					env, err = fw.AsKubeDeveloper.GitOpsController.CreatePocEnvironment(EnvironmentName, namespace)
-					Expect(err).NotTo(HaveOccurred())
-				})
-
 				for _, componentTest := range appTest.Components {
 					componentTest := componentTest
 					cdq := &appservice.ComponentDetectionQuery{}

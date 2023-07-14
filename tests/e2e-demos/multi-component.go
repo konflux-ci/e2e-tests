@@ -194,12 +194,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 						}
 					})
 
-					// Create an environment in a specific namespace
-					It(fmt.Sprintf("creates environment %s", EnvironmentName), func() {
-						env, err = fw.AsKubeDeveloper.GitOpsController.CreatePocEnvironment(EnvironmentName, namespace)
-						Expect(err).NotTo(HaveOccurred())
-					})
-
 					It(fmt.Sprintf("creates multiple components in application %s", suite.ApplicationName), func() {
 						for _, component := range cdq.Status.ComponentDetected {
 							c, err := fw.AsKubeDeveloper.HasController.CreateComponent(component.ComponentStub, namespace, "", SPIGithubSecretName, application.Name, true, map[string]string{})
