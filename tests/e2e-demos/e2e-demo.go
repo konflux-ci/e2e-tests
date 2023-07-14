@@ -74,7 +74,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 					_ = fw.AsKubeDeveloper.SPIController.InjectManualSPIToken(namespace, fmt.Sprintf("https://github.com/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")), githubCredentials, v1.SecretTypeBasicAuth, SPIGithubSecretName)
 				})
-        
+
 				// Remove all resources created by the tests
 				AfterAll(func() {
 					// collect SPI ResourceQuota metrics (temporary)
