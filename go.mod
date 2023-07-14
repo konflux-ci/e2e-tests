@@ -10,7 +10,7 @@ require (
 	github.com/enterprise-contract/enterprise-contract-controller/api v0.0.0-20230327185456-5befd172d558
 	github.com/go-git/go-git/v5 v5.6.1
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572
-	github.com/gofri/go-github-ratelimit v1.0.2
+	github.com/gofri/go-github-ratelimit v1.0.3-0.20230428184158-a500e14de53f
 	github.com/google/go-containerregistry v0.13.0
 	github.com/google/go-github/v44 v44.1.0
 	github.com/google/uuid v1.3.0
@@ -25,7 +25,7 @@ require (
 	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
-	github.com/redhat-appstudio/application-api v0.0.0-20230509152222-ef5c4dcebc94
+	github.com/redhat-appstudio/application-api v0.0.0-20230704143842-035c661f115f
 	github.com/redhat-appstudio/build-service v0.0.0-20230113121706-a9f10055dbc4
 	github.com/redhat-appstudio/image-controller v0.0.0-20230606065013-5c7c65e0db05
 	github.com/redhat-appstudio/integration-service v0.0.0-20230427084439-306b4611389b
@@ -34,7 +34,7 @@ require (
 	github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0
 	github.com/redhat-appstudio/release-service v0.0.0-20230530123949-005cd468d6a7
 	github.com/redhat-appstudio/service-provider-integration-operator v0.9.1-0.20230420083506-cd7210b05b60
-	github.com/spf13/cobra v1.6.1
+	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.14.0
 	github.com/stretchr/testify v1.8.2
 	github.com/tektoncd/cli v0.29.1
@@ -72,8 +72,8 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/BurntSushi/toml v1.2.0 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
-	github.com/Microsoft/go-winio v0.6.0 // indirect
-	github.com/ProtonMail/go-crypto v0.0.0-20230411080316-8b3893ee7fca // indirect
+	github.com/Microsoft/go-winio v0.6.1 // indirect
+	github.com/ProtonMail/go-crypto v0.0.0-20230417170513-8ee5748c52b5 // indirect
 	github.com/acomagu/bufpipe v1.0.4 // indirect
 	github.com/aws/aws-sdk-go v1.44.191 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -84,7 +84,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chai2010/gettext-go v0.0.0-20160711120539-c6fed771bfd5 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
-	github.com/cloudflare/circl v1.3.2 // indirect
+	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/containerd/containerd v1.7.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.13.0 // indirect
 	github.com/containers/image/v5 v5.15.0 // indirect
@@ -92,7 +92,7 @@ require (
 	github.com/containers/ocicrypt v1.1.6 // indirect
 	github.com/containers/storage v1.33.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/devfile/api/v2 v2.2.0 // indirect
+	github.com/devfile/api/v2 v2.2.1-alpha.0.20230413012049-a6c32fca0dbd // indirect
 	github.com/docker/cli v23.0.3+incompatible // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/docker v23.0.3+incompatible // indirect
@@ -189,6 +189,7 @@ require (
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/prometheus/statsd_exporter v0.23.0 // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
+	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/russross/blackfriday v1.6.0 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
@@ -214,7 +215,7 @@ require (
 	golang.org/x/crypto v0.8.0 // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/net v0.9.0 // indirect
-	golang.org/x/sync v0.1.0 // indirect
+	golang.org/x/sync v0.2.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
 	golang.org/x/term v0.7.0 // indirect
 	golang.org/x/time v0.3.0 // indirect

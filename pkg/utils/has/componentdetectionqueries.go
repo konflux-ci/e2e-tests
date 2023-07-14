@@ -54,7 +54,8 @@ func (h *hasFactory) CreateComponentDetectionQueryWithTimeout(name string, names
 				Revision: gitSourceRevision,
 				Context:  gitSourceContext,
 			},
-			Secret: secret,
+			Secret:                secret,
+			GenerateComponentName: true,
 		},
 	}
 
