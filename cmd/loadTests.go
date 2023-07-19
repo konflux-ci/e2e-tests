@@ -798,7 +798,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 
 				deploymentRetryInterval := time.Second * 5
 				deploymentTimeout := time.Minute * 25
-				deploymentPauseToMitigateRaceConditions := time.Second * 10
+				deploymentPauseToMitigateRaceConditions := time.Second * 5
 
 				err = k8swait.Poll(deploymentRetryInterval, deploymentTimeout, func() (done bool, err error) {
 					deployment, err = framework.AsKubeDeveloper.CommonController.GetDeployment(componentName, usernamespace)
@@ -811,18 +811,18 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 					time.Sleep(deploymentPauseToMitigateRaceConditions)
 
 					creationTimestamp := deployment.ObjectMeta.CreationTimestamp
-					deploymentIsDone, completionTime := checkDeploymentIsDone(deployment)
+					deploymentIsDone, lastUpdateTimeOfDone := checkDeploymentIsDone(deployment)
 
 					var (
 						deploymentFailed   bool
 						errorMessage       string
-						lastTransitionTime metav1.Time
+						lastUpdateTimeOfFailed metav1.Time
 					)
 					if !deploymentIsDone {
-						deploymentFailed, errorMessage, lastTransitionTime = checkDeploymentFailed(deployment)
+						deploymentFailed, errorMessage, lastUpdateTimeOfFailed = checkDeploymentFailed(deployment)
 					}
 					if deploymentIsDone {
-						dur := completionTime.Time.Sub(creationTimestamp.Time)
+						dur := lastUpdateTimeOfDone.Time.Sub(creationTimestamp.Time)
 						DeploymentSucceededTimeSumPerThread[threadIndex] += dur
 						if dur > DeploymentSucceededTimeMaxPerThread[threadIndex] {
 							DeploymentSucceededTimeMaxPerThread[threadIndex] = dur
@@ -830,7 +830,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 						SuccessfulDeploymentsPerThread[threadIndex] += 1
 						increaseBar(deploymentsBar, deploymentsBarMutex)
 					} else if deploymentFailed {
-						dur := lastTransitionTime.Time.Sub(creationTimestamp.Time)
+						dur := lastUpdateTimeOfFailed.Time.Sub(creationTimestamp.Time)
 						DeploymentFailedTimeSumPerThread[threadIndex] += dur
 						logError(17, fmt.Sprintf("Deployment for %s/%s failed due to %s", applicationName, componentName, errorMessage))
 						FailedDeploymentsPerThread[threadIndex] += 1
@@ -850,74 +850,72 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 	wg.Wait()
 }
 
+
 func checkDeploymentFailed(deployment *appsv1.Deployment) (bool, string, metav1.Time) {
-	var lastTransitionTime metav1.Time = metav1.Now() // initialize with the current time
+	var lastUpdateTime metav1.Time = metav1.Now() // initialize with the current time
 
 	// Check if the Deployment is in a stable state
 	if deployment.Status.ObservedGeneration < deployment.Generation {
-		return false, "", lastTransitionTime
+		return false, "", lastUpdateTime
 	}
 
-	// Check if the Deployment is unable to progress
+	/* Iterate over all conditions
+	   https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#failed-deployment
+       All the below tests catches all the described failure reasons
+	*/
 	for _, condition := range deployment.Status.Conditions {
-		if condition.Type == appsv1.DeploymentProgressing && condition.Status == corev1.ConditionFalse {
-			lastTransitionTime = condition.LastTransitionTime
-			return true, fmt.Sprintf("Deployment failed to progress: %s", condition.Message), lastTransitionTime
-		}
-	}
-
-	// Check if the Deployment couldn't create the required number of pods
-	if deployment.Spec.Replicas != nil && deployment.Status.AvailableReplicas < *deployment.Spec.Replicas {
-		for _, condition := range deployment.Status.Conditions {
-			if condition.Type == appsv1.DeploymentAvailable && condition.Status == corev1.ConditionFalse {
-				lastTransitionTime = condition.LastTransitionTime
-				break
+		switch condition.Type {
+		case appsv1.DeploymentAvailable:
+			if condition.Status == corev1.ConditionFalse {
+				return true, fmt.Sprintf("Deployment is not available: %s", condition.Message), condition.LastUpdateTime
+			}
+		case appsv1.DeploymentProgressing:
+			if condition.Status == corev1.ConditionFalse {
+				return true, fmt.Sprintf("Deployment failed to progress: %s", condition.Message), condition.LastUpdateTime
+			}
+		case appsv1.DeploymentReplicaFailure:
+			if condition.Status == corev1.ConditionTrue {
+				return true, fmt.Sprintf("Deployment failed during rollout: %s", condition.Message), condition.LastUpdateTime
 			}
 		}
-		return true, fmt.Sprintf("Deployment failed to create required pods: wanted %d, have %d", *deployment.Spec.Replicas, deployment.Status.AvailableReplicas), lastTransitionTime
 	}
 
-	// Check for errors during rollout
-	if deployment.Status.UpdatedReplicas < deployment.Status.Replicas {
-		for _, condition := range deployment.Status.Conditions {
-			if condition.Type == appsv1.DeploymentReplicaFailure {
-				lastTransitionTime = condition.LastTransitionTime
-				break
-			}
-		}
-		return true, fmt.Sprintf("Deployment failed during rollout: updated %d, total %d", deployment.Status.UpdatedReplicas, deployment.Status.Replicas), lastTransitionTime
-	}
-
-	return false, "", lastTransitionTime
+	return false, "", lastUpdateTime
 }
 
 func checkDeploymentIsDone(deployment *appsv1.Deployment) (bool, metav1.Time) {
-	var deploymentAvailable bool = false
+	var deploymentCompleted bool = false
 	var deploymentReachedDesiredState bool = false
-	var CompletionTime metav1.Time = metav1.Now() // initialize with the current time
+	var lastUpdateTime metav1.Time = metav1.Now() // initialize with the current time
 
 	// Check if the Deployment is in a stable state
 	if deployment.Status.ObservedGeneration < deployment.Generation {
-		return false, CompletionTime
+		return false, lastUpdateTime
 	}
 
-	// Check the DeploymentAvailable condition
+	/* Check the DeploymentProgressing condition
+	   https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#complete-deployment
+	
+	   When the rollout becomes “complete”, the Deployment controller sets a condition with the following attributes to the Deployment's .status.conditions:
+	   type: Progressing
+	   status: "True"
+	   reason: NewReplicaSetAvailable
+	*/
 	for _, condition := range deployment.Status.Conditions {
-		if condition.Type == appsv1.DeploymentAvailable && condition.Status == corev1.ConditionTrue {
-			// Available condition is true
-			// --> Deployment is available
-			deploymentAvailable = true
-			CompletionTime = condition.LastTransitionTime
+		if condition.Type == appsv1.DeploymentProgressing && condition.Status == corev1.ConditionTrue && condition.Reason == "NewReplicaSetAvailable" {
+			// --> Deployment is complete
+			deploymentCompleted = true
+			lastUpdateTime = condition.LastUpdateTime
 			break
 		}
 	}
 
 	// Check the replica counts
+	// The desired number of replicas are running, ready, and have the updated version of the app
 	if *deployment.Spec.Replicas == deployment.Status.ReadyReplicas && *deployment.Spec.Replicas == deployment.Status.UpdatedReplicas {
-		// The desired number of replicas are running, ready, and have the updated version of the app
 		// --> Deployment has achieved desired state
 		deploymentReachedDesiredState = true
 	}
 
-	return deploymentAvailable && deploymentReachedDesiredState, CompletionTime
+	return deploymentCompleted && deploymentReachedDesiredState, lastUpdateTime
 }
