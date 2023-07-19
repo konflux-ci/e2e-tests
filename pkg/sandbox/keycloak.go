@@ -30,6 +30,43 @@ type KeycloakAuth struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+//Get Stage KeyCloak Token
+func (k *SandboxController) GetKeycloakTokenStage(userName, tokenURL, refreshToken string) (keycloakAuth *KeycloakAuth, err error) {
+
+
+	// Prepare the form data
+	formData := url.Values{}
+	formData.Set("grant_type", "refresh_token")
+	formData.Set("client_id", "cloud-services")
+	formData.Set("refresh_token", refreshToken)
+
+	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(formData.Encode()))
+	if err != nil {
+		fmt.Println("Failed to create Access Token request:", err)
+		return nil, err
+	}
+
+	// Set the headers
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := k.HttpClient.Do(req)
+	if err != nil || resp.StatusCode != 200 {
+		var statusCode string
+		if resp == nil {
+			statusCode = "nil"
+		} else {
+			statusCode = fmt.Sprintf("%d", resp.StatusCode)
+		}
+		return nil, fmt.Errorf("failed to get keycloak token, userName: %s, statusCode: %s", userName, statusCode)
+	}
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&keycloakAuth)
+
+	return keycloakAuth, err
+}
+
 // GetKeycloakToken return a token for admins
 func (k *SandboxController) GetKeycloakToken(clientID string, userName string, password string, realm string) (keycloakAuth *KeycloakAuth, err error) {
 	data := url.Values{
