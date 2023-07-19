@@ -14,6 +14,7 @@ import (
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/sandbox"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	integrationservice "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	integrationservicev1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	jvmbuildservice "github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
@@ -111,51 +112,39 @@ func (c *CustomClient) DynamicClient() dynamic.Interface {
 	return c.dynamicClient
 }
 
-// Create a new Sandbox stage client
-func NewDevSandboxProxyStageClient(username string, toolchainApiUrl string, keycloakUrl string, offlineToken string) (*K8SClient, error) {
-	sandboxController, err := sandbox.NewDevSandboxStageController()
-	if err != nil {
-		return nil, err
-	}
-	userAuthInfo, err := sandboxController.ReconcileUserCreationStage(username, toolchainApiUrl, keycloakUrl , offlineToken)
-	if err != nil {
-		return nil, err
-	}
-
-	sandboxProxyClient, err := CreateAPIProxyClient(userAuthInfo.UserToken, userAuthInfo.ProxyUrl)
-	if err != nil {
-		return nil, err
-	}
-	return &K8SClient{
-		AsKubeAdmin: 	   sandboxProxyClient,
-		AsKubeDeveloper:   sandboxProxyClient,
-		UserName:          userAuthInfo.UserName,
-		UserNamespace:     userAuthInfo.UserNamespace,
-		SandboxController: sandboxController,
-	}, nil
-}
-
-
 // Creates Kubernetes clients:
 // 1. Will create a kubernetes client from default kubeconfig as kubeadmin
 // 2. Will create a sandbox user and will generate a client using user token a new client to create resources in RHTAP like a normal user
-func NewDevSandboxProxyClient(userName string) (*K8SClient, error) {
-	asAdminClient, err := NewAdminKubernetesClient()
-	if err != nil {
-		return nil, err
+func NewDevSandboxProxyClient(userName string, isStage bool, options utils.Options) (*K8SClient, error) {
+	var err error
+	var asAdminClient *CustomClient = nil
+	var sandboxController *sandbox.SandboxController
+	var proxyAuthInfo *sandbox.SandboxUserAuthInfo
+	var sandboxProxyClient *CustomClient
+
+	if isStage {
+		sandboxController, err := sandbox.NewDevSandboxStageController()
+		if err != nil {
+			return nil, err
+		}
+		proxyAuthInfo, err = sandboxController.ReconcileUserCreationStage(userName, options.ToolchainApiUrl, options.KeycloakUrl , options.OfflineToken)
+		if err != nil {
+			return nil, err
+		}
+
+	}else {
+		asAdminClient, err = NewAdminKubernetesClient()
+		if err != nil {
+			return nil, err
+		}
+
+		sandboxController, err = sandbox.NewDevSandboxController(asAdminClient.KubeInterface(), asAdminClient.KubeRest())
+		if err != nil {
+			return nil, err
+		}		
 	}
 
-	sandboxController, err := sandbox.NewDevSandboxController(asAdminClient.KubeInterface(), asAdminClient.KubeRest())
-	if err != nil {
-		return nil, err
-	}
-
-	proxyAuthInfo, err := sandboxController.ReconcileUserCreation(userName)
-	if err != nil {
-		return nil, err
-	}
-
-	sandboxProxyClient, err := CreateAPIProxyClient(proxyAuthInfo.UserToken, proxyAuthInfo.ProxyUrl)
+	sandboxProxyClient, err = CreateAPIProxyClient(proxyAuthInfo.UserToken, proxyAuthInfo.ProxyUrl)
 	if err != nil {
 		return nil, err
 	}

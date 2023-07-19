@@ -49,6 +49,39 @@ type FailedPipelineRunDetails struct {
 	FailedContainerName string
 }
 
+type Options struct {
+	ToolchainApiUrl string
+	KeycloakUrl 	string
+	OfflineToken 	string
+}
+
+//check options are valid or not
+func CheckOptions(optionsArr []Options) (bool, error) {
+	if len(optionsArr) == 0 {
+		return false, nil
+	}
+
+	if len(optionsArr) > 1 {
+		return true, fmt.Errorf("options array contains more than 1 object")
+	}
+
+	options := optionsArr[0]
+
+	if options.ToolchainApiUrl == "" {
+		return true, fmt.Errorf("ToolchainApiUrl field is empty")
+	}
+
+	if options.KeycloakUrl == "" {
+		return true, fmt.Errorf("KeycloakUrl field is empty")
+	}
+
+	if options.OfflineToken == "" {
+		return true, fmt.Errorf("OfflineToken field is empty")
+	}
+
+	return true, nil
+}
+
 // CheckIfEnvironmentExists return true/false if the environment variable exists
 func CheckIfEnvironmentExists(env string) bool {
 	_, exist := os.LookupEnv(env)
