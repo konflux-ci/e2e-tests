@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devfile/library/pkg/util"
+	"github.com/devfile/library/v2/pkg/util"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"k8s.io/klog/v2"
