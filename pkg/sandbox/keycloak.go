@@ -30,6 +30,26 @@ type KeycloakAuth struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+//Make Request
+func (k *SandboxController) MakeRequestKeyCloak(req *http.Request, userName string) (keycloakAuth *KeycloakAuth, err error){
+
+	resp, err := k.HttpClient.Do(req)
+	if err != nil || resp.StatusCode != 200 {
+		var statusCode string
+		if resp == nil {
+			statusCode = "nil"
+		} else {
+			statusCode = fmt.Sprintf("%d", resp.StatusCode)
+		}
+		return nil, fmt.Errorf("failed to get keycloak token, userName: %s, statusCode: %s", userName, statusCode)
+	}
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&keycloakAuth)
+
+	return keycloakAuth, err
+}
+
 //Get Stage KeyCloak Token
 func (k *SandboxController) GetKeycloakTokenStage(userName, tokenURL, refreshToken string) (keycloakAuth *KeycloakAuth, err error) {
 
@@ -50,21 +70,7 @@ func (k *SandboxController) GetKeycloakTokenStage(userName, tokenURL, refreshTok
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := k.HttpClient.Do(req)
-	if err != nil || resp.StatusCode != 200 {
-		var statusCode string
-		if resp == nil {
-			statusCode = "nil"
-		} else {
-			statusCode = fmt.Sprintf("%d", resp.StatusCode)
-		}
-		return nil, fmt.Errorf("failed to get keycloak token, userName: %s, statusCode: %s", userName, statusCode)
-	}
-	defer resp.Body.Close()
-
-	err = json.NewDecoder(resp.Body).Decode(&keycloakAuth)
-
-	return keycloakAuth, err
+	return k.MakeRequestKeyCloak(req, userName)
 }
 
 // GetKeycloakToken return a token for admins
@@ -84,22 +90,7 @@ func (k *SandboxController) GetKeycloakToken(clientID string, userName string, p
 	}
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
-	response, err := k.HttpClient.Do(request)
-
-	if err != nil || response.StatusCode != 200 {
-		var statusCode string
-		if response == nil {
-			statusCode = "nil"
-		} else {
-			statusCode = fmt.Sprintf("%d", response.StatusCode)
-		}
-		return nil, fmt.Errorf("failed to get keycloak token, realm: %s, userName: %s, client-id: %s statusCode: %s, url: %s", realm, userName, clientID, statusCode, k.KeycloakUrl)
-	}
-	defer response.Body.Close()
-
-	err = json.NewDecoder(response.Body).Decode(&keycloakAuth)
-
-	return keycloakAuth, err
+	return k.MakeRequestKeyCloak(request, userName)
 }
 
 /*

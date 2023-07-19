@@ -172,7 +172,7 @@ func (s *SandboxController) ReconcileUserCreationStage(userName, toolchainApiUrl
 		return nil, err
 	}
 
-	return s.GetKubeconfigPathForSpecificUserStage(toolchainApiUrl, userName, kubeconfigPath, userToken)
+	return s.GetKubeconfigPathForSpecificUser(true, toolchainApiUrl, userName, kubeconfigPath, userToken)
 }
 
 // ReconcileUserCreation create a user in sandbox and return a valid kubeconfig for user to be used for the tests
@@ -223,10 +223,10 @@ func (s *SandboxController) ReconcileUserCreation(userName string) (*SandboxUser
 		return nil, err
 	}
 
-	return s.GetKubeconfigPathForSpecificUser(toolchainApiUrl, compliantUsername, kubeconfigPath, userToken)
+	return s.GetKubeconfigPathForSpecificUser(false, toolchainApiUrl, compliantUsername, kubeconfigPath, userToken)
 }
 
-func (s *SandboxController) GetKubeconfigPathForSpecificUserStage(toolchainApiUrl string, userName string, kubeconfigPath string, keycloakAuth *KeycloakAuth) (*SandboxUserAuthInfo, error) {
+func (s *SandboxController) GetKubeconfigPathForSpecificUser(isStage bool, toolchainApiUrl string, userName string, kubeconfigPath string, keycloakAuth *KeycloakAuth) (*SandboxUserAuthInfo, error) {
 	kubeconfig := api.NewConfig()
 	kubeconfig.Clusters[toolchainApiUrl] = &api.Cluster{
 		Server:                toolchainApiUrl,
@@ -246,41 +246,16 @@ func (s *SandboxController) GetKubeconfigPathForSpecificUserStage(toolchainApiUr
 	if err != nil {
 		return nil, fmt.Errorf("error writing sandbox user kubeconfig to %s path: %v", kubeconfigPath, err)
 	}
-
-	return &SandboxUserAuthInfo{
-		UserName:       userName,
-		UserNamespace:  fmt.Sprintf("%s-tenant", userName),
-		KubeconfigPath: kubeconfigPath,
-		ProxyUrl:       toolchainApiUrl,
-		UserToken:      keycloakAuth.AccessToken,
-	}, nil
-}
-
-func (s *SandboxController) GetKubeconfigPathForSpecificUser(toolchainApiUrl string, userName string, kubeconfigPath string, keycloakAuth *KeycloakAuth) (*SandboxUserAuthInfo, error) {
-	kubeconfig := api.NewConfig()
-	kubeconfig.Clusters[toolchainApiUrl] = &api.Cluster{
-		Server:                toolchainApiUrl,
-		InsecureSkipTLSVerify: true,
+	var ns string;
+	if isStage{
+		ns = fmt.Sprintf("%s-tenant", userName)
+	}else {
+		ns, err = s.GetUserProvisionedNamespace(userName)
+		if err != nil {
+			return nil, fmt.Errorf("error getting provisioned usernamespace: %v", err)
+		}
 	}
-	kubeconfig.Contexts[fmt.Sprintf("%s/%s/%s", userName, toolchainApiUrl, userName)] = &api.Context{
-		Cluster:   toolchainApiUrl,
-		Namespace: fmt.Sprintf("%s-tenant", userName),
-		AuthInfo:  fmt.Sprintf("%s/%s", userName, toolchainApiUrl),
-	}
-	kubeconfig.AuthInfos[fmt.Sprintf("%s/%s", userName, toolchainApiUrl)] = &api.AuthInfo{
-		Token: keycloakAuth.AccessToken,
-	}
-	kubeconfig.CurrentContext = fmt.Sprintf("%s/%s/%s", userName, toolchainApiUrl, userName)
-
-	err := clientcmd.WriteToFile(*kubeconfig, kubeconfigPath)
-	if err != nil {
-		return nil, fmt.Errorf("error writing sandbox user kubeconfig to %s path: %v", kubeconfigPath, err)
-	}
-
-	ns, err := s.GetUserProvisionedNamespace(userName)
-	if err != nil {
-		return nil, fmt.Errorf("error getting provisioned usernamespace: %v", err)
-	}
+	
 
 	return &SandboxUserAuthInfo{
 		UserName:       userName,
