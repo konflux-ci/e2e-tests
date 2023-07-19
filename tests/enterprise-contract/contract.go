@@ -217,7 +217,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 				Sources: []ecp.Source{
 					{
 						Policy: []string{
-							"oci::quay.io/hacbs-contract/ec-release-policy:git-086f871@sha256:373a5c4c1d34123836cbfc11826f6bbf6fdf8f0dfae333a2686bbe941c4f79ef",
+							"oci::quay.io/hacbs-contract/ec-release-policy:git-e908e45@sha256:e90f160c60acd9ef18f503556d635bb3c6b17b75c65d39efb7462a4d4950086a",
 						},
 						Data: []string{
 							"oci::quay.io/hacbs-contract/ec-policy-data:git-8629680@sha256:ee5708dda57216647f63032dd3e63375e70e2353cb1ad10c9ab5493b9236c23e",
