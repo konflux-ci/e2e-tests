@@ -214,16 +214,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 
 		It("verifies the release policy: Task bundles are latest versions", func() {
 			policy := ecp.EnterpriseContractPolicySpec{
-				Sources: []ecp.Source{
-					{
-						Policy: []string{
-							"oci::quay.io/hacbs-contract/ec-release-policy:git-086f871@sha256:373a5c4c1d34123836cbfc11826f6bbf6fdf8f0dfae333a2686bbe941c4f79ef",
-						},
-						Data: []string{
-							"oci::quay.io/hacbs-contract/ec-policy-data:git-8629680@sha256:ee5708dda57216647f63032dd3e63375e70e2353cb1ad10c9ab5493b9236c23e",
-						},
-					},
-				},
+				Sources: policySource,
 				Configuration: &ecp.EnterpriseContractPolicyConfiguration{
 					Include: []string{"attestation_task_bundle.task_ref_bundles_current"},
 				},
@@ -252,7 +243,10 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			reportLog, err := utils.GetContainerLogs(fwk.AsKubeAdmin.CommonController.KubeInterface(), tr.Status.PodName, "step-report", namespace)
 			GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, "step-report", reportLog)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(reportLog).Should(ContainSubstring("Pipeline task 'build-container' uses an out of date task bundle"))
+			// depending on the data which is updated regularly several tasks
+			// could be using out of date task bundle, we check that at least
+			// one such issue is reported
+			Expect(reportLog).Should(ContainSubstring("uses an out of date task bundle"))
 		})
 
 		It("verifies the release policy: Task bundle references pinned to digest", func() {
