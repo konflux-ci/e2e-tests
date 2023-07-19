@@ -23,12 +23,12 @@ import (
 )
 
 type ControllerHub struct {
-	HasController             has.ApplicationService
+	HasController             *has.HasController
 	CommonController          *common.SuiteController
 	TektonController          *tekton.SuiteController
-	GitOpsController          gitops.Gitops
+	GitOpsController          *gitops.GitopsController
 	SPIController             *spi.SuiteController
-	ReleaseController         *release.SuiteController
+	ReleaseController         *release.ReleaseController
 	IntegrationController     *integration.SuiteController
 	JvmbuildserviceController *jvmbuildservice.SuiteController
 	O11yController            *o11y.SuiteController

@@ -21,40 +21,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Contains all methods related with components objects CRUD operations.
-type ComponentsInterface interface {
-	// Returns an application obj from the kubernetes cluster.
-	GetComponent(name string, namespace string) (*appservice.Component, error)
-
-	// Returns a component from kubernetes cluster given a application name.
-	GetComponentByApplicationName(applicationName string, namespace string) (*appservice.Component, error)
-
-	// Returns an pipelinerun obj related with a given component name from the kubernetes cluster.
-	GetComponentPipelineRun(componentName, applicationName, namespace, sha string) (*v1beta1.PipelineRun, error)
-
-	// Waits for a given component to be finished and in case of hitting issue: https://issues.redhat.com/browse/SRVKP-2749 do a given retries.
-	WaitForComponentPipelineToBeFinished(component *appservice.Component, sha string, maxRetries int) error
-
-	// Creates an component object in the kubernetes cluster.
-	CreateComponent(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string) (*appservice.Component, error)
-
-	// Modifies the replicas of a component.
-	ScaleComponentReplicas(component *appservice.Component, replicas *int) (*appservice.Component, error)
-
-	// Deletes a component object from the given namespace in the kubernetes cluster.
-	DeleteComponent(name string, namespace string, reportErrorOnNotFound bool) error
-
-	// Deletes all components from the given namespace in the kubernetes cluster.
-	DeleteAllComponentsInASpecificNamespace(namespace string, timeout time.Duration) error
-}
-
 // GetComponent return a component object from kubernetes cluster
-func (h *hasFactory) GetComponent(name string, namespace string) (*appservice.Component, error) {
+func (h *HasController) GetComponent(name string, namespace string) (*appservice.Component, error) {
 	component := &appservice.Component{}
 	if err := h.KubeRest().Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, component); err != nil {
 		return nil, err
@@ -64,7 +38,7 @@ func (h *hasFactory) GetComponent(name string, namespace string) (*appservice.Co
 }
 
 // GetComponentByApplicationName returns a component from kubernetes cluster given a application name.
-func (h *hasFactory) GetComponentByApplicationName(applicationName string, namespace string) (*appservice.Component, error) {
+func (h *HasController) GetComponentByApplicationName(applicationName string, namespace string) (*appservice.Component, error) {
 	components := &appservice.ComponentList{}
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
@@ -83,7 +57,7 @@ func (h *hasFactory) GetComponentByApplicationName(applicationName string, names
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels
-func (h *hasFactory) GetComponentPipelineRun(componentName string, applicationName string, namespace, sha string) (*v1beta1.PipelineRun, error) {
+func (h *HasController) GetComponentPipelineRun(componentName string, applicationName string, namespace, sha string) (*v1beta1.PipelineRun, error) {
 	pipelineRunLabels := map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName}
 
 	if sha != "" {
@@ -105,7 +79,7 @@ func (h *hasFactory) GetComponentPipelineRun(componentName string, applicationNa
 }
 
 // Waits for a given component to be finished and in case of hitting issue: https://issues.redhat.com/browse/SRVKP-2749 do a given retries.
-func (h *hasFactory) WaitForComponentPipelineToBeFinished(component *appservice.Component, sha string, maxRetries int) error {
+func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservice.Component, sha string, maxRetries int) error {
 	attempts := 1
 	app := component.Spec.Application
 	var pr *v1beta1.PipelineRun
@@ -158,7 +132,7 @@ func (h *hasFactory) WaitForComponentPipelineToBeFinished(component *appservice.
 }
 
 // Universal method to create a component in the kubernetes clusters.
-func (h *hasFactory) CreateComponent(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string) (*appservice.Component, error) {
+func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string) (*appservice.Component, error) {
 	componentObject := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			// adding default label because of the BuildPipelineSelector in build test
@@ -201,8 +175,40 @@ func (h *hasFactory) CreateComponent(componentSpec appservice.ComponentSpec, nam
 	return componentObject, nil
 }
 
+// CreateComponentWithDockerSource creates a component based on container image source.
+func (h *HasController) CreateComponentWithDockerSource(applicationName, componentName, namespace, gitSourceURL, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
+	component := &appservice.Component{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      componentName,
+			Namespace: namespace,
+		},
+		Spec: appservice.ComponentSpec{
+			ComponentName: componentName,
+			Application:   applicationName,
+			Source: appservice.ComponentSource{
+				ComponentSourceUnion: appservice.ComponentSourceUnion{
+					GitSource: &appservice.GitSource{
+						URL:           gitSourceURL,
+						DockerfileURL: containerImageSource,
+					},
+				},
+			},
+			Secret:         secret,
+			ContainerImage: outputContainerImage,
+			Replicas:       pointer.Int(1),
+			TargetPort:     8081,
+			Route:          "",
+		},
+	}
+	err := h.KubeRest().Create(context.TODO(), component)
+	if err != nil {
+		return nil, err
+	}
+	return component, nil
+}
+
 // ScaleDeploymentReplicas scales the replicas of a given deployment
-func (h *hasFactory) ScaleComponentReplicas(component *appservice.Component, replicas *int) (*appservice.Component, error) {
+func (h *HasController) ScaleComponentReplicas(component *appservice.Component, replicas *int) (*appservice.Component, error) {
 	component.Spec.Replicas = replicas
 
 	err := h.KubeRest().Update(context.TODO(), component, &rclient.UpdateOptions{})
@@ -213,7 +219,7 @@ func (h *hasFactory) ScaleComponentReplicas(component *appservice.Component, rep
 }
 
 // DeleteComponent delete an has component from a given name and namespace
-func (h *hasFactory) DeleteComponent(name string, namespace string, reportErrorOnNotFound bool) error {
+func (h *HasController) DeleteComponent(name string, namespace string, reportErrorOnNotFound bool) error {
 	component := appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -230,7 +236,7 @@ func (h *hasFactory) DeleteComponent(name string, namespace string, reportErrorO
 }
 
 // DeleteAllComponentsInASpecificNamespace removes all component CRs from a specific namespace. Useful when creating a lot of resources and want to remove all of them
-func (h *hasFactory) DeleteAllComponentsInASpecificNamespace(namespace string, timeout time.Duration) error {
+func (h *HasController) DeleteAllComponentsInASpecificNamespace(namespace string, timeout time.Duration) error {
 	if err := h.KubeRest().DeleteAllOf(context.TODO(), &appservice.Component{}, rclient.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting components from the namespace %s: %+v", namespace, err)
 	}
@@ -245,7 +251,7 @@ func (h *hasFactory) DeleteAllComponentsInASpecificNamespace(namespace string, t
 }
 
 // Waits for a component to be reconciled in the application service.
-func (h *hasFactory) ComponentReady(component *appservice.Component) wait.ConditionFunc {
+func (h *HasController) ComponentReady(component *appservice.Component) wait.ConditionFunc {
 	return func() (bool, error) {
 		messages, err := h.GetComponentConditionStatusMessages(component.Name, component.Namespace)
 		if err != nil {
@@ -261,7 +267,7 @@ func (h *hasFactory) ComponentReady(component *appservice.Component) wait.Condit
 }
 
 // Waits for a component until is deleted and if not will return an error
-func (h *hasFactory) ComponentDeleted(component *appservice.Component) wait.ConditionFunc {
+func (h *HasController) ComponentDeleted(component *appservice.Component) wait.ConditionFunc {
 	return func() (bool, error) {
 		_, err := h.GetComponent(component.Name, component.Namespace)
 		return err != nil && k8sErrors.IsNotFound(err), nil
@@ -269,7 +275,7 @@ func (h *hasFactory) ComponentDeleted(component *appservice.Component) wait.Cond
 }
 
 // Get the message from the status of a component. Usefull for debugging purposes.
-func (h *hasFactory) GetComponentConditionStatusMessages(name, namespace string) (messages []string, err error) {
+func (h *HasController) GetComponentConditionStatusMessages(name, namespace string) (messages []string, err error) {
 	c, err := h.GetComponent(name, namespace)
 	if err != nil {
 		return messages, fmt.Errorf("error getting HAS component: %v", err)
@@ -281,7 +287,7 @@ func (h *hasFactory) GetComponentConditionStatusMessages(name, namespace string)
 }
 
 // Universal method to retrigger pipelineruns in kubernetes cluster
-func (h *hasFactory) RetriggerComponentPipelineRun(component *appservice.Component, pr *v1beta1.PipelineRun) (sha string, err error) {
+func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Component, pr *v1beta1.PipelineRun) (sha string, err error) {
 	if err = h.KubeRest().Delete(context.TODO(), pr); err != nil {
 		return "", fmt.Errorf("failed to delete PipelineRun %q from %q namespace", pr.GetName(), pr.GetNamespace())
 	}
@@ -370,7 +376,7 @@ func (h *hasFactory) RetriggerComponentPipelineRun(component *appservice.Compone
 }
 
 // refreshComponentForErrorDebug returns the latest component object from the kubernetes cluster.
-func (h *hasFactory) refreshComponentForErrorDebug(component *appservice.Component) *appservice.Component {
+func (h *HasController) refreshComponentForErrorDebug(component *appservice.Component) *appservice.Component {
 	retComp := &appservice.Component{}
 	key := rclient.ObjectKeyFromObject(component)
 	err := h.KubeRest().Get(context.Background(), key, retComp)
@@ -381,7 +387,7 @@ func (h *hasFactory) refreshComponentForErrorDebug(component *appservice.Compone
 	return retComp
 }
 
-func (h *hasFactory) CheckForImageAnnotation(component *appservice.Component) wait.ConditionFunc {
+func (h *HasController) CheckForImageAnnotation(component *appservice.Component) wait.ConditionFunc {
 	return func() (bool, error) {
 		componentCR, err := h.GetComponent(component.Name, component.Namespace)
 		if err != nil {
