@@ -111,6 +111,31 @@ func (c *CustomClient) DynamicClient() dynamic.Interface {
 	return c.dynamicClient
 }
 
+// Create a new Sandbox stage client
+func NewDevSandboxProxyStageClient(username string, toolchainApiUrl string, keycloakUrl string, offlineToken string) (*K8SClient, error) {
+	sandboxController, err := sandbox.NewDevSandboxStageController()
+	if err != nil {
+		return nil, err
+	}
+	userAuthInfo, err := sandboxController.ReconcileUserCreationStage(username, toolchainApiUrl, keycloakUrl , offlineToken)
+	if err != nil {
+		return nil, err
+	}
+
+	sandboxProxyClient, err := CreateAPIProxyClient(userAuthInfo.UserToken, userAuthInfo.ProxyUrl)
+	if err != nil {
+		return nil, err
+	}
+	return &K8SClient{
+		AsKubeAdmin: 	   sandboxProxyClient,
+		AsKubeDeveloper:   sandboxProxyClient,
+		UserName:          userAuthInfo.UserName,
+		UserNamespace:     userAuthInfo.UserNamespace,
+		SandboxController: sandboxController,
+	}, nil
+}
+
+
 // Creates Kubernetes clients:
 // 1. Will create a kubernetes client from default kubeconfig as kubeadmin
 // 2. Will create a sandbox user and will generate a client using user token a new client to create resources in RHTAP like a normal user
