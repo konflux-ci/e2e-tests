@@ -320,12 +320,15 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 					return nil
 				}, pipelineRunStartedTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for a PipelineRun in namespace %q with label component label %q and application label %q and sha label %q to start", userNamespace, componentName, appName, mergeResultSha))
 			})
-
 		})
 
 		When("SLSA level 3 customizable PipelineRun is created", func() {
 			It("should eventually complete successfully", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResultSha, 2)).To(Succeed())
+			})
+
+			It("does not contain an annotation with a Snapshot Name", func() {
+				Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(""))
 			})
 		})
 
@@ -349,11 +352,23 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 				Expect(build.ValidateBuildPipelineTestResults(pipelineRun, f.AsKubeAdmin.CommonController.KubeRest())).To(Succeed())
 			})
 
+			It("should validate pipelineRun is signed", func() {
+				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, appName, userNamespace, mergeResultSha)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(pipelineRun.Annotations["chains.tekton.dev/signed"]).To(Equal("true"))
+			})
+
 			It("should find the related Snapshot CR", func() {
 				Eventually(func() error {
 					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", userNamespace)
 					return err
 				}, snapshotTimeout, snapshotPollingInterval).Should(Succeed(), "timed out when trying to check if the Snapshot exists for PipelineRun %s/%s", userNamespace, pipelineRun.GetName())
+			})
+
+			It("should validate the pipelineRun is annotated with the name of the Snapshot", func() {
+				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, appName, userNamespace, mergeResultSha)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(snapshot.GetName()))
 			})
 
 			It("should find the related Integration Test PipelineRun", func() {
