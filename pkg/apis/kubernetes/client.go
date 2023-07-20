@@ -141,7 +141,12 @@ func NewDevSandboxProxyClient(userName string, isStage bool, options utils.Optio
 		sandboxController, err = sandbox.NewDevSandboxController(asAdminClient.KubeInterface(), asAdminClient.KubeRest())
 		if err != nil {
 			return nil, err
-		}		
+		}
+		
+		proxyAuthInfo, err = sandboxController.ReconcileUserCreation(userName)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	sandboxProxyClient, err = CreateAPIProxyClient(proxyAuthInfo.UserToken, proxyAuthInfo.ProxyUrl)
