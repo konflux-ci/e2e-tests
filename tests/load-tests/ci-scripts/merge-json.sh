@@ -25,5 +25,7 @@ shift
 # Merge JSON strings into one JSON array
 merged_json=$(merge_json_strings "$@")
 
+echo $merged_json
+
 # Store the merged JSON array in the output file
 echo "$merged_json" > "$output_file"
