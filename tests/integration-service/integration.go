@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devfile/library/pkg/util"
+	"github.com/devfile/library/v2/pkg/util"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -191,7 +191,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			It("creates an snapshot of push event", func() {
 				sampleImage := "quay.io/redhat-appstudio/sample-image@sha256:841328df1b9f8c4087adbdcfec6cc99ac8308805dea83f6d415d6fb8d40227c1"
-        snapshot_push, err = f.AsKubeAdmin.IntegrationController.CreateSnapshotWithImage(applicationName, testNamespace, componentName, sampleImage)
+				snapshot_push, err = f.AsKubeAdmin.IntegrationController.CreateSnapshotWithImage(applicationName, testNamespace, componentName, sampleImage)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -349,7 +349,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			It("creates a snapshot of push event", func() {
 				sampleImage := "quay.io/redhat-appstudio/sample-image@sha256:841328df1b9f8c4087adbdcfec6cc99ac8308805dea83f6d415d6fb8d40227c1"
-        snapshot_push, err = f.AsKubeAdmin.IntegrationController.CreateSnapshotWithImage(applicationName, testNamespace, componentName, sampleImage)
+				snapshot_push, err = f.AsKubeAdmin.IntegrationController.CreateSnapshotWithImage(applicationName, testNamespace, componentName, sampleImage)
 				Expect(err).ShouldNot(HaveOccurred())
 				GinkgoWriter.Printf("snapshot %s is found\n", snapshot_push.Name)
 			})

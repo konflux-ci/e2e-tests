@@ -13,7 +13,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 
-	"github.com/devfile/library/pkg/util"
+	"github.com/devfile/library/v2/pkg/util"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"

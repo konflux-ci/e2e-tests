@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devfile/library/pkg/util"
+	"github.com/devfile/library/v2/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"

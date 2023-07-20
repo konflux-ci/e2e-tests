@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devfile/library/pkg/util"
+	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	"github.com/google/go-github/v44/github"
 	. "github.com/onsi/ginkgo/v2"
