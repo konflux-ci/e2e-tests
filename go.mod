@@ -6,7 +6,7 @@ require (
 	github.com/avast/retry-go/v4 v4.3.3
 	github.com/codeready-toolchain/api v0.0.0-20230502074949-f8c1d80bac96
 	github.com/codeready-toolchain/toolchain-e2e v0.0.0-20220525131508-60876bfb99d3
-	github.com/devfile/library v1.2.1-0.20220308191614-f0f7e11b17de
+	github.com/devfile/library/v2 v2.2.1-0.20230418160146-e75481b7eebd
 	github.com/enterprise-contract/enterprise-contract-controller/api v0.0.0-20230327185456-5befd172d558
 	github.com/go-git/go-git/v5 v5.6.1
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572
@@ -69,6 +69,7 @@ replace (
 require (
 	contrib.go.opencensus.io/exporter/ocagent v0.7.1-0.20200907061046-05415f1de66d // indirect
 	contrib.go.opencensus.io/exporter/prometheus v0.4.2 // indirect
+	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230106234847-43070de90fa1 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/BurntSushi/toml v1.2.0 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
@@ -91,8 +92,11 @@ require (
 	github.com/containers/libtrust v0.0.0-20190913040956-14b96171aa3b // indirect
 	github.com/containers/ocicrypt v1.1.6 // indirect
 	github.com/containers/storage v1.33.0 // indirect
+	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/devfile/api/v2 v2.2.1-alpha.0.20230413012049-a6c32fca0dbd // indirect
+	github.com/devfile/registry-support/index/generator v0.0.0-20221018203505-df96d34d4273 // indirect
+	github.com/devfile/registry-support/registry-library v0.0.0-20221018213054-47b3ffaeadba // indirect
 	github.com/docker/cli v23.0.3+incompatible // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/docker v23.0.3+incompatible // indirect
@@ -115,6 +119,7 @@ require (
 	github.com/go-kit/log v0.2.1 // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
+	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/swag v0.22.3 // indirect
@@ -161,6 +166,7 @@ require (
 	github.com/mitchellh/go-wordwrap v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
+	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/patternmatcher v0.5.0 // indirect
 	github.com/moby/spdystream v0.2.0 // indirect
 	github.com/moby/sys/mountinfo v0.6.2 // indirect
@@ -208,6 +214,8 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	github.com/xlab/treeprint v1.1.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
+	go.opentelemetry.io/otel v1.14.0 // indirect
+	go.opentelemetry.io/otel/trace v1.14.0 // indirect
 	go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
@@ -235,6 +243,7 @@ require (
 	k8s.io/component-base v0.27.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20230327201221-f5883ff37f0c // indirect
 	knative.dev/eventing v0.35.5 // indirect
+	oras.land/oras-go v1.1.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kustomize/api v0.12.1 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.13.9 // indirect

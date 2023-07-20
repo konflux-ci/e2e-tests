@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/devfile/library/pkg/util"
+	"github.com/devfile/library/v2/pkg/util"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"

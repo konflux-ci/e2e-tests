@@ -7,7 +7,7 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/devfile/library/pkg/util"
+	"github.com/devfile/library/v2/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
