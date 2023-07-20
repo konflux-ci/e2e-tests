@@ -18,7 +18,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y jq
 
-    - name: Run load test script
+    - name: Prepare Load Test
       env:
         STAGING_USERS_1: ${{ secrets.STAGING_USERS_1 }}
         STAGING_USERS_2: ${{ secrets.STAGING_USERS_2 }}
@@ -26,3 +26,6 @@ jobs:
         STAGING_USERS_4: ${{ secrets.STAGING_USERS_4 }}
       run: |
         ./tests/load-tests/ci-scripts/merge-json.sh tests/load-tests/output.json $STAGING_USERS_1 $STAGING_USERS_2 $STAGING_USERS_3 $STAGING_USERS_4
+    
+    - name: Run Load Test
+      run: ./tests/load-tests/run-stage.sh
