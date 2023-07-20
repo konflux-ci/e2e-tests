@@ -117,6 +117,8 @@ const (
 	DefaultImageTagExpiration string = "6h"
 
 	PipelineRunPollingInterval = 10 * time.Second
+
+	JsonStageUsersPath = "output.json"
 )
 
 var (
