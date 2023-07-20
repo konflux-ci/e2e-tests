@@ -135,7 +135,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 
 		Expect(kc.CreateOrUpdateSigningSecret(publicKey, "cosign-public-key", managedNamespace)).To(Succeed())
 
-		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlan("source-releaseplan", userNamespace, appName, managedNamespace, "")
+		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlanWithLabel("source-releaseplan", userNamespace, appName, managedNamespace, "")
 		Expect(err).NotTo(HaveOccurred())
 
 		components := []r.Component{{Name: componentName, Repository: constants.DefaultReleasedImagePushRepo}}
@@ -384,7 +384,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 			It("should lead to Snapshot CR being marked as passed", func() {
 				snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", userNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(f.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot)).To(BeTrue(), fmt.Sprintf("tests have not succeeded for snapshot %s/%s", snapshot.GetNamespace(), snapshot.GetName()))
+				Expect(f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)).To(BeTrue(), fmt.Sprintf("tests have not succeeded for snapshot %s/%s", snapshot.GetNamespace(), snapshot.GetName()))
 			})
 
 			It("should trigger creation of Release CR", func() {

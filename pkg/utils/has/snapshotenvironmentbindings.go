@@ -7,8 +7,30 @@ import (
 
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// GetComponentPipeline returns the pipeline for a given component labels
+func (h *HasController) GetSnapshotEnvironmentBinding(applicationName string, namespace string, environment *appservice.Environment) (*appservice.SnapshotEnvironmentBinding, error) {
+	snapshotEnvironmentBindingList := &appservice.SnapshotEnvironmentBindingList{}
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+
+	err := h.KubeRest().List(context.TODO(), snapshotEnvironmentBindingList, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, binding := range snapshotEnvironmentBindingList.Items {
+		if binding.Spec.Application == applicationName && binding.Spec.Environment == environment.Name {
+			return &binding, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no SnapshotEnvironmentBinding found in environment %s %s", environment.Name, utils.GetAdditionalInfo(applicationName, namespace))
+}
 
 // DeleteAllSnapshotEnvBindingsInASpecificNamespace removes all snapshotEnvironmentBindings from a specific namespace. Useful when creating a lot of resources and want to remove all of them
 func (h *HasController) DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace string, timeout time.Duration) error {

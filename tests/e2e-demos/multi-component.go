@@ -230,14 +230,14 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 									GinkgoWriter.Printf("cannot get the Snapshot: %v\n", err)
 									return err
 								}
-								if !fw.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(componentSnapshot) {
+								if !fw.AsKubeAdmin.CommonController.HaveTestsSucceeded(componentSnapshot) {
 									return fmt.Errorf("tests haven't succeeded for snapshot %s/%s. snapshot status: %+v", componentSnapshot.GetNamespace(), componentSnapshot.GetName(), componentSnapshot.Status)
 								}
 								return nil
 							}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the snapshot for the component %s/%s to be marked as successful", component.GetNamespace(), component.GetName()))
 
 							Eventually(func() error {
-								_, err := fw.AsKubeAdmin.IntegrationController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
+								_, err := fw.AsKubeAdmin.HasController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
 								if err != nil {
 									GinkgoWriter.Println("SnapshotEnvironmentBinding has not been found yet")
 									return err

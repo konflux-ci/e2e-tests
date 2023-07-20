@@ -94,7 +94,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 			componentDetected = compDetected
 		}
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "")
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanWithLabel(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "")
 		Expect(err).NotTo(HaveOccurred())
 
 		components := []release.Component{{Name: compName, Repository: releasedImagePushRepo}}

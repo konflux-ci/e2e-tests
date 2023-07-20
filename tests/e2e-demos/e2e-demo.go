@@ -183,7 +183,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 								GinkgoWriter.Println("snapshot has not been found yet")
 								return err
 							}
-							if !fw.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot) {
+							if !fw.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot) {
 								return fmt.Errorf("tests haven't succeeded for snapshot %s/%s. snapshot status: %+v", snapshot.GetNamespace(), snapshot.GetName(), snapshot.Status)
 							}
 							return nil
@@ -192,7 +192,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 					It("checks if a SnapshotEnvironmentBinding is created successfully", func() {
 						Eventually(func() error {
-							_, err := fw.AsKubeAdmin.IntegrationController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
+							_, err := fw.AsKubeAdmin.HasController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
 							if err != nil {
 								GinkgoWriter.Println("SnapshotEnvironmentBinding has not been found yet")
 								return err
