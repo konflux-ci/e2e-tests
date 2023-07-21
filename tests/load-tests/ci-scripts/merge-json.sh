@@ -36,7 +36,7 @@ EOF
 decode_and_save_json() {
     local variable_name="$1"
     local file_name="pre_${variable_name#*_}.json"
-    echo "${!variable_name}" | base64 --decode | jq '.' > "$file_name"
+    echo "${!variable_name}" | base64 --decode > "$file_name"
 }
 
 # Get the total number of parameters passed to the script (N)
@@ -49,9 +49,9 @@ for ((i = 1; i <= N; i++)); do
 done
 
 # Merge all the pre_N.json files into output.json
-jq '[.[].creds] | add' pre_*.json > output.json
+cat pre_*.json | jq '[.[].creds | add]' > output.json
 
-cat pre_*.json
+cat output.json
 
 # Optionally, you can remove the temporary pre_N.json files
 # Uncomment the next line to delete the files
