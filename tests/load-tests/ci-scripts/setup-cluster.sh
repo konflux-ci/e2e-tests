@@ -26,11 +26,11 @@ TEKTON_PERF_KUBE_API_BURST=${TEKTON_PERF_KUBE_API_BURST:-50}
 echo "Tweaking infra-deployments"
 infra_deployment_dir=$(mktemp -d)
 git clone --branch main "https://${GITHUB_TOKEN}@github.com/redhat-appstudio/infra-deployments.git" "$infra_deployment_dir"
-envsubst <tests/load-tests/ci-scripts/tekton-performance/update-tekton-config-performance.yaml >"$infra_deployment_dir/components/pipeline-service/development/update-tekton-config-performance.yaml"
+###envsubst <tests/load-tests/ci-scripts/tekton-performance/update-tekton-config-performance.yaml >"$infra_deployment_dir/components/pipeline-service/development/update-tekton-config-performance.yaml"
 pushd "$infra_deployment_dir"
 git checkout -b "$INFRA_DEPLOYMENTS_BRANCH" origin/main
-git add "$infra_deployment_dir/components/pipeline-service/development/update-tekton-config-performance.yaml"
-git commit -m "WIP: tekton performance tuning"
+###git add "$infra_deployment_dir/components/pipeline-service/development/update-tekton-config-performance.yaml"
+###git commit -m "WIP: tekton performance tuning"
 curl https://patch-diff.githubusercontent.com/raw/redhat-appstudio/infra-deployments/pull/2128.patch | git apply -v
 git commit -m "WIP: Stuart's topology spread constraint"
 git remote add tekton-tuning "https://${GITHUB_TOKEN}@github.com/$INFRA_DEPLOYMENTS_ORG/infra-deployments.git"
