@@ -1,4 +1,3 @@
-cat output.json
 go run loadtest.go \
         --component-repo "${COMPONENT_REPO:-https://github.com/devfile-samples/devfile-sample-code-with-quarkus}" \
         --users "${USERS_PER_THREAD:-1}" \
