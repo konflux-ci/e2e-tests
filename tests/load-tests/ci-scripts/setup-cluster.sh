@@ -31,6 +31,8 @@ pushd "$infra_deployment_dir"
 git checkout -b "$INFRA_DEPLOYMENTS_BRANCH" origin/main
 git add "$infra_deployment_dir/components/pipeline-service/development/update-tekton-config-performance.yaml"
 git commit -m "WIP: tekton performance tuning"
+curl https://patch-diff.githubusercontent.com/raw/redhat-appstudio/infra-deployments/pull/2128.patch | git apply -v
+git commit -m "WIP: Stuart's topology spread constraint"
 git remote add tekton-tuning "https://${GITHUB_TOKEN}@github.com/$INFRA_DEPLOYMENTS_ORG/infra-deployments.git"
 git push -u tekton-tuning "$INFRA_DEPLOYMENTS_BRANCH"
 popd
