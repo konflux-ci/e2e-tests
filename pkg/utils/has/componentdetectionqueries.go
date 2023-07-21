@@ -11,20 +11,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// Contains all methods related with componentdetectionquery objects CRUD operations.
-type ComponentDetectionQueriesInterface interface {
-	// Returns an componentdetectionquery obj from the kubernetes cluster.
-	GetComponentDetectionQuery(name string, namespace string) (*appservice.ComponentDetectionQuery, error)
-
-	// Creates an componentdetectionquery object in the kubernetes cluster.
-	CreateComponentDetectionQuery(name string, namespace string, gitSourceURL string, gitSourceRevision string, gitSourceContext string, secret string, isMultiComponent bool) (*appservice.ComponentDetectionQuery, error)
-
-	// Creates an componentdetectionquery object in the kubernetes cluster and wait for a period of given timeout.
-	CreateComponentDetectionQueryWithTimeout(name string, namespace string, gitSourceURL string, gitSourceRevision string, gitSourceContext string, secret string, isMultiComponent bool, timeout time.Duration) (*appservice.ComponentDetectionQuery, error)
-}
-
 // GetComponentDetectionQuery return the status from the ComponentDetectionQuery Custom Resource object
-func (h *hasFactory) GetComponentDetectionQuery(name, namespace string) (*appservice.ComponentDetectionQuery, error) {
+func (h *HasController) GetComponentDetectionQuery(name, namespace string) (*appservice.ComponentDetectionQuery, error) {
 	componentDetectionQuery := &appservice.ComponentDetectionQuery{
 		Spec: appservice.ComponentDetectionQuerySpec{},
 	}
@@ -37,12 +25,12 @@ func (h *hasFactory) GetComponentDetectionQuery(name, namespace string) (*appser
 }
 
 // CreateComponentDetectionQuery create a has componentdetectionquery from a given name, namespace, and git source
-func (h *hasFactory) CreateComponentDetectionQuery(name string, namespace string, gitSourceURL string, gitSourceRevision string, gitSourceContext string, secret string, isMultiComponent bool) (*appservice.ComponentDetectionQuery, error) {
+func (h *HasController) CreateComponentDetectionQuery(name string, namespace string, gitSourceURL string, gitSourceRevision string, gitSourceContext string, secret string, isMultiComponent bool) (*appservice.ComponentDetectionQuery, error) {
 	return h.CreateComponentDetectionQueryWithTimeout(name, namespace, gitSourceURL, gitSourceRevision, gitSourceContext, secret, isMultiComponent, 5*time.Minute)
 }
 
 // CreateComponentDetectionQueryWithTimeout create a has componentdetectionquery from a given name, namespace, and git source and waits for it to be read
-func (h *hasFactory) CreateComponentDetectionQueryWithTimeout(name string, namespace string, gitSourceURL string, gitSourceRevision string, gitSourceContext string, secret string, isMultiComponent bool, timeout time.Duration) (*appservice.ComponentDetectionQuery, error) {
+func (h *HasController) CreateComponentDetectionQueryWithTimeout(name string, namespace string, gitSourceURL string, gitSourceRevision string, gitSourceContext string, secret string, isMultiComponent bool, timeout time.Duration) (*appservice.ComponentDetectionQuery, error) {
 	componentDetectionQuery := &appservice.ComponentDetectionQuery{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -54,7 +42,8 @@ func (h *hasFactory) CreateComponentDetectionQueryWithTimeout(name string, names
 				Revision: gitSourceRevision,
 				Context:  gitSourceContext,
 			},
-			Secret: secret,
+			Secret:                secret,
+			GenerateComponentName: true,
 		},
 	}
 

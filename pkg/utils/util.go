@@ -23,10 +23,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/apis"
 
-	devfilePkg "github.com/devfile/library/pkg/devfile"
-	"github.com/devfile/library/pkg/devfile/parser"
-	"github.com/devfile/library/pkg/devfile/parser/data"
-	"github.com/devfile/library/pkg/util"
+	devfilePkg "github.com/devfile/library/v2/pkg/devfile"
+	"github.com/devfile/library/v2/pkg/devfile/parser"
+	"github.com/devfile/library/v2/pkg/devfile/parser/data"
+	"github.com/devfile/library/v2/pkg/util"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
@@ -47,6 +47,39 @@ type FailedPipelineRunDetails struct {
 	FailedTaskRunName   string
 	PodName             string
 	FailedContainerName string
+}
+
+type Options struct {
+	ToolchainApiUrl string
+	KeycloakUrl 	string
+	OfflineToken 	string
+}
+
+//check options are valid or not
+func CheckOptions(optionsArr []Options) (bool, error) {
+	if len(optionsArr) == 0 {
+		return false, nil
+	}
+
+	if len(optionsArr) > 1 {
+		return true, fmt.Errorf("options array contains more than 1 object")
+	}
+
+	options := optionsArr[0]
+
+	if options.ToolchainApiUrl == "" {
+		return true, fmt.Errorf("ToolchainApiUrl field is empty")
+	}
+
+	if options.KeycloakUrl == "" {
+		return true, fmt.Errorf("KeycloakUrl field is empty")
+	}
+
+	if options.OfflineToken == "" {
+		return true, fmt.Errorf("OfflineToken field is empty")
+	}
+
+	return true, nil
 }
 
 // CheckIfEnvironmentExists return true/false if the environment variable exists

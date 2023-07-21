@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/devfile/library/pkg/util"
+	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -230,7 +230,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					}
 				})
 				It("verify-enterprise-contract check should pass", Label(buildTemplatesTestLabel), func() {
-					Skip("Skip until RHTAP bug is solved: https://issues.redhat.com/browse/RHTAPBUGS-352")
 					cm, err := kubeController.Commonctrl.GetConfigMap("ec-defaults", "enterprise-contract-service")
 					Expect(err).ToNot(HaveOccurred())
 
