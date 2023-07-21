@@ -27,6 +27,6 @@ jobs:
         #STAGING_USERS_4: ${{ secrets.STAGING_USERS_4 }}
       run: ./ci-scripts/merge-json.sh $STAGING_USERS_1 $STAGING_USERS_2
     
-    # - name: Run Load Test
-    #   working-directory: ./tests/load-tests
-    #   run: ./run-stage.sh
+    - name: Run Load Test
+      working-directory: ./tests/load-tests
+      run: ./run-stage.sh
