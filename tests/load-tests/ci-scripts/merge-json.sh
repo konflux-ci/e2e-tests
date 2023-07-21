@@ -51,6 +51,7 @@ done
 # Merge all the pre_N.json files into output.json
 jq '[.[].creds] | add' pre_*.json > output.json
 
+cat pre_*.json
 
 # Optionally, you can remove the temporary pre_N.json files
 # Uncomment the next line to delete the files
