@@ -3,7 +3,7 @@ package loadtests
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -21,7 +21,7 @@ type User struct {
 
 
 func LoadStageUsers(filePath string) ([]User, error) {
-	jsonData, err := ioutil.ReadFile(filePath)
+	jsonData, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}

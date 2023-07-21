@@ -13,7 +13,6 @@ import (
 
 	"github.com/gosuri/uiprogress"
 	"github.com/gosuri/uitable/util/strutil"
-	metrics "github.com/redhat-appstudio-qe/perf-monitoring/metrics"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -32,7 +31,6 @@ var (
 	numberOfUsers             int
 	waitPipelines             bool
 	verbose                   bool
-	token                     string
 	logConsole                bool
 	failFast                  bool
 	disableMetrics            bool
@@ -68,7 +66,6 @@ var (
 	selectedUsers                        []loadtestUtils.User
 	CI                                   bool
 	JobName                              string
-	metricsController                    *metrics.MetricsPush
 )
 
 type ErrorOccurrence struct {
@@ -394,9 +391,6 @@ func setup(cmd *cobra.Command, args []string) {
 
 	klog.StopFlushDaemon()
 	klog.Flush()
-	if !disableMetrics {
-		//send final data and close the metrics gathering
-	}
 }
 
 func StageCleanup(users []loadtestUtils.User) {
