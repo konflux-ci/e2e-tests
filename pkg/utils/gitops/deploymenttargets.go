@@ -9,14 +9,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Contains all methods related with DeploymentTargets CRUD operations.
-type DeploymentTargetsInterface interface {
-	// List all deploymentTargets in a given namespace from the kubernetes cluster.
-	GetDeploymentTargetsList(namespace string) (*appservice.DeploymentTargetList, error)
-}
-
 // List all deploymentTargets in a given namespace from the kubernetes cluster.
-func (g *gitopsFactory) GetDeploymentTargetsList(namespace string) (*appservice.DeploymentTargetList, error) {
+func (g *GitopsController) GetDeploymentTargetsList(namespace string) (*appservice.DeploymentTargetList, error) {
 	deploymentTargetList := &appservice.DeploymentTargetList{}
 
 	opts := []client.ListOption{

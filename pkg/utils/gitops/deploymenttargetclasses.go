@@ -8,15 +8,9 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
-// Contains all methods related with DeploymentTargetClasses CRUD operations.
-type DeploymentTargetClassesInterface interface {
-	// Checks in the kubernetes cluster if deploymenttargetclass exists.
-	HaveAvailableDeploymentTargetClassExist() (*appservice.DeploymentTargetClass, error)
-}
-
 // HaveAvailableDeploymentTargetClassExist attempts to find a DeploymentTargetClass with appstudioApi.Provisioner_Devsandbox as provisioner.
 // reurn nil if not found
-func (g *gitopsFactory) HaveAvailableDeploymentTargetClassExist() (*appservice.DeploymentTargetClass, error) {
+func (g *GitopsController) HaveAvailableDeploymentTargetClassExist() (*appservice.DeploymentTargetClass, error) {
 	deploymentTargetClassList := &appservice.DeploymentTargetClassList{}
 	err := g.KubeRest().List(context.TODO(), deploymentTargetClassList)
 	if err != nil && !k8sErrors.IsNotFound(err) {

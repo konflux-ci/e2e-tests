@@ -9,14 +9,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Contains all methods related with DeploymentTargetClaims CRUD operations.
-type DeploymentTargetClaimsInterface interface {
-	// Returns a list of a deploymenttargetclaims from a specific namespace in the kubernetes cluster
-	GetDeploymentTargetClaimsList(namespace string) (*appservice.DeploymentTargetClaimList, error)
-}
-
 // Returns a list of a deploymenttargetclaims from a specific namespace in the kubernetes cluster
-func (g *gitopsFactory) GetDeploymentTargetClaimsList(namespace string) (*appservice.DeploymentTargetClaimList, error) {
+func (g *GitopsController) GetDeploymentTargetClaimsList(namespace string) (*appservice.DeploymentTargetClaimList, error) {
 	deploymentTargetClaimList := &appservice.DeploymentTargetClaimList{}
 
 	opts := []client.ListOption{

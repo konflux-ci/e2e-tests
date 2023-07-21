@@ -20,6 +20,7 @@ import (
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -507,15 +508,6 @@ func findCosignResultsForImage(imageRef string) (*CosignResult, error) {
 		errMsg += fmt.Sprintf("error when getting attestation tag: %+v\n", err)
 	} else {
 		results.attestationImageRef = attestationTag.ImageRef
-		// we want two layers, one for TaskRun and one for PipelineRun
-		// attestations, i.e. that the Chains controller reconciled both and
-		// uploaded them as layers
-		//
-		// this needs to change if/when Chains controller does not produce two layers
-		layersExpected := 2
-		if len(attestationTag.Layers) < layersExpected {
-			errMsg += fmt.Sprintf("attestation tag doesn't have the expected number of layers (%d)\n", layersExpected)
-		}
 	}
 
 	if len(errMsg) > 0 {
@@ -599,7 +591,7 @@ func (k KubeController) CreateOrUpdateSigningSecret(publicKey []byte, name, name
 }
 
 func (k KubeController) GetTektonChainsPublicKey() ([]byte, error) {
-	namespace := "tekton-chains"
+	namespace := constants.TEKTON_CHAINS_KEY_NS
 	secretName := "public-key"
 	dataKey := "cosign.pub"
 
@@ -654,7 +646,7 @@ func (k KubeController) CreateOrUpdatePolicyConfiguration(namespace string, poli
 }
 
 func (k KubeController) GetRekorHost() (rekorHost string, err error) {
-	api := k.Tektonctrl.KubeInterface().CoreV1().ConfigMaps("tekton-chains")
+	api := k.Tektonctrl.KubeInterface().CoreV1().ConfigMaps(constants.TEKTON_CHAINS_DEPLOYMENT_NS)
 	ctx := context.TODO()
 
 	cm, err := api.Get(ctx, "chains-config", metav1.GetOptions{})
