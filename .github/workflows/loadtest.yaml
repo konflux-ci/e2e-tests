@@ -28,6 +28,7 @@ jobs:
       run: |
         echo '$STAGING_USERS_1' | base64 --decode | jq > pre.json
         jq '.creds' pre.json > output.json
+        echo output.json
     
     - name: Run Load Test
       working-directory: ./tests/load-tests
