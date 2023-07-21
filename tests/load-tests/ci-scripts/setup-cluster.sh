@@ -26,7 +26,8 @@ TEKTON_PERF_KUBE_API_BURST=${TEKTON_PERF_KUBE_API_BURST:-50}
 echo "Tweaking infra-deployments"
 infra_deployment_dir=$(mktemp -d)
 infra_deployment_branch="add-topology-spread-constraint"
-git clone --branch "$infra_deployment_branch" "https://${GITHUB_TOKEN}@github.com/redhat-appstudio/infra-deployments.git" "$infra_deployment_dir"
+infra_deployment_fork="stuartwdouglas"
+git clone --branch "$infra_deployment_branch" "https://${GITHUB_TOKEN}@github.com/$infra_deployment_fork/infra-deployments.git" "$infra_deployment_dir"
 ###envsubst <tests/load-tests/ci-scripts/tekton-performance/update-tekton-config-performance.yaml >"$infra_deployment_dir/components/pipeline-service/development/update-tekton-config-performance.yaml"
 pushd "$infra_deployment_dir"
 git checkout -b "$INFRA_DEPLOYMENTS_BRANCH" "origin/$infra_deployment_branch"
