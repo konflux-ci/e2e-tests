@@ -52,7 +52,6 @@ done
 jq -s '[.[].creds]' pre_*.json > data.json
 jq 'add' data.json > output.json
 
-cat output.json
 
 # Optionally, you can remove the temporary pre_N.json files
 # Uncomment the next line to delete the files
