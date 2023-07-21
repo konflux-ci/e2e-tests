@@ -2,9 +2,13 @@ name: CI Stage Load Test
 
 on:
   workflow-dispatch:
-  schedule:
-    # * is a special character in YAML so you have to quote this string
-    - cron:  '0 0 * * *'
+    inputs:
+      users:
+        type: string
+        description: Number of Users
+      threads:
+        type: string
+        description: Number of threads
 
 jobs:
   load_test:
@@ -30,4 +34,7 @@ jobs:
   
     - name: Run Load Test
       working-directory: ./tests/load-tests
+      env:
+        USERS_PER_THREAD: ${{ github.event.inputs.users }}
+        THREADS: ${{ github.event.inputs.threads }}
       run: ./run-stage.sh
