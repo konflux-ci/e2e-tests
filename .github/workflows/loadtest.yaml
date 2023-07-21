@@ -23,11 +23,10 @@ jobs:
       env:
         STAGING_USERS_1: ${{ secrets.STAGING_USERS_1 }}
         STAGING_USERS_2: ${{ secrets.STAGING_USERS_2 }}
-        STAGING_USERS_3: ${{ secrets.STAGING_USERS_3 }}
-        STAGING_USERS_4: ${{ secrets.STAGING_USERS_4 }}
+        #STAGING_USERS_3: ${{ secrets.STAGING_USERS_3 }}
+        #STAGING_USERS_4: ${{ secrets.STAGING_USERS_4 }}
       run: |
-        MERGED_OUTPUT=$(echo "$STAGING_USERS_1" "$STAGING_USERS_2" "$STAGING_USERS_3" "$STAGING_USERS_4" | jq -s '{ "creds": [.[].creds] }')
-        echo "$MERGED_OUTPUT" | jq '.creds' > output.json
+        echo '$STAGING_USERS_1' | base64 --decode | jq > output.json
     
     - name: Run Load Test
       working-directory: ./tests/load-tests

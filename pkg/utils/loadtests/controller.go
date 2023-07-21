@@ -3,7 +3,6 @@ package loadtests
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"time"
 
@@ -26,8 +25,6 @@ func LoadStageUsers(filePath string) ([]User, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println(jsonData)
 	// Parse JSON into an array of User objects
 	var users []User
 	err = json.Unmarshal(jsonData, &users)
