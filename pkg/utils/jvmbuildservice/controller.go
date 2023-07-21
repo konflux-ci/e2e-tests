@@ -124,3 +124,8 @@ func (s *SuiteController) WaitForCache(commonctrl *common.SuiteController, testN
 		return false, nil
 	})
 }
+
+func (s *SuiteController) DeleteJbsConfig(name string, namespace string) error {
+	return s.JvmbuildserviceClient().JvmbuildserviceV1alpha1().JBSConfigs(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+
+}
