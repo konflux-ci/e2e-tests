@@ -14,7 +14,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
-var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests", Label("enterprise-contract", "HACBS"), func() {
+var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests", Label("ec", "HACBS"), func() {
 
 	defer GinkgoRecover()
 	var fwk *framework.Framework
