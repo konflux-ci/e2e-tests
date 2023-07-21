@@ -25,10 +25,7 @@ jobs:
         STAGING_USERS_2: ${{ secrets.STAGING_USERS_2 }}
         #STAGING_USERS_3: ${{ secrets.STAGING_USERS_3 }}
         #STAGING_USERS_4: ${{ secrets.STAGING_USERS_4 }}
-      run: |
-        echo $STAGING_USERS_1 | base64 --decode | jq > pre.json
-        jq '.creds' pre.json > output.json
-        echo output.json
+      run: ./ci-scripts/merge-json.sh $STAGING_USERS_1 $STAGING_USERS_2
     
     - name: Run Load Test
       working-directory: ./tests/load-tests
