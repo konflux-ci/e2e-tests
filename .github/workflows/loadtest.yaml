@@ -1,7 +1,7 @@
 name: CI Stage Load Test
 
 on:
-  workflow-dispatch:
+  workflow_dispatch:
     inputs:
       users:
         type: string
