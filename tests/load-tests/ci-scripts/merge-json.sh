@@ -49,7 +49,7 @@ for ((i = 1; i <= N; i++)); do
 done
 
 # Merge all the pre_N.json files into output.json
-jq -s '[.[].creds]' pre_*.json > output.json
+jq '[.[].creds] | add' pre_*.json > output.json
 
 
 # Optionally, you can remove the temporary pre_N.json files
