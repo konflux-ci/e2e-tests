@@ -170,3 +170,4 @@ Our automated tests running in CI create lot of repositories in our redhat-appst
 There is a mage target that can cleanup those repositories - `mage local:cleanupGithubOrg`.
 
 For more infor & usage, please run `mage -h local:cleanupGithubOrg`.
+
