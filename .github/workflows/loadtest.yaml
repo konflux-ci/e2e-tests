@@ -19,13 +19,15 @@ jobs:
         sudo apt-get install -y jq
 
     - name: Prepare Load Test
+      working-directory: ./tests/load-tests
       env:
         STAGING_USERS_1: ${{ secrets.STAGING_USERS_1 }}
         STAGING_USERS_2: ${{ secrets.STAGING_USERS_2 }}
         STAGING_USERS_3: ${{ secrets.STAGING_USERS_3 }}
         STAGING_USERS_4: ${{ secrets.STAGING_USERS_4 }}
       run: |
-        ./tests/load-tests/ci-scripts/merge-json.sh tests/load-tests/output.json $STAGING_USERS_1 $STAGING_USERS_2 $STAGING_USERS_3 $STAGING_USERS_4
+        jq -s '{ "creds": [.[].creds] }' STAGING_USERS_1 STAGING_USERS_2 STAGING_USERS_3 STAGING_USERS_4 > merged_output.json
+        jq '.creds' merged_output.json > output.json
     
     - name: Run Load Test
       working-directory: ./tests/load-tests
