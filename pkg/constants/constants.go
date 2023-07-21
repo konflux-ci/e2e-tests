@@ -118,7 +118,7 @@ const (
 
 	PipelineRunPollingInterval = 10 * time.Second
 
-	JsonStageUsersPath = "output.json"
+	JsonStageUsersPath = "users.json"
 )
 
 var (

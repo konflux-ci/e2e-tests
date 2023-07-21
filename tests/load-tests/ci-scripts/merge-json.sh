@@ -50,11 +50,11 @@ done
 
 # Merge all the pre_N.json files into output.json
 jq -s '[.[].creds]' pre_*.json > data.json
-jq 'add' data.json > output.json
+jq 'add' data.json > users.json
 
 
 # Optionally, you can remove the temporary pre_N.json files
 # Uncomment the next line to delete the files
 rm pre_*.json
 
-echo "Decoded JSON data merged and stored in output.json."
+echo "Decoded JSON data merged and stored in users.json."
