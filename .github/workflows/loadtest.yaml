@@ -23,10 +23,10 @@ jobs:
       env:
         STAGING_USERS_1: ${{ secrets.STAGING_USERS_1 }}
         STAGING_USERS_2: ${{ secrets.STAGING_USERS_2 }}
-        #STAGING_USERS_3: ${{ secrets.STAGING_USERS_3 }}
-        #STAGING_USERS_4: ${{ secrets.STAGING_USERS_4 }}
-      run: ./ci-scripts/merge-json.sh $STAGING_USERS_1 $STAGING_USERS_2
-    
+        STAGING_USERS_3: ${{ secrets.STAGING_USERS_3 }}
+        STAGING_USERS_4: ${{ secrets.STAGING_USERS_4 }}
+      run: ./ci-scripts/merge-json.sh $STAGING_USERS_1 $STAGING_USERS_2 $STAGING_USERS_3 $STAGING_USERS_4
+  
     - name: Run Load Test
       working-directory: ./tests/load-tests
       run: ./run-stage.sh
