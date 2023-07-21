@@ -1,0 +1,26 @@
+package integration
+
+import (
+	"context"
+	"fmt"
+
+	codereadytoolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+// GetSpaceRequests returns a list of spaceRequests in given namespace.
+func (i *IntegrationController) GetSpaceRequests(namespace string) (*codereadytoolchainv1alpha1.SpaceRequestList, error) {
+	spaceRequestList := &codereadytoolchainv1alpha1.SpaceRequestList{}
+
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+
+	err := i.KubeRest().List(context.Background(), spaceRequestList, opts...)
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error occurred while trying to list spaceRequests in %s namespace: %v", namespace, err)
+	}
+
+	return spaceRequestList, nil
+}
