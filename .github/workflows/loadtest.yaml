@@ -26,7 +26,7 @@ jobs:
         #STAGING_USERS_3: ${{ secrets.STAGING_USERS_3 }}
         #STAGING_USERS_4: ${{ secrets.STAGING_USERS_4 }}
       run: |
-        echo '$STAGING_USERS_1' | base64 --decode | jq > pre.json
+        echo $STAGING_USERS_1 | base64 --decode | jq > pre.json
         jq '.creds' pre.json > output.json
         echo output.json
     
