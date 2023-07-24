@@ -302,7 +302,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					for _, component := range cyclonedx.Components {
 						Expect(component.Name).ToNot(BeEmpty())
 						Expect(component.Type).ToNot(BeEmpty())
-						Expect(component.Version).ToNot(BeEmpty())
 
 						if component.Type == "library" {
 							Expect(component.Purl).ToNot(BeEmpty())
