@@ -82,6 +82,10 @@ func (m *QuayClientMock) GetRobotAccount(organization string, robotName string) 
 	return nil, nil
 }
 
+func (m *QuayClientMock) ChangeRepositoryVisibility(organization, imageRepository string, visibility string) error {
+	return nil
+}
+
 func TestCleanupQuayReposAndRobots(t *testing.T) {
 	timeFormat := "Mon, 02 Jan 2006 15:04:05 -0700"
 

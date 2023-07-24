@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
 	spi "github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -70,8 +71,10 @@ func (s *SuiteController) CreateSPIAccessTokenBinding(name, namespace, repoURL, 
 			},
 			RepoUrl: repoURL,
 			Secret: spi.SecretSpec{
-				Name: secretName,
-				Type: secretType,
+				LinkableSecretSpec: rs.LinkableSecretSpec{
+					Name: secretName,
+					Type: secretType,
+				},
 			},
 		},
 	}
@@ -80,17 +83,6 @@ func (s *SuiteController) CreateSPIAccessTokenBinding(name, namespace, repoURL, 
 		return nil, err
 	}
 	return &spiAccessTokenBinding, nil
-}
-
-// DeleteSPIAccessTokenBinding deletes an SPIAccessTokenBinding from a given name and namespace
-func (h *SuiteController) DeleteSPIAccessTokenBinding(name, namespace string) error {
-	application := spi.SPIAccessTokenBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-	}
-	return h.KubeRest().Delete(context.TODO(), &application)
 }
 
 // GetSPIAccessTokenBinding returns the requested SPIAccessTokenBinding object
@@ -188,17 +180,17 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 	return secretName
 }
 
-// Remove all tokens from a given repository. Useful when creating a lot of resources and wanting to remove all of them
+// Remove all SPIAccessTokenBinding from a given namespace. Useful when creating a lot of resources and wanting to remove all of them
 func (h *SuiteController) DeleteAllBindingTokensInASpecificNamespace(namespace string) error {
 	return h.KubeRest().DeleteAllOf(context.TODO(), &spi.SPIAccessTokenBinding{}, client.InNamespace(namespace))
 }
 
-// Remove all tokens from a given repository. Useful when creating a lot of resources and wanting to remove all of them
+// Remove all SPIAccessTokenDataUpdate from a given namespace. Useful when creating a lot of resources and wanting to remove all of them
 func (h *SuiteController) DeleteAllAccessTokenDataInASpecificNamespace(namespace string) error {
 	return h.KubeRest().DeleteAllOf(context.TODO(), &spi.SPIAccessTokenDataUpdate{}, client.InNamespace(namespace))
 }
 
-// Remove all tokens from a given repository. Useful when creating a lot of resources and wanting to remove all of them
+// Remove all SPIAccessToken from a given namespace. Useful when creating a lot of resources and wanting to remove all of them
 func (h *SuiteController) DeleteAllAccessTokensInASpecificNamespace(namespace string) error {
 	return h.KubeRest().DeleteAllOf(context.TODO(), &spi.SPIAccessToken{}, client.InNamespace(namespace))
 }
@@ -309,13 +301,15 @@ func (s *SuiteController) CreateSPIAccessTokenBindingWithSA(name, namespace, ser
 			},
 			RepoUrl: repoURL,
 			Secret: spi.SecretSpec{
-				Name: secretName,
-				Type: "kubernetes.io/dockerconfigjson",
-				LinkedTo: []spi.SecretLink{
-					{
-						ServiceAccount: spi.ServiceAccountLink{
-							Reference: v1.LocalObjectReference{
-								Name: serviceAccountName,
+				LinkableSecretSpec: rs.LinkableSecretSpec{
+					Name: secretName,
+					Type: "kubernetes.io/dockerconfigjson",
+					LinkedTo: []rs.SecretLink{
+						{
+							ServiceAccount: rs.ServiceAccountLink{
+								Reference: v1.LocalObjectReference{
+									Name: serviceAccountName,
+								},
 							},
 						},
 					},
@@ -325,15 +319,15 @@ func (s *SuiteController) CreateSPIAccessTokenBindingWithSA(name, namespace, ser
 	}
 
 	if isImagePullSecret {
-		spiAccessTokenBinding.Spec.Secret.LinkedTo[0].ServiceAccount.As = spi.ServiceAccountLinkTypeImagePullSecret
+		spiAccessTokenBinding.Spec.Secret.LinkedTo[0].ServiceAccount.As = rs.ServiceAccountLinkTypeImagePullSecret
 	}
 
 	if isManagedServiceAccount {
 		spiAccessTokenBinding.Spec.Secret.Type = "kubernetes.io/basic-auth"
-		spiAccessTokenBinding.Spec.Secret.LinkedTo = []spi.SecretLink{
+		spiAccessTokenBinding.Spec.Secret.LinkedTo = []rs.SecretLink{
 			{
-				ServiceAccount: spi.ServiceAccountLink{
-					Managed: spi.ManagedServiceAccountSpec{
+				ServiceAccount: rs.ServiceAccountLink{
+					Managed: rs.ManagedServiceAccountSpec{
 						GenerateName: serviceAccountName,
 					},
 				},
@@ -383,4 +377,68 @@ func (s *SuiteController) GetSPIFileContentRequest(name, namespace string) (*spi
 		return nil, err
 	}
 	return &spiFcr, nil
+}
+
+// CreateRemoteSecret creates a RemoteSecret object
+func (s *SuiteController) CreateRemoteSecret(name, namespace string, targetNamespaces []string) (*rs.RemoteSecret, error) {
+	remoteSecret := rs.RemoteSecret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: rs.RemoteSecretSpec{
+			Secret: rs.LinkableSecretSpec{
+				GenerateName: "some-secret-",
+			},
+		},
+	}
+
+	targets := make([]rs.RemoteSecretTarget, 0)
+	for _, target := range targetNamespaces {
+		targets = append(targets, rs.RemoteSecretTarget{
+			Namespace: target,
+		})
+	}
+	remoteSecret.Spec.Targets = targets
+
+	err := s.KubeRest().Create(context.TODO(), &remoteSecret)
+	if err != nil {
+		return nil, err
+	}
+	return &remoteSecret, nil
+}
+
+// GetRemoteSecret returns the requested RemoteSecret object
+func (s *SuiteController) GetRemoteSecret(name, namespace string) (*rs.RemoteSecret, error) {
+	namespacedName := types.NamespacedName{
+		Name:      name,
+		Namespace: namespace,
+	}
+
+	remoteSecret := rs.RemoteSecret{
+		Spec: rs.RemoteSecretSpec{},
+	}
+	err := s.KubeRest().Get(context.TODO(), namespacedName, &remoteSecret)
+	if err != nil {
+		return nil, err
+	}
+	return &remoteSecret, nil
+}
+
+// Remove all RemoteSecret from a given namespace. Useful when creating a lot of resources and wanting to remove all of them
+func (h *SuiteController) DeleteAllRemoteSecretsInASpecificNamespace(namespace string) error {
+	return h.KubeRest().DeleteAllOf(context.TODO(), &rs.RemoteSecret{}, client.InNamespace(namespace))
+}
+
+// GetTargetSecretName gets the target secret name from a given namespace
+func (s *SuiteController) GetTargetSecretName(targets []rs.TargetStatus, targetNamespace string) string {
+	targetSecretName := ""
+
+	for _, t := range targets {
+		if t.Namespace == targetNamespace {
+			return t.SecretName
+		}
+	}
+
+	return targetSecretName
 }
