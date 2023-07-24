@@ -30,9 +30,6 @@ func (g *Github) CreateRef(repository, baseBranchName, sha, newBranchName string
 
 	if sha != "" {
 		ref.Object.SHA = &sha
-
-		refURL := fmt.Sprintf("%s/%s", (*ref.Object.URL)[:strings.LastIndex(*ref.Object.URL, "/")], sha)
-		ref.Object.URL = &refURL
 	}
 
 	_, _, err = g.client.Git.CreateRef(ctx, g.organization, repository, ref)
