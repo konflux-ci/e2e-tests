@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"time"
 
 	. "github.com/redhat-appstudio/e2e-tests/pkg/constants"
@@ -102,6 +103,20 @@ func (s *SuiteController) CreateRegistryAuthSecret(secretName, namespace, secret
 	er := s.KubeRest().Create(context.TODO(), secret)
 	if er != nil {
 		return nil, er
+	}
+	return secret, nil
+}
+
+// CreateRegistryJsonSecret creates a secret for registry repository in namespace given with key passed.
+func (s *SuiteController) CreateRegistryJsonSecret(name, namespace, authKey, keyName string) (*corev1.Secret, error) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+		Type:       corev1.SecretTypeDockerConfigJson,
+		Data:       map[string][]byte{".dockerconfigjson": []byte(fmt.Sprintf("{\"auths\":{\"quay.io\":{\"username\":\"%s\",\"password\":\"%s\",\"auth\":\"dGVzdDp0ZXN0\",\"email\":\"\"}}}", keyName, authKey))},
+	}
+	err := s.KubeRest().Create(context.TODO(), secret)
+	if err != nil {
+		return nil, err
 	}
 	return secret, nil
 }

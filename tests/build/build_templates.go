@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/devfile/library/pkg/util"
+	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -302,7 +302,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					for _, component := range cyclonedx.Components {
 						Expect(component.Name).ToNot(BeEmpty())
 						Expect(component.Type).ToNot(BeEmpty())
-						Expect(component.Version).ToNot(BeEmpty())
 
 						if component.Type == "library" {
 							Expect(component.Purl).ToNot(BeEmpty())

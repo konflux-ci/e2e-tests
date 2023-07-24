@@ -7,7 +7,7 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/devfile/library/pkg/util"
+	"github.com/devfile/library/v2/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -162,7 +162,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		_, err = fw.AsKubeAdmin.CommonController.Github.CreateFile(constants.StrategyConfigsRepo, scPath, string(scYaml), scGitRevision)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-push-to-external-registry-strategy", managedNamespace, "push-to-external-registry", "quay.io/hacbs-release/pipeline-push-to-external-registry:0.11", releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, []releaseApi.Params{
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-push-to-external-registry-strategy", managedNamespace, "push-to-external-registry", "quay.io/hacbs-release/pipeline-push-to-external-registry:0.12", releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, []releaseApi.Params{
 			{Name: "extraConfigGitUrl", Value: fmt.Sprintf("https://github.com/%s/strategy-configs.git", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"))},
 			{Name: "extraConfigPath", Value: scPath},
 			{Name: "extraConfigGitRevision", Value: scGitRevision},

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devfile/library/pkg/util"
+	"github.com/devfile/library/v2/pkg/util"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"k8s.io/klog/v2"
@@ -321,8 +321,11 @@ func (ci CI) setRequiredEnvVars() error {
 				var tektonObj runtime.Object
 
 				tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
-				var newS2iJavaTaskRef, _ = name.ParseReference(fmt.Sprintf("%s:task-bundle-%s", constants.DefaultImagePushRepo, tag))
-				var newJavaBuilderPipelineRef, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", constants.DefaultImagePushRepo, tag))
+				quayOrg := utils.GetEnv(constants.DEFAULT_QUAY_ORG_ENV, constants.DefaultQuayOrg)
+				newS2iJavaTaskImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
+				var newS2iJavaTaskRef, _ = name.ParseReference(fmt.Sprintf("%s:task-bundle-%s", newS2iJavaTaskImg, tag))
+				newJavaBuilderPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
+				var newJavaBuilderPipelineRef, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newJavaBuilderPipelineImg, tag))
 				var newReqprocessorImage = os.Getenv("JVM_BUILD_SERVICE_REQPROCESSOR_IMAGE")
 				var newTaskYaml, newPipelineYaml []byte
 

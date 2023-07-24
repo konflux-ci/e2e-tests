@@ -97,7 +97,7 @@ const (
 
 	ComponentInitialBuildAnnotationKey = "appstudio.openshift.io/component-initial-build"
 
-	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.14"
+	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.15"
 
 	StrategyConfigsRepo          = "strategy-configs"
 	StrategyConfigsDefaultBranch = "main"

@@ -53,7 +53,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1108]test-release-service-happy-p
 		Expect(err).NotTo(HaveOccurred(), "Error when fetching the default ECP: %v", err)
 		ecPolicy = defaultECP.Spec
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateSnapshot(snapshotName, devNamespace, applicationName, snapshotComponents)
+		_, err = fw.AsKubeAdmin.IntegrationController.CreateSnapshotWithComponents(snapshotName, devNamespace, applicationName, snapshotComponents)
 		Expect(err).NotTo(HaveOccurred())
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, serviceAccount, paramsReleaseStrategyM6)
 		Expect(err).NotTo(HaveOccurred())
