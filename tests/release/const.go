@@ -41,13 +41,13 @@ const (
 	destinationKeyName                   string = "redhat-appstudio-qe+redhat_appstudio_quality"
 	containerImageUrl                    string = "quay.io/redhat-appstudio-qe/dcmetromap:latest"
 	roleName                             string = "role-release-service-account"
-	releasedImagePushRepo                string = "quay.io/hacbs-release-tests/dcmetromap"
-	additionalReleasedImagePushRepo      string = "quay.io/hacbs-release-tests/simplepython"
+	releasedImagePushRepo                string = "quay.io/redhat-appstudio-qe/dcmetromap"
+	additionalReleasedImagePushRepo      string = "quay.io/redhat-appstudio-qe/simplepython"
 
 	additionalComponentName         string = "simple-python"
 	additionalGitSourceComponentUrl string = "https://github.com/devfile-samples/devfile-sample-python-basic"
 	addtionalOutputContainerImage   string = constants.DefaultReleasedImagePushRepo
-	pyxisStageURL                   string = "https://pyxis.preprod.api.redhat.com/v1/images/id/"
+	pyxisStageImagesApiEndpoint     string = "https://pyxis.preprod.api.redhat.com/v1/images/id/"
 
 	namespaceCreationTimeout              = 5 * time.Minute
 	namespaceDeletionTimeout              = 5 * time.Minute
@@ -57,10 +57,12 @@ const (
 	EnterpriseContractPolicyTimeout       = 5 * time.Minute
 	releasePlanAdmissionCreationTimeout   = 5 * time.Minute
 	releaseCreationTimeout                = 5 * time.Minute
-	releasePipelineRunCreationTimeout     = 25 * time.Minute
-	releasePipelineRunCompletionTimeout   = 40 * time.Minute
+	releasePipelineRunCreationTimeout     = 10 * time.Minute
+	releasePipelineRunCompletionTimeout   = 20 * time.Minute
 	avgControllerQueryTimeout             = 5 * time.Minute
 	pipelineServiceAccountCreationTimeout = 7 * time.Minute
+	releaseDeploymentTimeout              = 10 * time.Minute
+	releaseFinishedTimeout                = 5 * time.Minute
 
 	defaultInterval = 100 * time.Millisecond
 )

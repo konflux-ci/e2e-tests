@@ -23,12 +23,12 @@ import (
 )
 
 type ControllerHub struct {
-	HasController             *has.SuiteController
+	HasController             *has.HasController
 	CommonController          *common.SuiteController
 	TektonController          *tekton.SuiteController
-	GitOpsController          *gitops.SuiteController
+	GitOpsController          *gitops.GitopsController
 	SPIController             *spi.SuiteController
-	ReleaseController         *release.SuiteController
+	ReleaseController         *release.ReleaseController
 	IntegrationController     *integration.SuiteController
 	JvmbuildserviceController *jvmbuildservice.SuiteController
 	O11yController            *o11y.SuiteController
@@ -44,14 +44,24 @@ type Framework struct {
 	UserToken         string
 }
 
-func NewFramework(userName string) (*Framework, error) {
-	return NewFrameworkWithTimeout(userName, time.Second*60)
+func NewFramework(userName string, stageConfig ...utils.Options) (*Framework, error) {
+	return NewFrameworkWithTimeout(userName, time.Second*60, stageConfig...)
 }
 
-func NewFrameworkWithTimeout(userName string, timeout time.Duration) (*Framework, error) {
+func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...utils.Options) (*Framework, error) {
 	var err error
 	var k *kubeCl.K8SClient
+	var supplyopts utils.Options
+	
+	
+	isStage, err := utils.CheckOptions(options)
+	if err != nil {
+		return nil, err
+	}
 
+	if isStage {
+		supplyopts = options[0]
+	}
 	// https://issues.redhat.com/browse/CRT-1670
 	if len(userName) > 20 {
 		GinkgoWriter.Printf("WARNING: username %q is longer than 20 characters - the tenant namespace prefix will be shortened to %s\n", userName, userName[:20])
@@ -62,7 +72,7 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration) (*Framework
 
 	err = retry.Do(
 		func() error {
-			if k, err = kubeCl.NewDevSandboxProxyClient(userName); err != nil {
+			if k, err = kubeCl.NewDevSandboxProxyClient(userName, isStage, supplyopts); err != nil {
 				GinkgoWriter.Printf("error when creating dev sandbox proxy client: %+v\n", err)
 			}
 			return err
@@ -74,9 +84,17 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration) (*Framework
 		return nil, fmt.Errorf("error when initializing kubernetes clients: %v", err)
 	}
 
-	asAdmin, err := InitControllerHub(k.AsKubeAdmin)
-	if err != nil {
-		return nil, fmt.Errorf("error when initializing appstudio hub controllers for admin user: %v", err)
+	var asAdmin *ControllerHub
+	if !isStage {
+		asAdmin, err = InitControllerHub(k.AsKubeAdmin)
+		if err != nil {
+			return nil, fmt.Errorf("error when initializing appstudio hub controllers for admin user: %v", err)
+		}
+		if err = asAdmin.CommonController.AddRegistryAuthSecretToSA("QUAY_TOKEN", k.UserNamespace); err != nil {
+			GinkgoWriter.Println(fmt.Sprintf("Failed to add registry auth secret to service account: %v\n", err))
+		}
+	}else {
+		asAdmin = nil
 	}
 
 	asUser, err := InitControllerHub(k.AsKubeDeveloper)
@@ -86,10 +104,6 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration) (*Framework
 
 	if err = utils.WaitUntil(asAdmin.CommonController.ServiceaccountPresent(constants.DefaultPipelineServiceAccount, k.UserNamespace), timeout); err != nil {
 		return nil, fmt.Errorf("'%s' service account wasn't created in %s namespace: %+v", constants.DefaultPipelineServiceAccount, k.UserNamespace, err)
-	}
-
-	if err = asAdmin.CommonController.AddRegistryAuthSecretToSA("QUAY_TOKEN", k.UserNamespace); err != nil {
-		GinkgoWriter.Println(fmt.Sprintf("Failed to add registry auth secret to service account: %v\n", err))
 	}
 
 	return &Framework{
@@ -160,5 +174,4 @@ func InitControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 		JvmbuildserviceController: jvmbuildserviceController,
 		O11yController:            o11yController,
 	}, nil
-
 }

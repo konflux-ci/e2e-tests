@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/devfile/library/pkg/util"
+	"github.com/devfile/library/v2/pkg/util"
 	"github.com/magefile/mage/sh"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -18,7 +18,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -92,10 +91,10 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				kubeIngressDomain = openshiftIngress.Spec.Domain
-				Expect(kubeIngressDomain).NotTo(BeEmpty(), "domain is not pressent in the cluster. Make sure your openshift cluster have the domain defined in ingress cluster object")
+				Expect(kubeIngressDomain).NotTo(BeEmpty(), "domain is not present in the cluster. Make sure your openshift cluster has the domain defined in ingress cluster object")
 
 				if suite.Byoc.ClusterType == appservice.ConfigurationClusterType_Kubernetes {
-					Expect(sh.Run("which", "vcluster")).NotTo(HaveOccurred(), "please install vcluster locally in order to run kubernetes suite")
+					Expect(sh.Run("which", "vcluster")).To(Succeed(), "please install vcluster locally in order to run kubernetes suite")
 
 					vc = vcluster.NewVclusterController(fmt.Sprintf("%s/tmp", rootPath), fw.AsKubeAdmin.CommonController.CustomClient)
 
@@ -115,10 +114,10 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 					Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.HasController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
-					Expect(fw.AsKubeAdmin.ReleaseController.DeleteAllSnapshotsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
+					Expect(fw.AsKubeAdmin.IntegrationController.DeleteAllSnapshotsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(fw.UserNamespace)).To(Succeed())
-					Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllGitOpsDeploymentInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
+					Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllGitOpsDeploymentsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 					Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
 				}
 			})
@@ -140,9 +139,9 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 
 			It("creates managed-gitops.redhat.com/managed-environment secret type", func() {
 				kubeConfData, err := os.ReadFile(byocKubeconfig)
+				Expect(err).NotTo(HaveOccurred())
 				data := make(map[string][]byte)
 				data["kubeconfig"] = kubeConfData
-				Expect(err).NotTo(HaveOccurred())
 
 				secret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
@@ -160,32 +159,32 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 			It("creates environment", func() {
 				// Note: It is not possible yet to configure integration service snapshots to deploy to a specific environment.
 				// As an workaround for now: Deletes the development environment and recreate it with kubernetes cluster information
-				Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(fw.UserNamespace, 1*time.Minute)).NotTo(HaveOccurred())
+				Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(fw.UserNamespace, 1*time.Minute)).To(Succeed())
 
 				environment, err := fw.AsKubeAdmin.GitOpsController.CreateEphemeralEnvironment(ManagedEnvironmentName, fw.UserNamespace, suite.Byoc.TargetNamespace, byocAPIServerURL, ManagedEnvironmentSecretName, suite.Byoc.ClusterType, kubeIngressDomain)
-				Expect(environment.Name).To(Equal(ManagedEnvironmentName))
 				Expect(err).NotTo(HaveOccurred())
+				Expect(environment.Name).To(Equal(ManagedEnvironmentName))
 			})
 
-			It("creates RHTAP application and check healths", func() {
-				createdApplication, err := fw.AsKubeDeveloper.HasController.CreateHasApplication(applicationName, fw.UserNamespace)
+			It("creates RHTAP application and check its health", func() {
+				createdApplication, err := fw.AsKubeDeveloper.HasController.CreateApplication(applicationName, fw.UserNamespace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(createdApplication.Spec.DisplayName).To(Equal(applicationName))
 				Expect(createdApplication.Namespace).To(Equal(fw.UserNamespace))
 
 				Eventually(func() string {
-					application, err = fw.AsKubeAdmin.HasController.GetHasApplication(applicationName, fw.UserNamespace)
+					application, err = fw.AsKubeAdmin.HasController.GetApplication(applicationName, fw.UserNamespace)
 					Expect(err).NotTo(HaveOccurred())
 
 					return application.Status.Devfile
-				}, 3*time.Minute, 100*time.Millisecond).Should(Not(BeEmpty()), "Error creating gitOps repository")
+				}, 3*time.Minute, 100*time.Millisecond).Should(Not(BeEmpty()), fmt.Sprintf("timed out waiting for gitOps repository to be created for the %s application in %s namespace", applicationName, fw.UserNamespace))
 
 				Eventually(func() bool {
 					// application info should be stored even after deleting the application in application variable
 					gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
 					return fw.AsKubeAdmin.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
-				}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "Has controller didn't create gitops repository")
+				}, 1*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("timed out waiting for HAS controller to create gitops repository for the %s application in %s namespace", applicationName, fw.UserNamespace))
 			})
 
 			It("creates Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
@@ -195,14 +194,15 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 
 			It("validates CDQ object information", func() {
 				// Validate that the CDQ completes successfully
-				Eventually(func() bool {
+				Eventually(func() (appservice.ComponentDetectionMap, error) {
 					// application info should be stored even after deleting the application in application variable
 					cdq, err = fw.AsKubeAdmin.HasController.GetComponentDetectionQuery(cdqName, fw.UserNamespace)
-					return err == nil && len(cdq.Status.ComponentDetected) > 0
-				}, 1*time.Minute, 1*time.Second).Should(BeTrue(), "ComponentDetectionQuery did not complete successfully")
-
-				// Validate that the completed CDQ only has one detected component
-				Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+					if err != nil {
+						return nil, err
+					}
+					return cdq.Status.ComponentDetected, nil
+					// Validate that the completed CDQ only has one detected component
+				}, 1*time.Minute, 1*time.Second).Should(HaveLen(1), fmt.Sprintf("ComponentDetectionQuery %s/%s does not have the expected amount of components", fw.UserNamespace, cdqName))
 
 				// Get the stub CDQ and validate its content
 				for _, compDetected = range cdq.Status.ComponentDetected {
@@ -214,54 +214,52 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 
 			It("creates Red Hat AppStudio Quarkus component", func() {
 				compDetected.ComponentStub.ComponentName = util.GenerateRandomString(4)
-				componentObj, err = fw.AsKubeAdmin.HasController.CreateComponentFromStub(compDetected, fw.UserNamespace, "", "", applicationName)
+				componentObj, err = fw.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, fw.UserNamespace, "", "", applicationName, true, map[string]string{})
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("waits component pipeline to finish", func() {
-
 				Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(componentObj, "", 2)).To(Succeed())
 			})
 
 			// Deploy the component using gitops and check for the health
 			It(fmt.Sprintf("checks if component %s was deployed in the target cluster and namespace", componentObj.Name), func() {
 				var deployment *appsv1.Deployment
-				Eventually(func() bool {
+				var expectedReplicas int32 = 1
+				Eventually(func() error {
 					deployment, err = ephemeralClusterClient.AppsV1().Deployments(suite.Byoc.TargetNamespace).Get(context.TODO(), componentObj.Name, metav1.GetOptions{})
-					if err != nil && !errors.IsNotFound(err) {
-						return false
+					if err != nil {
+						return fmt.Errorf("could not get deployment %s/%s: %+v", suite.Byoc.TargetNamespace, componentObj.GetName(), err)
 					}
-					if deployment.Status.AvailableReplicas == 1 {
-						GinkgoWriter.Printf("Deployment %s is ready\n", deployment.Name)
-						return true
+					if deployment.Status.AvailableReplicas != expectedReplicas {
+						return fmt.Errorf("expected %d replicas for %s/%s deployment, got %d", expectedReplicas, deployment.GetNamespace(), deployment.GetName(), deployment.Status.AvailableReplicas)
 					}
-
-					return false
-				}, 25*time.Minute, 10*time.Second).Should(BeTrue(), fmt.Sprintf("Component deployment didn't become ready: %+v", deployment))
+					return nil
+				}, 25*time.Minute, 10*time.Second).Should(Succeed(), fmt.Sprintf("timed out waiting for deployment of a component %s/%s to become ready in ephemeral cluster", suite.Byoc.TargetNamespace, componentObj.GetName()))
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			if suite.Byoc.ClusterType == appservice.ConfigurationClusterType_Kubernetes {
 				It("checks if ingress exists and is accessible in the kubernetes ephemeral cluster", func() {
 					var ingress *v1.Ingress
-					Eventually(func() bool {
+					Eventually(func() error {
 						ingress, err = ephemeralClusterClient.NetworkingV1().Ingresses(suite.Byoc.TargetNamespace).Get(context.TODO(), componentObj.Name, metav1.GetOptions{})
-						if err != nil && !errors.IsNotFound(err) {
-							return false
+						if err != nil {
+							return err
 						}
 
-						return true
-					}, 10*time.Minute, 10*time.Second).Should(BeTrue(), fmt.Sprintf("ingress didn't appear in target cluster in 10 minutes: %+v", ingress))
+						return nil
+					}, 10*time.Minute, 10*time.Second).Should(Succeed(), fmt.Sprintf("ingress %s/%s didn't appear in target cluster in 10 minutes: %+v", componentObj.GetName(), suite.Byoc.TargetNamespace, ingress))
 
 					if len(ingress.Spec.Rules) == 0 {
-						Fail("kubernetes ingress set any rule during component creation")
+						Fail(fmt.Sprintf("kubernetes ingress %s/%s did not have any rule set during component creation", ingress.GetNamespace(), ingress.GetName()))
 					}
 
 					// Add complex endpoint checks when: https://issues.redhat.com/browse/DEVHAS-367 is ready
 					Eventually(func() bool {
 						// Add endpoint of component when: https://issues.redhat.com/browse/DEVHAS-367 is ready
 						return utils.HostIsAccessible(fmt.Sprintf("http://%s", ingress.Spec.Rules[0].Host))
-					}, 10*time.Minute, 10*time.Second).Should(BeTrue(), fmt.Sprintf("ingress is not accessible: %+v", ingress))
+					}, 10*time.Minute, 10*time.Second).Should(BeTrue(), fmt.Sprintf("timed out waiting for ingress %s/%s host (%s) to be accessible: %+v", ingress.GetNamespace(), ingress.GetName(), ingress.Spec.Rules[0].Host, ingress))
 				})
 			}
 		})

@@ -13,6 +13,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	client "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	corev1 "k8s.io/api/core/v1"
@@ -82,25 +83,21 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "access-control"), func() 
 			// start of upload token
 			// SPITokenBinding to be in AwaitingTokenData phase
 			// wait SPITokenBinding to be in AwaitingTokenData phase before trying to upload a token
-			Eventually(func() bool {
+			Eventually(func() v1beta1.SPIAccessTokenBindingPhase {
 				SPITokenBinding, err = user.Framework.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
-				if err != nil {
-					return false
-				}
+				Expect(err).NotTo(HaveOccurred())
 
-				return (SPITokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData)
-			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in AwaitingTokenData phase")
+				return SPITokenBinding.Status.Phase
+			}, 1*time.Minute, 5*time.Second).Should(Equal(v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData), fmt.Sprintf("SPIAccessTokenBinding %s/%s is not in %s phase", SPITokenBinding.GetNamespace(), SPITokenBinding.GetName(), v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData))
 
 			// uploads username and token using rest endpoint
 			// the UploadUrl in SPITokenBinding should be available before uploading the token
-			Eventually(func() bool {
+			Eventually(func() string {
 				SPITokenBinding, err = user.Framework.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
-				if err != nil {
-					return false
-				}
+				Expect(err).NotTo(HaveOccurred())
 
-				return SPITokenBinding.Status.UploadUrl != ""
-			}, 1*time.Minute, 10*time.Second).Should(BeTrue(), "uploadUrl not set")
+				return SPITokenBinding.Status.UploadUrl
+			}, 1*time.Minute, 10*time.Second).ShouldNot(BeEmpty(), fmt.Sprintf(".Status.UploadUrl for SPIAccessTokenBinding %s/%s is not set", SPITokenBinding.GetNamespace(), SPITokenBinding.GetName()))
 			Expect(err).NotTo(HaveOccurred())
 
 			// LinkedAccessToken should exist
@@ -119,7 +116,6 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "access-control"), func() 
 
 			// get the url to manually upload the token
 			uploadURL := SPITokenBinding.Status.UploadUrl
-			Expect(uploadURL).NotTo(BeEmpty())
 
 			// Get the token for the current openshift user
 			bearerToken, err := utils.GetOpenshiftToken()
@@ -132,22 +128,21 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "access-control"), func() 
 			Expect(statusCode).Should(Equal(204))
 
 			// SPITokenBinding to be in Injected phase
-			Eventually(func() bool {
+			Eventually(func() v1beta1.SPIAccessTokenBindingPhase {
 				SPITokenBinding, err = user.Framework.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
 				Expect(err).NotTo(HaveOccurred())
-				return SPITokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected
-			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in Injected phase")
+				return SPITokenBinding.Status.Phase
+			}, 1*time.Minute, 5*time.Second).Should(Equal(v1beta1.SPIAccessTokenBindingPhaseInjected), fmt.Sprintf("SPIAccessTokenBinding %s/%s is not in %s phase", SPITokenBinding.GetNamespace(), SPITokenBinding.GetName(), v1beta1.SPIAccessTokenBindingPhaseInjected))
 
 			// SPIAccessToken exists and is in Read phase
-			Eventually(func() bool {
+			Eventually(func() (v1beta1.SPIAccessTokenPhase, error) {
 				SPIAccessToken, err := user.Framework.AsKubeDeveloper.SPIController.GetSPIAccessToken(SPITokenBinding.Status.LinkedAccessTokenName, namespace)
-
 				if err != nil {
-					return false
+					return "", fmt.Errorf("can't get SPI access token %s/%s: %+v", namespace, SPITokenBinding.Status.LinkedAccessTokenName, err)
 				}
 
-				return (SPIAccessToken.Status.Phase == v1beta1.SPIAccessTokenPhaseReady)
-			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "SPIAccessToken should be in ready phase")
+				return SPIAccessToken.Status.Phase, nil
+			}, 1*time.Minute, 5*time.Second).Should(Equal(v1beta1.SPIAccessTokenPhaseReady), fmt.Sprintf("SPIAccessToken %s/%s should be in ready phase", namespace, SPITokenBinding.Status.LinkedAccessTokenName))
 			// end of upload token
 		}
 
@@ -180,12 +175,15 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "access-control"), func() 
 				Expect(err).NotTo(HaveOccurred())
 
 				// check that guest user can read a primary's GitHub repo in the primary's workspace
-				Eventually(func() bool {
+				Eventually(func() v1beta1.SPIFileContentRequestStatus {
 					err = client.Get(context.TODO(), types.NamespacedName{Name: spiFcr.Name, Namespace: spiFcr.Namespace}, &spiFcr)
 					Expect(err).NotTo(HaveOccurred())
 
-					return spiFcr.Status.Phase == v1beta1.SPIFileContentRequestPhaseDelivered && spiFcr.Status.Content != ""
-				}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "content not provided by SPIFileContentRequest")
+					return spiFcr.Status
+				}, 2*time.Minute, 10*time.Second).Should(MatchFields(IgnoreExtras, Fields{
+					"Content": Not(BeEmpty()),
+					"Phase":   Equal(v1beta1.SPIFileContentRequestPhaseDelivered),
+				}), fmt.Sprintf("content not provided by SPIFileContentRequest %s/%s", primaryUser.Framework.UserNamespace, spiFcr.Name))
 			} else {
 				Expect(err).To(HaveOccurred())
 			}
@@ -295,12 +293,12 @@ spec:
 			Expect(err).NotTo(HaveOccurred())
 
 			// check that pod started
-			Eventually(func() bool {
+			Eventually(func() corev1.PodPhase {
 				pod, err := guestUser.Framework.AsKubeAdmin.CommonController.GetPod(namespace, pod.Name)
 				Expect(err).NotTo(HaveOccurred())
 
-				return pod.Status.Phase == corev1.PodRunning
-			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "Pod not created successfully")
+				return pod.Status.Phase
+			}, 1*time.Minute, 5*time.Second).Should(Equal(corev1.PodRunning), fmt.Sprintf("Pod %s/%s not created successfully", namespace, pod.Name))
 			Expect(err).NotTo(HaveOccurred())
 
 			// make read request
@@ -310,12 +308,15 @@ spec:
 			spiFcr := v1beta1.SPIFileContentRequest{}
 			if shouldRead {
 				// check that guest user's pod can read a primary's GitHub repo in the primary's workspace
-				Eventually(func() bool {
+				Eventually(func() v1beta1.SPIFileContentRequestStatus {
 					err = client.Get(context.TODO(), types.NamespacedName{Name: spiFcrName, Namespace: primaryUser.Framework.UserNamespace}, &spiFcr)
 					Expect(err).NotTo(HaveOccurred())
 
-					return spiFcr.Status.Phase == v1beta1.SPIFileContentRequestPhaseDelivered && spiFcr.Status.Content != ""
-				}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "content not provided by SPIFileContentRequest")
+					return spiFcr.Status
+				}, 2*time.Minute, 10*time.Second).Should(MatchFields(IgnoreExtras, Fields{
+					"Content": Not(BeEmpty()),
+					"Phase":   Equal(v1beta1.SPIFileContentRequestPhaseDelivered),
+				}), fmt.Sprintf("content not provided by SPIFileContentRequest %s/%s", primaryUser.Framework.UserNamespace, spiFcrName))
 			} else {
 				// check that guest user's pod can not read a primary's GitHub repo in the primary's workspace
 				err = client.Get(context.TODO(), types.NamespacedName{Name: spiFcrName, Namespace: primaryUser.Framework.UserNamespace}, &spiFcr)
@@ -386,16 +387,16 @@ spec:
 			Expect(err).NotTo(HaveOccurred())
 
 			// check if workspace C was shared with user A
-			Eventually(func() bool {
+			Eventually(func() error {
 				err = fwUserC.AsKubeAdmin.CommonController.CheckWorkspaceShare(fwUserA.UserName, fwUserC.UserNamespace)
-				return err == nil
-			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "error checking if the workspace C was shared with user A")
+				return err
+			}, 1*time.Minute, 5*time.Second).Should(BeNil(), fmt.Sprintf("error checking if the workspace C (%s) was shared with user A (%s)", fwUserC.UserNamespace, fwUserA.UserName))
 
 			// check if user C is provisioned after workspace share
-			Eventually(func() bool {
+			Eventually(func() error {
 				_, err := fwUserC.SandboxController.GetUserProvisionedNamespace(fwUserC.UserName)
-				return err == nil
-			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "error getting provisioned usernamespace")
+				return err
+			}, 1*time.Minute, 5*time.Second).Should(BeNil(), fmt.Sprintf("error getting provisioned usernamespace for user %s", fwUserC.UserName))
 
 			// create SPITokenBinding for user A
 			createSPITokenBinding(userA)

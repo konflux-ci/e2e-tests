@@ -1,5 +1,7 @@
 package constants
 
+import "time"
+
 // Global constants
 const (
 	// A github token is required to run the tests. The token need to have permissions to the given github organization. By default the e2e use redhat-appstudio-qe github organization.
@@ -23,8 +25,11 @@ const (
 	// The private devfile sample git repository to use in certain HAS e2e tests
 	PRIVATE_DEVFILE_SAMPLE string = "PRIVATE_DEVFILE_SAMPLE" // #nosec
 
-	// The Tekton Chains namespace
-	TEKTON_CHAINS_NS string = "tekton-chains" // #nosec
+	// The Tekton Chains namespace for its deployments (no longer separate from the rest of tekton)
+	TEKTON_CHAINS_DEPLOYMENT_NS string = "openshift-pipelines" // #nosec
+
+	// The namespace the pipeline service uses for the chains key
+	TEKTON_CHAINS_KEY_NS string = "tekton-chains" // #nosec
 
 	// User for running the end-to-end Tekton Chains tests
 	TEKTON_CHAINS_E2E_USER string = "chains-e2e"
@@ -92,7 +97,7 @@ const (
 
 	ComponentInitialBuildAnnotationKey = "appstudio.openshift.io/component-initial-build"
 
-	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.14"
+	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.15"
 
 	// TODO
 	// delete this constant and all its occurrences in the code base
@@ -110,11 +115,12 @@ const (
 	// Expiration for image tags
 	IMAGE_TAG_EXPIRATION_ENV  string = "IMAGE_TAG_EXPIRATION"
 	DefaultImageTagExpiration string = "6h"
+
+	PipelineRunPollingInterval = 10 * time.Second
 )
 
 var (
-	ComponentDefaultLabel                    = map[string]string{"e2e-test": "true"}
-	ComponentPaCRequestAnnotation            = map[string]string{"appstudio.openshift.io/pac-provision": "request"}
-	ImageControllerAnnotationDeleteRepoTrue  = map[string]string{"image.redhat.com/generate": "true", "image.redhat.com/delete-image-repo": "true"}
-	ImageControllerAnnotationDeleteRepoFalse = map[string]string{"image.redhat.com/generate": "true", "image.redhat.com/delete-image-repo": "false"}
+	ComponentDefaultLabel                      = map[string]string{"e2e-test": "true"}
+	ComponentPaCRequestAnnotation              = map[string]string{"appstudio.openshift.io/pac-provision": "request"}
+	ImageControllerAnnotationRequestPublicRepo = map[string]string{"image.redhat.com/generate": `{"visibility": "public"}`}
 )

@@ -5,16 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/devfile/library/pkg/util"
+	"github.com/devfile/library/v2/pkg/util"
 	"k8s.io/apimachinery/pkg/runtime"
-
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 
 	"k8s.io/klog/v2"
 
@@ -26,6 +24,7 @@ import (
 	gh "github.com/google/go-github/v44/github"
 	"github.com/magefile/mage/sh"
 	"github.com/redhat-appstudio/e2e-tests/magefiles/installation"
+	"github.com/redhat-appstudio/e2e-tests/magefiles/testspecs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -316,14 +315,17 @@ func (ci CI) setRequiredEnvVars() error {
 				os.Setenv(fmt.Sprintf("%s_REQPROCESSOR_IMAGE", envVarPrefix), os.Getenv("CI_JBS_REQPROCESSOR_IMAGE"))
 				os.Setenv(fmt.Sprintf("%s_CACHE_IMAGE", envVarPrefix), os.Getenv("CI_JBS_CACHE_IMAGE"))
 
-				klog.Infof("going to override default Tekton bundle for the purpose of testing jvm-build-service PR")
+				klog.Infof("going to override default Tekton bundle s2i-java task for the purpose of testing jvm-build-service PR")
 				var err error
 				var defaultBundleRef string
 				var tektonObj runtime.Object
 
 				tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
-				var newS2iJavaTaskRef, _ = name.ParseReference(fmt.Sprintf("%s:task-bundle-%s", constants.DefaultImagePushRepo, tag))
-				var newJavaBuilderPipelineRef, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", constants.DefaultImagePushRepo, tag))
+				quayOrg := utils.GetEnv(constants.DEFAULT_QUAY_ORG_ENV, constants.DefaultQuayOrg)
+				newS2iJavaTaskImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
+				var newS2iJavaTaskRef, _ = name.ParseReference(fmt.Sprintf("%s:task-bundle-%s", newS2iJavaTaskImg, tag))
+				newJavaBuilderPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
+				var newJavaBuilderPipelineRef, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newJavaBuilderPipelineImg, tag))
 				var newReqprocessorImage = os.Getenv("JVM_BUILD_SERVICE_REQPROCESSOR_IMAGE")
 				var newTaskYaml, newPipelineYaml []byte
 
@@ -340,9 +342,21 @@ func (ci CI) setRequiredEnvVars() error {
 
 				var currentS2iJavaTaskRef string
 				for _, t := range javaPipelineObj.PipelineSpec().Tasks {
-					if t.TaskRef.Name == "s2i-java" {
-						currentS2iJavaTaskRef = t.TaskRef.Bundle
-						t.TaskRef.Bundle = newS2iJavaTaskRef.String()
+					params := t.TaskRef.Params
+					var lastBundle *tektonapi.Param
+					s2iTask := false
+					for i, param := range params {
+						if param.Name == "bundle" {
+							lastBundle = &t.TaskRef.Params[i]
+						} else if param.Name == "name" && param.Value.StringVal == "s2i-java" {
+							s2iTask = true
+						}
+					}
+					if s2iTask {
+						currentS2iJavaTaskRef = lastBundle.Value.StringVal
+						klog.Infof("Found current task ref %s", currentS2iJavaTaskRef)
+						lastBundle.Value = *tektonapi.NewStructuredValues(newS2iJavaTaskRef.String())
+						break
 					}
 				}
 				if tektonObj, err = utils.ExtractTektonObjectFromBundle(currentS2iJavaTaskRef, "task", "s2i-java"); err != nil {
@@ -501,21 +515,18 @@ func GenerateTestCasesAppStudio() error {
 	return sh.RunV("ginkgo", "--dry-run", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", "--polarion-output-file=polarion.xml", "--generate-test-cases=true")
 }
 
-// I've attached to the Local struct for now since it felt like it fit but it can be decoupled later as a standalone func.
-func (Local) GenerateTestSuiteFile() error {
+// Generates ginkgo test suite files under the cmd/ directory.
+func GenerateTestSuiteFile(packageName string) error {
 
-	var templatePackageName = utils.GetEnv("TEMPLATE_SUITE_PACKAGE_NAME", "")
 	var templatePath = "templates/test_suite_cmd.tmpl"
-	var err error
+	var templatePackageFile = fmt.Sprintf("cmd/%s_test.go", packageName)
 
-	if !utils.CheckIfEnvironmentExists("TEMPLATE_SUITE_PACKAGE_NAME") {
-		klog.Exitf("TEMPLATE_SUITE_PACKAGE_NAME not set or is empty")
-	}
-
-	var templatePackageFile = fmt.Sprintf("cmd/%s_test.go", templatePackageName)
 	klog.Infof("Creating new test suite file %s.\n", templatePackageFile)
-	data := TemplateData{SuiteName: templatePackageName}
-	err = renderTemplate(templatePackageFile, templatePath, data, false)
+	//var caser = cases.Title(language.English)
+
+	templateData := map[string]string{"SuiteName": packageName}
+	//data, _ := json.Marshal(template)
+	err := renderTemplate(templatePackageFile, templatePath, templateData, false)
 
 	if err != nil {
 		klog.Errorf("failed to render template with: %s", err)
@@ -562,99 +573,137 @@ func CleanWebHooks() error {
 	return nil
 }
 
-// I've attached to the Local struct for now since it felt like it fit but it can be decoupled later as a standalone func.
-func (Local) GenerateTestSpecFile() error {
+// Generate a Text Outline file from a Ginkgo Spec
+func GenerateTextOutlineFromGinkgoSpec(source string, destination string) error {
 
-	var templateDirName = utils.GetEnv("TEMPLATE_SUITE_PACKAGE_NAME", "")
-	var templateSpecName = utils.GetEnv("TEMPLATE_SPEC_FILE_NAME", templateDirName)
-	var templateAppendFrameworkDescribeBool = utils.GetEnv("TEMPLATE_APPEND_FRAMEWORK_DESCRIBE_FILE", "true")
-	var templateJoinSuiteSpecNamesBool = utils.GetEnv("TEMPLATE_JOIN_SUITE_SPEC_FILE_NAMES", "false")
-	var templatePath = "templates/test_spec_file.tmpl"
-	var templateDirPath string
-	var templateSpecFile string
-	var err error
-	var caser = cases.Title(language.English)
+	gs := testspecs.NewGinkgoSpecTranslator()
+	ts := testspecs.NewTextSpecTranslator()
 
-	if !utils.CheckIfEnvironmentExists("TEMPLATE_SUITE_PACKAGE_NAME") {
-		klog.Exitf("TEMPLATE_SUITE_PACKAGE_NAME not set or is empty")
-	}
+	klog.Infof("Mapping outline from a Ginkgo test file, %s", source)
+	outline, err := gs.FromFile(source)
 
-	if !utils.CheckIfEnvironmentExists("TEMPLATE_SPEC_FILE_NAME") {
-		klog.Infof("TEMPLATE_SPEC_FILE_NAME not set. Defaulting test spec file to value of `%s`.\n", templateSpecName)
-	}
-
-	if !utils.CheckIfEnvironmentExists("TEMPLATE_APPEND_FRAMEWORK_DESCRIBE_FILE") {
-		klog.Infof("TEMPLATE_APPEND_FRAMEWORK_DESCRIBE_FILE not set. Defaulting to `%s` which will update the pkg/framework/describe.go after generating the template.\n", templateAppendFrameworkDescribeBool)
-	}
-
-	if utils.CheckIfEnvironmentExists("TEMPLATE_JOIN_SUITE_SPEC_FILE_NAMES") {
-		klog.Infof("TEMPLATE_JOIN_SUITE_SPEC_FILE_NAMES is set to %s. Will join the suite package and spec file name to be used in the Describe of suites.\n", templateJoinSuiteSpecNamesBool)
-	}
-
-	templateDirPath = fmt.Sprintf("tests/%s", templateDirName)
-	err = os.MkdirAll(templateDirPath, 0775)
 	if err != nil {
-		klog.Errorf("failed to create package directory, %s, template with: %v", templateDirPath, err)
-		return err
-	}
-	templateSpecFile = fmt.Sprintf("%s/%s.go", templateDirPath, templateSpecName)
-
-	klog.Infof("Creating new test package directory and spec file %s.\n", templateSpecFile)
-	if templateJoinSuiteSpecNamesBool == "true" {
-		templateSpecName = fmt.Sprintf("%s%v", caser.String(templateDirName), caser.String(templateSpecName))
-	} else {
-		templateSpecName = caser.String(templateSpecName)
-	}
-
-	data := TemplateData{SuiteName: templateDirName,
-		TestSpecName: templateSpecName}
-	err = renderTemplate(templateSpecFile, templatePath, data, false)
-	if err != nil {
-		klog.Errorf("failed to render template with: %s", err)
+		klog.Error("Failed to map Ginkgo test file")
 		return err
 	}
 
-	err = goFmt(templateSpecFile)
+	klog.Infof("Mapping outline to a text file, %s", destination)
+	err = ts.ToFile(destination, outline)
 	if err != nil {
-
-		klog.Errorf("%s", err)
+		klog.Error("Failed to map text file")
 		return err
 	}
 
-	if templateAppendFrameworkDescribeBool == "true" {
+	return err
 
-		err = appendFrameworkDescribeFile(templateSpecName)
-
-		if err != nil {
-			return err
-		}
-
-	}
-
-	return nil
 }
 
-func appendFrameworkDescribeFile(packageName string) error {
+// Generate a Ginkgo Spec file from a Text Outline file
+func GenerateGinkoSpecFromTextOutline(source string, destination string) error {
 
-	var templatePath = "templates/framework_describe_func.tmpl"
-	var describeFile = "pkg/framework/describe.go"
-	var err error
-	var caser = cases.Title(language.English)
+	gs := testspecs.NewGinkgoSpecTranslator()
+	ts := testspecs.NewTextSpecTranslator()
 
-	data := TemplateData{TestSpecName: caser.String(packageName)}
-	err = renderTemplate(describeFile, templatePath, data, true)
+	klog.Infof("Mapping outline from a text file, %s", source)
+	outline, err := ts.FromFile(source)
 	if err != nil {
-		klog.Errorf("failed to append to pkg/framework/describe.go with : %s", err)
-		return err
-	}
-	err = goFmt(describeFile)
-
-	if err != nil {
-
-		klog.Errorf("%s", err)
+		klog.Error("Failed to map text outline file")
 		return err
 	}
 
-	return nil
+	klog.Infof("Mapping outline to a Ginkgo spec file, %s", destination)
+	err = gs.ToFile(destination, outline)
+	if err != nil {
+		klog.Error("Failed to map Ginkgo spec file")
+		return err
+	}
+
+	return err
+}
+
+// Print the outline of the Ginkgo spec
+func PrintOutlineOfGinkgoSpec(specFile string) error {
+
+	gs := testspecs.NewGinkgoSpecTranslator()
+	klog.Infof("Mapping outline from a Ginkgo test file, %s", specFile)
+	outline, err := gs.FromFile(specFile)
+
+	if err != nil {
+		klog.Errorf("failed to map ginkgo spec to outline: %s", err)
+		return err
+	}
+
+	klog.Info("Printing outline:")
+	fmt.Printf("%s\n", outline.ToString())
+
+	return err
+
+}
+
+// Print the outline of the Text Outline
+func PrintOutlineOfTextSpec(specFile string) error {
+
+	ts := testspecs.NewTextSpecTranslator()
+
+	klog.Infof("Mapping outline from a text file, %s", specFile)
+	outline, err := ts.FromFile(specFile)
+	if err != nil {
+		klog.Error("Failed to map text outline file")
+		return err
+	}
+
+	klog.Info("Printing outline:")
+	fmt.Printf("%s\n", outline.ToString())
+
+	return err
+
+}
+
+// Print the outline of the Ginkgo spec in JSON format
+func PrintJsonOutlineOfGinkgoSpec(specFile string) error {
+
+	gs := testspecs.NewGinkgoSpecTranslator()
+	klog.Infof("Mapping outline from a Ginkgo test file, %s", specFile)
+	outline, err := gs.FromFile(specFile)
+	if err != nil {
+		klog.Errorf("failed to map ginkgo spec to outline: %s", err)
+		return err
+	}
+	data, err := json.Marshal(outline)
+	if err != nil {
+		println(fmt.Sprintf("error marshalling to json: %s", err))
+	}
+	fmt.Print(string(data))
+
+	return err
+
+}
+
+// Append to the pkg/framework/describe.go the decorator function for new Ginkgo spec
+func AppendFrameworkDescribeGoFile(specFile string) error {
+
+	var node testspecs.TestSpecNode
+	klog.Infof("Inspecting Ginkgo spec file, %s", specFile)
+	node, err := testspecs.ExtractFrameworkDescribeNode(specFile)
+	if err != nil {
+		klog.Error("Failed to extract the framework node")
+		return err
+	}
+
+	if reflect.ValueOf(node).IsZero() {
+		klog.Info("Did not find a framework describe decorator function so nothing to append.")
+		// we assume its a normal Ginkgo Spec file so that is fine
+		return nil
+	}
+	outline := testspecs.TestOutline{node}
+	tmplData := testspecs.NewTemplateData(outline, specFile)
+	err = testspecs.RenderFrameworkDescribeGoFile(*tmplData)
+
+	if err != nil {
+		klog.Error("Failed to render the framework/describe.go")
+		return err
+	}
+
+	return err
 
 }
