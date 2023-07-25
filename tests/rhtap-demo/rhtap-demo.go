@@ -429,7 +429,6 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 
 		When("Release PipelineRun is triggered", func() {
 			It("should eventually succeed", func() {
-				Skip("Skip until bug is fixed: https://issues.redhat.com/browse/RHTAPBUGS-356")
 				Eventually(func() error {
 					pipelineRun, err = f.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -443,7 +442,6 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 		})
 		When("Release PipelineRun is completed", func() {
 			It("should lead to Release CR being marked as succeeded", func() {
-				Skip("Skip until bug is fixed: https://issues.redhat.com/browse/RHTAPBUGS-356")
 				Eventually(func() error {
 					release, err = f.AsKubeAdmin.ReleaseController.GetRelease(release.Name, "", userNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
