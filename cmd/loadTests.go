@@ -105,17 +105,17 @@ type LogData struct {
 	AverageTimeToRunPipelineSucceeded float64           `json:"runPipelineSucceededTimeAvg"`
 	MaxTimeToRunPipelineSucceeded     float64           `json:"runPipelineSucceededTimeMax"`
 	AverageTimeToRunPipelineFailed    float64           `json:"runPipelineFailedTimeAvg"`
-	AverageTimeToDeploymentSucceeded  float64           `json:"DeploymentSucceededTimeAvg"`
-	MaxTimeToDeploymentSucceeded      float64           `json:"DeploymentSucceededTimeMax"`
-	AverageTimeToDeploymentFailed     float64           `json:"DeploymentFailedTimeAvg"`
+	AverageTimeToDeploymentSucceeded  float64           `json:"deploymentSucceededTimeAvg"`
+	MaxTimeToDeploymentSucceeded      float64           `json:"deploymentSucceededTimeMax"`
+	AverageTimeToDeploymentFailed     float64           `json:"deploymentFailedTimeAvg"`
 	UserCreationFailureCount          int64             `json:"createUserFailures"`
 	UserCreationFailureRate           float64           `json:"createUserFailureRate"`
 	ResourceCreationFailureCount      int64             `json:"createResourcesFailures"`
 	ResourceCreationFailureRate       float64           `json:"createResourcesFailureRate"`
 	PipelineRunFailureCount           int64             `json:"runPipelineFailures"`
 	PipelineRunFailureRate            float64           `json:"runPipelineFailureRate"`
-	DeploymentFailureCount            int64             `json:"DeploymentFailures"`
-	DeploymentFailureRate             float64           `json:"DeploymentFailureRate"`
+	DeploymentFailureCount            int64             `json:"deploymentFailures"`
+	DeploymentFailureRate             float64           `json:"deploymentFailureRate"`
 	ErrorCounts                       []ErrorCount      `json:"errorCounts"`
 	Errors                            []ErrorOccurrence `json:"errors"`
 	ErrorsTotal                       int               `json:"errorsTotal"`
@@ -206,10 +206,8 @@ func setup(cmd *cobra.Command, args []string) {
 	cmd.SilenceUsage = true
 	term := terminal.New(cmd.InOrStdin, cmd.OutOrStdout, verbose)
 
-	// waitDeployments is valid only if waitPipelines
-	if waitDeployments && !waitPipelines {
-		klog.Fatalf("Error: The --waitdeployments flag requires the --waitpipelines flag.")
-	}
+	// waitDeployments sets waitPipelines=true implicitly
+	waitPipelines = waitPipelines || waitDeployments
 
 	logFile, err := os.Create("load-tests.log")
 	if err != nil {
@@ -814,8 +812,8 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 					deploymentIsDone, lastUpdateTimeOfDone := checkDeploymentIsDone(deployment)
 
 					var (
-						deploymentFailed   bool
-						errorMessage       string
+						deploymentFailed       bool
+						errorMessage           string
 						lastUpdateTimeOfFailed metav1.Time
 					)
 					if !deploymentIsDone {
@@ -850,7 +848,6 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 	wg.Wait()
 }
 
-
 func checkDeploymentFailed(deployment *appsv1.Deployment) (bool, string, metav1.Time) {
 	var lastUpdateTime metav1.Time = metav1.Now() // initialize with the current time
 
@@ -860,8 +857,8 @@ func checkDeploymentFailed(deployment *appsv1.Deployment) (bool, string, metav1.
 	}
 
 	/* Iterate over all conditions
-	   https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#failed-deployment
-       All the below tests catches all the described failure reasons
+		   https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#failed-deployment
+	       All the below tests catches all the described failure reasons
 	*/
 	for _, condition := range deployment.Status.Conditions {
 		switch condition.Type {
@@ -895,7 +892,7 @@ func checkDeploymentIsDone(deployment *appsv1.Deployment) (bool, metav1.Time) {
 
 	/* Check the DeploymentProgressing condition
 	   https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#complete-deployment
-	
+
 	   When the rollout becomes “complete”, the Deployment controller sets a condition with the following attributes to the Deployment's .status.conditions:
 	   type: Progressing
 	   status: "True"
