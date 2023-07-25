@@ -34,10 +34,11 @@ if [ ${#USER_PREFIX} -gt 10 ]; then
     exit 1
 else
     output=load-tests.max-concurrency.json
+    maxConcurrencyStep=${MAX_CONCURRENCY_STEP:-1}
     maxThreads=${MAX_THREADS:-10}
     threshold=${THRESHOLD:-300}
-    echo '{"maxThreads": '"$maxThreads"', "threshold": '"$threshold"', "maxConcurrencyReached": 0}' | jq >"$output"
-    for t in $(seq 1 "${MAX_THREADS:-10}"); do
+    echo '{"maxThreads": '"$maxThreads"', "maxConcurrencyStep": '"$maxConcurrencyStep"', "threshold": '"$threshold"', "maxConcurrencyReached": 0}' | jq >"$output"
+    for t in $(seq 1 "${maxConcurrencyStep}" "${maxThreads}"); do
         echo "Deleting resources from previous steps"
         for res in pipelineruns.tekton.dev components.appstudio.redhat.com componentdetectionqueries.appstudio.redhat.com snapshotenvironmentbindings.appstudio.redhat.com applications.appstudio.redhat.com; do
             echo -e " * $res"
