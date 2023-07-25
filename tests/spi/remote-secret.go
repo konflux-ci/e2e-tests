@@ -64,8 +64,8 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "remote-secret"), func() {
 			remoteSecret, err = fw.AsKubeDeveloper.SPIController.GetRemoteSecret(remoteSecret.Name, namespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			dataObtained := meta.IsStatusConditionFalse(remoteSecret.Status.Conditions, "DataObtained")
-			Expect(dataObtained).To(BeTrue())
+			dataNotObtained := meta.IsStatusConditionFalse(remoteSecret.Status.Conditions, "DataObtained")
+			Expect(dataNotObtained).To(BeTrue())
 		})
 
 		It("creates upload secret", func() {

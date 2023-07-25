@@ -415,9 +415,8 @@ func (s *SuiteController) GetRemoteSecret(name, namespace string) (*rs.RemoteSec
 		Namespace: namespace,
 	}
 
-	remoteSecret := rs.RemoteSecret{
-		Spec: rs.RemoteSecretSpec{},
-	}
+	remoteSecret := rs.RemoteSecret{}
+
 	err := s.KubeRest().Get(context.TODO(), namespacedName, &remoteSecret)
 	if err != nil {
 		return nil, err
