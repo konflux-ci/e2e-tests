@@ -253,7 +253,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 					break
 				}
 			}
-			Expect(f.AsKubeAdmin.JvmbuildserviceController.DeleteJbsConfig(constants.JBSConfigName, userNamespace)).To(Succeed())
+			Expect(f.AsKubeAdmin.JvmbuildserviceController.DeleteJBSConfig(constants.JBSConfigName, userNamespace)).To(Succeed())
 		})
 
 		When("Component with PaC is created", func() {
