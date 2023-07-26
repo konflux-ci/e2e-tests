@@ -52,8 +52,7 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 	var err error
 	var k *kubeCl.K8SClient
 	var supplyopts utils.Options
-	
-	
+
 	isStage, err := utils.CheckOptions(options)
 	if err != nil {
 		return nil, err
@@ -93,7 +92,7 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 		if err = asAdmin.CommonController.AddRegistryAuthSecretToSA("QUAY_TOKEN", k.UserNamespace); err != nil {
 			GinkgoWriter.Println(fmt.Sprintf("Failed to add registry auth secret to service account: %v\n", err))
 		}
-	}else {
+	} else {
 		asAdmin = nil
 	}
 
