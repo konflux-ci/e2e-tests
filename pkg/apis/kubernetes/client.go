@@ -129,12 +129,12 @@ func NewDevSandboxProxyClient(userName string, isStage bool, options utils.Optio
 		if err != nil {
 			return nil, err
 		}
-		proxyAuthInfo, err = sandboxController.ReconcileUserCreationStage(userName, options.ToolchainApiUrl, options.KeycloakUrl , options.OfflineToken)
+		proxyAuthInfo, err = sandboxController.ReconcileUserCreationStage(userName, options.ToolchainApiUrl, options.KeycloakUrl, options.OfflineToken)
 		if err != nil {
 			return nil, err
 		}
 
-	}else {
+	} else {
 		asAdminClient, err = NewAdminKubernetesClient()
 		if err != nil {
 			return nil, err
@@ -144,7 +144,7 @@ func NewDevSandboxProxyClient(userName string, isStage bool, options utils.Optio
 		if err != nil {
 			return nil, err
 		}
-		
+
 		proxyAuthInfo, err = sandboxController.ReconcileUserCreation(userName)
 		if err != nil {
 			return nil, err
