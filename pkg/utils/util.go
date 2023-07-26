@@ -51,11 +51,11 @@ type FailedPipelineRunDetails struct {
 
 type Options struct {
 	ToolchainApiUrl string
-	KeycloakUrl 	string
-	OfflineToken 	string
+	KeycloakUrl     string
+	OfflineToken    string
 }
 
-//check options are valid or not
+// check options are valid or not
 func CheckOptions(optionsArr []Options) (bool, error) {
 	if len(optionsArr) == 0 {
 		return false, nil
