@@ -82,11 +82,11 @@ func DeleteImageRepo(imageName string) (bool, error) {
 func DoesTagExistsInQuay(imageURL string) (bool, error) {
 	urlParts := strings.Split(imageURL, ":")
 	if len(urlParts) != 2 {
-		return false, fmt.Errorf("Image URL %s has incorrect format", imageURL)
+		return false, fmt.Errorf("image URL %s has incorrect format", imageURL)
 	}
 	repoParts := strings.Split(urlParts[0], "/")
 	if len(repoParts) <= 2 {
-		return false, fmt.Errorf("Image URL %s is not complete", imageURL)
+		return false, fmt.Errorf("image URL %s is not complete", imageURL)
 	}
 	repoName := strings.Join(repoParts[2:], "/")
 	tagList, _, err := quayClient.GetTagsFromPage(quayOrg, repoName, 0)

@@ -188,7 +188,7 @@ func (Local) CleanupQuayReposAndRobots() error {
 	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
 
 	quayClient := quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayOrgToken, "https://quay.io/api/v1")
-	return cleanupQuayReposAndRobots(&quayClient, quayOrg)
+	return cleanupQuayReposAndRobots(quayClient, quayOrg)
 }
 
 // Deletes Quay Tags older than 7 days in `test-images` repository
@@ -200,7 +200,7 @@ func (Local) CleanupQuayTags() error {
 	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
 
 	quayClient := quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayOrgToken, "https://quay.io/api/v1")
-	return cleanupQuayTags(&quayClient, quayOrg, "test-images")
+	return cleanupQuayTags(quayClient, quayOrg, "test-images")
 }
 
 func (ci CI) TestE2E() error {

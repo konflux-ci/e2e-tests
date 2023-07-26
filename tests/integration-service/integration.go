@@ -118,7 +118,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					GinkgoWriter.Printf("PipelineRun for Component %s/%s can't be gotten successfully\n", testNamespace, componentName)
 					return err
 				}
-				if (pipelineRun.Annotations["chains.tekton.dev/signed"] != "true") {
+				if pipelineRun.Annotations["chains.tekton.dev/signed"] != "true" {
 					return fmt.Errorf("pipelinerun %s/%s hasn't been signed yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
 				}
 				return nil
