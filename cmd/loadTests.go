@@ -794,19 +794,18 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 					continue
 				}
 
-				deploymentRetryInterval := time.Second * 5
+				deploymentRetryIntervalInitialValue := time.Second * 5
+				deploymentRetryInterval := deploymentRetryIntervalInitialValue
 				deploymentTimeout := time.Minute * 25
-				deploymentPauseToMitigateRaceConditions := time.Second * 5
+				deploymentFailCount := 0
 
+				// To avoid race conditions we want to check for deployment failure that occurs more than once to signify failure (deploymentFailCount > 3)
 				err = k8swait.Poll(deploymentRetryInterval, deploymentTimeout, func() (done bool, err error) {
 					deployment, err = framework.AsKubeDeveloper.CommonController.GetDeployment(componentName, usernamespace)
 					if err != nil {
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
 						return false, nil
 					}
-
-					// Pause briefly to allow any ongoing updates to the Deployment to complete
-					time.Sleep(deploymentPauseToMitigateRaceConditions)
 
 					creationTimestamp := deployment.ObjectMeta.CreationTimestamp
 					deploymentIsDone, lastUpdateTimeOfDone := checkDeploymentIsDone(deployment)
@@ -818,6 +817,16 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 					)
 					if !deploymentIsDone {
 						deploymentFailed, errorMessage, lastUpdateTimeOfFailed = checkDeploymentFailed(deployment)
+						if deploymentFailed {
+							deploymentFailCount++
+							deploymentRetryInterval += 5 // increase retry interval by 5 seconds to give more time for the deploymnt to get ready or to make sure the failure persists
+						} else {
+							deploymentFailCount = 0
+							deploymentRetryInterval = deploymentRetryIntervalInitialValue // reset deploymentRetryInterval to its initial value
+						}
+					} else {
+						deploymentFailCount = 0
+						deploymentRetryInterval = deploymentRetryIntervalInitialValue // reset deploymentRetryInterval to its initial value
 					}
 					if deploymentIsDone {
 						dur := lastUpdateTimeOfDone.Time.Sub(creationTimestamp.Time)
@@ -827,14 +836,14 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 						}
 						SuccessfulDeploymentsPerThread[threadIndex] += 1
 						increaseBar(deploymentsBar, deploymentsBarMutex)
-					} else if deploymentFailed {
+					} else if deploymentFailed && deploymentFailCount > 3 {
 						dur := lastUpdateTimeOfFailed.Time.Sub(creationTimestamp.Time)
 						DeploymentFailedTimeSumPerThread[threadIndex] += dur
 						logError(17, fmt.Sprintf("Deployment for %s/%s failed due to %s", applicationName, componentName, errorMessage))
 						FailedDeploymentsPerThread[threadIndex] += 1
 						increaseBar(deploymentsBar, deploymentsBarMutex)
 					}
-					return deploymentIsDone || deploymentFailed, nil
+					return deploymentIsDone || (deploymentFailed && deploymentFailCount > 3), nil
 				})
 				if err != nil {
 					logError(18, fmt.Sprintf("Deployment for %s/%s failed to succeed within %v: %v", applicationName, componentName, deploymentTimeout, err))
