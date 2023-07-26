@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Creates a new secret in a specified namespace
@@ -27,6 +28,11 @@ func (s *SuiteController) GetSecret(ns string, name string) (*corev1.Secret, err
 // Deleted a secret in a specified namespace
 func (s *SuiteController) DeleteSecret(ns string, name string) error {
 	return s.KubeInterface().CoreV1().Secrets(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
+}
+
+// Remove allSecret from a given namespace. Useful when creating a lot of resources and wanting to remove all of them
+func (h *SuiteController) DeleteAllSecretsInASpecificNamespace(namespace string) error {
+	return h.KubeRest().DeleteAllOf(context.TODO(), &corev1.Secret{}, client.InNamespace(namespace))
 }
 
 // Links a secret to a specified serviceaccount, if argument addImagePullSecrets is true secret will be added also to ImagePullSecrets of SA.
@@ -125,7 +131,7 @@ func (s *SuiteController) CreateRegistryJsonSecret(name, namespace, authKey, key
 func (s *SuiteController) AddRegistryAuthSecretToSA(registryAuth, namespace string) error {
 	quayToken := utils.GetEnv(registryAuth, "")
 	if quayToken == "" {
-		return errors.New("Failed to get registry auth secret")
+		return errors.New("failed to get registry auth secret")
 	}
 
 	_, err := s.CreateRegistryAuthSecret(RegistryAuthSecretName, namespace, quayToken)

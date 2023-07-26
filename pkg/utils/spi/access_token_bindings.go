@@ -3,10 +3,12 @@ package spi
 import (
 	"context"
 
+	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
 	spi "github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // CreateSPIAccessTokenBinding creates an SPIAccessTokenBinding object
@@ -27,8 +29,10 @@ func (s *SPIController) CreateSPIAccessTokenBinding(name, namespace, repoURL, se
 			},
 			RepoUrl: repoURL,
 			Secret: spi.SecretSpec{
-				Name: secretName,
-				Type: secretType,
+				LinkableSecretSpec: rs.LinkableSecretSpec{
+					Name: secretName,
+					Type: secretType,
+				},
 			},
 		},
 	}
@@ -61,13 +65,15 @@ func (s *SPIController) CreateSPIAccessTokenBindingWithSA(name, namespace, servi
 			},
 			RepoUrl: repoURL,
 			Secret: spi.SecretSpec{
-				Name: secretName,
-				Type: "kubernetes.io/dockerconfigjson",
-				LinkedTo: []spi.SecretLink{
-					{
-						ServiceAccount: spi.ServiceAccountLink{
-							Reference: v1.LocalObjectReference{
-								Name: serviceAccountName,
+				LinkableSecretSpec: rs.LinkableSecretSpec{
+					Name: secretName,
+					Type: "kubernetes.io/dockerconfigjson",
+					LinkedTo: []rs.SecretLink{
+						{
+							ServiceAccount: rs.ServiceAccountLink{
+								Reference: v1.LocalObjectReference{
+									Name: serviceAccountName,
+								},
 							},
 						},
 					},
@@ -77,15 +83,15 @@ func (s *SPIController) CreateSPIAccessTokenBindingWithSA(name, namespace, servi
 	}
 
 	if isImagePullSecret {
-		spiAccessTokenBinding.Spec.Secret.LinkedTo[0].ServiceAccount.As = spi.ServiceAccountLinkTypeImagePullSecret
+		spiAccessTokenBinding.Spec.Secret.LinkedTo[0].ServiceAccount.As = rs.ServiceAccountLinkTypeImagePullSecret
 	}
 
 	if isManagedServiceAccount {
 		spiAccessTokenBinding.Spec.Secret.Type = "kubernetes.io/basic-auth"
-		spiAccessTokenBinding.Spec.Secret.LinkedTo = []spi.SecretLink{
+		spiAccessTokenBinding.Spec.Secret.LinkedTo = []rs.SecretLink{
 			{
-				ServiceAccount: spi.ServiceAccountLink{
-					Managed: spi.ManagedServiceAccountSpec{
+				ServiceAccount: rs.ServiceAccountLink{
+					Managed: rs.ManagedServiceAccountSpec{
 						GenerateName: serviceAccountName,
 					},
 				},
@@ -117,13 +123,7 @@ func (s *SPIController) GetSPIAccessTokenBinding(name, namespace string) (*spi.S
 	return &spiAccessTokenBinding, nil
 }
 
-// DeleteSPIAccessTokenBinding deletes an SPIAccessTokenBinding from a given name and namespace
-func (s *SPIController) DeleteSPIAccessTokenBinding(name, namespace string) error {
-	application := spi.SPIAccessTokenBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-	}
-	return s.KubeRest().Delete(context.TODO(), &application)
+// Remove all SPIAccessTokenBinding from a given namespace. Useful when creating a lot of resources and wanting to remove all of them
+func (s *SPIController) DeleteAllBindingTokensInASpecificNamespace(namespace string) error {
+	return s.KubeRest().DeleteAllOf(context.TODO(), &spi.SPIAccessTokenBinding{}, client.InNamespace(namespace))
 }
