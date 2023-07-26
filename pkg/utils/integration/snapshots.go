@@ -42,11 +42,11 @@ func (i *IntegrationController) CreateSnapshotWithImage(applicationName, namespa
 	return hasSnapshot, err
 }
 
-// CreateSnapshotWithCompoents creates a Snapshot using the given parameters.
-func (i *IntegrationController) CreateSnapshotWithComponents(name string, namespace string, applicationName string, snapshotComponents []appstudioApi.SnapshotComponent) (*appstudioApi.Snapshot, error) {
+// CreateSnapshotWithComponents creates a Snapshot using the given parameters.
+func (i *IntegrationController) CreateSnapshotWithComponents(applicationName, namespace, snapshotName string, snapshotComponents []appstudioApi.SnapshotComponent) (*appstudioApi.Snapshot, error) {
 	snapshot := &appstudioApi.Snapshot{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      snapshotName,
 			Namespace: namespace,
 		},
 		Spec: appstudioApi.SnapshotSpec{
