@@ -61,11 +61,12 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "remote-secret"), func() {
 			remoteSecret, err = fw.AsKubeDeveloper.SPIController.CreateRemoteSecret(remoteSecretName, namespace, []string{targetNamespace1, targetNamespace2})
 			Expect(err).NotTo(HaveOccurred())
 
-			remoteSecret, err = fw.AsKubeDeveloper.SPIController.GetRemoteSecret(remoteSecret.Name, namespace)
-			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() bool {
+				remoteSecret, err = fw.AsKubeDeveloper.SPIController.GetRemoteSecret(remoteSecretName, namespace)
+				Expect(err).NotTo(HaveOccurred())
 
-			dataNotObtained := meta.IsStatusConditionFalse(remoteSecret.Status.Conditions, "DataObtained")
-			Expect(dataNotObtained).To(BeTrue())
+				return meta.IsStatusConditionFalse(remoteSecret.Status.Conditions, "DataObtained")
+			}, 5*time.Minute, 5*time.Second).Should(BeTrue(), fmt.Sprintf("RemoteSecret %s/%s is not waiting for data", namespace, remoteSecretName))
 		})
 
 		It("creates upload secret", func() {
