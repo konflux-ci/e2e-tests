@@ -246,16 +246,15 @@ func (s *SandboxController) GetKubeconfigPathForSpecificUser(isStage bool, toolc
 	if err != nil {
 		return nil, fmt.Errorf("error writing sandbox user kubeconfig to %s path: %v", kubeconfigPath, err)
 	}
-	var ns string;
-	if isStage{
+	var ns string
+	if isStage {
 		ns = fmt.Sprintf("%s-tenant", userName)
-	}else {
+	} else {
 		ns, err = s.GetUserProvisionedNamespace(userName)
 		if err != nil {
 			return nil, fmt.Errorf("error getting provisioned usernamespace: %v", err)
 		}
 	}
-	
 
 	return &SandboxUserAuthInfo{
 		UserName:       userName,
