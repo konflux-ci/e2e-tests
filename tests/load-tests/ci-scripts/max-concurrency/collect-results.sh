@@ -74,9 +74,9 @@ ${csv_delim}ClusterMemoryUsageAvg\
 ${csv_delim}ClusterPodCountAvg\
 ${csv_delim}ClusterPVCInUseAvg\
 ${csv_delim}ClusterPipelineRunCountAvg\
-${csv_delim}ClusterPipelineWorkqueueDepthAvg" \
-${csv_delim}ClusterPipelineScheduleFirstPodAvg" \
-${csv_delim}ClusterTaskrunThrottledByNodeResourcesAvg" \
+${csv_delim}ClusterPipelineWorkqueueDepthAvg\
+${csv_delim}ClusterPipelineScheduleFirstPodAvg\
+${csv_delim}ClusterTaskrunThrottledByNodeResourcesAvg\
 ${csv_delim}ClusterTaskRunThrottledByDefinedQuotaAvg" \
     >"$max_concurrency_csv"
 cat ./tests/load-tests/load-tests.max-concurrency.*.json |
