@@ -38,7 +38,7 @@ var _ = framework.O11ySuiteDescribe("O11Y E2E tests for Deployments", Label("o11
 		})
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
+				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 			}
 		})
 
