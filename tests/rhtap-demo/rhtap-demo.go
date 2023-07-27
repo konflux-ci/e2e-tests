@@ -37,6 +37,7 @@ const (
 	// This app might be replaced with service-registry in a future
 	sampleRepoName             = "hacbs-test-project"
 	componentDefaultBranchName = "main"
+	componentRevision          = "34da5a8f51fba6a8b7ec75a727d3c72ebb5e1274"
 
 	// Kubernetes resource names
 	testNamespacePrefix = "rhtap-demo-dev"
@@ -44,7 +45,7 @@ const (
 
 	appName                = "mvp-test-app"
 	testScenarioGitURL     = "https://github.com/redhat-appstudio/integration-examples.git"
-	testScenarioRevision   = "main"
+	testScenarioRevision   = "843f455fe87a6d7f68c238f95a8f3eb304e65ac5"
 	testScenarioPathInRepo = "pipelines/integration_resolver_pipeline_pass.yaml"
 
 	// Timeouts
@@ -144,8 +145,8 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 		Expect(err).ShouldNot(HaveOccurred())
 
 		scPath := "rhtap-demo.yaml"
-		Expect(f.AsKubeAdmin.CommonController.Github.CreateRef("strategy-configs", "main", componentName)).To(Succeed())
-		_, err = f.AsKubeAdmin.CommonController.Github.CreateFile("strategy-configs", scPath, string(scYaml), componentName)
+		Expect(f.AsKubeAdmin.CommonController.Github.CreateRef(constants.StrategyConfigsRepo, constants.StrategyConfigsDefaultBranch, "", componentName)).To(Succeed())
+		_, err = f.AsKubeAdmin.CommonController.Github.CreateFile(constants.StrategyConfigsRepo, scPath, string(scYaml), componentName)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		_, err = f.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("rhtap-demo-strategy", managedNamespace, "release", constants.ReleasePipelineImageRef, "rhtap-demo-policy", "release-service-account", []releaseApi.Params{
@@ -186,7 +187,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 		_, err = f.AsKubeAdmin.CommonController.CreateRoleBinding("role-release-service-account-binding", managedNamespace, "ServiceAccount", "release-service-account", "Role", "role-release-service-account", "rbac.authorization.k8s.io")
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(f.AsKubeAdmin.CommonController.Github.CreateRef(sampleRepoName, componentDefaultBranchName, componentNewBaseBranch)).To(Succeed())
+		Expect(f.AsKubeAdmin.CommonController.Github.CreateRef(sampleRepoName, componentDefaultBranchName, componentRevision, componentNewBaseBranch)).To(Succeed())
 		_, err = f.AsKubeAdmin.HasController.CreateApplication(appName, userNamespace)
 		Expect(err).ShouldNot(HaveOccurred())
 		_, err = f.AsKubeAdmin.GitOpsController.CreatePocEnvironment("rhtap-demo-test", userNamespace)
@@ -202,7 +203,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 		if !CurrentSpecReport().Failed() {
 			Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 			Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).To(Succeed())
-			Expect(f.AsKubeAdmin.CommonController.Github.DeleteRef("strategy-configs", componentName)).To(Succeed())
+			Expect(f.AsKubeAdmin.CommonController.Github.DeleteRef(constants.StrategyConfigsRepo, componentName)).To(Succeed())
 		}
 	})
 

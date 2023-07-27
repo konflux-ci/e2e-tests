@@ -79,7 +79,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
 			componentBaseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(4))
 
-			err = f.AsKubeAdmin.CommonController.Github.CreateRef(helloWorldComponentGitSourceRepoName, helloWorldComponentDefaultBranch, componentBaseBranchName)
+			err = f.AsKubeAdmin.CommonController.Github.CreateRef(helloWorldComponentGitSourceRepoName, helloWorldComponentDefaultBranch, helloWorldComponentRevision, componentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			defaultBranchTestComponentName = fmt.Sprintf("test-custom-default-branch-%s", util.GenerateRandomString(4))
