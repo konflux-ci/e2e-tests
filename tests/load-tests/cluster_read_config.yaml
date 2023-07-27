@@ -30,10 +30,10 @@
   monitoring_query: sum(pipelinerun_duration_scheduled_seconds_sum / pipelinerun_duration_scheduled_seconds_count)
   monitoring_step: 15
 
-- name: measurements.tekton_pipelines_controller_running_taskruns_throttled_by_node
-  monitoring_query: sum(tekton_pipelines_controller_running_taskruns_throttled_by_node_count)
-  monitoring_step: 15
-
-- name: measurements.tekton_pipelines_controller_running_taskruns_throttled_by_quota
-  monitoring_query: sum(tekton_pipelines_controller_running_taskruns_throttled_by_quota_count)
-  monitoring_step: 15
+#- name: measurements.tekton_pipelines_controller_running_taskruns_throttled_by_node
+#  monitoring_query: sum(tekton_pipelines_controller_running_taskruns_throttled_by_node_count)
+#  monitoring_step: 15
+#
+#- name: measurements.tekton_pipelines_controller_running_taskruns_throttled_by_quota
+#  monitoring_query: sum(tekton_pipelines_controller_running_taskruns_throttled_by_quota_count)
+#  monitoring_step: 15

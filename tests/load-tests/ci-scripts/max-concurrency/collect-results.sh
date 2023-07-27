@@ -95,9 +95,9 @@ cat ./tests/load-tests/load-tests.max-concurrency.*.json |
     + $csv_delim_quoted + (.measurements.storage_count_attachable_volumes_in_use.mean | tostring) \
     + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_pipelineruns_count.mean | tostring) \
     + $csv_delim_quoted + (.measurements.tekton_tekton_pipelines_controller_workqueue_depth.mean | tostring) \
-    + $csv_delim_quoted + (.measurements.pipelinerun_duration_scheduled_seconds.mean | tostring) \
-    + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_node.mean | tostring) \
-    + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_quota.mean | tostring)" \
+    + $csv_delim_quoted + (.measurements.pipelinerun_duration_scheduled_seconds.mean | tostring)" \
+#    + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_node.mean | tostring) \
+#    + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_quota.mean | tostring)" \
         >>"$max_concurrency_csv"
 
 ## PipelineRun timestamps
