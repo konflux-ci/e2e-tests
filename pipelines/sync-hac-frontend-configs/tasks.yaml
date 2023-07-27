@@ -8,7 +8,7 @@ spec:
     This task updates redhat-appstudio-qe/frontend-configs with 
     content from internal gitlab repo insights-platform/frontend-configs.
   steps:
-    - image: quay.io/devfile/base-developer-image@sha256:latest
+    - image: quay.io/devfile/base-developer-image:latest
       name: sync-frontend-configs
       script: >
         #!/bin/bash
@@ -53,7 +53,7 @@ spec:
               key: token
               name: $(params.token-secret)
       image: >-
-        quay.io/devfile/base-developer-image@sha256:latest
+        quay.io/devfile/base-developer-image:latest
       name: post
       resources: {}
       script: >
