@@ -75,7 +75,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				// using cdq since git ref is not known
 				cdq, err := kubeadminClient.HasController.CreateComponentDetectionQuery(componentName, testNamespace, gitUrl, "", "", "", false)
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+				Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
 
 				for _, compDetected := range cdq.Status.ComponentDetected {
 					c, err := kubeadminClient.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, false, map[string]string{})
@@ -94,8 +94,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					DeferCleanup(kubeadminClient.HasController.DeleteApplication, applicationName, testNamespace, false)
 				} else {
 					Expect(kubeadminClient.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
-					Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
-					Expect(kubeadminClient.CommonController.DeleteProxyPlugin("tekton-results", "toolchain-host-operator")).NotTo(BeFalse())
+					Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
+					Expect(kubeadminClient.CommonController.DeleteProxyPlugin("tekton-results", "toolchain-host-operator")).To(BeTrue())
 				}
 			}
 		})
@@ -143,7 +143,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("failed to parse SBOM from show-sbom task output from %s/%s PipelineRun", pr.GetNamespace(), pr.GetName()))
 				Expect(sbom.BomFormat).ToNot(BeEmpty())
 				Expect(sbom.SpecVersion).ToNot(BeEmpty())
-				Expect(len(sbom.Components)).To(BeNumerically(">=", 1))
+				Expect(sbom.Components).ToNot(BeEmpty())
 			})
 
 			When(fmt.Sprintf("Pipeline Results are stored for component with Git source URL %s", gitUrl), Label("pipeline"), func() {
@@ -167,7 +167,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					// temporary logs due to RHTAPBUGS-213
 					GinkgoWriter.Printf("records for PipelineRun %s:\n%s\n", pr.Name, records)
 					Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("got error getting records for PipelineRun %s: %v", pr.Name, err))
-					Expect(len(records.Record)).NotTo(BeZero(), fmt.Sprintf("No records found for PipelineRun %s", pr.Name))
+					Expect(records.Record).NotTo(BeEmpty(), fmt.Sprintf("No records found for PipelineRun %s", pr.Name))
 				})
 
 				It("should have Pipeline Logs", func() {
@@ -199,7 +199,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					log, err := resultClient.GetLogByName(logs.Record[0].Name)
 					GinkgoWriter.Printf("log for record %s:\n%s\n", logs.Record[0].Name, log)
 					Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("got error getting log '%s' for PipelineRun %s: %v", logs.Record[0].Name, pr.GetName(), err))
-					Expect(len(log)).NotTo(BeZero(), fmt.Sprintf("no log content '%s' found for PipelineRun %s", logs.Record[0].Name, pr.GetName()))
+					Expect(log).NotTo(BeEmpty(), fmt.Sprintf("no log content '%s' found for PipelineRun %s", logs.Record[0].Name, pr.GetName()))
 				})
 			})
 
@@ -310,7 +310,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					}
 
 					Expect(purl.ImageContents.Dependencies).ToNot(BeEmpty())
-					Expect(len(purl.ImageContents.Dependencies)).To(Equal(numberOfLibraryComponents))
+					Expect(purl.ImageContents.Dependencies).To(HaveLen(numberOfLibraryComponents))
 
 					for _, dependency := range purl.ImageContents.Dependencies {
 						Expect(dependency.Purl).ToNot(BeEmpty())

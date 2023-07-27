@@ -201,7 +201,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 		}
 		if !CurrentSpecReport().Failed() {
-			Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
+			Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 			Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).To(Succeed())
 			Expect(f.AsKubeAdmin.CommonController.Github.DeleteRef(constants.StrategyConfigsRepo, componentName)).To(Succeed())
 		}
