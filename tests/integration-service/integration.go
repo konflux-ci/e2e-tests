@@ -69,7 +69,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			// using cdq since git ref is not known
 			cdq, err := f.AsKubeAdmin.HasController.CreateComponentDetectionQuery(componentName, testNamespace, gitSourceURL, "", "", "", false)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+			Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
 
 			for _, compDetected := range cdq.Status.ComponentDetected {
 				originalComponent, err = f.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, true, map[string]string{})
@@ -89,7 +89,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				for _, testScenario := range *integrationTestScenarios {
 					Expect(f.AsKubeAdmin.IntegrationController.DeleteIntegrationTestScenario(&testScenario, testNamespace)).To(Succeed())
 				}
-				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
+				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 			}
 		}
 
@@ -346,7 +346,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				Expect(err).ShouldNot(HaveOccurred())
 
 				// global candidate is not updated
-				Expect(component.Spec.ContainerImage == originalComponent.Spec.ContainerImage).To(BeTrue())
+				Expect(component.Spec.ContainerImage).To(Equal(originalComponent.Spec.ContainerImage))
 
 			})
 		})
@@ -372,14 +372,14 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					cleanup()
 
 					Expect(f.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(testNamespace, 30*time.Second)).To(Succeed())
-					Expect(f.AsKubeAdmin.IntegrationController.DeleteSnapshot(snapshot_push, testNamespace)).To(BeNil())
+					Expect(f.AsKubeAdmin.IntegrationController.DeleteSnapshot(snapshot_push, testNamespace)).To(Succeed())
 				}
 			})
 
 			It("valid deploymentTargetClass doesn't exist", func() {
 				validDTCLS, err := f.AsKubeAdmin.GitOpsController.HaveAvailableDeploymentTargetClassExist()
 				Expect(validDTCLS).To(BeNil())
-				Expect(err).To(BeNil())
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("creates a snapshot of push event", func() {
@@ -392,20 +392,20 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			When("nonexisting valid deploymentTargetClass", func() {
 				It("check no GitOpsCR is created for the dtc with nonexisting deploymentTargetClass", func() {
 					spaceRequestList, err := f.AsKubeAdmin.IntegrationController.GetSpaceRequests(testNamespace)
-					Expect(err).To(BeNil())
-					Expect(len(spaceRequestList.Items) > 0).To(BeFalse())
+					Expect(err).ToNot(HaveOccurred())
+					Expect(spaceRequestList.Items).To(BeEmpty())
 
 					deploymentTargetList, err := f.AsKubeAdmin.GitOpsController.GetDeploymentTargetsList(testNamespace)
-					Expect(err).To(BeNil())
-					Expect(len(deploymentTargetList.Items) > 0).To(BeFalse())
+					Expect(err).ToNot(HaveOccurred())
+					Expect(deploymentTargetList.Items).To(BeEmpty())
 
 					deploymentTargetClaimList, err := f.AsKubeAdmin.GitOpsController.GetDeploymentTargetClaimsList(testNamespace)
-					Expect(err).To(BeNil())
-					Expect(len(deploymentTargetClaimList.Items) > 0).To(BeFalse())
+					Expect(err).ToNot(HaveOccurred())
+					Expect(deploymentTargetClaimList.Items).To(BeEmpty())
 
 					environmentList, err := f.AsKubeAdmin.GitOpsController.GetEnvironmentsList(testNamespace)
-					Expect(err).To(BeNil())
-					Expect(len(environmentList.Items) > 1).To(BeFalse())
+					Expect(err).ToNot(HaveOccurred())
+					Expect(len(environmentList.Items)).ToNot(BeNumerically(">", 1))
 
 					pipelineRun, err := f.AsKubeAdmin.IntegrationController.GetIntegrationPipelineRun(integrationTestScenario_alpha1.Name, snapshot_push.Name, testNamespace)
 					Expect(pipelineRun.Name == "" && strings.Contains(err.Error(), "no pipelinerun found")).To(BeTrue())

@@ -88,7 +88,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
+				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 			}
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
@@ -357,7 +357,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Expect(err).ShouldNot(HaveOccurred())
 
 					return comments
-				}, timeout, interval).ShouldNot(HaveLen(0), fmt.Sprintf("timed out when waiting for the PaC PR comment about the pipelinerun status to appear in the component repo %s in PR #%d", helloWorldComponentGitSourceRepoName, prNumber))
+				}, timeout, interval).ShouldNot(BeEmpty(), fmt.Sprintf("timed out when waiting for the PaC PR comment about the pipelinerun status to appear in the component repo %s in PR #%d", helloWorldComponentGitSourceRepoName, prNumber))
 
 				// TODO uncomment once https://issues.redhat.com/browse/SRVKP-2471 is sorted
 				//Expect(comments).To(HaveLen(1), fmt.Sprintf("the initial PR has more than 1 comment after a single pipelinerun. repo: %s, pr number: %d, comments content: %v", helloWorldComponentGitSourceURL, prNumber, comments))
@@ -408,7 +408,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Expect(err).ShouldNot(HaveOccurred())
 
 					return comments
-				}, timeout, interval).ShouldNot(HaveLen(0), fmt.Sprintf("timed out when waiting for the PaC PR comment about the pipelinerun status to appear in the component repo %s in PR #%d", helloWorldComponentGitSourceRepoName, prNumber))
+				}, timeout, interval).ShouldNot(BeEmpty(), fmt.Sprintf("timed out when waiting for the PaC PR comment about the pipelinerun status to appear in the component repo %s in PR #%d", helloWorldComponentGitSourceRepoName, prNumber))
 
 				// TODO uncomment once https://issues.redhat.com/browse/SRVKP-2471 is sorted
 				//Expect(comments).To(HaveLen(1), fmt.Sprintf("the updated PaC PR has more than 1 comment after a single branch update. repo: %s, pr number: %d, comments content: %v", helloWorldComponentGitSourceURL, prNumber, comments))
@@ -549,14 +549,14 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
-				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
+				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 			}
 		})
 
 		It("should not trigger a PipelineRun", func() {
 			Consistently(func() bool {
 				_, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-				Expect(err).NotTo(BeNil())
+				Expect(err).To(HaveOccurred())
 				return strings.Contains(err.Error(), "no pipelinerun found")
 			}, timeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("expected no PipelineRun to be triggered for the component %s in %s namespace", componentName, testNamespace))
 		})
@@ -595,7 +595,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
-				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
+				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 			}
 		})
 
@@ -603,7 +603,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			// using cdq since git ref is not known
 			cdq, err := f.AsKubeAdmin.HasController.CreateComponentDetectionQuery(componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", "", false)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+			Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
 
 			for _, compDetected := range cdq.Status.ComponentDetected {
 				// Since we only know the component name after cdq creation,
@@ -664,7 +664,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			// using cdq since git ref is not known
 			cdq, err := f.AsKubeAdmin.HasController.CreateComponentDetectionQuery(notMatchingComponentName, testNamespace, helloWorldComponentGitSourceURL, "", "", "", false)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+			Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
 
 			for _, compDetected := range cdq.Status.ComponentDetected {
 				c, err := f.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, true, map[string]string{})
@@ -754,7 +754,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			// using cdq since git ref is not known
 			cdq, err := f.AsKubeAdmin.HasController.CreateComponentDetectionQuery(componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", "", false)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+			Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
 
 			for _, compDetected := range cdq.Status.ComponentDetected {
 				c, err := f.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, true, map[string]string{})
@@ -768,7 +768,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
-				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
+				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 			}
 		})
 
