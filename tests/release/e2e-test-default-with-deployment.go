@@ -80,7 +80,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		var componentDetected appservice.ComponentDetectionDescription
 		cdq, err := fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(compName, devNamespace, gitSourceComponentUrl, "", "", "", false)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+		Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
 
 		for _, compDetected := range cdq.Status.ComponentDetected {
 			compName = compDetected.ComponentStub.ComponentName
@@ -169,7 +169,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		}
 		if !CurrentSpecReport().Failed() {
 			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
+			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 		}
 	})
 
