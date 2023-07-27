@@ -71,6 +71,9 @@ func DoesRobotAccountExistInQuay(robotAccountName string) (bool, error) {
 }
 
 func DeleteImageRepo(imageName string) (bool, error) {
+	if imageName == "" {
+		return false, nil
+	}
 	_, err := quayClient.DeleteRepository(quayOrg, imageName)
 	if err != nil {
 		return false, err
