@@ -19,7 +19,9 @@ import (
  * Description: SVPI-541 - Basic remote secret functionalities
  */
 
-var _ = framework.SPISuiteDescribe(Label("spi-suite", "remote-secret"), func() {
+// pending because https://github.com/redhat-appstudio/remote-secret/pull/57 will break the tests
+// we will need to update the current test after merging the PR
+var _ = framework.SPISuiteDescribe(Label("spi-suite", "remote-secret"), Pending, func() {
 
 	defer GinkgoRecover()
 
