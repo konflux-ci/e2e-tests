@@ -23,7 +23,6 @@ import (
 	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -40,8 +39,8 @@ func (h *HasController) GetComponent(name string, namespace string) (*appservice
 // GetComponentByApplicationName returns a component from kubernetes cluster given a application name.
 func (h *HasController) GetComponentByApplicationName(applicationName string, namespace string) (*appservice.Component, error) {
 	components := &appservice.ComponentList{}
-	opts := []client.ListOption{
-		client.InNamespace(namespace),
+	opts := []rclient.ListOption{
+		rclient.InNamespace(namespace),
 	}
 	err := h.KubeRest().List(context.TODO(), components, opts...)
 	if err != nil {
