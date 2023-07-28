@@ -16,8 +16,9 @@ go mod vendor
 export MY_GITHUB_ORG QUAY_E2E_ORGANIZATION INFRA_DEPLOYMENTS_ORG INFRA_DEPLOYMENTS_BRANCH TEKTON_PERF_ENABLE_PROFILING TEKTON_PERF_PROFILE_CPU_PERIOD
 MY_GITHUB_ORG=$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/github-org)
 QUAY_E2E_ORGANIZATION=$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/quay-org)
-INFRA_DEPLOYMENTS_ORG=${INFRA_DEPLOYMENTS_ORG:-redhat-appstudio}
-INFRA_DEPLOYMENTS_BRANCH=${INFRA_DEPLOYMENTS_BRANCH:-main}
+INFRA_DEPLOYMENTS_ORG=gabemontero
+INFRA_DEPLOYMENTS_BRANCH=goto-1.10-by-img-ref
+TWEAK_INFRA_DEPLOYMENTS=true
 
 ## Tweak infra-deployments
 if [ "${TWEAK_INFRA_DEPLOYMENTS:-false}" == "true" ]; then
