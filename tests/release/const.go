@@ -24,7 +24,6 @@ const (
 	releasePipelineNameDefault           string = "release"
 	applicationNameDefault               string = "appstudio"
 	componentName                        string = "dc-metro-map"
-	buildPipelineBundleDefault           string = "quay.io/redhat-appstudio/hacbs-templates-bundle:latest"
 	buildPipelineBundleDefaultName       string = "build-pipelines-defaults"
 	releaseStrategyPolicyDefault         string = "mvp-policy"
 	releaseStrategyServiceAccountDefault string = "release-service-account"
@@ -39,7 +38,6 @@ const (
 	gitSourceComponentUrl                string = "https://github.com/scoheb/dc-metro-map"
 	sourceKeyName                        string = "release-e2e+release_e2e"
 	destinationKeyName                   string = "redhat-appstudio-qe+redhat_appstudio_quality"
-	containerImageUrl                    string = "quay.io/redhat-appstudio-qe/dcmetromap:latest"
 	roleName                             string = "role-release-service-account"
 	releasedImagePushRepo                string = "quay.io/redhat-appstudio-qe/dcmetromap"
 	additionalReleasedImagePushRepo      string = "quay.io/redhat-appstudio-qe/simplepython"
@@ -70,7 +68,7 @@ const (
 var paramsReleaseStrategyM6 = []appstudiov1alpha1.Params{
 	{Name: "extraConfigGitUrl", Value: "https://github.com/hacbs-release/strategy-configs"},
 	{Name: "extraConfigPath", Value: "mvp.yaml"},
-	{Name: "extraConfigGitRevision", Value: "main"},
+	{Name: "extraConfigGitRevision", Value: "9d31b4408cf1b9a57804cccb9deb9f7d47a306eb"},
 }
 
 var managednamespaceSecret = []corev1.ObjectReference{
