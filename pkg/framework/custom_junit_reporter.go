@@ -82,7 +82,7 @@ func GenerateCustomJUnitReportWithConfig(report types.Report, dst string, config
 			continue
 		}
 		test := JUnitTestCase{
-			Name:      shortenStringAddHash(spec),
+			Name:      ShortenStringAddHash(spec),
 			Classname: getClassnameFromReport(spec),
 			Status:    spec.State.String(),
 			Time:      spec.RunTime.Seconds(),
@@ -181,7 +181,7 @@ func GenerateRPPreprocReport(report types.Report, rpPreprocParentDir string) {
 		//generate folders only for failed tests
 		if !reportSpec.Failure.IsZero() {
 			if reportSpec.LeafNodeType == types.NodeTypeIt {
-				name := shortenStringAddHash(reportSpec)
+				name := ShortenStringAddHash(reportSpec)
 				filePath := rpPreprocDir + "/attachments/xunit/" + name
 				if err3 := os.MkdirAll(filePath, os.ModePerm); err3 != nil {
 					klog.Error(err3)
@@ -284,7 +284,7 @@ func getClassnameFromReport(report types.SpecReport) string {
 }
 
 // This function is used to shorten classname and add hash to prevent issues with filesystems(255 chars for folder name) and to avoid conflicts(same shortened name of a classname)
-func shortenStringAddHash(report types.SpecReport) string {
+func ShortenStringAddHash(report types.SpecReport) string {
 	className := getClassnameFromReport(report)
 	s := report.FullText()
 	replacedClass := strings.Replace(s, className, "", 1)
