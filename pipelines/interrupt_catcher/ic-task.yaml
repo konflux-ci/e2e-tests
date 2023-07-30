@@ -71,7 +71,11 @@ spec:
                     # Normal flow - check whether next one was in IC group as well and shift by one.
                     # Fail othewise
                     if [[ " ${currentICs[*]} " =~ " $(echo ${allPeople[$(($i+1))]} | jq -r .id) " ]]; then
-                        updateICAndSendMessage $(($i+2)) $(($i+1))
+                        if [[ -z ${allPeople[$(($i+2)) ]} ]]; then
+                            updateICAndSendMessage 0 $(($i+1))
+                        else 
+                            updateICAndSendMessage $(($i+2)) $(($i+1))
+                        fi
                         exit 0
                     else 
                         text=":warning: :interrupt-catcher: IC rotation pipeline failed (People in IC group are not next to each other according to roration list). Please check latest run."
