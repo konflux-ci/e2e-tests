@@ -24,7 +24,7 @@ var _ = framework.ClusterRegistrationSuiteDescribe("Cluster Registration E2E tes
 
 	g.AfterAll(func() {
 		if !g.CurrentSpecReport().Failed() {
-			Expect(fwk.SandboxController.DeleteUserSignup(fwk.UserName)).NotTo(BeFalse())
+			Expect(fwk.SandboxController.DeleteUserSignup(fwk.UserName)).To(BeTrue())
 		}
 	})
 

@@ -59,7 +59,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 		verifyECTaskBundle = cm.Data["verify_ec_task_bundle"]
 		Expect(verifyECTaskBundle).ToNot(BeEmpty())
 		GinkgoWriter.Printf("Using verify EC task bundle: %s\n", verifyECTaskBundle)
-		imageWithDigest = "quay.io/redhat-appstudio/ec-golden-image:latest"
+		imageWithDigest = "quay.io/redhat-appstudio/ec-golden-image@sha256:4b318620a32349fd37827163c67b5ff6e503f05b3ca4dde066ee03bb34be9ae1"
 	})
 	Context("ec-cli command verification", func() {
 		BeforeEach(func() {

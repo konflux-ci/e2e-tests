@@ -30,8 +30,8 @@ type KeycloakAuth struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
-//Make Request
-func (k *SandboxController) MakeRequestKeyCloak(req *http.Request, userName string) (keycloakAuth *KeycloakAuth, err error){
+// Make Request
+func (k *SandboxController) MakeRequestKeyCloak(req *http.Request, userName string) (keycloakAuth *KeycloakAuth, err error) {
 
 	resp, err := k.HttpClient.Do(req)
 	if err != nil || resp.StatusCode != 200 {
@@ -50,9 +50,8 @@ func (k *SandboxController) MakeRequestKeyCloak(req *http.Request, userName stri
 	return keycloakAuth, err
 }
 
-//Get Stage KeyCloak Token
+// Get Stage KeyCloak Token
 func (k *SandboxController) GetKeycloakTokenStage(userName, tokenURL, refreshToken string) (keycloakAuth *KeycloakAuth, err error) {
-
 
 	// Prepare the form data
 	formData := url.Values{}
