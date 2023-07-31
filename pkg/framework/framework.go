@@ -31,7 +31,7 @@ type ControllerHub struct {
 	ReleaseController         *release.ReleaseController
 	IntegrationController     *integration.SuiteController
 	JvmbuildserviceController *jvmbuildservice.SuiteController
-	O11yController            *o11y.SuiteController
+	O11yController            *o11y.O11yController
 }
 
 type Framework struct {
