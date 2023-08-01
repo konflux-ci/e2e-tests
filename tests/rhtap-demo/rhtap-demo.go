@@ -60,6 +60,7 @@ const (
 	snapshotTimeout             = time.Minute * 4
 	releaseTimeout              = time.Minute * 4
 	testPipelineTimeout         = time.Minute * 15
+	branchCreateTimeout         = time.Minute * 1
 
 	// Intervals
 	defaultPollingInterval    = time.Second * 2
