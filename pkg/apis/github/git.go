@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
+
+	. "github.com/onsi/gomega"
 
 	"github.com/google/go-github/v44/github"
 )
@@ -36,6 +39,12 @@ func (g *Github) CreateRef(repository, baseBranchName, sha, newBranchName string
 	if err != nil {
 		return fmt.Errorf("error when creating a new branch '%s' for the repo '%s': %+v", newBranchName, repository, err)
 	}
+	Eventually(func(gomega Gomega) {
+		exist, err := g.ExistsRef(repository, newBranchName)
+		gomega.Expect((err)).NotTo(HaveOccurred())
+		gomega.Expect(exist).To(Equal(true))
+
+	}, 2*time.Minute, 2*time.Second).Should(Succeed()) //Wait for the branch to actually exist
 	return nil
 }
 
