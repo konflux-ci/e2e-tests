@@ -131,7 +131,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		compName = componentName
 		cdq, err := fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(compName, devNamespace, gitSourceComponentUrl, "", "", "", false)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+		Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
 
 		for _, compDetected := range cdq.Status.ComponentDetected {
 			compName = compDetected.ComponentStub.ComponentName
@@ -142,7 +142,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		additionalCompName = additionalComponentName
 		cdq, err = fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(additionalCompName, devNamespace, additionalGitSourceComponentUrl, "", "", "", false)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+		Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
 
 		for _, compDetected := range cdq.Status.ComponentDetected {
 			additionalCompName = compDetected.ComponentStub.ComponentName
@@ -158,8 +158,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		Expect(err).ShouldNot(HaveOccurred())
 
 		scPath := "release-push-to-pyxis.yaml"
-		Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef("strategy-configs", "main", scGitRevision)).To(Succeed())
-		_, err = fw.AsKubeAdmin.CommonController.Github.CreateFile("strategy-configs", scPath, string(scYaml), scGitRevision)
+		Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef(constants.StrategyConfigsRepo, constants.StrategyConfigsDefaultBranch, constants.StrategyConfigsRevision, scGitRevision)).To(Succeed())
+		_, err = fw.AsKubeAdmin.CommonController.Github.CreateFile(constants.StrategyConfigsRepo, scPath, string(scYaml), scGitRevision)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-push-to-external-registry-strategy", managedNamespace, "push-to-external-registry", "quay.io/hacbs-release/pipeline-push-to-external-registry:0.12", releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, []releaseApi.Params{
@@ -196,13 +196,13 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 	})
 
 	AfterAll(func() {
-		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef("strategy-configs", scGitRevision)
+		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(constants.StrategyConfigsRepo, scGitRevision)
 		if err != nil {
 			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 		}
 		if !CurrentSpecReport().Failed() {
 			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
+			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 		}
 	})
 
@@ -316,10 +316,10 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 				trReleaseImageIDs := re.FindAllString(trReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)
 				trAdditionalReleaseIDs := re.FindAllString(trAdditionalReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)
 
-				Expect(trReleaseImageIDs).To(Not(HaveLen(0)), fmt.Sprintf("Invalid ImageID in results of task create-pyxis-image. taskrun results: %+v", trReleasePr.Status.TaskRunResults[0]))
-				Expect(trAdditionalReleaseIDs).To(Not(HaveLen(0)), fmt.Sprintf("Invalid ImageID in results of task create-pyxis-image. taskrun results: %+v", trAdditionalReleasePr.Status.TaskRunResults[0]))
+				Expect(trReleaseImageIDs).ToNot(BeEmpty(), fmt.Sprintf("Invalid ImageID in results of task create-pyxis-image. taskrun results: %+v", trReleasePr.Status.TaskRunResults[0]))
+				Expect(trAdditionalReleaseIDs).ToNot(BeEmpty(), fmt.Sprintf("Invalid ImageID in results of task create-pyxis-image. taskrun results: %+v", trAdditionalReleasePr.Status.TaskRunResults[0]))
 
-				Expect(len(trReleaseImageIDs)).To(Not(Equal(len(trAdditionalReleaseIDs))), "the number of image IDs should not be the same in both taskrun results. (%+v vs. %+v)", trReleasePr.Status.TaskRunResults[0], trAdditionalReleasePr.Status.TaskRunResults[0])
+				Expect(trReleaseImageIDs).ToNot(HaveLen(len(trAdditionalReleaseIDs)), "the number of image IDs should not be the same in both taskrun results. (%+v vs. %+v)", trReleasePr.Status.TaskRunResults[0], trAdditionalReleasePr.Status.TaskRunResults[0])
 
 				if len(trReleaseImageIDs) > len(trAdditionalReleaseIDs) {
 					imageIDs = trReleaseImageIDs

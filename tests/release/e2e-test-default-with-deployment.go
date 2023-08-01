@@ -80,7 +80,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		var componentDetected appservice.ComponentDetectionDescription
 		cdq, err := fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(compName, devNamespace, gitSourceComponentUrl, "", "", "", false)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+		Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
 
 		for _, compDetected := range cdq.Status.ComponentDetected {
 			compName = compDetected.ComponentStub.ComponentName
@@ -96,8 +96,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		Expect(err).ShouldNot(HaveOccurred())
 
 		scPath := "release-default-with-deployment.yaml"
-		Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef("strategy-configs", "main", scGitRevision)).To(Succeed())
-		_, err = fw.AsKubeAdmin.CommonController.Github.CreateFile("strategy-configs", scPath, string(scYaml), scGitRevision)
+		Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef(constants.StrategyConfigsRepo, constants.StrategyConfigsDefaultBranch, constants.StrategyConfigsRevision, scGitRevision)).To(Succeed())
+		_, err = fw.AsKubeAdmin.CommonController.Github.CreateFile(constants.StrategyConfigsRepo, scPath, string(scYaml), scGitRevision)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-deploy-strategy", managedNamespace, "deploy-release", "quay.io/hacbs-release/pipeline-deploy-release:0.4", releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, []releaseApi.Params{
@@ -163,13 +163,13 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 	})
 
 	AfterAll(func() {
-		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef("strategy-configs", scGitRevision)
+		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(constants.StrategyConfigsRepo, scGitRevision)
 		if err != nil {
 			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 		}
 		if !CurrentSpecReport().Failed() {
 			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
+			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 		}
 	})
 

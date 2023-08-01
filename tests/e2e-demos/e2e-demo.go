@@ -89,7 +89,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 						Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 						Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)).To(Succeed())
 						Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllGitOpsDeploymentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-						Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
+						Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 					}
 				})
 
@@ -146,7 +146,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					It(fmt.Sprintf("creates componentdetectionquery for component %s", componentTest.Name), func() {
 						cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, componentTest.GitSourceRevision, componentTest.GitSourceContext, secret, false)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+						Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
 					})
 
 					// Components for now can be imported from gitUrl, container image or a devfile
