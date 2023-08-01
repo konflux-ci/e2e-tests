@@ -70,6 +70,10 @@ func (h *HasController) GetComponentPipelineRun(componentName string, applicatio
 		return nil, fmt.Errorf("error listing pipelineruns in %s namespace: %v", namespace, err)
 	}
 
+	if len(list.Items) > 1 {
+		return nil, fmt.Errorf("multiple pipelineruns found for component %s", componentName)
+	}
+
 	if len(list.Items) > 0 {
 		return &list.Items[0], nil
 	}
