@@ -30,6 +30,8 @@ const (
 	gitURL                 = "https://github.com/redhat-appstudio/integration-examples.git"
 	revision               = "843f455fe87a6d7f68c238f95a8f3eb304e65ac5"
 	pathInRepo             = "pipelines/integration_resolver_pipeline_pass.yaml"
+	autoReleasePlan        = "auto-releaseplan"
+	targetReleaseNamespace = "default"
 )
 
 var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests", Label("integration-service", "HACBS"), func() {
@@ -209,7 +211,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("creates a ReleasePlan and an environment", func() {
-				_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlan(applicationName, testNamespace)
+				_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlan(autoReleasePlan, testNamespace, applicationName, targetReleaseNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
 				env, err = f.AsKubeAdmin.GitOpsController.CreatePocEnvironment(EnvironmentName, testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -222,7 +224,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			It("creates an snapshot of push event", func() {
 				sampleImage := "quay.io/redhat-appstudio/sample-image@sha256:841328df1b9f8c4087adbdcfec6cc99ac8308805dea83f6d415d6fb8d40227c1"
-				snapshot_push, err = f.AsKubeAdmin.IntegrationController.CreateSnapshotWithImage(applicationName, testNamespace, componentName, sampleImage)
+				snapshot_push, err = f.AsKubeAdmin.IntegrationController.CreateSnapshotWithImage(componentName, applicationName, testNamespace, sampleImage)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -384,14 +386,14 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			It("creates a snapshot of push event", func() {
 				sampleImage := "quay.io/redhat-appstudio/sample-image@sha256:841328df1b9f8c4087adbdcfec6cc99ac8308805dea83f6d415d6fb8d40227c1"
-				snapshot_push, err = f.AsKubeAdmin.IntegrationController.CreateSnapshotWithImage(applicationName, testNamespace, componentName, sampleImage)
+				snapshot_push, err = f.AsKubeAdmin.IntegrationController.CreateSnapshotWithImage(componentName, applicationName, testNamespace, sampleImage)
 				Expect(err).ShouldNot(HaveOccurred())
 				GinkgoWriter.Printf("snapshot %s is found\n", snapshot_push.Name)
 			})
 
 			When("nonexisting valid deploymentTargetClass", func() {
 				It("check no GitOpsCR is created for the dtc with nonexisting deploymentTargetClass", func() {
-					spaceRequestList, err := f.AsKubeAdmin.IntegrationController.GetSpaceRequests(testNamespace)
+					spaceRequestList, err := f.AsKubeAdmin.GitOpsController.GetSpaceRequests(testNamespace)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(spaceRequestList.Items).To(BeEmpty())
 

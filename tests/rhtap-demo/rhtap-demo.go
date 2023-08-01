@@ -137,7 +137,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 
 		Expect(kc.CreateOrUpdateSigningSecret(publicKey, "cosign-public-key", managedNamespace)).To(Succeed())
 
-		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlanWithLabel("source-releaseplan", userNamespace, appName, managedNamespace, "")
+		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlan("source-releaseplan", userNamespace, appName, managedNamespace, "")
 		Expect(err).NotTo(HaveOccurred())
 
 		components := []r.Component{{Name: componentName, Repository: constants.DefaultReleasedImagePushRepo}}

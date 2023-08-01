@@ -10,32 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// CreateReleasePlan creates a new ReleasePlan.
-func (r *ReleaseController) CreateReleasePlan(applicationName, namespace string) (*releaseApi.ReleasePlan, error) {
-	testReleasePlan := &releaseApi.ReleasePlan{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "test-releaseplan-",
-			Namespace:    namespace,
-			Labels: map[string]string{
-				releaseMetadata.AutoReleaseLabel: "true",
-				releaseMetadata.AttributionLabel: "true",
-			},
-		},
-		Spec: releaseApi.ReleasePlanSpec{
-			Application: applicationName,
-			Target:      "default",
-		},
-	}
-	err := r.KubeRest().Create(context.TODO(), testReleasePlan)
-	if err != nil {
-		return nil, err
-	}
-
-	return testReleasePlan, err
-}
-
 // CreateReleasePlan creates a new ReleasePlan using the given parameters.
-func (r *ReleaseController) CreateReleasePlanWithLabel(name, namespace, application, targetNamespace, autoReleaseLabel string) (*releaseApi.ReleasePlan, error) {
+func (r *ReleaseController) CreateReleasePlan(name, namespace, application, targetNamespace, autoReleaseLabel string) (*releaseApi.ReleasePlan, error) {
 	var releasePlan *releaseApi.ReleasePlan = &releaseApi.ReleasePlan{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: name,

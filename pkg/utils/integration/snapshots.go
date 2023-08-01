@@ -13,11 +13,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// CreateSnapshotWithImage creates a snapshot using an image.
-func (i *IntegrationController) CreateSnapshotWithImage(applicationName, namespace, componentName, containerImage string) (*appstudioApi.Snapshot, error) {
-	hasSnapshot := &appstudioApi.Snapshot{
+// CreateSnapshotWithComponents creates a Snapshot using the given parameters.
+func (i *IntegrationController) CreateSnapshotWithComponents(snapshotName, componentName, applicationName, namespace string, snapshotComponents []appstudioApi.SnapshotComponent) (*appstudioApi.Snapshot, error) {
+	snapshot := &appstudioApi.Snapshot{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "snapshot-sample-" + util.GenerateRandomString(4),
+			Name:      snapshotName,
 			Namespace: namespace,
 			Labels: map[string]string{
 				"test.appstudio.openshift.io/type":           "component",
@@ -27,34 +27,24 @@ func (i *IntegrationController) CreateSnapshotWithImage(applicationName, namespa
 		},
 		Spec: appstudioApi.SnapshotSpec{
 			Application: applicationName,
-			Components: []appstudioApi.SnapshotComponent{
-				{
-					Name:           componentName,
-					ContainerImage: containerImage,
-				},
-			},
-		},
-	}
-	err := i.KubeRest().Create(context.TODO(), hasSnapshot)
-	if err != nil {
-		return nil, err
-	}
-	return hasSnapshot, err
-}
-
-// CreateSnapshotWithComponents creates a Snapshot using the given parameters.
-func (i *IntegrationController) CreateSnapshotWithComponents(applicationName, namespace, snapshotName string, snapshotComponents []appstudioApi.SnapshotComponent) (*appstudioApi.Snapshot, error) {
-	snapshot := &appstudioApi.Snapshot{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      snapshotName,
-			Namespace: namespace,
-		},
-		Spec: appstudioApi.SnapshotSpec{
-			Application: applicationName,
 			Components:  snapshotComponents,
 		},
 	}
 	return snapshot, i.KubeRest().Create(context.TODO(), snapshot)
+}
+
+// CreateSnapshotWithImage creates a snapshot using an image.
+func (i *IntegrationController) CreateSnapshotWithImage(componentName, applicationName, namespace, containerImage string) (*appstudioApi.Snapshot, error) {
+	snapshotComponents := []appstudioApi.SnapshotComponent{
+		{
+			Name:           componentName,
+			ContainerImage: containerImage,
+		},
+	}
+
+	snapshotName := "snapshot-sample-" + util.GenerateRandomString(4)
+
+	return i.CreateSnapshotWithComponents(snapshotName, componentName, applicationName, namespace, snapshotComponents)
 }
 
 // GetSnapshotByComponent returns the first snapshot in namespace if exist, else will return nil

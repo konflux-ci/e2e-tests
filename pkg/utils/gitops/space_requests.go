@@ -1,4 +1,4 @@
-package integration
+package gitops
 
 import (
 	"context"
@@ -10,14 +10,14 @@ import (
 )
 
 // GetSpaceRequests returns a list of spaceRequests in given namespace.
-func (i *IntegrationController) GetSpaceRequests(namespace string) (*codereadytoolchainv1alpha1.SpaceRequestList, error) {
+func (g *GitopsController) GetSpaceRequests(namespace string) (*codereadytoolchainv1alpha1.SpaceRequestList, error) {
 	spaceRequestList := &codereadytoolchainv1alpha1.SpaceRequestList{}
 
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
 	}
 
-	err := i.KubeRest().List(context.Background(), spaceRequestList, opts...)
+	err := g.KubeRest().List(context.Background(), spaceRequestList, opts...)
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, fmt.Errorf("error occurred while trying to list spaceRequests in %s namespace: %v", namespace, err)
 	}
