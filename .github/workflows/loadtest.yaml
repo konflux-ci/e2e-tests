@@ -1,0 +1,40 @@
+name: CI Stage Load Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      users:
+        type: string
+        description: Number of Users
+      threads:
+        type: string
+        description: Number of threads
+
+jobs:
+  load_test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up jq
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq
+
+    - name: Prepare Load Test
+      working-directory: ./tests/load-tests
+      env:
+        STAGING_USERS_1: ${{ secrets.STAGING_USERS_1 }}
+        STAGING_USERS_2: ${{ secrets.STAGING_USERS_2 }}
+        STAGING_USERS_3: ${{ secrets.STAGING_USERS_3 }}
+        STAGING_USERS_4: ${{ secrets.STAGING_USERS_4 }}
+      run: ./ci-scripts/merge-json.sh $STAGING_USERS_1 $STAGING_USERS_2 $STAGING_USERS_3 $STAGING_USERS_4
+  
+    - name: Run Load Test
+      working-directory: ./tests/load-tests
+      env:
+        USERS_PER_THREAD: ${{ github.event.inputs.users }}
+        THREADS: ${{ github.event.inputs.threads }}
+      run: ./run-stage.sh
