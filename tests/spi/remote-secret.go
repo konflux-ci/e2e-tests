@@ -19,7 +19,9 @@ import (
  * Description: SVPI-541 - Basic remote secret functionalities
  */
 
-var _ = framework.SPISuiteDescribe(Label("spi-suite", "remote-secret"), func() {
+// pending because https://github.com/redhat-appstudio/remote-secret/pull/57 will break the tests
+// we will need to update the current test after merging the PR
+var _ = framework.SPISuiteDescribe(Label("spi-suite", "remote-secret"), Pending, func() {
 
 	defer GinkgoRecover()
 
@@ -61,11 +63,12 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "remote-secret"), func() {
 			remoteSecret, err = fw.AsKubeDeveloper.SPIController.CreateRemoteSecret(remoteSecretName, namespace, []string{targetNamespace1, targetNamespace2})
 			Expect(err).NotTo(HaveOccurred())
 
-			remoteSecret, err = fw.AsKubeDeveloper.SPIController.GetRemoteSecret(remoteSecret.Name, namespace)
-			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() bool {
+				remoteSecret, err = fw.AsKubeDeveloper.SPIController.GetRemoteSecret(remoteSecretName, namespace)
+				Expect(err).NotTo(HaveOccurred())
 
-			dataNotObtained := meta.IsStatusConditionFalse(remoteSecret.Status.Conditions, "DataObtained")
-			Expect(dataNotObtained).To(BeTrue())
+				return meta.IsStatusConditionFalse(remoteSecret.Status.Conditions, "DataObtained")
+			}, 5*time.Minute, 5*time.Second).Should(BeTrue(), fmt.Sprintf("RemoteSecret %s/%s is not waiting for data", namespace, remoteSecretName))
 		})
 
 		It("creates upload secret", func() {
@@ -104,7 +107,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "remote-secret"), func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			targets := remoteSecret.Status.Targets
-			Expect(len(targets)).To(BeNumerically("==", 2))
+			Expect(targets).To(HaveLen(2))
 
 			// get targetSecretName1
 			targetSecretName1 = fw.AsKubeDeveloper.SPIController.GetTargetSecretName(targets, targetNamespace1)

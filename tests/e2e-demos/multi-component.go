@@ -133,7 +133,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 						Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 						Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)).To(Succeed())
 						Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllGitOpsDeploymentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-						Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
+						Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 					}
 				})
 
@@ -186,11 +186,10 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 					It("check if components have supported languages by AppStudio", func() {
 						if suite.Name == MultiComponentWithUnsupportedRuntime {
 							// Validate that the completed CDQ only has detected 1 component and not also the unsupported component
-							Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "cdq also detect unsupported component")
+							Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "cdq also detect unsupported component")
 						}
 						for _, component := range cdq.Status.ComponentDetected {
-							Expect(utils.Contains(runtimeSupported, component.ProjectType), "unsupported runtime used for multi component tests")
-
+							Expect(runtimeSupported).To(ContainElement(component.ProjectType), "unsupported runtime used for multi component tests")
 						}
 					})
 
@@ -205,7 +204,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo", "multi-component"), func() 
 							c, err := fw.AsKubeDeveloper.HasController.CreateComponent(component.ComponentStub, namespace, "", SPIGithubSecretName, application.Name, true, map[string]string{})
 							Expect(err).NotTo(HaveOccurred())
 							Expect(c.Name).To(Equal(component.ComponentStub.ComponentName))
-							Expect(utils.Contains(runtimeSupported, component.ProjectType), "unsupported runtime used for multi component tests")
+							Expect(runtimeSupported).To(ContainElement(component.ProjectType), "unsupported runtime used for multi component tests")
 
 							componentList = append(componentList, c)
 						}

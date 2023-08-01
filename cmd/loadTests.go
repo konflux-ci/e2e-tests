@@ -19,6 +19,9 @@ import (
 	loadtestUtils "github.com/redhat-appstudio/e2e-tests/pkg/utils/loadtests"
 	"github.com/spf13/cobra"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
 	k8swait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
@@ -30,6 +33,7 @@ var (
 	usernamePrefix            string = "testuser"
 	numberOfUsers             int
 	waitPipelines             bool
+	waitDeployments           bool
 	verbose                   bool
 	logConsole                bool
 	failFast                  bool
@@ -43,16 +47,21 @@ var (
 	UserCreationTimeMaxPerThread         []time.Duration
 	ResourceCreationTimeMaxPerThread     []time.Duration
 	PipelineRunSucceededTimeMaxPerThread []time.Duration
+	DeploymentSucceededTimeMaxPerThread  []time.Duration
 	UserCreationTimeSumPerThread         []time.Duration
 	ResourceCreationTimeSumPerThread     []time.Duration
 	PipelineRunSucceededTimeSumPerThread []time.Duration
 	PipelineRunFailedTimeSumPerThread    []time.Duration
+	DeploymentSucceededTimeSumPerThread  []time.Duration
+	DeploymentFailedTimeSumPerThread     []time.Duration
 	SuccessfulUserCreationsPerThread     []int64
 	SuccessfulResourceCreationsPerThread []int64
 	SuccessfulPipelineRunsPerThread      []int64
+	SuccessfulDeploymentsPerThread       []int64
 	FailedUserCreationsPerThread         []int64
 	FailedResourceCreationsPerThread     []int64
 	FailedPipelineRunsPerThread          []int64
+	FailedDeploymentsPerThread           []int64
 	frameworkMap                         *sync.Map
 	userComponentMap                     *sync.Map
 	errorCountMap                        map[int]ErrorCount
@@ -60,6 +69,7 @@ var (
 	usersBarMutex                        = &sync.Mutex{}
 	resourcesBarMutex                    = &sync.Mutex{}
 	pipelinesBarMutex                    = &sync.Mutex{}
+	deploymentsBarMutex                  = &sync.Mutex{}
 	threadsWG                            *sync.WaitGroup
 	logData                              LogData
 	stageUsers                           []loadtestUtils.User
@@ -96,12 +106,17 @@ type LogData struct {
 	AverageTimeToRunPipelineSucceeded float64           `json:"runPipelineSucceededTimeAvg"`
 	MaxTimeToRunPipelineSucceeded     float64           `json:"runPipelineSucceededTimeMax"`
 	AverageTimeToRunPipelineFailed    float64           `json:"runPipelineFailedTimeAvg"`
+	AverageTimeToDeploymentSucceeded  float64           `json:"deploymentSucceededTimeAvg"`
+	MaxTimeToDeploymentSucceeded      float64           `json:"deploymentSucceededTimeMax"`
+	AverageTimeToDeploymentFailed     float64           `json:"deploymentFailedTimeAvg"`
 	UserCreationFailureCount          int64             `json:"createUserFailures"`
 	UserCreationFailureRate           float64           `json:"createUserFailureRate"`
 	ResourceCreationFailureCount      int64             `json:"createResourcesFailures"`
 	ResourceCreationFailureRate       float64           `json:"createResourcesFailureRate"`
 	PipelineRunFailureCount           int64             `json:"runPipelineFailures"`
 	PipelineRunFailureRate            float64           `json:"runPipelineFailureRate"`
+	DeploymentFailureCount            int64             `json:"deploymentFailures"`
+	DeploymentFailureRate             float64           `json:"deploymentFailureRate"`
 	ErrorCounts                       []ErrorCount      `json:"errorCounts"`
 	Errors                            []ErrorOccurrence `json:"errors"`
 	ErrorsTotal                       int               `json:"errorsTotal"`
@@ -146,6 +161,7 @@ func init() {
 	rootCmd.Flags().BoolVarP(&stage, "stage", "s", false, "is you want to run the test on stage")
 	rootCmd.Flags().IntVarP(&numberOfUsers, "users", "u", 5, "the number of user accounts to provision per thread")
 	rootCmd.Flags().BoolVarP(&waitPipelines, "waitpipelines", "w", false, "if you want to wait for pipelines to finish")
+	rootCmd.Flags().BoolVarP(&waitDeployments, "waitdeployments", "d", false, "if you want to wait for deployments to finish")
 	rootCmd.Flags().BoolVarP(&logConsole, "log-to-console", "l", false, "if you want to log to console in addition to the log file")
 	rootCmd.Flags().BoolVar(&failFast, "fail-fast", false, "if you want the test to fail fast at first failure")
 	rootCmd.Flags().BoolVar(&disableMetrics, "disable-metrics", false, "if you want to disable metrics gathering")
@@ -192,6 +208,9 @@ func setup(cmd *cobra.Command, args []string) {
 	cmd.SilenceUsage = true
 
 	JobName = loadtestUtils.GetJobName()
+
+	// waitDeployments sets waitPipelines=true implicitly
+	waitPipelines = waitPipelines || waitDeployments
 
 	logFile, err := os.Create("load-tests.log")
 	if err != nil {
@@ -275,19 +294,32 @@ func setup(cmd *cobra.Command, args []string) {
 		return strutil.PadLeft(fmt.Sprintf("Waiting for pipelines to finish (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedPipelineRunsPerThread)), barLength, ' ')
 	})
 
+	DeploymentsBar := uip.AddBar(overallCount).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
+		return strutil.PadLeft(fmt.Sprintf("Waiting for deployments to finish (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedDeploymentsPerThread)), barLength, ' ')
+	})
+
 	UserCreationTimeMaxPerThread = make([]time.Duration, threadCount)
 	ResourceCreationTimeMaxPerThread = make([]time.Duration, threadCount)
 	PipelineRunSucceededTimeMaxPerThread = make([]time.Duration, threadCount)
+	DeploymentSucceededTimeMaxPerThread = make([]time.Duration, threadCount)
+
 	UserCreationTimeSumPerThread = make([]time.Duration, threadCount)
 	ResourceCreationTimeSumPerThread = make([]time.Duration, threadCount)
 	PipelineRunSucceededTimeSumPerThread = make([]time.Duration, threadCount)
 	PipelineRunFailedTimeSumPerThread = make([]time.Duration, threadCount)
+	DeploymentSucceededTimeSumPerThread = make([]time.Duration, threadCount)
+	DeploymentFailedTimeSumPerThread = make([]time.Duration, threadCount)
+
 	SuccessfulUserCreationsPerThread = make([]int64, threadCount)
 	SuccessfulResourceCreationsPerThread = make([]int64, threadCount)
 	SuccessfulPipelineRunsPerThread = make([]int64, threadCount)
+	SuccessfulDeploymentsPerThread = make([]int64, threadCount)
+
 	FailedUserCreationsPerThread = make([]int64, threadCount)
 	FailedResourceCreationsPerThread = make([]int64, threadCount)
 	FailedPipelineRunsPerThread = make([]int64, threadCount)
+	FailedDeploymentsPerThread = make([]int64, threadCount)
+
 	frameworkMap = &sync.Map{}
 	userComponentMap = &sync.Map{}
 	errorCountMap = make(map[int]ErrorCount)
@@ -297,7 +329,7 @@ func setup(cmd *cobra.Command, args []string) {
 	threadsWG = &sync.WaitGroup{}
 	threadsWG.Add(threadCount)
 	for thread := 0; thread < threadCount; thread++ {
-		go userJourneyThread(frameworkMap, threadsWG, thread, AppStudioUsersBar, ResourcesBar, PipelinesBar)
+		go userJourneyThread(frameworkMap, threadsWG, thread, AppStudioUsersBar, ResourcesBar, PipelinesBar, DeploymentsBar)
 	}
 
 	// Todo add cleanup functions that will delete user signups
@@ -306,7 +338,6 @@ func setup(cmd *cobra.Command, args []string) {
 	uip.Stop()
 
 	logData.EndTimestamp = time.Now().Format("2006-01-02T15:04:05Z07:00")
-
 	logData.LoadTestCompletionStatus = "Completed"
 
 	userCreationFailureCount := sumFromArray(FailedUserCreationsPerThread)
@@ -318,7 +349,6 @@ func setup(cmd *cobra.Command, args []string) {
 		averageTimeToSpinUpUsers = sumDurationFromArray(UserCreationTimeSumPerThread).Seconds() / float64(userCreationSuccessCount)
 	}
 	logData.AverageTimeToSpinUpUsers = averageTimeToSpinUpUsers
-
 	logData.MaxTimeToSpinUpUsers = maxDurationFromArray(UserCreationTimeMaxPerThread).Seconds()
 
 	resourceCreationFailureCount := sumFromArray(FailedResourceCreationsPerThread)
@@ -330,11 +360,13 @@ func setup(cmd *cobra.Command, args []string) {
 		averageTimeToCreateResources = sumDurationFromArray(ResourceCreationTimeSumPerThread).Seconds() / float64(resourceCreationSuccessCount)
 	}
 	logData.AverageTimeToCreateResources = averageTimeToCreateResources
-
 	logData.MaxTimeToCreateResources = maxDurationFromArray(ResourceCreationTimeMaxPerThread).Seconds()
 
 	pipelineRunFailureCount := sumFromArray(FailedPipelineRunsPerThread)
 	logData.PipelineRunFailureCount = pipelineRunFailureCount
+
+	deploymentFailureCount := sumFromArray(FailedDeploymentsPerThread)
+	logData.DeploymentFailureCount = deploymentFailureCount
 
 	averageTimeToRunPipelineSucceeded := float64(0)
 	pipelineRunSuccessCount := sumFromArray(SuccessfulPipelineRunsPerThread)
@@ -342,7 +374,6 @@ func setup(cmd *cobra.Command, args []string) {
 		averageTimeToRunPipelineSucceeded = sumDurationFromArray(PipelineRunSucceededTimeSumPerThread).Seconds() / float64(pipelineRunSuccessCount)
 	}
 	logData.AverageTimeToRunPipelineSucceeded = averageTimeToRunPipelineSucceeded
-
 	logData.MaxTimeToRunPipelineSucceeded = maxDurationFromArray(PipelineRunSucceededTimeMaxPerThread).Seconds()
 
 	averageTimeToRunPipelineFailed := float64(0)
@@ -350,6 +381,20 @@ func setup(cmd *cobra.Command, args []string) {
 		averageTimeToRunPipelineFailed = sumDurationFromArray(PipelineRunFailedTimeSumPerThread).Seconds() / float64(pipelineRunFailureCount)
 	}
 	logData.AverageTimeToRunPipelineFailed = averageTimeToRunPipelineFailed
+
+	averageTimeToDeploymentSucceeded := float64(0)
+	deploymentSuccessCount := sumFromArray(SuccessfulDeploymentsPerThread)
+	if deploymentSuccessCount > 0 {
+		averageTimeToDeploymentSucceeded = sumDurationFromArray(DeploymentSucceededTimeSumPerThread).Seconds() / float64(deploymentSuccessCount)
+	}
+	logData.AverageTimeToDeploymentSucceeded = averageTimeToDeploymentSucceeded
+	logData.MaxTimeToDeploymentSucceeded = maxDurationFromArray(DeploymentSucceededTimeMaxPerThread).Seconds()
+
+	averageTimeToDeploymentFailed := float64(0)
+	if deploymentFailureCount > 0 {
+		averageTimeToDeploymentFailed = sumDurationFromArray(DeploymentFailedTimeSumPerThread).Seconds() / float64(deploymentFailureCount)
+	}
+	logData.AverageTimeToDeploymentFailed = averageTimeToDeploymentFailed
 
 	userCreationFailureRate := float64(userCreationFailureCount) / float64(overallCount)
 	logData.UserCreationFailureRate = userCreationFailureRate
@@ -359,6 +404,8 @@ func setup(cmd *cobra.Command, args []string) {
 
 	pipelineRunFailureRate := float64(pipelineRunFailureCount) / float64(overallCount)
 	logData.PipelineRunFailureRate = pipelineRunFailureRate
+  deploymentFailureRate := float64(deploymentFailureCount) / float64(overallCount)
+	logData.DeploymentFailureRate = deploymentFailureRate
 
 	if stage{
 		StageCleanup(selectedUsers)
@@ -373,9 +420,13 @@ func setup(cmd *cobra.Command, args []string) {
 	klog.Infof("Average Time to run Pipelines successfully: %.2f s", averageTimeToRunPipelineSucceeded)
 	klog.Infof("Maximal Time to run Pipelines successfully: %.2f s", logData.MaxTimeToRunPipelineSucceeded)
 	klog.Infof("Average Time to fail Pipelines: %.2f s", averageTimeToRunPipelineFailed)
+	klog.Infof("Average Time to deploy component successfully: %.2f s", averageTimeToDeploymentSucceeded)
+	klog.Infof("Maximal Time to deploy component successfully: %.2f s", logData.MaxTimeToDeploymentSucceeded)
+	klog.Infof("Average Time to fail Deployments: %.2f s", averageTimeToDeploymentFailed)
 	klog.Infof("Number of times user creation failed: %d (%.2f %%)", userCreationFailureCount, userCreationFailureRate*100)
 	klog.Infof("Number of times resource creation failed: %d (%.2f %%)", resourceCreationFailureCount, resourceCreationFailureRate*100)
 	klog.Infof("Number of times pipeline run failed: %d (%.2f %%)", pipelineRunFailureCount, pipelineRunFailureRate*100)
+	klog.Infof("Number of times deployment failed: %d (%.2f %%)", deploymentFailureCount, deploymentFailureRate*100)
 	klog.Infoln("Error summary:")
 	for _, errorCount := range errorCountMap {
 		klog.Infof("Number of error #%d occured: %d", errorCount.ErrorCode, errorCount.Count)
@@ -497,16 +548,21 @@ func tryNewFramework(username string, user loadtestUtils.User, timeout time.Dura
 	return ret, err
 }
 
-func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, threadIndex int, usersBar *uiprogress.Bar, resourcesBar *uiprogress.Bar, pipelinesBar *uiprogress.Bar) {
+func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, threadIndex int, usersBar *uiprogress.Bar, resourcesBar *uiprogress.Bar, pipelinesBar *uiprogress.Bar, deploymentsBar *uiprogress.Bar) {
 	chUsers := make(chan string, numberOfUsers)
 	chPipelines := make(chan string, numberOfUsers)
+	chDeployments := make(chan string, numberOfUsers)
 
 	defer threadWaitGroup.Done()
 
 	var wg *sync.WaitGroup = &sync.WaitGroup{}
 
 	if waitPipelines {
-		wg.Add(3)
+		if waitDeployments {
+			wg.Add(4)
+		} else {
+			wg.Add(3)
+		}
 	} else {
 		wg.Add(2)
 	}
@@ -700,6 +756,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 								PipelineRunSucceededTimeMaxPerThread[threadIndex] = dur
 							}
 							SuccessfulPipelineRunsPerThread[threadIndex] += 1
+							chDeployments <- username
 						}
 						increaseBar(pipelinesBar, pipelinesBarMutex)
 					}
@@ -712,7 +769,168 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 					continue
 				}
 			}
+			close(chDeployments)
+		}()
+	}
+
+	if waitDeployments {
+		go func() {
+			defer wg.Done()
+			for username := range chDeployments {
+				// since username added to chDeployments only after valid framework, usernamespace, componentName, and applicationName have been created
+				//  we don't need to verify validity for neither
+				framework := frameworkForUser(username)
+				usernamespace := framework.UserNamespace
+				componentName := componentForUser(username)
+				applicationName := fmt.Sprintf("%s-app", username)
+				deploymentCreatedRetryInterval := time.Second * 5
+				deploymentCreatedTimeout := time.Minute * 15
+				var deployment *appsv1.Deployment
+
+				// Deploy the component using gitops and check for the health
+				err := k8swait.Poll(deploymentCreatedRetryInterval, deploymentCreatedTimeout, func() (done bool, err error) {
+					deployment, err = framework.AsKubeDeveloper.CommonController.GetDeployment(componentName, usernamespace)
+					if err != nil {
+						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
+						return false, nil
+					}
+					return true, nil
+				})
+				if err != nil {
+					logError(16, fmt.Sprintf("Deployment for %s/%s has not been created within %v: %v", applicationName, componentName, deploymentCreatedTimeout, err))
+					FailedDeploymentsPerThread[threadIndex] += 1
+					increaseBar(deploymentsBar, deploymentsBarMutex)
+					continue
+				}
+
+				deploymentRetryIntervalInitialValue := time.Second * 5
+				deploymentRetryInterval := deploymentRetryIntervalInitialValue
+				deploymentTimeout := time.Minute * 25
+				deploymentFailCount := 0
+
+				// To avoid race conditions we want to check for deployment failure that occurs more than once to signify failure (deploymentFailCount > 3)
+				err = k8swait.Poll(deploymentRetryInterval, deploymentTimeout, func() (done bool, err error) {
+					deployment, err = framework.AsKubeDeveloper.CommonController.GetDeployment(componentName, usernamespace)
+					if err != nil {
+						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
+						return false, nil
+					}
+
+					creationTimestamp := deployment.ObjectMeta.CreationTimestamp
+					deploymentIsDone, lastUpdateTimeOfDone := checkDeploymentIsDone(deployment)
+
+					var (
+						deploymentFailed       bool
+						errorMessage           string
+						lastUpdateTimeOfFailed metav1.Time
+					)
+					if !deploymentIsDone {
+						deploymentFailed, errorMessage, lastUpdateTimeOfFailed = checkDeploymentFailed(deployment)
+						if deploymentFailed {
+							deploymentFailCount++
+							deploymentRetryInterval += 5 // increase retry interval by 5 seconds to give more time for the deploymnt to get ready or to make sure the failure persists
+						} else {
+							deploymentFailCount = 0
+							deploymentRetryInterval = deploymentRetryIntervalInitialValue // reset deploymentRetryInterval to its initial value
+						}
+					} else {
+						deploymentFailCount = 0
+						deploymentRetryInterval = deploymentRetryIntervalInitialValue // reset deploymentRetryInterval to its initial value
+					}
+					if deploymentIsDone {
+						dur := lastUpdateTimeOfDone.Time.Sub(creationTimestamp.Time)
+						DeploymentSucceededTimeSumPerThread[threadIndex] += dur
+						if dur > DeploymentSucceededTimeMaxPerThread[threadIndex] {
+							DeploymentSucceededTimeMaxPerThread[threadIndex] = dur
+						}
+						SuccessfulDeploymentsPerThread[threadIndex] += 1
+						increaseBar(deploymentsBar, deploymentsBarMutex)
+					} else if deploymentFailed && deploymentFailCount > 3 {
+						dur := lastUpdateTimeOfFailed.Time.Sub(creationTimestamp.Time)
+						DeploymentFailedTimeSumPerThread[threadIndex] += dur
+						logError(17, fmt.Sprintf("Deployment for %s/%s failed due to %s", applicationName, componentName, errorMessage))
+						FailedDeploymentsPerThread[threadIndex] += 1
+						increaseBar(deploymentsBar, deploymentsBarMutex)
+					}
+					return deploymentIsDone || (deploymentFailed && deploymentFailCount > 3), nil
+				})
+				if err != nil {
+					logError(18, fmt.Sprintf("Deployment for %s/%s failed to succeed within %v: %v", applicationName, componentName, deploymentTimeout, err))
+					FailedDeploymentsPerThread[threadIndex] += 1
+					increaseBar(deploymentsBar, deploymentsBarMutex)
+					continue
+				}
+			}
 		}()
 	}
 	wg.Wait()
+}
+
+func checkDeploymentFailed(deployment *appsv1.Deployment) (bool, string, metav1.Time) {
+	var lastUpdateTime metav1.Time = metav1.Now() // initialize with the current time
+
+	// Check if the Deployment is in a stable state
+	if deployment.Status.ObservedGeneration < deployment.Generation {
+		return false, "", lastUpdateTime
+	}
+
+	/* Iterate over all conditions
+		   https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#failed-deployment
+	       All the below tests catches all the described failure reasons
+	*/
+	for _, condition := range deployment.Status.Conditions {
+		switch condition.Type {
+		case appsv1.DeploymentAvailable:
+			if condition.Status == corev1.ConditionFalse {
+				return true, fmt.Sprintf("Deployment is not available: %s", condition.Message), condition.LastUpdateTime
+			}
+		case appsv1.DeploymentProgressing:
+			if condition.Status == corev1.ConditionFalse {
+				return true, fmt.Sprintf("Deployment failed to progress: %s", condition.Message), condition.LastUpdateTime
+			}
+		case appsv1.DeploymentReplicaFailure:
+			if condition.Status == corev1.ConditionTrue {
+				return true, fmt.Sprintf("Deployment failed during rollout: %s", condition.Message), condition.LastUpdateTime
+			}
+		}
+	}
+
+	return false, "", lastUpdateTime
+}
+
+func checkDeploymentIsDone(deployment *appsv1.Deployment) (bool, metav1.Time) {
+	var deploymentCompleted bool = false
+	var deploymentReachedDesiredState bool = false
+	var lastUpdateTime metav1.Time = metav1.Now() // initialize with the current time
+
+	// Check if the Deployment is in a stable state
+	if deployment.Status.ObservedGeneration < deployment.Generation {
+		return false, lastUpdateTime
+	}
+
+	/* Check the DeploymentProgressing condition
+	   https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#complete-deployment
+
+	   When the rollout becomes “complete”, the Deployment controller sets a condition with the following attributes to the Deployment's .status.conditions:
+	   type: Progressing
+	   status: "True"
+	   reason: NewReplicaSetAvailable
+	*/
+	for _, condition := range deployment.Status.Conditions {
+		if condition.Type == appsv1.DeploymentProgressing && condition.Status == corev1.ConditionTrue && condition.Reason == "NewReplicaSetAvailable" {
+			// --> Deployment is complete
+			deploymentCompleted = true
+			lastUpdateTime = condition.LastUpdateTime
+			break
+		}
+	}
+
+	// Check the replica counts
+	// The desired number of replicas are running, ready, and have the updated version of the app
+	if *deployment.Spec.Replicas == deployment.Status.ReadyReplicas && *deployment.Spec.Replicas == deployment.Status.UpdatedReplicas {
+		// --> Deployment has achieved desired state
+		deploymentReachedDesiredState = true
+	}
+
+	return deploymentCompleted && deploymentReachedDesiredState, lastUpdateTime
 }
