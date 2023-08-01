@@ -3,6 +3,7 @@ package build
 import (
 	"context"
 	"fmt"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"os"
 	"strings"
 	"time"
@@ -378,6 +379,33 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				if exitForLoop {
 					break
 				}
+			}
+		})
+
+		It("All rebuilt images are signed and attested", func() {
+
+			kubeController := tekton.KubeController{
+				Commonctrl: *f.AsKubeAdmin.CommonController,
+				Tektonctrl: *f.AsKubeAdmin.TektonController,
+				Namespace:  testNamespace,
+			}
+			seen := map[string]bool{}
+			rebuilt, err := f.AsKubeAdmin.JvmbuildserviceController.ListRebuiltArtifacts(testNamespace)
+			Expect(err).NotTo(HaveOccurred())
+			for _, i := range rebuilt.Items {
+				if seen[i.Spec.Image] {
+					continue
+				}
+				seen[i.Spec.Image] = true
+
+				imageWithDigest := i.Spec.Image + "@" + i.Spec.Digest
+				Expect(kubeController.AwaitAttestationAndSignature(imageWithDigest, time.Minute)).To(
+					Succeed(),
+					"Could not find .att or .sig ImageStreamTags within the 1 minute timeout. "+
+						"Most likely the chains-controller did not create those in time. "+
+						"Look at the chains-controller logs.")
+				GinkgoWriter.Printf("Cosign verify pass with .att and .sig ImageStreamTags found for %s\n", imageWithDigest)
+
 			}
 		})
 	})
