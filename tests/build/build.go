@@ -549,7 +549,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			componentBaseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(4))
 			purgeBranchName = fmt.Sprintf("%s-%s", "appstudio-purge", componentName)
 
-			err = f.AsKubeAdmin.CommonController.Github.CreateRef(helloWorldComponentGitSourceRepoName, helloWorldComponentDefaultBranch, componentBaseBranchName)
+			err = f.AsKubeAdmin.CommonController.Github.CreateRef(helloWorldComponentGitSourceRepoName, helloWorldComponentDefaultBranch, helloWorldComponentRevision, componentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			componentObj = appservice.ComponentSpec{
