@@ -51,7 +51,7 @@ const (
 	// Timeouts
 	appDeployTimeout            = time.Minute * 20
 	appRouteAvailableTimeout    = time.Minute * 5
-	customResourceUpdateTimeout = time.Minute * 2
+	customResourceUpdateTimeout = time.Minute * 5
 	jvmRebuildTimeout           = time.Minute * 20
 	mergePRTimeout              = time.Minute * 1
 	pipelineRunStartedTimeout   = time.Minute * 5
@@ -60,6 +60,7 @@ const (
 	snapshotTimeout             = time.Minute * 4
 	releaseTimeout              = time.Minute * 4
 	testPipelineTimeout         = time.Minute * 15
+	branchCreateTimeout         = time.Minute * 1
 
 	// Intervals
 	defaultPollingInterval    = time.Second * 2
