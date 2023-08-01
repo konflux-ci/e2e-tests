@@ -11,3 +11,4 @@ Tests folder contains E2E related to several components divided in folders:
 | `integration-service` | https://github.com/redhat-appstudio/integration-service | N/A |  |
 | `load-tests` | N/A | [LoadTests.md](/docs/LoadTests.md) |  |
 | `release` | https://github.com/redhat-appstudio/release-service | N/A |  |
+| `spi` | https://github.com/redhat-appstudio/service-provider-integration-operator | [README.md](/tests/spi/README.md) | |
