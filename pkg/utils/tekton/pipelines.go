@@ -1,22 +1,16 @@
 package tekton
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 
-	. "github.com/onsi/ginkgo/v2"
-	g "github.com/onsi/ginkgo/v2"
-
 	app "github.com/redhat-appstudio/application-api/api/v1alpha1"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	crclient "sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 )
 
 type PipelineRunGenerator interface {
@@ -174,100 +168,33 @@ func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
 	}
 }
 
-// GetFailedPipelineRunLogs gets the logs of the pipelinerun failed task
-func GetFailedPipelineRunLogs(c crclient.Client, ki kubernetes.Interface, pipelineRun *v1beta1.PipelineRun) (string, error) {
-	var d *utils.FailedPipelineRunDetails
-	var err error
-	failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
-	if d, err = utils.GetFailedPipelineRunDetails(c, pipelineRun); err != nil {
-		return "", err
-	}
-	if d.FailedContainerName != "" {
-		logs, _ := utils.GetContainerLogs(ki, d.PodName, d.FailedContainerName, pipelineRun.Namespace)
-		failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
-	}
-	return failMessage, nil
+// Create a tekton pipeline and return the pipeline or error
+func (s *SuiteController) CreatePipeline(pipeline *v1beta1.Pipeline, ns string) (*v1beta1.Pipeline, error) {
+	return s.PipelineClient().TektonV1beta1().Pipelines(ns).Create(context.TODO(), pipeline, metav1.CreateOptions{})
 }
 
-// StorePipelineRunLogs stores logs and parsed yamls of pipelineRuns into directory of pipelineruns' namespace under ARTIFACT_DIR env.
-// In case the files can't be stored in ARTIFACT_DIR, they will be recorder in GinkgoWriter.
-func StorePipelineRun(pipelineRun *v1beta1.PipelineRun, c crclient.Client, ki kubernetes.Interface) error {
-	wd, _ := os.Getwd()
-	artifactDir := utils.GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
-	testLogsDir := fmt.Sprintf("%s/%s", artifactDir, pipelineRun.GetNamespace())
-
-	pipelineRunLog, err := GetFailedPipelineRunLogs(c, ki, pipelineRun)
-	if err != nil {
-		return fmt.Errorf("failed to store PipelineRun: %+v", err)
-	}
-
-	pipelineRunYaml, prYamlErr := yaml.Marshal(pipelineRun)
-	if prYamlErr != nil {
-		GinkgoWriter.Printf("\nfailed to get pipelineRunYaml: %s\n", prYamlErr.Error())
-	}
-
-	err = os.MkdirAll(testLogsDir, os.ModePerm)
-
-	if err != nil {
-		GinkgoWriter.Printf("\n%s\nFailed pipelineRunLog:\n%s\n---END OF THE LOG---\n", pipelineRun.GetName(), pipelineRunLog)
-		if prYamlErr == nil {
-			GinkgoWriter.Printf("Failed pipelineRunYaml:\n%s\n", pipelineRunYaml)
-		}
-		return err
-	}
-
-	filename := fmt.Sprintf("%s-pr-%s.log", pipelineRun.Namespace, pipelineRun.Name)
-	filePath := fmt.Sprintf("%s/%s", testLogsDir, filename)
-	if err := os.WriteFile(filePath, []byte(pipelineRunLog), 0644); err != nil {
-		GinkgoWriter.Printf("cannot write to %s: %+v\n", filename, err)
-		GinkgoWriter.Printf("\n%s\nFailed pipelineRunLog:\n%s\n", filename, pipelineRunLog)
-	}
-
-	if prYamlErr == nil {
-		filename = fmt.Sprintf("%s-pr-%s.yaml", pipelineRun.Namespace, pipelineRun.Name)
-		filePath = fmt.Sprintf("%s/%s", testLogsDir, filename)
-		if err := os.WriteFile(filePath, pipelineRunYaml, 0644); err != nil {
-			GinkgoWriter.Printf("cannot write to %s: %+v\n", filename, err)
-			GinkgoWriter.Printf("\n%s\nFailed pipelineRunYaml:\n%s\n", filename, pipelineRunYaml)
-		}
-	}
-
-	return nil
+func (s *SuiteController) DeletePipeline(name, ns string) error {
+	return s.PipelineClient().TektonV1beta1().Pipelines(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
-func (s *SuiteController) StorePipelineRuns(componentPipelineRun *v1beta1.PipelineRun, testLogsDir, testNamespace string) error {
-	if err := os.MkdirAll(testLogsDir, os.ModePerm); err != nil {
-		return err
-	}
-
-	filepath := fmt.Sprintf("%s/%s-pr-%s.log", testLogsDir, testNamespace, componentPipelineRun.Name)
-	pipelineLogs, err := s.GetPipelineRunLogs(componentPipelineRun.Name, testNamespace)
-	if err != nil {
-		g.GinkgoWriter.Printf("got error fetching PR logs: %v\n", err.Error())
-	} else {
-		if err := os.WriteFile(filepath, []byte(pipelineLogs), 0644); err != nil {
-			g.GinkgoWriter.Printf("cannot write to %s: %+v\n", filepath, err)
+func (k KubeController) RunPipeline(g PipelineRunGenerator, taskTimeout int) (*v1beta1.PipelineRun, error) {
+	pr := g.Generate()
+	pvcs := k.Commonctrl.KubeInterface().CoreV1().PersistentVolumeClaims(pr.Namespace)
+	for _, w := range pr.Spec.Workspaces {
+		if w.PersistentVolumeClaim != nil {
+			pvcName := w.PersistentVolumeClaim.ClaimName
+			if _, err := pvcs.Get(context.TODO(), pvcName, metav1.GetOptions{}); err != nil {
+				if errors.IsNotFound(err) {
+					err := createPVC(pvcs, pvcName)
+					if err != nil {
+						return nil, err
+					}
+				} else {
+					return nil, err
+				}
+			}
 		}
 	}
 
-	pipelineRuns, err := s.ListAllPipelineRuns(testNamespace)
-
-	if err != nil {
-		return fmt.Errorf("got error fetching PR list: %v\n", err.Error())
-	}
-
-	for _, pipelineRun := range pipelineRuns.Items {
-		filepath := fmt.Sprintf("%s/%s-pr-%s.log", testLogsDir, testNamespace, pipelineRun.Name)
-		pipelineLogs, err := s.GetPipelineRunLogs(pipelineRun.Name, testNamespace)
-		if err != nil {
-			g.GinkgoWriter.Printf("got error fetching PR logs: %v\n", err.Error())
-			continue
-		}
-
-		if err := os.WriteFile(filepath, []byte(pipelineLogs), 0644); err != nil {
-			g.GinkgoWriter.Printf("cannot write to %s: %+v\n", filepath, err)
-		}
-	}
-
-	return nil
+	return k.createAndWait(pr, taskTimeout)
 }
