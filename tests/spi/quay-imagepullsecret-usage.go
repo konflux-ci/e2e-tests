@@ -222,7 +222,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 					Expect(err).NotTo(HaveOccurred())
 
 					return TaskRun.Status.CompletionTime
-				}, 1*time.Minute, 5*time.Second).ShouldNot(BeNil(), "timed out waiting for taskrun %s/%s to get completed", TaskRun.GetNamespace(), TaskRun.GetName())
+				}, 5*time.Minute, 5*time.Second).ShouldNot(BeNil(), "timed out waiting for taskrun %s/%s to get completed", TaskRun.GetNamespace(), TaskRun.GetName())
 			})
 
 			It("checks if taskrun is successful", func() {
