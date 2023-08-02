@@ -113,29 +113,6 @@ func NewAppStudioInstallController() (*InstallAppStudio, error) {
 	}, nil
 }
 
-func NewAppStudioInstallControllerDefault() (*InstallAppStudio, error) {
-	cwd, _ := os.Getwd()
-	k8sClient, err := kubeCl.NewAdminKubernetesClient()
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &InstallAppStudio{
-		KubernetesClient:                 k8sClient,
-		TmpDirectory:                     DEFAULT_TMP_DIR,
-		InfraDeploymentsCloneDir:         fmt.Sprintf("%s/%s/infra-deployments-upgrade", cwd, DEFAULT_TMP_DIR),
-		InfraDeploymentsBranch:           DEFAULT_INFRA_DEPLOYMENTS_BRANCH,
-		InfraDeploymentsOrganizationName: DEFAULT_INFRA_DEPLOYMENTS_GH_ORG,
-		LocalForkName:                    DEFAULT_LOCAL_FORK_NAME,
-		LocalGithubForkOrganization:      utils.GetEnv("MY_GITHUB_ORG", DEFAULT_LOCAL_FORK_ORGANIZATION),
-		E2EApplicationsNamespace:         utils.GetEnv("E2E_APPLICATIONS_NAMESPACE", DEFAULT_E2E_APPLICATIONS_NAMEPSPACE),
-		QuayToken:                        utils.GetEnv("QUAY_TOKEN", ""),
-		DefaultImageQuayOrg:              utils.GetEnv("DEFAULT_QUAY_ORG", DEFAULT_E2E_QUAY_ORG),
-		DefaultImageQuayOrgOAuth2Token:   utils.GetEnv("DEFAULT_QUAY_ORG_TOKEN", ""),
-	}, nil
-}
-
 // Start the appstudio installation in preview mode.
 func (i *InstallAppStudio) InstallAppStudioPreviewMode() error {
 	if _, err := i.cloneInfraDeployments(); err != nil {
@@ -190,19 +167,9 @@ func (i *InstallAppStudio) cloneInfraDeployments() (*git.Remote, error) {
 }
 
 func MergePRInRemote(branch string, forkOrganization string, repoPath string) error {
-	if forkOrganization == "" {
-		forkOrganization = "redhat-appstudio"
-	}
-
 	if branch == "" {
 		klog.Fatal("The branch for upgrade is empty!")
 	}
-
-	cmd, err := exec.Command("git", "-C", repoPath, "branch").CombinedOutput()
-	if err != nil {
-		klog.Fatal(err)
-	}
-	fmt.Printf("output repo branches: %s\n", cmd)
 
 	repo, err := git.PlainOpen(repoPath)
 	if err != nil {
@@ -237,27 +204,27 @@ func MergePRInRemote(branch string, forkOrganization string, repoPath string) er
 		klog.Fatal(err)
 	}
 
-	if forkOrganization == "redhat-appstudio" {
-		cmd, err = exec.Command("git", "-C", repoPath, "merge", "remotes/origin/"+branch, "-q").Output()
+	if forkOrganization == "" {
+		_, err = exec.Command("git", "-C", repoPath, "merge", "remotes/origin/"+branch, "-q").Output()
 	} else {
 		repoURL := fmt.Sprintf("https://github.com/%s/infra-deployments.git", forkOrganization)
-		cmd, err = exec.Command("git", "-C", repoPath, "remote", "add", "forked_repo", repoURL).Output()
-		klog.Info(cmd)
+		_, err = repo.CreateRemote(&config.RemoteConfig{
+			Name: "forked_repo",
+			URLs: []string{repoURL},
+		})
 		if err != nil {
 			klog.Fatal(err)
 		}
-		cmd, err = exec.Command("git", "-C", repoPath, "fetch", "forked_repo").Output()
-		klog.Info(cmd)
+
+		err = repo.Fetch(&git.FetchOptions{
+			RemoteName: "forked_repo",
+		})
 		if err != nil {
 			klog.Fatal(err)
 		}
-		cmd, err = exec.Command("git", "-C", repoPath, "merge", "remotes/forked_repo/"+branch).Output()
+
+		_, err = exec.Command("git", "-C", repoPath, "merge", "remotes/forked_repo/"+branch).Output()
 	}
-	if err != nil {
-		klog.Fatal(err)
-	}
-	klog.Info("output merge:")
-	klog.Info(cmd)
 	if err != nil {
 		klog.Fatal(err)
 	}

@@ -855,7 +855,7 @@ func (Local) TestUpgrade() error {
 }
 
 func BootstrapClusterForUpgrade() (*installation.InstallAppStudio, error) {
-	ic, err := installation.NewAppStudioInstallControllerDefault()
+	ic, err := installation.NewAppStudioInstallController()
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize installation controller: %+v", err)
 	}
@@ -864,7 +864,7 @@ func BootstrapClusterForUpgrade() (*installation.InstallAppStudio, error) {
 }
 
 func UpgradeCluster() error {
-	return installation.MergePRInRemote(utils.GetEnv("UPGRADE_BRANCH", ""), utils.GetEnv("UPGRADE_FORK_ORGANIZATION", ""), "./tmp/infra-deployments-upgrade")
+	return installation.MergePRInRemote(utils.GetEnv("UPGRADE_BRANCH", ""), utils.GetEnv("UPGRADE_FORK_ORGANIZATION", ""), "./tmp/infra-deployments")
 }
 
 func CheckClusterAfterUpgrade(ic *installation.InstallAppStudio) error {
