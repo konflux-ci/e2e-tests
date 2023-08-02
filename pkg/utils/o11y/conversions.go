@@ -11,7 +11,7 @@ func convertBytesToMB(valueInBytes float64) int {
 	return int(valueInMegabytes)
 }
 
-// ConvertValuesToMB converts results (strings in bytes) in podNamesWithResult map to ints in MB.
+// ConvertValuesToMB converts results strings (in bytes) in podNamesWithResult map to ints (in MB).
 func (o *O11yController) ConvertValuesToMB(podNamesWithResult map[string]string) (map[string]int, error) {
 	podNameWithMB := make(map[string]int)
 
