@@ -189,9 +189,9 @@ func (i *InstallAppStudio) cloneInfraDeployments() (*git.Remote, error) {
 	return repo.CreateRemote(&config.RemoteConfig{Name: i.LocalForkName, URLs: []string{fmt.Sprintf("https://github.com/%s/infra-deployments.git", i.LocalGithubForkOrganization)}})
 }
 
-func MergePRInRemote(branch string, fork string, repoPath string) error {
-	if fork == "" {
-		fork = "infra-deployments"
+func MergePRInRemote(branch string, forkOrganization string, repoPath string) error {
+	if forkOrganization == "" {
+		forkOrganization = "redhat-appstudio"
 	}
 
 	if branch == "" {
@@ -237,11 +237,27 @@ func MergePRInRemote(branch string, fork string, repoPath string) error {
 		klog.Fatal(err)
 	}
 
-	cmd, err = exec.Command("git", "-C", repoPath, "merge", "remotes/origin/"+branch, "-q").Output()
+	if forkOrganization == "redhat-appstudio" {
+		cmd, err = exec.Command("git", "-C", repoPath, "merge", "remotes/origin/"+branch, "-q").Output()
+	} else {
+		repoURL := fmt.Sprintf("https://github.com/%s/infra-deployments.git", forkOrganization)
+		cmd, err = exec.Command("git", "-C", repoPath, "remote", "add", "forked_repo", repoURL).Output()
+		klog.Info(cmd)
+		if err != nil {
+			klog.Fatal(err)
+		}
+		cmd, err = exec.Command("git", "-C", repoPath, "fetch", "forked_repo").Output()
+		klog.Info(cmd)
+		if err != nil {
+			klog.Fatal(err)
+		}
+		cmd, err = exec.Command("git", "-C", repoPath, "merge", "remotes/forked_repo/"+branch).Output()
+	}
 	if err != nil {
 		klog.Fatal(err)
 	}
-	fmt.Printf("output merge %s\n", cmd)
+	klog.Info("output merge:")
+	klog.Info(cmd)
 	if err != nil {
 		klog.Fatal(err)
 	}

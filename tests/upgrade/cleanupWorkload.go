@@ -29,11 +29,13 @@ var _ = framework.UpgradeSuiteDescribe("Create users and check their state", Lab
 	})
 
 	It("Verify AppStudioProvisionedUser", func() {
-		fw.SandboxController.DeleteUserSignup(utilsUpgrade.AppStudioProvisionedUser)
+		_, err := fw.SandboxController.DeleteUserSignup(utilsUpgrade.AppStudioProvisionedUser)
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("creates AppStudioBannedUser", func() {
-		fw.SandboxController.DeleteUserSignup(utilsUpgrade.BannedUser)
+		_, err := fw.SandboxController.DeleteUserSignup(utilsUpgrade.BannedUser)
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 })

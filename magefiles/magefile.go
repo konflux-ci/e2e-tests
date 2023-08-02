@@ -864,7 +864,7 @@ func BootstrapClusterForUpgrade() (*installation.InstallAppStudio, error) {
 }
 
 func UpgradeCluster() error {
-	return installation.MergePRInRemote(utils.GetEnv("UPGRADE_BRANCH", ""), utils.GetEnv("UPGRADE_FORK", ""), "./tmp/infra-deployments-upgrade")
+	return installation.MergePRInRemote(utils.GetEnv("UPGRADE_BRANCH", ""), utils.GetEnv("UPGRADE_FORK_ORGANIZATION", ""), "./tmp/infra-deployments-upgrade")
 }
 
 func CheckClusterAfterUpgrade(ic *installation.InstallAppStudio) error {
