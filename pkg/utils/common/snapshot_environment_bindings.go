@@ -1,4 +1,4 @@
-package has
+package common
 
 import (
 	"context"
@@ -12,13 +12,13 @@ import (
 )
 
 // GetComponentPipeline returns the pipeline for a given component labels
-func (h *HasController) GetSnapshotEnvironmentBinding(applicationName string, namespace string, environment *appservice.Environment) (*appservice.SnapshotEnvironmentBinding, error) {
+func (s *SuiteController) GetSnapshotEnvironmentBinding(applicationName string, namespace string, environment *appservice.Environment) (*appservice.SnapshotEnvironmentBinding, error) {
 	snapshotEnvironmentBindingList := &appservice.SnapshotEnvironmentBindingList{}
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
 	}
 
-	err := h.KubeRest().List(context.TODO(), snapshotEnvironmentBindingList, opts...)
+	err := s.KubeRest().List(context.TODO(), snapshotEnvironmentBindingList, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -33,14 +33,14 @@ func (h *HasController) GetSnapshotEnvironmentBinding(applicationName string, na
 }
 
 // DeleteAllSnapshotEnvBindingsInASpecificNamespace removes all snapshotEnvironmentBindings from a specific namespace. Useful when creating a lot of resources and want to remove all of them
-func (h *HasController) DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace string, timeout time.Duration) error {
-	if err := h.KubeRest().DeleteAllOf(context.TODO(), &appservice.SnapshotEnvironmentBinding{}, rclient.InNamespace(namespace)); err != nil {
+func (s *SuiteController) DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace string, timeout time.Duration) error {
+	if err := s.KubeRest().DeleteAllOf(context.TODO(), &appservice.SnapshotEnvironmentBinding{}, rclient.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting snapshotEnvironmentBindings from the namespace %s: %+v", namespace, err)
 	}
 
 	snapshotEnvironmentBindingList := &appservice.SnapshotEnvironmentBindingList{}
 	return utils.WaitUntil(func() (done bool, err error) {
-		if err := h.KubeRest().List(context.Background(), snapshotEnvironmentBindingList, &rclient.ListOptions{Namespace: namespace}); err != nil {
+		if err := s.KubeRest().List(context.Background(), snapshotEnvironmentBindingList, &rclient.ListOptions{Namespace: namespace}); err != nil {
 			return false, nil
 		}
 		return len(snapshotEnvironmentBindingList.Items) == 0, nil

@@ -84,7 +84,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					if !CurrentSpecReport().Failed() {
 						Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 						Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-						Expect(fw.AsKubeAdmin.HasController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+						Expect(fw.AsKubeAdmin.CommonController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 						Expect(fw.AsKubeAdmin.IntegrationController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 						Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 						Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)).To(Succeed())
@@ -192,7 +192,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 					It("checks if a SnapshotEnvironmentBinding is created successfully", func() {
 						Eventually(func() error {
-							_, err := fw.AsKubeAdmin.HasController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
+							_, err := fw.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
 							if err != nil {
 								GinkgoWriter.Println("SnapshotEnvironmentBinding has not been found yet")
 								return err

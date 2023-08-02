@@ -282,7 +282,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					timeout = time.Second * 600
 					interval = time.Second * 2
 					Eventually(func() error {
-						_, err := f.AsKubeAdmin.HasController.GetSnapshotEnvironmentBinding(applicationName, testNamespace, env)
+						_, err := f.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(applicationName, testNamespace, env)
 						return err
 					}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out when waiting for SnapshotEnvironmentBinding to be created for application %s/%s", testNamespace, applicationName))
 				})
