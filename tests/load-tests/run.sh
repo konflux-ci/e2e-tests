@@ -38,6 +38,7 @@ else
         --username "$USER_PREFIX" \
         --users "${USERS_PER_THREAD:-50}" \
         -w \
+        -d \
         -l \
         -t "${THREADS:-1}" \
         --disable-metrics \

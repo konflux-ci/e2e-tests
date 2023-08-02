@@ -84,7 +84,7 @@ func (r *ReleaseController) GetRelease(releaseName, snapshotName, namespace stri
 	return nil, fmt.Errorf("could not find Release CR based on associated Snapshot '%s' in '%s' namespace", snapshotName, namespace)
 }
 
-// GetRelease returns the list of Release CR in the given namespace.
+// GetReleases returns the list of Release CR in the given namespace.
 func (r *ReleaseController) GetReleases(namespace string) (*releaseApi.ReleaseList, error) {
 	releaseList := &releaseApi.ReleaseList{}
 	opts := []client.ListOption{

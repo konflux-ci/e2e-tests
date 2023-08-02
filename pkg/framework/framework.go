@@ -29,7 +29,7 @@ type ControllerHub struct {
 	GitOpsController          *gitops.GitopsController
 	SPIController             *spi.SuiteController
 	ReleaseController         *release.ReleaseController
-	IntegrationController     *integration.SuiteController
+	IntegrationController     *integration.IntegrationController
 	JvmbuildserviceController *jvmbuildservice.SuiteController
 	O11yController            *o11y.O11yController
 }
@@ -92,13 +92,15 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 		if err = asAdmin.CommonController.AddRegistryAuthSecretToSA("QUAY_TOKEN", k.UserNamespace); err != nil {
 			GinkgoWriter.Println(fmt.Sprintf("Failed to add registry auth secret to service account: %v\n", err))
 		}
-	} else {
-		asAdmin = nil
-	}
+	} 
 
 	asUser, err := InitControllerHub(k.AsKubeDeveloper)
 	if err != nil {
 		return nil, fmt.Errorf("error when initializing appstudio hub controllers for sandbox user: %v", err)
+	}
+
+	if isStage {
+		asAdmin = asUser
 	}
 
 	if err = utils.WaitUntil(asAdmin.CommonController.ServiceaccountPresent(constants.DefaultPipelineServiceAccount, k.UserNamespace), timeout); err != nil {

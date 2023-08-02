@@ -107,7 +107,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "remote-secret"), Pending,
 			Expect(err).NotTo(HaveOccurred())
 
 			targets := remoteSecret.Status.Targets
-			Expect(len(targets)).To(BeNumerically("==", 2))
+			Expect(targets).To(HaveLen(2))
 
 			// get targetSecretName1
 			targetSecretName1 = fw.AsKubeDeveloper.SPIController.GetTargetSecretName(targets, targetNamespace1)

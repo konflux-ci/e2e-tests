@@ -47,8 +47,8 @@ EOF
 )
 
 echo "Please go to https://github.com/settings/developers."
-echo "And register new Github OAuth application for callback https://"$OAUTH_URL"/github/callback"
 
+echo "And register new Github OAuth application for callback https://"$OAUTH_URL"/github/callback"
 oc create namespace spi-system --dry-run=client -o yaml | oc apply -f -
 
 # legacy config file

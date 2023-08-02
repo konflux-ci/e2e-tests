@@ -99,6 +99,10 @@ const (
 
 	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.15"
 
+	StrategyConfigsRepo          = "strategy-configs"
+	StrategyConfigsDefaultBranch = "main"
+	StrategyConfigsRevision      = "caeaaae63a816ab42dad6c7be1e4b352ea8aabf4"
+
 	// TODO
 	// delete this constant and all its occurrences in the code base
 	// once https://issues.redhat.com/browse/RHTAP-810 is completed
@@ -117,6 +121,8 @@ const (
 	DefaultImageTagExpiration string = "6h"
 
 	PipelineRunPollingInterval = 10 * time.Second
+
+	JsonStageUsersPath = "users.json"
 )
 
 var (

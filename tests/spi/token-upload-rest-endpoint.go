@@ -99,11 +99,11 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-rest-endpoin
 
 					if test.Accessibility == v1beta1.SPIAccessCheckAccessibilityPublic {
 						//  if public, the repository should be accessible
-						Expect(SPIAccessCheck.Status.Accessible).To(Equal(true))
+						Expect(SPIAccessCheck.Status.Accessible).To(BeTrue())
 						Expect(SPIAccessCheck.Status.Accessibility).To(Equal(test.Accessibility))
 					} else {
 						//  if private, the repository should not be accessible since the token was not upload yet
-						Expect(SPIAccessCheck.Status.Accessible).To(Equal(false))
+						Expect(SPIAccessCheck.Status.Accessible).To(BeFalse())
 						Expect(SPIAccessCheck.Status.Accessibility).To(Equal(v1beta1.SPIAccessCheckAccessibilityUnknown))
 					}
 

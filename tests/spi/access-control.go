@@ -62,7 +62,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "access-control"), func() 
 			Expect(user.Framework.AsKubeAdmin.SPIController.DeleteAllBindingTokensInASpecificNamespace(user.Framework.UserNamespace)).To(Succeed())
 			Expect(user.Framework.AsKubeAdmin.SPIController.DeleteAllAccessTokensInASpecificNamespace(user.Framework.UserNamespace)).To(Succeed())
 			Expect(user.Framework.AsKubeAdmin.SPIController.DeleteAllAccessTokenDataInASpecificNamespace(user.Framework.UserNamespace)).To(Succeed())
-			Expect(user.Framework.SandboxController.DeleteUserSignup(user.Framework.UserName)).NotTo(BeFalse())
+			Expect(user.Framework.SandboxController.DeleteUserSignup(user.Framework.UserName)).To(BeTrue())
 		}
 
 		createAPIProxyClient := func(userToken, proxyURL string) *crclient.Client {
