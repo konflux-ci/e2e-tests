@@ -40,6 +40,10 @@ func (s *SuiteController) ListDependencyBuilds(namespace string) (*v1alpha1.Depe
 	return s.JvmbuildserviceClient().JvmbuildserviceV1alpha1().DependencyBuilds(namespace).List(context.TODO(), metav1.ListOptions{})
 }
 
+func (s *SuiteController) ListRebuiltArtifacts(namespace string) (*v1alpha1.RebuiltArtifactList, error) {
+	return s.JvmbuildserviceClient().JvmbuildserviceV1alpha1().RebuiltArtifacts(namespace).List(context.TODO(), metav1.ListOptions{})
+}
+
 func (s *SuiteController) DeleteDependencyBuild(name, namespace string) error {
 	return s.JvmbuildserviceClient().JvmbuildserviceV1alpha1().DependencyBuilds(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
