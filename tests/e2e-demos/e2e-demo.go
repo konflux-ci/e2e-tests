@@ -84,12 +84,12 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					if !CurrentSpecReport().Failed() {
 						Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 						Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-						Expect(fw.AsKubeAdmin.HasController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+						Expect(fw.AsKubeAdmin.CommonController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 						Expect(fw.AsKubeAdmin.IntegrationController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 						Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 						Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)).To(Succeed())
 						Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllGitOpsDeploymentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-						Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).NotTo(BeFalse())
+						Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 					}
 				})
 
@@ -146,7 +146,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					It(fmt.Sprintf("creates componentdetectionquery for component %s", componentTest.Name), func() {
 						cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, componentTest.GitSourceRevision, componentTest.GitSourceContext, secret, false)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+						Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
 					})
 
 					// Components for now can be imported from gitUrl, container image or a devfile
@@ -183,7 +183,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 								GinkgoWriter.Println("snapshot has not been found yet")
 								return err
 							}
-							if !fw.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot) {
+							if !fw.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot) {
 								return fmt.Errorf("tests haven't succeeded for snapshot %s/%s. snapshot status: %+v", snapshot.GetNamespace(), snapshot.GetName(), snapshot.Status)
 							}
 							return nil
@@ -192,7 +192,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 					It("checks if a SnapshotEnvironmentBinding is created successfully", func() {
 						Eventually(func() error {
-							_, err := fw.AsKubeAdmin.IntegrationController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
+							_, err := fw.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
 							if err != nil {
 								GinkgoWriter.Println("SnapshotEnvironmentBinding has not been found yet")
 								return err

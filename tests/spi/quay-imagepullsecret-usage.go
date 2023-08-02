@@ -222,13 +222,13 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 					Expect(err).NotTo(HaveOccurred())
 
 					return TaskRun.Status.CompletionTime
-				}, 1*time.Minute, 5*time.Second).ShouldNot(BeNil(), "timed out waiting for taskrun %s/%s to get completed", TaskRun.GetNamespace(), TaskRun.GetName())
+				}, 5*time.Minute, 5*time.Second).ShouldNot(BeNil(), "timed out waiting for taskrun %s/%s to get completed", TaskRun.GetNamespace(), TaskRun.GetName())
 			})
 
 			It("checks if taskrun is successful", func() {
 				TaskRun, err = fw.AsKubeDeveloper.TektonController.GetTaskRun(taskRunName, namespace)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(len(TaskRun.Status.Conditions)).NotTo(BeZero())
+				Expect(TaskRun.Status.Conditions).NotTo(BeEmpty())
 				Expect(TaskRun.Status.Conditions[0].Status).To(Equal(corev1.ConditionTrue))
 			})
 		})

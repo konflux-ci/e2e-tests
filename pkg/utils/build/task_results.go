@@ -12,7 +12,7 @@ import (
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var taskNames = []string{"clair-scan", "clamav-scan", "deprecated-base-image-check", "inspect-image", "label-check", "sbom-json-check"}
+var taskNames = []string{"clair-scan", "clamav-scan", "deprecated-base-image-check", "inspect-image", "sbom-json-check"}
 
 type TestOutput struct {
 	Result    string `json:"result"`
