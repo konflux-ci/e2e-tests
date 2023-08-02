@@ -13,7 +13,6 @@ import (
 	"github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog"
 )
 
 /*
@@ -31,10 +30,11 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 	var CYPRESS_GH_USER string
 	var CYPRESS_GH_PASSWORD string
 	var CYPRESS_GH_2FA_CODE string
+	var cypressPodName string = "cypress-script"
 
 	Describe("SVPI-395 - Github OAuth flow to upload token", Ordered, func() {
 		BeforeAll(func() {
-			Skip(fmt.Sprintln("skip this temporary"))
+			//Skip(fmt.Sprintln("skip this temporary"))
 
 			if os.Getenv("CI") != "true" {
 				Skip(fmt.Sprintln("test skipped on local execution"))
@@ -58,6 +58,12 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 
 		// Clean up after running these tests and before the next tests block: can't have multiple AccessTokens in Injected phase
 		AfterAll(func() {
+
+			artifactDir := utils.GetEnv("ARTIFACT_DIR", "")
+			if artifactDir != "" {
+				// collect cypress recording from the pod and save it in the artifacts folder
+				utils.ExecuteCommandInASpecificDirectory("kubectl", []string{"cp", cypressPodName + ":/cypress-browser-oauth-flow/cypress/videos", artifactDir + "/cypress/spi-oauth/", "-n", namespace}, "")
+			}
 
 			if !CurrentSpecReport().Failed() {
 				Expect(fw.AsKubeAdmin.SPIController.DeleteAllBindingTokensInASpecificNamespace(namespace)).To(Succeed())
@@ -113,22 +119,23 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 		It("run browser oauth login flow in cypress pod", func() {
 
 			// Now we create a short-living pod that will use cypress to perform the browser login flow
+
 			cypressPod := &corev1.Pod{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Pod",
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cypress-script",
+					Name:      cypressPodName,
 					Namespace: namespace,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:    "cypress-test",
+							Name:    cypressPodName,
 							Image:   "cypress/included",
 							Command: []string{"/bin/sh", "-c"},
-							Args:    []string{"git clone https://github.com/redhat-appstudio-qe/cypress-browser-oauth-flow; cd cypress-browser-oauth-flow; npm install; cypress run --spec cypress/e2e/spec.cy.js;"},
+							Args:    []string{"git clone https://github.com/redhat-appstudio-qe/cypress-browser-oauth-flow; cd cypress-browser-oauth-flow; npm install; cypress run --spec cypress/e2e/spec.cy.js; tail -f /dev/null;"},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "CYPRESS_GH_USER",
@@ -156,17 +163,17 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 
 			_, err := fw.AsKubeAdmin.CommonController.KubeInterface().CoreV1().Pods(namespace).Create(context.TODO(), cypressPod, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			klog.Infof("err %s", err)
 
-			// check pod is completed without error
-
+			// check pod is running
+			// if spi oauth flow is completed, the SPITokenBinding will be injected
+			// keeping the pod running and only checking the SPITokenBinding (instead of the pod status itself) allows us
+			// to get the logs and browser session recording from the cypress pod.
 			Eventually(func() bool {
 				pod, err := fw.AsKubeAdmin.CommonController.GetPod(namespace, cypressPod.Name)
 				Expect(err).NotTo(HaveOccurred())
-				klog.Infof("err %s", err)
 
-				return (pod.Status.Phase == corev1.PodSucceeded)
-			}, 5*time.Minute, 5*time.Second).Should(BeTrue(), "Cypress pod did not completed oauth flow")
+				return (pod.Status.Phase == corev1.PodRunning)
+			}, 5*time.Minute, 5*time.Second).Should(BeTrue(), "Cypress pod did not start")
 
 		})
 
@@ -176,7 +183,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				return SPITokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected
-			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in Injected phase")
+			}, 5*time.Minute, 10*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in Injected phase")
 		})
 
 	})
