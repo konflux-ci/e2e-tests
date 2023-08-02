@@ -664,7 +664,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					}
 
 					return buildStatus.PaC != nil && buildStatus.PaC.State == "enabled" && buildStatus.PaC.MergeUrl != "" && buildStatus.PaC.ErrId == 0 && buildStatus.PaC.ConfigurationTime != "", nil
-				}, timeout, interval).Should(BeTrue(), fmt.Errorf("build status has unexpected content"))
+				}, timeout, interval).Should(BeTrue(), "build status has unexpected content")
 			})
 
 			It("ensures build pipeline is triggered after merge", func() {
