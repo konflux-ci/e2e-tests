@@ -119,7 +119,6 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 		It("run browser oauth login flow in cypress pod", func() {
 
 			// Now we create a short-living pod that will use cypress to perform the browser login flow
-
 			cypressPod := &corev1.Pod{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Pod",
