@@ -120,10 +120,11 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 
 	spiAccessTokenBinding, err = s.CreateSPIAccessTokenBinding(SPIAccessTokenBindingPrefixName, namespace, repoUrl, secretName, secretType)
 	Expect(err).NotTo(HaveOccurred())
+	spiAccessTokenBindingName := spiAccessTokenBinding.Name
 
 	Eventually(func() bool {
 		// application info should be stored even after deleting the application in application variable
-		spiAccessTokenBinding, err = s.GetSPIAccessTokenBinding(spiAccessTokenBinding.Name, namespace)
+		spiAccessTokenBinding, err = s.GetSPIAccessTokenBinding(spiAccessTokenBindingName, namespace)
 
 		if err != nil {
 			return false
@@ -134,7 +135,7 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 
 	Eventually(func() bool {
 		// application info should be stored even after deleting the application in application variable
-		spiAccessTokenBinding, err = s.GetSPIAccessTokenBinding(spiAccessTokenBinding.Name, namespace)
+		spiAccessTokenBinding, err = s.GetSPIAccessTokenBinding(spiAccessTokenBindingName, namespace)
 
 		if err != nil {
 			return false
@@ -173,7 +174,7 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 		// Check to see if the token was successfully injected
 		Eventually(func() bool {
 			// application info should be stored even after deleting the application in application variable
-			spiAccessTokenBinding, err = s.GetSPIAccessTokenBinding(spiAccessTokenBinding.Name, namespace)
+			spiAccessTokenBinding, err = s.GetSPIAccessTokenBinding(spiAccessTokenBindingName, namespace)
 			return err == nil && spiAccessTokenBinding.Status.Phase == spi.SPIAccessTokenBindingPhaseInjected
 		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to Injected")
 	}
