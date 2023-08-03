@@ -29,7 +29,7 @@ type ControllerHub struct {
 	GitOpsController          *gitops.GitopsController
 	SPIController             *spi.SuiteController
 	ReleaseController         *release.ReleaseController
-	IntegrationController     *integration.SuiteController
+	IntegrationController     *integration.IntegrationController
 	JvmbuildserviceController *jvmbuildservice.SuiteController
 	O11yController            *o11y.SuiteController
 }
