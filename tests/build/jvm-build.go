@@ -3,7 +3,6 @@ package build
 import (
 	"context"
 	"fmt"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"os"
 	"strings"
 	"time"
@@ -307,7 +306,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 			ctx := context.TODO()
 
-			watch, err := f.AsKubeAdmin.TektonController.WatchPipelineRun(ctx, testNamespace)
+			watch, err := f.AsKubeAdmin.TektonController.GetPipelineRunWatch(ctx, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("watch pipelinerun failed in %s namespace", testNamespace))
 
 			exitForLoop := false
@@ -383,12 +382,6 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		})
 
 		It("All rebuilt images are signed and attested", func() {
-
-			kubeController := tekton.KubeController{
-				Commonctrl: *f.AsKubeAdmin.CommonController,
-				Tektonctrl: *f.AsKubeAdmin.TektonController,
-				Namespace:  testNamespace,
-			}
 			seen := map[string]bool{}
 			rebuilt, err := f.AsKubeAdmin.JvmbuildserviceController.ListRebuiltArtifacts(testNamespace)
 			Expect(err).NotTo(HaveOccurred())
@@ -399,7 +392,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				seen[i.Spec.Image] = true
 
 				imageWithDigest := i.Spec.Image + "@" + i.Spec.Digest
-				Expect(kubeController.AwaitAttestationAndSignature(imageWithDigest, time.Minute)).To(
+				Expect(f.AsKubeAdmin.TektonController.AwaitAttestationAndSignature(imageWithDigest, time.Minute)).To(
 					Succeed(),
 					"Could not find .att or .sig ImageStreamTags within the 1 minute timeout. "+
 						"Most likely the chains-controller did not create those in time. "+

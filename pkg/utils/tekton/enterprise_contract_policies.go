@@ -9,8 +9,8 @@ import (
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// CreateEnterpriseContractPolicy creates an EnterpriseContractPolicy.
-func (s *SuiteController) CreateEnterpriseContractPolicy(name, namespace string, ecpolicy ecp.EnterpriseContractPolicySpec) (*ecp.EnterpriseContractPolicy, error) {
+// CreateEnterpriseContractPolicy creates an EnterpriseContractPolicy in a specified namespace.
+func (t *TektonController) CreateEnterpriseContractPolicy(name, namespace string, ecpolicy ecp.EnterpriseContractPolicySpec) (*ecp.EnterpriseContractPolicy, error) {
 	ec := &ecp.EnterpriseContractPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -18,10 +18,11 @@ func (s *SuiteController) CreateEnterpriseContractPolicy(name, namespace string,
 		},
 		Spec: ecpolicy,
 	}
-	return ec, s.KubeRest().Create(context.TODO(), ec)
+	return ec, t.KubeRest().Create(context.TODO(), ec)
 }
 
-func (k KubeController) CreateOrUpdatePolicyConfiguration(namespace string, policy ecp.EnterpriseContractPolicySpec) error {
+// CreateOrUpdatePolicyConfiguration creates new policy if it doesn't exist, otherwise updates the existing one, in a specified namespace.
+func (t *TektonController) CreateOrUpdatePolicyConfiguration(namespace string, policy ecp.EnterpriseContractPolicySpec) error {
 	ecPolicy := ecp.EnterpriseContractPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "ec-policy",
@@ -30,7 +31,7 @@ func (k KubeController) CreateOrUpdatePolicyConfiguration(namespace string, poli
 	}
 
 	// fetch to see if it exists
-	err := k.Tektonctrl.KubeRest().Get(context.TODO(), crclient.ObjectKey{
+	err := t.KubeRest().Get(context.TODO(), crclient.ObjectKey{
 		Namespace: namespace,
 		Name:      "ec-policy",
 	}, &ecPolicy)
@@ -47,12 +48,12 @@ func (k KubeController) CreateOrUpdatePolicyConfiguration(namespace string, poli
 	ecPolicy.Spec = policy
 	if !exists {
 		// it doesn't, so create
-		if err := k.Tektonctrl.KubeRest().Create(context.TODO(), &ecPolicy); err != nil {
+		if err := t.KubeRest().Create(context.TODO(), &ecPolicy); err != nil {
 			return err
 		}
 	} else {
 		// it does, so update
-		if err := k.Tektonctrl.KubeRest().Update(context.TODO(), &ecPolicy); err != nil {
+		if err := t.KubeRest().Update(context.TODO(), &ecPolicy); err != nil {
 			return err
 		}
 	}
@@ -61,14 +62,14 @@ func (k KubeController) CreateOrUpdatePolicyConfiguration(namespace string, poli
 }
 
 // GetEnterpriseContractPolicy gets an EnterpriseContractPolicy from specified a namespace
-func (k KubeController) GetEnterpriseContractPolicy(name, namespace string) (*ecp.EnterpriseContractPolicy, error) {
+func (t *TektonController) GetEnterpriseContractPolicy(name, namespace string) (*ecp.EnterpriseContractPolicy, error) {
 	defaultEcPolicy := ecp.EnterpriseContractPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
 	}
-	err := k.Tektonctrl.KubeRest().Get(context.TODO(), crclient.ObjectKey{
+	err := t.KubeRest().Get(context.TODO(), crclient.ObjectKey{
 		Namespace: namespace,
 		Name:      name,
 	}, &defaultEcPolicy)

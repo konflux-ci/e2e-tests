@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	app "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -81,6 +82,7 @@ type VerifyEnterpriseContract struct {
 	EffectiveTime       string
 }
 
+// Generates pipelineRun from VerifyEnterpriseContract.
 func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
 	var snapshot app.SnapshotSpec
 	err := json.Unmarshal([]byte(p.Image), &snapshot)
@@ -168,18 +170,15 @@ func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
 	}
 }
 
-// Create a tekton pipeline and return the pipeline or error
-func (s *SuiteController) CreatePipeline(pipeline *v1beta1.Pipeline, ns string) (*v1beta1.Pipeline, error) {
-	return s.PipelineClient().TektonV1beta1().Pipelines(ns).Create(context.TODO(), pipeline, metav1.CreateOptions{})
+// CreatePipeline creates a tekton pipeline and returns the pipeline or an error
+func (t *TektonController) CreatePipeline(pipeline *v1beta1.Pipeline, ns string) (*v1beta1.Pipeline, error) {
+	return t.PipelineClient().TektonV1beta1().Pipelines(ns).Create(context.TODO(), pipeline, metav1.CreateOptions{})
 }
 
-func (s *SuiteController) DeletePipeline(name, ns string) error {
-	return s.PipelineClient().TektonV1beta1().Pipelines(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
-}
-
-func (k KubeController) RunPipeline(g PipelineRunGenerator, taskTimeout int) (*v1beta1.PipelineRun, error) {
+// RunPipeline creates a pipelineRun and waits for it to start.
+func (t *TektonController) RunPipeline(c *common.SuiteController, namespace string, g PipelineRunGenerator, taskTimeout int) (*v1beta1.PipelineRun, error) {
 	pr := g.Generate()
-	pvcs := k.Commonctrl.KubeInterface().CoreV1().PersistentVolumeClaims(pr.Namespace)
+	pvcs := t.KubeInterface().CoreV1().PersistentVolumeClaims(pr.Namespace)
 	for _, w := range pr.Spec.Workspaces {
 		if w.PersistentVolumeClaim != nil {
 			pvcName := w.PersistentVolumeClaim.ClaimName
@@ -196,5 +195,10 @@ func (k KubeController) RunPipeline(g PipelineRunGenerator, taskTimeout int) (*v
 		}
 	}
 
-	return k.createAndWait(pr, taskTimeout)
+	return t.createAndWait(pr, namespace, taskTimeout)
+}
+
+// DeletePipeline removes the pipeline from given namespace.
+func (t *TektonController) DeletePipeline(name, ns string) error {
+	return t.PipelineClient().TektonV1beta1().Pipelines(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }

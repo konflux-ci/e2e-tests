@@ -8,8 +8,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (k KubeController) CreateOrUpdateSigningSecret(publicKey []byte, name, namespace string) (err error) {
-	api := k.Tektonctrl.KubeInterface().CoreV1().Secrets(namespace)
+// CreateOrUpdateSigningSecret creates a signing secret if it doesn't exist, otherwise updates the existing one.
+func (t *TektonController) CreateOrUpdateSigningSecret(publicKey []byte, name, namespace string) (err error) {
+	api := t.KubeInterface().CoreV1().Secrets(namespace)
 	ctx := context.TODO()
 
 	expectedSecret := &corev1.Secret{

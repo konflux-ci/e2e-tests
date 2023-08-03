@@ -20,7 +20,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	r "github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
@@ -79,10 +78,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 	var sharedSecret *corev1.Secret
 	var pacControllerRoute *routev1.Route
 	var componentName string
-
 	var componentNewBaseBranch, userNamespace string
-
-	var kc tekton.KubeController
 
 	// set vs. simply declare these pointers so we can use them in debug, where an empty name is indicative of Get's failing
 	component := &appstudioApi.Component{}
@@ -103,12 +99,6 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 
 		sharedSecret, err = f.AsKubeAdmin.CommonController.GetSecret(constants.QuayRepositorySecretNamespace, constants.QuayRepositorySecretName)
 		Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error when getting shared secret - make sure the secret %s in %s userNamespace is created", constants.QuayRepositorySecretName, constants.QuayRepositorySecretNamespace))
-
-		// Release configuration
-		kc = tekton.KubeController{
-			Commonctrl: *f.AsKubeAdmin.CommonController,
-			Tektonctrl: *f.AsKubeAdmin.TektonController,
-		}
 
 		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "release-pull-secret", Namespace: managedNamespace},
 			Data: map[string][]byte{".dockerconfigjson": sharedSecret.Data[".dockerconfigjson"]},
@@ -132,10 +122,10 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
 		Expect(err).NotTo(HaveOccurred())
 
-		publicKey, err := kc.GetTektonChainsPublicKey()
+		publicKey, err := f.AsKubeAdmin.TektonController.GetTektonChainsPublicKey()
 		Expect(err).ToNot(HaveOccurred())
 
-		Expect(kc.CreateOrUpdateSigningSecret(publicKey, "cosign-public-key", managedNamespace)).To(Succeed())
+		Expect(f.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(publicKey, "cosign-public-key", managedNamespace)).To(Succeed())
 
 		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlan("source-releaseplan", userNamespace, appName, managedNamespace, "")
 		Expect(err).NotTo(HaveOccurred())
@@ -160,7 +150,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission("demo", userNamespace, appName, managedNamespace, "", "", "rhtap-demo-strategy")
 		Expect(err).NotTo(HaveOccurred())
 
-		defaultEcPolicy, err := kc.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+		defaultEcPolicy, err := f.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 		Expect(err).NotTo(HaveOccurred())
 
 		defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
@@ -295,7 +285,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 				Eventually(func() error {
 					pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, appName, userNamespace, prSHA)
 					if err == nil {
-						Expect(kc.Tektonctrl.DeletePipelineRun(pipelineRun.Name, pipelineRun.Namespace)).To(Succeed())
+						Expect(f.AsKubeAdmin.TektonController.DeletePipelineRun(pipelineRun.Name, pipelineRun.Namespace)).To(Succeed())
 						return nil
 					}
 					return err

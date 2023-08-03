@@ -9,6 +9,7 @@ import (
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
+// createPVC creates PVC.
 func createPVC(pvcs v1.PersistentVolumeClaimInterface, pvcName string) error {
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -34,7 +35,7 @@ func createPVC(pvcs v1.PersistentVolumeClaimInterface, pvcName string) error {
 }
 
 // CreatePVCInAccessMode creates a PVC with mode as passed in arguments.
-func (s *SuiteController) CreatePVCInAccessMode(name, namespace string, accessMode corev1.PersistentVolumeAccessMode) (*corev1.PersistentVolumeClaim, error) {
+func (t *TektonController) CreatePVCInAccessMode(name, namespace string, accessMode corev1.PersistentVolumeAccessMode) (*corev1.PersistentVolumeClaim, error) {
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -52,7 +53,7 @@ func (s *SuiteController) CreatePVCInAccessMode(name, namespace string, accessMo
 		},
 	}
 
-	createdPVC, err := s.KubeInterface().CoreV1().PersistentVolumeClaims(namespace).Create(context.TODO(), pvc, metav1.CreateOptions{})
+	createdPVC, err := t.KubeInterface().CoreV1().PersistentVolumeClaims(namespace).Create(context.TODO(), pvc, metav1.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}

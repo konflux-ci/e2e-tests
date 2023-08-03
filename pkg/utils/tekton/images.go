@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+const quayBaseUrl = "https://quay.io/api/v1"
+
 type ManifestResponse struct {
 	Layers []any `json:"layers"`
 }
@@ -25,6 +27,7 @@ type TagResponse struct {
 	Tags []Tag `json:"tags"`
 }
 
+// getImageInfoFromQuay returns QuayImageInfo for a given image.
 func getImageInfoFromQuay(imageRepo, imageTag string) (*QuayImageInfo, error) {
 
 	res, err := http.Get(fmt.Sprintf("%s/repository/%s/tag/?specificTag=%s", quayBaseUrl, imageRepo, imageTag))

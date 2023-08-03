@@ -102,7 +102,7 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 				return true, nil
 			} else {
 				var prLogs string
-				if err = tekton.StorePipelineRun(pr, h.KubeRest(), h.KubeInterface()); err != nil {
+				if err = tekton.StoreFailedPipelineRun(pr, h.KubeRest(), h.KubeInterface()); err != nil {
 					GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
 				}
 				if prLogs, err = tekton.GetFailedPipelineRunLogs(h.KubeRest(), h.KubeInterface(), pr); err != nil {

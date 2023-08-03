@@ -14,14 +14,15 @@ type Bundles struct {
 	NodeJSBuilderBundle string
 }
 
-func (s *SuiteController) NewBundles() (*Bundles, error) {
+// NewBundles returns new Bundles.
+func (t *TektonController) NewBundles() (*Bundles, error) {
 	namespacedName := types.NamespacedName{
 		Name:      "build-pipeline-selector",
 		Namespace: "build-service",
 	}
 	bundles := &Bundles{}
 	pipelineSelector := &buildservice.BuildPipelineSelector{}
-	err := s.KubeRest().Get(context.TODO(), namespacedName, pipelineSelector)
+	err := t.KubeRest().Get(context.TODO(), namespacedName, pipelineSelector)
 	if err != nil {
 		return nil, err
 	}

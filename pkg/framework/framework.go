@@ -25,7 +25,7 @@ import (
 type ControllerHub struct {
 	HasController             *has.HasController
 	CommonController          *common.SuiteController
-	TektonController          *tekton.SuiteController
+	TektonController          *tekton.TektonController
 	GitOpsController          *gitops.GitopsController
 	SPIController             *spi.SuiteController
 	ReleaseController         *release.ReleaseController
@@ -92,7 +92,7 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 		if err = asAdmin.CommonController.AddRegistryAuthSecretToSA("QUAY_TOKEN", k.UserNamespace); err != nil {
 			GinkgoWriter.Println(fmt.Sprintf("Failed to add registry auth secret to service account: %v\n", err))
 		}
-	} 
+	}
 
 	asUser, err := InitControllerHub(k.AsKubeDeveloper)
 	if err != nil {
@@ -136,7 +136,10 @@ func InitControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 		return nil, err
 	}
 	// Initialize Tekton controller
-	tektonController := tekton.NewSuiteController(cc)
+	tektonController, err := tekton.NewSuiteController(cc)
+	if err != nil {
+		return nil, err
+	}
 
 	// Initialize GitOps controller
 	gitopsController, err := gitops.NewSuiteController(cc)

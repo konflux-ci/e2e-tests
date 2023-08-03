@@ -8,14 +8,12 @@ import (
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
 var _ = framework.O11ySuiteDescribe("O11Y E2E tests for Pipelinerun", Label("o11y", "HACBS"), Pending, func() {
 
 	defer GinkgoRecover()
 	var f *framework.Framework
-	var kc tekton.KubeController
 	var err error
 
 	Describe("O11y test", func() {
@@ -26,11 +24,6 @@ var _ = framework.O11ySuiteDescribe("O11Y E2E tests for Pipelinerun", Label("o11
 			f, err = framework.NewFramework(O11yUserPipelineruns)
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace
-			kc = tekton.KubeController{
-				Commonctrl: *f.AsKubeAdmin.CommonController,
-				Tektonctrl: *f.AsKubeAdmin.TektonController,
-				Namespace:  testNamespace,
-			}
 
 			// Get Quay Token from ENV
 			quayToken := utils.GetEnv("QUAY_TOKEN", "")
@@ -59,7 +52,7 @@ var _ = framework.O11ySuiteDescribe("O11Y E2E tests for Pipelinerun", Label("o11
 			Expect(err).NotTo(HaveOccurred())
 
 			// Wait for the pipeline run to succeed
-			Expect(kc.WatchPipelineRunSucceeded(pipelineRun.Name, pipelineRunTimeout)).To(Succeed())
+			Expect(f.AsKubeAdmin.TektonController.WatchPipelineRunSucceeded(pipelineRun.Name, testNamespace, pipelineRunTimeout)).To(Succeed())
 
 			podNameRegex := ".*-buildah-quay-pod"
 			query := fmt.Sprintf("last_over_time(container_network_transmit_bytes_total{namespace='%s', pod=~'%s'}[1h])", testNamespace, podNameRegex)
@@ -87,7 +80,7 @@ var _ = framework.O11ySuiteDescribe("O11Y E2E tests for Pipelinerun", Label("o11
 			Expect(err).NotTo(HaveOccurred())
 
 			// Wait for the pipeline run to succeed
-			Expect(kc.WatchPipelineRunSucceeded(pipelineRun.Name, pipelineRunTimeout)).To(Succeed())
+			Expect(f.AsKubeAdmin.TektonController.WatchPipelineRunSucceeded(pipelineRun.Name, testNamespace, pipelineRunTimeout)).To(Succeed())
 
 			podNameRegex := "pipelinerun-vcpu-.*"
 			query := fmt.Sprintf("{__name__=~'kube_pod_container_resource_limits', namespace='%s', resource='cpu', pod=~'%s', container!='None'}", testNamespace, podNameRegex)

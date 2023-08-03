@@ -211,7 +211,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 			When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", gitUrl), Label("sbom", "slow"), func() {
 				var outputImage string
-				var kubeController tekton.KubeController
 				BeforeAll(func() {
 					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
 					Expect(err).ShouldNot(HaveOccurred())
@@ -222,28 +221,22 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						}
 					}
 					Expect(outputImage).ToNot(BeEmpty(), "output image of a component could not be found")
-
-					kubeController = tekton.KubeController{
-						Commonctrl: *kubeadminClient.CommonController,
-						Tektonctrl: *kubeadminClient.TektonController,
-						Namespace:  testNamespace,
-					}
 				})
 				It("verify-enterprise-contract check should pass", Label(buildTemplatesTestLabel), func() {
-					cm, err := kubeController.Commonctrl.GetConfigMap("ec-defaults", "enterprise-contract-service")
+					cm, err := f.AsKubeAdmin.CommonController.GetConfigMap("ec-defaults", "enterprise-contract-service")
 					Expect(err).ToNot(HaveOccurred())
 
 					verifyECTaskBundle := cm.Data["verify_ec_task_bundle"]
 					Expect(verifyECTaskBundle).ToNot(BeEmpty())
 
 					publicSecretName := "cosign-public-key"
-					publicKey, err := kubeController.GetTektonChainsPublicKey()
+					publicKey, err := kubeadminClient.TektonController.GetTektonChainsPublicKey()
 					Expect(err).ToNot(HaveOccurred())
 
-					Expect(kubeController.CreateOrUpdateSigningSecret(
+					Expect(kubeadminClient.TektonController.CreateOrUpdateSigningSecret(
 						publicKey, publicSecretName, testNamespace)).To(Succeed())
 
-					defaultEcp, err := kubeController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+					defaultEcp, err := kubeadminClient.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 					Expect(err).NotTo(HaveOccurred())
 
 					policySource := defaultEcp.Spec.Sources
@@ -256,7 +249,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 							Exclude:     []string{"cve"},
 						},
 					}
-					Expect(kubeController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
+					Expect(kubeadminClient.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
 
 					generator := tekton.VerifyEnterpriseContract{
 						ApplicationName:     applicationName,
@@ -272,15 +265,15 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						EffectiveTime:       "now",
 					}
 					ecPipelineRunTimeout := int(time.Duration(10 * time.Minute).Seconds())
-					pr, err := kubeController.RunPipeline(generator, ecPipelineRunTimeout)
+					pr, err := kubeadminClient.TektonController.RunPipeline(kubeadminClient.CommonController, testNamespace, generator, ecPipelineRunTimeout)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(kubeController.WatchPipelineRun(pr.Name, ecPipelineRunTimeout)).To(Succeed())
+					Expect(kubeadminClient.TektonController.WatchPipelineRun(pr.Name, testNamespace, ecPipelineRunTimeout)).To(Succeed())
 
-					pr, err = kubeController.Tektonctrl.GetPipelineRun(pr.Name, pr.Namespace)
+					pr, err = kubeadminClient.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
 					Expect(err).NotTo(HaveOccurred())
 
-					tr, err := kubeController.GetTaskRunStatus(kubeadminClient.CommonController.KubeRest(), pr, "verify-enterprise-contract")
+					tr, err := kubeadminClient.TektonController.GetTaskRunStatus(kubeadminClient.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
 					Expect(tr.Status.TaskRunResults).Should(Or(

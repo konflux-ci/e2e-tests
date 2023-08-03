@@ -11,13 +11,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Create a tekton task and return the task or error
-func (s *SuiteController) CreateTask(task *v1beta1.Task, ns string) (*v1beta1.Task, error) {
-	return s.PipelineClient().TektonV1beta1().Tasks(ns).Create(context.TODO(), task, metav1.CreateOptions{})
+// Create a tekton task and return the task or error.
+func (t *TektonController) CreateTask(task *v1beta1.Task, ns string) (*v1beta1.Task, error) {
+	return t.PipelineClient().TektonV1beta1().Tasks(ns).Create(context.TODO(), task, metav1.CreateOptions{})
 }
 
-// CreateSkopeoCopyTask creates a skopeo copy task in the given namespace
-func (s *SuiteController) CreateSkopeoCopyTask(namespace string) error {
+// CreateSkopeoCopyTask creates a skopeo copy task in the given namespace.
+func (t *TektonController) CreateSkopeoCopyTask(namespace string) error {
 	_, err := exec.Command(
 		"oc",
 		"apply",
@@ -29,8 +29,8 @@ func (s *SuiteController) CreateSkopeoCopyTask(namespace string) error {
 	return err
 }
 
-// GetTask returns the requested Task object
-func (s *SuiteController) GetTask(name, namespace string) (*v1beta1.Task, error) {
+// GetTask returns the requested Task object.
+func (t *TektonController) GetTask(name, namespace string) (*v1beta1.Task, error) {
 	namespacedName := types.NamespacedName{
 		Name:      name,
 		Namespace: namespace,
@@ -42,18 +42,19 @@ func (s *SuiteController) GetTask(name, namespace string) (*v1beta1.Task, error)
 			Namespace: namespace,
 		},
 	}
-	err := s.KubeRest().Get(context.TODO(), namespacedName, &task)
+	err := t.KubeRest().Get(context.TODO(), namespacedName, &task)
 	if err != nil {
 		return nil, err
 	}
 	return &task, nil
 }
 
-func (s *SuiteController) DeleteTask(name, ns string) error {
-	return s.PipelineClient().TektonV1beta1().Tasks(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
+// DeleteTask removes the task from a given namespace.
+func (t *TektonController) DeleteTask(name, ns string) error {
+	return t.PipelineClient().TektonV1beta1().Tasks(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
-// Remove all Tasks from a given repository. Useful when creating a lot of resources and wanting to remove all of them
-func (h *SuiteController) DeleteAllTasksInASpecificNamespace(namespace string) error {
-	return h.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.Task{}, crclient.InNamespace(namespace))
+// DeleteAllTasksInASpecificNamespace removes all Tasks from a given repository. Useful when creating a lot of resources and wanting to remove all of them.
+func (t *TektonController) DeleteAllTasksInASpecificNamespace(namespace string) error {
+	return t.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.Task{}, crclient.InNamespace(namespace))
 }

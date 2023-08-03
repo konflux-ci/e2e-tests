@@ -7,8 +7,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func (s *SuiteController) fetchContainerLog(podName, containerName, namespace string) (string, error) {
-	podClient := s.KubeInterface().CoreV1().Pods(namespace)
+// fetchContainerLog fetches logs of a given container.
+func (t *TektonController) fetchContainerLog(podName, containerName, namespace string) (string, error) {
+	podClient := t.KubeInterface().CoreV1().Pods(namespace)
 	req := podClient.GetLogs(podName, &corev1.PodLogOptions{Container: containerName})
 	readCloser, err := req.Stream(context.TODO())
 	log := ""

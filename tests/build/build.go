@@ -699,7 +699,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		var applicationName, componentName, testNamespace string
 		var timeout time.Duration
 		var err error
-		var kc tekton.KubeController
 		var pr *v1beta1.PipelineRun
 
 		BeforeAll(func() {
@@ -707,12 +706,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace
-
-			kc = tekton.KubeController{
-				Commonctrl: *f.AsKubeAdmin.CommonController,
-				Tektonctrl: *f.AsKubeAdmin.TektonController,
-				Namespace:  testNamespace,
-			}
 
 			if err = f.AsKubeAdmin.CommonController.UnlinkSecretFromServiceAccount(testNamespace, constants.RegistryAuthSecretName, constants.DefaultPipelineServiceAccount, true); err != nil {
 				GinkgoWriter.Println(fmt.Sprintf("Failed to unlink registry auth secret from service account: %v\n", err))
@@ -793,10 +786,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		It("should not be possible to push to quay.io repo (PipelineRun should fail)", func() {
 			pipelineRunTimeout := int(time.Duration(20) * time.Minute)
 
-			Expect(kc.WatchPipelineRun(pr.Name, pipelineRunTimeout)).To(Succeed())
-			pr, err = kc.Tektonctrl.GetPipelineRun(pr.GetName(), pr.GetNamespace())
+			Expect(f.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, testNamespace, pipelineRunTimeout)).To(Succeed())
+			pr, err = f.AsKubeAdmin.TektonController.GetPipelineRun(pr.GetName(), pr.GetNamespace())
 			Expect(err).NotTo(HaveOccurred())
-			tr, err := kc.GetTaskRunStatus(f.AsKubeAdmin.CommonController.KubeRest(), pr, constants.BuildTaskRunName)
+			tr, err := f.AsKubeAdmin.TektonController.GetTaskRunStatus(f.AsKubeAdmin.CommonController.KubeRest(), pr, constants.BuildTaskRunName)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(tekton.DidTaskSucceed(tr)).To(BeFalse())
 		})

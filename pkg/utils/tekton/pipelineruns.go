@@ -22,32 +22,34 @@ import (
 	g "github.com/onsi/ginkgo/v2"
 )
 
-// Create a tekton pipelineRun and return the pipelineRun or error
-func (s *SuiteController) CreatePipelineRun(pipelineRun *v1beta1.PipelineRun, ns string) (*v1beta1.PipelineRun, error) {
-	return s.PipelineClient().TektonV1beta1().PipelineRuns(ns).Create(context.TODO(), pipelineRun, metav1.CreateOptions{})
+// CreatePipelineRun creates a tekton pipelineRun and returns the pipelineRun or error
+func (t *TektonController) CreatePipelineRun(pipelineRun *v1beta1.PipelineRun, ns string) (*v1beta1.PipelineRun, error) {
+	return t.PipelineClient().TektonV1beta1().PipelineRuns(ns).Create(context.TODO(), pipelineRun, metav1.CreateOptions{})
 }
 
-func (k KubeController) createAndWait(pr *v1beta1.PipelineRun, taskTimeout int) (*v1beta1.PipelineRun, error) {
-	pipelineRun, err := k.Tektonctrl.CreatePipelineRun(pr, k.Namespace)
+// createAndWait creates a pipelineRun and waits until it starts.
+func (t *TektonController) createAndWait(pr *v1beta1.PipelineRun, namespace string, taskTimeout int) (*v1beta1.PipelineRun, error) {
+	pipelineRun, err := t.CreatePipelineRun(pr, namespace)
 	if err != nil {
 		return nil, err
 	}
 	g.GinkgoWriter.Printf("Creating Pipeline %q\n", pipelineRun.Name)
-	return pipelineRun, utils.WaitUntil(k.Tektonctrl.CheckPipelineRunStarted(pipelineRun.Name, k.Namespace), time.Duration(taskTimeout)*time.Second)
+	return pipelineRun, utils.WaitUntil(t.CheckPipelineRunStarted(pipelineRun.Name, namespace), time.Duration(taskTimeout)*time.Second)
 }
 
-func (s *SuiteController) GetPipelineRun(pipelineRunName, namespace string) (*v1beta1.PipelineRun, error) {
-	return s.PipelineClient().TektonV1beta1().PipelineRuns(namespace).Get(context.TODO(), pipelineRunName, metav1.GetOptions{})
+// GetPipelineRun returns a pipelineRun with a given name.
+func (t *TektonController) GetPipelineRun(pipelineRunName, namespace string) (*v1beta1.PipelineRun, error) {
+	return t.PipelineClient().TektonV1beta1().PipelineRuns(namespace).Get(context.TODO(), pipelineRunName, metav1.GetOptions{})
 }
 
-// DUPLICATION!!!!!!!!!!!!!!!!!!!!!
-// GetListOfPipelineRunsInNamespace returns a List of all PipelineRuns in namespace.
-func (s *SuiteController) GetListOfPipelineRunsInNamespace(namespace string) (*v1beta1.PipelineRunList, error) {
-	return s.PipelineClient().TektonV1beta1().PipelineRuns(namespace).List(context.TODO(), metav1.ListOptions{})
+// GetListOfPipelineRunsInNamespace returns a list of all pipelineRuns in a given namespace.
+func (t *TektonController) GetListOfPipelineRunsInNamespace(namespace string) (*v1beta1.PipelineRunList, error) {
+	return t.PipelineClient().TektonV1beta1().PipelineRuns(namespace).List(context.TODO(), metav1.ListOptions{})
 }
 
-func (s *SuiteController) GetPipelineRunLogs(pipelineRunName, namespace string) (string, error) {
-	podClient := s.KubeInterface().CoreV1().Pods(namespace)
+// GetPipelineRunLogs returns logs of a given pipelineRun.
+func (t *TektonController) GetPipelineRunLogs(pipelineRunName, namespace string) (string, error) {
+	podClient := t.KubeInterface().CoreV1().Pods(namespace)
 	podList, err := podClient.List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return "", err
@@ -60,7 +62,7 @@ func (s *SuiteController) GetPipelineRunLogs(pipelineRunName, namespace string) 
 		for _, c := range pod.Spec.InitContainers {
 			var err error
 			var cLog string
-			cLog, err = s.fetchContainerLog(pod.Name, c.Name, namespace)
+			cLog, err = t.fetchContainerLog(pod.Name, c.Name, namespace)
 			podLog = podLog + fmt.Sprintf("\ninit container %s: \n", c.Name) + cLog
 			if err != nil {
 				return podLog, err
@@ -69,7 +71,7 @@ func (s *SuiteController) GetPipelineRunLogs(pipelineRunName, namespace string) 
 		for _, c := range pod.Spec.Containers {
 			var err error
 			var cLog string
-			cLog, err = s.fetchContainerLog(pod.Name, c.Name, namespace)
+			cLog, err = t.fetchContainerLog(pod.Name, c.Name, namespace)
 			podLog = podLog + fmt.Sprintf("\ncontainer %s: \n", c.Name) + cLog
 			if err != nil {
 				return podLog, err
@@ -94,9 +96,9 @@ func GetFailedPipelineRunLogs(c crclient.Client, ki kubernetes.Interface, pipeli
 	return failMessage, nil
 }
 
-// StorePipelineRunLogs stores logs and parsed yamls of pipelineRuns into directory of pipelineruns' namespace under ARTIFACT_DIR env.
+// StoreFailedPipelineRunLogs stores logs and parsed yamls of pipelineRuns into directory of pipelineruns' namespace under ARTIFACT_DIR env.
 // In case the files can't be stored in ARTIFACT_DIR, they will be recorder in GinkgoWriter.
-func StorePipelineRun(pipelineRun *v1beta1.PipelineRun, c crclient.Client, ki kubernetes.Interface) error {
+func StoreFailedPipelineRun(pipelineRun *v1beta1.PipelineRun, c crclient.Client, ki kubernetes.Interface) error {
 	wd, _ := os.Getwd()
 	artifactDir := utils.GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
 	testLogsDir := fmt.Sprintf("%s/%s", artifactDir, pipelineRun.GetNamespace())
@@ -140,13 +142,14 @@ func StorePipelineRun(pipelineRun *v1beta1.PipelineRun, c crclient.Client, ki ku
 	return nil
 }
 
-func (s *SuiteController) StorePipelineRuns(componentPipelineRun *v1beta1.PipelineRun, testLogsDir, testNamespace string) error {
+// StorePipelineRuns stores logs of all pipelineruns in given namespace in folder specified under ARTIFACT_DIR env.
+func (t *TektonController) StorePipelineRuns(componentPipelineRun *v1beta1.PipelineRun, testLogsDir, testNamespace string) error {
 	if err := os.MkdirAll(testLogsDir, os.ModePerm); err != nil {
 		return err
 	}
 
 	filepath := fmt.Sprintf("%s/%s-pr-%s.log", testLogsDir, testNamespace, componentPipelineRun.Name)
-	pipelineLogs, err := s.GetPipelineRunLogs(componentPipelineRun.Name, testNamespace)
+	pipelineLogs, err := t.GetPipelineRunLogs(componentPipelineRun.Name, testNamespace)
 	if err != nil {
 		g.GinkgoWriter.Printf("got error fetching PR logs: %v\n", err.Error())
 	} else {
@@ -155,7 +158,7 @@ func (s *SuiteController) StorePipelineRuns(componentPipelineRun *v1beta1.Pipeli
 		}
 	}
 
-	pipelineRuns, err := s.ListAllPipelineRuns(testNamespace)
+	pipelineRuns, err := t.ListAllPipelineRuns(testNamespace)
 
 	if err != nil {
 		return fmt.Errorf("got error fetching PR list: %v\n", err.Error())
@@ -163,7 +166,7 @@ func (s *SuiteController) StorePipelineRuns(componentPipelineRun *v1beta1.Pipeli
 
 	for _, pipelineRun := range pipelineRuns.Items {
 		filepath := fmt.Sprintf("%s/%s-pr-%s.log", testLogsDir, testNamespace, pipelineRun.Name)
-		pipelineLogs, err := s.GetPipelineRunLogs(pipelineRun.Name, testNamespace)
+		pipelineLogs, err := t.GetPipelineRunLogs(pipelineRun.Name, testNamespace)
 		if err != nil {
 			g.GinkgoWriter.Printf("got error fetching PR logs: %v\n", err.Error())
 			continue
@@ -177,23 +180,27 @@ func (s *SuiteController) StorePipelineRuns(componentPipelineRun *v1beta1.Pipeli
 	return nil
 }
 
-func (s *SuiteController) WatchPipelineRun(ctx context.Context, namespace string) (watch.Interface, error) {
-	return s.PipelineClient().TektonV1beta1().PipelineRuns(namespace).Watch(ctx, metav1.ListOptions{})
+// GetPipelineRunWatch returns pipelineRun watch interface.
+func (t *TektonController) GetPipelineRunWatch(ctx context.Context, namespace string) (watch.Interface, error) {
+	return t.PipelineClient().TektonV1beta1().PipelineRuns(namespace).Watch(ctx, metav1.ListOptions{})
 }
 
-func (k KubeController) WatchPipelineRun(pipelineRunName string, taskTimeout int) error {
+// WatchPipelineRun waits until pipelineRun finishes.
+func (t *TektonController) WatchPipelineRun(pipelineRunName, namespace string, taskTimeout int) error {
 	g.GinkgoWriter.Printf("Waiting for pipeline %q to finish\n", pipelineRunName)
-	return utils.WaitUntil(k.Tektonctrl.CheckPipelineRunFinished(pipelineRunName, k.Namespace), time.Duration(taskTimeout)*time.Second)
+	return utils.WaitUntil(t.CheckPipelineRunFinished(pipelineRunName, namespace), time.Duration(taskTimeout)*time.Second)
 }
 
-func (k KubeController) WatchPipelineRunSucceeded(pipelineRunName string, taskTimeout int) error {
+// WatchPipelineRunSucceeded waits until the pipelineRun succeeds.
+func (t *TektonController) WatchPipelineRunSucceeded(pipelineRunName, namespace string, taskTimeout int) error {
 	g.GinkgoWriter.Printf("Waiting for pipeline %q to finish\n", pipelineRunName)
-	return utils.WaitUntil(k.Tektonctrl.CheckPipelineRunSucceeded(pipelineRunName, k.Namespace), time.Duration(taskTimeout)*time.Second)
+	return utils.WaitUntil(t.CheckPipelineRunSucceeded(pipelineRunName, namespace), time.Duration(taskTimeout)*time.Second)
 }
 
-func (s *SuiteController) CheckPipelineRunStarted(pipelineRunName, namespace string) wait.ConditionFunc {
+// CheckPipelineRunStarted checks if pipelineRUn started.
+func (t *TektonController) CheckPipelineRunStarted(pipelineRunName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		pr, err := s.GetPipelineRun(pipelineRunName, namespace)
+		pr, err := t.GetPipelineRun(pipelineRunName, namespace)
 		if err != nil {
 			return false, nil
 		}
@@ -204,9 +211,10 @@ func (s *SuiteController) CheckPipelineRunStarted(pipelineRunName, namespace str
 	}
 }
 
-func (s *SuiteController) CheckPipelineRunFinished(pipelineRunName, namespace string) wait.ConditionFunc {
+// CheckPipelineRunFinished checks if pipelineRun finished.
+func (t *TektonController) CheckPipelineRunFinished(pipelineRunName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		pr, err := s.GetPipelineRun(pipelineRunName, namespace)
+		pr, err := t.GetPipelineRun(pipelineRunName, namespace)
 		if err != nil {
 			return false, nil
 		}
@@ -217,9 +225,10 @@ func (s *SuiteController) CheckPipelineRunFinished(pipelineRunName, namespace st
 	}
 }
 
-func (s *SuiteController) CheckPipelineRunSucceeded(pipelineRunName, namespace string) wait.ConditionFunc {
+// CheckPipelineRunSucceeded checks if pipelineRun succeeded. Returns error if getting pipelineRun fails.
+func (t *TektonController) CheckPipelineRunSucceeded(pipelineRunName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		pr, err := s.GetPipelineRun(pipelineRunName, namespace)
+		pr, err := t.GetPipelineRun(pipelineRunName, namespace)
 		if err != nil {
 			return false, err
 		}
@@ -234,18 +243,20 @@ func (s *SuiteController) CheckPipelineRunSucceeded(pipelineRunName, namespace s
 	}
 }
 
-func (s *SuiteController) ListAllPipelineRuns(ns string) (*v1beta1.PipelineRunList, error) {
-	return s.PipelineClient().TektonV1beta1().PipelineRuns(ns).List(context.TODO(), metav1.ListOptions{})
+// ListAllPipelineRuns returns a list of all pipelineRuns in a namespace.
+func (t *TektonController) ListAllPipelineRuns(ns string) (*v1beta1.PipelineRunList, error) {
+	return t.PipelineClient().TektonV1beta1().PipelineRuns(ns).List(context.TODO(), metav1.ListOptions{})
 }
 
-func (s *SuiteController) DeletePipelineRun(name, ns string) error {
-	return s.PipelineClient().TektonV1beta1().PipelineRuns(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
+// DeletePipelineRun deletes a pipelineRun form a given namespace.
+func (t *TektonController) DeletePipelineRun(name, ns string) error {
+	return t.PipelineClient().TektonV1beta1().PipelineRuns(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
 // DeleteAllPipelineRunsInASpecificNamespace deletes all PipelineRuns in a given namespace (removing the finalizers field, first)
-func (s *SuiteController) DeleteAllPipelineRunsInASpecificNamespace(ns string) error {
+func (t *TektonController) DeleteAllPipelineRunsInASpecificNamespace(ns string) error {
 
-	pipelineRunList, err := s.ListAllPipelineRuns(ns)
+	pipelineRunList, err := t.ListAllPipelineRuns(ns)
 	if err != nil || pipelineRunList == nil {
 		return fmt.Errorf("unable to delete all PipelineRuns in '%s': %v", ns, err)
 	}
@@ -258,7 +269,7 @@ func (s *SuiteController) DeleteAllPipelineRunsInASpecificNamespace(ns string) e
 					Namespace: ns,
 				},
 			}
-			if err := s.KubeRest().Get(context.TODO(), crclient.ObjectKeyFromObject(&pipelineRunCR), &pipelineRunCR); err != nil {
+			if err := t.KubeRest().Get(context.TODO(), crclient.ObjectKeyFromObject(&pipelineRunCR), &pipelineRunCR); err != nil {
 				if errors.IsNotFound(err) {
 					// PipelinerRun CR is already removed
 					return true, nil
@@ -270,12 +281,12 @@ func (s *SuiteController) DeleteAllPipelineRunsInASpecificNamespace(ns string) e
 
 			// Remove the finalizer, so that it can be deleted.
 			pipelineRunCR.Finalizers = []string{}
-			if err := s.KubeRest().Update(context.TODO(), &pipelineRunCR); err != nil {
+			if err := t.KubeRest().Update(context.TODO(), &pipelineRunCR); err != nil {
 				g.GinkgoWriter.Printf("unable to remove finalizers from PipelineRun '%s' in '%s': %v\n", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
 				return false, nil
 			}
 
-			if err := s.KubeRest().Delete(context.TODO(), &pipelineRunCR); err != nil {
+			if err := t.KubeRest().Delete(context.TODO(), &pipelineRunCR); err != nil {
 				g.GinkgoWriter.Printf("unable to delete PipelineRun '%s' in '%s': %v\n", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
 				return false, nil
 			}
