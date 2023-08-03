@@ -13,6 +13,7 @@ import (
 	"github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
 )
 
 /*
@@ -61,7 +62,10 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 			artifactDir := utils.GetEnv("ARTIFACT_DIR", "")
 			if artifactDir != "" {
 				// collect cypress recording from the pod and save it in the artifacts folder
-				utils.ExecuteCommandInASpecificDirectory("kubectl", []string{"cp", cypressPodName + ":/cypress-browser-oauth-flow/cypress/videos", artifactDir + "/cypress/spi-oauth/", "-n", namespace}, "")
+				err := utils.ExecuteCommandInASpecificDirectory("kubectl", []string{"cp", cypressPodName + ":/cypress-browser-oauth-flow/cypress/videos", artifactDir + "/cypress/spi-oauth/", "-n", namespace}, "")
+				if err != nil {
+					klog.Infof("cannot save screen recording in the artifacts folder: %s", err)
+				}
 			}
 
 			if !CurrentSpecReport().Failed() {
