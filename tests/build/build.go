@@ -552,23 +552,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			err = f.AsKubeAdmin.CommonController.Github.CreateRef(helloWorldComponentGitSourceRepoName, helloWorldComponentDefaultBranch, helloWorldComponentRevision, componentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			componentObj = appservice.ComponentSpec{
-				ComponentName: componentName,
-				Application:   applicationName,
-				Source: appservice.ComponentSource{
-					ComponentSourceUnion: appservice.ComponentSourceUnion{
-						GitSource: &appservice.GitSource{
-							URL:      helloWorldComponentGitSourceURL,
-							Revision: "",
-						},
-					},
-				},
-			}
-
-			component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, nil)
-			Expect(component).ToNot(BeNil())
-			Expect(err).ShouldNot(HaveOccurred())
-
 			pacControllerRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "pipelines-as-code")
 			if err != nil {
 				if k8sErrors.IsNotFound(err) {
@@ -613,6 +596,25 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		When("component is created", func() {
+			BeforeAll(func() {
+				componentObj = appservice.ComponentSpec{
+					ComponentName: componentName,
+					Application:   applicationName,
+					Source: appservice.ComponentSource{
+						ComponentSourceUnion: appservice.ComponentSourceUnion{
+							GitSource: &appservice.GitSource{
+								URL:      helloWorldComponentGitSourceURL,
+								Revision: "",
+							},
+						},
+					},
+				}
+
+				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, nil)
+				Expect(component).ToNot(BeNil())
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+
 			It("triggers a pipeline run", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
@@ -626,7 +628,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 		})
 
-		Context("using PaC", func() {
+		When("using PaC", func() {
 			BeforeAll(func() {
 				if utils.IsPrivateHostname(consoleRoute.Spec.Host) {
 					Skip("Using private cluster (not reachable from Github), skipping...")
@@ -638,6 +640,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 				var buildStatus *controllers.BuildStatus
 
+				By("having correct build status")
 				Eventually(func() (bool, error) {
 					component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
 					if err != nil {
@@ -663,7 +666,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						GinkgoWriter.Println("build status does not have PaC field")
 					}
 
-					return buildStatus.PaC != nil && buildStatus.PaC.State == "enabled" && buildStatus.PaC.MergeUrl != "" && buildStatus.PaC.ErrId == 0 && buildStatus.PaC.ConfigurationTime != "", nil
+					return buildStatus.Simple != nil && buildStatus.PaC != nil && buildStatus.PaC.State == "enabled" && buildStatus.PaC.MergeUrl != "" && buildStatus.PaC.ErrId == 0 && buildStatus.PaC.ConfigurationTime != "", nil
 				}, timeout, interval).Should(BeTrue(), "build status has unexpected content")
 			})
 
@@ -690,12 +693,14 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return false, nil
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for init PaC PR to be created")
 
+				By("checking PipelineRun on PR finishes")
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, pipelinerunPullSha, 2)).To(Succeed(), "PipelineRun on pull request did not finish successfully")
+
 				By("merging init PaC PR")
 				mergeResult, err := f.AsKubeAdmin.CommonController.Github.MergePullRequest(helloWorldComponentGitSourceRepoName, prNumber)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				By("checking both PipelineRuns exist and finish")
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, pipelinerunPullSha, 2)).To(Succeed(), "PipelineRun on pull request did not finish successfully")
+				By("checking PipelineRun on push finishes")
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResult.GetSHA(), 2)).To(Succeed(), "PipelineRun on push did not finish successfully")
 
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
@@ -709,19 +714,20 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 			})
 
-			// Invalid request is currently treated as simple build trigger
 			It("handles invalid request annotation", func() {
-				Skip("until STONEBLD-1315 is merged")
+				By("setting invalid annotation")
 				invalidAnnotation := "foo"
 
 				componentPipelineRun, _ := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 				Expect(componentPipelineRun).To(BeNil())
 
 				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.BuildRequestAnnotationName, invalidAnnotation, testNamespace)).To(Succeed())
+
+				By("waiting for 1 minute to see if pipelinerun is triggered")
 				Consistently(func() bool {
 					componentPipelineRun, _ := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 					return componentPipelineRun == nil
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("expected no PipelineRun to be triggered for the component %s in %s namespace", componentName, testNamespace))
+				}, time.Minute, interval).Should(BeTrue(), fmt.Sprintf("expected no PipelineRun to be triggered for the component %s in %s namespace", componentName, testNamespace))
 
 				By("having correct build status")
 				component, err = f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
