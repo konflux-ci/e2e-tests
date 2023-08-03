@@ -303,7 +303,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						Expect(component.Name).ToNot(BeEmpty())
 						Expect(component.Type).ToNot(BeEmpty())
 
-						if component.Type == "library" {
+						if component.Type == "library" || component.Type == "application" {
 							Expect(component.Purl).ToNot(BeEmpty())
 							numberOfLibraryComponents++
 						}
