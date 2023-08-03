@@ -34,7 +34,6 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 
 	Describe("SVPI-395 - Github OAuth flow to upload token", Ordered, func() {
 		BeforeAll(func() {
-			//Skip(fmt.Sprintln("skip this temporary"))
 
 			if os.Getenv("CI") != "true" {
 				Skip(fmt.Sprintln("test skipped on local execution"))
