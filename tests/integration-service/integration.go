@@ -30,6 +30,8 @@ const (
 	gitURL                 = "https://github.com/redhat-appstudio/integration-examples.git"
 	revision               = "843f455fe87a6d7f68c238f95a8f3eb304e65ac5"
 	pathInRepo             = "pipelines/integration_resolver_pipeline_pass.yaml"
+	autoReleasePlan        = "auto-releaseplan"
+	targetReleaseNamespace = "default"
 )
 
 var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests", Label("integration-service", "HACBS"), func() {
@@ -209,7 +211,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("creates a ReleasePlan and an environment", func() {
-				_, err = f.AsKubeAdmin.IntegrationController.CreateReleasePlan(applicationName, testNamespace)
+				_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlan(autoReleasePlan, testNamespace, applicationName, targetReleaseNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
 				env, err = f.AsKubeAdmin.GitOpsController.CreatePocEnvironment(EnvironmentName, testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -222,7 +224,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			It("creates an snapshot of push event", func() {
 				sampleImage := "quay.io/redhat-appstudio/sample-image@sha256:841328df1b9f8c4087adbdcfec6cc99ac8308805dea83f6d415d6fb8d40227c1"
-				snapshot_push, err = f.AsKubeAdmin.IntegrationController.CreateSnapshotWithImage(applicationName, testNamespace, componentName, sampleImage)
+				snapshot_push, err = f.AsKubeAdmin.IntegrationController.CreateSnapshotWithImage(componentName, applicationName, testNamespace, sampleImage)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -257,7 +259,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						snapshot_push, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot_push.Name, "", "", testNamespace)
 						Expect(err).ShouldNot(HaveOccurred())
 
-						if f.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot_push) {
+						if f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot_push) {
 							component, err := f.AsKubeAdmin.HasController.GetComponentByApplicationName(applicationName, testNamespace)
 							Expect(err).ShouldNot(HaveOccurred())
 							Expect(component.Spec.ContainerImage).ToNot(Equal(originalComponent.Spec.ContainerImage))
@@ -271,7 +273,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					timeout = time.Second * 60
 					interval = time.Second * 5
 					Eventually(func() error {
-						_, err := f.AsKubeAdmin.IntegrationController.GetReleasesWithSnapshot(snapshot_push, testNamespace)
+						_, err := f.AsKubeAdmin.ReleaseController.GetReleases(testNamespace)
 						return err
 					}, timeout, interval).Should(Succeed(), fmt.Sprintf("time out when waiting for release created for snapshot %s/%s", snapshot_push.GetNamespace(), snapshot_push.GetName()))
 				})
@@ -280,7 +282,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					timeout = time.Second * 600
 					interval = time.Second * 2
 					Eventually(func() error {
-						_, err := f.AsKubeAdmin.IntegrationController.GetSnapshotEnvironmentBinding(applicationName, testNamespace, env)
+						_, err := f.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(applicationName, testNamespace, env)
 						return err
 					}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out when waiting for SnapshotEnvironmentBinding to be created for application %s/%s", testNamespace, applicationName))
 				})
@@ -330,10 +332,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						return err
 					}
 					GinkgoWriter.Printf("snapshot %s is found\n", snapshot.Name)
-					if !f.AsKubeAdmin.IntegrationController.HaveTestsFinished(snapshot) {
+					if !f.AsKubeAdmin.CommonController.HaveTestsFinished(snapshot) {
 						return fmt.Errorf("tests haven't finished yet for snapshot %s/%s", snapshot.GetNamespace(), snapshot.GetName())
 					}
-					Expect(f.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot)).To(BeFalse(), "expected tests to fail for snapshot %s/%s", snapshot.GetNamespace(), snapshot.GetName())
+					Expect(f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)).To(BeFalse(), "expected tests to fail for snapshot %s/%s", snapshot.GetNamespace(), snapshot.GetName())
 					return nil
 				}, timeout, interval).Should(Succeed(), fmt.Sprintf("time out when trying to check if either the Snapshot %s/%s exists or if the Snapshot is marked as failed", testNamespace, snapshot.GetName()))
 			})
@@ -384,14 +386,14 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			It("creates a snapshot of push event", func() {
 				sampleImage := "quay.io/redhat-appstudio/sample-image@sha256:841328df1b9f8c4087adbdcfec6cc99ac8308805dea83f6d415d6fb8d40227c1"
-				snapshot_push, err = f.AsKubeAdmin.IntegrationController.CreateSnapshotWithImage(applicationName, testNamespace, componentName, sampleImage)
+				snapshot_push, err = f.AsKubeAdmin.IntegrationController.CreateSnapshotWithImage(componentName, applicationName, testNamespace, sampleImage)
 				Expect(err).ShouldNot(HaveOccurred())
 				GinkgoWriter.Printf("snapshot %s is found\n", snapshot_push.Name)
 			})
 
 			When("nonexisting valid deploymentTargetClass", func() {
 				It("check no GitOpsCR is created for the dtc with nonexisting deploymentTargetClass", func() {
-					spaceRequestList, err := f.AsKubeAdmin.IntegrationController.GetSpaceRequests(testNamespace)
+					spaceRequestList, err := f.AsKubeAdmin.GitOpsController.GetSpaceRequests(testNamespace)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(spaceRequestList.Items).To(BeEmpty())
 
@@ -413,7 +415,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				It("checks if snapshot is not marked as passed", func() {
 					snapshot, err := f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot_push.Name, "", "", testNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
-					Expect(f.AsKubeAdmin.IntegrationController.HaveTestsSucceeded(snapshot)).To(BeFalse())
+					Expect(f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)).To(BeFalse())
 				})
 			})
 		})
