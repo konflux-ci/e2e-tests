@@ -425,11 +425,6 @@ func (s *SuiteController) GetRemoteSecret(name, namespace string) (*rs.RemoteSec
 	return &remoteSecret, nil
 }
 
-// Remove all RemoteSecret from a given namespace. Useful when creating a lot of resources and wanting to remove all of them
-func (h *SuiteController) DeleteAllRemoteSecretsInASpecificNamespace(namespace string) error {
-	return h.KubeRest().DeleteAllOf(context.TODO(), &rs.RemoteSecret{}, client.InNamespace(namespace))
-}
-
 // GetTargetSecretName gets the target secret name from a given namespace
 func (s *SuiteController) GetTargetSecretName(targets []rs.TargetStatus, targetNamespace string) string {
 	targetSecretName := ""
