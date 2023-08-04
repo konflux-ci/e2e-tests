@@ -76,7 +76,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, baselinePolicies)).To(Succeed())
 		})
 		It("verifies ec cli has error handling", func() {
-			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(fwk.AsKubeAdmin.CommonController, namespace, generator, pipelineRunTimeout)
+			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
 
@@ -99,7 +99,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 		})
 
 		It("verifies ec cli supports the current policy config fields used by the ec-policies rego rules", func() {
-			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(fwk.AsKubeAdmin.CommonController, namespace, generator, pipelineRunTimeout)
+			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
 
@@ -132,7 +132,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			}
 			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 			generator.Image = snapshotComponent
-			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(fwk.AsKubeAdmin.CommonController, namespace, generator, pipelineRunTimeout)
+			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
 
@@ -183,7 +183,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
 			generator.Image = "quay.io/redhat-appstudio/ec-golden-image:e2e-test-unacceptable-task"
-			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(fwk.AsKubeAdmin.CommonController, namespace, generator, pipelineRunTimeout)
+			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
 
@@ -217,7 +217,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 
 			generator.Image = "quay.io/redhat-appstudio/ec-golden-image:e2e-test-out-of-date-task"
 			generator.EffectiveTime = "2023-03-31T00:00:00Z"
-			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(fwk.AsKubeAdmin.CommonController, namespace, generator, pipelineRunTimeout)
+			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
 
@@ -261,7 +261,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
 			generator.Image = "quay.io/redhat-appstudio-qe/enterprise-contract-tests:e2e-test-unpinned-task-bundle"
-			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(fwk.AsKubeAdmin.CommonController, namespace, generator, pipelineRunTimeout)
+			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
 

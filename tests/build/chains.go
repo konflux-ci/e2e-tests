@@ -116,7 +116,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			Expect(err).ShouldNot(HaveOccurred())
 			dockerBuildBundle := bundles.DockerBuildBundle
 			Expect(dockerBuildBundle).NotTo(Equal(""), "Can't continue without a docker-build pipeline got from selector config")
-			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(fwk.AsKubeAdmin.CommonController, namespace, tekton.BuildahDemo{Image: image, Bundle: dockerBuildBundle, Namespace: namespace, Name: buildPipelineRunName}, pipelineRunTimeout)
+			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(tekton.BuildahDemo{Image: image, Bundle: dockerBuildBundle, Namespace: namespace, Name: buildPipelineRunName}, namespace, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			// Verify that the build task was created as expected.
 			Expect(pr.ObjectMeta.Name).To(Equal(buildPipelineRunName))
@@ -208,7 +208,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			})
 
 			It("succeeds when policy is met", func() {
-				pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(fwk.AsKubeAdmin.CommonController, namespace, generator, pipelineRunTimeout)
+				pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
 
@@ -241,7 +241,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 				// printPolicyConfiguration(policy)
 				generator.Strict = false
-				pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(fwk.AsKubeAdmin.CommonController, namespace, generator, pipelineRunTimeout)
+				pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
 
@@ -276,7 +276,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				// printPolicyConfiguration(policy)
 
 				generator.Strict = true
-				pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(fwk.AsKubeAdmin.CommonController, namespace, generator, pipelineRunTimeout)
+				pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
 
@@ -303,7 +303,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(publicKey, secretName, namespace)).To(Succeed())
 				generator.PublicKey = fmt.Sprintf("k8s://%s/%s", namespace, secretName)
 
-				pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(fwk.AsKubeAdmin.CommonController, namespace, generator, pipelineRunTimeout)
+				pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
 

@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	app "github.com/redhat-appstudio/application-api/api/v1alpha1"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -176,7 +175,7 @@ func (t *TektonController) CreatePipeline(pipeline *v1beta1.Pipeline, ns string)
 }
 
 // RunPipeline creates a pipelineRun and waits for it to start.
-func (t *TektonController) RunPipeline(c *common.SuiteController, namespace string, g PipelineRunGenerator, taskTimeout int) (*v1beta1.PipelineRun, error) {
+func (t *TektonController) RunPipeline(g PipelineRunGenerator, namespace string, taskTimeout int) (*v1beta1.PipelineRun, error) {
 	pr := g.Generate()
 	pvcs := t.KubeInterface().CoreV1().PersistentVolumeClaims(pr.Namespace)
 	for _, w := range pr.Spec.Workspaces {

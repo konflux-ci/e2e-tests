@@ -265,7 +265,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						EffectiveTime:       "now",
 					}
 					ecPipelineRunTimeout := int(time.Duration(10 * time.Minute).Seconds())
-					pr, err := kubeadminClient.TektonController.RunPipeline(kubeadminClient.CommonController, testNamespace, generator, ecPipelineRunTimeout)
+					pr, err := kubeadminClient.TektonController.RunPipeline(generator, testNamespace, ecPipelineRunTimeout)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(kubeadminClient.TektonController.WatchPipelineRun(pr.Name, testNamespace, ecPipelineRunTimeout)).To(Succeed())
