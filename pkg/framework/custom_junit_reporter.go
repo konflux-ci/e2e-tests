@@ -226,7 +226,9 @@ func GenerateRPPreprocReport(report types.Report, rpPreprocParentDir string) {
 			}
 		}
 
-		os.Remove(dirPath)
+		if err := os.Remove(dirPath); err != nil {
+			klog.Error(err)
+		}
 	}
 }
 
