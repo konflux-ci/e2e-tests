@@ -65,7 +65,7 @@ const (
 	defaultInterval = 100 * time.Millisecond
 )
 
-var paramsReleaseStrategyM6 = []appstudiov1alpha1.Params{
+var paramsReleaseStrategy = []appstudiov1alpha1.Params{
 	{Name: "extraConfigGitUrl", Value: "https://github.com/hacbs-release/strategy-configs"},
 	{Name: "extraConfigPath", Value: "mvp.yaml"},
 	{Name: "extraConfigGitRevision", Value: "9d31b4408cf1b9a57804cccb9deb9f7d47a306eb"},

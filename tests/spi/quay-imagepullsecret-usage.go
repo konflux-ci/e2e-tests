@@ -196,7 +196,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 				secrets := []corev1.ObjectReference{
 					{Name: SecretName},
 				}
-				_, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(serviceAccountName, namespace, secrets)
+				_, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(serviceAccountName, namespace, secrets, nil)
 				Expect(err).NotTo(HaveOccurred())
 				_, err = fw.AsKubeAdmin.CommonController.GetServiceAccount(serviceAccountName, namespace)
 				Expect(err).NotTo(HaveOccurred())
