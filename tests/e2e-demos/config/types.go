@@ -1,11 +1,5 @@
 package config
 
-// Define the basic specs for the configuration
-type WorkflowSpec struct {
-	// All tests configurations
-	Tests []TestSpec `yaml:"tests"`
-}
-
 // Set of tests to run in appstudio
 type TestSpec struct {
 	// The test name corresponding to an application
@@ -33,8 +27,8 @@ type ComponentSpec struct {
 	// The component name which will be created
 	Name string `yaml:"name"`
 
-	// The type indicate if the component comes from a private source like quay or github. Possible values: "private" or "public"
-	Type string `yaml:"type"`
+	// It indicates if the component comes from a private source like quay or github.
+	Private bool `yaml:"private"`
 
 	// Indicate the container value
 	ContainerSource string `yaml:"containerSource,omitempty"`
