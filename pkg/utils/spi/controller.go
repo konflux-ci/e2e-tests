@@ -12,7 +12,6 @@ import (
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
-	"github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	spi "github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -123,13 +122,13 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 	Expect(err).NotTo(HaveOccurred())
 	spiAccessTokenBindingName := spiAccessTokenBinding.Name
 
-	Eventually(func() v1beta1.SPIAccessTokenBindingPhase {
+	Eventually(func() spi.SPIAccessTokenBindingPhase {
 		// application info should be stored even after deleting the application in application variable
 		spiAccessTokenBinding, err = s.GetSPIAccessTokenBinding(spiAccessTokenBindingName, namespace)
 		Expect(err).NotTo(HaveOccurred())
 
 		return spiAccessTokenBinding.Status.Phase
-	}, 2*time.Minute, 5*time.Second).Should(Or(Equal(spi.SPIAccessTokenBindingPhaseInjected), Equal(spi.SPIAccessTokenBindingPhaseAwaitingTokenData)), fmt.Sprintf("SPIAccessTokenBinding %s/%s is not in %s or %s phase", spiAccessTokenBinding.GetNamespace(), spiAccessTokenBinding.GetName(), spi.SPIAccessTokenBindingPhaseInjected, v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData))
+	}, 2*time.Minute, 5*time.Second).Should(Or(Equal(spi.SPIAccessTokenBindingPhaseInjected), Equal(spi.SPIAccessTokenBindingPhaseAwaitingTokenData)), fmt.Sprintf("SPIAccessTokenBinding %s/%s is not in %s or %s phase", spiAccessTokenBinding.GetNamespace(), spiAccessTokenBinding.GetName(), spi.SPIAccessTokenBindingPhaseInjected, spi.SPIAccessTokenBindingPhaseAwaitingTokenData))
 
 	Eventually(func() string {
 		// application info should be stored even after deleting the application in application variable
@@ -167,7 +166,7 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 		defer resp.Body.Close()
 
 		// Check to see if the token was successfully injected
-		Eventually(func() v1beta1.SPIAccessTokenBindingPhase {
+		Eventually(func() spi.SPIAccessTokenBindingPhase {
 			// application info should be stored even after deleting the application in application variable
 			spiAccessTokenBinding, err = s.GetSPIAccessTokenBinding(spiAccessTokenBindingName, namespace)
 			Expect(err).NotTo(HaveOccurred())
