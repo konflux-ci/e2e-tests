@@ -74,7 +74,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "link-secret-sa"), func() 
 			It("creates service account", func() {
 				if !test.IsManagedServiceAccount { // Test Scenario 1 and Test Scenario 2 (the service account should exist before the binding)
 					existingServiceAccountName := utils.GetGeneratedNamespace("service-account")
-					_, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(existingServiceAccountName, namespace, nil)
+					_, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(existingServiceAccountName, namespace, nil, nil)
 					Expect(err).NotTo(HaveOccurred())
 					serviceAccountName = existingServiceAccountName
 				}
@@ -113,7 +113,6 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "link-secret-sa"), func() 
 
 					return binding.Status.UploadUrl
 				}, 1*time.Minute, 10*time.Second).ShouldNot(BeEmpty(), fmt.Sprintf(".Status.UploadUrl for SPIAccessTokenBinding %s/%s is not set", binding.GetNamespace(), binding.GetName()))
-				Expect(err).NotTo(HaveOccurred())
 
 				// linked accessToken token should exist
 				linkedAccessTokenName := binding.Status.LinkedAccessTokenName

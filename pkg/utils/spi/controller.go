@@ -122,27 +122,21 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 	Expect(err).NotTo(HaveOccurred())
 	spiAccessTokenBindingName := spiAccessTokenBinding.Name
 
-	Eventually(func() bool {
+	Eventually(func() spi.SPIAccessTokenBindingPhase {
 		// application info should be stored even after deleting the application in application variable
 		spiAccessTokenBinding, err = s.GetSPIAccessTokenBinding(spiAccessTokenBindingName, namespace)
+		Expect(err).NotTo(HaveOccurred())
 
-		if err != nil {
-			return false
-		}
+		return spiAccessTokenBinding.Status.Phase
+	}, 2*time.Minute, 5*time.Second).Should(Or(Equal(spi.SPIAccessTokenBindingPhaseInjected), Equal(spi.SPIAccessTokenBindingPhaseAwaitingTokenData)), fmt.Sprintf("SPIAccessTokenBinding %s/%s is not in %s or %s phase", spiAccessTokenBinding.GetNamespace(), spiAccessTokenBinding.GetName(), spi.SPIAccessTokenBindingPhaseInjected, spi.SPIAccessTokenBindingPhaseAwaitingTokenData))
 
-		return (spiAccessTokenBinding.Status.Phase == spi.SPIAccessTokenBindingPhaseInjected || spiAccessTokenBinding.Status.Phase == spi.SPIAccessTokenBindingPhaseAwaitingTokenData)
-	}, 2*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to AwaitingTokenData/Injected")
-
-	Eventually(func() bool {
+	Eventually(func() string {
 		// application info should be stored even after deleting the application in application variable
 		spiAccessTokenBinding, err = s.GetSPIAccessTokenBinding(spiAccessTokenBindingName, namespace)
+		Expect(err).NotTo(HaveOccurred())
 
-		if err != nil {
-			return false
-		}
-
-		return spiAccessTokenBinding.Status.UploadUrl != ""
-	}, 5*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI oauth url not set. Please check if spi oauth-config configmap contain all necessary providers for tests.")
+		return spiAccessTokenBinding.Status.UploadUrl
+	}, 5*time.Minute, 100*time.Millisecond).ShouldNot(BeEmpty(), fmt.Sprintf(".Status.UploadUrl for SPIAccessTokenBinding %s/%s is not set. Please check if spi oauth-config configmap contain all necessary providers for tests.", spiAccessTokenBinding.GetNamespace(), spiAccessTokenBinding.GetName()))
 
 	if spiAccessTokenBinding.Status.Phase == spi.SPIAccessTokenBindingPhaseAwaitingTokenData {
 		// If the phase is AwaitingTokenData then manually inject the git token
@@ -172,11 +166,13 @@ func (s *SuiteController) InjectManualSPIToken(namespace string, repoUrl string,
 		defer resp.Body.Close()
 
 		// Check to see if the token was successfully injected
-		Eventually(func() bool {
+		Eventually(func() spi.SPIAccessTokenBindingPhase {
 			// application info should be stored even after deleting the application in application variable
 			spiAccessTokenBinding, err = s.GetSPIAccessTokenBinding(spiAccessTokenBindingName, namespace)
-			return err == nil && spiAccessTokenBinding.Status.Phase == spi.SPIAccessTokenBindingPhaseInjected
-		}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't set SPIAccessTokenBinding to Injected")
+			Expect(err).NotTo(HaveOccurred())
+
+			return spiAccessTokenBinding.Status.Phase
+		}, 1*time.Minute, 100*time.Millisecond).Should(Equal(spi.SPIAccessTokenBindingPhaseInjected), fmt.Sprintf("SPIAccessTokenBinding %s/%s is not in %s phase", spiAccessTokenBinding.GetNamespace(), spiAccessTokenBinding.GetName(), spi.SPIAccessTokenBindingPhaseInjected))
 	}
 	return secretName
 }
@@ -423,11 +419,6 @@ func (s *SuiteController) GetRemoteSecret(name, namespace string) (*rs.RemoteSec
 		return nil, err
 	}
 	return &remoteSecret, nil
-}
-
-// Remove all RemoteSecret from a given namespace. Useful when creating a lot of resources and wanting to remove all of them
-func (h *SuiteController) DeleteAllRemoteSecretsInASpecificNamespace(namespace string) error {
-	return h.KubeRest().DeleteAllOf(context.TODO(), &rs.RemoteSecret{}, client.InNamespace(namespace))
 }
 
 // GetTargetSecretName gets the target secret name from a given namespace
