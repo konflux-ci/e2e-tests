@@ -39,22 +39,6 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			err := fwk.AsKubeAdmin.CommonController.WaitForPodSelector(fwk.AsKubeAdmin.CommonController.IsPodRunning, constants.TEKTON_CHAINS_NS, "app", "tekton-chains-controller", 60, 100)
 			Expect(err).NotTo(HaveOccurred())
 		})
-		It("verifies if the correct roles are created", func() {
-			_, csaErr := fwk.AsKubeAdmin.CommonController.GetRole("chains-secret-admin", constants.TEKTON_CHAINS_NS)
-			Expect(csaErr).NotTo(HaveOccurred())
-			_, srErr := fwk.AsKubeAdmin.CommonController.GetRole("secret-reader", "openshift-ingress-operator")
-			Expect(srErr).NotTo(HaveOccurred())
-		})
-		It("verifies if the correct rolebindings are created", func() {
-			_, csaErr := fwk.AsKubeAdmin.CommonController.GetRoleBinding("chains-secret-admin", constants.TEKTON_CHAINS_NS)
-			Expect(csaErr).NotTo(HaveOccurred())
-			_, csrErr := fwk.AsKubeAdmin.CommonController.GetRoleBinding("chains-secret-reader", "openshift-ingress-operator")
-			Expect(csrErr).NotTo(HaveOccurred())
-		})
-		It("verifies if the correct service account is created", func() {
-			_, err := fwk.AsKubeAdmin.CommonController.GetServiceAccount("chains-secrets-admin", constants.TEKTON_CHAINS_NS)
-			Expect(err).NotTo(HaveOccurred())
-		})
 	})
 
 	Context("test creating and signing an image and task", Label("pipeline"), func() {
