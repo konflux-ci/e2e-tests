@@ -596,6 +596,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		When("component is created", func() {
+			var lastBuildStartTime string
+
 			BeforeAll(func() {
 				componentObj = appservice.ComponentSpec{
 					ComponentName: componentName,
@@ -617,6 +619,36 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			It("triggers a pipeline run", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
+
+				var buildStatus *controllers.BuildStatus
+
+				Eventually(func() (bool, error) {
+					component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
+					if err != nil {
+						GinkgoWriter.Printf("cannot get the component: %v\n", err)
+						return false, err
+					}
+
+					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+
+					err = json.Unmarshal(statusBytes, &buildStatus)
+					if err != nil {
+						GinkgoWriter.Printf("cannot unmarshal build status: %v\n", err)
+						return false, err
+					}
+
+					if buildStatus.Simple != nil {
+						GinkgoWriter.Printf("buildStartTime: %s\n", buildStatus.Simple.BuildStartTime)
+						//GinkgoWriter.Printf("errId: %d\n", buildStatus.PaC.ErrId)
+						//GinkgoWriter.Printf("errMessage: %s\n", buildStatus.PaC.ErrMessage)
+						lastBuildStartTime = buildStatus.Simple.BuildStartTime
+					} else {
+						GinkgoWriter.Println("build status does not have simple field")
+					}
+
+					return buildStatus.Simple != nil && buildStatus.Simple.BuildStartTime != "" && buildStatus.Simple.ErrId == 0 && buildStatus.Simple.ErrMessage == "", nil
+				}, timeout, interval).Should(BeTrue(), "build status has unexpected content")
+
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 			})
 
@@ -624,6 +656,33 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.BuildRequestAnnotationName, controllers.BuildRequestTriggerSimpleBuildAnnotationValue, testNamespace)).To(Succeed())
 
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2))
+
+				var buildStatus *controllers.BuildStatus
+
+				Eventually(func() (bool, error) {
+					component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
+					if err != nil {
+						GinkgoWriter.Printf("cannot get the component: %v\n", err)
+						return false, err
+					}
+
+					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+
+					err = json.Unmarshal(statusBytes, &buildStatus)
+					if err != nil {
+						GinkgoWriter.Printf("cannot unmarshal build status: %v\n", err)
+						return false, err
+					}
+
+					if buildStatus.Simple != nil {
+						GinkgoWriter.Printf("buildStartTime: '%s', expect to NOT be '%s'\n", buildStatus.Simple.BuildStartTime, lastBuildStartTime)
+					} else {
+						GinkgoWriter.Println("build status does not have simple field")
+					}
+
+					return buildStatus.Simple != nil && buildStatus.Simple.BuildStartTime != lastBuildStartTime && buildStatus.Simple.ErrId == 0 && buildStatus.Simple.ErrMessage == "", nil
+				}, timeout, interval).Should(BeTrue(), "build status has unexpected content")
+
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace))
 			})
 		})
@@ -660,13 +719,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						GinkgoWriter.Printf("state: %s\n", buildStatus.PaC.State)
 						GinkgoWriter.Printf("mergeUrl: %s\n", buildStatus.PaC.MergeUrl)
 						GinkgoWriter.Printf("errId: %d\n", buildStatus.PaC.ErrId)
-						GinkgoWriter.Printf("errMessage: %d\n", buildStatus.PaC.ErrMessage)
-						GinkgoWriter.Printf("configurationTime: %d\n", buildStatus.PaC.ConfigurationTime)
+						GinkgoWriter.Printf("errMessage: %s\n", buildStatus.PaC.ErrMessage)
+						GinkgoWriter.Printf("configurationTime: %s\n", buildStatus.PaC.ConfigurationTime)
 					} else {
 						GinkgoWriter.Println("build status does not have PaC field")
 					}
 
-					return buildStatus.Simple != nil && buildStatus.PaC != nil && buildStatus.PaC.State == "enabled" && buildStatus.PaC.MergeUrl != "" && buildStatus.PaC.ErrId == 0 && buildStatus.PaC.ConfigurationTime != "", nil
+					return buildStatus.PaC != nil && buildStatus.PaC.State == "enabled" && buildStatus.PaC.MergeUrl != "" && buildStatus.PaC.ErrId == 0 && buildStatus.PaC.ConfigurationTime != "", nil
 				}, timeout, interval).Should(BeTrue(), "build status has unexpected content")
 			})
 
