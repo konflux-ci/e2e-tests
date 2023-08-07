@@ -124,7 +124,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 		secret.Type = corev1.SecretTypeDockerConfigJson
 		_, err = f.AsKubeAdmin.CommonController.CreateSecret(managedNamespace, secret)
 		Expect(err).ShouldNot(HaveOccurred())
-		managedServiceAccount, err := f.AsKubeAdmin.CommonController.CreateServiceAccount("release-service-account", managedNamespace, []corev1.ObjectReference{{Name: secret.Name}})
+		managedServiceAccount, err := f.AsKubeAdmin.CommonController.CreateServiceAccount("release-service-account", managedNamespace, []corev1.ObjectReference{{Name: secret.Name}}, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(userNamespace, managedServiceAccount)
@@ -185,7 +185,7 @@ var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = f.AsKubeAdmin.CommonController.CreateRoleBinding("role-release-service-account-binding", managedNamespace, "ServiceAccount", "release-service-account", "Role", "role-release-service-account", "rbac.authorization.k8s.io")
+		_, err = f.AsKubeAdmin.CommonController.CreateRoleBinding("role-release-service-account-binding", managedNamespace, "ServiceAccount", "release-service-account", managedNamespace, "Role", "role-release-service-account", "rbac.authorization.k8s.io")
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(f.AsKubeAdmin.CommonController.Github.CreateRef(sampleRepoName, componentDefaultBranchName, componentRevision, componentNewBaseBranch)).To(Succeed())

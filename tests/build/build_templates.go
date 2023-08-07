@@ -88,7 +88,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			symlinkComponentName = fmt.Sprintf("%s-%s", "test-symlink-comp", util.GenerateRandomString(4))
 			cdq, err := kubeadminClient.HasController.CreateComponentDetectionQuery(symlinkComponentName, testNamespace, pythonComponentGitSourceURL, gitRepoContainsSymlinkBranchName, "", "", false)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(cdq.Status.ComponentDetected)).To(Equal(1), "Expected length of the detected Components was not 1")
+			Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
 
 			for _, compDetected := range cdq.Status.ComponentDetected {
 				c, err := kubeadminClient.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, false, map[string]string{})
