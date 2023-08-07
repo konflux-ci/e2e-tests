@@ -51,7 +51,7 @@ const (
 	// Timeouts
 	appDeployTimeout            = time.Minute * 20
 	appRouteAvailableTimeout    = time.Minute * 5
-	customResourceUpdateTimeout = time.Minute * 5
+	customResourceUpdateTimeout = time.Minute * 10
 	jvmRebuildTimeout           = time.Minute * 20
 	mergePRTimeout              = time.Minute * 1
 	pipelineRunStartedTimeout   = time.Minute * 5
