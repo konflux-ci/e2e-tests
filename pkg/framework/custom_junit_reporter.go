@@ -30,8 +30,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 package framework
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
 	"encoding/xml"
 	"fmt"
 	"os"
@@ -40,6 +38,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2/reporters"
 	types "github.com/onsi/ginkgo/v2/types"
+	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"k8s.io/klog/v2"
 )
@@ -82,8 +81,8 @@ func GenerateCustomJUnitReportWithConfig(report types.Report, dst string, config
 			continue
 		}
 		test := JUnitTestCase{
-			Name:      ShortenStringAddHash(spec),
-			Classname: getClassnameFromReport(spec),
+			Name:      logs.ShortenStringAddHash(spec),
+			Classname: logs.GetClassnameFromReport(spec),
 			Status:    spec.State.String(),
 			Time:      spec.RunTime.Seconds(),
 		}
@@ -181,7 +180,7 @@ func GenerateRPPreprocReport(report types.Report, rpPreprocParentDir string) {
 		//generate folders only for failed tests
 		if !reportSpec.Failure.IsZero() {
 			if reportSpec.LeafNodeType == types.NodeTypeIt {
-				name := ShortenStringAddHash(reportSpec)
+				name := logs.ShortenStringAddHash(reportSpec)
 				filePath := rpPreprocDir + "/attachments/xunit/" + name
 				if err3 := os.MkdirAll(filePath, os.ModePerm); err3 != nil {
 					klog.Error(err3)
@@ -195,26 +194,39 @@ func GenerateRPPreprocReport(report types.Report, rpPreprocParentDir string) {
 		}
 	}
 
-	//Move files stored directly in artifacts dir to rp_preproc subdirectory
+	// Move files matching rp structure stored directly in artifacts dir to rp_preproc subdirectory
 	wd, _ := os.Getwd()
 	artifactDir := utils.GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
 
-	files, err := os.ReadDir(artifactDir)
+	dirs, err := os.ReadDir(artifactDir)
 	if err != nil {
 		klog.Error(err)
 	}
 
-	for _, file := range files {
-		if file.Name() == "rp_preproc" {
+	for _, dir := range dirs {
+		reportDir := filepath.Join(fmt.Sprintf("%s/attachments/xunit/", rpPreprocDir), dir.Name())
+
+		_, err := os.Stat(reportDir)
+		if os.IsNotExist(err) || !dir.IsDir() || dir.Name() == "rp_preproc" {
 			continue
 		}
 
-		sourcePath := filepath.Join(artifactDir, file.Name())
-		destPath := filepath.Join(fmt.Sprintf("%s/attachments/xunit/", rpPreprocDir), file.Name())
-
-		if err := os.Rename(sourcePath, destPath); err != nil {
+		dirPath := filepath.Join(artifactDir, dir.Name())
+		files, err := os.ReadDir(dirPath)
+		if err != nil {
 			klog.Error(err)
 		}
+
+		for _, file := range files {
+			sourcePath := filepath.Join(dirPath, file.Name())
+			destPath := filepath.Join(reportDir, file.Name())
+
+			if err := os.Rename(sourcePath, destPath); err != nil {
+				klog.Error(err)
+			}
+		}
+
+		os.Remove(dirPath)
 	}
 }
 
@@ -267,35 +279,4 @@ func systemErrForUnstructuredReporters(spec types.SpecReport) string {
 
 func systemOutForUnstructuredReporters(spec types.SpecReport) string {
 	return spec.CapturedStdOutErr
-}
-
-func getClassnameFromReport(report types.SpecReport) string {
-	texts := []string{}
-	texts = append(texts, report.ContainerHierarchyTexts...)
-	if report.LeafNodeText != "" {
-		texts = append(texts, report.LeafNodeText)
-	}
-	if len(texts) > 0 {
-		classStrings := strings.Fields(texts[0])
-		return classStrings[0][1:]
-	} else {
-		return strings.Join(texts, " ")
-	}
-}
-
-// This function is used to shorten classname and add hash to prevent issues with filesystems(255 chars for folder name) and to avoid conflicts(same shortened name of a classname)
-func ShortenStringAddHash(report types.SpecReport) string {
-	className := getClassnameFromReport(report)
-	s := report.FullText()
-	replacedClass := strings.Replace(s, className, "", 1)
-	if len(replacedClass) > 100 {
-		stringToHash := replacedClass[100:]
-		h := sha1.New()
-		h.Write([]byte(stringToHash))
-		sha1_hash := hex.EncodeToString(h.Sum(nil))
-		stringWithHash := replacedClass[0:100] + " sha: " + sha1_hash
-		return stringWithHash
-	} else {
-		return replacedClass
-	}
 }
