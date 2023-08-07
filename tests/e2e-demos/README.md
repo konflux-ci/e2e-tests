@@ -11,7 +11,7 @@ Steps to run 'e2e-demos-suite':
 
 The test specs in e2e-demo-suite are generated dynamically using ginkgo specs.
 
-If you want to test your own Component (repository), all you need to do is to update the `TestConfig` variable in [config.go](./config/config.go)
+If you want to test your own Component (repository), all you need to do is to update the `TestScenarios` variable in [scenarios.go](./config/scenarios.go)
 
 
 To run the e2e-demos with a custom yaml use: `./bin/e2e-appstudio --ginkgo.focus="e2e-demos-suite"
@@ -30,10 +30,10 @@ Red Hat AppStudio E2E framework now supports creating components from private qu
 #### Setup configuration for private repositories
 
 1. Define in your configuration for the application and the component
-Example of a config for GitHub private repository:
+Example of a test scenario for GitHub private repository:
 
 ```go
-var TestConfig = []TestSpec{
+var TestScenarios = []TestSpec{
     {
         Name:            "nodejs private component test",
         ApplicationName: "nodejs-private-app",

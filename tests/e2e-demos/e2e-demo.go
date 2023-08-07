@@ -42,7 +42,7 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	env := &appservice.Environment{}
 	fw := &framework.Framework{}
 
-	for _, appTest := range e2eConfig.TestConfig {
+	for _, appTest := range e2eConfig.TestScenarios {
 		appTest := appTest
 		if !appTest.Skip {
 

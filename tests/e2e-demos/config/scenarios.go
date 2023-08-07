@@ -8,7 +8,7 @@ const (
 	MultiComponentWithUnsupportedRuntime          = "multi-component scenario with a component with a supported runtime and another unsuported"
 )
 
-var TestConfig = []TestSpec{
+var TestScenarios = []TestSpec{
 	{
 		Name:            "DEVHAS-234: creates an application with springboot component from RHTAP samples",
 		ApplicationName: "e2e-springboot",
@@ -220,6 +220,23 @@ var TestConfig = []TestSpec{
 			{
 				Name:         "mc-unsuported-runtime",
 				GitSourceUrl: "https://github.com/redhat-appstudio-qe/rhtap-mc-unsuported-runtime.git",
+			},
+		},
+	},
+	{
+		Name:            "DEVHAS-234: creates quarkus application(with dockerfile but not devfile) which is not included in AppStudio starter stack",
+		ApplicationName: "status-quarkus-io",
+		Components: []ComponentSpec{
+			{
+				Name:                "status-quarkus-io",
+				ContainerSource:     "",
+				Language:            "Java",
+				GitSourceUrl:        "https://github.com/quarkusio/status.quarkus.io.git",
+				GitSourceRevision:   "",
+				GitSourceContext:    "",
+				HealthEndpoint:      "/",
+				K8sSpec:             K8sSpec{Replicas: 0},
+				SkipDeploymentCheck: true,
 			},
 		},
 	},
