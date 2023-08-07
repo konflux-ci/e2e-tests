@@ -36,23 +36,23 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 
 	Context("infrastructure is running", Label("pipeline"), func() {
 		It("verifies if the chains controller is running", func() {
-			err := fwk.AsKubeAdmin.CommonController.WaitForPodSelector(fwk.AsKubeAdmin.CommonController.IsPodRunning, constants.TEKTON_CHAINS_DEPLOYMENT_NS, "app", "tekton-chains-controller", 60, 100)
+			err := fwk.AsKubeAdmin.CommonController.WaitForPodSelector(fwk.AsKubeAdmin.CommonController.IsPodRunning, constants.TEKTON_CHAINS_NS, "app", "tekton-chains-controller", 60, 100)
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("verifies if the correct roles are created", func() {
-			_, csaErr := fwk.AsKubeAdmin.CommonController.GetRole("chains-secret-admin", constants.TEKTON_CHAINS_KEY_NS)
+			_, csaErr := fwk.AsKubeAdmin.CommonController.GetRole("chains-secret-admin", constants.TEKTON_CHAINS_NS)
 			Expect(csaErr).NotTo(HaveOccurred())
 			_, srErr := fwk.AsKubeAdmin.CommonController.GetRole("secret-reader", "openshift-ingress-operator")
 			Expect(srErr).NotTo(HaveOccurred())
 		})
 		It("verifies if the correct rolebindings are created", func() {
-			_, csaErr := fwk.AsKubeAdmin.CommonController.GetRoleBinding("chains-secret-admin", constants.TEKTON_CHAINS_KEY_NS)
+			_, csaErr := fwk.AsKubeAdmin.CommonController.GetRoleBinding("chains-secret-admin", constants.TEKTON_CHAINS_NS)
 			Expect(csaErr).NotTo(HaveOccurred())
 			_, csrErr := fwk.AsKubeAdmin.CommonController.GetRoleBinding("chains-secret-reader", "openshift-ingress-operator")
 			Expect(csrErr).NotTo(HaveOccurred())
 		})
 		It("verifies if the correct service account is created", func() {
-			_, err := fwk.AsKubeAdmin.CommonController.GetServiceAccount("chains-secrets-admin", constants.TEKTON_CHAINS_KEY_NS)
+			_, err := fwk.AsKubeAdmin.CommonController.GetServiceAccount("chains-secrets-admin", constants.TEKTON_CHAINS_NS)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -167,12 +167,12 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			publicSecretName := "cosign-public-key"
 
 			BeforeAll(func() {
-				// Copy the public key from tekton-chains/signing-secrets to a new
+				// Copy the public key from openshift-pipelines/signing-secrets to a new
 				// secret that contains just the public key to ensure that access
 				// to password and private key are not needed.
 				publicKey, err := kubeController.GetTektonChainsPublicKey()
 				Expect(err).ToNot(HaveOccurred())
-				GinkgoWriter.Printf("Copy public key from %s/signing-secrets to a new secret\n", constants.TEKTON_CHAINS_KEY_NS)
+				GinkgoWriter.Printf("Copy public key from %s/signing-secrets to a new secret\n", constants.TEKTON_CHAINS_NS)
 				Expect(kubeController.CreateOrUpdateSigningSecret(
 					publicKey, publicSecretName, namespace)).To(Succeed())
 
