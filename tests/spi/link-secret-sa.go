@@ -113,7 +113,6 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "link-secret-sa"), func() 
 
 					return binding.Status.UploadUrl
 				}, 1*time.Minute, 10*time.Second).ShouldNot(BeEmpty(), fmt.Sprintf(".Status.UploadUrl for SPIAccessTokenBinding %s/%s is not set", binding.GetNamespace(), binding.GetName()))
-				Expect(err).NotTo(HaveOccurred())
 
 				// linked accessToken token should exist
 				linkedAccessTokenName := binding.Status.LinkedAccessTokenName
