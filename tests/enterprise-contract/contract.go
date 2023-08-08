@@ -45,7 +45,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 		}
 		publicKey, err := kubeController.GetTektonChainsPublicKey()
 		Expect(err).ToNot(HaveOccurred())
-		GinkgoWriter.Printf("Copy public key from %s/signing-secrets to a new secret\n", constants.TEKTON_CHAINS_KEY_NS)
+		GinkgoWriter.Printf("Copy public key from %s/signing-secrets to a new secret\n", constants.TEKTON_CHAINS_NS)
 		Expect(kubeController.CreateOrUpdateSigningSecret(
 			publicKey, publicSecretName, namespace)).To(Succeed())
 

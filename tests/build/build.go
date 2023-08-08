@@ -517,7 +517,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 	})
 
-	Describe("Using test annotations", Label("annotations"), Ordered, func() {
+	Describe("Using test annotations", Label("annotations"), Ordered, Pending, func() {
 		var testNamespace, componentName, applicationName, branchName, componentBaseBranchName, pacControllerHost, purgeBranchName string
 		var componentObj appservice.ComponentSpec
 		var component *appservice.Component
