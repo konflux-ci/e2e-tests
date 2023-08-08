@@ -10,7 +10,7 @@ import (
 
 // GetTektonChainsPublicKey returns a TektonChains public key.
 func (t *TektonController) GetTektonChainsPublicKey() ([]byte, error) {
-	namespace := constants.TEKTON_CHAINS_KEY_NS
+	namespace := constants.TEKTON_CHAINS_NS
 	secretName := "public-key"
 	dataKey := "cosign.pub"
 
