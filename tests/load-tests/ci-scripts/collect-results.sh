@@ -15,6 +15,10 @@ cp -vf ./tests/load-tests/*.log "$ARTIFACT_DIR"
 cp -vf ./tests/load-tests/load-tests.json "$ARTIFACT_DIR"
 cp -vf ./tests/load-tests/gh-rate-limits-remaining.csv "$ARTIFACT_DIR"
 
+pipelineruns_json=$ARTIFACT_DIR/pipelineruns.json
+taskruns_json=$ARTIFACT_DIR/taskruns.json
+pods_json=$ARTIFACT_DIR/pods.json
+
 application_timestamps=$ARTIFACT_DIR/applications.appstudio.redhat.com_timestamps
 application_timestamps_csv=${application_timestamps}.csv
 application_timestamps_txt=${application_timestamps}.txt
@@ -83,7 +87,8 @@ jq_cmd=".items[] | (.metadata.name) \
 + $csv_delim_quoted + (if .status.completionTime != null and .status.finallyStartTime != null then ((.status.completionTime | strptime($dt_format) | mktime) - (.status.finallyStartTime | strptime($dt_format) | mktime) | tostring) else \"\" end) \
 + $csv_delim_quoted + (if .status.conditions[0].status == \"True\" and .status.completionTime != null and .metadata.creationTimestamp != null then ((.status.completionTime | strptime($dt_format) | mktime) - (.metadata.creationTimestamp | strptime($dt_format) | mktime) | tostring) else \"\" end) \
 + $csv_delim_quoted + (if .status.conditions[0].status == \"False\" and .status.completionTime != null and .metadata.creationTimestamp != null then ((.status.completionTime | strptime($dt_format) | mktime) - (.metadata.creationTimestamp | strptime($dt_format) | mktime) | tostring) else \"\" end)"
-oc get pipelineruns.tekton.dev -A -o json | jq "$jq_cmd" | sed -e "s/\n//g" -e "s/^\"//g" -e "s/\"$//g" -e "s/Z;/;/g" | sort -t ";" -k 13 -r -n >>"$pipelinerun_timestamps"
+oc get pipelineruns.tekton.dev -A -o json >"$pipelineruns_json"
+jq "$jq_cmd" "$pipelineruns_json" | sed -e "s/\n//g" -e "s/^\"//g" -e "s/\"$//g" -e "s/Z;/;/g" | sort -t ";" -k 13 -r -n >>"$pipelinerun_timestamps"
 
 ## Application service log segments per user app
 echo "Collecting application service log segments per user app..."
@@ -148,7 +153,7 @@ jq_cmd=".items[] | .metadata.name \
 + $csv_delim_quoted + .metadata.labels.\"topology.kubernetes.io/zone\""
 oc get nodes -o json | jq -r "$jq_cmd" >>"$node_info_csv"
 
-oc get pods -A -o json >pods.json
+oc get pods -A -o json >"$pods_json"
 pods_on_nodes_csv=$ARTIFACT_DIR/pods-on-nodes.csv
 all_pods_distribution_csv=$ARTIFACT_DIR/all-pods-distribution.csv
 task_pods_distribution_csv=$ARTIFACT_DIR/task-pods-distribution.csv
@@ -159,10 +164,30 @@ jq_cmd=".items[] | select(.metadata.labels.\"appstudio.openshift.io/application\
 | .spec.nodeName \
 + $csv_delim_quoted + .metadata.namespace \
 + $csv_delim_quoted + .metadata.name"
-jq -r "$jq_cmd" pods.json | sort -V >>"$pods_on_nodes_csv"
+jq -r "$jq_cmd" "$pods_json" | sort -V >>"$pods_on_nodes_csv"
 echo "Node;Pods" >"$all_pods_distribution_csv"
-jq -r ".items[] | .spec.nodeName" pods.json | sort | uniq -c | sed -e 's,\s\+\([0-9]\+\)\s\+\(.*\),\2;\1,g' >>"$all_pods_distribution_csv"
+jq -r ".items[] | .spec.nodeName" "$pods_json" | sort | uniq -c | sed -e 's,\s\+\([0-9]\+\)\s\+\(.*\),\2;\1,g' >>"$all_pods_distribution_csv"
 echo "Node;Pods" >"$task_pods_distribution_csv"
-jq -r '.items[] | select(.metadata.labels."appstudio.openshift.io/application" != null).spec.nodeName' pods.json | sort | uniq -c | sed -e 's,\s\+\([0-9]\+\)\s\+\(.*\),\2;\1,g' >>"$task_pods_distribution_csv"
+jq -r '.items[] | select(.metadata.labels."appstudio.openshift.io/application" != null).spec.nodeName' "$pods_json" | sort | uniq -c | sed -e 's,\s\+\([0-9]\+\)\s\+\(.*\),\2;\1,g' >>"$task_pods_distribution_csv"
 
+## Tekton Artifact Performance Analysis
+tapa_dir=./tapa.git
+
+echo "Installing Tekton Artifact Performance Analysis (tapa)"
+rm -rf "$tapa_dir"
+git clone https://github.com/gabemontero/tekton-artifact-performance-analysis "$tapa_dir"
+pushd "$tapa_dir"
+go mod tidy
+go mod vendor
+go build -o tapa . && chmod +x ./tapa
+popd
+export PATH="$PATH:$tapa_dir"
+
+echo "Running Tekton Artifact Performance Analysis"
+oc get taskruns.tekton.dev -A -o json >"$taskruns_json"
+tapa prlist "$pipelineruns_json" >"$ARTIFACT_DIR/tapa.prlist"
+tapa trlist "$taskruns_json" >"$ARTIFACT_DIR/tapa.trlist"
+tapa podlist "$pods_json" >"$ARTIFACT_DIR/tapa.podlist"
+tapa podlist --containers-only "$pods_json" >"$ARTIFACT_DIR/tapa.podlist.containers"
+tapa all "$pipelineruns_json" "$taskruns_json" "$pods_json" >"$ARTIFACT_DIR/tapa.all"
 popd
