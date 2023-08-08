@@ -396,3 +396,28 @@ func (h *HasController) CheckForImageAnnotation(component *appservice.Component)
 		return build.IsImageAnnotationPresent(annotations) && build.ImageRepoCreationSucceeded(annotations), nil
 	}
 }
+
+// Gets value of a specified annotation in a component
+func (h *HasController) GetComponentAnnotation(componentName, annotationKey, namespace string) (string, error) {
+	component, err := h.GetComponent(componentName, namespace)
+	if err != nil {
+		return "", fmt.Errorf("error when getting component: %+v", err)
+	}
+	return component.Annotations[annotationKey], nil
+}
+
+// Sets annotation in a component
+func (h *HasController) SetComponentAnnotation(componentName, annotationKey, annotationValue, namespace string) error {
+	component, err := h.GetComponent(componentName, namespace)
+	if err != nil {
+		return fmt.Errorf("error when getting component: %+v", err)
+	}
+	newAnnotations := component.GetAnnotations()
+	newAnnotations[annotationKey] = annotationValue
+	component.SetAnnotations(newAnnotations)
+	err = h.KubeRest().Update(context.TODO(), component)
+	if err != nil {
+		return fmt.Errorf("error when updating component: %+v", err)
+	}
+	return nil
+}
