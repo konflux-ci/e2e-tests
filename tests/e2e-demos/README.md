@@ -9,31 +9,16 @@ Steps to run 'e2e-demos-suite':
 
 ## Test Generator
 
-The test specs in e2e-demo-suite are generated dynamically using ginkgo specs. To run the demo you need to use the default
-yaml located in `$ROOT_DIR/tests/e2e-demos/config/default.yaml`.
+The test specs in e2e-demo-suite are generated dynamically using ginkgo specs.
 
-Also it is possible to create your own yaml following the next structure:
+If you want to test your own Component (repository), all you need to do is to update the `TestScenarios` variable in [scenarios.go](./config/scenarios.go)
 
-```yaml
-tests: 
-  - name: "create an application with nodejs component"
-    applicationName: "e2e-nodejs"
-    components:
-      - name: "nodejs-component"
-        type: "public"
-        gitSourceUrl: "https://github.com/jduimovich/single-nodejs-app"
-        devfileSource: "https://raw.githubusercontent.com/jduimovich/appstudio-e2e-demos/main/demos/single-nodejs-app/devfiles/devfile.yaml"
-        language: "nodejs"
-        healthz: "/"
-        spec:
-          replicas: 2
-```
 
-To run the e2e-demos with a custom yaml use: `./bin/e2e-appstudio --ginkgo.focus="e2e-demos-suite" -config-suites=$PATH_TO_YOUR_CONFIG_YAML`
+To run the e2e-demos with a custom yaml use: `./bin/e2e-appstudio --ginkgo.focus="e2e-demos-suite"
 
 ## Run tests with private component
 
-Red Hat AppStudio e2e framework now support to create components from private quay.io images and GitHub repositories.
+Red Hat AppStudio E2E framework now supports creating components from private quay.io images and GitHub repositories.
 
 #### Environments
 
@@ -44,19 +29,25 @@ Red Hat AppStudio e2e framework now support to create components from private qu
 
 #### Setup configuration for private repositories
 
-1. Define in your configuration file the application and the component
-Example of a github private repository:
+1. Define in your configuration for the application and the component
+Example of a test scenario for GitHub private repository:
 
-```yaml
-tests: 
-  - name: "RHDP-478: create an application with multiple components from private and public repositories"
-    applicationName: "e2e-multiple-components"
-    components:
-      - name: "private-quarkus-component"
-        type: "private"
-        gitSourceUrl: "https://github.com/redhat-appstudio-qe/private-quarkus-devfile-sample"
-        language: "quarkus"
-        healthz: "/hello-resteasy"
+```go
+var TestScenarios = []TestSpec{
+    {
+        Name:            "nodejs private component test",
+        ApplicationName: "nodejs-private-app",
+        Components: []ComponentSpec{
+            {
+                Name:              "nodejs-private-comp",
+                Private:           true,
+                Language:          "JavaScript",
+                GitSourceUrl:      "https://github.com/redhat-appstudio-qe-bot/nodejs-health-check.git",
+                HealthEndpoint:    "/live",
+            },
+        },
+    },
+}
 ```
 
-3. Run the e2e tests
+2. Run the e2e tests

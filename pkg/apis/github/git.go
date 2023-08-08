@@ -42,7 +42,7 @@ func (g *Github) CreateRef(repository, baseBranchName, sha, newBranchName string
 	Eventually(func(gomega Gomega) {
 		exist, err := g.ExistsRef(repository, newBranchName)
 		gomega.Expect((err)).NotTo(HaveOccurred())
-		gomega.Expect(exist).To(Equal(true))
+		gomega.Expect(exist).To(BeTrue())
 
 	}, 2*time.Minute, 2*time.Second).Should(Succeed()) //Wait for the branch to actually exist
 	return nil

@@ -11,7 +11,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	e2eConfig "github.com/redhat-appstudio/e2e-tests/tests/e2e-demos/config"
-	"github.com/spf13/viper"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
@@ -28,27 +27,22 @@ const (
 	SPIQuaySecretName string = "e2e-quay-secret"
 )
 
+var supportedRuntimes = []string{"Dockerfile", "Node.js", "Go", "Quarkus", "Python", "JavaScript", "springboot", "dotnet"}
+
 var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 	defer GinkgoRecover()
 
 	var timeout, interval time.Duration
 	var namespace string
+	var err error
 
 	// Initialize the application struct
 	application := &appservice.Application{}
-	component := &appservice.Component{}
 	snapshot := &appservice.Snapshot{}
 	env := &appservice.Environment{}
 	fw := &framework.Framework{}
 
-	// Initialize the e2e demo configuration
-	configTestFile := viper.GetString("config-suites")
-	GinkgoWriter.Printf("Starting e2e-demo test suites from config: %s\n", configTestFile)
-
-	configTest, err := e2eConfig.LoadTestGeneratorConfig(configTestFile)
-	Expect(err).NotTo(HaveOccurred())
-
-	for _, appTest := range configTest.Tests {
+	for _, appTest := range e2eConfig.TestScenarios {
 		appTest := appTest
 		if !appTest.Skip {
 
@@ -125,36 +119,50 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					Expect(err).NotTo(HaveOccurred())
 				})
 
-				for _, componentTest := range appTest.Components {
-					componentTest := componentTest
+				for _, componentSpec := range appTest.Components {
+					componentSpec := componentSpec
 					cdq := &appservice.ComponentDetectionQuery{}
+					componentList := []*appservice.Component{}
 					var secret string
 
-					if componentTest.Type == "private" {
+					if componentSpec.Private {
 						secret = SPIGithubSecretName
-						It(fmt.Sprintf("injects manually SPI token for component %s", componentTest.Name), func() {
+						It(fmt.Sprintf("injects manually SPI token for component %s", componentSpec.Name), func() {
 							// Inject spi tokens to work with private components
-							if componentTest.ContainerSource != "" {
+							if componentSpec.ContainerSource != "" {
 								// More info about manual token upload for quay.io here: https://github.com/redhat-appstudio/service-provider-integration-operator/pull/115
 								oauthCredentials := `{"access_token":"` + utils.GetEnv(constants.QUAY_OAUTH_TOKEN_ENV, "") + `", "username":"` + utils.GetEnv(constants.QUAY_OAUTH_USER_ENV, "") + `"}`
 
-								_ = fw.AsKubeAdmin.SPIController.InjectManualSPIToken(namespace, componentTest.ContainerSource, oauthCredentials, v1.SecretTypeDockerConfigJson, SPIQuaySecretName)
+								_ = fw.AsKubeAdmin.SPIController.InjectManualSPIToken(namespace, componentSpec.ContainerSource, oauthCredentials, v1.SecretTypeDockerConfigJson, SPIQuaySecretName)
 							}
 						})
 					}
 
-					It(fmt.Sprintf("creates componentdetectionquery for component %s", componentTest.Name), func() {
-						cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentTest.Name, namespace, componentTest.GitSourceUrl, componentTest.GitSourceRevision, componentTest.GitSourceContext, secret, false)
+					It(fmt.Sprintf("creates componentdetectionquery for component %s", componentSpec.Name), func() {
+						cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentSpec.Name, namespace, componentSpec.GitSourceUrl, componentSpec.GitSourceRevision, componentSpec.GitSourceContext, secret, false)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
+					})
+
+					It("check if components have supported languages by AppStudio", func() {
+						if appTest.Name == e2eConfig.MultiComponentWithUnsupportedRuntime {
+							// Validate that the completed CDQ only has detected 1 component and not also the unsupported component
+							Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "cdq also detect unsupported component")
+						}
+						for _, component := range cdq.Status.ComponentDetected {
+							Expect(supportedRuntimes).To(ContainElement(component.ProjectType), "unsupported runtime used for multi component tests")
+						}
 					})
 
 					// Components for now can be imported from gitUrl, container image or a devfile
-					if componentTest.GitSourceUrl != "" {
-						It(fmt.Sprintf("creates component %s from %s git source %s", componentTest.Name, componentTest.Type, componentTest.GitSourceUrl), func() {
+					if componentSpec.GitSourceUrl != "" {
+						It(fmt.Sprintf("creates component %s (private: %t) from git source %s", componentSpec.Name, componentSpec.Private, componentSpec.GitSourceUrl), func() {
 							for _, compDetected := range cdq.Status.ComponentDetected {
-								component, err = fw.AsKubeDeveloper.HasController.CreateComponent(compDetected.ComponentStub, namespace, "", secret, appTest.ApplicationName, true, map[string]string{})
+								c, err := fw.AsKubeDeveloper.HasController.CreateComponent(compDetected.ComponentStub, namespace, "", secret, appTest.ApplicationName, true, map[string]string{})
 								Expect(err).NotTo(HaveOccurred())
+								Expect(c.Name).To(Equal(compDetected.ComponentStub.ComponentName))
+								Expect(supportedRuntimes).To(ContainElement(compDetected.ProjectType), "unsupported runtime used for multi component tests")
+
+								componentList = append(componentList, c)
 							}
 						})
 					} else {
@@ -163,31 +171,34 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					}
 
 					// Start to watch the pipeline until is finished
-					It(fmt.Sprintf("waits %s component %s pipeline to be finished", componentTest.Type, componentTest.Name), func() {
-						if componentTest.ContainerSource != "" {
-							Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skipping pipelinerun check.", componentTest.Name))
+					It(fmt.Sprintf("waits for %s component (private: %t) pipeline to be finished", componentSpec.Name, componentSpec.Private), func() {
+						if componentSpec.ContainerSource != "" {
+							Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skipping pipelinerun check.", componentSpec.Name))
 						}
-						component, err = fw.AsKubeAdmin.HasController.GetComponent(component.Name, namespace)
-						Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
+						for _, component := range componentList {
+							component, err = fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), namespace)
+							Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
 
-						Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
+							Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
+						}
 					})
 
 					It("finds the snapshot and checks if it is marked as successful", func() {
 						timeout = time.Second * 600
 						interval = time.Second * 10
-
-						Eventually(func() error {
-							snapshot, err = fw.AsKubeAdmin.IntegrationController.GetSnapshot("", "", component.Name, namespace)
-							if err != nil {
-								GinkgoWriter.Println("snapshot has not been found yet")
-								return err
-							}
-							if !fw.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot) {
-								return fmt.Errorf("tests haven't succeeded for snapshot %s/%s. snapshot status: %+v", snapshot.GetNamespace(), snapshot.GetName(), snapshot.Status)
-							}
-							return nil
-						}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the snapshot for the component %s/%s to be marked as successful", component.GetNamespace(), component.GetName()))
+						for _, component := range componentList {
+							Eventually(func() error {
+								snapshot, err = fw.AsKubeAdmin.IntegrationController.GetSnapshot("", "", component.Name, namespace)
+								if err != nil {
+									GinkgoWriter.Println("snapshot has not been found yet")
+									return err
+								}
+								if !fw.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot) {
+									return fmt.Errorf("tests haven't succeeded for snapshot %s/%s. snapshot status: %+v", snapshot.GetNamespace(), snapshot.GetName(), snapshot.Status)
+								}
+								return nil
+							}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the snapshot for the component %s/%s to be marked as successful", component.GetNamespace(), component.GetName()))
+						}
 					})
 
 					It("checks if a SnapshotEnvironmentBinding is created successfully", func() {
@@ -202,54 +213,61 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					})
 
 					// Deploy the component using gitops and check for the health
-					if !componentTest.SkipDeploymentCheck {
+					if !componentSpec.SkipDeploymentCheck {
 						var expectedReplicas int32 = 1
-						It(fmt.Sprintf("deploys component %s successfully using gitops", componentTest.Name), func() {
+						It(fmt.Sprintf("deploys component %s successfully using gitops", componentSpec.Name), func() {
 							var deployment *appsv1.Deployment
-							Eventually(func() error {
-								deployment, err = fw.AsKubeDeveloper.CommonController.GetDeployment(component.Name, namespace)
-								if err != nil {
-									return err
-								}
-								if deployment.Status.AvailableReplicas != expectedReplicas {
-									return fmt.Errorf("the deployment %s/%s does not have the expected amount of replicas (expected: %d, got: %d)", deployment.GetNamespace(), deployment.GetName(), expectedReplicas, deployment.Status.AvailableReplicas)
-								}
-								return nil
-							}, 25*time.Minute, 10*time.Second).Should(Succeed(), fmt.Sprintf("timed out waiting for deployment of a component %s/%s to become ready", component.GetNamespace(), component.GetName()))
-							Expect(err).NotTo(HaveOccurred())
+							for _, component := range componentList {
+								Eventually(func() error {
+									deployment, err = fw.AsKubeDeveloper.CommonController.GetDeployment(component.Name, namespace)
+									if err != nil {
+										return err
+									}
+									if deployment.Status.AvailableReplicas != expectedReplicas {
+										return fmt.Errorf("the deployment %s/%s does not have the expected amount of replicas (expected: %d, got: %d)", deployment.GetNamespace(), deployment.GetName(), expectedReplicas, deployment.Status.AvailableReplicas)
+									}
+									return nil
+								}, 25*time.Minute, 10*time.Second).Should(Succeed(), fmt.Sprintf("timed out waiting for deployment of a component %s/%s to become ready", component.GetNamespace(), component.GetName()))
+							}
 						})
 
-						It(fmt.Sprintf("checks if component %s endpoint is healthy", componentTest.Name), func() {
-							Eventually(func() error {
-								gitOpsRoute, err := fw.AsKubeDeveloper.CommonController.GetOpenshiftRouteByComponentName(component.Name, namespace)
-								Expect(err).NotTo(HaveOccurred())
-								err = fw.AsKubeDeveloper.CommonController.RouteEndpointIsAccessible(gitOpsRoute, componentTest.HealthEndpoint)
-								if err != nil {
-									GinkgoWriter.Printf("Failed to request component endpoint: %+v\n retrying...\n", err)
-									return err
-								}
-								return nil
-							}, 5*time.Minute, 10*time.Second).Should(Succeed())
+						It(fmt.Sprintf("checks if component %s route(s) exist and health endpoint (if defined) is reachable", componentSpec.Name), func() {
+							for _, component := range componentList {
+								Eventually(func() error {
+									gitOpsRoute, err := fw.AsKubeDeveloper.CommonController.GetOpenshiftRouteByComponentName(component.Name, namespace)
+									Expect(err).NotTo(HaveOccurred())
+									if componentSpec.HealthEndpoint != "" {
+										err = fw.AsKubeDeveloper.CommonController.RouteEndpointIsAccessible(gitOpsRoute, componentSpec.HealthEndpoint)
+										if err != nil {
+											GinkgoWriter.Printf("Failed to request component endpoint: %+v\n retrying...\n", err)
+											return err
+										}
+									}
+									return nil
+								}, 5*time.Minute, 10*time.Second).Should(Succeed())
+							}
 						})
 					}
 
-					if componentTest.K8sSpec != (e2eConfig.K8sSpec{}) && componentTest.K8sSpec.Replicas > 1 {
-						It(fmt.Sprintf("scales component %s replicas", componentTest.Name), Pending, func() {
-							component, err := fw.AsKubeDeveloper.HasController.GetComponent(component.Name, namespace)
-							Expect(err).NotTo(HaveOccurred())
-							_, err = fw.AsKubeDeveloper.HasController.ScaleComponentReplicas(component, pointer.Int(int(componentTest.K8sSpec.Replicas)))
-							Expect(err).NotTo(HaveOccurred())
-							var deployment *appsv1.Deployment
-
-							Eventually(func() error {
-								deployment, err = fw.AsKubeDeveloper.CommonController.GetDeployment(component.Name, namespace)
+					if componentSpec.K8sSpec != (e2eConfig.K8sSpec{}) && componentSpec.K8sSpec.Replicas > 1 {
+						It(fmt.Sprintf("scales component %s replicas", componentSpec.Name), Pending, func() {
+							for _, component := range componentList {
+								c, err := fw.AsKubeDeveloper.HasController.GetComponent(component.Name, namespace)
 								Expect(err).NotTo(HaveOccurred())
-								if deployment.Status.AvailableReplicas != componentTest.K8sSpec.Replicas {
-									return fmt.Errorf("the deployment %s/%s does not have the expected amount of replicas (expected: %d, got: %d)", deployment.GetNamespace(), deployment.GetName(), componentTest.K8sSpec.Replicas, deployment.Status.AvailableReplicas)
-								}
-								return nil
-							}, 5*time.Minute, 10*time.Second).Should(Succeed(), "Component deployment %s/%s didn't get scaled to desired replicas", deployment.GetNamespace(), deployment.GetName())
-							Expect(err).NotTo(HaveOccurred())
+								_, err = fw.AsKubeDeveloper.HasController.ScaleComponentReplicas(c, pointer.Int(int(componentSpec.K8sSpec.Replicas)))
+								Expect(err).NotTo(HaveOccurred())
+								var deployment *appsv1.Deployment
+
+								Eventually(func() error {
+									deployment, err = fw.AsKubeDeveloper.CommonController.GetDeployment(c.Name, namespace)
+									Expect(err).NotTo(HaveOccurred())
+									if deployment.Status.AvailableReplicas != componentSpec.K8sSpec.Replicas {
+										return fmt.Errorf("the deployment %s/%s does not have the expected amount of replicas (expected: %d, got: %d)", deployment.GetNamespace(), deployment.GetName(), componentSpec.K8sSpec.Replicas, deployment.Status.AvailableReplicas)
+									}
+									return nil
+								}, 5*time.Minute, 10*time.Second).Should(Succeed(), "Component deployment %s/%s didn't get scaled to desired replicas", deployment.GetNamespace(), deployment.GetName())
+								Expect(err).NotTo(HaveOccurred())
+							}
 						})
 					}
 				}

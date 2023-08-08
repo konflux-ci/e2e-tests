@@ -6,7 +6,6 @@ import (
 	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // CreateRemoteSecret creates a RemoteSecret object
@@ -65,9 +64,4 @@ func (s *SPIController) GetTargetSecretName(targets []rs.TargetStatus, targetNam
 	}
 
 	return targetSecretName
-}
-
-// Remove all RemoteSecret from a given namespace. Useful when creating a lot of resources and wanting to remove all of them
-func (h *SPIController) DeleteAllRemoteSecretsInASpecificNamespace(namespace string) error {
-	return h.KubeRest().DeleteAllOf(context.TODO(), &rs.RemoteSecret{}, client.InNamespace(namespace))
 }
