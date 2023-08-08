@@ -10,7 +10,6 @@ import (
 	"github.com/onsi/gomega/types"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/client-go/util/jsonpath"
-	"knative.dev/pkg/apis"
 )
 
 type TaskRunResultMatcher struct {
@@ -122,15 +121,4 @@ func MatchTaskRunResultWithJSONValue(name string, json interface{}) types.Gomega
 // MatchTaskRunResultWithJSONPathValue returns a taskRunResult with a JSONPath and JSONvalue matcher.
 func MatchTaskRunResultWithJSONPathValue(name, path string, json interface{}) types.GomegaMatcher {
 	return &TaskRunResultMatcher{name: name, jsonPath: &path, jsonValue: &json}
-}
-
-// DidTaskSucceed checks if task succeeded.
-func DidTaskSucceed(tr interface{}) bool {
-	switch tr := tr.(type) {
-	case *v1beta1.PipelineRunTaskRunStatus:
-		return tr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
-	case *v1beta1.TaskRunStatus:
-		return tr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
-	}
-	return false
 }

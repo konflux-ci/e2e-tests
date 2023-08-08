@@ -42,11 +42,6 @@ func (t *TektonController) GetPipelineRun(pipelineRunName, namespace string) (*v
 	return t.PipelineClient().TektonV1beta1().PipelineRuns(namespace).Get(context.TODO(), pipelineRunName, metav1.GetOptions{})
 }
 
-// GetListOfPipelineRunsInNamespace returns a list of all pipelineRuns in a given namespace.
-func (t *TektonController) GetListOfPipelineRunsInNamespace(namespace string) (*v1beta1.PipelineRunList, error) {
-	return t.PipelineClient().TektonV1beta1().PipelineRuns(namespace).List(context.TODO(), metav1.ListOptions{})
-}
-
 // GetPipelineRunLogs returns logs of a given pipelineRun.
 func (t *TektonController) GetPipelineRunLogs(pipelineRunName, namespace string) (string, error) {
 	podClient := t.KubeInterface().CoreV1().Pods(namespace)

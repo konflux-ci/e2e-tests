@@ -4,11 +4,11 @@ import (
 	"context"
 	"os/exec"
 
-	"k8s.io/apimachinery/pkg/types"
-	crclient "sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/pkg/apis"
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Create a tekton task and return the task or error.
@@ -49,9 +49,15 @@ func (t *TektonController) GetTask(name, namespace string) (*v1beta1.Task, error
 	return &task, nil
 }
 
-// DeleteTask removes the task from a given namespace.
-func (t *TektonController) DeleteTask(name, ns string) error {
-	return t.PipelineClient().TektonV1beta1().Tasks(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
+// DidTaskSucceed checks if task succeeded.
+func DidTaskSucceed(tr interface{}) bool {
+	switch tr := tr.(type) {
+	case *v1beta1.PipelineRunTaskRunStatus:
+		return tr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
+	case *v1beta1.TaskRunStatus:
+		return tr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
+	}
+	return false
 }
 
 // DeleteAllTasksInASpecificNamespace removes all Tasks from a given repository. Useful when creating a lot of resources and wanting to remove all of them.

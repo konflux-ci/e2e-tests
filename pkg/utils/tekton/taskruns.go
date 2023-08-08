@@ -12,7 +12,6 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -167,26 +166,6 @@ func (t *TektonController) GetTaskRunStatus(c crclient.Client, pr *v1beta1.Pipel
 	}
 	return nil, fmt.Errorf(
 		"TaskRun status for pipeline task name %q not found in the status of PipelineRun %s/%s", pipelineTaskName, pr.ObjectMeta.Namespace, pr.ObjectMeta.Name)
-}
-
-// ListTaskRuns returns a list of taskRuns matching specified labels in a given namespace.
-func (t *TektonController) ListTaskRuns(ns string, labelKey string, labelValue string, selectorLimit int64) (*v1beta1.TaskRunList, error) {
-	labelSelector := metav1.LabelSelector{MatchLabels: map[string]string{labelKey: labelValue}}
-	listOptions := metav1.ListOptions{
-		LabelSelector: labels.Set(labelSelector.MatchLabels).String(),
-		Limit:         selectorLimit,
-	}
-	return t.PipelineClient().TektonV1beta1().TaskRuns(ns).List(context.TODO(), listOptions)
-}
-
-// ListAllTaskRuns returns a list of all taksRuns in a given namespace.
-func (t *TektonController) ListAllTaskRuns(ns string) (*v1beta1.TaskRunList, error) {
-	return t.PipelineClient().TektonV1beta1().TaskRuns(ns).List(context.TODO(), metav1.ListOptions{})
-}
-
-// DeleteTaskRun removes a taskRun from a given namespace.
-func (t *TektonController) DeleteTaskRun(name, ns string) error {
-	return t.PipelineClient().TektonV1beta1().TaskRuns(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
 // DeleteAllTaskRunsInASpecificNamespace removes all TaskRuns from a given repository. Useful when creating a lot of resources and wanting to remove all of them.
