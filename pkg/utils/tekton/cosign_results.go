@@ -15,9 +15,9 @@ type CosignResult struct {
 	attestationImageRef string
 }
 
-// FindCosignResultsForImage looks for .sig and .att image tags in the OpenShift image stream for the provided image reference.
+// findCosignResultsForImage looks for .sig and .att image tags in the OpenShift image stream for the provided image reference.
 // If none can be found errors.IsNotFound(err) is true, when err is nil CosignResult contains image references for signature and attestation images, otherwise other errors could be returned.
-func (t *TektonController) FindCosignResultsForImage(imageRef string) (*CosignResult, error) {
+func findCosignResultsForImage(imageRef string) (*CosignResult, error) {
 	var errMsg string
 	// Split the image ref into image repo+tag (e.g quay.io/repo/name:tag), and image digest (sha256:abcd...)
 	imageInfo := strings.Split(imageRef, "@")
@@ -55,7 +55,7 @@ func (t *TektonController) FindCosignResultsForImage(imageRef string) (*CosignRe
 // AwaitAttestationAndSignature awaits attestation and signature.
 func (t *TektonController) AwaitAttestationAndSignature(image string, timeout time.Duration) error {
 	return wait.PollImmediate(time.Second, timeout, func() (done bool, err error) {
-		if _, err := t.FindCosignResultsForImage(image); err != nil {
+		if _, err := findCosignResultsForImage(image); err != nil {
 			g.GinkgoWriter.Printf("failed to get cosign result for image %s: %+v\n", image, err)
 			return false, nil
 		}
