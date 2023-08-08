@@ -24,11 +24,12 @@ func (s *SuiteController) ServiceaccountPresent(saName, namespace string) wait.C
 }
 
 // CreateServiceAccount creates a service account with the provided name and namespace using the given list of secrets.
-func (s *SuiteController) CreateServiceAccount(name, namespace string, serviceAccountSecretList []corev1.ObjectReference) (*corev1.ServiceAccount, error) {
+func (s *SuiteController) CreateServiceAccount(name, namespace string, serviceAccountSecretList []corev1.ObjectReference, labels map[string]string) (*corev1.ServiceAccount, error) {
 	serviceAccount := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels:    labels,
 		},
 		Secrets: serviceAccountSecretList,
 	}
