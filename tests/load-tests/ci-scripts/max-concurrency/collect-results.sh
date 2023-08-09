@@ -79,7 +79,8 @@ ${csv_delim}ClusterPipelineRunCountAvg\
 ${csv_delim}ClusterPipelineWorkqueueDepthAvg\
 ${csv_delim}ClusterPipelineScheduleFirstPodAvg\
 ${csv_delim}ClusterTaskrunThrottledByNodeResourcesAvg\
-${csv_delim}ClusterTaskRunThrottledByDefinedQuotaAvg" \
+${csv_delim}ClusterTaskRunThrottledByDefinedQuotaAvg \
+${csv_delim}ContainerMemoryWorkingSetBytesTestNamespacesBuildContainersAvg" \
     >"$max_concurrency_csv"
 cat $output_dir/load-tests.max-concurrency.*.json |
     jq -rc "(.threads | tostring) \
@@ -99,7 +100,8 @@ cat $output_dir/load-tests.max-concurrency.*.json |
     + $csv_delim_quoted + (.measurements.tekton_tekton_pipelines_controller_workqueue_depth.mean | tostring) \
     + $csv_delim_quoted + (.measurements.pipelinerun_duration_scheduled_seconds.mean | tostring) \
     + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_node.mean | tostring) \
-    + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_quota.mean | tostring)" \
+    + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_quota.mean | tostring) \
+    + $csv_delim_quoted + (.measurements.container_memory_working_set_bytes_test_namespaces_build_containers.mean | tostring)" \
         >>"$max_concurrency_csv"
 
 ## PipelineRun timestamps

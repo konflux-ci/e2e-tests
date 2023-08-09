@@ -37,3 +37,7 @@
 - name: measurements.tekton_pipelines_controller_running_taskruns_throttled_by_quota
   monitoring_query: sum(tekton_pipelines_controller_running_taskruns_throttled_by_quota_count)
   monitoring_step: 15
+
+- name: measurements.container_memory_working_set_bytes_test_namespaces_build_containers
+  monitoring_query: sum(container_memory_working_set_bytes{namespace=~'test-rhtap-.*-tenant',pod=~'devfile-sample-.*-build-container-pod'})
+  monitoring_step: 15
