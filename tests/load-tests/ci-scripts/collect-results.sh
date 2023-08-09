@@ -9,6 +9,8 @@ source "/usr/local/ci-secrets/redhat-appstudio-load-test/load-test-scenario.${1:
 
 pushd "${2:-.}"
 
+source "./tests/load-tests/ci-scripts/user-prefix.sh"
+
 echo "Collecting load test results"
 load_test_log=$ARTIFACT_DIR/load-tests.log
 cp -vf ./tests/load-tests/*.log "$ARTIFACT_DIR"
