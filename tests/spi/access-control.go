@@ -260,8 +260,8 @@ spec:
 				Stderr: errBuffer,
 			})
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("reason: %v", err))
+			Expect(errBuffer.String()).To(BeEmpty(), fmt.Sprintf("reason: %v", errBuffer.String()))
 			Expect(buffer.String()).NotTo(BeEmpty())
-			Expect(errBuffer.String()).To(BeEmpty())
 		}
 
 		// check if guest user's pod deployed in guest user's workspace should be able to construct an API request that reads code in the Github repo for primary's user workspace
