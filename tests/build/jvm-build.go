@@ -3,7 +3,6 @@ package build
 import (
 	"context"
 	"fmt"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"os"
 	"strings"
 	"time"
@@ -19,6 +18,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 
@@ -48,7 +48,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 			Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 			Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
-			Expect(f.AsKubeAdmin.JvmbuildserviceController.DeleteJbsConfig(constants.JBSConfigName, testNamespace)).To(Succeed())
+			Expect(f.AsKubeAdmin.JvmbuildserviceController.DeleteJBSConfig(constants.JBSConfigName, testNamespace)).To(Succeed())
 		} else {
 			componentPipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 			if err != nil {
