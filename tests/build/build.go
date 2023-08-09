@@ -2,6 +2,7 @@ package build
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -24,6 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 	routev1 "github.com/openshift/api/route/v1"
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
+	"github.com/redhat-appstudio/build-service/controllers"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	v1 "k8s.io/api/core/v1"
 )
@@ -120,7 +122,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			//Delete the quay image repo since we are setting delete-repo=false
 			_, err = build.DeleteImageRepo(imageRepoName)
 			Expect(err).NotTo(HaveOccurred(), "Failed to delete image repo with error: %+v", err)
-
 		})
 
 		When("a new component without specified branch is created", Label("pac-custom-default-branch"), func() {
@@ -512,6 +513,315 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					}
 					return nil
 				}, timeout, interval).Should(BeNil())
+			})
+		})
+	})
+
+	Describe("Using test annotations", Label("annotations"), Ordered, Pending, func() {
+		var testNamespace, componentName, applicationName, branchName, componentBaseBranchName, pacControllerHost, purgeBranchName string
+		var componentObj appservice.ComponentSpec
+		var component *appservice.Component
+
+		var timeout, interval time.Duration
+
+		var consoleRoute *routev1.Route
+
+		BeforeAll(func() {
+			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
+			Expect(err).ShouldNot(HaveOccurred())
+			testNamespace = f.UserNamespace
+
+			consoleRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("console", "openshift-console")
+			Expect(err).ShouldNot(HaveOccurred())
+
+			timeout = 5 * time.Minute
+			interval = time.Second
+
+			applicationName = fmt.Sprintf("build-suite-test-application-%s", util.GenerateRandomString(4))
+			app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
+				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
+			)
+
+			componentName = fmt.Sprintf("%s-%s", "test-annotations", util.GenerateRandomString(4))
+			branchName = constants.PaCPullRequestBranchPrefix + componentName
+			componentBaseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(4))
+			purgeBranchName = fmt.Sprintf("%s-%s", "appstudio-purge", componentName)
+
+			err = f.AsKubeAdmin.CommonController.Github.CreateRef(helloWorldComponentGitSourceRepoName, helloWorldComponentDefaultBranch, helloWorldComponentRevision, componentBaseBranchName)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			pacControllerRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "pipelines-as-code")
+			if err != nil {
+				if k8sErrors.IsNotFound(err) {
+					pacControllerRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "openshift-pipelines")
+				}
+			}
+			Expect(err).ShouldNot(HaveOccurred())
+			pacControllerHost = pacControllerRoute.Spec.Host
+		})
+
+		AfterAll(func() {
+			if !CurrentSpecReport().Failed() {
+				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
+				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
+			}
+
+			// Delete new branches created by PaC and a testing branch used as a component's base branch
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, branchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, componentBaseBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, purgeBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+
+			// Delete created webhook from GitHub
+			hooks, err := f.AsKubeAdmin.CommonController.Github.ListRepoWebhooks(helloWorldComponentGitSourceRepoName)
+			Expect(err).NotTo(HaveOccurred())
+
+			for _, h := range hooks {
+				hookUrl := h.Config["url"].(string)
+				if strings.Contains(hookUrl, pacControllerHost) {
+					Expect(f.AsKubeAdmin.CommonController.Github.DeleteWebhook(helloWorldComponentGitSourceRepoName, h.GetID())).To(Succeed())
+					break
+				}
+			}
+		})
+
+		When("component is created", func() {
+			var lastBuildStartTime string
+
+			BeforeAll(func() {
+				componentObj = appservice.ComponentSpec{
+					ComponentName: componentName,
+					Application:   applicationName,
+					Source: appservice.ComponentSource{
+						ComponentSourceUnion: appservice.ComponentSourceUnion{
+							GitSource: &appservice.GitSource{
+								URL:      helloWorldComponentGitSourceURL,
+								Revision: "",
+							},
+						},
+					},
+				}
+
+				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, nil)
+				Expect(component).ToNot(BeNil())
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+
+			It("triggers a pipeline run", func() {
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
+
+				var buildStatus *controllers.BuildStatus
+
+				Eventually(func() (bool, error) {
+					component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
+					if err != nil {
+						GinkgoWriter.Printf("cannot get the component: %v\n", err)
+						return false, err
+					}
+
+					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+
+					err = json.Unmarshal(statusBytes, &buildStatus)
+					if err != nil {
+						GinkgoWriter.Printf("cannot unmarshal build status: %v\n", err)
+						return false, err
+					}
+
+					if buildStatus.Simple != nil {
+						GinkgoWriter.Printf("buildStartTime: %s\n", buildStatus.Simple.BuildStartTime)
+						//GinkgoWriter.Printf("errId: %d\n", buildStatus.PaC.ErrId)
+						//GinkgoWriter.Printf("errMessage: %s\n", buildStatus.PaC.ErrMessage)
+						lastBuildStartTime = buildStatus.Simple.BuildStartTime
+					} else {
+						GinkgoWriter.Println("build status does not have simple field")
+					}
+
+					return buildStatus.Simple != nil && buildStatus.Simple.BuildStartTime != "" && buildStatus.Simple.ErrId == 0 && buildStatus.Simple.ErrMessage == "", nil
+				}, timeout, interval).Should(BeTrue(), "build status has unexpected content")
+
+				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+			})
+
+			Specify("simple build can be triggered manually", func() {
+				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.BuildRequestAnnotationName, controllers.BuildRequestTriggerSimpleBuildAnnotationValue, testNamespace)).To(Succeed())
+
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2))
+
+				var buildStatus *controllers.BuildStatus
+
+				Eventually(func() (bool, error) {
+					component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
+					if err != nil {
+						GinkgoWriter.Printf("cannot get the component: %v\n", err)
+						return false, err
+					}
+
+					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+
+					err = json.Unmarshal(statusBytes, &buildStatus)
+					if err != nil {
+						GinkgoWriter.Printf("cannot unmarshal build status: %v\n", err)
+						return false, err
+					}
+
+					if buildStatus.Simple != nil {
+						GinkgoWriter.Printf("buildStartTime: '%s', expect to NOT be '%s'\n", buildStatus.Simple.BuildStartTime, lastBuildStartTime)
+					} else {
+						GinkgoWriter.Println("build status does not have simple field")
+					}
+
+					return buildStatus.Simple != nil && buildStatus.Simple.BuildStartTime != lastBuildStartTime && buildStatus.Simple.ErrId == 0 && buildStatus.Simple.ErrMessage == "", nil
+				}, timeout, interval).Should(BeTrue(), "build status has unexpected content")
+
+				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace))
+			})
+		})
+
+		When("using PaC", func() {
+			BeforeAll(func() {
+				if utils.IsPrivateHostname(consoleRoute.Spec.Host) {
+					Skip("Using private cluster (not reachable from Github), skipping...")
+				}
+			})
+
+			It("configures PaC via annotation", func() {
+				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.BuildRequestAnnotationName, controllers.BuildRequestConfigurePaCAnnotationValue, testNamespace)).To(Succeed())
+
+				var buildStatus *controllers.BuildStatus
+
+				By("having correct build status")
+				Eventually(func() (bool, error) {
+					component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
+					if err != nil {
+						GinkgoWriter.Printf("cannot get the component: %v\n", err)
+						return false, err
+					}
+
+					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+
+					err = json.Unmarshal(statusBytes, &buildStatus)
+					if err != nil {
+						GinkgoWriter.Printf("cannot unmarshal build status: %v\n", err)
+						return false, err
+					}
+
+					if buildStatus.PaC != nil {
+						GinkgoWriter.Printf("state: %s\n", buildStatus.PaC.State)
+						GinkgoWriter.Printf("mergeUrl: %s\n", buildStatus.PaC.MergeUrl)
+						GinkgoWriter.Printf("errId: %d\n", buildStatus.PaC.ErrId)
+						GinkgoWriter.Printf("errMessage: %s\n", buildStatus.PaC.ErrMessage)
+						GinkgoWriter.Printf("configurationTime: %s\n", buildStatus.PaC.ConfigurationTime)
+					} else {
+						GinkgoWriter.Println("build status does not have PaC field")
+					}
+
+					return buildStatus.PaC != nil && buildStatus.PaC.State == "enabled" && buildStatus.PaC.MergeUrl != "" && buildStatus.PaC.ErrId == 0 && buildStatus.PaC.ConfigurationTime != "", nil
+				}, timeout, interval).Should(BeTrue(), "build status has unexpected content")
+			})
+
+			It("ensures build pipeline is triggered after merge", func() {
+				var pipelinerunPullSha string
+				var mergeResult *github.PullRequestMergeResult
+				var prNumber int
+
+				By("finding init PaC PR")
+				Eventually(func() (bool, error) {
+					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(helloWorldComponentGitSourceRepoName)
+					if err != nil {
+						GinkgoWriter.Printf("cannot list pull requests: %v\n", err)
+						return false, err
+					}
+
+					for _, pr := range prs {
+						if pr.Head.GetRef() == branchName {
+							prNumber = pr.GetNumber()
+							pipelinerunPullSha = pr.Head.GetSHA()
+							return true, nil
+						}
+					}
+					return false, nil
+				}, timeout, interval).Should(BeTrue(), "timed out when waiting for init PaC PR to be created")
+
+				By("checking PipelineRun on PR finishes")
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, pipelinerunPullSha, 2)).To(Succeed(), "PipelineRun on pull request did not finish successfully")
+
+				By("merging init PaC PR")
+				mergeResult, err := f.AsKubeAdmin.CommonController.Github.MergePullRequest(helloWorldComponentGitSourceRepoName, prNumber)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				By("checking PipelineRun on push finishes")
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResult.GetSHA(), 2)).To(Succeed(), "PipelineRun on push did not finish successfully")
+
+				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+			})
+
+			It("can trigger simple build manually in PaC mode", func() {
+				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.BuildRequestAnnotationName, controllers.BuildRequestTriggerSimpleBuildAnnotationValue, testNamespace)).To(Succeed())
+
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
+
+				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+			})
+
+			It("handles invalid request annotation", func() {
+				By("setting invalid annotation")
+				invalidAnnotation := "foo"
+
+				componentPipelineRun, _ := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+				Expect(componentPipelineRun).To(BeNil())
+
+				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.BuildRequestAnnotationName, invalidAnnotation, testNamespace)).To(Succeed())
+
+				By("waiting for 1 minute to see if pipelinerun is triggered")
+				Consistently(func() bool {
+					componentPipelineRun, _ := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+					return componentPipelineRun == nil
+				}, time.Minute, interval).Should(BeTrue(), fmt.Sprintf("expected no PipelineRun to be triggered for the component %s in %s namespace", componentName, testNamespace))
+
+				By("having correct build status")
+				component, err = f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
+				Expect(component).ToNot(BeNil())
+				Expect(err).ShouldNot(HaveOccurred())
+
+				statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+				buildStatus := &controllers.BuildStatus{}
+				Expect(json.Unmarshal(statusBytes, buildStatus)).To(Succeed())
+				Expect(buildStatus.Message).To(Equal(fmt.Sprintf("unexpected build request: %s", invalidAnnotation)))
+			})
+
+			It("can move from PaC to simple build", func() {
+				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.BuildRequestAnnotationName, controllers.BuildRequestUnconfigurePaCAnnotationValue, testNamespace)).To(Succeed())
+				var buildStatus *controllers.BuildStatus
+
+				Eventually(func() (bool, error) {
+					component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
+					status := component.Annotations[controllers.BuildStatusAnnotationName]
+
+					if err != nil {
+						GinkgoWriter.Printf("cannot get build status annotation: %v\n")
+						return false, err
+					}
+
+					statusBytes := []byte(status)
+
+					err = json.Unmarshal(statusBytes, &buildStatus)
+					if err != nil {
+						GinkgoWriter.Printf("cannot unmarshal build status: %v\n", err)
+						return false, err
+					}
+
+					return buildStatus.PaC.State != "enabled", nil
+				}, timeout, interval).Should(BeTrue(), "PaC is still enabled even after unprovisioning")
 			})
 		})
 	})
