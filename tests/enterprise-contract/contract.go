@@ -94,7 +94,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			reportLog, err := utils.GetContainerLogs(fwk.AsKubeAdmin.CommonController.KubeInterface(), tr.Status.PodName, "step-report", namespace)
 			GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, "step-report", reportLog)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(reportLog).Should(ContainSubstring("msg: No image attestations found matching the given public key"))
+			Expect(reportLog).Should(ContainSubstring("No image attestations found matching the given public key"))
 		})
 
 		It("verifies ec cli supports the current policy config fields used by the ec-policies rego rules", func() {
@@ -202,7 +202,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			reportLog, err := utils.GetContainerLogs(fwk.AsKubeAdmin.CommonController.KubeInterface(), tr.Status.PodName, "step-report", namespace)
 			GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, "step-report", reportLog)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(reportLog).Should(ContainSubstring("msg: Pipeline task 'build-container' uses an unacceptable task bundle"))
+			Expect(reportLog).Should(ContainSubstring("Pipeline task 'build-container' uses an unacceptable task bundle"))
 		})
 
 		It("verifies the release policy: Task bundles are latest versions", func() {
@@ -280,7 +280,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			reportLog, err := utils.GetContainerLogs(fwk.AsKubeAdmin.CommonController.KubeInterface(), tr.Status.PodName, "step-report", namespace)
 			GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, "step-report", reportLog)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(reportLog).Should(ContainSubstring("msg: Pipeline task 'show-summary' uses an unpinned task bundle reference"))
+			Expect(reportLog).Should(ContainSubstring("Pipeline task 'show-summary' uses an unpinned task bundle reference"))
 		})
 	})
 })
