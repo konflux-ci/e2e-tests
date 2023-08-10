@@ -63,10 +63,6 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 					GinkgoWriter.Printf("Parallel processes: %d\n", suiteConfig.ParallelTotal)
 					GinkgoWriter.Printf("Running on namespace: %s\n", namespace)
 					GinkgoWriter.Printf("User: %s\n", fw.UserName)
-
-					githubCredentials := `{"access_token":"` + utils.GetEnv(constants.GITHUB_TOKEN_ENV, "") + `"}`
-
-					_ = fw.AsKubeDeveloper.SPIController.InjectManualSPIToken(namespace, fmt.Sprintf("https://github.com/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")), githubCredentials, v1.SecretTypeBasicAuth, SPIGithubSecretName)
 				})
 
 				// Remove all resources created by the tests
@@ -135,6 +131,8 @@ var _ = framework.E2ESuiteDescribe(Label("e2e-demo"), func() {
 
 								_ = fw.AsKubeAdmin.SPIController.InjectManualSPIToken(namespace, componentSpec.ContainerSource, oauthCredentials, v1.SecretTypeDockerConfigJson, SPIQuaySecretName)
 							}
+							githubCredentials := `{"access_token":"` + utils.GetEnv(constants.GITHUB_TOKEN_ENV, "") + `"}`
+							_ = fw.AsKubeDeveloper.SPIController.InjectManualSPIToken(namespace, componentSpec.GitSourceUrl, githubCredentials, v1.SecretTypeBasicAuth, SPIGithubSecretName)
 						})
 					}
 
