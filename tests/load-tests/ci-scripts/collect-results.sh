@@ -185,11 +185,35 @@ go build -o tapa . && chmod +x ./tapa
 popd
 export PATH="$PATH:$tapa_dir"
 
+tapa="tapa -t csv"
+
 echo "Running Tekton Artifact Performance Analysis"
 oc get taskruns.tekton.dev -A -o json >"$taskruns_json"
-tapa prlist "$pipelineruns_json" >"$ARTIFACT_DIR/tapa.prlist"
-tapa trlist "$taskruns_json" >"$ARTIFACT_DIR/tapa.trlist"
-tapa podlist "$pods_json" >"$ARTIFACT_DIR/tapa.podlist"
-tapa podlist --containers-only "$pods_json" >"$ARTIFACT_DIR/tapa.podlist.containers"
-tapa all "$pipelineruns_json" "$taskruns_json" "$pods_json" >"$ARTIFACT_DIR/tapa.all"
+tapa_prlist_csv=$ARTIFACT_DIR/tapa.prlist.csv
+tapa_trlist_csv=$ARTIFACT_DIR/tapa.trlist.csv
+tapa_podlist_csv=$ARTIFACT_DIR/tapa.podlist.csv
+tapa_podlist_containers_csv=$ARTIFACT_DIR/tapa.podlist.containers.csv
+tapa_all_csv=$ARTIFACT_DIR/tapa.all.csv
+tapa_tmp=tapa.tmp
+
+sort_csv() {
+    head -n1 "$1" >"$2"
+    tail -n+2 "$1" | sort -t ";" -k 2 -r -n >>"$2"
+}
+
+$tapa prlist "$pipelineruns_json" >"$tapa_tmp"
+sort_csv "$tapa_tmp" "$tapa_prlist_csv"
+
+$tapa trlist "$taskruns_json" >"$tapa_tmp"
+sort_csv "$tapa_tmp" "$tapa_trlist_csv"
+
+$tapa podlist "$pods_json" >"$tapa_tmp"
+sort_csv "$tapa_tmp" "$tapa_podlist_csv"
+
+$tapa podlist --containers-only "$pods_json" >"$tapa_tmp"
+sort_csv "$tapa_tmp" "$tapa_podlist_containers_csv"
+
+$tapa all "$pipelineruns_json" "$taskruns_json" "$pods_json" >"$tapa_tmp"
+sort_csv "$tapa_tmp" "$tapa_all_csv"
+
 popd
