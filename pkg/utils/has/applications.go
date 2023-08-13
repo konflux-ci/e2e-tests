@@ -101,6 +101,31 @@ func (h *HasController) ApplicationDeleted(application *appservice.Application) 
 	}
 }
 
+// DeleteAllApplicationsOneByOneInASpecificNamespace removes all application CRs one by one from a specific namespace.
+// That function is a workaround of the "DeleteAllApplicationsInASpecificNamespace" function which uses the deletecollection verb of the application object which
+// is not permitted as per this PR - https://github.com/codeready-toolchain/toolchain-e2e/pull/774
+// That function uses the list and delete verbs of the application object
+func (h *HasController) DeleteAllApplicationsOneByOneInASpecificNamespace(namespace string, timeout time.Duration) error {
+	applicationList := &appservice.ApplicationList{}
+	if err := h.KubeRest().List(context.Background(), applicationList, &rclient.ListOptions{Namespace: namespace}); err != nil {
+		return fmt.Errorf("error listing applications from the namespace %s: %+v", namespace, err)
+	}
+
+	for i := range applicationList.Items {
+		application := &applicationList.Items[i]
+		if err := h.KubeRest().Delete(context.TODO(), application); err != nil {
+			return fmt.Errorf("error deleting application %s from the namespace %s: %+v", application.Name, namespace, err)
+		}
+	}
+
+	return utils.WaitUntil(func() (done bool, err error) {
+		if err := h.KubeRest().List(context.Background(), applicationList, &rclient.ListOptions{Namespace: namespace}); err != nil {
+			return false, nil
+		}
+		return len(applicationList.Items) == 0, nil
+	}, timeout)
+}
+
 // DeleteAllApplicationsInASpecificNamespace removes all application CRs from a specific namespace. Useful when creating a lot of resources and want to remove all of them
 func (h *HasController) DeleteAllApplicationsInASpecificNamespace(namespace string, timeout time.Duration) error {
 	if err := h.KubeRest().DeleteAllOf(context.TODO(), &appservice.Application{}, rclient.InNamespace(namespace)); err != nil {
