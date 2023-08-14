@@ -1,5 +1,12 @@
 package config
 
+import (
+	"fmt"
+
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+)
+
 // All multiple components scenarios are supported in the next jira: https://issues.redhat.com/browse/DEVHAS-305
 const (
 	MultiComponentWithoutDockerFileAndDevfile     = "multi-component scenario with components without devfile or dockerfile"
@@ -9,6 +16,29 @@ const (
 )
 
 var TestScenarios = []TestSpec{
+	{
+		Name:            "Maven project - Simple and Advanced build",
+		ApplicationName: "rhtap-demo-app",
+		Components: []ComponentSpec{
+			{
+				Name:                       "rhtap-demo-component",
+				Language:                   "Java",
+				GitSourceUrl:               fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), "hacbs-test-project"),
+				GitSourceRevision:          "34da5a8f51fba6a8b7ec75a727d3c72ebb5e1274",
+				GitSourceContext:           "",
+				GitSourceDefaultBranchName: "main",
+				HealthEndpoint:             "/",
+				SkipDeploymentCheck:        false,
+				AdvancedBuildSpec: &AdvancedBuildSpec{
+					TestScenario: TestScenarioSpec{
+						GitURL:      "https://github.com/redhat-appstudio/integration-examples.git",
+						GitRevision: "843f455fe87a6d7f68c238f95a8f3eb304e65ac5",
+						TestPath:    "pipelines/integration_resolver_pipeline_pass.yaml",
+					},
+				},
+			},
+		},
+	},
 	{
 		Name:            "DEVHAS-234: creates an application with springboot component from RHTAP samples",
 		ApplicationName: "e2e-springboot",
@@ -21,7 +51,6 @@ var TestScenarios = []TestSpec{
 				GitSourceRevision: "",
 				GitSourceContext:  "",
 				HealthEndpoint:    "/",
-				K8sSpec:           K8sSpec{Replicas: 0},
 			},
 		},
 	},
@@ -37,7 +66,6 @@ var TestScenarios = []TestSpec{
 				GitSourceRevision: "",
 				GitSourceContext:  "",
 				HealthEndpoint:    "/",
-				K8sSpec:           K8sSpec{Replicas: 0},
 			},
 		},
 	},
@@ -53,7 +81,6 @@ var TestScenarios = []TestSpec{
 				GitSourceRevision: "",
 				GitSourceContext:  "",
 				HealthEndpoint:    "/",
-				K8sSpec:           K8sSpec{Replicas: 0},
 			},
 		},
 	},
@@ -69,7 +96,6 @@ var TestScenarios = []TestSpec{
 				GitSourceRevision: "",
 				GitSourceContext:  "",
 				HealthEndpoint:    "/live",
-				K8sSpec:           K8sSpec{Replicas: 0},
 			},
 			{
 				Name:              "nodejs-priv",
@@ -80,7 +106,6 @@ var TestScenarios = []TestSpec{
 				GitSourceRevision: "",
 				GitSourceContext:  "",
 				HealthEndpoint:    "/live",
-				K8sSpec:           K8sSpec{Replicas: 0},
 			},
 		},
 	},
@@ -96,7 +121,6 @@ var TestScenarios = []TestSpec{
 				GitSourceRevision: "",
 				GitSourceContext:  "",
 				HealthEndpoint:    "/",
-				K8sSpec:           K8sSpec{Replicas: 0},
 			},
 		},
 	},
@@ -112,7 +136,6 @@ var TestScenarios = []TestSpec{
 				GitSourceRevision: "",
 				GitSourceContext:  "",
 				HealthEndpoint:    "/",
-				K8sSpec:           K8sSpec{Replicas: 0},
 			},
 		},
 	},
@@ -128,7 +151,6 @@ var TestScenarios = []TestSpec{
 				GitSourceRevision: "",
 				GitSourceContext:  "",
 				HealthEndpoint:    "/hello-resteasy",
-				K8sSpec:           K8sSpec{Replicas: 0},
 			},
 		},
 	},
@@ -144,7 +166,6 @@ var TestScenarios = []TestSpec{
 				GitSourceRevision: "testing",
 				GitSourceContext:  "java/java",
 				HealthEndpoint:    "/",
-				K8sSpec:           K8sSpec{Replicas: 0},
 			},
 		},
 	},
@@ -160,7 +181,6 @@ var TestScenarios = []TestSpec{
 				GitSourceRevision:   "",
 				GitSourceContext:    "",
 				HealthEndpoint:      "/",
-				K8sSpec:             K8sSpec{Replicas: 0},
 				SkipDeploymentCheck: true,
 			},
 		},
@@ -177,7 +197,6 @@ var TestScenarios = []TestSpec{
 				GitSourceRevision: "",
 				GitSourceContext:  "",
 				HealthEndpoint:    "/users",
-				K8sSpec:           K8sSpec{Replicas: 0},
 			},
 		},
 	},
@@ -235,7 +254,6 @@ var TestScenarios = []TestSpec{
 				GitSourceRevision:   "",
 				GitSourceContext:    "",
 				HealthEndpoint:      "/",
-				K8sSpec:             K8sSpec{Replicas: 0},
 				SkipDeploymentCheck: true,
 			},
 		},
