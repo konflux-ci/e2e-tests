@@ -7,8 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/library/v2/pkg/util"
