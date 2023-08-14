@@ -23,6 +23,7 @@ The Script works in Steps
 - Starts by creating `n` number of UserSignup CRD's which will create `n` number of NameSpaces , number of users can be changed by the flag `--users`
 - Then it proceeds by creating AppStudio Applications for each user followed by Appstudio Component, i.e Creates users on a 1:1 basis 
 - Creating the Component will start the pipelines, if the `-w` flag is given it will wait for the pipelines to finish,
+- if the '-i' flag is given it will wait till integration tests have finished  
 - if the '-d' flag is given it will wait until deployments have finished rolling out changes, then print results,
 - Then after the tests are completed it will dump the results / stats, on error the stats will still get dumped along with the trace
 

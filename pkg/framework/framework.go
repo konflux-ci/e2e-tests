@@ -30,7 +30,7 @@ type ControllerHub struct {
 	SPIController             *spi.SuiteController
 	ReleaseController         *release.ReleaseController
 	IntegrationController     *integration.IntegrationController
-	JvmbuildserviceController *jvmbuildservice.SuiteController
+	JvmbuildserviceController *jvmbuildservice.JvmbuildserviceController
 	O11yController            *o11y.SuiteController
 }
 

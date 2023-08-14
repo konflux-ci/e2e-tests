@@ -47,7 +47,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 			Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 			Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
-			Expect(f.AsKubeAdmin.JvmbuildserviceController.DeleteJbsConfig(constants.JBSConfigName, testNamespace)).To(Succeed())
+			Expect(f.AsKubeAdmin.JvmbuildserviceController.DeleteJBSConfig(constants.JBSConfigName, testNamespace)).To(Succeed())
 		} else {
 			componentPipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 			if err != nil {
