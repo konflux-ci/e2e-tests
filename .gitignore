@@ -23,6 +23,8 @@ tmp/
 .vscode/targets.log
 .cache/
 .tmp/
+venv/
+tapa.git
 
 # RP Preproc output
 rp_preproc/

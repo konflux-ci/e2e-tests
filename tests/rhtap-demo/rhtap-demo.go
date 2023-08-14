@@ -11,42 +11,37 @@ import (
 	"github.com/google/go-github/v44/github"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	routev1 "github.com/openshift/api/route/v1"
-
-	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
-
+	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	r "github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
-	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
+	"gopkg.in/yaml.v2"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+
+	routev1 "github.com/openshift/api/route/v1"
+	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 
-	corev1 "k8s.io/api/core/v1"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"sigs.k8s.io/yaml"
+	e2eConfig "github.com/redhat-appstudio/e2e-tests/tests/rhtap-demo/config"
 )
 
 const (
-	// This app might be replaced with service-registry in a future
-	sampleRepoName             = "hacbs-test-project"
-	componentDefaultBranchName = "main"
-	componentRevision          = "34da5a8f51fba6a8b7ec75a727d3c72ebb5e1274"
+	// Environment name used for rhtap-demo tests
+	EnvironmentName string = "development"
 
-	// Kubernetes resource names
-	testNamespacePrefix = "rhtap-demo-dev"
-	managedNamespace    = "rhtap-demo-managed"
+	// Secret Name created by spi to interact with github
+	SPIGithubSecretName string = "e2e-github-secret"
 
-	appName                = "mvp-test-app"
-	testScenarioGitURL     = "https://github.com/redhat-appstudio/integration-examples.git"
-	testScenarioRevision   = "843f455fe87a6d7f68c238f95a8f3eb304e65ac5"
-	testScenarioPathInRepo = "pipelines/integration_resolver_pipeline_pass.yaml"
+	// Environment name used for e2e-tests demos
+	SPIQuaySecretName string = "e2e-quay-secret"
 
 	// Timeouts
 	appDeployTimeout            = time.Minute * 20
@@ -69,440 +64,652 @@ const (
 	releasePollingInterval    = time.Second * 1
 )
 
-var sampleRepoURL = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), sampleRepoName)
+var supportedRuntimes = []string{"Dockerfile", "Node.js", "Go", "Quarkus", "Python", "JavaScript", "springboot", "dotnet", "maven"}
 
-var _ = framework.RhtapDemoSuiteDescribe("RHTAP Demo", Label("rhtap-demo"), func() {
-
+var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 	defer GinkgoRecover()
+
+	var timeout, interval time.Duration
+	var namespace string
 	var err error
-	var f *framework.Framework
-	var sharedSecret *corev1.Secret
-	var pacControllerRoute *routev1.Route
-	var componentName string
 
-	var componentNewBaseBranch, userNamespace string
+	// Initialize the application struct
+	application := &appservice.Application{}
+	snapshot := &appservice.Snapshot{}
+	env := &appservice.Environment{}
+	fw := &framework.Framework{}
 
-	var kc tekton.KubeController
+	for _, appTest := range e2eConfig.TestScenarios {
+		appTest := appTest
+		if !appTest.Skip {
 
-	// set vs. simply declare these pointers so we can use them in debug, where an empty name is indicative of Get's failing
-	component := &appstudioApi.Component{}
-	pipelineRun := &tektonapi.PipelineRun{}
-	release := &releaseApi.Release{}
-	snapshot := &appstudioApi.Snapshot{}
-	testPipelinerun := &tektonapi.PipelineRun{}
-	integrationTestScenario := &integrationv1beta1.IntegrationTestScenario{}
+			Describe(appTest.Name, Ordered, func() {
+				BeforeAll(func() {
 
-	BeforeAll(func() {
-		f, err = framework.NewFramework(utils.GetGeneratedNamespace(testNamespacePrefix))
-		Expect(err).NotTo(HaveOccurred())
-		userNamespace = f.UserNamespace
-		Expect(userNamespace).NotTo(BeEmpty())
+					// Initialize the tests controllers
+					fw, err = framework.NewFramework(utils.GetGeneratedNamespace("rhtap-demo"))
+					Expect(err).NotTo(HaveOccurred())
+					namespace = fw.UserNamespace
+					Expect(namespace).NotTo(BeEmpty())
 
-		componentName = fmt.Sprintf("rhtap-demo-component-%s", util.GenerateRandomString(4))
-		componentNewBaseBranch = fmt.Sprintf("base-%s", util.GenerateRandomString(4))
+					// collect SPI ResourceQuota metrics (temporary)
+					err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("rhtap-demo", namespace, "appstudio-crds-spi")
+					Expect(err).NotTo(HaveOccurred())
 
-		sharedSecret, err = f.AsKubeAdmin.CommonController.GetSecret(constants.QuayRepositorySecretNamespace, constants.QuayRepositorySecretName)
-		Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error when getting shared secret - make sure the secret %s in %s userNamespace is created", constants.QuayRepositorySecretName, constants.QuayRepositorySecretNamespace))
+					suiteConfig, _ := GinkgoConfiguration()
+					GinkgoWriter.Printf("Parallel processes: %d\n", suiteConfig.ParallelTotal)
+					GinkgoWriter.Printf("Running on namespace: %s\n", namespace)
+					GinkgoWriter.Printf("User: %s\n", fw.UserName)
+				})
 
-		// Release configuration
-		kc = tekton.KubeController{
-			Commonctrl: *f.AsKubeAdmin.CommonController,
-			Tektonctrl: *f.AsKubeAdmin.TektonController,
-		}
+				// Remove all resources created by the tests
+				AfterAll(func() {
+					// collect SPI ResourceQuota metrics (temporary)
+					err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("rhtap-demo", namespace, "appstudio-crds-spi")
+					Expect(err).NotTo(HaveOccurred())
 
-		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "release-pull-secret", Namespace: managedNamespace},
-			Data: map[string][]byte{".dockerconfigjson": sharedSecret.Data[".dockerconfigjson"]},
-			Type: corev1.SecretTypeDockerConfigJson,
-		}
+					if !CurrentSpecReport().Failed() {
+						Expect(fw.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+						Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+						Expect(fw.AsKubeAdmin.CommonController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+						Expect(fw.AsKubeAdmin.IntegrationController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+						Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+						Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)).To(Succeed())
+						Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllGitOpsDeploymentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+						Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
+					}
+				})
 
-		// release stuff
-		_, err = f.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
-		Expect(err).ShouldNot(HaveOccurred())
+				// Create an application in a specific namespace
+				It("creates an application", func() {
+					GinkgoWriter.Printf("Parallel process %d\n", GinkgoParallelProcess())
+					createdApplication, err := fw.AsKubeDeveloper.HasController.CreateApplication(appTest.ApplicationName, namespace)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(createdApplication.Spec.DisplayName).To(Equal(appTest.ApplicationName))
+					Expect(createdApplication.Namespace).To(Equal(namespace))
+				})
 
-		secret.Namespace = managedNamespace
-		secret.Name = "release-pull-secret"
-		secret.Type = corev1.SecretTypeDockerConfigJson
-		_, err = f.AsKubeAdmin.CommonController.CreateSecret(managedNamespace, secret)
-		Expect(err).ShouldNot(HaveOccurred())
-		managedServiceAccount, err := f.AsKubeAdmin.CommonController.CreateServiceAccount("release-service-account", managedNamespace, []corev1.ObjectReference{{Name: secret.Name}}, nil)
-		Expect(err).NotTo(HaveOccurred())
+				// Check the application health and check if a devfile was generated in the status
+				It("checks if application is healthy", func() {
+					Eventually(func() string {
+						appstudioApp, err := fw.AsKubeDeveloper.HasController.GetApplication(appTest.ApplicationName, namespace)
+						Expect(err).NotTo(HaveOccurred())
+						application = appstudioApp
 
-		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(userNamespace, managedServiceAccount)
-		Expect(err).NotTo(HaveOccurred())
-		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
-		Expect(err).NotTo(HaveOccurred())
+						return application.Status.Devfile
+					}, 3*time.Minute, 100*time.Millisecond).Should(Not(BeEmpty()), fmt.Sprintf("timed out waiting for gitOps repository to be created for the %s application in %s namespace", appTest.ApplicationName, fw.UserNamespace))
 
-		publicKey, err := kc.GetTektonChainsPublicKey()
-		Expect(err).ToNot(HaveOccurred())
+					Eventually(func() bool {
+						gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-		Expect(kc.CreateOrUpdateSigningSecret(publicKey, "cosign-public-key", managedNamespace)).To(Succeed())
+						return fw.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+					}, 1*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("timed out waiting for HAS controller to create gitops repository for the %s application in %s namespace", appTest.ApplicationName, fw.UserNamespace))
+				})
 
-		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlan("source-releaseplan", userNamespace, appName, managedNamespace, "")
-		Expect(err).NotTo(HaveOccurred())
+				// Create an environment in a specific namespace
+				It("creates an environment", func() {
+					env, err = fw.AsKubeDeveloper.GitOpsController.CreatePocEnvironment(EnvironmentName, namespace)
+					Expect(err).NotTo(HaveOccurred())
+				})
 
-		components := []r.Component{{Name: componentName, Repository: constants.DefaultReleasedImagePushRepo}}
-		sc := f.AsKubeAdmin.ReleaseController.GenerateReleaseStrategyConfig(components)
-		scYaml, err := yaml.Marshal(sc)
-		Expect(err).ShouldNot(HaveOccurred())
+				for _, componentSpec := range appTest.Components {
+					componentSpec := componentSpec
+					var componentNewBaseBranch string
+					componentRepositoryName := utils.ExtractGitRepositoryNameFromURL(componentSpec.GitSourceUrl)
+					cdq := &appservice.ComponentDetectionQuery{}
+					componentList := []*appservice.Component{}
+					var secret string
 
-		scPath := "rhtap-demo.yaml"
-		Expect(f.AsKubeAdmin.CommonController.Github.CreateRef(constants.StrategyConfigsRepo, constants.StrategyConfigsDefaultBranch, "", componentName)).To(Succeed())
-		_, err = f.AsKubeAdmin.CommonController.Github.CreateFile(constants.StrategyConfigsRepo, scPath, string(scYaml), componentName)
-		Expect(err).ShouldNot(HaveOccurred())
+					if componentSpec.Private {
+						secret = SPIGithubSecretName
+						It(fmt.Sprintf("injects manually SPI token for component %s", componentSpec.Name), func() {
+							// Inject spi tokens to work with private components
+							if componentSpec.ContainerSource != "" {
+								// More info about manual token upload for quay.io here: https://github.com/redhat-appstudio/service-provider-integration-operator/pull/115
+								oauthCredentials := `{"access_token":"` + utils.GetEnv(constants.QUAY_OAUTH_TOKEN_ENV, "") + `", "username":"` + utils.GetEnv(constants.QUAY_OAUTH_USER_ENV, "") + `"}`
 
-		_, err = f.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("rhtap-demo-strategy", managedNamespace, "release", constants.ReleasePipelineImageRef, "rhtap-demo-policy", "release-service-account", []releaseApi.Params{
-			{Name: "extraConfigGitUrl", Value: fmt.Sprintf("https://github.com/%s/strategy-configs.git", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"))},
-			{Name: "extraConfigPath", Value: scPath},
-			{Name: "extraConfigGitRevision", Value: componentName},
-		})
-		Expect(err).NotTo(HaveOccurred())
+								_ = fw.AsKubeAdmin.SPIController.InjectManualSPIToken(namespace, componentSpec.ContainerSource, oauthCredentials, corev1.SecretTypeDockerConfigJson, SPIQuaySecretName)
+							}
+							githubCredentials := `{"access_token":"` + utils.GetEnv(constants.GITHUB_TOKEN_ENV, "") + `"}`
+							_ = fw.AsKubeDeveloper.SPIController.InjectManualSPIToken(namespace, componentSpec.GitSourceUrl, githubCredentials, corev1.SecretTypeBasicAuth, SPIGithubSecretName)
+						})
+					}
 
-		_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission("demo", userNamespace, appName, managedNamespace, "", "", "rhtap-demo-strategy")
-		Expect(err).NotTo(HaveOccurred())
+					It(fmt.Sprintf("creates componentdetectionquery for component %s", componentSpec.Name), func() {
+						gitRevision := componentSpec.GitSourceRevision
+						// In case the advanced build (PaC) is enabled for this component,
+						// we need to create a new branch that we will target
+						// and that will contain the PaC configuration, so we can avoid polluting the default (main) branch
+						if componentSpec.AdvancedBuildSpec != nil {
+							componentNewBaseBranch = fmt.Sprintf("base-%s", util.GenerateRandomString(4))
+							gitRevision = componentNewBaseBranch
+							Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef(componentRepositoryName, componentSpec.GitSourceDefaultBranchName, componentSpec.GitSourceRevision, componentNewBaseBranch)).To(Succeed())
+						}
+						cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentSpec.Name, namespace, componentSpec.GitSourceUrl, gitRevision, componentSpec.GitSourceContext, secret, false)
+						Expect(err).NotTo(HaveOccurred())
+					})
 
-		defaultEcPolicy, err := kc.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
-		Expect(err).NotTo(HaveOccurred())
+					It("check if components have supported languages by AppStudio", func() {
+						if appTest.Name == e2eConfig.MultiComponentWithUnsupportedRuntime {
+							// Validate that the completed CDQ only has detected 1 component and not also the unsupported component
+							Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "cdq also detect unsupported component")
+						}
+						for _, component := range cdq.Status.ComponentDetected {
+							Expect(supportedRuntimes).To(ContainElement(component.ProjectType), "unsupported runtime used for multi component tests")
+						}
+					})
 
-		defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
-			Description: "Red Hat's enterprise requirements",
-			PublicKey:   string(publicKey),
-			Sources:     defaultEcPolicy.Spec.Sources,
-			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-				Collections: []string{"minimal"},
-				Exclude:     []string{"cve"},
-			},
-		}
-		_, err = f.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy("rhtap-demo-policy", managedNamespace, defaultEcPolicySpec)
-		Expect(err).NotTo(HaveOccurred())
+					// Components for now can be imported from gitUrl, container image or a devfile
+					if componentSpec.GitSourceUrl != "" {
+						It(fmt.Sprintf("creates component %s (private: %t) from git source %s", componentSpec.Name, componentSpec.Private, componentSpec.GitSourceUrl), func() {
+							for _, compDetected := range cdq.Status.ComponentDetected {
+								c, err := fw.AsKubeDeveloper.HasController.CreateComponent(compDetected.ComponentStub, namespace, "", secret, appTest.ApplicationName, true, map[string]string{})
+								Expect(err).NotTo(HaveOccurred())
+								Expect(c.Name).To(Equal(compDetected.ComponentStub.ComponentName))
+								Expect(supportedRuntimes).To(ContainElement(compDetected.ProjectType), "unsupported runtime used for multi component tests")
 
-		_, err = f.AsKubeAdmin.TektonController.CreatePVCInAccessMode("release-pvc", managedNamespace, corev1.ReadWriteOnce)
-		Expect(err).NotTo(HaveOccurred())
+								componentList = append(componentList, c)
+							}
+						})
+					} else {
+						defer GinkgoRecover()
+						Fail("Please Provide a valid test sample")
+					}
 
-		_, err = f.AsKubeAdmin.CommonController.CreateRole("role-release-service-account", managedNamespace, map[string][]string{
-			"apiGroupsList": {""},
-			"roleResources": {"secrets"},
-			"roleVerbs":     {"get", "list", "watch"},
-		})
-		Expect(err).NotTo(HaveOccurred())
+					// Start to watch the pipeline until is finished
+					It(fmt.Sprintf("waits for %s component (private: %t) pipeline to be finished", componentSpec.Name, componentSpec.Private), func() {
+						if componentSpec.ContainerSource != "" {
+							Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skipping pipelinerun check.", componentSpec.Name))
+						}
+						for _, component := range componentList {
+							component, err = fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), namespace)
+							Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
 
-		_, err = f.AsKubeAdmin.CommonController.CreateRoleBinding("role-release-service-account-binding", managedNamespace, "ServiceAccount", "release-service-account", managedNamespace, "Role", "role-release-service-account", "rbac.authorization.k8s.io")
-		Expect(err).NotTo(HaveOccurred())
+							Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
+						}
+					})
 
-		Expect(f.AsKubeAdmin.CommonController.Github.CreateRef(sampleRepoName, componentDefaultBranchName, componentRevision, componentNewBaseBranch)).To(Succeed())
-		_, err = f.AsKubeAdmin.HasController.CreateApplication(appName, userNamespace)
-		Expect(err).ShouldNot(HaveOccurred())
-		_, err = f.AsKubeAdmin.GitOpsController.CreatePocEnvironment("rhtap-demo-test", userNamespace)
-		Expect(err).ShouldNot(HaveOccurred())
-		integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario_beta1(appName, userNamespace, testScenarioGitURL, testScenarioRevision, testScenarioPathInRepo)
-		Expect(err).ShouldNot(HaveOccurred())
-	})
-	AfterAll(func() {
-		err = f.AsKubeAdmin.CommonController.Github.DeleteRef(sampleRepoName, componentNewBaseBranch)
-		if err != nil {
-			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
-		}
-		if !CurrentSpecReport().Failed() {
-			Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
-			Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).To(Succeed())
-			Expect(f.AsKubeAdmin.CommonController.Github.DeleteRef(constants.StrategyConfigsRepo, componentName)).To(Succeed())
-		}
-	})
+					It("finds the snapshot and checks if it is marked as successful", func() {
+						timeout = time.Second * 600
+						interval = time.Second * 10
+						for _, component := range componentList {
+							Eventually(func() error {
+								snapshot, err = fw.AsKubeAdmin.IntegrationController.GetSnapshot("", "", component.Name, namespace)
+								if err != nil {
+									GinkgoWriter.Println("snapshot has not been found yet")
+									return err
+								}
+								if !fw.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot) {
+									return fmt.Errorf("tests haven't succeeded for snapshot %s/%s. snapshot status: %+v", snapshot.GetNamespace(), snapshot.GetName(), snapshot.Status)
+								}
+								return nil
+							}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the snapshot for the component %s/%s to be marked as successful", component.GetNamespace(), component.GetName()))
+						}
+					})
 
-	Describe("RHTAP advanced pipeline, JVM rebuild, successful release, switch to simple build", Label("rhtap-demo"), Ordered, func() {
-
-		var pacControllerHost, pacBranchName, pacPurgeBranchName string
-		var prNumber int
-		var mergeResult *github.PullRequestMergeResult
-		var mergeResultSha string
-
-		BeforeAll(func() {
-			// Used for identifying related webhook on GitHub - in order to delete it
-			// TODO: Remove when https://github.com/redhat-appstudio/infra-deployments/pull/1725 it is merged
-			pacControllerRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "pipelines-as-code")
-			if err != nil {
-				if k8sErrors.IsNotFound(err) {
-					pacControllerRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "openshift-pipelines")
-				}
-			}
-
-			Expect(err).ShouldNot(HaveOccurred())
-			pacControllerHost = pacControllerRoute.Spec.Host
-
-			pacBranchName = fmt.Sprintf("appstudio-%s", componentName)
-			pacPurgeBranchName = fmt.Sprintf("appstudio-purge-%s", componentName)
-
-			_, err = f.AsKubeAdmin.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, userNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(f.AsKubeAdmin.JvmbuildserviceController.WaitForCache(f.AsKubeAdmin.CommonController, userNamespace)).Should(Succeed())
-
-		})
-		AfterAll(func() {
-
-			// Delete new branch created by PaC and a testing branch used as a component's base branch
-			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(sampleRepoName, pacBranchName)
-			if err != nil {
-				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
-			}
-
-			// Delete created webhook from GitHub
-			hooks, err := f.AsKubeAdmin.CommonController.Github.ListRepoWebhooks(sampleRepoName)
-			Expect(err).NotTo(HaveOccurred())
-
-			for _, h := range hooks {
-				hookUrl := h.Config["url"].(string)
-				if strings.Contains(hookUrl, pacControllerHost) {
-					Expect(f.AsKubeAdmin.CommonController.Github.DeleteWebhook(sampleRepoName, h.GetID())).To(Succeed())
-					break
-				}
-			}
-			Expect(f.AsKubeAdmin.JvmbuildserviceController.DeleteJbsConfig(constants.JBSConfigName, userNamespace)).To(Succeed())
-		})
-
-		When("Component with PaC is created", func() {
-
-			It("triggers creation of a PR in the sample repo", func() {
-				componentObj := appstudioApi.ComponentSpec{
-					ComponentName: componentName,
-					Source: appstudioApi.ComponentSource{
-						ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
-							GitSource: &appstudioApi.GitSource{
-								URL:      sampleRepoURL,
-								Revision: componentNewBaseBranch,
-							},
-						},
-					},
-				}
-				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, userNamespace, "", "", appName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
-				Expect(err).ShouldNot(HaveOccurred())
-
-				pacBranchName := fmt.Sprintf("appstudio-%s", component.GetName())
-
-				var prSHA string
-				Eventually(func() error {
-					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(sampleRepoName)
-					Expect(err).ShouldNot(HaveOccurred())
-					for _, pr := range prs {
-						if pr.Head.GetRef() == pacBranchName {
-							prNumber = pr.GetNumber()
-							prSHA = pr.GetHead().GetSHA()
+					It("checks if a SnapshotEnvironmentBinding is created successfully", func() {
+						Eventually(func() error {
+							_, err := fw.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
+							if err != nil {
+								GinkgoWriter.Println("SnapshotEnvironmentBinding has not been found yet")
+								return err
+							}
 							return nil
-						}
+						}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the SnapshotEnvironmentBinding to be created (snapshot: %s, env: %s, namespace: %s)", snapshot.GetName(), env.GetName(), snapshot.GetNamespace()))
+					})
+
+					// Deploy the component using gitops and check for the health
+					if !componentSpec.SkipDeploymentCheck {
+						var expectedReplicas int32 = 1
+						It(fmt.Sprintf("deploys component %s successfully using gitops", componentSpec.Name), func() {
+							var deployment *appsv1.Deployment
+							for _, component := range componentList {
+								Eventually(func() error {
+									deployment, err = fw.AsKubeDeveloper.CommonController.GetDeployment(component.Name, namespace)
+									if err != nil {
+										return err
+									}
+									if deployment.Status.AvailableReplicas != expectedReplicas {
+										return fmt.Errorf("the deployment %s/%s does not have the expected amount of replicas (expected: %d, got: %d)", deployment.GetNamespace(), deployment.GetName(), expectedReplicas, deployment.Status.AvailableReplicas)
+									}
+									return nil
+								}, 25*time.Minute, 10*time.Second).Should(Succeed(), fmt.Sprintf("timed out waiting for deployment of a component %s/%s to become ready", component.GetNamespace(), component.GetName()))
+							}
+						})
+
+						It(fmt.Sprintf("checks if component %s route(s) exist and health endpoint (if defined) is reachable", componentSpec.Name), func() {
+							for _, component := range componentList {
+								Eventually(func() error {
+									gitOpsRoute, err := fw.AsKubeDeveloper.CommonController.GetOpenshiftRouteByComponentName(component.Name, namespace)
+									Expect(err).NotTo(HaveOccurred())
+									if componentSpec.HealthEndpoint != "" {
+										err = fw.AsKubeDeveloper.CommonController.RouteEndpointIsAccessible(gitOpsRoute, componentSpec.HealthEndpoint)
+										if err != nil {
+											GinkgoWriter.Printf("Failed to request component endpoint: %+v\n retrying...\n", err)
+											return err
+										}
+									}
+									return nil
+								}, 5*time.Minute, 10*time.Second).Should(Succeed())
+							}
+						})
 					}
-					return fmt.Errorf("could not get the expected PaC branch name %s", pacBranchName)
-				}, pullRequestCreationTimeout, defaultPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for init PaC PR (branch %q) to be created against the %q repo", pacBranchName, sampleRepoName))
 
-				// We actually don't need the "on-pull-request" PipelineRun to complete, so we can delete it
-				Eventually(func() error {
-					pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, appName, userNamespace, prSHA)
-					if err == nil {
-						Expect(kc.Tektonctrl.DeletePipelineRun(pipelineRun.Name, pipelineRun.Namespace)).To(Succeed())
-						return nil
+					if componentSpec.K8sSpec != nil && componentSpec.K8sSpec.Replicas > 1 {
+						It(fmt.Sprintf("scales component %s replicas", componentSpec.Name), Pending, func() {
+							for _, component := range componentList {
+								c, err := fw.AsKubeDeveloper.HasController.GetComponent(component.Name, namespace)
+								Expect(err).NotTo(HaveOccurred())
+								_, err = fw.AsKubeDeveloper.HasController.ScaleComponentReplicas(c, pointer.Int(int(componentSpec.K8sSpec.Replicas)))
+								Expect(err).NotTo(HaveOccurred())
+								var deployment *appsv1.Deployment
+
+								Eventually(func() error {
+									deployment, err = fw.AsKubeDeveloper.CommonController.GetDeployment(c.Name, namespace)
+									Expect(err).NotTo(HaveOccurred())
+									if deployment.Status.AvailableReplicas != componentSpec.K8sSpec.Replicas {
+										return fmt.Errorf("the deployment %s/%s does not have the expected amount of replicas (expected: %d, got: %d)", deployment.GetNamespace(), deployment.GetName(), componentSpec.K8sSpec.Replicas, deployment.Status.AvailableReplicas)
+									}
+									return nil
+								}, 5*time.Minute, 10*time.Second).Should(Succeed(), "Component deployment %s/%s didn't get scaled to desired replicas", deployment.GetNamespace(), deployment.GetName())
+								Expect(err).NotTo(HaveOccurred())
+							}
+						})
 					}
-					return err
-				}, pipelineRunStartedTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for init PaC PipelineRun to be present in the user namespace %q for component %q with a label pointing to %q", userNamespace, componentName, appName))
+					if componentSpec.AdvancedBuildSpec != nil {
+						Describe(fmt.Sprintf("RHTAP Advanced build test for %s", componentSpec.Name), Ordered, func() {
+							var kc tekton.KubeController
 
-			})
+							var managedNamespace string
 
-			It("should eventually lead to triggering another PipelineRun after merging the PaC init branch ", func() {
-				Eventually(func() error {
-					mergeResult, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(sampleRepoName, prNumber)
-					return err
-				}, mergePRTimeout).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request: %+v\n", err))
+							var component *appservice.Component
+							var release *releaseApi.Release
+							var snapshot *appservice.Snapshot
+							var pipelineRun, testPipelinerun *tektonapi.PipelineRun
+							var integrationTestScenario *integrationv1beta1.IntegrationTestScenario
 
-				mergeResultSha = mergeResult.GetSHA()
+							// PaC related variables
+							var prNumber int
+							var mergeResultSha, pacBranchName, pacControllerHost, pacPurgeBranchName string
+							var mergeResult *github.PullRequestMergeResult
+							var pacControllerRoute *routev1.Route
 
-				Eventually(func() error {
-					pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, appName, userNamespace, mergeResultSha)
-					if err != nil {
-						GinkgoWriter.Printf("PipelineRun has not been created yet for component %s/%s\n", userNamespace, componentName)
-						return err
-					}
-					if !pipelineRun.HasStarted() {
-						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
-					}
-					return nil
-				}, pipelineRunStartedTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for a PipelineRun in namespace %q with label component label %q and application label %q and sha label %q to start", userNamespace, componentName, appName, mergeResultSha))
-			})
-		})
+							BeforeAll(func() {
+								managedNamespace = fw.UserNamespace + "-managed"
+								// Used for identifying related webhook on GitHub - in order to delete it
+								pacControllerRoute, err = fw.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "openshift-pipelines")
+								Expect(err).ShouldNot(HaveOccurred())
+								pacControllerHost = pacControllerRoute.Spec.Host
 
-		When("SLSA level 3 customizable PipelineRun is created", func() {
-			It("should eventually complete successfully", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResultSha, 2)).To(Succeed())
-			})
+								kc = tekton.KubeController{
+									Commonctrl: *fw.AsKubeAdmin.CommonController,
+									Tektonctrl: *fw.AsKubeAdmin.TektonController,
+								}
 
-			It("does not contain an annotation with a Snapshot Name", func() {
-				Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(""))
-			})
-		})
+								component = componentList[0]
 
-		When("SLSA level 3 customizable PipelineRun completes successfully", func() {
-			It("should be possible to download the SBOM file", func() {
-				var outputImage string
-				for _, p := range pipelineRun.Spec.Params {
-					if p.Name == "output-image" {
-						outputImage = p.Value.StringVal
+								sharedSecret, err := fw.AsKubeAdmin.CommonController.GetSecret(constants.QuayRepositorySecretNamespace, constants.QuayRepositorySecretName)
+								Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error when getting shared secret - make sure the secret %s in %s userNamespace is created", constants.QuayRepositorySecretName, constants.QuayRepositorySecretNamespace))
+								createReleaseConfig(*fw, kc, managedNamespace, component.GetName(), appTest.ApplicationName, sharedSecret.Data[".dockerconfigjson"])
+
+								its := componentSpec.AdvancedBuildSpec.TestScenario
+								integrationTestScenario, err = fw.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario_beta1(appTest.ApplicationName, fw.UserNamespace, its.GitURL, its.GitRevision, its.TestPath)
+								Expect(err).ShouldNot(HaveOccurred())
+
+								pacBranchName = fmt.Sprintf("appstudio-%s", component.GetName())
+								pacPurgeBranchName = fmt.Sprintf("appstudio-purge-%s", component.GetName())
+
+								// JBS related config
+								_, err = fw.AsKubeAdmin.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, fw.UserNamespace)
+								Expect(err).ShouldNot(HaveOccurred())
+								Expect(fw.AsKubeAdmin.JvmbuildserviceController.WaitForCache(fw.AsKubeAdmin.CommonController, fw.UserNamespace)).Should(Succeed())
+							})
+							AfterAll(func() {
+								if !CurrentSpecReport().Failed() {
+									Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).To(Succeed())
+									Expect(fw.AsKubeAdmin.JvmbuildserviceController.DeleteJBSConfig(constants.JBSConfigName, fw.UserNamespace)).To(Succeed())
+								}
+
+								// Delete created webhook from GitHub
+								hooks, err := fw.AsKubeAdmin.CommonController.Github.ListRepoWebhooks(componentRepositoryName)
+								Expect(err).NotTo(HaveOccurred())
+
+								for _, h := range hooks {
+									hookUrl := h.Config["url"].(string)
+									if strings.Contains(hookUrl, pacControllerHost) {
+										Expect(fw.AsKubeAdmin.CommonController.Github.DeleteWebhook(componentRepositoryName, h.GetID())).To(Succeed())
+										break
+									}
+								}
+								// Delete new branch created by PaC and a testing branch used as a component's base branch
+								Expect(fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, pacBranchName)).To(Succeed())
+								Expect(fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, componentNewBaseBranch)).To(Succeed())
+								Expect(fw.AsKubeAdmin.CommonController.Github.DeleteRef(constants.StrategyConfigsRepo, component.GetName())).To(Succeed())
+							})
+							When("Component is switched to Advanced Build mode", func() {
+
+								BeforeAll(func() {
+									component, err = fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), fw.UserNamespace)
+									Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
+
+									component.Annotations["skip-initial-checks"] = "false"
+									for k, v := range constants.ComponentPaCRequestAnnotation {
+										component.Annotations[k] = v
+									}
+									Expect(fw.AsKubeAdmin.CommonController.KubeRest().Update(context.TODO(), component)).To(Succeed())
+									Expect(err).ShouldNot(HaveOccurred(), "failed to update component: %v", err)
+								})
+
+								It("triggers creation of a PR in the sample repo", func() {
+
+									var prSHA string
+									Eventually(func() error {
+										prs, err := fw.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepositoryName)
+										Expect(err).ShouldNot(HaveOccurred())
+										for _, pr := range prs {
+											if pr.Head.GetRef() == pacBranchName {
+												prNumber = pr.GetNumber()
+												prSHA = pr.GetHead().GetSHA()
+												return nil
+											}
+										}
+										return fmt.Errorf("could not get the expected PaC branch name %s", pacBranchName)
+									}, pullRequestCreationTimeout, defaultPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for init PaC PR (branch %q) to be created against the %q repo", pacBranchName, componentRepositoryName))
+
+									// We actually don't need the "on-pull-request" PipelineRun to complete, so we can delete it
+									Eventually(func() error {
+										pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appTest.ApplicationName, fw.UserNamespace, prSHA)
+										if err == nil {
+											Expect(kc.Tektonctrl.DeletePipelineRun(pipelineRun.Name, pipelineRun.Namespace)).To(Succeed())
+											return nil
+										}
+										return err
+									}, pipelineRunStartedTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for init PaC PipelineRun to be present in the user namespace %q for component %q with a label pointing to %q", fw.UserNamespace, component.GetName(), appTest.ApplicationName))
+
+								})
+
+								It("should eventually lead to triggering another PipelineRun after merging the PaC init branch ", func() {
+									Eventually(func() error {
+										mergeResult, err = fw.AsKubeAdmin.CommonController.Github.MergePullRequest(componentRepositoryName, prNumber)
+										return err
+									}, mergePRTimeout).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request: %+v\n", err))
+
+									mergeResultSha = mergeResult.GetSHA()
+
+									Eventually(func() error {
+										pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appTest.ApplicationName, fw.UserNamespace, mergeResultSha)
+										if err != nil {
+											GinkgoWriter.Printf("PipelineRun has not been created yet for component %s/%s\n", fw.UserNamespace, component.GetName())
+											return err
+										}
+										if !pipelineRun.HasStarted() {
+											return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
+										}
+										return nil
+									}, pipelineRunStartedTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for a PipelineRun in namespace %q with label component label %q and application label %q and sha label %q to start", fw.UserNamespace, component.GetName(), appTest.ApplicationName, mergeResultSha))
+								})
+							})
+
+							When("SLSA level 3 customizable PipelineRun is created", func() {
+								It("should eventually complete successfully", func() {
+									Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResultSha, 2)).To(Succeed())
+								})
+
+								It("does not contain an annotation with a Snapshot Name", func() {
+									Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(""))
+								})
+							})
+
+							When("SLSA level 3 customizable PipelineRun completes successfully", func() {
+								It("should be possible to download the SBOM file", func() {
+									var outputImage string
+									for _, p := range pipelineRun.Spec.Params {
+										if p.Name == "output-image" {
+											outputImage = p.Value.StringVal
+										}
+									}
+									Expect(outputImage).ToNot(BeEmpty(), "output image of a component could not be found")
+
+									_, _, err = build.GetParsedSbomFilesContentFromImage(outputImage)
+									Expect(err).NotTo(HaveOccurred())
+								})
+
+								It("should validate Tekton TaskRun test results successfully", func() {
+									pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appTest.ApplicationName, fw.UserNamespace, mergeResultSha)
+									Expect(err).ShouldNot(HaveOccurred())
+									Expect(build.ValidateBuildPipelineTestResults(pipelineRun, fw.AsKubeAdmin.CommonController.KubeRest())).To(Succeed())
+								})
+
+								It("should validate pipelineRun is signed", func() {
+									pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appTest.ApplicationName, fw.UserNamespace, mergeResultSha)
+									Expect(err).ShouldNot(HaveOccurred())
+									Expect(pipelineRun.Annotations["chains.tekton.dev/signed"]).To(Equal("true"))
+								})
+
+								It("should find the related Snapshot CR", func() {
+									Eventually(func() error {
+										snapshot, err = fw.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", fw.UserNamespace)
+										return err
+									}, snapshotTimeout, snapshotPollingInterval).Should(Succeed(), "timed out when trying to check if the Snapshot exists for PipelineRun %s/%s", fw.UserNamespace, pipelineRun.GetName())
+								})
+
+								It("should validate the pipelineRun is annotated with the name of the Snapshot", func() {
+									pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appTest.ApplicationName, fw.UserNamespace, mergeResultSha)
+									Expect(err).ShouldNot(HaveOccurred())
+									Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(snapshot.GetName()))
+								})
+
+								It("should find the related Integration Test PipelineRun", func() {
+									Eventually(func() error {
+										testPipelinerun, err = fw.AsKubeAdmin.IntegrationController.GetIntegrationPipelineRun(integrationTestScenario.Name, snapshot.Name, fw.UserNamespace)
+										if err != nil {
+											GinkgoWriter.Printf("failed to get Integration test PipelineRun for a snapshot '%s' in '%s' namespace: %+v\n", snapshot.Name, fw.UserNamespace, err)
+											return err
+										}
+										if !testPipelinerun.HasStarted() {
+											return fmt.Errorf("pipelinerun %s/%s hasn't started yet", testPipelinerun.GetNamespace(), testPipelinerun.GetName())
+										}
+										return nil
+									}, pipelineRunStartedTimeout, defaultPollingInterval).Should(Succeed())
+									Expect(testPipelinerun.Labels["appstudio.openshift.io/snapshot"]).To(ContainSubstring(snapshot.Name))
+									Expect(testPipelinerun.Labels["test.appstudio.openshift.io/scenario"]).To(ContainSubstring(integrationTestScenario.Name))
+								})
+							})
+
+							When("Integration Test PipelineRun is created", func() {
+								It("should eventually complete successfully", func() {
+									Expect(fw.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenario, snapshot, fw.UserNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a integration pipeline for snapshot %s/%s to finish", fw.UserNamespace, snapshot.GetName()))
+								})
+							})
+
+							When("Integration Test PipelineRun completes successfully", func() {
+
+								It("should lead to Snapshot CR being marked as passed", func() {
+									snapshot, err = fw.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", fw.UserNamespace)
+									Expect(err).ShouldNot(HaveOccurred())
+									Expect(fw.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)).To(BeTrue(), fmt.Sprintf("tests have not succeeded for snapshot %s/%s", snapshot.GetNamespace(), snapshot.GetName()))
+								})
+
+								It("should trigger creation of Release CR", func() {
+									Eventually(func() error {
+										release, err = fw.AsKubeAdmin.ReleaseController.GetRelease("", snapshot.Name, fw.UserNamespace)
+										return err
+									}, releaseTimeout, releasePollingInterval).Should(Succeed(), fmt.Sprintf("timed out when trying to check if the release exists for snapshot %s/%s", fw.UserNamespace, snapshot.GetName()))
+								})
+							})
+
+							When("Release CR is created", func() {
+								It("triggers creation of Release PipelineRun", func() {
+									Eventually(func() error {
+										pipelineRun, err = fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
+										if err != nil {
+											GinkgoWriter.Printf("pipelineRun for component '%s' in namespace '%s' not created yet: %+v\n", component.GetName(), managedNamespace, err)
+											return err
+										}
+										if !pipelineRun.HasStarted() {
+											return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
+										}
+										return nil
+									}, pipelineRunStartedTimeout, defaultPollingInterval).Should(Succeed(), fmt.Sprintf("failed to get pipelinerun named %q in namespace %q with label to release %q in namespace %q to start", pipelineRun.Name, managedNamespace, release.Name, release.Namespace))
+								})
+							})
+
+							When("Release PipelineRun is triggered", func() {
+								It("should eventually succeed", func() {
+									Eventually(func() error {
+										pr, err := fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
+										Expect(err).ShouldNot(HaveOccurred())
+										Expect(utils.HasPipelineRunFailed(pr)).NotTo(BeTrue(), fmt.Sprintf("did not expect PipelineRun %s/%s to fail", pr.GetNamespace(), pr.GetName()))
+										if !pr.IsDone() {
+											return fmt.Errorf("release pipelinerun %s/%s has not finished yet", pr.GetNamespace(), pr.GetName())
+										}
+										Expect(utils.HasPipelineRunSucceeded(pr)).To(BeTrue(), fmt.Sprintf("PipelineRun %s/%s did not succeed", pr.GetNamespace(), pr.GetName()))
+										return nil
+									}, releasePipelineTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("failed to see pipelinerun %q in namespace %q with a label pointing to release %q in namespace %q to complete successfully", pipelineRun.Name, managedNamespace, release.Name, release.Namespace))
+								})
+							})
+							When("Release PipelineRun is completed", func() {
+								It("should lead to Release CR being marked as succeeded", func() {
+									Eventually(func() error {
+										release, err = fw.AsKubeAdmin.ReleaseController.GetRelease(release.Name, "", fw.UserNamespace)
+										Expect(err).ShouldNot(HaveOccurred())
+										if !release.IsReleased() {
+											return fmt.Errorf("release CR %s/%s is not marked as finished yet", release.GetNamespace(), release.GetName())
+										}
+										return nil
+									}, customResourceUpdateTimeout, defaultPollingInterval).Should(Succeed(), fmt.Sprintf("failed to see release %q in namespace %q get marked as released", release.Name, fw.UserNamespace))
+								})
+							})
+
+							When("JVM Build Service is used for rebuilding dependencies", func() {
+								It("should eventually rebuild of all artifacts and dependencies successfully", func() {
+									Eventually(func() error {
+										abList, err := fw.AsKubeAdmin.JvmbuildserviceController.ListArtifactBuilds(fw.UserNamespace)
+										Expect(err).ShouldNot(HaveOccurred())
+										for _, ab := range abList.Items {
+											if ab.Status.State != v1alpha1.ArtifactBuildStateComplete {
+												return fmt.Errorf("artifactbuild %s not complete", ab.Spec.GAV)
+											}
+										}
+										dbList, err := fw.AsKubeAdmin.JvmbuildserviceController.ListDependencyBuilds(fw.UserNamespace)
+										Expect(err).ShouldNot(HaveOccurred())
+										for _, db := range dbList.Items {
+											if db.Status.State != v1alpha1.DependencyBuildStateComplete {
+												return fmt.Errorf("dependencybuild %s not complete", db.Spec.ScmInfo.SCMURL)
+											}
+										}
+										return nil
+									}, jvmRebuildTimeout, jvmRebuildPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for all artifactbuilds and dependencybuilds to complete in namespace %q", fw.UserNamespace))
+								})
+							})
+
+							When("User switches to simple build", func() {
+								BeforeAll(func() {
+									comp, err := fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), fw.UserNamespace)
+									Expect(err).ShouldNot(HaveOccurred())
+									comp.Annotations["appstudio.openshift.io/pac-provision"] = "delete"
+									Expect(fw.AsKubeAdmin.CommonController.KubeRest().Update(context.TODO(), comp)).To(Succeed())
+								})
+								AfterAll(func() {
+									// Delete the new branch created by sending purge PR while moving to simple build
+									err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, pacPurgeBranchName)
+									if err != nil {
+										Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+									}
+								})
+								It("creates a pull request for removing PAC configuration", func() {
+									Eventually(func() error {
+										prs, err := fw.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepositoryName)
+										Expect(err).ShouldNot(HaveOccurred())
+										for _, pr := range prs {
+											if pr.Head.GetRef() == pacPurgeBranchName {
+												return nil
+											}
+										}
+										return fmt.Errorf("could not get the expected PaC purge PR branch %s", pacPurgeBranchName)
+									}, time.Minute*1, defaultPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for PaC purge PR to be created against the %q repo", componentRepositoryName))
+								})
+							})
+						})
 					}
 				}
-				Expect(outputImage).ToNot(BeEmpty(), "output image of a component could not be found")
-
-				_, _, err = build.GetParsedSbomFilesContentFromImage(outputImage)
-				Expect(err).NotTo(HaveOccurred())
 			})
-
-			It("should validate Tekton TaskRun test results successfully", func() {
-				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, appName, userNamespace, mergeResultSha)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(build.ValidateBuildPipelineTestResults(pipelineRun, f.AsKubeAdmin.CommonController.KubeRest())).To(Succeed())
-			})
-
-			It("should validate pipelineRun is signed", func() {
-				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, appName, userNamespace, mergeResultSha)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(pipelineRun.Annotations["chains.tekton.dev/signed"]).To(Equal("true"))
-			})
-
-			It("should find the related Snapshot CR", func() {
-				Eventually(func() error {
-					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", userNamespace)
-					return err
-				}, snapshotTimeout, snapshotPollingInterval).Should(Succeed(), "timed out when trying to check if the Snapshot exists for PipelineRun %s/%s", userNamespace, pipelineRun.GetName())
-			})
-
-			It("should validate the pipelineRun is annotated with the name of the Snapshot", func() {
-				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, appName, userNamespace, mergeResultSha)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(snapshot.GetName()))
-			})
-
-			It("should find the related Integration Test PipelineRun", func() {
-				Eventually(func() error {
-					testPipelinerun, err = f.AsKubeAdmin.IntegrationController.GetIntegrationPipelineRun(integrationTestScenario.Name, snapshot.Name, userNamespace)
-					if err != nil {
-						GinkgoWriter.Printf("failed to get Integration test PipelineRun for a snapshot '%s' in '%s' namespace: %+v\n", snapshot.Name, userNamespace, err)
-						return err
-					}
-					if !testPipelinerun.HasStarted() {
-						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", testPipelinerun.GetNamespace(), testPipelinerun.GetName())
-					}
-					return nil
-				}, pipelineRunStartedTimeout, defaultPollingInterval).Should(Succeed())
-				Expect(testPipelinerun.Labels["appstudio.openshift.io/snapshot"]).To(ContainSubstring(snapshot.Name))
-				Expect(testPipelinerun.Labels["test.appstudio.openshift.io/scenario"]).To(ContainSubstring(integrationTestScenario.Name))
-			})
-		})
-
-		When("Integration Test PipelineRun is created", func() {
-			It("should eventually complete successfully", func() {
-				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenario, snapshot, userNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a integration pipeline for snapshot %s/%s to finish", userNamespace, snapshot.GetName()))
-			})
-		})
-
-		When("Integration Test PipelineRun completes successfully", func() {
-
-			It("should lead to Snapshot CR being marked as passed", func() {
-				snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", userNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)).To(BeTrue(), fmt.Sprintf("tests have not succeeded for snapshot %s/%s", snapshot.GetNamespace(), snapshot.GetName()))
-			})
-
-			It("should trigger creation of Release CR", func() {
-				Eventually(func() error {
-					release, err = f.AsKubeAdmin.ReleaseController.GetRelease("", snapshot.Name, userNamespace)
-					return err
-				}, releaseTimeout, releasePollingInterval).Should(Succeed(), fmt.Sprintf("timed out when trying to check if the release exists for snapshot %s/%s", userNamespace, snapshot.GetName()))
-			})
-		})
-
-		When("Release CR is created", func() {
-			It("triggers creation of Release PipelineRun", func() {
-				Eventually(func() error {
-					pipelineRun, err = f.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
-					if err != nil {
-						GinkgoWriter.Printf("pipelineRun for component '%s' in namespace '%s' not created yet: %+v\n", componentName, managedNamespace, err)
-						return err
-					}
-					if !pipelineRun.HasStarted() {
-						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
-					}
-					return nil
-				}, pipelineRunStartedTimeout, defaultPollingInterval).Should(Succeed(), fmt.Sprintf("failed to get pipelinerun named %q in namespace %q with label to release %q in namespace %q to start", pipelineRun.Name, managedNamespace, release.Name, release.Namespace))
-			})
-		})
-
-		When("Release PipelineRun is triggered", func() {
-			It("should eventually succeed", func() {
-				Eventually(func() error {
-					pipelineRun, err = f.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
-					Expect(err).ShouldNot(HaveOccurred())
-					Expect(utils.HasPipelineRunFailed(pipelineRun)).NotTo(BeTrue(), fmt.Sprintf("did not expect PipelineRun %s/%s to fail", pipelineRun.GetNamespace(), pipelineRun.GetName()))
-					if pipelineRun.IsDone() {
-						Expect(utils.HasPipelineRunSucceeded(pipelineRun)).To(BeTrue(), fmt.Sprintf("PipelineRun %s/%s did not succeed", pipelineRun.GetNamespace(), pipelineRun.GetName()))
-					}
-					return nil
-				}, releasePipelineTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("failed to see pipelinerun %q in namespace %q with a label pointing to release %q in namespace %q to complete successfully", pipelineRun.Name, managedNamespace, release.Name, release.Namespace))
-			})
-		})
-		When("Release PipelineRun is completed", func() {
-			It("should lead to Release CR being marked as succeeded", func() {
-				Eventually(func() error {
-					release, err = f.AsKubeAdmin.ReleaseController.GetRelease(release.Name, "", userNamespace)
-					Expect(err).ShouldNot(HaveOccurred())
-					if !release.IsReleased() {
-						return fmt.Errorf("release CR %s/%s is not marked as finished yet", release.GetNamespace(), release.GetName())
-					}
-					return nil
-				}, customResourceUpdateTimeout, defaultPollingInterval).Should(Succeed(), fmt.Sprintf("failed to see release %q in namespace %q get marked as released", release.Name, userNamespace))
-			})
-		})
-
-		When("JVM Build Service is used for rebuilding dependencies", func() {
-			It("should eventually rebuild of all artifacts and dependencies successfully", func() {
-				Eventually(func() error {
-					abList, err := f.AsKubeAdmin.JvmbuildserviceController.ListArtifactBuilds(userNamespace)
-					Expect(err).ShouldNot(HaveOccurred())
-					for _, ab := range abList.Items {
-						if ab.Status.State != v1alpha1.ArtifactBuildStateComplete {
-							return fmt.Errorf("artifactbuild %s not complete", ab.Spec.GAV)
-						}
-					}
-					dbList, err := f.AsKubeAdmin.JvmbuildserviceController.ListDependencyBuilds(userNamespace)
-					Expect(err).ShouldNot(HaveOccurred())
-					for _, db := range dbList.Items {
-						if db.Status.State != v1alpha1.DependencyBuildStateComplete {
-							return fmt.Errorf("dependencybuild %s not complete", db.Spec.ScmInfo.SCMURL)
-						}
-					}
-					return nil
-				}, jvmRebuildTimeout, jvmRebuildPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for all artifactbuilds and dependencybuilds to complete in namespace %q", userNamespace))
-			})
-		})
-
-		When("User switches to simple build", func() {
-			BeforeAll(func() {
-				comp, err := f.AsKubeAdmin.HasController.GetComponent(componentName, userNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-				comp.Annotations["appstudio.openshift.io/pac-provision"] = "delete"
-				Expect(f.AsKubeAdmin.CommonController.KubeRest().Update(context.TODO(), comp)).To(Succeed())
-			})
-			AfterAll(func() {
-				// Delete the new branch created by sending purge PR while moving to simple build
-				err = f.AsKubeAdmin.CommonController.Github.DeleteRef(sampleRepoName, pacPurgeBranchName)
-				if err != nil {
-					Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
-				}
-			})
-			It("creates a pull request for removing PAC configuration", func() {
-				Eventually(func() error {
-					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(sampleRepoName)
-					Expect(err).ShouldNot(HaveOccurred())
-					for _, pr := range prs {
-						if pr.Head.GetRef() == pacPurgeBranchName {
-							return nil
-						}
-					}
-					return fmt.Errorf("could not get the expected PaC purge PR branch %s", pacPurgeBranchName)
-				}, time.Minute*1, defaultPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for PaC purge PR to be created against the %q repo", sampleRepoName))
-			})
-		})
-	})
+		}
+	}
 })
+
+func createReleaseConfig(fw framework.Framework, kc tekton.KubeController, managedNamespace, componentName, appName string, secretData []byte) {
+	var err error
+	_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
+	Expect(err).ShouldNot(HaveOccurred())
+
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "release-pull-secret", Namespace: managedNamespace},
+		Data: map[string][]byte{".dockerconfigjson": secretData},
+		Type: corev1.SecretTypeDockerConfigJson,
+	}
+	_, err = fw.AsKubeAdmin.CommonController.CreateSecret(managedNamespace, secret)
+	Expect(err).ShouldNot(HaveOccurred())
+
+	managedServiceAccount, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount("release-service-account", managedNamespace, []corev1.ObjectReference{{Name: secret.Name}}, nil)
+	Expect(err).NotTo(HaveOccurred())
+
+	_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(fw.UserNamespace, managedServiceAccount)
+	Expect(err).NotTo(HaveOccurred())
+	_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
+	Expect(err).NotTo(HaveOccurred())
+
+	publicKey, err := kc.GetTektonChainsPublicKey()
+	Expect(err).ToNot(HaveOccurred())
+
+	Expect(kc.CreateOrUpdateSigningSecret(publicKey, "cosign-public-key", managedNamespace)).To(Succeed())
+
+	_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan("source-releaseplan", fw.UserNamespace, appName, managedNamespace, "")
+	Expect(err).NotTo(HaveOccurred())
+
+	components := []r.Component{{Name: componentName, Repository: constants.DefaultReleasedImagePushRepo}}
+	sc := fw.AsKubeAdmin.ReleaseController.GenerateReleaseStrategyConfig(components)
+	scYaml, err := yaml.Marshal(sc)
+	Expect(err).ShouldNot(HaveOccurred())
+
+	scPath := componentName + ".yaml"
+	Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef(constants.StrategyConfigsRepo, constants.StrategyConfigsDefaultBranch, "", componentName)).To(Succeed())
+	_, err = fw.AsKubeAdmin.CommonController.Github.CreateFile(constants.StrategyConfigsRepo, scPath, string(scYaml), componentName)
+	Expect(err).ShouldNot(HaveOccurred())
+
+	defaultEcPolicy, err := kc.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+	Expect(err).NotTo(HaveOccurred())
+	ecPolicyName := componentName + "-policy"
+	defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
+		Description: "Red Hat's enterprise requirements",
+		PublicKey:   string(publicKey),
+		Sources:     defaultEcPolicy.Spec.Sources,
+		Configuration: &ecp.EnterpriseContractPolicyConfiguration{
+			Collections: []string{"minimal"},
+			Exclude:     []string{"cve"},
+		},
+	}
+	_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(ecPolicyName, managedNamespace, defaultEcPolicySpec)
+	Expect(err).NotTo(HaveOccurred())
+	_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy(componentName+"-strategy", managedNamespace, "release", constants.ReleasePipelineImageRef, ecPolicyName, "release-service-account", []releaseApi.Params{
+		{Name: "extraConfigGitUrl", Value: fmt.Sprintf("https://github.com/%s/strategy-configs.git", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"))},
+		{Name: "extraConfigPath", Value: scPath},
+		{Name: "extraConfigGitRevision", Value: componentName},
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission("demo", fw.UserNamespace, appName, managedNamespace, "", "", componentName+"-strategy")
+	Expect(err).NotTo(HaveOccurred())
+
+	_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode("release-pvc", managedNamespace, corev1.ReadWriteOnce)
+	Expect(err).NotTo(HaveOccurred())
+
+	_, err = fw.AsKubeAdmin.CommonController.CreateRole("role-release-service-account", managedNamespace, map[string][]string{
+		"apiGroupsList": {""},
+		"roleResources": {"secrets"},
+		"roleVerbs":     {"get", "list", "watch"},
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	_, err = fw.AsKubeAdmin.CommonController.CreateRoleBinding("role-release-service-account-binding", managedNamespace, "ServiceAccount", "release-service-account", managedNamespace, "Role", "role-release-service-account", "rbac.authorization.k8s.io")
+	Expect(err).NotTo(HaveOccurred())
+}
