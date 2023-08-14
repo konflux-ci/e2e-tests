@@ -401,3 +401,8 @@ func GetContainerLogs(ki kubernetes.Interface, podName, containerName, namespace
 	}
 	return buf.String(), nil
 }
+
+func ExtractGitRepositoryNameFromURL(url string) (name string) {
+	repoName := url[strings.LastIndex(url, "/")+1:]
+	return strings.TrimSuffix(repoName, ".git")
+}
