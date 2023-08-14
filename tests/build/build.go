@@ -46,7 +46,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		var timeout, interval time.Duration
 
 		var prNumber int
-		var prCreationTime time.Time
+		var prHeadSha string
 
 		BeforeAll(func() {
 
@@ -301,7 +301,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					for _, pr := range prs {
 						if pr.Head.GetRef() == pacBranchName {
 							prNumber = pr.GetNumber()
-							prCreationTime = pr.GetCreatedAt()
+							prHeadSha = pr.Head.GetSHA()
 							return true
 						}
 					}
@@ -365,31 +365,34 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(ok).To(BeTrue())
 				Expect(expiration).To(Equal(utils.GetEnv(constants.IMAGE_TAG_EXPIRATION_ENV, constants.DefaultImageTagExpiration)))
 			})
-			It("eventually leads to a creation of a PR comment with the PipelineRun status report", func() {
-				var comments []*github.IssueComment
+			It("eventually leads to the PipelineRun status report at Checks tab", func() {
+				var checkSuites []*github.CheckSuite
 				timeout = time.Minute * 15
 				interval = time.Second * 10
 
-				Eventually(func() []*github.IssueComment {
-					comments, err = f.AsKubeAdmin.CommonController.Github.ListPullRequestCommentsSince(helloWorldComponentGitSourceRepoName, prNumber, prCreationTime)
+				Eventually(func() []*github.CheckSuite {
+					checkSuites, err = f.AsKubeAdmin.CommonController.Github.ListCheckSuites(helloWorldComponentGitSourceRepoName, prHeadSha)
 					Expect(err).ShouldNot(HaveOccurred())
-
-					return comments
+					return checkSuites
 				}, timeout, interval).ShouldNot(BeEmpty(), fmt.Sprintf("timed out when waiting for the PaC PR comment about the pipelinerun status to appear in the component repo %s in PR #%d", helloWorldComponentGitSourceRepoName, prNumber))
-
-				// TODO uncomment once https://issues.redhat.com/browse/SRVKP-2471 is sorted
-				//Expect(comments).To(HaveLen(1), fmt.Sprintf("the initial PR has more than 1 comment after a single pipelinerun. repo: %s, pr number: %d, comments content: %v", helloWorldComponentGitSourceURL, prNumber, comments))
-				Expect(comments[len(comments)-1]).To(ContainSubstring("success"), fmt.Sprintf("the initial PR %d in %s repo doesn't contain the info about successful pipelinerun", prNumber, helloWorldComponentGitSourceRepoName))
+				var checkSuite *github.CheckSuite
+				for _, cs := range checkSuites {
+					githubAppId, err := utils.GetGithubAppID()
+					Expect(err).ShouldNot(HaveOccurred())
+					if cs.GetApp().GetID() == githubAppId {
+						checkSuite = cs
+					}
+				}
+				Expect(checkSuite).ToNot(BeNil(), "the Pac PR doesn't has a checksuite generated")
+				Expect(checkSuite.GetConclusion()).To(Equal("success"), fmt.Sprintf("the initial PR %d in %s repo doesn't contain the info about successful pipelinerun", prNumber, helloWorldComponentGitSourceRepoName))
 			})
 		})
 
 		When("the PaC init branch is updated", func() {
-			var branchUpdateTimestamp time.Time
 			var createdFileSHA string
 
 			BeforeAll(func() {
 				fileToCreatePath := fmt.Sprintf(".tekton/%s-readme.md", componentName)
-				branchUpdateTimestamp = time.Now()
 				createdFile, err := f.AsKubeAdmin.CommonController.Github.CreateFile(helloWorldComponentGitSourceRepoName, fileToCreatePath, fmt.Sprintf("test PaC branch %s update", pacBranchName), pacBranchName)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -412,25 +415,47 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return nil
 				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
 			})
+			It("should lead to a PaC init PR update", func() {
+				timeout = time.Second * 300
+				interval = time.Second * 1
+
+				Eventually(func() bool {
+					   prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(helloWorldComponentGitSourceRepoName)
+					   Expect(err).ShouldNot(HaveOccurred())
+
+					   for _, pr := range prs {
+							  if pr.Head.GetRef() == pacBranchName {
+									Expect(prHeadSha).NotTo(Equal(pr.Head.GetSHA()))
+									prNumber = pr.GetNumber()
+									prHeadSha = pr.Head.GetSHA()
+									return true
+							  }
+					   }
+					   return false
+				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldComponentGitSourceRepoName))
+		 	})
 			It("PipelineRun should eventually finish", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, createdFileSHA, 2, f.AsKubeAdmin.TektonController)).To(Succeed())
 			})
-			It("eventually leads to another update of a PR with a comment about the PipelineRun status report", func() {
-				var comments []*github.IssueComment
-
+			It("eventually leads to another update of a PR about the PipelineRun status report at Checks tab", func() {
+				var checkSuites []*github.CheckSuite
 				timeout = time.Minute * 20
 				interval = time.Second * 5
-
-				Eventually(func() []*github.IssueComment {
-					comments, err = f.AsKubeAdmin.CommonController.Github.ListPullRequestCommentsSince(helloWorldComponentGitSourceRepoName, prNumber, branchUpdateTimestamp)
+				Eventually(func() []*github.CheckSuite {
+					checkSuites, err = f.AsKubeAdmin.CommonController.Github.ListCheckSuites(helloWorldComponentGitSourceRepoName, prHeadSha)
 					Expect(err).ShouldNot(HaveOccurred())
-
-					return comments
+					return checkSuites
 				}, timeout, interval).ShouldNot(BeEmpty(), fmt.Sprintf("timed out when waiting for the PaC PR comment about the pipelinerun status to appear in the component repo %s in PR #%d", helloWorldComponentGitSourceRepoName, prNumber))
-
-				// TODO uncomment once https://issues.redhat.com/browse/SRVKP-2471 is sorted
-				//Expect(comments).To(HaveLen(1), fmt.Sprintf("the updated PaC PR has more than 1 comment after a single branch update. repo: %s, pr number: %d, comments content: %v", helloWorldComponentGitSourceURL, prNumber, comments))
-				Expect(comments[len(comments)-1]).To(ContainSubstring("success"), "the updated PR doesn't contain the info about successful pipelinerun")
+				var checkSuite *github.CheckSuite
+				for _, cs := range checkSuites {
+					githubAppId, err := utils.GetGithubAppID()
+					Expect(err).ShouldNot(HaveOccurred())
+					if cs.GetApp().GetID() == githubAppId {
+						checkSuite = cs
+					}
+				}
+				Expect(checkSuite).ToNot(BeNil(), "the updated PaC PR doesn't has a checksuite generated")
+				Expect(checkSuite.GetConclusion()).To(Equal("success"), fmt.Sprintf("the updated PR %d in %s repo doesn't contain the info about successful pipelinerun", prNumber, helloWorldComponentGitSourceRepoName))
 			})
 		})
 
