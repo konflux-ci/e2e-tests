@@ -1,3 +1,6 @@
 issues:
   exclude:
     - composites
+linters:
+  enable:
+    - ginkgolinter
