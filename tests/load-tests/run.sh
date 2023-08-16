@@ -40,16 +40,16 @@ else
         --test-scenario-git-url "${TEST_SCENARIO_GIT_URL:-https://github.com/redhat-appstudio/integration-examples.git}" \
         --test-scenario-revision "${TEST_SCENARIO_REVISION:-main}" \
         --test-scenario-path-in-repo "${TEST_SCENARIO_PATH_IN_REPO:-pipelines/integration_resolver_pipeline_pass.yaml}" \
-        -w \
-        -i \
-        -d \
+        -w="${WAIT_PIPELINES:-true}" \
+        -i="${WAIT_INTEGRATION_TESTS:-true}" \
+        -d="${WAIT_DEPLOYMENTS:-true}" \
         -l \
         -t "${THREADS:-1}" \
         --disable-metrics \
-        --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}" 
-        
+        --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}"
+
     DRY_RUN=false ./clear.sh "$USER_PREFIX"
-    
+
     if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
         echo "Waiting for the Tekton controller profiling to finish up to ${TEKTON_PERF_PROFILE_CPU_PERIOD}s"
         wait "$TEKTON_PROFILER_PID"
