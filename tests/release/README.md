@@ -58,8 +58,17 @@ This document will detail the e2e tests included for the release suite.
        - The Release passes.
        - Validate that the SBOM for both components were uploaded to Pyxis stage.
 
+### 5. Ensure ReleasePlan has owner references set (e2e-test-releaseplan-owner-ref.go)
 
-### 5. Negative e2e-tests
+   This test is designed to ensure that the ReleasePlan controller reconciles ReleasePlans to have an owner reference for its application.
+
+      Steps:
+       - Create a ReleasePlan and an Application.
+      Expected Results:
+       - The ReleasePlan has an owner reference for the Application.
+       - If the Application is deleted, the ReleasePlan is also deleted.
+
+### 6. Negative e2e-tests
 We use manual tests to cover negative tests, using filtering labels in Ginkgo framework to enable users to run negative e2e-tests whether all together or each one separately:
 
 **Run all negative release e2e-tests**
@@ -71,21 +80,21 @@ We use manual tests to cover negative tests, using filtering labels in Ginkgo fr
 e2e-test = negMissingReleaseStrategy || negMissingReleasePlan || negMissingReleasePlanAdmission
 ./bin/e2e-appstudio --ginkgo.junit-report=report.xml  --ginkgo.focus="release" --ginkgo.label-filter="<e2e-test>" --ginkgo.vv
 ```
-   #### 5.1. A release CR will fail if ReleasePlanAdmission is missing (neg-missing-releaseplanadmission.go).
+   #### 6.1. A release CR will fail if ReleasePlanAdmission is missing (neg-missing-releaseplanadmission.go).
 
       Steps:
        - Create the following CRs: Snapshot, ReleaseStrategy, ReleasePlan, EnterpriseContractPolicy and Release          
       Expected Results:
        - We ensure that Release CR fails on Validation and on Release, with a proper message printed out to the user. 
 
-   #### 5.2. A release CR will fail if ReleasePlan is missing (neg-missing-releaseplan.go).
+   #### 6.2. A release CR will fail if ReleasePlan is missing (neg-missing-releaseplan.go).
 
       Steps:
        - Create the following CRs: Snapshot, ReleaseStrategy, ReleasePlanAdmission, EnterpriseContractPolicy and Release          
       Expected Results:
        - We ensure that Release CR fails on Validation and on Release, with a proper message printed out to the user.
 
-   #### 5.3. A release CR will fail if ReleaseStrategy is missing (neg-missing-releasestrategy.go).
+   #### 6.3. A release CR will fail if ReleaseStrategy is missing (neg-missing-releasestrategy.go).
 
       Steps:
        - Create the following CRs: Snapshot, ReleasePlan, ReleasePlanAdmission, EnterpriseContractPolicy and Release          
