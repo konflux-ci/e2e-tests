@@ -223,6 +223,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 			When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", gitUrl), Label("sbom", "slow"), func() {
 				var outputImage string
+				var outputImageDigest string
 				BeforeAll(func() {
 					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
 					Expect(err).ShouldNot(HaveOccurred())
@@ -231,11 +232,24 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						if p.Name == "output-image" {
 							outputImage = p.Value.StringVal
 						}
+
 					}
 					Expect(outputImage).ToNot(BeEmpty(), "output image of a component could not be found")
+					for _, r := range pipelineRun.Status.PipelineResults {
+						if r.Name == "IMAGE_DIGEST" {
+							outputImageDigest = r.Value.StringVal
+						}
+					}
+					Expect(outputImageDigest).ToNot(BeEmpty(), "digest of output image could not be found")
 				})
 				It("verify-enterprise-contract check should pass", Label(buildTemplatesTestLabel), func() {
-					cm, err := f.AsKubeAdmin.CommonController.GetConfigMap("ec-defaults", "enterprise-contract-service")
+					// If the Tekton Chains controller is busy, it may take longer than usual for it
+					// to sign and attest the image built in BeforeAll.
+					imageWithDigest := fmt.Sprintf("%s@%s", outputImage, outputImageDigest)
+					err := kubeadminClient.TektonController.AwaitAttestationAndSignature(imageWithDigest, time.Duration(10)*time.Minute)
+					Expect(err).ToNot(HaveOccurred())
+
+					cm, err := kubeadminClient.CommonController.GetConfigMap("ec-defaults", "enterprise-contract-service")
 					Expect(err).ToNot(HaveOccurred())
 
 					verifyECTaskBundle := cm.Data["verify_ec_task_bundle"]
