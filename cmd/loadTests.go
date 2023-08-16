@@ -545,12 +545,12 @@ func StageCleanup(users []loadtestUtils.User) {
 
 	for _, user := range users {
 		framework := frameworkForUser(user.Username)
-		err := framework.AsKubeDeveloper.HasController.DeleteAllApplicationsOneByOneInASpecificNamespace(framework.UserNamespace, 5*time.Minute)
+		err := framework.AsKubeDeveloper.HasController.DeleteAllApplicationsInASpecificNamespace(framework.UserNamespace, 5*time.Minute)
 		if err != nil {
 			klog.Errorf("while deleting resources for user: %s, got error: %v\n", user.Username, err)
 		}
 
-		err = framework.AsKubeDeveloper.HasController.DeleteAllComponentDetectionQueriesOneByOneInASpecificNamespace(framework.UserNamespace, 5*time.Minute)
+		err = framework.AsKubeDeveloper.HasController.DeleteAllComponentDetectionQueriesInASpecificNamespace(framework.UserNamespace, 5*time.Minute)
 		if err != nil {
 			klog.Errorf("while deleting component detection queries for user: %s, got error: %v\n", user.Username, err)
 		}

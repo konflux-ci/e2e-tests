@@ -72,31 +72,6 @@ func (h *HasController) CreateComponentDetectionQueryWithTimeout(name string, na
 	return componentDetectionQuery, nil
 }
 
-// DeleteAllComponentDetectionQueriesOneByOneInASpecificNamespace removes all CDQs CRs one by one from a specific namespace.
-// That function is a workaround of the "DeleteAllComponentDetectionQueriesInASpecificNamespace" function which uses the deletecollection verb of the CDQ object which
-// is not permitted as per this PR - https://github.com/codeready-toolchain/toolchain-e2e/pull/774
-// That function uses the list and delete verbs of the CDQ object
-func (h *HasController) DeleteAllComponentDetectionQueriesOneByOneInASpecificNamespace(namespace string, timeout time.Duration) error {
-	componentDetectionQueriesList := &appservice.ComponentDetectionQueryList{}
-	if err := h.KubeRest().List(context.Background(), componentDetectionQueriesList, &rclient.ListOptions{Namespace: namespace}); err != nil {
-		return fmt.Errorf("error listing component detection queries from the namespace %s: %+v", namespace, err)
-	}
-
-	for i := range componentDetectionQueriesList.Items {
-		query := &componentDetectionQueriesList.Items[i]
-		if err := h.KubeRest().Delete(context.TODO(), query); err != nil {
-			return fmt.Errorf("error deleting component detection query %s from the namespace %s: %+v", query.Name, namespace, err)
-		}
-	}
-
-	return utils.WaitUntil(func() (done bool, err error) {
-		if err := h.KubeRest().List(context.Background(), componentDetectionQueriesList, &rclient.ListOptions{Namespace: namespace}); err != nil {
-			return false, nil
-		}
-		return len(componentDetectionQueriesList.Items) == 0, nil
-	}, timeout)
-}
-
 // DeleteAllComponentDetectionQueriesInASpecificNamespace removes all CDQs CRs from a specific namespace. Useful when creating a lot of resources and want to remove all of them
 func (h *HasController) DeleteAllComponentDetectionQueriesInASpecificNamespace(namespace string, timeout time.Duration) error {
 	if err := h.KubeRest().DeleteAllOf(context.TODO(), &appservice.ComponentDetectionQuery{}, rclient.InNamespace(namespace)); err != nil {
