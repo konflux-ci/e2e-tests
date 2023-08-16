@@ -49,6 +49,7 @@ const (
 
 	namespaceCreationTimeout              = 5 * time.Minute
 	namespaceDeletionTimeout              = 5 * time.Minute
+	cacheSyncTimeout                      = 1 * time.Minute
 	snapshotCreationTimeout               = 5 * time.Minute
 	releaseStrategyCreationTimeout        = 5 * time.Minute
 	releasePlanCreationTimeout            = 5 * time.Minute
