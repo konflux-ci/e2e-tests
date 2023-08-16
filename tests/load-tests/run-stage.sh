@@ -10,6 +10,7 @@ go run loadtest.go \
     -i="${WAIT_INTEGRATION_TESTS:-true}" \
     -d="${WAIT_DEPLOYMENTS:-true}" \
     -l \
+    -o "${OUTPUT_DIR:-.}" \
     -t "${THREADS:-1}" \
     --disable-metrics \
     --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}"

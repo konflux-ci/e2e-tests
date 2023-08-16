@@ -9,13 +9,15 @@ source "/usr/local/ci-secrets/redhat-appstudio-load-test/load-test-scenario.${1:
 
 pushd "${2:-.}"
 
+output_dir="${OUTPUT_DIR:-./tests/load-tests}"
+
 source "./tests/load-tests/ci-scripts/user-prefix.sh"
 
 echo "Collecting load test results"
 load_test_log=$ARTIFACT_DIR/load-tests.log
-cp -vf ./tests/load-tests/*.log "$ARTIFACT_DIR"
-cp -vf ./tests/load-tests/load-tests.json "$ARTIFACT_DIR"
-cp -vf ./tests/load-tests/gh-rate-limits-remaining.csv "$ARTIFACT_DIR"
+cp -vf $output_dir/*.log "$ARTIFACT_DIR"
+cp -vf $output_dir/load-tests.json "$ARTIFACT_DIR"
+cp -vf $output_dir/gh-rate-limits-remaining.csv "$ARTIFACT_DIR"
 
 pipelineruns_json=$ARTIFACT_DIR/pipelineruns.json
 taskruns_json=$ARTIFACT_DIR/taskruns.json
@@ -138,7 +140,7 @@ set -u
 ## Tekton prifiling data
 if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
     echo "Collecting profiling data from Tekton controller"
-    pprof_profile=tests/load-tests/cpu-profile.pprof
+    pprof_profile="$output_dir/cpu-profile.pprof"
     go tool pprof -text "$pprof_profile" >$ARTIFACT_DIR/cpu-profile.txt
     go tool pprof -svg -output="$ARTIFACT_DIR/cpu-profile.svg" "$pprof_profile"
 fi
