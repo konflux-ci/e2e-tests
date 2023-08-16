@@ -24,6 +24,9 @@ type K8sSpec struct {
 
 // Specs for a specific component to create in AppStudio
 type ComponentSpec struct {
+	// Test Advanced build (using PaC)
+	AdvancedBuildSpec *AdvancedBuildSpec `yaml:"advancedBuild"`
+
 	// The component name which will be created
 	Name string `yaml:"name"`
 
@@ -45,12 +48,25 @@ type ComponentSpec struct {
 	// Relative path inside the repository containing the component
 	GitSourceContext string `yaml:"gitSourceContext,omitempty"`
 
+	GitSourceDefaultBranchName string `yaml:"gitSourceDefaultBranchName,omitempty"`
+
 	// An endpoint where the framework can ping to see if a component was deployed successfully
 	HealthEndpoint string `yaml:"healthz"`
 
 	// Set k8s resource specific properties
-	K8sSpec K8sSpec `yaml:"spec,omitempty"`
+	K8sSpec *K8sSpec `yaml:"spec,omitempty"`
 
 	// Skip the deployment of a component in case not needed to deploy
 	SkipDeploymentCheck bool `yaml:"skipDeploy,omitempty"`
+}
+
+type TestScenarioSpec struct {
+	GitURL      string
+	GitRevision string
+	TestPath    string
+}
+
+type AdvancedBuildSpec struct {
+	// Integration test config
+	TestScenario TestScenarioSpec `yaml:"testScenario,omitempty"`
 }

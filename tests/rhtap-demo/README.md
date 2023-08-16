@@ -1,15 +1,28 @@
 # RHTAP demo test
 
-### Prerequisites for running this test against your own cluster
+### Prerequisites for running the advanced build scenario against your own cluster
 1. Fork https://github.com/redhat-appstudio-qe/hacbs-test-project and https://github.com/redhat-appstudio-qe/strategy-configs to your GitHub org (specified in `MY_GITHUB_ORG` env var)
 2. Make sure the cluster you are about to run this test against is public (i.e. hosted on a public cloud provider)
 
 ### Description
-This test simulates the "advanced -> build -> scan -> test -> release" user journey
+This test simulates typical user scenario: 
 
-### Test steps
+#### Simple build
 1. Setup
-   1. Create a user and a related (dev) namespace, create a managed namespace used by release service for validating and releasing the built image
+   1. Create a user namespace
+   2. Inject manual SPI token
+
+2. Test Scenario
+   1. The application was created successfully and is healthy
+   2. The POC environment was created successfully
+   3. The Component Detection Query was created successfully
+   4. The Component (simple) Build finished successfully
+   5. Snapshot was created and integration test finished successfully
+   6. Component was successfully deployed to a dev environment and the health endpoint is reachable
+
+### Advanced build (enabled only if AdvancedBuildSpec is set)
+1. Setup
+   1. Create a managed namespace used by release service for validating and releasing the built image
    2. Create required resources in managed-namespace
       1. Secret with container image registry credentials (used for pushing the image to container registry)
       2. Service account that mounts the secret, including required roles and rolebindings
@@ -31,3 +44,50 @@ This test simulates the "advanced -> build -> scan -> test -> release" user jour
    5. Make sure that integration test pipelinerun is created and completes successfully
    6. The release pipeline should succeed and the release should be marked as successful
    7. Make sure JVM build service is used for rebuilding java component's dependencies and that all related dependency builds complete successfully
+
+Steps to run 'rhtap-demos':
+
+1) Follow the instructions from the [Readme](../../docs/Installation.md) scripts to install AppStudio in e2e mode
+2) Run the e2e suite: `./bin/e2e-appstudio --ginkgo.label-filter="rhtap-demo"`
+
+## Test Generator
+
+The test specs in e2e-demo-suite are generated dynamically using ginkgo specs.
+
+If you want to test your own Component (repository), all you need to do is to update the `TestScenarios` variable in [scenarios.go](./config/scenarios.go)
+
+## Run tests with private component
+
+Red Hat AppStudio E2E framework now supports creating components from private quay.io images and GitHub repositories.
+
+#### Environments
+
+| Variable | Required | Explanation | Default Value |
+|---|---|---|---|
+| `QUAY_OAUTH_USER` | yes | A quay.io username used to push/build containers  | ''  |
+| `QUAY_OAUTH_TOKEN` | yes | A quay.io token used to push/build containers. Note: the token and username must be a robot account with access to your repository | '' |
+
+#### Setup configuration for private repositories
+
+1. Define in your configuration for the application and the component
+Example of a test scenario for GitHub private repository:
+
+```go
+var TestScenarios = []TestSpec{
+    {
+        Name:            "nodejs private component test",
+        ApplicationName: "nodejs-private-app",
+        Components: []ComponentSpec{
+            {
+                Name:              "nodejs-private-comp",
+                Private:           true,
+                Language:          "JavaScript",
+                GitSourceUrl:      "https://github.com/redhat-appstudio-qe-bot/nodejs-health-check.git",
+                HealthEndpoint:    "/live",
+            },
+        },
+    },
+}
+```
+
+2. Run the e2e tests

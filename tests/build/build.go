@@ -565,7 +565,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).NotTo(BeFalse())
+				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 			}
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
@@ -655,7 +655,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Specify("simple build can be triggered manually", func() {
 				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.BuildRequestAnnotationName, controllers.BuildRequestTriggerSimpleBuildAnnotationValue, testNamespace)).To(Succeed())
 
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2))
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
 
 				var buildStatus *controllers.BuildStatus
 
@@ -683,7 +683,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return buildStatus.Simple != nil && buildStatus.Simple.BuildStartTime != lastBuildStartTime && buildStatus.Simple.ErrId == 0 && buildStatus.Simple.ErrMessage == "", nil
 				}, timeout, interval).Should(BeTrue(), "build status has unexpected content")
 
-				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace))
+				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 			})
 		})
 

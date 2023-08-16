@@ -15,7 +15,9 @@ load_test() {
         --component-repo "${COMPONENT_REPO:-https://github.com/nodeshift-starters/devfile-sample.git}" \
         --username "$USER_PREFIX-$index" \
         --users 1 \
-        -w \
+        -w="${WAIT_PIPELINES:-true}" \
+        -i="${WAIT_INTEGRATION_TESTS:-false}" \
+        -d="${WAIT_DEPLOYMENTS:-false}" \
         -l \
         -t "$threads" \
         --disable-metrics \

@@ -30,7 +30,7 @@ type ControllerHub struct {
 	SPIController             *spi.SPIController
 	ReleaseController         *release.ReleaseController
 	IntegrationController     *integration.IntegrationController
-	JvmbuildserviceController *jvmbuildservice.SuiteController
+	JvmbuildserviceController *jvmbuildservice.JvmbuildserviceController
 	O11yController            *o11y.SuiteController
 }
 
@@ -92,7 +92,7 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 		if err = asAdmin.CommonController.AddRegistryAuthSecretToSA("QUAY_TOKEN", k.UserNamespace); err != nil {
 			GinkgoWriter.Println(fmt.Sprintf("Failed to add registry auth secret to service account: %v\n", err))
 		}
-	} 
+	}
 
 	asUser, err := InitControllerHub(k.AsKubeDeveloper)
 	if err != nil {
