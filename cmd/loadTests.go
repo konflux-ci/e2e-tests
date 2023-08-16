@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -866,7 +867,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				pipelineCreatedRetryInterval := time.Second * 5
 				pipelineCreatedTimeout := time.Minute * 15
 				var pipelineRun *v1beta1.PipelineRun
-				err := k8swait.Poll(pipelineCreatedRetryInterval, pipelineCreatedTimeout, func() (done bool, err error) {
+				err := k8swait.PollUntilContextTimeout(context.Background(), pipelineCreatedRetryInterval, pipelineCreatedTimeout, false, func(ctx context.Context) (done bool, err error) {
 					pipelineRun, err = framework.AsKubeDeveloper.HasController.GetComponentPipelineRun(componentName, applicationName, usernamespace, "")
 					if err != nil {
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
@@ -884,7 +885,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 
 				pipelineRunRetryInterval := time.Second * 5
 				pipelineRunTimeout := time.Minute * 60
-				err = k8swait.Poll(pipelineRunRetryInterval, pipelineRunTimeout, func() (done bool, err error) {
+				err = k8swait.PollUntilContextTimeout(context.Background(), pipelineRunRetryInterval, pipelineRunTimeout, false, func(ctx context.Context) (done bool, err error) {
 					pipelineRun, err = framework.AsKubeDeveloper.HasController.GetComponentPipelineRun(componentName, applicationName, usernamespace, "")
 					if err != nil {
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
@@ -940,7 +941,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				IntegrationTestsPipelineCreatedTimeout := time.Minute * 15
 
 				var snapshot *appstudioApi.Snapshot
-				err := k8swait.Poll(SnapshotCreatedRetryInterval, SnapshotCreatedTimeout, func() (done bool, err error) {
+				err := k8swait.PollUntilContextTimeout(context.Background(), SnapshotCreatedRetryInterval, SnapshotCreatedTimeout, false, func(ctx context.Context) (done bool, err error) {
 					snapshot, err = framework.AsKubeDeveloper.IntegrationController.GetSnapshot("", componentPipelineRunName, "", usernamespace)
 					if err != nil {
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
@@ -956,7 +957,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				}
 
 				var IntegrationTestsPipelineRun *v1beta1.PipelineRun
-				err = k8swait.Poll(IntegrationTestsPipelineCreatedRetryInterval, IntegrationTestsPipelineCreatedTimeout, func() (done bool, err error) {
+				err = k8swait.PollUntilContextTimeout(context.Background(), IntegrationTestsPipelineCreatedRetryInterval, IntegrationTestsPipelineCreatedTimeout, false, func(ctx context.Context) (done bool, err error) {
 					IntegrationTestsPipelineRun, err = framework.AsKubeDeveloper.IntegrationController.GetIntegrationPipelineRun(testScenarioName, snapshot.Name, usernamespace)
 					if err != nil {
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
@@ -972,7 +973,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				}
 				IntegrationTestsPipelineRunRetryInterval := time.Second * 5
 				IntegrationTestsPipelineRunTimeout := time.Minute * 60
-				err = k8swait.Poll(IntegrationTestsPipelineRunRetryInterval, IntegrationTestsPipelineRunTimeout, func() (done bool, err error) {
+				err = k8swait.PollUntilContextTimeout(context.Background(), IntegrationTestsPipelineRunRetryInterval, IntegrationTestsPipelineRunTimeout, false, func(ctx context.Context) (done bool, err error) {
 					IntegrationTestsPipelineRun, err = framework.AsKubeDeveloper.IntegrationController.GetIntegrationPipelineRun(testScenarioName, snapshot.Name, usernamespace)
 					if err != nil {
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
@@ -1024,7 +1025,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				var deployment *appsv1.Deployment
 
 				// Deploy the component using gitops and check for the health
-				err := k8swait.Poll(deploymentCreatedRetryInterval, deploymentCreatedTimeout, func() (done bool, err error) {
+				err := k8swait.PollUntilContextTimeout(context.Background(), deploymentCreatedRetryInterval, deploymentCreatedTimeout, false, func(ctx context.Context) (done bool, err error) {
 					deployment, err = framework.AsKubeDeveloper.CommonController.GetDeployment(componentName, usernamespace)
 					if err != nil {
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
@@ -1046,7 +1047,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				deploymentFailCountThreshold := 5
 
 				// To avoid race conditions we want to check for deployment failure that occurs more than once to signify failure (deploymentFailCount > 3)
-				err = k8swait.Poll(deploymentRetryInterval, deploymentTimeout, func() (done bool, err error) {
+				err = k8swait.PollUntilContextTimeout(context.Background(), deploymentRetryInterval, deploymentTimeout, false, func(ctx context.Context) (done bool, err error) {
 					deployment, err = framework.AsKubeDeveloper.CommonController.GetDeployment(componentName, usernamespace)
 					if err != nil {
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
