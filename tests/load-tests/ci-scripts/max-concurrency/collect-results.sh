@@ -9,9 +9,11 @@ source "/usr/local/ci-secrets/redhat-appstudio-load-test/load-test-scenario.${1:
 
 pushd "${2:-.}"
 
+output_dir="${OUTPUT_DIR:-./tests/load-tests}"
+
 echo "Collecting load test results"
-cp -vf ./tests/load-tests/load-tests.max-concurrency.*.log "$ARTIFACT_DIR"
-cp -vf ./tests/load-tests/load-tests.max-concurrency.json "$ARTIFACT_DIR"
+cp -vf $output_dir/load-tests.max-concurrency.*.log "$ARTIFACT_DIR"
+cp -vf $output_dir/load-tests.max-concurrency.json "$ARTIFACT_DIR"
 
 echo "Setting up tool to collect monitoring data..."
 python3 -m venv venv
@@ -22,7 +24,7 @@ set -u
 python3 -m pip install -U pip
 python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team-core&subdirectory=core"
 
-for monitoring_collection_data in ./tests/load-tests/load-tests.max-concurrency.*.json; do
+for monitoring_collection_data in $output_dir/load-tests.max-concurrency.*.json; do
     index=$(echo "$monitoring_collection_data" | sed -e 's,.*/load-tests.max-concurrency.\([0-9]\+\).json,\1,')
     monitoring_collection_log="$ARTIFACT_DIR/monitoring-collection.$index.log"
 
@@ -44,7 +46,7 @@ for monitoring_collection_data in ./tests/load-tests/load-tests.max-concurrency.
     ## Tekton prifiling data
     if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
         echo "Collecting profiling data from Tekton controller"
-        pprof_profile="tests/load-tests/cpu-profile.$index.pprof"
+        pprof_profile="$output_dir/cpu-profile.$index.pprof"
         cp "$pprof_profile" "$ARTIFACT_DIR"
         go tool pprof -text "$pprof_profile" >"$ARTIFACT_DIR/cpu-profile.$index.txt"
         go tool pprof -svg -output="$ARTIFACT_DIR/cpu-profile.$index.svg" "$pprof_profile"
@@ -79,7 +81,7 @@ ${csv_delim}ClusterPipelineScheduleFirstPodAvg\
 ${csv_delim}ClusterTaskrunThrottledByNodeResourcesAvg\
 ${csv_delim}ClusterTaskRunThrottledByDefinedQuotaAvg" \
     >"$max_concurrency_csv"
-cat ./tests/load-tests/load-tests.max-concurrency.*.json |
+cat $output_dir/load-tests.max-concurrency.*.json |
     jq -rc "(.threads | tostring) \
     + $csv_delim_quoted + (.errorsTotal | tostring) \
     + $csv_delim_quoted + (.createUserTimeAvg | tostring) \
