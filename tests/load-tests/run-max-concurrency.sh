@@ -1,6 +1,8 @@
 #!/bin/bash
 export MY_GITHUB_ORG GITHUB_TOKEN
 
+output_dir="${OUTPUT_DIR:-.}"
+
 load_test() {
     threads=${1:-1}
     index=$(printf "%04d" "$threads")
@@ -8,7 +10,7 @@ load_test() {
     if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
         echo "Starting CPU profiling with pprof"
         TEKTON_PERF_PROFILE_CPU_PERIOD=${TEKTON_PERF_PROFILE_CPU_PERIOD:-${THRESHOLD:-300}}
-        oc exec -n openshift-pipelines $(oc get pods -n openshift-pipelines -l app=tekton-pipelines-controller -o name) -- bash -c "curl -SsL --max-time $((TEKTON_PERF_PROFILE_CPU_PERIOD + 10)) localhost:8008/debug/pprof/profile?seconds=${TEKTON_PERF_PROFILE_CPU_PERIOD} | base64" | base64 -d >"cpu-profile.$index.pprof" &
+        oc exec -n openshift-pipelines $(oc get pods -n openshift-pipelines -l app=tekton-pipelines-controller -o name) -- bash -c "curl -SsL --max-time $((TEKTON_PERF_PROFILE_CPU_PERIOD + 10)) localhost:8008/debug/pprof/profile?seconds=${TEKTON_PERF_PROFILE_CPU_PERIOD} | base64" | base64 -d >"$output_dir/cpu-profile.$index.pprof" &
         TEKTON_PROFILER_PID=$!
     fi
     go run loadtest.go \
@@ -19,6 +21,7 @@ load_test() {
         -i="${WAIT_INTEGRATION_TESTS:-false}" \
         -d="${WAIT_DEPLOYMENTS:-false}" \
         -l \
+        -o "$output_dir" \
         -t "$threads" \
         --disable-metrics \
         --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}"
@@ -35,7 +38,7 @@ if [ ${#USER_PREFIX} -gt 10 ]; then
     echo "Maximal allowed length of user prefix is 10 characters. The '$USER_PREFIX' length of ${#USER_PREFIX} exceeds the limit."
     exit 1
 else
-    output=load-tests.max-concurrency.json
+    output="$output_dir/load-tests.max-concurrency.json"
     maxConcurrencyStep=${MAX_CONCURRENCY_STEP:-1}
     maxThreads=${MAX_THREADS:-10}
     threshold=${THRESHOLD:-300}
@@ -64,15 +67,15 @@ else
         fi
         load_test "$t"
         index=$(printf "%04d" "$t")
-        cp -vf load-tests.json "load-tests.max-concurrency.$index.json"
-        cp -vf load-tests.log "load-tests.max-concurrency.$index.log"
-        pipelineRunThresholdExceeded=$(jq -rc ".runPipelineSucceededTimeMax > $threshold" load-tests.json)
-        pipelineRunKPI=$(jq -rc ".runPipelineSucceededTimeMax" load-tests.json)
+        cp -vf "$output_dir/load-tests.json" "$output_dir/load-tests.max-concurrency.$index.json"
+        cp -vf "$output_dir/load-tests.log" "$output_dir/load-tests.max-concurrency.$index.log"
+        pipelineRunThresholdExceeded=$(jq -rc ".runPipelineSucceededTimeMax > $threshold" "$output_dir/load-tests.json")
+        pipelineRunKPI=$(jq -rc ".runPipelineSucceededTimeMax" "$output_dir/load-tests.json")
         if [ "$pipelineRunThresholdExceeded" = "true" ]; then
             echo "The maximal time a pipeline run took to succeed (${pipelineRunKPI}s) has exceeded a threshold of ${threshold}s with $t threads."
             break
         else
-            jq ".maxConcurrencyReached = $t" "$output" >$$.json && mv -f $$.json "$output"
+            jq ".maxConcurrencyReached = $t" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
         fi
     done
     DRY_RUN=false ./clear.sh "$USER_PREFIX"

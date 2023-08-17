@@ -15,7 +15,7 @@ export QUAY_E2E_ORGANIZATION MY_GITHUB_ORG GITHUB_TOKEN TEKTON_PERF_ENABLE_PROFI
 QUAY_E2E_ORGANIZATION=$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/quay-org)
 MY_GITHUB_ORG=$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/github-org)
 
-rate_limits_csv=./gh-rate-limits-remaining.csv
+rate_limits_csv="${OUTPUT_DIR:-.}/gh-rate-limits-remaining.csv"
 
 echo "Starting a watch for GH rate limits remainig"
 IFS="," read -ra kvs <<<"$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/github_accounts)"
