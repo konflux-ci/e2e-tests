@@ -26,6 +26,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 	var fwk *framework.Framework
 	var err error
 	var namespace string
+	AfterEach(framework.ReportFailure(&fwk))
 
 	BeforeAll(func() {
 		fwk, err = framework.NewFramework(utils.GetGeneratedNamespace(constants.TEKTON_CHAINS_E2E_USER))

@@ -35,6 +35,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "link-secret-sa"), func() 
 	var fw *framework.Framework
 	var err error
 	var namespace string
+	AfterEach(framework.ReportFailure(&fw))
 
 	for _, test := range ServiceAccountTests {
 		test := test
