@@ -47,6 +47,7 @@ var (
 	threadCount                   int
 	pipelineSkipInitialChecks     bool
 	stage                         bool
+	outputDir                     string = "."
 )
 
 var (
@@ -202,6 +203,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&disableMetrics, "disable-metrics", false, "if you want to disable metrics gathering")
 	rootCmd.Flags().IntVarP(&threadCount, "threads", "t", 1, "number of concurrent threads to execute")
 	rootCmd.Flags().BoolVar(&pipelineSkipInitialChecks, "pipeline-skip-initial-checks", true, "if pipeline runs' initial checks are to be skipped")
+	rootCmd.Flags().StringVarP(&outputDir, "output-dir", "o", ".", "directory where output files such as load-tests.log or load-tests.json are stored")
 }
 
 func logError(errCode int, message string) {
@@ -250,7 +252,7 @@ func setup(cmd *cobra.Command, args []string) {
 	// waitIntegrationTestsPipelines sets waitPipelines=true implicitly
 	waitPipelines = waitPipelines || waitIntegrationTestsPipelines
 
-	logFile, err := os.Create("load-tests.log")
+	logFile, err := os.Create(fmt.Sprintf("%s/load-tests.log", outputDir))
 	if err != nil {
 		klog.Fatalf("Error creating log file: %v", err)
 	}
@@ -532,7 +534,7 @@ func setup(cmd *cobra.Command, args []string) {
 	logData.ErrorsTotal = len(logData.Errors)
 	klog.Infof("Total number of errors occured: %d", logData.ErrorsTotal)
 
-	err = createLogDataJSON("load-tests.json", logData)
+	err = createLogDataJSON(fmt.Sprintf("%s/load-tests.json", outputDir), logData)
 	if err != nil {
 		klog.Errorf("error while marshalling JSON: %v\n", err)
 	}
@@ -545,13 +547,16 @@ func StageCleanup(users []loadtestUtils.User) {
 
 	for _, user := range users {
 		framework := frameworkForUser(user.Username)
-		err := framework.AsKubeDeveloper.HasController.DeleteAllApplicationsInASpecificNamespace(framework.UserNamespace, 60*time.Minute)
+		err := framework.AsKubeDeveloper.HasController.DeleteAllApplicationsInASpecificNamespace(framework.UserNamespace, 5*time.Minute)
 		if err != nil {
 			klog.Errorf("while deleting resources for user: %s, got error: %v\n", user.Username, err)
 		}
 
+		err = framework.AsKubeDeveloper.HasController.DeleteAllComponentDetectionQueriesInASpecificNamespace(framework.UserNamespace, 5*time.Minute)
+		if err != nil {
+			klog.Errorf("while deleting component detection queries for user: %s, got error: %v\n", user.Username, err)
+		}
 	}
-
 }
 
 func maxDurationFromArray(durations []time.Duration) time.Duration {
