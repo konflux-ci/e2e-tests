@@ -8,6 +8,7 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/pod"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
+	"knative.dev/pkg/apis"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -166,6 +167,17 @@ func (t *TektonController) GetTaskRunStatus(c crclient.Client, pr *v1beta1.Pipel
 	}
 	return nil, fmt.Errorf(
 		"TaskRun status for pipeline task name %q not found in the status of PipelineRun %s/%s", pipelineTaskName, pr.ObjectMeta.Namespace, pr.ObjectMeta.Name)
+}
+
+// DidTaskRunSucceed checks if task succeeded.
+func DidTaskRunSucceed(tr interface{}) bool {
+	switch tr := tr.(type) {
+	case *v1beta1.PipelineRunTaskRunStatus:
+		return tr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
+	case *v1beta1.TaskRunStatus:
+		return tr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
+	}
+	return false
 }
 
 // DeleteAllTaskRunsInASpecificNamespace removes all TaskRuns from a given repository. Useful when creating a lot of resources and wanting to remove all of them.

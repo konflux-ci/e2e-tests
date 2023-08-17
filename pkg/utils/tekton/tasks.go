@@ -7,7 +7,6 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"knative.dev/pkg/apis"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -47,17 +46,6 @@ func (t *TektonController) GetTask(name, namespace string) (*v1beta1.Task, error
 		return nil, err
 	}
 	return &task, nil
-}
-
-// DidTaskSucceed checks if task succeeded.
-func DidTaskSucceed(tr interface{}) bool {
-	switch tr := tr.(type) {
-	case *v1beta1.PipelineRunTaskRunStatus:
-		return tr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
-	case *v1beta1.TaskRunStatus:
-		return tr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
-	}
-	return false
 }
 
 // DeleteAllTasksInASpecificNamespace removes all Tasks from a given repository. Useful when creating a lot of resources and wanting to remove all of them.

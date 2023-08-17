@@ -204,7 +204,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				Expect(err).NotTo(HaveOccurred())
 				printTaskRunStatus(tr, namespace, *fwk.AsKubeAdmin.CommonController)
 				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s succeeded\n", tr.PipelineTaskName, pr.Name)
-				Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
+				Expect(tekton.DidTaskRunSucceed(tr)).To(BeTrue())
 				GinkgoWriter.Printf("Make sure result for TaskRun %q succeeded\n", tr.PipelineTaskName)
 				Expect(tr.Status.TaskRunResults).Should(Or(
 					// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
@@ -238,7 +238,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 
 				printTaskRunStatus(tr, namespace, *fwk.AsKubeAdmin.CommonController)
 				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s succeeded\n", tr.PipelineTaskName, pr.Name)
-				Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
+				Expect(tekton.DidTaskRunSucceed(tr)).To(BeTrue())
 				GinkgoWriter.Printf("Make sure result for TaskRun %q succeeded\n", tr.PipelineTaskName)
 				Expect(tr.Status.TaskRunResults).Should(Or(
 					// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
@@ -273,7 +273,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 
 				printTaskRunStatus(tr, namespace, *fwk.AsKubeAdmin.CommonController)
 				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s failed\n", tr.PipelineTaskName, pr.Name)
-				Expect(tekton.DidTaskSucceed(tr)).To(BeFalse())
+				Expect(tekton.DidTaskRunSucceed(tr)).To(BeFalse())
 				// Because the task fails, no results are created
 			})
 
@@ -300,7 +300,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 
 				printTaskRunStatus(tr, namespace, *fwk.AsKubeAdmin.CommonController)
 				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s failed\n", tr.PipelineTaskName, pr.Name)
-				Expect(tekton.DidTaskSucceed(tr)).To(BeFalse())
+				Expect(tekton.DidTaskRunSucceed(tr)).To(BeFalse())
 				// Because the task fails, no results are created
 			})
 		})

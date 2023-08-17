@@ -301,7 +301,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 					tr, err := kubeadminClient.TektonController.GetTaskRunStatus(kubeadminClient.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 					Expect(err).NotTo(HaveOccurred())
-					Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
+					Expect(tekton.DidTaskRunSucceed(tr)).To(BeTrue())
 					Expect(tr.Status.TaskRunResults).Should(Or(
 						// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
 						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),

@@ -10,8 +10,8 @@ type TektonController struct {
 }
 
 // Create controller for Tekton Task/Pipeline CRUD operations
-func NewSuiteController(kube *kubeCl.CustomClient) (*TektonController, error) {
+func NewSuiteController(kube *kubeCl.CustomClient) *TektonController {
 	return &TektonController{
 		kube,
-	}, nil
+	}
 }

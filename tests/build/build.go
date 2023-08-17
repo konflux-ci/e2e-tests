@@ -1101,7 +1101,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Expect(err).NotTo(HaveOccurred())
 			tr, err := f.AsKubeAdmin.TektonController.GetTaskRunStatus(f.AsKubeAdmin.CommonController.KubeRest(), pr, constants.BuildTaskRunName)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(tekton.DidTaskSucceed(tr)).To(BeFalse())
+			Expect(tekton.DidTaskRunSucceed(tr)).To(BeFalse())
 		})
 	})
 })
