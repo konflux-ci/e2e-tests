@@ -53,6 +53,10 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				kubeadminClient = f.AsKubeAdmin
 			}
 
+			// create the proxyplugin for tekton-results
+			_, err = kubeadminClient.CommonController.CreateProxyPlugin("tekton-results", "toolchain-host-operator", "tekton-results", "tekton-results")
+			Expect(err).NotTo(HaveOccurred())
+
 			_, err = kubeadminClient.HasController.GetApplication(applicationName, testNamespace)
 			// In case the app with the same name exist in the selected namespace, delete it first
 			if err == nil {
@@ -163,9 +167,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				var pr *v1beta1.PipelineRun
 
 				BeforeAll(func() {
-					// create the proxyplugin for tekton-results
-					_, err = kubeadminClient.CommonController.CreateProxyPlugin("tekton-results", "toolchain-host-operator", "tekton-results", "tekton-results")
-					Expect(err).NotTo(HaveOccurred())
 
 					regProxyUrl := fmt.Sprintf("%s/plugins/tekton-results", f.ProxyUrl)
 					resultClient = pipeline.NewClient(regProxyUrl, f.UserToken)
