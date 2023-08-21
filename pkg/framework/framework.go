@@ -59,6 +59,7 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 	}
 
 	if isStage {
+		options[0].ToolchainApiUrl = fmt.Sprintf("%s/workspaces/%s", options[0].ToolchainApiUrl, userName)
 		supplyopts = options[0]
 	}
 	// https://issues.redhat.com/browse/CRT-1670
