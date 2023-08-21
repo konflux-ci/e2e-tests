@@ -340,6 +340,22 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				}, timeout, interval).Should(Succeed(), fmt.Sprintf("time out when trying to check if either the Snapshot %s/%s exists or if the Snapshot is marked as failed", testNamespace, snapshot.GetName()))
 			})
 
+			It("checks no Release CRs are created", func() {
+				releases, err := f.AsKubeAdmin.ReleaseController.GetReleases(testNamespace)
+				Expect(err).NotTo(HaveOccurred(), "Error when fetching the Releases")
+				Expect(releases.Items).To(BeEmpty(), "Expected no Release CRs to be present, but found some")
+			})
+
+			It("checks no SnapshotEnvironmentBinding is created", func() {
+				seb, err := f.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(applicationName, testNamespace, env)
+
+				if err != nil {
+					Expect(err.Error()).To(ContainSubstring("no SnapshotEnvironmentBinding found"))
+				} else {
+					Expect(seb).To(BeNil(), "Expected no SnapshotEnvironmentBinding to be present, but found one")
+				}
+			})
+
 			It("checks if the global candidate is not updated", func() {
 				// give some time to do eventual updates in component
 				time.Sleep(60 * time.Second)
