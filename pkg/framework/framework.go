@@ -27,7 +27,7 @@ type ControllerHub struct {
 	CommonController          *common.SuiteController
 	TektonController          *tekton.SuiteController
 	GitOpsController          *gitops.GitopsController
-	SPIController             *spi.SuiteController
+	SPIController             *spi.SPIController
 	ReleaseController         *release.ReleaseController
 	IntegrationController     *integration.IntegrationController
 	JvmbuildserviceController *jvmbuildservice.JvmbuildserviceController
@@ -59,6 +59,7 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 	}
 
 	if isStage {
+		options[0].ToolchainApiUrl = fmt.Sprintf("%s/workspaces/%s", options[0].ToolchainApiUrl, userName)
 		supplyopts = options[0]
 	}
 	// https://issues.redhat.com/browse/CRT-1670
