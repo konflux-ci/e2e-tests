@@ -1,14 +1,31 @@
 #!/bin/bash
 export MY_GITHUB_ORG GITHUB_TOKEN
 
-output_dir="${OUTPUT_DIR:-.}"
 
+# Check if the RANDOM_STRING environment variable is declared. If it's declared, include the -r flag when invoking loadtest.go
+if [ -n "${RANDOM_PREFIX+x}" ]; then
+    RANDOM_PREFIX_FLAG="-r"
+else
+    RANDOM_PREFIX_FLAG=""
+fi
+
+output_dir="${OUTPUT_DIR:-.}"
 USER_PREFIX=${USER_PREFIX:-testuser}
-# Max length of compliant username is 20 characters. We add "-XXXX" suffix for the test users' name so max length of the prefix is 15.
+# Max length of compliant username is 20 characters. We add -"-XXXXX-XXXX" suffix for the test users' name so max length of the prefix is 9.
+# Random string addition will not apply for Openshift-CI load tests 
+# Therefore: the "-XXXXXX" addition to user prefix will be the PR number for OpenShift Presubmit jobs  
+# The same addition will be for the 5 chars long random string for non OpenShift-CI load tests
+# The last "XXXX" would be for the suffix running index added to the test users in cmd/loadTests.go
+# Comment: run-max-concurrency.sh is used for max-concurrency type of Open-Shift-CI jobs and it wasn't changed
 # See https://github.com/codeready-toolchain/toolchain-common/blob/master/pkg/usersignup/usersignup.go#L16
-if [ ${#USER_PREFIX} -gt 15 ]; then
-    echo "Maximal allowed length of user prefix is 15 characters. The '$USER_PREFIX' length of ${#USER_PREFIX} exceeds the limit."
+
+# If adding random prefix we can allow only up to 9 characters long user prefix
+if [ ${#USER_PREFIX} -gt 9 -a RANDOM_PREFIX_FLAG="-r"]; then
+    echo "Maximal allowed length of user prefix is 9 characters. The '$USER_PREFIX' length of ${#USER_PREFIX} exceeds the limit."
     exit 1
+# If adding not adding random prefix we can allow only up to 15 characters long user prefix    
+elif [ ${#USER_PREFIX} -gt 15 -a RANDOM_PREFIX_FLAG=""]; then
+    echo "Maximal allowed length of user prefix is 15 characters. The '$USER_PREFIX' length of ${#USER_PREFIX} exceeds the limit."
 else
     ## Enable profiling in Tekton controller
     if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
@@ -49,6 +66,7 @@ else
         -l \
         -o "$output_dir" \
         -t "${THREADS:-1}" \
+        $RANDOM_PREFIX_FLAG \
         --disable-metrics \
         --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}"
 

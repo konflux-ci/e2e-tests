@@ -46,6 +46,7 @@ var (
 	failFast                      bool
 	disableMetrics                bool
 	threadCount                   int
+	randomString                  bool
 	pipelineSkipInitialChecks     bool
 	stage                         bool
 	outputDir                     string = "."
@@ -193,6 +194,19 @@ func ExecuteLoadTest() {
 	}
 }
 
+// generate random string from charset = "abcdefghijklmnopqrstuvwxyz0123456789"
+// We shall use length = 5 characters length random string with 60,466,176 random combinations
+const customCharset = "abcdefghijklmnopqrstuvwxyz0123456789"
+
+func randomStringFromCharset(length int) string {
+	var result []byte
+	for i := 0; i < length; i++ {
+		index := rand.Intn(len(customCharset))
+		result = append(result, customCharset[index])
+	}
+	return string(result)
+}
+
 func init() {
 	rootCmd.Flags().StringVar(&componentRepoUrl, "component-repo", componentRepoUrl, "the component repo URL to be used")
 	rootCmd.Flags().StringVar(&usernamePrefix, "username", usernamePrefix, "the prefix used for usersignup names")
@@ -210,6 +224,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&failFast, "fail-fast", false, "if you want the test to fail fast at first failure")
 	rootCmd.Flags().BoolVar(&disableMetrics, "disable-metrics", false, "if you want to disable metrics gathering")
 	rootCmd.Flags().IntVarP(&threadCount, "threads", "t", 1, "number of concurrent threads to execute")
+	rootCmd.Flags().BoolVarP(&randomString, "randomstring", "r", false, "if you want to add random string to the user prefix")
 	rootCmd.Flags().BoolVar(&pipelineSkipInitialChecks, "pipeline-skip-initial-checks", true, "if pipeline runs' initial checks are to be skipped")
 	rootCmd.Flags().StringVarP(&outputDir, "output-dir", "o", ".", "directory where output files such as load-tests.log or load-tests.json are stored")
 	rootCmd.Flags().BoolVar(&enableProgressBars, "enable-progress-bars", false, "if you want to enable progress bars")
@@ -404,15 +419,14 @@ func setup(cmd *cobra.Command, args []string) {
 	errorCountMap = make(map[int]ErrorCount)
 
 	rand.Seed(time.Now().UnixNano())
-
 	threadsWG = &sync.WaitGroup{}
 	threadsWG.Add(threadCount)
+
 	for thread := 0; thread < threadCount; thread++ {
 		go userJourneyThread(frameworkMap, threadsWG, thread, AppStudioUsersBar, ResourcesBar, PipelinesBar, IntegrationTestsPipelinesBar, DeploymentsBar)
 	}
 
 	// Todo add cleanup functions that will delete user signups
-
 	threadsWG.Wait()
 	uip.Stop()
 
@@ -720,7 +734,16 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 		defer wg.Done()
 		for userIndex := 1; userIndex <= numberOfUsers; userIndex++ {
 			startTime := time.Now()
-			username := fmt.Sprintf("%s-%04d", usernamePrefix, threadIndex*numberOfUsers+userIndex)
+
+			var username string
+			if randomString {
+				// Create a 5 characters wide random string to be added to username (https://issues.redhat.com/browse/RHTAP-1338)
+				randomStr := randomStringFromCharset(5)
+				username = fmt.Sprintf("%s-%s-%04d", usernamePrefix, randomStr, threadIndex*numberOfUsers+userIndex)
+			} else {
+				username = fmt.Sprintf("%s-%04d", usernamePrefix, threadIndex*numberOfUsers+userIndex)
+			}
+
 			var user loadtestUtils.User
 			var framework *framework.Framework
 			var err error
