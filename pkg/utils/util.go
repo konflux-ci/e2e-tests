@@ -205,7 +205,7 @@ func GetGeneratedNamespace(name string) string {
 }
 
 func WaitUntilWithInterval(cond wait.ConditionFunc, interval time.Duration, timeout time.Duration) error {
-	return wait.PollImmediate(interval, timeout, cond)
+	return wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) { return cond() })
 }
 
 func WaitUntil(cond wait.ConditionFunc, timeout time.Duration) error {
@@ -341,7 +341,7 @@ func GetDefaultPipelineBundleRef(buildPipelineSelectorYamlURL, selectorName stri
 	}
 	for _, s := range ps.Spec.Selectors {
 		if s.Name == selectorName {
-			return s.PipelineRef.Bundle, nil
+			return s.PipelineRef.Bundle, nil //nolint:all
 		}
 	}
 

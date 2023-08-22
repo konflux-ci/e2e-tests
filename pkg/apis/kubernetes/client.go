@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -219,7 +220,7 @@ func CreateAPIProxyClient(usertoken, proxyURL string) (*CustomClient, error) {
 
 	// Getting the proxy client can fail from time to time if the proxy's informer cache has not been
 	// updated yet and we try to create the client to quickly so retry to reduce flakiness.
-	waitErr := wait.Poll(DefaultRetryInterval, DefaultTimeout, func() (done bool, err error) {
+	waitErr := wait.PollUntilContextTimeout(context.Background(), DefaultRetryInterval, DefaultTimeout, false, func(ctx context.Context) (done bool, err error) {
 		proxyCl, initProxyClError = crclient.New(proxyKubeConfig, crclient.Options{Scheme: scheme})
 		return initProxyClError == nil, nil
 	})
