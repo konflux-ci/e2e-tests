@@ -398,7 +398,7 @@ func (ci CI) setRequiredEnvVars() error {
 				imageTagSuffix = "remote-secret-image"
 				testSuiteLabel = "remote-secret"
 			case strings.Contains(jobName, "spi-service"):
-				envVarPrefix = "SPI_OPERATOR_SERVICE"
+				envVarPrefix = "SPI_OPERATOR"
 				imageTagSuffix = "spi-image"
 				testSuiteLabel = "spi"
 			}
