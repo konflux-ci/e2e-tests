@@ -1,4 +1,4 @@
-package spi
+package remotesecret
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ import (
  * Description: SVPI-541 - Basic remote secret functionalities
  */
 
-var _ = framework.SPISuiteDescribe(Label("spi-suite", "remote-secret"), func() {
+var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret"), func() {
 
 	defer GinkgoRecover()
 
@@ -61,11 +61,11 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "remote-secret"), func() {
 		})
 
 		It("creates RemoteSecret with previously created namespaces as targets", func() {
-			remoteSecret, err = fw.AsKubeDeveloper.SPIController.CreateRemoteSecret(remoteSecretName, namespace, []string{targetNamespace1, targetNamespace2})
+			remoteSecret, err = fw.AsKubeDeveloper.RemoteSecretController.CreateRemoteSecret(remoteSecretName, namespace, []string{targetNamespace1, targetNamespace2})
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() bool {
-				remoteSecret, err = fw.AsKubeDeveloper.SPIController.GetRemoteSecret(remoteSecretName, namespace)
+				remoteSecret, err = fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecretName, namespace)
 				Expect(err).NotTo(HaveOccurred())
 
 				return meta.IsStatusConditionFalse(remoteSecret.Status.Conditions, "DataObtained")
@@ -144,7 +144,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "remote-secret"), func() {
 
 		It("checks if remote secret was deployed", func() {
 			Eventually(func() bool {
-				remoteSecret, err = fw.AsKubeDeveloper.SPIController.GetRemoteSecret(remoteSecretName, namespace)
+				remoteSecret, err = fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecretName, namespace)
 				Expect(err).NotTo(HaveOccurred())
 
 				return meta.IsStatusConditionTrue(remoteSecret.Status.Conditions, "Deployed")
@@ -152,18 +152,18 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "remote-secret"), func() {
 		})
 
 		It("checks targets in RemoteSecret status", func() {
-			remoteSecret, err = fw.AsKubeDeveloper.SPIController.GetRemoteSecret(remoteSecret.Name, namespace)
+			remoteSecret, err = fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecret.Name, namespace)
 			Expect(err).NotTo(HaveOccurred())
 
 			targets := remoteSecret.Status.Targets
 			Expect(targets).To(HaveLen(2))
 
 			// get targetSecretName1
-			targetSecretName1 = fw.AsKubeDeveloper.SPIController.GetTargetSecretName(targets, targetNamespace1)
+			targetSecretName1 = fw.AsKubeDeveloper.RemoteSecretController.GetTargetSecretName(targets, targetNamespace1)
 			Expect(targetSecretName1).ToNot(BeEmpty())
 
 			// get targetSecretName12
-			targetSecretName2 = fw.AsKubeDeveloper.SPIController.GetTargetSecretName(targets, targetNamespace2)
+			targetSecretName2 = fw.AsKubeDeveloper.RemoteSecretController.GetTargetSecretName(targets, targetNamespace2)
 			Expect(targetSecretName2).ToNot(BeEmpty())
 		})
 
