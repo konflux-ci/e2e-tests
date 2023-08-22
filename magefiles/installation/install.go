@@ -8,7 +8,6 @@ import (
 	"os"
 	"time"
 
-	"os/exec"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -170,6 +169,10 @@ func MergePRInRemote(branch string, forkOrganization string, repoPath string) er
 	if branch == "" {
 		klog.Fatal("The branch for upgrade is empty!")
 	}
+	var auth = &http.BasicAuth{
+		Username: "123",
+		Password: utils.GetEnv("GITHUB_TOKEN", ""),
+	}
 
 	repo, err := git.PlainOpen(repoPath)
 	if err != nil {
@@ -181,10 +184,10 @@ func MergePRInRemote(branch string, forkOrganization string, repoPath string) er
 		klog.Fatal(err)
 	}
 
-	var branchRepo string
+	var previewBranchRef *plumbing.Reference
 	err = branches.ForEach(func(ref *plumbing.Reference) error {
 		if !strings.Contains("main", ref.Name().String()) {
-			branchRepo = ref.Name().String()
+			previewBranchRef = ref
 		}
 		return nil
 	})
@@ -198,14 +201,22 @@ func MergePRInRemote(branch string, forkOrganization string, repoPath string) er
 	}
 
 	err = wt.Checkout(&git.CheckoutOptions{
-		Branch: plumbing.ReferenceName(branchRepo),
+		Branch: previewBranchRef.Name(),
 	})
 	if err != nil {
 		klog.Fatal(err)
 	}
 
 	if forkOrganization == "" {
-		_, err = exec.Command("git", "-C", repoPath, "merge", "remotes/origin/"+branch, "-q").Output()
+		err = wt.Pull(&git.PullOptions{
+			RemoteName:    "origin",
+			ReferenceName: plumbing.ReferenceName("refs/heads/" + branch),
+			SingleBranch:  true,
+			Auth:          auth,
+		})
+		if err != nil {
+			klog.Fatal(err)
+		}
 	} else {
 		repoURL := fmt.Sprintf("https://github.com/%s/infra-deployments.git", forkOrganization)
 		_, err = repo.CreateRemote(&config.RemoteConfig{
@@ -223,17 +234,23 @@ func MergePRInRemote(branch string, forkOrganization string, repoPath string) er
 			klog.Fatal(err)
 		}
 
-		_, err = exec.Command("git", "-C", repoPath, "merge", "remotes/forked_repo/"+branch).Output()
+		err = wt.Pull(&git.PullOptions{
+			RemoteName:    "forked_repo",
+			ReferenceName: plumbing.ReferenceName("refs/heads/" + branch),
+			SingleBranch:  true,
+			Force:         true,
+			Auth:          auth,
+		})
+		if err != nil {
+			klog.Fatal(err)
+		}
 	}
 	if err != nil {
 		klog.Fatal(err)
 	}
 
-	var auth = &http.BasicAuth{
-		Username: "123",
-		Password: utils.GetEnv("GITHUB_TOKEN", ""),
-	}
 	err = repo.Push(&git.PushOptions{
+		RefSpecs:   []config.RefSpec{config.RefSpec(fmt.Sprintf("%s:%s", previewBranchRef.Name().String(), previewBranchRef.Name().String()))},
 		RemoteName: "qe",
 		Auth:       auth,
 	})
