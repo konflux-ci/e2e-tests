@@ -36,12 +36,12 @@ func (i *IntegrationController) CreateIntegrationPipelineRun(snapshotName, names
 		Spec: tektonv1beta1.PipelineRunSpec{
 			PipelineRef: &tektonv1beta1.PipelineRef{
 				Name:   "integration-pipeline-pass",
-				Bundle: "quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-pass",
+				Bundle: "quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-pass", //nolint:all
 			},
 			Params: []tektonv1beta1.Param{
 				{
 					Name: "output-image",
-					Value: tektonv1beta1.ArrayOrString{
+					Value: tektonv1beta1.ParamValue{
 						Type:      "string",
 						StringVal: "quay.io/redhat-appstudio/sample-image",
 					},
@@ -114,7 +114,7 @@ func (i *IntegrationController) GetIntegrationPipelineRun(integrationTestScenari
 
 // WaitForIntegrationPipelineToBeFinished wait for given integration pipeline to finish.
 func (i *IntegrationController) WaitForIntegrationPipelineToBeFinished(testScenario *integrationv1beta1.IntegrationTestScenario, snapshot *appstudioApi.Snapshot, appNamespace string) error {
-	return wait.PollImmediate(constants.PipelineRunPollingInterval, 20*time.Minute, func() (done bool, err error) {
+	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 20*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 		pipelineRun, err := i.GetIntegrationPipelineRun(testScenario.Name, snapshot.Name, appNamespace)
 		if err != nil {
 			GinkgoWriter.Println("PipelineRun has not been created yet for test scenario %s and snapshot %s/%s", testScenario.GetName(), snapshot.GetNamespace(), snapshot.GetName())
