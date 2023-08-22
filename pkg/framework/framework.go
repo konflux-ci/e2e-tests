@@ -27,7 +27,7 @@ type ControllerHub struct {
 	CommonController          *common.SuiteController
 	TektonController          *tekton.SuiteController
 	GitOpsController          *gitops.GitopsController
-	SPIController             *spi.SuiteController
+	SPIController             *spi.SPIController
 	ReleaseController         *release.ReleaseController
 	IntegrationController     *integration.IntegrationController
 	JvmbuildserviceController *jvmbuildservice.JvmbuildserviceController

@@ -3,6 +3,10 @@ package rhtap_demo
 import (
 	"context"
 	"fmt"
+	"github.com/redhat-appstudio/jvm-build-service/openshift-with-appstudio-test/e2e"
+	jvmclientSet "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
+	pipelineclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
+	"k8s.io/client-go/kubernetes"
 	"strings"
 	"time"
 
@@ -47,7 +51,7 @@ const (
 	appDeployTimeout            = time.Minute * 20
 	appRouteAvailableTimeout    = time.Minute * 5
 	customResourceUpdateTimeout = time.Minute * 10
-	jvmRebuildTimeout           = time.Minute * 20
+	jvmRebuildTimeout           = time.Minute * 40
 	mergePRTimeout              = time.Minute * 1
 	pipelineRunStartedTimeout   = time.Minute * 5
 	pullRequestCreationTimeout  = time.Minute * 5
@@ -583,6 +587,11 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 
 							When("JVM Build Service is used for rebuilding dependencies", func() {
 								It("should eventually rebuild of all artifacts and dependencies successfully", func() {
+									jvmClient := jvmclientSet.New(fw.AsKubeAdmin.JvmbuildserviceController.JvmbuildserviceClient().JvmbuildserviceV1alpha1().RESTClient())
+									tektonClient := pipelineclientset.New(fw.AsKubeAdmin.TektonController.PipelineClient().TektonV1beta1().RESTClient())
+									kubeClient := kubernetes.New(fw.AsKubeAdmin.CommonController.KubeInterface().CoreV1().RESTClient())
+									//status report ends up in artifacts/redhat-appstudio-e2e/redhat-appstudio-e2e/artifacts/rp_preproc/attachments/xunit
+									defer e2e.GenerateStatusReport(fw.UserNamespace, jvmClient, kubeClient, tektonClient)
 									Eventually(func() error {
 										abList, err := fw.AsKubeAdmin.JvmbuildserviceController.ListArtifactBuilds(fw.UserNamespace)
 										Expect(err).ShouldNot(HaveOccurred())
@@ -607,7 +616,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 								BeforeAll(func() {
 									comp, err := fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), fw.UserNamespace)
 									Expect(err).ShouldNot(HaveOccurred())
-									comp.Annotations["appstudio.openshift.io/pac-provision"] = "delete"
+									comp.Annotations["build.appstudio.openshift.io/request"] = "unconfigure-pac"
 									Expect(fw.AsKubeAdmin.CommonController.KubeRest().Update(context.TODO(), comp)).To(Succeed())
 								})
 								AfterAll(func() {

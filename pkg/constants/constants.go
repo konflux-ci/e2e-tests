@@ -124,6 +124,6 @@ const (
 
 var (
 	ComponentDefaultLabel                      = map[string]string{"e2e-test": "true"}
-	ComponentPaCRequestAnnotation              = map[string]string{"appstudio.openshift.io/pac-provision": "request"}
+	ComponentPaCRequestAnnotation              = map[string]string{"build.appstudio.openshift.io/request": "configure-pac"}
 	ImageControllerAnnotationRequestPublicRepo = map[string]string{"image.redhat.com/generate": `{"visibility": "public"}`}
 )

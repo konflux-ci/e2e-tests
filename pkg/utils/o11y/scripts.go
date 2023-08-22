@@ -75,7 +75,7 @@ func (o *O11yController) WaitForScriptCompletion(deployment *appsv1.Deployment, 
 	podLogOpts := &corev1.PodLogOptions{}
 	req := o.KubeInterface().CoreV1().Pods(namespace).GetLogs(pod.Name, podLogOpts)
 
-	err = wait.PollImmediate(time.Second, timeout, func() (bool, error) {
+	err = wait.PollUntilContextTimeout(context.Background(), time.Second, timeout, true, func(ctx context.Context) (bool, error) {
 		readCloser, err := req.Stream(context.Background())
 		if err != nil {
 			return false, err
