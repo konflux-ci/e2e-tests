@@ -28,7 +28,7 @@ func (t *TektonController) NewBundles() (*Bundles, error) {
 	}
 	for _, selector := range pipelineSelector.Spec.Selectors {
 		bundleName := selector.PipelineRef.Name
-		bundleRef := selector.PipelineRef.Bundle
+		bundleRef := selector.PipelineRef.Bundle //nolint:all
 		switch bundleName {
 		case "docker-build":
 			bundles.DockerBuildBundle = bundleRef

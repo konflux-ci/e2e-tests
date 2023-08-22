@@ -1,6 +1,7 @@
 package tekton
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -54,7 +55,7 @@ func findCosignResultsForImage(imageRef string) (*CosignResult, error) {
 
 // AwaitAttestationAndSignature awaits attestation and signature.
 func (t *TektonController) AwaitAttestationAndSignature(image string, timeout time.Duration) error {
-	return wait.PollImmediate(time.Second, timeout, func() (done bool, err error) {
+	return wait.PollUntilContextTimeout(context.Background(), time.Second, timeout, true, func(ctx context.Context) (done bool, err error) {
 		if _, err := findCosignResultsForImage(image); err != nil {
 			g.GinkgoWriter.Printf("failed to get cosign result for image %s: %+v\n", image, err)
 			return false, nil
