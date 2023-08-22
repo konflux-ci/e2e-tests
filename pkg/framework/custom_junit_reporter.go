@@ -174,59 +174,57 @@ func GenerateRPPreprocReport(report types.Report, rpPreprocParentDir string) {
 			klog.Error(err2)
 		}
 	}
-	//Generate folder structure for RPPreproc with logs
-	for i := range report.SpecReports {
-		reportSpec := report.SpecReports[i]
-		//generate folders only for failed tests
-		if !reportSpec.Failure.IsZero() {
-			if reportSpec.LeafNodeType == types.NodeTypeIt {
-				name := logs.ShortenStringAddHash(reportSpec)
-				filePath := rpPreprocDir + "/attachments/xunit/" + name
-				if err3 := os.MkdirAll(filePath, os.ModePerm); err3 != nil {
-					klog.Error(err3)
-				} else {
-					writeLogInFile(filePath+"/ginkgoWriter.log", reportSpec.CapturedGinkgoWriterOutput)
-					writeLogInFile(filePath+"/stdOutErr.log", reportSpec.CapturedStdOutErr)
-					writeLogInFile(filePath+"/failureMessage.log", reportSpec.FailureMessage())
-					writeLogInFile(filePath+"/failureLocation.log", reportSpec.FailureLocation().FullStackTrace)
-				}
-			}
-		}
-	}
 
-	// Move files matching rp structure stored directly in artifacts dir to rp_preproc subdirectory
 	wd, _ := os.Getwd()
 	artifactDir := utils.GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
 
-	dirs, err := os.ReadDir(artifactDir)
-	if err != nil {
-		klog.Error(err)
-	}
+	// Generate folder structure for RPPreproc with logs
+	for i := range report.SpecReports {
+		reportSpec := report.SpecReports[i]
+		name := logs.ShortenStringAddHash(reportSpec)
+		artifactsDirPath := artifactDir + "/" + name
+		reportPortalDirPath := rpPreprocDir + "/attachments/xunit/" + name
+		//generate folders only for failed tests
+		if !reportSpec.Failure.IsZero() {
+			if reportSpec.LeafNodeType == types.NodeTypeIt {
+				if err3 := os.MkdirAll(reportPortalDirPath, os.ModePerm); err3 != nil {
+					klog.Error(err3)
+				} else {
+					writeLogInFile(reportPortalDirPath+"/ginkgoWriter.log", reportSpec.CapturedGinkgoWriterOutput)
+					writeLogInFile(reportPortalDirPath+"/stdOutErr.log", reportSpec.CapturedStdOutErr)
+					writeLogInFile(reportPortalDirPath+"/failureMessage.log", reportSpec.FailureMessage())
+					writeLogInFile(reportPortalDirPath+"/failureLocation.log", reportSpec.FailureLocation().FullStackTrace)
+				}
+			}
+		}
 
-	for _, dir := range dirs {
-		reportDir := filepath.Join(fmt.Sprintf("%s/attachments/xunit/", rpPreprocDir), dir.Name())
-
-		_, err := os.Stat(reportDir)
-		if os.IsNotExist(err) || !dir.IsDir() || dir.Name() == "rp_preproc" {
+		// Move files matching report portal structure stored directly in artifacts dir to rp_preproc subdirectory
+		if _, err := os.Stat(artifactsDirPath); os.IsNotExist(err) {
 			continue
 		}
 
-		dirPath := filepath.Join(artifactDir, dir.Name())
-		files, err := os.ReadDir(dirPath)
+		if _, err := os.Stat(reportPortalDirPath); os.IsNotExist(err) {
+			if err = os.MkdirAll(reportPortalDirPath, os.ModePerm); err != nil {
+				klog.Error(err)
+				continue
+			}
+		}
+
+		files, err := os.ReadDir(artifactsDirPath)
 		if err != nil {
 			klog.Error(err)
 		}
 
 		for _, file := range files {
-			sourcePath := filepath.Join(dirPath, file.Name())
-			destPath := filepath.Join(reportDir, file.Name())
+			sourcePath := filepath.Join(artifactsDirPath, file.Name())
+			destPath := filepath.Join(reportPortalDirPath, file.Name())
 
 			if err := os.Rename(sourcePath, destPath); err != nil {
 				klog.Error(err)
 			}
 		}
 
-		if err := os.Remove(dirPath); err != nil {
+		if err := os.Remove(artifactsDirPath); err != nil {
 			klog.Error(err)
 		}
 	}
