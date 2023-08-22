@@ -616,7 +616,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 								BeforeAll(func() {
 									comp, err := fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), fw.UserNamespace)
 									Expect(err).ShouldNot(HaveOccurred())
-									comp.Annotations["appstudio.openshift.io/pac-provision"] = "delete"
+									comp.Annotations["build.appstudio.openshift.io/request"] = "unconfigure-pac"
 									Expect(fw.AsKubeAdmin.CommonController.KubeRest().Update(context.TODO(), comp)).To(Succeed())
 								})
 								AfterAll(func() {
