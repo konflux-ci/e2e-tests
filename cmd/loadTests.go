@@ -49,7 +49,7 @@ var (
 	pipelineSkipInitialChecks     bool
 	stage                         bool
 	outputDir                     string = "."
-	enableLoaders                 bool
+	enableProgressBars            bool
 )
 
 var (
@@ -212,7 +212,7 @@ func init() {
 	rootCmd.Flags().IntVarP(&threadCount, "threads", "t", 1, "number of concurrent threads to execute")
 	rootCmd.Flags().BoolVar(&pipelineSkipInitialChecks, "pipeline-skip-initial-checks", true, "if pipeline runs' initial checks are to be skipped")
 	rootCmd.Flags().StringVarP(&outputDir, "output-dir", "o", ".", "directory where output files such as load-tests.log or load-tests.json are stored")
-	rootCmd.Flags().BoolVar(&enableLoaders, "enable-progress-bar", false, "if you want to enable progress bars")
+	rootCmd.Flags().BoolVar(&enableProgressBars, "enable-progress-bar", false, "if you want to enable progress bars")
 }
 
 func logError(errCode int, message string) {
@@ -330,7 +330,7 @@ func setup(cmd *cobra.Command, args []string) {
 
 	barLength := 60
 
-	if enableLoaders {
+	if enableProgressBars {
 		userProgress := uip.AddBar(overallCount).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
 			return strutil.PadLeft(fmt.Sprintf("Creating AppStudio Users (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedUserCreationsPerThread)), barLength, ' ')
 		})
@@ -361,6 +361,8 @@ func setup(cmd *cobra.Command, args []string) {
 			})
 			DeploymentsBar = deploymentProgress
 		}
+	} else {
+		fmt.Printf("Progress bar is not enabled.Please hold off until all iterations have been completed.Run with the --enable-progress-bar in [OPTIONS] to enable the progress bar \n")
 	}
 
 	UserCreationTimeMaxPerThread = make([]time.Duration, threadCount)
@@ -599,7 +601,7 @@ func sumFromArray(array []int64) int64 {
 }
 
 func increaseBar(bar *uiprogress.Bar, mutex *sync.Mutex) {
-	if enableLoaders {
+	if enableProgressBars {
 		mutex.Lock()
 		defer mutex.Unlock()
 		bar.Incr()
