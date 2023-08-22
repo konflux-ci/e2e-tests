@@ -1,4 +1,4 @@
-package spi
+package remotesecret
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 )
 
 // CreateRemoteSecret creates a RemoteSecret object
-func (s *SPIController) CreateRemoteSecret(name, namespace string, targetNamespaces []string) (*rs.RemoteSecret, error) {
+func (s *RemoteSecretController) CreateRemoteSecret(name, namespace string, targetNamespaces []string) (*rs.RemoteSecret, error) {
 	remoteSecret := rs.RemoteSecret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -38,7 +38,7 @@ func (s *SPIController) CreateRemoteSecret(name, namespace string, targetNamespa
 }
 
 // GetRemoteSecret returns the requested RemoteSecret object
-func (s *SPIController) GetRemoteSecret(name, namespace string) (*rs.RemoteSecret, error) {
+func (s *RemoteSecretController) GetRemoteSecret(name, namespace string) (*rs.RemoteSecret, error) {
 	namespacedName := types.NamespacedName{
 		Name:      name,
 		Namespace: namespace,
@@ -54,7 +54,7 @@ func (s *SPIController) GetRemoteSecret(name, namespace string) (*rs.RemoteSecre
 }
 
 // GetTargetSecretName gets the target secret name from a given namespace
-func (s *SPIController) GetTargetSecretName(targets []rs.TargetStatus, targetNamespace string) string {
+func (s *RemoteSecretController) GetTargetSecretName(targets []rs.TargetStatus, targetNamespace string) string {
 	targetSecretName := ""
 
 	for _, t := range targets {
