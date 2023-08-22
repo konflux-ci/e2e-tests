@@ -35,6 +35,7 @@ else
         KUBE_SCHEDULER_LOG_PID=$!
     fi
     ## Run the actual load test
+    ## To enable progress bar , add `--enable-progress-bar` in [OPTIONS]
     go run loadtest.go \
         --component-repo "${COMPONENT_REPO:-https://github.com/devfile-samples/devfile-sample-code-with-quarkus}" \
         --username "$USER_PREFIX" \

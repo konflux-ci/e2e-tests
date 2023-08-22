@@ -49,6 +49,7 @@ var (
 	pipelineSkipInitialChecks     bool
 	stage                         bool
 	outputDir                     string = "."
+	enableLoaders                 bool
 )
 
 var (
@@ -179,6 +180,12 @@ var rootCmd = &cobra.Command{
 	Run:           setup,
 }
 
+var AppStudioUsersBar *uiprogress.Bar
+var ResourcesBar *uiprogress.Bar
+var PipelinesBar *uiprogress.Bar
+var IntegrationTestsPipelinesBar *uiprogress.Bar
+var DeploymentsBar *uiprogress.Bar
+
 func ExecuteLoadTest() {
 	err := rootCmd.Execute()
 	if err != nil {
@@ -205,6 +212,7 @@ func init() {
 	rootCmd.Flags().IntVarP(&threadCount, "threads", "t", 1, "number of concurrent threads to execute")
 	rootCmd.Flags().BoolVar(&pipelineSkipInitialChecks, "pipeline-skip-initial-checks", true, "if pipeline runs' initial checks are to be skipped")
 	rootCmd.Flags().StringVarP(&outputDir, "output-dir", "o", ".", "directory where output files such as load-tests.log or load-tests.json are stored")
+	rootCmd.Flags().BoolVar(&enableLoaders, "enable-progress-bar", false, "if you want to enable progress bars")
 }
 
 func logError(errCode int, message string) {
@@ -322,33 +330,37 @@ func setup(cmd *cobra.Command, args []string) {
 
 	barLength := 60
 
-	AppStudioUsersBar := uip.AddBar(overallCount).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
-		return strutil.PadLeft(fmt.Sprintf("Creating AppStudio Users (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedUserCreationsPerThread)), barLength, ' ')
-	})
-
-	ResourcesBar := uip.AddBar(overallCount).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
-		return strutil.PadLeft(fmt.Sprintf("Creating AppStudio User Resources (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedResourceCreationsPerThread)), barLength, ' ')
-	})
-
-	var PipelinesBar *uiprogress.Bar
-	if waitPipelines {
-		PipelinesBar = uip.AddBar(overallCount).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
-			return strutil.PadLeft(fmt.Sprintf("Waiting for pipelines to finish (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedPipelineRunsPerThread)), barLength, ' ')
+	if enableLoaders {
+		userProgress := uip.AddBar(overallCount).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
+			return strutil.PadLeft(fmt.Sprintf("Creating AppStudio Users (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedUserCreationsPerThread)), barLength, ' ')
 		})
-	}
+		AppStudioUsersBar = userProgress
 
-	var IntegrationTestsPipelinesBar *uiprogress.Bar
-	if waitIntegrationTestsPipelines {
-		IntegrationTestsPipelinesBar = uip.AddBar(overallCount).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
-			return strutil.PadLeft(fmt.Sprintf("Waiting for Integration Test pipelines to finish (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedIntegrationTestsPipelineRunsPerThread)), barLength, ' ')
+		resourceProgress := uip.AddBar(overallCount).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
+			return strutil.PadLeft(fmt.Sprintf("Creating AppStudio User Resources (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedResourceCreationsPerThread)), barLength, ' ')
 		})
-	}
+		ResourcesBar = resourceProgress
 
-	var DeploymentsBar *uiprogress.Bar
-	if waitDeployments {
-		DeploymentsBar = uip.AddBar(overallCount).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
-			return strutil.PadLeft(fmt.Sprintf("Waiting for deployments to finish (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedDeploymentsPerThread)), barLength, ' ')
-		})
+		if waitPipelines {
+			pipelineProgress := uip.AddBar(overallCount).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
+				return strutil.PadLeft(fmt.Sprintf("Waiting for pipelines to finish (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedPipelineRunsPerThread)), barLength, ' ')
+			})
+			PipelinesBar = pipelineProgress
+		}
+
+		if waitIntegrationTestsPipelines {
+			integrationTestProgress := uip.AddBar(overallCount).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
+				return strutil.PadLeft(fmt.Sprintf("Waiting for Integration Test pipelines to finish (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedIntegrationTestsPipelineRunsPerThread)), barLength, ' ')
+			})
+			IntegrationTestsPipelinesBar = integrationTestProgress
+		}
+
+		if waitDeployments {
+			deploymentProgress := uip.AddBar(overallCount).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
+				return strutil.PadLeft(fmt.Sprintf("Waiting for deployments to finish (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedDeploymentsPerThread)), barLength, ' ')
+			})
+			DeploymentsBar = deploymentProgress
+		}
 	}
 
 	UserCreationTimeMaxPerThread = make([]time.Duration, threadCount)
@@ -587,9 +599,11 @@ func sumFromArray(array []int64) int64 {
 }
 
 func increaseBar(bar *uiprogress.Bar, mutex *sync.Mutex) {
-	mutex.Lock()
-	defer mutex.Unlock()
-	bar.Incr()
+	if enableLoaders {
+		mutex.Lock()
+		defer mutex.Unlock()
+		bar.Incr()
+	}
 }
 
 func componentForUser(username string) string {
