@@ -59,7 +59,7 @@ func (g BuildahDemo) Generate() *v1beta1.PipelineRun {
 			},
 			PipelineRef: &v1beta1.PipelineRef{
 				Name:   "docker-build",
-				Bundle: g.Bundle,
+				Bundle: g.Bundle, //nolint:all
 			},
 			Workspaces: []v1beta1.WorkspaceBinding{
 				{
@@ -122,42 +122,42 @@ func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
 						Params: []v1beta1.Param{
 							{
 								Name: "IMAGES",
-								Value: v1beta1.ArrayOrString{
+								Value: v1beta1.ParamValue{
 									Type:      v1beta1.ParamTypeString,
 									StringVal: p.Image,
 								},
 							},
 							{
 								Name: "POLICY_CONFIGURATION",
-								Value: v1beta1.ArrayOrString{
+								Value: v1beta1.ParamValue{
 									Type:      v1beta1.ParamTypeString,
 									StringVal: p.PolicyConfiguration,
 								},
 							},
 							{
 								Name: "PUBLIC_KEY",
-								Value: v1beta1.ArrayOrString{
+								Value: v1beta1.ParamValue{
 									Type:      v1beta1.ParamTypeString,
 									StringVal: p.PublicKey,
 								},
 							},
 							{
 								Name: "SSL_CERT_DIR",
-								Value: v1beta1.ArrayOrString{
+								Value: v1beta1.ParamValue{
 									Type:      v1beta1.ParamTypeString,
 									StringVal: p.SSLCertDir,
 								},
 							},
 							{
 								Name: "STRICT",
-								Value: v1beta1.ArrayOrString{
+								Value: v1beta1.ParamValue{
 									Type:      v1beta1.ParamTypeString,
 									StringVal: strconv.FormatBool(p.Strict),
 								},
 							},
 							{
 								Name: "EFFECTIVE_TIME",
-								Value: v1beta1.ArrayOrString{
+								Value: v1beta1.ParamValue{
 									Type:      v1beta1.ParamTypeString,
 									StringVal: p.EffectiveTime,
 								},

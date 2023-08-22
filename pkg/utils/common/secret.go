@@ -32,7 +32,7 @@ func (s *SuiteController) DeleteSecret(ns string, name string) error {
 // Links a secret to a specified serviceaccount, if argument addImagePullSecrets is true secret will be added also to ImagePullSecrets of SA.
 func (s *SuiteController) LinkSecretToServiceAccount(ns, secret, serviceaccount string, addImagePullSecrets bool) error {
 	timeout := 20 * time.Second
-	return wait.PollImmediate(time.Second, timeout, func() (bool, error) {
+	return wait.PollUntilContextTimeout(context.Background(), time.Second, timeout, true, func(ctx context.Context) (bool, error) {
 		serviceAccountObject, err := s.KubeInterface().CoreV1().ServiceAccounts(ns).Get(context.TODO(), serviceaccount, metav1.GetOptions{})
 		if err != nil {
 			return false, err

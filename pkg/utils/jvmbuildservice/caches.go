@@ -1,6 +1,7 @@
 package jvmbuildservice
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -15,7 +16,7 @@ import (
 
 // WaitForCache waits for cache to exist.
 func (j *JvmbuildserviceController) WaitForCache(commonctrl *common.SuiteController, testNamespace string) error {
-	return wait.PollImmediate(5*time.Second, 5*time.Minute, func() (bool, error) {
+	return wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
 		cache, err := commonctrl.GetDeployment(v1alpha1.CacheDeploymentName, testNamespace)
 		if err != nil {
 			GinkgoWriter.Printf("failed to get JBS cache deployment: %s\n", err.Error())

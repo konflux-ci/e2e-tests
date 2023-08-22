@@ -208,7 +208,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 			It("creates taskrun", func() {
 				srcImageURL := fmt.Sprintf("docker://%s", TestQuayPrivateRepoURL)
 				destTag := fmt.Sprintf("spi-test-%s", strings.Replace(uuid.New().String(), "-", "", -1))
-				destImageURL := fmt.Sprintf("docker://%s/%s", QuayPrivateRepoURL, destTag)
+				destImageURL := fmt.Sprintf("docker://%s:%s", QuayPrivateRepoURL, destTag)
 
 				TaskRun, err = fw.AsKubeAdmin.TektonController.CreateTaskRunCopy(taskRunName, namespace, serviceAccountName, srcImageURL, destImageURL)
 				Expect(err).NotTo(HaveOccurred())

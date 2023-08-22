@@ -110,7 +110,7 @@ func (s *SuiteController) NewBundles() (*Bundles, error) {
 	}
 	for _, selector := range pipelineSelector.Spec.Selectors {
 		bundleName := selector.PipelineRef.Name
-		bundleRef := selector.PipelineRef.Bundle
+		bundleRef := selector.PipelineRef.Bundle //nolint:all
 		switch bundleName {
 		case "docker-build":
 			bundles.DockerBuildBundle = bundleRef
@@ -393,7 +393,7 @@ func (s *SuiteController) DeleteAllPipelineRunsInASpecificNamespace(ns string) e
 	}
 
 	for _, pipelineRun := range pipelineRunList.Items {
-		err := wait.PollImmediate(time.Second, 30*time.Second, func() (done bool, err error) {
+		err := wait.PollUntilContextTimeout(context.Background(), time.Second, 30*time.Second, true, func(ctx context.Context) (done bool, err error) {
 			pipelineRunCR := v1beta1.PipelineRun{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      pipelineRun.Name,
@@ -457,7 +457,7 @@ func createPVC(pvcs v1.PersistentVolumeClaimInterface, pvcName string) error {
 }
 
 func (k KubeController) AwaitAttestationAndSignature(image string, timeout time.Duration) error {
-	return wait.PollImmediate(time.Second, timeout, func() (done bool, err error) {
+	return wait.PollUntilContextTimeout(context.Background(), time.Second, timeout, true, func(ctx context.Context) (done bool, err error) {
 		if _, err := k.FindCosignResultsForImage(image); err != nil {
 			g.GinkgoWriter.Printf("failed to get cosign result for image %s: %+v\n", image, err)
 			return false, nil

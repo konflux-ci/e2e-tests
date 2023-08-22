@@ -85,7 +85,7 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 	var pr *v1beta1.PipelineRun
 
 	for {
-		err := wait.PollImmediate(constants.PipelineRunPollingInterval, 30*time.Minute, func() (done bool, err error) {
+		err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 30*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 			pr, err = h.GetComponentPipelineRun(component.GetName(), app, component.GetNamespace(), sha)
 
 			if err != nil {
