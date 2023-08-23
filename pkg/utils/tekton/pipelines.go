@@ -171,6 +171,44 @@ func (p *VerifyEnterpriseContract) AppendComponentImage(imageRef string) {
 	})
 }
 
+type ECIntegrationTestScenario struct {
+	Image                 string
+	Name                  string
+	Namespace             string
+	PipelineGitURL        string
+	PipelineGitRevision   string
+	PipelineGitPathInRepo string
+}
+
+func (p ECIntegrationTestScenario) Generate() (*v1beta1.PipelineRun, error) {
+
+	snapshot := `{"components": [
+		{"containerImage": "` + p.Image + `"}
+	]}`
+
+	return &v1beta1.PipelineRun{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "ec-integration-test-scenario-run-",
+			Namespace:    p.Namespace,
+		},
+		Spec: v1beta1.PipelineRunSpec{
+			PipelineRef: &v1beta1.PipelineRef{
+				ResolverRef: v1beta1.ResolverRef{
+					Resolver: "git",
+					Params: []v1beta1.Param{
+						{Name: "url", Value: *v1beta1.NewStructuredValues(p.PipelineGitURL)},
+						{Name: "revision", Value: *v1beta1.NewStructuredValues(p.PipelineGitRevision)},
+						{Name: "pathInRepo", Value: *v1beta1.NewStructuredValues(p.PipelineGitPathInRepo)},
+					},
+				},
+			},
+			Params: []v1beta1.Param{
+				{Name: "SNAPSHOT", Value: *v1beta1.NewStructuredValues(snapshot)},
+			},
+		},
+	}, nil
+}
+
 // GetFailedPipelineRunLogs gets the logs of the pipelinerun failed task
 func GetFailedPipelineRunLogs(c crclient.Client, ki kubernetes.Interface, pipelineRun *v1beta1.PipelineRun) (string, error) {
 	var d *utils.FailedPipelineRunDetails
