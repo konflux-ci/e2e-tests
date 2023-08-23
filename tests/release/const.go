@@ -20,6 +20,7 @@ const (
 	releaseStrategyPolicy               = "policy"
 	environment                         = "test-environment"
 	releaseStrategyServiceAccount       = constants.DefaultPipelineServiceAccount
+	verifyEnterpriseContractTaskName    = "verify-enterprise-contract"
 
 	releasePipelineNameDefault           string = "release"
 	applicationNameDefault               string = "appstudio"
