@@ -212,7 +212,7 @@ func init() {
 	rootCmd.Flags().IntVarP(&threadCount, "threads", "t", 1, "number of concurrent threads to execute")
 	rootCmd.Flags().BoolVar(&pipelineSkipInitialChecks, "pipeline-skip-initial-checks", true, "if pipeline runs' initial checks are to be skipped")
 	rootCmd.Flags().StringVarP(&outputDir, "output-dir", "o", ".", "directory where output files such as load-tests.log or load-tests.json are stored")
-	rootCmd.Flags().BoolVar(&enableProgressBars, "enable-progress-bar", false, "if you want to enable progress bars")
+	rootCmd.Flags().BoolVar(&enableProgressBars, "enable-progress-bars", false, "if you want to enable progress bars")
 }
 
 func logError(errCode int, message string) {
@@ -362,7 +362,7 @@ func setup(cmd *cobra.Command, args []string) {
 			DeploymentsBar = deploymentProgress
 		}
 	} else {
-		fmt.Printf("Progress bar is not enabled.Please hold off until all iterations have been completed.Run with the --enable-progress-bar in [OPTIONS] to enable the progress bar \n")
+		klog.Infoln("Progress bars are disabled by default. Please hold off until all iterations has completed. To enable the progress bars run with the --enable-progress-bars in [OPTIONS]")
 	}
 
 	UserCreationTimeMaxPerThread = make([]time.Duration, threadCount)
