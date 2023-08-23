@@ -18,6 +18,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/jvmbuildservice"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/o11y"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/remotesecret"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/spi"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
@@ -28,6 +29,7 @@ type ControllerHub struct {
 	TektonController          *tekton.SuiteController
 	GitOpsController          *gitops.GitopsController
 	SPIController             *spi.SPIController
+	RemoteSecretController    *remotesecret.RemoteSecretController
 	ReleaseController         *release.ReleaseController
 	IntegrationController     *integration.IntegrationController
 	JvmbuildserviceController *jvmbuildservice.JvmbuildserviceController
@@ -132,10 +134,18 @@ func InitControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 		return nil, err
 	}
 
+	// Initialize SPI controller
 	spiController, err := spi.NewSuiteController(cc)
 	if err != nil {
 		return nil, err
 	}
+
+	// Initialize Remote Secret controller
+	remoteSecretController, err := remotesecret.NewSuiteController(cc)
+	if err != nil {
+		return nil, err
+	}
+
 	// Initialize Tekton controller
 	tektonController := tekton.NewSuiteController(cc)
 
@@ -169,6 +179,7 @@ func InitControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 		HasController:             hasController,
 		CommonController:          commonCtrl,
 		SPIController:             spiController,
+		RemoteSecretController:    remoteSecretController,
 		TektonController:          tektonController,
 		GitOpsController:          gitopsController,
 		ReleaseController:         releaseController,
