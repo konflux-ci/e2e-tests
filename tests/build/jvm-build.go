@@ -65,8 +65,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s: %v", testNamespace, componentName, err.Error())
 			}
 
-			classname := framework.ShortenStringAddHash(CurrentSpecReport())
-			if err := logs.StoreTestLogs(classname, testNamespace, "jvm-build-service", componentPipelineRun, f.AsKubeAdmin.CommonController, f.AsKubeAdmin.TektonController); err != nil {
+			if err := logs.StoreTestLogs(testNamespace, "jvm-build-service", componentPipelineRun, f.AsKubeAdmin.CommonController, f.AsKubeAdmin.TektonController); err != nil {
 				GinkgoWriter.Printf("error storing test logs: %v\n", err.Error())
 			}
 		}

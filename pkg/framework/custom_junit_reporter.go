@@ -30,8 +30,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 package framework
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
 	"encoding/xml"
 	"fmt"
 	"os"
@@ -40,6 +38,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2/reporters"
 	types "github.com/onsi/ginkgo/v2/types"
+	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"k8s.io/klog/v2"
 )
@@ -82,8 +81,8 @@ func GenerateCustomJUnitReportWithConfig(report types.Report, dst string, config
 			continue
 		}
 		test := JUnitTestCase{
-			Name:      ShortenStringAddHash(spec),
-			Classname: getClassnameFromReport(spec),
+			Name:      logs.ShortenStringAddHash(spec),
+			Classname: logs.GetClassnameFromReport(spec),
 			Status:    spec.State.String(),
 			Time:      spec.RunTime.Seconds(),
 		}
@@ -175,44 +174,57 @@ func GenerateRPPreprocReport(report types.Report, rpPreprocParentDir string) {
 			klog.Error(err2)
 		}
 	}
-	//Generate folder structure for RPPreproc with logs
-	for i := range report.SpecReports {
-		reportSpec := report.SpecReports[i]
-		//generate folders only for failed tests
-		if !reportSpec.Failure.IsZero() {
-			if reportSpec.LeafNodeType == types.NodeTypeIt {
-				name := ShortenStringAddHash(reportSpec)
-				filePath := rpPreprocDir + "/attachments/xunit/" + name
-				if err3 := os.MkdirAll(filePath, os.ModePerm); err3 != nil {
-					klog.Error(err3)
-				} else {
-					writeLogInFile(filePath+"/ginkgoWriter.log", reportSpec.CapturedGinkgoWriterOutput)
-					writeLogInFile(filePath+"/stdOutErr.log", reportSpec.CapturedStdOutErr)
-					writeLogInFile(filePath+"/failureMessage.log", reportSpec.FailureMessage())
-					writeLogInFile(filePath+"/failureLocation.log", reportSpec.FailureLocation().FullStackTrace)
-				}
-			}
-		}
-	}
 
-	//Move files stored directly in artifacts dir to rp_preproc subdirectory
 	wd, _ := os.Getwd()
 	artifactDir := utils.GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
 
-	files, err := os.ReadDir(artifactDir)
-	if err != nil {
-		klog.Error(err)
-	}
+	// Generate folder structure for RPPreproc with logs
+	for i := range report.SpecReports {
+		reportSpec := report.SpecReports[i]
+		name := logs.ShortenStringAddHash(reportSpec)
+		artifactsDirPath := artifactDir + "/" + name
+		reportPortalDirPath := rpPreprocDir + "/attachments/xunit/" + name
+		//generate folders only for failed tests
+		if !reportSpec.Failure.IsZero() {
+			if reportSpec.LeafNodeType == types.NodeTypeIt {
+				if err3 := os.MkdirAll(reportPortalDirPath, os.ModePerm); err3 != nil {
+					klog.Error(err3)
+				} else {
+					writeLogInFile(reportPortalDirPath+"/ginkgoWriter.log", reportSpec.CapturedGinkgoWriterOutput)
+					writeLogInFile(reportPortalDirPath+"/stdOutErr.log", reportSpec.CapturedStdOutErr)
+					writeLogInFile(reportPortalDirPath+"/failureMessage.log", reportSpec.FailureMessage())
+					writeLogInFile(reportPortalDirPath+"/failureLocation.log", reportSpec.FailureLocation().FullStackTrace)
+				}
+			}
+		}
 
-	for _, file := range files {
-		if file.Name() == "rp_preproc" {
+		// Move files matching report portal structure stored directly in artifacts dir to rp_preproc subdirectory
+		if _, err := os.Stat(artifactsDirPath); os.IsNotExist(err) {
 			continue
 		}
 
-		sourcePath := filepath.Join(artifactDir, file.Name())
-		destPath := filepath.Join(fmt.Sprintf("%s/attachments/xunit/", rpPreprocDir), file.Name())
+		if _, err := os.Stat(reportPortalDirPath); os.IsNotExist(err) {
+			if err = os.MkdirAll(reportPortalDirPath, os.ModePerm); err != nil {
+				klog.Error(err)
+				continue
+			}
+		}
 
-		if err := os.Rename(sourcePath, destPath); err != nil {
+		files, err := os.ReadDir(artifactsDirPath)
+		if err != nil {
+			klog.Error(err)
+		}
+
+		for _, file := range files {
+			sourcePath := filepath.Join(artifactsDirPath, file.Name())
+			destPath := filepath.Join(reportPortalDirPath, file.Name())
+
+			if err := os.Rename(sourcePath, destPath); err != nil {
+				klog.Error(err)
+			}
+		}
+
+		if err := os.Remove(artifactsDirPath); err != nil {
 			klog.Error(err)
 		}
 	}
@@ -267,35 +279,4 @@ func systemErrForUnstructuredReporters(spec types.SpecReport) string {
 
 func systemOutForUnstructuredReporters(spec types.SpecReport) string {
 	return spec.CapturedStdOutErr
-}
-
-func getClassnameFromReport(report types.SpecReport) string {
-	texts := []string{}
-	texts = append(texts, report.ContainerHierarchyTexts...)
-	if report.LeafNodeText != "" {
-		texts = append(texts, report.LeafNodeText)
-	}
-	if len(texts) > 0 {
-		classStrings := strings.Fields(texts[0])
-		return classStrings[0][1:]
-	} else {
-		return strings.Join(texts, " ")
-	}
-}
-
-// This function is used to shorten classname and add hash to prevent issues with filesystems(255 chars for folder name) and to avoid conflicts(same shortened name of a classname)
-func ShortenStringAddHash(report types.SpecReport) string {
-	className := getClassnameFromReport(report)
-	s := report.FullText()
-	replacedClass := strings.Replace(s, className, "", 1)
-	if len(replacedClass) > 100 {
-		stringToHash := replacedClass[100:]
-		h := sha1.New()
-		h.Write([]byte(stringToHash))
-		sha1_hash := hex.EncodeToString(h.Sum(nil))
-		stringWithHash := replacedClass[0:100] + " sha: " + sha1_hash
-		return stringWithHash
-	} else {
-		return replacedClass
-	}
 }
