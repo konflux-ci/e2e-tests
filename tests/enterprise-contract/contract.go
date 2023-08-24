@@ -65,16 +65,15 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 	Context("ec-cli command verification", func() {
 		BeforeEach(func() {
 			generator = tekton.VerifyEnterpriseContract{
-				Bundle:              verifyECTaskBundle,
-				Image:               imageWithDigest,
+				TaskBundle:          verifyECTaskBundle,
 				Name:                "verify-enterprise-contract",
 				Namespace:           namespace,
 				PolicyConfiguration: "ec-policy",
 				PublicKey:           fmt.Sprintf("k8s://%s/%s", namespace, publicSecretName),
-				SSLCertDir:          "/var/run/secrets/kubernetes.io/serviceaccount",
 				Strict:              false,
 				EffectiveTime:       "now",
 			}
+			generator.WithComponentImage(imageWithDigest)
 			pipelineRunTimeout = int(time.Duration(5) * time.Minute)
 			baselinePolicies := ecp.EnterpriseContractPolicySpec{
 				Configuration: policyConfig,
@@ -138,7 +137,8 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 				},
 			}
 			Expect(kubeController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
-			generator.Image = snapshotComponent
+			generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-out-of-date-task")
+			generator.AppendComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-unacceptable-task")
 			pr, err := kubeController.RunPipeline(generator, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(kubeController.WatchPipelineRun(pr.Name, pipelineRunTimeout)).To(Succeed())
@@ -167,16 +167,15 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			GinkgoWriter.Println("Update public key to verify golden images")
 			Expect(kubeController.CreateOrUpdateSigningSecret(goldenImagePublicKey, secretName, namespace)).To(Succeed())
 			generator = tekton.VerifyEnterpriseContract{
-				Bundle:              verifyECTaskBundle,
-				Image:               imageWithDigest,
+				TaskBundle:          verifyECTaskBundle,
 				Name:                "verify-enterprise-contract",
 				Namespace:           namespace,
 				PolicyConfiguration: "ec-policy",
 				PublicKey:           fmt.Sprintf("k8s://%s/%s", namespace, secretName),
-				SSLCertDir:          "/var/run/secrets/kubernetes.io/serviceaccount",
 				Strict:              false,
 				EffectiveTime:       "now",
 			}
+			generator.WithComponentImage(imageWithDigest)
 			pipelineRunTimeout = int(time.Duration(5) * time.Minute)
 		})
 
@@ -189,7 +188,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			}
 			Expect(kubeController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
-			generator.Image = "quay.io/redhat-appstudio/ec-golden-image:e2e-test-unacceptable-task"
+			generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-unacceptable-task")
 			pr, err := kubeController.RunPipeline(generator, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(kubeController.WatchPipelineRun(pr.Name, pipelineRunTimeout)).To(Succeed())
@@ -222,7 +221,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			}
 			Expect(kubeController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
-			generator.Image = "quay.io/redhat-appstudio/ec-golden-image:e2e-test-out-of-date-task"
+			generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-out-of-date-task")
 			generator.EffectiveTime = "2023-03-31T00:00:00Z"
 			pr, err := kubeController.RunPipeline(generator, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
@@ -267,7 +266,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			}
 			Expect(kubeController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
-			generator.Image = "quay.io/redhat-appstudio-qe/enterprise-contract-tests:e2e-test-unpinned-task-bundle"
+			generator.WithComponentImage("quay.io/redhat-appstudio-qe/enterprise-contract-tests:e2e-test-unpinned-task-bundle")
 			pr, err := kubeController.RunPipeline(generator, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(kubeController.WatchPipelineRun(pr.Name, pipelineRunTimeout)).To(Succeed())

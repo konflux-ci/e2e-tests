@@ -6,7 +6,6 @@ import (
 	"os"
 	"strconv"
 
-	. "github.com/onsi/ginkgo/v2"
 	g "github.com/onsi/ginkgo/v2"
 
 	app "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -19,8 +18,10 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+const sslCertDir = "/var/run/secrets/kubernetes.io/serviceaccount"
+
 type PipelineRunGenerator interface {
-	Generate() *v1beta1.PipelineRun
+	Generate() (*v1beta1.PipelineRun, error)
 }
 
 type BuildahDemo struct {
@@ -31,12 +32,11 @@ type BuildahDemo struct {
 }
 
 // This is a demo pipeline to create test image and task signing
-func (g BuildahDemo) Generate() *v1beta1.PipelineRun {
-
+func (b BuildahDemo) Generate() (*v1beta1.PipelineRun, error) {
 	return &v1beta1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      g.Name,
-			Namespace: g.Namespace,
+			Name:      b.Name,
+			Namespace: b.Namespace,
 		},
 		Spec: v1beta1.PipelineRunSpec{
 			Params: []v1beta1.Param{
@@ -46,7 +46,7 @@ func (g BuildahDemo) Generate() *v1beta1.PipelineRun {
 				},
 				{
 					Name:  "output-image",
-					Value: *v1beta1.NewArrayOrString(g.Image),
+					Value: *v1beta1.NewArrayOrString(b.Image),
 				},
 				{
 					Name:  "git-url",
@@ -59,7 +59,7 @@ func (g BuildahDemo) Generate() *v1beta1.PipelineRun {
 			},
 			PipelineRef: &v1beta1.PipelineRef{
 				Name:   "docker-build",
-				Bundle: g.Bundle, //nolint:all
+				Bundle: b.Bundle, //nolint:all
 			},
 			Workspaces: []v1beta1.WorkspaceBinding{
 				{
@@ -70,48 +70,31 @@ func (g BuildahDemo) Generate() *v1beta1.PipelineRun {
 				},
 			},
 		},
-	}
+	}, nil
 }
 
 type VerifyEnterpriseContract struct {
-	ApplicationName     string
-	Bundle              string
-	ComponentName       string
-	Image               string
+	Snapshot            app.SnapshotSpec
+	TaskBundle          string
 	Name                string
 	Namespace           string
 	PolicyConfiguration string
 	PublicKey           string
-	SSLCertDir          string
 	Strict              bool
 	EffectiveTime       string
 }
 
-func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
-	var snapshot app.SnapshotSpec
-	err := json.Unmarshal([]byte(p.Image), &snapshot)
+func (p VerifyEnterpriseContract) Generate() (*v1beta1.PipelineRun, error) {
+	var applicationSnapshotJSON, err = json.Marshal(p.Snapshot)
 	if err != nil {
-		fmt.Printf("Application Snapshot doesn't exist: %s\n", err)
-	}
-
-	if len(snapshot.Components) == 0 {
-		p.Image = `{
-			"application": "` + p.ApplicationName + `",
-			"components": [
-			  {
-				"name": "` + p.ComponentName + `",
-				"containerImage": "` + p.Image + `"
-			  }
-			]
-		  }`
+		return nil, err
 	}
 	return &v1beta1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-run-", p.Name),
 			Namespace:    p.Namespace,
 			Labels: map[string]string{
-				"appstudio.openshift.io/application": p.ApplicationName,
-				"appstudio.openshift.io/component":   p.ComponentName,
+				"appstudio.openshift.io/application": p.Snapshot.Application,
 			},
 		},
 		Spec: v1beta1.PipelineRunSpec{
@@ -124,7 +107,7 @@ func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
 								Name: "IMAGES",
 								Value: v1beta1.ParamValue{
 									Type:      v1beta1.ParamTypeString,
-									StringVal: p.Image,
+									StringVal: string(applicationSnapshotJSON),
 								},
 							},
 							{
@@ -145,7 +128,7 @@ func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
 								Name: "SSL_CERT_DIR",
 								Value: v1beta1.ParamValue{
 									Type:      v1beta1.ParamTypeString,
-									StringVal: p.SSLCertDir,
+									StringVal: sslCertDir,
 								},
 							},
 							{
@@ -165,13 +148,65 @@ func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
 						},
 						TaskRef: &v1beta1.TaskRef{
 							Name:   "verify-enterprise-contract",
-							Bundle: p.Bundle,
+							Bundle: p.TaskBundle,
 						},
 					},
 				},
 			},
 		},
+	}, nil
+}
+
+func (p *VerifyEnterpriseContract) WithComponentImage(imageRef string) {
+	p.Snapshot.Components = []app.SnapshotComponent{
+		{
+			ContainerImage: imageRef,
+		},
 	}
+}
+
+func (p *VerifyEnterpriseContract) AppendComponentImage(imageRef string) {
+	p.Snapshot.Components = append(p.Snapshot.Components, app.SnapshotComponent{
+		ContainerImage: imageRef,
+	})
+}
+
+type ECIntegrationTestScenario struct {
+	Image                 string
+	Name                  string
+	Namespace             string
+	PipelineGitURL        string
+	PipelineGitRevision   string
+	PipelineGitPathInRepo string
+}
+
+func (p ECIntegrationTestScenario) Generate() (*v1beta1.PipelineRun, error) {
+
+	snapshot := `{"components": [
+		{"containerImage": "` + p.Image + `"}
+	]}`
+
+	return &v1beta1.PipelineRun{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "ec-integration-test-scenario-run-",
+			Namespace:    p.Namespace,
+		},
+		Spec: v1beta1.PipelineRunSpec{
+			PipelineRef: &v1beta1.PipelineRef{
+				ResolverRef: v1beta1.ResolverRef{
+					Resolver: "git",
+					Params: []v1beta1.Param{
+						{Name: "url", Value: *v1beta1.NewStructuredValues(p.PipelineGitURL)},
+						{Name: "revision", Value: *v1beta1.NewStructuredValues(p.PipelineGitRevision)},
+						{Name: "pathInRepo", Value: *v1beta1.NewStructuredValues(p.PipelineGitPathInRepo)},
+					},
+				},
+			},
+			Params: []v1beta1.Param{
+				{Name: "SNAPSHOT", Value: *v1beta1.NewStructuredValues(snapshot)},
+			},
+		},
+	}, nil
 }
 
 // GetFailedPipelineRunLogs gets the logs of the pipelinerun failed task
@@ -191,10 +226,10 @@ func GetFailedPipelineRunLogs(c crclient.Client, ki kubernetes.Interface, pipeli
 
 // StorePipelineRunLogs stores logs and parsed yamls of pipelineRuns into directory of pipelineruns' namespace under ARTIFACT_DIR env.
 // In case the files can't be stored in ARTIFACT_DIR, they will be recorder in GinkgoWriter.
-func StorePipelineRun(pipelineRun *v1beta1.PipelineRun, c crclient.Client, ki kubernetes.Interface) error {
+func StoreFailedPipelineRun(pipelineRun *v1beta1.PipelineRun, classname string, c crclient.Client, ki kubernetes.Interface) error {
 	wd, _ := os.Getwd()
 	artifactDir := utils.GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
-	testLogsDir := fmt.Sprintf("%s/%s", artifactDir, pipelineRun.GetNamespace())
+	testLogsDir := fmt.Sprintf("%s/%s", artifactDir, classname)
 
 	pipelineRunLog, err := GetFailedPipelineRunLogs(c, ki, pipelineRun)
 	if err != nil {
@@ -203,15 +238,15 @@ func StorePipelineRun(pipelineRun *v1beta1.PipelineRun, c crclient.Client, ki ku
 
 	pipelineRunYaml, prYamlErr := yaml.Marshal(pipelineRun)
 	if prYamlErr != nil {
-		GinkgoWriter.Printf("\nfailed to get pipelineRunYaml: %s\n", prYamlErr.Error())
+		g.GinkgoWriter.Printf("\nfailed to get pipelineRunYaml: %s\n", prYamlErr.Error())
 	}
 
 	err = os.MkdirAll(testLogsDir, os.ModePerm)
 
 	if err != nil {
-		GinkgoWriter.Printf("\n%s\nFailed pipelineRunLog:\n%s\n---END OF THE LOG---\n", pipelineRun.GetName(), pipelineRunLog)
+		g.GinkgoWriter.Printf("\n%s\nFailed pipelineRunLog:\n%s\n---END OF THE LOG---\n", pipelineRun.GetName(), pipelineRunLog)
 		if prYamlErr == nil {
-			GinkgoWriter.Printf("Failed pipelineRunYaml:\n%s\n", pipelineRunYaml)
+			g.GinkgoWriter.Printf("Failed pipelineRunYaml:\n%s\n", pipelineRunYaml)
 		}
 		return err
 	}
@@ -219,16 +254,16 @@ func StorePipelineRun(pipelineRun *v1beta1.PipelineRun, c crclient.Client, ki ku
 	filename := fmt.Sprintf("%s-pr-%s.log", pipelineRun.Namespace, pipelineRun.Name)
 	filePath := fmt.Sprintf("%s/%s", testLogsDir, filename)
 	if err := os.WriteFile(filePath, []byte(pipelineRunLog), 0644); err != nil {
-		GinkgoWriter.Printf("cannot write to %s: %+v\n", filename, err)
-		GinkgoWriter.Printf("\n%s\nFailed pipelineRunLog:\n%s\n", filename, pipelineRunLog)
+		g.GinkgoWriter.Printf("cannot write to %s: %+v\n", filename, err)
+		g.GinkgoWriter.Printf("\n%s\nFailed pipelineRunLog:\n%s\n", filename, pipelineRunLog)
 	}
 
 	if prYamlErr == nil {
 		filename = fmt.Sprintf("%s-pr-%s.yaml", pipelineRun.Namespace, pipelineRun.Name)
 		filePath = fmt.Sprintf("%s/%s", testLogsDir, filename)
 		if err := os.WriteFile(filePath, pipelineRunYaml, 0644); err != nil {
-			GinkgoWriter.Printf("cannot write to %s: %+v\n", filename, err)
-			GinkgoWriter.Printf("\n%s\nFailed pipelineRunYaml:\n%s\n", filename, pipelineRunYaml)
+			g.GinkgoWriter.Printf("cannot write to %s: %+v\n", filename, err)
+			g.GinkgoWriter.Printf("\n%s\nFailed pipelineRunYaml:\n%s\n", filename, pipelineRunYaml)
 		}
 	}
 
