@@ -22,6 +22,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 	defer GinkgoRecover()
 
 	var fw *framework.Framework
+	var kubeController tekton.KubeController
 	AfterEach(framework.ReportFailure(&fw))
 	var err error
 	var compName string
@@ -36,7 +37,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 		// Initialize the tests controllers
 		fw, err = framework.NewFramework("release-e2e-bundle")
 		Expect(err).NotTo(HaveOccurred())
-		kubeController := tekton.KubeController{
+		kubeController = tekton.KubeController{
 			Commonctrl: *fw.AsKubeAdmin.CommonController,
 			Tektonctrl: *fw.AsKubeAdmin.TektonController,
 		}
@@ -187,6 +188,18 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 					return fmt.Errorf("release pipelinerun %s/%s did not finish yet", pr.GetNamespace(), pr.GetName())
 				}
 				Expect(utils.HasPipelineRunSucceeded(pr)).To(BeTrue(), fmt.Sprintf("release pipelinerun %s/%s did not succeed", pr.GetNamespace(), pr.GetName()))
+				return nil
+			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(Succeed())
+		})
+
+		It("verifies that Enterprise Contract Task has succeeded in the Release PipelineRun", func() {
+			Eventually(func() error {
+				pr, err := fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
+				Expect(err).ShouldNot(HaveOccurred())
+				ecTaskRunStatus, err := kubeController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), pr, verifyEnterpriseContractTaskName)
+				Expect(err).ShouldNot(HaveOccurred())
+				GinkgoWriter.Printf("the status of the %s TaskRun on the release pipeline is: %v", verifyEnterpriseContractTaskName, ecTaskRunStatus.Status.Conditions)
+				Expect(tekton.DidTaskSucceed(ecTaskRunStatus)).To(BeTrue())
 				return nil
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(Succeed())
 		})
