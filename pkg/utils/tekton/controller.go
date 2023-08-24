@@ -363,7 +363,10 @@ func (k KubeController) GetTaskRunStatus(c crclient.Client, pr *v1beta1.Pipeline
 }
 
 func (k KubeController) RunPipeline(g PipelineRunGenerator, taskTimeout int) (*v1beta1.PipelineRun, error) {
-	pr := g.Generate()
+	pr, err := g.Generate()
+	if err != nil {
+		return nil, err
+	}
 	pvcs := k.Commonctrl.KubeInterface().CoreV1().PersistentVolumeClaims(pr.Namespace)
 	for _, w := range pr.Spec.Workspaces {
 		if w.PersistentVolumeClaim != nil {
