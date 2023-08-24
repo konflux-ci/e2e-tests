@@ -336,7 +336,7 @@ func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Comp
 			if err != nil {
 				return fmt.Errorf("failed to get component for PipelineRun %q in %q namespace: %+v", pr.GetName(), pr.GetNamespace(), err)
 			}
-			delete(component.Annotations, constants.ComponentInitialBuildAnnotationKey)
+			component.Annotations = utils.MergeMaps(component.Annotations, constants.ComponentTriggerSimpleBuildAnnotation)
 			if err = h.KubeRest().Update(context.Background(), component); err != nil {
 				return fmt.Errorf("failed to update Component %q in %q namespace", component.GetName(), component.GetNamespace())
 			}

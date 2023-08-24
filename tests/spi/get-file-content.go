@@ -26,6 +26,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "get-file-content"), func(
 	var fw *framework.Framework
 	var err error
 	var namespace string
+	AfterEach(framework.ReportFailure(&fw))
 
 	Describe("SVPI-402 - Get file content from a private Github repository", Ordered, func() {
 		BeforeAll(func() {

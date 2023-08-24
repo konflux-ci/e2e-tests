@@ -32,6 +32,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 	var CYPRESS_GH_PASSWORD string
 	var CYPRESS_GH_2FA_CODE string
 	var cypressPodName string = "cypress-script"
+	AfterEach(framework.ReportFailure(&fw))
 
 	Describe("SVPI-395 - Github OAuth flow to upload token", Ordered, func() {
 		BeforeAll(func() {

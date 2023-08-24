@@ -17,6 +17,7 @@ var _ = framework.O11ySuiteDescribe("O11Y E2E tests for Pipelinerun", Label("o11
 	var f *framework.Framework
 	var kc tekton.KubeController
 	var err error
+	AfterEach(framework.ReportFailure(&f))
 
 	Describe("O11y test", func() {
 		var testNamespace string

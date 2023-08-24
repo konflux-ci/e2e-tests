@@ -46,6 +46,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	var snapshot *appstudioApi.Snapshot
 	var snapshot_push *appstudioApi.Snapshot
 	var env *appstudioApi.Environment
+	AfterEach(framework.ReportFailure(&f))
 
 	Describe("the component with git source (GitHub) is created", Ordered, func() {
 

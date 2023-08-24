@@ -38,6 +38,7 @@ var (
 
 var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jvm-build", "HACBS"), func() {
 	var f *framework.Framework
+	AfterEach(framework.ReportFailure(&f))
 	var err error
 
 	defer GinkgoRecover()
@@ -307,8 +308,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("could not get component %s/%s", testNamespace, componentName))
 
-			annotations := component.GetAnnotations()
-			delete(annotations, constants.ComponentInitialBuildAnnotationKey)
+			annotations := utils.MergeMaps(component.GetAnnotations(), constants.ComponentTriggerSimpleBuildAnnotation)
 			component.SetAnnotations(annotations)
 			Expect(f.AsKubeAdmin.CommonController.KubeRest().Update(context.TODO(), component, &client.UpdateOptions{})).To(Succeed())
 

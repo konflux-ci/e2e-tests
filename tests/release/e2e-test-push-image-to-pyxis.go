@@ -30,6 +30,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	var fw *framework.Framework
+	AfterEach(framework.ReportFailure(&fw))
 	var err error
 	var kubeController tekton.KubeController
 	var devNamespace, managedNamespace, compName, additionalCompName string
