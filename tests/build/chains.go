@@ -174,16 +174,15 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 
 			BeforeEach(func() {
 				generator = tekton.VerifyEnterpriseContract{
-					Bundle:              verifyECTaskBundle,
-					Image:               imageWithDigest,
+					TaskBundle:          verifyECTaskBundle,
 					Name:                "verify-enterprise-contract",
 					Namespace:           namespace,
 					PolicyConfiguration: "ec-policy",
 					PublicKey:           fmt.Sprintf("k8s://%s/%s", namespace, publicSecretName),
-					SSLCertDir:          "/var/run/secrets/kubernetes.io/serviceaccount",
 					Strict:              true,
 					EffectiveTime:       "now",
 				}
+				generator.WithComponentImage(imageWithDigest)
 
 				// Since specs could update the config policy, make sure it has a consistent
 				// baseline at the start of each spec.
@@ -314,27 +313,6 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 		})
 	})
 })
-
-// func printPolicyConfiguration(policy ecp.EnterpriseContractPolicySpec) {
-// 	sources := ""
-// 	for i, s := range policy.Sources {
-// 		if i != 0 {
-// 			sources += "\n"
-// 		}
-// 		if s.GitRepository != nil {
-// 			if s.GitRepository.Revision != nil {
-// 				sources += fmt.Sprintf("[%d] repository: '%s', revision: '%s'", i, s.GitRepository.Repository, *s.GitRepository.Revision)
-// 			} else {
-// 				sources += fmt.Sprintf("[%d] repository: '%s'", i, s.GitRepository.Repository)
-// 			}
-// 		}
-// 	}
-// 	exceptions := "[]"
-// 	if policy.Exceptions != nil {
-// 		exceptions = fmt.Sprintf("%v", policy.Exceptions.NonBlocking)
-// 	}
-// 	GinkgoWriter.Printf("Configured sources: %s\nand non-blocking policies: %v\n", sources, exceptions)
-// }
 
 func printTaskRunStatus(tr *v1beta1.PipelineRunTaskRunStatus, namespace string, sc common.SuiteController) {
 	if tr.Status == nil {
