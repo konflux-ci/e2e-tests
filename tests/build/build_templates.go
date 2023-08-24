@@ -10,6 +10,7 @@ import (
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/redhat-appstudio/application-api/api/v1alpha1"
 	kubeapi "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
@@ -289,15 +290,20 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					Expect(kubeController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
 
 					generator := tekton.VerifyEnterpriseContract{
-						ApplicationName:     applicationName,
-						Bundle:              verifyECTaskBundle,
-						ComponentName:       componentNames[i],
-						Image:               outputImage,
+						Snapshot: v1alpha1.SnapshotSpec{
+							Application: applicationName,
+							Components: []v1alpha1.SnapshotComponent{
+								{
+									Name:           componentNames[i],
+									ContainerImage: outputImage,
+								},
+							},
+						},
+						TaskBundle:          verifyECTaskBundle,
 						Name:                "verify-enterprise-contract",
 						Namespace:           testNamespace,
 						PolicyConfiguration: "ec-policy",
 						PublicKey:           fmt.Sprintf("k8s://%s/%s", testNamespace, publicSecretName),
-						SSLCertDir:          "/var/run/secrets/kubernetes.io/serviceaccount",
 						Strict:              true,
 						EffectiveTime:       "now",
 					}
