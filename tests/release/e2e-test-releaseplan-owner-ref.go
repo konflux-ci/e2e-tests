@@ -17,6 +17,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-2469]test-releaseplan-owner-ref-a
 	var err error
 	var devNamespace string
 	var releasePlan *releaseApi.ReleasePlan
+	AfterEach(framework.ReportFailure(&fw))
 
 	BeforeAll(func() {
 		fw, err = framework.NewFramework("releaseplan-ownerref")
