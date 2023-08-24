@@ -38,6 +38,7 @@ var (
 
 var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jvm-build", "HACBS"), func() {
 	var f *framework.Framework
+	AfterEach(framework.ReportFailure(&f))
 	var err error
 
 	defer GinkgoRecover()

@@ -70,6 +70,7 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 	var vc vcluster.Vcluster
 	var ephemeralClusterClient *kubernetes.Clientset
 	var fw *framework.Framework
+	AfterEach(framework.ReportFailure(&fw))
 	var byocKubeconfig, byocAPIServerURL, kubeIngressDomain string
 
 	// Initialize the application struct

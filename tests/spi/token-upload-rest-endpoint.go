@@ -36,6 +36,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-rest-endpoin
 	var fw *framework.Framework
 	var err error
 	var namespace string
+	AfterEach(framework.ReportFailure(&fw))
 
 	for _, test := range AccessCheckTests {
 		test := test

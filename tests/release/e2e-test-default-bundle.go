@@ -22,6 +22,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 	defer GinkgoRecover()
 
 	var fw *framework.Framework
+	AfterEach(framework.ReportFailure(&fw))
 	var err error
 	var compName string
 	var devNamespace string

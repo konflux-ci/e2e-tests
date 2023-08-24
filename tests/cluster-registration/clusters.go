@@ -15,6 +15,7 @@ var _ = framework.ClusterRegistrationSuiteDescribe("Cluster Registration E2E tes
 	defer g.GinkgoRecover()
 	var fwk *framework.Framework
 	var err error
+	g.AfterEach(framework.ReportFailure(&fwk))
 
 	g.BeforeAll(func() {
 		// Initialize the tests controllers
