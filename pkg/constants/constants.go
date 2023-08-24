@@ -92,8 +92,6 @@ const (
 
 	BuildTaskRunName = "build-container"
 
-	ComponentInitialBuildAnnotationKey = "appstudio.openshift.io/component-initial-build"
-
 	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.15"
 
 	StrategyConfigsRepo          = "strategy-configs"
@@ -125,5 +123,6 @@ const (
 var (
 	ComponentDefaultLabel                      = map[string]string{"e2e-test": "true"}
 	ComponentPaCRequestAnnotation              = map[string]string{"build.appstudio.openshift.io/request": "configure-pac"}
+	ComponentTriggerSimpleBuildAnnotation      = map[string]string{"build.appstudio.openshift.io/request": "trigger-simple-build"}
 	ImageControllerAnnotationRequestPublicRepo = map[string]string{"image.redhat.com/generate": `{"visibility": "public"}`}
 )
