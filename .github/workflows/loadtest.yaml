@@ -43,6 +43,9 @@ jobs:
 
     - name: Collect results
       working-directory: ./tests/load-tests
+      env:
+        OCP_TOKEN: ${{ secrets.OCP_TOKEN }}
+        STAGE_MEMBER_CLUSTER: ${{ secrets.STAGE_MEMBER_CLUSTER }}
       run: |
         ./ci-scripts/stage/collect-results.sh .
 
