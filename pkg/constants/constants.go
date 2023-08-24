@@ -22,6 +22,12 @@ const (
 	// The quay.io token to perform container builds and push. The token must be correlated with the QUAY_OAUTH_USER environment
 	QUAY_OAUTH_TOKEN_ENV string = "QUAY_OAUTH_TOKEN" // #nosec
 
+	// The git repo url for the EC pipelines.
+	EC_PIPELINES_REPO_URL_ENV string = "EC_PIPELINES_REPO_URL"
+
+	// The git repo revision for the EC pipelines.
+	EC_PIPELINES_REPO_REVISION_ENV string = "EC_PIPELINES_REPO_REVISION"
+
 	// The private devfile sample git repository to use in certain HAS e2e tests
 	PRIVATE_DEVFILE_SAMPLE string = "PRIVATE_DEVFILE_SAMPLE" // #nosec
 
