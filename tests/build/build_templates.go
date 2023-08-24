@@ -24,6 +24,7 @@ import (
 var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", "HACBS"), func() {
 	var f *framework.Framework
 	var err error
+	AfterEach(framework.ReportFailure(&f))
 
 	defer GinkgoRecover()
 	Describe("HACBS pipelines", Ordered, Label("pipeline"), func() {

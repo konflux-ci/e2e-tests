@@ -42,6 +42,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "token-upload-k8s"), func(
 	var fw *framework.Framework
 	var err error
 	var namespace string
+	AfterEach(framework.ReportFailure(&fw))
 
 	Describe("SVPI-399 - Upload token with k8s secret (associate it to existing SPIAccessToken)", Ordered, func() {
 		BeforeAll(func() {
