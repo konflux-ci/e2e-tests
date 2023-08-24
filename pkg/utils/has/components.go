@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
@@ -102,7 +103,8 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 				return true, nil
 			} else {
 				var prLogs string
-				if err = tekton.StorePipelineRun(pr, h.KubeRest(), h.KubeInterface()); err != nil {
+				classname := logs.ShortenStringAddHash(CurrentSpecReport())
+				if err = tekton.StoreFailedPipelineRun(pr, classname, h.KubeRest(), h.KubeInterface()); err != nil {
 					GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
 				}
 				if prLogs, err = tekton.GetFailedPipelineRunLogs(h.KubeRest(), h.KubeInterface(), pr); err != nil {

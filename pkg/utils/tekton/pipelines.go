@@ -188,10 +188,10 @@ func GetFailedPipelineRunLogs(c crclient.Client, ki kubernetes.Interface, pipeli
 
 // StorePipelineRunLogs stores logs and parsed yamls of pipelineRuns into directory of pipelineruns' namespace under ARTIFACT_DIR env.
 // In case the files can't be stored in ARTIFACT_DIR, they will be recorder in GinkgoWriter.
-func StorePipelineRun(pipelineRun *v1beta1.PipelineRun, c crclient.Client, ki kubernetes.Interface) error {
+func StoreFailedPipelineRun(pipelineRun *v1beta1.PipelineRun, classname string, c crclient.Client, ki kubernetes.Interface) error {
 	wd, _ := os.Getwd()
 	artifactDir := utils.GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
-	testLogsDir := fmt.Sprintf("%s/%s", artifactDir, pipelineRun.GetNamespace())
+	testLogsDir := fmt.Sprintf("%s/%s", artifactDir, classname)
 
 	pipelineRunLog, err := GetFailedPipelineRunLogs(c, ki, pipelineRun)
 	if err != nil {
