@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"time"
 
 	"strings"
@@ -208,15 +209,7 @@ func MergePRInRemote(branch string, forkOrganization string, repoPath string) er
 	}
 
 	if forkOrganization == "" {
-		err = wt.Pull(&git.PullOptions{
-			RemoteName:    "origin",
-			ReferenceName: plumbing.ReferenceName("refs/heads/" + branch),
-			SingleBranch:  true,
-			Auth:          auth,
-		})
-		if err != nil {
-			klog.Fatal(err)
-		}
+		_, err = exec.Command("git", "-C", repoPath, "merge", "remotes/origin/"+branch, "-Xtheirs", "-q").Output()
 	} else {
 		repoURL := fmt.Sprintf("https://github.com/%s/infra-deployments.git", forkOrganization)
 		_, err = repo.CreateRemote(&config.RemoteConfig{
@@ -233,17 +226,7 @@ func MergePRInRemote(branch string, forkOrganization string, repoPath string) er
 		if err != nil {
 			klog.Fatal(err)
 		}
-
-		err = wt.Pull(&git.PullOptions{
-			RemoteName:    "forked_repo",
-			ReferenceName: plumbing.ReferenceName("refs/heads/" + branch),
-			SingleBranch:  true,
-			Force:         true,
-			Auth:          auth,
-		})
-		if err != nil {
-			klog.Fatal(err)
-		}
+		_, err = exec.Command("git", "-C", repoPath, "merge", "remotes/forked_repo/"+branch, "-Xtheirs", "-q").Output()
 	}
 	if err != nil {
 		klog.Fatal(err)
