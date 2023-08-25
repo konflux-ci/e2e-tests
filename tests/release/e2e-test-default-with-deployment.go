@@ -23,6 +23,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	var fw *framework.Framework
+	AfterEach(framework.ReportFailure(&fw))
 	var err error
 	var compName string
 	var devNamespace string

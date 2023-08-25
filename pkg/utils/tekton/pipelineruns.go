@@ -14,7 +14,6 @@ import (
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
-	app "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -26,8 +25,10 @@ import (
 	g "github.com/onsi/ginkgo/v2"
 )
 
+const sslCertDir = "/var/run/secrets/kubernetes.io/serviceaccount"
+
 type PipelineRunGenerator interface {
-	Generate() *v1beta1.PipelineRun
+	Generate() (*v1beta1.PipelineRun, error)
 }
 
 type BuildahDemo struct {
@@ -37,27 +38,21 @@ type BuildahDemo struct {
 	Namespace string
 }
 
-type VerifyEnterpriseContract struct {
-	ApplicationName     string
-	Bundle              string
-	ComponentName       string
-	Image               string
-	Name                string
-	Namespace           string
-	PolicyConfiguration string
-	PublicKey           string
-	SSLCertDir          string
-	Strict              bool
-	EffectiveTime       string
+type ECIntegrationTestScenario struct {
+	Image                 string
+	Name                  string
+	Namespace             string
+	PipelineGitURL        string
+	PipelineGitRevision   string
+	PipelineGitPathInRepo string
 }
 
 // This is a demo pipeline to create test image and task signing
-func (g BuildahDemo) Generate() *v1beta1.PipelineRun {
-
+func (b BuildahDemo) Generate() (*v1beta1.PipelineRun, error) {
 	return &v1beta1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      g.Name,
-			Namespace: g.Namespace,
+			Name:      b.Name,
+			Namespace: b.Namespace,
 		},
 		Spec: v1beta1.PipelineRunSpec{
 			Params: []v1beta1.Param{
@@ -67,7 +62,7 @@ func (g BuildahDemo) Generate() *v1beta1.PipelineRun {
 				},
 				{
 					Name:  "output-image",
-					Value: *v1beta1.NewArrayOrString(g.Image),
+					Value: *v1beta1.NewArrayOrString(b.Image),
 				},
 				{
 					Name:  "git-url",
@@ -80,7 +75,7 @@ func (g BuildahDemo) Generate() *v1beta1.PipelineRun {
 			},
 			PipelineRef: &v1beta1.PipelineRef{
 				Name:   "docker-build",
-				Bundle: g.Bundle, //nolint:all
+				Bundle: b.Bundle, //nolint:all
 			},
 			Workspaces: []v1beta1.WorkspaceBinding{
 				{
@@ -91,35 +86,21 @@ func (g BuildahDemo) Generate() *v1beta1.PipelineRun {
 				},
 			},
 		},
-	}
+	}, nil
 }
 
 // Generates pipelineRun from VerifyEnterpriseContract.
-func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
-	var snapshot app.SnapshotSpec
-	err := json.Unmarshal([]byte(p.Image), &snapshot)
+func (p VerifyEnterpriseContract) Generate() (*v1beta1.PipelineRun, error) {
+	var applicationSnapshotJSON, err = json.Marshal(p.Snapshot)
 	if err != nil {
-		fmt.Printf("Application Snapshot doesn't exist: %s\n", err)
-	}
-
-	if len(snapshot.Components) == 0 {
-		p.Image = `{
-			"application": "` + p.ApplicationName + `",
-			"components": [
-			  {
-				"name": "` + p.ComponentName + `",
-				"containerImage": "` + p.Image + `"
-			  }
-			]
-		  }`
+		return nil, err
 	}
 	return &v1beta1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-run-", p.Name),
 			Namespace:    p.Namespace,
 			Labels: map[string]string{
-				"appstudio.openshift.io/application": p.ApplicationName,
-				"appstudio.openshift.io/component":   p.ComponentName,
+				"appstudio.openshift.io/application": p.Snapshot.Application,
 			},
 		},
 		Spec: v1beta1.PipelineRunSpec{
@@ -132,7 +113,7 @@ func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
 								Name: "IMAGES",
 								Value: v1beta1.ParamValue{
 									Type:      v1beta1.ParamTypeString,
-									StringVal: p.Image,
+									StringVal: string(applicationSnapshotJSON),
 								},
 							},
 							{
@@ -153,7 +134,7 @@ func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
 								Name: "SSL_CERT_DIR",
 								Value: v1beta1.ParamValue{
 									Type:      v1beta1.ParamTypeString,
-									StringVal: p.SSLCertDir,
+									StringVal: sslCertDir,
 								},
 							},
 							{
@@ -173,13 +154,43 @@ func (p VerifyEnterpriseContract) Generate() *v1beta1.PipelineRun {
 						},
 						TaskRef: &v1beta1.TaskRef{
 							Name:   "verify-enterprise-contract",
-							Bundle: p.Bundle,
+							Bundle: p.TaskBundle,
 						},
 					},
 				},
 			},
 		},
-	}
+	}, nil
+}
+
+// Generates pipelineRun from ECIntegrationTestScenario.
+func (p ECIntegrationTestScenario) Generate() (*v1beta1.PipelineRun, error) {
+
+	snapshot := `{"components": [
+		{"containerImage": "` + p.Image + `"}
+	]}`
+
+	return &v1beta1.PipelineRun{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "ec-integration-test-scenario-run-",
+			Namespace:    p.Namespace,
+		},
+		Spec: v1beta1.PipelineRunSpec{
+			PipelineRef: &v1beta1.PipelineRef{
+				ResolverRef: v1beta1.ResolverRef{
+					Resolver: "git",
+					Params: []v1beta1.Param{
+						{Name: "url", Value: *v1beta1.NewStructuredValues(p.PipelineGitURL)},
+						{Name: "revision", Value: *v1beta1.NewStructuredValues(p.PipelineGitRevision)},
+						{Name: "pathInRepo", Value: *v1beta1.NewStructuredValues(p.PipelineGitPathInRepo)},
+					},
+				},
+			},
+			Params: []v1beta1.Param{
+				{Name: "SNAPSHOT", Value: *v1beta1.NewStructuredValues(snapshot)},
+			},
+		},
+	}, nil
 }
 
 // CreatePipelineRun creates a tekton pipelineRun and returns the pipelineRun or error
@@ -199,7 +210,10 @@ func (t *TektonController) createAndWait(pr *v1beta1.PipelineRun, namespace stri
 
 // RunPipeline creates a pipelineRun and waits for it to start.
 func (t *TektonController) RunPipeline(g PipelineRunGenerator, namespace string, taskTimeout int) (*v1beta1.PipelineRun, error) {
-	pr := g.Generate()
+	pr, err := g.Generate()
+	if err != nil {
+		return nil, err
+	}
 	pvcs := t.KubeInterface().CoreV1().PersistentVolumeClaims(pr.Namespace)
 	for _, w := range pr.Spec.Workspaces {
 		if w.PersistentVolumeClaim != nil {
@@ -274,12 +288,12 @@ func GetFailedPipelineRunLogs(c crclient.Client, ki kubernetes.Interface, pipeli
 	return failMessage, nil
 }
 
-// StoreFailedPipelineRunLogs stores logs and parsed yamls of pipelineRuns into directory of pipelineruns' namespace under ARTIFACT_DIR env.
+// StorePipelineRunLogs stores logs and parsed yamls of pipelineRuns into directory of pipelineruns' namespace under ARTIFACT_DIR env.
 // In case the files can't be stored in ARTIFACT_DIR, they will be recorder in GinkgoWriter.
-func StoreFailedPipelineRun(pipelineRun *v1beta1.PipelineRun, c crclient.Client, ki kubernetes.Interface) error {
+func StoreFailedPipelineRun(pipelineRun *v1beta1.PipelineRun, classname string, c crclient.Client, ki kubernetes.Interface) error {
 	wd, _ := os.Getwd()
 	artifactDir := utils.GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
-	testLogsDir := fmt.Sprintf("%s/%s", artifactDir, pipelineRun.GetNamespace())
+	testLogsDir := fmt.Sprintf("%s/%s", artifactDir, classname)
 
 	pipelineRunLog, err := GetFailedPipelineRunLogs(c, ki, pipelineRun)
 	if err != nil {

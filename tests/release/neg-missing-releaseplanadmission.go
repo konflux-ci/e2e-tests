@@ -21,6 +21,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-2360] Release CR fails when missi
 	var ecPolicy ecp.EnterpriseContractPolicySpec
 
 	var releaseCR *releaseApi.Release
+	AfterEach(framework.ReportFailure(&fw))
 
 	BeforeAll(func() {
 		// Initialize the tests controllers

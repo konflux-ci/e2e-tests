@@ -129,8 +129,7 @@ func (t *TektonController) GetTaskRunLogs(pipelineRunName, pipelineTaskName, nam
 	return logs, nil
 }
 
-// GetTaskRunResult returns the result of a specified taskRun.
-func (t *TektonController) GetTaskRunResult(c crclient.Client, pr *v1beta1.PipelineRun, pipelineTaskName string, result string) (string, error) {
+func (t *TektonController) GetTaskRunFromPipelineRun(c crclient.Client, pr *v1beta1.PipelineRun, pipelineTaskName string) (*v1beta1.TaskRun, error) {
 	for _, chr := range pr.Status.ChildReferences {
 		if chr.PipelineTaskName != pipelineTaskName {
 			continue
@@ -139,14 +138,24 @@ func (t *TektonController) GetTaskRunResult(c crclient.Client, pr *v1beta1.Pipel
 		taskRun := &v1beta1.TaskRun{}
 		taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
 		if err := c.Get(context.TODO(), taskRunKey, taskRun); err != nil {
-			return "", err
+			return nil, err
 		}
+		return taskRun, nil
+	}
 
-		for _, trResult := range taskRun.Status.TaskRunResults {
-			if trResult.Name == result {
-				// for some reason the result might contain \n suffix
-				return strings.TrimSuffix(trResult.Value.StringVal, "\n"), nil
-			}
+	return nil, fmt.Errorf("task %q not found in PipelineRun %q/%q", pipelineTaskName, pr.Namespace, pr.Name)
+}
+
+func (t *TektonController) GetTaskRunResult(c crclient.Client, pr *v1beta1.PipelineRun, pipelineTaskName string, result string) (string, error) {
+	taskRun, err := t.GetTaskRunFromPipelineRun(c, pr, pipelineTaskName)
+	if err != nil {
+		return "", err
+	}
+
+	for _, trResult := range taskRun.Status.TaskRunResults {
+		if trResult.Name == result {
+			// for some reason the result might contain \n suffix
+			return strings.TrimSuffix(trResult.Value.StringVal, "\n"), nil
 		}
 	}
 	return "", fmt.Errorf(

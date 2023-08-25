@@ -32,6 +32,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 	var CYPRESS_GH_PASSWORD string
 	var CYPRESS_GH_2FA_CODE string
 	var cypressPodName string = "cypress-script"
+	AfterEach(framework.ReportFailure(&fw))
 
 	Describe("SVPI-395 - Github OAuth flow to upload token", Ordered, func() {
 		BeforeAll(func() {
@@ -135,7 +136,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 					Containers: []corev1.Container{
 						{
 							Name:    cypressPodName,
-							Image:   "cypress/included",
+							Image:   "quay.io/redhat-appstudio-qe/cypress/included:latest",
 							Command: []string{"/bin/sh", "-c"},
 							Args:    []string{"git clone https://github.com/redhat-appstudio-qe/cypress-browser-oauth-flow; cd cypress-browser-oauth-flow; npm install; cypress run --spec cypress/e2e/spec.cy.js; tail -f /dev/null;"},
 							Env: []corev1.EnvVar{

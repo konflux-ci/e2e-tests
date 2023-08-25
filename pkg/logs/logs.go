@@ -12,9 +12,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 )
 
-func StoreTestLogs(classname, testNamespace, jobName string, componentPipelineRun *v1beta1.PipelineRun, cs *common.SuiteController, t *tekton.TektonController) error {
+func StoreTestLogs(testNamespace, jobName string, componentPipelineRun *v1beta1.PipelineRun, cs *common.SuiteController, t *tekton.TektonController) error {
 	wd, _ := os.Getwd()
 	artifactDir := GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
+	classname := ShortenStringAddHash(CurrentSpecReport())
 	testLogsDir := fmt.Sprintf("%s/%s", artifactDir, classname)
 
 	if err := os.MkdirAll(testLogsDir, os.ModePerm); err != nil {
@@ -22,7 +23,6 @@ func StoreTestLogs(classname, testNamespace, jobName string, componentPipelineRu
 	}
 
 	var errPods, errPipelineRuns error
-
 	if errPods = cs.StorePodLogs(testNamespace, jobName, testLogsDir); errPods != nil {
 		GinkgoWriter.Printf("Failed to store pod logs: %v", errPods)
 	}

@@ -81,6 +81,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 	snapshot := &appservice.Snapshot{}
 	env := &appservice.Environment{}
 	fw := &framework.Framework{}
+	AfterEach(framework.ReportFailure(&fw))
 
 	for _, appTest := range e2eConfig.TestScenarios {
 		appTest := appTest

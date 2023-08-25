@@ -31,7 +31,9 @@ import (
 )
 
 var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "HACBS"), func() {
+
 	var f *framework.Framework
+	AfterEach(framework.ReportFailure(&f))
 	var pacControllerRoute *routev1.Route
 
 	var err error
@@ -188,7 +190,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				robotAccountExist, err := build.DoesRobotAccountExistInQuay(robotAccountName)
 				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if robot account exists in quay with error: %+v", err)
 				Expect(robotAccountExist).To(BeTrue(), "quay robot account does not exists")
-
 			})
 			It("a related PipelineRun and Github webhook should be deleted after deleting the component", func() {
 				timeout = time.Second * 60

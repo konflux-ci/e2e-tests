@@ -31,6 +31,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 		"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZP/0htjhVt2y0ohjgtIIgICOtQtA\n" +
 		"naYJRuLprwIv6FDhZ5yFjYUEtsmoNcW7rx2KM6FOXGsCX3BNc7qhHELT+g==\n" +
 		"-----END PUBLIC KEY-----")
+	AfterEach(framework.ReportFailure(&fwk))
 
 	BeforeAll(func() {
 		fwk, err = framework.NewFramework(utils.GetGeneratedNamespace(constants.TEKTON_CHAINS_E2E_USER))
@@ -57,16 +58,15 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 	Context("ec-cli command verification", func() {
 		BeforeEach(func() {
 			generator = tekton.VerifyEnterpriseContract{
-				Bundle:              verifyECTaskBundle,
-				Image:               imageWithDigest,
+				TaskBundle:          verifyECTaskBundle,
 				Name:                "verify-enterprise-contract",
 				Namespace:           namespace,
 				PolicyConfiguration: "ec-policy",
 				PublicKey:           fmt.Sprintf("k8s://%s/%s", namespace, publicSecretName),
-				SSLCertDir:          "/var/run/secrets/kubernetes.io/serviceaccount",
 				Strict:              false,
 				EffectiveTime:       "now",
 			}
+			generator.WithComponentImage(imageWithDigest)
 			pipelineRunTimeout = int(time.Duration(5) * time.Minute)
 			baselinePolicies := ecp.EnterpriseContractPolicySpec{
 				Configuration: policyConfig,
@@ -130,7 +130,8 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 				},
 			}
 			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
-			generator.Image = snapshotComponent
+			generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-out-of-date-task")
+			generator.AppendComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-unacceptable-task")
 			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
@@ -159,16 +160,15 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			GinkgoWriter.Println("Update public key to verify golden images")
 			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(goldenImagePublicKey, secretName, namespace)).To(Succeed())
 			generator = tekton.VerifyEnterpriseContract{
-				Bundle:              verifyECTaskBundle,
-				Image:               imageWithDigest,
+				TaskBundle:          verifyECTaskBundle,
 				Name:                "verify-enterprise-contract",
 				Namespace:           namespace,
 				PolicyConfiguration: "ec-policy",
 				PublicKey:           fmt.Sprintf("k8s://%s/%s", namespace, secretName),
-				SSLCertDir:          "/var/run/secrets/kubernetes.io/serviceaccount",
 				Strict:              false,
 				EffectiveTime:       "now",
 			}
+			generator.WithComponentImage(imageWithDigest)
 			pipelineRunTimeout = int(time.Duration(5) * time.Minute)
 		})
 
@@ -181,7 +181,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			}
 			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
-			generator.Image = "quay.io/redhat-appstudio/ec-golden-image:e2e-test-unacceptable-task"
+			generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-unacceptable-task")
 			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
@@ -214,7 +214,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			}
 			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
-			generator.Image = "quay.io/redhat-appstudio/ec-golden-image:e2e-test-out-of-date-task"
+			generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-out-of-date-task")
 			generator.EffectiveTime = "2023-03-31T00:00:00Z"
 			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
@@ -259,7 +259,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			}
 			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
-			generator.Image = "quay.io/redhat-appstudio-qe/enterprise-contract-tests:e2e-test-unpinned-task-bundle"
+			generator.WithComponentImage("quay.io/redhat-appstudio-qe/enterprise-contract-tests:e2e-test-unpinned-task-bundle")
 			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())

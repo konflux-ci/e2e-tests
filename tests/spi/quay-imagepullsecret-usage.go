@@ -41,6 +41,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 	var namespace string
 	var QuayAuthToken string
 	var QuayAuthUser string
+	AfterEach(framework.ReportFailure(&fw))
 
 	Describe("SVPI-407 - Check ImagePullSecret usage for the private Quay image", Ordered, func() {
 		BeforeAll(func() {
