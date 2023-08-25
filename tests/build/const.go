@@ -20,7 +20,7 @@ const (
 
 	helloWorldComponentGitSourceRepoName = "devfile-sample-hello-world"
 	helloWorldComponentDefaultBranch     = "default"
-	helloWorldComponentRevision          = "e17b15c4ea1fd4a2553e17ab24561bbe40d0e2f4"
+	helloWorldComponentRevision          = "b915157dc9efac492ebc285d4a44ce67e6ab2075"
 )
 
 var (
