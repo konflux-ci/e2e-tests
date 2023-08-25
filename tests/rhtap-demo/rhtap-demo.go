@@ -3,12 +3,13 @@ package rhtap_demo
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/redhat-appstudio/jvm-build-service/openshift-with-appstudio-test/e2e"
 	jvmclientSet "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
 	pipelineclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
-	"strings"
-	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
@@ -229,7 +230,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 							component, err = fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), namespace)
 							Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
 
-							Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
+							Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, fw.AsKubeAdmin.TektonController)).To(Succeed())
 						}
 					})
 
@@ -448,7 +449,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 
 							When("SLSA level 3 customizable PipelineRun is created", func() {
 								It("should eventually complete successfully", func() {
-									Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResultSha, 2)).To(Succeed())
+									Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResultSha, 2, fw.AsKubeAdmin.TektonController)).To(Succeed())
 								})
 
 								It("does not contain an annotation with a Snapshot Name", func() {

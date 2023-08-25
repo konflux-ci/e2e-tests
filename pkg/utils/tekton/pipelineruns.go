@@ -288,14 +288,14 @@ func GetFailedPipelineRunLogs(c crclient.Client, ki kubernetes.Interface, pipeli
 	return failMessage, nil
 }
 
-// StorePipelineRunLogs stores logs and parsed yamls of pipelineRuns into directory of pipelineruns' namespace under ARTIFACT_DIR env.
+// StorePipelineRun stores logs and parsed yamls of pipelineRuns into directory of pipelineruns' namespace under ARTIFACT_DIR env.
 // In case the files can't be stored in ARTIFACT_DIR, they will be recorder in GinkgoWriter.
-func StoreFailedPipelineRun(pipelineRun *v1beta1.PipelineRun, classname string, c crclient.Client, ki kubernetes.Interface) error {
+func (t *TektonController) StorePipelineRun(pipelineRun *v1beta1.PipelineRun, classname string) error {
 	wd, _ := os.Getwd()
 	artifactDir := utils.GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
 	testLogsDir := fmt.Sprintf("%s/%s", artifactDir, classname)
 
-	pipelineRunLog, err := GetFailedPipelineRunLogs(c, ki, pipelineRun)
+	pipelineRunLog, err := t.GetPipelineRunLogs(pipelineRun.Name, pipelineRun.Namespace)
 	if err != nil {
 		return fmt.Errorf("failed to store PipelineRun: %+v", err)
 	}
@@ -335,37 +335,15 @@ func StoreFailedPipelineRun(pipelineRun *v1beta1.PipelineRun, classname string, 
 }
 
 // StorePipelineRuns stores logs of all pipelineruns in given namespace in folder specified under ARTIFACT_DIR env.
-func (t *TektonController) StorePipelineRuns(componentPipelineRun *v1beta1.PipelineRun, testLogsDir, testNamespace string) error {
-	if err := os.MkdirAll(testLogsDir, os.ModePerm); err != nil {
-		return err
-	}
-
-	filepath := fmt.Sprintf("%s/%s-pr-%s.log", testLogsDir, testNamespace, componentPipelineRun.Name)
-	pipelineLogs, err := t.GetPipelineRunLogs(componentPipelineRun.Name, testNamespace)
-	if err != nil {
-		g.GinkgoWriter.Printf("got error fetching PR logs: %v\n", err.Error())
-	} else {
-		if err := os.WriteFile(filepath, []byte(pipelineLogs), 0644); err != nil {
-			g.GinkgoWriter.Printf("cannot write to %s: %+v\n", filepath, err)
-		}
-	}
-
+func (t *TektonController) StorePipelineRuns(classname, testNamespace string) error {
 	pipelineRuns, err := t.ListAllPipelineRuns(testNamespace)
-
 	if err != nil {
 		return fmt.Errorf("got error fetching PR list: %v\n", err.Error())
 	}
 
 	for _, pipelineRun := range pipelineRuns.Items {
-		filepath := fmt.Sprintf("%s/%s-pr-%s.log", testLogsDir, testNamespace, pipelineRun.Name)
-		pipelineLogs, err := t.GetPipelineRunLogs(pipelineRun.Name, testNamespace)
-		if err != nil {
-			g.GinkgoWriter.Printf("got error fetching PR logs: %v\n", err.Error())
-			continue
-		}
-
-		if err := os.WriteFile(filepath, []byte(pipelineLogs), 0644); err != nil {
-			g.GinkgoWriter.Printf("cannot write to %s: %+v\n", filepath, err)
+		if err := t.StorePipelineRun(&pipelineRun, classname); err != nil {
+			g.GinkgoWriter.Printf("Error storing pipelineRun: %v\n", err.Error())
 		}
 	}
 

@@ -7,12 +7,11 @@ import (
 	. "github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 
 	. "github.com/onsi/ginkgo/v2"
 )
 
-func StoreTestLogs(testNamespace, jobName string, componentPipelineRun *v1beta1.PipelineRun, cs *common.SuiteController, t *tekton.TektonController) error {
+func StoreTestLogs(testNamespace, jobName string, cs *common.SuiteController, t *tekton.TektonController) error {
 	wd, _ := os.Getwd()
 	artifactDir := GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
 	classname := ShortenStringAddHash(CurrentSpecReport())
@@ -27,10 +26,8 @@ func StoreTestLogs(testNamespace, jobName string, componentPipelineRun *v1beta1.
 		GinkgoWriter.Printf("Failed to store pod logs: %v", errPods)
 	}
 
-	if componentPipelineRun != nil {
-		if errPipelineRuns = t.StorePipelineRuns(componentPipelineRun, testLogsDir, testNamespace); errPipelineRuns != nil {
-			GinkgoWriter.Printf("Failed to store pipelineRun logs: %v", errPipelineRuns)
-		}
+	if errPipelineRuns = t.StorePipelineRuns(classname, testNamespace); errPipelineRuns != nil {
+		GinkgoWriter.Printf("Failed to store pipelineRun logs: %v", errPipelineRuns)
 	}
 
 	// joining errors
