@@ -19,7 +19,6 @@ type User struct {
 	Verified bool   `json:"verified"`
 }
 
-
 func LoadStageUsers(filePath string) ([]User, error) {
 	jsonData, err := os.ReadFile(filePath)
 	if err != nil {
@@ -54,6 +53,7 @@ func SelectUsers(userList []User, numberOfUsers, threadCount, maxUsers int) ([]U
 	return selectedUsers, nil
 }
 
+//Indentify CI and get unique Job Name
 //Indentify CI and get unique Job Name
 func GetJobName()(string){
 	var jobName string
