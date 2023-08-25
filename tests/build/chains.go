@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
@@ -16,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
+	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
 	kubeapi "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
@@ -341,15 +343,35 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				"pipelines/enterprise-contract-slsa3.yaml",
 			}
 
-			gitRevision := os.Getenv(constants.EC_PIPELINES_REPO_REVISION_ENV)
-			if len(gitRevision) == 0 {
-				gitRevision = "main"
-			}
+			var gitRevision, gitURL string
 
-			gitURL := os.Getenv(constants.EC_PIPELINES_REPO_URL_ENV)
-			if len(gitURL) == 0 {
-				gitURL = "https://github.com/redhat-appstudio/build-definitions"
-			}
+			defaultGHOrg := "redhat-appstudio"
+			defaultGHRepo := "build-definitions"
+			defaultGitURL := fmt.Sprintf("https://github.com/%s/%s", defaultGHOrg, defaultGHRepo)
+			defaultGitRevision := "main"
+
+			BeforeAll(func() {
+				// If we are testing the changes from a pull request, APP_SUFFIX may contain the
+				// pull request ID. If it looks like an ID, then fetch information about the pull
+				// request and use it to determine which git URL and revision to use for the EC
+				// pipelines. NOTE: This is a workaround until Pipeline as Code supports passing
+				// the source repo URL: https://issues.redhat.com/browse/SRVKP-3427. Once that's
+				// implemented, remove the APP_SUFFIX support below and simply rely on the other
+				// environment variables to set the git revision and URL directly.
+				appSuffix := os.Getenv("APP_SUFFIX")
+				if pullRequestID, err := strconv.ParseInt(appSuffix, 10, 64); err == nil {
+					gh, err := github.NewGithubClient(utils.GetEnv(constants.GITHUB_TOKEN_ENV, ""), defaultGHOrg)
+					Expect(err).NotTo(HaveOccurred())
+					pullRequest, err := gh.GetPullRequest(defaultGHRepo, int(pullRequestID))
+					Expect(err).NotTo(HaveOccurred())
+					gitURL = *pullRequest.Head.Repo.CloneURL
+					gitRevision = *pullRequest.Head.Ref
+					return
+				}
+
+				gitRevision = utils.GetEnv(constants.EC_PIPELINES_REPO_REVISION_ENV, defaultGitRevision)
+				gitURL = utils.GetEnv(constants.EC_PIPELINES_REPO_URL_ENV, defaultGitURL)
+			})
 
 			for _, pathInRepo := range ecPipelines {
 				pathInRepo := pathInRepo
