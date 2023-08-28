@@ -15,9 +15,9 @@ source "./tests/load-tests/ci-scripts/user-prefix.sh"
 
 echo "Collecting load test results"
 load_test_log=$ARTIFACT_DIR/load-tests.log
-cp -vf $output_dir/*.log "$ARTIFACT_DIR"
-cp -vf $output_dir/load-tests.json "$ARTIFACT_DIR"
-cp -vf $output_dir/gh-rate-limits-remaining.csv "$ARTIFACT_DIR"
+find "$output_dir" -type f -name '*.log' -exec cp -vf {} "${ARTIFACT_DIR}" \;
+find "$output_dir" -type f -name 'load-tests.json' -exec cp -vf {} "${ARTIFACT_DIR}" \;
+find "$output_dir" -type f -name 'gh-rate-limits-remaining.csv' -exec cp -vf {} "${ARTIFACT_DIR}" \;
 
 pipelineruns_json=$ARTIFACT_DIR/pipelineruns.json
 taskruns_json=$ARTIFACT_DIR/taskruns.json
@@ -107,8 +107,7 @@ if [ -f "$load_test_log" ]; then
         grep -c "$i" "$load_test_log"
     done | sort -V || :
 else
-    echo "File $load_test_log does not exist!"
-    exit 1
+    echo "WARNING: File $load_test_log not found!"
 fi
 
 ## Monitoring data
@@ -121,28 +120,36 @@ python3 -m pip install -U pip
 python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team-core&subdirectory=core"
 
 echo "Collecting monitoring data..."
-mstart=$(date --utc --date "$(status_data.py --status-data-file "$monitoring_collection_data" --get timestamp)" --iso-8601=seconds)
-mend=$(date --utc --date "$(status_data.py --status-data-file "$monitoring_collection_data" --get endTimestamp)" --iso-8601=seconds)
-mhost=$(oc -n openshift-monitoring get route -l app.kubernetes.io/name=thanos-query -o json | jq --raw-output '.items[0].spec.host')
-status_data.py \
-    --status-data-file "$monitoring_collection_data" \
-    --additional ./tests/load-tests/cluster_read_config.yaml \
-    --monitoring-start "$mstart" \
-    --monitoring-end "$mend" \
-    --prometheus-host "https://$mhost" \
-    --prometheus-port 443 \
-    --prometheus-token "$(oc whoami -t)" \
-    -d &>$monitoring_collection_log
-set +u
-deactivate
-set -u
+if [ -f "$monitoring_collection_data" ]; then
+    mstart=$(date --utc --date "$(status_data.py --status-data-file "$monitoring_collection_data" --get timestamp)" --iso-8601=seconds)
+    mend=$(date --utc --date "$(status_data.py --status-data-file "$monitoring_collection_data" --get endTimestamp)" --iso-8601=seconds)
+    mhost=$(oc -n openshift-monitoring get route -l app.kubernetes.io/name=thanos-query -o json | jq --raw-output '.items[0].spec.host')
+    status_data.py \
+        --status-data-file "$monitoring_collection_data" \
+        --additional ./tests/load-tests/cluster_read_config.yaml \
+        --monitoring-start "$mstart" \
+        --monitoring-end "$mend" \
+        --prometheus-host "https://$mhost" \
+        --prometheus-port 443 \
+        --prometheus-token "$(oc whoami -t)" \
+        -d &>$monitoring_collection_log
+    set +u
+    deactivate
+    set -u
+else
+    echo "WARNING: File $monitoring_collection_data not found!"
+fi
 
 ## Tekton prifiling data
 if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
     echo "Collecting profiling data from Tekton controller"
     pprof_profile="$output_dir/cpu-profile.pprof"
-    go tool pprof -text "$pprof_profile" >$ARTIFACT_DIR/cpu-profile.txt
-    go tool pprof -svg -output="$ARTIFACT_DIR/cpu-profile.svg" "$pprof_profile"
+    if [ -f "$pprof_profile" ]; then
+        go tool pprof -text "$pprof_profile" >"$ARTIFACT_DIR/cpu-profile.txt" || true
+        go tool pprof -svg -output="$ARTIFACT_DIR/cpu-profile.svg" "$pprof_profile" || true
+    else
+        echo "WARNING: File $pprof_profile not found!"
+    fi
 fi
 
 ## Pods on Nodes distribution
@@ -199,8 +206,12 @@ tapa_all_csv=$ARTIFACT_DIR/tapa.all.csv
 tapa_tmp=tapa.tmp
 
 sort_csv() {
-    head -n1 "$1" >"$2"
-    tail -n+2 "$1" | sort -t ";" -k 2 -r -n >>"$2"
+    if [ -f "$1" ]; then
+        head -n1 "$1" >"$2"
+        tail -n+2 "$1" | sort -t ";" -k 2 -r -n >>"$2"
+    else
+        echo "WARNING: File $1 not found!"
+    fi
 }
 
 $tapa prlist "$pipelineruns_json" >"$tapa_tmp"

@@ -12,8 +12,8 @@ pushd "${2:-.}"
 output_dir="${OUTPUT_DIR:-./tests/load-tests}"
 
 echo "Collecting load test results"
-cp -vf $output_dir/load-tests.max-concurrency.*.log "$ARTIFACT_DIR"
-cp -vf $output_dir/load-tests.max-concurrency.json "$ARTIFACT_DIR"
+find "$output_dir" -type f -name 'load-tests.max-concurrency.*.log' -exec cp -vf {} "${ARTIFACT_DIR}" \;
+find "$output_dir" -type f -name 'load-tests.max-concurrency.json' -exec cp -vf {} "${ARTIFACT_DIR}" \;
 
 echo "Setting up tool to collect monitoring data..."
 python3 -m venv venv
@@ -24,7 +24,7 @@ set -u
 python3 -m pip install -U pip
 python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team-core&subdirectory=core"
 
-for monitoring_collection_data in $output_dir/load-tests.max-concurrency.*.json; do
+for monitoring_collection_data in $(find "$output_dir" -type f -name 'load-tests.max-concurrency.*.json'); do
     index=$(echo "$monitoring_collection_data" | sed -e 's,.*/load-tests.max-concurrency.\([0-9]\+\).json,\1,')
     monitoring_collection_log="$ARTIFACT_DIR/monitoring-collection.$index.log"
 
@@ -47,9 +47,13 @@ for monitoring_collection_data in $output_dir/load-tests.max-concurrency.*.json;
     if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
         echo "Collecting profiling data from Tekton controller"
         pprof_profile="$output_dir/cpu-profile.$index.pprof"
-        cp "$pprof_profile" "$ARTIFACT_DIR"
-        go tool pprof -text "$pprof_profile" >"$ARTIFACT_DIR/cpu-profile.$index.txt"
-        go tool pprof -svg -output="$ARTIFACT_DIR/cpu-profile.$index.svg" "$pprof_profile"
+        if [ -f "$pprof_profile" ]; then
+            cp "$pprof_profile" "$ARTIFACT_DIR"
+            go tool pprof -text "$pprof_profile" >"$ARTIFACT_DIR/cpu-profile.$index.txt" || true
+            go tool pprof -svg -output="$ARTIFACT_DIR/cpu-profile.$index.svg" "$pprof_profile" || true
+        else
+            echo "WARNING: File $pprof_profile not found!"
+        fi
     fi
 done
 set +u
@@ -81,26 +85,31 @@ ${csv_delim}ClusterPipelineScheduleFirstPodAvg\
 ${csv_delim}ClusterTaskrunThrottledByNodeResourcesAvg\
 ${csv_delim}ClusterTaskRunThrottledByDefinedQuotaAvg" \
     >"$max_concurrency_csv"
-cat $output_dir/load-tests.max-concurrency.*.json |
-    jq -rc "(.threads | tostring) \
-    + $csv_delim_quoted + (.errorsTotal | tostring) \
-    + $csv_delim_quoted + (.createUserTimeAvg | tostring) \
-    + $csv_delim_quoted + (.createUserTimeMax | tostring) \
-    + $csv_delim_quoted + (.createResourcesTimeAvg | tostring) \
-    + $csv_delim_quoted + (.createResourcesTimeMax | tostring) \
-    + $csv_delim_quoted + (.runPipelineSucceededTimeAvg | tostring) \
-    + $csv_delim_quoted + (.runPipelineSucceededTimeMax | tostring) \
-    + $csv_delim_quoted + (.measurements.cluster_cpu_usage_seconds_total_rate.mean | tostring) \
-    + $csv_delim_quoted + (.measurements.cluster_disk_throughput_total.mean | tostring) \
-    + $csv_delim_quoted + (.measurements.cluster_memory_usage_rss_total.mean | tostring) \
-    + $csv_delim_quoted + (.measurements.cluster_pods_count.mean | tostring) \
-    + $csv_delim_quoted + (.measurements.storage_count_attachable_volumes_in_use.mean | tostring) \
-    + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_pipelineruns_count.mean | tostring) \
-    + $csv_delim_quoted + (.measurements.tekton_tekton_pipelines_controller_workqueue_depth.mean | tostring) \
-    + $csv_delim_quoted + (.measurements.pipelinerun_duration_scheduled_seconds.mean | tostring) \
-    + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_node.mean | tostring) \
-    + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_quota.mean | tostring)" \
-        >>"$max_concurrency_csv"
+mc_files=$(find "$output_dir" -type f -name 'load-tests.max-concurrency.*.json')
+if [ -n "$mc_files" ]; then
+    cat $mc_files |
+        jq -rc "(.threads | tostring) \
+        + $csv_delim_quoted + (.errorsTotal | tostring) \
+        + $csv_delim_quoted + (.createUserTimeAvg | tostring) \
+        + $csv_delim_quoted + (.createUserTimeMax | tostring) \
+        + $csv_delim_quoted + (.createResourcesTimeAvg | tostring) \
+        + $csv_delim_quoted + (.createResourcesTimeMax | tostring) \
+        + $csv_delim_quoted + (.runPipelineSucceededTimeAvg | tostring) \
+        + $csv_delim_quoted + (.runPipelineSucceededTimeMax | tostring) \
+        + $csv_delim_quoted + (.measurements.cluster_cpu_usage_seconds_total_rate.mean | tostring) \
+        + $csv_delim_quoted + (.measurements.cluster_disk_throughput_total.mean | tostring) \
+        + $csv_delim_quoted + (.measurements.cluster_memory_usage_rss_total.mean | tostring) \
+        + $csv_delim_quoted + (.measurements.cluster_pods_count.mean | tostring) \
+        + $csv_delim_quoted + (.measurements.storage_count_attachable_volumes_in_use.mean | tostring) \
+        + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_pipelineruns_count.mean | tostring) \
+        + $csv_delim_quoted + (.measurements.tekton_tekton_pipelines_controller_workqueue_depth.mean | tostring) \
+        + $csv_delim_quoted + (.measurements.pipelinerun_duration_scheduled_seconds.mean | tostring) \
+        + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_node.mean | tostring) \
+        + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_quota.mean | tostring)" \
+            >>"$max_concurrency_csv"
+else
+    echo "WARNING: No file matching '$output_dir/load-tests.max-concurrency.*.json' found!"
+fi
 
 ## PipelineRun timestamps
 echo "Collecting PipelineRun timestamps..."
