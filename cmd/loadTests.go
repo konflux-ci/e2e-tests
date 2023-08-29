@@ -153,20 +153,27 @@ type LogData struct {
 	IntegrationTestsMaxTimeToRunPipelineSucceeded     float64 `json:"integrationTestsRunPipelineSucceededTimeMax"`
 	IntegrationTestsAverageTimeToRunPipelineFailed    float64 `json:"integrationTestsRunPipelineFailedTimeAvg"`
 
+	UserCreationSuccessCount        int64   `json:"createUserSuccesses"`
 	UserCreationFailureCount        int64   `json:"createUserFailures"`
 	UserCreationFailureRate         float64 `json:"createUserFailureRate"`
+	ApplicationCreationSuccessCount int64   `json:"createApplicationsSuccesses"`
 	ApplicationCreationFailureCount int64   `json:"createApplicationsFailures"`
 	ApplicationCreationFailureRate  float64 `json:"createsApplictionsFailureRate"`
+	CDQCreationSuccessCount         int64   `json:"createCDQsSuccesses"`
 	CDQCreationFailureCount         int64   `json:"createCDQsFailures"`
 	CDQCreationFailureRate          float64 `json:"createCDQsFailureRate"`
+	ComponentCreationSuccessCount   int64   `json:"createComponentsSuccesses"`
 	ComponentCreationFailureCount   int64   `json:"createComponentsFailures"`
 	ComponentCreationFailureRate    float64 `json:"createComponentsFailureRate"`
+	PipelineRunSuccessCount         int64   `json:"runPipelineSuccesses"`
 	PipelineRunFailureCount         int64   `json:"runPipelineFailures"`
 	PipelineRunFailureRate          float64 `json:"runPipelineFailureRate"`
 
+	DeploymentSuccessCount int64   `json:"deploymentSuccesses"`
 	DeploymentFailureCount int64   `json:"deploymentFailures"`
 	DeploymentFailureRate  float64 `json:"deploymentFailureRate"`
 
+	IntegrationTestsPipelineRunSuccessCount int64   `json:"integrationTestsRunPipelineSuccesses"`
 	IntegrationTestsPipelineRunFailureCount int64   `json:"integrationTestsRunPipelineFailures"`
 	IntegrationTestsPipelineRunFailureRate  float64 `json:"integrationTestsRunPipelineFailureRate"`
 
@@ -472,11 +479,13 @@ func setup(cmd *cobra.Command, args []string) {
 
 	logData.LoadTestCompletionStatus = "Completed"
 
+	userCreationSuccessCount := sumFromArray(SuccessfulUserCreationsPerThread)
+	logData.UserCreationSuccessCount = userCreationSuccessCount
+
 	userCreationFailureCount := sumFromArray(FailedUserCreationsPerThread)
 	logData.UserCreationFailureCount = userCreationFailureCount
 
 	averageTimeToSpinUpUsers := float64(0)
-	userCreationSuccessCount := sumFromArray(SuccessfulUserCreationsPerThread)
 	if userCreationSuccessCount > 0 {
 		averageTimeToSpinUpUsers = sumDurationFromArray(UserCreationTimeSumPerThread).Seconds() / float64(userCreationSuccessCount)
 	}
@@ -484,17 +493,25 @@ func setup(cmd *cobra.Command, args []string) {
 
 	logData.MaxTimeToSpinUpUsers = maxDurationFromArray(UserCreationTimeMaxPerThread).Seconds()
 
+	applicationCreationSuccessCount := sumFromArray(SuccessfulApplicationCreationsPerThread)
+	logData.ApplicationCreationSuccessCount = applicationCreationSuccessCount
+
 	applicationCreationFailureCount := sumFromArray(FailedApplicationCreationsPerThread)
 	logData.ApplicationCreationFailureCount = applicationCreationFailureCount
 
+	cdqCreationSuccessCount := sumFromArray(SuccessfulCDQCreationsPerThread)
+	logData.CDQCreationSuccessCount = cdqCreationSuccessCount
+
 	cdqCreationFailureCount := sumFromArray(FailedCDQCreationsPerThread)
 	logData.CDQCreationFailureCount = cdqCreationFailureCount
+
+	componentCreationSuccessCount := sumFromArray(SuccessfulComponentCreationsPerThread)
+	logData.ComponentCreationSuccessCount = componentCreationSuccessCount
 
 	componentCreationFailureCount := sumFromArray(FailedComponentCreationsPerThread)
 	logData.ComponentCreationFailureCount = componentCreationFailureCount
 
 	averageTimeToCreateApplications := float64(0)
-	applicationCreationSuccessCount := sumFromArray(SuccessfulApplicationCreationsPerThread)
 	if applicationCreationSuccessCount > 0 {
 		averageTimeToCreateApplications = sumDurationFromArray(ApplicationCreationTimeSumPerThread).Seconds() / float64(applicationCreationSuccessCount)
 	}
@@ -503,7 +520,6 @@ func setup(cmd *cobra.Command, args []string) {
 	logData.MaxTimeToCreateApplications = maxDurationFromArray(ApplicationCreationTimeMaxPerThread).Seconds()
 
 	averageTimeToCreateCDQs := float64(0)
-	cdqCreationSuccessCount := sumFromArray(SuccessfulCDQCreationsPerThread)
 	if cdqCreationSuccessCount > 0 {
 		averageTimeToCreateCDQs = sumDurationFromArray(CDQCreationTimeSumPerThread).Seconds() / float64(cdqCreationSuccessCount)
 	}
@@ -512,7 +528,6 @@ func setup(cmd *cobra.Command, args []string) {
 	logData.MaxTimeToCreateCDQs = maxDurationFromArray(CDQCreationTimeMaxPerThread).Seconds()
 
 	averageTimeToCreateComponents := float64(0)
-	componentCreationSuccessCount := sumFromArray(SuccessfulComponentCreationsPerThread)
 	if componentCreationSuccessCount > 0 {
 		averageTimeToCreateComponents = sumDurationFromArray(ComponentCreationTimeSumPerThread).Seconds() / float64(cdqCreationSuccessCount)
 	}
@@ -520,17 +535,25 @@ func setup(cmd *cobra.Command, args []string) {
 
 	logData.MaxTimeToCreateComponents = maxDurationFromArray(ComponentCreationTimeMaxPerThread).Seconds()
 
+	pipelineRunSuccessCount := sumFromArray(SuccessfulPipelineRunsPerThread)
+	logData.PipelineRunSuccessCount = pipelineRunSuccessCount
+
 	pipelineRunFailureCount := sumFromArray(FailedPipelineRunsPerThread)
 	logData.PipelineRunFailureCount = pipelineRunFailureCount
+
+	deploymentSuccessCount := sumFromArray(SuccessfulDeploymentsPerThread)
+	logData.DeploymentSuccessCount = deploymentSuccessCount
 
 	deploymentFailureCount := sumFromArray(FailedDeploymentsPerThread)
 	logData.DeploymentFailureCount = deploymentFailureCount
 
-	IntegrationTestsPipelineRunFailureCount := sumFromArray(FailedIntegrationTestsPipelineRunsPerThread)
-	logData.IntegrationTestsPipelineRunFailureCount = IntegrationTestsPipelineRunFailureCount
+	integrationTestsPipelineRunSuccessCount := sumFromArray(SuccessfulIntegrationTestsPipelineRunsPerThread)
+	logData.IntegrationTestsPipelineRunSuccessCount = integrationTestsPipelineRunSuccessCount
+
+	integrationTestsPipelineRunFailureCount := sumFromArray(FailedIntegrationTestsPipelineRunsPerThread)
+	logData.IntegrationTestsPipelineRunFailureCount = integrationTestsPipelineRunFailureCount
 
 	averageTimeToRunPipelineSucceeded := float64(0)
-	pipelineRunSuccessCount := sumFromArray(SuccessfulPipelineRunsPerThread)
 	if pipelineRunSuccessCount > 0 {
 		averageTimeToRunPipelineSucceeded = sumDurationFromArray(PipelineRunSucceededTimeSumPerThread).Seconds() / float64(pipelineRunSuccessCount)
 	}
@@ -545,7 +568,6 @@ func setup(cmd *cobra.Command, args []string) {
 	logData.AverageTimeToRunPipelineFailed = averageTimeToRunPipelineFailed
 
 	averageTimeToDeploymentSucceeded := float64(0)
-	deploymentSuccessCount := sumFromArray(SuccessfulDeploymentsPerThread)
 	if deploymentSuccessCount > 0 {
 		averageTimeToDeploymentSucceeded = sumDurationFromArray(DeploymentSucceededTimeSumPerThread).Seconds() / float64(deploymentSuccessCount)
 	}
@@ -560,17 +582,16 @@ func setup(cmd *cobra.Command, args []string) {
 	logData.AverageTimeToDeploymentFailed = averageTimeToDeploymentFailed
 
 	IntegrationTestsAverageTimeToRunPipelineSucceeded := float64(0)
-	IntegrationTestsPipelineRunSuccessCount := sumFromArray(SuccessfulIntegrationTestsPipelineRunsPerThread)
-	if IntegrationTestsPipelineRunSuccessCount > 0 {
-		IntegrationTestsAverageTimeToRunPipelineSucceeded = sumDurationFromArray(IntegrationTestsPipelineRunSucceededTimeSumPerThread).Seconds() / float64(IntegrationTestsPipelineRunSuccessCount)
+	if integrationTestsPipelineRunSuccessCount > 0 {
+		IntegrationTestsAverageTimeToRunPipelineSucceeded = sumDurationFromArray(IntegrationTestsPipelineRunSucceededTimeSumPerThread).Seconds() / float64(integrationTestsPipelineRunSuccessCount)
 	}
 	logData.IntegrationTestsAverageTimeToRunPipelineSucceeded = IntegrationTestsAverageTimeToRunPipelineSucceeded
 
 	logData.IntegrationTestsMaxTimeToRunPipelineSucceeded = maxDurationFromArray(IntegrationTestsPipelineRunSucceededTimeMaxPerThread).Seconds()
 
 	IntegrationTestsAverageTimeToRunPipelineFailed := float64(0)
-	if IntegrationTestsPipelineRunFailureCount > 0 {
-		IntegrationTestsAverageTimeToRunPipelineFailed = sumDurationFromArray(IntegrationTestsPipelineRunFailedTimeSumPerThread).Seconds() / float64(IntegrationTestsPipelineRunFailureCount)
+	if integrationTestsPipelineRunFailureCount > 0 {
+		IntegrationTestsAverageTimeToRunPipelineFailed = sumDurationFromArray(IntegrationTestsPipelineRunFailedTimeSumPerThread).Seconds() / float64(integrationTestsPipelineRunFailureCount)
 	}
 	logData.IntegrationTestsAverageTimeToRunPipelineFailed = IntegrationTestsAverageTimeToRunPipelineFailed
 
@@ -589,7 +610,7 @@ func setup(cmd *cobra.Command, args []string) {
 	pipelineRunFailureRate := float64(pipelineRunFailureCount) / float64(overallCount)
 	logData.PipelineRunFailureRate = pipelineRunFailureRate
 
-	IntegrationTestsPipelineRunFailureRate := float64(IntegrationTestsPipelineRunFailureCount) / float64(overallCount)
+	IntegrationTestsPipelineRunFailureRate := float64(integrationTestsPipelineRunFailureCount) / float64(overallCount)
 	logData.IntegrationTestsPipelineRunFailureRate = IntegrationTestsPipelineRunFailureRate
 
 	deploymentFailureRate := float64(deploymentFailureCount) / float64(overallCount)
@@ -621,13 +642,13 @@ func setup(cmd *cobra.Command, args []string) {
 	klog.Infof("Maximal Time to deploy component successfully: %.2f s", logData.MaxTimeToDeploymentSucceeded)
 	klog.Infof("Average Time to fail Deployments: %.2f s", averageTimeToDeploymentFailed)
 
-	klog.Infof("Number of times user creation failed: %d (%.2f %%)", userCreationFailureCount, userCreationFailureRate*100)
-	klog.Infof("Number of times application creation failed: %d (%.2f %%)", applicationCreationFailureCount, applicationCreationFailureRate*100)
-	klog.Infof("Number of times cdq creation failed: %d (%.2f %%)", cdqCreationFailureCount, cdqCreationFailureRate*100)
-	klog.Infof("Number of times component creation failed: %d (%.2f %%)", componentCreationFailureCount, componentCreationFailureRate*100)
-	klog.Infof("Number of times pipeline run failed: %d (%.2f %%)", pipelineRunFailureCount, pipelineRunFailureRate*100)
-	klog.Infof("Number of times IntegrationTests pipeline run failed: %d (%.2f %%)", IntegrationTestsPipelineRunFailureCount, IntegrationTestsPipelineRunFailureRate*100)
-	klog.Infof("Number of times deployment failed: %d (%.2f %%)", deploymentFailureCount, deploymentFailureRate*100)
+	klog.Infof("Number of times user creation worked/failed: %d/%d (%.2f %%)", userCreationSuccessCount, userCreationFailureCount, userCreationFailureRate*100)
+	klog.Infof("Number of times application creation worked/failed: %d/%d (%.2f %%)", applicationCreationSuccessCount, applicationCreationFailureCount, applicationCreationFailureRate*100)
+	klog.Infof("Number of times cdq creation worked/failed: %d/%d (%.2f %%)", cdqCreationSuccessCount, cdqCreationFailureCount, cdqCreationFailureRate*100)
+	klog.Infof("Number of times component creation worked/failed: %d/%d (%.2f %%)", componentCreationSuccessCount, componentCreationFailureCount, componentCreationFailureRate*100)
+	klog.Infof("Number of times pipeline run worked/failed: %d/%d (%.2f %%)", pipelineRunSuccessCount, pipelineRunFailureCount, pipelineRunFailureRate*100)
+	klog.Infof("Number of times IntegrationTests pipeline run worked/failed: %d/%d (%.2f %%)", integrationTestsPipelineRunSuccessCount, integrationTestsPipelineRunFailureCount, IntegrationTestsPipelineRunFailureRate*100)
+	klog.Infof("Number of times deployment worked/failed: %d/%d (%.2f %%)", deploymentSuccessCount, deploymentFailureCount, deploymentFailureRate*100)
 
 	klog.Infoln("Error summary:")
 	for _, errorCount := range errorCountMap {
