@@ -27,7 +27,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
-var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "ec-pipelines", "HACBS"), func() {
+var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HACBS"), func() {
 	defer GinkgoRecover()
 
 	var namespace string
@@ -63,7 +63,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "ec
 		})
 	})
 
-	Context("test creating and signing an image and task", Label("pipeline"), func() {
+	Context("test creating and signing an image and task", Label("pipeline", "ec-pipelines"), func() {
 		// Make the PipelineRun name and namespace predictable. For convenience, the name of the
 		// PipelineRun that builds an image, is the same as the repository where the image is
 		// pushed to.
