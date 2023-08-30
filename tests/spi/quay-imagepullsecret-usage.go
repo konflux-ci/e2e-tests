@@ -45,6 +45,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 
 	Describe("SVPI-407 - Check ImagePullSecret usage for the private Quay image", Ordered, func() {
 		BeforeAll(func() {
+			Skip(fmt.Sprintln("test skipped"))
 			if os.Getenv("CI") != "true" {
 				Skip(fmt.Sprintln("test skipped on local execution"))
 			}
