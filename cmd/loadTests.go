@@ -877,7 +877,6 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			framework := frameworkForUser(username)
 			if framework == nil {
 				logError(2, fmt.Sprintf("Framework not found for username %s", username))
-				// TODO increaseBar(resourcesBar, resourcesBarMutex)
 				continue
 			}
 			usernamespace := framework.UserNamespace
@@ -919,8 +918,6 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				}
 			}, gitopsRepoInterval, gitopsRepoTimeout); err != nil {
 				logError(4, fmt.Sprintf("Unable to create application %s gitops repo within %v: %v", ApplicationName, gitopsRepoTimeout, err))
-				// TODO FailedResourceCreationsPerThread[threadIndex] += 1
-				// TODO increaseBar(resourcesBar, resourcesBarMutex)
 				continue
 			}
 
@@ -932,8 +929,6 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			integrationTestScenario, err = framework.AsKubeDeveloper.IntegrationController.CreateIntegrationTestScenario_beta1(ApplicationName, usernamespace, testScenarioGitURL, testScenarioRevision, testScenarioPathInRepo)
 			if err != nil {
 				logError(5, fmt.Sprintf("Unable to create integrationTestScenario : %v \n", err))
-				// TODO FailedResourceCreationsPerThread[threadIndex] += 1
-				// TODO increaseBar(resourcesBar, resourcesBarMutex)
 				continue
 			}
 			userTestScenarioMap.Store(username, integrationTestScenario.Name)
