@@ -646,7 +646,7 @@ func setup(cmd *cobra.Command, args []string) {
 	klog.Infof("Number of times cdq creation worked/failed: %d/%d (%.2f %%)", cdqCreationSuccessCount, cdqCreationFailureCount, cdqCreationFailureRate*100)
 	klog.Infof("Number of times component creation worked/failed: %d/%d (%.2f %%)", componentCreationSuccessCount, componentCreationFailureCount, componentCreationFailureRate*100)
 	klog.Infof("Number of times pipeline run worked/failed: %d/%d (%.2f %%)", pipelineRunSuccessCount, pipelineRunFailureCount, pipelineRunFailureRate*100)
-	klog.Infof("Number of times IntegrationTests pipeline run worked/failed: %d/%d (%.2f %%)", integrationTestsPipelineRunSuccessCount, integrationTestsPipelineRunFailureCount, IntegrationTestsPipelineRunFailureRate*100)
+	klog.Infof("Number of times integration tests' pipeline run worked/failed: %d/%d (%.2f %%)", integrationTestsPipelineRunSuccessCount, integrationTestsPipelineRunFailureCount, IntegrationTestsPipelineRunFailureRate*100)
 	klog.Infof("Number of times deployment worked/failed: %d/%d (%.2f %%)", deploymentSuccessCount, deploymentFailureCount, deploymentFailureRate*100)
 
 	klog.Infoln("Error summary:")
