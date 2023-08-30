@@ -402,7 +402,7 @@ func setup(cmd *cobra.Command, args []string) {
 
 		if waitIntegrationTestsPipelines {
 			integrationTestProgress := uip.AddBar(overallCount).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
-				return strutil.PadLeft(fmt.Sprintf("Waiting for Integration Test pipelines to finish (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedIntegrationTestsPipelineRunsPerThread)), barLength, ' ')
+				return strutil.PadLeft(fmt.Sprintf("Waiting for integration tests to finish (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedIntegrationTestsPipelineRunsPerThread)), barLength, ' ')
 			})
 			IntegrationTestsPipelinesBar = integrationTestProgress
 		}
@@ -622,25 +622,17 @@ func setup(cmd *cobra.Command, args []string) {
 
 	klog.Infof("🏁 Load Test Completed!")
 	klog.Infof("📈 Results 📉")
-	klog.Infof("Average Time to spin up users: %.2f s", averageTimeToSpinUpUsers)
-	klog.Infof("Maximal Time to spin up users: %.2f s", logData.MaxTimeToSpinUpUsers)
-	klog.Infof("Average Time to create application: %.2f s", averageTimeToCreateApplications)
-	klog.Infof("Maximal Time to create application: %.2f s", logData.MaxTimeToCreateApplications)
-	klog.Infof("Average Time to create cdq: %.2f s", averageTimeToCreateCDQs)
-	klog.Infof("Maximal Time to create cdq: %.2f s", logData.MaxTimeToCreateCDQs)
-	klog.Infof("Average Time to create component: %.2f s", averageTimeToCreateComponents)
-	klog.Infof("Maximal Time to create component: %.2f s", logData.MaxTimeToCreateComponents)
-	klog.Infof("Average Time to run Pipelines successfully: %.2f s", averageTimeToRunPipelineSucceeded)
-	klog.Infof("Maximal Time to run Pipelines successfully: %.2f s", logData.MaxTimeToRunPipelineSucceeded)
-	klog.Infof("Average Time to fail Pipelines: %.2f s", averageTimeToRunPipelineFailed)
+	klog.Infof("Avg/max time to spin up users: %.2f s/%.2f s", averageTimeToSpinUpUsers, logData.MaxTimeToSpinUpUsers)
+	klog.Infof("Avg/max time to create application: %.2f s/%.2f s", averageTimeToCreateApplications, logData.MaxTimeToCreateApplications)
+	klog.Infof("Avg/max time to create cdq: %.2f s/%.2f s", averageTimeToCreateCDQs, logData.MaxTimeToCreateCDQs)
+	klog.Infof("Avg/max time to create component: %.2f s/%.2f s", averageTimeToCreateComponents, logData.MaxTimeToCreateComponents)
+	klog.Infof("Avg/max time to complete pipelinesrun: %.2f s/%.2f s", averageTimeToRunPipelineSucceeded, logData.MaxTimeToRunPipelineSucceeded)
+	klog.Infof("Average time to complete integration test: %.2f s/%.2f s", IntegrationTestsAverageTimeToRunPipelineSucceeded, logData.IntegrationTestsMaxTimeToRunPipelineSucceeded)
+	klog.Infof("Avg/max time to complete deployment: %.2f s/%.2f s", averageTimeToDeploymentSucceeded, logData.MaxTimeToDeploymentSucceeded)
 
-	klog.Infof("Average Time to run IntegrationTests Pipelines successfully: %.2f s", IntegrationTestsAverageTimeToRunPipelineSucceeded)
-	klog.Infof("Maximal Time to run IntegrationTests Pipelines successfully: %.2f s", logData.IntegrationTestsMaxTimeToRunPipelineSucceeded)
-	klog.Infof("Average Time to fail IntegrationTests Pipelines: %.2f s", IntegrationTestsAverageTimeToRunPipelineFailed)
-
-	klog.Infof("Average Time to deploy component successfully: %.2f s", averageTimeToDeploymentSucceeded)
-	klog.Infof("Maximal Time to deploy component successfully: %.2f s", logData.MaxTimeToDeploymentSucceeded)
-	klog.Infof("Average Time to fail Deployments: %.2f s", averageTimeToDeploymentFailed)
+	klog.Infof("Average time to fail pipelinerun: %.2f s", averageTimeToRunPipelineFailed)
+	klog.Infof("Average time to fail integration test: %.2f s", IntegrationTestsAverageTimeToRunPipelineFailed)
+	klog.Infof("Average time to fail deployment: %.2f s", averageTimeToDeploymentFailed)
 
 	klog.Infof("Number of times user creation worked/failed: %d/%d (%.2f %%)", userCreationSuccessCount, userCreationFailureCount, userCreationFailureRate*100)
 	klog.Infof("Number of times application creation worked/failed: %d/%d (%.2f %%)", applicationCreationSuccessCount, applicationCreationFailureCount, applicationCreationFailureRate*100)
