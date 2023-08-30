@@ -266,46 +266,46 @@ func (i *InstallAppStudio) CheckOperatorsReady() (err error) {
 		klog.Fatal(err)
 	}
 
-	// for {
-	// 	var count = 0
-	// 	appsListFor, err := appClientset.ArgoprojV1alpha1().Applications("openshift-gitops").List(context.TODO(), metav1.ListOptions{})
-	// 	for _, app := range appsListFor.Items {
-	// 		fmt.Printf("Check application: %s\n", app.Name)
-	// 		application, err := appClientset.ArgoprojV1alpha1().Applications("openshift-gitops").Get(context.TODO(), app.Name, metav1.GetOptions{})
-	// 		if err != nil {
-	// 			panic(err.Error())
-	// 		}
+	for {
+		var count = 0
+		appsListFor, err := appClientset.ArgoprojV1alpha1().Applications("openshift-gitops").List(context.TODO(), metav1.ListOptions{})
+		for _, app := range appsListFor.Items {
+			fmt.Printf("Check application: %s\n", app.Name)
+			application, err := appClientset.ArgoprojV1alpha1().Applications("openshift-gitops").Get(context.TODO(), app.Name, metav1.GetOptions{})
+			if err != nil {
+				panic(err.Error())
+			}
 
-	// 		if !(application.Status.Sync.Status == "Synced" && application.Status.Health.Status == "Healthy") {
-	// 			fmt.Printf("Application %s not ready\n", app.Name)
-	// 			count++
-	// 		} else if strings.Contains(application.String(), ("context deadline exceeded")) {
-	// 			fmt.Printf("Refreshing Application %s\n", app.Name)
-	// 			patchPayload := []patchStringValue{{
-	// 				Op:    "replace",
-	// 				Path:  "/metadata/annotations/argocd.argoproj.io~1refresh",
-	// 				Value: "soft",
-	// 			}}
+			if !(application.Status.Sync.Status == "Synced" && application.Status.Health.Status == "Healthy") {
+				fmt.Printf("Application %s not ready\n", app.Name)
+				count++
+			} else if strings.Contains(application.String(), ("context deadline exceeded")) {
+				fmt.Printf("Refreshing Application %s\n", app.Name)
+				patchPayload := []patchStringValue{{
+					Op:    "replace",
+					Path:  "/metadata/annotations/argocd.argoproj.io~1refresh",
+					Value: "soft",
+				}}
 
-	// 			patchPayloadBytes, _ := json.Marshal(patchPayload)
-	// 			for _, app := range appsListFor.Items {
-	// 				_, err = i.KubernetesClient.KubeInterface().AppsV1().Deployments("openshift-gitops").Patch(context.TODO(), app.Name, types.JSONPatchType, patchPayloadBytes, metav1.PatchOptions{})
-	// 				if err != nil {
-	// 					klog.Fatal(err)
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// 	if err != nil {
-	// 		klog.Fatal(err)
-	// 	}
+				patchPayloadBytes, _ := json.Marshal(patchPayload)
+				for _, app := range appsListFor.Items {
+					_, err = i.KubernetesClient.KubeInterface().AppsV1().Deployments("openshift-gitops").Patch(context.TODO(), app.Name, types.JSONPatchType, patchPayloadBytes, metav1.PatchOptions{})
+					if err != nil {
+						klog.Fatal(err)
+					}
+				}
+			}
+		}
+		if err != nil {
+			klog.Fatal(err)
+		}
 
-	// 	if count == 0 {
-	// 		fmt.Printf("All Application are ready\n")
-	// 		break
-	// 	}
-	// 	time.Sleep(10 * time.Second)
-	// }
+		if count == 0 {
+			fmt.Printf("All Application are ready\n")
+			break
+		}
+		time.Sleep(10 * time.Second)
+	}
 	return err
 }
 
