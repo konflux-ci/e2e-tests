@@ -479,6 +479,7 @@ func setup(cmd *cobra.Command, args []string) {
 
 	logData.LoadTestCompletionStatus = "Completed"
 
+	// Compiling data about UserSignups
 	userCreationSuccessCount := sumFromArray(SuccessfulUserCreationsPerThread)
 	logData.UserCreationSuccessCount = userCreationSuccessCount
 
@@ -493,23 +494,15 @@ func setup(cmd *cobra.Command, args []string) {
 
 	logData.MaxTimeToSpinUpUsers = maxDurationFromArray(UserCreationTimeMaxPerThread).Seconds()
 
+	userCreationFailureRate := float64(userCreationFailureCount) / float64(overallCount)
+	logData.UserCreationFailureRate = userCreationFailureRate
+
+	// Compiling data about Applications
 	applicationCreationSuccessCount := sumFromArray(SuccessfulApplicationCreationsPerThread)
 	logData.ApplicationCreationSuccessCount = applicationCreationSuccessCount
 
 	applicationCreationFailureCount := sumFromArray(FailedApplicationCreationsPerThread)
 	logData.ApplicationCreationFailureCount = applicationCreationFailureCount
-
-	cdqCreationSuccessCount := sumFromArray(SuccessfulCDQCreationsPerThread)
-	logData.CDQCreationSuccessCount = cdqCreationSuccessCount
-
-	cdqCreationFailureCount := sumFromArray(FailedCDQCreationsPerThread)
-	logData.CDQCreationFailureCount = cdqCreationFailureCount
-
-	componentCreationSuccessCount := sumFromArray(SuccessfulComponentCreationsPerThread)
-	logData.ComponentCreationSuccessCount = componentCreationSuccessCount
-
-	componentCreationFailureCount := sumFromArray(FailedComponentCreationsPerThread)
-	logData.ComponentCreationFailureCount = componentCreationFailureCount
 
 	averageTimeToCreateApplications := float64(0)
 	if applicationCreationSuccessCount > 0 {
@@ -519,6 +512,16 @@ func setup(cmd *cobra.Command, args []string) {
 
 	logData.MaxTimeToCreateApplications = maxDurationFromArray(ApplicationCreationTimeMaxPerThread).Seconds()
 
+	applicationCreationFailureRate := float64(applicationCreationFailureCount) / float64(overallCount)
+	logData.ApplicationCreationFailureRate = applicationCreationFailureRate
+
+	// Compiling data about CDQs
+	cdqCreationSuccessCount := sumFromArray(SuccessfulCDQCreationsPerThread)
+	logData.CDQCreationSuccessCount = cdqCreationSuccessCount
+
+	cdqCreationFailureCount := sumFromArray(FailedCDQCreationsPerThread)
+	logData.CDQCreationFailureCount = cdqCreationFailureCount
+
 	averageTimeToCreateCDQs := float64(0)
 	if cdqCreationSuccessCount > 0 {
 		averageTimeToCreateCDQs = sumDurationFromArray(CDQCreationTimeSumPerThread).Seconds() / float64(cdqCreationSuccessCount)
@@ -526,6 +529,16 @@ func setup(cmd *cobra.Command, args []string) {
 	logData.AverageTimeToCreateCDQs = averageTimeToCreateCDQs
 
 	logData.MaxTimeToCreateCDQs = maxDurationFromArray(CDQCreationTimeMaxPerThread).Seconds()
+
+	cdqCreationFailureRate := float64(cdqCreationFailureCount) / float64(overallCount)
+	logData.CDQCreationFailureRate = cdqCreationFailureRate
+
+	// Compiling data about Components
+	componentCreationSuccessCount := sumFromArray(SuccessfulComponentCreationsPerThread)
+	logData.ComponentCreationSuccessCount = componentCreationSuccessCount
+
+	componentCreationFailureCount := sumFromArray(FailedComponentCreationsPerThread)
+	logData.ComponentCreationFailureCount = componentCreationFailureCount
 
 	averageTimeToCreateComponents := float64(0)
 	if componentCreationSuccessCount > 0 {
@@ -535,23 +548,15 @@ func setup(cmd *cobra.Command, args []string) {
 
 	logData.MaxTimeToCreateComponents = maxDurationFromArray(ComponentCreationTimeMaxPerThread).Seconds()
 
+	componentCreationFailureRate := float64(componentCreationFailureCount) / float64(overallCount)
+	logData.ComponentCreationFailureRate = componentCreationFailureRate
+
+	// Compile data about PipelineRuns
 	pipelineRunSuccessCount := sumFromArray(SuccessfulPipelineRunsPerThread)
 	logData.PipelineRunSuccessCount = pipelineRunSuccessCount
 
 	pipelineRunFailureCount := sumFromArray(FailedPipelineRunsPerThread)
 	logData.PipelineRunFailureCount = pipelineRunFailureCount
-
-	deploymentSuccessCount := sumFromArray(SuccessfulDeploymentsPerThread)
-	logData.DeploymentSuccessCount = deploymentSuccessCount
-
-	deploymentFailureCount := sumFromArray(FailedDeploymentsPerThread)
-	logData.DeploymentFailureCount = deploymentFailureCount
-
-	integrationTestsPipelineRunSuccessCount := sumFromArray(SuccessfulIntegrationTestsPipelineRunsPerThread)
-	logData.IntegrationTestsPipelineRunSuccessCount = integrationTestsPipelineRunSuccessCount
-
-	integrationTestsPipelineRunFailureCount := sumFromArray(FailedIntegrationTestsPipelineRunsPerThread)
-	logData.IntegrationTestsPipelineRunFailureCount = integrationTestsPipelineRunFailureCount
 
 	averageTimeToRunPipelineSucceeded := float64(0)
 	if pipelineRunSuccessCount > 0 {
@@ -567,19 +572,15 @@ func setup(cmd *cobra.Command, args []string) {
 	}
 	logData.AverageTimeToRunPipelineFailed = averageTimeToRunPipelineFailed
 
-	averageTimeToDeploymentSucceeded := float64(0)
-	if deploymentSuccessCount > 0 {
-		averageTimeToDeploymentSucceeded = sumDurationFromArray(DeploymentSucceededTimeSumPerThread).Seconds() / float64(deploymentSuccessCount)
-	}
-	logData.AverageTimeToDeploymentSucceeded = averageTimeToDeploymentSucceeded
+	pipelineRunFailureRate := float64(pipelineRunFailureCount) / float64(overallCount)
+	logData.PipelineRunFailureRate = pipelineRunFailureRate
 
-	logData.MaxTimeToDeploymentSucceeded = maxDurationFromArray(DeploymentSucceededTimeMaxPerThread).Seconds()
+	// Compile data about integration tests
+	integrationTestsPipelineRunSuccessCount := sumFromArray(SuccessfulIntegrationTestsPipelineRunsPerThread)
+	logData.IntegrationTestsPipelineRunSuccessCount = integrationTestsPipelineRunSuccessCount
 
-	averageTimeToDeploymentFailed := float64(0)
-	if deploymentFailureCount > 0 {
-		averageTimeToDeploymentFailed = sumDurationFromArray(DeploymentFailedTimeSumPerThread).Seconds() / float64(deploymentFailureCount)
-	}
-	logData.AverageTimeToDeploymentFailed = averageTimeToDeploymentFailed
+	integrationTestsPipelineRunFailureCount := sumFromArray(FailedIntegrationTestsPipelineRunsPerThread)
+	logData.IntegrationTestsPipelineRunFailureCount = integrationTestsPipelineRunFailureCount
 
 	IntegrationTestsAverageTimeToRunPipelineSucceeded := float64(0)
 	if integrationTestsPipelineRunSuccessCount > 0 {
@@ -595,23 +596,29 @@ func setup(cmd *cobra.Command, args []string) {
 	}
 	logData.IntegrationTestsAverageTimeToRunPipelineFailed = IntegrationTestsAverageTimeToRunPipelineFailed
 
-	userCreationFailureRate := float64(userCreationFailureCount) / float64(overallCount)
-	logData.UserCreationFailureRate = userCreationFailureRate
-
-	applicationCreationFailureRate := float64(applicationCreationFailureCount) / float64(overallCount)
-	logData.ApplicationCreationFailureRate = applicationCreationFailureRate
-
-	cdqCreationFailureRate := float64(cdqCreationFailureCount) / float64(overallCount)
-	logData.CDQCreationFailureRate = cdqCreationFailureRate
-
-	componentCreationFailureRate := float64(componentCreationFailureCount) / float64(overallCount)
-	logData.ComponentCreationFailureRate = componentCreationFailureRate
-
-	pipelineRunFailureRate := float64(pipelineRunFailureCount) / float64(overallCount)
-	logData.PipelineRunFailureRate = pipelineRunFailureRate
-
 	IntegrationTestsPipelineRunFailureRate := float64(integrationTestsPipelineRunFailureCount) / float64(overallCount)
 	logData.IntegrationTestsPipelineRunFailureRate = IntegrationTestsPipelineRunFailureRate
+
+	// Compile data about Deployments
+	deploymentSuccessCount := sumFromArray(SuccessfulDeploymentsPerThread)
+	logData.DeploymentSuccessCount = deploymentSuccessCount
+
+	deploymentFailureCount := sumFromArray(FailedDeploymentsPerThread)
+	logData.DeploymentFailureCount = deploymentFailureCount
+
+	averageTimeToDeploymentSucceeded := float64(0)
+	if deploymentSuccessCount > 0 {
+		averageTimeToDeploymentSucceeded = sumDurationFromArray(DeploymentSucceededTimeSumPerThread).Seconds() / float64(deploymentSuccessCount)
+	}
+	logData.AverageTimeToDeploymentSucceeded = averageTimeToDeploymentSucceeded
+
+	logData.MaxTimeToDeploymentSucceeded = maxDurationFromArray(DeploymentSucceededTimeMaxPerThread).Seconds()
+
+	averageTimeToDeploymentFailed := float64(0)
+	if deploymentFailureCount > 0 {
+		averageTimeToDeploymentFailed = sumDurationFromArray(DeploymentFailedTimeSumPerThread).Seconds() / float64(deploymentFailureCount)
+	}
+	logData.AverageTimeToDeploymentFailed = averageTimeToDeploymentFailed
 
 	deploymentFailureRate := float64(deploymentFailureCount) / float64(overallCount)
 	logData.DeploymentFailureRate = deploymentFailureRate
