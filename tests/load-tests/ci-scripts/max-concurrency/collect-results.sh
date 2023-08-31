@@ -78,12 +78,18 @@ ${csv_delim}ClusterCPUUsageAvg\
 ${csv_delim}ClusterDiskUsageAvg\
 ${csv_delim}ClusterMemoryUsageAvg\
 ${csv_delim}ClusterPodCountAvg\
+${csv_delim}ClusterNodesWorkerCountAvg\
+${csv_delim}ClusterRunningPodsOnWorkersCountAvg\
 ${csv_delim}ClusterPVCInUseAvg\
+${csv_delim}SchedulerPendingPodsCountAvg\
+${csv_delim}TokenPoolRatePrimaryAvg\
+${csv_delim}TokenPoolRateSecondaryAvg\
 ${csv_delim}ClusterPipelineRunCountAvg\
 ${csv_delim}ClusterPipelineWorkqueueDepthAvg\
 ${csv_delim}ClusterPipelineScheduleFirstPodAvg\
 ${csv_delim}ClusterTaskrunThrottledByNodeResourcesAvg\
-${csv_delim}ClusterTaskRunThrottledByDefinedQuotaAvg" \
+${csv_delim}ClusterTaskRunThrottledByDefinedQuotaAvg
+${csv_delim}EtcdRequestDurationSecondsAvg" \
     >"$max_concurrency_csv"
 mc_files=$(find "$output_dir" -type f -name 'load-tests.max-concurrency.*.json')
 if [ -n "$mc_files" ]; then
@@ -100,12 +106,18 @@ if [ -n "$mc_files" ]; then
         + $csv_delim_quoted + (.measurements.cluster_disk_throughput_total.mean | tostring) \
         + $csv_delim_quoted + (.measurements.cluster_memory_usage_rss_total.mean | tostring) \
         + $csv_delim_quoted + (.measurements.cluster_pods_count.mean | tostring) \
+        + $csv_delim_quoted + (.measurements.cluster_nodes_worker_count.mean | tostring) \
+        + $csv_delim_quoted + (.measurements.cluster_running_pods_on_workers_count.mean | tostring) \
         + $csv_delim_quoted + (.measurements.storage_count_attachable_volumes_in_use.mean | tostring) \
+        + $csv_delim_quoted + (.measurements.scheduler_pending_pods_count.mean | tostring) \
+        + $csv_delim_quoted + (.measurements.token_pool_rate_primary.mean | tostring) \
+        + $csv_delim_quoted + (.measurements.token_pool_rate_secondary.mean | tostring) \
         + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_pipelineruns_count.mean | tostring) \
         + $csv_delim_quoted + (.measurements.tekton_tekton_pipelines_controller_workqueue_depth.mean | tostring) \
         + $csv_delim_quoted + (.measurements.pipelinerun_duration_scheduled_seconds.mean | tostring) \
         + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_node.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_quota.mean | tostring)" \
+        + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_quota.mean | tostring) \
+        + $csv_delim_quoted + (.measurements.etcd_request_duration_seconds_average.mean | tostring)" \
             >>"$max_concurrency_csv"
 else
     echo "WARNING: No file matching '$output_dir/load-tests.max-concurrency.*.json' found!"
