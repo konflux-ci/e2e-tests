@@ -18,8 +18,28 @@
   monitoring_query: sum (rate(container_fs_reads_bytes_total{id!="", device=~"(/dev.+)|mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|dasd.+", cluster=""}[5m]) + rate(container_fs_writes_bytes_total{id!="", device=~"(/dev.+)|mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|dasd.+", cluster=""}[5m]))
   monitoring_step: 15
 
+- name: measurements.token_pool_rate_primary
+  monitoring_query: sum(rate(token_pool_gauge{rateLimited="primary"}[5m]))
+  monitoring_step: 15
+
+- name: measurements.token_pool_rate_secondary
+  monitoring_query: sum(rate(token_pool_gauge{rateLimited="secondary"}[5m]))
+  monitoring_step: 15
+
+- name: measurements.cluster_nodes_worker_count
+  monitoring_query: count(kube_node_role{role="worker"})
+  monitoring_step: 15
+
 - name: measurements.cluster_pods_count
   monitoring_query: count(kube_pod_info)
+  monitoring_step: 15
+
+- name: measurements.cluster_running_pods_on_workers_count
+  monitoring_query: count(kube_pod_info * on(node) group_left(role) kube_node_role{role="worker"} and on(pod, namespace) (kube_pod_status_phase{job="kube-state-metrics", phase="Running"} > 0))
+  monitoring_step: 15
+
+- name: measurements.scheduler_pending_pods_count
+  monitoring_query: sum(scheduler_pending_pods)
   monitoring_step: 15
 
 - name: measurements.tekton_tekton_pipelines_controller_workqueue_depth
@@ -36,4 +56,8 @@
 
 - name: measurements.tekton_pipelines_controller_running_taskruns_throttled_by_quota
   monitoring_query: sum(tekton_pipelines_controller_running_taskruns_throttled_by_quota_count)
+  monitoring_step: 15
+
+- name: measurements.etcd_request_duration_seconds_average
+  monitoring_query: sum(rate(etcd_request_duration_seconds_sum{}[5m])) / sum(rate(etcd_request_duration_seconds_count[5m]))
   monitoring_step: 15
