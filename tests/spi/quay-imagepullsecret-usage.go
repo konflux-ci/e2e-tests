@@ -196,9 +196,10 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 			})
 
 			/*
-				Even though ClusterTasks are getting deprecated, for now, someone using OpenShift Pipelines should use the ClusterTasks.
-				Eventually, there will be a release that provides those as regular Tasks in a special namespace so cluster resolver can be used.
-				At that point, we should switch over.
+				ClusterTask is getting deprecated. See https://tekton.dev/docs/pipelines/tasks/#task-vs-clustertask and https://cloud.redhat.com/blog/migration-from-clustertasks-to-tekton-resolvers-in-openshift-pipelines.
+				Based on discussions in slack, even though ClusterTasks are getting deprecated, for now, someone using OpenShift Pipelines should use the ClusterTasks anyway.
+				Eventually, there will be a release that provides those as regular Tasks in a special namespace so cluster resolver can be used. At that point, we should switch over.
+
 			*/
 			var TaskRun *taskrunv1beta1.TaskRun
 			taskRunName := "skopeo-run"
