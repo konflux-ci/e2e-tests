@@ -2,7 +2,9 @@ package has
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -243,12 +245,19 @@ func (h *HasController) DeleteAllComponentsInASpecificNamespace(namespace string
 	}
 
 	componentList := &appservice.ComponentList{}
-	return utils.WaitUntil(func() (done bool, err error) {
+	err := utils.WaitUntil(func() (done bool, err error) {
 		if err := h.KubeRest().List(context.Background(), componentList, &rclient.ListOptions{Namespace: namespace}); err != nil {
 			return false, nil
 		}
 		return len(componentList.Items) == 0, nil
 	}, timeout)
+	if err != nil {
+		if err := h.gatherEverything("rhopp_debugInfo", namespace); err != nil {
+			return fmt.Errorf("error storing artifacts. \n%s", err)
+		}
+		return fmt.Errorf("error deleting all components from namespace %s.\n%s", namespace, err)
+	}
+	return err
 }
 
 // Waits for a component to be reconciled in the application service.
@@ -420,6 +429,80 @@ func (h *HasController) SetComponentAnnotation(componentName, annotationKey, ann
 	err = h.KubeRest().Update(context.TODO(), component)
 	if err != nil {
 		return fmt.Errorf("error when updating component: %+v", err)
+	}
+	return nil
+}
+
+func (h *HasController) gatherEverything(path, namespace string) error {
+	wd, _ := os.Getwd()
+	artifactDir := utils.GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
+	testLogsDir := fmt.Sprintf("%s/%s", artifactDir, path)
+
+	if err := os.MkdirAll(testLogsDir, os.ModePerm); err != nil {
+		return err
+	}
+	componentList := &appservice.ComponentList{}
+	h.KubeRest().List(context.TODO(), componentList, &rclient.ListOptions{Namespace: namespace})
+	if err := writeToFile(componentList, fmt.Sprintf("%s/%s", testLogsDir, "componentList.json")); err != nil {
+		return fmt.Errorf("failed writing components to file:\n %s", err)
+	}
+	applicationList := &appservice.ApplicationList{}
+	h.KubeRest().List(context.TODO(), applicationList, &rclient.ListOptions{Namespace: namespace})
+	if err := writeToFile(applicationList, fmt.Sprintf("%s/%s", testLogsDir, "applicationList.json")); err != nil {
+		return fmt.Errorf("failed writing applications to file: \n %s", err)
+	}
+	cdqList := &appservice.ComponentDetectionQueryList{}
+	h.KubeRest().List(context.TODO(), cdqList, &rclient.ListOptions{Namespace: namespace})
+	if err := writeToFile(cdqList, fmt.Sprintf("%s/%s", testLogsDir, "cdqList.json")); err != nil {
+		return fmt.Errorf("failed writing cdqs to file: \n %s", err)
+	}
+	envList := &appservice.EnvironmentList{}
+	h.KubeRest().List(context.TODO(), envList, &rclient.ListOptions{Namespace: namespace})
+	if err := writeToFile(envList, fmt.Sprintf("%s/%s", testLogsDir, "envList.json")); err != nil {
+		return fmt.Errorf("failed writing Environments to file: \n %s", err)
+	}
+	snapshotList := &appservice.SnapshotList{}
+	h.KubeRest().List(context.TODO(), snapshotList, &rclient.ListOptions{Namespace: namespace})
+	if err := writeToFile(snapshotList, fmt.Sprintf("%s/%s", testLogsDir, "snapshotList.json")); err != nil {
+		return fmt.Errorf("failed writing Snapshots to file: \n %s", err)
+	}
+	sebList := &appservice.SnapshotEnvironmentBindingList{}
+	h.KubeRest().List(context.TODO(), sebList, &rclient.ListOptions{Namespace: namespace})
+	if err := writeToFile(sebList, fmt.Sprintf("%s/%s", testLogsDir, "snapshotEnvBindingList.json")); err != nil {
+		return fmt.Errorf("failed writing SnapshotEnvironmentBinding to file: \n %s", err)
+	}
+	promotionRunList := &appservice.PromotionRunList{}
+	h.KubeRest().List(context.TODO(), promotionRunList, &rclient.ListOptions{Namespace: namespace})
+	if err := writeToFile(promotionRunList, fmt.Sprintf("%s/%s", testLogsDir, "promotionRunList.json")); err != nil {
+		return fmt.Errorf("failed writing PromotionRuns to file: \n %s", err)
+	}
+	deploymentTargetList := &appservice.DeploymentTargetList{}
+	h.KubeRest().List(context.TODO(), deploymentTargetList, &rclient.ListOptions{Namespace: namespace})
+	if err := writeToFile(deploymentTargetList, fmt.Sprintf("%s/%s", testLogsDir, "deploymentTargetList.json")); err != nil {
+		return fmt.Errorf("failed writing DeploymentTargets to file: \n %s", err)
+	}
+	deploymentTargetClassList := &appservice.DeploymentTargetClassList{}
+	h.KubeRest().List(context.TODO(), deploymentTargetClassList, &rclient.ListOptions{Namespace: namespace})
+	if err := writeToFile(deploymentTargetClassList, fmt.Sprintf("%s/%s", testLogsDir, "deploymentTargetClassList.json")); err != nil {
+		return fmt.Errorf("failed writing DeploymentTargetClasses to file: \n %s", err)
+	}
+	deploymentTargetClaimList := &appservice.DeploymentTargetClaimList{}
+	h.KubeRest().List(context.TODO(), deploymentTargetClaimList, &rclient.ListOptions{Namespace: namespace})
+	if err := writeToFile(deploymentTargetClaimList, fmt.Sprintf("%s/%s", testLogsDir, "deploymentTargetClaimList.json")); err != nil {
+		return fmt.Errorf("failed writing DeploymentTargetClaims to file: \n %s", err)
+	}
+
+	return nil
+}
+
+func writeToFile(resource any, filePath string) error {
+	jsonData, err := json.MarshalIndent(resource, "", "\t")
+	if err != nil {
+		return fmt.Errorf("errror marshalling resource: %s", err)
+	}
+	err = os.WriteFile(filePath, jsonData, 0644)
+	if err != nil {
+		return fmt.Errorf("error writing %s: %s", filePath, err)
 	}
 	return nil
 }
