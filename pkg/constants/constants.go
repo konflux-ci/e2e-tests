@@ -98,7 +98,7 @@ const (
 
 	BuildTaskRunName = "build-container"
 
-	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.15"
+	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.18"
 
 	StrategyConfigsRepo          = "strategy-configs"
 	StrategyConfigsDefaultBranch = "main"

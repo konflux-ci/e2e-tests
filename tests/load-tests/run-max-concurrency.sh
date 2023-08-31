@@ -10,7 +10,7 @@ load_test() {
     if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
         echo "Starting CPU profiling with pprof"
         TEKTON_PERF_PROFILE_CPU_PERIOD=${TEKTON_PERF_PROFILE_CPU_PERIOD:-${THRESHOLD:-300}}
-        oc exec -n openshift-pipelines $(oc get pods -n openshift-pipelines -l app=tekton-pipelines-controller -o name) -- bash -c "curl -SsL --max-time $((TEKTON_PERF_PROFILE_CPU_PERIOD + 10)) localhost:8008/debug/pprof/profile?seconds=${TEKTON_PERF_PROFILE_CPU_PERIOD} | base64" | base64 -d >"$output_dir/cpu-profile.$index.pprof" &
+        oc exec -n openshift-pipelines "$(oc get pods -n openshift-pipelines -l app=tekton-pipelines-controller -o name)" -- bash -c "curl -SsL --max-time $((TEKTON_PERF_PROFILE_CPU_PERIOD + 10)) localhost:8008/debug/pprof/profile?seconds=${TEKTON_PERF_PROFILE_CPU_PERIOD} | base64" | base64 -d >"$output_dir/cpu-profile.$index.pprof" &
         TEKTON_PROFILER_PID=$!
     fi
     go run loadtest.go \
@@ -39,11 +39,14 @@ if [ ${#USER_PREFIX} -gt 10 ]; then
     exit 1
 else
     output="$output_dir/load-tests.max-concurrency.json"
-    maxConcurrencyStep=${MAX_CONCURRENCY_STEP:-1}
+    IFS=" " read -r -a maxConcurrencySteps <<<"${MAX_CONCURRENCY_STEPS:-1 5 10 25 50 100 150 200}"
     maxThreads=${MAX_THREADS:-10}
     threshold=${THRESHOLD:-300}
-    echo '{"maxThreads": '"$maxThreads"', "maxConcurrencyStep": '"$maxConcurrencyStep"', "threshold": '"$threshold"', "maxConcurrencyReached": 0}' | jq >"$output"
-    for t in $(seq 1 "${maxConcurrencyStep}" "${maxThreads}"); do
+    echo '{"maxThreads": '"$maxThreads"', "maxConcurrencySteps": "'"${maxConcurrencySteps[*]}"'", "threshold": '"$threshold"', "maxConcurrencyReached": 0}' | jq >"$output"
+    for t in "${maxConcurrencySteps[@]}"; do
+        if (("$t" > "$maxThreads")); then
+            break
+        fi
         echo "Deleting resources from previous steps"
         for res in pipelineruns.tekton.dev components.appstudio.redhat.com componentdetectionqueries.appstudio.redhat.com snapshotenvironmentbindings.appstudio.redhat.com applications.appstudio.redhat.com; do
             echo -e " * $res"
