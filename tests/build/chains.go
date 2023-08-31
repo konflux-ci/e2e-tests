@@ -1,10 +1,8 @@
 package build
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
@@ -17,12 +15,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
 	kubeapi "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
@@ -63,7 +59,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 		})
 	})
 
-	Context("test creating and signing an image and task", Label("pipeline", "ec-pipelines"), func() {
+	Context("test creating and signing an image and task", Label("pipeline"), func() {
 		// Make the PipelineRun name and namespace predictable. For convenience, the name of the
 		// PipelineRun that builds an image, is the same as the repository where the image is
 		// pushed to.
@@ -326,95 +322,6 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			})
 		})
 
-		Context("build-definitions ec pipelines", func() {
-			ecPipelines := []string{
-				"pipelines/enterprise-contract.yaml",
-				"pipelines/enterprise-contract-everything.yaml",
-				"pipelines/enterprise-contract-redhat.yaml",
-				"pipelines/enterprise-contract-slsa1.yaml",
-				"pipelines/enterprise-contract-slsa2.yaml",
-				"pipelines/enterprise-contract-slsa3.yaml",
-			}
-
-			var gitRevision, gitURL string
-
-			defaultGHOrg := "redhat-appstudio"
-			defaultGHRepo := "build-definitions"
-			defaultGitURL := fmt.Sprintf("https://github.com/%s/%s", defaultGHOrg, defaultGHRepo)
-			defaultGitRevision := "main"
-
-			BeforeAll(func() {
-				// If we are testing the changes from a pull request, APP_SUFFIX may contain the
-				// pull request ID. If it looks like an ID, then fetch information about the pull
-				// request and use it to determine which git URL and revision to use for the EC
-				// pipelines. NOTE: This is a workaround until Pipeline as Code supports passing
-				// the source repo URL: https://issues.redhat.com/browse/SRVKP-3427. Once that's
-				// implemented, remove the APP_SUFFIX support below and simply rely on the other
-				// environment variables to set the git revision and URL directly.
-				appSuffix := os.Getenv("APP_SUFFIX")
-				if pullRequestID, err := strconv.ParseInt(appSuffix, 10, 64); err == nil {
-					gh, err := github.NewGithubClient(utils.GetEnv(constants.GITHUB_TOKEN_ENV, ""), defaultGHOrg)
-					Expect(err).NotTo(HaveOccurred())
-					pullRequest, err := gh.GetPullRequest(defaultGHRepo, int(pullRequestID))
-					Expect(err).NotTo(HaveOccurred())
-					gitURL = *pullRequest.Head.Repo.CloneURL
-					gitRevision = *pullRequest.Head.Ref
-					return
-				}
-
-				gitRevision = utils.GetEnv(constants.EC_PIPELINES_REPO_REVISION_ENV, defaultGitRevision)
-				gitURL = utils.GetEnv(constants.EC_PIPELINES_REPO_URL_ENV, defaultGitURL)
-			})
-
-			for _, pathInRepo := range ecPipelines {
-				pathInRepo := pathInRepo
-				It(fmt.Sprintf("runs ec pipeline %s", pathInRepo), func() {
-					generator := tekton.ECIntegrationTestScenario{
-						Image:                 imageWithDigest,
-						Namespace:             namespace,
-						PipelineGitURL:        gitURL,
-						PipelineGitRevision:   gitRevision,
-						PipelineGitPathInRepo: pathInRepo,
-					}
-
-					pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
-
-					// Refresh our copy of the PipelineRun for latest results
-					pr, err = fwk.AsKubeAdmin.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
-					Expect(err).NotTo(HaveOccurred())
-
-					// The UI uses this label to display additional information.
-					Expect(pr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
-
-					// The UI uses this label to display additional information.
-					tr, err := fwk.AsKubeAdmin.TektonController.GetTaskRunFromPipelineRun(kubeClient.CommonController.KubeRest(), pr, "verify")
-					Expect(err).NotTo(HaveOccurred())
-					Expect(tr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
-
-					logs, err := fwk.AsKubeAdmin.TektonController.GetTaskRunLogs(pr.Name, "verify", pr.Namespace)
-					Expect(err).NotTo(HaveOccurred())
-
-					// The logs from the report step are used by the UI to display validation
-					// details. Let's make sure it has valid YAML.
-					reportLogs := logs["step-report"]
-					Expect(reportLogs).NotTo(BeEmpty())
-					var reportYAML any
-					err = yaml.Unmarshal([]byte(reportLogs), &reportYAML)
-					Expect(err).NotTo(HaveOccurred())
-
-					// The logs from the summary step are used by the UI to display an overview of
-					// the validation.
-					summaryLogs := logs["step-summary"]
-					Expect(summaryLogs).NotTo(BeEmpty())
-					var summary build.TestOutput
-					err = json.Unmarshal([]byte(summaryLogs), &summary)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(summary).NotTo(Equal(build.TestOutput{}))
-				})
-			}
-		})
 	})
 })
 
