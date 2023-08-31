@@ -82,8 +82,8 @@ ${csv_delim}ClusterNodesWorkerCountAvg\
 ${csv_delim}ClusterRunningPodsOnWorkersCountAvg\
 ${csv_delim}ClusterPVCInUseAvg\
 ${csv_delim}SchedulerPendingPodsCountAvg\
-${csv_delim}TokenPoolRatePrimary\
-${csv_delim}TokenPoolRateSecondary\
+${csv_delim}TokenPoolRatePrimaryAvg\
+${csv_delim}TokenPoolRateSecondaryAvg\
 ${csv_delim}ClusterPipelineRunCountAvg\
 ${csv_delim}ClusterPipelineWorkqueueDepthAvg\
 ${csv_delim}ClusterPipelineScheduleFirstPodAvg\
