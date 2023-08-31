@@ -743,6 +743,7 @@ func (s *SuiteController) CreateTaskRunCopy(name, namespace, serviceAccountName,
 		Spec: v1beta1.TaskRunSpec{
 			ServiceAccountName: serviceAccountName,
 			TaskRef: &v1beta1.TaskRef{
+				Kind: v1beta1.ClusterTaskKind,
 				Name: "skopeo-copy",
 			},
 			Params: []v1beta1.Param{
