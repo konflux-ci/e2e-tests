@@ -259,9 +259,10 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 	var allTags []quay.Tag
 	var errors []error
 
-	page := 1
+	page := 1000
 	for {
 		tags, hasAdditional, err := quayService.GetTagsFromPage(organization, repository, page)
+		klog.Infof("page: %d, num of tags: %d, num of errors: %d", page, len(allTags), len(errors))
 		page++
 		if err != nil {
 			errors = append(errors, fmt.Errorf("error getting tags of `%s` repository of `%s` organization on page `%d`, error: %s", repository, organization, page, err))
@@ -282,8 +283,10 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 			for idx := startIdx; idx < len(allTags); idx += workerCount {
 				tag := allTags[idx]
 				if time.Unix(tag.StartTS, 0).Before(time.Now().AddDate(0, 0, -7)) {
+					klog.Infof("deleting %s", tag.Name)
 					deleted, err := quayService.DeleteTag(organization, repository, tag.Name)
 					if err != nil {
+						klog.Infof("error when deleting %s: %+v", tag.Name, err)
 						errorsMutex.Lock()
 						errors = append(errors, fmt.Errorf("error during deletion of tag `%s` in repository `%s` of organization `%s`, error: `%s`", tag.Name, repository, organization, err))
 						errorsMutex.Unlock()
