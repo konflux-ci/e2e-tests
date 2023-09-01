@@ -410,6 +410,11 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 						pr, err := kubeadminClient.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
 						Expect(err).NotTo(HaveOccurred())
+						defer func(pr *v1beta1.PipelineRun) {
+							// Avoid blowing up PipelineRun usage
+							err := kubeadminClient.TektonController.DeletePipelineRun(pr.Name, pr.Namespace)
+							Expect(err).NotTo(HaveOccurred())
+						}(pr)
 						Expect(kubeadminClient.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(Succeed())
 
 						// Refresh our copy of the PipelineRun for latest results
