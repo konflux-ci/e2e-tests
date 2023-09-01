@@ -112,7 +112,7 @@ func (s *SuiteController) StorePod(pod *corev1.Pod) error {
 			continue
 		}
 
-		artifacts["pod-"+pod.Name+"-"+c.Name+"-.log"] = []byte(log)
+		artifacts["pod-"+pod.Name+"-"+c.Name+".log"] = []byte(log)
 	}
 
 	return logs.StoreArtifacts(artifacts)

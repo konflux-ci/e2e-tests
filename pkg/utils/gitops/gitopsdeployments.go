@@ -37,7 +37,7 @@ func (g *GitopsController) ListAllGitOpsDeployments(namespace string) (*managedg
 
 // StoreGitOpsDeployment stores a given GitOpsDeployment as an artifact.
 func (g *GitopsController) StoreGitOpsDeployment(gitOpsDeployment *managedgitopsv1alpha1.GitOpsDeployment) error {
-	return logs.StoreResourceYaml(gitOpsDeployment, "gitOpsDeployment-"+gitOpsDeployment.Name+".yaml")
+	return logs.StoreResourceYaml(gitOpsDeployment, "gitOpsDeployment-"+gitOpsDeployment.Name)
 }
 
 // StoreAllGitOpsDeployments stores all GitOpsDeployments in a given namespace.

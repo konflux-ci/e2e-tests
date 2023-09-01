@@ -97,7 +97,7 @@ func (h *HasController) ListAllComponentDetectionQueries(namespace string) (*app
 
 // StoreComponentDetectionQuery stores a given ComponentDetectionQuery as an artifact.
 func (h *HasController) StoreComponentDetectionQuery(ComponentDetectionQuery *appservice.ComponentDetectionQuery) error {
-	return logs.StoreResourceYaml(ComponentDetectionQuery, "componentDetectionQuery-"+ComponentDetectionQuery.Name+".yaml")
+	return logs.StoreResourceYaml(ComponentDetectionQuery, "componentDetectionQuery-"+ComponentDetectionQuery.Name)
 }
 
 // StoreAllComponentDetectionQueries stores all ComponentDetectionQueries in a given namespace.

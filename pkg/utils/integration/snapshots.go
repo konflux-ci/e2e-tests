@@ -137,7 +137,7 @@ func (i *IntegrationController) ListAllSnapshots(namespace string) (*appstudioAp
 
 // StoreSnapshot stores a given Snapshot as an artifact.
 func (i *IntegrationController) StoreSnapshot(snapshot *appstudioApi.Snapshot) error {
-	return logs.StoreResourceYaml(snapshot, "snapshot-"+snapshot.Name+".yaml")
+	return logs.StoreResourceYaml(snapshot, "snapshot-"+snapshot.Name)
 }
 
 // StoreAllSnapshots stores all Snapshots in a given namespace.

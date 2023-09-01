@@ -138,7 +138,7 @@ func (h *HasController) ListAllApplications(namespace string) (*appservice.Appli
 
 // StoreApplication stores a given Application as an artifact.
 func (h *HasController) StoreApplication(application *appservice.Application) error {
-	return logs.StoreResourceYaml(application, "application-"+application.Name+".yaml")
+	return logs.StoreResourceYaml(application, "application-"+application.Name)
 }
 
 // StoreAllApplications stores all Applications in a given namespace.
