@@ -21,6 +21,7 @@ type TaskRunResultMatcher struct {
 	jsonMatcher types.GomegaMatcher
 }
 
+// FailureMessage returns failure message for a TaskRunResult matcher.
 func (matcher *TaskRunResultMatcher) FailureMessage(actual interface{}) (message string) {
 	if matcher.value != nil {
 		return fmt.Sprintf("%v to equal %v", actual, v1beta1.TaskRunResult{
@@ -32,6 +33,7 @@ func (matcher *TaskRunResultMatcher) FailureMessage(actual interface{}) (message
 	return matcher.jsonMatcher.FailureMessage(actual)
 }
 
+// Match matches the matcher with a given taskRun.
 func (matcher *TaskRunResultMatcher) Match(actual interface{}) (success bool, err error) {
 	if tr, ok := actual.(v1beta1.TaskRunResult); !ok {
 		return false, fmt.Errorf("not given TaskRunResult")
@@ -92,6 +94,7 @@ func (matcher *TaskRunResultMatcher) Match(actual interface{}) (success bool, er
 	}
 }
 
+// NegatedFailureMessage returns negated failure message for a TaskRunResult matcher.
 func (matcher *TaskRunResultMatcher) NegatedFailureMessage(actual interface{}) (message string) {
 	if matcher.jsonPath != nil && matcher.jsonValue != nil {
 		return fmt.Sprintf("value `%s` for JSONPath `%s` not to equal `%s`", actual, *matcher.jsonPath, *matcher.jsonValue)
@@ -106,14 +109,17 @@ func (matcher *TaskRunResultMatcher) NegatedFailureMessage(actual interface{}) (
 	return matcher.jsonMatcher.NegatedFailureMessage(actual)
 }
 
+// MatchTaskRunResult returns a taskRunResult matcher.
 func MatchTaskRunResult(name, value string) types.GomegaMatcher {
 	return &TaskRunResultMatcher{name: name, value: &value}
 }
 
+// MatchTaskRunResultWithJSONValue returns a taskRunResult with a JSONValue matcher.
 func MatchTaskRunResultWithJSONValue(name string, json interface{}) types.GomegaMatcher {
 	return &TaskRunResultMatcher{name: name, jsonValue: &json}
 }
 
+// MatchTaskRunResultWithJSONPathValue returns a taskRunResult with a JSONPath and JSONvalue matcher.
 func MatchTaskRunResultWithJSONPathValue(name, path string, json interface{}) types.GomegaMatcher {
 	return &TaskRunResultMatcher{name: name, jsonPath: &path, jsonValue: &json}
 }

@@ -26,7 +26,7 @@ import (
 type ControllerHub struct {
 	HasController             *has.HasController
 	CommonController          *common.SuiteController
-	TektonController          *tekton.SuiteController
+	TektonController          *tekton.TektonController
 	GitOpsController          *gitops.GitopsController
 	SPIController             *spi.SPIController
 	RemoteSecretController    *remotesecret.RemoteSecretController

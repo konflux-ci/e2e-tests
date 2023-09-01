@@ -3,12 +3,13 @@ package rhtap_demo
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/redhat-appstudio/jvm-build-service/openshift-with-appstudio-test/e2e"
 	jvmclientSet "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
 	pipelineclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
-	"strings"
-	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
@@ -21,7 +22,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	r "github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -230,7 +230,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 							component, err = fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), namespace)
 							Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
 
-							Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
+							Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, fw.AsKubeAdmin.TektonController)).To(Succeed())
 						}
 					})
 
@@ -323,8 +323,6 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 					}
 					if componentSpec.AdvancedBuildSpec != nil {
 						Describe(fmt.Sprintf("RHTAP Advanced build test for %s", componentSpec.Name), Ordered, func() {
-							var kc tekton.KubeController
-
 							var managedNamespace string
 
 							var component *appservice.Component
@@ -345,17 +343,11 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 								pacControllerRoute, err = fw.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "openshift-pipelines")
 								Expect(err).ShouldNot(HaveOccurred())
 								pacControllerHost = pacControllerRoute.Spec.Host
-
-								kc = tekton.KubeController{
-									Commonctrl: *fw.AsKubeAdmin.CommonController,
-									Tektonctrl: *fw.AsKubeAdmin.TektonController,
-								}
-
 								component = componentList[0]
 
 								sharedSecret, err := fw.AsKubeAdmin.CommonController.GetSecret(constants.QuayRepositorySecretNamespace, constants.QuayRepositorySecretName)
 								Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error when getting shared secret - make sure the secret %s in %s userNamespace is created", constants.QuayRepositorySecretName, constants.QuayRepositorySecretNamespace))
-								createReleaseConfig(*fw, kc, managedNamespace, component.GetName(), appTest.ApplicationName, sharedSecret.Data[".dockerconfigjson"])
+								createReleaseConfig(*fw, managedNamespace, component.GetName(), appTest.ApplicationName, sharedSecret.Data[".dockerconfigjson"])
 
 								its := componentSpec.AdvancedBuildSpec.TestScenario
 								integrationTestScenario, err = fw.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario_beta1(appTest.ApplicationName, fw.UserNamespace, its.GitURL, its.GitRevision, its.TestPath)
@@ -425,7 +417,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 									Eventually(func() error {
 										pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appTest.ApplicationName, fw.UserNamespace, prSHA)
 										if err == nil {
-											Expect(kc.Tektonctrl.DeletePipelineRun(pipelineRun.Name, pipelineRun.Namespace)).To(Succeed())
+											Expect(fw.AsKubeAdmin.TektonController.DeletePipelineRun(pipelineRun.Name, pipelineRun.Namespace)).To(Succeed())
 											return nil
 										}
 										return err
@@ -457,7 +449,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 
 							When("SLSA level 3 customizable PipelineRun is created", func() {
 								It("should eventually complete successfully", func() {
-									Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResultSha, 2)).To(Succeed())
+									Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResultSha, 2, fw.AsKubeAdmin.TektonController)).To(Succeed())
 								})
 
 								It("does not contain an annotation with a Snapshot Name", func() {
@@ -648,7 +640,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 	}
 })
 
-func createReleaseConfig(fw framework.Framework, kc tekton.KubeController, managedNamespace, componentName, appName string, secretData []byte) {
+func createReleaseConfig(fw framework.Framework, managedNamespace, componentName, appName string, secretData []byte) {
 	var err error
 	_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
 	Expect(err).ShouldNot(HaveOccurred())
@@ -668,10 +660,10 @@ func createReleaseConfig(fw framework.Framework, kc tekton.KubeController, manag
 	_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
 	Expect(err).NotTo(HaveOccurred())
 
-	publicKey, err := kc.GetTektonChainsPublicKey()
+	publicKey, err := fw.AsKubeAdmin.TektonController.GetTektonChainsPublicKey()
 	Expect(err).ToNot(HaveOccurred())
 
-	Expect(kc.CreateOrUpdateSigningSecret(publicKey, "cosign-public-key", managedNamespace)).To(Succeed())
+	Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(publicKey, "cosign-public-key", managedNamespace)).To(Succeed())
 
 	_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan("source-releaseplan", fw.UserNamespace, appName, managedNamespace, "")
 	Expect(err).NotTo(HaveOccurred())
@@ -686,7 +678,7 @@ func createReleaseConfig(fw framework.Framework, kc tekton.KubeController, manag
 	_, err = fw.AsKubeAdmin.CommonController.Github.CreateFile(constants.StrategyConfigsRepo, scPath, string(scYaml), componentName)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	defaultEcPolicy, err := kc.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+	defaultEcPolicy, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 	Expect(err).NotTo(HaveOccurred())
 	ecPolicyName := componentName + "-policy"
 	defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{

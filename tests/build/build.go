@@ -297,7 +297,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldComponentGitSourceRepoName))
 			})
 			It("the PipelineRun should eventually finish successfully", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
 			})
 			It("image repo and robot account created successfully", func() {
 
@@ -397,7 +397,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
 			})
 			It("PipelineRun should eventually finish", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, createdFileSHA, 2)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, createdFileSHA, 2, f.AsKubeAdmin.TektonController)).To(Succeed())
 			})
 			It("eventually leads to another update of a PR with a comment about the PipelineRun status report", func() {
 				var comments []*github.IssueComment
@@ -450,7 +450,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 
 			It("pipelineRun should eventually finish", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResultSha, 2)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResultSha, 2, f.AsKubeAdmin.TektonController)).To(Succeed())
 			})
 
 			It("does not have expiration set", func() {
@@ -619,7 +619,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 
 			It("triggers a pipeline run", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
 
 				var buildStatus *controllers.BuildStatus
 
@@ -656,7 +656,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Specify("simple build can be triggered manually", func() {
 				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.BuildRequestAnnotationName, controllers.BuildRequestTriggerSimpleBuildAnnotationValue, testNamespace)).To(Succeed())
 
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
 
 				var buildStatus *controllers.BuildStatus
 
@@ -754,14 +754,14 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, timeout, interval).Should(BeTrue(), "timed out when waiting for init PaC PR to be created")
 
 				By("checking PipelineRun on PR finishes")
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, pipelinerunPullSha, 2)).To(Succeed(), "PipelineRun on pull request did not finish successfully")
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, pipelinerunPullSha, 2, f.AsKubeAdmin.TektonController)).To(Succeed(), "PipelineRun on pull request did not finish successfully")
 
 				By("merging init PaC PR")
 				mergeResult, err := f.AsKubeAdmin.CommonController.Github.MergePullRequest(helloWorldComponentGitSourceRepoName, prNumber)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				By("checking PipelineRun on push finishes")
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResult.GetSHA(), 2)).To(Succeed(), "PipelineRun on push did not finish successfully")
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResult.GetSHA(), 2, f.AsKubeAdmin.TektonController)).To(Succeed(), "PipelineRun on push did not finish successfully")
 
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 			})
@@ -769,7 +769,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			It("can trigger simple build manually in PaC mode", func() {
 				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.BuildRequestAnnotationName, controllers.BuildRequestTriggerSimpleBuildAnnotationValue, testNamespace)).To(Succeed())
 
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
 
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 			})
@@ -1010,7 +1010,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		var applicationName, componentName, testNamespace string
 		var timeout time.Duration
 		var err error
-		var kc tekton.KubeController
 		var pr *v1beta1.PipelineRun
 
 		BeforeAll(func() {
@@ -1018,12 +1017,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace
-
-			kc = tekton.KubeController{
-				Commonctrl: *f.AsKubeAdmin.CommonController,
-				Tektonctrl: *f.AsKubeAdmin.TektonController,
-				Namespace:  testNamespace,
-			}
 
 			if err = f.AsKubeAdmin.CommonController.UnlinkSecretFromServiceAccount(testNamespace, constants.RegistryAuthSecretName, constants.DefaultPipelineServiceAccount, true); err != nil {
 				GinkgoWriter.Println(fmt.Sprintf("Failed to unlink registry auth secret from service account: %v\n", err))
@@ -1104,12 +1097,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		It("should not be possible to push to quay.io repo (PipelineRun should fail)", func() {
 			pipelineRunTimeout := int(time.Duration(20) * time.Minute)
 
-			Expect(kc.WatchPipelineRun(pr.Name, pipelineRunTimeout)).To(Succeed())
-			pr, err = kc.Tektonctrl.GetPipelineRun(pr.GetName(), pr.GetNamespace())
+			Expect(f.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, testNamespace, pipelineRunTimeout)).To(Succeed())
+			pr, err = f.AsKubeAdmin.TektonController.GetPipelineRun(pr.GetName(), pr.GetNamespace())
 			Expect(err).NotTo(HaveOccurred())
-			tr, err := kc.GetTaskRunStatus(f.AsKubeAdmin.CommonController.KubeRest(), pr, constants.BuildTaskRunName)
+			tr, err := f.AsKubeAdmin.TektonController.GetTaskRunStatus(f.AsKubeAdmin.CommonController.KubeRest(), pr, constants.BuildTaskRunName)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(tekton.DidTaskSucceed(tr)).To(BeFalse())
+			Expect(tekton.DidTaskRunSucceed(tr)).To(BeFalse())
 		})
 	})
 })

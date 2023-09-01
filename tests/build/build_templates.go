@@ -135,7 +135,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			It(fmt.Sprintf("should eventually finish successfully for component with Git source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
 				component, err := kubeadminClient.HasController.GetComponent(componentNames[i], testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
+				Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
 			})
 
 			It(fmt.Sprintf("should ensure SBOM is shown for component with Git source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
@@ -229,7 +229,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", gitUrl), Label("sbom", "slow"), func() {
 				var outputImage string
 				var outputImageDigest string
-				var kubeController tekton.KubeController
 				BeforeAll(func() {
 					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
 					Expect(err).ShouldNot(HaveOccurred())
@@ -247,34 +246,28 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						}
 					}
 					Expect(outputImageDigest).ToNot(BeEmpty(), "digest of output image could not be found")
-
-					kubeController = tekton.KubeController{
-						Commonctrl: *kubeadminClient.CommonController,
-						Tektonctrl: *kubeadminClient.TektonController,
-						Namespace:  testNamespace,
-					}
 				})
 				It("verify-enterprise-contract check should pass", Label(buildTemplatesTestLabel), func() {
 					// If the Tekton Chains controller is busy, it may take longer than usual for it
 					// to sign and attest the image built in BeforeAll.
 					imageWithDigest := fmt.Sprintf("%s@%s", outputImage, outputImageDigest)
-					err := kubeController.AwaitAttestationAndSignature(imageWithDigest, time.Duration(10)*time.Minute)
+					err := kubeadminClient.TektonController.AwaitAttestationAndSignature(imageWithDigest, time.Duration(10)*time.Minute)
 					Expect(err).ToNot(HaveOccurred())
 
-					cm, err := kubeController.Commonctrl.GetConfigMap("ec-defaults", "enterprise-contract-service")
+					cm, err := kubeadminClient.CommonController.GetConfigMap("ec-defaults", "enterprise-contract-service")
 					Expect(err).ToNot(HaveOccurred())
 
 					verifyECTaskBundle := cm.Data["verify_ec_task_bundle"]
 					Expect(verifyECTaskBundle).ToNot(BeEmpty())
 
 					publicSecretName := "cosign-public-key"
-					publicKey, err := kubeController.GetTektonChainsPublicKey()
+					publicKey, err := kubeadminClient.TektonController.GetTektonChainsPublicKey()
 					Expect(err).ToNot(HaveOccurred())
 
-					Expect(kubeController.CreateOrUpdateSigningSecret(
+					Expect(kubeadminClient.TektonController.CreateOrUpdateSigningSecret(
 						publicKey, publicSecretName, testNamespace)).To(Succeed())
 
-					defaultEcp, err := kubeController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+					defaultEcp, err := kubeadminClient.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 					Expect(err).NotTo(HaveOccurred())
 
 					policySource := defaultEcp.Spec.Sources
@@ -287,7 +280,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 							Exclude:     []string{"cve"},
 						},
 					}
-					Expect(kubeController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
+					Expect(kubeadminClient.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
 
 					generator := tekton.VerifyEnterpriseContract{
 						Snapshot: v1alpha1.SnapshotSpec{
@@ -308,17 +301,17 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						EffectiveTime:       "now",
 					}
 					ecPipelineRunTimeout := int(time.Duration(10 * time.Minute).Seconds())
-					pr, err := kubeController.RunPipeline(generator, ecPipelineRunTimeout)
+					pr, err := kubeadminClient.TektonController.RunPipeline(generator, testNamespace, ecPipelineRunTimeout)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(kubeController.WatchPipelineRun(pr.Name, ecPipelineRunTimeout)).To(Succeed())
+					Expect(kubeadminClient.TektonController.WatchPipelineRun(pr.Name, testNamespace, ecPipelineRunTimeout)).To(Succeed())
 
-					pr, err = kubeController.Tektonctrl.GetPipelineRun(pr.Name, pr.Namespace)
+					pr, err = kubeadminClient.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
 					Expect(err).NotTo(HaveOccurred())
 
-					tr, err := kubeController.GetTaskRunStatus(kubeadminClient.CommonController.KubeRest(), pr, "verify-enterprise-contract")
+					tr, err := kubeadminClient.TektonController.GetTaskRunStatus(kubeadminClient.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 					Expect(err).NotTo(HaveOccurred())
-					Expect(tekton.DidTaskSucceed(tr)).To(BeTrue())
+					Expect(tekton.DidTaskRunSucceed(tr)).To(BeTrue())
 					Expect(tr.Status.TaskRunResults).Should(Or(
 						// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
 						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
@@ -374,7 +367,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		It(fmt.Sprintf("pipelineRun should fail for symlink component with Git source URL %s", pythonComponentGitSourceURL), Label(buildTemplatesTestLabel), func() {
 			component, err := kubeadminClient.HasController.GetComponent(symlinkComponentName, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).Should(MatchError(ContainSubstring("cloned repository contains symlink pointing outside of the cloned repository")))
+			Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, f.AsKubeAdmin.TektonController)).Should(MatchError(ContainSubstring("cloned repository contains symlink pointing outside of the cloned repository")))
 		})
 	})
 })
