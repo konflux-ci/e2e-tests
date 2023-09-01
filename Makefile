@@ -24,6 +24,9 @@ ci/prepare/e2e-branch:
 local/cluster/prepare:
 	./mage -v local:prepareCluster
 
+local/cluster/upgrade:
+	./mage -v local:testUpgrade
+
 local/test/e2e:
 	./mage -v local:teste2e
 
