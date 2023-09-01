@@ -79,7 +79,7 @@ func (h *HasController) GetComponentPipelineRun(componentName string, applicatio
 }
 
 // Waits for a given component to be finished and in case of hitting issue: https://issues.redhat.com/browse/SRVKP-2749 do a given retries.
-func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservice.Component, sha string, maxRetries int) error {
+func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservice.Component, sha string, maxRetries int, t *tekton.TektonController) error {
 	attempts := 1
 	app := component.Spec.Application
 	var pr *v1beta1.PipelineRun
@@ -104,10 +104,10 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 			} else {
 				var prLogs string
 				classname := logs.ShortenStringAddHash(CurrentSpecReport())
-				if err = tekton.StoreFailedPipelineRun(pr, classname, h.KubeRest(), h.KubeInterface()); err != nil {
+				if err = t.StorePipelineRun(pr, classname); err != nil {
 					GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
 				}
-				if prLogs, err = tekton.GetFailedPipelineRunLogs(h.KubeRest(), h.KubeInterface(), pr); err != nil {
+				if prLogs, err = t.GetPipelineRunLogs(pr.Name, pr.Namespace); err != nil {
 					GinkgoWriter.Printf("failed to get logs for PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
 				}
 				return false, fmt.Errorf(prLogs)

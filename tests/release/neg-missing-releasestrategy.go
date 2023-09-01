@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 )
 
@@ -38,8 +37,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-2360] Release CR fails when missi
 		// Get the Spec from the default EnterpriseContractPolicy. This resource has up to date
 		// references and contains a small set of policy rules that should always pass during
 		// normal execution.
-		k := tekton.KubeController{Tektonctrl: *fw.AsKubeAdmin.TektonController}
-		defaultECP, err := k.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+		defaultECP, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 		Expect(err).NotTo(HaveOccurred(), "Error when fetching the default ECP: %v", err)
 		ecPolicy = defaultECP.Spec
 

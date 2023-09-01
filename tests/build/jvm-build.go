@@ -18,7 +18,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"github.com/redhat-appstudio/jvm-build-service/openshift-with-appstudio-test/e2e"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	jvmclientSet "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
@@ -60,12 +59,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 			Expect(f.AsKubeAdmin.JvmbuildserviceController.DeleteJBSConfig(constants.JBSConfigName, testNamespace)).To(Succeed())
 		} else {
-			componentPipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-			if err != nil {
-				GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s: %v", testNamespace, componentName, err.Error())
-			}
-
-			if err := logs.StoreTestLogs(testNamespace, "jvm-build-service", componentPipelineRun, f.AsKubeAdmin.CommonController, f.AsKubeAdmin.TektonController); err != nil {
+			if err := logs.StoreTestLogs(testNamespace, "jvm-build-service", f.AsKubeAdmin.CommonController, f.AsKubeAdmin.TektonController); err != nil {
 				GinkgoWriter.Printf("error storing test logs: %v\n", err.Error())
 			}
 		}
@@ -201,7 +195,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		})
 
 		It("that PipelineRun completes successfully", func() {
-			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2)).To(Succeed())
+			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
 			pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			//now delete it so it can't interfere with later test logic
@@ -319,7 +313,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 			ctx := context.TODO()
 
-			watch, err := f.AsKubeAdmin.TektonController.WatchPipelineRun(ctx, testNamespace)
+			watch, err := f.AsKubeAdmin.TektonController.GetPipelineRunWatch(ctx, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("watch pipelinerun failed in %s namespace", testNamespace))
 
 			exitForLoop := false
@@ -395,12 +389,6 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		})
 
 		It("All rebuilt images are signed and attested", func() {
-
-			kubeController := tekton.KubeController{
-				Commonctrl: *f.AsKubeAdmin.CommonController,
-				Tektonctrl: *f.AsKubeAdmin.TektonController,
-				Namespace:  testNamespace,
-			}
 			seen := map[string]bool{}
 			rebuilt, err := f.AsKubeAdmin.JvmbuildserviceController.ListRebuiltArtifacts(testNamespace)
 			Expect(err).NotTo(HaveOccurred())
@@ -411,7 +399,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				seen[i.Spec.Image] = true
 
 				imageWithDigest := i.Spec.Image + "@" + i.Spec.Digest
-				Expect(kubeController.AwaitAttestationAndSignature(imageWithDigest, time.Minute)).To(
+				Expect(f.AsKubeAdmin.TektonController.AwaitAttestationAndSignature(imageWithDigest, time.Minute)).To(
 					Succeed(),
 					"Could not find .att or .sig ImageStreamTags within the 1 minute timeout. "+
 						"Most likely the chains-controller did not create those in time. "+

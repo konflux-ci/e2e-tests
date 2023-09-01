@@ -18,7 +18,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
@@ -32,7 +31,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 	var fw *framework.Framework
 	AfterEach(framework.ReportFailure(&fw))
 	var err error
-	var kubeController tekton.KubeController
 	var devNamespace, managedNamespace, compName, additionalCompName string
 	var imageIDs []string
 	var pyxisKeyDecoded, pyxisCertDecoded []byte
@@ -49,12 +47,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		fw, err = framework.NewFramework("release-e2e-pyxis")
 		Expect(err).NotTo(HaveOccurred())
 		devNamespace = fw.UserNamespace
-
-		kubeController = tekton.KubeController{
-			Commonctrl: *fw.AsKubeAdmin.CommonController,
-			Tektonctrl: *fw.AsKubeAdmin.TektonController,
-		}
-
 		managedNamespace = utils.GetGeneratedNamespace("release-e2e-pyxis-managed")
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
@@ -77,7 +69,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, hacbsReleaseTestsTokenSecret, serviceAccount, true)
 		Expect(err).ToNot(HaveOccurred())
 
-		publicKey, err := kubeController.GetTektonChainsPublicKey()
+		publicKey, err := fw.AsKubeAdmin.TektonController.GetTektonChainsPublicKey()
 		Expect(err).ToNot(HaveOccurred())
 
 		// Creating k8s secret to access Pyxis stage based on base64 decoded of key and cert
@@ -101,10 +93,10 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		_, err = fw.AsKubeAdmin.CommonController.CreateSecret(managedNamespace, secret)
 		Expect(err).ToNot(HaveOccurred())
 
-		Expect(kubeController.CreateOrUpdateSigningSecret(
+		Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
 			publicKey, publicSecretNameAuth, managedNamespace)).To(Succeed())
 
-		defaultEcPolicy, err := kubeController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+		defaultEcPolicy, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 		Expect(err).NotTo(HaveOccurred())
 
 		defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
@@ -212,13 +204,13 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		It("verifies that Component 1 can be created and build PipelineRun is created for it in dev namespace and succeeds", func() {
 			component1, err = fw.AsKubeAdmin.HasController.CreateComponent(componentDetected.ComponentStub, devNamespace, "", "", applicationNameDefault, true, map[string]string{})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component1, "", 2)).To(Succeed())
+			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component1, "", 2, fw.AsKubeAdmin.TektonController)).To(Succeed())
 		})
 
 		It("verifies that Component 2 can be created and build PipelineRun is created for it in dev namespace and succeeds", func() {
 			component2, err = fw.AsKubeAdmin.HasController.CreateComponent(additionalComponentDetected.ComponentStub, devNamespace, "", "", applicationNameDefault, true, map[string]string{})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component2, "", 2)).To(Succeed())
+			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component2, "", 2, fw.AsKubeAdmin.TektonController)).To(Succeed())
 		})
 
 		It("tests that Snapshot is created for each Component", func() {
@@ -308,10 +300,10 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 				releasePR2, err = fw.AsKubeAdmin.TektonController.GetPipelineRun(releasePR2.GetName(), releasePR2.GetNamespace())
 				Expect(err).NotTo(HaveOccurred())
 
-				trReleasePr, err := kubeController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), releasePR1, "create-pyxis-image")
+				trReleasePr, err := fw.AsKubeAdmin.TektonController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), releasePR1, "create-pyxis-image")
 				Expect(err).NotTo(HaveOccurred())
 
-				trAdditionalReleasePr, err := kubeController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), releasePR2, "create-pyxis-image")
+				trAdditionalReleasePr, err := fw.AsKubeAdmin.TektonController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), releasePR2, "create-pyxis-image")
 				Expect(err).NotTo(HaveOccurred())
 
 				trReleaseImageIDs := re.FindAllString(trReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)
