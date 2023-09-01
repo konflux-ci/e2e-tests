@@ -108,6 +108,18 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 
 				// Remove all resources created by the tests
 				AfterAll(func() {
+					fw.AsKubeAdmin.CommonController.StoreAllPods(namespace)
+					fw.AsKubeAdmin.HasController.StoreAllComponents(namespace)
+					fw.AsKubeAdmin.HasController.StoreAllComponentDetectionQueries(namespace)
+					fw.AsKubeAdmin.HasController.StoreAllApplications(namespace)
+					fw.AsKubeAdmin.CommonController.StoreAllSnapshotEnvironmentBindings(namespace)
+					fw.AsKubeAdmin.IntegrationController.StoreAllSnapshots(namespace)
+					fw.AsKubeAdmin.GitOpsController.StoreAllEnvironments(namespace)
+					fw.AsKubeAdmin.TektonController.StoreAllPipelineRuns(namespace)
+					fw.AsKubeAdmin.GitOpsController.StoreAllGitOpsDeployments(namespace)
+					fw.AsKubeAdmin.GitOpsController.StoreAllDeploymentTargets(namespace)
+					fw.AsKubeAdmin.GitOpsController.StoreAllDeploymentTargetClaims(namespace)
+					fw.AsKubeAdmin.GitOpsController.StoreAllDeploymentTargetClasses(namespace)
 					// collect SPI ResourceQuota metrics (temporary)
 					err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("rhtap-demo", namespace, "appstudio-crds-spi")
 					Expect(err).NotTo(HaveOccurred())

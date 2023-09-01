@@ -6,7 +6,6 @@ import (
 	"time"
 
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
-	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -126,32 +125,4 @@ func (h *HasController) refreshApplicationForErrorDebug(application *appservice.
 	}
 
 	return retApp
-}
-
-// ListAllApplications returns a list of all Applications in a given namespace.
-func (h *HasController) ListAllApplications(namespace string) (*appservice.ApplicationList, error) {
-	applicationList := &appservice.ApplicationList{}
-	err := h.KubeRest().List(context.Background(), applicationList, &rclient.ListOptions{Namespace: namespace})
-
-	return applicationList, err
-}
-
-// StoreApplication stores a given Application as an artifact.
-func (h *HasController) StoreApplication(application *appservice.Application) error {
-	return logs.StoreResourceYaml(application, "application-"+application.Name)
-}
-
-// StoreAllApplications stores all Applications in a given namespace.
-func (h *HasController) StoreAllApplications(namespace string) error {
-	applicationList, err := h.ListAllApplications(namespace)
-	if err != nil {
-		return err
-	}
-
-	for _, application := range applicationList.Items {
-		if err := h.StoreApplication(&application); err != nil {
-			return err
-		}
-	}
-	return nil
 }

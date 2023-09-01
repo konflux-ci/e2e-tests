@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 
@@ -20,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 
 	g "github.com/onsi/ginkgo/v2"
 )
