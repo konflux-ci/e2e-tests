@@ -6,6 +6,7 @@ import (
 	"time"
 
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -78,11 +79,38 @@ func (h *HasController) DeleteAllComponentDetectionQueriesInASpecificNamespace(n
 		return fmt.Errorf("error deleting component detection queries from the namespace %s: %+v", namespace, err)
 	}
 
-	componentDetectionQueriesList := &appservice.ComponentDetectionQueryList{}
 	return utils.WaitUntil(func() (done bool, err error) {
-		if err := h.KubeRest().List(context.Background(), componentDetectionQueriesList, &rclient.ListOptions{Namespace: namespace}); err != nil {
+		componentDetectionQueriesList, err := h.ListAllComponentDetectionQueries(namespace)
+		if err != nil {
 			return false, nil
 		}
 		return len(componentDetectionQueriesList.Items) == 0, nil
 	}, timeout)
+}
+
+// ListAllComponentDetectionQueries returns a list of all ComponentDetectionQueries in a given namespace.
+func (h *HasController) ListAllComponentDetectionQueries(namespace string) (*appservice.ComponentDetectionQueryList, error) {
+	componentDetectionQueryList := &appservice.ComponentDetectionQueryList{}
+	err := h.KubeRest().List(context.Background(), componentDetectionQueryList, &rclient.ListOptions{Namespace: namespace})
+	return componentDetectionQueryList, err
+}
+
+// StoreComponentDetectionQuery stores a given ComponentDetectionQuery as an artifact.
+func (h *HasController) StoreComponentDetectionQuery(ComponentDetectionQuery *appservice.ComponentDetectionQuery) error {
+	return logs.StoreResourceYaml(ComponentDetectionQuery, "componentDetectionQuery-"+ComponentDetectionQuery.Name+".yaml")
+}
+
+// StoreAllComponentDetectionQueries stores all ComponentDetectionQueries in a given namespace.
+func (h *HasController) StoreAllComponentDetectionQueries(namespace string) error {
+	componentDetectionQueryList, err := h.ListAllComponentDetectionQueries(namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, componentDetectionQuery := range componentDetectionQueryList.Items {
+		if err := h.StoreComponentDetectionQuery(&componentDetectionQuery); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -7,10 +7,12 @@ import (
 
 	"github.com/devfile/library/v2/pkg/util"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // CreateSnapshotWithComponents creates a Snapshot using the given parameters.
@@ -116,11 +118,39 @@ func (i *IntegrationController) DeleteAllSnapshotsInASpecificNamespace(namespace
 		return fmt.Errorf("error deleting snapshots from the namespace %s: %+v", namespace, err)
 	}
 
-	snapshotList := &appstudioApi.SnapshotList{}
 	return utils.WaitUntil(func() (done bool, err error) {
-		if err := i.KubeRest().List(context.Background(), snapshotList, &client.ListOptions{Namespace: namespace}); err != nil {
+		snapshotList, err := i.ListAllSnapshots(namespace)
+		if err != nil {
 			return false, nil
 		}
 		return len(snapshotList.Items) == 0, nil
 	}, timeout)
+}
+
+// ListAllSnapshots returns a list of all Snapshots in a given namespace.
+func (i *IntegrationController) ListAllSnapshots(namespace string) (*appstudioApi.SnapshotList, error) {
+	snapshotList := &appstudioApi.SnapshotList{}
+	err := i.KubeRest().List(context.Background(), snapshotList, &rclient.ListOptions{Namespace: namespace})
+
+	return snapshotList, err
+}
+
+// StoreSnapshot stores a given Snapshot as an artifact.
+func (i *IntegrationController) StoreSnapshot(snapshot *appstudioApi.Snapshot) error {
+	return logs.StoreResourceYaml(snapshot, "snapshot-"+snapshot.Name+".yaml")
+}
+
+// StoreAllSnapshots stores all Snapshots in a given namespace.
+func (i *IntegrationController) StoreAllSnapshots(namespace string) error {
+	snapshotList, err := i.ListAllSnapshots(namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, snapshot := range snapshotList.Items {
+		if err := i.StoreSnapshot(&snapshot); err != nil {
+			return err
+		}
+	}
+	return nil
 }

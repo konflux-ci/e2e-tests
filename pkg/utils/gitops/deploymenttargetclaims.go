@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -23,4 +24,24 @@ func (g *GitopsController) GetDeploymentTargetClaimsList(namespace string) (*app
 	}
 
 	return deploymentTargetClaimList, nil
+}
+
+// StoreDeploymentTargetClaim stores a given DeploymentTargetClaim as an artifact.
+func (g *GitopsController) StoreDeploymentTargetClaim(deploymentTargetClaim *appservice.DeploymentTargetClaim) error {
+	return logs.StoreResourceYaml(deploymentTargetClaim, "deploymentTargetClaim-"+deploymentTargetClaim.Name)
+}
+
+// StoreAllDeploymentTargetClaims stores all DeploymentTargetClaims in a given namespace.
+func (g *GitopsController) StoreAllDeploymentTargetClaims(namespace string) error {
+	deploymentTargetClaimList, err := g.GetDeploymentTargetClaimsList(namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, deploymentTargetClaim := range deploymentTargetClaimList.Items {
+		if err := g.StoreDeploymentTargetClaim(&deploymentTargetClaim); err != nil {
+			return err
+		}
+	}
+	return nil
 }

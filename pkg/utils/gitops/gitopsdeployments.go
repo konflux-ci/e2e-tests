@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+
 	managedgitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend/apis/managed-gitops/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -16,11 +18,39 @@ func (g *GitopsController) DeleteAllGitOpsDeploymentsInASpecificNamespace(namesp
 		return fmt.Errorf("error when deleting gitopsdeployments in %s namespace: %+v", namespace, err)
 	}
 
-	gdList := &managedgitopsv1alpha1.GitOpsDeploymentList{}
 	return utils.WaitUntil(func() (done bool, err error) {
-		if err = g.KubeRest().List(context.Background(), gdList, client.InNamespace(namespace)); err != nil {
+		gdList, err := g.ListAllGitOpsDeployments(namespace)
+		if err != nil {
 			return false, nil
 		}
 		return len(gdList.Items) == 0, nil
 	}, timeout)
+}
+
+// ListAllGitOpsDeployments returns a list of all GitOpsDeployments in a given namespace.
+func (g *GitopsController) ListAllGitOpsDeployments(namespace string) (*managedgitopsv1alpha1.GitOpsDeploymentList, error) {
+	gitOpsDeploymentList := &managedgitopsv1alpha1.GitOpsDeploymentList{}
+	err := g.KubeRest().List(context.Background(), gitOpsDeploymentList, &client.ListOptions{Namespace: namespace})
+
+	return gitOpsDeploymentList, err
+}
+
+// StoreGitOpsDeployment stores a given GitOpsDeployment as an artifact.
+func (g *GitopsController) StoreGitOpsDeployment(gitOpsDeployment *managedgitopsv1alpha1.GitOpsDeployment) error {
+	return logs.StoreResourceYaml(gitOpsDeployment, "gitOpsDeployment-"+gitOpsDeployment.Name+".yaml")
+}
+
+// StoreAllGitOpsDeployments stores all GitOpsDeployments in a given namespace.
+func (g *GitopsController) StoreAllGitOpsDeployments(namespace string) error {
+	gitOpsDeploymentList, err := g.ListAllGitOpsDeployments(namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, gitOpsDeployment := range gitOpsDeploymentList.Items {
+		if err := g.StoreGitOpsDeployment(&gitOpsDeployment); err != nil {
+			return err
+		}
+	}
+	return nil
 }

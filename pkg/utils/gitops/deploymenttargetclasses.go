@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // HaveAvailableDeploymentTargetClassExist attempts to find a DeploymentTargetClass with appstudioApi.Provisioner_Devsandbox as provisioner.
@@ -24,4 +26,32 @@ func (g *GitopsController) HaveAvailableDeploymentTargetClassExist() (*appservic
 	}
 
 	return nil, nil
+}
+
+// ListAllDeploymentTargetClasses returns a list of all DeploymentTargetClassList in a given namespace.
+func (g *GitopsController) ListAllDeploymentTargetClasses(namespace string) (*appservice.DeploymentTargetClassList, error) {
+	deploymentTargetClassList := &appservice.DeploymentTargetClassList{}
+	err := g.KubeRest().List(context.Background(), deploymentTargetClassList, &client.ListOptions{Namespace: namespace})
+
+	return deploymentTargetClassList, err
+}
+
+// StoreDeploymentTargetClass a stores given DeploymentTargetClass as an artifact.
+func (g *GitopsController) StoreDeploymentTargetClass(deploymentTargetClass *appservice.DeploymentTargetClass) error {
+	return logs.StoreResourceYaml(deploymentTargetClass, "deploymentTargetClass-"+deploymentTargetClass.Name)
+}
+
+// StoreAllDeploymentTargetClasses stores all DeploymentTargetClasses in a given namespace.
+func (g *GitopsController) StoreAllDeploymentTargetClasses(namespace string) error {
+	deploymentTargetClassList, err := g.ListAllDeploymentTargetClasses(namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, deploymentTargetClass := range deploymentTargetClassList.Items {
+		if err := g.StoreDeploymentTargetClass(&deploymentTargetClass); err != nil {
+			return err
+		}
+	}
+	return nil
 }
