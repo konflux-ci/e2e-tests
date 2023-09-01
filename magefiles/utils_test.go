@@ -25,6 +25,14 @@ type QuayClientMock struct {
 
 var _ quay.QuayService = (*QuayClientMock)(nil)
 
+func (m *QuayClientMock) AddPermissionsForRepositoryToRobotAccount(string, string, string, bool) error {
+	return nil
+}
+
+func (m *QuayClientMock) RegenerateRobotAccountToken(string, string) (*quay.RobotAccount, error) {
+	return nil, nil
+}
+
 func (m *QuayClientMock) GetAllRepositories(organization string) ([]quay.Repository, error) {
 	return m.AllRepositories, nil
 }

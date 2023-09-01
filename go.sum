@@ -1294,12 +1294,12 @@ github.com/redhat-appstudio/application-service v0.0.0-20230717184417-67d31a01a7
 github.com/redhat-appstudio/application-service v0.0.0-20230717184417-67d31a01a776/go.mod h1:meLjzNehwlqPyjd8Gg78oXRpRy5HQ4nCulk8u8mCjqs=
 github.com/redhat-appstudio/build-service v0.0.0-20230727072250-19c7a8b5c63d h1:bk/mBxEb1mSRQ/xuCuNQfxm4Riz/KNJ1AI8pekrNsmo=
 github.com/redhat-appstudio/build-service v0.0.0-20230727072250-19c7a8b5c63d/go.mod h1:zpT61sPazrKuE2GrFaoxVfyWO1x5vjmSntJtaMYAE2U=
-github.com/redhat-appstudio/image-controller v0.0.0-20230619094421-a6d78d062948 h1:jDmXnFVxmbhqPDk5LFBh+QTLR7n0nqwQodc00OtTi3g=
-github.com/redhat-appstudio/image-controller v0.0.0-20230619094421-a6d78d062948/go.mod h1:5jVUQSgHYjzfZtWC7aJv2zhP7tyH6k47FdLGC2FaA4M=
+github.com/redhat-appstudio/image-controller v0.0.0-20230831131151-75d3928646d2 h1:5ulZ6EVjYCBSXlZ0j6ylZPyn5TcaJ5ev5ffHVkrW29M=
+github.com/redhat-appstudio/image-controller v0.0.0-20230831131151-75d3928646d2/go.mod h1:fNP2oUEejlHZUkAz2f0ViKNl0D8w4cD8QVoGy1pri9c=
 github.com/redhat-appstudio/integration-service v0.0.0-20230427084439-306b4611389b h1:+9QZ6tcV3cddqE1E/N8zu3GJKe9bPtmLbN7cbY/9lQU=
 github.com/redhat-appstudio/integration-service v0.0.0-20230427084439-306b4611389b/go.mod h1:OVpNXkUNwAxJoJT3JwJfqNt2kAwixMxizcgzCQq4n8g=
-github.com/redhat-appstudio/jvm-build-service v0.0.0-20230817005403-d65a20d42726 h1:2QhYTyx+6qAAgoEyfuNsnQEFnTmanRf+NmWpIomnyYI=
-github.com/redhat-appstudio/jvm-build-service v0.0.0-20230817005403-d65a20d42726/go.mod h1:6hB+Sh0auB84ykyWrV631gmZvKXiTvFtZZnaWPUwGJU=
+github.com/redhat-appstudio/jvm-build-service v0.0.0-20230821060312-4172397d68e8 h1:00i53LFAxOim46xJMe13FEfkqxTZMs+nXNlXu7hRCno=
+github.com/redhat-appstudio/jvm-build-service v0.0.0-20230821060312-4172397d68e8/go.mod h1:1L8D7nBUn8EJrlYLCl5NmX1yzoRjkAeEX5v4YmmxQNo=
 github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001 h1:dHYSaZ8slDW27YrbAYj59Zd82Oml3oTj9ieICLtzk8Y=
 github.com/redhat-appstudio/managed-gitops/backend v0.0.0-20220506042230-3a79f373a001/go.mod h1:jqTuNQDL/xf+LsxWg1RuhJiMvMWnoRZcpcHRhX8Z12s=
 github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20220506042230-3a79f373a001 h1:xjO01dcMV7mv7b0GFeEN1uLhJiLOlzglgeEO57rfdNk=
