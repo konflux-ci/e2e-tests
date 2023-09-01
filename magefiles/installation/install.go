@@ -209,7 +209,7 @@ func MergePRInRemote(branch string, forkOrganization string, repoPath string) er
 	}
 
 	if forkOrganization == "" {
-		_, err = exec.Command("git", "-C", repoPath, "merge", "remotes/origin/"+branch, "-Xtheirs", "-q").Output()
+		err = mergeBranch(repoPath, "remotes/origin/"+branch)
 	} else {
 		repoURL := fmt.Sprintf("https://github.com/%s/infra-deployments.git", forkOrganization)
 		_, err = repo.CreateRemote(&config.RemoteConfig{
@@ -226,7 +226,7 @@ func MergePRInRemote(branch string, forkOrganization string, repoPath string) er
 		if err != nil {
 			klog.Fatal(err)
 		}
-		_, err = exec.Command("git", "-C", repoPath, "merge", "remotes/forked_repo/"+branch, "-Xtheirs", "-q").Output()
+		err = mergeBranch(repoPath, "remotes/forked_repo/"+branch)
 	}
 	if err != nil {
 		klog.Fatal(err)
@@ -241,6 +241,14 @@ func MergePRInRemote(branch string, forkOrganization string, repoPath string) er
 		klog.Fatal(err)
 	}
 
+	return nil
+}
+
+func mergeBranch(repoPath string, branchToMerge string) error {
+	_, err := exec.Command("git", "-C", repoPath, "merge", branchToMerge, "-Xtheirs", "-q").Output()
+	if err != nil {
+		klog.Fatal(err)
+	}
 	return nil
 }
 

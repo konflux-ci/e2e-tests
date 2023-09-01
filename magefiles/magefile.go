@@ -797,12 +797,47 @@ func unregisterPacServer() error {
 	return nil
 }
 
-// Run upgrade testss locally(bootstrap cluster, create workload, upgrade, verify)
+// Run upgrade tests in CI
+func (ci CI) TestUpgrade() error {
+	var testFailure bool
+
+	if err := ci.init(); err != nil {
+		return fmt.Errorf("error when running ci init: %v", err)
+	}
+
+	if err := PreflightChecks(); err != nil {
+		return fmt.Errorf("error when running preflight checks: %v", err)
+	}
+
+	if err := ci.setRequiredEnvVars(); err != nil {
+		return fmt.Errorf("error when setting up required env vars: %v", err)
+	}
+
+	if err := UpgradeTestsWorkflow(); err != nil {
+		return fmt.Errorf("error when running upgrade tests: %v", err)
+	}
+
+	if testFailure {
+		return fmt.Errorf("error when running upgrade tests - see the log above for more details")
+	}
+
+	return nil
+}
+
+// Run upgrade tests locally(bootstrap cluster, create workload, upgrade, verify)
 func (Local) TestUpgrade() error {
 	if err := PreflightChecks(); err != nil {
 		return fmt.Errorf("error when running preflight checks: %v", err)
 	}
 
+	if err := UpgradeTestsWorkflow(); err != nil {
+		return fmt.Errorf("error when running upgrade tests: %v", err)
+	}
+
+	return nil
+}
+
+func UpgradeTestsWorkflow() error {
 	ic, err := BootstrapClusterForUpgrade()
 	if err != nil {
 		klog.Errorf("%s", err)
