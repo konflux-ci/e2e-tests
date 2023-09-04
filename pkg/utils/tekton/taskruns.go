@@ -27,6 +27,7 @@ func (t *TektonController) CreateTaskRunCopy(name, namespace, serviceAccountName
 			ServiceAccountName: serviceAccountName,
 			TaskRef: &v1beta1.TaskRef{
 				Name: "skopeo-copy",
+				Kind: v1beta1.ClusterTaskKind,
 			},
 			Params: []v1beta1.Param{
 				{
