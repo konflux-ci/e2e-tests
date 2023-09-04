@@ -45,7 +45,6 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 
 	Describe("SVPI-407 - Check ImagePullSecret usage for the private Quay image", Ordered, func() {
 		BeforeAll(func() {
-			Skip(fmt.Sprintln("test skipped"))
 			if os.Getenv("CI") != "true" {
 				Skip(fmt.Sprintln("test skipped on local execution"))
 			}
@@ -186,14 +185,6 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 		Describe("SVPI-408 - Check the secret that can be used with skopeo Tekton task to authorize a copy of one private Quay image to the second Quay image repository", Ordered, func() {
 			serviceAccountName := "tekton-task-service-account"
 
-			It("creates skopeo copy task", func() {
-				err := fw.AsKubeAdmin.TektonController.CreateSkopeoCopyTask(namespace)
-				Expect(err).NotTo(HaveOccurred())
-
-				_, err = fw.AsKubeDeveloper.TektonController.GetTask("skopeo-copy", namespace)
-				Expect(err).NotTo(HaveOccurred())
-			})
-
 			It("creates service account for the TaskRun referencing the docker config json secret", func() {
 				secrets := []corev1.ObjectReference{
 					{Name: SecretName},
@@ -204,6 +195,12 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 				Expect(err).NotTo(HaveOccurred())
 			})
 
+			/*
+				ClusterTask is getting deprecated. See https://tekton.dev/docs/pipelines/tasks/#task-vs-clustertask and https://cloud.redhat.com/blog/migration-from-clustertasks-to-tekton-resolvers-in-openshift-pipelines.
+				Based on discussions in slack, even though ClusterTasks are getting deprecated, for now, someone using OpenShift Pipelines should use the ClusterTasks anyway.
+				Eventually, there will be a release that provides those as regular Tasks in a special namespace so cluster resolver can be used. At that point, we should switch over.
+
+			*/
 			var TaskRun *taskrunv1beta1.TaskRun
 			taskRunName := "skopeo-run"
 
