@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
@@ -11,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
 	kubeapi "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
@@ -20,7 +22,15 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/yaml"
 )
+
+var (
+	ecPipelineRunTimeout     = time.Duration(10 * time.Minute)
+	chainsAttestationTimeout = time.Duration(10 * time.Minute)
+)
+
+const pipelineCompletionRetries = 2
 
 var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", "HACBS"), func() {
 	var f *framework.Framework
@@ -135,7 +145,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			It(fmt.Sprintf("should eventually finish successfully for component with Git source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
 				component, err := kubeadminClient.HasController.GetComponent(componentNames[i], testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
+				Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "", pipelineCompletionRetries, kubeadminClient.TektonController)).To(Succeed())
 			})
 
 			It(fmt.Sprintf("should ensure SBOM is shown for component with Git source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
@@ -171,7 +181,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					regProxyUrl := fmt.Sprintf("%s/plugins/tekton-results", f.ProxyUrl)
 					resultClient = pipeline.NewClient(regProxyUrl, f.UserToken)
 
-					pr, err = f.AsKubeDeveloper.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
+					pr, err = kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
 					Expect(err).ShouldNot(HaveOccurred())
 				})
 
@@ -227,31 +237,18 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			})
 
 			When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", gitUrl), Label("sbom", "slow"), func() {
-				var outputImage string
-				var outputImageDigest string
+				var imageWithDigest string
+
 				BeforeAll(func() {
-					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
-					Expect(err).ShouldNot(HaveOccurred())
-
-					for _, p := range pipelineRun.Spec.Params {
-						if p.Name == "output-image" {
-							outputImage = p.Value.StringVal
-						}
-
-					}
-					Expect(outputImage).ToNot(BeEmpty(), "output image of a component could not be found")
-					for _, r := range pipelineRun.Status.PipelineResults {
-						if r.Name == "IMAGE_DIGEST" {
-							outputImageDigest = r.Value.StringVal
-						}
-					}
-					Expect(outputImageDigest).ToNot(BeEmpty(), "digest of output image could not be found")
+					var err error
+					imageWithDigest, err = getImageWithDigest(kubeadminClient, componentNames[i], applicationName, testNamespace)
+					Expect(err).NotTo(HaveOccurred())
 				})
+
 				It("verify-enterprise-contract check should pass", Label(buildTemplatesTestLabel), func() {
 					// If the Tekton Chains controller is busy, it may take longer than usual for it
 					// to sign and attest the image built in BeforeAll.
-					imageWithDigest := fmt.Sprintf("%s@%s", outputImage, outputImageDigest)
-					err := kubeadminClient.TektonController.AwaitAttestationAndSignature(imageWithDigest, time.Duration(10)*time.Minute)
+					err = kubeadminClient.TektonController.AwaitAttestationAndSignature(imageWithDigest, chainsAttestationTimeout)
 					Expect(err).ToNot(HaveOccurred())
 
 					cm, err := kubeadminClient.CommonController.GetConfigMap("ec-defaults", "enterprise-contract-service")
@@ -288,7 +285,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 							Components: []v1alpha1.SnapshotComponent{
 								{
 									Name:           componentNames[i],
-									ContainerImage: outputImage,
+									ContainerImage: imageWithDigest,
 								},
 							},
 						},
@@ -300,11 +297,11 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						Strict:              true,
 						EffectiveTime:       "now",
 					}
-					ecPipelineRunTimeout := int(time.Duration(10 * time.Minute).Seconds())
-					pr, err := kubeadminClient.TektonController.RunPipeline(generator, testNamespace, ecPipelineRunTimeout)
+
+					pr, err := kubeadminClient.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(kubeadminClient.TektonController.WatchPipelineRun(pr.Name, testNamespace, ecPipelineRunTimeout)).To(Succeed())
+					Expect(kubeadminClient.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(Succeed())
 
 					pr, err = kubeadminClient.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
 					Expect(err).NotTo(HaveOccurred())
@@ -319,7 +316,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					))
 				})
 				It("contains non-empty sbom files", Label(buildTemplatesTestLabel), func() {
-					purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(outputImage)
+					purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(imageWithDigest)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(cyclonedx.BomFormat).To(Equal("CycloneDX"))
@@ -346,6 +343,114 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					}
 				})
 			})
+
+			Context("build-definitions ec pipelines", Label(buildTemplatesTestLabel), func() {
+				ecPipelines := []string{
+					"pipelines/enterprise-contract.yaml",
+					"pipelines/enterprise-contract-everything.yaml",
+					"pipelines/enterprise-contract-redhat.yaml",
+					"pipelines/enterprise-contract-slsa1.yaml",
+					"pipelines/enterprise-contract-slsa2.yaml",
+					"pipelines/enterprise-contract-slsa3.yaml",
+				}
+
+				var gitRevision, gitURL, imageWithDigest string
+
+				defaultGHOrg := "redhat-appstudio"
+				defaultGHRepo := "build-definitions"
+				defaultGitURL := fmt.Sprintf("https://github.com/%s/%s", defaultGHOrg, defaultGHRepo)
+				defaultGitRevision := "main"
+
+				BeforeAll(func() {
+					// If we are testing the changes from a pull request, APP_SUFFIX may contain the
+					// pull request ID. If it looks like an ID, then fetch information about the pull
+					// request and use it to determine which git URL and revision to use for the EC
+					// pipelines. NOTE: This is a workaround until Pipeline as Code supports passing
+					// the source repo URL: https://issues.redhat.com/browse/SRVKP-3427. Once that's
+					// implemented, remove the APP_SUFFIX support below and simply rely on the other
+					// environment variables to set the git revision and URL directly.
+					appSuffix := os.Getenv("APP_SUFFIX")
+					if pullRequestID, err := strconv.ParseInt(appSuffix, 10, 64); err == nil {
+						gh, err := github.NewGithubClient(utils.GetEnv(constants.GITHUB_TOKEN_ENV, ""), defaultGHOrg)
+						Expect(err).NotTo(HaveOccurred())
+						pullRequest, err := gh.GetPullRequest(defaultGHRepo, int(pullRequestID))
+						Expect(err).NotTo(HaveOccurred())
+						gitURL = *pullRequest.Head.Repo.CloneURL
+						gitRevision = *pullRequest.Head.Ref
+					} else {
+						gitRevision = utils.GetEnv(constants.EC_PIPELINES_REPO_REVISION_ENV, defaultGitRevision)
+						gitURL = utils.GetEnv(constants.EC_PIPELINES_REPO_URL_ENV, defaultGitURL)
+					}
+
+					// Double check that the component has finished. There's an earlier test that
+					// verifies this so this should be a no-op. It is added here in order to avoid
+					// unnecessary coupling of unrelated tests.
+					component, err := kubeadminClient.HasController.GetComponent(componentNames[i], testNamespace)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(
+						component, "", pipelineCompletionRetries, kubeadminClient.TektonController)).To(Succeed())
+
+					imageWithDigest, err = getImageWithDigest(kubeadminClient, componentNames[i], applicationName, testNamespace)
+					Expect(err).NotTo(HaveOccurred())
+
+					err = kubeadminClient.TektonController.AwaitAttestationAndSignature(imageWithDigest, chainsAttestationTimeout)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				for _, pathInRepo := range ecPipelines {
+					pathInRepo := pathInRepo
+					It(fmt.Sprintf("runs ec pipeline %s", pathInRepo), func() {
+						generator := tekton.ECIntegrationTestScenario{
+							Image:                 imageWithDigest,
+							Namespace:             testNamespace,
+							PipelineGitURL:        gitURL,
+							PipelineGitRevision:   gitRevision,
+							PipelineGitPathInRepo: pathInRepo,
+						}
+
+						pr, err := kubeadminClient.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
+						Expect(err).NotTo(HaveOccurred())
+						defer func(pr *v1beta1.PipelineRun) {
+							// Avoid blowing up PipelineRun usage
+							err := kubeadminClient.TektonController.DeletePipelineRun(pr.Name, pr.Namespace)
+							Expect(err).NotTo(HaveOccurred())
+						}(pr)
+						Expect(kubeadminClient.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(Succeed())
+
+						// Refresh our copy of the PipelineRun for latest results
+						pr, err = kubeadminClient.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
+						Expect(err).NotTo(HaveOccurred())
+
+						// The UI uses this label to display additional information.
+						Expect(pr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
+
+						// The UI uses this label to display additional information.
+						tr, err := kubeadminClient.TektonController.GetTaskRunFromPipelineRun(kubeadminClient.CommonController.KubeRest(), pr, "verify")
+						Expect(err).NotTo(HaveOccurred())
+						Expect(tr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
+
+						logs, err := kubeadminClient.TektonController.GetTaskRunLogs(pr.Name, "verify", pr.Namespace)
+						Expect(err).NotTo(HaveOccurred())
+
+						// The logs from the report step are used by the UI to display validation
+						// details. Let's make sure it has valid YAML.
+						reportLogs := logs["step-report"]
+						Expect(reportLogs).NotTo(BeEmpty())
+						var reportYAML any
+						err = yaml.Unmarshal([]byte(reportLogs), &reportYAML)
+						Expect(err).NotTo(HaveOccurred())
+
+						// The logs from the summary step are used by the UI to display an overview of
+						// the validation.
+						summaryLogs := logs["step-summary"]
+						Expect(summaryLogs).NotTo(BeEmpty())
+						var summary build.TestOutput
+						err = json.Unmarshal([]byte(summaryLogs), &summary)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(summary).NotTo(Equal(build.TestOutput{}))
+					})
+				}
+			})
 		}
 
 		It(fmt.Sprintf("triggers PipelineRun for symlink component with source URL %s", pythonComponentGitSourceURL), Label(buildTemplatesTestLabel), func() {
@@ -367,7 +472,35 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		It(fmt.Sprintf("pipelineRun should fail for symlink component with Git source URL %s", pythonComponentGitSourceURL), Label(buildTemplatesTestLabel), func() {
 			component, err := kubeadminClient.HasController.GetComponent(symlinkComponentName, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, f.AsKubeAdmin.TektonController)).Should(MatchError(ContainSubstring("cloned repository contains symlink pointing outside of the cloned repository")))
+			Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "", pipelineCompletionRetries, kubeadminClient.TektonController)).Should(MatchError(ContainSubstring("cloned repository contains symlink pointing outside of the cloned repository")))
 		})
 	})
 })
+
+func getImageWithDigest(c *framework.ControllerHub, componentName, applicationName, namespace string) (string, error) {
+	var url string
+	var digest string
+	pipelineRun, err := c.HasController.GetComponentPipelineRun(componentName, applicationName, namespace, "")
+	if err != nil {
+		return "", err
+	}
+
+	for _, p := range pipelineRun.Spec.Params {
+		if p.Name == "output-image" {
+			url = p.Value.StringVal
+		}
+	}
+	if url == "" {
+		return "", fmt.Errorf("output-image of a component %q could not be found", componentName)
+	}
+
+	for _, r := range pipelineRun.Status.PipelineResults {
+		if r.Name == "IMAGE_DIGEST" {
+			digest = r.Value.StringVal
+		}
+	}
+	if digest == "" {
+		return "", fmt.Errorf("IMAGE_DIGEST for component %q could not be found", componentName)
+	}
+	return fmt.Sprintf("%s@%s", url, digest), nil
+}
