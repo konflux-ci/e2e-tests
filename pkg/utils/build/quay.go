@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	quay "github.com/redhat-appstudio/image-controller/pkg/quay"
 )
@@ -102,4 +103,36 @@ func DoesTagExistsInQuay(imageURL string) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func IsImageRepoPublic(quayImageRepoName string) (bool, error) {
+	isPublic, err := quayClient.IsRepositoryPublic(quayOrg, quayImageRepoName)
+	if isPublic {
+		return true, nil
+	} else if !isPublic && err == nil {
+		return false, nil
+	} else {
+		return false, err
+	}
+}
+
+func IsQuayOrgSupportsPrivateRepo() (bool, error) {
+	repositoryRequest := quay.RepositoryRequest{
+		Namespace:   quayOrg,
+		Visibility:  "private",
+		Description: "Test private repository",
+		Repository:  constants.SamplePrivateRepoName,
+	}
+	repo, err := quayClient.CreateRepository(repositoryRequest)
+	if err != nil {
+		if err.Error() == "payment required" {
+			return false, nil
+		} else {
+			return false, err
+		}
+	}
+	if repo == nil {
+		return false, fmt.Errorf("%v repository created is nil", repo)
+	}
+	return true, nil
 }

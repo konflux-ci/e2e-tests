@@ -61,6 +61,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Skip("Using private cluster (not reachable from Github), skipping...")
 			}
 
+			supports, err := build.IsQuayOrgSupportsPrivateRepo()
+			Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error while checking if quay org supports private repo: %+v", err))
+			if !supports {
+				Skip("Quay org does not support private quay repository creation, please add support for private repo creation before running this test")
+			}
+
 			// Used for identifying related webhook on GitHub - in order to delete it
 			// TODO: Remove when https://github.com/redhat-appstudio/infra-deployments/pull/1725 it is merged
 			pacControllerRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "pipelines-as-code")
@@ -124,9 +130,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			//Delete the quay image repo since we are setting delete-repo=false
 			_, err = build.DeleteImageRepo(imageRepoName)
 			Expect(err).NotTo(HaveOccurred(), "Failed to delete image repo with error: %+v", err)
+
+			// Delete the sample private image repo created for checking inside build.IsQuayOrgSupportsPrivateRepo()
+			_, err = build.DeleteImageRepo(constants.SamplePrivateRepoName)
+			Expect(err).NotTo(HaveOccurred(), "Failed to delete sample private image repo with error: %+v", err)
 		})
 
-		When("a new component without specified branch is created", Label("pac-custom-default-branch"), func() {
+		When("a new component without specified branch is created and with visibility private", Label("pac-custom-default-branch"), func() {
 			BeforeAll(func() {
 				componentObj := appservice.ComponentSpec{
 					ComponentName: defaultBranchTestComponentName,
@@ -140,7 +150,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						},
 					},
 				}
-				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
+				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPrivateRepo))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -190,6 +200,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				robotAccountExist, err := build.DoesRobotAccountExistInQuay(robotAccountName)
 				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if robot account exists in quay with error: %+v", err)
 				Expect(robotAccountExist).To(BeTrue(), "quay robot account does not exists")
+			})
+			It("created image repo is private", func() {
+				isPublic, err := build.IsImageRepoPublic(imageRepoName)
+				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while checking if the image repo %s is private", imageRepoName))
+				Expect(isPublic).To(BeFalse(), "Expected image repo to be private, but it is public")
 			})
 			It("a related PipelineRun and Github webhook should be deleted after deleting the component", func() {
 				timeout = time.Second * 60
@@ -318,7 +333,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(robotAccountExist).To(BeTrue(), fmt.Sprintf("quay robot account %s does not exists", robotAccountName))
 
 			})
-
+			It("created image repo is public", func() {
+				isPublic, err := build.IsImageRepoPublic(imageRepoName)
+				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while checking if the image repo %s is public", imageRepoName))
+				Expect(isPublic).To(BeTrue(), "Expected image repo to changed to public, but it is private")
+			})
 			It("image tag is updated successfully", func() {
 				// check if the image tag exists in quay
 				pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
@@ -464,6 +483,22 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(ok).To(BeFalse())
 				Expect(expiration).To(BeEmpty())
 			})
+
+			It("After updating image visibility to private, it should not trigger another PipelineRun", func() {
+				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.ImageRepoGenerateAnnotationName, constants.ImageControllerAnnotationRequestPrivateRepo[controllers.ImageRepoGenerateAnnotationName], testNamespace)).To(Succeed())
+
+				Consistently(func() bool {
+					componentPipelineRun, _ := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+					return componentPipelineRun == nil
+				}, time.Minute, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("expected no PipelineRun to be triggered for the component %s in %s namespace", componentName, testNamespace))
+			})
+			It("image repo is updated to private", func() {
+				isPublic, err := build.IsImageRepoPublic(imageRepoName)
+				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while checking if the image repo %s is private", imageRepoName))
+				Expect(isPublic).To(BeFalse(), "Expected image repo to changed to private, but it is public")
+			})
+
 		})
 
 		When("the component is removed and recreated (with the same name in the same namespace)", func() {
