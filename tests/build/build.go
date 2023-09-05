@@ -61,7 +61,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Skip("Using private cluster (not reachable from Github), skipping...")
 			}
 
-			supports, err := build.IsQuayOrgSupportsPrivateRepo()
+			supports, err := build.DoesQuayOrgSupportPrivateRepo()
 			Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error while checking if quay org supports private repo: %+v", err))
 			if !supports {
 				Skip("Quay org does not support private quay repository creation, please add support for private repo creation before running this test")
@@ -131,9 +131,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			_, err = build.DeleteImageRepo(imageRepoName)
 			Expect(err).NotTo(HaveOccurred(), "Failed to delete image repo with error: %+v", err)
 
-			// Delete the sample private image repo created for checking inside build.IsQuayOrgSupportsPrivateRepo()
-			_, err = build.DeleteImageRepo(constants.SamplePrivateRepoName)
-			Expect(err).NotTo(HaveOccurred(), "Failed to delete sample private image repo with error: %+v", err)
 		})
 
 		When("a new component without specified branch is created and with visibility private", Label("pac-custom-default-branch"), func() {

@@ -106,17 +106,10 @@ func DoesTagExistsInQuay(imageURL string) (bool, error) {
 }
 
 func IsImageRepoPublic(quayImageRepoName string) (bool, error) {
-	isPublic, err := quayClient.IsRepositoryPublic(quayOrg, quayImageRepoName)
-	if isPublic {
-		return true, nil
-	} else if !isPublic && err == nil {
-		return false, nil
-	} else {
-		return false, err
-	}
+	return quayClient.IsRepositoryPublic(quayOrg, quayImageRepoName)
 }
 
-func IsQuayOrgSupportsPrivateRepo() (bool, error) {
+func DoesQuayOrgSupportPrivateRepo() (bool, error) {
 	repositoryRequest := quay.RepositoryRequest{
 		Namespace:   quayOrg,
 		Visibility:  "private",
@@ -133,6 +126,11 @@ func IsQuayOrgSupportsPrivateRepo() (bool, error) {
 	}
 	if repo == nil {
 		return false, fmt.Errorf("%v repository created is nil", repo)
+	}
+	// Delete the created image repo
+	_, err = DeleteImageRepo(constants.SamplePrivateRepoName)
+	if err != nil {
+		return true, fmt.Errorf("error while deleting private image repo: %v", err)
 	}
 	return true, nil
 }
