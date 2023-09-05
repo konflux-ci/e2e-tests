@@ -222,7 +222,7 @@ spec:
 					"-X POST \\"+
 					"-H 'Content-Type: application/yaml' \\"+
 					"--connect-timeout 30 \\"+
-					"--max-time 1200 \\"+
+					"--max-time 300 \\"+
 					"-d '%s'",
 				fmt.Sprintf("%s/apis/appstudio.redhat.com/v1beta1/namespaces/%s/spifilecontentrequests", primaryUser.WorkspaceURL, primaryUser.Framework.UserNamespace),
 				guestUser.Framework.UserToken,
