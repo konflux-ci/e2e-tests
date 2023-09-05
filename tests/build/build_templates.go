@@ -238,11 +238,17 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 			When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", gitUrl), Label("sbom", "slow"), func() {
 				var imageWithDigest string
+				var pr *v1beta1.PipelineRun
 
 				BeforeAll(func() {
 					var err error
 					imageWithDigest, err = getImageWithDigest(kubeadminClient, componentNames[i], applicationName, testNamespace)
 					Expect(err).NotTo(HaveOccurred())
+				})
+				AfterAll(func() {
+					if !CurrentSpecReport().Failed() {
+						Expect(kubeadminClient.TektonController.DeletePipelineRun(pr.GetName(), pr.GetNamespace())).To(Succeed())
+					}
 				})
 
 				It("verify-enterprise-contract check should pass", Label(buildTemplatesTestLabel), func() {
@@ -298,7 +304,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						EffectiveTime:       "now",
 					}
 
-					pr, err := kubeadminClient.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
+					pr, err = kubeadminClient.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(kubeadminClient.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(Succeed())
