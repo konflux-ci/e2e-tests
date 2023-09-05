@@ -221,6 +221,8 @@ spec:
 					"-H 'Authorization: Bearer %s' \\"+
 					"-X POST \\"+
 					"-H 'Content-Type: application/yaml' \\"+
+					"--connect-timeout 30 \\"+
+					"--max-time 1200 \\"+
 					"-d '%s'",
 				fmt.Sprintf("%s/apis/appstudio.redhat.com/v1beta1/namespaces/%s/spifilecontentrequests", primaryUser.WorkspaceURL, primaryUser.Framework.UserNamespace),
 				guestUser.Framework.UserToken,
@@ -259,8 +261,8 @@ spec:
 				Stdout: buffer,
 				Stderr: errBuffer,
 			})
-			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("reason: %v", err))
-			Expect(errBuffer.String()).To(BeEmpty(), fmt.Sprintf("reason: %v", errBuffer.String()))
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("error: %v", err))
+			Expect(errBuffer.String()).To(BeEmpty(), fmt.Sprintf("stderr: %v", errBuffer.String()))
 			Expect(buffer.String()).NotTo(BeEmpty())
 		}
 
