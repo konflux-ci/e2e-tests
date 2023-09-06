@@ -61,3 +61,19 @@
 - name: measurements.etcd_request_duration_seconds_average
   monitoring_query: sum(rate(etcd_request_duration_seconds_sum{}[5m])) / sum(rate(etcd_request_duration_seconds_count[5m]))
   monitoring_step: 15
+
+- name: measurements.cluster_network_bytes_total
+  monitoring_query: sum(irate(container_network_receive_bytes_total{cluster="",namespace=~".*"}[5m])) + sum(irate(container_network_transmit_bytes_total{cluster="",namespace=~".*"}[5m]))
+  monitoring_step: 15
+
+- name: measurements.cluster_network_receive_bytes_total
+  monitoring_query: sum(irate(container_network_receive_bytes_total{cluster="",namespace=~".*"}[5m]))
+  monitoring_step: 15
+
+- name: measurements.cluster_network_transmit_bytes_total
+  monitoring_query: sum(irate(container_network_transmit_bytes_total{cluster="",namespace=~".*"}[5m]))
+  monitoring_step: 15
+
+- name: measurements.node_disk_io_time_seconds_total
+  monitoring_query: sum(irate(node_disk_io_time_seconds_total{cluster="",namespace=~".*"}[5m]))
+  monitoring_step: 15
