@@ -191,6 +191,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 					PublicKey:           fmt.Sprintf("k8s://%s/%s", namespace, publicSecretName),
 					Strict:              true,
 					EffectiveTime:       "now",
+					IgnoreRekor:         true,
 				}
 				generator.WithComponentImage(imageWithDigest)
 

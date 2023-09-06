@@ -302,6 +302,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						PublicKey:           fmt.Sprintf("k8s://%s/%s", testNamespace, publicSecretName),
 						Strict:              true,
 						EffectiveTime:       "now",
+						IgnoreRekor:         true,
 					}
 
 					pr, err = kubeadminClient.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
