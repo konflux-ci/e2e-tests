@@ -65,6 +65,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 				PublicKey:           fmt.Sprintf("k8s://%s/%s", namespace, publicSecretName),
 				Strict:              false,
 				EffectiveTime:       "now",
+				IgnoreRekor:         true,
 			}
 			generator.WithComponentImage(imageWithDigest)
 			pipelineRunTimeout = int(time.Duration(5) * time.Minute)
@@ -167,6 +168,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 				PublicKey:           fmt.Sprintf("k8s://%s/%s", namespace, secretName),
 				Strict:              false,
 				EffectiveTime:       "now",
+				IgnoreRekor:         true,
 			}
 			generator.WithComponentImage(imageWithDigest)
 			pipelineRunTimeout = int(time.Duration(5) * time.Minute)
