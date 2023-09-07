@@ -234,6 +234,8 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when running e2e tests - see the log above for more details")
 	}
 
+	deletePreviewBranch()
+
 	return nil
 }
 
