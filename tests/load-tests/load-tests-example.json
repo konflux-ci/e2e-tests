@@ -31,7 +31,7 @@
   "createUserFailureRate": 0,
   "createApplicationsSuccesses": 30,
   "createApplicationsFailures": 0,
-  "createsApplictionsFailureRate": 0,
+  "createApplicationsFailureRate": 0,
   "createCDQsSuccesses": 30,
   "createCDQsFailures": 0,
   "createCDQsFailureRate": 0,

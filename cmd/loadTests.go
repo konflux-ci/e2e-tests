@@ -158,7 +158,7 @@ type LogData struct {
 	UserCreationFailureRate         float64 `json:"createUserFailureRate"`
 	ApplicationCreationSuccessCount int64   `json:"createApplicationsSuccesses"`
 	ApplicationCreationFailureCount int64   `json:"createApplicationsFailures"`
-	ApplicationCreationFailureRate  float64 `json:"createsApplictionsFailureRate"`
+	ApplicationCreationFailureRate  float64 `json:"createApplicationsFailureRate"`
 	CDQCreationSuccessCount         int64   `json:"createCDQsSuccesses"`
 	CDQCreationFailureCount         int64   `json:"createCDQsFailures"`
 	CDQCreationFailureRate          float64 `json:"createCDQsFailureRate"`
