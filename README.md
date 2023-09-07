@@ -192,3 +192,12 @@ Our automated tests running in CI create lot of repositories in our redhat-appst
 There is a mage target that can cleanup those repositories - `mage local:cleanupGithubOrg`.
 
 For more infor & usage, please run `mage -h local:cleanupGithubOrg`.
+
+# PR review process in e2e-tests
+* Since RHTAP is leveraging OpenShift CI, [OWNERS](https://github.com/redhat-appstudio/e2e-tests/blob/main/OWNERS) file (in a directory or its parent directory) takes effect in e2e-tests PR review process. Reviewers are selected by [Blunderbuss plugin](https://github.com/kubernetes/test-infra/tree/master/prow/plugins/blunderbuss).
+  * [code review process](https://github.com/kubernetes/community/blob/master/contributors/guide/owners.md#the-code-review-process)
+  * root [OWNERS](https://github.com/redhat-appstudio/e2e-tests/blob/main/OWNERS) is maintained by the whole RHTAP team, while sub directory OWNERS files are maintained by sub workstream.
+
+* To get a PR merged, the following is needed:
+  1. approved label added by selected [approver](https://github.com/kubernetes/community/blob/master/community-membership.md#approver) in relevant OWNERS file through [Blunderbuss plugin](https://github.com/kubernetes/test-infra/tree/master/prow/plugins/blunderbuss).
+  2. Tide check passed.
