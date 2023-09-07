@@ -291,6 +291,9 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 // deletePreviewBranch deletes 'preview-' branch
 // used on ci job to delete 'preview-' branch that is created in the infra-deployment fork
 func deletePreviewBranch() {
+	// testing
+	fmt.Printf("preview branch: %s", os.Getenv("PREVIEW_BRANCH"))
+
 	if err := sh.RunV("bash", "-c", "git branch -D `git branch --list 'preview-*'`"); err != nil {
 		fmt.Printf("error deleting preview branch: %v", err)
 	}

@@ -84,11 +84,12 @@ func NewAppStudioInstallController() (*InstallAppStudio, error) {
 	}
 
 	return &InstallAppStudio{
-		KubernetesClient:                 k8sClient,
-		TmpDirectory:                     DEFAULT_TMP_DIR,
-		InfraDeploymentsCloneDir:         fmt.Sprintf("%s/%s/infra-deployments", cwd, DEFAULT_TMP_DIR),
-		InfraDeploymentsBranch:           utils.GetEnv("INFRA_DEPLOYMENTS_BRANCH", DEFAULT_INFRA_DEPLOYMENTS_BRANCH),
-		InfraDeploymentsOrganizationName: utils.GetEnv("INFRA_DEPLOYMENTS_ORG", DEFAULT_INFRA_DEPLOYMENTS_GH_ORG),
+		KubernetesClient:         k8sClient,
+		TmpDirectory:             DEFAULT_TMP_DIR,
+		InfraDeploymentsCloneDir: fmt.Sprintf("%s/%s/infra-deployments", cwd, DEFAULT_TMP_DIR),
+		// testing
+		InfraDeploymentsBranch:           "RHTAPBUGS-570",
+		InfraDeploymentsOrganizationName: "rsoaresd",
 		LocalForkName:                    DEFAULT_LOCAL_FORK_NAME,
 		LocalGithubForkOrganization:      utils.GetEnv("MY_GITHUB_ORG", DEFAULT_LOCAL_FORK_ORGANIZATION),
 		QuayToken:                        utils.GetEnv("QUAY_TOKEN", ""),
