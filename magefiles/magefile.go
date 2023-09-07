@@ -402,7 +402,7 @@ func (ci CI) setRequiredEnvVars() error {
 			case strings.Contains(jobName, "spi-service"):
 				envVarPrefix = "SPI_OPERATOR"
 				imageTagSuffix = "spi-image"
-				testSuiteLabel = "spi"
+				testSuiteLabel = "spi-suite"
 			}
 
 			os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", envVarPrefix), sp[0])

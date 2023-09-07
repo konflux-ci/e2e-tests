@@ -70,8 +70,12 @@ echo "Threads\
 ${csv_delim}Errors\
 ${csv_delim}UserAvgTime\
 ${csv_delim}UserMaxTime\
-${csv_delim}ResourcesAvgTime\
-${csv_delim}ResourcesMaxTime\
+${csv_delim}ApplicationAvgTime\
+${csv_delim}ApplicationMaxTime\
+${csv_delim}CDQAvgTime\
+${csv_delim}CDQMaxTime\
+${csv_delim}ComponentsAvgTime\
+${csv_delim}ComponentsMaxTime\
 ${csv_delim}PipelineRunAvgTime\
 ${csv_delim}PipelineRunMaxTime\
 ${csv_delim}ClusterCPUUsageAvg\
@@ -88,8 +92,12 @@ ${csv_delim}ClusterPipelineRunCountAvg\
 ${csv_delim}ClusterPipelineWorkqueueDepthAvg\
 ${csv_delim}ClusterPipelineScheduleFirstPodAvg\
 ${csv_delim}ClusterTaskrunThrottledByNodeResourcesAvg\
-${csv_delim}ClusterTaskRunThrottledByDefinedQuotaAvg
-${csv_delim}EtcdRequestDurationSecondsAvg" \
+${csv_delim}ClusterTaskRunThrottledByDefinedQuotaAvg\
+${csv_delim}EtcdRequestDurationSecondsAvg\
+${csv_delim}ClusterNetworkBytesTotalAvg\
+${csv_delim}ClusterNetworkReceiveBytesTotalAvg\
+${csv_delim}ClusterNetworkTransmitBytesTotalAvg\
+${csv_delim}NodeDiskIoTimeSecondsTotalAvg" \
     >"$max_concurrency_csv"
 mc_files=$(find "$output_dir" -type f -name 'load-tests.max-concurrency.*.json')
 if [ -n "$mc_files" ]; then
@@ -98,8 +106,12 @@ if [ -n "$mc_files" ]; then
         + $csv_delim_quoted + (.errorsTotal | tostring) \
         + $csv_delim_quoted + (.createUserTimeAvg | tostring) \
         + $csv_delim_quoted + (.createUserTimeMax | tostring) \
-        + $csv_delim_quoted + (.createResourcesTimeAvg | tostring) \
-        + $csv_delim_quoted + (.createResourcesTimeMax | tostring) \
+        + $csv_delim_quoted + (.createApplicationsTimeAvg | tostring) \
+        + $csv_delim_quoted + (.createApplicationsTimeMax | tostring) \
+        + $csv_delim_quoted + (.createCDQsTimeAvg | tostring) \
+        + $csv_delim_quoted + (.createCDQsTimeMax | tostring) \
+        + $csv_delim_quoted + (.createComponentsTimeAvg | tostring) \
+        + $csv_delim_quoted + (.createComponentsTimeMax | tostring) \
         + $csv_delim_quoted + (.runPipelineSucceededTimeAvg | tostring) \
         + $csv_delim_quoted + (.runPipelineSucceededTimeMax | tostring) \
         + $csv_delim_quoted + (.measurements.cluster_cpu_usage_seconds_total_rate.mean | tostring) \
@@ -117,7 +129,11 @@ if [ -n "$mc_files" ]; then
         + $csv_delim_quoted + (.measurements.pipelinerun_duration_scheduled_seconds.mean | tostring) \
         + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_node.mean | tostring) \
         + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_quota.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.etcd_request_duration_seconds_average.mean | tostring)" \
+        + $csv_delim_quoted + (.measurements.etcd_request_duration_seconds_average.mean | tostring) \
+        + $csv_delim_quoted + (.measurements.cluster_network_bytes_total.mean | tostring) \
+        + $csv_delim_quoted + (.measurements.cluster_network_receive_bytes_total.mean | tostring) \
+        + $csv_delim_quoted + (.measurements.cluster_network_transmit_bytes_total.mean | tostring) \
+        + $csv_delim_quoted + (.measurements.node_disk_io_time_seconds_total.mean | tostring)" \
             >>"$max_concurrency_csv"
 else
     echo "WARNING: No file matching '$output_dir/load-tests.max-concurrency.*.json' found!"

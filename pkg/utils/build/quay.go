@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	quay "github.com/redhat-appstudio/image-controller/pkg/quay"
 )
@@ -102,4 +103,34 @@ func DoesTagExistsInQuay(imageURL string) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func IsImageRepoPublic(quayImageRepoName string) (bool, error) {
+	return quayClient.IsRepositoryPublic(quayOrg, quayImageRepoName)
+}
+
+func DoesQuayOrgSupportPrivateRepo() (bool, error) {
+	repositoryRequest := quay.RepositoryRequest{
+		Namespace:   quayOrg,
+		Visibility:  "private",
+		Description: "Test private repository",
+		Repository:  constants.SamplePrivateRepoName,
+	}
+	repo, err := quayClient.CreateRepository(repositoryRequest)
+	if err != nil {
+		if err.Error() == "payment required" {
+			return false, nil
+		} else {
+			return false, err
+		}
+	}
+	if repo == nil {
+		return false, fmt.Errorf("%v repository created is nil", repo)
+	}
+	// Delete the created image repo
+	_, err = DeleteImageRepo(constants.SamplePrivateRepoName)
+	if err != nil {
+		return true, fmt.Errorf("error while deleting private image repo: %v", err)
+	}
+	return true, nil
 }
