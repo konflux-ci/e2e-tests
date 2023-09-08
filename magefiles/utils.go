@@ -17,6 +17,8 @@ import (
 
 	sprig "github.com/go-task/slim-sprig"
 	"github.com/magefile/mage/sh"
+	"github.com/redhat-appstudio/e2e-tests/magefiles/installation"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/image-controller/pkg/quay"
 )
 
@@ -291,10 +293,20 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 // deletePreviewBranch deletes 'preview-' branch
 // used on ci job to delete 'preview-' branch that is created in the infra-deployment fork
 func deletePreviewBranch() {
-	// testing
-	fmt.Printf("preview branch: %s", os.Getenv("PREVIEW_BRANCH"))
+	previewBranch := os.Getenv("PREVIEW_BRANCH")
+	ghToken := os.Getenv("GITHUB_TOKEN")
+	org := utils.GetEnv("MY_GITHUB_ORG", installation.DEFAULT_LOCAL_FORK_ORGANIZATION)
 
-	if err := sh.RunV("bash", "-c", "git branch -D `git branch --list 'preview-*'`"); err != nil {
+	err := sh.RunV(
+		"curl", "-L",
+		"-X", "DELETE",
+		"-H", "Accept: application/vnd.github+json",
+		"-H", fmt.Sprintf("Authorization: Bearer %s", ghToken),
+		"-H", "X-GitHub-Api-Version: 2022-11-28",
+		fmt.Sprintf("https://api.github.com/repos/%s/infra-deployments/git/refs/heads/%s", org, previewBranch),
+	)
+
+	if err != nil {
 		fmt.Printf("error deleting preview branch: %v", err)
 	}
 }

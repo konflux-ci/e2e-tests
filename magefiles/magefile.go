@@ -226,6 +226,8 @@ func (ci CI) TestE2E() error {
 		testFailure = true
 	}
 
+	deletePreviewBranch()
+
 	if err := ci.sendWebhook(); err != nil {
 		klog.Infof("error when sending webhook: %v", err)
 	}
@@ -233,8 +235,6 @@ func (ci CI) TestE2E() error {
 	if testFailure {
 		return fmt.Errorf("error when running e2e tests - see the log above for more details")
 	}
-
-	deletePreviewBranch()
 
 	return nil
 }
