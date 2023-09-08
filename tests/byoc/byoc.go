@@ -112,7 +112,12 @@ var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
 			// Remove all resources created by the tests in case the suite was successfull
 			AfterAll(func() {
 				if !CurrentSpecReport().Failed() {
-					Expect(fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
+					if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(fw.UserNamespace, 30*time.Second); err != nil {
+						if err := fw.AsKubeAdmin.StoreAllArtifactsForNamespace(fw.UserNamespace); err != nil {
+							Fail(fmt.Sprintf("error archiving artifacts:\n%s", err))
+						}
+						Fail(fmt.Sprintf("error deleting all componentns in namespace:\n%s", err))
+					}
 					Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.CommonController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.IntegrationController.DeleteAllSnapshotsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
