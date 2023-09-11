@@ -150,6 +150,13 @@ func (p VerifyEnterpriseContract) Generate() (*v1beta1.PipelineRun, error) {
 									StringVal: p.EffectiveTime,
 								},
 							},
+							{
+								Name: "IGNORE_REKOR",
+								Value: v1beta1.ParamValue{
+									Type:      v1beta1.ParamTypeString,
+									StringVal: strconv.FormatBool(p.IgnoreRekor),
+								},
+							},
 						},
 						TaskRef: &v1beta1.TaskRef{
 							Name:   "verify-enterprise-contract",
