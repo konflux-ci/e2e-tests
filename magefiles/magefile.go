@@ -222,6 +222,9 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
 	}
 
+	fmt.Println(os.Getenv("INFRA_DEPLOYMENTS_ORG"))
+	fmt.Println(os.Getenv("INFRA_DEPLOYMENTS_BRANCH"))
+
 	if err := RunE2ETests(); err != nil {
 		testFailure = true
 	}
