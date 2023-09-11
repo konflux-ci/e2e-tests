@@ -2,8 +2,10 @@ package integration
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/devfile/library/v2/pkg/util"
+	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,30 +36,54 @@ func (i *IntegrationController) CreateIntegrationTestScenario(applicationName, n
 	return integrationTestScenario, nil
 }
 
-// CreateIntegrationTestScenarioWithEnvironment creates new integrationTestScenario with given Environment.
-func (i *IntegrationController) CreateIntegrationTestScenarioWithEnvironment(applicationName, namespace, bundleURL, pipelineName, environmentName string) (*integrationv1alpha1.IntegrationTestScenario, error) {
-	integrationTestScenario := &integrationv1alpha1.IntegrationTestScenario{
+// CreateIntegrationTestScenarioWithEnvironment will create an IntegrationTestScenario with a
+// user-supplied environment embedded in its Spec.Environment
+func (i *IntegrationController) CreateIntegrationTestScenarioWithEnvironment(applicationName, namespace, gitURL, revision, pathInRepo string, environment *appservice.Environment) (*integrationv1beta1.IntegrationTestScenario, error) {
+	integrationTestScenario := &integrationv1beta1.IntegrationTestScenario{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "example-pass-" + util.GenerateRandomString(4),
+			Name:      "example-pass-with-env-" + util.GenerateRandomString(4),
 			Namespace: namespace,
 			Labels: map[string]string{
 				"test.appstudio.openshift.io/optional": "false",
 			},
 		},
-		Spec: integrationv1alpha1.IntegrationTestScenarioSpec{
+		Spec: integrationv1beta1.IntegrationTestScenarioSpec{
 			Application: applicationName,
-			Bundle:      bundleURL,
-			Pipeline:    pipelineName,
-			Environment: integrationv1alpha1.TestEnvironment{
-				Name: environmentName,
-				Type: "POC",
+			ResolverRef: integrationv1beta1.ResolverRef{
+				Resolver: "git",
+				Params: []integrationv1beta1.ResolverParameter{
+					{
+						Name:  "url",
+						Value: gitURL,
+					},
+					{
+						Name:  "revision",
+						Value: revision,
+					},
+					{
+						Name:  "pathInRepo",
+						Value: pathInRepo,
+					},
+				},
+			},
+			Environment: integrationv1beta1.TestEnvironment{
+				Name:          environment.Name,
+				Type:          environment.Spec.Type,
+				Configuration: &appservice.EnvironmentConfiguration{
+					Env: []appservice.EnvVarPair{
+						{
+							Name:  environment.Spec.Configuration.Env[0].Name,
+							Value: environment.Spec.Configuration.Env[0].Value,
+						},
+					},
+				},
 			},
 		},
 	}
 
 	err := i.KubeRest().Create(context.TODO(), integrationTestScenario)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error occurred when creating the IntegrationTestScenario: %+v", err)
 	}
 	return integrationTestScenario, nil
 }
