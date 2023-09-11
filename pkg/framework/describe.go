@@ -42,10 +42,6 @@ func RhtapDemoSuiteDescribe(args ...interface{}) bool {
 	return Describe("[rhtap-demo-suite]", args)
 }
 
-func O11ySuiteDescribe(text string, args ...interface{}) bool {
-	return Describe("[O11y-suite "+text+"]", args, Ordered)
-}
-
 func SPISuiteDescribe(args ...interface{}) bool {
 	return Describe("[spi-suite]", args, Ordered)
 }
