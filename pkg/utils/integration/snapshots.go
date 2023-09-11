@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
 	"github.com/devfile/library/v2/pkg/util"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -123,4 +126,21 @@ func (i *IntegrationController) DeleteAllSnapshotsInASpecificNamespace(namespace
 		}
 		return len(snapshotList.Items) == 0, nil
 	}, timeout)
+}
+
+// WaitForSnapshotToGetCreated wait for the Snapshot to get created successfully.
+func (i *IntegrationController) WaitForSnapshotToGetCreated(snapshotName, pipelinerunName, componentName, testNamespace string) (*appstudioApi.Snapshot, error) {
+	var snapshot *appstudioApi.Snapshot
+
+	err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 10*time.Minute, true, func(ctx context.Context) (done bool, err error) {
+		snapshot, err = i.GetSnapshot(snapshotName, pipelinerunName, componentName, testNamespace)
+		if err != nil {
+			GinkgoWriter.Printf("unable to get the Snapshot for Build PipelineRun %s/%s. Error: %v", testNamespace, pipelinerunName, err)
+			return false, nil
+		}
+
+		return true, nil
+	})
+
+	return snapshot, err
 }
