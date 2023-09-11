@@ -21,10 +21,14 @@ const (
 	helloWorldComponentGitSourceRepoName = "devfile-sample-hello-world"
 	helloWorldComponentDefaultBranch     = "default"
 	helloWorldComponentRevision          = "b915157dc9efac492ebc285d4a44ce67e6ab2075"
+
+	multiComponentGitSourceRepoName = "sample-multi-component"
 )
 
 var (
 	componentUrls                   = strings.Split(utils.GetEnv(COMPONENT_REPO_URLS_ENV, pythonComponentGitSourceURL), ",") //multiple urls
 	componentNames                  []string
 	helloWorldComponentGitSourceURL = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), helloWorldComponentGitSourceRepoName)
+	multiComponentGitSourceURL      = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), multiComponentGitSourceRepoName)
+	multiComponentContextDirs       = []string{"go-component", "python-component"}
 )
