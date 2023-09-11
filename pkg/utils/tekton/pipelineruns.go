@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	g "github.com/onsi/ginkgo/v2"
 )
@@ -424,7 +425,7 @@ func (t *TektonController) StorePipelineRun(pipelineRun *v1beta1.PipelineRun) er
 	}
 	artifacts["pipelineRun-"+pipelineRun.Name+".log"] = []byte(pipelineRunLog)
 
-	pipelineRunYaml, err := logs.GetObjectYaml(pipelineRun)
+	pipelineRunYaml, err := yaml.Marshal(pipelineRun)
 	if err != nil {
 		return err
 	}

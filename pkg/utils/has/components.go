@@ -25,6 +25,7 @@ import (
 	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 )
 
 // GetComponent return a component object from kubernetes cluster
@@ -435,7 +436,7 @@ func (h *HasController) StoreComponent(component *appservice.Component) error {
 	}
 	artifacts["component-condition-status-"+component.Name+".log"] = []byte(strings.Join(componentConditionStatus, "\n"))
 
-	componentYaml, err := logs.GetObjectYaml(component)
+	componentYaml, err := yaml.Marshal(component)
 	if err != nil {
 		return err
 	}

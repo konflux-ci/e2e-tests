@@ -25,14 +25,9 @@ func createArtifactDirectory() (string, error) {
 
 }
 
-// GetObjectYaml returns yaml of given object.
-func GetObjectYaml(object any) ([]byte, error) {
-	return yaml.Marshal(object)
-}
-
 // StoreResourceYaml stores yaml of given resource.
 func StoreResourceYaml(resource any, name string) error {
-	resourceYaml, err := GetObjectYaml(resource)
+	resourceYaml, err := yaml.Marshal(resource)
 	if err != nil {
 		return fmt.Errorf("error getting resource yaml: %v", err)
 	}
