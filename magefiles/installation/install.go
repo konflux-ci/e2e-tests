@@ -116,10 +116,13 @@ func (i *InstallAppStudio) InstallAppStudioPreviewMode() error {
 }
 
 func (i *InstallAppStudio) setInstallationEnvironments() {
+	testBranchID := util.GenerateRandomString(4)
+
 	os.Setenv("MY_GITHUB_ORG", i.LocalGithubForkOrganization)
 	os.Setenv("MY_GITHUB_TOKEN", utils.GetEnv("GITHUB_TOKEN", ""))
 	os.Setenv("MY_GIT_FORK_REMOTE", i.LocalForkName)
-	os.Setenv("TEST_BRANCH_ID", util.GenerateRandomString(4))
+	os.Setenv("TEST_BRANCH_ID", testBranchID)
+	os.Setenv("PREVIEW_BRANCH", fmt.Sprintf("preview-%s-%s", i.InfraDeploymentsBranch, testBranchID))
 	os.Setenv("QUAY_TOKEN", i.QuayToken)
 	os.Setenv("IMAGE_CONTROLLER_QUAY_ORG", i.DefaultImageQuayOrg)
 	os.Setenv("IMAGE_CONTROLLER_QUAY_TOKEN", i.DefaultImageQuayOrgOAuth2Token)
