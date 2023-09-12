@@ -77,3 +77,45 @@
 - name: measurements.node_disk_io_time_seconds_total
   monitoring_query: sum(irate(node_disk_io_time_seconds_total{cluster="",namespace=~".*"}[5m]))
   monitoring_step: 15
+
+# Interesting CI environment variables
+{% for var in [
+  'BUILD_ID',
+  'HOSTNAME',
+  'JOB_NAME',
+  'OPENSHIFT_API',
+  'PROW_JOB_ID',
+  'PULL_BASE_REF',
+  'PULL_BASE_SHA',
+  'PULL_HEAD_REF',
+  'PULL_NUMBER',
+  'PULL_PULL_SHA',
+  'PULL_REFS',
+  'REPO_NAME',
+  'REPO_OWNER',
+  'SCENARIO',
+] %}
+- name: metadata.env.{{ var }}
+  env_variable: {{ var }}
+{% endfor %}
+
+# Cluster nodes info
+- name: metadata.cluster.control-plane.count
+  command: oc get nodes -l node-role.kubernetes.io/master -o name | wc -l
+
+- name: metadata.cluster.control-plane.flavor
+  command: oc get nodes -l node-role.kubernetes.io/master -o json | jq --raw-output '.items | map(.metadata.labels."beta.kubernetes.io/instance-type") | unique | sort | join(",")'
+
+- name: metadata.cluster.control-plane.nodes
+  command: oc get nodes -l node-role.kubernetes.io/master -o json | jq '.items | map(.metadata.name)'
+  output: json
+
+- name: metadata.cluster.compute-nodes.count
+  command: oc get nodes -l node-role.kubernetes.io/worker -o name | wc -l
+
+- name: metadata.cluster.compute-nodes.flavor
+  command: oc get nodes -l node-role.kubernetes.io/worker -o json | jq --raw-output '.items | map(.metadata.labels."beta.kubernetes.io/instance-type") | unique | sort | join(",")'
+
+- name: metadata.cluster.compute-nodes.nodes
+  command: oc get nodes -l node-role.kubernetes.io/master -o json | jq '.items | map(.metadata.name)'
+  output: json
