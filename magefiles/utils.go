@@ -294,7 +294,6 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 // used on ci job to delete 'preview-' branch that is created in the infra-deployment fork
 func deletePreviewBranch() {
 	previewBranch := os.Getenv("PREVIEW_BRANCH")
-	fmt.Printf("preview branch: %s\n", previewBranch)
 	ghToken := os.Getenv("GITHUB_TOKEN")
 	org := utils.GetEnv("MY_GITHUB_ORG", installation.DEFAULT_LOCAL_FORK_ORGANIZATION)
 
