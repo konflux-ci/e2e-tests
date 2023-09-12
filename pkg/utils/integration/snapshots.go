@@ -137,7 +137,7 @@ func (i *IntegrationController) WaitForSnapshotToGetCreated(snapshotName, pipeli
 	err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 10*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 		snapshot, err = i.GetSnapshot(snapshotName, pipelinerunName, componentName, testNamespace)
 		if err != nil {
-			GinkgoWriter.Printf("unable to get the Snapshot for Build PipelineRun %s/%s. Error: %v", testNamespace, pipelinerunName, err)
+			GinkgoWriter.Printf("unable to get the Snapshot within the namespace %s. Error: %v", testNamespace, err)
 			return false, nil
 		}
 
