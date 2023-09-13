@@ -6,6 +6,7 @@ import (
 	"time"
 
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -172,4 +173,31 @@ func (g *GitopsController) DeleteAllEnvironmentsInASpecificNamespace(namespace s
 		}
 		return len(environmentList.Items) == 0, nil
 	}, timeout)
+}
+
+// ListAllEnvironments returns a list of all Environments in a given namespace.
+func (g *GitopsController) ListAllEnvironments(namespace string) (*appservice.EnvironmentList, error) {
+	environmentList := &appservice.EnvironmentList{}
+	err := g.KubeRest().List(context.Background(), environmentList, &client.ListOptions{Namespace: namespace})
+	return environmentList, err
+}
+
+// StoreEnvironment stores a given Environment as an artifact.
+func (g *GitopsController) StoreEnvironment(environment *appservice.Environment) error {
+	return logs.StoreResourceYaml(environment, "environment-"+environment.Name)
+}
+
+// StoreAllEnvironments stores all Environments in a given namespace.
+func (g *GitopsController) StoreAllEnvironments(namespace string) error {
+	environmentList, err := g.ListAllEnvironments(namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, environment := range environmentList.Items {
+		if err := g.StoreEnvironment(&environment); err != nil {
+			return err
+		}
+	}
+	return nil
 }

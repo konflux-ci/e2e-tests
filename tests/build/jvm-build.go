@@ -16,7 +16,6 @@ import (
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/jvm-build-service/openshift-with-appstudio-test/e2e"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
@@ -59,9 +58,8 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 			Expect(f.AsKubeAdmin.JvmbuildserviceController.DeleteJBSConfig(constants.JBSConfigName, testNamespace)).To(Succeed())
 		} else {
-			if err := logs.StoreTestLogs(testNamespace, "jvm-build-service", f.AsKubeAdmin.CommonController, f.AsKubeAdmin.TektonController); err != nil {
-				GinkgoWriter.Printf("error storing test logs: %v\n", err.Error())
-			}
+			Expect(f.AsKubeAdmin.CommonController.StoreAllPods(testNamespace)).To(Succeed())
+			Expect(f.AsKubeAdmin.TektonController.StoreAllPipelineRuns(testNamespace)).To(Succeed())
 		}
 	})
 
