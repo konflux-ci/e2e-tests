@@ -16,7 +16,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/integration"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/jvmbuildservice"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/o11y"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/remotesecret"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/spi"
@@ -33,7 +32,6 @@ type ControllerHub struct {
 	ReleaseController         *release.ReleaseController
 	IntegrationController     *integration.IntegrationController
 	JvmbuildserviceController *jvmbuildservice.JvmbuildserviceController
-	O11yController            *o11y.SuiteController
 }
 
 type Framework struct {
@@ -169,11 +167,6 @@ func InitControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Initialize o11y controller
-	o11yController, err := o11y.NewSuiteController(cc)
-	if err != nil {
-		return nil, err
-	}
 
 	return &ControllerHub{
 		HasController:             hasController,
@@ -185,6 +178,5 @@ func InitControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 		ReleaseController:         releaseController,
 		IntegrationController:     integrationController,
 		JvmbuildserviceController: jvmbuildserviceController,
-		O11yController:            o11yController,
 	}, nil
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -151,6 +151,13 @@ func (p VerifyEnterpriseContract) Generate() (*v1beta1.PipelineRun, error) {
 									StringVal: p.EffectiveTime,
 								},
 							},
+							{
+								Name: "IGNORE_REKOR",
+								Value: v1beta1.ParamValue{
+									Type:      v1beta1.ParamTypeString,
+									StringVal: strconv.FormatBool(p.IgnoreRekor),
+								},
+							},
 						},
 						TaskRef: &v1beta1.TaskRef{
 							Name:   "verify-enterprise-contract",
@@ -288,68 +295,6 @@ func GetFailedPipelineRunLogs(c crclient.Client, ki kubernetes.Interface, pipeli
 	return failMessage, nil
 }
 
-// StorePipelineRun stores logs and parsed yamls of pipelineRuns into directory of pipelineruns' namespace under ARTIFACT_DIR env.
-// In case the files can't be stored in ARTIFACT_DIR, they will be recorder in GinkgoWriter.
-func (t *TektonController) StorePipelineRun(pipelineRun *v1beta1.PipelineRun, classname string) error {
-	wd, _ := os.Getwd()
-	artifactDir := utils.GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
-	testLogsDir := fmt.Sprintf("%s/%s", artifactDir, classname)
-
-	pipelineRunLog, err := t.GetPipelineRunLogs(pipelineRun.Name, pipelineRun.Namespace)
-	if err != nil {
-		return fmt.Errorf("failed to store PipelineRun: %+v", err)
-	}
-
-	pipelineRunYaml, prYamlErr := yaml.Marshal(pipelineRun)
-	if prYamlErr != nil {
-		g.GinkgoWriter.Printf("\nfailed to get pipelineRunYaml: %s\n", prYamlErr.Error())
-	}
-
-	err = os.MkdirAll(testLogsDir, os.ModePerm)
-
-	if err != nil {
-		g.GinkgoWriter.Printf("\n%s\nFailed pipelineRunLog:\n%s\n---END OF THE LOG---\n", pipelineRun.GetName(), pipelineRunLog)
-		if prYamlErr == nil {
-			g.GinkgoWriter.Printf("Failed pipelineRunYaml:\n%s\n", pipelineRunYaml)
-		}
-		return err
-	}
-
-	filename := fmt.Sprintf("%s-pr-%s.log", pipelineRun.Namespace, pipelineRun.Name)
-	filePath := fmt.Sprintf("%s/%s", testLogsDir, filename)
-	if err := os.WriteFile(filePath, []byte(pipelineRunLog), 0644); err != nil {
-		g.GinkgoWriter.Printf("cannot write to %s: %+v\n", filename, err)
-		g.GinkgoWriter.Printf("\n%s\nFailed pipelineRunLog:\n%s\n", filename, pipelineRunLog)
-	}
-
-	if prYamlErr == nil {
-		filename = fmt.Sprintf("%s-pr-%s.yaml", pipelineRun.Namespace, pipelineRun.Name)
-		filePath = fmt.Sprintf("%s/%s", testLogsDir, filename)
-		if err := os.WriteFile(filePath, pipelineRunYaml, 0644); err != nil {
-			g.GinkgoWriter.Printf("cannot write to %s: %+v\n", filename, err)
-			g.GinkgoWriter.Printf("\n%s\nFailed pipelineRunYaml:\n%s\n", filename, pipelineRunYaml)
-		}
-	}
-
-	return nil
-}
-
-// StorePipelineRuns stores logs of all pipelineruns in given namespace in folder specified under ARTIFACT_DIR env.
-func (t *TektonController) StorePipelineRuns(classname, testNamespace string) error {
-	pipelineRuns, err := t.ListAllPipelineRuns(testNamespace)
-	if err != nil {
-		return fmt.Errorf("got error fetching PR list: %v\n", err.Error())
-	}
-
-	for _, pipelineRun := range pipelineRuns.Items {
-		if err := t.StorePipelineRun(&pipelineRun, classname); err != nil {
-			g.GinkgoWriter.Printf("Error storing pipelineRun: %v\n", err.Error())
-		}
-	}
-
-	return nil
-}
-
 // GetPipelineRunWatch returns pipelineRun watch interface.
 func (t *TektonController) GetPipelineRunWatch(ctx context.Context, namespace string) (watch.Interface, error) {
 	return t.PipelineClient().TektonV1beta1().PipelineRuns(namespace).Watch(ctx, metav1.ListOptions{})
@@ -466,6 +411,44 @@ func (t *TektonController) DeleteAllPipelineRunsInASpecificNamespace(ns string) 
 			return fmt.Errorf("deletion of PipelineRun '%s' in '%s' timed out", pipelineRun.Name, ns)
 		}
 
+	}
+
+	return nil
+}
+
+// StorePipelineRun stores a given PipelineRun as an artifact.
+func (t *TektonController) StorePipelineRun(pipelineRun *v1beta1.PipelineRun) error {
+	artifacts := make(map[string][]byte)
+	pipelineRunLog, err := t.GetPipelineRunLogs(pipelineRun.Name, pipelineRun.Namespace)
+	if err != nil {
+		return err
+	}
+	artifacts["pipelineRun-"+pipelineRun.Name+".log"] = []byte(pipelineRunLog)
+
+	pipelineRunYaml, err := yaml.Marshal(pipelineRun)
+	if err != nil {
+		return err
+	}
+	artifacts["pipelineRun-"+pipelineRun.Name+".yaml"] = pipelineRunYaml
+
+	if err := logs.StoreArtifacts(artifacts); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// StoreAllPipelineRuns stores all PipelineRuns in a given namespace.
+func (t *TektonController) StoreAllPipelineRuns(namespace string) error {
+	pipelineRuns, err := t.ListAllPipelineRuns(namespace)
+	if err != nil {
+		return fmt.Errorf("got error fetching PR list: %v\n", err.Error())
+	}
+
+	for _, pipelineRun := range pipelineRuns.Items {
+		if err := t.StorePipelineRun(&pipelineRun); err != nil {
+			return fmt.Errorf("got error storing PR: %v\n", err.Error())
+		}
 	}
 
 	return nil

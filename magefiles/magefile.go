@@ -400,7 +400,7 @@ func (ci CI) setRequiredEnvVars() error {
 			case strings.Contains(jobName, "spi-service"):
 				envVarPrefix = "SPI_OPERATOR"
 				imageTagSuffix = "spi-image"
-				testSuiteLabel = "spi"
+				testSuiteLabel = "spi-suite"
 			}
 
 			os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", envVarPrefix), sp[0])
@@ -416,7 +416,7 @@ func (ci CI) setRequiredEnvVars() error {
 		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
-			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,spi-suite,remote-secret,integration-service,o11y,ec,byoc")
+			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,spi-suite,remote-secret,integration-service,ec,byoc")
 		}
 	} else {
 		if ci.isPRPairingRequired("infra-deployments") {

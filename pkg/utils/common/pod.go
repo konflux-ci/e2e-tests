@@ -3,10 +3,10 @@ package common
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
+	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -93,34 +93,41 @@ func (s *SuiteController) WaitForPodSelector(
 	return nil
 }
 
-// Stores logs of all pods of the job
-func (cs *SuiteController) StorePodLogs(testNamespace, jobName, testLogsDir string) error {
-	if err := os.MkdirAll(testLogsDir, os.ModePerm); err != nil {
+// ListAllPods returns a list of all pods in a namespace.
+func (s *SuiteController) ListAllPods(namespace string) (*corev1.PodList, error) {
+	return s.KubeInterface().CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+}
+
+// StorePod stores a given pod as an artifact.
+func (s *SuiteController) StorePod(pod *corev1.Pod) error {
+	artifacts := make(map[string][]byte)
+
+	var containers []corev1.Container
+	containers = append(containers, pod.Spec.InitContainers...)
+	containers = append(containers, pod.Spec.Containers...)
+	for _, c := range containers {
+		log, err := utils.GetContainerLogs(s.KubeInterface(), pod.Name, c.Name, pod.Namespace)
+		if err != nil {
+			GinkgoWriter.Printf("error getting logs for pod/container %s/%s: %v\n", pod.Name, c.Name, err.Error())
+			continue
+		}
+
+		artifacts["pod-"+pod.Name+"-"+c.Name+".log"] = []byte(log)
+	}
+
+	return logs.StoreArtifacts(artifacts)
+}
+
+// StoreAllPods stores all pods in a given namespace.
+func (s *SuiteController) StoreAllPods(namespace string) error {
+	podList, err := s.ListAllPods(namespace)
+	if err != nil {
 		return err
 	}
 
-	podList, err := cs.KubeInterface().CoreV1().Pods(jobName).List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return fmt.Errorf("error listing %s pods: %s\n", testNamespace, err.Error())
-	}
-
-	GinkgoWriter.Printf("found %d pods in namespace: %s\n", len(podList.Items), testNamespace)
-
 	for _, pod := range podList.Items {
-		var containers []corev1.Container
-		containers = append(containers, pod.Spec.InitContainers...)
-		containers = append(containers, pod.Spec.Containers...)
-		for _, c := range containers {
-			log, err := utils.GetContainerLogs(cs.KubeInterface(), pod.Name, c.Name, pod.Namespace)
-			if err != nil {
-				GinkgoWriter.Printf("error getting logs for pod/container %s/%s: %v\n", pod.Name, c.Name, err.Error())
-				continue
-			}
-
-			filepath := fmt.Sprintf("%s/%s-pod-%s-%s.log", testLogsDir, pod.Namespace, pod.Name, c.Name)
-			if err := os.WriteFile(filepath, []byte(log), 0644); err != nil {
-				return err
-			}
+		if err := s.StorePod(&pod); err != nil {
+			return err
 		}
 	}
 	return nil
