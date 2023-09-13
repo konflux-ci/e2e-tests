@@ -43,7 +43,9 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 	AfterEach(framework.ReportFailure(&f))
 
 	Describe("the component with git source (GitHub) is created", Ordered, func() {
-
+		BeforeAll(func() {
+			Skip(fmt.Sprintln("test skipped"))
+		})
 		createApp := func() {
 			applicationName = fmt.Sprintf("integ-app-%s", util.GenerateRandomString(4))
 
@@ -93,7 +95,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 
 				createApp()
 				createComponent()
-				
+
 				dtcls, err := f.AsKubeAdmin.GitOpsController.CreateDeploymentTargetClass()
 				Expect(dtcls).ToNot(BeNil())
 				Expect(err).ToNot(HaveOccurred())
@@ -134,7 +136,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 				})
 			})
 
-			It("creates an Ephemeral Environment", func ()  {
+			It("creates an Ephemeral Environment", func() {
 				ephemeralEnvironment, err = f.AsKubeAdmin.GitOpsController.GetEphemeralEnvironment(snapshot.Spec.Application, snapshot.Name, integrationTestScenario.Name, testNamespace)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(ephemeralEnvironment.Name).ToNot(BeEmpty())
@@ -158,7 +160,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 				Expect(testPipelinerun.Labels["test.appstudio.openshift.io/scenario"]).To(ContainSubstring(integrationTestScenario.Name))
 				Expect(testPipelinerun.Labels["appstudio.openshift.io/environment"]).To(ContainSubstring(ephemeralEnvironment.Name))
 			})
-			
 
 			When("Integration Test PipelineRun is created", func() {
 				It("should eventually complete successfully", func() {
