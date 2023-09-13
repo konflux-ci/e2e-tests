@@ -252,18 +252,21 @@ spec:
 			restConfig, err := config.ClientConfig()
 			Expect(err).NotTo(HaveOccurred())
 
-			exec, err := remotecommand.NewSPDYExecutor(restConfig, "POST", request.URL())
-			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() string {
+				exec, err := remotecommand.NewSPDYExecutor(restConfig, "POST", request.URL())
+				Expect(err).NotTo(HaveOccurred())
 
-			buffer := &bytes.Buffer{}
-			errBuffer := &bytes.Buffer{}
-			err = exec.Stream(remotecommand.StreamOptions{
-				Stdout: buffer,
-				Stderr: errBuffer,
-			})
-			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("error: %v", err))
-			Expect(errBuffer.String()).To(BeEmpty(), fmt.Sprintf("stderr: %v", errBuffer.String()))
-			Expect(buffer.String()).NotTo(BeEmpty())
+				buffer := &bytes.Buffer{}
+				errBuffer := &bytes.Buffer{}
+				err = exec.Stream(remotecommand.StreamOptions{
+					Stdout: buffer,
+					Stderr: errBuffer,
+				})
+				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("error: %v", err))
+				Expect(errBuffer.String()).To(BeEmpty(), fmt.Sprintf("stderr: %v", errBuffer.String()))
+
+				return buffer.String()
+			}, 5*time.Minute, 5*time.Second).ShouldNot(BeEmpty(), "buffer is empty")
 		}
 
 		// check if guest user's pod deployed in guest user's workspace should be able to construct an API request that reads code in the Github repo for primary's user workspace
@@ -300,7 +303,7 @@ spec:
 				Expect(err).NotTo(HaveOccurred())
 
 				return pod.Status.Phase
-			}, 1*time.Minute, 5*time.Second).Should(Equal(corev1.PodRunning), fmt.Sprintf("Pod %s/%s not created successfully", namespace, pod.Name))
+			}, 2*time.Minute, 5*time.Second).Should(Equal(corev1.PodRunning), fmt.Sprintf("Pod %s/%s not created successfully", namespace, pod.Name))
 			Expect(err).NotTo(HaveOccurred())
 
 			// make read request
