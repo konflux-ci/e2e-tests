@@ -90,7 +90,6 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 
 			Describe(appTest.Name, Ordered, func() {
 				BeforeAll(func() {
-
 					// Initialize the tests controllers
 					fw, err = framework.NewFramework(utils.GetGeneratedNamespace("rhtap-demo"))
 					Expect(err).NotTo(HaveOccurred())
