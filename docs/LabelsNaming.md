@@ -16,7 +16,6 @@ See: https://onsi.github.io/ginkgo/#spec-labels
 Component Labels | Description
 --- | ---
 build | Build related tests
-cluster-registration | cluster registration related tests
 e2e-demos | e2e-demos related tests
 pipeline | Pipeline Service related tests
 
