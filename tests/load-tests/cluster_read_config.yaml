@@ -117,7 +117,7 @@
   command: oc get nodes -l node-role.kubernetes.io/worker -o json | jq --raw-output '.items | map(.metadata.labels."beta.kubernetes.io/instance-type") | unique | sort | join(",")'
 
 - name: metadata.cluster.compute-nodes.nodes
-  command: oc get nodes -l node-role.kubernetes.io/master -o json | jq '.items | map(.metadata.name)'
+  command: oc get nodes -l node-role.kubernetes.io/worker -o json | jq '.items | map(.metadata.name)'
   output: json
 
 - name: metadata.scenarioContent
