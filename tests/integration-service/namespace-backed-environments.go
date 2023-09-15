@@ -43,9 +43,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 	AfterEach(framework.ReportFailure(&f))
 
 	Describe("the component with git source (GitHub) is created", Ordered, func() {
-		BeforeAll(func() {
-			Skip(fmt.Sprintln("test skipped"))
-		})
 		createApp := func() {
 			applicationName = fmt.Sprintf("integ-app-%s", util.GenerateRandomString(4))
 
