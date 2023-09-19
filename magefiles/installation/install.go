@@ -268,7 +268,10 @@ func (i *InstallAppStudio) CheckOperatorsReady() (err error) {
 		Path:  "/metadata/annotations/argocd.argoproj.io~1refresh",
 		Value: "hard",
 	}}
-	patchPayloadBytes, _ := json.Marshal(patchPayload)
+	patchPayloadBytes, err := json.Marshal(patchPayload)
+	if err != nil {
+		klog.Fatal(err)
+	}
 	_, err = appClientset.ArgoprojV1alpha1().Applications("openshift-gitops").Patch(context.TODO(), "all-application-sets", types.JSONPatchType, patchPayloadBytes, metav1.PatchOptions{})
 	if err != nil {
 		klog.Fatal(err)
@@ -281,11 +284,11 @@ func (i *InstallAppStudio) CheckOperatorsReady() (err error) {
 			fmt.Printf("Check application: %s\n", app.Name)
 			application, err := appClientset.ArgoprojV1alpha1().Applications("openshift-gitops").Get(context.TODO(), app.Name, metav1.GetOptions{})
 			if err != nil {
-				panic(err.Error())
+				klog.Fatal(err)
 			}
 
 			if !(application.Status.Sync.Status == "Synced" && application.Status.Health.Status == "Healthy") {
-				fmt.Printf("Application %s not ready\n", app.Name)
+				klog.Info("Application %s not ready\n", app.Name)
 				count++
 			} else if strings.Contains(application.String(), ("context deadline exceeded")) {
 				fmt.Printf("Refreshing Application %s\n", app.Name)
@@ -295,7 +298,10 @@ func (i *InstallAppStudio) CheckOperatorsReady() (err error) {
 					Value: "soft",
 				}}
 
-				patchPayloadBytes, _ := json.Marshal(patchPayload)
+				patchPayloadBytes, err := json.Marshal(patchPayload)
+				if err != nil {
+					klog.Fatal(err)
+				}
 				for _, app := range appsListFor.Items {
 					_, err = i.KubernetesClient.KubeInterface().AppsV1().Deployments("openshift-gitops").Patch(context.TODO(), app.Name, types.JSONPatchType, patchPayloadBytes, metav1.PatchOptions{})
 					if err != nil {
@@ -309,7 +315,7 @@ func (i *InstallAppStudio) CheckOperatorsReady() (err error) {
 		}
 
 		if count == 0 {
-			fmt.Printf("All Application are ready\n")
+			klog.Info("All Application are ready\n")
 			break
 		}
 		time.Sleep(10 * time.Second)

@@ -253,7 +253,7 @@ func (ci CI) TestE2E() error {
 
 func RunE2ETests() error {
 	labelsToSkip := "!upgrade-create && !upgrade-verify && !upgrade-cleanup"
-	labelFilter := os.Getenv("$E2E_TEST_SUITE_LABEL")
+	labelFilter := os.Getenv("E2E_TEST_SUITE_LABEL")
 	if labelFilter == "" {
 		labelFilter = labelsToSkip
 	} else {
@@ -827,11 +827,13 @@ func (ci CI) TestUpgrade() error {
 // Run upgrade tests locally(bootstrap cluster, create workload, upgrade, verify)
 func (Local) TestUpgrade() error {
 	if err := PreflightChecks(); err != nil {
-		return fmt.Errorf("error when running preflight checks: %v", err)
+		klog.Errorf("error when running preflight checks: %s", err)
+		return err
 	}
 
 	if err := UpgradeTestsWorkflow(); err != nil {
-		return fmt.Errorf("error when running upgrade tests: %v", err)
+		klog.Errorf("error when running upgrade tests: %s", err)
+		return err
 	}
 
 	return nil
