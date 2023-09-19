@@ -204,7 +204,8 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "access-control"), func() 
 		}
 
 		// check that guest user can make a request to create a SPIFileContentRequest in the primary's workspace
-		makeGhReadRequestFromPod := func(guestUser, primaryUser User, podName, podNamespace, spiFcrName string) {
+		makeGhReadRequestFromPod := func(guestUser, primaryUser User, podName, podNamespace, spiFcrName string, shouldAccess bool) {
+			namespace := primaryUser.Framework.UserNamespace
 			spiFcrData := fmt.Sprintf(`---
 apiVersion: appstudio.redhat.com/v1beta1
 kind: SPIFileContentRequest
@@ -214,7 +215,7 @@ metadata:
 spec:
   filePath: README.md
   repoUrl: %s
-`, spiFcrName, primaryUser.Framework.UserNamespace, GithubPrivateRepoURL)
+`, spiFcrName, namespace, GithubPrivateRepoURL)
 			readRequest := fmt.Sprintf(
 				"curl '%s' \\"+
 					"-k \\"+
@@ -224,7 +225,7 @@ spec:
 					"--connect-timeout 30 \\"+
 					"--max-time 300 \\"+
 					"-d '%s'",
-				fmt.Sprintf("%s/apis/appstudio.redhat.com/v1beta1/namespaces/%s/spifilecontentrequests", primaryUser.WorkspaceURL, primaryUser.Framework.UserNamespace),
+				fmt.Sprintf("%s/apis/appstudio.redhat.com/v1beta1/namespaces/%s/spifilecontentrequests", primaryUser.WorkspaceURL, namespace),
 				guestUser.Framework.UserToken,
 				spiFcrData,
 			)
@@ -252,7 +253,7 @@ spec:
 			restConfig, err := config.ClientConfig()
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(func() string {
+			Eventually(func() error {
 				exec, err := remotecommand.NewSPDYExecutor(restConfig, "POST", request.URL())
 				Expect(err).NotTo(HaveOccurred())
 
@@ -265,8 +266,15 @@ spec:
 				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("error: %v", err))
 				Expect(errBuffer.String()).To(BeEmpty(), fmt.Sprintf("stderr: %v", errBuffer.String()))
 
-				return buffer.String()
-			}, 5*time.Minute, 5*time.Second).ShouldNot(BeEmpty(), "buffer is empty")
+				_, err = primaryUser.Framework.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(spiFcrName, namespace)
+				if err != nil && shouldAccess {
+					fmt.Printf("buffer info: %s\n", buffer.String())
+					GinkgoWriter.Printf("buffer info: %s\n", buffer.String())
+					return err
+				}
+
+				return nil
+			}, 1*time.Minute, 5*time.Second).Should(Succeed(), fmt.Sprintf("SPIFileContentRequest '%s' in namespace '%s' was not created", spiFcrName, namespace))
 		}
 
 		// check if guest user's pod deployed in guest user's workspace should be able to construct an API request that reads code in the Github repo for primary's user workspace
@@ -308,7 +316,7 @@ spec:
 
 			// make read request
 			spiFcrName := utils.GetGeneratedNamespace("pod-spi-file-content-request")
-			makeGhReadRequestFromPod(guestUser, primaryUser, pod.Name, pod.Namespace, spiFcrName)
+			makeGhReadRequestFromPod(guestUser, primaryUser, pod.Name, pod.Namespace, spiFcrName, shouldRead)
 
 			spiFcr := v1beta1.SPIFileContentRequest{}
 			if shouldRead {
