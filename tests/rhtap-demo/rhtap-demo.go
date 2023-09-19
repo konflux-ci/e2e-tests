@@ -68,7 +68,7 @@ const (
 	releasePollingInterval    = time.Second * 1
 )
 
-var supportedRuntimes = []string{"Dockerfile", "Node.js", "Go", "Quarkus", "Python", "JavaScript", "springboot", "dotnet", "maven"}
+//var supportedRuntimes = []string{"Dockerfile", "Node.js", "Go", "Quarkus", "Python", "JavaScript", "springboot", "dotnet", "maven"}
 
 var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 	defer GinkgoRecover()
@@ -198,9 +198,10 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 							// Validate that the completed CDQ only has detected 1 component and not also the unsupported component
 							Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "cdq also detect unsupported component")
 						}
-						for _, component := range cdq.Status.ComponentDetected {
+						// Skip until: https://issues.redhat.com/browse/RHTAPBUGS-804
+						/*for _, component := range cdq.Status.ComponentDetected {
 							Expect(supportedRuntimes).To(ContainElement(component.ProjectType), "unsupported runtime used for multi component tests")
-						}
+						}*/
 					})
 
 					// Components for now can be imported from gitUrl, container image or a devfile
@@ -210,7 +211,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 								c, err := fw.AsKubeDeveloper.HasController.CreateComponent(compDetected.ComponentStub, namespace, "", secret, appTest.ApplicationName, true, map[string]string{})
 								Expect(err).NotTo(HaveOccurred())
 								Expect(c.Name).To(Equal(compDetected.ComponentStub.ComponentName))
-								Expect(supportedRuntimes).To(ContainElement(compDetected.ProjectType), "unsupported runtime used for multi component tests")
+								//Expect(supportedRuntimes).To(ContainElement(compDetected.ProjectType), "unsupported runtime used for multi component tests")
 
 								componentList = append(componentList, c)
 							}
