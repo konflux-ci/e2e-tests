@@ -966,7 +966,29 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 
 			ApplicationName := fmt.Sprintf("%s-app", username)
 			startTimeForApplication := time.Now()
+
+			//Trace CreateApplicationWithTimeout call
+			params := map[string]interface{}{
+				"BeforeOrAfter":   "Before",
+				"ApplicationName": ApplicationName,
+				"username":        username,
+				"usernamespace":   usernamespace,
+				"timeout":         60 * time.Minute,
+			}
+			TraceFunction("CreateApplicationWithTimeout", params)
+
 			app, err := framework.AsKubeDeveloper.HasController.CreateApplicationWithTimeout(ApplicationName, usernamespace, 60*time.Minute)
+
+			//Trace CreateApplicationWithTimeout call
+			params = map[string]interface{}{
+				"BeforeOrAfter":   "After",
+				"ApplicationName": ApplicationName,
+				"username":        username,
+				"usernamespace":   usernamespace,
+				"timeout":         60 * time.Minute,
+			}
+			TraceFunction("CreateApplicationWithTimeout", params)
+
 			applicationCreationTime := time.Since(startTimeForApplication)
 			if err != nil {
 				logError(3, fmt.Sprintf("Unable to create the Application %s: %v", ApplicationName, err))
@@ -1000,9 +1022,33 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			*/
 			var integrationTestScenario *integrationv1beta1.IntegrationTestScenario
 
+			//Trace CreateIntegrationTestScenario_beta1 call
+			params = map[string]interface{}{
+				"BeforeOrAfter":          "Before",
+				"ApplicationName":        ApplicationName,
+				"username":               username,
+				"usernamespace":          usernamespace,
+				"testScenarioGitURL":     testScenarioGitURL,
+				"testScenarioRevision":   testScenarioRevision,
+				"testScenarioPathInRepo": testScenarioPathInRepo,
+			}
+			TraceFunction("CreateIntegrationTestScenario", params)
+
 			startTimeForIts := time.Now()
 			integrationTestScenario, err = framework.AsKubeDeveloper.IntegrationController.CreateIntegrationTestScenario_beta1(ApplicationName, usernamespace, testScenarioGitURL, testScenarioRevision, testScenarioPathInRepo)
 			itsCreationTime := time.Since(startTimeForIts)
+			//Trace CreateIntegrationTestScenario_beta1 call
+			params = map[string]interface{}{
+				"BeforeOrAfter":          "After",
+				"ApplicationName":        ApplicationName,
+				"username":               username,
+				"usernamespace":          usernamespace,
+				"testScenarioGitURL":     testScenarioGitURL,
+				"testScenarioRevision":   testScenarioRevision,
+				"testScenarioPathInRepo": testScenarioPathInRepo,
+			}
+			TraceFunction("CreateIntegrationTestScenario", params)
+
 			if err != nil {
 				logError(51, fmt.Sprintf("Unable to create integrationTestScenario for Application %s: %v \n", ApplicationName, err))
 				FailedItsCreationsPerThread[threadIndex] += 1
@@ -1090,7 +1136,33 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 
 			ComponentDetectionQueryName := fmt.Sprintf("%s-cdq", username)
 			startTimeForCDQ := time.Now()
+
+			//Trace CreateComponentDetectionQueryWithTimeout call
+			params = map[string]interface{}{
+				"BeforeOrAfter":               "Before",
+				"ApplicationName":             ApplicationName,
+				"username":                    username,
+				"usernamespace":               usernamespace,
+				"ComponentDetectionQueryName": ComponentDetectionQueryName,
+				"componentRepoUrl":            testScenarioRevision,
+				"timeout":                     60 * time.Minute,
+			}
+			TraceFunction("CreateComponentDetectionQuery", params)
+
 			cdq, err := framework.AsKubeDeveloper.HasController.CreateComponentDetectionQueryWithTimeout(ComponentDetectionQueryName, usernamespace, componentRepoUrl, "", "", "", false, 60*time.Minute)
+
+			//Trace CreateComponentDetectionQueryWithTimeout call
+			params = map[string]interface{}{
+				"BeforeOrAfter":               "After",
+				"ApplicationName":             ApplicationName,
+				"username":                    username,
+				"usernamespace":               usernamespace,
+				"ComponentDetectionQueryName": ComponentDetectionQueryName,
+				"componentRepoUrl":            testScenarioRevision,
+				"timeout":                     60 * time.Minute,
+			}
+			TraceFunction("CreateComponentDetectionQuery", params)
+
 			cdqCreationTime := time.Since(startTimeForCDQ)
 
 			if err != nil {
@@ -1133,7 +1205,31 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 
 			for _, compStub := range cdq.Status.ComponentDetected {
 				startTimeForComponent := time.Now()
+
+				//Trace CreateComponent call
+				params = map[string]interface{}{
+					"BeforeOrAfter":             "Before",
+					"ApplicationName":           ApplicationName,
+					"username":                  username,
+					"usernamespace":             usernamespace,
+					"compStub.ComponentStub":    compStub.ComponentStub,
+					"pipelineSkipInitialChecks": pipelineSkipInitialChecks,
+				}
+				TraceFunction("CreateComponent", params)
+
 				component, err := framework.AsKubeDeveloper.HasController.CreateComponent(compStub.ComponentStub, usernamespace, "", "", ApplicationName, pipelineSkipInitialChecks, map[string]string{})
+
+				//Trace CreateComponent call
+				params = map[string]interface{}{
+					"BeforeOrAfter":             "After",
+					"ApplicationName":           ApplicationName,
+					"username":                  username,
+					"usernamespace":             usernamespace,
+					"compStub.ComponentStub":    compStub.ComponentStub,
+					"pipelineSkipInitialChecks": pipelineSkipInitialChecks,
+				}
+				TraceFunction("CreateComponent", params)
+
 				componentCreationTime := time.Since(startTimeForComponent)
 
 				if err != nil {
@@ -1198,8 +1294,29 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				pipelineCreatedTimeout := time.Minute * 15
 				var pipelineRun *v1beta1.PipelineRun
 				err := k8swait.PollUntilContextTimeout(context.Background(), pipelineCreatedRetryInterval, pipelineCreatedTimeout, false, func(ctx context.Context) (done bool, err error) {
+
+					//Trace GetComponentPipelineRun call
+					params := map[string]interface{}{
+						"BeforeOrAfter":   "Before",
+						"ApplicationName": applicationName,
+						"username":        username,
+						"usernamespace":   usernamespace,
+						"componentName":   componentName,
+					}
+					TraceFunction("GetComponentPipelineRun", params)
+
 					// Searching for "build" type of pipelineRun
 					pipelineRun, err = framework.AsKubeDeveloper.HasController.GetComponentPipelineRunWithType(componentName, applicationName, usernamespace, "build", "")
+
+					//Trace GetComponentPipelineRun call
+					params = map[string]interface{}{
+						"BeforeOrAfter":   "After",
+						"ApplicationName": applicationName,
+						"username":        username,
+						"usernamespace":   usernamespace,
+						"componentName":   componentName,
+					}
+					TraceFunction("GetComponentPipelineRun", params)
 
 					if err != nil {
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
@@ -1220,7 +1337,29 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				pipelineRunRetryInterval := time.Second * 5
 				pipelineRunTimeout := time.Minute * 60
 				err = k8swait.PollUntilContextTimeout(context.Background(), pipelineRunRetryInterval, pipelineRunTimeout, false, func(ctx context.Context) (done bool, err error) {
+
+					//Trace GetComponentPipelineRun call
+					params := map[string]interface{}{
+						"BeforeOrAfter":   "Before",
+						"ApplicationName": applicationName,
+						"username":        username,
+						"usernamespace":   usernamespace,
+						"componentName":   componentName,
+					}
+					TraceFunction("GetComponentPipelineRun", params)
+
 					pipelineRun, err = framework.AsKubeDeveloper.HasController.GetComponentPipelineRunWithType(componentName, applicationName, usernamespace, "build", "")
+
+					//Trace GetComponentPipelineRun call
+					params = map[string]interface{}{
+						"BeforeOrAfter":   "After",
+						"ApplicationName": applicationName,
+						"username":        username,
+						"usernamespace":   usernamespace,
+						"componentName":   componentName,
+					}
+					TraceFunction("GetComponentPipelineRun", params)
+
 					if err != nil {
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
 						return false, nil
@@ -1275,13 +1414,39 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				componentPipelineRunName := userComponentPipelineRunForUser(username)
 				applicationName := fmt.Sprintf("%s-app", username)
 				SnapshotCreatedRetryInterval := time.Second * 5
-				SnapshotCreatedTimeout := time.Minute * 30
+				SnapshotCreatedTimeout := time.Minute * 45
 				IntegrationTestsPipelineCreatedRetryInterval := time.Second * 5
 				IntegrationTestsPipelineCreatedTimeout := time.Minute * 15
 
 				var snapshot *appstudioApi.Snapshot
 				err := k8swait.PollUntilContextTimeout(context.Background(), SnapshotCreatedRetryInterval, SnapshotCreatedTimeout, false, func(ctx context.Context) (done bool, err error) {
+
+					//Trace GetSnapshot call
+					params := map[string]interface{}{
+						"BeforeOrAfter":            "Before",
+						"ApplicationName":          applicationName,
+						"username":                 username,
+						"usernamespace":            usernamespace,
+						"componentName":            componentName,
+						"testScenarioName":         testScenarioName,
+						"componentPipelineRunName": componentPipelineRunName,
+					}
+					TraceFunction("GetSnapshot", params)
+
 					snapshot, err = framework.AsKubeDeveloper.IntegrationController.GetSnapshot("", componentPipelineRunName, "", usernamespace)
+
+					//Trace GetSnapshot call
+					params = map[string]interface{}{
+						"BeforeOrAfter":            "After",
+						"ApplicationName":          applicationName,
+						"username":                 username,
+						"usernamespace":            usernamespace,
+						"componentName":            componentName,
+						"testScenarioName":         testScenarioName,
+						"componentPipelineRunName": componentPipelineRunName,
+					}
+					TraceFunction("GetSnapshot", params)
+
 					if err != nil {
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
 						return false, nil
@@ -1298,7 +1463,35 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 
 				var IntegrationTestsPipelineRun *v1beta1.PipelineRun
 				err = k8swait.PollUntilContextTimeout(context.Background(), IntegrationTestsPipelineCreatedRetryInterval, IntegrationTestsPipelineCreatedTimeout, false, func(ctx context.Context) (done bool, err error) {
+
+					//Trace GetIntegrationPipelineRun call
+					params := map[string]interface{}{
+						"BeforeOrAfter":            "Before",
+						"ApplicationName":          applicationName,
+						"username":                 username,
+						"usernamespace":            usernamespace,
+						"componentName":            componentName,
+						"testScenarioName":         testScenarioName,
+						"componentPipelineRunName": componentPipelineRunName,
+						"snapshotName":             snapshot.Name,
+					}
+					TraceFunction("GetIntegrationPipelineRun", params)
+
 					IntegrationTestsPipelineRun, err = framework.AsKubeDeveloper.IntegrationController.GetIntegrationPipelineRun(testScenarioName, snapshot.Name, usernamespace)
+
+					//Trace GetIntegrationPipelineRun call
+					params = map[string]interface{}{
+						"BeforeOrAfter":            "After",
+						"ApplicationName":          applicationName,
+						"username":                 username,
+						"usernamespace":            usernamespace,
+						"componentName":            componentName,
+						"testScenarioName":         testScenarioName,
+						"componentPipelineRunName": componentPipelineRunName,
+						"snapshotName":             snapshot.Name,
+					}
+					TraceFunction("GetIntegrationPipelineRun", params)
+
 					if err != nil {
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
 						return false, nil
@@ -1315,7 +1508,35 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				IntegrationTestsPipelineRunRetryInterval := time.Second * 5
 				IntegrationTestsPipelineRunTimeout := time.Minute * 60
 				err = k8swait.PollUntilContextTimeout(context.Background(), IntegrationTestsPipelineRunRetryInterval, IntegrationTestsPipelineRunTimeout, false, func(ctx context.Context) (done bool, err error) {
+
+					//Trace GetIntegrationPipelineRun call
+					params := map[string]interface{}{
+						"BeforeOrAfter":            "Before",
+						"ApplicationName":          applicationName,
+						"username":                 username,
+						"usernamespace":            usernamespace,
+						"componentName":            componentName,
+						"testScenarioName":         testScenarioName,
+						"componentPipelineRunName": componentPipelineRunName,
+						"snapshotName":             snapshot.Name,
+					}
+					TraceFunction("GetIntegrationPipelineRun", params)
+
 					IntegrationTestsPipelineRun, err = framework.AsKubeDeveloper.IntegrationController.GetIntegrationPipelineRun(testScenarioName, snapshot.Name, usernamespace)
+
+					//Trace GetIntegrationPipelineRun call
+					params = map[string]interface{}{
+						"BeforeOrAfter":            "After",
+						"ApplicationName":          applicationName,
+						"username":                 username,
+						"usernamespace":            usernamespace,
+						"componentName":            componentName,
+						"testScenarioName":         testScenarioName,
+						"componentPipelineRunName": componentPipelineRunName,
+						"snapshotName":             snapshot.Name,
+					}
+					TraceFunction("GetIntegrationPipelineRun", params)
+
 					if err != nil {
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
 						return false, nil
@@ -1371,7 +1592,29 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 
 				// Deploy the component using gitops and check for the health
 				err := k8swait.PollUntilContextTimeout(context.Background(), deploymentCreatedRetryInterval, deploymentCreatedTimeout, false, func(ctx context.Context) (done bool, err error) {
+
+					//Trace GetDeployment call
+					params := map[string]interface{}{
+						"BeforeOrAfter":   "Before",
+						"ApplicationName": applicationName,
+						"username":        username,
+						"usernamespace":   usernamespace,
+						"componentName":   componentName,
+					}
+					TraceFunction("GetDeployment", params)
+
 					deployment, err = framework.AsKubeDeveloper.CommonController.GetDeployment(componentName, usernamespace)
+
+					//Trace GetDeployment call
+					params = map[string]interface{}{
+						"BeforeOrAfter":   "After",
+						"ApplicationName": applicationName,
+						"username":        username,
+						"usernamespace":   usernamespace,
+						"componentName":   componentName,
+					}
+					TraceFunction("GetDeployment", params)
+
 					if err != nil {
 						klog.Infof("Unable getting deployment - %v", err)
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
@@ -1401,7 +1644,28 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				err = k8swait.PollUntilContextTimeout(context.Background(), deploymentRetryInterval, deploymentTimeout, false, func(ctx context.Context) (done bool, err error) {
 
 					conditionError = nil // Reset the condition error
+					//Trace GetDeployment call
+					params := map[string]interface{}{
+						"BeforeOrAfter":   "Before",
+						"ApplicationName": applicationName,
+						"username":        username,
+						"usernamespace":   usernamespace,
+						"componentName":   componentName,
+					}
+					TraceFunction("GetDeployment", params)
+
 					deployment, err = framework.AsKubeDeveloper.CommonController.GetDeployment(componentName, usernamespace)
+
+					//Trace GetDeployment call
+					params = map[string]interface{}{
+						"BeforeOrAfter":   "After",
+						"ApplicationName": applicationName,
+						"username":        username,
+						"usernamespace":   usernamespace,
+						"componentName":   componentName,
+					}
+					TraceFunction("GetDeployment", params)
+
 					if err != nil {
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
 						conditionError = err
@@ -1451,6 +1715,12 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 		}()
 	}
 	wg.Wait()
+
+	// Save the trace records to JSON
+	err := createTraceDataJSON(fmt.Sprintf("%s/trace.json", outputDir), traceRecords)
+	if err != nil {
+		klog.Errorf("error while marshalling JSON: %v\n", err)
+	}
 }
 
 func checkDeploymentFailed(deployment *appsv1.Deployment) (bool, string, metav1.Time) {
@@ -1520,4 +1790,39 @@ func checkDeploymentIsDone(deployment *appsv1.Deployment) (bool, metav1.Time) {
 	}
 
 	return deploymentCompleted && deploymentReachedDesiredState, lastUpdateTime
+}
+
+// TraceRecord represents a single trace record
+type TraceRecord struct {
+	FunctionName string                 `json:"functionName"`
+	Timestamp    time.Time              `json:"timestamp"`
+	Params       map[string]interface{} `json:"params"`
+}
+
+var traceRecords []TraceRecord
+var traceMutex sync.Mutex
+
+// TraceFunction records the trace of the function with the given name and dynamic parameters
+func TraceFunction(functionName string, params map[string]interface{}) {
+	traceMutex.Lock()
+	traceRecords = append(traceRecords, TraceRecord{
+		FunctionName: functionName,
+		Timestamp:    time.Now().UTC(),
+		Params:       params,
+	})
+	traceMutex.Unlock()
+}
+
+func createTraceDataJSON(outputFile string, traceRecords []TraceRecord) error {
+	jsonData, err := json.MarshalIndent(traceRecords, "", "  ")
+	if err != nil {
+		return fmt.Errorf("error marshalling JSON: %v", err)
+	}
+
+	err = os.WriteFile(outputFile, jsonData, 0644)
+	if err != nil {
+		return fmt.Errorf("error writing JSON file: %v", err)
+	}
+
+	return nil
 }
