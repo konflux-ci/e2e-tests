@@ -3,6 +3,8 @@ package client
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"time"
 
@@ -216,6 +218,7 @@ func CreateAPIProxyClient(usertoken, proxyURL string) (*CustomClient, error) {
 		Host:            proxyURL,
 		TLSClientConfig: defaultConfig.TLSClientConfig,
 		BearerToken:     usertoken,
+		Transport:       noTimeoutDefaultTransport(),
 	}
 
 	// Getting the proxy client can fail from time to time if the proxy's informer cache has not been
@@ -241,6 +244,22 @@ func CreateAPIProxyClient(usertoken, proxyURL string) (*CustomClient, error) {
 		routeClient:           clientSets.routeClient,
 		crClient:              proxyCl,
 	}, nil
+}
+
+func noTimeoutDefaultTransport() *http.Transport {
+	transport := http.DefaultTransport.(interface {
+		Clone() *http.Transport
+	}).Clone()
+	transport.DialContext = noTimeoutDialerProxy
+	return transport
+}
+
+var noTimeoutDialerProxy = func(ctx context.Context, network, addr string) (net.Conn, error) {
+	dialer := &net.Dialer{
+		Timeout:   0,
+		KeepAlive: 0,
+	}
+	return dialer.DialContext(ctx, network, addr)
 }
 
 func NewKubeFromKubeConfigFile(kubeconfig string) (*kubernetes.Clientset, error) {
