@@ -51,7 +51,7 @@ func (g *GitopsController) GetEphemeralEnvironment(applicationName, snapshotName
 		}
 	}
 
-	return nil, fmt.Errorf("no matching ephemeral environment found %s", utils.GetAdditionalInfo(applicationName, namespace))
+	return nil, fmt.Errorf("no matching Ephemeral Environment found %s", utils.GetAdditionalInfo(applicationName, namespace))
 }
 
 /*

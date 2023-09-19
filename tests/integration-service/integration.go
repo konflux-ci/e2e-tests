@@ -23,7 +23,6 @@ const (
 	InPipelineName         = "integration-pipeline-pass"
 	InPipelineNameFail     = "integration-pipeline-fail"
 	EnvironmentName        = "development"
-	IntegrationServiceUser = "integration-e2e"
 	gitURL                 = "https://github.com/redhat-appstudio/integration-examples.git"
 	revision               = "843f455fe87a6d7f68c238f95a8f3eb304e65ac5"
 	pathInRepo             = "pipelines/integration_resolver_pipeline_pass.yaml"
@@ -42,14 +41,14 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	var originalComponent *appstudioApi.Component
 	var pipelineRun *v1beta1.PipelineRun
 	var snapshot *appstudioApi.Snapshot
-	var snapshot_push *appstudioApi.Snapshot
+	var snapshotPush *appstudioApi.Snapshot
 	var env *appstudioApi.Environment
 	AfterEach(framework.ReportFailure(&f))
 
 	Describe("with happy path for general flow of Integration service", Ordered, func() {
 		BeforeAll(func() {
 			// Initialize the tests controllers
-			f, err = framework.NewFramework(IntegrationServiceUser)
+			f, err = framework.NewFramework(utils.GetGeneratedNamespace("integration1"))
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace
 
@@ -65,7 +64,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			if !CurrentSpecReport().Failed() {
 				cleanup(*f, testNamespace, applicationName, componentName)
 
-				Expect(f.AsKubeAdmin.IntegrationController.DeleteSnapshot(snapshot_push, testNamespace)).To(Succeed())
+				Expect(f.AsKubeAdmin.IntegrationController.DeleteSnapshot(snapshotPush, testNamespace)).To(Succeed())
 				Expect(f.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(EnvironmentName, time.Minute*5)).To(Succeed())
 			}
 		})
@@ -109,29 +108,29 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		It("creates an snapshot of push event", func() {
 			sampleImage := "quay.io/redhat-appstudio/sample-image@sha256:841328df1b9f8c4087adbdcfec6cc99ac8308805dea83f6d415d6fb8d40227c1"
-			snapshot_push, err = f.AsKubeAdmin.IntegrationController.CreateSnapshotWithImage(componentName, applicationName, testNamespace, sampleImage)
+			snapshotPush, err = f.AsKubeAdmin.IntegrationController.CreateSnapshotWithImage(componentName, applicationName, testNamespace, sampleImage)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
 		When("An snapshot of push event is created", func() {
 			It("checks if all of the integrationPipelineRuns created by push event passed", Label("slow"), func() {
-				Expect(f.AsKubeAdmin.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshot_push)).To(Succeed(), "Error when waiting for one of the integration pipelines to finish in %s namespace", testNamespace)
+				Expect(f.AsKubeAdmin.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshotPush)).To(Succeed(), "Error when waiting for one of the integration pipelines to finish in %s namespace", testNamespace)
 			})
 
 			It("checks if the global candidate is updated after push event", func() {
 				timeout = time.Second * 600
 				interval = time.Second * 10
 				Eventually(func() error {
-					snapshot_push, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot_push.Name, "", "", testNamespace)
+					snapshotPush, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshotPush.Name, "", "", testNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
 
-					if f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot_push) {
+					if f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshotPush) {
 						component, err := f.AsKubeAdmin.HasController.GetComponentByApplicationName(applicationName, testNamespace)
 						Expect(err).ShouldNot(HaveOccurred())
 						Expect(component.Spec.ContainerImage).ToNot(Equal(originalComponent.Spec.ContainerImage))
 						return nil
 					}
-					return fmt.Errorf("tests haven't succeeded yet for snapshot %s/%s", snapshot_push.GetNamespace(), snapshot_push.GetName())
+					return fmt.Errorf("tests haven't succeeded yet for snapshot %s/%s", snapshotPush.GetNamespace(), snapshotPush.GetName())
 				}, timeout, interval).Should(Succeed(), fmt.Sprintf("time out when waiting for updating the global candidate in %s namespace", testNamespace))
 			})
 
@@ -141,7 +140,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				Eventually(func() error {
 					_, err := f.AsKubeAdmin.ReleaseController.GetReleases(testNamespace)
 					return err
-				}, timeout, interval).Should(Succeed(), fmt.Sprintf("time out when waiting for release created for snapshot %s/%s", snapshot_push.GetNamespace(), snapshot_push.GetName()))
+				}, timeout, interval).Should(Succeed(), fmt.Sprintf("time out when waiting for release created for snapshot %s/%s", snapshotPush.GetNamespace(), snapshotPush.GetName()))
 			})
 
 			It("checks if an SnapshotEnvironmentBinding is created successfully", func() {
@@ -158,7 +157,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	Describe("with an integration test fail", Ordered, func() {
 		BeforeAll(func() {
 			// Initialize the tests controllers
-			f, err = framework.NewFramework(IntegrationServiceUser)
+			f, err = framework.NewFramework(utils.GetGeneratedNamespace("integration2"))
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace
 
@@ -210,7 +209,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		It("creates an snapshot of push event", func() {
 			sampleImage := "quay.io/redhat-appstudio/sample-image@sha256:841328df1b9f8c4087adbdcfec6cc99ac8308805dea83f6d415d6fb8d40227c1"
-			snapshot_push, err = f.AsKubeAdmin.IntegrationController.CreateSnapshotWithImage(componentName, applicationName, testNamespace, sampleImage)
+			snapshotPush, err = f.AsKubeAdmin.IntegrationController.CreateSnapshotWithImage(componentName, applicationName, testNamespace, sampleImage)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 

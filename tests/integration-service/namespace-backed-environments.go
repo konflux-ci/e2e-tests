@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -37,7 +38,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 	var snapshot, snapshot_push *appstudioApi.Snapshot
 	var integrationTestScenario *integrationv1beta1.IntegrationTestScenario
 	var env, ephemeralEnvironment, userPickedEnvironment *appstudioApi.Environment
-	var snapshotEnvironmentBinding *appstudioApi.SnapshotEnvironmentBinding
 	AfterEach(framework.ReportFailure(&f))
 
 	Describe("with happy path for Namespace-backed environments", Ordered, func() {
@@ -91,10 +91,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 		})
 
 		It("creates an Ephemeral Environment", func ()  {
-			Eventually(func() bool {
+			Eventually(func() error {
 				ephemeralEnvironment, err = f.AsKubeAdmin.GitOpsController.GetEphemeralEnvironment(snapshot.Spec.Application, snapshot.Name, integrationTestScenario.Name, testNamespace)
-				return ephemeralEnvironment != nil
-			}, time.Minute*3, time.Second*1).Should(BeTrue(), fmt.Sprintf("timed out when waiting for the deletion of Ephemeral Environment related to snapshot %s", snapshot.Name))
+				return err
+			}, time.Minute*3, time.Second*1).Should(Succeed(), fmt.Sprintf("timed out when waiting for the creation of Ephemeral Environment related to snapshot %s", snapshot.Name))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(ephemeralEnvironment.Name).ToNot(BeEmpty())
 		})
@@ -121,17 +121,19 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 			})
 
 			It("should lead to SnapshotEnvironmentBinding getting deleted", func() {
-				Eventually(func() bool {
-					snapshotEnvironmentBinding, err = f.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(applicationName, testNamespace, ephemeralEnvironment)
-					return snapshotEnvironmentBinding == nil
-				}, time.Minute*3, time.Second*2).Should(BeTrue(), fmt.Sprintf("timed out when waiting for SnapshotEnvironmentBinding to be deleted for application %s/%s", testNamespace, applicationName))
+				Eventually(func() error {
+					_, err = f.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(applicationName, testNamespace, ephemeralEnvironment)
+					return err
+				}, time.Minute*3, time.Second*2).ShouldNot(Succeed(), fmt.Sprintf("timed out when waiting for SnapshotEnvironmentBinding to be deleted for application %s/%s", testNamespace, applicationName))
+				Expect(err.Error()).To(ContainSubstring(constants.SEBAbsenceErrorString))
 			})
 
 			It("should lead to ephemeral environment getting deleted", func() {
-				Eventually(func() bool {
+				Eventually(func() error {
 					ephemeralEnvironment, err = f.AsKubeAdmin.GitOpsController.GetEphemeralEnvironment(snapshot.Spec.Application, snapshot.Name, integrationTestScenario.Name, testNamespace)
-					return ephemeralEnvironment == nil
-				}, time.Minute*3, time.Second*1).Should(BeTrue(), fmt.Sprintf("timed out when waiting for the Ephemeral Environment %s to be deleted", ephemeralEnvironment.Name))
+					return err
+				}, time.Minute*3, time.Second*1).ShouldNot(Succeed(), fmt.Sprintf("timed out when waiting for the Ephemeral Environment %s to be deleted", ephemeralEnvironment.Name))
+				Expect(err.Error()).To(ContainSubstring(constants.EphemeralEnvAbsenceErrorString))
 			})
 		})
 	})
