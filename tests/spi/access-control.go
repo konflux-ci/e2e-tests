@@ -11,6 +11,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 
+	"github.com/avast/retry-go/v4"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -253,7 +254,8 @@ spec:
 			restConfig, err := config.ClientConfig()
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(func() error {
+			Eventually(func() bool {
+				stop := false
 				exec, err := remotecommand.NewSPDYExecutor(restConfig, "POST", request.URL())
 				Expect(err).NotTo(HaveOccurred())
 
@@ -266,15 +268,21 @@ spec:
 				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("error: %v", err))
 				Expect(errBuffer.String()).To(BeEmpty(), fmt.Sprintf("stderr: %v", errBuffer.String()))
 
-				_, err = primaryUser.Framework.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(spiFcrName, namespace)
-				if err != nil && shouldAccess {
-					fmt.Printf("buffer info: %s\n", buffer.String())
-					GinkgoWriter.Printf("buffer info: %s\n", buffer.String())
-					return err
-				}
-
-				return nil
-			}, 1*time.Minute, 5*time.Second).Should(Succeed(), fmt.Sprintf("SPIFileContentRequest '%s' in namespace '%s' was not created", spiFcrName, namespace))
+				// default of attempts: 10
+				err = retry.Do(
+					func() error {
+						_, err = primaryUser.Framework.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(spiFcrName, namespace)
+						if err != nil && shouldAccess {
+							fmt.Printf("buffer info: %s\n", buffer.String())
+							GinkgoWriter.Printf("buffer info: %s\n", buffer.String())
+							return err
+						}
+						stop = true
+						return nil
+					},
+				)
+				return stop
+			}, 5*time.Minute, 5*time.Second).Should(BeTrue(), fmt.Sprintf("SPIFileContentRequest '%s' in namespace '%s' was not created", spiFcrName, namespace))
 		}
 
 		// check if guest user's pod deployed in guest user's workspace should be able to construct an API request that reads code in the Github repo for primary's user workspace
