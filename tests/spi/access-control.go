@@ -273,7 +273,6 @@ spec:
 					func() error {
 						_, err = primaryUser.Framework.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(spiFcrName, namespace)
 						if err != nil && shouldAccess {
-							fmt.Printf("buffer info: %s\n", buffer.String())
 							GinkgoWriter.Printf("buffer info: %s\n", buffer.String())
 							return err
 						}
