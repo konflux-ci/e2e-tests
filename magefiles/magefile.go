@@ -42,6 +42,9 @@ var (
 	jobType                    = utils.GetEnv("JOB_TYPE", "")
 	reposToDeleteDefaultRegexp = "jvm-build|e2e-dotnet|build-suite|e2e|pet-clinic-e2e|test-app|e2e-quayio|petclinic|test-app|integ-app|^dockerfile-|new-|^python|my-app|^test-|^multi-component"
 	repositoriesWithWebhooks   = []string{"devfile-sample-hello-world", "hacbs-test-project"}
+	// determine whether CI will run tests that require to register SprayProxy
+	// in order to run tests that require PaC application
+	requiresSprayProxyRegistering bool
 )
 
 func (CI) parseJobSpec() error {
@@ -109,7 +112,6 @@ func (Local) PrepareCluster() error {
 	if err := BootstrapCluster(); err != nil {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
 	}
-
 	return nil
 }
 
@@ -222,8 +224,20 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
 	}
 
+	if requiresSprayProxyRegistering {
+		if err := retry(registerPacServer, 3, 10*time.Second); err != nil {
+			return fmt.Errorf("error when registering PAC server: %v", err)
+		}
+	}
+
 	if err := RunE2ETests(); err != nil {
 		testFailure = true
+	}
+
+	if requiresSprayProxyRegistering {
+		if err := retry(unregisterPacServer, 3, 10*time.Second); err != nil {
+			klog.Infof("error when unregistering PAC server: %v", err)
+		}
 	}
 
 	if err := ci.sendWebhook(); err != nil {
@@ -290,6 +304,7 @@ func (ci CI) setRequiredEnvVars() error {
 
 			switch {
 			case strings.Contains(jobName, "application-service"):
+				requiresSprayProxyRegistering = true
 				envVarPrefix = "HAS"
 				imageTagSuffix = "has-image"
 				testSuiteLabel = "e2e-demo,byoc"
@@ -386,10 +401,12 @@ func (ci CI) setRequiredEnvVars() error {
 				}
 				os.Setenv(constants.CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV, newJavaBuilderPipelineRef.String())
 			case strings.Contains(jobName, "build-service"):
+				requiresSprayProxyRegistering = true
 				envVarPrefix = "BUILD_SERVICE"
 				imageTagSuffix = "build-service-image"
 				testSuiteLabel = "build"
 			case strings.Contains(jobName, "image-controller"):
+				requiresSprayProxyRegistering = true
 				envVarPrefix = "IMAGE_CONTROLLER"
 				imageTagSuffix = "image-controller-image"
 				testSuiteLabel = "image-controller"
@@ -414,11 +431,14 @@ func (ci CI) setRequiredEnvVars() error {
 			os.Setenv("E2E_TEST_SUITE_LABEL", testSuiteLabel)
 
 		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
+			requiresSprayProxyRegistering = true
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
 			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,spi-suite,remote-secret,integration-service,ec,byoc")
 		}
+		// e2e-tests repository PR
 	} else {
+		requiresSprayProxyRegistering = true
 		if ci.isPRPairingRequired("infra-deployments") {
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
@@ -712,4 +732,60 @@ func AppendFrameworkDescribeGoFile(specFile string) error {
 
 	return err
 
+}
+
+func newSprayProxy() *SprayProxy {
+	sprayProxyUrl := os.Getenv("QE_SPRAYPROXY_HOST")
+	sprayProxyToken := os.Getenv("QE_SPRAYPROXY_TOKEN")
+	if sprayProxyUrl == "" || sprayProxyToken == "" {
+		klog.Error("env var QE_SPRAYPROXY_HOST is not set")
+		return nil
+	}
+	return NewSprayProxy(sprayProxyUrl, sprayProxyToken)
+}
+
+func registerPacServer() error {
+	pacControllerRoute, err := GetPacRoute()
+	if err != nil {
+		return err
+	}
+	pacControllerHost := fmt.Sprintf("https://%s", pacControllerRoute.Spec.Host)
+
+	sprayproxy := newSprayProxy()
+	_, err = sprayproxy.RegisterServer(pacControllerHost)
+
+	if err != nil {
+		klog.Error("Failed to register pac server", pacControllerHost)
+		return err
+	}
+	// for debugging purposes
+	servers, err := sprayproxy.GetServers()
+	if err != nil {
+		klog.Error("Failed to get servers")
+		return err
+	}
+	klog.Infof("Registered pac server %s, servers: %v", pacControllerHost, servers)
+	return nil
+}
+
+func unregisterPacServer() error {
+	pacControllerRoute, err := GetPacRoute()
+	if err != nil {
+		return err
+	}
+	pacControllerHost := fmt.Sprintf("https://%s", pacControllerRoute.Spec.Host)
+	sprayproxy := newSprayProxy()
+	_, err = sprayproxy.UnegisterServer(pacControllerHost)
+	if err != nil {
+		klog.Error("Failed to unregister pac server", pacControllerHost)
+		return err
+	}
+	// for debugging purposes
+	servers, err := sprayproxy.GetServers()
+	if err != nil {
+		klog.Error("Failed to get servers")
+		return err
+	}
+	klog.Infof("Registered pac server %s, servers: %v", pacControllerHost, servers)
+	return nil
 }

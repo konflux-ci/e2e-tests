@@ -68,7 +68,7 @@ const (
 	releasePollingInterval    = time.Second * 1
 )
 
-//var supportedRuntimes = []string{"Dockerfile", "Node.js", "Go", "Quarkus", "Python", "JavaScript", "springboot", "dotnet", "maven"}
+// var supportedRuntimes = []string{"Dockerfile", "Node.js", "Go", "Quarkus", "Python", "JavaScript", "springboot", "dotnet", "maven"}
 
 var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 	defer GinkgoRecover()

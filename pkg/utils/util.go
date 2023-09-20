@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -405,4 +406,14 @@ func GetContainerLogs(ki kubernetes.Interface, podName, containerName, namespace
 func ExtractGitRepositoryNameFromURL(url string) (name string) {
 	repoName := url[strings.LastIndex(url, "/")+1:]
 	return strings.TrimSuffix(repoName, ".git")
+}
+
+func GetGithubAppID() (int64, error) {
+	appIDStr := GetEnv("E2E_PAC_GITHUB_APP_ID", constants.DefaultPaCGitHubAppID)
+
+	id, err := strconv.ParseInt(appIDStr, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }
