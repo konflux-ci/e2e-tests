@@ -2,7 +2,7 @@ package client
 
 import (
 	"context"
-	"fmt"
+	"crypto/tls"
 	"net"
 	"net/http"
 	"os"
@@ -205,20 +205,10 @@ func CreateAPIProxyClient(usertoken, proxyURL string) (*CustomClient, error) {
 	var proxyCl crclient.Client
 	var initProxyClError error
 
-	apiConfig, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
-	if err != nil {
-		return nil, fmt.Errorf("error initializing api proxy client config rules %s", err)
-	}
-
-	defaultConfig, err := clientcmd.NewDefaultClientConfig(*apiConfig, &clientcmd.ConfigOverrides{}).ClientConfig()
-	if err != nil {
-		return nil, fmt.Errorf("error initializing default client configs %s", err)
-	}
 	proxyKubeConfig := &rest.Config{
-		Host:            proxyURL,
-		TLSClientConfig: defaultConfig.TLSClientConfig,
-		BearerToken:     usertoken,
-		Transport:       noTimeoutDefaultTransport(),
+		Host:        proxyURL,
+		BearerToken: usertoken,
+		Transport:   noTimeoutDefaultTransport(),
 	}
 
 	// Getting the proxy client can fail from time to time if the proxy's informer cache has not been
@@ -251,6 +241,9 @@ func noTimeoutDefaultTransport() *http.Transport {
 		Clone() *http.Transport
 	}).Clone()
 	transport.DialContext = noTimeoutDialerProxy
+	transport.TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: true, // nolint:gosec
+	}
 	return transport
 }
 
