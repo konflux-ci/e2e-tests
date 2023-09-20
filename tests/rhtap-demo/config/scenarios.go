@@ -201,6 +201,22 @@ var TestScenarios = []TestSpec{
 		},
 	},
 	{
+		Name:            "DEVHAS-337: creates quarkus application from a private repository which contain a devfile",
+		ApplicationName: "private-devfile",
+		Components: []ComponentSpec{
+			{
+				Private:           true,
+				Name:              "quarkus-devfile",
+				ContainerSource:   "",
+				Language:          "Java",
+				GitSourceUrl:      "https://github.com/redhat-appstudio-qe/private-quarkus-devfile-sample.git",
+				GitSourceRevision: "",
+				GitSourceContext:  "",
+				HealthEndpoint:    "/hello-resteasy",
+			},
+		},
+	},
+	{
 		Name:            MultiComponentWithoutDockerFileAndDevfile,
 		ApplicationName: "mc-quality-dashboard",
 		// We need to skip for now deployment checks of quality dashboard until RHTAP support secrets
