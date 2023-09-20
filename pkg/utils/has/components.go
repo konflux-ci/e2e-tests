@@ -25,6 +25,7 @@ import (
 	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 )
 
 // GetComponent return a component object from kubernetes cluster
@@ -101,17 +102,17 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 
 			if pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
 				return true, nil
-			} else {
-				var prLogs string
-				classname := logs.ShortenStringAddHash(CurrentSpecReport())
-				if err = t.StorePipelineRun(pr, classname); err != nil {
-					GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
-				}
-				if prLogs, err = t.GetPipelineRunLogs(pr.Name, pr.Namespace); err != nil {
-					GinkgoWriter.Printf("failed to get logs for PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
-				}
-				return false, fmt.Errorf(prLogs)
 			}
+
+			var prLogs string
+			if err = t.StorePipelineRun(pr); err != nil {
+				GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
+			}
+			if prLogs, err = t.GetPipelineRunLogs(pr.Name, pr.Namespace); err != nil {
+				GinkgoWriter.Printf("failed to get logs for PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
+			}
+
+			return false, fmt.Errorf(prLogs)
 		})
 
 		if err != nil {
@@ -159,7 +160,8 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 	}
 	if outputContainerImage != "" {
 		componentObject.Spec.ContainerImage = outputContainerImage
-	} else {
+	} else if componentObject.Annotations["image.redhat.com/generate"] == "" {
+		// Generate default public image repo since nothing is mentioned specifically
 		componentObject.Annotations = utils.MergeMaps(componentObject.Annotations, constants.ImageControllerAnnotationRequestPublicRepo)
 	}
 
@@ -420,6 +422,44 @@ func (h *HasController) SetComponentAnnotation(componentName, annotationKey, ann
 	err = h.KubeRest().Update(context.TODO(), component)
 	if err != nil {
 		return fmt.Errorf("error when updating component: %+v", err)
+	}
+	return nil
+}
+
+// StoreComponent stores a given Component as an artifact.
+func (h *HasController) StoreComponent(component *appservice.Component) error {
+	artifacts := make(map[string][]byte)
+
+	componentConditionStatus, err := h.GetComponentConditionStatusMessages(component.Name, component.Namespace)
+	if err != nil {
+		return err
+	}
+	artifacts["component-condition-status-"+component.Name+".log"] = []byte(strings.Join(componentConditionStatus, "\n"))
+
+	componentYaml, err := yaml.Marshal(component)
+	if err != nil {
+		return err
+	}
+	artifacts["component-"+component.Name+".yaml"] = componentYaml
+
+	if err := logs.StoreArtifacts(artifacts); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// StoreAllComponents stores all Components in a given namespace.
+func (h *HasController) StoreAllComponents(namespace string) error {
+	componentList := &appservice.ComponentList{}
+	if err := h.KubeRest().List(context.Background(), componentList, &rclient.ListOptions{Namespace: namespace}); err != nil {
+		return err
+	}
+
+	for _, component := range componentList.Items {
+		if err := h.StoreComponent(&component); err != nil {
+			return err
+		}
 	}
 	return nil
 }

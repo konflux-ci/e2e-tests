@@ -70,8 +70,12 @@ echo "Threads\
 ${csv_delim}Errors\
 ${csv_delim}UserAvgTime\
 ${csv_delim}UserMaxTime\
-${csv_delim}ResourcesAvgTime\
-${csv_delim}ResourcesMaxTime\
+${csv_delim}ApplicationAvgTime\
+${csv_delim}ApplicationMaxTime\
+${csv_delim}CDQAvgTime\
+${csv_delim}CDQMaxTime\
+${csv_delim}ComponentsAvgTime\
+${csv_delim}ComponentsMaxTime\
 ${csv_delim}PipelineRunAvgTime\
 ${csv_delim}PipelineRunMaxTime\
 ${csv_delim}ClusterCPUUsageAvg\
@@ -102,8 +106,12 @@ if [ -n "$mc_files" ]; then
         + $csv_delim_quoted + (.errorsTotal | tostring) \
         + $csv_delim_quoted + (.createUserTimeAvg | tostring) \
         + $csv_delim_quoted + (.createUserTimeMax | tostring) \
-        + $csv_delim_quoted + (.createResourcesTimeAvg | tostring) \
-        + $csv_delim_quoted + (.createResourcesTimeMax | tostring) \
+        + $csv_delim_quoted + (.createApplicationsTimeAvg | tostring) \
+        + $csv_delim_quoted + (.createApplicationsTimeMax | tostring) \
+        + $csv_delim_quoted + (.createCDQsTimeAvg | tostring) \
+        + $csv_delim_quoted + (.createCDQsTimeMax | tostring) \
+        + $csv_delim_quoted + (.createComponentsTimeAvg | tostring) \
+        + $csv_delim_quoted + (.createComponentsTimeMax | tostring) \
         + $csv_delim_quoted + (.runPipelineSucceededTimeAvg | tostring) \
         + $csv_delim_quoted + (.runPipelineSucceededTimeMax | tostring) \
         + $csv_delim_quoted + (.measurements.cluster_cpu_usage_seconds_total_rate.mean | tostring) \

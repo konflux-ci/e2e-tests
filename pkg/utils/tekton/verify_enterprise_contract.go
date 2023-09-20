@@ -11,6 +11,7 @@ type VerifyEnterpriseContract struct {
 	PublicKey           string
 	Strict              bool
 	EffectiveTime       string
+	IgnoreRekor         bool
 }
 
 func (p *VerifyEnterpriseContract) WithComponentImage(imageRef string) {

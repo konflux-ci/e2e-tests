@@ -26,10 +26,6 @@ func JVMBuildSuiteDescribe(text string, args ...interface{}) bool {
 	return Describe("[jvm-build-service-suite "+text+"]", args, Ordered)
 }
 
-func ClusterRegistrationSuiteDescribe(text string, args ...interface{}) bool {
-	return Describe("[cluster-registration-suite "+text+"]", args, Ordered)
-}
-
 func ReleaseSuiteDescribe(text string, args ...interface{}) bool {
 	return Describe("[release-suite "+text+"]", args, Ordered)
 }
@@ -40,10 +36,6 @@ func IntegrationServiceSuiteDescribe(text string, args ...interface{}) bool {
 
 func RhtapDemoSuiteDescribe(args ...interface{}) bool {
 	return Describe("[rhtap-demo-suite]", args)
-}
-
-func O11ySuiteDescribe(text string, args ...interface{}) bool {
-	return Describe("[O11y-suite "+text+"]", args, Ordered)
 }
 
 func SPISuiteDescribe(args ...interface{}) bool {

@@ -124,11 +124,14 @@ const (
 	PipelineRunPollingInterval = 10 * time.Second
 
 	JsonStageUsersPath = "users.json"
+
+	SamplePrivateRepoName = "test-private-repo"
 )
 
 var (
-	ComponentDefaultLabel                      = map[string]string{"e2e-test": "true"}
-	ComponentPaCRequestAnnotation              = map[string]string{"build.appstudio.openshift.io/request": "configure-pac"}
-	ComponentTriggerSimpleBuildAnnotation      = map[string]string{"build.appstudio.openshift.io/request": "trigger-simple-build"}
-	ImageControllerAnnotationRequestPublicRepo = map[string]string{"image.redhat.com/generate": `{"visibility": "public"}`}
+	ComponentDefaultLabel                       = map[string]string{"e2e-test": "true"}
+	ComponentPaCRequestAnnotation               = map[string]string{"build.appstudio.openshift.io/request": "configure-pac"}
+	ComponentTriggerSimpleBuildAnnotation       = map[string]string{"build.appstudio.openshift.io/request": "trigger-simple-build"}
+	ImageControllerAnnotationRequestPublicRepo  = map[string]string{"image.redhat.com/generate": `{"visibility": "public"}`}
+	ImageControllerAnnotationRequestPrivateRepo = map[string]string{"image.redhat.com/generate": `{"visibility": "private"}`}
 )
