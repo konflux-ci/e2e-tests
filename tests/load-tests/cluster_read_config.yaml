@@ -120,5 +120,6 @@
   command: oc get nodes -l node-role.kubernetes.io/worker -o json | jq '.items | map(.metadata.name)'
   output: json
 
-- name: metadata.scenarioContent
-  command: cat /usr/local/ci-secrets/redhat-appstudio-load-test/load-test-scenario.${SCENARIO}
+- name: metadata.scenario
+  command: cat /usr/local/ci-secrets/redhat-appstudio-load-test/load-test-scenario.${SCENARIO} | sed 's/\\ /,/g' | sed 's/[^ ]* \([^= ]*\)=\([^= ]*\)/"\1":"\2",/g' | sed 's/\(.*\),$/{\1}/g'
+  output: json
