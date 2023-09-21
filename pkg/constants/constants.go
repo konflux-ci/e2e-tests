@@ -126,8 +126,13 @@ const (
 	JsonStageUsersPath = "users.json"
 
 	SamplePrivateRepoName = "test-private-repo"
+
 	// Github App name is RHTAP-Qe-App. Note: this App ID is used in our CI and can't be used for local dev/testing.
 	DefaultPaCGitHubAppID = "310332"
+
+	// Error string constants for Namespace-backed environment test suite
+	SEBAbsenceErrorString = "no SnapshotEnvironmentBinding found in environment"
+	EphemeralEnvAbsenceErrorString = "no matching Ephemeral Environment found"
 )
 
 var (
