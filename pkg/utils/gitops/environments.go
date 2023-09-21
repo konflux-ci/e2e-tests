@@ -33,7 +33,7 @@ func (g *GitopsController) GetEnvironmentsList(namespace string) (*appservice.En
 
 // GetEphemeralEnvironment returns the Ephemeral Environment in the namespace and nil if it's not found
 // It will search for the Environment based on the Snapshot and Scneario name present in its labels,
-// and also look for environment containing the tag "ephemeral".
+// and also look for environment containing the "ephemeral" tag.
 func (g *GitopsController) GetEphemeralEnvironment(applicationName, snapshotName, integrationTestScenarioName, namespace string) (*appservice.Environment, error) {
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
@@ -51,7 +51,7 @@ func (g *GitopsController) GetEphemeralEnvironment(applicationName, snapshotName
 		}
 	}
 
-	return nil, fmt.Errorf("no matching ephemeral environment found %s", utils.GetAdditionalInfo(applicationName, namespace))
+	return nil, fmt.Errorf("no matching Ephemeral Environment found %s", utils.GetAdditionalInfo(applicationName, namespace))
 }
 
 /*
