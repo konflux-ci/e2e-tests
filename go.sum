@@ -281,6 +281,7 @@ github.com/codeready-toolchain/api v0.0.0-20220420163009-01d30d6cedd9/go.mod h1:
 github.com/codeready-toolchain/api v0.0.0-20220511141428-1adfed7d17b0/go.mod h1:yxINrgni3bMTyGKMjMaLmWwgwZt/P+WT09c/pIMP02w=
 github.com/codeready-toolchain/api v0.0.0-20230502074949-f8c1d80bac96 h1:ZUTvyKfBnXjYbQ506Kn21yrXf3GxUn1rpsJvxe2xPIU=
 github.com/codeready-toolchain/api v0.0.0-20230502074949-f8c1d80bac96/go.mod h1:nn3W6eKb9PFIVwSwZW7wDeLACMBOwAV+4kddGuN+ARM=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20220523142428-2558e76260fb h1:S4i4LR9qaZLEoYrH0ZhJFZ0qF3CQie2ScQfElQBPJnM=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20220523142428-2558e76260fb/go.mod h1:MRW2K1Es7tjgbqLt024he5iaDcpnMx03Xf2TaFG67ww=
 github.com/codeready-toolchain/toolchain-e2e v0.0.0-20220525131508-60876bfb99d3 h1:Dj9Gp8/qM322+4CVxqQBSoKBGrvL/pw3JhxFqQsfEz4=
 github.com/codeready-toolchain/toolchain-e2e v0.0.0-20220525131508-60876bfb99d3/go.mod h1:klt61SndSV3ZWfVEmjt9/uxDmqgLQsMi33s6KaDE9gY=

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	toolchainApi "github.com/codeready-toolchain/api/api/v1alpha1"
+	toolchainStates "github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-e2e/testsupport/md5"
 	. "github.com/onsi/ginkgo/v2"
 	routev1 "github.com/openshift/api/route/v1"
@@ -20,6 +21,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -274,7 +276,37 @@ func (s *SandboxController) RegisterBannedSandboxUser(userName string) (complian
 }
 
 func (s *SandboxController) RegisterDeactivatedSandboxUser(userName string) (compliantUsername string, err error) {
-	return s.RegisterSandboxUserUserWithSignUp(userName, GetUserSignupSpecsDeactivated(userName))
+	complientUsername, err := s.RegisterSandboxUserUserWithSignUp(userName, GetUserSignupSpecs(userName))
+	if err != nil {
+		return "", err
+	}
+	_, err = s.UpdateUserSignup(complientUsername,
+		func(us *toolchainApi.UserSignup) {
+			toolchainStates.SetDeactivated(us, true)
+		})
+	if err != nil {
+		return "", err
+	}
+	return complientUsername, err
+}
+
+func (s *SandboxController) UpdateUserSignup(userSignupName string, modifyUserSignup func(us *toolchainApi.UserSignup)) (*toolchainApi.UserSignup, error) {
+	var userSignup *toolchainApi.UserSignup
+	err := wait.Poll(2, 1*time.Minute, func() (done bool, err error) {
+		freshUserSignup := &toolchainApi.UserSignup{}
+		if err := s.KubeRest.Get(context.TODO(), types.NamespacedName{Namespace: DEFAULT_TOOLCHAIN_NAMESPACE, Name: userSignupName}, freshUserSignup); err != nil {
+			return true, err
+		}
+
+		modifyUserSignup(freshUserSignup)
+		if err := s.KubeRest.Update(context.TODO(), freshUserSignup); err != nil {
+			//klog.Error("error updating UserSignup '%s': %s. Will retry again...", userSignupName, err.Error())
+			return false, nil
+		}
+		userSignup = freshUserSignup
+		return true, nil
+	})
+	return userSignup, err
 }
 
 func (s *SandboxController) RegisterSandboxUserUserWithSignUp(userName string, userSignup *toolchainApi.UserSignup) (compliantUsername string, err error) {

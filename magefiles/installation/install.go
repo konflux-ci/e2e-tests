@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"time"
 
 	"strings"
@@ -17,7 +16,6 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/transport/http"
 
 	appclientset "github.com/argoproj/argo-cd/v2/pkg/client/clientset/versioned"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
@@ -138,7 +136,7 @@ func (i *InstallAppStudio) setInstallationEnvironments() {
 	os.Setenv("IMAGE_CONTROLLER_QUAY_ORG", i.DefaultImageQuayOrg)
 	os.Setenv("IMAGE_CONTROLLER_QUAY_TOKEN", i.DefaultImageQuayOrgOAuth2Token)
 	os.Setenv("BUILD_SERVICE_IMAGE_TAG_EXPIRATION", i.DefaultImageTagExpiration)
-	os.Setenv("PAC_GITHUB_APP_ID", utils.GetEnv("E2E_PAC_GITHUB_APP_ID", ""))  // #nosec G104
+	os.Setenv("PAC_GITHUB_APP_ID", utils.GetEnv("E2E_PAC_GITHUB_APP_ID", ""))                   // #nosec G104
 	os.Setenv("PAC_GITHUB_APP_PRIVATE_KEY", utils.GetEnv("E2E_PAC_GITHUB_APP_PRIVATE_KEY", "")) // #nosec G104
 }
 
@@ -164,92 +162,6 @@ func (i *InstallAppStudio) cloneInfraDeployments() (*git.Remote, error) {
 	})
 
 	return repo.CreateRemote(&config.RemoteConfig{Name: i.LocalForkName, URLs: []string{fmt.Sprintf("https://github.com/%s/infra-deployments.git", i.LocalGithubForkOrganization)}})
-}
-
-func MergePRInRemote(branch string, forkOrganization string, repoPath string) error {
-	if branch == "" {
-		klog.Fatal("The branch for upgrade is empty!")
-	}
-	var auth = &http.BasicAuth{
-		Username: "123",
-		Password: utils.GetEnv("GITHUB_TOKEN", ""),
-	}
-
-	repo, err := git.PlainOpen(repoPath)
-	if err != nil {
-		klog.Fatal(err)
-	}
-
-	branches, err := repo.Branches()
-	if err != nil {
-		klog.Fatal(err)
-	}
-
-	var previewBranchRef *plumbing.Reference
-	err = branches.ForEach(func(ref *plumbing.Reference) error {
-		if !strings.Contains("main", ref.Name().String()) {
-			previewBranchRef = ref
-		}
-		return nil
-	})
-	if err != nil {
-		klog.Fatal(err)
-	}
-
-	wt, err := repo.Worktree()
-	if err != nil {
-		klog.Fatal(err)
-	}
-
-	err = wt.Checkout(&git.CheckoutOptions{
-		Branch: previewBranchRef.Name(),
-	})
-	if err != nil {
-		klog.Fatal(err)
-	}
-
-	if forkOrganization == "" {
-		err = mergeBranch(repoPath, "remotes/origin/"+branch)
-	} else {
-		repoURL := fmt.Sprintf("https://github.com/%s/infra-deployments.git", forkOrganization)
-		_, err = repo.CreateRemote(&config.RemoteConfig{
-			Name: "forked_repo",
-			URLs: []string{repoURL},
-		})
-		if err != nil {
-			klog.Fatal(err)
-		}
-
-		err = repo.Fetch(&git.FetchOptions{
-			RemoteName: "forked_repo",
-		})
-		if err != nil {
-			klog.Fatal(err)
-		}
-		err = mergeBranch(repoPath, "remotes/forked_repo/"+branch)
-	}
-	if err != nil {
-		klog.Fatal(err)
-	}
-
-	err = repo.Push(&git.PushOptions{
-		RefSpecs:   []config.RefSpec{config.RefSpec(fmt.Sprintf("%s:%s", previewBranchRef.Name().String(), previewBranchRef.Name().String()))},
-		RemoteName: "qe",
-		Auth:       auth,
-	})
-	if err != nil {
-		klog.Fatal(err)
-	}
-
-	return nil
-}
-
-func mergeBranch(repoPath string, branchToMerge string) error {
-	_, err := exec.Command("git", "-C", repoPath, "merge", branchToMerge, "-Xtheirs", "-q").Output()
-	if err != nil {
-		klog.Fatal(err)
-	}
-	return nil
 }
 
 func (i *InstallAppStudio) CheckOperatorsReady() (err error) {

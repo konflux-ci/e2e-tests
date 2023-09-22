@@ -252,14 +252,7 @@ func (ci CI) TestE2E() error {
 }
 
 func RunE2ETests() error {
-	labelsToSkip := "!upgrade-create && !upgrade-verify && !upgrade-cleanup"
-	labelFilter := os.Getenv("E2E_TEST_SUITE_LABEL")
-	if labelFilter == "" {
-		labelFilter = labelsToSkip
-	} else {
-		labelFilter = labelFilter + " && " + labelsToSkip
-	}
-
+	labelFilter := utils.GetEnv("E2E_TEST_SUITE_LABEL", "!upgrade-create && !upgrade-verify && !upgrade-cleanup")
 	return runTests(labelFilter, "e2e-report.xml")
 }
 
@@ -901,7 +894,7 @@ func BootstrapClusterForUpgrade() (*installation.InstallAppStudio, error) {
 }
 
 func UpgradeCluster() error {
-	return installation.MergePRInRemote(utils.GetEnv("UPGRADE_BRANCH", ""), utils.GetEnv("UPGRADE_FORK_ORGANIZATION", ""), "./tmp/infra-deployments")
+	return MergePRInRemote(utils.GetEnv("UPGRADE_BRANCH", ""), utils.GetEnv("UPGRADE_FORK_ORGANIZATION", ""), "./tmp/infra-deployments")
 }
 
 func CheckClusterAfterUpgrade(ic *installation.InstallAppStudio) error {

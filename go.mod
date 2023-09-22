@@ -6,6 +6,7 @@ require (
 	github.com/argoproj/argo-cd/v2 v2.8.2
 	github.com/avast/retry-go/v4 v4.3.3
 	github.com/codeready-toolchain/api v0.0.0-20230502074949-f8c1d80bac96
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20220523142428-2558e76260fb
 	github.com/codeready-toolchain/toolchain-e2e v0.0.0-20220525131508-60876bfb99d3
 	github.com/devfile/library/v2 v2.2.1-0.20230418160146-e75481b7eebd
 	github.com/enterprise-contract/enterprise-contract-controller/api v0.0.0-20230327185456-5befd172d558
