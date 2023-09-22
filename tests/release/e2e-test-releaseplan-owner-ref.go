@@ -42,8 +42,16 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-2469]test-releaseplan-owner-ref-a
 		It("verifies that the ReleasePlan has an owner reference for the application", func() {
 			releasePlan, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(sourceReleasePlanName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			ownerRef := releasePlan.OwnerReferences[0]
-			Expect(ownerRef.Name).To(Equal(applicationNameDefault))
+			Eventually(func() error {
+				if len(releasePlan.OwnerReferences) != 1 {
+					return fmt.Errorf("OwnerReference not updated yet for ReleasePlan %s", releasePlan.Name)
+				}
+				ownerRef := releasePlan.OwnerReferences[0]
+				if ownerRef.Name != applicationNameDefault {
+					return fmt.Errorf("ReleasePlan %s have OwnerReference Name %s and it's not as expected in Application Name %s", releasePlan.Name, ownerRef.Name, applicationNameDefault)
+				}
+				return nil
+			}, releasePlanOwnerReferencesTimeout, defaultInterval).Should(Succeed(), "timed out waiting for ReleasePlan %s OwnerReference to be set.", releasePlan.Name)
 		})
 
 		It("verifies that the ReleasePlan is deleted if the application is deleted", func() {
