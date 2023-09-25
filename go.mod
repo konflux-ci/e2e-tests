@@ -3,7 +3,7 @@ module github.com/redhat-appstudio/e2e-tests
 go 1.19
 
 require (
-	github.com/argoproj/argo-cd/v2 v2.8.2
+	github.com/argoproj/argo-cd/v2 v2.8.3
 	github.com/avast/retry-go/v4 v4.3.3
 	github.com/codeready-toolchain/api v0.0.0-20230502074949-f8c1d80bac96
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20220523142428-2558e76260fb
