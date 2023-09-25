@@ -44,7 +44,7 @@ $ go mod tidy
 $ go mod vendor
 ```
 
-1. Install RHTAP in e2e mode. By default the installation script will use the `redhat-appstudio-qe` GitHub organization for pushing changes to `infra-deployments` repository.
+1. By default the installation script will use the `redhat-appstudio-qe` GitHub organization for pushing changes to `infra-deployments` repository.
 
 **It is recommended to use your fork of [infra-deployments repo](https://github.com/redhat-appstudio/infra-deployments) in your GitHub org instead** - you can change the GitHub organization with environment variable `export MY_GITHUB_ORG=<name-of-your-github-org>`.
 
@@ -78,6 +78,16 @@ More information about how to deploy RHTAP
 are in the [infra-deployments](https://github.com/redhat-appstudio/infra-deployments) repository.
 
 ### Building and running the e2e tests
+
+Some tests could require you to have specific container image repo's created (if you're using your own container image org/user account (`QUAY_E2E_ORGANIZATION`) or your own GitHub organization (`MY_GITHUB_ORG`)
+In that case, before you run the test, make sure you have created
+* `test-images` repo in quay.io, i.e. `quay.io/<QUAY_E2E_ORGANIZATION>/test-images` and make it **public**
+  * also make sure that the docker config, that is encoded in the value of `QUAY_TOKEN` environment variable, contains a correct credentials required to push to `test-images` repo. And make sure the robot account or user account has the **write** permissions set for `test-images` repo which is required by the tests to push the generated artifacts.
+* fork following GitHub repositories to your org (specified in `MY_GITHUB_ORG` env var)
+  * https://github.com/redhat-appstudio-qe/devfile-sample-hello-world (for running build-service tests)
+  * https://github.com/redhat-appstudio-qe/hacbs-test-project (for rhtap-demo test)
+  * https://github.com/redhat-appstudio-qe/strategy-configs (for rhtap-demo test)
+
 You can use the following make target to build and run the tests:
    ```bash
       make local/test/e2e
@@ -98,17 +108,9 @@ Or build and run the tests without scripts:
 2. Run the e2e tests:
 The `e2e-appstudio` command is the root command that executes all test functionality. To obtain all available flags for the binary please use `--help` flags. All ginkgo flags and go tests are available in `e2e-appstudio` binary.
 
-Some tests could require you to have specific container image repo's created (if you're using your own container image org/user account (`QUAY_E2E_ORGANIZATION`) or your own GitHub organization (`MY_GITHUB_ORG`)
-In that case, before you run the test, make sure you have created
-* `test-images` repo in quay.io, i.e. `quay.io/<QUAY_E2E_ORGANIZATION>/test-images` and make it **public**
-  * also make sure that the docker config, that is encoded in the value of `QUAY_TOKEN` environment variable, contains a correct credentials required to push to `test-images` repo. And make sure the robot account or user account has the **write** permissions set for `test-images` repo which is required by the tests to push the generated artifacts.
-* forked following GitHub repositories to your org (specified in `MY_GITHUB_ORG` env var)
-  * https://github.com/redhat-appstudio-qe/devfile-sample-hello-world (for running build-service tests)
-  * https://github.com/redhat-appstudio-qe/hacbs-test-project (for rhtap-demo test)
-  * https://github.com/redhat-appstudio-qe/strategy-configs (for rhtap-demo test)
 
    ```bash
-    `./bin/e2e-appstudio`
+      `./bin/e2e-appstudio`
    ```
 
 The instructions for every test suite can be found in the [tests folder](tests), e.g. [has Readme.md](tests/has/README.md).

@@ -10,17 +10,17 @@ It is recommended to install AppStudio in E2E mode, but the E2E suite can be als
 * Writes tests results in JUnit XML/JSON file to a custom directory by using `--ginkgo.junit(or json)-report` flag.
 * Ability to run the test suites separately.
 
-## To start running E2E tests
+## Start running E2E tests
 
-All the instructions about installing RHTAP locally/CI and running tests locally/CI can be found in this [Documentation](docs/Installation.md). Contains also information about how to pair PR when breaking changes are introduced.
+All the instructions about installing RHTAP locally/CI and running tests locally/CI can be found in this [Documentation](docs/Installation.md), which contains also information about how to pair PR when breaking changes are introduced.
 
-## To start developing tests
+## Start developing tests
 
 To develop new tests in RHTAP consider first to read some tips for a better experience:
 * Basic tips to write readable tests. [Documentation](docs/Guidelines.md).
 * How to auto generate tests. [Documentation](docs/DeveloperGenerateTest.md).
 
-## To start debugging CI
+## Start debugging CI
 
 To onboard a new component in Openshift CI follow this [Documentation](docs/OpenShiftCI.md).
 To debug CI jobs follow this [Documentation](docs/InvestigatingCIFailures.md).

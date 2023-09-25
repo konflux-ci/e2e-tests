@@ -1,5 +1,5 @@
 # Overview
-The purpose of *this* document is to serve as a primer for developers/qe who are looking for best practices or add tests to RHTAP E2E framework.
+The purpose of *this* document is to serve as a primer for developers/qe who are looking for best practices or adding new tests to RHTAP E2E framework.
 
 ## General tips
 
