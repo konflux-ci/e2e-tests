@@ -292,7 +292,7 @@ func (s *SandboxController) RegisterDeactivatedSandboxUser(userName string) (com
 
 func (s *SandboxController) UpdateUserSignup(userSignupName string, modifyUserSignup func(us *toolchainApi.UserSignup)) (*toolchainApi.UserSignup, error) {
 	var userSignup *toolchainApi.UserSignup
-	err := wait.Poll(2, 1*time.Minute, func() (done bool, err error) {
+	err := wait.PollUntilContextTimeout(context.TODO(), 2, 1*time.Minute, true, func(context.Context) (done bool, err error) {
 		freshUserSignup := &toolchainApi.UserSignup{}
 		if err := s.KubeRest.Get(context.TODO(), types.NamespacedName{Namespace: DEFAULT_TOOLCHAIN_NAMESPACE, Name: userSignupName}, freshUserSignup); err != nil {
 			return true, err
@@ -300,7 +300,7 @@ func (s *SandboxController) UpdateUserSignup(userSignupName string, modifyUserSi
 
 		modifyUserSignup(freshUserSignup)
 		if err := s.KubeRest.Update(context.TODO(), freshUserSignup); err != nil {
-			//klog.Error("error updating UserSignup '%s': %s. Will retry again...", userSignupName, err.Error())
+			GinkgoWriter.Printf("error updating UserSignup '%s': %s. Will retry again...", userSignupName, err.Error())
 			return false, nil
 		}
 		userSignup = freshUserSignup

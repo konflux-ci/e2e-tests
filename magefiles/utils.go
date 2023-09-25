@@ -336,7 +336,8 @@ func MergePRInRemote(branch string, forkOrganization string, repoPath string) er
 		klog.Fatal(err)
 	}
 
-	if forkOrganization == "" {
+	if forkOrganization == "redhat-appstudio" {
+		// Cloned repository have as origin set redhat-appstudio organization
 		err = mergeBranch(repoPath, "remotes/origin/"+branch)
 	} else {
 		repoURL := fmt.Sprintf("https://github.com/%s/infra-deployments.git", forkOrganization)
