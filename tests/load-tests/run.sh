@@ -67,6 +67,7 @@ else
         -t "${THREADS:-1}" \
         $RANDOM_PREFIX_FLAG \
         --disable-metrics \
+        --enable-progress-bars="${ENABLE_PROGRESS_BARS:-false}" \
         --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}"
 
     DRY_RUN=false ./clear.sh "$USER_PREFIX"
