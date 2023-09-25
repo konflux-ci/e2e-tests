@@ -39,10 +39,10 @@ if [ ${#USER_PREFIX} -gt 10 ]; then
     exit 1
 else
     output="$output_dir/load-tests.max-concurrency.json"
-    IFS=" " read -r -a maxConcurrencySteps <<<"${MAX_CONCURRENCY_STEPS:-1 5 10 25 50 100 150 200}"
+    IFS="," read -r -a maxConcurrencySteps <<<"$(echo "${MAX_CONCURRENCY_STEPS:-1\ 5\ 10\ 25\ 50\ 100\ 150\ 200}" | sed 's/ /,/g')"
     maxThreads=${MAX_THREADS:-10}
     threshold=${THRESHOLD:-300}
-    echo '{"maxThreads": '"$maxThreads"', "maxConcurrencySteps": "'"${maxConcurrencySteps[*]}"'", "threshold": '"$threshold"', "maxConcurrencyReached": 0}' | jq >"$output"
+    echo '{"startTimestamp":"'$(date +%FT%T%:z)'", "maxThreads": '"$maxThreads"', "maxConcurrencySteps": "'"${maxConcurrencySteps[*]}"'", "threshold": '"$threshold"', "maxConcurrencyReached": 0, "endTimestamp": ""}' | jq >"$output"
     for t in "${maxConcurrencySteps[@]}"; do
         if (("$t" > "$maxThreads")); then
             break
@@ -79,6 +79,7 @@ else
             break
         else
             jq ".maxConcurrencyReached = $t" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
+            jq '.endTimestamp = "'$(date +%FT%T%:z)'"' "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
         fi
     done
     DRY_RUN=false ./clear.sh "$USER_PREFIX"

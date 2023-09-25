@@ -207,43 +207,6 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			Expect(reportLog).Should(ContainSubstring("Pipeline task 'build-container' uses an unacceptable task bundle"))
 		})
 
-		It("verifies the release policy: Task bundles are latest versions", func() {
-			policy := ecp.EnterpriseContractPolicySpec{
-				Sources: policySource,
-				Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-					Include: []string{"attestation_task_bundle.task_ref_bundles_current"},
-				},
-			}
-			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
-
-			generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-out-of-date-task")
-			generator.EffectiveTime = "2023-03-31T00:00:00Z"
-			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
-
-			pr, err = fwk.AsKubeAdmin.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
-			Expect(err).NotTo(HaveOccurred())
-
-			tr, err := fwk.AsKubeAdmin.TektonController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(tr.Status.TaskRunResults).Should(Or(
-				// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
-				ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["WARNING"]`)),
-				ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["WARNING"]`)),
-			))
-
-			//Get container step-report log details from pod
-			reportLog, err := utils.GetContainerLogs(fwk.AsKubeAdmin.CommonController.KubeInterface(), tr.Status.PodName, "step-report", namespace)
-			GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, "step-report", reportLog)
-			Expect(err).NotTo(HaveOccurred())
-			// depending on the data which is updated regularly several tasks
-			// could be using out of date task bundle, we check that at least
-			// one such issue is reported
-			Expect(reportLog).Should(ContainSubstring("uses an out of date task bundle"))
-		})
-
 		It("verifies the release policy: Task bundle references pinned to digest", func() {
 			secretName := fmt.Sprintf("unpinned-task-bundle-public-key%s", util.GenerateRandomString(10))
 			unpinnedTaskPublicKey := []byte("-----BEGIN PUBLIC KEY-----\n" +

@@ -46,3 +46,11 @@ func (g *Github) MergePullRequest(repository string, prNumber int) (*github.Pull
 
 	return mergeResult, nil
 }
+
+func (g *Github) ListCheckSuites(repository string, ref string) ([]*github.CheckSuite, error) {
+	checkSuiteResults, _, err := g.client.Checks.ListCheckSuitesForRef(context.Background(), g.organization, repository, ref, &github.ListCheckSuiteOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("error when listing check suites for the repo %s: %v", repository, err)
+	}
+	return checkSuiteResults.CheckSuites, nil
+}

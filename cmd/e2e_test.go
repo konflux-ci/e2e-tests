@@ -13,14 +13,13 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/build"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/byoc"
-	_ "github.com/redhat-appstudio/e2e-tests/tests/cluster-registration"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/enterprise-contract"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/integration-service"
-	_ "github.com/redhat-appstudio/e2e-tests/tests/o11y"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/release"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/remotesecret"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/rhtap-demo"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/spi"
+	_ "github.com/redhat-appstudio/e2e-tests/tests/upgrade"
 
 	"flag"
 

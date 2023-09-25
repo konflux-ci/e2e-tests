@@ -6,10 +6,12 @@ import (
 	"time"
 
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -27,6 +29,29 @@ func (g *GitopsController) GetEnvironmentsList(namespace string) (*appservice.En
 	}
 
 	return environmentList, nil
+}
+
+// GetEphemeralEnvironment returns the Ephemeral Environment in the namespace and nil if it's not found
+// It will search for the Environment based on the Snapshot and Scneario name present in its labels,
+// and also look for environment containing the "ephemeral" tag.
+func (g *GitopsController) GetEphemeralEnvironment(applicationName, snapshotName, integrationTestScenarioName, namespace string) (*appservice.Environment, error) {
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+
+	environmentList := &appservice.EnvironmentList{}
+	err := g.KubeRest().List(context.TODO(), environmentList, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("error occurred when listing the environments: %+v", err)
+	}
+
+	for _, environment := range environmentList.Items {
+		if environment.Labels["appstudio.openshift.io/snapshot"] == snapshotName && environment.Labels["test.appstudio.openshift.io/scenario"] == integrationTestScenarioName && slices.Contains(environment.Spec.Tags, "ephemeral") {
+			return &environment, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no matching Ephemeral Environment found %s", utils.GetAdditionalInfo(applicationName, namespace))
 }
 
 /*
@@ -148,4 +173,31 @@ func (g *GitopsController) DeleteAllEnvironmentsInASpecificNamespace(namespace s
 		}
 		return len(environmentList.Items) == 0, nil
 	}, timeout)
+}
+
+// ListAllEnvironments returns a list of all Environments in a given namespace.
+func (g *GitopsController) ListAllEnvironments(namespace string) (*appservice.EnvironmentList, error) {
+	environmentList := &appservice.EnvironmentList{}
+	err := g.KubeRest().List(context.Background(), environmentList, &client.ListOptions{Namespace: namespace})
+	return environmentList, err
+}
+
+// StoreEnvironment stores a given Environment as an artifact.
+func (g *GitopsController) StoreEnvironment(environment *appservice.Environment) error {
+	return logs.StoreResourceYaml(environment, "environment-"+environment.Name)
+}
+
+// StoreAllEnvironments stores all Environments in a given namespace.
+func (g *GitopsController) StoreAllEnvironments(namespace string) error {
+	environmentList, err := g.ListAllEnvironments(namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, environment := range environmentList.Items {
+		if err := g.StoreEnvironment(&environment); err != nil {
+			return err
+		}
+	}
+	return nil
 }

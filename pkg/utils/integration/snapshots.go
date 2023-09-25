@@ -6,11 +6,16 @@ import (
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
+	. "github.com/onsi/ginkgo/v2"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // CreateSnapshotWithComponents creates a Snapshot using the given parameters.
@@ -116,11 +121,56 @@ func (i *IntegrationController) DeleteAllSnapshotsInASpecificNamespace(namespace
 		return fmt.Errorf("error deleting snapshots from the namespace %s: %+v", namespace, err)
 	}
 
-	snapshotList := &appstudioApi.SnapshotList{}
 	return utils.WaitUntil(func() (done bool, err error) {
-		if err := i.KubeRest().List(context.Background(), snapshotList, &client.ListOptions{Namespace: namespace}); err != nil {
+		snapshotList, err := i.ListAllSnapshots(namespace)
+		if err != nil {
 			return false, nil
 		}
 		return len(snapshotList.Items) == 0, nil
 	}, timeout)
+}
+
+// WaitForSnapshotToGetCreated wait for the Snapshot to get created successfully.
+func (i *IntegrationController) WaitForSnapshotToGetCreated(snapshotName, pipelinerunName, componentName, testNamespace string) (*appstudioApi.Snapshot, error) {
+	var snapshot *appstudioApi.Snapshot
+
+	err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 10*time.Minute, true, func(ctx context.Context) (done bool, err error) {
+		snapshot, err = i.GetSnapshot(snapshotName, pipelinerunName, componentName, testNamespace)
+		if err != nil {
+			GinkgoWriter.Printf("unable to get the Snapshot within the namespace %s. Error: %v", testNamespace, err)
+			return false, nil
+		}
+
+		return true, nil
+	})
+
+	return snapshot, err
+}
+
+// ListAllSnapshots returns a list of all Snapshots in a given namespace.
+func (i *IntegrationController) ListAllSnapshots(namespace string) (*appstudioApi.SnapshotList, error) {
+	snapshotList := &appstudioApi.SnapshotList{}
+	err := i.KubeRest().List(context.Background(), snapshotList, &rclient.ListOptions{Namespace: namespace})
+
+	return snapshotList, err
+}
+
+// StoreSnapshot stores a given Snapshot as an artifact.
+func (i *IntegrationController) StoreSnapshot(snapshot *appstudioApi.Snapshot) error {
+	return logs.StoreResourceYaml(snapshot, "snapshot-"+snapshot.Name)
+}
+
+// StoreAllSnapshots stores all Snapshots in a given namespace.
+func (i *IntegrationController) StoreAllSnapshots(namespace string) error {
+	snapshotList, err := i.ListAllSnapshots(namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, snapshot := range snapshotList.Items {
+		if err := i.StoreSnapshot(&snapshot); err != nil {
+			return err
+		}
+	}
+	return nil
 }
