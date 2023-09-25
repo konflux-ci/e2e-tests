@@ -19,6 +19,7 @@ import (
 	_ "github.com/redhat-appstudio/e2e-tests/tests/remotesecret"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/rhtap-demo"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/spi"
+	_ "github.com/redhat-appstudio/e2e-tests/tests/upgrade"
 
 	"flag"
 

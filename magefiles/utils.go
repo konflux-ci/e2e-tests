@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 	"sync"
@@ -15,8 +16,13 @@ import (
 
 	"k8s.io/klog/v2"
 
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
+	plumbingHttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	sprig "github.com/go-task/slim-sprig"
 	"github.com/magefile/mage/sh"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/image-controller/pkg/quay"
 )
 
@@ -265,7 +271,7 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 					deleted, err := quayService.DeleteTag(organization, repository, tag.Name)
 					if err != nil {
 						errorsMutex.Lock()
-						errors = append(errors, fmt.Errorf("error during deletion of tag `%s` in repository `%s` of organization `%s`, error: `%s`\n", tag.Name, repository, organization, err))
+						errors = append(errors, fmt.Errorf("error during deletion of tag `%s` in repository `%s` of organization `%s`, error: `%s`", tag.Name, repository, organization, err))
 						errorsMutex.Unlock()
 					} else if !deleted {
 						fmt.Printf("tag `%s` in repository `%s` of organization `%s` was not deleted\n", tag.Name, repository, organization)
@@ -286,4 +292,91 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 		errBuilder.WriteString(fmt.Sprintf("%s\n", err))
 	}
 	return fmt.Errorf("encountered errors during CleanupQuayTags: %s", errBuilder.String())
+}
+
+func MergePRInRemote(branch string, forkOrganization string, repoPath string) error {
+	if branch == "" {
+		klog.Fatal("The branch for upgrade is empty!")
+	}
+	var auth = &plumbingHttp.BasicAuth{
+		Username: "123",
+		Password: utils.GetEnv("GITHUB_TOKEN", ""),
+	}
+
+	repo, err := git.PlainOpen(repoPath)
+	if err != nil {
+		klog.Fatal(err)
+	}
+
+	branches, err := repo.Branches()
+	if err != nil {
+		klog.Fatal(err)
+	}
+
+	var previewBranchRef *plumbing.Reference
+	err = branches.ForEach(func(ref *plumbing.Reference) error {
+		if !strings.Contains("main", ref.Name().String()) {
+			previewBranchRef = ref
+		}
+		return nil
+	})
+	if err != nil {
+		klog.Fatal(err)
+	}
+
+	wt, err := repo.Worktree()
+	if err != nil {
+		klog.Fatal(err)
+	}
+
+	err = wt.Checkout(&git.CheckoutOptions{
+		Branch: previewBranchRef.Name(),
+	})
+	if err != nil {
+		klog.Fatal(err)
+	}
+
+	if forkOrganization == "redhat-appstudio" {
+		// Cloned repository have as origin set redhat-appstudio organization
+		err = mergeBranch(repoPath, "remotes/origin/"+branch)
+	} else {
+		repoURL := fmt.Sprintf("https://github.com/%s/infra-deployments.git", forkOrganization)
+		_, err = repo.CreateRemote(&config.RemoteConfig{
+			Name: "forked_repo",
+			URLs: []string{repoURL},
+		})
+		if err != nil {
+			klog.Fatal(err)
+		}
+
+		err = repo.Fetch(&git.FetchOptions{
+			RemoteName: "forked_repo",
+		})
+		if err != nil {
+			klog.Fatal(err)
+		}
+		err = mergeBranch(repoPath, "remotes/forked_repo/"+branch)
+	}
+	if err != nil {
+		klog.Fatal(err)
+	}
+
+	err = repo.Push(&git.PushOptions{
+		RefSpecs:   []config.RefSpec{config.RefSpec(fmt.Sprintf("%s:%s", previewBranchRef.Name().String(), previewBranchRef.Name().String()))},
+		RemoteName: "qe",
+		Auth:       auth,
+	})
+	if err != nil {
+		klog.Fatal(err)
+	}
+
+	return nil
+}
+
+func mergeBranch(repoPath string, branchToMerge string) error {
+	_, err := exec.Command("git", "-C", repoPath, "merge", branchToMerge, "-Xtheirs", "-q").Output()
+	if err != nil {
+		klog.Fatal(err)
+	}
+	return nil
 }
