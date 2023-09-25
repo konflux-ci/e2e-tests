@@ -11,6 +11,7 @@ import (
 	"time"
 
 	toolchainApi "github.com/codeready-toolchain/api/api/v1alpha1"
+	toolchainStates "github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-e2e/testsupport/md5"
 	. "github.com/onsi/ginkgo/v2"
 	routev1 "github.com/openshift/api/route/v1"
@@ -20,6 +21,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -266,8 +268,48 @@ func (s *SandboxController) GetKubeconfigPathForSpecificUser(isStage bool, toolc
 }
 
 func (s *SandboxController) RegisterSandboxUser(userName string) (compliantUsername string, err error) {
-	userSignup := getUserSignupSpecs(userName)
+	return s.RegisterSandboxUserUserWithSignUp(userName, GetUserSignupSpecs(userName))
+}
 
+func (s *SandboxController) RegisterBannedSandboxUser(userName string) (compliantUsername string, err error) {
+	return s.RegisterSandboxUserUserWithSignUp(userName, GetUserSignupSpecsBanned(userName))
+}
+
+func (s *SandboxController) RegisterDeactivatedSandboxUser(userName string) (compliantUsername string, err error) {
+	complientUsername, err := s.RegisterSandboxUserUserWithSignUp(userName, GetUserSignupSpecs(userName))
+	if err != nil {
+		return "", err
+	}
+	_, err = s.UpdateUserSignup(complientUsername,
+		func(us *toolchainApi.UserSignup) {
+			toolchainStates.SetDeactivated(us, true)
+		})
+	if err != nil {
+		return "", err
+	}
+	return complientUsername, err
+}
+
+func (s *SandboxController) UpdateUserSignup(userSignupName string, modifyUserSignup func(us *toolchainApi.UserSignup)) (*toolchainApi.UserSignup, error) {
+	var userSignup *toolchainApi.UserSignup
+	err := wait.PollUntilContextTimeout(context.TODO(), 2, 1*time.Minute, true, func(context.Context) (done bool, err error) {
+		freshUserSignup := &toolchainApi.UserSignup{}
+		if err := s.KubeRest.Get(context.TODO(), types.NamespacedName{Namespace: DEFAULT_TOOLCHAIN_NAMESPACE, Name: userSignupName}, freshUserSignup); err != nil {
+			return true, err
+		}
+
+		modifyUserSignup(freshUserSignup)
+		if err := s.KubeRest.Update(context.TODO(), freshUserSignup); err != nil {
+			GinkgoWriter.Printf("error updating UserSignup '%s': %s. Will retry again...", userSignupName, err.Error())
+			return false, nil
+		}
+		userSignup = freshUserSignup
+		return true, nil
+	})
+	return userSignup, err
+}
+
+func (s *SandboxController) RegisterSandboxUserUserWithSignUp(userName string, userSignup *toolchainApi.UserSignup) (compliantUsername string, err error) {
 	if err := s.KubeRest.Create(context.TODO(), userSignup); err != nil {
 		if k8sErrors.IsAlreadyExists(err) {
 			GinkgoWriter.Printf("User %s already exists\n", userName)
@@ -276,6 +318,19 @@ func (s *SandboxController) RegisterSandboxUser(userName string) (compliantUsern
 		}
 	}
 
+	compliantUsername, err = s.CheckUserCreatedWithSignUp(userName, userSignup)
+
+	if err != nil {
+		return "", err
+	}
+	return compliantUsername, nil
+}
+
+func (s *SandboxController) CheckUserCreated(userName string) (compliantUsername string, err error) {
+	return s.CheckUserCreatedWithSignUp(userName, GetUserSignupSpecs(userName))
+}
+
+func (s *SandboxController) CheckUserCreatedWithSignUp(userName string, userSignup *toolchainApi.UserSignup) (compliantUsername string, err error) {
 	err = utils.WaitUntil(func() (done bool, err error) {
 		err = s.KubeRest.Get(context.TODO(), types.NamespacedName{
 			Namespace: DEFAULT_TOOLCHAIN_NAMESPACE,
@@ -303,11 +358,23 @@ func (s *SandboxController) RegisterSandboxUser(userName string) (compliantUsern
 	if err != nil {
 		return "", err
 	}
-	return compliantUsername, nil
 
+	return compliantUsername, nil
 }
 
-func getUserSignupSpecs(username string) *toolchainApi.UserSignup {
+func GetUserSignupSpecs(username string) *toolchainApi.UserSignup {
+	return getUserSignupSpecsWithState(username, toolchainApi.UserSignupStateApproved)
+}
+
+func GetUserSignupSpecsBanned(username string) *toolchainApi.UserSignup {
+	return getUserSignupSpecsWithState(username, toolchainApi.UserSignupStateBanned)
+}
+
+func GetUserSignupSpecsDeactivated(username string) *toolchainApi.UserSignup {
+	return getUserSignupSpecsWithState(username, toolchainApi.UserSignupStateDeactivated)
+}
+
+func getUserSignupSpecsWithState(username string, state toolchainApi.UserSignupState) *toolchainApi.UserSignup {
 	return &toolchainApi.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      username,
@@ -323,7 +390,7 @@ func getUserSignupSpecs(username string) *toolchainApi.UserSignup {
 			Userid:   username,
 			Username: username,
 			States: []toolchainApi.UserSignupState{
-				toolchainApi.UserSignupStateApproved,
+				state,
 			},
 		},
 	}
