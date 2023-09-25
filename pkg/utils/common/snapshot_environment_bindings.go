@@ -12,7 +12,7 @@ import (
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// GetComponentPipeline returns the pipeline for a given component labels
+// GetSnapshotEnvironmentBinding returns the SnapshotEnvironmentBinding related to the given App and Environment
 func (s *SuiteController) GetSnapshotEnvironmentBinding(applicationName string, namespace string, environment *appservice.Environment) (*appservice.SnapshotEnvironmentBinding, error) {
 	snapshotEnvironmentBindingList := &appservice.SnapshotEnvironmentBindingList{}
 	opts := []client.ListOption{
