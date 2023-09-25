@@ -2,7 +2,7 @@ package upgrade
 
 import (
 	"github.com/redhat-appstudio/e2e-tests/tests/upgrade/create"
-	utilsUpgrade "github.com/redhat-appstudio/e2e-tests/tests/upgrade/utils"
+	"github.com/redhat-appstudio/e2e-tests/tests/upgrade/utils"
 
 	. "github.com/onsi/ginkgo/v2"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
@@ -14,7 +14,7 @@ var _ = framework.UpgradeSuiteDescribe("Create users and check their state", Lab
 	var fw *framework.Framework
 
 	BeforeAll(func() {
-		fw, _ = utilsUpgrade.PrepareForUpgradeTests()
+		fw, _ = utils.PrepareForUpgradeTests()
 	})
 
 	It("creates AppStudioProvisionedUser", func() {
