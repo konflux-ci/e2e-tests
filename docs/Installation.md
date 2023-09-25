@@ -9,7 +9,7 @@ The following guide will walk through the necessary instruction about driving an
 
 Requirements for installing RHTAP in E2E mode:
 
-* An OpenShift 4.12 or higher Environment (If you are using CRC/OpenShift Local please also review [optional-codeready-containers-post-bootstrap-configuration](https://github.com/redhat-appstudio/infra-deployments#optional-codeready-containers-post-bootstrap-configuration))
+* An OpenShift 4.12 or higher Environment (If you are using CRC/OpenShift Local please also review [optional-codeready-containers-post-bootstrap-configuration](https://github.com/redhat-appstudio/infra-deployments/blob/main/docs/development/deployment.md#optional-openshift-local-post-bootstrap-configuration))
 * A machine from which to run the install (usually your laptop) with required tools:
   * A properly setup Go workspace using **Go 1.19 is required**
   * The OpenShift Command Line Tool (oc) **Use the version coresponding to the Openshift version**
@@ -44,29 +44,40 @@ $ go mod tidy
 $ go mod vendor
 ```
 
-1. By default the installation script will use the `redhat-appstudio-qe` GitHub organization for pushing changes to `infra-deployments` repository.
+4. By default the installation script will use the `redhat-appstudio-qe` GitHub organization for pushing changes to `infra-deployments` repository.
 
 **It is recommended to use your fork of [infra-deployments repo](https://github.com/redhat-appstudio/infra-deployments) in your GitHub org instead** - you can change the GitHub organization with environment variable `export MY_GITHUB_ORG=<name-of-your-github-org>`.
 
-Some tests could require you have a Github App created in order to test Component builds via Pipelines as Code.
+<details>
+<summary><h4>Advancing installation guidelines</h4></summary>
+<h5>GitHub Application for Pipelines as Code<h5>
+<p>
+   Some tests could require you have a Github App created in order to test Component builds via Pipelines as Code.
 Such tests are [rhtap-demo](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/rhtap-demo/rhtap-demo.go) and [build](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/build/build.go).
 
 In this case, before you bootstrap a cluster, make sure you [created a Github App for your GitHub account](https://github.com/settings/apps). Fill in following details:
-* **GitHub App name**: unique app name
-* **Homepage URL**: some dummy URL (like https://example.com)
-* **Webhook**: mark as active and put some dummy URL to the **Webhook URL** field
-* **Permissions** and **Subscribe to events**: refer to [the guide in PaC documentation](https://pipelinesascode.com/docs/install/github_apps/#setup-manually)
-* **Where can this GitHub App be installed?**: Any account
+</p>
+<ul><li> <b>GitHub App name</b>: unique app name</li> </ul>
+<ul><li> <b>Homepage URL</b>: some dummy URL (like https://example.com)</li></ul>
+<ul> <li> <b>Webhook</b>: mark as active and put some dummy URL to the <b>Webhook URL</b> field</li></ul>
+<ul> <li> <b>Permissions</b> and <b>Subscribe to events</b>: refer to <a href="https://pipelinesascode.com/docs/install/github_apps/#setup-manually">the guide in PaC documentation</a></li></ul>
+<ul> <li> <b>Where can this GitHub App be installed></b>: Any account</li> </ul>
 
-Hit create, make a note of the **App ID** and navigate to the **Private keys** section where you generate a private key that gets downloaded automatically. Then export following environment variables (or if you're using [.env file](default.env), update values of following variables):
+<p></p>
 
-```
+Hit create, make a note of the <b>App ID</b> and navigate to the <b>Private keys</b> section where you generate a private key that gets downloaded automatically. Then export following environment variables (or if you're using .env file, update values of following variables):
+
+```bash
 export E2E_PAC_GITHUB_APP_ID='<YOUR_APP_ID>'
 
 export E2E_PAC_GITHUB_APP_PRIVATE_KEY=$(base64 < /PATH/TO/YOUR/DOWNLOADED/PRIVATE_KEY.pem)
 ```
 
-Navigate back to [your GitHub App](https://github.com/settings/apps), select **Install App** and select your GitHub org (the one that you're using in `MY_GITHUB_ORG` env var). Feel free to install it to all repositories of that organization or the **forked repositories** currently used by [rhtap-demo](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/rhtap-demo/rhtap-demo.go) and [build](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/build/build.go) tests ([`hacbs-test-project`](https://github.com/redhat-appstudio-qe/hacbs-test-project) and [`devfile-sample-hello-world`](https://github.com/redhat-appstudio-qe/devfile-sample-hello-world)).
+<p>
+Navigate back to <a href="https://github.com/settings/apps">your GitHub App</a>, select Install App and select your GitHub org (the one that you're using in `MY_GITHUB_ORG` env var). Feel free to install it to all repositories of that organization or the forked repositories currently used by <a href="(https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/rhtap-demo/rhtap-demo.go)">rhtap-demo</a> and <a href="(https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/build/build.go">build tests</a>
+</p>
+
+</details>
 
 For bootstrapping a cluster, run the following command:
 
@@ -79,7 +90,7 @@ are in the [infra-deployments](https://github.com/redhat-appstudio/infra-deploym
 
 ### Building and running the e2e tests
 
-Some tests could require you to have specific container image repo's created (if you're using your own container image org/user account (`QUAY_E2E_ORGANIZATION`) or your own GitHub organization (`MY_GITHUB_ORG`)
+Most of the tests could require you to have specific container image repo's created (if you're using your own container image org/user account (`QUAY_E2E_ORGANIZATION`) or your own GitHub organization (`MY_GITHUB_ORG`)
 In that case, before you run the test, make sure you have created
 * `test-images` repo in quay.io, i.e. `quay.io/<QUAY_E2E_ORGANIZATION>/test-images` and make it **public**
   * also make sure that the docker config, that is encoded in the value of `QUAY_TOKEN` environment variable, contains a correct credentials required to push to `test-images` repo. And make sure the robot account or user account has the **write** permissions set for `test-images` repo which is required by the tests to push the generated artifacts.
