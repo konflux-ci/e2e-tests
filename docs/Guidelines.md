@@ -16,6 +16,8 @@ The purpose of *this* document is to serve as a primer for developers/qe who are
 * `klog` level can be controled via `KLOG_VERBOSITY` environment variable. For
   example: `KLOG_VERBOSITY=9 ./mage runE2ETests` would output `curl` commands
   issued via Kubernetes client from sigs.k8s.io/controller-runtime
+* To quickly debug a test, you can run only the desired suite. Example: `./bin/e2e-appstudio --ginkgo.focus="e2e-demos-suite"`
+* Split tests in different scenarios. Will be better to debug a small scenario than a very big one
 
 ## Debuggability
 
