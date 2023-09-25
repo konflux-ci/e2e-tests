@@ -575,7 +575,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 	})
 
-	Describe("test pac with multi-component using same repository", Ordered, Label("pac-build", "multi-component"), func() {
+	Describe("test pac with multiple components using same repository", Ordered, Label("pac-build", "multi-component"), func() {
 		var applicationName, testNamespace, pacControllerHost string
 		var pacBranchNames []string
 
@@ -603,7 +603,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Expect(err).ShouldNot(HaveOccurred())
 			pacControllerHost = pacControllerRoute.Spec.Host
 
-			applicationName = fmt.Sprintf("build-suite-test-mc-%s", util.GenerateRandomString(4))
+			applicationName = fmt.Sprintf("build-suite-positive-mc-%s", util.GenerateRandomString(4))
 			app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
@@ -640,67 +640,136 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 		})
 
-		for _, contextDir := range multiComponentContextDirs {
+		When("components are created in same namespace", func() {
 			var component *appservice.Component
-			componentName := fmt.Sprintf("%s-%s", contextDir, util.GenerateRandomString(4))
-			pacBranchName := constants.PaCPullRequestBranchPrefix + componentName
-			pacBranchNames = append(pacBranchNames, pacBranchName)
 
-			It(fmt.Sprintf("creates component with context directory %s", contextDir), func() {
+			for _, contextDir := range multiComponentContextDirs {
+				componentName := fmt.Sprintf("%s-%s", contextDir, util.GenerateRandomString(4))
+				pacBranchName := constants.PaCPullRequestBranchPrefix + componentName
+				pacBranchNames = append(pacBranchNames, pacBranchName)
+
+				It(fmt.Sprintf("creates component with context directory %s", contextDir), func() {
+					componentObj := appservice.ComponentSpec{
+						ComponentName: componentName,
+						Application:   applicationName,
+						Source: appservice.ComponentSource{
+							ComponentSourceUnion: appservice.ComponentSourceUnion{
+								GitSource: &appservice.GitSource{
+									URL:     multiComponentGitSourceURL,
+									Context: contextDir,
+								},
+							},
+						},
+					}
+					component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
+					Expect(err).ShouldNot(HaveOccurred())
+				})
+
+				It(fmt.Sprintf("triggers a PipelineRun for component %s", componentName), func() {
+					timeout = time.Minute * 5
+					Eventually(func() error {
+						pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+						if err != nil {
+							GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
+							return err
+						}
+						if !pr.HasStarted() {
+							return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
+						}
+						return nil
+					}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", componentName, testNamespace))
+				})
+
+				It(fmt.Sprintf("should lead to a PaC PR creation for component %s", componentName), func() {
+					timeout = time.Second * 300
+					interval := time.Second * 1
+
+					Eventually(func() bool {
+						prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(multiComponentGitSourceRepoName)
+						Expect(err).ShouldNot(HaveOccurred())
+
+						for _, pr := range prs {
+							if pr.Head.GetRef() == pacBranchName {
+								return true
+							}
+						}
+						return false
+					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for PaC PR (branch name '%s') to be created in %s repository", pacBranchName, multiComponentGitSourceRepoName))
+				})
+
+				It(fmt.Sprintf("the PipelineRun should eventually finish successfully for component %s", componentName), func() {
+					Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
+				})
+			}
+		})
+		When("a components is created with same git url in different namespace", func() {
+			var namespace, appName, compName string
+			var fw *framework.Framework
+
+			BeforeAll(func() {
+				fw, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
+				Expect(err).NotTo(HaveOccurred())
+				namespace = fw.UserNamespace
+
+				appName = fmt.Sprintf("build-suite-negative-mc-%s", util.GenerateRandomString(4))
+				app, err := f.AsKubeAdmin.HasController.CreateApplication(appName, namespace)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
+					Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
+				)
+
+				compName = fmt.Sprintf("%s-%s", multiComponentContextDirs[0], util.GenerateRandomString(4))
+
 				componentObj := appservice.ComponentSpec{
-					ComponentName: componentName,
-					Application:   applicationName,
+					ComponentName: compName,
+					Application:   appName,
 					Source: appservice.ComponentSource{
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
 							GitSource: &appservice.GitSource{
-								URL:      multiComponentGitSourceURL,
-								Revision: "",
-								Context:  contextDir,
+								URL:     multiComponentGitSourceURL,
+								Context: multiComponentContextDirs[0],
 							},
 						},
 					},
 				}
-				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
+				_, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj, namespace, "", "", appName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
 				Expect(err).ShouldNot(HaveOccurred())
+
 			})
 
-			It(fmt.Sprintf("triggers a PipelineRun for component %s", componentName), func() {
-				timeout = time.Minute * 5
-				Eventually(func() error {
-					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+			AfterAll(func() {
+				if !CurrentSpecReport().Failed() {
+					Expect(fw.AsKubeAdmin.HasController.DeleteApplication(appName, namespace, false)).To(Succeed())
+					Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
+				}
+			})
+
+			It("should fail to configure PaC for the component", func() {
+				var buildStatus *controllers.BuildStatus
+
+				Eventually(func() (bool, error) {
+					component, err := fw.AsKubeAdmin.HasController.GetComponent(compName, namespace)
 					if err != nil {
-						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
-						return err
+						GinkgoWriter.Printf("error while getting the component: %v\n", err)
+						return false, err
 					}
-					if !pr.HasStarted() {
-						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
+
+					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+
+					err = json.Unmarshal(statusBytes, &buildStatus)
+					if err != nil {
+						GinkgoWriter.Printf("cannot unmarshal build status from component annotation: %v\n", err)
+						return false, err
 					}
-					return nil
-				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", componentName, testNamespace))
+
+					GinkgoWriter.Printf("build status: %+v\n", buildStatus.PaC)
+
+					return buildStatus.PaC != nil && buildStatus.PaC.State == "error" && strings.Contains(buildStatus.PaC.ErrMessage, "Git repository is already handled by Pipelines as Code"), nil
+				}, time.Minute*1, time.Second*2).Should(BeTrue(), "build status is unexpected")
+
 			})
 
-			It(fmt.Sprintf("should lead to a PaC PR creation for component %s", componentName), func() {
-				timeout = time.Second * 300
-				interval := time.Second * 1
-
-				Eventually(func() bool {
-					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(multiComponentGitSourceRepoName)
-					Expect(err).ShouldNot(HaveOccurred())
-
-					for _, pr := range prs {
-						if pr.Head.GetRef() == pacBranchName {
-							return true
-						}
-					}
-					return false
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for PaC PR (branch name '%s') to be created in %s repository", pacBranchName, multiComponentGitSourceRepoName))
-			})
-
-			It(fmt.Sprintf("the PipelineRun should eventually finish successfully for component %s", componentName), func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
-			})
-
-		}
+		})
 
 	})
 

@@ -18,11 +18,17 @@ run:
 ci/test/e2e:
 	./mage -v ci:teste2e
 
+ci/test/upgrade:
+	./mage -v ci:testUpgrade 
+
 ci/prepare/e2e-branch:
 	./mage -v ci:prepareE2Ebranch
 
 local/cluster/prepare:
 	./mage -v local:prepareCluster
+
+local/cluster/upgrade:
+	./mage -v local:testUpgrade
 
 local/test/e2e:
 	./mage -v local:teste2e

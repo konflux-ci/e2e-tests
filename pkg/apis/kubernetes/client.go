@@ -2,7 +2,9 @@ package client
 
 import (
 	"context"
-	"fmt"
+	"crypto/tls"
+	"net"
+	"net/http"
 	"os"
 	"time"
 
@@ -21,7 +23,6 @@ import (
 	jvmbuildservice "github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	jvmbuildserviceclientset "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
 	gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend-shared/apis/managed-gitops/v1alpha1"
-	managedgitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend/apis/managed-gitops/v1alpha1"
 	release "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
 	spi "github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
@@ -73,7 +74,6 @@ func init() {
 	utilruntime.Must(ocpOauth.AddToScheme(scheme))
 	utilruntime.Must(tekton.AddToScheme(scheme))
 	utilruntime.Must(routev1.AddToScheme(scheme))
-	utilruntime.Must(managedgitopsv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(spi.AddToScheme(scheme))
 	utilruntime.Must(toolchainv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(release.AddToScheme(scheme))
@@ -203,19 +203,10 @@ func CreateAPIProxyClient(usertoken, proxyURL string) (*CustomClient, error) {
 	var proxyCl crclient.Client
 	var initProxyClError error
 
-	apiConfig, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
-	if err != nil {
-		return nil, fmt.Errorf("error initializing api proxy client config rules %s", err)
-	}
-
-	defaultConfig, err := clientcmd.NewDefaultClientConfig(*apiConfig, &clientcmd.ConfigOverrides{}).ClientConfig()
-	if err != nil {
-		return nil, fmt.Errorf("error initializing default client configs %s", err)
-	}
 	proxyKubeConfig := &rest.Config{
-		Host:            proxyURL,
-		TLSClientConfig: defaultConfig.TLSClientConfig,
-		BearerToken:     usertoken,
+		Host:        proxyURL,
+		BearerToken: usertoken,
+		Transport:   noTimeoutDefaultTransport(),
 	}
 
 	// Getting the proxy client can fail from time to time if the proxy's informer cache has not been
@@ -241,6 +232,25 @@ func CreateAPIProxyClient(usertoken, proxyURL string) (*CustomClient, error) {
 		routeClient:           clientSets.routeClient,
 		crClient:              proxyCl,
 	}, nil
+}
+
+func noTimeoutDefaultTransport() *http.Transport {
+	transport := http.DefaultTransport.(interface {
+		Clone() *http.Transport
+	}).Clone()
+	transport.DialContext = noTimeoutDialerProxy
+	transport.TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: true, // nolint:gosec
+	}
+	return transport
+}
+
+var noTimeoutDialerProxy = func(ctx context.Context, network, addr string) (net.Conn, error) {
+	dialer := &net.Dialer{
+		Timeout:   0,
+		KeepAlive: 0,
+	}
+	return dialer.DialContext(ctx, network, addr)
 }
 
 func NewKubeFromKubeConfigFile(kubeconfig string) (*kubernetes.Clientset, error) {

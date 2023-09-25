@@ -3,9 +3,12 @@ package installation
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
+
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 
@@ -13,6 +16,8 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
+
+	appclientset "github.com/argoproj/argo-cd/v2/pkg/client/clientset/versioned"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -20,6 +25,8 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 )
 
@@ -36,6 +43,12 @@ const (
 var (
 	previewInstallArgs = []string{"preview", "--keycloak", "--toolchain"}
 )
+
+type patchStringValue struct {
+	Op    string `json:"op"`
+	Path  string `json:"path"`
+	Value string `json:"value"`
+}
 
 type InstallAppStudio struct {
 	// Kubernetes Client to interact with Openshift Cluster
@@ -123,7 +136,7 @@ func (i *InstallAppStudio) setInstallationEnvironments() {
 	os.Setenv("IMAGE_CONTROLLER_QUAY_ORG", i.DefaultImageQuayOrg)
 	os.Setenv("IMAGE_CONTROLLER_QUAY_TOKEN", i.DefaultImageQuayOrgOAuth2Token)
 	os.Setenv("BUILD_SERVICE_IMAGE_TAG_EXPIRATION", i.DefaultImageTagExpiration)
-	os.Setenv("PAC_GITHUB_APP_ID", utils.GetEnv("E2E_PAC_GITHUB_APP_ID", ""))  // #nosec G104
+	os.Setenv("PAC_GITHUB_APP_ID", utils.GetEnv("E2E_PAC_GITHUB_APP_ID", ""))                   // #nosec G104
 	os.Setenv("PAC_GITHUB_APP_PRIVATE_KEY", utils.GetEnv("E2E_PAC_GITHUB_APP_PRIVATE_KEY", "")) // #nosec G104
 }
 
@@ -149,6 +162,77 @@ func (i *InstallAppStudio) cloneInfraDeployments() (*git.Remote, error) {
 	})
 
 	return repo.CreateRemote(&config.RemoteConfig{Name: i.LocalForkName, URLs: []string{fmt.Sprintf("https://github.com/%s/infra-deployments.git", i.LocalGithubForkOrganization)}})
+}
+
+func (i *InstallAppStudio) CheckOperatorsReady() (err error) {
+	apiConfig, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
+	if err != nil {
+		klog.Fatal(err)
+	}
+	config, err := clientcmd.NewDefaultClientConfig(*apiConfig, &clientcmd.ConfigOverrides{}).ClientConfig()
+	if err != nil {
+		klog.Fatal(err)
+	}
+	appClientset := appclientset.NewForConfigOrDie(config)
+
+	patchPayload := []patchStringValue{{
+		Op:    "replace",
+		Path:  "/metadata/annotations/argocd.argoproj.io~1refresh",
+		Value: "hard",
+	}}
+	patchPayloadBytes, err := json.Marshal(patchPayload)
+	if err != nil {
+		klog.Fatal(err)
+	}
+	_, err = appClientset.ArgoprojV1alpha1().Applications("openshift-gitops").Patch(context.TODO(), "all-application-sets", types.JSONPatchType, patchPayloadBytes, metav1.PatchOptions{})
+	if err != nil {
+		klog.Fatal(err)
+	}
+
+	for {
+		var count = 0
+		appsListFor, err := appClientset.ArgoprojV1alpha1().Applications("openshift-gitops").List(context.TODO(), metav1.ListOptions{})
+		for _, app := range appsListFor.Items {
+			fmt.Printf("Check application: %s\n", app.Name)
+			application, err := appClientset.ArgoprojV1alpha1().Applications("openshift-gitops").Get(context.TODO(), app.Name, metav1.GetOptions{})
+			if err != nil {
+				klog.Fatal(err)
+			}
+
+			if !(application.Status.Sync.Status == "Synced" && application.Status.Health.Status == "Healthy") {
+				klog.Info("Application %s not ready\n", app.Name)
+				count++
+			} else if strings.Contains(application.String(), ("context deadline exceeded")) {
+				fmt.Printf("Refreshing Application %s\n", app.Name)
+				patchPayload := []patchStringValue{{
+					Op:    "replace",
+					Path:  "/metadata/annotations/argocd.argoproj.io~1refresh",
+					Value: "soft",
+				}}
+
+				patchPayloadBytes, err := json.Marshal(patchPayload)
+				if err != nil {
+					klog.Fatal(err)
+				}
+				for _, app := range appsListFor.Items {
+					_, err = i.KubernetesClient.KubeInterface().AppsV1().Deployments("openshift-gitops").Patch(context.TODO(), app.Name, types.JSONPatchType, patchPayloadBytes, metav1.PatchOptions{})
+					if err != nil {
+						klog.Fatal(err)
+					}
+				}
+			}
+		}
+		if err != nil {
+			klog.Fatal(err)
+		}
+
+		if count == 0 {
+			klog.Info("All Application are ready\n")
+			break
+		}
+		time.Sleep(10 * time.Second)
+	}
+	return err
 }
 
 // Create secret in e2e-secrets which can be copied to testing namespaces
