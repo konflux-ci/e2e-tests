@@ -49,7 +49,7 @@ $ go mod vendor
 **It is recommended to use your fork of [infra-deployments repo](https://github.com/redhat-appstudio/infra-deployments) in your GitHub org instead** - you can change the GitHub organization with environment variable `export MY_GITHUB_ORG=<name-of-your-github-org>`.
 
 <details>
-<summary><h4>Advancing installation guidelines</h4></summary>
+<summary><h4>Advanced installation guidelines</h4></summary>
 <h5>GitHub Application for Pipelines as Code<h5>
 <p>
    Some tests could require you have a Github App created in order to test Component builds via Pipelines as Code.
@@ -124,7 +124,7 @@ The `e2e-appstudio` command is the root command that executes all test functiona
       `./bin/e2e-appstudio`
    ```
 
-The instructions for every test suite can be found in the [tests folder](tests), e.g. [has Readme.md](tests/has/README.md).
+The instructions for every test suite can be found in the [tests folder](tests), e.g. [has Readme.md](tests/rhtap-demo/README.md).
 You can also specify which tests you want to run using [labels](docs/LabelsNaming.md) or [Ginkgo Focus](docs/DeveloperFocus.md).
 
 

@@ -6,7 +6,7 @@ The purpose of *this* document is to serve as a primer for developers/qe who are
 * Make sure you've implemented any required controller functionality that is required for your tests within the following files
    * `pkg/utils/<new controller directory>` - net new controller logic for a new service or component
    * `pkg/framework/framework.go` - import the new controller and update the `Framework` struct to be able to initialize the new controller
-* Every test package should be imported to `cmd/e2e_test.go`, e.g. [has](https://github.com/redhat-appstudio/e2e-tests/blob/main/cmd/e2e_test.go#L15).
+* Every test package should be imported to `cmd/e2e_test.go`, e.g. [byoc](https://github.com/redhat-appstudio/e2e-tests/blob/main/cmd/e2e_test.go#L15).
 * Every new test should have correct [labels](docs/LabelsNaming.md).
 * Every test should have meaningful description with JIRA/GitHub issue key.
 * (Recommended) Use JIRA integration for linking issues and commits (just add JIRA issue key in the commit message).
@@ -54,7 +54,7 @@ format.Object:
 When waiting for something to happen, use a reasonable timeout. Without it, a test might keep running until the entire test suite gets killed by the CI. **Beware that the CI under load may take a lot longer to complete some operation compared to running the same test locally**. On the other hand, a too long timeout also has drawbacks:
 
 * When a feature is broken so that the expected state doesn’t get reached, a test waiting for that state first needs to time out before the test fails.
-* If a state is expected to be reached within a certain time frame, then a timeout that is much higher will cause test runs to be considered successful although the feature was too slow. A dedicated performance test in a well-know environment may be a better solution for testing such performance expectations.
+* If a state is expected to be reached within a certain time frame, then a timeout that is much higher will cause test runs to be considered successful although the feature was too slow. A dedicated performance test in a well-known environment may be a better solution for testing such performance expectations.
 
 Good code that waits for something to happen meets the following criteria:
 * accepts a context for test timeouts
@@ -64,11 +64,10 @@ Good code that waits for something to happen meets the following criteria:
 ### Tips for writing and debugging long-running tests
 
 * Use `ginkgo.By` to record individual steps. Ginkgo will use that information when describing where a test timed out.
-* Use [gomega.Eventually](https://) to wait for some condition. When it times out or gets stuck, the last failed assertion will be included in the report automatically. A good way to invoke it is:
+* Use `gomega.Eventually` to wait for some condition. When it times out or gets stuck, the last failed assertion will be included in the report automatically. A good way to invoke it is:
 ```go
-	// Before injecting the token, validate that the linkedaccesstoken resource exists, otherwise injecting will return a 404 error code
+
 	Eventually(func() bool {
-		// application info should be stored even after deleting the application in application variable
 		_, err := s.GetSPIAccessToken(linkedAccessTokenName, namespace)
 		return err == nil
 	}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't create the SPIAccessToken")
