@@ -14,10 +14,10 @@ The purpose of *this* document is to serve as a primer for developers/qe who are
   `E2E_TEST_SUITE_LABEL` environment variable. For example:
   `E2E_TEST_SUITE_LABEL=ec ./mage runE2ETests`
 * `klog` level can be controled via `KLOG_VERBOSITY` environment variable. For
-  example: `KLOG_VERBOSITY=9 ./mage runE2ETests` would output `curl` commands
+  example: `KLOG_VERBOSITY=9 ./mage runE2ETests` would output http requests
   issued via Kubernetes client from sigs.k8s.io/controller-runtime
 * To quickly debug a test, you can run only the desired suite. Example: `./bin/e2e-appstudio --ginkgo.focus="e2e-demos-suite"`
-* Split tests in different scenarios. Will be better to debug a small scenario than a very big one
+* Split tests in multiple scenarios. It's better to debug a small scenario than a very big one
 
 ## Debuggability
 
@@ -67,10 +67,10 @@ Good code that waits for something to happen meets the following criteria:
 * Use `gomega.Eventually` to wait for some condition. When it times out or gets stuck, the last failed assertion will be included in the report automatically. A good way to invoke it is:
 ```go
 
-	Eventually(func() bool {
+	Eventually(func() error {
 		_, err := s.GetSPIAccessToken(linkedAccessTokenName, namespace)
-		return err == nil
-	}, 1*time.Minute, 100*time.Millisecond).Should(BeTrue(), "SPI controller didn't create the SPIAccessToken")
+		return err
+	}, 1*time.Minute, 100*time.Millisecond).Should(Succeed(), "SPI controller didn't create the SPIAccessToken")
 ```
 * Use `gomega.Consistently` to ensure that some condition is true for a while. As with `gomega.Eventually`, make assertions about the value instead of checking the value with Go code and then asserting that the code returns true.
 * Both `gomega.Consistently` and `gomega.Eventually` can be aborted early via `gomega.StopPolling`.
