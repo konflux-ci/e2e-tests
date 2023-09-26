@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/klog"
 	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -173,6 +174,7 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
 	}
 	if err := utils.WaitUntil(h.CheckForImageAnnotation(componentObject), time.Minute*5); err != nil {
+		componentObject = h.refreshComponentForErrorDebug(componentObject)
 		return nil, fmt.Errorf("timed out when waiting for image-controller annotations to be updated on component %s in namespace %s. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
 	}
 	return componentObject, nil
@@ -394,7 +396,8 @@ func (h *HasController) CheckForImageAnnotation(component *appservice.Component)
 	return func() (bool, error) {
 		componentCR, err := h.GetComponent(component.Name, component.Namespace)
 		if err != nil {
-			return false, err
+			klog.Errorf("failed to get component %s with error: %+v", component.Name, err)
+			return false, nil
 		}
 		annotations := componentCR.GetAnnotations()
 		return build.IsImageAnnotationPresent(annotations) && build.ImageRepoCreationSucceeded(annotations), nil
