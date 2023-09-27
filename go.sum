@@ -1305,8 +1305,10 @@ github.com/redhat-appstudio/jvm-build-service v0.0.0-20230821060312-4172397d68e8
 github.com/redhat-appstudio/jvm-build-service v0.0.0-20230821060312-4172397d68e8/go.mod h1:1L8D7nBUn8EJrlYLCl5NmX1yzoRjkAeEX5v4YmmxQNo=
 github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20230825175313-126ea8674329 h1:6M0ZNiTrjPyZjRYv9TO1b+cM0BuCedEdxTn8mI++Rck=
 github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20230825175313-126ea8674329/go.mod h1:12lI+rL9+laUTAZ8G/fl7ECBRym5q4WqHKcro8ET6Vo=
-github.com/redhat-appstudio/release-service v0.0.0-20230530123949-005cd468d6a7 h1:dVvmFq1Hh2E7MvI4U5gDDAvnLb5ftwE1WnC+tp6Q7YE=
-github.com/redhat-appstudio/release-service v0.0.0-20230530123949-005cd468d6a7/go.mod h1:hhwmkJHL9pDmFuSI4PsiZD4u3k7VnRtBLUaNcJ2qroM=
+github.com/redhat-appstudio/operator-toolkit v0.0.0-20230901144515-eeb937692f03 h1:3cHK+a1D+VwhzGoAnC2HXbjkywT/b8jDDaiew2KgpPw=
+github.com/redhat-appstudio/operator-toolkit v0.0.0-20230901144515-eeb937692f03/go.mod h1:7cX2+4KGZLJ4Yoj+1v0iV5hkCGBzbSd9wkNJQjCdDJs=
+github.com/redhat-appstudio/release-service v0.0.0-20230927145627-e492842a18f8 h1:ai38uzqzp9kuD5bbBdbq1bNMwc1n7+EzOgfAesy8z3o=
+github.com/redhat-appstudio/release-service v0.0.0-20230927145627-e492842a18f8/go.mod h1:U4Qa933BrXLEnudIhCaPp0lBWjevLY2MuvXrl9LIo7U=
 github.com/redhat-appstudio/remote-secret v0.0.0-20230713072146-a6094c712436 h1:6XYknDslXDSVpNqEKnI+gKj3Uu4afK2S+IIH3KogX1E=
 github.com/redhat-appstudio/remote-secret v0.0.0-20230713072146-a6094c712436/go.mod h1:QlcxNg0q63QFGr9ceI3dH7a7vO6gGh+2TJrbTiMf9DE=
 github.com/redhat-appstudio/service-provider-integration-operator v0.2023.22-0.20230713080056-eae17aa8c172 h1:Zibq2RBTzcoDgZcTfM5k2o1qrKuix3YPtYQ/NuP039Y=
@@ -1360,7 +1362,7 @@ github.com/shurcooL/githubv4 v0.0.0-20221229060216-a8d4a561cc93/go.mod h1:hAF0iL
 github.com/shurcooL/graphql v0.0.0-20220606043923-3cf50f8a0a29 h1:B1PEwpArrNp4dkQrfxh/abbBAOZBVp0ds+fBEOUOqOc=
 github.com/shurcooL/graphql v0.0.0-20220606043923-3cf50f8a0a29/go.mod h1:AuYgA5Kyo4c7HfUmvRGs/6rGlMMV/6B1bVnB9JxJEEg=
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
-github.com/sigstore/sigstore v1.6.2 h1:D03GxT3YK+ZkRmCS6SJIDCpfQ0Ypy1o6mgtXBQELtZc=
+github.com/sigstore/sigstore v1.6.5 h1:/liHIo7YPJp6sN31DzBYDOuRPmN1xbzROMBE5DLllYM=
 github.com/sirupsen/logrus v1.0.4-0.20170822132746-89742aefa4b2/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
 github.com/sirupsen/logrus v1.0.6/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
@@ -1445,8 +1447,8 @@ github.com/tchap/go-patricia v2.2.6+incompatible/go.mod h1:bmLyhP68RS6kStMGxByiQ
 github.com/tchap/go-patricia v2.3.0+incompatible/go.mod h1:bmLyhP68RS6kStMGxByiQ23RP/odRBOTVjwp2cDyi6I=
 github.com/tektoncd/cli v0.29.1 h1:61+QyWxJSSwdH46wH7/ng14vvm/IdUJ4antlRHXOOEI=
 github.com/tektoncd/cli v0.29.1/go.mod h1:SIN97VCseMwxcU/8NVS9yUsBBEZmfhHsOUEDtNSdfzE=
-github.com/tektoncd/pipeline v0.47.3 h1:8oh2Yy3duW8wRW8nq0GZdD96Ya9bKELzVSGVxS/oOQo=
-github.com/tektoncd/pipeline v0.47.3/go.mod h1:7H1DeNuEJFGoExGwQTlRul2IziCPxkjXRdDdirWmoQs=
+github.com/tektoncd/pipeline v0.49.0 h1:LxpgoPZvIDiOvPj6vtInnGG0uzuQ5CPA+h8FdJdklh4=
+github.com/tektoncd/pipeline v0.49.0/go.mod h1:R3Qn/oTTf1SCLrj+rCg4sqUbpx7vE+6D8Z81+zKUdqQ=
 github.com/tektoncd/triggers v0.22.0 h1:xe9l+ebuUMuP4wzBLjvmUGUPZCz0qND4osFFLSVCAW0=
 github.com/theupdateframework/go-tuf v0.5.2 h1:habfDzTmpbzBLIFGWa2ZpVhYvFBoK0C1onC3a4zuPRA=
 github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 h1:e/5i7d4oYZ+C1wj2THlRK+oAhjeS/TRQwMfkIuet3w0=
