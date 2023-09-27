@@ -128,10 +128,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}
 			}
 
-			//Delete the quay image repo since we are setting delete-repo=false
-			_, err = build.DeleteImageRepo(imageRepoName)
-			Expect(err).NotTo(HaveOccurred(), "Failed to delete image repo with error: %+v", err)
-
 		})
 
 		When("a new component without specified branch is created and with visibility private", Label("pac-custom-default-branch"), func() {
