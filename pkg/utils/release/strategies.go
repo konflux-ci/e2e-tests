@@ -2,6 +2,7 @@ package release
 
 import (
 	"context"
+	"github.com/redhat-appstudio/release-service/tekton/utils"
 
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,8 +27,14 @@ func (r *ReleaseController) CreateReleaseStrategy(name, namespace, pipelineName,
 			Namespace: namespace,
 		},
 		Spec: releaseApi.ReleaseStrategySpec{
-			Pipeline:       pipelineName,
-			Bundle:         bundle,
+			PipelineRef: utils.PipelineRef{
+				Resolver: "bundles",
+				Params: []utils.Param{
+					{Name: "bundle", Value: bundle},
+					{Name: "name", Value: pipelineName},
+					{Name: "kind", Value: "pipeline"},
+				},
+			},
 			Policy:         policy,
 			Params:         params,
 			ServiceAccount: serviceAccount,

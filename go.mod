@@ -33,13 +33,13 @@ require (
 	github.com/redhat-appstudio/integration-service v0.0.0-20230427084439-306b4611389b
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20230821060312-4172397d68e8
 	github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0
-	github.com/redhat-appstudio/release-service v0.0.0-20230530123949-005cd468d6a7
+	github.com/redhat-appstudio/release-service v0.0.0-20230927145627-e492842a18f8
 	github.com/redhat-appstudio/remote-secret v0.0.0-20230713072146-a6094c712436
 	github.com/redhat-appstudio/service-provider-integration-operator v0.2023.22-0.20230713080056-eae17aa8c172
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
 	github.com/tektoncd/cli v0.29.1
-	github.com/tektoncd/pipeline v0.47.3
+	github.com/tektoncd/pipeline v0.49.0
 	golang.org/x/oauth2 v0.10.0
 	golang.org/x/tools v0.9.3
 	gopkg.in/yaml.v2 v2.4.0
@@ -237,6 +237,7 @@ require (
 	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/prometheus/statsd_exporter v0.23.0 // indirect
 	github.com/redhat-appstudio/application-service v0.0.0-20230717184417-67d31a01a776 // indirect
+	github.com/redhat-appstudio/operator-toolkit v0.0.0-20230901144515-eeb937692f03 // indirect
 	github.com/redhat-developer/alizer/go v0.0.0-20230516215932-135a2bb3fb90 // indirect
 	github.com/redhat-developer/gitops-generator v0.0.0-20230614175323-aff86c6bc55e // indirect
 	github.com/redis/go-redis/v9 v9.0.5 // indirect
