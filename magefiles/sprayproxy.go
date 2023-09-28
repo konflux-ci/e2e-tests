@@ -18,9 +18,9 @@ import (
 
 const (
 	SPRAYPROXY_NAMESPACE = "sprayproxy"
-	ROUTE_NAME            = "sprayproxy-route"
-	PAC_NAMESPACE = "openshift-pipelines"
-	PAC_ROUTE_NAME = "pipelines-as-code-controller"
+	ROUTE_NAME           = "sprayproxy-route"
+	PAC_NAMESPACE        = "openshift-pipelines"
+	PAC_ROUTE_NAME       = "pipelines-as-code-controller"
 )
 
 type SprayProxy struct {
@@ -82,7 +82,7 @@ func (s *SprayProxy) sendRequest(hostUrl string, httpMethod string) (string, err
 	}
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.Token))
-	
+
 	res, err := s.HTTPClient.Do(req)
 	if err != nil {
 		return "", err

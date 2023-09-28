@@ -93,7 +93,7 @@ contexts:
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("creates RemoteSecret with previously created namespaces as targets", func() {
+		It("creates RemoteSecret with previously created namespace as target", func() {
 			targets := []v1beta1.RemoteSecretTarget{
 				{
 					ApiUrl:                   cfg.Host,
