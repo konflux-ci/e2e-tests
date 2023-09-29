@@ -288,11 +288,10 @@ func PreflightChecks() error {
 
 func (ci CI) setRequiredEnvVars() error {
 
-	if strings.Contains(jobName, "hacbs-e2e-periodic") {
-		os.Setenv("E2E_TEST_SUITE_LABEL", "HACBS")
-		return nil
-	} else if strings.Contains(jobName, "appstudio-e2e-deployment-periodic") {
-		os.Setenv("E2E_TEST_SUITE_LABEL", "!HACBS")
+	// RHTAP Nightly E2E job
+	// The job name is taken from https://github.com/openshift/release/blob/f03153fa4ad36c0e10050d977e7f0f7619d2163a/ci-operator/config/redhat-appstudio/infra-deployments/redhat-appstudio-infra-deployments-main.yaml#L59C7-L59C35
+	if strings.Contains(jobName, "appstudio-e2e-tests-periodic") {
+		requiresSprayProxyRegistering = true
 		return nil
 	}
 
