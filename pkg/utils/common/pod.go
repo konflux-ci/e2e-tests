@@ -1,12 +1,12 @@
 package common
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
+	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -73,27 +73,6 @@ func (s *SuiteController) ListPods(namespace, labelKey, labelValue string, selec
 	return s.KubeInterface().CoreV1().Pods(namespace).List(context.TODO(), listOptions)
 }
 
-// Return a container logs from a given pod and namespace
-func (s *SuiteController) GetContainerLogs(podName, containerName, namespace string) (string, error) {
-	podLogOpts := corev1.PodLogOptions{
-		Container: containerName,
-	}
-
-	req := s.KubeInterface().CoreV1().Pods(namespace).GetLogs(podName, &podLogOpts)
-	podLogs, err := req.Stream(context.TODO())
-	if err != nil {
-		return "", fmt.Errorf("error in opening the stream: %v", err)
-	}
-	defer podLogs.Close()
-
-	buf := new(bytes.Buffer)
-	_, err = io.Copy(buf, podLogs)
-	if err != nil {
-		return "", fmt.Errorf("error in copying logs to buf, %v", err)
-	}
-	return buf.String(), nil
-}
-
 // Wait for a pod selector until exists
 func (s *SuiteController) WaitForPodSelector(
 	fn func(podName, namespace string) wait.ConditionFunc, namespace, labelKey string, labelValue string,
@@ -108,6 +87,46 @@ func (s *SuiteController) WaitForPodSelector(
 
 	for i := range podList.Items {
 		if err := utils.WaitUntil(fn(podList.Items[i].Name, namespace), time.Duration(timeout)*time.Second); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ListAllPods returns a list of all pods in a namespace.
+func (s *SuiteController) ListAllPods(namespace string) (*corev1.PodList, error) {
+	return s.KubeInterface().CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+}
+
+// StorePod stores a given pod as an artifact.
+func (s *SuiteController) StorePod(pod *corev1.Pod) error {
+	artifacts := make(map[string][]byte)
+
+	var containers []corev1.Container
+	containers = append(containers, pod.Spec.InitContainers...)
+	containers = append(containers, pod.Spec.Containers...)
+	for _, c := range containers {
+		log, err := utils.GetContainerLogs(s.KubeInterface(), pod.Name, c.Name, pod.Namespace)
+		if err != nil {
+			GinkgoWriter.Printf("error getting logs for pod/container %s/%s: %v\n", pod.Name, c.Name, err.Error())
+			continue
+		}
+
+		artifacts["pod-"+pod.Name+"-"+c.Name+".log"] = []byte(log)
+	}
+
+	return logs.StoreArtifacts(artifacts)
+}
+
+// StoreAllPods stores all pods in a given namespace.
+func (s *SuiteController) StoreAllPods(namespace string) error {
+	podList, err := s.ListAllPods(namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, pod := range podList.Items {
+		if err := s.StorePod(&pod); err != nil {
 			return err
 		}
 	}

@@ -4,22 +4,22 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/devfile/library/pkg/util"
+	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
-var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests", Label("enterprise-contract", "HACBS"), func() {
+var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests", Label("ec", "HACBS"), func() {
 
 	defer GinkgoRecover()
 	var fwk *framework.Framework
 	var err error
 	var namespace string
-	var kubeController tekton.KubeController
 	var policySource []ecp.Source
 	var policyConfig *ecp.EnterpriseContractPolicyConfiguration
 	var imageWithDigest string
@@ -27,65 +27,63 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 	var generator tekton.VerifyEnterpriseContract
 	var verifyECTaskBundle string
 	publicSecretName := "cosign-public-key"
+	goldenImagePublicKey := []byte("-----BEGIN PUBLIC KEY-----\n" +
+		"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZP/0htjhVt2y0ohjgtIIgICOtQtA\n" +
+		"naYJRuLprwIv6FDhZ5yFjYUEtsmoNcW7rx2KM6FOXGsCX3BNc7qhHELT+g==\n" +
+		"-----END PUBLIC KEY-----")
+	AfterEach(framework.ReportFailure(&fwk))
 
 	BeforeAll(func() {
-		fwk, err = framework.NewFramework(constants.TEKTON_CHAINS_E2E_USER)
+		fwk, err = framework.NewFramework(utils.GetGeneratedNamespace(constants.TEKTON_CHAINS_E2E_USER))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(fwk.UserNamespace).NotTo(BeNil(), "failed to create sandbox user")
+		Expect(fwk.UserNamespace).NotTo(BeEmpty(), "failed to create sandbox user")
 		namespace = fwk.UserNamespace
-		kubeController = tekton.KubeController{
-			Commonctrl: *fwk.AsKubeAdmin.CommonController,
-			Tektonctrl: *fwk.AsKubeAdmin.TektonController,
-			Namespace:  namespace,
-		}
-		publicKey, err := kubeController.GetTektonChainsPublicKey()
+		publicKey, err := fwk.AsKubeAdmin.TektonController.GetTektonChainsPublicKey()
 		Expect(err).ToNot(HaveOccurred())
 		GinkgoWriter.Printf("Copy public key from %s/signing-secrets to a new secret\n", constants.TEKTON_CHAINS_NS)
-		Expect(kubeController.CreateOrUpdateSigningSecret(
-			publicKey, publicSecretName, namespace)).To(Succeed())
+		Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(publicKey, publicSecretName, namespace)).To(Succeed())
 
-		defaultEcp, err := kubeController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+		defaultEcp, err := fwk.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 		Expect(err).NotTo(HaveOccurred())
 		policyConfig = defaultEcp.Spec.Configuration
 		policySource = defaultEcp.Spec.Sources
 
-		cm, err := kubeController.Commonctrl.GetConfigMap("ec-defaults", "enterprise-contract-service")
+		cm, err := fwk.AsKubeAdmin.CommonController.GetConfigMap("ec-defaults", "enterprise-contract-service")
 		Expect(err).ToNot(HaveOccurred())
 		verifyECTaskBundle = cm.Data["verify_ec_task_bundle"]
 		Expect(verifyECTaskBundle).ToNot(BeEmpty())
 		GinkgoWriter.Printf("Using verify EC task bundle: %s\n", verifyECTaskBundle)
-		imageWithDigest = "quay.io/redhat-appstudio/ec-golden-image:latest"
+		imageWithDigest = "quay.io/redhat-appstudio/ec-golden-image@sha256:4b318620a32349fd37827163c67b5ff6e503f05b3ca4dde066ee03bb34be9ae1"
 	})
 	Context("ec-cli command verification", func() {
-		BeforeAll(func() {
+		BeforeEach(func() {
 			generator = tekton.VerifyEnterpriseContract{
-				Bundle:              verifyECTaskBundle,
-				Image:               imageWithDigest,
+				TaskBundle:          verifyECTaskBundle,
 				Name:                "verify-enterprise-contract",
 				Namespace:           namespace,
 				PolicyConfiguration: "ec-policy",
 				PublicKey:           fmt.Sprintf("k8s://%s/%s", namespace, publicSecretName),
-				SSLCertDir:          "/var/run/secrets/kubernetes.io/serviceaccount",
 				Strict:              false,
 				EffectiveTime:       "now",
+				IgnoreRekor:         true,
 			}
+			generator.WithComponentImage(imageWithDigest)
 			pipelineRunTimeout = int(time.Duration(5) * time.Minute)
 			baselinePolicies := ecp.EnterpriseContractPolicySpec{
 				Configuration: policyConfig,
 				Sources:       policySource,
 			}
-			Expect(kubeController.CreateOrUpdatePolicyConfiguration(namespace, baselinePolicies)).To(Succeed())
+			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, baselinePolicies)).To(Succeed())
 		})
 		It("verifies ec cli has error handling", func() {
-			generator.Image = "quay.io/redhat-appstudio/ec-golden-image:latest"
-			pr, err := kubeController.RunPipeline(generator, pipelineRunTimeout)
+			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(kubeController.WatchPipelineRun(pr.Name, pipelineRunTimeout)).To(Succeed())
+			Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
 
-			pr, err = kubeController.Tektonctrl.GetPipelineRun(pr.Name, pr.Namespace)
+			pr, err = fwk.AsKubeAdmin.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			tr, err := kubeController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
+			tr, err := fwk.AsKubeAdmin.TektonController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(tr.Status.TaskRunResults).Should(Or(
@@ -94,54 +92,106 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 				ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
 			))
 			//Get container step-report log details from pod
-			reportLog, err := kubeController.Commonctrl.GetContainerLogs(tr.Status.PodName, "step-report", namespace)
+			reportLog, err := utils.GetContainerLogs(fwk.AsKubeAdmin.CommonController.KubeInterface(), tr.Status.PodName, "step-report", namespace)
 			GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, "step-report", reportLog)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(reportLog).Should(ContainSubstring("msg: No image attestations found matching the given public key"))
+			Expect(reportLog).Should(ContainSubstring("No image attestations found matching the given public key"))
+		})
+
+		It("verifies ec cli supports the current policy config fields used by the ec-policies rego rules", func() {
+			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
+
+			pr, err = fwk.AsKubeAdmin.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
+			Expect(err).NotTo(HaveOccurred())
+
+			tr, err := fwk.AsKubeAdmin.TektonController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
+			Expect(err).NotTo(HaveOccurred())
+
+			//Get container step-report log details from pod
+			reportLog, err := utils.GetContainerLogs(fwk.AsKubeAdmin.CommonController.KubeInterface(), tr.Status.PodName, "step-report", namespace)
+			GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, "step-report", reportLog)
+			Expect(err).NotTo(HaveOccurred())
+			//assert ec cli support policy config include field
+			Expect(reportLog).Should(ContainSubstring("include"))
+			//assert ec cli support policy config exclude field
+			Expect(reportLog).Should(ContainSubstring("exclude"))
+		})
+
+		It("verifies ec validate accepts a list of image references", func() {
+			secretName := fmt.Sprintf("golden-image-public-key%s", util.GenerateRandomString(10))
+			GinkgoWriter.Println("Update public key to verify golden images")
+			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(goldenImagePublicKey, secretName, namespace)).To(Succeed())
+			generator.PublicKey = fmt.Sprintf("k8s://%s/%s", namespace, secretName)
+			policy := ecp.EnterpriseContractPolicySpec{
+				Sources: policySource,
+				Configuration: &ecp.EnterpriseContractPolicyConfiguration{
+					Include: []string{"minimal"},
+				},
+			}
+			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
+			generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-out-of-date-task")
+			generator.AppendComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-unacceptable-task")
+			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
+
+			pr, err = fwk.AsKubeAdmin.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
+			Expect(err).NotTo(HaveOccurred())
+
+			tr, err := fwk.AsKubeAdmin.TektonController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(tr.Status.TaskRunResults).Should(Or(
+				// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
+				ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
+				ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
+			))
+			//Get container step-report log details from pod
+			reportLog, err := utils.GetContainerLogs(fwk.AsKubeAdmin.CommonController.KubeInterface(), tr.Status.PodName, "step-report", namespace)
+			GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, "step-report", reportLog)
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
 	Context("Release Policy", func() {
 		BeforeAll(func() {
 			secretName := fmt.Sprintf("golden-image-public-key%s", util.GenerateRandomString(10))
-			//The staging public key for verificaiton image
-			publicKey := []byte("-----BEGIN PUBLIC KEY-----\n" +
-				"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZP/0htjhVt2y0ohjgtIIgICOtQtA\n" +
-				"naYJRuLprwIv6FDhZ5yFjYUEtsmoNcW7rx2KM6FOXGsCX3BNc7qhHELT+g==\n" +
-				"-----END PUBLIC KEY-----")
-			GinkgoWriter.Println("Create golden image public signing key")
-			Expect(kubeController.CreateOrUpdateSigningSecret(publicKey, secretName, namespace)).To(Succeed())
+			GinkgoWriter.Println("Update public key to verify golden images")
+			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(goldenImagePublicKey, secretName, namespace)).To(Succeed())
 			generator = tekton.VerifyEnterpriseContract{
-				Bundle:              verifyECTaskBundle,
-				Image:               imageWithDigest,
+				TaskBundle:          verifyECTaskBundle,
 				Name:                "verify-enterprise-contract",
 				Namespace:           namespace,
 				PolicyConfiguration: "ec-policy",
 				PublicKey:           fmt.Sprintf("k8s://%s/%s", namespace, secretName),
-				SSLCertDir:          "/var/run/secrets/kubernetes.io/serviceaccount",
 				Strict:              false,
 				EffectiveTime:       "now",
+				IgnoreRekor:         true,
 			}
+			generator.WithComponentImage(imageWithDigest)
 			pipelineRunTimeout = int(time.Duration(5) * time.Minute)
 		})
-		It("verifies the release policy: Task bundle is not acceptable", func() {
+
+		It("verifies the release policy: Task bundles are in acceptable bundle list", func() {
 			policy := ecp.EnterpriseContractPolicySpec{
 				Sources: policySource,
 				Configuration: &ecp.EnterpriseContractPolicyConfiguration{
 					Include: []string{"attestation_task_bundle.task_ref_bundles_acceptable"},
 				},
 			}
-			Expect(kubeController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
+			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
-			generator.Image = "quay.io/redhat-appstudio/ec-golden-image:e2e-test-unacceptable-task"
-			pr, err := kubeController.RunPipeline(generator, pipelineRunTimeout)
+			generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-unacceptable-task")
+			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(kubeController.WatchPipelineRun(pr.Name, pipelineRunTimeout)).To(Succeed())
+			Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
 
-			pr, err = kubeController.Tektonctrl.GetPipelineRun(pr.Name, pr.Namespace)
+			pr, err = fwk.AsKubeAdmin.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			tr, err := kubeController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
+			tr, err := fwk.AsKubeAdmin.TektonController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(tr.Status.TaskRunResults).Should(Or(
@@ -151,40 +201,38 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			))
 
 			//Get container step-report log details from pod
-			reportLog, err := kubeController.Commonctrl.GetContainerLogs(tr.Status.PodName, "step-report", namespace)
+			reportLog, err := utils.GetContainerLogs(fwk.AsKubeAdmin.CommonController.KubeInterface(), tr.Status.PodName, "step-report", namespace)
 			GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, "step-report", reportLog)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(reportLog).Should(ContainSubstring("msg: Pipeline task 'build-container' uses an unacceptable task bundle"))
+			Expect(reportLog).Should(ContainSubstring("Pipeline task 'build-container' uses an unacceptable task bundle"))
 		})
 
-		It("verifies the release policy: Task bundle is out of date", func() {
+		It("verifies the release policy: Task bundle references pinned to digest", func() {
+			secretName := fmt.Sprintf("unpinned-task-bundle-public-key%s", util.GenerateRandomString(10))
+			unpinnedTaskPublicKey := []byte("-----BEGIN PUBLIC KEY-----\n" +
+				"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEPfwkY/ru2JRd6FSqIp7lT3gzjaEC\n" +
+				"EAg+paWtlme2KNcostCsmIbwz+bc2aFV+AxCOpRjRpp3vYrbS5KhkmgC1Q==\n" +
+				"-----END PUBLIC KEY-----")
+			GinkgoWriter.Println("Update public <key to verify unpinned task image")
+			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(unpinnedTaskPublicKey, secretName, namespace)).To(Succeed())
+			generator.PublicKey = fmt.Sprintf("k8s://%s/%s", namespace, secretName)
 			policy := ecp.EnterpriseContractPolicySpec{
-				Sources: []ecp.Source{
-					{
-						Policy: []string{
-							"oci::quay.io/hacbs-contract/ec-release-policy:git-086f871@sha256:373a5c4c1d34123836cbfc11826f6bbf6fdf8f0dfae333a2686bbe941c4f79ef",
-						},
-						Data: []string{
-							"oci::quay.io/hacbs-contract/ec-policy-data:git-8629680@sha256:ee5708dda57216647f63032dd3e63375e70e2353cb1ad10c9ab5493b9236c23e",
-						},
-					},
-				},
+				Sources: policySource,
 				Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-					Include: []string{"attestation_task_bundle.task_ref_bundles_current"},
+					Include: []string{"attestation_task_bundle.task_ref_bundles_pinned"},
 				},
 			}
-			Expect(kubeController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
+			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
-			generator.Image = "quay.io/redhat-appstudio/ec-golden-image:e2e-test-out-of-date-task"
-			generator.EffectiveTime = "2023-03-31T00:00:00Z"
-			pr, err := kubeController.RunPipeline(generator, pipelineRunTimeout)
+			generator.WithComponentImage("quay.io/redhat-appstudio-qe/enterprise-contract-tests:e2e-test-unpinned-task-bundle")
+			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(kubeController.WatchPipelineRun(pr.Name, pipelineRunTimeout)).To(Succeed())
+			Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
 
-			pr, err = kubeController.Tektonctrl.GetPipelineRun(pr.Name, pr.Namespace)
+			pr, err = fwk.AsKubeAdmin.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			tr, err := kubeController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
+			tr, err := fwk.AsKubeAdmin.TektonController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(tr.Status.TaskRunResults).Should(Or(
@@ -194,10 +242,10 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			))
 
 			//Get container step-report log details from pod
-			reportLog, err := kubeController.Commonctrl.GetContainerLogs(tr.Status.PodName, "step-report", namespace)
+			reportLog, err := utils.GetContainerLogs(fwk.AsKubeAdmin.CommonController.KubeInterface(), tr.Status.PodName, "step-report", namespace)
 			GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, "step-report", reportLog)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(reportLog).Should(ContainSubstring("Pipeline task 'build-container' uses an out of date task bundle"))
+			Expect(reportLog).Should(ContainSubstring("Pipeline task 'show-summary' uses an unpinned task bundle reference"))
 		})
 	})
 })

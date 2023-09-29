@@ -99,8 +99,8 @@ func (vc *vclusterFactory) CreateRoute(serviceName string, namespace string) (ro
 		return nil, err
 	}
 
-	return route, wait.Poll(5*time.Minute, 10*time.Second, func() (done bool, err error) {
-		route, err = vc.KubeClient.RouteClient().RouteV1().Routes(namespace).Get(context.TODO(), routeSpec.Name, v1.GetOptions{})
+	return route, wait.PollUntilContextTimeout(context.Background(), 10*time.Second, 5*time.Minute, false, func(ctx context.Context) (done bool, err error) {
+		route, err = vc.KubeClient.RouteClient().RouteV1().Routes(namespace).Get(ctx, routeSpec.Name, v1.GetOptions{})
 		if err != nil {
 			return false, nil
 		}

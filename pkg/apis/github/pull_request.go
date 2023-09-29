@@ -8,6 +8,14 @@ import (
 	"github.com/google/go-github/v44/github"
 )
 
+func (g *Github) GetPullRequest(repository string, id int) (*github.PullRequest, error) {
+	pr, _, err := g.client.PullRequests.Get(context.Background(), g.organization, repository, id)
+	if err != nil {
+		return nil, err
+	}
+	return pr, nil
+}
+
 func (g *Github) ListPullRequests(repository string) ([]*github.PullRequest, error) {
 	prs, _, err := g.client.PullRequests.List(context.Background(), g.organization, repository, &github.PullRequestListOptions{})
 	if err != nil {
@@ -37,4 +45,12 @@ func (g *Github) MergePullRequest(repository string, prNumber int) (*github.Pull
 	}
 
 	return mergeResult, nil
+}
+
+func (g *Github) ListCheckSuites(repository string, ref string) ([]*github.CheckSuite, error) {
+	checkSuiteResults, _, err := g.client.Checks.ListCheckSuitesForRef(context.Background(), g.organization, repository, ref, &github.ListCheckSuiteOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("error when listing check suites for the repo %s: %v", repository, err)
+	}
+	return checkSuiteResults.CheckSuites, nil
 }

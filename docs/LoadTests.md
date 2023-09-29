@@ -10,12 +10,8 @@ This Test Section Provides Load Testing Scripts for Red Hat AppStudio
 
 ## Running the script
 1. Change your directory to `tests/load-tests` 
-2. Set the following environment variables with your encoded docker config json:
-```bash
-  export DOCKER_CONFIG_JSON=<PLEASE_ENTER_BASE64_ENCODED_CONFIG>
-```
-3. Additional environment variables are required to set for the e2e framework that the load test uses. Refer to [Running the tests](https://github.com/redhat-appstudio/e2e-tests#running-the-tests).
-4. Run the bash script
+2. Environment variables are required to set for the e2e framework that the load test uses. Refer to [Running the tests](https://github.com/redhat-appstudio/e2e-tests#running-the-tests).
+3. Run the bash script
 ```
 ./run.sh 
 ```
@@ -25,9 +21,10 @@ You can configure the parameters by editing `run.sh` and add/change parameters(e
 ## How does this work 
 The Script works in Steps
 - Starts by creating `n` number of UserSignup CRD's which will create `n` number of NameSpaces , number of users can be changed by the flag `--users`
-- Next the Script Adds a Secret named `redhat-appstudio-registry-pull-secret` which will contain the docker config you provided when you run the script
 - Then it proceeds by creating AppStudio Applications for each user followed by Appstudio Component, i.e Creates users on a 1:1 basis 
-- Creating the Component will start the pipelines, if the `-w` flag is given it will wait for the pipelines to finish then print results 
+- Creating the Component will start the pipelines, if the `-w` flag is given it will wait for the pipelines to finish,
+- if the '-i' flag is given it will wait till integration tests have finished  
+- if the '-d' flag is given it will wait until deployments have finished rolling out changes, then print results,
 - Then after the tests are completed it will dump the results / stats, on error the stats will still get dumped along with the trace
 
 ## How to contribute

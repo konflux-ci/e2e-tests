@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/base64"
@@ -12,17 +13,21 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
+	"knative.dev/pkg/apis"
 
-	devfilePkg "github.com/devfile/library/pkg/devfile"
-	"github.com/devfile/library/pkg/devfile/parser"
-	"github.com/devfile/library/pkg/devfile/parser/data"
-	"github.com/devfile/library/pkg/util"
+	devfilePkg "github.com/devfile/library/v2/pkg/devfile"
+	"github.com/devfile/library/v2/pkg/devfile/parser"
+	"github.com/devfile/library/v2/pkg/devfile/parser/data"
+	"github.com/devfile/library/v2/pkg/util"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
@@ -43,6 +48,39 @@ type FailedPipelineRunDetails struct {
 	FailedTaskRunName   string
 	PodName             string
 	FailedContainerName string
+}
+
+type Options struct {
+	ToolchainApiUrl string
+	KeycloakUrl     string
+	OfflineToken    string
+}
+
+// check options are valid or not
+func CheckOptions(optionsArr []Options) (bool, error) {
+	if len(optionsArr) == 0 {
+		return false, nil
+	}
+
+	if len(optionsArr) > 1 {
+		return true, fmt.Errorf("options array contains more than 1 object")
+	}
+
+	options := optionsArr[0]
+
+	if options.ToolchainApiUrl == "" {
+		return true, fmt.Errorf("ToolchainApiUrl field is empty")
+	}
+
+	if options.KeycloakUrl == "" {
+		return true, fmt.Errorf("KeycloakUrl field is empty")
+	}
+
+	if options.OfflineToken == "" {
+		return true, fmt.Errorf("OfflineToken field is empty")
+	}
+
+	return true, nil
 }
 
 // CheckIfEnvironmentExists return true/false if the environment variable exists
@@ -112,10 +150,6 @@ func GetQuayIOOrganization() string {
 	return GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
 }
 
-func GetDockerConfigJson() string {
-	return GetEnv(constants.DOCKER_CONFIG_JSON, "")
-}
-
 func IsPrivateHostname(url string) bool {
 	// https://www.ibm.com/docs/en/networkmanager/4.2.0?topic=translation-private-address-ranges
 	privateIPAddressPrefixes := []string{"10.", "172.1", "172.2", "172.3", "192.168"}
@@ -172,7 +206,7 @@ func GetGeneratedNamespace(name string) string {
 }
 
 func WaitUntilWithInterval(cond wait.ConditionFunc, interval time.Duration, timeout time.Duration) error {
-	return wait.PollImmediate(interval, timeout, cond)
+	return wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) { return cond() })
 }
 
 func WaitUntil(cond wait.ConditionFunc, timeout time.Duration) error {
@@ -308,7 +342,7 @@ func GetDefaultPipelineBundleRef(buildPipelineSelectorYamlURL, selectorName stri
 	}
 	for _, s := range ps.Spec.Selectors {
 		if s.Name == selectorName {
-			return s.PipelineRef.Bundle, nil
+			return s.PipelineRef.Bundle, nil //nolint:all
 		}
 	}
 
@@ -340,16 +374,46 @@ func HostIsAccessible(host string) bool {
 	return true
 }
 
-func HostEndpointIsAccessible(host string, endpoint string) bool {
-	tc := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+func HasPipelineRunSucceeded(pr *v1beta1.PipelineRun) bool {
+	return pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue()
+}
+
+func HasPipelineRunFailed(pr *v1beta1.PipelineRun) bool {
+	return pr.IsDone() && pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsFalse()
+}
+
+// Return a container logs from a given pod and namespace
+func GetContainerLogs(ki kubernetes.Interface, podName, containerName, namespace string) (string, error) {
+	podLogOpts := corev1.PodLogOptions{
+		Container: containerName,
 	}
-	client := http.Client{Transport: tc}
-	res, err := client.Get(host)
-	if err != nil || res.StatusCode == 200 {
-		return false
+
+	req := ki.CoreV1().Pods(namespace).GetLogs(podName, &podLogOpts)
+	podLogs, err := req.Stream(context.TODO())
+	if err != nil {
+		return "", fmt.Errorf("error in opening the stream: %v", err)
 	}
-	return true
+	defer podLogs.Close()
+
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, podLogs)
+	if err != nil {
+		return "", fmt.Errorf("error in copying logs to buf, %v", err)
+	}
+	return buf.String(), nil
+}
+
+func ExtractGitRepositoryNameFromURL(url string) (name string) {
+	repoName := url[strings.LastIndex(url, "/")+1:]
+	return strings.TrimSuffix(repoName, ".git")
+}
+
+func GetGithubAppID() (int64, error) {
+	appIDStr := GetEnv("E2E_PAC_GITHUB_APP_ID", constants.DefaultPaCGitHubAppID)
+
+	id, err := strconv.ParseInt(appIDStr, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }

@@ -23,6 +23,11 @@ tmp/
 .vscode/targets.log
 .cache/
 .tmp/
+venv/
+tapa.git
 
 # RP Preproc output
 rp_preproc/
+
+# Files likely to be created by users
+user.env

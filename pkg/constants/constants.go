@@ -1,5 +1,7 @@
 package constants
 
+import "time"
+
 // Global constants
 const (
 	// A github token is required to run the tests. The token need to have permissions to the given github organization. By default the e2e use redhat-appstudio-qe github organization.
@@ -20,17 +22,20 @@ const (
 	// The quay.io token to perform container builds and push. The token must be correlated with the QUAY_OAUTH_USER environment
 	QUAY_OAUTH_TOKEN_ENV string = "QUAY_OAUTH_TOKEN" // #nosec
 
+	// The git repo url for the EC pipelines.
+	EC_PIPELINES_REPO_URL_ENV string = "EC_PIPELINES_REPO_URL"
+
+	// The git repo revision for the EC pipelines.
+	EC_PIPELINES_REPO_REVISION_ENV string = "EC_PIPELINES_REPO_REVISION"
+
 	// The private devfile sample git repository to use in certain HAS e2e tests
 	PRIVATE_DEVFILE_SAMPLE string = "PRIVATE_DEVFILE_SAMPLE" // #nosec
 
-	// The Tekton Chains namespace
-	TEKTON_CHAINS_NS string = "tekton-chains" // #nosec
+	// The namespace where Tekton Chains and its secrets are deployed.
+	TEKTON_CHAINS_NS string = "openshift-pipelines" // #nosec
 
 	// User for running the end-to-end Tekton Chains tests
-	TEKTON_CHAINS_E2E_USER string = "tekton-chains-e2e"
-
-	//base64 Encoded docker config json value to create registry pull secret
-	DOCKER_CONFIG_JSON string = "DOCKER_CONFIG_JSON"
+	TEKTON_CHAINS_E2E_USER string = "chains-e2e"
 
 	//Cluster Registration namespace
 	CLUSTER_REG_NS string = "cluster-reg-config" // #nosec
@@ -42,7 +47,7 @@ const (
 	SKIP_HAS_SECRET_CHECK_ENV string = "SKIP_HAS_SECRET_CHECK"
 
 	// Sandbox kubeconfig user path
-	USER_USER_KUBE_CONFIG_PATH_ENV string = "USER_KUBE_CONFIG_PATH"
+	USER_KUBE_CONFIG_PATH_ENV string = "USER_KUBE_CONFIG_PATH"
 	// Release e2e auth for build and release quay keys
 
 	QUAY_OAUTH_TOKEN_RELEASE_SOURCE string = "QUAY_OAUTH_TOKEN_RELEASE_SOURCE"
@@ -80,8 +85,8 @@ const (
 
 	RegistryAuthSecretName = "redhat-appstudio-registry-pull-secret"
 
-	SharedPullSecretName      = "redhat-appstudio-user-workload"
-	SharedPullSecretNamespace = "build-templates"
+	QuayRepositorySecretName      = "quay-repository"
+	QuayRepositorySecretNamespace = "e2e-secrets"
 
 	JVMBuildImageSecretName = "jvm-build-image-secrets"
 	JBSConfigName           = "jvm-build-config"
@@ -93,9 +98,11 @@ const (
 
 	BuildTaskRunName = "build-container"
 
-	ComponentInitialBuildAnnotationKey = "appstudio.openshift.io/component-initial-build"
+	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.20"
 
-	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.11"
+	StrategyConfigsRepo          = "strategy-configs"
+	StrategyConfigsDefaultBranch = "main"
+	StrategyConfigsRevision      = "caeaaae63a816ab42dad6c7be1e4b352ea8aabf4"
 
 	// TODO
 	// delete this constant and all its occurrences in the code base
@@ -107,14 +114,31 @@ const (
 	DefaultPipelineServiceAccount            = "appstudio-pipeline"
 	DefaultPipelineServiceAccountRoleBinding = "appstudio-pipelines-runner-rolebinding"
 	DefaultPipelineServiceAccountClusterRole = "appstudio-pipelines-runner"
+
+	PaCPullRequestBranchPrefix = "appstudio-"
+
+	// Expiration for image tags
+	IMAGE_TAG_EXPIRATION_ENV  string = "IMAGE_TAG_EXPIRATION"
+	DefaultImageTagExpiration string = "6h"
+
+	PipelineRunPollingInterval = 10 * time.Second
+
+	JsonStageUsersPath = "users.json"
+
+	SamplePrivateRepoName = "test-private-repo"
+
+	// Github App name is RHTAP-Qe-App. Note: this App ID is used in our CI and can't be used for local dev/testing.
+	DefaultPaCGitHubAppID = "310332"
+
+	// Error string constants for Namespace-backed environment test suite
+	SEBAbsenceErrorString = "no SnapshotEnvironmentBinding found in environment"
+	EphemeralEnvAbsenceErrorString = "no matching Ephemeral Environment found"
 )
 
 var (
-	ComponentDefaultLabel                  = map[string]string{"e2e-test": "true"}
-	ComponentDefaultAnnotation             = map[string]string{ComponentInitialBuildAnnotationKey: "processed"}
-	ComponentPaCRequestAnnotation          = map[string]string{"appstudio.openshift.io/pac-provision": "request"}
-	ComponentWithImageControllerAnnotation = map[string]string{
-		"image.redhat.com/generate":          "true",
-		"image.redhat.com/delete-image-repo": "true",
-	}
+	ComponentDefaultLabel                       = map[string]string{"e2e-test": "true"}
+	ComponentPaCRequestAnnotation               = map[string]string{"build.appstudio.openshift.io/request": "configure-pac"}
+	ComponentTriggerSimpleBuildAnnotation       = map[string]string{"build.appstudio.openshift.io/request": "trigger-simple-build"}
+	ImageControllerAnnotationRequestPublicRepo  = map[string]string{"image.redhat.com/generate": `{"visibility": "public"}`}
+	ImageControllerAnnotationRequestPrivateRepo = map[string]string{"image.redhat.com/generate": `{"visibility": "private"}`}
 )

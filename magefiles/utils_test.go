@@ -25,6 +25,14 @@ type QuayClientMock struct {
 
 var _ quay.QuayService = (*QuayClientMock)(nil)
 
+func (m *QuayClientMock) AddPermissionsForRepositoryToRobotAccount(string, string, string, bool) error {
+	return nil
+}
+
+func (m *QuayClientMock) RegenerateRobotAccountToken(string, string) (*quay.RobotAccount, error) {
+	return nil, nil
+}
+
 func (m *QuayClientMock) GetAllRepositories(organization string) ([]quay.Repository, error) {
 	return m.AllRepositories, nil
 }
@@ -66,7 +74,7 @@ func (m *QuayClientMock) DeleteTag(organization, repository, tag string) (bool, 
 }
 
 // Dummy functions
-func (m *QuayClientMock) AddPermissionsToRobotAccount(organization, imageRepository, robotAccountName string) error {
+func (m *QuayClientMock) AddWritePermissionsToRobotAccount(organization, imageRepository, robotAccountName string) error {
 	return nil
 }
 
@@ -76,6 +84,14 @@ func (m *QuayClientMock) CreateRepository(r quay.RepositoryRequest) (*quay.Repos
 
 func (m *QuayClientMock) CreateRobotAccount(organization string, robotName string) (*quay.RobotAccount, error) {
 	return nil, nil
+}
+
+func (m *QuayClientMock) GetRobotAccount(organization string, robotName string) (*quay.RobotAccount, error) {
+	return nil, nil
+}
+
+func (m *QuayClientMock) ChangeRepositoryVisibility(organization, imageRepository string, visibility string) error {
+	return nil
 }
 
 func TestCleanupQuayReposAndRobots(t *testing.T) {

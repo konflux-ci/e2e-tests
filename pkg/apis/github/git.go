@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
+
+	. "github.com/onsi/gomega"
 
 	"github.com/google/go-github/v44/github"
 )
@@ -17,18 +20,31 @@ func (g *Github) DeleteRef(repository, branchName string) error {
 }
 
 // CreateRef creates a new ref (GitHub branch) in a specified GitHub repository,
-// that will be based on the latest commit from a specified branch name
-func (g *Github) CreateRef(repository, baseBranchName, newBranchName string) error {
+// that will be based on the commit specified with sha. If sha is not specified
+// the latest commit from base branch will be used.
+func (g *Github) CreateRef(repository, baseBranchName, sha, newBranchName string) error {
 	ctx := context.Background()
 	ref, _, err := g.client.Git.GetRef(ctx, g.organization, repository, fmt.Sprintf("heads/%s", baseBranchName))
 	if err != nil {
 		return fmt.Errorf("error when getting the base branch name '%s' for the repo '%s': %+v", baseBranchName, repository, err)
 	}
+
 	ref.Ref = github.String(fmt.Sprintf("heads/%s", newBranchName))
+
+	if sha != "" {
+		ref.Object.SHA = &sha
+	}
+
 	_, _, err = g.client.Git.CreateRef(ctx, g.organization, repository, ref)
 	if err != nil {
 		return fmt.Errorf("error when creating a new branch '%s' for the repo '%s': %+v", newBranchName, repository, err)
 	}
+	Eventually(func(gomega Gomega) {
+		exist, err := g.ExistsRef(repository, newBranchName)
+		gomega.Expect((err)).NotTo(HaveOccurred())
+		gomega.Expect(exist).To(BeTrue())
+
+	}, 2*time.Minute, 2*time.Second).Should(Succeed()) //Wait for the branch to actually exist
 	return nil
 }
 

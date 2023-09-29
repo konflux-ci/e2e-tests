@@ -7,6 +7,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -18,13 +19,16 @@ import (
  * Description: SVPI-402 - Get file content from a private Github repository
  */
 
-var _ = framework.SPISuiteDescribe(Label("spi-suite", "get-file-content"), func() {
+// pending because https://github.com/redhat-appstudio/service-provider-integration-operator/pull/706 will break the tests
+// we will need to update the current test after merging the PR
+var _ = framework.SPISuiteDescribe(Label("spi-suite", "get-file-content"), Pending, func() {
 
 	defer GinkgoRecover()
 
 	var fw *framework.Framework
 	var err error
 	var namespace string
+	AfterEach(framework.ReportFailure(&fw))
 
 	Describe("SVPI-402 - Get file content from a private Github repository", Ordered, func() {
 		BeforeAll(func() {
@@ -61,37 +65,32 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "get-file-content"), func(
 		It("creates SPIFileContentRequest", func() {
 			SPIFcr, err = fw.AsKubeDeveloper.SPIController.CreateSPIFileContentRequest("gh-spi-filecontent-request", namespace, GithubPrivateRepoURL, GithubPrivateRepoFilePath)
 			Expect(err).NotTo(HaveOccurred())
+
+			SPIFcr, err = fw.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(SPIFcr.Name, namespace)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("SPIFileContentRequest should be in AwaitingTokenData phase", func() {
-			Eventually(func() bool {
+			Eventually(func() v1beta1.SPIFileContentRequestPhase {
 				SPIFcr, err = fw.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(SPIFcr.Name, namespace)
+				Expect(err).NotTo(HaveOccurred())
 
-				if err != nil {
-					return false
-				}
-
-				return SPIFcr.Status.Phase == v1beta1.SPIFileContentRequestPhaseAwaitingTokenData
-			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "")
+				return SPIFcr.Status.Phase
+			}, 2*time.Minute, 10*time.Second).Should(Equal(v1beta1.SPIFileContentRequestPhaseAwaitingTokenData), fmt.Sprintf("SPIFileContentRequest %s/%s '.Status.Phase' field didn't have the expected value", SPIFcr.GetNamespace(), SPIFcr.GetName()))
 
 		})
 
 		It("uploads username and token using rest endpoint", func() {
 			// the UploadUrl in SPITokenBinding should be available before uploading the token
-			Eventually(func() bool {
+			Eventually(func() string {
 				SPIFcr, err = fw.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(SPIFcr.Name, namespace)
+				Expect(err).NotTo(HaveOccurred())
 
-				if err != nil {
-					return false
-				}
-
-				return SPIFcr.Status.TokenUploadUrl != ""
-			}, 1*time.Minute, 10*time.Second).Should(BeTrue(), "uploadUrl not set")
-			Expect(err).NotTo(HaveOccurred())
+				return SPIFcr.Status.TokenUploadUrl
+			}, 1*time.Minute, 10*time.Second).ShouldNot(BeEmpty(), fmt.Sprintf(".Status.TokenUploadUrl field in SPIFileContentRequest %s/%s is empty", SPIFcr.GetNamespace(), SPIFcr.GetName()))
 
 			// get the url to manually upload the token
 			uploadURL := SPIFcr.Status.TokenUploadUrl
-			Expect(uploadURL).NotTo(BeEmpty())
 
 			// Get the token for the current openshift user
 			bearerToken, err := utils.GetOpenshiftToken()
@@ -105,15 +104,15 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "get-file-content"), func(
 		})
 
 		It("SPIFileContentRequest should be in Delivered phase and content should be provided", func() {
-			Eventually(func() bool {
+			Eventually(func() v1beta1.SPIFileContentRequestStatus {
 				SPIFcr, err = fw.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(SPIFcr.Name, namespace)
+				Expect(err).NotTo(HaveOccurred())
 
-				if err != nil {
-					return false
-				}
-
-				return SPIFcr.Status.Phase == v1beta1.SPIFileContentRequestPhaseDelivered && SPIFcr.Status.Content != ""
-			}, 2*time.Minute, 10*time.Second).Should(BeTrue(), "content not provided by SPIFileContentRequest")
+				return SPIFcr.Status
+			}, 2*time.Minute, 10*time.Second).Should(MatchFields(IgnoreExtras, Fields{
+				"Phase":   Equal(v1beta1.SPIFileContentRequestPhaseDelivered),
+				"Content": Not(BeEmpty()),
+			}), "SPIFileContentRequest %s/%s '.Status' does not contain expected field values", SPIFcr.GetNamespace(), SPIFcr.GetName())
 
 		})
 

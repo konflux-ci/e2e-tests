@@ -35,6 +35,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "link-secret-sa"), func() 
 	var fw *framework.Framework
 	var err error
 	var namespace string
+	AfterEach(framework.ReportFailure(&fw))
 
 	for _, test := range ServiceAccountTests {
 		test := test
@@ -74,7 +75,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "link-secret-sa"), func() 
 			It("creates service account", func() {
 				if !test.IsManagedServiceAccount { // Test Scenario 1 and Test Scenario 2 (the service account should exist before the binding)
 					existingServiceAccountName := utils.GetGeneratedNamespace("service-account")
-					_, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(existingServiceAccountName, namespace, nil)
+					_, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(existingServiceAccountName, namespace, nil, nil)
 					Expect(err).NotTo(HaveOccurred())
 					serviceAccountName = existingServiceAccountName
 				}
@@ -90,33 +91,29 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "link-secret-sa"), func() 
 					test.IsImagePullSecret,
 					test.IsManagedServiceAccount)
 				Expect(err).NotTo(HaveOccurred())
+
+				binding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(binding.Name, namespace)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			// start of upload token
 			It("SPITokenBinding to be in AwaitingTokenData phase", func() {
-				Eventually(func() bool {
+				Eventually(func() v1beta1.SPIAccessTokenBindingPhase {
 					binding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(binding.Name, namespace)
+					Expect(err).NotTo(HaveOccurred())
 
-					if err != nil {
-						return false
-					}
-
-					return (binding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData)
-				}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in AwaitingTokenData phase")
+					return binding.Status.Phase
+				}, 1*time.Minute, 5*time.Second).Should(Equal(v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData), fmt.Sprintf("SPIAccessTokenBinding %s/%s is not in %s phase", binding.GetNamespace(), binding.GetName(), v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData))
 			})
 
 			It("uploads username and token using rest endpoint", func() {
 				// the UploadUrl in SPITokenBinding should be available before uploading the token
-				Eventually(func() bool {
+				Eventually(func() string {
 					binding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(binding.Name, namespace)
+					Expect(err).NotTo(HaveOccurred())
 
-					if err != nil {
-						return false
-					}
-
-					return binding.Status.UploadUrl != ""
-				}, 1*time.Minute, 10*time.Second).Should(BeTrue(), "uploadUrl not set")
-				Expect(err).NotTo(HaveOccurred())
+					return binding.Status.UploadUrl
+				}, 1*time.Minute, 10*time.Second).ShouldNot(BeEmpty(), fmt.Sprintf(".Status.UploadUrl for SPIAccessTokenBinding %s/%s is not set", binding.GetNamespace(), binding.GetName()))
 
 				// linked accessToken token should exist
 				linkedAccessTokenName := binding.Status.LinkedAccessTokenName
@@ -124,7 +121,6 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "link-secret-sa"), func() 
 
 				// get the url to manually upload the token
 				uploadURL := binding.Status.UploadUrl
-				Expect(uploadURL).NotTo(BeEmpty())
 
 				// Get the token for the current openshift user
 				bearerToken, err := utils.GetOpenshiftToken()
@@ -138,11 +134,11 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "link-secret-sa"), func() 
 			})
 
 			It("SPITokenBinding to be in Injected phase", func() {
-				Eventually(func() bool {
+				Eventually(func() v1beta1.SPIAccessTokenBindingPhase {
 					binding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(binding.Name, namespace)
 					Expect(err).NotTo(HaveOccurred())
-					return binding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected
-				}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in Injected phase")
+					return binding.Status.Phase
+				}, 1*time.Minute, 5*time.Second).Should(Equal(v1beta1.SPIAccessTokenBindingPhaseInjected), fmt.Sprintf("SPIAccessTokenBinding %s/%s is not in %s phase", binding.GetNamespace(), binding.GetName(), v1beta1.SPIAccessTokenBindingPhaseInjected))
 			})
 			// end of upload token
 
