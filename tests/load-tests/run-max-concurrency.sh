@@ -24,6 +24,7 @@ load_test() {
         -o "$output_dir" \
         -t "$threads" \
         --disable-metrics \
+        --enable-progress-bars="${ENABLE_PROGRESS_BARS:-false}" \
         --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}"
     if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
         echo "Waiting for the Tekton controller profiling to finish up to ${TEKTON_PERF_PROFILE_CPU_PERIOD}s"
