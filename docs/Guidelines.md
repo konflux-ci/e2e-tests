@@ -4,9 +4,9 @@ The purpose of *this* document is to serve as a primer for developers/qe who are
 ## General tips
 
 * Make sure you've implemented any required controller functionality that is required for your tests within the following files
-   * `pkg/utils/<new controller directory>` - net new controller logic for a new service or component
+   * `pkg/utils/<new controller directory>` - logic to interact with kube controllers via API
    * `pkg/framework/framework.go` - import the new controller and update the `Framework` struct to be able to initialize the new controller
-* Every test package should be imported to `cmd/e2e_test.go`, e.g. [byoc](https://github.com/redhat-appstudio/e2e-tests/blob/main/cmd/e2e_test.go#L15).
+* Every test package should be imported to [cmd/e2e_test.go](https://github.com/redhat-appstudio/e2e-tests/blob/main/cmd/e2e_test.go#L15).
 * Every new test should have correct [labels](docs/LabelsNaming.md).
 * Every test should have meaningful description with JIRA/GitHub issue key.
 * (Recommended) Use JIRA integration for linking issues and commits (just add JIRA issue key in the commit message).

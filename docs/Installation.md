@@ -14,7 +14,7 @@ Requirements for installing RHTAP in E2E mode:
   * A properly setup Go workspace using **Go 1.19 is required**
   * The OpenShift Command Line Tool (oc) **Use the version coresponding to the Openshift version**
   * yq
-  * jq
+  * [jq](https://github.com/mikefarah/yq)
   * git
   * helm
   * vcluster (!optional! Only in case of running byoc testing)

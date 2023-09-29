@@ -12,11 +12,11 @@ It is recommended to install AppStudio in E2E mode, but the E2E suite can be als
 
 ## Start running E2E tests
 
-All the instructions about installing RHTAP locally/CI and running tests locally/CI can be found in this [Documentation](docs/Installation.md), which contains also information about how to pair PR when breaking changes are introduced.
+All the instructions about installing RHTAP locally/CI and running tests locally/CI can be found in this [Documentation](docs/Installation.md), which contains also information about how to pair Pull Requests when breaking changes are introduced.
 
 ## Start developing tests
 
-To develop new tests in RHTAP consider first to read some tips for a better experience:
+To develop new tests in RHTAP consider first to reading some tips for a better experience:
 * Basic tips to write readable tests. [Documentation](docs/Guidelines.md).
 * How to auto generate tests. [Documentation](docs/DeveloperGenerateTest.md).
 
