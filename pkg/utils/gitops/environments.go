@@ -141,7 +141,7 @@ func (g *GitopsController) CreatePocEnvironment(name string, namespace string) (
 		},
 	}
 
-	if err := g.KubeRest().Create(context.TODO(), environmentObject); err != nil {
+	if err := g.KubeRest().Create(context.Background(), environmentObject); err != nil {
 		if err != nil {
 			if k8sErrors.IsAlreadyExists(err) {
 				environment := &appservice.Environment{}
