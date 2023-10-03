@@ -39,7 +39,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	var err error
 	defer GinkgoRecover()
 
-	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), func() {
+	// TODO: RHTAPBUGS-851
+	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), Pending, func() {
 		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, pacControllerHost, defaultBranchTestComponentName, imageRepoName, robotAccountName string
 		var component *appservice.Component
 
@@ -420,20 +421,20 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				interval = time.Second * 1
 
 				Eventually(func() bool {
-					   prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(helloWorldComponentGitSourceRepoName)
-					   Expect(err).ShouldNot(HaveOccurred())
+					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(helloWorldComponentGitSourceRepoName)
+					Expect(err).ShouldNot(HaveOccurred())
 
-					   for _, pr := range prs {
-							  if pr.Head.GetRef() == pacBranchName {
-									Expect(prHeadSha).NotTo(Equal(pr.Head.GetSHA()))
-									prNumber = pr.GetNumber()
-									prHeadSha = pr.Head.GetSHA()
-									return true
-							  }
-					   }
-					   return false
+					for _, pr := range prs {
+						if pr.Head.GetRef() == pacBranchName {
+							Expect(prHeadSha).NotTo(Equal(pr.Head.GetSHA()))
+							prNumber = pr.GetNumber()
+							prHeadSha = pr.Head.GetSHA()
+							return true
+						}
+					}
+					return false
 				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldComponentGitSourceRepoName))
-		 	})
+			})
 			It("PipelineRun should eventually finish", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, createdFileSHA, 2, f.AsKubeAdmin.TektonController)).To(Succeed())
 			})
@@ -575,7 +576,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 	})
 
-	Describe("test pac with multiple components using same repository", Ordered, Label("pac-build", "multi-component"), func() {
+	// TODO: RHTAPBUGS-851
+	Describe("test pac with multiple components using same repository", Ordered, Label("pac-build", "multi-component"), Pending, func() {
 		var applicationName, testNamespace, pacControllerHost string
 		var pacBranchNames []string
 

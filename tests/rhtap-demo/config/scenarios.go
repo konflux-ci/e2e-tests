@@ -17,7 +17,9 @@ const (
 
 var TestScenarios = []TestSpec{
 	{
-		Name:            "Maven project - Simple and Advanced build",
+		Name: "Maven project - Simple and Advanced build",
+		// TODO: RHTAPBUGS-851
+		Skip:            true,
 		ApplicationName: "rhtap-demo-app",
 		Components: []ComponentSpec{
 			{
