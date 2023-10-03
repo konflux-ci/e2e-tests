@@ -36,7 +36,7 @@ func (s *SPIController) CreateSPIAccessTokenBinding(name, namespace, repoURL, se
 			},
 		},
 	}
-	err := s.KubeRest().Create(context.TODO(), &spiAccessTokenBinding)
+	err := s.KubeRest().Create(context.Background(), &spiAccessTokenBinding)
 	if err != nil {
 		return nil, err
 	}
