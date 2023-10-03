@@ -18,7 +18,7 @@ func (s *SPIController) CreateSPIAccessCheck(name, namespace, repoURL string) (*
 		},
 		Spec: spi.SPIAccessCheckSpec{RepoUrl: repoURL},
 	}
-	err := s.KubeRest().Create(context.TODO(), &spiAccessCheck)
+	err := s.KubeRest().Create(context.Background(), &spiAccessCheck)
 	if err != nil {
 		return nil, err
 	}
