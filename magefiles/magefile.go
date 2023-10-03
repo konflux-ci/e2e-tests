@@ -225,21 +225,23 @@ func (ci CI) TestE2E() error {
 	}
 
 	// TODO: RHTAPBUGS-851
-	// if requiresSprayProxyRegistering {
-	// 	if err := retry(registerPacServer, 3, 10*time.Second); err != nil {
-	// 		return fmt.Errorf("error when registering PAC server: %v", err)
-	// 	}
-	// }
+	if requiresSprayProxyRegistering {
+		klog.Info("skipping due to RHTAPBUGS-851")
+		// 	if err := retry(registerPacServer, 3, 10*time.Second); err != nil {
+		// 		return fmt.Errorf("error when registering PAC server: %v", err)
+		// 	}
+	}
 
 	if err := RunE2ETests(); err != nil {
 		testFailure = true
 	}
 	// TODO: RHTAPBUGS-851
-	// if requiresSprayProxyRegistering {
-	// 	if err := retry(unregisterPacServer, 3, 10*time.Second); err != nil {
-	// 		klog.Infof("error when unregistering PAC server: %v", err)
-	// 	}
-	// }
+	if requiresSprayProxyRegistering {
+		klog.Info("skipping due to RHTAPBUGS-851")
+		// 	if err := retry(unregisterPacServer, 3, 10*time.Second); err != nil {
+		// 		klog.Infof("error when unregistering PAC server: %v", err)
+		// 	}
+	}
 
 	if err := ci.sendWebhook(); err != nil {
 		klog.Infof("error when sending webhook: %v", err)
@@ -734,6 +736,7 @@ func AppendFrameworkDescribeGoFile(specFile string) error {
 
 }
 
+/*
 func newSprayProxy() *SprayProxy {
 	sprayProxyUrl := os.Getenv("QE_SPRAYPROXY_HOST")
 	sprayProxyToken := os.Getenv("QE_SPRAYPROXY_TOKEN")
@@ -789,7 +792,7 @@ func unregisterPacServer() error {
 	klog.Infof("Registered pac server %s, servers: %v", pacControllerHost, servers)
 	return nil
 }
-
+*/
 // Run upgrade tests in CI
 func (ci CI) TestUpgrade() error {
 	var testFailure bool
