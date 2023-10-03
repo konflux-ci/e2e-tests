@@ -224,21 +224,22 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
 	}
 
-	if requiresSprayProxyRegistering {
-		if err := retry(registerPacServer, 3, 10*time.Second); err != nil {
-			return fmt.Errorf("error when registering PAC server: %v", err)
-		}
-	}
+	// TODO: RHTAPBUGS-851
+	// if requiresSprayProxyRegistering {
+	// 	if err := retry(registerPacServer, 3, 10*time.Second); err != nil {
+	// 		return fmt.Errorf("error when registering PAC server: %v", err)
+	// 	}
+	// }
 
 	if err := RunE2ETests(); err != nil {
 		testFailure = true
 	}
-
-	if requiresSprayProxyRegistering {
-		if err := retry(unregisterPacServer, 3, 10*time.Second); err != nil {
-			klog.Infof("error when unregistering PAC server: %v", err)
-		}
-	}
+	// TODO: RHTAPBUGS-851
+	// if requiresSprayProxyRegistering {
+	// 	if err := retry(unregisterPacServer, 3, 10*time.Second); err != nil {
+	// 		klog.Infof("error when unregistering PAC server: %v", err)
+	// 	}
+	// }
 
 	if err := ci.sendWebhook(); err != nil {
 		klog.Infof("error when sending webhook: %v", err)
