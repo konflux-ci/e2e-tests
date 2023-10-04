@@ -9,7 +9,7 @@ import (
 )
 
 // CreateRemoteSecret creates a RemoteSecret object
-func (s *RemoteSecretController) CreateRemoteSecret(name, namespace string, targetNamespaces []string) (*rs.RemoteSecret, error) {
+func (s *RemoteSecretController) CreateRemoteSecret(name, namespace string, targets []rs.RemoteSecretTarget) (*rs.RemoteSecret, error) {
 	remoteSecret := rs.RemoteSecret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -22,12 +22,6 @@ func (s *RemoteSecretController) CreateRemoteSecret(name, namespace string, targ
 		},
 	}
 
-	targets := make([]rs.RemoteSecretTarget, 0)
-	for _, target := range targetNamespaces {
-		targets = append(targets, rs.RemoteSecretTarget{
-			Namespace: target,
-		})
-	}
 	remoteSecret.Spec.Targets = targets
 
 	err := s.KubeRest().Create(context.TODO(), &remoteSecret)
