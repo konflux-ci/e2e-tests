@@ -67,8 +67,8 @@ func (i *IntegrationController) CreateIntegrationTestScenarioWithEnvironment(app
 				},
 			},
 			Environment: integrationv1beta1.TestEnvironment{
-				Name:          environment.Name,
-				Type:          environment.Spec.Type,
+				Name: environment.Name,
+				Type: environment.Spec.Type,
 				Configuration: &appservice.EnvironmentConfiguration{
 					Env: []appservice.EnvVarPair{
 						{

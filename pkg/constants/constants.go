@@ -131,7 +131,7 @@ const (
 	DefaultPaCGitHubAppID = "310332"
 
 	// Error string constants for Namespace-backed environment test suite
-	SEBAbsenceErrorString = "no SnapshotEnvironmentBinding found in environment"
+	SEBAbsenceErrorString          = "no SnapshotEnvironmentBinding found in environment"
 	EphemeralEnvAbsenceErrorString = "no matching Ephemeral Environment found"
 )
 

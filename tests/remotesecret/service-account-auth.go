@@ -17,10 +17,11 @@ import (
 
 /*
  * Component: spi
- * Description: SVPI-541 - Basic remote secret functionalities
+ * Description: SVPI-558 - Test all the options of the authz of remote secret target deployment
+ * Test case: Authentication using Service Account
  */
 
-var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret"), func() {
+var _ = framework.RemoteSecretSuiteDescribe(Label("service-account-auth"), func() {
 
 	defer GinkgoRecover()
 
@@ -38,7 +39,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret"), func() {
 	roleBindingName := fmt.Sprintf("deployment-enabler-%s", util.GenerateRandomString(4))
 	AfterEach(framework.ReportFailure(&fw))
 
-	Describe("SVPI-541 - Basic remote secret functionalities", Ordered, func() {
+	Describe("SVPI-558 - Authentication using Service Account", Ordered, func() {
 		BeforeAll(func() {
 			// Initialize the tests controllers
 			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("spi-demos"))
@@ -62,7 +63,8 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret"), func() {
 		})
 
 		It("creates RemoteSecret with previously created namespaces as targets", func() {
-			remoteSecret, err = fw.AsKubeDeveloper.RemoteSecretController.CreateRemoteSecret(remoteSecretName, namespace, []string{targetNamespace1, targetNamespace2})
+			targets := []v1beta1.RemoteSecretTarget{{Namespace: targetNamespace1}, {Namespace: targetNamespace2}}
+			remoteSecret, err = fw.AsKubeDeveloper.RemoteSecretController.CreateRemoteSecret(remoteSecretName, namespace, targets)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() bool {
