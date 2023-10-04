@@ -65,17 +65,17 @@ func (i *IntegrationController) GetBuildPipelineRun(componentName, applicationNa
 	err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 20*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 		pipelineRunLabels := map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName, "pipelines.appstudio.openshift.io/type": "build"}
 
-        if sha != "" {
+		if sha != "" {
 			pipelineRunLabels["pipelinesascode.tekton.dev/sha"] = sha
-        }
+		}
 
-        list := &tektonv1beta1.PipelineRunList{}
-        err = i.KubeRest().List(context.TODO(), list, &client.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
+		list := &tektonv1beta1.PipelineRunList{}
+		err = i.KubeRest().List(context.TODO(), list, &client.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
 
-        if err != nil && !k8sErrors.IsNotFound(err) {
-            GinkgoWriter.Printf("error listing pipelineruns in %s namespace: %v", namespace, err)
-            return false, nil
-        }
+		if err != nil && !k8sErrors.IsNotFound(err) {
+			GinkgoWriter.Printf("error listing pipelineruns in %s namespace: %v", namespace, err)
+			return false, nil
+		}
 
 		if len(list.Items) > 0 {
 			pipelineRun = &list.Items[0]
@@ -133,7 +133,7 @@ func (i *IntegrationController) WaitForIntegrationPipelineToGetStarted(testScena
 		}
 		return true, nil
 	})
-	
+
 	return testPipelinerun, err
 }
 

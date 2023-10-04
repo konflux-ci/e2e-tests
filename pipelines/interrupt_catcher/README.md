@@ -1,12 +1,12 @@
 # IC rotation Cron triggered pipeline
 
-This pipeline triggers an Appstudio QE Interrupt catcher roration. It's scheduled to run every Thursday at 10 AM.
+This pipeline triggers an Appstudio QE Interrupt catcher rotation. It's scheduled to run every Thursday at 10 AM.
 
 This jobs rotates IC responsibility through the list defined in cm_people_list.yaml. It will shift the two IC people by one (a.k.a. last week's Primary IC is next week's backup IC).
 The job also sends a message to #forum-stonesoup-qe slack channel with info who is current primary and backup IC.
 It also sends a message to the same channel, when the pipeline fails.
 
-## Prerequisities
+## Prerequisites
 * Cluster with Openshift Pipelines installed (tested with Pipelines 1.7.2).
 * Existing `appstudio-qe` namespace
 * Slack App OAuth token with at least `usergroups:read` and `usergroups:write` scopes.
@@ -41,7 +41,7 @@ Json is in format
 ```
 After you've made your changes, encode json back (`cat myJson.json |base64 -w 0`) and replace `binaryData` in `cm_people_list.yaml`
 ## How to manually trigger another run of the pipeline
-Sometimes we would like to skip somebody in rotation. To do thata we might run the pipeline again manually. We can do this by creating `Job` from our `CronJob`
+Sometimes we would like to skip somebody in rotation. To do that we might run the pipeline again manually. We can do this by creating `Job` from our `CronJob`
 ```
 oc create job --from=cronjob/interrupt-catcher ic-manual-1
 ```
