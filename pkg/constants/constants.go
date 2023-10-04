@@ -37,6 +37,9 @@ const (
 	// User for running the end-to-end Tekton Chains tests
 	TEKTON_CHAINS_E2E_USER string = "chains-e2e"
 
+	// Name of the Secret Tekton Chains uses to read signing key
+	TEKTON_CHAINS_SIGNING_SECRETS_NAME = "signing-secrets"
+
 	//Cluster Registration namespace
 	CLUSTER_REG_NS string = "cluster-reg-config" // #nosec
 
