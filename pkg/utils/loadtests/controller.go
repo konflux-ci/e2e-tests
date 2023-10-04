@@ -53,17 +53,17 @@ func SelectUsers(userList []User, numberOfUsers, threadCount, maxUsers int) ([]U
 	return selectedUsers, nil
 }
 
-//Indentify CI and get unique Job Name
-//Indentify CI and get unique Job Name
-func GetJobName()(string){
+// Indentify CI and get unique Job Name
+// Indentify CI and get unique Job Name
+func GetJobName() string {
 	var jobName string
-	if utils.CheckIfEnvironmentExists("CI"){
-		if utils.CheckIfEnvironmentExists("GITHUB_ACTIONS"){
+	if utils.CheckIfEnvironmentExists("CI") {
+		if utils.CheckIfEnvironmentExists("GITHUB_ACTIONS") {
 			jobName = utils.GetEnv("GITHUB_RUN_ID", "")
-		} else if utils.CheckIfEnvironmentExists("PROW_JOB_ID") && utils.CheckIfEnvironmentExists("BUILD_ID"){
+		} else if utils.CheckIfEnvironmentExists("PROW_JOB_ID") && utils.CheckIfEnvironmentExists("BUILD_ID") {
 			jobName = utils.GetEnv("BUILD_ID", "")
 		}
-	}else {
+	} else {
 		jobName = time.Now().String()
 	}
 	return jobName

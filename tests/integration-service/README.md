@@ -26,7 +26,7 @@ Happy path testing describes tests that focus on the most common scenarios while
 - Validating the successful creation of a Snapshot, an Ephemeral environment, and an Integration PipelineRun.
 - Verifying that the Integration PipelineRun succeeded.
 - Asserting that the Snapshot was marked as Passed.
-- Verifying that the Epehemeral environment and related SnapshotEnvironmentBinding got deleted.
+- Verifying that the Ephemeral environment and related SnapshotEnvironmentBinding got deleted.
 
 
 ## Negative Test Cases
