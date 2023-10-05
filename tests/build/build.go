@@ -35,13 +35,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 	var f *framework.Framework
 	AfterEach(framework.ReportFailure(&f))
-	var pacControllerRoute *routev1.Route
 
 	var err error
 	defer GinkgoRecover()
 
 	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), func() {
-		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, pacControllerHost, defaultBranchTestComponentName, imageRepoName, robotAccountName string
+		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, defaultBranchTestComponentName, imageRepoName, robotAccountName string
 		var component *appservice.Component
 
 		var timeout, interval time.Duration
@@ -73,17 +72,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			}
 			githubAppId, err = utils.GetGithubAppID()
 			Expect(err).ShouldNot(HaveOccurred())
-
-			// Used for identifying related webhook on GitHub - in order to delete it
-			// TODO: Remove when https://github.com/redhat-appstudio/infra-deployments/pull/1725 it is merged
-			pacControllerRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "pipelines-as-code")
-			if err != nil {
-				if k8sErrors.IsNotFound(err) {
-					pacControllerRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "openshift-pipelines")
-				}
-			}
-			Expect(err).ShouldNot(HaveOccurred())
-			pacControllerHost = pacControllerRoute.Spec.Host
 
 			applicationName = fmt.Sprintf("build-suite-test-application-%s", util.GenerateRandomString(4))
 			app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
@@ -120,18 +108,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, constants.PaCPullRequestBranchPrefix+defaultBranchTestComponentName)
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
-			}
-
-			// Delete created webhook from GitHub
-			hooks, err := f.AsKubeAdmin.CommonController.Github.ListRepoWebhooks(helloWorldComponentGitSourceRepoName)
-			Expect(err).NotTo(HaveOccurred())
-
-			for _, h := range hooks {
-				hookUrl := h.Config["url"].(string)
-				if strings.Contains(hookUrl, pacControllerHost) {
-					Expect(f.AsKubeAdmin.CommonController.Github.DeleteWebhook(helloWorldComponentGitSourceRepoName, h.GetID())).To(Succeed())
-					break
-				}
 			}
 
 			//Delete the quay image repo since we are setting delete-repo=false
@@ -234,7 +210,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while checking if the image repo %s is private", imageRepoName))
 				Expect(isPublic).To(BeFalse(), "Expected image repo to be private, but it is public")
 			})
-			It("a related PipelineRun and Github webhook should be deleted after deleting the component", func() {
+			It("a related PipelineRun should be deleted after deleting the component", func() {
 				timeout = time.Second * 60
 				interval = time.Second * 1
 				Expect(f.AsKubeAdmin.HasController.DeleteComponent(defaultBranchTestComponentName, testNamespace, true)).To(Succeed())
@@ -247,19 +223,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					}
 					return err
 				}, timeout, constants.PipelineRunPollingInterval).Should(MatchError(ContainSubstring("no pipelinerun found")), fmt.Sprintf("timed out when waiting for the PipelineRun to be removed for Component %s/%s", testNamespace, defaultBranchTestComponentName))
-				// Test removal of related webhook in GitHub repo
-				Eventually(func() error {
-					hooks, err := f.AsKubeAdmin.CommonController.Github.ListRepoWebhooks(helloWorldComponentGitSourceRepoName)
-					Expect(err).NotTo(HaveOccurred())
-
-					for _, h := range hooks {
-						hookUrl := h.Config["url"].(string)
-						if strings.Contains(hookUrl, pacControllerHost) {
-							return fmt.Errorf("hook URL %s not removed yet from %s repository", hookUrl, helloWorldComponentGitSourceRepoName)
-						}
-					}
-					return nil
-				}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the webhook to be deleted in %s repository", helloWorldComponentGitSourceRepoName))
 			})
 			It("PR branch should not exist in the repo", func() {
 				timeout = time.Second * 60
@@ -572,7 +535,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	})
 
 	Describe("test pac with multiple components using same repository", Ordered, Label("pac-build", "multi-component"), func() {
-		var applicationName, testNamespace, pacControllerHost string
+		var applicationName, testNamespace string
 		var pacBranchNames []string
 
 		var timeout time.Duration
@@ -591,15 +554,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			if utils.IsPrivateHostname(consoleRoute.Spec.Host) {
 				Skip("Using private cluster (not reachable from Github), skipping...")
 			}
-
-			pacControllerRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "pipelines-as-code")
-			if err != nil {
-				if k8sErrors.IsNotFound(err) {
-					pacControllerRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "openshift-pipelines")
-				}
-			}
-			Expect(err).ShouldNot(HaveOccurred())
-			pacControllerHost = pacControllerRoute.Spec.Host
 
 			applicationName = fmt.Sprintf("build-suite-positive-mc-%s", util.GenerateRandomString(4))
 			app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
@@ -623,19 +577,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 				}
 			}
-
-			// Delete created webhook from GitHub
-			hooks, err := f.AsKubeAdmin.CommonController.Github.ListRepoWebhooks(multiComponentGitSourceRepoName)
-			Expect(err).NotTo(HaveOccurred())
-
-			for _, h := range hooks {
-				hookUrl := h.Config["url"].(string)
-				if strings.Contains(hookUrl, pacControllerHost) {
-					Expect(f.AsKubeAdmin.CommonController.Github.DeleteWebhook(multiComponentGitSourceRepoName, h.GetID())).To(Succeed())
-					break
-				}
-			}
-
 		})
 
 		When("components are created in same namespace", func() {
@@ -772,7 +713,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	})
 
 	Describe("Using test annotations", Label("annotations"), Ordered, Pending, func() {
-		var testNamespace, componentName, applicationName, branchName, componentBaseBranchName, pacControllerHost, purgeBranchName string
+		var testNamespace, componentName, applicationName, branchName, componentBaseBranchName, purgeBranchName string
 		var componentObj appservice.ComponentSpec
 		var component *appservice.Component
 
@@ -805,15 +746,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			err = f.AsKubeAdmin.CommonController.Github.CreateRef(helloWorldComponentGitSourceRepoName, helloWorldComponentDefaultBranch, helloWorldComponentRevision, componentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
-
-			pacControllerRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "pipelines-as-code")
-			if err != nil {
-				if k8sErrors.IsNotFound(err) {
-					pacControllerRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "openshift-pipelines")
-				}
-			}
-			Expect(err).ShouldNot(HaveOccurred())
-			pacControllerHost = pacControllerRoute.Spec.Host
 		})
 
 		AfterAll(func() {
@@ -834,18 +766,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, purgeBranchName)
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
-			}
-
-			// Delete created webhook from GitHub
-			hooks, err := f.AsKubeAdmin.CommonController.Github.ListRepoWebhooks(helloWorldComponentGitSourceRepoName)
-			Expect(err).NotTo(HaveOccurred())
-
-			for _, h := range hooks {
-				hookUrl := h.Config["url"].(string)
-				if strings.Contains(hookUrl, pacControllerHost) {
-					Expect(f.AsKubeAdmin.CommonController.Github.DeleteWebhook(helloWorldComponentGitSourceRepoName, h.GetID())).To(Succeed())
-					break
-				}
 			}
 		})
 
