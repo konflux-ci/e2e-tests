@@ -19,11 +19,11 @@ USER_PREFIX=${USER_PREFIX:-testuser}
 # See https://github.com/codeready-toolchain/toolchain-common/blob/master/pkg/usersignup/usersignup.go#L16
 
 # If adding random prefix we can allow only up to 9 characters long user prefix
-if [ ${#USER_PREFIX} -gt 9 -a RANDOM_PREFIX_FLAG="-r" ]; then
+if [ "${RANDOM_PREFIX_FLAG}" == "-r" ] && [ ${#USER_PREFIX} -gt 9 ]; then
     echo "Maximal allowed length of user prefix is 9 characters. The '$USER_PREFIX' length of ${#USER_PREFIX} exceeds the limit."
     exit 1
 # If adding not adding random prefix we can allow only up to 15 characters long user prefix
-elif [ ${#USER_PREFIX} -gt 15 -a RANDOM_PREFIX_FLAG="" ]; then
+elif [ "${RANDOM_PREFIX_FLAG}" == "" ] && [ ${#USER_PREFIX} -gt 15 ]; then
     echo "Maximal allowed length of user prefix is 15 characters. The '$USER_PREFIX' length of ${#USER_PREFIX} exceeds the limit."
 else
     ## Enable profiling in Tekton controller
