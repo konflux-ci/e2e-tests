@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -39,8 +40,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	var err error
 	defer GinkgoRecover()
 
-	// TODO: RHTAPBUGS-851
-	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), Pending, func() {
+	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), func() {
 		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, pacControllerHost, defaultBranchTestComponentName, imageRepoName, robotAccountName string
 		var component *appservice.Component
 
@@ -50,6 +50,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		var prHeadSha string
 
 		BeforeAll(func() {
+			if os.Getenv(constants.SKIP_PAC_TESTS_ENV) == "true" {
+				Skip("Skipping this test due to configuration issue with Spray proxy")
+			}
 
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
 			Expect(err).NotTo(HaveOccurred())
@@ -576,15 +579,16 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 	})
 
-	// TODO: RHTAPBUGS-851
-	Describe("test pac with multiple components using same repository", Ordered, Label("pac-build", "multi-component"), Pending, func() {
+	Describe("test pac with multiple components using same repository", Ordered, Label("pac-build", "multi-component"), func() {
 		var applicationName, testNamespace, pacControllerHost string
 		var pacBranchNames []string
 
 		var timeout time.Duration
 
 		BeforeAll(func() {
-
+			if os.Getenv(constants.SKIP_PAC_TESTS_ENV) == "true" {
+				Skip("Skipping this test due to configuration issue with Spray proxy")
+			}
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace
