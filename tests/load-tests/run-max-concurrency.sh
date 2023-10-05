@@ -73,10 +73,9 @@ else
         index=$(printf "%04d" "$t")
         cp -vf "$output_dir/load-tests.json" "$output_dir/load-tests.max-concurrency.$index.json"
         cp -vf "$output_dir/load-tests.log" "$output_dir/load-tests.max-concurrency.$index.log"
-        pipelineRunThresholdExceeded=$(jq -rc ".runPipelineSucceededTimeMax > $threshold" "$output_dir/load-tests.json")
-        pipelineRunKPI=$(jq -rc ".runPipelineSucceededTimeMax" "$output_dir/load-tests.json")
-        if [ "$pipelineRunThresholdExceeded" = "true" ]; then
-            echo "The maximal time a pipeline run took to succeed (${pipelineRunKPI}s) has exceeded a threshold of ${threshold}s with $t threads."
+        workloadKPI=$(jq '.createApplicationsTimeAvg + .createCDQsTimeAvg + .createComponentsTimeAvg + .integrationTestsRunPipelineSucceededTimeAvg + .runPipelineSucceededTimeAvg + .deploymentSucceededTimeAvg' "$output_dir/load-tests.json")
+        if [ "$workloadKPI" -gt "$threshold" ]; then
+            echo "The average time a workload took to succeed (${workloadKPI}s) has exceeded a threshold of ${threshold}s with $t threads."
             break
         else
             jq ".maxConcurrencyReached = $t" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
