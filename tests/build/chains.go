@@ -71,7 +71,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				_, password := config.Data["cosign.password"]
 
 				return private && public && password
-			}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting Tekton Chains signing secret %q to be present in %q namespace", constants.TEKTON_CHAINS_SIGNING_SECRETS_NAME, constants.TEKTON_CHAINS_NS))
+			}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for Tekton Chains signing secret %q to be present in %q namespace", constants.TEKTON_CHAINS_SIGNING_SECRETS_NAME, constants.TEKTON_CHAINS_NS))
 		})
 	})
 
