@@ -47,6 +47,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		var timeout, interval time.Duration
 
 		var prNumber int
+		var githubAppId int64
 		var prHeadSha string
 
 		BeforeAll(func() {
@@ -70,6 +71,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			if !supports {
 				Skip("Quay org does not support private quay repository creation, please add support for private repo creation before running this test")
 			}
+			githubAppId, err = utils.GetGithubAppID()
+			Expect(err).ShouldNot(HaveOccurred())
 
 			// Used for identifying related webhook on GitHub - in order to delete it
 			// TODO: Remove when https://github.com/redhat-appstudio/infra-deployments/pull/1725 it is merged
@@ -136,6 +139,30 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Expect(err).NotTo(HaveOccurred(), "Failed to delete image repo with error: %+v", err)
 
 		})
+
+		validateChecks := func() {
+			var checkSuite *github.CheckSuite
+			timeout = time.Minute * 15
+			interval = time.Second * 10
+
+			Eventually(func() *github.CheckSuite {
+				checkSuites, err := f.AsKubeAdmin.CommonController.Github.ListCheckSuites(helloWorldComponentGitSourceRepoName, prHeadSha)
+				Expect(err).ShouldNot(HaveOccurred())
+				for _, cs := range checkSuites {
+					if cs.GetApp().GetID() == githubAppId {
+						checkSuite = cs
+						return checkSuite
+					}
+				}
+				return nil
+			}, timeout, interval).ShouldNot(BeNil(), fmt.Sprintf("timed out when waiting for the PaC Check suite to appear in the Component repo %s in PR #%d", helloWorldComponentGitSourceRepoName, prNumber))
+			Eventually(func() string {
+				checkSuite, err = f.AsKubeAdmin.CommonController.Github.GetCheckSuite(helloWorldComponentGitSourceRepoName, checkSuite.GetID())
+				Expect(err).ShouldNot(HaveOccurred())
+				return checkSuite.GetStatus()
+			}, timeout, interval).Should(Equal("completed"), fmt.Sprintf("timed out when waiting for the PaC Check suite status to be 'completed' in the Component repo %s in PR #%d", helloWorldComponentGitSourceRepoName, prNumber))
+			Expect(checkSuite.GetConclusion()).To(Equal("success"), fmt.Sprintf("the initial PR %d in %s repo doesn't contain the info about successful pipelinerun", prNumber, helloWorldComponentGitSourceRepoName))
+		}
 
 		When("a new component without specified branch is created and with visibility private", Label("pac-custom-default-branch"), func() {
 			BeforeAll(func() {
@@ -370,25 +397,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(expiration).To(Equal(utils.GetEnv(constants.IMAGE_TAG_EXPIRATION_ENV, constants.DefaultImageTagExpiration)))
 			})
 			It("eventually leads to the PipelineRun status report at Checks tab", func() {
-				var checkSuites []*github.CheckSuite
-				timeout = time.Minute * 15
-				interval = time.Second * 10
-
-				Eventually(func() []*github.CheckSuite {
-					checkSuites, err = f.AsKubeAdmin.CommonController.Github.ListCheckSuites(helloWorldComponentGitSourceRepoName, prHeadSha)
-					Expect(err).ShouldNot(HaveOccurred())
-					return checkSuites
-				}, timeout, interval).ShouldNot(BeEmpty(), fmt.Sprintf("timed out when waiting for the PaC PR comment about the pipelinerun status to appear in the component repo %s in PR #%d", helloWorldComponentGitSourceRepoName, prNumber))
-				var checkSuite *github.CheckSuite
-				for _, cs := range checkSuites {
-					githubAppId, err := utils.GetGithubAppID()
-					Expect(err).ShouldNot(HaveOccurred())
-					if cs.GetApp().GetID() == githubAppId {
-						checkSuite = cs
-					}
-				}
-				Expect(checkSuite).ToNot(BeNil(), "the Pac PR doesn't has a checksuite generated")
-				Expect(checkSuite.GetConclusion()).To(Equal("success"), fmt.Sprintf("the initial PR %d in %s repo doesn't contain the info about successful pipelinerun", prNumber, helloWorldComponentGitSourceRepoName))
+				validateChecks()
 			})
 		})
 
@@ -442,24 +451,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, createdFileSHA, 2, f.AsKubeAdmin.TektonController)).To(Succeed())
 			})
 			It("eventually leads to another update of a PR about the PipelineRun status report at Checks tab", func() {
-				var checkSuites []*github.CheckSuite
-				timeout = time.Minute * 20
-				interval = time.Second * 5
-				Eventually(func() []*github.CheckSuite {
-					checkSuites, err = f.AsKubeAdmin.CommonController.Github.ListCheckSuites(helloWorldComponentGitSourceRepoName, prHeadSha)
-					Expect(err).ShouldNot(HaveOccurred())
-					return checkSuites
-				}, timeout, interval).ShouldNot(BeEmpty(), fmt.Sprintf("timed out when waiting for the PaC PR comment about the pipelinerun status to appear in the component repo %s in PR #%d", helloWorldComponentGitSourceRepoName, prNumber))
-				var checkSuite *github.CheckSuite
-				for _, cs := range checkSuites {
-					githubAppId, err := utils.GetGithubAppID()
-					Expect(err).ShouldNot(HaveOccurred())
-					if cs.GetApp().GetID() == githubAppId {
-						checkSuite = cs
-					}
-				}
-				Expect(checkSuite).ToNot(BeNil(), "the updated PaC PR doesn't has a checksuite generated")
-				Expect(checkSuite.GetConclusion()).To(Equal("success"), fmt.Sprintf("the updated PR %d in %s repo doesn't contain the info about successful pipelinerun", prNumber, helloWorldComponentGitSourceRepoName))
+				validateChecks()
 			})
 		})
 
