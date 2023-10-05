@@ -3,6 +3,7 @@ package rhtap_demo
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -343,6 +344,9 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 							var pacControllerRoute *routev1.Route
 
 							BeforeAll(func() {
+								if os.Getenv(constants.SKIP_PAC_TESTS_ENV) == "true" {
+									Skip("Skipping this test due to configuration issue with Spray proxy")
+								}
 								managedNamespace = fw.UserNamespace + "-managed"
 								// Used for identifying related webhook on GitHub - in order to delete it
 								pacControllerRoute, err = fw.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "openshift-pipelines")
