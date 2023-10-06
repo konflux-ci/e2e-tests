@@ -80,6 +80,8 @@ else
         else
             jq ".maxConcurrencyReached = $t" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
             jq '.endTimestamp = "'$(date +%FT%T%:z)'"' "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
+            errorsTotal=$(jq '.errorsTotal' "$output_dir/load-tests.json")
+            jq ".errorsTotalLast = $errorsTotal" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
         fi
     done
     DRY_RUN=false ./clear.sh "$USER_PREFIX"
