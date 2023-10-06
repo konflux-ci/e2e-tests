@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/redhat-appstudio/jvm-build-service/openshift-with-appstudio-test/e2e"
@@ -30,7 +29,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
-	routev1 "github.com/openshift/api/route/v1"
 	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -339,19 +337,14 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 
 							// PaC related variables
 							var prNumber int
-							var mergeResultSha, pacBranchName, pacControllerHost, pacPurgeBranchName string
+							var mergeResultSha, pacBranchName, pacPurgeBranchName string
 							var mergeResult *github.PullRequestMergeResult
-							var pacControllerRoute *routev1.Route
 
 							BeforeAll(func() {
 								if os.Getenv(constants.SKIP_PAC_TESTS_ENV) == "true" {
 									Skip("Skipping this test due to configuration issue with Spray proxy")
 								}
 								managedNamespace = fw.UserNamespace + "-managed"
-								// Used for identifying related webhook on GitHub - in order to delete it
-								pacControllerRoute, err = fw.AsKubeAdmin.CommonController.GetOpenshiftRoute("pipelines-as-code-controller", "openshift-pipelines")
-								Expect(err).ShouldNot(HaveOccurred())
-								pacControllerHost = pacControllerRoute.Spec.Host
 								component = componentList[0]
 
 								sharedSecret, err := fw.AsKubeAdmin.CommonController.GetSecret(constants.QuayRepositorySecretNamespace, constants.QuayRepositorySecretName)
@@ -376,17 +369,6 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 									Expect(fw.AsKubeAdmin.JvmbuildserviceController.DeleteJBSConfig(constants.JBSConfigName, fw.UserNamespace)).To(Succeed())
 								}
 
-								// Delete created webhook from GitHub
-								hooks, err := fw.AsKubeAdmin.CommonController.Github.ListRepoWebhooks(componentRepositoryName)
-								Expect(err).NotTo(HaveOccurred())
-
-								for _, h := range hooks {
-									hookUrl := h.Config["url"].(string)
-									if strings.Contains(hookUrl, pacControllerHost) {
-										Expect(fw.AsKubeAdmin.CommonController.Github.DeleteWebhook(componentRepositoryName, h.GetID())).To(Succeed())
-										break
-									}
-								}
 								// Delete new branch created by PaC and a testing branch used as a component's base branch
 								Expect(fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, pacBranchName)).To(Succeed())
 								Expect(fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, componentNewBaseBranch)).To(Succeed())
