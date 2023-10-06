@@ -67,6 +67,7 @@ dt_format='"%Y-%m-%dT%H:%M:%SZ"'
 ## Max concurrency scalability
 max_concurrency_csv=$ARTIFACT_DIR/max-concurrency.csv
 echo "Threads\
+${csv_delim}WorkloadKPI\
 ${csv_delim}Errors\
 ${csv_delim}UserAvgTime\
 ${csv_delim}UserMaxTime\
@@ -103,6 +104,7 @@ mc_files=$(find "$output_dir" -type f -name 'load-tests.max-concurrency.*.json')
 if [ -n "$mc_files" ]; then
     cat $mc_files |
         jq -rc "(.threads | tostring) \
+        + $csv_delim_quoted + (.workloadKPI | tostring) \
         + $csv_delim_quoted + (.errorsTotal | tostring) \
         + $csv_delim_quoted + (.createUserTimeAvg | tostring) \
         + $csv_delim_quoted + (.createUserTimeMax | tostring) \

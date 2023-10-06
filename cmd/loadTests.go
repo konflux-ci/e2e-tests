@@ -177,6 +177,8 @@ type LogData struct {
 	IntegrationTestsPipelineRunFailureCount int64   `json:"integrationTestsRunPipelineFailures"`
 	IntegrationTestsPipelineRunFailureRate  float64 `json:"integrationTestsRunPipelineFailureRate"`
 
+	WorkloadKPI float64 `json:"workloadKPI"`
+
 	ErrorCounts []ErrorCount      `json:"errorCounts"`
 	Errors      []ErrorOccurrence `json:"errors"`
 	ErrorsTotal int               `json:"errorsTotal"`
@@ -623,12 +625,17 @@ func setup(cmd *cobra.Command, args []string) {
 	deploymentFailureRate := float64(deploymentFailureCount) / float64(overallCount)
 	logData.DeploymentFailureRate = deploymentFailureRate
 
+	workloadKPI := logData.AverageTimeToCreateApplications + logData.AverageTimeToCreateCDQs + logData.AverageTimeToCreateComponents + logData.AverageTimeToRunPipelineSucceeded + logData.AverageTimeToDeploymentSucceeded
+	logData.WorkloadKPI = workloadKPI
 	if stage {
 		StageCleanup(selectedUsers)
 	}
 
 	klog.Infof("🏁 Load Test Completed!")
 	klog.Infof("📈 Results 📉")
+
+	klog.Infof("Workload KPI: %.2f", workloadKPI)
+
 	klog.Infof("Avg/max time to spin up users: %.2f s/%.2f s", averageTimeToSpinUpUsers, logData.MaxTimeToSpinUpUsers)
 	klog.Infof("Avg/max time to create application: %.2f s/%.2f s", averageTimeToCreateApplications, logData.MaxTimeToCreateApplications)
 	klog.Infof("Avg/max time to create cdq: %.2f s/%.2f s", averageTimeToCreateCDQs, logData.MaxTimeToCreateCDQs)
