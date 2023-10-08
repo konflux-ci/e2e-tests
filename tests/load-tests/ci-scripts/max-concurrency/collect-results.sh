@@ -92,7 +92,7 @@ ${csv_delim}TokenPoolRateSecondaryAvg\
 ${csv_delim}ClusterPipelineRunCountAvg\
 ${csv_delim}ClusterPipelineWorkqueueDepthAvg\
 ${csv_delim}ClusterPipelineScheduleFirstPodAvg\
-${csv_delim}ClusterTaskrunThrottledByNodeResourcesAvg\
+${csv_delim}ClusterTaskRunThrottledByNodeResourcesAvg\
 ${csv_delim}ClusterTaskRunThrottledByDefinedQuotaAvg\
 ${csv_delim}EtcdRequestDurationSecondsAvg\
 ${csv_delim}ClusterNetworkBytesTotalAvg\
