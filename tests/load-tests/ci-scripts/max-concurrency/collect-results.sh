@@ -79,6 +79,10 @@ ${csv_delim}ComponentsAvgTime\
 ${csv_delim}ComponentsMaxTime\
 ${csv_delim}PipelineRunAvgTime\
 ${csv_delim}PipelineRunMaxTime\
+${csv_delim}integrationTestsRunPipelineSucceededTimeAvg\
+${csv_delim}integrationTestsRunPipelineSucceededTimeMax\
+${csv_delim}deploymentSucceededTimeAvg\
+${csv_delim}deploymentSucceededTimeMax\
 ${csv_delim}ClusterCPUUsageAvg\
 ${csv_delim}ClusterDiskUsageAvg\
 ${csv_delim}ClusterMemoryUsageAvg\
@@ -116,6 +120,10 @@ if [ -n "$mc_files" ]; then
         + $csv_delim_quoted + (.createComponentsTimeMax | tostring) \
         + $csv_delim_quoted + (.runPipelineSucceededTimeAvg | tostring) \
         + $csv_delim_quoted + (.runPipelineSucceededTimeMax | tostring) \
+        + $csv_delim_quoted + (.integrationTestsRunPipelineSucceededTimeAvg | tostring) \
+        + $csv_delim_quoted + (.integrationTestsRunPipelineSucceededTimeMax | tostring) \
+        + $csv_delim_quoted + (.deploymentSucceededTimeAvg | tostring) \
+        + $csv_delim_quoted + (.deploymentSucceededTimeMax | tostring) \
         + $csv_delim_quoted + (.measurements.cluster_cpu_usage_seconds_total_rate.mean | tostring) \
         + $csv_delim_quoted + (.measurements.cluster_disk_throughput_total.mean | tostring) \
         + $csv_delim_quoted + (.measurements.cluster_memory_usage_rss_total.mean | tostring) \
