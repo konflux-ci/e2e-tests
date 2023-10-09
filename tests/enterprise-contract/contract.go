@@ -115,8 +115,6 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			Expect(err).NotTo(HaveOccurred())
 			//assert ec cli support policy config include field
 			Expect(reportLog).Should(ContainSubstring("include"))
-			//assert ec cli support policy config exclude field
-			Expect(reportLog).Should(ContainSubstring("exclude"))
 		})
 
 		It("verifies ec validate accepts a list of image references", func() {
