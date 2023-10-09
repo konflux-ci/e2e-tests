@@ -76,14 +76,14 @@ else
         workloadKPI=$(jq '.workloadKPI' "$output_dir/load-tests.json")
         if awk "BEGIN { exit !($workloadKPI > $threshold)}"; then
             echo "The average time a workload took to succeed (${workloadKPI}s) has exceeded a threshold of ${threshold}s with $t threads."
-            indexOld=$(printf "%04d" "$(($t - 1))")
-            workloadKPIOld=$(jq '.workloadKPI' "$output_dir/load-tests.max-concurrency.$indexOld.json")
-            threadsOld=$(jq '.maxConcurrencyReached' "$output_dir/load-tests.max-concurrency.$indexOld.json")
+            workloadKPIOld=$(jq '.workloadKPI' "$output")
+            threadsOld=$(jq '.maxConcurrencyReached' "$output")
             computedConcurrency=$(python -c "import sys; t = float(sys.argv[1]); a = float(sys.argv[2]); b = float(sys.argv[3]); c = float(sys.argv[4]); d = float(sys.argv[5]); print((t - b) / ((d - b) / (c - a)) + a)" "$threshold" "$threadsOld" "$workloadKPIOld" "$t" "$workloadKPI")
             jq ".computedConcurrency = $computedConcurrency" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
             break
         else
             jq ".maxConcurrencyReached = $t" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
+            jq ".workloadKPI = $workloadKPI" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
             jq '.endTimestamp = "'$(date +%FT%T%:z)'"' "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
             errorsTotal=$(jq '.errorsTotal' "$output_dir/load-tests.json")
             jq ".errorsTotal = $errorsTotal" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
