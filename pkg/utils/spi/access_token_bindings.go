@@ -3,7 +3,6 @@ package spi
 import (
 	"context"
 
-	. "github.com/onsi/gomega"
 	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
 	spi "github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	v1 "k8s.io/api/core/v1"
