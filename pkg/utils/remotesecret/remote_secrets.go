@@ -4,20 +4,23 @@ import (
 	"context"
 
 	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 // CreateRemoteSecret creates a RemoteSecret object
-func (s *RemoteSecretController) CreateRemoteSecret(name, namespace string, targets []rs.RemoteSecretTarget) (*rs.RemoteSecret, error) {
+func (s *RemoteSecretController) CreateRemoteSecret(name, namespace string, targets []rs.RemoteSecretTarget, secretType v1.SecretType, labels map[string]string) (*rs.RemoteSecret, error) {
 	remoteSecret := rs.RemoteSecret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels:    labels,
 		},
 		Spec: rs.RemoteSecretSpec{
 			Secret: rs.LinkableSecretSpec{
 				GenerateName: "some-secret-",
+				Type:         secretType,
 			},
 		},
 	}
@@ -58,4 +61,23 @@ func (s *RemoteSecretController) GetTargetSecretName(targets []rs.TargetStatus, 
 	}
 
 	return targetSecretName
+}
+
+// BuildSecret returns a specific secret for remote secret usage
+func (s *RemoteSecretController) BuildSecret(remoteSecretName string, secretType v1.SecretType, data map[string]string) *v1.Secret {
+	secret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-secret",
+			Labels: map[string]string{
+				"appstudio.redhat.com/upload-secret": "remotesecret",
+			},
+			Annotations: map[string]string{
+				"appstudio.redhat.com/remotesecret-name": remoteSecretName,
+			},
+		},
+		Type:       secretType,
+		StringData: data,
+	}
+
+	return secret
 }

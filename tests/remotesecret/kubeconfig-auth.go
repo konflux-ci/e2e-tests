@@ -101,7 +101,7 @@ contexts:
 					Namespace:                targetNamespace,
 				},
 			}
-			remoteSecret, err = fw.AsKubeAdmin.RemoteSecretController.CreateRemoteSecret(remoteSecretName, namespace, targets)
+			remoteSecret, err = fw.AsKubeAdmin.RemoteSecretController.CreateRemoteSecret(remoteSecretName, namespace, targets, v1.SecretTypeOpaque, map[string]string{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() bool {
@@ -113,22 +113,8 @@ contexts:
 		})
 
 		It("creates upload secret", func() {
-			s := &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-remote-cluster-secret-secret",
-					Labels: map[string]string{
-						"appstudio.redhat.com/upload-secret": "remotesecret",
-					},
-					Annotations: map[string]string{
-						"appstudio.redhat.com/remotesecret-name": remoteSecret.Name,
-					},
-				},
-				Type: v1.SecretTypeOpaque,
-				StringData: map[string]string{
-					"a": "b",
-					"c": "d",
-				},
-			}
+			data := map[string]string{"a": "b", "c": "d"}
+			s := fw.AsKubeDeveloper.RemoteSecretController.BuildSecret(remoteSecret.Name, v1.SecretTypeOpaque, data)
 
 			_, err = fw.AsKubeAdmin.CommonController.CreateSecret(namespace, s)
 			Expect(err).NotTo(HaveOccurred())
