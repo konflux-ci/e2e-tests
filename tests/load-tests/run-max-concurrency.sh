@@ -43,7 +43,7 @@ else
     IFS="," read -r -a maxConcurrencySteps <<<"$(echo "${MAX_CONCURRENCY_STEPS:-1\ 5\ 10\ 25\ 50\ 100\ 150\ 200}" | sed 's/ /,/g')"
     maxThreads=${MAX_THREADS:-10}
     threshold=${THRESHOLD:-300}
-    echo '{"startTimestamp":"'$(date +%FT%T%:z)'", "maxThreads": '"$maxThreads"', "maxConcurrencySteps": "'"${maxConcurrencySteps[*]}"'", "threshold": '"$threshold"', "maxConcurrencyReached": 0, "endTimestamp": "", "errorsTotal": -1}' | jq >"$output"
+    echo '{"startTimestamp":"'$(date +%FT%T%:z)'", "maxThreads": '"$maxThreads"', "maxConcurrencySteps": "'"${maxConcurrencySteps[*]}"'", "threshold": '"$threshold"', "maxConcurrencyReached": 0, "computedConcurrency": 0, "workloadKPI": 0, "endTimestamp": "", "errorsTotal": -1}' | jq >"$output"
     for t in "${maxConcurrencySteps[@]}"; do
         if (("$t" > "$maxThreads")); then
             break
