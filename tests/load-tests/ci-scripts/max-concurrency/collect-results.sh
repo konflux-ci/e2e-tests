@@ -67,6 +67,7 @@ dt_format='"%Y-%m-%dT%H:%M:%SZ"'
 ## Max concurrency scalability
 max_concurrency_csv=$ARTIFACT_DIR/max-concurrency.csv
 echo "Threads\
+${csv_delim}WorkloadKPI\
 ${csv_delim}Errors\
 ${csv_delim}UserAvgTime\
 ${csv_delim}UserMaxTime\
@@ -78,6 +79,10 @@ ${csv_delim}ComponentsAvgTime\
 ${csv_delim}ComponentsMaxTime\
 ${csv_delim}PipelineRunAvgTime\
 ${csv_delim}PipelineRunMaxTime\
+${csv_delim}integrationTestsRunPipelineSucceededTimeAvg\
+${csv_delim}integrationTestsRunPipelineSucceededTimeMax\
+${csv_delim}deploymentSucceededTimeAvg\
+${csv_delim}deploymentSucceededTimeMax\
 ${csv_delim}ClusterCPUUsageAvg\
 ${csv_delim}ClusterDiskUsageAvg\
 ${csv_delim}ClusterMemoryUsageAvg\
@@ -91,7 +96,7 @@ ${csv_delim}TokenPoolRateSecondaryAvg\
 ${csv_delim}ClusterPipelineRunCountAvg\
 ${csv_delim}ClusterPipelineWorkqueueDepthAvg\
 ${csv_delim}ClusterPipelineScheduleFirstPodAvg\
-${csv_delim}ClusterTaskrunThrottledByNodeResourcesAvg\
+${csv_delim}ClusterTaskRunThrottledByNodeResourcesAvg\
 ${csv_delim}ClusterTaskRunThrottledByDefinedQuotaAvg\
 ${csv_delim}EtcdRequestDurationSecondsAvg\
 ${csv_delim}ClusterNetworkBytesTotalAvg\
@@ -103,6 +108,7 @@ mc_files=$(find "$output_dir" -type f -name 'load-tests.max-concurrency.*.json')
 if [ -n "$mc_files" ]; then
     cat $mc_files |
         jq -rc "(.threads | tostring) \
+        + $csv_delim_quoted + (.workloadKPI | tostring) \
         + $csv_delim_quoted + (.errorsTotal | tostring) \
         + $csv_delim_quoted + (.createUserTimeAvg | tostring) \
         + $csv_delim_quoted + (.createUserTimeMax | tostring) \
@@ -114,6 +120,10 @@ if [ -n "$mc_files" ]; then
         + $csv_delim_quoted + (.createComponentsTimeMax | tostring) \
         + $csv_delim_quoted + (.runPipelineSucceededTimeAvg | tostring) \
         + $csv_delim_quoted + (.runPipelineSucceededTimeMax | tostring) \
+        + $csv_delim_quoted + (.integrationTestsRunPipelineSucceededTimeAvg | tostring) \
+        + $csv_delim_quoted + (.integrationTestsRunPipelineSucceededTimeMax | tostring) \
+        + $csv_delim_quoted + (.deploymentSucceededTimeAvg | tostring) \
+        + $csv_delim_quoted + (.deploymentSucceededTimeMax | tostring) \
         + $csv_delim_quoted + (.measurements.cluster_cpu_usage_seconds_total_rate.mean | tostring) \
         + $csv_delim_quoted + (.measurements.cluster_disk_throughput_total.mean | tostring) \
         + $csv_delim_quoted + (.measurements.cluster_memory_usage_rss_total.mean | tostring) \
