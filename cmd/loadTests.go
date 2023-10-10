@@ -1050,7 +1050,6 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				increaseBar(componentsBar, componentsBarMutex)
 			}
 
-
 			chPipelines <- username
 		}
 		close(chPipelines)

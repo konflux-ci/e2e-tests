@@ -54,3 +54,11 @@ func (g *Github) ListCheckSuites(repository string, ref string) ([]*github.Check
 	}
 	return checkSuiteResults.CheckSuites, nil
 }
+
+func (g *Github) GetCheckSuite(repository string, id int64) (*github.CheckSuite, error) {
+	checkSuite, _, err := g.client.Checks.GetCheckSuite(context.Background(), g.organization, repository, id)
+	if err != nil {
+		return nil, fmt.Errorf("error when getting check suite with id %d for the repo %s: %v", id, repository, err)
+	}
+	return checkSuite, nil
+}

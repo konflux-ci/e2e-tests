@@ -55,7 +55,6 @@ func SelectUsers(userList []User, numberOfUsers, threadCount, maxUsers int) ([]U
 }
 
 //Indentify CI and get unique Job Name
-//Indentify CI and get unique Job Name
 func GetJobName(name string)(string){
 	
 	var jobName string

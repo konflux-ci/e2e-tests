@@ -2,7 +2,7 @@
 
 ## Context
 
-We rely on Ginkgo and Gomega as the core of our E2E functional test framework. Ginkgo allows you to write expressive BDD style tests that act as specfications by example. The intent is to allow a team to write specifications, which we call a spec outline, that look like this:
+We rely on Ginkgo and Gomega as the core of our E2E functional test framework. Ginkgo allows you to write expressive BDD style tests that act as specifications by example. The intent is to allow a team to write specifications, which we call a spec outline, that look like this:
 
 ```
 BookSuiteDescribe: Book service E2E tests

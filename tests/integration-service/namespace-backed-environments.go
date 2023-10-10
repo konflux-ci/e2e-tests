@@ -90,7 +90,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 			})
 		})
 
-		It("creates an Ephemeral Environment", func ()  {
+		It("creates an Ephemeral Environment", func() {
 			Eventually(func() error {
 				ephemeralEnvironment, err = f.AsKubeAdmin.GitOpsController.GetEphemeralEnvironment(snapshot.Spec.Application, snapshot.Name, integrationTestScenario.Name, testNamespace)
 				return err

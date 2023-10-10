@@ -63,6 +63,12 @@ const (
 	// Bundle ref for overriding the default Java build bundle specified in BuildPipelineSelectorYamlURL
 	CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV string = "CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE"
 
+	// QE slack bot token used for delivering messages about critical failures during CI runs
+	SLACK_BOT_TOKEN_ENV = "SLACK_BOT_TOKEN"
+
+	// This variable is set by an automation in case Spray Proxy configuration fails in CI
+	SKIP_PAC_TESTS_ENV = "SKIP_PAC_TESTS"
+
 	// Test namespace's required labels
 	ArgoCDLabelKey   string = "argocd.argoproj.io/managed-by"
 	ArgoCDLabelValue string = "gitops-service-argocd"
@@ -91,7 +97,7 @@ const (
 	JVMBuildImageSecretName = "jvm-build-image-secrets"
 	JBSConfigName           = "jvm-build-config"
 
-	BuildPipelineSelectorYamlURL = "https://raw.githubusercontent.com/redhat-appstudio/infra-deployments/main/components/build-service/base/build-pipeline-selector.yaml"
+	BuildPipelineSelectorYamlURL = "https://raw.githubusercontent.com/redhat-appstudio/infra-deployments/main/components/build-service/base/build-pipeline-selectors/build-pipeline-selector.yaml"
 
 	DefaultImagePushRepo         = "quay.io/" + DefaultQuayOrg + "/test-images"
 	DefaultReleasedImagePushRepo = "quay.io/" + DefaultQuayOrg + "/test-release-images"
@@ -131,8 +137,11 @@ const (
 	DefaultPaCGitHubAppID = "310332"
 
 	// Error string constants for Namespace-backed environment test suite
-	SEBAbsenceErrorString = "no SnapshotEnvironmentBinding found in environment"
+	SEBAbsenceErrorString          = "no SnapshotEnvironmentBinding found in environment"
 	EphemeralEnvAbsenceErrorString = "no matching Ephemeral Environment found"
+
+	// #app-studio-ci-reports channel id
+	SlackCIReportsChannelID = "C02M210JZ7B"
 )
 
 var (
