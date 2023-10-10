@@ -97,7 +97,7 @@ const (
 	JVMBuildImageSecretName = "jvm-build-image-secrets"
 	JBSConfigName           = "jvm-build-config"
 
-	BuildPipelineSelectorYamlURL = "https://raw.githubusercontent.com/redhat-appstudio/infra-deployments/main/components/build-service/base/build-pipeline-selector.yaml"
+	BuildPipelineSelectorYamlURL = "https://raw.githubusercontent.com/redhat-appstudio/infra-deployments/main/components/build-service/base/build-pipeline-selectors/build-pipeline-selector.yaml"
 
 	DefaultImagePushRepo         = "quay.io/" + DefaultQuayOrg + "/test-images"
 	DefaultReleasedImagePushRepo = "quay.io/" + DefaultQuayOrg + "/test-release-images"
