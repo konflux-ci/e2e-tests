@@ -16,6 +16,7 @@ import (
 	_ "github.com/redhat-appstudio/e2e-tests/tests/enterprise-contract"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/integration-service"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/release"
+	_ "github.com/redhat-appstudio/e2e-tests/tests/release/pipelines"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/remotesecret"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/rhtap-demo"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/spi"
