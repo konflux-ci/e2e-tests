@@ -23,15 +23,15 @@ import (
 )
 
 type ControllerHub struct {
-	HasController             *has.HasController
-	CommonController          *common.SuiteController
-	TektonController          *tekton.TektonController
-	GitOpsController          *gitops.GitopsController
-	SPIController             *spi.SPIController
-	RemoteSecretController    *remotesecret.RemoteSecretController
-	ReleaseController         *release.ReleaseController
-	IntegrationController     *integration.IntegrationController
-	JvmbuildserviceController *jvmbuildservice.JvmbuildserviceController
+	HasController                 *has.HasController
+	CommonController              *common.SuiteController
+	TektonController              *tekton.TektonController
+	GitOpsController              *gitops.GitopsController
+	SPIController                 *spi.SPIController
+	RemoteSecretController        *remotesecret.RemoteSecretController
+	ReleaseController             *release.ReleaseController
+	IntegrationController         *integration.IntegrationController
+	JvmbuildserviceController     *jvmbuildservice.JvmbuildserviceController
 }
 
 type Framework struct {
@@ -104,10 +104,11 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 		asAdmin = asUser
 	}
 
-	if err = utils.WaitUntil(asAdmin.CommonController.ServiceaccountPresent(constants.DefaultPipelineServiceAccount, k.UserNamespace), timeout); err != nil {
-		return nil, fmt.Errorf("'%s' service account wasn't created in %s namespace: %+v", constants.DefaultPipelineServiceAccount, k.UserNamespace, err)
+	if !isStage {
+		if err = utils.WaitUntil(asAdmin.CommonController.ServiceaccountPresent(constants.DefaultPipelineServiceAccount, k.UserNamespace), timeout); err != nil {
+			return nil, fmt.Errorf("'%s' service account wasn't created in %s namespace: %+v", constants.DefaultPipelineServiceAccount, k.UserNamespace, err)
+		}
 	}
-
 	return &Framework{
 		AsKubeAdmin:       asAdmin,
 		AsKubeDeveloper:   asUser,
