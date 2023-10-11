@@ -1,4 +1,4 @@
-package spi
+package remotesecret
 
 import (
 	"context"
@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
-var _ = framework.SPISuiteDescribe(Label("rs-envirnoment"), func() {
+var _ = framework.SPISuiteDescribe(Label("rs-environment"), func() {
 
 	defer GinkgoRecover()
 
@@ -45,7 +45,7 @@ var _ = framework.SPISuiteDescribe(Label("rs-envirnoment"), func() {
 	compDetected := appservice.ComponentDetectionDescription{}
 	componentObj := &appservice.Component{}
 
-	Describe("(SVPI-632) RemoteSecret has to be created with target namespace and Environment and (SVPI-633) in all Environments of certain component and application", Ordered, func() {
+	Describe("(SVPI-632) RemoteSecret has to be created with target namespace and Environment and (SVPI-633) in all Environments of certain component and application, ", Ordered, func() {
 		BeforeAll(func() {
 			// Initialize the tests controllers
 			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("spi-demos"))
@@ -79,7 +79,7 @@ var _ = framework.SPISuiteDescribe(Label("rs-envirnoment"), func() {
 			}
 		})
 
-		It("creates target namespaces", func() {
+		It("create target namespaces", func() {
 			_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(targetNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -87,7 +87,7 @@ var _ = framework.SPISuiteDescribe(Label("rs-envirnoment"), func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("creates managed-gitops.redhat.com/managed-environment secret type", func() {
+		It("create managed-gitops.redhat.com/managed-environment secret type", func() {
 			// get Kubeconfig of running cluster; it will be used as target for creating the test Environments
 			cfg, err = config.GetConfig()
 			Expect(err).NotTo(HaveOccurred())
@@ -111,7 +111,7 @@ var _ = framework.SPISuiteDescribe(Label("rs-envirnoment"), func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("creates environments", func() {
+		It("create environments", func() {
 			// Deletes current development environment
 			Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(fw.UserNamespace, 1*time.Minute)).To(Succeed())
 
@@ -182,7 +182,7 @@ var _ = framework.SPISuiteDescribe(Label("rs-envirnoment"), func() {
 
 		})
 
-		It("(SVPI-633) creates remote secret #1 with only application and component and injects data", func() {
+		It("(SVPI-633) create remote secret #1 with only application and component and injects data", func() {
 			rs := rs.RemoteSecret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      remoteSecretName,
@@ -224,7 +224,7 @@ var _ = framework.SPISuiteDescribe(Label("rs-envirnoment"), func() {
 
 		})
 
-		It("(SVPI-632) creates remote secret #2 with application,component and environment and injects data", func() {
+		It("(SVPI-632) create remote secret #2 with application,component and environment and injects data", func() {
 			rs := rs.RemoteSecret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      remoteSecretName_2,
@@ -267,7 +267,7 @@ var _ = framework.SPISuiteDescribe(Label("rs-envirnoment"), func() {
 
 		})
 
-		It("creates RHTAP application and check its health", func() {
+		It("create RHTAP application and check its health", func() {
 			createdApplication, err := fw.AsKubeDeveloper.HasController.CreateApplication(applicationName, fw.UserNamespace)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(createdApplication.Spec.DisplayName).To(Equal(applicationName))
@@ -288,12 +288,12 @@ var _ = framework.SPISuiteDescribe(Label("rs-envirnoment"), func() {
 			}, 1*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("timed out waiting for HAS controller to create gitops repository for the %s application in %s namespace", applicationName, fw.UserNamespace))
 		})
 
-		It("creates Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
+		It("create Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
 			_, err := fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(cdqName, fw.UserNamespace, gitSourceRepo, "", "", "", false)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("validates CDQ object information", func() {
+		It("validate CDQ object information", func() {
 			// Validate that the CDQ completes successfully
 			Eventually(func() (appservice.ComponentDetectionMap, error) {
 				// application info should be stored even after deleting the application in application variable
@@ -313,29 +313,29 @@ var _ = framework.SPISuiteDescribe(Label("rs-envirnoment"), func() {
 			}
 		})
 
-		It("creates Red Hat AppStudio Quarkus component", func() {
+		It("create Red Hat AppStudio Quarkus component", func() {
 			compDetected.ComponentStub.ComponentName = componentName
 			componentObj, err = fw.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, fw.UserNamespace, "", "", applicationName, true, map[string]string{})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("waits for component pipeline to finish", func() {
+		It("wait for component pipeline to finish", func() {
 			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(componentObj, "", 2, fw.AsKubeAdmin.TektonController)).To(Succeed())
 		})
 
 		It("(SVPI-633) secret #1 should exist in all environments' target namespace", func() {
 			Eventually(func() bool {
-				_, err := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace, targetSecretName)
-				if k8sErrors.IsNotFound(err) {
+				rs_1, err := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace, targetSecretName)
+				if err != nil {
 					return false
 				}
 
-				_, err = fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_2, targetSecretName)
-				if k8sErrors.IsNotFound(err) {
+				rs_2, err := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_2, targetSecretName)
+				if err != nil {
 					return false
 				}
 
-				return true
+				return rs_1.Name == targetSecretName && rs_2.Name == targetSecretName
 			}, 2*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("secrets %s is not created in all environments", targetSecretName))
 
 		})
@@ -351,6 +351,21 @@ var _ = framework.SPISuiteDescribe(Label("rs-envirnoment"), func() {
 
 				return targetSecret_2.Name == targetSecretName_2 && k8sErrors.IsNotFound(errNotFound)
 			}, 2*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("secret %s is not created in the specified environment", targetSecretName_2))
+
+		})
+
+		It("secrets #1 and #2 should be deleted when Environment is deleted", func() {
+			// Delete the existing Environments
+			Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
+
+			Eventually(func() bool {
+				// Secrets should not exist anymore in target namespaces
+				_, errRs1Ns1 := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace, targetSecretName)
+				_, errRs1Ns2 := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_2, targetSecretName)
+				_, errRs2Ns2 := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_2, targetSecretName_2)
+
+				return k8sErrors.IsNotFound(errRs1Ns1) && k8sErrors.IsNotFound(errRs1Ns2) && k8sErrors.IsNotFound(errRs2Ns2)
+			}, 2*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("secrets %s is not created in all environments", targetSecretName))
 
 		})
 
