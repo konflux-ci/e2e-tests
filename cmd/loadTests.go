@@ -1039,7 +1039,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				userComponentMap.Store(username, component.Name)
 
 				ComponentCreationTimeSumPerThread[threadIndex] += componentCreationTime
-				MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeGuage, metricsConstants.MetricComponentCreationTimeGauge, float64(componentCreationTime))
+				MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeGuage, metricsConstants.MetricComponentCreationTimeGauge, componentCreationTime.Seconds())
 				if componentCreationTime > ComponentCreationTimeMaxPerThread[threadIndex] {
 					ComponentCreationTimeMaxPerThread[threadIndex] = componentCreationTime
 				}
