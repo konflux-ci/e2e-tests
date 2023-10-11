@@ -1136,7 +1136,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(pr.Spec.PipelineRef.Bundle).To(Equal(dummyPipelineBundleRef)) //nolint:all
+			Expect(pr.Spec.PipelineRef.Params).To(ContainElement(v1beta1.Param{
+				Name:  "bundle",
+				Value: v1beta1.ParamValue{StringVal: dummyPipelineBundleRef, Type: "string"}},
+			))
 			Expect(pr.Spec.Params).To(ContainElement(v1beta1.Param{
 				Name:  expectedAdditionalPipelineParam.Name,
 				Value: v1beta1.ParamValue{StringVal: expectedAdditionalPipelineParam.Value, Type: "string"}},
