@@ -1002,7 +1002,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 
 
 			CDQCreationTimeSumPerThread[threadIndex] += cdqCreationTime
-			MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeGuage, metricsConstants.MetricCDQCreationTimeGauge, float64(cdqCreationTime))
+			MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeGuage, metricsConstants.MetricCDQCreationTimeGauge, cdqCreationTime.Seconds())
 			if cdqCreationTime > CDQCreationTimeMaxPerThread[threadIndex] {
 				CDQCreationTimeMaxPerThread[threadIndex] = cdqCreationTime
 			}
