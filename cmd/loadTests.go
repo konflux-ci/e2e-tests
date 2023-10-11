@@ -1120,7 +1120,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 						} else {
 							dur := pipelineRun.Status.CompletionTime.Sub(pipelineRun.CreationTimestamp.Time)
 							PipelineRunSucceededTimeSumPerThread[threadIndex] += dur
-							MetricsWrapper(MetricsController, metricsConstants.CollectorPipelines, metricsConstants.MetricTypeGuage, metricsConstants.MetricPipelineRunsTimeGauge, float64(dur))
+							MetricsWrapper(MetricsController, metricsConstants.CollectorPipelines, metricsConstants.MetricTypeGuage, metricsConstants.MetricPipelineRunsTimeGauge, dur.Seconds())
 							if dur > PipelineRunSucceededTimeMaxPerThread[threadIndex] {
 								PipelineRunSucceededTimeMaxPerThread[threadIndex] = dur
 							}
