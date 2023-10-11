@@ -922,7 +922,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			}
 
 			ApplicationCreationTimeSumPerThread[threadIndex] += applicationCreationTime
-			MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeGuage, metricsConstants.MetricApplicationCreationTimeGauge, float64(applicationCreationTime))
+			MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeGuage, metricsConstants.MetricApplicationCreationTimeGauge, applicationCreationTime.Seconds())
 			if applicationCreationTime > ApplicationCreationTimeMaxPerThread[threadIndex] {
 				ApplicationCreationTimeMaxPerThread[threadIndex] = applicationCreationTime
 			}
