@@ -1215,7 +1215,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 						} else {
 							dur := IntegrationTestsPipelineRun.Status.CompletionTime.Sub(IntegrationTestsPipelineRun.CreationTimestamp.Time)
 							IntegrationTestsPipelineRunSucceededTimeSumPerThread[threadIndex] += dur
-							MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsPipeline, metricsConstants.MetricTypeGuage, metricsConstants.MetricIntegrationPipelineRunsTimeGauge, float64(dur))
+							MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsPipeline, metricsConstants.MetricTypeGuage, metricsConstants.MetricIntegrationPipelineRunsTimeGauge, dur.Seconds())
 							if dur > IntegrationTestsPipelineRunSucceededTimeMaxPerThread[threadIndex] {
 								IntegrationTestsPipelineRunSucceededTimeMaxPerThread[threadIndex] = dur
 							}
