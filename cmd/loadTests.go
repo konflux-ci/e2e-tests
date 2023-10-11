@@ -1049,7 +1049,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				for _, componentStatus := range component.Status.Conditions {
 					if componentStatus.Type == "Created" {
 						TempTime := componentStatus.LastTransitionTime.Sub(startTimeForComponent)
-						MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualComponentCreationTimeGauge, float64(TempTime))
+						MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualComponentCreationTimeGauge, TempTime.Seconds())
 					
 					}
 				}
