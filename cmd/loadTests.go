@@ -930,7 +930,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			for _, Status := range app.Status.Conditions{
 				if Status.Type == "Created"{
 					TempTime := Status.LastTransitionTime.Sub(startTimeForApplication)
-					MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualApplicationCreationTimeGauge, float64(TempTime))
+					MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualApplicationCreationTimeGauge, TempTime.Seconds())
 				}
 				
 				
