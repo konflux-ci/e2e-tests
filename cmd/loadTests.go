@@ -1012,7 +1012,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			for _, cdqInstance := range cdq.Status.Conditions {
 				if cdqInstance.Type == "Completed"{
 					TempTime := cdqInstance.LastTransitionTime.Sub(startTimeForCDQ)
-					MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualCDQCreationTimeGauge, float64(TempTime))
+					MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualCDQCreationTimeGauge, TempTime.Seconds())
 				}
 			}
 			increaseBar(cdqsBar, cdqsBarMutex)
