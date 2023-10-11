@@ -1306,7 +1306,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 					}
 					if deploymentIsDone {
 						dur := lastUpdateTimeOfDone.Time.Sub(creationTimestamp.Time)
-						MetricsWrapper(MetricsController, metricsConstants.CollectorDeployments, metricsConstants.MetricTypeGuage, metricsConstants.MetricDeploymentsCreationTimeGauge, float64(dur))
+						MetricsWrapper(MetricsController, metricsConstants.CollectorDeployments, metricsConstants.MetricTypeGuage, metricsConstants.MetricDeploymentsCreationTimeGauge, dur.Seconds())
 						DeploymentSucceededTimeSumPerThread[threadIndex] += dur
 						if dur > DeploymentSucceededTimeMaxPerThread[threadIndex] {
 							DeploymentSucceededTimeMaxPerThread[threadIndex] = dur
