@@ -147,7 +147,7 @@ BuildSuiteDescribe: Build service E2E tests @build, @HACBS
 ## How it works
 
 We leverage existing Ginkgo's tool set to be able to do this translation back and forth. 
-* `ginkgo outline` we use to be able to generate the intial spec outline for our internal model based on what is in the file Ginkgo Test File. This command depends on the GoLang AST to generates the output. 
+* `ginkgo outline` we use to be able to generate the initial spec outline for our internal model based on what is in the file Ginkgo Test File. This command depends on the GoLang AST to generates the output. 
 * `ginkgo generate` we use to pass a customize template and data so that it can render a spec file using Ginkgo's extensive use of closures to allow us to build a descriptive spec hierarchy. 
 
 ## Schema

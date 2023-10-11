@@ -52,7 +52,7 @@ Steps to run 'rhtap-demos':
 
 ## Test Generator
 
-The test specs in e2e-demo-suite are generated dynamically using ginkgo specs.
+The test specs in rhtap-demo-suite are generated dynamically using ginkgo specs.
 
 If you want to test your own Component (repository), all you need to do is to update the `TestScenarios` variable in [scenarios.go](./config/scenarios.go)
 

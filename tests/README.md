@@ -5,9 +5,12 @@ Tests folder contains E2E related to several components divided in folders:
 | Folder | Component repository | README | Note |
 |---|---|---|---|
 | `build` | [build-service](https://github.com/redhat-appstudio/build-service), [jvm-build-service](https://github.com/redhat-appstudio/jvm-build-service) | [README.md](/tests/build/README.md) | |
-| `e2e-demos` | N/A | [README.md](/tests/e2e-demos/README.md) | |
-| `has` | https://github.com/redhat-appstudio/application-service | [README.md](/tests/has/README.md) | |
-| `integration-service` | https://github.com/redhat-appstudio/integration-service | [README.md](/tests/integration-service/README.md) |  |
+| `byoc` | [application-service](https://github.com/redhat-appstudio/application-service) | [README.md](/tests/byoc/README.md) | |
+| `enterprise-contract` | N/A | [README.md](/tests/enterprise-contract/README.md) | |
+| `integration-service` | [integration-service](https://github.com/redhat-appstudio/integration-service) | [README.md](/tests/integration-service/README.md) |  |
 | `load-tests` | N/A | [LoadTests.md](/docs/LoadTests.md) |  |
-| `release` | https://github.com/redhat-appstudio/release-service | [README.md](/tests/release/README.md) |  |
-| `spi` | https://github.com/redhat-appstudio/service-provider-integration-operator | [README.md](/tests/spi/README.md) | |
+| `release` | [release-service](https://github.com/redhat-appstudio/release-service) | [README.md](/tests/release/README.md) |  |
+| `remote-secret` | [remote-secret](https://github.com/redhat-appstudio/remote-secret) | [README.md](/tests/remote-secret/README.md) | |
+| `rhtap-demo` | N/A | [README.md](/tests/rhtap-demo/README.md) | |
+| `spi` | [service-provider-integration-operator](https://github.com/redhat-appstudio/service-provider-integration-operator) | [README.md](/tests/spi/README.md) | |
+| `upgrade` | N/A | [README.md](/tests/upgrade/README.md) | |
