@@ -60,6 +60,22 @@ const (
 	// Cert auth for accessing Pyxis stage external registry
 	PYXIS_STAGE_CERT_ENV string = "PYXIS_STAGE_CERT"
 
+	// Offline/refresh token used for getting Keycloak token in order to authenticate against stage/prod cluster
+	// More details: https://access.redhat.com/articles/3626371
+	OFFLINE_TOKEN_ENV = "OFFLINE_TOKEN"
+
+	// Keycloak URL used for authentication against stage/prod cluster
+	KEYLOAK_URL_ENV = "KEYLOAK_URL"
+
+	// Toolchain API URL used for authentication against stage/prod cluster
+	TOOLCHAIN_API_URL_ENV = "TOOLCHAIN_API_URL"
+
+	// Dev workspace for release pipelines tests
+	RELEASE_DEV_WORKSPACE_ENV = "RELEASE_DEV_WORKSPACE"
+
+	// Managed workspace for release pipelines tests
+	RELEASE_MANAGED_WORKSPACE_ENV = "RELEASE_MANAGED_WORKSPACE"
+
 	// Bundle ref for overriding the default Java build bundle specified in BuildPipelineSelectorYamlURL
 	CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV string = "CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE"
 
@@ -97,7 +113,7 @@ const (
 	JVMBuildImageSecretName = "jvm-build-image-secrets"
 	JBSConfigName           = "jvm-build-config"
 
-	BuildPipelineSelectorYamlURL = "https://raw.githubusercontent.com/redhat-appstudio/infra-deployments/main/components/build-service/base/build-pipeline-selector.yaml"
+	BuildPipelineSelectorYamlURL = "https://raw.githubusercontent.com/redhat-appstudio/infra-deployments/main/components/build-service/base/build-pipeline-selectors/build-pipeline-selector.yaml"
 
 	DefaultImagePushRepo         = "quay.io/" + DefaultQuayOrg + "/test-images"
 	DefaultReleasedImagePushRepo = "quay.io/" + DefaultQuayOrg + "/test-release-images"
@@ -105,6 +121,10 @@ const (
 	BuildTaskRunName = "build-container"
 
 	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.20"
+
+	FromIndex   = "quay.io/scoheb/fbc-index-testing:latest"
+	TargetIndex = "quay.io/scoheb/fbc-target-index-testing:latest"
+	BinaryImage = "registry.redhat.io/openshift4/ose-operator-registry:v4.12"
 
 	StrategyConfigsRepo          = "strategy-configs"
 	StrategyConfigsDefaultBranch = "main"

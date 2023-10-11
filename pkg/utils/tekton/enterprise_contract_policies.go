@@ -76,3 +76,18 @@ func (t *TektonController) GetEnterpriseContractPolicy(name, namespace string) (
 
 	return &defaultEcPolicy, err
 }
+
+// DeleteEnterpriseContractPolicy deletes enterprise contract policy.
+func (t *TektonController) DeleteEnterpriseContractPolicy(name string, namespace string, failOnNotFound bool) error {
+	ecPolicy := ecp.EnterpriseContractPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+	err := t.KubeRest().Delete(context.TODO(), &ecPolicy)
+	if err != nil && !failOnNotFound && errors.IsNotFound(err) {
+		err = nil
+	}
+	return err
+}
