@@ -37,6 +37,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	AfterEach(framework.ReportFailure(&f))
 
 	var err error
+	var osConsoleHost string
 	defer GinkgoRecover()
 
 	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), func() {
@@ -46,7 +47,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		var timeout, interval time.Duration
 
 		var prNumber int
-		var githubAppId int64
 		var prHeadSha string
 
 		BeforeAll(func() {
@@ -60,8 +60,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			consoleRoute, err := f.AsKubeAdmin.CommonController.GetOpenshiftRoute("console", "openshift-console")
 			Expect(err).ShouldNot(HaveOccurred())
+			osConsoleHost = consoleRoute.Spec.Host
 
-			if utils.IsPrivateHostname(consoleRoute.Spec.Host) {
+			if utils.IsPrivateHostname(osConsoleHost) {
 				Skip("Using private cluster (not reachable from Github), skipping...")
 			}
 
@@ -70,7 +71,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			if !supports {
 				Skip("Quay org does not support private quay repository creation, please add support for private repo creation before running this test")
 			}
-			githubAppId, err = utils.GetGithubAppID()
 			Expect(err).ShouldNot(HaveOccurred())
 
 			applicationName = fmt.Sprintf("build-suite-test-application-%s", util.GenerateRandomString(4))
@@ -117,27 +117,28 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		validateChecks := func() {
-			var checkSuite *github.CheckSuite
+			var checkRun *github.CheckRun
 			timeout = time.Minute * 15
 			interval = time.Second * 10
 
-			Eventually(func() *github.CheckSuite {
-				checkSuites, err := f.AsKubeAdmin.CommonController.Github.ListCheckSuites(helloWorldComponentGitSourceRepoName, prHeadSha)
+			Eventually(func() *github.CheckRun {
+				checkRuns, err := f.AsKubeAdmin.CommonController.Github.ListCheckRuns(helloWorldComponentGitSourceRepoName, prHeadSha)
 				Expect(err).ShouldNot(HaveOccurred())
-				for _, cs := range checkSuites {
-					if cs.GetApp().GetID() == githubAppId {
-						checkSuite = cs
-						return checkSuite
+				for _, cr := range checkRuns {
+					if strings.Contains(cr.GetDetailsURL(), osConsoleHost) {
+						checkRun = cr
+						return cr
 					}
 				}
 				return nil
-			}, timeout, interval).ShouldNot(BeNil(), fmt.Sprintf("timed out when waiting for the PaC Check suite to appear in the Component repo %s in PR #%d", helloWorldComponentGitSourceRepoName, prNumber))
+			}, timeout, interval).ShouldNot(BeNil(), fmt.Sprintf("timed out when waiting for the PaC Check run with `Details URL` field containing %s to appear in the Component repo %s in PR #%d", osConsoleHost, helloWorldComponentGitSourceRepoName, prNumber))
+
 			Eventually(func() string {
-				checkSuite, err = f.AsKubeAdmin.CommonController.Github.GetCheckSuite(helloWorldComponentGitSourceRepoName, checkSuite.GetID())
+				checkRun, err = f.AsKubeAdmin.CommonController.Github.GetCheckRun(helloWorldComponentGitSourceRepoName, checkRun.GetID())
 				Expect(err).ShouldNot(HaveOccurred())
-				return checkSuite.GetStatus()
+				return checkRun.GetStatus()
 			}, timeout, interval).Should(Equal("completed"), fmt.Sprintf("timed out when waiting for the PaC Check suite status to be 'completed' in the Component repo %s in PR #%d", helloWorldComponentGitSourceRepoName, prNumber))
-			Expect(checkSuite.GetConclusion()).To(Equal("success"), fmt.Sprintf("the initial PR %d in %s repo doesn't contain the info about successful pipelinerun", prNumber, helloWorldComponentGitSourceRepoName))
+			Expect(checkRun.GetConclusion()).To(Equal("success"), fmt.Sprintf("the initial PR %d in %s repo doesn't contain the info about successful pipelinerun", prNumber, helloWorldComponentGitSourceRepoName))
 		}
 
 		When("a new component without specified branch is created and with visibility private", Label("pac-custom-default-branch"), func() {
@@ -550,8 +551,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			consoleRoute, err := f.AsKubeAdmin.CommonController.GetOpenshiftRoute("console", "openshift-console")
 			Expect(err).ShouldNot(HaveOccurred())
+			osConsoleHost = consoleRoute.Spec.Host
 
-			if utils.IsPrivateHostname(consoleRoute.Spec.Host) {
+			if utils.IsPrivateHostname(osConsoleHost) {
 				Skip("Using private cluster (not reachable from Github), skipping...")
 			}
 
@@ -728,6 +730,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			consoleRoute, err = f.AsKubeAdmin.CommonController.GetOpenshiftRoute("console", "openshift-console")
 			Expect(err).ShouldNot(HaveOccurred())
+			osConsoleHost = consoleRoute.Spec.Host
 
 			timeout = 5 * time.Minute
 			interval = time.Second
@@ -863,7 +866,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 		When("using PaC", func() {
 			BeforeAll(func() {
-				if utils.IsPrivateHostname(consoleRoute.Spec.Host) {
+				if utils.IsPrivateHostname(osConsoleHost) {
 					Skip("Using private cluster (not reachable from Github), skipping...")
 				}
 			})
