@@ -78,7 +78,7 @@ else
             echo "The average time a workload took to succeed (${workloadKPI}s) has exceeded a threshold of ${threshold}s with $t threads."
             workloadKPIOld=$(jq '.workloadKPI' "$output")
             threadsOld=$(jq '.maxConcurrencyReached' "$output")
-            computedConcurrency=$(python -c "import sys; t = float(sys.argv[1]); a = float(sys.argv[2]); b = float(sys.argv[3]); c = float(sys.argv[4]); d = float(sys.argv[5]); print((t - b) / ((d - b) / (c - a)) + a)" "$threshold" "$threadsOld" "$workloadKPIOld" "$t" "$workloadKPI")
+            computedConcurrency=$(python3 -c "import sys; t = float(sys.argv[1]); a = float(sys.argv[2]); b = float(sys.argv[3]); c = float(sys.argv[4]); d = float(sys.argv[5]); print((t - b) / ((d - b) / (c - a)) + a)" "$threshold" "$threadsOld" "$workloadKPIOld" "$t" "$workloadKPI")
             jq ".computedConcurrency = $computedConcurrency" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
             break
         else
