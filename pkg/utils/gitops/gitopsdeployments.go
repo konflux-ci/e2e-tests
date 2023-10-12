@@ -7,8 +7,8 @@ import (
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-
-	managedgitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend/apis/managed-gitops/v1alpha1"
+	managedgitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend-shared/apis/managed-gitops/v1alpha1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -53,4 +53,20 @@ func (g *GitopsController) StoreAllGitOpsDeployments(namespace string) error {
 		}
 	}
 	return nil
+}
+
+// GetGitOpsDeploymentManagedEnvironmentList lists all GitOpsDeploymentsManagedEnvironments in a given namespace.
+func (g *GitopsController) GetGitOpsDeploymentManagedEnvironmentList(namespace string) (*managedgitopsv1alpha1.GitOpsDeploymentManagedEnvironmentList, error) {
+	gitOpsDeploymentManagedEnvironmentList := &managedgitopsv1alpha1.GitOpsDeploymentManagedEnvironmentList{}
+
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+
+	err := g.KubeRest().List(context.Background(), gitOpsDeploymentManagedEnvironmentList, opts...)
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error occurred while trying to list gitOpsDeploymentManagedEnvironments in %s namespace: %w", namespace, err)
+	}
+
+	return gitOpsDeploymentManagedEnvironmentList, nil
 }
