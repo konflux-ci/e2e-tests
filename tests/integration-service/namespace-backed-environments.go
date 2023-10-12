@@ -233,16 +233,17 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 
 		When("Integration Test PipelineRun completes successfully", func() {
 			It("should lead to Snapshot CR being marked as passed", FlakeAttempts(3), func() {
-				snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", testNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)).To(BeTrue(), fmt.Sprintf("tests have not succeeded for snapshot %s/%s", snapshot.GetNamespace(), snapshot.GetName()))
+				Eventually(func() bool {
+					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", testNamespace)
+					return err == nil && f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)
+				}, time.Minute*3, time.Second*5).Should(BeTrue(), fmt.Sprintf("Timed out waiting for Snapshot to be marked as succeeded %s/%s", snapshot.GetNamespace(), snapshot.GetName()))
 			})
 
 			It("should lead to SnapshotEnvironmentBinding getting deleted", func() {
 				Eventually(func() error {
 					_, err = f.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(applicationName, testNamespace, ephemeralEnvironment)
 					return err
-				}, time.Minute*3, time.Second*2).ShouldNot(Succeed(), fmt.Sprintf("timed out when waiting for SnapshotEnvironmentBinding to be deleted for application %s/%s", testNamespace, applicationName))
+				}, time.Minute*3, time.Second*5).ShouldNot(Succeed(), fmt.Sprintf("timed out when waiting for SnapshotEnvironmentBinding to be deleted for application %s/%s", testNamespace, applicationName))
 				Expect(err.Error()).To(ContainSubstring(constants.SEBAbsenceErrorString))
 			})
 
