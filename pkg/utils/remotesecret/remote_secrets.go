@@ -32,6 +32,30 @@ func (s *RemoteSecretController) CreateRemoteSecret(name, namespace string, targ
 	return &remoteSecret, nil
 }
 
+// CreateRemoteSecretWithLabels creates a RemoteSecret object with specified labels
+func (s *RemoteSecretController) CreateRemoteSecretWithLabels(name, namespace string, targetSecretName string, labels map[string]string) (*rs.RemoteSecret, error) {
+	remoteSecret := rs.RemoteSecret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Spec: rs.RemoteSecretSpec{
+			Secret: rs.LinkableSecretSpec{
+				Name: targetSecretName,
+			},
+		},
+	}
+
+	remoteSecret.ObjectMeta.Labels = labels
+
+	err := s.KubeRest().Create(context.TODO(), &remoteSecret)
+	if err != nil {
+		return nil, err
+	}
+	return &remoteSecret, nil
+}
+
 // GetRemoteSecret returns the requested RemoteSecret object
 func (s *RemoteSecretController) GetRemoteSecret(name, namespace string) (*rs.RemoteSecret, error) {
 	namespacedName := types.NamespacedName{

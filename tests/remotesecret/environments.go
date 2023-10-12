@@ -10,7 +10,6 @@ import (
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -125,14 +124,6 @@ var _ = framework.SPISuiteDescribe(Label("rs-environment"), func() {
 					DeploymentStrategy: appservice.DeploymentStrategy_AppStudioAutomated,
 					DisplayName:        targetNamespace,
 					Tags:               []string{"managed"},
-					Configuration: appservice.EnvironmentConfiguration{
-						Env: []appservice.EnvVarPair{
-							{
-								Name:  "MY_FAKE_ENV_VAR",
-								Value: "100",
-							},
-						},
-					},
 					UnstableConfigurationFields: &appservice.UnstableEnvironmentConfiguration{
 						ClusterType: appservice.ConfigurationClusterType_OpenShift,
 						KubernetesClusterCredentials: appservice.KubernetesClusterCredentials{
@@ -157,14 +148,6 @@ var _ = framework.SPISuiteDescribe(Label("rs-environment"), func() {
 					DeploymentStrategy: appservice.DeploymentStrategy_AppStudioAutomated,
 					DisplayName:        targetNamespace_2,
 					Tags:               []string{"managed"},
-					Configuration: appservice.EnvironmentConfiguration{
-						Env: []appservice.EnvVarPair{
-							{
-								Name:  "MY_FAKE_ENV_VAR",
-								Value: "100",
-							},
-						},
-					},
 					UnstableConfigurationFields: &appservice.UnstableEnvironmentConfiguration{
 						ClusterType: appservice.ConfigurationClusterType_OpenShift,
 						KubernetesClusterCredentials: appservice.KubernetesClusterCredentials{
@@ -183,22 +166,11 @@ var _ = framework.SPISuiteDescribe(Label("rs-environment"), func() {
 		})
 
 		It("(SVPI-633) create remote secret #1 with only application and component and injects data", func() {
-			rs := rs.RemoteSecret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      remoteSecretName,
-					Namespace: fw.UserNamespace,
-					Labels: map[string]string{
-						"appstudio.redhat.com/application": applicationName,
-						"appstudio.redhat.com/component":   componentName,
-					},
-				},
-				Spec: rs.RemoteSecretSpec{
-					Secret: rs.LinkableSecretSpec{
-						Name: targetSecretName,
-					},
-				},
+			labels := map[string]string{
+				"appstudio.redhat.com/application": applicationName,
+				"appstudio.redhat.com/component":   componentName,
 			}
-			err := fw.AsKubeAdmin.RemoteSecretController.KubeRest().Create(context.TODO(), &rs)
+			_, err := fw.AsKubeAdmin.RemoteSecretController.CreateRemoteSecretWithLabels(remoteSecretName, fw.UserNamespace, targetSecretName, labels)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() bool {
@@ -225,23 +197,12 @@ var _ = framework.SPISuiteDescribe(Label("rs-environment"), func() {
 		})
 
 		It("(SVPI-632) create remote secret #2 with application,component and environment and injects data", func() {
-			rs := rs.RemoteSecret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      remoteSecretName_2,
-					Namespace: fw.UserNamespace,
-					Labels: map[string]string{
-						"appstudio.redhat.com/application": applicationName,
-						"appstudio.redhat.com/environment": targetNamespace_2,
-						"appstudio.redhat.com/component":   componentName,
-					},
-				},
-				Spec: rs.RemoteSecretSpec{
-					Secret: rs.LinkableSecretSpec{
-						Name: targetSecretName_2,
-					},
-				},
+			labels := map[string]string{
+				"appstudio.redhat.com/application": applicationName,
+				"appstudio.redhat.com/environment": targetNamespace_2,
+				"appstudio.redhat.com/component":   componentName,
 			}
-			err := fw.AsKubeAdmin.RemoteSecretController.KubeRest().Create(context.TODO(), &rs)
+			_, err := fw.AsKubeAdmin.RemoteSecretController.CreateRemoteSecretWithLabels(remoteSecretName_2, fw.UserNamespace, targetSecretName_2, labels)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() bool {
