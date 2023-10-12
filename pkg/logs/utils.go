@@ -3,10 +3,10 @@ package logs
 import (
 	"fmt"
 	"os"
-
-	. "github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
+	. "github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"sigs.k8s.io/yaml"
 )
 
@@ -22,7 +22,6 @@ func createArtifactDirectory() (string, error) {
 	}
 
 	return testLogsDir, nil
-
 }
 
 // StoreResourceYaml stores yaml of given resource.
@@ -51,6 +50,21 @@ func StoreArtifacts(artifacts map[string][]byte) error {
 		if err := os.WriteFile(filePath, []byte(artifact_value), 0644); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func StoreTestTiming() error {
+	artifactsDirectory, err := createArtifactDirectory()
+	if err != nil {
+		return err
+	}
+
+	testTime := "Test started at: " + CurrentSpecReport().StartTime.String() + "\nTest ended at: " + time.Now().String()
+	filePath := fmt.Sprintf("%s/test-timing", artifactsDirectory)
+	if err := os.WriteFile(filePath, []byte(testTime), 0644); err != nil {
+		return fmt.Errorf("failed to store test timing: %v", err)
 	}
 
 	return nil

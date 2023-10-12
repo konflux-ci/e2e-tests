@@ -19,7 +19,9 @@ import (
  * Description: SVPI-402 - Get file content from a private Github repository
  */
 
-var _ = framework.SPISuiteDescribe(Label("spi-suite", "get-file-content"), func() {
+// pending because https://github.com/redhat-appstudio/service-provider-integration-operator/pull/706 will break the tests
+// we will need to update the current test after merging the PR
+var _ = framework.SPISuiteDescribe(Label("spi-suite", "get-file-content"), Pending, func() {
 
 	defer GinkgoRecover()
 

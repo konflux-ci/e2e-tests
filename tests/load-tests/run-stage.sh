@@ -13,4 +13,5 @@ go run loadtest.go \
     -o "${OUTPUT_DIR:-.}" \
     -t "${THREADS:-1}" \
     --disable-metrics \
+    --enable-progress-bars="${ENABLE_PROGRESS_BARS:-false}" \
     --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}"

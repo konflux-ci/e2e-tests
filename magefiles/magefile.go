@@ -225,8 +225,11 @@ func (ci CI) TestE2E() error {
 	}
 
 	if requiresSprayProxyRegistering {
-		if err := retry(registerPacServer, 3, 10*time.Second); err != nil {
-			return fmt.Errorf("error when registering PAC server: %v", err)
+		if err := registerPacServer(); err != nil {
+			os.Setenv(constants.SKIP_PAC_TESTS_ENV, "true")
+			if alertErr := HandleErrorWithAlert(err); alertErr != nil {
+				return alertErr
+			}
 		}
 	}
 
@@ -235,8 +238,10 @@ func (ci CI) TestE2E() error {
 	}
 
 	if requiresSprayProxyRegistering {
-		if err := retry(unregisterPacServer, 3, 10*time.Second); err != nil {
-			klog.Infof("error when unregistering PAC server: %v", err)
+		if err := unregisterPacServer(); err != nil {
+			if alertErr := HandleErrorWithAlert(err); alertErr != nil {
+				klog.Warning(alertErr)
+			}
 		}
 	}
 
@@ -252,8 +257,8 @@ func (ci CI) TestE2E() error {
 }
 
 func RunE2ETests() error {
-	// added --output-interceptor-mode=none to mitigate RHTAPBUGS-34
-	return sh.RunV("ginkgo", "-p", "--output-interceptor-mode=none", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", "--generate-rppreproc-report=true", fmt.Sprintf("--rp-preproc-dir=%s", artifactDir))
+	labelFilter := utils.GetEnv("E2E_TEST_SUITE_LABEL", "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines")
+	return runTests(labelFilter, "e2e-report.xml")
 }
 
 func PreflightChecks() error {
@@ -288,11 +293,10 @@ func PreflightChecks() error {
 
 func (ci CI) setRequiredEnvVars() error {
 
-	if strings.Contains(jobName, "hacbs-e2e-periodic") {
-		os.Setenv("E2E_TEST_SUITE_LABEL", "HACBS")
-		return nil
-	} else if strings.Contains(jobName, "appstudio-e2e-deployment-periodic") {
-		os.Setenv("E2E_TEST_SUITE_LABEL", "!HACBS")
+	// RHTAP Nightly E2E job
+	// The job name is taken from https://github.com/openshift/release/blob/f03153fa4ad36c0e10050d977e7f0f7619d2163a/ci-operator/config/redhat-appstudio/infra-deployments/redhat-appstudio-infra-deployments-main.yaml#L59C7-L59C35
+	if strings.Contains(jobName, "appstudio-e2e-tests-periodic") {
+		requiresSprayProxyRegistering = true
 		return nil
 	}
 
@@ -734,14 +738,13 @@ func AppendFrameworkDescribeGoFile(specFile string) error {
 
 }
 
-func newSprayProxy() *SprayProxy {
+func newSprayProxy() (*SprayProxy, error) {
 	sprayProxyUrl := os.Getenv("QE_SPRAYPROXY_HOST")
 	sprayProxyToken := os.Getenv("QE_SPRAYPROXY_TOKEN")
 	if sprayProxyUrl == "" || sprayProxyToken == "" {
-		klog.Error("env var QE_SPRAYPROXY_HOST is not set")
-		return nil
+		return nil, fmt.Errorf("env var QE_SPRAYPROXY_HOST is not set")
 	}
-	return NewSprayProxy(sprayProxyUrl, sprayProxyToken)
+	return NewSprayProxy(sprayProxyUrl, sprayProxyToken), nil
 }
 
 func registerPacServer() error {
@@ -751,7 +754,10 @@ func registerPacServer() error {
 	}
 	pacControllerHost := fmt.Sprintf("https://%s", pacControllerRoute.Spec.Host)
 
-	sprayproxy := newSprayProxy()
+	sprayproxy, err := newSprayProxy()
+	if err != nil {
+		return fmt.Errorf("failed to register PaC server: %+v", err)
+	}
 	_, err = sprayproxy.RegisterServer(pacControllerHost)
 
 	if err != nil {
@@ -774,7 +780,10 @@ func unregisterPacServer() error {
 		return err
 	}
 	pacControllerHost := fmt.Sprintf("https://%s", pacControllerRoute.Spec.Host)
-	sprayproxy := newSprayProxy()
+	sprayproxy, err := newSprayProxy()
+	if err != nil {
+		return fmt.Errorf("failed to unregister PaC server: %+v", err)
+	}
 	_, err = sprayproxy.UnegisterServer(pacControllerHost)
 	if err != nil {
 		klog.Error("Failed to unregister pac server", pacControllerHost)
@@ -788,4 +797,132 @@ func unregisterPacServer() error {
 	}
 	klog.Infof("Registered pac server %s, servers: %v", pacControllerHost, servers)
 	return nil
+}
+
+// Run upgrade tests in CI
+func (ci CI) TestUpgrade() error {
+	var testFailure bool
+
+	if err := ci.init(); err != nil {
+		return fmt.Errorf("error when running ci init: %v", err)
+	}
+
+	if err := PreflightChecks(); err != nil {
+		return fmt.Errorf("error when running preflight checks: %v", err)
+	}
+
+	if err := ci.setRequiredEnvVars(); err != nil {
+		return fmt.Errorf("error when setting up required env vars: %v", err)
+	}
+
+	if err := UpgradeTestsWorkflow(); err != nil {
+		return fmt.Errorf("error when running upgrade tests: %v", err)
+	}
+
+	if testFailure {
+		return fmt.Errorf("error when running upgrade tests - see the log above for more details")
+	}
+
+	return nil
+}
+
+// Run upgrade tests locally(bootstrap cluster, create workload, upgrade, verify)
+func (Local) TestUpgrade() error {
+	if err := PreflightChecks(); err != nil {
+		klog.Errorf("error when running preflight checks: %s", err)
+		return err
+	}
+
+	if err := UpgradeTestsWorkflow(); err != nil {
+		klog.Errorf("error when running upgrade tests: %s", err)
+		return err
+	}
+
+	return nil
+}
+
+func UpgradeTestsWorkflow() error {
+	ic, err := BootstrapClusterForUpgrade()
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = CheckClusterAfterUpgrade(ic)
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = CreateWorkload()
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = VerifyWorkload()
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = UpgradeCluster()
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = CheckClusterAfterUpgrade(ic)
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = VerifyWorkload()
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = CleanWorkload()
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	return nil
+}
+
+func BootstrapClusterForUpgrade() (*installation.InstallAppStudio, error) {
+	ic, err := installation.NewAppStudioInstallController()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize installation controller: %+v", err)
+	}
+
+	return ic, ic.InstallAppStudioPreviewMode()
+}
+
+func UpgradeCluster() error {
+	return MergePRInRemote(utils.GetEnv("UPGRADE_BRANCH", ""), utils.GetEnv("UPGRADE_FORK_ORGANIZATION", "redhat-appstudio"), "./tmp/infra-deployments")
+}
+
+func CheckClusterAfterUpgrade(ic *installation.InstallAppStudio) error {
+	return ic.CheckOperatorsReady()
+}
+
+func CreateWorkload() error {
+	return runTests("upgrade-create", "upgrade-create-report.xml")
+}
+
+func VerifyWorkload() error {
+	return runTests("upgrade-verify", "upgrade-verify-report.xml")
+}
+
+func CleanWorkload() error {
+	return runTests("upgrade-cleanup", "upgrade-verify-report.xml")
+}
+
+func runTests(labelsToRun string, junitReportFile string) error {
+	// added --output-interceptor-mode=none to mitigate RHTAPBUGS-34
+	return sh.RunV("ginkgo", "-p", "--output-interceptor-mode=none", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report="+junitReportFile, "--label-filter="+labelsToRun, "./cmd", "--", "--generate-rppreproc-report=true", fmt.Sprintf("--rp-preproc-dir=%s", artifactDir))
 }
