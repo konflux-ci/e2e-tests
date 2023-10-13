@@ -12,7 +12,6 @@ import (
 	"github.com/redhat-appstudio/remote-secret/api/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 /*
@@ -64,7 +63,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("service-account-auth"), func(
 
 		It("creates RemoteSecret with previously created namespaces as targets", func() {
 			targets := []v1beta1.RemoteSecretTarget{{Namespace: targetNamespace1}, {Namespace: targetNamespace2}}
-			remoteSecret, err = fw.AsKubeDeveloper.RemoteSecretController.CreateRemoteSecret(remoteSecretName, namespace, targets)
+			remoteSecret, err = fw.AsKubeDeveloper.RemoteSecretController.CreateRemoteSecret(remoteSecretName, namespace, targets, v1.SecretTypeOpaque, map[string]string{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() bool {
@@ -124,24 +123,9 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("service-account-auth"), func(
 		})
 
 		It("creates upload secret", func() {
-			s := &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-secret",
-					Labels: map[string]string{
-						"appstudio.redhat.com/upload-secret": "remotesecret",
-					},
-					Annotations: map[string]string{
-						"appstudio.redhat.com/remotesecret-name": remoteSecret.Name,
-					},
-				},
-				Type: v1.SecretTypeOpaque,
-				StringData: map[string]string{
-					"a": "b",
-					"c": "d",
-				},
-			}
+			data := map[string]string{"a": "b", "c": "d"}
 
-			_, err = fw.AsKubeAdmin.CommonController.CreateSecret(namespace, s)
+			_, err = fw.AsKubeAdmin.RemoteSecretController.CreateUploadSecret(remoteSecret.Name, namespace, remoteSecret.Name, v1.SecretTypeOpaque, data)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
