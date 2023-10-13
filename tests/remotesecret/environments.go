@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
-var _ = framework.SPISuiteDescribe(Label("rs-environment"), func() {
+var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 
 	defer GinkgoRecover()
 
