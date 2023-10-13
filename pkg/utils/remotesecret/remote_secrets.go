@@ -5,20 +5,23 @@ import (
 
 	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 // CreateRemoteSecret creates a RemoteSecret object
-func (s *RemoteSecretController) CreateRemoteSecret(name, namespace string, targets []rs.RemoteSecretTarget) (*rs.RemoteSecret, error) {
+func (s *RemoteSecretController) CreateRemoteSecret(name, namespace string, targets []rs.RemoteSecretTarget, secretType v1.SecretType, labels map[string]string) (*rs.RemoteSecret, error) {
 	remoteSecret := rs.RemoteSecret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels:    labels,
 		},
 		Spec: rs.RemoteSecretSpec{
 			Secret: rs.LinkableSecretSpec{
 				GenerateName: "some-secret-",
+				Type:         secretType,
 			},
 		},
 	}
@@ -86,7 +89,7 @@ func (s *RemoteSecretController) GetTargetSecretName(targets []rs.TargetStatus, 
 }
 
 // CreateUploadSecret creates an Upload secret object to inject data in a Remote Secret
-func (s *RemoteSecretController) CreateUploadSecret(name, namespace string, remoteSecretName string, stringData map[string]string) (*corev1.Secret, error) {
+func (s *RemoteSecretController) CreateUploadSecret(name, namespace string, remoteSecretName string, secretType v1.SecretType, stringData map[string]string) (*corev1.Secret, error) {
 	uploadSecret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -98,7 +101,7 @@ func (s *RemoteSecretController) CreateUploadSecret(name, namespace string, remo
 				rs.RemoteSecretNameAnnotation: remoteSecretName,
 			},
 		},
-		Type:       corev1.SecretTypeOpaque,
+		Type:       secretType,
 		StringData: stringData,
 	}
 

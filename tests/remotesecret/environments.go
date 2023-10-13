@@ -11,6 +11,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -184,7 +185,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 
 			fakeData := map[string]string{"username": "john", "password": "doe"}
 
-			_, err = fw.AsKubeAdmin.RemoteSecretController.CreateUploadSecret(remoteSecretName, namespace, remoteSecretName, fakeData)
+			_, err = fw.AsKubeAdmin.RemoteSecretController.CreateUploadSecret(remoteSecretName, namespace, remoteSecretName, v1.SecretTypeOpaque, fakeData)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() bool {
@@ -216,7 +217,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 
 			fakeData := map[string]string{"username": "john", "password": "doe"}
 
-			_, err = fw.AsKubeAdmin.RemoteSecretController.CreateUploadSecret(remoteSecretName_2, namespace, remoteSecretName_2, fakeData)
+			_, err = fw.AsKubeAdmin.RemoteSecretController.CreateUploadSecret(remoteSecretName_2, namespace, remoteSecretName_2, v1.SecretTypeOpaque, fakeData)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() bool {

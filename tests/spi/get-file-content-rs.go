@@ -1,54 +1,70 @@
-package remotesecret
+package spi
 
 import (
 	"fmt"
+	"os"
 	"time"
 
-	"github.com/devfile/library/v2/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/remote-secret/api/v1beta1"
+	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
+	"github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 )
 
 /*
  * Component: spi
- * Description: SVPI-558 - Test all the options of the authz of remote secret target deployment
- * Test case: Target to the same namespace where the remote secret lives is always deployed
+ * Description: SVPI-402 - Get file content from a private Github repository
+ * Use case: Remote Secret Usage
  */
 
-var _ = framework.RemoteSecretSuiteDescribe(Label("target-current-namespace"), func() {
+var _ = framework.SPISuiteDescribe(Label("spi-suite", "get-file-content-rs"), func() {
 
 	defer GinkgoRecover()
 
 	var fw *framework.Framework
 	var err error
-	var namespace string
-	var remoteSecret *v1beta1.RemoteSecret
-	remoteSecretName := fmt.Sprintf("test-remote-secret-%s", util.GenerateRandomString(4))
-	targetSecretName := ""
+	var namespace, targetSecretName string
+	var remoteSecret *rs.RemoteSecret
+	var SPIFcr *v1beta1.SPIFileContentRequest
+	remoteSecretName := "test-remote-secret"
+	AfterEach(framework.ReportFailure(&fw))
 
-	Describe("SVPI-558 - Target to the same namespace where the remote secret lives is always deployed", Ordered, func() {
+	Describe("SVPI-402 - Get file content from a private Github repository with Remote Secret", Ordered, func() {
 		BeforeAll(func() {
+			if os.Getenv("CI") != "true" {
+				Skip(fmt.Sprintln("test skipped on local execution"))
+			}
 			// Initialize the tests controllers
 			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("spi-demos"))
 			Expect(err).NotTo(HaveOccurred())
 			namespace = fw.UserNamespace
 			Expect(namespace).NotTo(BeEmpty())
+
+			// collect SPI ResourceQuota metrics (temporary)
+			err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("get-file-content-rs", namespace, "appstudio-crds-spi")
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterAll(func() {
+			// collect SPI ResourceQuota metrics (temporary)
+			err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("get-file-content-rs", namespace, "appstudio-crds-spi")
+			Expect(err).NotTo(HaveOccurred())
+
 			if !CurrentSpecReport().Failed() {
 				Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 			}
 		})
 
-		It("creates RemoteSecret with a target that shares the same namespace", func() {
-			targets := []v1beta1.RemoteSecretTarget{{Namespace: namespace}}
-			remoteSecret, err = fw.AsKubeDeveloper.RemoteSecretController.CreateRemoteSecret(remoteSecretName, namespace, targets, v1.SecretTypeOpaque, map[string]string{})
+		It("creates RemoteSecret", func() {
+			targets := []rs.RemoteSecretTarget{{Namespace: namespace}}
+			labels := map[string]string{"appstudio.redhat.com/sp.host": "github.com"}
+
+			remoteSecret, err = fw.AsKubeDeveloper.RemoteSecretController.CreateRemoteSecret(remoteSecretName, namespace, targets, v1.SecretTypeBasicAuth, labels)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() bool {
@@ -60,9 +76,11 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("target-current-namespace"), f
 		})
 
 		It("creates upload secret", func() {
-			data := map[string]string{"a": "b", "c": "d"}
+			data := map[string]string{
+				"password": utils.GetEnv(constants.GITHUB_TOKEN_ENV, ""),
+			}
 
-			_, err = fw.AsKubeAdmin.RemoteSecretController.CreateUploadSecret(remoteSecret.Name, namespace, remoteSecret.Name, v1.SecretTypeOpaque, data)
+			_, err = fw.AsKubeAdmin.RemoteSecretController.CreateUploadSecret(remoteSecret.Name, namespace, remoteSecret.Name, v1.SecretTypeBasicAuth, data)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -90,6 +108,18 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("target-current-namespace"), f
 		It("checks if secret was created in target namespace", func() {
 			_, err = fw.AsKubeAdmin.CommonController.GetSecret(namespace, targetSecretName)
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("creates SPIFileContentRequest", func() {
+			SPIFcr, err = fw.AsKubeDeveloper.SPIController.CreateSPIFileContentRequest("gh-spi-filecontent-request", namespace, GithubPrivateRepoURL, GithubPrivateRepoFilePath)
+			Expect(err).NotTo(HaveOccurred())
+
+			SPIFcr, err = fw.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(SPIFcr.Name, namespace)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("SPIFileContentRequest should be in Delivered phase and content should be provided", func() {
+			fw.AsKubeDeveloper.SPIController.IsSPIFileContentRequestInDeliveredPhase(SPIFcr)
 		})
 	})
 })
