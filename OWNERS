@@ -1,4 +1,4 @@
-approvers:
+reviewers:
 - rhopp
 - flacatus
 - psturc
@@ -15,3 +15,10 @@ approvers:
 - Dannyb48
 - pmacik
 - siddardh-ra
+
+approvers:
+- rhopp
+- flacatus
+- jkopriva
+- Dannyb48
+- psturc
