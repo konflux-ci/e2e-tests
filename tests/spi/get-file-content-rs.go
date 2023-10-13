@@ -80,9 +80,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "get-file-content-rs"), fu
 				"password": utils.GetEnv(constants.GITHUB_TOKEN_ENV, ""),
 			}
 
-			s := fw.AsKubeDeveloper.RemoteSecretController.BuildSecret(remoteSecret.Name, v1.SecretTypeBasicAuth, data)
-
-			_, err = fw.AsKubeAdmin.CommonController.CreateSecret(namespace, s)
+			_, err = fw.AsKubeAdmin.RemoteSecretController.CreateUploadSecret(remoteSecret.Name, namespace, remoteSecret.Name, v1.SecretTypeBasicAuth, data)
 			Expect(err).NotTo(HaveOccurred())
 		})
 

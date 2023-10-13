@@ -4,6 +4,7 @@ import (
 	"context"
 
 	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -26,6 +27,30 @@ func (s *RemoteSecretController) CreateRemoteSecret(name, namespace string, targ
 	}
 
 	remoteSecret.Spec.Targets = targets
+
+	err := s.KubeRest().Create(context.TODO(), &remoteSecret)
+	if err != nil {
+		return nil, err
+	}
+	return &remoteSecret, nil
+}
+
+// CreateRemoteSecretWithLabels creates a RemoteSecret object with specified labels
+func (s *RemoteSecretController) CreateRemoteSecretWithLabels(name, namespace string, targetSecretName string, labels map[string]string) (*rs.RemoteSecret, error) {
+	remoteSecret := rs.RemoteSecret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Spec: rs.RemoteSecretSpec{
+			Secret: rs.LinkableSecretSpec{
+				Name: targetSecretName,
+			},
+		},
+	}
+
+	remoteSecret.ObjectMeta.Labels = labels
 
 	err := s.KubeRest().Create(context.TODO(), &remoteSecret)
 	if err != nil {
@@ -63,21 +88,26 @@ func (s *RemoteSecretController) GetTargetSecretName(targets []rs.TargetStatus, 
 	return targetSecretName
 }
 
-// BuildSecret returns a specific secret for remote secret usage
-func (s *RemoteSecretController) BuildSecret(remoteSecretName string, secretType v1.SecretType, data map[string]string) *v1.Secret {
-	secret := &v1.Secret{
+// CreateUploadSecret creates an Upload secret object to inject data in a Remote Secret
+func (s *RemoteSecretController) CreateUploadSecret(name, namespace string, remoteSecretName string, secretType v1.SecretType, stringData map[string]string) (*corev1.Secret, error) {
+	uploadSecret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-secret",
+			Name:      name,
+			Namespace: namespace,
 			Labels: map[string]string{
-				"appstudio.redhat.com/upload-secret": "remotesecret",
+				rs.UploadSecretLabel: "remotesecret",
 			},
 			Annotations: map[string]string{
-				"appstudio.redhat.com/remotesecret-name": remoteSecretName,
+				rs.RemoteSecretNameAnnotation: remoteSecretName,
 			},
 		},
 		Type:       secretType,
-		StringData: data,
+		StringData: stringData,
 	}
 
-	return secret
+	err := s.KubeRest().Create(context.TODO(), &uploadSecret)
+	if err != nil {
+		return nil, err
+	}
+	return &uploadSecret, nil
 }

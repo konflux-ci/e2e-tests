@@ -114,9 +114,8 @@ contexts:
 
 		It("creates upload secret", func() {
 			data := map[string]string{"a": "b", "c": "d"}
-			s := fw.AsKubeDeveloper.RemoteSecretController.BuildSecret(remoteSecret.Name, v1.SecretTypeOpaque, data)
 
-			_, err = fw.AsKubeAdmin.CommonController.CreateSecret(namespace, s)
+			_, err = fw.AsKubeAdmin.RemoteSecretController.CreateUploadSecret(remoteSecret.Name, namespace, remoteSecret.Name, v1.SecretTypeOpaque, data)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
