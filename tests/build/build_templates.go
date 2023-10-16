@@ -292,6 +292,13 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 								{
 									Name:           componentNames[i],
 									ContainerImage: imageWithDigest,
+									Source: v1alpha1.ComponentSource{
+										ComponentSourceUnion: v1alpha1.ComponentSourceUnion{
+											GitSource: &v1alpha1.GitSource{
+												URL: gitUrl,
+											},
+										},
+									},
 								},
 							},
 						},
