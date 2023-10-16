@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"k8s.io/apimachinery/pkg/api/meta"
 
 	"github.com/codeready-toolchain/api/api/v1alpha1"
 
@@ -123,32 +125,33 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 		It("checks for deploymentTargetClaim after Ephemeral env has been created", func() {
 			Eventually(func() error {
 				dtcl, err = f.AsKubeDeveloper.GitOpsController.GetDeploymentTargetClaimsList(testNamespace)
-				if dtcl.Items == nil {
-					return fmt.Errorf("DeploymentTargetClaim is nil.")
+				Expect(err).ToNot(HaveOccurred())
+				if len(dtcl.Items) == 0 {
+					return fmt.Errorf("No DeploymentTargetClaim is found.")
 				}
-				if dtcl.Items[0].Status.Phase != phaseDTC {
-					return fmt.Errorf("DeploymentTargetClaimPhase is: " + string(dtcl.Items[0].Status.Phase) + " Expected: " + string(phaseDTC))
+				if !reflect.ValueOf(dtcl.Items[0].Status).IsZero() && dtcl.Items[0].Status.Phase != phaseDTC {
+					return fmt.Errorf("DeploymentTargetClaimPhase is not yet equal to the expected phase: " + string(phaseDTC))
 				}
 				if dtcl.Items[0].Spec.DeploymentTargetClassName == "" {
 					return fmt.Errorf("deploymentTargetClassName field within deploymentTargetClaim is empty.")
 				}
 				return err
 			}, time.Minute*1, time.Second*1).Should(Succeed(), fmt.Sprintf("timed out checking DeploymentTargetClaim after Ephemeral Environment %s was created ", ephemeralEnvironment.Name))
-			Expect(err).ToNot(HaveOccurred())
+
 		})
 
 		It("checks for spaceRequest after Ephemeral env has been created", func() {
 			Eventually(func() error {
 				sr, err = f.AsKubeAdmin.GitOpsController.GetSpaceRequests(testNamespace)
-				if sr.Items == nil {
-					return fmt.Errorf("Space request is nil.")
+				Expect(err).ToNot(HaveOccurred())
+				if len(sr.Items) == 0 {
+					return fmt.Errorf("No Space request is found.")
 				}
-				if sr.Items[0].Status.Conditions[0].Type != v1alpha1.ConditionType("Ready") {
-					return fmt.Errorf("Status condition for Space request is: " + string(sr.Items[0].Status.Conditions[0].Type) + " Expected: Ready")
+				if sr.Items[0].Status.Conditions != nil && sr.Items[0].Status.Conditions[0].Type != v1alpha1.ConditionType("Ready") {
+					return fmt.Errorf("Status condition for Space request is not yet equal to the expected type: Ready")
 				}
 				return err
 			}, time.Minute*1, time.Second*1).Should(Succeed(), fmt.Sprintf("timed out checking GitOpsDeploymentManagedEnvironment after Ephemeral Environment was created %s", ephemeralEnvironment.Name))
-			Expect(err).ToNot(HaveOccurred())
 			Expect(sr.Items[0].Spec.TierName).ToNot(BeEmpty())
 			Expect(sr.Items[0].Status.NamespaceAccess).ToNot(BeEmpty())
 		})
@@ -162,7 +165,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 		It("checks for deploymentTarget after Ephemeral env has been created", func() {
 			Eventually(func() error {
 				dtl, err = f.AsKubeAdmin.GitOpsController.GetDeploymentTargetsList(testNamespace)
-				if dtl.Items == nil {
+				Expect(err).ToNot(HaveOccurred())
+				if len(dtl.Items) == 0 {
 					return fmt.Errorf("No DeploymentTargets found, deploymentTargetList is nil.")
 				}
 				if dtl.Items[0].Spec.DeploymentTargetClassName == "" {
@@ -171,40 +175,47 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 				if &dtl.Items[0].Spec.KubernetesClusterCredentials == kcc {
 					return fmt.Errorf("KubernetesClusterCredentials within DeploymentTarget are empty.")
 				}
-				if dtl.Items[0].Status.Phase != phaseDT {
-					return fmt.Errorf("DeploymentTargetPhase is: " + string(dtl.Items[0].Status.Phase) + " Expected: " + string(phaseDT))
+				if !reflect.ValueOf(dtl.Items[0].Status).IsZero() && dtl.Items[0].Status.Phase != phaseDT {
+					return fmt.Errorf("DeploymentTargetPhase is not yet equal to the expected phase: " + string(phaseDT))
 				}
 				return err
 			}, time.Minute*1, time.Second*1).Should(Succeed(), fmt.Sprintf("timed out checking DeploymentTarget after Ephemeral Environment %s was created ", ephemeralEnvironment.Name))
-			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("checks for GitOpsDeploymentManagedEnvironment after Ephemeral env has been created", func() {
 			Eventually(func() error {
 				godmel, err = f.AsKubeAdmin.GitOpsController.GetGitOpsDeploymentManagedEnvironmentList(testNamespace)
-				if godmel.Items == nil {
-					return fmt.Errorf("No GitOpsDeploymentManagedEnvironments found, GitOpsDeploymentManagedEnvironmentList is nil.")
+				Expect(err).ToNot(HaveOccurred())
+				if len(godmel.Items) == 0 {
+					return fmt.Errorf("No GitOpsDeploymentManagedEnvironments found, GitOpsDeploymentManagedEnvironmentList is empty.")
 				}
-				if godmel.Items[0].Status.Conditions[0].Type != "ConnectionInitializationSucceeded" {
-					return fmt.Errorf("Status condition for GitOpsDeploymentManagedEnvironment is: " + string(godmel.Items[0].Status.Conditions[0].Type) + " Expected: ConnectionInitializationSucceeded")
+				if godmel.Items[0].Status.Conditions != nil && !meta.IsStatusConditionTrue(godmel.Items[0].Status.Conditions, "ConnectionInitializationSucceeded") {
+					return fmt.Errorf("The GitOpsDeploymentManagedEnvironment doesn't have the ConnectionInitializationSucceeded status condition set to true.")
 				}
 				return err
 			}, time.Minute*1, time.Second*1).Should(Succeed(), fmt.Sprintf("timed out checking GitOpsDeploymentManagedEnvironment after Ephemeral Environment was created %s", ephemeralEnvironment.Name))
 			Expect(godmel.Items[0].Spec.ClusterCredentialsSecret).ToNot(BeEmpty())
 			Expect(godmel.Items[0].Spec.APIURL).ToNot(BeEmpty())
 			Expect(godmel.Items[0].Spec.AllowInsecureSkipTLSVerify).ToNot(BeNil())
-			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("checks for GitOpsDeployments after Ephemeral env has been created", func() {
-			godl, err = f.AsKubeAdmin.GitOpsController.ListAllGitOpsDeployments(testNamespace)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(godl.Items).ToNot(BeNil())
+			Eventually(func() error {
+				godl, err = f.AsKubeAdmin.GitOpsController.ListAllGitOpsDeployments(testNamespace)
+				Expect(err).ToNot(HaveOccurred())
+				if len(godl.Items) == 0 {
+					return fmt.Errorf("No GitOpsDeployments found.")
+				}
+				if !reflect.ValueOf(godl.Items[0].Status).IsZero() && reflect.ValueOf(godl.Items[0].Status.ReconciledState).IsZero() {
+					return fmt.Errorf("ReconciledState doesn't exist yet for GitOpsDeployment.")
+				}
+				return err
+			}, time.Minute*1, time.Second*1).Should(Succeed(), fmt.Sprintf("timed out checking GitOpsDeployments after Ephemeral Environment was created %s", ephemeralEnvironment.Name))
+
 			Expect(godl.Items[0].Spec.Source.RepoURL).ToNot(BeEmpty())
 			Expect(godl.Items[0].Spec.Source.Path).ToNot(BeEmpty())
 			Expect(godl.Items[0].Spec.Source.TargetRevision).To(Equal("main"))
 			Expect(godl.Items[0].Spec.Type).To(Equal("automated"))
-			Expect(godl.Items[0].Status.ReconciledState).ToNot(BeNil())
 		})
 
 		It("checks for SEB after Ephemeral env has been created", func() {
