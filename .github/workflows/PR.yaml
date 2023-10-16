@@ -45,4 +45,16 @@ jobs:
       - name: Setup Golang
         uses: actions/setup-go@v3
       - name: Run unit tests
-        run: go test -v ./pkg/... ./magefiles/...
+        run: make test/unit
+
+  check_vendor:
+      name: Check that vendor directory is up-to-date
+      runs-on: ubuntu-latest
+      steps:
+        - name: Check out code into the Go module directory
+          uses: actions/checkout@v3
+          with:
+            fetch-depth: 0
+        - name: Setup Golang
+          uses: actions/setup-go@v3
+        - run: make vendor/check || echo "\nERROR - inconsistency in vendor folder detected. Run 'make vendor/fix' and commit the changes" || return 1
