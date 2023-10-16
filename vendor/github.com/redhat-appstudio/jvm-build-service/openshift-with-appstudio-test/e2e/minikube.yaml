@@ -1,0 +1,9 @@
+commons:
+  - "commons-collections:commons-collections:3.2.2"
+  - "org.apache.commons:commons-lang3:3.12.0"
+build-systems:
+  - "org.xerial.snappy:snappy-java:1.1.8.4"
+  - "org.lz4:lz4-java:1.8.0"
+  - "org.lz4:lz4-pure-java:1.8.0"
+test-repos:
+  - "io.github.jvm-build-service-test-data.maven-version-from-parent-enforce-version:maven-version-from-parent-enforce-version:1.0"

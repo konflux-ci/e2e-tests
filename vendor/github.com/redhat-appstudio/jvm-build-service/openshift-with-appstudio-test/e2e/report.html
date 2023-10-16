@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Name}} Status</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-iYQeCzEYFbKjA/T2uDLTpkwGzCiq6soy8tYaI1GyVh/UjpbCx/TYkiZhlZB6+fzT" crossorigin="anonymous">
+</head>
+<body>
+<h1>{{.Name}} Build Status</h1>
+
+<p/>
+<ul class="nav nav-tabs" id="myTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="status-tab" data-bs-toggle="tab" data-bs-target="#status" type="button" role="tab" aria-controls="home" aria-selected="true">Overall Status</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="ab-tab" data-bs-toggle="tab" data-bs-target="#ab" type="button" role="tab" aria-controls="profile" aria-selected="false">Artifact Builds</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="db-tab" data-bs-toggle="tab" data-bs-target="#db" type="button" role="tab" aria-controls="contact" aria-selected="false">Dependency Builds</button>
+    </li>
+</ul>
+<div class="tab-content" id="myTabContent">
+    <div class="tab-pane fade show active" id="status" role="tabpanel" aria-labelledby="status-tab">
+        <div class="card" style="width: 18rem;">
+            <div class="card-body">
+                <h5 class="card-title">ArtifactBuild <span class="badge bg-secondary">{{.Artifact.Total}}</span></h5>
+                <ul class="list-group">
+                    <li class="list-group-item"><span class="badge bg-primary">{{.Artifact.Complete}}</span> Complete</li>
+                    <li class="list-group-item"><span class="badge bg-danger">{{.Artifact.Failed}}</span> Failed</li>
+                    <li class="list-group-item"><span class="badge bg-warning">{{.Artifact.Missing}}</span> Missing</li>
+                    <li class="list-group-item"><span class="badge bg-secondary">{{.Artifact.Other}}</span> Other</li>
+                </ul>
+            </div>
+        </div>
+        <p/>
+        <div class="card" style="width: 18rem;">
+            <div class="card-body">
+                <h5 class="card-title">DependencyBuild <span class="badge bg-secondary">{{.Dependency.Total}}</span></h5>
+                <ul class="list-group">
+                    <li class="list-group-item"><span class="badge bg-primary">{{.Dependency.Complete}}</span> Complete</li>
+                    <li class="list-group-item"><span class="badge bg-danger">{{.Dependency.Failed}}</span> Failed</li>
+                    <li class="list-group-item"><span class="badge bg-warning">{{.Dependency.Contaminated}}</span> Contaminated</li>
+                    <li class="list-group-item"><span class="badge bg-warning">{{.Dependency.Building}}</span> Building</li>
+                    <li class="list-group-item"><span class="badge bg-secondary">{{.Dependency.Other}}</span> Other</li>
+                </ul>
+            </div>
+        </div>
+        <div class="card" style="width: 18rem;">
+            <div class="card-body">
+                <h5 class="card-title">Other Logs</span></h5>
+                {{ range $.CacheLogs }}
+                <li class="list-group-item"><a href="{{ . }}" target="_blank">Cache</a></li>
+                {{ end }}
+                {{ range $.OperatorLogs }}
+                <li class="list-group-item"><a href="{{ . }}" target="_blank">Operator</a></li>
+                {{ end }}
+            </div>
+        </div>
+
+    </div>
+    <div class="tab-pane fade" id="ab" role="tabpanel" aria-labelledby="ab-tab">
+        <p>
+            <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target=".abStateArtifactBuildComplete" aria-expanded="false" >Toggle Complete</button>
+            <button class="btn btn-warning" type="button" data-bs-toggle="collapse" data-bs-target=".abStateArtifactBuildMissing" aria-expanded="false" >Toggle Missing</button>
+            <button class="btn btn-danger" type="button" data-bs-toggle="collapse" data-bs-target=".abStateArtifactBuildFailed" aria-expanded="false" >Toggle Failed</button>
+        </p>
+        <p/>
+        <div class="accordion" id="artifactAccordion">
+            {{ range $i, $e := $.Artifact.Instances }}
+                <div class="accordion-item collapse show abState{{ $e.State }}">
+                    <h2 class="accordion-header" id="headingAbr{{ $i }}">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#body{{ $i }}" aria-expanded="true" aria-controls="body{{ $i }}">
+                            {{ if eq "ArtifactBuildComplete" $e.State }}<span class="badge bg-primary">Complete</span>
+                            {{ else if eq "ArtifactBuildFailed" $e.State }}<span class="badge bg-danger">Failed</span>
+                            {{ else if eq "ArtifactBuildMissing" $e.State }}<span class="badge bg-warning">Missing</span>
+                            {{ else}}<span class="badge bg-secondary">{{ $e.State }}</span>{{ end }}
+                            &nbsp;{{ $e.Name }}
+                        </button>
+                    </h2>
+                    <div id="body{{ $i }}" class="accordion-collapse collapse" aria-labelledby="headingAbr{{ $i }}">
+                        <div class="accordion-body">
+                            <ul class="list-group">
+                                {{ range $e.Logs }}
+                                <li class="list-group-item"><a href="{{ . }}" target="_blank">{{ . }}</a></li>
+                                {{ end }}
+                            </ul>
+                            <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#yamlPopoutAb{{ $i }}" aria-controls="yamlPopoutAb{{ $i }}">
+                                Show YAML
+                            </button>
+                            <div class="offcanvas offcanvas-end" tabindex="-1" id="yamlPopoutAb{{ $i }}">
+                                <div class="offcanvas-body">
+                                    <pre>{{ $e.Yaml }}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {{ end }}
+        </div>
+
+
+    </div>
+    <div class="tab-pane fade" id="db" role="tabpanel" aria-labelledby="db-tab">
+        <p>
+            <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target=".dbStateDependencyBuildStateComplete" aria-expanded="false" >Toggle Complete</button>
+            <button class="btn btn-warning" type="button" data-bs-toggle="collapse" data-bs-target=".dbStateDependencyBuildStateContaminated" aria-expanded="false" >Toggle Contaminated</button>
+            <button class="btn btn-danger" type="button" data-bs-toggle="collapse" data-bs-target=".dbStateDependencyBuildStateFailed" aria-expanded="false" >Toggle Failed</button>
+            <button class="btn btn-danger" type="button" data-bs-toggle="collapse" data-bs-target=".dbStateDependencyBuildStateBuilding" aria-expanded="false" >Toggle Building</button>
+        </p>
+        <p/>
+        <div class="accordion" id="dependencyAccordion">
+            {{ range $i, $e := $.Dependency.Instances }}
+            <div class="accordion-item collapse show dbState{{ $e.State }}">
+                <h2 class="accordion-header" id="headingDb{{ $i }}">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#bodyDb{{ $i }}" aria-expanded="true" aria-controls="bodyDb{{ $i }}">
+                        {{ if eq "DependencyBuildStateComplete" $e.State }}<span class="badge bg-primary">Complete</span>
+                        {{ else if eq "DependencyBuildStateFailed" $e.State }}<span class="badge bg-danger">Failed</span>
+                        {{ else if eq "DependencyBuildStateContaminated" $e.State }}<span class="badge bg-warning">Contaminated</span>
+                        {{ else if eq "DependencyBuildStateBuilding" $e.State }}<span class="badge bg-warning">Building</span>
+                        {{ else}}<span class="badge bg-secondary">{{ $e.State }}</span>{{ end }}
+                        &nbsp;{{ $e.Name }}
+                    </button>
+                </h2>
+                <div id="bodyDb{{ $i }}" class="accordion-collapse collapse" aria-labelledby="headingDb{{ $i }}">
+                    <div class="accordion-body">
+                        <ul class="list-group">
+                            <li class="list-group-item"><a href="{{ $e.GitUrl }}" target="_blank">{{ $e.GitUrl }}</a></li>
+                            {{ range $e.Logs }}
+                            <li class="list-group-item"><a href="{{ . }}" target="_blank">{{ . }}</a></li>
+                            {{ end }}
+                        </ul>
+                        <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#yamlPopoutDb{{ $i }}" aria-controls="yamlPopoutDb{{ $i }}">
+                            Show YAML
+                        </button>
+                        <div class="offcanvas offcanvas-end" tabindex="-1" id="yamlPopoutDb{{ $i }}">
+                            <div class="offcanvas-body">
+                                <pre>{{ $e.Yaml }}</pre>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            {{ end }}
+        </div>
+
+    </div>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-u1OknCvxWvY5kfmNBILK2hRnQC3Pr17a+RTT6rIHI7NnikvbZlHgTPOOmMi466C8" crossorigin="anonymous"></script>
+</body>
+</html>
