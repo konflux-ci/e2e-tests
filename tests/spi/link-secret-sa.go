@@ -145,6 +145,14 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "link-secret-sa"), func() 
 			It("checks if service account was linked to the secret", func() {
 				// get the service account name associated with the binding
 				// this is a workaround to get the managed service account name that is generated
+				Eventually(func() bool {
+					binding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(binding.Name, namespace)
+					Expect(err).NotTo(HaveOccurred())
+					serviceAccountNames := binding.Status.ServiceAccountNames
+
+					return len(serviceAccountNames) != 0
+				}, 1*time.Minute, 5*time.Second).Should(BeTrue(), fmt.Sprintf("The SPIAccessTokenBinding %s is not linked to any service account", binding.GetName()))
+
 				serviceAccountNames := binding.Status.ServiceAccountNames
 				Expect(serviceAccountNames).NotTo(BeEmpty())
 				saName := serviceAccountNames[0]
