@@ -111,3 +111,28 @@ func (s *RemoteSecretController) CreateUploadSecret(name, namespace string, remo
 	}
 	return &uploadSecret, nil
 }
+
+// GetImageRepositoryRemoteSecret returns the requested image pull RemoteSecret object
+func (s *RemoteSecretController) GetImageRepositoryRemoteSecret(suffix, applicationName, componentName, namespace string) (*rs.RemoteSecret, error) {
+	namespacedName := types.NamespacedName{
+		Name:      componentName + suffix,
+		Namespace: namespace,
+	}
+
+	remoteSecret := rs.RemoteSecret{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"appstudio.redhat.com/application": applicationName,
+				"appstudio.redhat.com/component":   componentName,
+				"appstudio.redhat.com/internal":    "true",
+			},
+		},
+	}
+
+	err := s.KubeRest().Get(context.TODO(), namespacedName, &remoteSecret)
+	if err != nil {
+		return nil, err
+	}
+	return &remoteSecret, nil
+
+}

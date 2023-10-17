@@ -8,15 +8,14 @@ import (
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GetSnapshotEnvironmentBinding returns the SnapshotEnvironmentBinding related to the given App and Environment
 func (s *SuiteController) GetSnapshotEnvironmentBinding(applicationName string, namespace string, environment *appservice.Environment) (*appservice.SnapshotEnvironmentBinding, error) {
 	snapshotEnvironmentBindingList := &appservice.SnapshotEnvironmentBindingList{}
-	opts := []client.ListOption{
-		client.InNamespace(namespace),
+	opts := []rclient.ListOption{
+		rclient.InNamespace(namespace),
 	}
 
 	err := s.KubeRest().List(context.TODO(), snapshotEnvironmentBindingList, opts...)

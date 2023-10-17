@@ -90,7 +90,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
 
 				for _, compDetected := range cdq.Status.ComponentDetected {
-					c, err := kubeadminClient.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, false, map[string]string{})
+					c, err := kubeadminClient.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, false, map[string]string{}, true)
 					Expect(err).ShouldNot(HaveOccurred())
 					componentNames = append(componentNames, c.Name)
 				}
@@ -103,7 +103,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
 
 			for _, compDetected := range cdq.Status.ComponentDetected {
-				c, err := kubeadminClient.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, false, map[string]string{})
+				c, err := kubeadminClient.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, false, map[string]string{}, true)
 				Expect(err).ShouldNot(HaveOccurred())
 				symlinkComponentName = c.Name
 			}

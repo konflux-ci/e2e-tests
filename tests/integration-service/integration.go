@@ -267,7 +267,7 @@ func createComponent(f framework.Framework, testNamespace, applicationName strin
 	Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
 
 	for _, compDetected := range cdq.Status.ComponentDetected {
-		originalComponent, err = f.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, true, map[string]string{})
+		originalComponent, err = f.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, true, map[string]string{}, true)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(originalComponent).NotTo(BeNil())
 		componentName = originalComponent.Name

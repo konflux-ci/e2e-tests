@@ -974,7 +974,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 
 			for _, compStub := range cdq.Status.ComponentDetected {
 				startTimeForComponent := time.Now()
-				component, err := framework.AsKubeDeveloper.HasController.CreateComponent(compStub.ComponentStub, usernamespace, "", "", ApplicationName, pipelineSkipInitialChecks, map[string]string{})
+				component, err := framework.AsKubeDeveloper.HasController.CreateComponent(compStub.ComponentStub, usernamespace, "", "", ApplicationName, pipelineSkipInitialChecks, map[string]string{}, true)
 				componentCreationTime := time.Since(startTimeForComponent)
 
 				if err != nil {

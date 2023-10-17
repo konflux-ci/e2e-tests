@@ -212,7 +212,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 					if componentSpec.GitSourceUrl != "" {
 						It(fmt.Sprintf("creates component %s (private: %t) from git source %s", componentSpec.Name, componentSpec.Private, componentSpec.GitSourceUrl), func() {
 							for _, compDetected := range cdq.Status.ComponentDetected {
-								c, err := fw.AsKubeDeveloper.HasController.CreateComponent(compDetected.ComponentStub, namespace, "", secret, appTest.ApplicationName, true, map[string]string{})
+								c, err := fw.AsKubeDeveloper.HasController.CreateComponent(compDetected.ComponentStub, namespace, "", secret, appTest.ApplicationName, true, map[string]string{}, true)
 								Expect(err).NotTo(HaveOccurred())
 								Expect(c.Name).To(Equal(compDetected.ComponentStub.ComponentName))
 								//Expect(supportedRuntimes).To(ContainElement(compDetected.ProjectType), "unsupported runtime used for multi component tests")

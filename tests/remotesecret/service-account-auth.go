@@ -15,7 +15,7 @@ import (
 )
 
 /*
- * Component: spi
+ * Component: remote secret
  * Description: SVPI-558 - Test all the options of the authz of remote secret target deployment
  * Test case: Authentication using Service Account
  */

@@ -277,7 +277,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 
 		It("create Red Hat AppStudio Quarkus component", func() {
 			compDetected.ComponentStub.ComponentName = componentName
-			componentObj, err = fw.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, fw.UserNamespace, "", "", applicationName, true, map[string]string{})
+			componentObj, err = fw.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, fw.UserNamespace, "", "", applicationName, true, map[string]string{}, true)
 			Expect(err).NotTo(HaveOccurred())
 		})
 

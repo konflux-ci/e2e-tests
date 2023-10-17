@@ -135,7 +135,7 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 }
 
 // Universal method to create a component in the kubernetes clusters.
-func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string) (*appservice.Component, error) {
+func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string, shouldGenerateImage bool) (*appservice.Component, error) {
 	componentObject := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			// adding default label because of the BuildPipelineSelector in build test
@@ -161,7 +161,7 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 	}
 	if outputContainerImage != "" {
 		componentObject.Spec.ContainerImage = outputContainerImage
-	} else if componentObject.Annotations["image.redhat.com/generate"] == "" {
+	} else if componentObject.Annotations["image.redhat.com/generate"] == "" && shouldGenerateImage {
 		// Generate default public image repo since nothing is mentioned specifically
 		componentObject.Annotations = utils.MergeMaps(componentObject.Annotations, constants.ImageControllerAnnotationRequestPublicRepo)
 	}
@@ -173,7 +173,8 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 		componentObject = h.refreshComponentForErrorDebug(componentObject)
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
 	}
-	if err := utils.WaitUntil(h.CheckForImageAnnotation(componentObject), time.Minute*5); err != nil {
+
+	if shouldGenerateImage && utils.WaitUntil(h.CheckForImageAnnotation(componentObject), time.Minute*5) != nil {
 		componentObject = h.refreshComponentForErrorDebug(componentObject)
 		return nil, fmt.Errorf("timed out when waiting for image-controller annotations to be updated on component %s in namespace %s. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
 	}
