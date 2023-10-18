@@ -9,6 +9,9 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 
+	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
+	intgteststat "github.com/redhat-appstudio/integration-service/pkg/integrationteststatus"
+
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -37,6 +40,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	var err error
 
 	var applicationName, componentName, testNamespace string
+	var integrationTestScenario *integrationv1alpha1.IntegrationTestScenario
 	var timeout, interval time.Duration
 	var originalComponent *appstudioApi.Component
 	var pipelineRun *v1beta1.PipelineRun
@@ -54,7 +58,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			applicationName = createApp(*f, testNamespace)
 			componentName, originalComponent = createComponent(*f, testNamespace, applicationName)
-			_, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, testNamespace, BundleURL, InPipelineName)
+			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, testNamespace, BundleURL, InPipelineName)
 			// create a integrationTestScenario v1beta1 version works also here
 			// ex: _, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario_beta1(applicationName, testNamespace, gitURL, revision, pathInRepo)
 			Expect(err).ShouldNot(HaveOccurred())
@@ -91,6 +95,21 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			It("checks if all of the integrationPipelineRuns passed", Label("slow"), func() {
 				Expect(f.AsKubeDeveloper.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshot)).To(Succeed())
+			})
+
+			It("checks if the passed status of integration test is reported in the Snapshot", func() {
+				Eventually(func() error {
+					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					statusDetail, err := f.AsKubeDeveloper.IntegrationController.GetIntegrationTestStatusDetailFromSnapshot(snapshot, integrationTestScenario.Name)
+					Expect(err).ToNot(HaveOccurred())
+
+					if statusDetail.Status != intgteststat.IntegrationTestStatusTestPassed {
+						return fmt.Errorf("test status doesn't have expected value %s", intgteststat.IntegrationTestStatusTestPassed)
+					}
+					return nil
+				}, timeout, interval).Should(Succeed())
 			})
 		})
 
@@ -166,7 +185,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			env, err = f.AsKubeAdmin.GitOpsController.CreatePocEnvironment(EnvironmentName, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
-			_, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, testNamespace, BundleURLFail, InPipelineNameFail)
+			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, testNamespace, BundleURLFail, InPipelineNameFail)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
@@ -199,6 +218,21 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		It("checks if all of the integrationPipelineRuns finished", Label("slow"), func() {
 			Expect(f.AsKubeDeveloper.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshot)).To(Succeed())
+		})
+
+		It("checks if the failed status of integration test is reported in the Snapshot", func() {
+			Eventually(func() error {
+				snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				statusDetail, err := f.AsKubeDeveloper.IntegrationController.GetIntegrationTestStatusDetailFromSnapshot(snapshot, integrationTestScenario.Name)
+				Expect(err).ToNot(HaveOccurred())
+
+				if statusDetail.Status != intgteststat.IntegrationTestStatusTestFail {
+					return fmt.Errorf("test status doesn't have expected value %s", intgteststat.IntegrationTestStatusTestFail)
+				}
+				return nil
+			}, timeout, interval).Should(Succeed())
 		})
 
 		It("checks if snapshot is marked as failed", FlakeAttempts(3), func() {
