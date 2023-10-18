@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/tls"
 	"encoding/base64"
@@ -13,6 +15,8 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -452,4 +456,123 @@ func CreateKubeconfigFileForRestConfig(restConfig rest.Config) ([]byte, error) {
 		return []byte{}, nil
 	}
 	return kubeconfiString, nil
+}
+
+func GetFileNamesFromDir(dirPath string) ([]string, error) {
+	var filesInDir []string
+	dir, err := os.Open(dirPath) // nolint:gosec
+	if err != nil {
+		return nil, fmt.Errorf("error opening directory: %v", err)
+	}
+	defer dir.Close()
+
+	files, err := dir.Readdir(-1)
+	if err != nil {
+		return nil, fmt.Errorf("error reading directory: %v", err)
+	}
+	for _, file := range files {
+		filesInDir = append(filesInDir, file.Name())
+	}
+	return filesInDir, nil
+}
+
+func CheckFileExistsInDir(rootDir, filename string) (bool, error) {
+	files, err := GetFileNamesFromDir(rootDir)
+	if err != nil {
+		return false, fmt.Errorf("error getting files: %v", err)
+	}
+	for _, filen := range files {
+		if filen == filename {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func Untar(dst, tarPath string) error {
+	tarFile, err := os.Open(tarPath) // nolint:gosec
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = tarFile.Close()
+	}()
+
+	absPath, err := filepath.Abs(dst)
+	if err != nil {
+		return err
+	}
+
+	tr := tar.NewReader(tarFile)
+	if strings.HasSuffix(tarPath, ".gz") || strings.HasSuffix(tarPath, ".gzip") {
+		gz, err := gzip.NewReader(tarFile)
+		if err != nil {
+			return err
+		}
+		defer gz.Close()
+		tr = tar.NewReader(gz)
+	}
+
+	// untar each segment
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		// determine proper file path info
+		fInfo := hdr.FileInfo()
+		fileName := hdr.Name
+		if filepath.IsAbs(fileName) {
+			fmt.Printf("removing / prefix from %s\n", fileName)
+			fileName, err = filepath.Rel("/", fileName)
+			if err != nil {
+				return err
+			}
+		}
+		absFileName := filepath.Join(absPath, fileName) // nolint:gosec
+
+		if fInfo.Mode().IsDir() {
+			if err := os.MkdirAll(absFileName, 0755); err != nil { // nolint:gosec
+				return err
+			}
+			continue
+		}
+
+		// create new file with original file mode
+		file, err := os.OpenFile(absFileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, fInfo.Mode().Perm()) // nolint:gosec
+		if err != nil {
+			return err
+		}
+		fmt.Printf("x %s\n", absFileName)
+		n, cpErr := io.Copy(file, tr)                  // nolint:gosec
+		if closeErr := file.Close(); closeErr != nil { // close file immediately
+			return err
+		}
+		if cpErr != nil {
+			return cpErr
+		}
+		if n != fInfo.Size() {
+			return fmt.Errorf("unexpected bytes written: wrote %d, want %d", n, fInfo.Size())
+		}
+	}
+	return nil
+}
+
+func GetRepoName(repoUrl string) string {
+	return strings.Split(strings.TrimSuffix(repoUrl, ".git"), "/")[4]
+}
+
+func FilterSliceUsingPattern(pattern string, lString []string) []string {
+	var results []string
+	re := regexp.MustCompile(pattern)
+	for _, str := range lString {
+		if re.MatchString(str) {
+			results = append(results, str)
+		}
+	}
+	return results
 }
