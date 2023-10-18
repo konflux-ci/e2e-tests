@@ -292,6 +292,13 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 								{
 									Name:           componentNames[i],
 									ContainerImage: imageWithDigest,
+									Source: v1alpha1.ComponentSource{
+										ComponentSourceUnion: v1alpha1.ComponentSourceUnion{
+											GitSource: &v1alpha1.GitSource{
+												URL: gitUrl,
+											},
+										},
+									},
 								},
 							},
 						},
@@ -356,6 +363,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					"pipelines/enterprise-contract.yaml",
 					"pipelines/enterprise-contract-everything.yaml",
 					"pipelines/enterprise-contract-redhat.yaml",
+					"pipelines/enterprise-contract-redhat-no-hermetic.yaml",
 					"pipelines/enterprise-contract-slsa1.yaml",
 					"pipelines/enterprise-contract-slsa2.yaml",
 					"pipelines/enterprise-contract-slsa3.yaml",

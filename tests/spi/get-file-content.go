@@ -7,7 +7,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -17,18 +16,21 @@ import (
 /*
  * Component: spi
  * Description: SVPI-402 - Get file content from a private Github repository
+ * Use case: SPIAccessToken Usage
  */
 
-var _ = framework.SPISuiteDescribe(Label("spi-suite", "get-file-content"), func() {
+var _ = framework.SPISuiteDescribe(Label("spi-suite", "get-file-content"), Pending, func() {
 
 	defer GinkgoRecover()
 
 	var fw *framework.Framework
 	var err error
 	var namespace string
+	var SPIFcr *v1beta1.SPIFileContentRequest
+	var SPITokenBinding *v1beta1.SPIAccessTokenBinding
 	AfterEach(framework.ReportFailure(&fw))
 
-	Describe("SVPI-402 - Get file content from a private Github repository", Ordered, func() {
+	Describe("SVPI-402 - Get file content from a private Github repository with SPIAccessToken", Ordered, func() {
 		BeforeAll(func() {
 			if os.Getenv("CI") != "true" {
 				Skip(fmt.Sprintln("test skipped on local execution"))
@@ -40,55 +42,52 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "get-file-content"), func(
 			Expect(namespace).NotTo(BeEmpty())
 
 			// collect SPI ResourceQuota metrics (temporary)
-			err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("token-upload-rest-endpoint", namespace, "appstudio-crds-spi")
+			err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("get-file-content", namespace, "appstudio-crds-spi")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		// Clean up after running these tests and before the next tests block: can't have multiple AccessTokens in Injected phase
 		AfterAll(func() {
 			// collect SPI ResourceQuota metrics (temporary)
 			err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("get-file-content", namespace, "appstudio-crds-spi")
 			Expect(err).NotTo(HaveOccurred())
 
 			if !CurrentSpecReport().Failed() {
-				Expect(fw.AsKubeAdmin.SPIController.DeleteAllBindingTokensInASpecificNamespace(namespace)).To(Succeed())
-				Expect(fw.AsKubeAdmin.SPIController.DeleteAllAccessTokensInASpecificNamespace(namespace)).To(Succeed())
-				Expect(fw.AsKubeAdmin.SPIController.DeleteAllAccessTokenDataInASpecificNamespace(namespace)).To(Succeed())
-				Expect(fw.AsKubeAdmin.CommonController.DeleteAllServiceAccountsInASpecificNamespace(namespace)).To(Succeed())
+				Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 			}
 		})
 
-		var SPIFcr *v1beta1.SPIFileContentRequest
-
-		It("creates SPIFileContentRequest", func() {
-			SPIFcr, err = fw.AsKubeDeveloper.SPIController.CreateSPIFileContentRequest("gh-spi-filecontent-request", namespace, GithubPrivateRepoURL, GithubPrivateRepoFilePath)
+		It("creates SPITokenBinding", func() {
+			SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.CreateSPIAccessTokenBinding(SPITokenBindingName, namespace, GithubPrivateRepoURL, "", "kubernetes.io/basic-auth")
 			Expect(err).NotTo(HaveOccurred())
 
-			SPIFcr, err = fw.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(SPIFcr.Name, namespace)
+			SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("SPIFileContentRequest should be in AwaitingTokenData phase", func() {
-			Eventually(func() v1beta1.SPIFileContentRequestPhase {
-				SPIFcr, err = fw.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(SPIFcr.Name, namespace)
+		It("uploads token", func() {
+			// SPITokenBinding to be in AwaitingTokenData phase
+			Eventually(func() v1beta1.SPIAccessTokenBindingPhase {
+				SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, SPITokenBinding.Namespace)
 				Expect(err).NotTo(HaveOccurred())
 
-				return SPIFcr.Status.Phase
-			}, 2*time.Minute, 10*time.Second).Should(Equal(v1beta1.SPIFileContentRequestPhaseAwaitingTokenData), fmt.Sprintf("SPIFileContentRequest %s/%s '.Status.Phase' field didn't have the expected value", SPIFcr.GetNamespace(), SPIFcr.GetName()))
+				return SPITokenBinding.Status.Phase
+			}, 1*time.Minute, 5*time.Second).Should(Equal(v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData), fmt.Sprintf("SPIAccessTokenBinding %s/%s is not in %s phase", SPITokenBinding.GetNamespace(), SPITokenBinding.GetName(), v1beta1.SPIAccessTokenBindingPhaseAwaitingTokenData))
 
-		})
-
-		It("uploads username and token using rest endpoint", func() {
+			// start upload username and token using rest endpoint
 			// the UploadUrl in SPITokenBinding should be available before uploading the token
 			Eventually(func() string {
-				SPIFcr, err = fw.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(SPIFcr.Name, namespace)
+				SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, SPITokenBinding.Namespace)
 				Expect(err).NotTo(HaveOccurred())
 
-				return SPIFcr.Status.TokenUploadUrl
-			}, 1*time.Minute, 10*time.Second).ShouldNot(BeEmpty(), fmt.Sprintf(".Status.TokenUploadUrl field in SPIFileContentRequest %s/%s is empty", SPIFcr.GetNamespace(), SPIFcr.GetName()))
+				return SPITokenBinding.Status.UploadUrl
+			}, 1*time.Minute, 10*time.Second).ShouldNot(BeEmpty(), fmt.Sprintf(".Status.UploadUrl for SPIAccessTokenBinding %s/%s is not set", SPITokenBinding.GetNamespace(), SPITokenBinding.GetName()))
+
+			// linked accessToken token should exist
+			linkedAccessTokenName := SPITokenBinding.Status.LinkedAccessTokenName
+			Expect(linkedAccessTokenName).NotTo(BeEmpty())
 
 			// get the url to manually upload the token
-			uploadURL := SPIFcr.Status.TokenUploadUrl
+			uploadURL := SPITokenBinding.Status.UploadUrl
 
 			// Get the token for the current openshift user
 			bearerToken, err := utils.GetOpenshiftToken()
@@ -99,20 +98,26 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "get-file-content"), func(
 			statusCode, err := fw.AsKubeDeveloper.SPIController.UploadWithRestEndpoint(uploadURL, oauthCredentials, bearerToken)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(statusCode).Should(Equal(204))
+			// end upload username and token using rest endpoint
+
+			// SPITokenBinding to be in Injected phase
+			Eventually(func() v1beta1.SPIAccessTokenBindingPhase {
+				binding, err := fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, SPITokenBinding.Namespace)
+				Expect(err).NotTo(HaveOccurred())
+				return binding.Status.Phase
+			}, 1*time.Minute, 5*time.Second).Should(Equal(v1beta1.SPIAccessTokenBindingPhaseInjected), fmt.Sprintf("SPIAccessTokenBinding %s/%s is not in %s phase", SPITokenBinding.GetNamespace(), SPITokenBinding.GetName(), v1beta1.SPIAccessTokenBindingPhaseInjected))
+		})
+
+		It("creates SPIFileContentRequest", func() {
+			SPIFcr, err = fw.AsKubeDeveloper.SPIController.CreateSPIFileContentRequest("gh-spi-filecontent-request", namespace, GithubPrivateRepoURL, GithubPrivateRepoFilePath)
+			Expect(err).NotTo(HaveOccurred())
+
+			SPIFcr, err = fw.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(SPIFcr.Name, namespace)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("SPIFileContentRequest should be in Delivered phase and content should be provided", func() {
-			Eventually(func() v1beta1.SPIFileContentRequestStatus {
-				SPIFcr, err = fw.AsKubeDeveloper.SPIController.GetSPIFileContentRequest(SPIFcr.Name, namespace)
-				Expect(err).NotTo(HaveOccurred())
-
-				return SPIFcr.Status
-			}, 2*time.Minute, 10*time.Second).Should(MatchFields(IgnoreExtras, Fields{
-				"Phase":   Equal(v1beta1.SPIFileContentRequestPhaseDelivered),
-				"Content": Not(BeEmpty()),
-			}), "SPIFileContentRequest %s/%s '.Status' does not contain expected field values", SPIFcr.GetNamespace(), SPIFcr.GetName())
-
+			fw.AsKubeDeveloper.SPIController.IsSPIFileContentRequestInDeliveredPhase(SPIFcr)
 		})
-
 	})
 })

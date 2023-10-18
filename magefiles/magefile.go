@@ -42,6 +42,9 @@ var (
 	jobType                    = utils.GetEnv("JOB_TYPE", "")
 	reposToDeleteDefaultRegexp = "jvm-build|e2e-dotnet|build-suite|e2e|pet-clinic-e2e|test-app|e2e-quayio|petclinic|test-app|integ-app|^dockerfile-|new-|^python|my-app|^test-|^multi-component"
 	repositoriesWithWebhooks   = []string{"devfile-sample-hello-world", "hacbs-test-project"}
+	// determine whether CI will run tests that require to register SprayProxy
+	// in order to run tests that require PaC application
+	requiresSprayProxyRegistering bool
 )
 
 func (CI) parseJobSpec() error {
@@ -109,7 +112,6 @@ func (Local) PrepareCluster() error {
 	if err := BootstrapCluster(); err != nil {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
 	}
-
 	return nil
 }
 
@@ -222,8 +224,25 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
 	}
 
+	if requiresSprayProxyRegistering {
+		if err := registerPacServer(); err != nil {
+			os.Setenv(constants.SKIP_PAC_TESTS_ENV, "true")
+			if alertErr := HandleErrorWithAlert(err); alertErr != nil {
+				return alertErr
+			}
+		}
+	}
+
 	if err := RunE2ETests(); err != nil {
 		testFailure = true
+	}
+
+	if requiresSprayProxyRegistering {
+		if err := unregisterPacServer(); err != nil {
+			if alertErr := HandleErrorWithAlert(err); alertErr != nil {
+				klog.Warning(alertErr)
+			}
+		}
 	}
 
 	if err := ci.sendWebhook(); err != nil {
@@ -238,8 +257,8 @@ func (ci CI) TestE2E() error {
 }
 
 func RunE2ETests() error {
-	// added --output-interceptor-mode=none to mitigate RHTAPBUGS-34
-	return sh.RunV("ginkgo", "-p", "--output-interceptor-mode=none", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report=e2e-report.xml", "--label-filter=$E2E_TEST_SUITE_LABEL", "./cmd", "--", "--generate-rppreproc-report=true", fmt.Sprintf("--rp-preproc-dir=%s", artifactDir))
+	labelFilter := utils.GetEnv("E2E_TEST_SUITE_LABEL", "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines")
+	return runTests(labelFilter, "e2e-report.xml")
 }
 
 func PreflightChecks() error {
@@ -274,11 +293,10 @@ func PreflightChecks() error {
 
 func (ci CI) setRequiredEnvVars() error {
 
-	if strings.Contains(jobName, "hacbs-e2e-periodic") {
-		os.Setenv("E2E_TEST_SUITE_LABEL", "HACBS")
-		return nil
-	} else if strings.Contains(jobName, "appstudio-e2e-deployment-periodic") {
-		os.Setenv("E2E_TEST_SUITE_LABEL", "!HACBS")
+	// RHTAP Nightly E2E job
+	// The job name is taken from https://github.com/openshift/release/blob/f03153fa4ad36c0e10050d977e7f0f7619d2163a/ci-operator/config/redhat-appstudio/infra-deployments/redhat-appstudio-infra-deployments-main.yaml#L59C7-L59C35
+	if strings.Contains(jobName, "appstudio-e2e-tests-periodic") {
+		requiresSprayProxyRegistering = true
 		return nil
 	}
 
@@ -290,6 +308,7 @@ func (ci CI) setRequiredEnvVars() error {
 
 			switch {
 			case strings.Contains(jobName, "application-service"):
+				requiresSprayProxyRegistering = true
 				envVarPrefix = "HAS"
 				imageTagSuffix = "has-image"
 				testSuiteLabel = "e2e-demo,byoc"
@@ -386,10 +405,12 @@ func (ci CI) setRequiredEnvVars() error {
 				}
 				os.Setenv(constants.CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV, newJavaBuilderPipelineRef.String())
 			case strings.Contains(jobName, "build-service"):
+				requiresSprayProxyRegistering = true
 				envVarPrefix = "BUILD_SERVICE"
 				imageTagSuffix = "build-service-image"
 				testSuiteLabel = "build"
 			case strings.Contains(jobName, "image-controller"):
+				requiresSprayProxyRegistering = true
 				envVarPrefix = "IMAGE_CONTROLLER"
 				imageTagSuffix = "image-controller-image"
 				testSuiteLabel = "image-controller"
@@ -414,11 +435,14 @@ func (ci CI) setRequiredEnvVars() error {
 			os.Setenv("E2E_TEST_SUITE_LABEL", testSuiteLabel)
 
 		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
+			requiresSprayProxyRegistering = true
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
 			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,spi-suite,remote-secret,integration-service,ec,byoc")
 		}
+		// e2e-tests repository PR
 	} else {
+		requiresSprayProxyRegistering = true
 		if ci.isPRPairingRequired("infra-deployments") {
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
@@ -712,4 +736,193 @@ func AppendFrameworkDescribeGoFile(specFile string) error {
 
 	return err
 
+}
+
+func newSprayProxy() (*SprayProxy, error) {
+	sprayProxyUrl := os.Getenv("QE_SPRAYPROXY_HOST")
+	sprayProxyToken := os.Getenv("QE_SPRAYPROXY_TOKEN")
+	if sprayProxyUrl == "" || sprayProxyToken == "" {
+		return nil, fmt.Errorf("env var QE_SPRAYPROXY_HOST is not set")
+	}
+	return NewSprayProxy(sprayProxyUrl, sprayProxyToken), nil
+}
+
+func registerPacServer() error {
+	pacControllerRoute, err := GetPacRoute()
+	if err != nil {
+		return err
+	}
+	pacControllerHost := fmt.Sprintf("https://%s", pacControllerRoute.Spec.Host)
+
+	sprayproxy, err := newSprayProxy()
+	if err != nil {
+		return fmt.Errorf("failed to register PaC server: %+v", err)
+	}
+	_, err = sprayproxy.RegisterServer(pacControllerHost)
+
+	if err != nil {
+		klog.Error("Failed to register pac server", pacControllerHost)
+		return err
+	}
+	// for debugging purposes
+	servers, err := sprayproxy.GetServers()
+	if err != nil {
+		klog.Error("Failed to get servers")
+		return err
+	}
+	klog.Infof("Registered pac server %s, servers: %v", pacControllerHost, servers)
+	return nil
+}
+
+func unregisterPacServer() error {
+	pacControllerRoute, err := GetPacRoute()
+	if err != nil {
+		return err
+	}
+	pacControllerHost := fmt.Sprintf("https://%s", pacControllerRoute.Spec.Host)
+	sprayproxy, err := newSprayProxy()
+	if err != nil {
+		return fmt.Errorf("failed to unregister PaC server: %+v", err)
+	}
+	_, err = sprayproxy.UnegisterServer(pacControllerHost)
+	if err != nil {
+		klog.Error("Failed to unregister pac server", pacControllerHost)
+		return err
+	}
+	// for debugging purposes
+	servers, err := sprayproxy.GetServers()
+	if err != nil {
+		klog.Error("Failed to get servers")
+		return err
+	}
+	klog.Infof("Registered pac server %s, servers: %v", pacControllerHost, servers)
+	return nil
+}
+
+// Run upgrade tests in CI
+func (ci CI) TestUpgrade() error {
+	var testFailure bool
+
+	if err := ci.init(); err != nil {
+		return fmt.Errorf("error when running ci init: %v", err)
+	}
+
+	if err := PreflightChecks(); err != nil {
+		return fmt.Errorf("error when running preflight checks: %v", err)
+	}
+
+	if err := ci.setRequiredEnvVars(); err != nil {
+		return fmt.Errorf("error when setting up required env vars: %v", err)
+	}
+
+	if err := UpgradeTestsWorkflow(); err != nil {
+		return fmt.Errorf("error when running upgrade tests: %v", err)
+	}
+
+	if testFailure {
+		return fmt.Errorf("error when running upgrade tests - see the log above for more details")
+	}
+
+	return nil
+}
+
+// Run upgrade tests locally(bootstrap cluster, create workload, upgrade, verify)
+func (Local) TestUpgrade() error {
+	if err := PreflightChecks(); err != nil {
+		klog.Errorf("error when running preflight checks: %s", err)
+		return err
+	}
+
+	if err := UpgradeTestsWorkflow(); err != nil {
+		klog.Errorf("error when running upgrade tests: %s", err)
+		return err
+	}
+
+	return nil
+}
+
+func UpgradeTestsWorkflow() error {
+	ic, err := BootstrapClusterForUpgrade()
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = CheckClusterAfterUpgrade(ic)
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = CreateWorkload()
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = VerifyWorkload()
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = UpgradeCluster()
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = CheckClusterAfterUpgrade(ic)
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = VerifyWorkload()
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	err = CleanWorkload()
+	if err != nil {
+		klog.Errorf("%s", err)
+		return err
+	}
+
+	return nil
+}
+
+func BootstrapClusterForUpgrade() (*installation.InstallAppStudio, error) {
+	ic, err := installation.NewAppStudioInstallController()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize installation controller: %+v", err)
+	}
+
+	return ic, ic.InstallAppStudioPreviewMode()
+}
+
+func UpgradeCluster() error {
+	return MergePRInRemote(utils.GetEnv("UPGRADE_BRANCH", ""), utils.GetEnv("UPGRADE_FORK_ORGANIZATION", "redhat-appstudio"), "./tmp/infra-deployments")
+}
+
+func CheckClusterAfterUpgrade(ic *installation.InstallAppStudio) error {
+	return ic.CheckOperatorsReady()
+}
+
+func CreateWorkload() error {
+	return runTests("upgrade-create", "upgrade-create-report.xml")
+}
+
+func VerifyWorkload() error {
+	return runTests("upgrade-verify", "upgrade-verify-report.xml")
+}
+
+func CleanWorkload() error {
+	return runTests("upgrade-cleanup", "upgrade-verify-report.xml")
+}
+
+func runTests(labelsToRun string, junitReportFile string) error {
+	// added --output-interceptor-mode=none to mitigate RHTAPBUGS-34
+	return sh.RunV("ginkgo", "-p", "--output-interceptor-mode=none", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report="+junitReportFile, "--label-filter="+labelsToRun, "./cmd", "--", "--generate-rppreproc-report=true", fmt.Sprintf("--rp-preproc-dir=%s", artifactDir))
 }

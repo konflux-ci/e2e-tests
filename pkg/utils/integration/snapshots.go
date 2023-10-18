@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // CreateSnapshotWithComponents creates a Snapshot using the given parameters.
@@ -137,7 +136,7 @@ func (i *IntegrationController) WaitForSnapshotToGetCreated(snapshotName, pipeli
 	err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 10*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 		snapshot, err = i.GetSnapshot(snapshotName, pipelinerunName, componentName, testNamespace)
 		if err != nil {
-			GinkgoWriter.Printf("unable to get the Snapshot for Build PipelineRun %s/%s. Error: %v", testNamespace, pipelinerunName, err)
+			GinkgoWriter.Printf("unable to get the Snapshot within the namespace %s. Error: %v", testNamespace, err)
 			return false, nil
 		}
 
@@ -150,7 +149,7 @@ func (i *IntegrationController) WaitForSnapshotToGetCreated(snapshotName, pipeli
 // ListAllSnapshots returns a list of all Snapshots in a given namespace.
 func (i *IntegrationController) ListAllSnapshots(namespace string) (*appstudioApi.SnapshotList, error) {
 	snapshotList := &appstudioApi.SnapshotList{}
-	err := i.KubeRest().List(context.Background(), snapshotList, &rclient.ListOptions{Namespace: namespace})
+	err := i.KubeRest().List(context.Background(), snapshotList, &client.ListOptions{Namespace: namespace})
 
 	return snapshotList, err
 }

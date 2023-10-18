@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,6 +22,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"knative.dev/pkg/apis"
 
 	devfilePkg "github.com/devfile/library/v2/pkg/devfile"
@@ -41,6 +44,8 @@ import (
 	"sigs.k8s.io/yaml"
 
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 type FailedPipelineRunDetails struct {
@@ -405,4 +410,46 @@ func GetContainerLogs(ki kubernetes.Interface, podName, containerName, namespace
 func ExtractGitRepositoryNameFromURL(url string) (name string) {
 	repoName := url[strings.LastIndex(url, "/")+1:]
 	return strings.TrimSuffix(repoName, ".git")
+}
+
+func GetGithubAppID() (int64, error) {
+	appIDStr := GetEnv("E2E_PAC_GITHUB_APP_ID", constants.DefaultPaCGitHubAppID)
+
+	id, err := strconv.ParseInt(appIDStr, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+// Build a kubeconfig string from an existing client config
+func CreateKubeconfigFileForRestConfig(restConfig rest.Config) ([]byte, error) {
+	clusters := make(map[string]*clientcmdapi.Cluster)
+	clusters["default-cluster"] = &clientcmdapi.Cluster{
+		Server:                   restConfig.Host,
+		CertificateAuthorityData: restConfig.CAData,
+		InsecureSkipTLSVerify:    true,
+	}
+	contexts := make(map[string]*clientcmdapi.Context)
+	contexts["default-context"] = &clientcmdapi.Context{
+		Cluster:  "default-cluster",
+		AuthInfo: "default-user",
+	}
+	authinfos := make(map[string]*clientcmdapi.AuthInfo)
+	authinfos["default-user"] = &clientcmdapi.AuthInfo{
+		Token: string(restConfig.BearerToken),
+	}
+	clientConfig := clientcmdapi.Config{
+		Kind:           "Config",
+		APIVersion:     "v1",
+		Clusters:       clusters,
+		Contexts:       contexts,
+		CurrentContext: "default-context",
+		AuthInfos:      authinfos,
+	}
+	kubeconfiString, err := clientcmd.Write(clientConfig)
+	if err != nil {
+		return []byte{}, nil
+	}
+	return kubeconfiString, nil
 }

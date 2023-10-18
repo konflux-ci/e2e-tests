@@ -41,6 +41,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-2360] Release CR fails when missi
 		Expect(err).NotTo(HaveOccurred(), "Error when fetching the default ECP: %v", err)
 		ecPolicy = defaultECP.Spec
 
+		_, err = fw.AsKubeAdmin.HasController.CreateApplication(applicationName, devNamespace)
+		Expect(err).NotTo(HaveOccurred())
 		_, err = fw.AsKubeAdmin.IntegrationController.CreateSnapshotWithComponents(snapshotName, "", applicationName, devNamespace, snapshotComponents)
 		Expect(err).NotTo(HaveOccurred())
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationName, managedNamespace, "")
