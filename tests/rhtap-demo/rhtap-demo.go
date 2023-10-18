@@ -112,7 +112,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					if !CurrentSpecReport().Failed() {
-						if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 60*time.Second); err != nil {
+						if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 90*time.Second); err != nil {
 							if err := fw.AsKubeAdmin.StoreAllArtifactsForNamespace(namespace); err != nil {
 								Fail(fmt.Sprintf("error archiving artifacts:\n%s", err))
 							}
