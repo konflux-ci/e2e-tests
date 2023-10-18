@@ -19,6 +19,8 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	loadtestUtils "github.com/redhat-appstudio/e2e-tests/pkg/utils/loadtests"
+	"github.com/redhat-appstudio-qe/perf-monitoring/api/pkg/metrics"
+	metricsConstants "github.com/redhat-appstudio-qe/perf-monitoring/api/pkg/constants"
 	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	"github.com/spf13/cobra"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -51,6 +53,8 @@ var (
 	stage                         bool
 	outputDir                     string = "."
 	enableProgressBars            bool
+	pushGatewayURI 				  string = ""
+	jobName 					  string = ""
 )
 
 var (
@@ -110,6 +114,7 @@ var (
 	selectedUsers                     []loadtestUtils.User
 	CI                                bool
 	JobName                           string
+	MetricsController                 *metrics.MetricsPush
 )
 
 type ErrorOccurrence struct {
@@ -257,8 +262,10 @@ func init() {
 	rootCmd.Flags().BoolVar(&pipelineSkipInitialChecks, "pipeline-skip-initial-checks", true, "if pipeline runs' initial checks are to be skipped")
 	rootCmd.Flags().StringVarP(&outputDir, "output-dir", "o", ".", "directory where output files such as load-tests.log or load-tests.json are stored")
 	rootCmd.Flags().BoolVar(&enableProgressBars, "enable-progress-bars", false, "if you want to enable progress bars")
+	rootCmd.Flags().StringVar(&pushGatewayURI, "pushgateway-url", pushGatewayURI, "PushGateway url (needs to be set if metrics are enabled)")
+	rootCmd.Flags().StringVar(&jobName, "job-name", jobName, "Job Name to track Metrics (needs to be set if metrics are enabled)")
 }
-
+    
 func logError(errCode int, message string) {
 	msg := fmt.Sprintf("Error #%d: %s", errCode, message)
 	if failFast {
@@ -297,7 +304,7 @@ func setKlogFlag(fs flag.FlagSet, name string, value string) {
 func setup(cmd *cobra.Command, args []string) {
 	cmd.SilenceUsage = true
 
-	JobName = loadtestUtils.GetJobName()
+	JobName = loadtestUtils.GetJobName(jobName)
 
 	// waitDeployments sets waitIntegrationTestsPipelines=true implicitly
 	waitIntegrationTestsPipelines = waitIntegrationTestsPipelines || waitDeployments
@@ -326,8 +333,13 @@ func setup(cmd *cobra.Command, args []string) {
 
 	if !disableMetrics {
 		// add metrics releated code here
-		klog.Infof("Sleeping till all metrics queries gets init")
-		time.Sleep(time.Second * 10)
+		if loadtestUtils.UrlCheck(pushGatewayURI){
+			klog.Infof("Init Metrics")
+			MetricsController = metrics.NewMetricController(pushGatewayURI, JobName)
+			MetricsController.InitPusher()
+		}else {
+			klog.Fatalf("The Right PushGateway URL is required if metrics are enabled!")
+		}
 	}
 
 	if stage {
@@ -689,6 +701,12 @@ func StageCleanup(users []loadtestUtils.User) {
 	}
 }
 
+func MetricsWrapper(M *metrics.MetricsPush, collector string, metricType string, metric string, values ...float64){
+	if !disableMetrics {
+		M.PushMetrics(collector, metricType, metric, values...)
+	}
+}
+
 func maxDurationFromArray(durations []time.Duration) time.Duration {
 	max := time.Duration(0)
 	for _, i := range durations {
@@ -858,6 +876,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			if err != nil {
 				logError(1, fmt.Sprintf("Unable to provision user '%s': %v", username, err))
 				FailedUserCreationsPerThread[threadIndex] += 1
+				MetricsWrapper(MetricsController,metricsConstants.CollectorUsers, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedUserCreationsCounter)
 				increaseBar(usersBar, usersBarMutex)
 				continue
 			} else {
@@ -868,11 +887,13 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 
 			userCreationTime := time.Since(startTime)
 			UserCreationTimeSumPerThread[threadIndex] += userCreationTime
+			MetricsWrapper(MetricsController, metricsConstants.CollectorUsers, metricsConstants.MetricTypeGuage, metricsConstants.MetricUserCreationTimeGauge, float64(userCreationTime))
 			if userCreationTime > UserCreationTimeMaxPerThread[threadIndex] {
 				UserCreationTimeMaxPerThread[threadIndex] = userCreationTime
 			}
 
 			SuccessfulUserCreationsPerThread[threadIndex] += 1
+			MetricsWrapper(MetricsController, metricsConstants.CollectorUsers, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulUserCreationsCounter)
 			increaseBar(usersBar, usersBarMutex)
 		}
 		close(chUsers)
@@ -895,15 +916,27 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			if err != nil {
 				logError(3, fmt.Sprintf("Unable to create the Application %s: %v", ApplicationName, err))
 				FailedApplicationCreationsPerThread[threadIndex] += 1
+				MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedApplicationCreationCounter)
 				increaseBar(applicationsBar, applicationsBarMutex)
 				continue
 			}
 
 			ApplicationCreationTimeSumPerThread[threadIndex] += applicationCreationTime
+			MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeGuage, metricsConstants.MetricApplicationCreationTimeGauge, applicationCreationTime.Seconds())
 			if applicationCreationTime > ApplicationCreationTimeMaxPerThread[threadIndex] {
 				ApplicationCreationTimeMaxPerThread[threadIndex] = applicationCreationTime
 			}
+
+			for _, Status := range app.Status.Conditions{
+				if Status.Type == "Created"{
+					TempTime := Status.LastTransitionTime.Sub(startTimeForApplication)
+					MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualApplicationCreationTimeGauge, TempTime.Seconds())
+				}
+				
+				
+			}
 			SuccessfulApplicationCreationsPerThread[threadIndex] += 1
+			MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulApplicationCreationCounter)
 
 			increaseBar(applicationsBar, applicationsBarMutex)
 
@@ -948,28 +981,40 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			if err != nil {
 				logError(6, fmt.Sprintf("Unable to create ComponentDetectionQuery %s: %v", ComponentDetectionQueryName, err))
 				FailedCDQCreationsPerThread[threadIndex] += 1
+				MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
 				increaseBar(cdqsBar, cdqsBarMutex)
 				continue
 			}
 			if cdq.Name != ComponentDetectionQueryName {
 				logError(7, fmt.Sprintf("Actual cdq name (%s) does not match expected (%s): %v", cdq.Name, ComponentDetectionQueryName, err))
 				FailedCDQCreationsPerThread[threadIndex] += 1
+				MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
 				increaseBar(cdqsBar, cdqsBarMutex)
 				continue
 			}
 			if len(cdq.Status.ComponentDetected) > 1 {
 				logError(8, fmt.Sprintf("cdq (%s) detected more than 1 component", cdq.Name))
 				FailedCDQCreationsPerThread[threadIndex] += 1
+				MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
 				increaseBar(cdqsBar, cdqsBarMutex)
 				continue
 			}
 
+
 			CDQCreationTimeSumPerThread[threadIndex] += cdqCreationTime
+			MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeGuage, metricsConstants.MetricCDQCreationTimeGauge, cdqCreationTime.Seconds())
 			if cdqCreationTime > CDQCreationTimeMaxPerThread[threadIndex] {
 				CDQCreationTimeMaxPerThread[threadIndex] = cdqCreationTime
 			}
 			SuccessfulCDQCreationsPerThread[threadIndex] += 1
+			MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulCDQCreationCounter)
 
+			for _, cdqInstance := range cdq.Status.Conditions {
+				if cdqInstance.Type == "Completed"{
+					TempTime := cdqInstance.LastTransitionTime.Sub(startTimeForCDQ)
+					MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualCDQCreationTimeGauge, TempTime.Seconds())
+				}
+			}
 			increaseBar(cdqsBar, cdqsBarMutex)
 
 			for _, compStub := range cdq.Status.ComponentDetected {
@@ -980,22 +1025,34 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				if err != nil {
 					logError(9, fmt.Sprintf("Unable to create the Component %s: %v", compStub.ComponentStub.ComponentName, err))
 					FailedComponentCreationsPerThread[threadIndex] += 1
+					MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedComponentCreationCounter)
 					increaseBar(componentsBar, componentsBarMutex)
 					continue
 				}
 				if component.Name != compStub.ComponentStub.ComponentName {
 					logError(10, fmt.Sprintf("Actual component name (%s) does not match expected (%s): %v", component.Name, compStub.ComponentStub.ComponentName, err))
 					FailedComponentCreationsPerThread[threadIndex] += 1
+					MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedComponentCreationCounter)
 					increaseBar(componentsBar, componentsBarMutex)
 					continue
 				}
 				userComponentMap.Store(username, component.Name)
 
 				ComponentCreationTimeSumPerThread[threadIndex] += componentCreationTime
+				MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeGuage, metricsConstants.MetricComponentCreationTimeGauge, componentCreationTime.Seconds())
 				if componentCreationTime > ComponentCreationTimeMaxPerThread[threadIndex] {
 					ComponentCreationTimeMaxPerThread[threadIndex] = componentCreationTime
 				}
 				SuccessfulComponentCreationsPerThread[threadIndex] += 1
+				MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulComponentCreationCounter)
+
+				for _, componentStatus := range component.Status.Conditions {
+					if componentStatus.Type == "Created" {
+						TempTime := componentStatus.LastTransitionTime.Sub(startTimeForComponent)
+						MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualComponentCreationTimeGauge, TempTime.Seconds())
+					
+					}
+				}
 
 				increaseBar(componentsBar, componentsBarMutex)
 			}
@@ -1037,6 +1094,8 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				if err != nil {
 					logError(13, fmt.Sprintf("PipelineRun for applicationName/componentName %s/%s has not been created within %v: %v", applicationName, componentName, pipelineCreatedTimeout, err))
 					FailedPipelineRunsPerThread[threadIndex] += 1
+					MetricsWrapper(MetricsController, metricsConstants.CollectorPipelines, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedPipelineRunsCreationCounter)
+					
 					increaseBar(pipelinesBar, pipelinesBarMutex)
 					continue
 				}
@@ -1057,13 +1116,17 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 							PipelineRunFailedTimeSumPerThread[threadIndex] += dur
 							logError(14, fmt.Sprintf("Pipeline run for applicationName/componentName %s/%s failed due to %v: %v", applicationName, componentName, succeededCondition.Reason, succeededCondition.Message))
 							FailedPipelineRunsPerThread[threadIndex] += 1
+							MetricsWrapper(MetricsController, metricsConstants.CollectorPipelines, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedPipelineRunsCreationCounter)
 						} else {
 							dur := pipelineRun.Status.CompletionTime.Sub(pipelineRun.CreationTimestamp.Time)
 							PipelineRunSucceededTimeSumPerThread[threadIndex] += dur
+							MetricsWrapper(MetricsController, metricsConstants.CollectorPipelines, metricsConstants.MetricTypeGuage, metricsConstants.MetricPipelineRunsTimeGauge, dur.Seconds())
 							if dur > PipelineRunSucceededTimeMaxPerThread[threadIndex] {
 								PipelineRunSucceededTimeMaxPerThread[threadIndex] = dur
 							}
 							SuccessfulPipelineRunsPerThread[threadIndex] += 1
+							MetricsWrapper(MetricsController, metricsConstants.CollectorPipelines, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulPipelineRunsCreationCounter)
+							
 							chIntegrationTestsPipelines <- username
 						}
 						increaseBar(pipelinesBar, pipelinesBarMutex)
@@ -1073,6 +1136,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				if err != nil {
 					logError(15, fmt.Sprintf("Pipeline run for applicationName/componentName %s/%s failed to succeed within %v: %v", applicationName, componentName, pipelineRunTimeout, err))
 					FailedPipelineRunsPerThread[threadIndex] += 1
+					MetricsWrapper(MetricsController, metricsConstants.CollectorPipelines, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedPipelineRunsCreationCounter)
 					increaseBar(pipelinesBar, pipelinesBarMutex)
 					continue
 				}
@@ -1111,6 +1175,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				if err != nil {
 					logError(16, fmt.Sprintf("Snapshot for applicationName/componentName %s/%s has not been created within %v: %v", applicationName, componentName, SnapshotCreatedTimeout, err))
 					FailedIntegrationTestsPipelineRunsPerThread[threadIndex] += 1
+					MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsPipeline, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedIntegrationPipelineRunsCreationCounter)
 					increaseBar(integrationTestsPipelinesBar, integrationTestsPipelinesBarMutex)
 					continue
 				}
@@ -1127,6 +1192,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				if err != nil {
 					logError(17, fmt.Sprintf("IntegrationTestPipelineRun for applicationName/testScenarioName/snapshotName %s/%s/%s has not been created within %v: %v", applicationName, testScenarioName, snapshot.Name, IntegrationTestsPipelineCreatedTimeout, err))
 					FailedIntegrationTestsPipelineRunsPerThread[threadIndex] += 1
+					MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsPipeline, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedIntegrationPipelineRunsCreationCounter)
 					increaseBar(integrationTestsPipelinesBar, integrationTestsPipelinesBarMutex)
 					continue
 				}
@@ -1145,13 +1211,16 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 							IntegrationTestsPipelineRunFailedTimeSumPerThread[threadIndex] += dur
 							logError(18, fmt.Sprintf("IntegrationTestPipelineRun for applicationName/testScenarioName/snapshotName %s/%s/%s failed due to %v: %v", applicationName, testScenarioName, snapshot.Name, succeededCondition.Reason, succeededCondition.Message))
 							FailedIntegrationTestsPipelineRunsPerThread[threadIndex] += 1
+							MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsPipeline, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedIntegrationPipelineRunsCreationCounter)
 						} else {
 							dur := IntegrationTestsPipelineRun.Status.CompletionTime.Sub(IntegrationTestsPipelineRun.CreationTimestamp.Time)
 							IntegrationTestsPipelineRunSucceededTimeSumPerThread[threadIndex] += dur
+							MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsPipeline, metricsConstants.MetricTypeGuage, metricsConstants.MetricIntegrationPipelineRunsTimeGauge, dur.Seconds())
 							if dur > IntegrationTestsPipelineRunSucceededTimeMaxPerThread[threadIndex] {
 								IntegrationTestsPipelineRunSucceededTimeMaxPerThread[threadIndex] = dur
 							}
 							SuccessfulIntegrationTestsPipelineRunsPerThread[threadIndex] += 1
+							MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsPipeline, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulIntegrationPipelineRunsCreationCounter)
 							chDeployments <- username
 						}
 						increaseBar(integrationTestsPipelinesBar, integrationTestsPipelinesBarMutex)
@@ -1161,6 +1230,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				if err != nil {
 					logError(19, fmt.Sprintf("IntegrationTestPipelineRun for applicationName/testScenarioName/snapshotName %s/%s/%s failed to succeed within %v: %v", applicationName, testScenarioName, snapshot.Name, IntegrationTestsPipelineRunTimeout, err))
 					FailedIntegrationTestsPipelineRunsPerThread[threadIndex] += 1
+					MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsPipeline, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedIntegrationPipelineRunsCreationCounter)
 					increaseBar(integrationTestsPipelinesBar, integrationTestsPipelinesBarMutex)
 					continue
 				}
@@ -1236,17 +1306,20 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 					}
 					if deploymentIsDone {
 						dur := lastUpdateTimeOfDone.Time.Sub(creationTimestamp.Time)
+						MetricsWrapper(MetricsController, metricsConstants.CollectorDeployments, metricsConstants.MetricTypeGuage, metricsConstants.MetricDeploymentsCreationTimeGauge, dur.Seconds())
 						DeploymentSucceededTimeSumPerThread[threadIndex] += dur
 						if dur > DeploymentSucceededTimeMaxPerThread[threadIndex] {
 							DeploymentSucceededTimeMaxPerThread[threadIndex] = dur
 						}
 						SuccessfulDeploymentsPerThread[threadIndex] += 1
+						MetricsWrapper(MetricsController, metricsConstants.CollectorDeployments, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulDeploymentsCreationCounter)
 						increaseBar(deploymentsBar, deploymentsBarMutex)
 					} else if deploymentFailed && deploymentFailCount > deploymentFailCountThreshold {
 						dur := lastUpdateTimeOfFailed.Time.Sub(creationTimestamp.Time)
 						DeploymentFailedTimeSumPerThread[threadIndex] += dur
 						logError(21, fmt.Sprintf("Deployment for applicationName/componentName %s/%s failed due to %s", applicationName, componentName, errorMessage))
 						FailedDeploymentsPerThread[threadIndex] += 1
+						MetricsWrapper(MetricsController, metricsConstants.CollectorDeployments, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedDeploymentsCreationCounter)
 						increaseBar(deploymentsBar, deploymentsBarMutex)
 					}
 					return deploymentIsDone || (deploymentFailed && deploymentFailCount > deploymentFailCountThreshold), nil
@@ -1254,6 +1327,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				if err != nil {
 					logError(22, fmt.Sprintf("Deployment for applicationName/componentName %s/%s failed to succeed within %v: %v", applicationName, componentName, deploymentTimeout, err))
 					FailedDeploymentsPerThread[threadIndex] += 1
+					MetricsWrapper(MetricsController, metricsConstants.CollectorDeployments, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedDeploymentsCreationCounter)
 					increaseBar(deploymentsBar, deploymentsBarMutex)
 					continue
 				}
