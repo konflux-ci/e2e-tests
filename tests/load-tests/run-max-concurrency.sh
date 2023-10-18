@@ -24,6 +24,7 @@ load_test() {
         -o "$output_dir" \
         -t "$threads" \
         --disable-metrics \
+        --pushgateway-url "${PUSHGATEWAY_URL:-rhtapqe.com}" \
         --enable-progress-bars="${ENABLE_PROGRESS_BARS:-false}" \
         --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}"
     if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
