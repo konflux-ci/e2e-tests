@@ -2,6 +2,9 @@ package release
 
 import (
 	"context"
+	"github.com/redhat-appstudio/release-service/tekton/utils"
+	"k8s.io/apimachinery/pkg/runtime"
+	"strconv"
 
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	releaseMetadata "github.com/redhat-appstudio/release-service/metadata"
@@ -23,7 +26,6 @@ func (r *ReleaseController) CreateReleasePlan(name, namespace, application, targ
 			},
 		},
 		Spec: releaseApi.ReleasePlanSpec{
-			DisplayName: name,
 			Application: application,
 			Target:      targetNamespace,
 		},
@@ -38,23 +40,26 @@ func (r *ReleaseController) CreateReleasePlan(name, namespace, application, targ
 }
 
 // CreateReleasePlanAdmission creates a new ReleasePlanAdmission using the given parameters.
-func (r *ReleaseController) CreateReleasePlanAdmission(name, originNamespace, application, namespace, environment, autoRelease, releaseStrategy string) (*releaseApi.ReleasePlanAdmission, error) {
-	var releasePlanAdmission *releaseApi.ReleasePlanAdmission = &releaseApi.ReleasePlanAdmission{
+func (r *ReleaseController) CreateReleasePlanAdmission(name, namespace, environment, origin, policy, serviceAccount string, applications []string, autoRelease bool, pipelineRef *utils.PipelineRef, data *runtime.RawExtension) (*releaseApi.ReleasePlanAdmission, error) {
+	releasePlanAdmission := &releaseApi.ReleasePlanAdmission{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels: map[string]string{
+				releaseMetadata.AutoReleaseLabel: strconv.FormatBool(autoRelease),
+			},
 		},
 		Spec: releaseApi.ReleasePlanAdmissionSpec{
-			DisplayName:     name,
-			Application:     application,
-			Origin:          originNamespace,
-			Environment:     environment,
-			ReleaseStrategy: releaseStrategy,
+			Applications:   applications,
+			Data:           data,
+			Environment:    environment,
+			Origin:         origin,
+			PipelineRef:    pipelineRef,
+			Policy:         policy,
+			ServiceAccount: serviceAccount,
 		},
 	}
-	if autoRelease != "" {
-		releasePlanAdmission.ObjectMeta.Labels[releaseMetadata.AutoReleaseLabel] = autoRelease
-	}
+
 	return releasePlanAdmission, r.KubeRest().Create(context.TODO(), releasePlanAdmission)
 }
 
