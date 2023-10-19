@@ -64,7 +64,7 @@ func (h *HasController) CreateApplicationWithTimeout(name string, namespace stri
 		},
 	}
 
-	if err := h.KubeRest().Create(context.TODO(), application); err != nil {
+	if err := h.KubeRest().Create(context.Background(), application); err != nil {
 		return nil, err
 	}
 

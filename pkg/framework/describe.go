@@ -53,3 +53,7 @@ func EnterpriseContractSuiteDescribe(text string, args ...interface{}) bool {
 func UpgradeSuiteDescribe(text string, args ...interface{}) bool {
 	return Describe("[upgrade-suite "+text+"]", args, Ordered)
 }
+
+func ReleasePipelinesSuiteDescribe(text string, args ...interface{}) bool {
+	return Describe("[release-pipelines-suite "+text+"]", args, Ordered)
+}

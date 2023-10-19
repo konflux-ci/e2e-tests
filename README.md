@@ -26,4 +26,3 @@ To onboard a new component in Openshift CI follow this [Documentation](docs/Open
 To debug CI jobs follow this [Documentation](docs/InvestigatingCIFailures.md).
 
 ***HAPPY TESTING!***
-

@@ -225,8 +225,11 @@ func (ci CI) TestE2E() error {
 	}
 
 	if requiresSprayProxyRegistering {
-		if err := retry(registerPacServer, 3, 10*time.Second); err != nil {
-			return fmt.Errorf("error when registering PAC server: %v", err)
+		if err := registerPacServer(); err != nil {
+			os.Setenv(constants.SKIP_PAC_TESTS_ENV, "true")
+			if alertErr := HandleErrorWithAlert(err); alertErr != nil {
+				return alertErr
+			}
 		}
 	}
 
@@ -235,8 +238,10 @@ func (ci CI) TestE2E() error {
 	}
 
 	if requiresSprayProxyRegistering {
-		if err := retry(unregisterPacServer, 3, 10*time.Second); err != nil {
-			klog.Infof("error when unregistering PAC server: %v", err)
+		if err := unregisterPacServer(); err != nil {
+			if alertErr := HandleErrorWithAlert(err); alertErr != nil {
+				klog.Warning(alertErr)
+			}
 		}
 	}
 
@@ -252,7 +257,7 @@ func (ci CI) TestE2E() error {
 }
 
 func RunE2ETests() error {
-	labelFilter := utils.GetEnv("E2E_TEST_SUITE_LABEL", "!upgrade-create && !upgrade-verify && !upgrade-cleanup")
+	labelFilter := utils.GetEnv("E2E_TEST_SUITE_LABEL", "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines")
 	return runTests(labelFilter, "e2e-report.xml")
 }
 
@@ -733,14 +738,13 @@ func AppendFrameworkDescribeGoFile(specFile string) error {
 
 }
 
-func newSprayProxy() *SprayProxy {
+func newSprayProxy() (*SprayProxy, error) {
 	sprayProxyUrl := os.Getenv("QE_SPRAYPROXY_HOST")
 	sprayProxyToken := os.Getenv("QE_SPRAYPROXY_TOKEN")
 	if sprayProxyUrl == "" || sprayProxyToken == "" {
-		klog.Error("env var QE_SPRAYPROXY_HOST is not set")
-		return nil
+		return nil, fmt.Errorf("env var QE_SPRAYPROXY_HOST is not set")
 	}
-	return NewSprayProxy(sprayProxyUrl, sprayProxyToken)
+	return NewSprayProxy(sprayProxyUrl, sprayProxyToken), nil
 }
 
 func registerPacServer() error {
@@ -750,7 +754,10 @@ func registerPacServer() error {
 	}
 	pacControllerHost := fmt.Sprintf("https://%s", pacControllerRoute.Spec.Host)
 
-	sprayproxy := newSprayProxy()
+	sprayproxy, err := newSprayProxy()
+	if err != nil {
+		return fmt.Errorf("failed to register PaC server: %+v", err)
+	}
 	_, err = sprayproxy.RegisterServer(pacControllerHost)
 
 	if err != nil {
@@ -773,7 +780,10 @@ func unregisterPacServer() error {
 		return err
 	}
 	pacControllerHost := fmt.Sprintf("https://%s", pacControllerRoute.Spec.Host)
-	sprayproxy := newSprayProxy()
+	sprayproxy, err := newSprayProxy()
+	if err != nil {
+		return fmt.Errorf("failed to unregister PaC server: %+v", err)
+	}
 	_, err = sprayproxy.UnegisterServer(pacControllerHost)
 	if err != nil {
 		klog.Error("Failed to unregister pac server", pacControllerHost)
