@@ -20,14 +20,14 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 	defer GinkgoRecover()
 
 	const (
-		fbcApplicationName              = "fbc-pipelines-aplication"
-		fbcComponentName                = "fbc-pipelines-component"
-		fbcReleasePlanName              = "fbc-pipelines-releaseplan"
-		fbcReleasePlanAdmissionName     = "fbc-pipelines-releaseplanadmission"
-		fbcReleaseStrategyName          = "fbc-pipelines-strategy"
+		fbcApplicationName          = "fbc-pipelines-aplication"
+		fbcComponentName            = "fbc-pipelines-component"
+		fbcReleasePlanName          = "fbc-pipelines-releaseplan"
+		fbcReleasePlanAdmissionName = "fbc-pipelines-releaseplanadmission"
+		//fbcReleaseStrategyName          = "fbc-pipelines-strategy"
 		fbcEnterpriseContractPolicyName = "fbc-pipelines-policy"
-		fbcServiceAccountName           = "release-service-account"
-		fbcSourceGitUrl                 = "https://github.com/redhat-appstudio-qe/fbc-sample-repo"
+		//fbcServiceAccountName           = "release-service-account"
+		fbcSourceGitUrl = "https://github.com/redhat-appstudio-qe/fbc-sample-repo"
 	)
 
 	var devWorkspace = os.Getenv(constants.RELEASE_DEV_WORKSPACE_ENV)
@@ -88,20 +88,26 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 		GinkgoWriter.Println("component : ", component.Name)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		_, err = managed_fw.AsKubeDeveloper.ReleaseController.CreateReleaseStrategy(fbcReleaseStrategyName, managedNamespace, "fbc-release", "quay.io/hacbs-release/pipeline-fbc-release:main", fbcEnterpriseContractPolicyName, fbcServiceAccountName, []releaseApi.Params{
-			{Name: "fromIndex", Value: constants.FromIndex},
-			{Name: "targetIndex", Value: constants.TargetIndex},
-			{Name: "binaryImage", Value: constants.BinaryImage},
-			{Name: "requestUpdateTimeout", Value: "420"},
-			{Name: "buildTimeoutSeconds", Value: "480"},
-		})
-		Expect(err).NotTo(HaveOccurred())
+		// NOTE: This code has been commented until the tests in release/pipelines are fixed to adhere to the new API
+		// and to use git resolvers.
+		//
+		//_, err = managed_fw.AsKubeDeveloper.ReleaseController.CreateReleaseStrategy(fbcReleaseStrategyName, managedNamespace, "fbc-release", "quay.io/hacbs-release/pipeline-fbc-release:main", fbcEnterpriseContractPolicyName, fbcServiceAccountName, []releaseApi.Params{
+		//	{Name: "fromIndex", Value: constants.FromIndex},
+		//	{Name: "targetIndex", Value: constants.TargetIndex},
+		//	{Name: "binaryImage", Value: constants.BinaryImage},
+		//	{Name: "requestUpdateTimeout", Value: "420"},
+		//	{Name: "buildTimeoutSeconds", Value: "480"},
+		//})
+		//Expect(err).NotTo(HaveOccurred())
 
 		_, err = dev_fw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcReleasePlanName, devNamespace, fbcApplicationName, managedNamespace, "true")
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = managed_fw.AsKubeDeveloper.ReleaseController.CreateReleasePlanAdmission(fbcReleasePlanAdmissionName, devNamespace, fbcApplicationName, managedNamespace, "", "", fbcReleaseStrategyName)
-		Expect(err).NotTo(HaveOccurred())
+		// NOTE: This code has been commented until the tests in release/pipelines are fixed to adhere to the new API
+		// and to use git resolvers.
+		//
+		//_, err = managed_fw.AsKubeDeveloper.ReleaseController.CreateReleasePlanAdmission(fbcReleasePlanAdmissionName, devNamespace, fbcApplicationName, managedNamespace, "", "", fbcReleaseStrategyName)
+		//Expect(err).NotTo(HaveOccurred())
 
 		defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
 			Description: "Red Hat's enterprise requirements",
@@ -127,7 +133,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 		if !CurrentSpecReport().Failed() {
 			Expect(dev_fw.AsKubeDeveloper.HasController.DeleteApplication(fbcApplicationName, devNamespace, false)).NotTo(HaveOccurred())
 			Expect(managed_fw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
-			Expect(managed_fw.AsKubeDeveloper.ReleaseController.DeleteReleaseStrategy(fbcReleaseStrategyName, managedNamespace, false)).NotTo(HaveOccurred())
 			Expect(managed_fw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
 		}
 	})
