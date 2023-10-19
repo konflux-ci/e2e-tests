@@ -218,7 +218,7 @@ var TestScenarios = []TestSpec{
 		},
 	},
 	{
-		Name:            "DEVHAS-337: creates golang application from a private repository which contain a devfile",
+		Name:            "DEVHAS-337: creates golang application from a private repository which contain a devfile referencing a private Dockerfile URI",
 		ApplicationName: "private-devfile",
 		Components: []ComponentSpec{
 			{
