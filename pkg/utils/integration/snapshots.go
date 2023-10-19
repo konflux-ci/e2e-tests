@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // CreateSnapshotWithComponents creates a Snapshot using the given parameters.
@@ -150,7 +149,7 @@ func (i *IntegrationController) WaitForSnapshotToGetCreated(snapshotName, pipeli
 // ListAllSnapshots returns a list of all Snapshots in a given namespace.
 func (i *IntegrationController) ListAllSnapshots(namespace string) (*appstudioApi.SnapshotList, error) {
 	snapshotList := &appstudioApi.SnapshotList{}
-	err := i.KubeRest().List(context.Background(), snapshotList, &rclient.ListOptions{Namespace: namespace})
+	err := i.KubeRest().List(context.Background(), snapshotList, &client.ListOptions{Namespace: namespace})
 
 	return snapshotList, err
 }

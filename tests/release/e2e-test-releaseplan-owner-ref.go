@@ -24,11 +24,12 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-2469]test-releaseplan-owner-ref-a
 		Expect(err).NotTo(HaveOccurred())
 		devNamespace = fw.UserNamespace
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, "managed", "")
-		Expect(err).NotTo(HaveOccurred())
-
 		_, err = fw.AsKubeAdmin.HasController.CreateApplication(applicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
+
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, "managed", "true")
+		Expect(err).NotTo(HaveOccurred())
+
 	})
 
 	AfterAll(func() {
@@ -40,18 +41,20 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-2469]test-releaseplan-owner-ref-a
 	var _ = Describe("ReleasePlan verification", Ordered, func() {
 
 		It("verifies that the ReleasePlan has an owner reference for the application", func() {
-			releasePlan, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(sourceReleasePlanName, devNamespace)
-			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() error {
+				releasePlan, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(sourceReleasePlanName, devNamespace)
+				Expect(err).NotTo(HaveOccurred())
+
 				if len(releasePlan.OwnerReferences) != 1 {
 					return fmt.Errorf("OwnerReference not updated yet for ReleasePlan %s", releasePlan.Name)
 				}
+
 				ownerRef := releasePlan.OwnerReferences[0]
 				if ownerRef.Name != applicationNameDefault {
 					return fmt.Errorf("ReleasePlan %s have OwnerReference Name %s and it's not as expected in Application Name %s", releasePlan.Name, ownerRef.Name, applicationNameDefault)
 				}
 				return nil
-			}, releasePlanOwnerReferencesTimeout, defaultInterval).Should(Succeed(), "timed out waiting for ReleasePlan %s OwnerReference to be set.", releasePlan.Name)
+			}, releasePlanOwnerReferencesTimeout, defaultInterval).Should(Succeed(), "timed out waiting for ReleasePlan OwnerReference to be set.")
 		})
 
 		It("verifies that the ReleasePlan is deleted if the application is deleted", func() {

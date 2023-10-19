@@ -98,9 +98,8 @@ func (s *SuiteController) ListAllPods(namespace string) (*corev1.PodList, error)
 	return s.KubeInterface().CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
 }
 
-// StorePod stores a given pod as an artifact.
-func (s *SuiteController) StorePod(pod *corev1.Pod) error {
-	artifacts := make(map[string][]byte)
+func (s *SuiteController) GetPodLogs(pod *corev1.Pod) map[string][]byte {
+	podLogs := make(map[string][]byte)
 
 	var containers []corev1.Container
 	containers = append(containers, pod.Spec.InitContainers...)
@@ -112,10 +111,16 @@ func (s *SuiteController) StorePod(pod *corev1.Pod) error {
 			continue
 		}
 
-		artifacts["pod-"+pod.Name+"-"+c.Name+".log"] = []byte(log)
+		podLogs["pod-"+pod.Name+"-"+c.Name+".log"] = []byte(log)
 	}
 
-	return logs.StoreArtifacts(artifacts)
+	return podLogs
+}
+
+// StorePod stores a given pod as an artifact.
+func (s *SuiteController) StorePod(pod *corev1.Pod) error {
+	podLogs := s.GetPodLogs(pod)
+	return logs.StoreArtifacts(podLogs)
 }
 
 // StoreAllPods stores all pods in a given namespace.

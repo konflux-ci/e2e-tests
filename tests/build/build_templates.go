@@ -285,6 +285,11 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					}
 					Expect(kubeadminClient.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
 
+					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
+					Expect(err).ToNot(HaveOccurred())
+
+					rev := pipelineRun.Annotations["pipelinesascode.tekton.dev/sha"]
+
 					generator := tekton.VerifyEnterpriseContract{
 						Snapshot: v1alpha1.SnapshotSpec{
 							Application: applicationName,
@@ -292,6 +297,14 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 								{
 									Name:           componentNames[i],
 									ContainerImage: imageWithDigest,
+									Source: v1alpha1.ComponentSource{
+										ComponentSourceUnion: v1alpha1.ComponentSourceUnion{
+											GitSource: &v1alpha1.GitSource{
+												URL:      gitUrl,
+												Revision: rev,
+											},
+										},
+									},
 								},
 							},
 						},

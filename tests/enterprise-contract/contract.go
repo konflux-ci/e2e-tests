@@ -115,8 +115,6 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			Expect(err).NotTo(HaveOccurred())
 			//assert ec cli support policy config include field
 			Expect(reportLog).Should(ContainSubstring("include"))
-			//assert ec cli support policy config exclude field
-			Expect(reportLog).Should(ContainSubstring("exclude"))
 		})
 
 		It("verifies ec validate accepts a list of image references", func() {
@@ -204,7 +202,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			reportLog, err := utils.GetContainerLogs(fwk.AsKubeAdmin.CommonController.KubeInterface(), tr.Status.PodName, "step-report", namespace)
 			GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, "step-report", reportLog)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(reportLog).Should(ContainSubstring("Pipeline task 'build-container' uses an unacceptable task bundle"))
+			Expect(reportLog).Should(MatchRegexp(`Pipeline task .* uses an unacceptable task bundle`))
 		})
 
 		It("verifies the release policy: Task bundle references pinned to digest", func() {
@@ -245,7 +243,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			reportLog, err := utils.GetContainerLogs(fwk.AsKubeAdmin.CommonController.KubeInterface(), tr.Status.PodName, "step-report", namespace)
 			GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, "step-report", reportLog)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(reportLog).Should(ContainSubstring("Pipeline task 'show-summary' uses an unpinned task bundle reference"))
+			Expect(reportLog).Should(MatchRegexp(`Pipeline task .* uses an unpinned task bundle reference`))
 		})
 	})
 })

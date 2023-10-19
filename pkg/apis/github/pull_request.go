@@ -47,10 +47,18 @@ func (g *Github) MergePullRequest(repository string, prNumber int) (*github.Pull
 	return mergeResult, nil
 }
 
-func (g *Github) ListCheckSuites(repository string, ref string) ([]*github.CheckSuite, error) {
-	checkSuiteResults, _, err := g.client.Checks.ListCheckSuitesForRef(context.Background(), g.organization, repository, ref, &github.ListCheckSuiteOptions{})
+func (g *Github) ListCheckRuns(repository string, ref string) ([]*github.CheckRun, error) {
+	checkRunResults, _, err := g.client.Checks.ListCheckRunsForRef(context.Background(), g.organization, repository, ref, &github.ListCheckRunsOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("error when listing check suites for the repo %s: %v", repository, err)
+		return nil, fmt.Errorf("error when listing check runs for the repo %s and ref %s: %v", repository, ref, err)
 	}
-	return checkSuiteResults.CheckSuites, nil
+	return checkRunResults.CheckRuns, nil
+}
+
+func (g *Github) GetCheckRun(repository string, id int64) (*github.CheckRun, error) {
+	checkRun, _, err := g.client.Checks.GetCheckRun(context.Background(), g.organization, repository, id)
+	if err != nil {
+		return nil, fmt.Errorf("error when getting check run with id %d for the repo %s: %v", id, repository, err)
+	}
+	return checkRun, nil
 }

@@ -2,9 +2,11 @@ package release
 
 import (
 	"context"
+
 	"github.com/redhat-appstudio/release-service/tekton/utils"
 
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -49,4 +51,19 @@ func (r *ReleaseController) GenerateReleaseStrategyConfig(components []Component
 	return &StrategyConfig{
 		Mapping{Components: components},
 	}
+}
+
+// DeleteReleaseStrategy deletes ReleaseStrategy.
+func (r *ReleaseController) DeleteReleaseStrategy(name, namespace string, failOnNotFound bool) error {
+	releasePlan := &releaseApi.ReleaseStrategy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+	err := r.KubeRest().Delete(context.TODO(), releasePlan)
+	if err != nil && !failOnNotFound && k8sErrors.IsNotFound(err) {
+		err = nil
+	}
+	return err
 }

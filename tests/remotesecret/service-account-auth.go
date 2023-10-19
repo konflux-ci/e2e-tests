@@ -12,15 +12,15 @@ import (
 	"github.com/redhat-appstudio/remote-secret/api/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 /*
  * Component: spi
- * Description: SVPI-541 - Basic remote secret functionalities
+ * Description: SVPI-558 - Test all the options of the authz of remote secret target deployment
+ * Test case: Authentication using Service Account
  */
 
-var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret"), func() {
+var _ = framework.RemoteSecretSuiteDescribe(Label("service-account-auth"), func() {
 
 	defer GinkgoRecover()
 
@@ -38,7 +38,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret"), func() {
 	roleBindingName := fmt.Sprintf("deployment-enabler-%s", util.GenerateRandomString(4))
 	AfterEach(framework.ReportFailure(&fw))
 
-	Describe("SVPI-541 - Basic remote secret functionalities", Ordered, func() {
+	Describe("SVPI-558 - Authentication using Service Account", Ordered, func() {
 		BeforeAll(func() {
 			// Initialize the tests controllers
 			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("spi-demos"))
@@ -62,7 +62,8 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret"), func() {
 		})
 
 		It("creates RemoteSecret with previously created namespaces as targets", func() {
-			remoteSecret, err = fw.AsKubeDeveloper.RemoteSecretController.CreateRemoteSecret(remoteSecretName, namespace, []string{targetNamespace1, targetNamespace2})
+			targets := []v1beta1.RemoteSecretTarget{{Namespace: targetNamespace1}, {Namespace: targetNamespace2}}
+			remoteSecret, err = fw.AsKubeDeveloper.RemoteSecretController.CreateRemoteSecret(remoteSecretName, namespace, targets, v1.SecretTypeOpaque, map[string]string{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() bool {
@@ -122,24 +123,9 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret"), func() {
 		})
 
 		It("creates upload secret", func() {
-			s := &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-secret",
-					Labels: map[string]string{
-						"appstudio.redhat.com/upload-secret": "remotesecret",
-					},
-					Annotations: map[string]string{
-						"appstudio.redhat.com/remotesecret-name": remoteSecret.Name,
-					},
-				},
-				Type: v1.SecretTypeOpaque,
-				StringData: map[string]string{
-					"a": "b",
-					"c": "d",
-				},
-			}
+			data := map[string]string{"a": "b", "c": "d"}
 
-			_, err = fw.AsKubeAdmin.CommonController.CreateSecret(namespace, s)
+			_, err = fw.AsKubeAdmin.RemoteSecretController.CreateUploadSecret(remoteSecret.Name, namespace, remoteSecret.Name, v1.SecretTypeOpaque, data)
 			Expect(err).NotTo(HaveOccurred())
 		})
 

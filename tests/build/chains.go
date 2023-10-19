@@ -57,6 +57,22 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			err := kubeClient.CommonController.WaitForPodSelector(kubeClient.CommonController.IsPodRunning, constants.TEKTON_CHAINS_NS, "app", "tekton-chains-controller", 60, 100)
 			Expect(err).NotTo(HaveOccurred())
 		})
+
+		It("verifies the signing secret is present", func() {
+			timeout := time.Minute * 5
+			interval := time.Second * 1
+
+			Eventually(func() bool {
+				config, err := kubeClient.CommonController.GetSecret(constants.TEKTON_CHAINS_NS, constants.TEKTON_CHAINS_SIGNING_SECRETS_NAME)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, private := config.Data["cosign.key"]
+				_, public := config.Data["cosign.pub"]
+				_, password := config.Data["cosign.password"]
+
+				return private && public && password
+			}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for Tekton Chains signing secret %q to be present in %q namespace", constants.TEKTON_CHAINS_SIGNING_SECRETS_NAME, constants.TEKTON_CHAINS_NS))
+		})
 	})
 
 	Context("test creating and signing an image and task", Label("pipeline"), func() {

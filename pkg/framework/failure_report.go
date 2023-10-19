@@ -1,16 +1,13 @@
 package framework
 
 import (
-	"context"
-	"fmt"
-	. "github.com/onsi/ginkgo/v2"
-	"io"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
+
+	. "github.com/onsi/ginkgo/v2"
 )
 
 func ReportFailure(f **Framework) func() {
@@ -19,40 +16,42 @@ func ReportFailure(f **Framework) func() {
 		"JVM Build Service":   "jvm-build-service",
 		"Application Service": "application-service",
 		"Image Controller":    "image-controller"}
+
 	return func() {
-		report := CurrentSpecReport()
-		if report.Failed() {
-			now := time.Now()
-			AddReportEntry("timing", "Test started at "+report.StartTime.String()+
-				"\nTest ended at "+now.String())
-			fwk := *f
-			if fwk == nil {
+		if !CurrentSpecReport().Failed() {
+			return
+		}
+
+		fwk := *f
+		if fwk == nil {
+			return
+		}
+
+		if err := logs.StoreTestTiming(); err != nil {
+			GinkgoWriter.Printf("failed to store test timing: %v\n", err)
+		}
+
+		allPodLogs := make(map[string][]byte)
+		for _, namespace := range namespaces {
+			podList, err := fwk.AsKubeAdmin.CommonController.ListAllPods(namespace)
+			if err != nil {
+				GinkgoWriter.Printf("failed to list pods in namespace %s: %v\n", namespace, err)
 				return
 			}
-			for k, v := range namespaces {
-				msg := "\n========= " + k + " =========\n\n"
-				podInterface := fwk.AsKubeAdmin.CommonController.KubeInterface().CoreV1().Pods(v)
-				pods, err := podInterface.List(context.Background(), metav1.ListOptions{})
-				if err != nil {
-					msg += "Error listing pods: " + err.Error() + "\n"
-				} else {
-					for _, pod := range pods.Items {
-						containers := []corev1.Container{}
-						containers = append(containers, pod.Spec.InitContainers...)
-						containers = append(containers, pod.Spec.Containers...)
-						for _, container := range containers {
-							req := podInterface.GetLogs(pod.Name, &corev1.PodLogOptions{Container: container.Name})
-							logs, err := innerDumpPod(req, container.Name)
-							if err != nil {
-								msg += "Error getting logs: " + err.Error() + "\n"
-							} else {
-								msg += FilterLogs(logs, report.StartTime) + "\n"
-							}
-						}
+
+			for _, pod := range podList.Items {
+				podLogs := fwk.AsKubeAdmin.CommonController.GetPodLogs(&pod)
+
+				for podName, log := range podLogs {
+					if filteredLogs := FilterLogs(string(log), CurrentSpecReport().StartTime); filteredLogs != "" {
+						allPodLogs[podName] = []byte(filteredLogs)
 					}
 				}
-				AddReportEntry(v, msg)
 			}
+		}
+
+		if err := logs.StoreArtifacts(allPodLogs); err != nil {
+			GinkgoWriter.Printf("failed to store pod logs: %v\n", err)
 		}
 	}
 }
@@ -83,24 +82,4 @@ func FilterLogs(logs string, start time.Time) string {
 	}
 
 	return strings.Join(ret, "\n")
-
-}
-
-func innerDumpPod(req *rest.Request, containerName string) (string, error) {
-	var readCloser io.ReadCloser
-	var err error
-	readCloser, err = req.Stream(context.TODO())
-	if err != nil {
-		print(fmt.Sprintf("error getting pod logs for container %s: %s", containerName, err.Error()))
-		return "", err
-	}
-	defer func(readCloser io.ReadCloser) {
-		err := readCloser.Close()
-		if err != nil {
-			print(fmt.Sprintf("Failed to close ReadCloser reading pod logs for container %s: %s", containerName, err.Error()))
-		}
-	}(readCloser)
-	var b []byte
-	b, err = io.ReadAll(readCloser)
-	return string(b), err
 }
