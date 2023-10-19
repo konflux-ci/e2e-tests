@@ -1,4 +1,4 @@
-package main
+package sprayproxy
 
 import (
 	"bytes"
@@ -11,28 +11,30 @@ import (
 
 	routev1 "github.com/openshift/api/route/v1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 const (
-	SPRAYPROXY_NAMESPACE = "sprayproxy"
-	ROUTE_NAME           = "sprayproxy-route"
-	PAC_NAMESPACE        = "openshift-pipelines"
-	PAC_ROUTE_NAME       = "pipelines-as-code-controller"
+	sprayProxyNamespace = "sprayproxy"
+	sprayProxyName      = "sprayproxy-route"
+	pacNamespace        = "openshift-pipelines"
+	pacRouteName        = "pipelines-as-code-controller"
 )
 
-type SprayProxy struct {
+type SprayProxyConfig struct {
 	BaseURL    string
+	PaCHost    string
 	Token      string
 	HTTPClient *http.Client
 }
 
-func NewSprayProxy(url string, token string) *SprayProxy {
-	return &SprayProxy{
+func NewSprayProxyConfig(url string, token string) (*SprayProxyConfig, error) {
+	pacHost, err := getPaCHost()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get PaC host: %+v", err)
+	}
+	return &SprayProxyConfig{
 		BaseURL: url,
-		Token:   token,
 		HTTPClient: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -41,39 +43,40 @@ func NewSprayProxy(url string, token string) *SprayProxy {
 				},
 			},
 		},
-	}
+		PaCHost: pacHost,
+		Token:   token,
+	}, nil
 }
 
-func (s *SprayProxy) RegisterServer(hostUrl string) (string, error) {
-	result, err := s.sendRequest(hostUrl, http.MethodPost)
-	if err != nil {
-		return "", err
-	}
-
-	return result, nil
-}
-
-func (s *SprayProxy) UnegisterServer(hostUrl string) (string, error) {
-	result, err := s.sendRequest(hostUrl, http.MethodDelete)
+func (s *SprayProxyConfig) RegisterServer() (string, error) {
+	result, err := s.sendRequest(http.MethodPost)
 	if err != nil {
 		return "", err
 	}
 	return result, nil
 }
 
-func (s *SprayProxy) GetServers() (string, error) {
-	result, err := s.sendRequest("", http.MethodGet)
+func (s *SprayProxyConfig) UnregisterServer() (string, error) {
+	result, err := s.sendRequest(http.MethodDelete)
 	if err != nil {
 		return "", err
 	}
 	return result, nil
 }
 
-func (s *SprayProxy) sendRequest(hostUrl string, httpMethod string) (string, error) {
+func (s *SprayProxyConfig) GetServers() (string, error) {
+	result, err := s.sendRequest(http.MethodGet)
+	if err != nil {
+		return "", err
+	}
+	return result, nil
+}
+
+func (s *SprayProxyConfig) sendRequest(httpMethod string) (string, error) {
 	requestURL := s.BaseURL + "/backends"
 
 	data := make(map[string]string)
-	data["url"] = hostUrl
+	data["url"] = s.PaCHost
 	bytesData, _ := json.Marshal(data)
 
 	req, err := http.NewRequest(httpMethod, requestURL, bytes.NewReader(bytesData))
@@ -98,38 +101,21 @@ func (s *SprayProxy) sendRequest(hostUrl string, httpMethod string) (string, err
 	return string(body), err
 }
 
-func GetPod() (*corev1.Pod, error) {
+func getPaCHost() (string, error) {
 	k8sClient, err := kubeCl.NewAdminKubernetesClient()
 	if err != nil {
-		return nil, err
-	}
-	podList, err := k8sClient.KubeInterface().CoreV1().Pods(SPRAYPROXY_NAMESPACE).List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	for _, pod := range podList.Items {
-		if pod.Status.Phase == corev1.PodRunning {
-			return &pod, nil
-		}
-	}
-	return nil, fmt.Errorf("no running pod found in namespace %s", SPRAYPROXY_NAMESPACE)
-}
-
-func GetPacRoute() (*routev1.Route, error) {
-	k8sClient, err := kubeCl.NewAdminKubernetesClient()
-	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	namespaceName := types.NamespacedName{
-		Name:      PAC_ROUTE_NAME,
-		Namespace: PAC_NAMESPACE,
+		Name:      pacRouteName,
+		Namespace: pacNamespace,
 	}
 
 	route := &routev1.Route{}
 	err = k8sClient.KubeRest().Get(context.TODO(), namespaceName, route)
 	if err != nil {
-		return &routev1.Route{}, err
+		return "", err
 	}
-	return route, nil
+	return fmt.Sprintf("https://%s", route.Spec.Host), nil
 }
