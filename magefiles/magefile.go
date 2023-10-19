@@ -444,9 +444,10 @@ func (ci CI) setRequiredEnvVars() error {
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
 			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,spi-suite,remote-secret,integration-service,ec,byoc")
+		} else { // openshift/release rehearse job for e2e-tests/infra-deployments repos
+			requiresSprayProxyRegistering = true
 		}
-		// e2e-tests repository PR
-	} else {
+	} else { // e2e-tests repository PR
 		requiresSprayProxyRegistering = true
 		if ci.isPRPairingRequired("infra-deployments") {
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
