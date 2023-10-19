@@ -241,7 +241,7 @@ func (ci CI) TestE2E() error {
 		testFailure = true
 	}
 
-	if requiresSprayProxyRegistering {
+	if requiresSprayProxyRegistering && sprayProxyConfig != nil {
 		err := unregisterPacServer()
 		if err != nil {
 			if alertErr := HandleErrorWithAlert(fmt.Errorf("failed to unregister SprayProxy: %+v", err), slack.ErrorSeverityLevelInfo); alertErr != nil {
