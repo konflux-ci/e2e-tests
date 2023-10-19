@@ -20,7 +20,7 @@ func (g *GitopsController) GetDeploymentTargetsList(namespace string) (*appservi
 
 	err := g.KubeRest().List(context.Background(), deploymentTargetList, opts...)
 	if err != nil && !k8sErrors.IsNotFound(err) {
-		return nil, fmt.Errorf("error occurred while trying to list deploymentTargets in %s namespace: %v", namespace, err)
+		return nil, fmt.Errorf("error occurred while trying to list deploymentTargets in %s namespace: %w", namespace, err)
 	}
 
 	return deploymentTargetList, nil

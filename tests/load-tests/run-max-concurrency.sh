@@ -24,6 +24,8 @@ load_test() {
         -o "$output_dir" \
         -t "$threads" \
         --disable-metrics \
+        --pushgateway-url "${PUSHGATEWAY_URL:-rhtapqe.com}" \
+        --enable-progress-bars="${ENABLE_PROGRESS_BARS:-false}" \
         --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}"
     if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
         echo "Waiting for the Tekton controller profiling to finish up to ${TEKTON_PERF_PROFILE_CPU_PERIOD}s"
@@ -42,7 +44,7 @@ else
     IFS="," read -r -a maxConcurrencySteps <<<"$(echo "${MAX_CONCURRENCY_STEPS:-1\ 5\ 10\ 25\ 50\ 100\ 150\ 200}" | sed 's/ /,/g')"
     maxThreads=${MAX_THREADS:-10}
     threshold=${THRESHOLD:-300}
-    echo '{"startTimestamp":"'$(date +%FT%T%:z)'", "maxThreads": '"$maxThreads"', "maxConcurrencySteps": "'"${maxConcurrencySteps[*]}"'", "threshold": '"$threshold"', "maxConcurrencyReached": 0, "endTimestamp": ""}' | jq >"$output"
+    echo '{"startTimestamp":"'$(date +%FT%T%:z)'", "maxThreads": '"$maxThreads"', "maxConcurrencySteps": "'"${maxConcurrencySteps[*]}"'", "threshold": '"$threshold"', "maxConcurrencyReached": 0, "computedConcurrency": 0, "workloadKPI": 0, "endTimestamp": "", "errorsTotal": -1}' | jq >"$output"
     for t in "${maxConcurrencySteps[@]}"; do
         if (("$t" > "$maxThreads")); then
             break
@@ -72,14 +74,21 @@ else
         index=$(printf "%04d" "$t")
         cp -vf "$output_dir/load-tests.json" "$output_dir/load-tests.max-concurrency.$index.json"
         cp -vf "$output_dir/load-tests.log" "$output_dir/load-tests.max-concurrency.$index.log"
-        pipelineRunThresholdExceeded=$(jq -rc ".runPipelineSucceededTimeMax > $threshold" "$output_dir/load-tests.json")
-        pipelineRunKPI=$(jq -rc ".runPipelineSucceededTimeMax" "$output_dir/load-tests.json")
-        if [ "$pipelineRunThresholdExceeded" = "true" ]; then
-            echo "The maximal time a pipeline run took to succeed (${pipelineRunKPI}s) has exceeded a threshold of ${threshold}s with $t threads."
+        workloadKPI=$(jq '.workloadKPI' "$output_dir/load-tests.json")
+        if awk "BEGIN { exit !($workloadKPI > $threshold)}"; then
+            echo "The average time a workload took to succeed (${workloadKPI}s) has exceeded a threshold of ${threshold}s with $t threads."
+            workloadKPIOld=$(jq '.workloadKPI' "$output")
+            threadsOld=$(jq '.maxConcurrencyReached' "$output")
+            computedConcurrency=$(python3 -c "import sys; t = float(sys.argv[1]); a = float(sys.argv[2]); b = float(sys.argv[3]); c = float(sys.argv[4]); d = float(sys.argv[5]); print((t - b) / ((d - b) / (c - a)) + a)" "$threshold" "$threadsOld" "$workloadKPIOld" "$t" "$workloadKPI")
+            jq ".computedConcurrency = $computedConcurrency" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
             break
         else
             jq ".maxConcurrencyReached = $t" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
+            jq ".workloadKPI = $workloadKPI" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
+            jq ".computedConcurrency = $t" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
             jq '.endTimestamp = "'$(date +%FT%T%:z)'"' "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
+            errorsTotal=$(jq '.errorsTotal' "$output_dir/load-tests.json")
+            jq ".errorsTotal = $errorsTotal" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
         fi
     done
     DRY_RUN=false ./clear.sh "$USER_PREFIX"

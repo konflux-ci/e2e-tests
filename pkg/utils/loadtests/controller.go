@@ -3,6 +3,7 @@ package loadtests
 import (
 	"encoding/json"
 	"errors"
+	"net/url"
 	"os"
 	"time"
 
@@ -54,17 +55,34 @@ func SelectUsers(userList []User, numberOfUsers, threadCount, maxUsers int) ([]U
 }
 
 //Indentify CI and get unique Job Name
-//Indentify CI and get unique Job Name
-func GetJobName()(string){
+func GetJobName(name string)(string){
+	
 	var jobName string
-	if utils.CheckIfEnvironmentExists("CI"){
-		if utils.CheckIfEnvironmentExists("GITHUB_ACTIONS"){
-			jobName = utils.GetEnv("GITHUB_RUN_ID", "")
-		} else if utils.CheckIfEnvironmentExists("PROW_JOB_ID") && utils.CheckIfEnvironmentExists("BUILD_ID"){
-			jobName = utils.GetEnv("BUILD_ID", "")
+	if name != "" {
+		jobName = name
+	}else{
+		if utils.CheckIfEnvironmentExists("CI"){
+			if utils.CheckIfEnvironmentExists("GITHUB_ACTIONS"){
+				jobName = utils.GetEnv("GITHUB_RUN_ID", "")
+			} else if utils.CheckIfEnvironmentExists("PROW_JOB_ID") && utils.CheckIfEnvironmentExists("BUILD_ID"){
+				jobName = utils.GetEnv("BUILD_ID", "")
+			} else {
+				jobName = time.Now().String()
+			}
+		} else {
+			jobName = time.Now().String()
 		}
-	}else {
-		jobName = time.Now().String()
 	}
 	return jobName
+}
+
+//Parse and check url
+func UrlCheck(urlString string) (bool){
+	_, err := url.ParseRequestURI(urlString)
+    
+    if err != nil {
+       return false
+    } else {
+        return true
+    }
 }

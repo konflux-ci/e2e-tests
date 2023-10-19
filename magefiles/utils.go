@@ -22,6 +22,7 @@ import (
 	plumbingHttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	sprig "github.com/go-task/slim-sprig"
 	"github.com/magefile/mage/sh"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/slack"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/image-controller/pkg/quay"
 )
@@ -377,6 +378,15 @@ func mergeBranch(repoPath string, branchToMerge string) error {
 	_, err := exec.Command("git", "-C", repoPath, "merge", branchToMerge, "-Xtheirs", "-q").Output()
 	if err != nil {
 		klog.Fatal(err)
+	}
+	return nil
+}
+
+func HandleErrorWithAlert(err error) error {
+	klog.Warning(err.Error() + " - this issue will be reported to a dedicated Slack channel")
+
+	if slackErr := slack.ReportIssue(err.Error()); slackErr != nil {
+		return fmt.Errorf("failed report an error (%s) to a Slack channel: %s", err, slackErr)
 	}
 	return nil
 }
