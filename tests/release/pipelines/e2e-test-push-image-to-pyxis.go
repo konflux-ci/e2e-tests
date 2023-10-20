@@ -1,31 +1,30 @@
-package release
+package pipelines
 
 import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"os"
-	"regexp"
-
 	"github.com/devfile/library/v2/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"gopkg.in/yaml.v2"
-
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
+	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"os"
+	"regexp"
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-to-pyxis", Label("release", "pushPyxis", "HACBS"), func() {
+var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-to-pyxis", Label("release-pipelines", "pushPyxis", "HACBS"), func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	var fw *framework.Framework
@@ -109,9 +108,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			},
 		}
 
-		_, err = fw.AsKubeAdmin.HasController.CreateApplication(applicationNameDefault, devNamespace)
-		Expect(err).NotTo(HaveOccurred())
-
 		managedServiceAccount, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(releaseStrategyServiceAccountDefault, managedNamespace, managednamespaceSecret, nil)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -145,30 +141,39 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			additionalComponentDetected = compDetected
 		}
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "true")
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		components := []release.Component{{Name: compName, Repository: releasedImagePushRepo}, {Name: additionalCompName, Repository: additionalReleasedImagePushRepo}}
-		sc := fw.AsKubeAdmin.ReleaseController.GenerateReleaseStrategyConfig(components)
-		scYaml, err := yaml.Marshal(sc)
-		Expect(err).ShouldNot(HaveOccurred())
-
-		scPath := "release-push-to-pyxis.yaml"
-		Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef(constants.StrategyConfigsRepo, constants.StrategyConfigsDefaultBranch, constants.StrategyConfigsRevision, scGitRevision)).To(Succeed())
-		_, err = fw.AsKubeAdmin.CommonController.Github.CreateFile(constants.StrategyConfigsRepo, scPath, string(scYaml), scGitRevision)
-		Expect(err).ShouldNot(HaveOccurred())
-
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-push-to-external-registry-strategy", managedNamespace, "push-to-external-registry", "quay.io/hacbs-release/pipeline-push-to-external-registry:0.19", releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, []releaseApi.Params{
-			{Name: "extraConfigGitUrl", Value: fmt.Sprintf("https://github.com/%s/strategy-configs.git", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"))},
-			{Name: "extraConfigPath", Value: scPath},
-			{Name: "extraConfigGitRevision", Value: scGitRevision},
-			{Name: "pyxisServerType", Value: "stage"},
-			{Name: "pyxisSecret", Value: "pyxis"},
-			{Name: "tag", Value: "latest"},
+		data, err := json.Marshal(map[string]interface{}{
+			"mapping": map[string]interface{}{
+				"components": []map[string]interface{}{
+					{
+						"component":  compName,
+						"repository": releasedImagePushRepo,
+					},
+					{
+						"component":  additionalComponentName,
+						"repository": additionalReleasedImagePushRepo,
+					},
+				},
+			},
+			"pyxis": map[string]interface{}{
+				"server": "stage",
+				"secret": "pyxis",
+			},
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, "", "", "mvp-push-to-external-registry-strategy")
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, managedNamespace, releaseEnvironment, devNamespace, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, []string{applicationNameDefault}, true, &tektonutils.PipelineRef{
+			Resolver: "git",
+			Params: []tektonutils.Param{
+				{Name: "url", Value: "https://github.com/redhat-appstudio/release-service-catalog"},
+				{Name: "revision", Value: "main"},
+				{Name: "pathInRepo", Value: "pipelines/push-to-external-registry/push-to-external-registry.yaml"},
+			},
+		}, &runtime.RawExtension{
+			Raw: data,
+		})
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicyDefault, managedNamespace, defaultEcPolicySpec)
@@ -187,6 +192,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		_, err = fw.AsKubeAdmin.CommonController.CreateRoleBinding("role-release-service-account-binding", managedNamespace, "ServiceAccount", releaseStrategyServiceAccountDefault, managedNamespace, "Role", "role-release-service-account", "rbac.authorization.k8s.io")
 		Expect(err).NotTo(HaveOccurred())
 
+		_, err = fw.AsKubeAdmin.HasController.CreateApplication(applicationNameDefault, devNamespace)
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterAll(func() {
