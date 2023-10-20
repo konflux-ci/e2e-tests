@@ -761,7 +761,7 @@ func registerPacServer() error {
 	}
 	_, err = sprayProxyConfig.RegisterServer()
 	if err != nil {
-		return fmt.Errorf("error when registering PaC server %s to SprayProxy server %s: %+v", sprayProxyConfig.PaCHost, err, sprayProxyConfig.BaseURL)
+		return fmt.Errorf("error when registering PaC server %s to SprayProxy server %s: %+v", sprayProxyConfig.PaCHost, sprayProxyConfig.BaseURL, err)
 	}
 	// for debugging purposes
 	servers, err := sprayProxyConfig.GetServers()
@@ -780,7 +780,7 @@ func unregisterPacServer() error {
 	}
 	_, err := sprayProxyConfig.UnregisterServer()
 	if err != nil {
-		return fmt.Errorf("error when unregistering PaC server %s from SprayProxy server %s: %+v", sprayProxyConfig.PaCHost, err, sprayProxyConfig.BaseURL)
+		return fmt.Errorf("error when unregistering PaC server %s from SprayProxy server %s: %+v", sprayProxyConfig.PaCHost, sprayProxyConfig.BaseURL, err)
 	}
 	// for debugging purposes
 	servers, err := sprayProxyConfig.GetServers()
