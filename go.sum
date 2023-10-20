@@ -1322,8 +1322,8 @@ github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20230825175313-
 github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20230825175313-126ea8674329/go.mod h1:12lI+rL9+laUTAZ8G/fl7ECBRym5q4WqHKcro8ET6Vo=
 github.com/redhat-appstudio/operator-toolkit v0.0.0-20230901144515-eeb937692f03 h1:3cHK+a1D+VwhzGoAnC2HXbjkywT/b8jDDaiew2KgpPw=
 github.com/redhat-appstudio/operator-toolkit v0.0.0-20230901144515-eeb937692f03/go.mod h1:7cX2+4KGZLJ4Yoj+1v0iV5hkCGBzbSd9wkNJQjCdDJs=
-github.com/redhat-appstudio/release-service v0.0.0-20230927145627-e492842a18f8 h1:ai38uzqzp9kuD5bbBdbq1bNMwc1n7+EzOgfAesy8z3o=
-github.com/redhat-appstudio/release-service v0.0.0-20230927145627-e492842a18f8/go.mod h1:U4Qa933BrXLEnudIhCaPp0lBWjevLY2MuvXrl9LIo7U=
+github.com/redhat-appstudio/release-service v0.0.0-20231012135118-498f8de95cc4 h1:2o7W/6e8PY4hIePCoJNJhOuVSr7FFfYgMeYp+fAoaAM=
+github.com/redhat-appstudio/release-service v0.0.0-20231012135118-498f8de95cc4/go.mod h1:nn+jLoCUky2VwmZPD3amxreRj4QJNp+ALhNgrKfLgno=
 github.com/redhat-appstudio/remote-secret v0.0.0-20230713072146-a6094c712436 h1:6XYknDslXDSVpNqEKnI+gKj3Uu4afK2S+IIH3KogX1E=
 github.com/redhat-appstudio/remote-secret v0.0.0-20230713072146-a6094c712436/go.mod h1:QlcxNg0q63QFGr9ceI3dH7a7vO6gGh+2TJrbTiMf9DE=
 github.com/redhat-appstudio/service-provider-integration-operator v0.2023.22-0.20230713080056-eae17aa8c172 h1:Zibq2RBTzcoDgZcTfM5k2o1qrKuix3YPtYQ/NuP039Y=

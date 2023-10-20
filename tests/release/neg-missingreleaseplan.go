@@ -1,9 +1,10 @@
 package release
 
 import (
+	"github.com/redhat-appstudio/application-api/api/v1alpha1"
+	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	"strings"
 
-	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -18,7 +19,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-2360] Release CR fails when missi
 	var err error
 
 	var devNamespace, managedNamespace string
-	var ecPolicy ecp.EnterpriseContractPolicySpec
 
 	var releaseCR *releaseApi.Release
 	AfterEach(framework.ReportFailure(&fw))
@@ -34,22 +34,16 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-2360] Release CR fails when missi
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", managedNamespace, err)
 
-		// Get the Spec from the default EnterpriseContractPolicy. This resource has up to date
-		// references and contains a small set of policy rules that should always pass during
-		// normal execution.
-		defaultECP, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
-		Expect(err).NotTo(HaveOccurred(), "Error when fetching the default ECP: %v", err)
-		ecPolicy = defaultECP.Spec
-
-		_, err = fw.AsKubeAdmin.HasController.CreateApplication(applicationName, devNamespace)
+		_, err = fw.AsKubeAdmin.IntegrationController.CreateSnapshotWithComponents(snapshotName, "", applicationName, devNamespace, []v1alpha1.SnapshotComponent{})
 		Expect(err).NotTo(HaveOccurred())
-		_, err = fw.AsKubeAdmin.IntegrationController.CreateSnapshotWithComponents(snapshotName, "", applicationName, devNamespace, snapshotComponents)
-		Expect(err).NotTo(HaveOccurred())
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy(releaseStrategyName, managedNamespace, releasePipelineName, releasePipelineBundle, releaseStrategyPolicy, serviceAccount, paramsReleaseStrategy)
-		Expect(err).NotTo(HaveOccurred())
-		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicy, managedNamespace, ecPolicy)
-		Expect(err).NotTo(HaveOccurred())
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(destinationReleasePlanAdmissionName, devNamespace, applicationName, managedNamespace, "", "", releaseStrategyName)
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(destinationReleasePlanAdmissionName, managedNamespace, "", devNamespace, releaseStrategyPolicy, serviceAccount, []string{applicationName}, true, &tektonutils.PipelineRef{
+			Resolver: "git",
+			Params: []tektonutils.Param{
+				{Name: "url", Value: "https://github.com/redhat-appstudio/release-service-catalog"},
+				{Name: "revision", Value: "main"},
+				{Name: "pathInRepo", Value: "pipelines/e2e/e2e.yaml"},
+			},
+		}, nil)
 		Expect(err).NotTo(HaveOccurred())
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, sourceReleasePlanName)
 		Expect(err).NotTo(HaveOccurred())
@@ -63,7 +57,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-2360] Release CR fails when missi
 	})
 
 	var _ = Describe("post-release verification.", func() {
-
 		It("tests a Release CR set as failed in both IsReleased and IsValid with a proper message to user.", func() {
 			Eventually(func() bool {
 				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetRelease(releaseName, "", devNamespace)

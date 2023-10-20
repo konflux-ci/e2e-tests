@@ -1,8 +1,7 @@
-package release
+package pipelines
 
 import (
 	"fmt"
-
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
@@ -11,46 +10,37 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
-	"gopkg.in/yaml.v2"
+	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	corev1 "k8s.io/api/core/v1"
+	"os"
 )
 
-var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-pipeline", Label("release", "defaultBundle", "HACBS"), func() {
+var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deployment", Label("release-pipelines", "withDeployment", "HACBS"), func() {
 	defer GinkgoRecover()
-
+	// Initialize the tests controllers
 	var fw *framework.Framework
 	AfterEach(framework.ReportFailure(&fw))
 	var err error
 	var compName string
 	var devNamespace string
-	var managedNamespace = utils.GetGeneratedNamespace("release-e2e-bundle-managed")
 
 	var component *appservice.Component
 	var releaseCR *releaseApi.Release
-	scGitRevision := fmt.Sprintf("test-bundle-%s", util.GenerateRandomString(4))
+	var managedNamespace = utils.GetGeneratedNamespace("release-e2e-deploy-managed")
+
+	scGitRevision := fmt.Sprintf("test-deployment-%s", util.GenerateRandomString(4))
 
 	BeforeAll(func() {
-		// Initialize the tests controllers
-		fw, err = framework.NewFramework("release-e2e-bundle")
+		fw, err = framework.NewFramework("release-e2e-deploy")
 		Expect(err).NotTo(HaveOccurred())
 		devNamespace = fw.UserNamespace
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating managedNamespace: %v", err)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating managed namespace: %v", err)
 
 		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
 		Expect(sourceAuthJson).ToNot(BeEmpty())
-
-		managedServiceAccount, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(releaseStrategyServiceAccountDefault, managedNamespace, managednamespaceSecret, nil)
-		Expect(err).NotTo(HaveOccurred())
-
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(devNamespace, managedServiceAccount)
-		Expect(err).NotTo(HaveOccurred())
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
-		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(redhatAppstudioUserSecret, managedNamespace, sourceAuthJson)
 		Expect(err).ToNot(HaveOccurred())
@@ -58,11 +48,9 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, hacbsReleaseTestsTokenSecret, serviceAccount, true)
 		Expect(err).ToNot(HaveOccurred())
 
-		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, redhatAppstudioUserSecret, serviceAccount, true)
-		Expect(err).ToNot(HaveOccurred())
-
 		publicKey, err := fw.AsKubeAdmin.TektonController.GetTektonChainsPublicKey()
 		Expect(err).ToNot(HaveOccurred())
+
 		Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
 			publicKey, publicSecretNameAuth, managedNamespace)).To(Succeed())
 
@@ -91,39 +79,34 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 			componentDetected = compDetected
 		}
 
-		_, err = fw.AsKubeAdmin.HasController.CreateApplication(applicationNameDefault, devNamespace)
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentDetected.ComponentStub, devNamespace, "", "", applicationNameDefault, false, map[string]string{})
+		_, err = fw.AsKubeAdmin.GitOpsController.CreatePocEnvironment(releaseEnvironment, managedNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "true")
-		Expect(err).NotTo(HaveOccurred())
-
-		components := []release.Component{{Name: compName, Repository: releasedImagePushRepo}}
-		sc := fw.AsKubeAdmin.ReleaseController.GenerateReleaseStrategyConfig(components)
-		scYaml, err := yaml.Marshal(sc)
-		Expect(err).ShouldNot(HaveOccurred())
-
-		scPath := "release-default-bundle.yaml"
-		Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef(constants.StrategyConfigsRepo, constants.StrategyConfigsDefaultBranch, constants.StrategyConfigsRevision, scGitRevision)).To(Succeed())
-		_, err = fw.AsKubeAdmin.CommonController.Github.CreateFile(constants.StrategyConfigsRepo, scPath, string(scYaml), scGitRevision)
-		Expect(err).ShouldNot(HaveOccurred())
-
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy(releaseStrategyDefaultName, managedNamespace, releasePipelineNameDefault, constants.ReleasePipelineImageRef, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, []releaseApi.Params{
-			{Name: "extraConfigGitUrl", Value: fmt.Sprintf("https://github.com/%s/strategy-configs.git", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"))},
-			{Name: "extraConfigPath", Value: scPath},
-			{Name: "extraConfigGitRevision", Value: scGitRevision},
-		})
-		Expect(err).NotTo(HaveOccurred())
-
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, "", "", releaseStrategyDefaultName)
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, managedNamespace, releaseEnvironment, devNamespace, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, []string{applicationNameDefault}, true, &tektonutils.PipelineRef{
+			Resolver: "git",
+			Params: []tektonutils.Param{
+				{Name: "url", Value: "https://github.com/redhat-appstudio/release-service-catalog"},
+				{Name: "revision", Value: "main"},
+				{Name: "pathInRepo", Value: "pipelines/deploy-release/deploy-release.yaml"},
+			},
+		}, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicyDefault, managedNamespace, defaultEcPolicySpec)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasePvcName, managedNamespace, corev1.ReadWriteOnce)
+		Expect(err).NotTo(HaveOccurred())
+
+		managedServiceAccount, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(releaseStrategyServiceAccountDefault, managedNamespace, managednamespaceSecret, nil)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(devNamespace, managedServiceAccount)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateRole("role-release-service-account", managedNamespace, map[string][]string{
@@ -136,6 +119,29 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 		_, err = fw.AsKubeAdmin.CommonController.CreateRoleBinding("role-release-service-account-binding", managedNamespace, "ServiceAccount", releaseStrategyServiceAccountDefault, managedNamespace, "Role", "role-release-service-account", "rbac.authorization.k8s.io")
 		Expect(err).NotTo(HaveOccurred())
 
+		_, err = fw.AsKubeAdmin.HasController.CreateApplication(applicationNameDefault, devNamespace)
+		Expect(err).NotTo(HaveOccurred())
+
+		component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentDetected.ComponentStub, devNamespace, "", "", applicationNameDefault, true, map[string]string{})
+		Expect(err).NotTo(HaveOccurred())
+
+		workingDir, err := os.Getwd()
+		if err != nil {
+			GinkgoWriter.Printf(err.Error())
+		}
+
+		// Download copy-applications.sh script from release-utils repo
+		scriptFileName := "copy-application.sh"
+		args := []string{"https://raw.githubusercontent.com/hacbs-release/release-utils/main/copy-application.sh", "-o", scriptFileName}
+		Expect(utils.ExecuteCommandInASpecificDirectory("curl", args, workingDir)).To(Succeed())
+		defer os.Remove(fmt.Sprintf("%s/%s", workingDir, scriptFileName))
+
+		args = []string{"775", "copy-application.sh"}
+		Expect(utils.ExecuteCommandInASpecificDirectory("chmod", args, workingDir)).To(Succeed())
+		// Copying application in dev namespace to managed namespace
+		args = []string{managedNamespace, "-a", devNamespace + "/" + applicationNameDefault}
+		Expect(utils.ExecuteCommandInASpecificDirectory("./copy-application.sh", args, workingDir)).To(Succeed())
+
 	})
 
 	AfterAll(func() {
@@ -144,8 +150,8 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 		}
 		if !CurrentSpecReport().Failed() {
-			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 		}
 	})
 
@@ -155,7 +161,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, fw.AsKubeAdmin.TektonController)).To(Succeed())
 		})
 
-		It("verifies that a Release CR should have been created in the dev namespace", func() {
+		It("tests an associated Release CR is created", func() {
 			Eventually(func() error {
 				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				return err
@@ -187,22 +193,22 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 				return nil
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(Succeed())
 		})
-
-		It("verifies that Enterprise Contract Task has succeeded in the Release PipelineRun", func() {
+		// phase Deployed happens before phase Released
+		It("tests a Release CR reports that the deployment was successful", func() {
 			Eventually(func() error {
-				pr, err := fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
-				Expect(err).ShouldNot(HaveOccurred())
-				ecTaskRunStatus, err := fw.AsKubeAdmin.TektonController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), pr, verifyEnterpriseContractTaskName)
-				Expect(err).ShouldNot(HaveOccurred())
-				GinkgoWriter.Printf("the status of the %s TaskRun on the release pipeline is: %v", verifyEnterpriseContractTaskName, ecTaskRunStatus.Status.Conditions)
-				Expect(tekton.DidTaskSucceed(ecTaskRunStatus)).To(BeTrue())
+				releaseCR, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
+				if err != nil {
+					return err
+				}
+				if !releaseCR.IsDeployed() {
+					return fmt.Errorf("release %s/%s is not marked as deployed yet", releaseCR.GetNamespace(), releaseCR.GetName())
+				}
 				return nil
-			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(Succeed())
+			}, releaseDeploymentTimeout, defaultInterval).Should(Succeed())
 		})
-
-		It("verifies that a Release is marked as succeeded.", func() {
+		It("tests a Release CR is marked as successfully deployed", func() {
 			Eventually(func() error {
-				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
+				releaseCR, err := fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				if err != nil {
 					return err
 				}
@@ -210,7 +216,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-738]test-release-service-default-
 					return fmt.Errorf("release %s/%s is not marked as finished yet", releaseCR.GetNamespace(), releaseCR.GetName())
 				}
 				return nil
-			}, releaseCreationTimeout, defaultInterval).Should(Succeed())
+			}, releaseFinishedTimeout, defaultInterval).Should(Succeed())
 		})
 	})
 })

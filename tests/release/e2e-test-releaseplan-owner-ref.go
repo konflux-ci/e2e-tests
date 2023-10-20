@@ -29,7 +29,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-2469]test-releaseplan-owner-ref-a
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, "managed", "true")
 		Expect(err).NotTo(HaveOccurred())
-
 	})
 
 	AfterAll(func() {
@@ -39,7 +38,6 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-2469]test-releaseplan-owner-ref-a
 	})
 
 	var _ = Describe("ReleasePlan verification", Ordered, func() {
-
 		It("verifies that the ReleasePlan has an owner reference for the application", func() {
 			Eventually(func() error {
 				releasePlan, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(sourceReleasePlanName, devNamespace)
