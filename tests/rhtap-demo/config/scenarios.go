@@ -220,6 +220,9 @@ var TestScenarios = []TestSpec{
 	{
 		Name:            "DEVHAS-337: creates golang application from a private repository which contain a devfile referencing a private Dockerfile URI",
 		ApplicationName: "private-devfile",
+		// Due to bug in build team fetching private stuffs lets skip this test:
+		// Bug: https://issues.redhat.com/browse/RHTAPBUGS-912
+		Skip: true,
 		Components: []ComponentSpec{
 			{
 				Private:        true,
@@ -269,7 +272,6 @@ var TestScenarios = []TestSpec{
 	{
 		Name:            MultiComponentWithoutDockerFileAndDevfile,
 		ApplicationName: "mc-quality-dashboard",
-		// We need to skip for now deployment checks of quality dashboard until RHTAP support secrets
 		Components: []ComponentSpec{
 			{
 				Name:                "mc-withdockerfile-withoutdevfile",
