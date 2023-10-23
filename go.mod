@@ -34,7 +34,7 @@ require (
 	github.com/redhat-appstudio/integration-service v0.0.0-20230427084439-306b4611389b
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20230821060312-4172397d68e8
 	github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0
-	github.com/redhat-appstudio/release-service v0.0.0-20230927145627-e492842a18f8
+	github.com/redhat-appstudio/release-service v0.0.0-20231012135118-498f8de95cc4
 	github.com/redhat-appstudio/remote-secret v0.0.0-20230713072146-a6094c712436
 	github.com/redhat-appstudio/service-provider-integration-operator v0.2023.22-0.20230713080056-eae17aa8c172
 	github.com/slack-go/slack v0.12.3

@@ -59,7 +59,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 		// Remove all resources created by the tests in case the suite was successfull
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(fw.UserNamespace, 60*time.Second); err != nil {
+				if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(fw.UserNamespace, 90*time.Second); err != nil {
 					if err := fw.AsKubeAdmin.StoreAllArtifactsForNamespace(fw.UserNamespace); err != nil {
 						Fail(fmt.Sprintf("error archiving artifacts:\n%s", err))
 					}
