@@ -10,7 +10,6 @@ import (
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -28,6 +27,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 	var namespace string
 	var targetNamespace string
 	var targetNamespace_2 string
+	var targetNamespace_3 string
 	var cfg *rest.Config
 	const ManagedEnvironmentSecretName = "envsecret"
 	const applicationName = "rsenvapp"
@@ -36,6 +36,8 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 	const remoteSecretName = "target-secret-test"
 	const targetSecretName_2 = "target-secret-test-2"
 	const remoteSecretName_2 = "target-secret-test-2"
+	const targetSecretName_3 = "target-secret-test-3"
+	const remoteSecretName_3 = "target-secret-test-3"
 
 	const cdqName = "target-secret-test"
 	const gitSourceRepo = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
@@ -48,11 +50,12 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 	Describe("(SVPI-632) RemoteSecret has to be created with target namespace and Environment and (SVPI-633) in all Environments of certain component and application, ", Ordered, func() {
 		BeforeAll(func() {
 			// Initialize the tests controllers
-			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("spi-demos"))
+			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("rs-demos"))
 			Expect(err).NotTo(HaveOccurred())
 			namespace = fw.UserNamespace
 			targetNamespace = fw.UserNamespace + "-target"
 			targetNamespace_2 = fw.UserNamespace + "-target-2"
+			targetNamespace_3 = fw.UserNamespace + "-target-3"
 			Expect(namespace).NotTo(BeEmpty())
 		})
 
@@ -75,6 +78,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 
 				Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(targetNamespace)).To(Succeed())
 				Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(targetNamespace_2)).To(Succeed())
+				Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(targetNamespace_3)).To(Succeed())
 
 			}
 		})
@@ -84,6 +88,9 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(targetNamespace_2)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(targetNamespace_3)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -98,12 +105,12 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 			data["kubeconfig"] = []byte(kubeConfData)
 
 			// create the secret
-			secret := &corev1.Secret{
+			secret := &v1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      ManagedEnvironmentSecretName,
 					Namespace: fw.UserNamespace,
 				},
-				Type: corev1.SecretType("managed-gitops.redhat.com/managed-environment"),
+				Type: v1.SecretType("managed-gitops.redhat.com/managed-environment"),
 				Data: data,
 			}
 
@@ -115,7 +122,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 			// Deletes current development environment
 			Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(fw.UserNamespace, 1*time.Minute)).To(Succeed())
 
-			// Creates two environments using the same cluster as target
+			// Creates three environments using the same cluster as target
 			ephemeralEnvironmentObj := &appservice.Environment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      targetNamespace,
@@ -164,6 +171,29 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 			err = fw.AsKubeAdmin.RemoteSecretController.KubeRest().Create(context.TODO(), ephemeralEnvironmentObj)
 			Expect(err).NotTo(HaveOccurred())
 
+			ephemeralEnvironmentObj = &appservice.Environment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      targetNamespace_3,
+					Namespace: fw.UserNamespace,
+				},
+				Spec: appservice.EnvironmentSpec{
+					DeploymentStrategy: appservice.DeploymentStrategy_AppStudioAutomated,
+					DisplayName:        targetNamespace_3,
+					Tags:               []string{"managed"},
+					UnstableConfigurationFields: &appservice.UnstableEnvironmentConfiguration{
+						ClusterType: appservice.ConfigurationClusterType_OpenShift,
+						KubernetesClusterCredentials: appservice.KubernetesClusterCredentials{
+							TargetNamespace:            targetNamespace_3,
+							APIURL:                     cfg.Host,
+							ClusterCredentialsSecret:   ManagedEnvironmentSecretName,
+							AllowInsecureSkipTLSVerify: true,
+							Namespaces:                 []string{targetNamespace_3},
+						},
+					},
+				},
+			}
+			err = fw.AsKubeAdmin.RemoteSecretController.KubeRest().Create(context.TODO(), ephemeralEnvironmentObj)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("(SVPI-633) create remote secret #1 with only application and component and injects data", func() {
@@ -171,7 +201,10 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 				"appstudio.redhat.com/application": applicationName,
 				"appstudio.redhat.com/component":   componentName,
 			}
-			_, err := fw.AsKubeAdmin.RemoteSecretController.CreateRemoteSecretWithLabels(remoteSecretName, fw.UserNamespace, targetSecretName, labels)
+
+			annotations := map[string]string{}
+
+			_, err := fw.AsKubeAdmin.RemoteSecretController.CreateRemoteSecretWithLabelsAndAnnotations(remoteSecretName, fw.UserNamespace, targetSecretName, labels, annotations)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() bool {
@@ -203,7 +236,9 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 				"appstudio.redhat.com/environment": targetNamespace_2,
 				"appstudio.redhat.com/component":   componentName,
 			}
-			_, err := fw.AsKubeAdmin.RemoteSecretController.CreateRemoteSecretWithLabels(remoteSecretName_2, fw.UserNamespace, targetSecretName_2, labels)
+			annotations := map[string]string{}
+
+			_, err := fw.AsKubeAdmin.RemoteSecretController.CreateRemoteSecretWithLabelsAndAnnotations(remoteSecretName_2, fw.UserNamespace, targetSecretName_2, labels, annotations)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() bool {
@@ -226,6 +261,40 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 
 				return meta.IsStatusConditionTrue(remoteSecret.Status.Conditions, "DataObtained")
 			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), fmt.Sprintf("RemoteSecret %s/%s data not injected", namespace, remoteSecretName_2))
+
+		})
+
+		It("(SVPI-654) create remote secret #3 with application,component and mutiple environments and injects data", func() {
+			labels := map[string]string{
+				"appstudio.redhat.com/application": applicationName,
+				"appstudio.redhat.com/component":   componentName,
+			}
+			annotations := map[string]string{
+				"appstudio.redhat.com/environment": fmt.Sprintf("%s,%s", targetNamespace_2, targetNamespace_3),
+			}
+			_, err := fw.AsKubeAdmin.RemoteSecretController.CreateRemoteSecretWithLabelsAndAnnotations(remoteSecretName_3, fw.UserNamespace, targetSecretName_3, labels, annotations)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() bool {
+				remoteSecret, err := fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecretName_3, namespace)
+				if k8sErrors.IsNotFound(err) {
+					return false
+				}
+
+				return remoteSecret.Name == remoteSecretName_3
+			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), fmt.Sprintf("RemoteSecret %s/%s data not injected", namespace, remoteSecretName_3))
+
+			fakeData := map[string]string{"username": "john", "password": "doe"}
+
+			_, err = fw.AsKubeAdmin.RemoteSecretController.CreateUploadSecret(remoteSecretName_3, namespace, remoteSecretName_3, v1.SecretTypeOpaque, fakeData)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() bool {
+				remoteSecret, err := fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecretName_3, namespace)
+				Expect(err).NotTo(HaveOccurred())
+
+				return meta.IsStatusConditionTrue(remoteSecret.Status.Conditions, "DataObtained")
+			}, 1*time.Minute, 5*time.Second).Should(BeTrue(), fmt.Sprintf("RemoteSecret %s/%s data not injected", namespace, remoteSecretName_3))
 
 		})
 
@@ -316,6 +385,56 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 
 		})
 
+		It("(SVPI-654) secret #3 should exist in #2 and #3 environments target namespace", func() {
+			Eventually(func() bool {
+				rs_3, err := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_3, targetSecretName_3)
+				if err != nil {
+					return false
+				}
+
+				rs_2, err := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_2, targetSecretName_3)
+				if err != nil {
+					return false
+				}
+
+				return rs_3.Name == targetSecretName_3 && rs_2.Name == targetSecretName_3
+			}, 2*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("secrets %s is not created in all environments", targetSecretName_3))
+
+		})
+
+		It("checks targets in RemoteSecret #1 status contains target namespace #1, #2, #3", func() {
+			remoteSecret, err := fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecretName, namespace)
+			Expect(err).NotTo(HaveOccurred())
+
+			// remote secret #1 is deployed in all environement for the application and component
+			// target should therefore contain target namespaces of all three environments
+			Expect(fw.AsKubeAdmin.RemoteSecretController.RemoteSecretTargetsContainsNamespace(targetNamespace, remoteSecret)).To(BeTrue(), fmt.Sprintf("namespace %s is not in targets of %s", targetNamespace, remoteSecretName))
+			Expect(fw.AsKubeAdmin.RemoteSecretController.RemoteSecretTargetsContainsNamespace(targetNamespace_2, remoteSecret)).To(BeTrue(), fmt.Sprintf("namespace %s is not in targets of %s", targetNamespace_2, remoteSecretName))
+			Expect(fw.AsKubeAdmin.RemoteSecretController.RemoteSecretTargetsContainsNamespace(targetNamespace_3, remoteSecret)).To(BeTrue(), fmt.Sprintf("namespace %s is not in targets of %s", targetNamespace_3, remoteSecretName))
+			Expect(remoteSecret.Status.Targets).To(HaveLen(3))
+		})
+
+		It("checks targets in RemoteSecret #2 status contains target namespace #2", func() {
+			remoteSecret, err := fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecretName_2, namespace)
+			Expect(err).NotTo(HaveOccurred())
+
+			// remote secret #2 is deployed only on environement #2
+			// target should therefore contain target namespaces of only environment #2
+			Expect(fw.AsKubeAdmin.RemoteSecretController.RemoteSecretTargetsContainsNamespace(targetNamespace_2, remoteSecret)).To(BeTrue(), fmt.Sprintf("namespace %s is not in targets of %s", targetNamespace_2, remoteSecretName_2))
+			Expect(remoteSecret.Status.Targets).To(HaveLen(1))
+		})
+
+		It("checks targets in RemoteSecret #3 status contains target namespace #2 and #3", func() {
+			remoteSecret, err := fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecretName_3, namespace)
+			Expect(err).NotTo(HaveOccurred())
+
+			// remote secret #3 is deployed on environement #2 and #3 for the applications and component
+			// target should therefore contain target namespaces of both environments
+			Expect(fw.AsKubeAdmin.RemoteSecretController.RemoteSecretTargetsContainsNamespace(targetNamespace_2, remoteSecret)).To(BeTrue(), fmt.Sprintf("namespace %s is not in targets of %s", targetNamespace_2, remoteSecretName_3))
+			Expect(fw.AsKubeAdmin.RemoteSecretController.RemoteSecretTargetsContainsNamespace(targetNamespace_3, remoteSecret)).To(BeTrue(), fmt.Sprintf("namespace %s is not in targets of %s", targetNamespace_3, remoteSecretName_3))
+			Expect(remoteSecret.Status.Targets).To(HaveLen(2))
+		})
+
 		It("secrets #1 and #2 should be deleted when Environment is deleted", func() {
 			// Delete the existing Environments
 			Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
@@ -329,6 +448,23 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 				return k8sErrors.IsNotFound(errRs1Ns1) && k8sErrors.IsNotFound(errRs1Ns2) && k8sErrors.IsNotFound(errRs2Ns2)
 			}, 2*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("secrets %s is not created in all environments", targetSecretName))
 
+		})
+
+		It("after Environment is deleted target namespace is removed from targets in RemoteSecret status", func() {
+			remoteSecret, err := fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecretName, namespace)
+			Expect(err).NotTo(HaveOccurred())
+			targets := remoteSecret.Status.Targets
+			Expect(targets).To(BeEmpty())
+
+			remoteSecret_2, err := fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecretName_2, namespace)
+			Expect(err).NotTo(HaveOccurred())
+			targets_2 := remoteSecret_2.Status.Targets
+			Expect(targets_2).To(BeEmpty())
+
+			remoteSecret_3, err := fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecretName_3, namespace)
+			Expect(err).NotTo(HaveOccurred())
+			targets_3 := remoteSecret_3.Status.Targets
+			Expect(targets_3).To(BeEmpty())
 		})
 
 	})
