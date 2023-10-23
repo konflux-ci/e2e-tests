@@ -12,6 +12,7 @@ go run loadtest.go \
     -l \
     -o "${OUTPUT_DIR:-.}" \
     -t "${THREADS:-2}" \
+    --disable-metrics="${DISABLE_METRICS:-false}" \
     --pushgateway-url "${PUSHGATEWAY_URL:-rhtapqe.com}" \
     --enable-progress-bars="${ENABLE_PROGRESS_BARS:-false}" \
     --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}"
