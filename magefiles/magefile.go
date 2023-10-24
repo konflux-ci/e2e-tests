@@ -745,10 +745,12 @@ func AppendFrameworkDescribeGoFile(specFile string) error {
 }
 
 func newSprayProxy() (*sprayproxy.SprayProxyConfig, error) {
-	sprayProxyUrl := os.Getenv("QE_SPRAYPROXY_HOST")
-	sprayProxyToken := os.Getenv("QE_SPRAYPROXY_TOKEN")
-	if sprayProxyUrl == "" || sprayProxyToken == "" {
+	var sprayProxyUrl, sprayProxyToken string
+	if sprayProxyUrl = os.Getenv("QE_SPRAYPROXY_HOST"); sprayProxyUrl == "" {
 		return nil, fmt.Errorf("env var QE_SPRAYPROXY_HOST is not set")
+	}
+	if sprayProxyToken = os.Getenv("QE_SPRAYPROXY_TOKEN"); sprayProxyToken == "" {
+		return nil, fmt.Errorf("env var QE_SPRAYPROXY_TOKEN is not set")
 	}
 	return sprayproxy.NewSprayProxyConfig(sprayProxyUrl, sprayProxyToken)
 }
@@ -764,12 +766,7 @@ func registerPacServer() error {
 		return fmt.Errorf("error when registering PaC server %s to SprayProxy server %s: %+v", sprayProxyConfig.PaCHost, sprayProxyConfig.BaseURL, err)
 	}
 	// for debugging purposes
-	servers, err := sprayProxyConfig.GetServers()
-	if err != nil {
-		klog.Error("Failed to get registered PaC servers from SprayProxy: %+v", err)
-	} else {
-		klog.Infof("Registered PaC servers: %v", servers)
-	}
+	klog.Infof("Registered PaC server: %s", sprayProxyConfig.PaCHost)
 
 	return nil
 }
