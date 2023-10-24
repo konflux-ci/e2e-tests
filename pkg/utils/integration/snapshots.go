@@ -11,11 +11,15 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	intgteststat "github.com/redhat-appstudio/integration-service/pkg/integrationteststatus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// SnapshotTestsStatusAnnotation is annotation in snapshot where integration test results are stored
+const SnapshotTestsStatusAnnotation = "test.appstudio.openshift.io/status"
 
 // CreateSnapshotWithComponents creates a Snapshot using the given parameters.
 func (i *IntegrationController) CreateSnapshotWithComponents(snapshotName, componentName, applicationName, namespace string, snapshotComponents []appstudioApi.SnapshotComponent) (*appstudioApi.Snapshot, error) {
@@ -172,4 +176,26 @@ func (i *IntegrationController) StoreAllSnapshots(namespace string) error {
 		}
 	}
 	return nil
+}
+
+// GetIntegrationTestStatusDetailFromSnapshot parses snapshot annotation and returns integration test status detail
+func (i *IntegrationController) GetIntegrationTestStatusDetailFromSnapshot(snapshot *appstudioApi.Snapshot, scenarioName string) (*intgteststat.IntegrationTestStatusDetail, error) {
+	var (
+		resultsJson string
+		ok          bool
+	)
+	annotations := snapshot.GetAnnotations()
+	resultsJson, ok = annotations[SnapshotTestsStatusAnnotation]
+	if !ok {
+		resultsJson = ""
+	}
+	statuses, err := intgteststat.NewSnapshotIntegrationTestStatuses(resultsJson)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create new SnapshotIntegrationTestStatuses object: %w", err)
+	}
+	statusDetail, ok := statuses.GetScenarioStatus(scenarioName)
+	if !ok {
+		return nil, fmt.Errorf("status detail for scenario %s not found", scenarioName)
+	}
+	return statusDetail, nil
 }
