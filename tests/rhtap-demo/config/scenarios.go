@@ -202,9 +202,76 @@ var TestScenarios = []TestSpec{
 		},
 	},
 	{
+		Name:            "DEVHAS-337: creates quarkus application from a private repository which contain a devfile",
+		ApplicationName: "private-devfile",
+		Components: []ComponentSpec{
+			{
+				Private:           true,
+				Name:              "quarkus-devfile",
+				ContainerSource:   "",
+				Language:          "Java",
+				GitSourceUrl:      "https://github.com/redhat-appstudio-qe/private-quarkus-devfile-sample.git",
+				GitSourceRevision: "",
+				GitSourceContext:  "",
+				HealthEndpoint:    "/hello-resteasy",
+			},
+		},
+	},
+	{
+		Name:            "DEVHAS-337: creates golang application from a private repository which contain a devfile referencing a private Dockerfile URI",
+		ApplicationName: "private-devfile",
+		// Due to bug in build team fetching private stuffs lets skip this test:
+		// Bug: https://issues.redhat.com/browse/RHTAPBUGS-912
+		Skip: true,
+		Components: []ComponentSpec{
+			{
+				Private:        true,
+				Name:           "go-devfile-private",
+				Language:       "Go",
+				GitSourceUrl:   "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic-private-dockerfile-full-private.git",
+				HealthEndpoint: "/",
+			},
+		},
+	},
+	{
+		Name:            "Private nested application with 2 golang components",
+		ApplicationName: "mc-golang-nested",
+		Components: []ComponentSpec{
+			{
+				Name:                "mc-golang-nested",
+				SkipDeploymentCheck: true,
+				Private:             true,
+				GitSourceUrl:        "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic-private-devfile-nested.git",
+			},
+		},
+	},
+	{
+		Name:            "Application with a golang component with dockerfile but not devfile (private)",
+		ApplicationName: "mc-golang-nested",
+		Components: []ComponentSpec{
+			{
+				Name:                "mc-golang-nodevfile",
+				SkipDeploymentCheck: true,
+				Private:             true,
+				GitSourceUrl:        "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic-dockerfile-only-private.git",
+			},
+		},
+	},
+	{
+		Name:            "Private component withoud devfile/docker",
+		ApplicationName: "mc-golang-without",
+		Components: []ComponentSpec{
+			{
+				Name:                "mc-golang-without",
+				SkipDeploymentCheck: true,
+				Private:             true,
+				GitSourceUrl:        "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic-dockerfile-empty-private.git",
+			},
+		},
+	},
+	{
 		Name:            MultiComponentWithoutDockerFileAndDevfile,
 		ApplicationName: "mc-quality-dashboard",
-		// We need to skip for now deployment checks of quality dashboard until RHTAP support secrets
 		Components: []ComponentSpec{
 			{
 				Name:                "mc-withdockerfile-withoutdevfile",
