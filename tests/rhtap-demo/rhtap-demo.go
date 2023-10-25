@@ -3,6 +3,7 @@ package rhtap_demo
 import (
 	"context"
 	"fmt"
+	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	"os"
 	"time"
 
@@ -21,9 +22,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
-	r "github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
-	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -112,7 +111,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					if !CurrentSpecReport().Failed() {
-						if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 60*time.Second); err != nil {
+						if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 90*time.Second); err != nil {
 							if err := fw.AsKubeAdmin.StoreAllArtifactsForNamespace(namespace); err != nil {
 								Fail(fmt.Sprintf("error archiving artifacts:\n%s", err))
 							}
@@ -372,7 +371,6 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 								// Delete new branch created by PaC and a testing branch used as a component's base branch
 								Expect(fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, pacBranchName)).To(Succeed())
 								Expect(fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, componentNewBaseBranch)).To(Succeed())
-								Expect(fw.AsKubeAdmin.CommonController.Github.DeleteRef(constants.StrategyConfigsRepo, component.GetName())).To(Succeed())
 							})
 							When("Component is switched to Advanced Build mode", func() {
 
@@ -659,16 +657,6 @@ func createReleaseConfig(fw framework.Framework, managedNamespace, componentName
 	_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan("source-releaseplan", fw.UserNamespace, appName, managedNamespace, "")
 	Expect(err).NotTo(HaveOccurred())
 
-	components := []r.Component{{Name: componentName, Repository: constants.DefaultReleasedImagePushRepo}}
-	sc := fw.AsKubeAdmin.ReleaseController.GenerateReleaseStrategyConfig(components)
-	scYaml, err := yaml.Marshal(sc)
-	Expect(err).ShouldNot(HaveOccurred())
-
-	scPath := componentName + ".yaml"
-	Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef(constants.StrategyConfigsRepo, constants.StrategyConfigsDefaultBranch, "", componentName)).To(Succeed())
-	_, err = fw.AsKubeAdmin.CommonController.Github.CreateFile(constants.StrategyConfigsRepo, scPath, string(scYaml), componentName)
-	Expect(err).ShouldNot(HaveOccurred())
-
 	defaultEcPolicy, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 	Expect(err).NotTo(HaveOccurred())
 	ecPolicyName := componentName + "-policy"
@@ -683,14 +671,15 @@ func createReleaseConfig(fw framework.Framework, managedNamespace, componentName
 	}
 	_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(ecPolicyName, managedNamespace, defaultEcPolicySpec)
 	Expect(err).NotTo(HaveOccurred())
-	_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy(componentName+"-strategy", managedNamespace, "release", constants.ReleasePipelineImageRef, ecPolicyName, "release-service-account", []releaseApi.Params{
-		{Name: "extraConfigGitUrl", Value: fmt.Sprintf("https://github.com/%s/strategy-configs.git", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"))},
-		{Name: "extraConfigPath", Value: scPath},
-		{Name: "extraConfigGitRevision", Value: componentName},
-	})
-	Expect(err).NotTo(HaveOccurred())
 
-	_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission("demo", fw.UserNamespace, appName, managedNamespace, "", "", componentName+"-strategy")
+	_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission("demo", managedNamespace, "", fw.UserNamespace, ecPolicyName, "release-service-account", []string{appName}, true, &tektonutils.PipelineRef{
+		Resolver: "git",
+		Params: []tektonutils.Param{
+			{Name: "url", Value: "https://github.com/redhat-appstudio/release-service-catalog"},
+			{Name: "revision", Value: "main"},
+			{Name: "pathInRepo", Value: "pipelines/e2e/e2e.yaml"},
+		},
+	}, nil)
 	Expect(err).NotTo(HaveOccurred())
 
 	_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode("release-pvc", managedNamespace, corev1.ReadWriteOnce)

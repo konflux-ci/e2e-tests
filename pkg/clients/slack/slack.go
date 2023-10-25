@@ -12,11 +12,9 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-const alertEmoji = ":alert-siren:"
-
-func ReportIssue(msg string) error {
+func ReportIssue(msg string, errLevel ErrorSeverityLevel) error {
 	api := slack.New(os.Getenv(constants.SLACK_BOT_TOKEN_ENV))
-	msg = fmt.Sprintf("%s *E2E job alert* %s\nError message: `%s`", alertEmoji, alertEmoji, msg)
+	msg = fmt.Sprintf("%s\nError message: ```\n%s\n```", getMessageHeader(errLevel), msg)
 
 	jobID := os.Getenv("PROW_JOB_ID")
 	if jobID != "" {
@@ -29,6 +27,11 @@ func ReportIssue(msg string) error {
 		slack.MsgOptionAsUser(true),
 	)
 	return err
+}
+
+func getMessageHeader(errLevel ErrorSeverityLevel) string {
+	headerMsg := "*E2E job alert*"
+	return fmt.Sprintf("%s %s %s", alertEmojiType[errLevel], headerMsg, alertEmojiType[errLevel])
 }
 
 func getProwJobURL(jobID string) string {
