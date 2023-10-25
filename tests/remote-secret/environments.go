@@ -47,7 +47,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 	compDetected := appservice.ComponentDetectionDescription{}
 	componentObj := &appservice.Component{}
 
-	Describe("(SVPI-632) RemoteSecret has to be created with target namespace and Environment and (SVPI-633) in all Environments of certain component and application, ", Ordered, func() {
+	Describe("Check RemoteSecret behaviour when deployed in Environments of an Application and Component", Ordered, func() {
 		BeforeAll(func() {
 			// Initialize the tests controllers
 			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("rs-demos"))
@@ -118,7 +118,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("create environments", func() {
+		It("create three Environments", func() {
 			// Deletes current development environment
 			Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(fw.UserNamespace, 1*time.Minute)).To(Succeed())
 
@@ -196,7 +196,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("(SVPI-633) create remote secret #1 with only application and component and injects data", func() {
+		It("(SVPI-633) create Remote Secret #1 with only Application and Component and inject data", func() {
 			labels := map[string]string{
 				"appstudio.redhat.com/application": applicationName,
 				"appstudio.redhat.com/component":   componentName,
@@ -230,7 +230,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 
 		})
 
-		It("(SVPI-632) create remote secret #2 with application,component and environment and injects data", func() {
+		It("(SVPI-632) create Remote Secret #2 with Application, Component and one Environment (#2) and injects data", func() {
 			labels := map[string]string{
 				"appstudio.redhat.com/application": applicationName,
 				"appstudio.redhat.com/environment": targetNamespace_2,
@@ -264,7 +264,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 
 		})
 
-		It("(SVPI-654) create remote secret #3 with application,component and mutiple environments and injects data", func() {
+		It("(SVPI-654) create Remote Secret #3 with Application, Component and mutiple Environments (#2, #3) and injects data", func() {
 			labels := map[string]string{
 				"appstudio.redhat.com/application": applicationName,
 				"appstudio.redhat.com/component":   componentName,
@@ -298,7 +298,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 
 		})
 
-		It("create RHTAP application and check its health", func() {
+		It("create the RHTAP Application and check its health", func() {
 			createdApplication, err := fw.AsKubeDeveloper.HasController.CreateApplication(applicationName, fw.UserNamespace)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(createdApplication.Spec.DisplayName).To(Equal(applicationName))
@@ -319,7 +319,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 			}, 1*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("timed out waiting for HAS controller to create gitops repository for the %s application in %s namespace", applicationName, fw.UserNamespace))
 		})
 
-		It("create Red Hat AppStudio ComponentDetectionQuery for Component repository", func() {
+		It("create the RHTAP ComponentDetectionQuery for Component repository", func() {
 			_, err := fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(cdqName, fw.UserNamespace, gitSourceRepo, "", "", "", false)
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -344,17 +344,18 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 			}
 		})
 
-		It("create Red Hat AppStudio Quarkus component", func() {
+		It("create RHTAP Quarkus component", func() {
 			compDetected.ComponentStub.ComponentName = componentName
 			componentObj, err = fw.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, fw.UserNamespace, "", "", applicationName, true, map[string]string{})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("wait for component pipeline to finish", func() {
+		It("wait for Component pipeline to finish", func() {
 			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(componentObj, "", 2, fw.AsKubeAdmin.TektonController)).To(Succeed())
 		})
 
 		It("(SVPI-633) secret #1 should exist in all environments' target namespace", func() {
+			// Checking that secret #1 (targetSecretName) exists in all three target namespaces (targetNamespace, targetNamespace_2, targetNamespace_3)
 			Eventually(func() bool {
 				rs_1, err := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace, targetSecretName)
 				if err != nil {
@@ -366,12 +367,18 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 					return false
 				}
 
-				return rs_1.Name == targetSecretName && rs_2.Name == targetSecretName
+				rs_3, err := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_3, targetSecretName)
+				if err != nil {
+					return false
+				}
+
+				return rs_1.Name == targetSecretName && rs_2.Name == targetSecretName && rs_3.Name == targetSecretName
 			}, 2*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("secrets %s is not created in all environments", targetSecretName))
 
 		})
 
 		It("(SVPI-632) secret #2 should exist (only) in the target environment", func() {
+			// Checking that secret #2 (targetSecretName_2) exists only target namespaces #2 (targetNamespace_2)
 			Eventually(func() bool {
 				targetSecret_2, err := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_2, targetSecretName_2)
 				if k8sErrors.IsNotFound(err) {
@@ -380,12 +387,14 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 
 				_, errNotFound := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace, targetSecretName_2)
 
-				return targetSecret_2.Name == targetSecretName_2 && k8sErrors.IsNotFound(errNotFound)
-			}, 2*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("secret %s is not created in the specified environment", targetSecretName_2))
+				_, errNotFound_3 := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_3, targetSecretName_2)
+
+				return targetSecret_2.Name == targetSecretName_2 && k8sErrors.IsNotFound(errNotFound) && k8sErrors.IsNotFound(errNotFound_3)
+			}, 2*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("secret %s does not exists (only) in the specified environment", targetSecretName_2))
 
 		})
 
-		It("(SVPI-654) secret #3 should exist in #2 and #3 environments target namespace", func() {
+		It("(SVPI-654) secret #3 should exist (only) in #2 and #3 environments target namespace", func() {
 			Eventually(func() bool {
 				rs_3, err := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_3, targetSecretName_3)
 				if err != nil {
@@ -397,12 +406,14 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 					return false
 				}
 
-				return rs_3.Name == targetSecretName_3 && rs_2.Name == targetSecretName_3
+				_, errNotFound := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace, targetSecretName_3)
+
+				return rs_3.Name == targetSecretName_3 && rs_2.Name == targetSecretName_3 && k8sErrors.IsNotFound(errNotFound)
 			}, 2*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("secrets %s is not created in all environments", targetSecretName_3))
 
 		})
 
-		It("checks targets in RemoteSecret #1 status contains target namespace #1, #2, #3", func() {
+		It("check targets in RemoteSecret #1 status contains target namespace #1, #2, #3", func() {
 			remoteSecret, err := fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecretName, namespace)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -414,7 +425,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 			Expect(remoteSecret.Status.Targets).To(HaveLen(3))
 		})
 
-		It("checks targets in RemoteSecret #2 status contains target namespace #2", func() {
+		It("checks targets in RemoteSecret #2 status contains (only) target namespace #2", func() {
 			remoteSecret, err := fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecretName_2, namespace)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -424,7 +435,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 			Expect(remoteSecret.Status.Targets).To(HaveLen(1))
 		})
 
-		It("checks targets in RemoteSecret #3 status contains target namespace #2 and #3", func() {
+		It("checks targets in RemoteSecret #3 status contains (only) target namespace #2 and #3", func() {
 			remoteSecret, err := fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecretName_3, namespace)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -435,7 +446,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 			Expect(remoteSecret.Status.Targets).To(HaveLen(2))
 		})
 
-		It("secrets #1 and #2 should be deleted when Environment is deleted", func() {
+		It("secrets #1, #2, #3 should be deleted when Environment is deleted", func() {
 			// Delete the existing Environments
 			Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 
@@ -444,8 +455,10 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("rs-environment"), func() {
 				_, errRs1Ns1 := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace, targetSecretName)
 				_, errRs1Ns2 := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_2, targetSecretName)
 				_, errRs2Ns2 := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_2, targetSecretName_2)
+				_, errRs3Ns2 := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_2, targetSecretName_3)
+				_, errRs3Ns3 := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_3, targetSecretName_3)
 
-				return k8sErrors.IsNotFound(errRs1Ns1) && k8sErrors.IsNotFound(errRs1Ns2) && k8sErrors.IsNotFound(errRs2Ns2)
+				return k8sErrors.IsNotFound(errRs1Ns1) && k8sErrors.IsNotFound(errRs1Ns2) && k8sErrors.IsNotFound(errRs2Ns2) && k8sErrors.IsNotFound(errRs3Ns2) && k8sErrors.IsNotFound(errRs3Ns3)
 			}, 2*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("secrets %s is not created in all environments", targetSecretName))
 
 		})
