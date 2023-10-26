@@ -38,8 +38,10 @@ type Vulnerabilities struct {
 
 func ValidateBuildPipelineTestResults(pipelineRun *v1beta1.PipelineRun, c crclient.Client) error {
 	for _, taskName := range taskNames {
-		// The inspect-image task is only required for FBC pipelines
-		if taskName == "inspect-image" && !strings.Contains(strings.ToLower(pipelineRun.GetName()),"fbc") {
+		// The inspect-image task is only required for FBC pipelines which we can infer by the component name
+		prLabels := pipelineRun.GetLabels()
+		componentName := prLabels["appstudio.openshift.io/component"]
+		if taskName == "inspect-image" && !strings.HasPrefix(strings.ToLower(componentName),"fbc-") {
 			continue
 		}
 		results, err := fetchTaskRunResults(c, pipelineRun, taskName)
