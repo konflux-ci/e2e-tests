@@ -1,0 +1,1108 @@
+// +build ignore
+
+package main
+
+import (
+	"context"
+	"flag"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"text/tabwriter"
+	"time"
+	
+)
+
+func main() {
+	// Use local types and functions in order to avoid name conflicts with additional magefiles.
+	type arguments struct {
+		Verbose       bool          // print out log statements
+		List          bool          // print out a list of targets
+		Help          bool          // print out help for a specific target
+		Timeout       time.Duration // set a timeout to running the targets
+		Args          []string      // args contain the non-flag command-line arguments
+	}
+
+	parseBool := func(env string) bool {
+		val := os.Getenv(env)
+		if val == "" {
+			return false
+		}		
+		b, err := strconv.ParseBool(val)
+		if err != nil {
+			log.Printf("warning: environment variable %s is not a valid bool value: %v", env, val)
+			return false
+		}
+		return b
+	}
+
+	parseDuration := func(env string) time.Duration {
+		val := os.Getenv(env)
+		if val == "" {
+			return 0
+		}		
+		d, err := time.ParseDuration(val)
+		if err != nil {
+			log.Printf("warning: environment variable %s is not a valid duration value: %v", env, val)
+			return 0
+		}
+		return d
+	}
+	args := arguments{}
+	fs := flag.FlagSet{}
+	fs.SetOutput(os.Stdout)
+
+	// default flag set with ExitOnError and auto generated PrintDefaults should be sufficient
+	fs.BoolVar(&args.Verbose, "v", parseBool("MAGEFILE_VERBOSE"), "show verbose output when running targets")
+	fs.BoolVar(&args.List, "l", parseBool("MAGEFILE_LIST"), "list targets for this binary")
+	fs.BoolVar(&args.Help, "h", parseBool("MAGEFILE_HELP"), "print out help for a specific target")
+	fs.DurationVar(&args.Timeout, "t", parseDuration("MAGEFILE_TIMEOUT"), "timeout in duration parsable format (e.g. 5m30s)")
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stdout, `
+%s [options] [target]
+
+Commands:
+  -l    list targets in this binary
+  -h    show this help
+
+Options:
+  -h    show description of a target
+  -t <string>
+        timeout in duration parsable format (e.g. 5m30s)
+  -v    show verbose output when running targets
+ `[1:], filepath.Base(os.Args[0]))
+	}
+	if err := fs.Parse(os.Args[1:]); err != nil {
+		// flag will have printed out an error already.
+		return
+	}
+	args.Args = fs.Args()
+	if args.Help && len(args.Args) == 0 {
+		fs.Usage()
+		return
+	}
+		
+	// color is ANSI color type
+	type color int
+
+	// If you add/change/remove any items in this constant,
+	// you will need to run "stringer -type=color" in this directory again.
+	// NOTE: Please keep the list in an alphabetical order.
+	const (
+		black color = iota
+		red
+		green
+		yellow
+		blue
+		magenta
+		cyan
+		white
+		brightblack
+		brightred
+		brightgreen
+		brightyellow
+		brightblue
+		brightmagenta
+		brightcyan
+		brightwhite
+	)
+
+	// AnsiColor are ANSI color codes for supported terminal colors.
+	var ansiColor = map[color]string{
+		black:         "\u001b[30m",
+		red:           "\u001b[31m",
+		green:         "\u001b[32m",
+		yellow:        "\u001b[33m",
+		blue:          "\u001b[34m",
+		magenta:       "\u001b[35m",
+		cyan:          "\u001b[36m",
+		white:         "\u001b[37m",
+		brightblack:   "\u001b[30;1m",
+		brightred:     "\u001b[31;1m",
+		brightgreen:   "\u001b[32;1m",
+		brightyellow:  "\u001b[33;1m",
+		brightblue:    "\u001b[34;1m",
+		brightmagenta: "\u001b[35;1m",
+		brightcyan:    "\u001b[36;1m",
+		brightwhite:   "\u001b[37;1m",
+	}
+	
+	const _color_name = "blackredgreenyellowbluemagentacyanwhitebrightblackbrightredbrightgreenbrightyellowbrightbluebrightmagentabrightcyanbrightwhite"
+
+	var _color_index = [...]uint8{0, 5, 8, 13, 19, 23, 30, 34, 39, 50, 59, 70, 82, 92, 105, 115, 126}
+
+	colorToLowerString := func (i color) string {
+		if i < 0 || i >= color(len(_color_index)-1) {
+			return "color(" + strconv.FormatInt(int64(i), 10) + ")"
+		}
+		return _color_name[_color_index[i]:_color_index[i+1]]
+	}
+
+	// ansiColorReset is an ANSI color code to reset the terminal color.
+	const ansiColorReset = "\033[0m"
+
+	// defaultTargetAnsiColor is a default ANSI color for colorizing targets.
+	// It is set to Cyan as an arbitrary color, because it has a neutral meaning
+	var defaultTargetAnsiColor = ansiColor[cyan]
+
+	getAnsiColor := func(color string) (string, bool) {
+		colorLower := strings.ToLower(color)
+		for k, v := range ansiColor {
+			colorConstLower := colorToLowerString(k)
+			if colorConstLower == colorLower {
+				return v, true
+			}
+		}
+		return "", false
+	}
+
+	// Terminals which  don't support color:
+	// 	TERM=vt100
+	// 	TERM=cygwin
+	// 	TERM=xterm-mono
+    var noColorTerms = map[string]bool{
+		"vt100":      false,
+		"cygwin":     false,
+		"xterm-mono": false,
+	}
+
+	// terminalSupportsColor checks if the current console supports color output
+	//
+	// Supported:
+	// 	linux, mac, or windows's ConEmu, Cmder, putty, git-bash.exe, pwsh.exe
+	// Not supported:
+	// 	windows cmd.exe, powerShell.exe
+	terminalSupportsColor := func() bool {
+		envTerm := os.Getenv("TERM")
+		if _, ok := noColorTerms[envTerm]; ok {
+			return false
+		}
+		return true
+	}
+
+	// enableColor reports whether the user has requested to enable a color output.
+	enableColor := func() bool {
+		b, _ := strconv.ParseBool(os.Getenv("MAGEFILE_ENABLE_COLOR"))
+		return b
+	}
+
+	// targetColor returns the ANSI color which should be used to colorize targets.
+	targetColor := func() string {
+		s, exists := os.LookupEnv("MAGEFILE_TARGET_COLOR")
+		if exists == true {
+			if c, ok := getAnsiColor(s); ok == true {
+				return c
+			}
+		}
+		return defaultTargetAnsiColor
+	}
+
+	// store the color terminal variables, so that the detection isn't repeated for each target
+	var enableColorValue = enableColor() && terminalSupportsColor()
+	var targetColorValue = targetColor()
+
+	printName := func(str string) string {
+		if enableColorValue {
+			return fmt.Sprintf("%s%s%s", targetColorValue, str, ansiColorReset)
+		} else {
+			return str
+		}
+	}
+
+	list := func() error {
+		
+		targets := map[string]string{
+			"appendFrameworkDescribeGoFile": "Append to the pkg/framework/describe.go the decorator function for new Ginkgo spec",
+			"bootstrapCluster": "",
+			"ci:prepareE2EBranch": "",
+			"ci:testE2E": "",
+			"ci:testUpgrade": "Run upgrade tests in CI",
+			"cleanWebHooks": "Remove all webhooks which with 1 day lifetime.",
+			"cleanWorkload": "",
+			"createWorkload": "",
+			"generateGinkoSpecFromTextOutline": "Generate a Ginkgo Spec file from a Text Outline file",
+			"generateTestCasesAppStudio": "Generates test cases for Polarion(polarion.xml) from test files for AppStudio project.",
+			"generateTestSuiteFile": "Generates ginkgo test suite files under the cmd/ directory.",
+			"generateTextOutlineFromGinkgoSpec": "Generate a Text Outline file from a Ginkgo Spec",
+			"local:cleanupGithubOrg": "Deletes autogenerated repositories from redhat-appstudio-qe Github org.",
+			"local:cleanupQuayReposAndRobots": "Deletes Quay repos and robot accounts older than 24 hours with prefixes `has-e2e` and `e2e-demos`, uses env vars DEFAULT_QUAY_ORG and DEFAULT_QUAY_ORG_TOKEN",
+			"local:cleanupQuayTags": "Deletes Quay Tags older than 7 days in `test-images` repository",
+			"local:prepareCluster": "",
+			"local:testE2E": "",
+			"local:testUpgrade": "Run upgrade tests locally(bootstrap cluster, create workload, upgrade, verify)",
+			"mergePRInRemote": "",
+			"preflightChecks": "",
+			"printJsonOutlineOfGinkgoSpec": "Print the outline of the Ginkgo spec in JSON format",
+			"printOutlineOfGinkgoSpec": "Print the outline of the Ginkgo spec",
+			"printOutlineOfTextSpec": "Print the outline of the Text Outline",
+			"runE2ETests": "",
+			"upgradeCluster": "",
+			"upgradeTestsWorkflow": "",
+			"verifyWorkload": "",
+		}
+
+		keys := make([]string, 0, len(targets))
+		for name := range targets {
+			keys = append(keys, name)
+		}
+		sort.Strings(keys)
+
+		fmt.Println("Targets:")
+		w := tabwriter.NewWriter(os.Stdout, 0, 4, 4, ' ', 0)
+		for _, name := range keys {
+			fmt.Fprintf(w, "  %v\t%v\n", printName(name), targets[name])
+		}
+		err := w.Flush()
+		return err
+	}
+
+	var ctx context.Context
+	var ctxCancel func()
+
+	getContext := func() (context.Context, func()) {
+		if ctx != nil {
+			return ctx, ctxCancel
+		}
+
+		if args.Timeout != 0 {
+			ctx, ctxCancel = context.WithTimeout(context.Background(), args.Timeout)
+		} else {
+			ctx = context.Background()
+			ctxCancel = func() {}
+		}
+		return ctx, ctxCancel
+	}
+
+	runTarget := func(fn func(context.Context) error) interface{} {
+		var err interface{}
+		ctx, cancel := getContext()
+		d := make(chan interface{})
+		go func() {
+			defer func() {
+				err := recover()
+				d <- err
+			}()
+			err := fn(ctx)
+			d <- err
+		}()
+		select {
+		case <-ctx.Done():
+			cancel()
+			e := ctx.Err()
+			fmt.Printf("ctx err: %v\n", e)
+			return e
+		case err = <-d:
+			cancel()
+			return err
+		}
+	}
+	// This is necessary in case there aren't any targets, to avoid an unused
+	// variable error.
+	_ = runTarget
+
+	handleError := func(logger *log.Logger, err interface{}) {
+		if err != nil {
+			logger.Printf("Error: %+v\n", err)
+			type code interface {
+				ExitStatus() int
+			}
+			if c, ok := err.(code); ok {
+				os.Exit(c.ExitStatus())
+			}
+			os.Exit(1)
+		}
+	}
+	_ = handleError
+
+	// Set MAGEFILE_VERBOSE so mg.Verbose() reflects the flag value.
+	if args.Verbose {
+		os.Setenv("MAGEFILE_VERBOSE", "1")
+	} else {
+		os.Setenv("MAGEFILE_VERBOSE", "0")
+	}
+
+	log.SetFlags(0)
+	if !args.Verbose {
+		log.SetOutput(ioutil.Discard)
+	}
+	logger := log.New(os.Stderr, "", 0)
+	if args.List {
+		if err := list(); err != nil {
+			log.Println(err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	if args.Help {
+		if len(args.Args) < 1 {
+			logger.Println("no target specified")
+			os.Exit(2)
+		}
+		switch strings.ToLower(args.Args[0]) {
+			case "appendframeworkdescribegofile":
+				fmt.Println("Append to the pkg/framework/describe.go the decorator function for new Ginkgo spec")
+				fmt.Println()
+				
+				fmt.Print("Usage:\n\n\tmage appendframeworkdescribegofile <specFile>\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "bootstrapcluster":
+				
+				fmt.Print("Usage:\n\n\tmage bootstrapcluster\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "ci:preparee2ebranch":
+				
+				fmt.Print("Usage:\n\n\tmage ci:preparee2ebranch\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "ci:teste2e":
+				
+				fmt.Print("Usage:\n\n\tmage ci:teste2e\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "ci:testupgrade":
+				fmt.Println("Run upgrade tests in CI")
+				fmt.Println()
+				
+				fmt.Print("Usage:\n\n\tmage ci:testupgrade\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "cleanwebhooks":
+				fmt.Println("Remove all webhooks which with 1 day lifetime. By default will delete webooks from redhat-appstudio-qe")
+				fmt.Println()
+				
+				fmt.Print("Usage:\n\n\tmage cleanwebhooks\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "cleanworkload":
+				
+				fmt.Print("Usage:\n\n\tmage cleanworkload\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "createworkload":
+				
+				fmt.Print("Usage:\n\n\tmage createworkload\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "generateginkospecfromtextoutline":
+				fmt.Println("Generate a Ginkgo Spec file from a Text Outline file")
+				fmt.Println()
+				
+				fmt.Print("Usage:\n\n\tmage generateginkospecfromtextoutline <source> <destination>\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "generatetestcasesappstudio":
+				fmt.Println("Generates test cases for Polarion(polarion.xml) from test files for AppStudio project.")
+				fmt.Println()
+				
+				fmt.Print("Usage:\n\n\tmage generatetestcasesappstudio\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "generatetestsuitefile":
+				fmt.Println("Generates ginkgo test suite files under the cmd/ directory.")
+				fmt.Println()
+				
+				fmt.Print("Usage:\n\n\tmage generatetestsuitefile <packageName>\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "generatetextoutlinefromginkgospec":
+				fmt.Println("Generate a Text Outline file from a Ginkgo Spec")
+				fmt.Println()
+				
+				fmt.Print("Usage:\n\n\tmage generatetextoutlinefromginkgospec <source> <destination>\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "local:cleanupgithuborg":
+				fmt.Println("Deletes autogenerated repositories from redhat-appstudio-qe Github org. Env vars to configure this target: REPO_REGEX (optional), DRY_RUN (optional) - defaults to false Remove all repos which with 1 day lifetime. By default will delete gitops repositories from redhat-appstudio-qe")
+				fmt.Println()
+				
+				fmt.Print("Usage:\n\n\tmage local:cleanupgithuborg\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "local:cleanupquayreposandrobots":
+				fmt.Println("Deletes Quay repos and robot accounts older than 24 hours with prefixes `has-e2e` and `e2e-demos`, uses env vars DEFAULT_QUAY_ORG and DEFAULT_QUAY_ORG_TOKEN")
+				fmt.Println()
+				
+				fmt.Print("Usage:\n\n\tmage local:cleanupquayreposandrobots\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "local:cleanupquaytags":
+				fmt.Println("Deletes Quay Tags older than 7 days in `test-images` repository")
+				fmt.Println()
+				
+				fmt.Print("Usage:\n\n\tmage local:cleanupquaytags\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "local:preparecluster":
+				
+				fmt.Print("Usage:\n\n\tmage local:preparecluster\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "local:teste2e":
+				
+				fmt.Print("Usage:\n\n\tmage local:teste2e\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "local:testupgrade":
+				fmt.Println("Run upgrade tests locally(bootstrap cluster, create workload, upgrade, verify)")
+				fmt.Println()
+				
+				fmt.Print("Usage:\n\n\tmage local:testupgrade\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "mergeprinremote":
+				
+				fmt.Print("Usage:\n\n\tmage mergeprinremote <branch> <forkOrganization> <repoPath>\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "preflightchecks":
+				
+				fmt.Print("Usage:\n\n\tmage preflightchecks\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "printjsonoutlineofginkgospec":
+				fmt.Println("Print the outline of the Ginkgo spec in JSON format")
+				fmt.Println()
+				
+				fmt.Print("Usage:\n\n\tmage printjsonoutlineofginkgospec <specFile>\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "printoutlineofginkgospec":
+				fmt.Println("Print the outline of the Ginkgo spec")
+				fmt.Println()
+				
+				fmt.Print("Usage:\n\n\tmage printoutlineofginkgospec <specFile>\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "printoutlineoftextspec":
+				fmt.Println("Print the outline of the Text Outline")
+				fmt.Println()
+				
+				fmt.Print("Usage:\n\n\tmage printoutlineoftextspec <specFile>\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "rune2etests":
+				
+				fmt.Print("Usage:\n\n\tmage rune2etests\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "upgradecluster":
+				
+				fmt.Print("Usage:\n\n\tmage upgradecluster\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "upgradetestsworkflow":
+				
+				fmt.Print("Usage:\n\n\tmage upgradetestsworkflow\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			case "verifyworkload":
+				
+				fmt.Print("Usage:\n\n\tmage verifyworkload\n\n")
+				var aliases []string
+				if len(aliases) > 0 {
+					fmt.Printf("Aliases: %s\n\n", strings.Join(aliases, ", "))
+				}
+				return
+			default:
+				logger.Printf("Unknown target: %q\n", args.Args[0])
+				os.Exit(2)
+		}
+	}
+	if len(args.Args) < 1 {
+		if err := list(); err != nil {
+			logger.Println("Error:", err)
+			os.Exit(1)
+		}
+		return
+	}
+	for x := 0; x < len(args.Args); {
+		target := args.Args[x]
+		x++
+
+		// resolve aliases
+		switch strings.ToLower(target) {
+		
+		}
+
+		switch strings.ToLower(target) {
+		
+			case "appendframeworkdescribegofile":
+				expected := x + 1
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"AppendFrameworkDescribeGoFile\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "AppendFrameworkDescribeGoFile")
+				}
+				
+			arg0 := args.Args[x]
+			x++
+				wrapFn := func(ctx context.Context) error {
+					return AppendFrameworkDescribeGoFile(arg0)
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "bootstrapcluster":
+				expected := x + 0
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"BootstrapCluster\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "BootstrapCluster")
+				}
+				
+				wrapFn := func(ctx context.Context) error {
+					return BootstrapCluster()
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "ci:preparee2ebranch":
+				expected := x + 0
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"CI:PrepareE2EBranch\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "CI:PrepareE2EBranch")
+				}
+				
+				wrapFn := func(ctx context.Context) error {
+					return CI{}.PrepareE2EBranch()
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "ci:teste2e":
+				expected := x + 0
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"CI:TestE2E\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "CI:TestE2E")
+				}
+				
+				wrapFn := func(ctx context.Context) error {
+					return CI{}.TestE2E()
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "ci:testupgrade":
+				expected := x + 0
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"CI:TestUpgrade\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "CI:TestUpgrade")
+				}
+				
+				wrapFn := func(ctx context.Context) error {
+					return CI{}.TestUpgrade()
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "cleanwebhooks":
+				expected := x + 0
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"CleanWebHooks\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "CleanWebHooks")
+				}
+				
+				wrapFn := func(ctx context.Context) error {
+					return CleanWebHooks()
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "cleanworkload":
+				expected := x + 0
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"CleanWorkload\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "CleanWorkload")
+				}
+				
+				wrapFn := func(ctx context.Context) error {
+					return CleanWorkload()
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "createworkload":
+				expected := x + 0
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"CreateWorkload\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "CreateWorkload")
+				}
+				
+				wrapFn := func(ctx context.Context) error {
+					return CreateWorkload()
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "generateginkospecfromtextoutline":
+				expected := x + 2
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"GenerateGinkoSpecFromTextOutline\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "GenerateGinkoSpecFromTextOutline")
+				}
+				
+			arg0 := args.Args[x]
+			x++
+			arg1 := args.Args[x]
+			x++
+				wrapFn := func(ctx context.Context) error {
+					return GenerateGinkoSpecFromTextOutline(arg0, arg1)
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "generatetestcasesappstudio":
+				expected := x + 0
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"GenerateTestCasesAppStudio\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "GenerateTestCasesAppStudio")
+				}
+				
+				wrapFn := func(ctx context.Context) error {
+					return GenerateTestCasesAppStudio()
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "generatetestsuitefile":
+				expected := x + 1
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"GenerateTestSuiteFile\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "GenerateTestSuiteFile")
+				}
+				
+			arg0 := args.Args[x]
+			x++
+				wrapFn := func(ctx context.Context) error {
+					return GenerateTestSuiteFile(arg0)
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "generatetextoutlinefromginkgospec":
+				expected := x + 2
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"GenerateTextOutlineFromGinkgoSpec\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "GenerateTextOutlineFromGinkgoSpec")
+				}
+				
+			arg0 := args.Args[x]
+			x++
+			arg1 := args.Args[x]
+			x++
+				wrapFn := func(ctx context.Context) error {
+					return GenerateTextOutlineFromGinkgoSpec(arg0, arg1)
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "local:cleanupgithuborg":
+				expected := x + 0
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"Local:CleanupGithubOrg\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "Local:CleanupGithubOrg")
+				}
+				
+				wrapFn := func(ctx context.Context) error {
+					return Local{}.CleanupGithubOrg()
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "local:cleanupquayreposandrobots":
+				expected := x + 0
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"Local:CleanupQuayReposAndRobots\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "Local:CleanupQuayReposAndRobots")
+				}
+				
+				wrapFn := func(ctx context.Context) error {
+					return Local{}.CleanupQuayReposAndRobots()
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "local:cleanupquaytags":
+				expected := x + 0
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"Local:CleanupQuayTags\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "Local:CleanupQuayTags")
+				}
+				
+				wrapFn := func(ctx context.Context) error {
+					return Local{}.CleanupQuayTags()
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "local:preparecluster":
+				expected := x + 0
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"Local:PrepareCluster\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "Local:PrepareCluster")
+				}
+				
+				wrapFn := func(ctx context.Context) error {
+					return Local{}.PrepareCluster()
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "local:teste2e":
+				expected := x + 0
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"Local:TestE2E\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "Local:TestE2E")
+				}
+				
+				wrapFn := func(ctx context.Context) error {
+					return Local{}.TestE2E()
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "local:testupgrade":
+				expected := x + 0
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"Local:TestUpgrade\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "Local:TestUpgrade")
+				}
+				
+				wrapFn := func(ctx context.Context) error {
+					return Local{}.TestUpgrade()
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "mergeprinremote":
+				expected := x + 3
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"MergePRInRemote\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "MergePRInRemote")
+				}
+				
+			arg0 := args.Args[x]
+			x++
+			arg1 := args.Args[x]
+			x++
+			arg2 := args.Args[x]
+			x++
+				wrapFn := func(ctx context.Context) error {
+					return MergePRInRemote(arg0, arg1, arg2)
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "preflightchecks":
+				expected := x + 0
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"PreflightChecks\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "PreflightChecks")
+				}
+				
+				wrapFn := func(ctx context.Context) error {
+					return PreflightChecks()
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "printjsonoutlineofginkgospec":
+				expected := x + 1
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"PrintJsonOutlineOfGinkgoSpec\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "PrintJsonOutlineOfGinkgoSpec")
+				}
+				
+			arg0 := args.Args[x]
+			x++
+				wrapFn := func(ctx context.Context) error {
+					return PrintJsonOutlineOfGinkgoSpec(arg0)
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "printoutlineofginkgospec":
+				expected := x + 1
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"PrintOutlineOfGinkgoSpec\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "PrintOutlineOfGinkgoSpec")
+				}
+				
+			arg0 := args.Args[x]
+			x++
+				wrapFn := func(ctx context.Context) error {
+					return PrintOutlineOfGinkgoSpec(arg0)
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "printoutlineoftextspec":
+				expected := x + 1
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"PrintOutlineOfTextSpec\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "PrintOutlineOfTextSpec")
+				}
+				
+			arg0 := args.Args[x]
+			x++
+				wrapFn := func(ctx context.Context) error {
+					return PrintOutlineOfTextSpec(arg0)
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "rune2etests":
+				expected := x + 0
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"RunE2ETests\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "RunE2ETests")
+				}
+				
+				wrapFn := func(ctx context.Context) error {
+					return RunE2ETests()
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "upgradecluster":
+				expected := x + 0
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"UpgradeCluster\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "UpgradeCluster")
+				}
+				
+				wrapFn := func(ctx context.Context) error {
+					return UpgradeCluster()
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "upgradetestsworkflow":
+				expected := x + 0
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"UpgradeTestsWorkflow\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "UpgradeTestsWorkflow")
+				}
+				
+				wrapFn := func(ctx context.Context) error {
+					return UpgradeTestsWorkflow()
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+			case "verifyworkload":
+				expected := x + 0
+				if expected > len(args.Args) {
+					// note that expected and args at this point include the arg for the target itself
+					// so we subtract 1 here to show the number of args without the target.
+					logger.Printf("not enough arguments for target \"VerifyWorkload\", expected %v, got %v\n", expected-1, len(args.Args)-1)
+					os.Exit(2)
+				}
+				if args.Verbose {
+					logger.Println("Running target:", "VerifyWorkload")
+				}
+				
+				wrapFn := func(ctx context.Context) error {
+					return VerifyWorkload()
+				}
+				ret := runTarget(wrapFn)
+				handleError(logger, ret)
+		
+		default:
+			logger.Printf("Unknown target specified: %q\n", target)
+			os.Exit(2)
+		}
+	}
+}
+
+
+
+
