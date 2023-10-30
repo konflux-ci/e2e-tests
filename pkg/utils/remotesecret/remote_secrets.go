@@ -35,8 +35,8 @@ func (s *RemoteSecretController) CreateRemoteSecret(name, namespace string, targ
 	return &remoteSecret, nil
 }
 
-// CreateRemoteSecretWithLabels creates a RemoteSecret object with specified labels
-func (s *RemoteSecretController) CreateRemoteSecretWithLabels(name, namespace string, targetSecretName string, labels map[string]string) (*rs.RemoteSecret, error) {
+// CreateRemoteSecretWithLabels creates a RemoteSecret object with specified labels and annotations
+func (s *RemoteSecretController) CreateRemoteSecretWithLabelsAndAnnotations(name, namespace string, targetSecretName string, labels map[string]string, annotations map[string]string) (*rs.RemoteSecret, error) {
 	remoteSecret := rs.RemoteSecret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -51,6 +51,7 @@ func (s *RemoteSecretController) CreateRemoteSecretWithLabels(name, namespace st
 	}
 
 	remoteSecret.ObjectMeta.Labels = labels
+	remoteSecret.ObjectMeta.Annotations = annotations
 
 	err := s.KubeRest().Create(context.TODO(), &remoteSecret)
 	if err != nil {
@@ -110,4 +111,14 @@ func (s *RemoteSecretController) CreateUploadSecret(name, namespace string, remo
 		return nil, err
 	}
 	return &uploadSecret, nil
+}
+
+// RemoteSecretTargetHasNamespace checks whether the RemoteSecret targets contains a namespace
+func (s *RemoteSecretController) RemoteSecretTargetsContainsNamespace(name string, rs *rs.RemoteSecret) bool {
+	for _, target := range rs.Status.Targets {
+		if target.Namespace == name {
+			return true
+		}
+	}
+	return false
 }
