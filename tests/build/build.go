@@ -532,9 +532,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	})
 
 	Describe("test pac with multiple components using same repository", Ordered, Label("pac-build", "multi-component"), func() {
-		var applicationName, testNamespace string
+		var applicationName, testNamespace, multiComponentBaseBranchName, multiComponentPRBranchName, mergeResultSha string
 		var pacBranchNames []string
-
+		var prNumber int
+		var mergeResult *github.PullRequestMergeResult
 		var timeout time.Duration
 
 		BeforeAll(func() {
@@ -560,6 +561,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
 			)
 
+			multiComponentBaseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(4))
+			err = f.AsKubeAdmin.CommonController.Github.CreateRef(multiComponentGitSourceRepoName, multiComponentDefaultBranch, multiComponentGitRevision, multiComponentBaseBranchName)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			//Branch for creating pull request
+			multiComponentPRBranchName = fmt.Sprintf("%s-%s", "pr-branch", util.GenerateRandomString(4))
+
 		})
 
 		AfterAll(func() {
@@ -575,12 +583,23 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 				}
 			}
+			// Delete the created base branch
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(multiComponentGitSourceRepoName, multiComponentBaseBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			// Delete the created pr branch
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(multiComponentGitSourceRepoName, multiComponentPRBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
 		})
 
 		When("components are created in same namespace", func() {
 			var component *appservice.Component
 
 			for _, contextDir := range multiComponentContextDirs {
+				contextDir := contextDir
 				componentName := fmt.Sprintf("%s-%s", contextDir, util.GenerateRandomString(4))
 				pacBranchName := constants.PaCPullRequestBranchPrefix + componentName
 				pacBranchNames = append(pacBranchNames, pacBranchName)
@@ -592,8 +611,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						Source: appservice.ComponentSource{
 							ComponentSourceUnion: appservice.ComponentSourceUnion{
 								GitSource: &appservice.GitSource{
-									URL:     multiComponentGitSourceURL,
-									Context: contextDir,
+									URL:      multiComponentGitSourceURL,
+									Revision: multiComponentBaseBranchName,
+									Context:  contextDir,
 								},
 							},
 						},
@@ -627,6 +647,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 						for _, pr := range prs {
 							if pr.Head.GetRef() == pacBranchName {
+								prNumber = pr.GetNumber()
 								return true
 							}
 						}
@@ -637,7 +658,59 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				It(fmt.Sprintf("the PipelineRun should eventually finish successfully for component %s", componentName), func() {
 					Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
 				})
+
+				It("merging the PR should be successful", func() {
+					Eventually(func() error {
+						mergeResult, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(multiComponentGitSourceRepoName, prNumber)
+						return err
+					}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, multiComponentGitSourceRepoName))
+
+					mergeResultSha = mergeResult.GetSHA()
+					GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
+
+				})
+				It("leads to triggering on push PipelineRun", func() {
+					timeout = time.Minute * 5
+
+					Eventually(func() error {
+						pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, mergeResultSha)
+						if err != nil {
+							GinkgoWriter.Printf("Push PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
+							return err
+						}
+						if !pipelineRun.HasStarted() {
+							return fmt.Errorf("push pipelinerun %s/%s hasn't started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
+						}
+						return nil
+					}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
+				})
 			}
+			It("only one component is changed", func() {
+				//Delete all the pipelineruns in the namespace before sending PR
+				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+				//Create the ref, add the file and create the PR
+				err = f.AsKubeAdmin.CommonController.Github.CreateRef(multiComponentGitSourceRepoName, multiComponentDefaultBranch, mergeResultSha, multiComponentPRBranchName)
+				Expect(err).ShouldNot(HaveOccurred())
+				fileToCreatePath := fmt.Sprintf("%s/sample-file.txt", multiComponentContextDirs[0])
+				createdFileSha, err := f.AsKubeAdmin.CommonController.Github.CreateFile(multiComponentGitSourceRepoName, fileToCreatePath, fmt.Sprintf("sample test file inside %s", multiComponentContextDirs[0]), multiComponentPRBranchName)
+				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error while creating file: %s", fileToCreatePath))
+				pr, err := f.AsKubeAdmin.CommonController.Github.CreatePullRequest(multiComponentGitSourceRepoName, "sample pr title", "sample pr body", multiComponentPRBranchName, multiComponentBaseBranchName)
+				Expect(err).ShouldNot(HaveOccurred())
+				GinkgoWriter.Printf("PR #%d got created with sha %s\n", pr.GetNumber(), createdFileSha.GetSHA())
+			})
+			It("only related pipelinerun should be triggered", func() {
+				Eventually(func() error {
+					pipelineRuns, err := f.AsKubeAdmin.HasController.GetAllPipelineRunInNameSpace(applicationName, testNamespace)
+					if err != nil {
+						GinkgoWriter.Println("on pull PiplelineRun has not been created yet for the PR")
+						return err
+					}
+					if len(pipelineRuns.Items) != 1 || !strings.HasPrefix(pipelineRuns.Items[0].Name, multiComponentContextDirs[0]) {
+						return fmt.Errorf("pipelinerun created in the namespace %s is not as expected, got pipelineruns %v", testNamespace, pipelineRuns.Items)
+					}
+					return nil
+				}, time.Minute*5, constants.PipelineRunPollingInterval).Should(Succeed(), "timeout while waiting for PR pipeline to start")
+			})
 		})
 		When("a components is created with same git url in different namespace", func() {
 			var namespace, appName, compName string
@@ -663,8 +736,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Source: appservice.ComponentSource{
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
 							GitSource: &appservice.GitSource{
-								URL:     multiComponentGitSourceURL,
-								Context: multiComponentContextDirs[0],
+								URL:      multiComponentGitSourceURL,
+								Revision: multiComponentBaseBranchName,
+								Context:  multiComponentContextDirs[0],
 							},
 						},
 					},

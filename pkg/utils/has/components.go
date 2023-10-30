@@ -80,6 +80,24 @@ func (h *HasController) GetComponentPipelineRun(componentName string, applicatio
 	return nil, fmt.Errorf("no pipelinerun found for component %s", componentName)
 }
 
+// GetAllPipelineRunInNameSpace returns the pipeline for a given application in a namespace
+func (h *HasController) GetAllPipelineRunInNameSpace(applicationName, namespace string) (*v1beta1.PipelineRunList, error) {
+	pipelineRunLabels := map[string]string{"appstudio.openshift.io/application": applicationName}
+
+	list := &v1beta1.PipelineRunList{}
+	err := h.KubeRest().List(context.TODO(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
+
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error listing pipelineruns in %s namespace: %v", namespace, err)
+	}
+
+	if len(list.Items) > 0 {
+		return list, nil
+	}
+
+	return nil, fmt.Errorf("no pipelinerun found for application %s", applicationName)
+}
+
 // Waits for a given component to be finished and in case of hitting issue: https://issues.redhat.com/browse/SRVKP-2749 do a given retries.
 func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservice.Component, sha string, maxRetries int, t *tekton.TektonController) error {
 	attempts := 1
