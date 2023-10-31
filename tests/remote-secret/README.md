@@ -25,39 +25,13 @@ To check the above cases, three different Environments are created, using the sa
 Three Remote Secrets with different labels and annotations (based on the required case) are then created and all the checks for each case are performed (secret existence or removal in target namespace, Status.Target updated).
 
 ## Kubeconfig auth ([SVPI-558](https://issues.redhat.com/browse/SVPI-558), [kubeconfig-auth.go](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/spi/kubeconfig-auth.go))
-
 [Kubeconfig auth](https://github.com/redhat-appstudio/remote-secret/blob/main/docs/USER.md#another-cluster) is an authorization option that allows deploying the secrets defined by the remote secret to a completely different cluster using a referenced kubeconfig configuration.
 
-To avoid the complexity of using two clusters on the test, the test points to the running cluster kubeconfig, since the goal is to test the kubeconfig auth. To test this use case, this tests covers the following steps:
-
-- creates a secret with a kubeconfig
-- creates RemoteSecret with previously created namespace as target
-- creates upload secret
-- checks if remote secret was deployed
-- checks targets in RemoteSecret status
-- checks if secret was created in target namespaces
+To avoid the complexity of using two clusters on the test, the test points to the running cluster kubeconfig, since the goal is to test the kubeconfig auth.
 
 
 ## Service account auth ([SVPI-558](https://issues.redhat.com/browse/SVPI-558), [service-account-auth.go](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/spi/service-account-auth.go))
-[Service account auth](https://github.com/redhat-appstudio/remote-secret/blob/main/docs/USER.md#associating-the-secret-with-a-service-account-in-the-targets) is an authorization option for deploying secrets to different target namespace than where the remote secret lives. To test this use case, this tests covers the following steps:
-
-- creates namespaces for targets 1 and 2
-- creates RemoteSecret with target namespaces 1 and 2
-- creates service account 
-- creates role for target 1 that gives "create", "get", "list", "update", and "delete" roles to secrets and serviceaccounts resources
-- creates role for target 2 that gives "create", "get", "list", "update", and "delete" roles to secrets and serviceaccounts resources
-- creates role binding for target 1
-- creates role binding for target 2
-- creates upload secret
-- checks if remote secret was deployed
-- checks targets in RemoteSecret status
-- checks if secret was created in target namespaces
+[Service account auth](https://github.com/redhat-appstudio/remote-secret/blob/main/docs/USER.md#associating-the-secret-with-a-service-account-in-the-targets) is an authorization option for deploying secrets to different target namespace than where the remote secret lives.
 
 ## Target current namespace where the remote secret lives ([SVPI-558](https://issues.redhat.com/browse/SVPI-558), [target-current-namespace.go](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/spi/target-current-namespace.go))
-[Current namespace auth](https://github.com/redhat-appstudio/remote-secret/blob/main/docs/USER.md#same-namespace) is the simplest way of authorization since targeting current namespace where the remote secret lives is always allowed. To test this use case, this tests covers the following steps:
-
-- creates RemoteSecret with a target that shares the same namespace
-- creates upload secret
-- checks if remote secret was deployed
-- checks targets in RemoteSecret status
-- checks if secret was created in target namespace
+[Current namespace auth](https://github.com/redhat-appstudio/remote-secret/blob/main/docs/USER.md#same-namespace) is the simplest way of authorization since targeting current namespace where the remote secret lives is always allowed.
