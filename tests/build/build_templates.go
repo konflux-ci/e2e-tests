@@ -288,7 +288,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
 					Expect(err).ToNot(HaveOccurred())
 
-					rev := pipelineRun.Annotations["pipelinesascode.tekton.dev/sha"]
+					revision := pipelineRun.Annotations["build.appstudio.redhat.com/commit_sha"]
+					Expect(revision).ToNot(BeEmpty())
 
 					generator := tekton.VerifyEnterpriseContract{
 						Snapshot: v1alpha1.SnapshotSpec{
@@ -301,7 +302,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 										ComponentSourceUnion: v1alpha1.ComponentSourceUnion{
 											GitSource: &v1alpha1.GitSource{
 												URL:      gitUrl,
-												Revision: rev,
+												Revision: revision,
 											},
 										},
 									},
