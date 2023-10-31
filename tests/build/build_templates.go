@@ -236,7 +236,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				Expect(build.ValidateBuildPipelineTestResults(pr, kubeadminClient.CommonController.KubeRest())).To(Succeed())
 			})
 
-			When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", gitUrl), Label("sbom", "slow"), Pending, func() {
+			When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", gitUrl), Label("sbom", "slow"), func() {
 				var imageWithDigest string
 				var pr *v1beta1.PipelineRun
 
@@ -288,7 +288,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
 					Expect(err).ToNot(HaveOccurred())
 
-					rev := pipelineRun.Annotations["pipelinesascode.tekton.dev/sha"]
+					revision := pipelineRun.Annotations["build.appstudio.redhat.com/commit_sha"]
+					Expect(revision).ToNot(BeEmpty())
 
 					generator := tekton.VerifyEnterpriseContract{
 						Snapshot: v1alpha1.SnapshotSpec{
@@ -301,7 +302,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 										ComponentSourceUnion: v1alpha1.ComponentSourceUnion{
 											GitSource: &v1alpha1.GitSource{
 												URL:      gitUrl,
-												Revision: rev,
+												Revision: revision,
 											},
 										},
 									},
