@@ -75,16 +75,14 @@ func IsSourceFilesExistsInSourceImage(srcImage string, gitUrl string, isHermetic
 		return false, fmt.Errorf("error while getting files: %v", err)
 	}
 	if len(fileNames) == 0 {
-		fmt.Println("No tar file found in extra_src_dir")
-		return false, nil
+		return false, fmt.Errorf("no tar file found in extra_src_dir, found files %v", fileNames)
 	}
 
 	// Get all the extra-src-[0-9]+.tar files
 	extraSrcTarFiles := utils.FilterSliceUsingPattern(srcTarFileRegex, fileNames)
 	fmt.Printf("Files found with pattern extra-src-[0-9]+.tar: %v\n", extraSrcTarFiles)
 	if len(extraSrcTarFiles) == 0 {
-		fmt.Println("No tar file found with pattern extra-src-[0-9]+.tar")
-		return false, nil
+		return false, fmt.Errorf("no tar file found with pattern extra-src-[0-9]+.tar")
 	}
 
 	//Untar all the extra-src-[0-9]+.tar files
@@ -95,9 +93,25 @@ func IsSourceFilesExistsInSourceImage(srcImage string, gitUrl string, isHermetic
 			return false, fmt.Errorf("error while untaring %s: %v", tarFile, err)
 		}
 	}
+	//Check if application source files exists
+	_, err = IsAppSourceFilesExists(absExtraSourceDirPath, gitUrl)
+	if err != nil {
+		return false, err
+	}
+	// Check the pre-fetch dependency related files
+	if isHermetic {
+		_, err := IsPreFetchDependencysFilesExists(absExtraSourceDirPath, isHermetic, prefetchValue)
+		if err != nil {
+			return false, err
+		}
+	}
 
-	//After untarring, get the file list from extra_src_dir
-	fileNames, err = utils.GetFileNamesFromDir(absExtraSourceDirPath)
+	return true, nil
+}
+
+func IsAppSourceFilesExists(absExtraSourceDirPath string, gitUrl string) (bool, error) {
+	//Get the file list from extra_src_dir
+	fileNames, err := utils.GetFileNamesFromDir(absExtraSourceDirPath)
 	if err != nil {
 		return false, fmt.Errorf("error while getting files: %v", err)
 	}
@@ -107,8 +121,7 @@ func IsSourceFilesExistsInSourceImage(srcImage string, gitUrl string, isHermetic
 	filePatternToFind := repoName + "-" + shaValueRegex + tarGzFileRegex
 	resultFiles := utils.FilterSliceUsingPattern(filePatternToFind, fileNames)
 	if len(resultFiles) == 0 {
-		fmt.Printf("did not found the component source inside extra_src_dir, files found are: %v\n", fileNames)
-		return false, nil
+		return false, fmt.Errorf("did not found the component source inside extra_src_dir, files found are: %v", fileNames)
 	}
 	sourceGzTarFileName := resultFiles[0]
 
@@ -126,39 +139,29 @@ func IsSourceFilesExistsInSourceImage(srcImage string, gitUrl string, isHermetic
 		return false, fmt.Errorf("error while getting files from %s: %v", sourceGzTarDirName, err)
 	}
 	if len(fileNames) == 0 {
-		fmt.Println("No file found under extra_src_dir/<repo-name>-<git-sha>")
-		return false, nil
+		return false, fmt.Errorf("no file found under extra_src_dir/<repo-name>-<git-sha>")
+	}
+	return true, nil
+}
+
+func IsPreFetchDependencysFilesExists(absExtraSourceDirPath string, isHermetic bool, prefetchValue string) (bool, error) {
+	var absDependencyPath string
+	if prefetchValue == "gomod" {
+		fmt.Println("Checking go dependency files")
+		absDependencyPath = filepath.Join(absExtraSourceDirPath, gomodDependencySubDir)
+	} else if prefetchValue == "pip" {
+		fmt.Println("Checking python dependency files")
+		absDependencyPath = filepath.Join(absExtraSourceDirPath, pipDependencySubDir)
+	} else {
+		return false, fmt.Errorf("pre-fetch value type is not implemented")
 	}
 
-	//Check the pre-fetch dependency related files
-	if isHermetic {
-		if prefetchValue == "gomod" {
-			fmt.Println("Checking go dependency files")
-			absGoDependencyPath := filepath.Join(absExtraSourceDirPath, gomodDependencySubDir)
-			fileNames, err = utils.GetFileNamesFromDir(absGoDependencyPath)
-			if err != nil {
-				return false, fmt.Errorf("error while getting files from %s: %v", absGoDependencyPath, err)
-			}
-			if len(fileNames) == 0 {
-				fmt.Println("No file found under extra_src_dir/deps/gomod/pkg/mod/cache/download/")
-				return false, nil
-			}
-		} else if prefetchValue == "pip" {
-			fmt.Println("Checking python dependency files")
-			absPythonDependencyPath := filepath.Join(absExtraSourceDirPath, pipDependencySubDir)
-			fileNames, err = utils.GetFileNamesFromDir(absPythonDependencyPath)
-			if err != nil {
-				return false, fmt.Errorf("error while getting files from %s: %v", absPythonDependencyPath, err)
-			}
-			if len(fileNames) == 0 {
-				fmt.Println("No file found under extra_src_dir/deps/pip")
-				return false, nil
-			}
-		} else {
-			fmt.Println("pre-fetch value type is not implemented")
-			return false, nil
-		}
+	fileNames, err := utils.GetFileNamesFromDir(absDependencyPath)
+	if err != nil {
+		return false, fmt.Errorf("error while getting files from %s: %v", absDependencyPath, err)
 	}
-
+	if len(fileNames) == 0 {
+		return false, fmt.Errorf("no file found under extra_src_dir/deps/")
+	}
 	return true, nil
 }

@@ -460,13 +460,7 @@ func CreateKubeconfigFileForRestConfig(restConfig rest.Config) ([]byte, error) {
 
 func GetFileNamesFromDir(dirPath string) ([]string, error) {
 	var filesInDir []string
-	dir, err := os.Open(dirPath) // nolint:gosec
-	if err != nil {
-		return nil, fmt.Errorf("error opening directory: %v", err)
-	}
-	defer dir.Close()
-
-	files, err := dir.Readdir(-1)
+	files, err := os.ReadDir(dirPath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading directory: %v", err)
 	}
@@ -477,89 +471,109 @@ func GetFileNamesFromDir(dirPath string) ([]string, error) {
 }
 
 func CheckFileExistsInDir(rootDir, filename string) (bool, error) {
-	files, err := GetFileNamesFromDir(rootDir)
+	absFilePath := filepath.Join(rootDir, filename)
+	_, err := os.Stat(absFilePath)
 	if err != nil {
-		return false, fmt.Errorf("error getting files: %v", err)
-	}
-	for _, filen := range files {
-		if filen == filename {
-			return true, nil
+		if os.IsNotExist(err) {
+			return false, nil
+		} else {
+			return false, err
 		}
 	}
-	return false, nil
+	return true, nil
 }
 
-func Untar(dst, tarPath string) error {
-	tarFile, err := os.Open(tarPath) // nolint:gosec
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err = tarFile.Close()
-	}()
+func Untar(dst string, tarPath string) error {
 
-	absPath, err := filepath.Abs(dst)
+	tr, err := ReadTarFile(tarPath)
 	if err != nil {
 		return err
 	}
 
-	tr := tar.NewReader(tarFile)
-	if strings.HasSuffix(tarPath, ".gz") || strings.HasSuffix(tarPath, ".gzip") {
-		gz, err := gzip.NewReader(tarFile)
-		if err != nil {
-			return err
-		}
-		defer gz.Close()
-		tr = tar.NewReader(gz)
-	}
-
-	// untar each segment
 	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
+		header, err := tr.Next()
+
+		switch {
+
+		// if no more files are found return
+		case err == io.EOF:
+			return nil
+
+		// return any other error
+		case err != nil:
 			return err
+
+		// if the header is nil, just skip it (not sure how this happens)
+		case header == nil:
+			continue
 		}
 
-		// determine proper file path info
-		fInfo := hdr.FileInfo()
-		fileName := hdr.Name
-		if filepath.IsAbs(fileName) {
-			fmt.Printf("removing / prefix from %s\n", fileName)
-			fileName, err = filepath.Rel("/", fileName)
+		// the target location where the dir/file should be created
+		target := filepath.Join(dst, header.Name) // nolint:gosec
+
+		// the following switch could also be done using fi.Mode(), not sure if there
+		// a benefit of using one vs. the other.
+		// fi := header.FileInfo()
+
+		// check the file type
+		switch header.Typeflag {
+
+		// if its a dir and it doesn't exist create it
+		case tar.TypeDir:
+			err := CreateDir(target)
+			if err != nil {
+				return err
+			}
+		// if it's a file create it
+		case tar.TypeReg:
+			err = CreateFile(target, header, tr)
 			if err != nil {
 				return err
 			}
 		}
-		absFileName := filepath.Join(absPath, fileName) // nolint:gosec
+	}
+}
 
-		if fInfo.Mode().IsDir() {
-			if err := os.MkdirAll(absFileName, 0755); err != nil { // nolint:gosec
-				return err
-			}
-			continue
-		}
-
-		// create new file with original file mode
-		file, err := os.OpenFile(absFileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, fInfo.Mode().Perm()) // nolint:gosec
+func ReadTarFile(tarPath string) (*tar.Reader, error) {
+	tarFile, err := os.Open(tarPath) // nolint:gosec
+	if err != nil {
+		return nil, err
+	}
+	tr := tar.NewReader(tarFile)
+	if strings.HasSuffix(tarPath, ".gz") || strings.HasSuffix(tarPath, ".gzip") {
+		gz, err := gzip.NewReader(tarFile)
 		if err != nil {
+			return nil, err
+		}
+		defer gz.Close()
+		tr = tar.NewReader(gz)
+	}
+	return tr, nil
+}
+
+func CreateDir(target string) error {
+	if _, err := os.Stat(target); err != nil {
+		if err := os.MkdirAll(target, 0755); err != nil { // nolint:gosec
 			return err
-		}
-		fmt.Printf("x %s\n", absFileName)
-		n, cpErr := io.Copy(file, tr)                  // nolint:gosec
-		if closeErr := file.Close(); closeErr != nil { // close file immediately
-			return err
-		}
-		if cpErr != nil {
-			return cpErr
-		}
-		if n != fInfo.Size() {
-			return fmt.Errorf("unexpected bytes written: wrote %d, want %d", n, fInfo.Size())
 		}
 	}
 	return nil
+}
+
+func CreateFile(target string, header *tar.Header, tr *tar.Reader) error {
+	f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode)) // nolint:gosec
+	if err != nil {
+		return err
+	}
+
+	// copy over contents
+	if _, err := io.Copy(f, tr); err != nil { // nolint:gosec
+		return err
+	}
+
+	// manually close here after each file operation; defering would cause each file close
+	// to wait until all operations have completed.
+	return f.Close()
 }
 
 func GetRepoName(repoUrl string) string {
