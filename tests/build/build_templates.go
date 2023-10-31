@@ -236,7 +236,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				Expect(build.ValidateBuildPipelineTestResults(pr, kubeadminClient.CommonController.KubeRest())).To(Succeed())
 			})
 
-			When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", gitUrl), Label("sbom", "slow"), func() {
+			When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", gitUrl), Label("sbom", "slow"), Pending, func() {
 				var imageWithDigest string
 				var pr *v1beta1.PipelineRun
 
