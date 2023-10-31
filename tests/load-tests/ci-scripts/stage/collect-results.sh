@@ -4,10 +4,9 @@ set -o nounset
 set -o errexit
 set -o pipefail
 
-# Login to the stage member cluster with the OCP_TOKEN credentials
-TOKEN=$(echo ${OCP_TOKEN} | base64 -d)
+# Login to the stage member cluster with the OCP_PROMETHEUS_TOKEN credentials
+TOKEN=${OCP_PROMETHEUS_TOKEN}
 oc login --token="$TOKEN" --server="$STAGE_MEMBER_CLUSTER"
-
 
 ARTIFACT_DIR=${ARTIFACT_DIR:-.artifacts}
 mkdir -p ${ARTIFACT_DIR}
@@ -32,7 +31,7 @@ python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg
 echo "Collecting monitoring data..."
 mstart=$(date --utc --date "$(status_data.py --status-data-file "$monitoring_collection_data" --get timestamp)" --iso-8601=seconds)
 mend=$(date --utc --date "$(status_data.py --status-data-file "$monitoring_collection_data" --get endTimestamp)" --iso-8601=seconds)
-mhost=$(oc -n openshift-monitoring get route -l app.kubernetes.io/name=thanos-query -o json | jq --raw-output '.items[0].spec.host')
+mhost=${PROMETHEUS_HOST}
 
 status_data.py \
     --status-data-file "$monitoring_collection_data" \
