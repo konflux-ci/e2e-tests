@@ -126,6 +126,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		for i, gitUrl := range componentUrls {
 			i := i
 			gitUrl := gitUrl
+			var pr *v1beta1.PipelineRun
 			It(fmt.Sprintf("triggers PipelineRun for component with source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
 				timeout := time.Minute * 5
 
@@ -149,7 +150,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			})
 
 			It(fmt.Sprintf("should ensure SBOM is shown for component with Git source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
-				pr, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
+				pr, err = kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(pr).ToNot(BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentNames[i]))
 
@@ -167,6 +168,34 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				Expect(sbom.BomFormat).ToNot(BeEmpty())
 				Expect(sbom.SpecVersion).ToNot(BeEmpty())
 				Expect(sbom.Components).ToNot(BeEmpty())
+			})
+
+			It("check for source images if enabled in pipeline", Label(buildTemplatesTestLabel), func() {
+
+				isSourceBuildEnabled := build.IsSourceBuildEnabled(pr)
+				GinkgoWriter.Printf("Source build is enabled: %v\n", isSourceBuildEnabled)
+				if !isSourceBuildEnabled {
+					Skip("Skiping source image check since it is not enabled in the pipeline")
+				}
+
+				//Check if hermetic enabled
+				isHermeticBuildEnabled := build.IsHermeticBuildEnabled(pr)
+				GinkgoWriter.Printf("HERMETIC STATUS: %v\n", isHermeticBuildEnabled)
+
+				//Get prefetch input value
+				prefetchInputValue := build.GetPrefetchValue(pr)
+				GinkgoWriter.Printf("PRE-FETCH VALUE: %v\n", prefetchInputValue)
+
+				binaryImage := build.GetBinaryImage(pr)
+				if binaryImage == "" {
+					Fail("Failed to get the binary image url from pipelinerun")
+				}
+
+				srcImage := binaryImage + ".src"
+				filesExists, err := build.IsSourceFilesExistsInSourceImage(srcImage, gitUrl, isHermeticBuildEnabled, prefetchInputValue)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(filesExists).To(BeTrue())
+
 			})
 
 			When(fmt.Sprintf("Pipeline Results are stored for component with Git source URL %s", gitUrl), Label("pipeline"), func() {
