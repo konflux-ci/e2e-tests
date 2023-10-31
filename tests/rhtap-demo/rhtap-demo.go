@@ -3,9 +3,10 @@ package rhtap_demo
 import (
 	"context"
 	"fmt"
-	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	"os"
 	"time"
+
+	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 
 	"github.com/redhat-appstudio/jvm-build-service/openshift-with-appstudio-test/e2e"
 	jvmclientSet "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
@@ -469,7 +470,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 								It("should validate pipelineRun is signed", func() {
 									pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appTest.ApplicationName, fw.UserNamespace, mergeResultSha)
 									Expect(err).ShouldNot(HaveOccurred())
-									Expect(pipelineRun.Annotations["chains.tekton.dev/signed"]).To(Equal("true"))
+									Expect(pipelineRun.Annotations["chains.tekton.dev/signed"]).To(Equal("true"), fmt.Sprintf("pipelinerun %s/%s does not have the expected value of annotation 'chains.tekton.dev/signed'", pipelineRun.GetNamespace(), pipelineRun.GetName()))
 								})
 
 								It("should find the related Snapshot CR", func() {

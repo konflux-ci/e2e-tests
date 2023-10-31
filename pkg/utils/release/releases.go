@@ -122,5 +122,5 @@ func (r *ReleaseController) GetPipelineRunInNamespace(namespace, releaseName, re
 		return &pipelineRuns.Items[0], nil
 	}
 
-	return nil, fmt.Errorf("couldn't find PipelineRun in managed namespace '%s' for a release '%s' in '%s' namespace", namespace, releaseName, releaseNamespace)
+	return nil, fmt.Errorf("couldn't find PipelineRun in managed namespace '%s' for a release '%s' in '%s' namespace because of err:'%w'", namespace, releaseName, releaseNamespace, err)
 }
