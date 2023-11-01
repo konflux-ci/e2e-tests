@@ -1,4 +1,4 @@
-package release
+package service
 
 import (
 	"encoding/json"
@@ -13,12 +13,13 @@ import (
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/contract"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
 
-var _ = framework.ReleaseSuiteDescribe("Release service happy path", Label("release", "happy-path", "HACBS"), func() {
+var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", Label("release-service", "happy-path", "HACBS"), func() {
 	defer GinkgoRecover()
 
 	var fw *framework.Framework
@@ -26,14 +27,14 @@ var _ = framework.ReleaseSuiteDescribe("Release service happy path", Label("rele
 	var err error
 	var compName string
 	var devNamespace string
-	var managedNamespace = utils.GetGeneratedNamespace("release-service-e2e-managed")
+	var managedNamespace = utils.GetGeneratedNamespace("happy-path-service-managed")
 
 	var component *appservice.Component
 	var releaseCR *releaseApi.Release
 
 	BeforeAll(func() {
 		// Initialize the tests controllers
-		fw, err = framework.NewFramework("release-service-e2e")
+		fw, err = framework.NewFramework("happy-path-service")
 		Expect(err).NotTo(HaveOccurred())
 		devNamespace = fw.UserNamespace
 
@@ -65,18 +66,9 @@ var _ = framework.ReleaseSuiteDescribe("Release service happy path", Label("rele
 		Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
 			publicKey, publicSecretNameAuth, managedNamespace)).To(Succeed())
 
-		defaultEcPolicy, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+		defaultECP, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 		Expect(err).NotTo(HaveOccurred())
-
-		defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
-			Description: "Red Hat's enterprise requirements",
-			PublicKey:   string(publicKey),
-			Sources:     defaultEcPolicy.Spec.Sources,
-			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-				Collections: []string{"minimal"},
-				Exclude:     []string{"cve"},
-			},
-		}
+		policy := contract.PolicySpecWithSourceConfig(defaultECP.Spec, ecp.SourceConfig{Include: []string{"minimal"}})
 
 		// using cdq since git ref is not known
 		compName = componentName
@@ -123,7 +115,7 @@ var _ = framework.ReleaseSuiteDescribe("Release service happy path", Label("rele
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicyDefault, managedNamespace, defaultEcPolicySpec)
+		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicyDefault, managedNamespace, policy)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasePvcName, managedNamespace, corev1.ReadWriteOnce)

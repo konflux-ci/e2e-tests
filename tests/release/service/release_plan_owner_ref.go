@@ -1,4 +1,4 @@
-package release
+package service
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 )
 
-var _ = framework.ReleaseSuiteDescribe("[HACBS-2469]test-releaseplan-owner-ref-added", Label("release", "releaseplan-ownerref", "HACBS"), func() {
+var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2469]test-releaseplan-owner-ref-added", Label("release-service", "releaseplan-ownerref", "HACBS"), func() {
 	defer GinkgoRecover()
 	var fw *framework.Framework
 	var err error
