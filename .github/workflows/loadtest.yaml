@@ -47,7 +47,6 @@ jobs:
       working-directory: ./tests/load-tests
       env:
         STAGE_MEMBER_CLUSTER: ${{ secrets.STAGE_MEMBER_CLUSTER }}
-        PROMETHEUS_HOST: ${{ secrets.PROMETHEUS_HOST }}
         OCP_PROMETHEUS_TOKEN: ${{ secrets.OCP_PROMETHEUS_TOKEN }}
       run: |
         ./ci-scripts/stage/collect-results.sh .

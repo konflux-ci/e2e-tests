@@ -4,6 +4,11 @@ set -o nounset
 set -o errexit
 set -o pipefail
 
+# construct $PROMETHEUS_HOST by extracting BASE_URL from $STAGE_MEMBER_CLUSTER
+BASE_URL=$(echo $STAGE_MEMBER_CLUSTER | grep -oP 'https://api\.\K[^:]+')  
+PROMETHEUS_HOST="thanos-querier-openshift-monitoring.apps.$BASE_URL"
+
+
 # Login to the stage member cluster with the OCP_PROMETHEUS_TOKEN credentials
 TOKEN=${OCP_PROMETHEUS_TOKEN}
 oc login --token="$TOKEN" --server="$STAGE_MEMBER_CLUSTER"
@@ -31,7 +36,7 @@ python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg
 echo "Collecting monitoring data..."
 mstart=$(date --utc --date "$(status_data.py --status-data-file "$monitoring_collection_data" --get timestamp)" --iso-8601=seconds)
 mend=$(date --utc --date "$(status_data.py --status-data-file "$monitoring_collection_data" --get endTimestamp)" --iso-8601=seconds)
-mhost=${PROMETHEUS_HOST}
+mhost=$PROMETHEUS_HOST
 
 status_data.py \
     --status-data-file "$monitoring_collection_data" \
