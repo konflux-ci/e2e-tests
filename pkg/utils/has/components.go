@@ -80,8 +80,8 @@ func (h *HasController) GetComponentPipelineRun(componentName string, applicatio
 	return nil, fmt.Errorf("no pipelinerun found for component %s", componentName)
 }
 
-// GetAllPipelineRunInNameSpace returns the pipeline for a given application in a namespace
-func (h *HasController) GetAllPipelineRunInNameSpace(applicationName, namespace string) (*v1beta1.PipelineRunList, error) {
+// GetAllPipelineRunsForApplication returns the pipelineruns for a given application in the namespace
+func (h *HasController) GetAllPipelineRunsForApplication(applicationName, namespace string) (*v1beta1.PipelineRunList, error) {
 	pipelineRunLabels := map[string]string{"appstudio.openshift.io/application": applicationName}
 
 	list := &v1beta1.PipelineRunList{}

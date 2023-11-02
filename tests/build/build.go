@@ -561,7 +561,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
 			)
 
-			multiComponentBaseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(4))
+			multiComponentBaseBranchName = fmt.Sprintf("multi-component-base-%s", util.GenerateRandomString(4))
 			err = f.AsKubeAdmin.CommonController.Github.CreateRef(multiComponentGitSourceRepoName, multiComponentDefaultBranch, multiComponentGitRevision, multiComponentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -700,7 +700,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 			It("only related pipelinerun should be triggered", func() {
 				Eventually(func() error {
-					pipelineRuns, err := f.AsKubeAdmin.HasController.GetAllPipelineRunInNameSpace(applicationName, testNamespace)
+					pipelineRuns, err := f.AsKubeAdmin.HasController.GetAllPipelineRunsForApplication(applicationName, testNamespace)
 					if err != nil {
 						GinkgoWriter.Println("on pull PiplelineRun has not been created yet for the PR")
 						return err
