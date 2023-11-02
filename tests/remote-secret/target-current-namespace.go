@@ -20,7 +20,7 @@ import (
  * Test case: Target to the same namespace where the remote secret lives is always deployed
  */
 
-var _ = framework.RemoteSecretSuiteDescribe(Label("target-current-namespace"), func() {
+var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "target-current-namespace"), func() {
 
 	defer GinkgoRecover()
 
