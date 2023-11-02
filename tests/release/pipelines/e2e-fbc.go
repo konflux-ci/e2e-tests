@@ -84,7 +84,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 			},
 			TargetPort: 50051,
 		}
-		component, err = dev_fw.AsKubeDeveloper.HasController.CreateComponent(componentObj, dev_fw.UserNamespace, "", "", fbcApplicationName, false, map[string]string{}, true)
+		component, err = dev_fw.AsKubeDeveloper.HasController.CreateComponent(componentObj, dev_fw.UserNamespace, "", "", fbcApplicationName, false, map[string]string{})
 		GinkgoWriter.Println("component : ", component.Name)
 		Expect(err).ShouldNot(HaveOccurred())
 

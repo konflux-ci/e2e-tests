@@ -346,7 +346,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "rs-environme
 
 		It("create RHTAP Quarkus component", func() {
 			compDetected.ComponentStub.ComponentName = componentName
-			componentObj, err = fw.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, fw.UserNamespace, "", "", applicationName, true, map[string]string{}, true)
+			componentObj, err = fw.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, fw.UserNamespace, "", "", applicationName, true, map[string]string{})
 			Expect(err).NotTo(HaveOccurred())
 		})
 

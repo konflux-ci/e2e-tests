@@ -129,7 +129,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("image-repository-cr-image-pul
 
 		It("creates component", func() {
 			for _, compDetected := range cdq.Status.ComponentDetected {
-				c, err := fw.AsKubeDeveloper.HasController.CreateComponent(compDetected.ComponentStub, namespace, "", secret, applicationName, true, map[string]string{}, false)
+				c, err := fw.AsKubeDeveloper.HasController.CreateComponentWithoutGenerateAnnotation(compDetected.ComponentStub, namespace, secret, applicationName, true)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(c.Name).To(Equal(compDetected.ComponentStub.ComponentName))
 
