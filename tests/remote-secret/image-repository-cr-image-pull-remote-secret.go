@@ -17,7 +17,8 @@ import (
 
 /*
  * Component: remote secret
- * Description: SVPI-574 - Ensure existence of image pull remote secret and image pull secret when component is created
+ * Description: SVPI-574 - Ensure existence of image pull remote secret and image pull secret when ImageRepository is created
+ *              SVPI-652 - Ensure existence of image push remote secret and image push secret when ImageRepository is created
  * Note: This test covers the newer approach (ImageRepository CR) that it is not in prod yet
  * More info: https://github.com/redhat-appstudio/image-controller#general-purpose-image-repository
  */
@@ -36,7 +37,9 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("image-repository-cr-image-pul
 	componentList := []*appservice.Component{}
 	component := &appservice.Component{}
 	imagePullRemoteSecret := &rs.RemoteSecret{}
-	targets := []rs.TargetStatus{}
+	imagePushRemoteSecret := &rs.RemoteSecret{}
+	pullTargets := []rs.TargetStatus{}
+	pushTargets := []rs.TargetStatus{}
 	imageRepository := &image.ImageRepository{}
 	snapshot := &appservice.Snapshot{}
 	env := &appservice.Environment{}
@@ -48,10 +51,38 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("image-repository-cr-image-pul
 
 	AfterEach(framework.ReportFailure(&fw))
 
-	Describe("SVPI-601 - Ensure existence of image pull remote secret and image pull secret when component is created", Ordered, func() {
+	Describe("SVPI-574 and SVPI-652 - Ensure existence of image pull remote secret, image push remote secret, image pull secret and image push secret when ImageRepository is created", Ordered, func() {
+		checkTargetSecret := func(secretName, ns, secretType string, image *image.ImageRepository) {
+			secret, err := fw.AsKubeAdmin.CommonController.GetSecret(ns, secretName)
+			Expect(err).NotTo(HaveOccurred())
+
+			// get robot account name and token from image secret
+			robotAccountName, robotAccountToken := build.GetRobotAccountInfoFromSecret(secret)
+
+			// get expected robot account name
+			imageRepo, err := fw.AsKubeAdmin.ImageController.GetImageRepositoryCR(image.Name, image.Namespace)
+			Expect(err).NotTo(HaveOccurred())
+
+			// ensure that image secret points to the expected robot account name
+			expectedRobotAccountName := ""
+			if secretType == "pull" {
+				expectedRobotAccountName = imageRepo.Status.Credentials.PullRobotAccountName
+			} else {
+				expectedRobotAccountName = imageRepo.Status.Credentials.PushRobotAccountName
+			}
+			Expect(robotAccountName).To(Equal(expectedRobotAccountName))
+
+			// get expected robot account token
+			expectedRobotAccountToken, err := build.GetRobotAccountToken(robotAccountName)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			// ensure secret points to the expected robot account token
+			Expect(robotAccountToken).To(Equal(expectedRobotAccountToken))
+		}
+
 		BeforeAll(func() {
 			// Initialize the tests controllers
-			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("spi-demos"))
+			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("rs-demos"))
 			Expect(err).NotTo(HaveOccurred())
 			namespace = fw.UserNamespace
 			Expect(namespace).NotTo(BeEmpty())
@@ -170,10 +201,18 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("image-repository-cr-image-pul
 
 		It("checks if image pull remote secret was created", func() {
 			Eventually(func() error {
-				imagePullRemoteSecret, err = fw.AsKubeAdmin.RemoteSecretController.GetImageRepositoryRemoteSecret("-image-pull", applicationName, component.Spec.ComponentName, namespace)
+				imagePullRemoteSecret, err = fw.AsKubeAdmin.RemoteSecretController.GetImageRepositoryRemoteSecret("image-repository-image-pull", applicationName, component.Spec.ComponentName, namespace)
 
 				return err
 			}, 5*time.Minute, 5*time.Second).Should(Succeed(), fmt.Sprintf("Image Pull Remote Secret in '%s' was not created", namespace))
+		})
+
+		It("checks if image push remote secret was created", func() {
+			Eventually(func() error {
+				imagePushRemoteSecret, err = fw.AsKubeAdmin.RemoteSecretController.GetImageRepositoryRemoteSecret("image-repository-image-push", applicationName, component.Spec.ComponentName, namespace)
+
+				return err
+			}, 5*time.Minute, 5*time.Second).Should(Succeed(), fmt.Sprintf("Image Push Remote Secret in '%s' was not created", namespace))
 		})
 
 		It("checks if image pull remote secret was deployed", func() {
@@ -185,38 +224,44 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("image-repository-cr-image-pul
 			}, 5*time.Minute, 5*time.Second).Should(BeTrue(), fmt.Sprintf("Pull RemoteSecret %s/%s is not in deployed phase", namespace, imagePullRemoteSecret.GetName()))
 		})
 
-		It("checks if image pull secret is set and linked to the default service account", func() {
-			targets = imagePullRemoteSecret.Status.Targets
-			Expect(targets).To(HaveLen(1))
+		It("checks if image push remote secret was deployed", func() {
+			Eventually(func() bool {
+				imagePushRemoteSecret, err = fw.AsKubeAdmin.RemoteSecretController.GetRemoteSecret(imagePushRemoteSecret.Name, imagePushRemoteSecret.Namespace)
+				Expect(err).NotTo(HaveOccurred())
 
-			target := targets[0]
+				return meta.IsStatusConditionTrue(imagePushRemoteSecret.Status.Conditions, "Deployed")
+			}, 5*time.Minute, 5*time.Second).Should(BeTrue(), fmt.Sprintf("Push RemoteSecret %s/%s is not in deployed phase", namespace, imagePushRemoteSecret.GetName()))
+		})
+
+		It("checks if image pull secret is set and linked to the default service account", func() {
+			pullTargets = imagePullRemoteSecret.Status.Targets
+			Expect(pullTargets).To(HaveLen(1))
+
+			target := pullTargets[0]
 			Expect(target.Namespace).To(Equal(namespace))
 			Expect(target.SecretName).To(Equal(imagePullRemoteSecret.Name))
 			Expect(target.ServiceAccountNames).To(HaveLen(1))
 			Expect(target.ServiceAccountNames[0]).To(Equal("default"))
 		})
 
-		It("checks if image pull secret is correct", func() {
-			secret, err := fw.AsKubeAdmin.CommonController.GetSecret(namespace, targets[0].SecretName)
-			Expect(err).NotTo(HaveOccurred())
+		It("checks if image push secret is set and linked to the appstudio-pipeline service account", func() {
+			pushTargets = imagePushRemoteSecret.Status.Targets
+			Expect(pushTargets).To(HaveLen(1))
 
-			// get robot account name and token from image pull secret
-			robotAccountName, robotAccountToken := build.GetRobotAccountInfoFromSecret(secret)
-
-			// get expected robot account name
-			imageRepository, err = fw.AsKubeAdmin.ImageController.GetImageRepositoryCR(imageRepository.Name, imageRepository.Namespace)
-			Expect(err).NotTo(HaveOccurred())
-
-			// ensure that image pull secret points to the expected robot account name
-			expectedRobotAccountName := imageRepository.Status.Credentials.PullRobotAccountName
-			Expect(robotAccountName).To(Equal(expectedRobotAccountName))
-
-			// get expected robot account token
-			expectedRobotAccountToken, err := build.GetRobotAccountToken(robotAccountName)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			// ensure secret points to the expected robot account token
-			Expect(robotAccountToken).To(Equal(expectedRobotAccountToken))
+			target := pushTargets[0]
+			Expect(target.Namespace).To(Equal(namespace))
+			Expect(target.SecretName).To(Equal(imagePushRemoteSecret.Name))
+			Expect(target.ServiceAccountNames).To(HaveLen(1))
+			Expect(target.ServiceAccountNames[0]).To(Equal("appstudio-pipeline"))
 		})
+
+		It("checks if image pull secret is correct", func() {
+			checkTargetSecret(pullTargets[0].SecretName, namespace, "pull", imageRepository)
+		})
+
+		It("checks if image push secret is correct", func() {
+			checkTargetSecret(pushTargets[0].SecretName, namespace, "push", imageRepository)
+		})
+
 	})
 })

@@ -49,7 +49,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("component-annotation-image-pu
 	Describe("SVPI-601 - Ensure existence of image pull remote secret and image pull secret when component is created", Ordered, func() {
 		BeforeAll(func() {
 			// Initialize the tests controllers
-			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("spi-demos"))
+			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("rs-demos"))
 			Expect(err).NotTo(HaveOccurred())
 			namespace = fw.UserNamespace
 			Expect(namespace).NotTo(BeEmpty())
@@ -149,7 +149,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("component-annotation-image-pu
 
 		It("checks if image pull remote secret was deployed", func() {
 			Eventually(func() bool {
-				imagePullRemoteSecret, err = fw.AsKubeAdmin.RemoteSecretController.GetImageRepositoryRemoteSecret("-pull", applicationName, component.Spec.ComponentName, namespace)
+				imagePullRemoteSecret, err = fw.AsKubeAdmin.RemoteSecretController.GetImageRepositoryRemoteSecret(component.Spec.ComponentName+"-pull", applicationName, component.Spec.ComponentName, namespace)
 				Expect(err).NotTo(HaveOccurred())
 
 				return meta.IsStatusConditionTrue(imagePullRemoteSecret.Status.Conditions, "Deployed")

@@ -34,7 +34,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "target-curre
 	Describe("SVPI-558 - Target to the same namespace where the remote secret lives is always deployed", Ordered, func() {
 		BeforeAll(func() {
 			// Initialize the tests controllers
-			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("spi-demos"))
+			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("rs-demos"))
 			Expect(err).NotTo(HaveOccurred())
 			namespace = fw.UserNamespace
 			Expect(namespace).NotTo(BeEmpty())

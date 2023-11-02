@@ -39,7 +39,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "kubeconfig-a
 
 	Describe("SVPI-558 - Authentication using Kubeconfig", Ordered, func() {
 		BeforeAll(func() {
-			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("spi-demos"))
+			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("rs-demos"))
 			Expect(err).NotTo(HaveOccurred())
 			namespace = fw.UserNamespace
 			Expect(namespace).NotTo(BeEmpty())

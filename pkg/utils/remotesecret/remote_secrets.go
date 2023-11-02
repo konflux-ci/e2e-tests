@@ -113,9 +113,9 @@ func (s *RemoteSecretController) CreateUploadSecret(name, namespace string, remo
 }
 
 // GetImageRepositoryRemoteSecret returns the requested image pull RemoteSecret object
-func (s *RemoteSecretController) GetImageRepositoryRemoteSecret(suffix, applicationName, componentName, namespace string) (*rs.RemoteSecret, error) {
+func (s *RemoteSecretController) GetImageRepositoryRemoteSecret(name, applicationName, componentName, namespace string) (*rs.RemoteSecret, error) {
 	namespacedName := types.NamespacedName{
-		Name:      componentName + suffix,
+		Name:      name,
 		Namespace: namespace,
 	}
 
