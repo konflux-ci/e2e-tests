@@ -940,27 +940,6 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 
 			increaseBar(applicationsBar, applicationsBarMutex)
 
-			gitopsRepoInterval := 5 * time.Second
-			gitopsRepoTimeout := 60 * time.Minute
-			repoUrl := utils.ObtainGitOpsRepositoryUrl(app.Status.Devfile)
-			if err := utils.WaitUntilWithInterval(func() (done bool, err error) {
-				resp, err := http.Get(repoUrl)
-				if err != nil {
-					return false, fmt.Errorf("unable to request gitops repo %s: %+v", repoUrl, err)
-				}
-				defer resp.Body.Close()
-				if resp.StatusCode == 404 {
-					return false, nil
-				} else if resp.StatusCode == 200 {
-					return true, nil
-				} else {
-					return false, fmt.Errorf("unexpected response code when requesting gitop repo %s: %v", repoUrl, err)
-				}
-			}, gitopsRepoInterval, gitopsRepoTimeout); err != nil {
-				logError(4, fmt.Sprintf("Unable to create application %s gitops repo within %v: %v", ApplicationName, gitopsRepoTimeout, err))
-				continue
-			}
-
 			/*
 				This part adds the Integration test scenario part
 				It's considered also as part of the resources creation since Integration test scenarios are resources as well
