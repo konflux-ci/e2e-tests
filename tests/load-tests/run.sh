@@ -66,7 +66,7 @@ else
         -o "$output_dir" \
         -t "${THREADS:-1}" \
         $RANDOM_PREFIX_FLAG \
-        --disable-metrics \
+        --disable-metrics="${DISABLE_METRICS:-false}" \
         --pushgateway-url "${PUSHGATEWAY_URL:-rhtapqe.com}" \
         --enable-progress-bars="${ENABLE_PROGRESS_BARS:-false}" \
         --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}"

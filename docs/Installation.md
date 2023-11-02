@@ -32,7 +32,7 @@ Requirements for installing RHTAP in E2E mode:
     oc login -u <user> -p <password> --server=<oc_api_url>
    ```
 
-2. Export required (and recommended) environment variables from [default.env](default.env). Copy the file (`cp default.env user.env`), edit the required variables and source it (`source user.env`).
+2. Export required (and recommended) environment variables from [default.env](../default.env). Copy the file (`cp default.env user.env`), edit the required variables and source it (`source user.env`).
 
 3. Install dependencies:
 
@@ -90,7 +90,7 @@ are in the [infra-deployments](https://github.com/redhat-appstudio/infra-deploym
 
 ### Building and running the e2e tests
 
-Most of the tests could require you to have specific container image repo's created (if you're using your own container image org/user account (`QUAY_E2E_ORGANIZATION`) or your own GitHub organization (`MY_GITHUB_ORG`)
+Most of the tests could require you to have specific container image repo's created (if you're using your own container image org/user account (`QUAY_E2E_ORGANIZATION`) or your own GitHub organization (`MY_GITHUB_ORG`).
 In that case, before you run the test, make sure you have created
 * `test-images` repo in quay.io, i.e. `quay.io/<QUAY_E2E_ORGANIZATION>/test-images` and make it **public**
   * also make sure that the docker config, that is encoded in the value of `QUAY_TOKEN` environment variable, contains a correct credentials required to push to `test-images` repo. And make sure the robot account or user account has the **write** permissions set for `test-images` repo which is required by the tests to push the generated artifacts.
@@ -98,6 +98,8 @@ In that case, before you run the test, make sure you have created
   * https://github.com/redhat-appstudio-qe/devfile-sample-hello-world (for running build-service tests)
   * https://github.com/redhat-appstudio-qe/hacbs-test-project (for rhtap-demo test)
   * https://github.com/redhat-appstudio-qe/strategy-configs (for rhtap-demo test)
+
+Note: All Environments used in all e2e-tests are in [default.env](../default.env) file. In case you need to run a specific tests, not all environments are necessary to be defined.
 
 You can use the following make target to build and run the tests:
    ```bash
@@ -123,6 +125,7 @@ The `e2e-appstudio` command is the root command that executes all test functiona
    ```bash
       `./bin/e2e-appstudio`
    ```
+Note: The binary must be updated by running `make build` every time there are new changes in the tests.
 
 The instructions for every test suite can be found in the [tests folder](tests), e.g. [has Readme.md](tests/rhtap-demo/README.md).
 You can also specify which tests you want to run using [labels](docs/LabelsNaming.md) or [Ginkgo Focus](docs/DeveloperFocus.md).

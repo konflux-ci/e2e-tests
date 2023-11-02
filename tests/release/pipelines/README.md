@@ -19,7 +19,7 @@ This suite contains e2e-tests for testing release pipelines from repository [rel
 ## How to Run tests:
 
 ### 1. To run all e2e-tests in suite ensure your changes of the suite tests are saved.
-- navigate to `e2e-tests` directoy 
+- navigate to `e2e-tests` directory 
  ```bash
  make build 
  ./bin/e2e-appstudio --ginkgo.junit-report=report.xml  --ginkgo.focus="pipelines"
@@ -31,7 +31,7 @@ This suite contains e2e-tests for testing release pipelines from repository [rel
 For example: 
 If a test has the label `label-test` to a test in suite `pipelines` then the test should run using the following arguments:
 
-- navigate to `e2e-tests` directoy 
+- navigate to `e2e-tests` directory 
  ```bash
  make build 
  ./bin/e2e-appstudio --ginkgo.junit-report=report.xml  --ginkgo.focus="pipelines" --ginkgo.label-filter="label-test"

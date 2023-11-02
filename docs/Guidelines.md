@@ -75,3 +75,18 @@ Good code that waits for something to happen meets the following criteria:
 * Use `gomega.Consistently` to ensure that some condition is true for a while. As with `gomega.Eventually`, make assertions about the value instead of checking the value with Go code and then asserting that the code returns true.
 * Both `gomega.Consistently` and `gomega.Eventually` can be aborted early via `gomega.StopPolling`.
 * Avoid polling with functions that don’t take a context (`wait.Poll`, `wait.PollImmediate`, `wait.Until`, …) and replace with their counterparts that do (`wait.PollWithContext`, `wait.PollImmediateWithContext`, `wait.UntilWithContext`, …) or even better, with `gomega.Eventually`.
+
+## E2E structure
+```bash
+# Is the main for all e2e tests. Don't put a lot of code in the application directory. If you think the code can be imported and used in other projects, then it should live in the `/pkg` directory.
+- /cmd Is the entrypoint of
+# Documentation
+- /docs          # Documentation and project-related documents
+- /src           # Source code for the project
+  - /app        # Main application code
+  - /config     # Configuration files
+  - /lib        # Shared libraries
+- /data          # Data files, datasets, or any data related to the project
+- /tests         # Unit tests and test data
+- /scripts       # Utility scripts
+```

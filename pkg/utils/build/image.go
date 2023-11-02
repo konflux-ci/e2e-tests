@@ -21,7 +21,7 @@ func ExtractImage(image string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("cannot parse docker pull spec (image) %s, error: %+v", image, err)
 	}
-	tmpDir, err := os.MkdirTemp(os.TempDir(), "sbom")
+	tmpDir, err := os.MkdirTemp(os.TempDir(), "eimage")
 	if err != nil {
 		return "", fmt.Errorf("error when creating a temp directory for extracting files: %+v", err)
 	}

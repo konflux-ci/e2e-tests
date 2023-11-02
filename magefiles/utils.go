@@ -382,10 +382,10 @@ func mergeBranch(repoPath string, branchToMerge string) error {
 	return nil
 }
 
-func HandleErrorWithAlert(err error) error {
+func HandleErrorWithAlert(err error, errLevel slack.ErrorSeverityLevel) error {
 	klog.Warning(err.Error() + " - this issue will be reported to a dedicated Slack channel")
 
-	if slackErr := slack.ReportIssue(err.Error()); slackErr != nil {
+	if slackErr := slack.ReportIssue(err.Error(), errLevel); slackErr != nil {
 		return fmt.Errorf("failed report an error (%s) to a Slack channel: %s", err, slackErr)
 	}
 	return nil
