@@ -20,7 +20,7 @@ import (
  * Test case: Authentication using Service Account
  */
 
-var _ = framework.RemoteSecretSuiteDescribe(Label("service-account-auth"), func() {
+var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "service-account-auth"), func() {
 
 	defer GinkgoRecover()
 

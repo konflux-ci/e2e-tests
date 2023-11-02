@@ -4,7 +4,6 @@ import (
 	"context"
 
 	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -35,8 +34,8 @@ func (s *RemoteSecretController) CreateRemoteSecret(name, namespace string, targ
 	return &remoteSecret, nil
 }
 
-// CreateRemoteSecretWithLabels creates a RemoteSecret object with specified labels
-func (s *RemoteSecretController) CreateRemoteSecretWithLabels(name, namespace string, targetSecretName string, labels map[string]string) (*rs.RemoteSecret, error) {
+// CreateRemoteSecretWithLabels creates a RemoteSecret object with specified labels and annotations
+func (s *RemoteSecretController) CreateRemoteSecretWithLabelsAndAnnotations(name, namespace string, targetSecretName string, labels map[string]string, annotations map[string]string) (*rs.RemoteSecret, error) {
 	remoteSecret := rs.RemoteSecret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -51,6 +50,7 @@ func (s *RemoteSecretController) CreateRemoteSecretWithLabels(name, namespace st
 	}
 
 	remoteSecret.ObjectMeta.Labels = labels
+	remoteSecret.ObjectMeta.Annotations = annotations
 
 	err := s.KubeRest().Create(context.TODO(), &remoteSecret)
 	if err != nil {
@@ -89,8 +89,8 @@ func (s *RemoteSecretController) GetTargetSecretName(targets []rs.TargetStatus, 
 }
 
 // CreateUploadSecret creates an Upload secret object to inject data in a Remote Secret
-func (s *RemoteSecretController) CreateUploadSecret(name, namespace string, remoteSecretName string, secretType v1.SecretType, stringData map[string]string) (*corev1.Secret, error) {
-	uploadSecret := corev1.Secret{
+func (s *RemoteSecretController) CreateUploadSecret(name, namespace string, remoteSecretName string, secretType v1.SecretType, stringData map[string]string) (*v1.Secret, error) {
+	uploadSecret := v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -134,5 +134,14 @@ func (s *RemoteSecretController) GetImageRepositoryRemoteSecret(suffix, applicat
 		return nil, err
 	}
 	return &remoteSecret, nil
+}
 
+// RemoteSecretTargetHasNamespace checks whether the RemoteSecret targets contains a namespace
+func (s *RemoteSecretController) RemoteSecretTargetsContainsNamespace(name string, rs *rs.RemoteSecret) bool {
+	for _, target := range rs.Status.Targets {
+		if target.Namespace == name {
+			return true
+		}
+	}
+	return false
 }

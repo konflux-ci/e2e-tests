@@ -158,7 +158,7 @@ For more information refer to [Generate Tests](docs/DeveloperGenerateTest.md).
 * When running via mage you can filter the suites run by specifying the
   `E2E_TEST_SUITE_LABEL` environment variable. For example:
   `E2E_TEST_SUITE_LABEL=ec ./mage runE2ETests`
-* `klog` level can be controled via `KLOG_VERBOSITY` environment variable. For
+* `klog` level can be controlled via `KLOG_VERBOSITY` environment variable. For
   example: `KLOG_VERBOSITY=9 ./mage runE2ETests` would output `curl` commands
   issued via Kubernetes client from sigs.k8s.io/controller-runtime
 
@@ -191,7 +191,7 @@ Our automated tests running in CI create lot of repositories in our redhat-appst
 
 There is a mage target that can cleanup those repositories - `mage local:cleanupGithubOrg`.
 
-For more infor & usage, please run `mage -h local:cleanupGithubOrg`.
+For more info & usage, please run `mage -h local:cleanupGithubOrg`.
 
 # PR review process in e2e-tests
 * Since RHTAP is leveraging OpenShift CI, [OWNERS](https://github.com/redhat-appstudio/e2e-tests/blob/main/OWNERS) file (in a directory or its parent directory) takes effect in e2e-tests PR review process. Reviewers are selected by [Blunderbuss plugin](https://github.com/kubernetes/test-infra/tree/master/prow/plugins/blunderbuss).

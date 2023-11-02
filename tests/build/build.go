@@ -110,10 +110,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 			}
 
-			//Delete the quay image repo since we are setting delete-repo=false
-			_, err = build.DeleteImageRepo(imageRepoName)
-			Expect(err).NotTo(HaveOccurred(), "Failed to delete image repo with error: %+v", err)
-
 		})
 
 		validateChecks := func() {

@@ -91,7 +91,7 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 			pr, err = h.GetComponentPipelineRun(component.GetName(), app, component.GetNamespace(), sha)
 
 			if err != nil {
-				GinkgoWriter.Printf("PipelineRun has not been created yet for the Component %s/%s\n", component.GetNamespace, component.GetName())
+				GinkgoWriter.Printf("PipelineRun has not been created yet for the Component %s/%s\n", component.GetNamespace(), component.GetName())
 				return false, nil
 			}
 

@@ -1,25 +1,22 @@
-package release
+package pipelines
 
 import (
 	"fmt"
-	"os"
-
 	"github.com/devfile/library/v2/pkg/util"
+	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
-	"gopkg.in/yaml.v2"
-
-	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	corev1 "k8s.io/api/core/v1"
+	"os"
 )
 
-var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deployment", Label("release", "withDeployment", "HACBS"), func() {
+var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deployment", Label("release-pipelines", "withDeployment", "HACBS"), func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	var fw *framework.Framework
@@ -82,36 +79,20 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 			componentDetected = compDetected
 		}
 
-		_, err = fw.AsKubeAdmin.HasController.CreateApplication(applicationNameDefault, devNamespace)
-		Expect(err).NotTo(HaveOccurred())
-
-		component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentDetected.ComponentStub, devNamespace, "", "", applicationNameDefault, true, map[string]string{}, true)
-		Expect(err).NotTo(HaveOccurred())
-
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "true")
-		Expect(err).NotTo(HaveOccurred())
-
-		components := []release.Component{{Name: compName, Repository: releasedImagePushRepo}}
-		sc := fw.AsKubeAdmin.ReleaseController.GenerateReleaseStrategyConfig(components)
-		scYaml, err := yaml.Marshal(sc)
-		Expect(err).ShouldNot(HaveOccurred())
-
-		scPath := "release-default-with-deployment.yaml"
-		Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef(constants.StrategyConfigsRepo, constants.StrategyConfigsDefaultBranch, constants.StrategyConfigsRevision, scGitRevision)).To(Succeed())
-		_, err = fw.AsKubeAdmin.CommonController.Github.CreateFile(constants.StrategyConfigsRepo, scPath, string(scYaml), scGitRevision)
-		Expect(err).ShouldNot(HaveOccurred())
-
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleaseStrategy("mvp-deploy-strategy", managedNamespace, "deploy-release", "quay.io/hacbs-release/pipeline-deploy-release:0.8", releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, []releaseApi.Params{
-			{Name: "extraConfigGitUrl", Value: fmt.Sprintf("https://github.com/%s/strategy-configs.git", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"))},
-			{Name: "extraConfigPath", Value: scPath},
-			{Name: "extraConfigGitRevision", Value: scGitRevision},
-		})
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "")
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.GitOpsController.CreatePocEnvironment(releaseEnvironment, managedNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, devNamespace, applicationNameDefault, managedNamespace, releaseEnvironment, "", "mvp-deploy-strategy")
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, managedNamespace, releaseEnvironment, devNamespace, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, []string{applicationNameDefault}, true, &tektonutils.PipelineRef{
+			Resolver: "git",
+			Params: []tektonutils.Param{
+				{Name: "url", Value: "https://github.com/redhat-appstudio/release-service-catalog"},
+				{Name: "revision", Value: "main"},
+				{Name: "pathInRepo", Value: "pipelines/deploy-release/deploy-release.yaml"},
+			},
+		}, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicyDefault, managedNamespace, defaultEcPolicySpec)
@@ -136,6 +117,12 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deploy
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateRoleBinding("role-release-service-account-binding", managedNamespace, "ServiceAccount", releaseStrategyServiceAccountDefault, managedNamespace, "Role", "role-release-service-account", "rbac.authorization.k8s.io")
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = fw.AsKubeAdmin.HasController.CreateApplication(applicationNameDefault, devNamespace)
+		Expect(err).NotTo(HaveOccurred())
+
+		component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentDetected.ComponentStub, devNamespace, "", "", applicationNameDefault, true, map[string]string{})
 		Expect(err).NotTo(HaveOccurred())
 
 		workingDir, err := os.Getwd()

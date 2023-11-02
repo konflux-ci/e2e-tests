@@ -20,7 +20,7 @@ oc create secret generic slack-token --from-literal="token=<TOKEN>"
 ```
 oc create secret generic slack-token --from-literal="token=<TOKEN>"
 ```
-* Deploy rest of the resoureces: 
+* Deploy rest of the resources: 
 ```
 cd pipelines/interrupt_catcher
 kubectl apply -f .

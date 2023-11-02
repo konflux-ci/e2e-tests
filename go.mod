@@ -13,7 +13,7 @@ require (
 	github.com/go-git/go-git/v5 v5.8.1
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572
 	github.com/gofri/go-github-ratelimit v1.0.3-0.20230428184158-a500e14de53f
-	github.com/google/go-containerregistry v0.15.2
+	github.com/google/go-containerregistry v0.16.1
 	github.com/google/go-github/v44 v44.1.0
 	github.com/google/uuid v1.3.0
 	github.com/gosuri/uiprogress v0.0.1
@@ -21,8 +21,8 @@ require (
 	github.com/h2non/gock v1.2.0
 	github.com/magefile/mage v1.13.0
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/onsi/ginkgo/v2 v2.11.0
-	github.com/onsi/gomega v1.27.10
+	github.com/onsi/ginkgo/v2 v2.13.0
+	github.com/onsi/gomega v1.28.0
 	github.com/openshift/api v0.0.0-20230213134911-7ba313770556
 	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
@@ -30,11 +30,16 @@ require (
 	github.com/redhat-appstudio-qe/perf-monitoring/api v0.0.0-20231003074147-a076f9e620da
 	github.com/redhat-appstudio/application-api v0.0.0-20230704143842-035c661f115f
 	github.com/redhat-appstudio/build-service v0.0.0-20230727072250-19c7a8b5c63d
+<<<<<<< HEAD
 	github.com/redhat-appstudio/image-controller v0.0.0-20231003082540-48893226ba8b
 	github.com/redhat-appstudio/integration-service v0.0.0-20230427084439-306b4611389b
+=======
+	github.com/redhat-appstudio/image-controller v0.0.0-20230831131151-75d3928646d2
+	github.com/redhat-appstudio/integration-service v0.0.0-20231017154915-ca19edc57d63
+>>>>>>> main
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20230821060312-4172397d68e8
 	github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0
-	github.com/redhat-appstudio/release-service v0.0.0-20230927145627-e492842a18f8
+	github.com/redhat-appstudio/release-service v0.0.0-20231012135118-498f8de95cc4
 	github.com/redhat-appstudio/remote-secret v0.0.0-20230713072146-a6094c712436
 	github.com/redhat-appstudio/service-provider-integration-operator v0.2023.22-0.20230713080056-eae17aa8c172
 	github.com/slack-go/slack v0.12.3
@@ -42,8 +47,8 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/tektoncd/cli v0.29.1
 	github.com/tektoncd/pipeline v0.49.0
-	golang.org/x/oauth2 v0.10.0
-	golang.org/x/tools v0.9.3
+	golang.org/x/oauth2 v0.13.0
+	golang.org/x/tools v0.12.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.27.0
 	k8s.io/apimachinery v0.27.3
@@ -64,6 +69,7 @@ replace (
 	github.com/antlr/antlr4 => github.com/antlr/antlr4 v0.0.0-20211106181442-e4c1a74c66bd
 	github.com/apcera/gssapi => github.com/openshift/gssapi v0.0.0-20161010215902-5fb4217df13b
 	github.com/chai2010/gettext-go => github.com/chai2010/gettext-go v0.1.0
+	github.com/docker/docker => github.com/docker/docker v23.0.5+incompatible
 	github.com/redhat-appstudio/managed-gitops/backend-shared => github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20230825175313-126ea8674329
 	k8s.io/api => k8s.io/api v0.25.5
 	// https://github.com/kubernetes/kubernetes/issues/79384#issuecomment-505627280
@@ -93,6 +99,7 @@ replace (
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.24.2
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.13.0
 	vbom.ml/util => github.com/fvbommel/util v0.0.0-20180919145318-efcd4e0f9787
+
 )
 
 require (
@@ -120,7 +127,7 @@ require (
 	github.com/bluekeyes/go-gitdiff v0.7.1 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.6.0 // indirect
 	github.com/bombsimon/logrusr/v2 v2.0.1 // indirect
-	github.com/bradleyfalzon/ghinstallation/v2 v2.5.0 // indirect
+	github.com/bradleyfalzon/ghinstallation/v2 v2.7.0 // indirect
 	github.com/census-instrumentation/opencensus-proto v0.4.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
@@ -140,9 +147,9 @@ require (
 	github.com/devfile/registry-support/registry-library v0.0.0-20230123181701-4de4dadb13e7 // indirect
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/docker/cli v23.0.5+incompatible // indirect
+	github.com/docker/cli v24.0.0+incompatible // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
-	github.com/docker/docker v23.0.5+incompatible // indirect
+	github.com/docker/docker v24.0.0+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
@@ -181,10 +188,10 @@ require (
 	github.com/google/gnostic v0.6.9 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/go-github/v45 v45.2.0 // indirect
-	github.com/google/go-github/v53 v53.0.0 // indirect
+	github.com/google/go-github/v55 v55.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.2.1-0.20210504230335-f78f29fc09ea // indirect
-	github.com/google/pprof v0.0.0-20230406165453-00490a63f317 // indirect
+	github.com/google/pprof v0.0.0-20230510103437-eeec1cb781c3 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
@@ -239,13 +246,13 @@ require (
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/prometheus/client_golang v1.16.0 // indirect
-	github.com/prometheus/client_model v0.4.0 // indirect
-	github.com/prometheus/common v0.42.0 // indirect
-	github.com/prometheus/procfs v0.10.1 // indirect
+	github.com/prometheus/client_golang v1.17.0 // indirect
+	github.com/prometheus/client_model v0.4.1-0.20230718164431-9a2bf3000d16 // indirect
+	github.com/prometheus/common v0.44.0 // indirect
+	github.com/prometheus/procfs v0.11.1 // indirect
 	github.com/prometheus/statsd_exporter v0.23.0 // indirect
 	github.com/redhat-appstudio/application-service v0.0.0-20230717184417-67d31a01a776 // indirect
-	github.com/redhat-appstudio/operator-toolkit v0.0.0-20230901144515-eeb937692f03 // indirect
+	github.com/redhat-appstudio/operator-toolkit v0.0.0-20230913085326-6c5e9d368a6a // indirect
 	github.com/redhat-developer/alizer/go v0.0.0-20230516215932-135a2bb3fb90 // indirect
 	github.com/redhat-developer/gitops-generator v0.0.0-20230614175323-aff86c6bc55e // indirect
 	github.com/redis/go-redis/v9 v9.0.5 // indirect
@@ -253,6 +260,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/russross/blackfriday v1.6.0 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
+	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shurcooL/githubv4 v0.0.0-20221229060216-a8d4a561cc93 // indirect
 	github.com/shurcooL/graphql v0.0.0-20220606043923-3cf50f8a0a29 // indirect
@@ -278,10 +286,10 @@ require (
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	go.uber.org/zap v1.24.0 // indirect
+	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1 // indirect
-	golang.org/x/mod v0.10.0 // indirect
+	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect

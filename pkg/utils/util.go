@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/tls"
 	"encoding/base64"
@@ -13,6 +15,8 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -452,4 +456,137 @@ func CreateKubeconfigFileForRestConfig(restConfig rest.Config) ([]byte, error) {
 		return []byte{}, nil
 	}
 	return kubeconfiString, nil
+}
+
+func GetFileNamesFromDir(dirPath string) ([]string, error) {
+	var filesInDir []string
+	files, err := os.ReadDir(dirPath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading directory: %v", err)
+	}
+	for _, file := range files {
+		filesInDir = append(filesInDir, file.Name())
+	}
+	return filesInDir, nil
+}
+
+func CheckFileExistsInDir(rootDir, filename string) (bool, error) {
+	absFilePath := filepath.Join(rootDir, filename)
+	_, err := os.Stat(absFilePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		} else {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
+func Untar(dst string, tarPath string) error {
+
+	tr, err := ReadTarFile(tarPath)
+	if err != nil {
+		return err
+	}
+
+	for {
+		header, err := tr.Next()
+
+		switch {
+
+		// if no more files are found return
+		case err == io.EOF:
+			return nil
+
+		// return any other error
+		case err != nil:
+			return err
+
+		// if the header is nil, just skip it (not sure how this happens)
+		case header == nil:
+			continue
+		}
+
+		// the target location where the dir/file should be created
+		target := filepath.Join(dst, header.Name) // nolint:gosec
+
+		// the following switch could also be done using fi.Mode(), not sure if there
+		// a benefit of using one vs. the other.
+		// fi := header.FileInfo()
+
+		// check the file type
+		switch header.Typeflag {
+
+		// if its a dir and it doesn't exist create it
+		case tar.TypeDir:
+			err := CreateDir(target)
+			if err != nil {
+				return err
+			}
+		// if it's a file create it
+		case tar.TypeReg:
+			err = CreateFile(target, header, tr)
+			if err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func ReadTarFile(tarPath string) (*tar.Reader, error) {
+	tarFile, err := os.Open(tarPath) // nolint:gosec
+	if err != nil {
+		return nil, err
+	}
+	tr := tar.NewReader(tarFile)
+	if strings.HasSuffix(tarPath, ".gz") || strings.HasSuffix(tarPath, ".gzip") {
+		gz, err := gzip.NewReader(tarFile)
+		if err != nil {
+			return nil, err
+		}
+		defer gz.Close()
+		tr = tar.NewReader(gz)
+	}
+	return tr, nil
+}
+
+func CreateDir(target string) error {
+	if _, err := os.Stat(target); err != nil {
+		if err := os.MkdirAll(target, 0755); err != nil { // nolint:gosec
+			return err
+		}
+	}
+	return nil
+}
+
+func CreateFile(target string, header *tar.Header, tr *tar.Reader) error {
+	f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode)) // nolint:gosec
+	if err != nil {
+		return err
+	}
+
+	// copy over contents
+	if _, err := io.Copy(f, tr); err != nil { // nolint:gosec
+		return err
+	}
+
+	// manually close here after each file operation; defering would cause each file close
+	// to wait until all operations have completed.
+	return f.Close()
+}
+
+func GetRepoName(repoUrl string) string {
+	return strings.Split(strings.TrimSuffix(repoUrl, ".git"), "/")[4]
+}
+
+func FilterSliceUsingPattern(pattern string, lString []string) []string {
+	var results []string
+	re := regexp.MustCompile(pattern)
+	for _, str := range lString {
+		if re.MatchString(str) {
+			results = append(results, str)
+		}
+	}
+	return results
 }

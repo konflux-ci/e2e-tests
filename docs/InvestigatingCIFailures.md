@@ -35,7 +35,7 @@
            - This artifacts are present only with hypershift installer.
         - **redhat-appstudio_e2e-tests/gather-extra/**
            - Stores all cluster pods logs, events, configmaps etc. 
-           - This artifacts are present only when we dont use hypershift.
+           - This artifacts are present only when we don't use hypershift.
         - More details on all artifacts can be found in [OpenShift CI documentation](https://docs.ci.openshift.org/docs/how-tos/artifacts/ )
 
 ## Reporting and escalating CI Issue

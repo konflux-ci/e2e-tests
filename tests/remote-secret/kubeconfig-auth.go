@@ -23,7 +23,7 @@ import (
  * Test case: Authentication using Kubeconfig
  */
 
-var _ = framework.RemoteSecretSuiteDescribe(Label("kubeconfig-auth"), func() {
+var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "kubeconfig-auth"), func() {
 
 	defer GinkgoRecover()
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	spi "github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -49,13 +48,13 @@ func (s *SPIController) GetSPIFileContentRequest(name, namespace string) (*spi.S
 //
 
 func (s *SPIController) IsSPIFileContentRequestInDeliveredPhase(SPIFcr *spi.SPIFileContentRequest) {
-	Eventually(func() v1beta1.SPIFileContentRequestStatus {
+	Eventually(func() spi.SPIFileContentRequestStatus {
 		SPIFcr, err := s.GetSPIFileContentRequest(SPIFcr.Name, SPIFcr.Namespace)
 		Expect(err).NotTo(HaveOccurred())
 
 		return SPIFcr.Status
 	}, 2*time.Minute, 10*time.Second).Should(MatchFields(IgnoreExtras, Fields{
-		"Phase":   Equal(v1beta1.SPIFileContentRequestPhaseDelivered),
+		"Phase":   Equal(spi.SPIFileContentRequestPhaseDelivered),
 		"Content": Not(BeEmpty()),
 	}), "SPIFileContentRequest %s/%s '.Status' does not contain expected field values", SPIFcr.GetNamespace(), SPIFcr.GetName())
 }
