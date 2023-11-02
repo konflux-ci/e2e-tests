@@ -9,7 +9,6 @@ import (
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 )
@@ -160,26 +159,11 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("component-annotation-image-pu
 			targets = imagePullRemoteSecret.Status.Targets
 			Expect(targets).To(HaveLen(1))
 
-			target := targets[0]
-			Expect(target.Namespace).To(Equal(namespace))
-			Expect(target.SecretName).To(Equal(imagePullRemoteSecret.Name))
-			Expect(target.ServiceAccountNames).To(HaveLen(1))
-			Expect(target.ServiceAccountNames[0]).To(Equal("default"))
+			IsTargetSecretLinkedToRightSA(namespace, imagePullRemoteSecret.Name, "default", targets[0])
 		})
 
 		It("checks if image pull secret is correct", func() {
-			secret, err := fw.AsKubeAdmin.CommonController.GetSecret(namespace, targets[0].SecretName)
-			Expect(err).NotTo(HaveOccurred())
-
-			// get robot account name and token from image pull secret
-			robotAccountName, robotAccountToken := build.GetRobotAccountInfoFromSecret(secret)
-
-			// get expected robot account token
-			expectedRobotAccountToken, err := build.GetRobotAccountToken(robotAccountName)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			// ensure secret points to the expected robot account token
-			Expect(robotAccountToken).To(Equal(expectedRobotAccountToken))
+			IsRobotAccountTokenCorrect(targets[0].SecretName, namespace, "", nil, fw)
 		})
 	})
 })

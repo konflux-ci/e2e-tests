@@ -9,7 +9,6 @@ import (
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	image "github.com/redhat-appstudio/image-controller/api/v1alpha1"
 	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -52,34 +51,6 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("image-repository-cr-image-pul
 	AfterEach(framework.ReportFailure(&fw))
 
 	Describe("SVPI-574 and SVPI-652 - Ensure existence of image pull remote secret, image push remote secret, image pull secret and image push secret when ImageRepository is created", Ordered, func() {
-		checkTargetSecret := func(secretName, ns, secretType string, image *image.ImageRepository) {
-			secret, err := fw.AsKubeAdmin.CommonController.GetSecret(ns, secretName)
-			Expect(err).NotTo(HaveOccurred())
-
-			// get robot account name and token from image secret
-			robotAccountName, robotAccountToken := build.GetRobotAccountInfoFromSecret(secret)
-
-			// get expected robot account name
-			imageRepo, err := fw.AsKubeAdmin.ImageController.GetImageRepositoryCR(image.Name, image.Namespace)
-			Expect(err).NotTo(HaveOccurred())
-
-			// ensure that image secret points to the expected robot account name
-			expectedRobotAccountName := ""
-			if secretType == "pull" {
-				expectedRobotAccountName = imageRepo.Status.Credentials.PullRobotAccountName
-			} else {
-				expectedRobotAccountName = imageRepo.Status.Credentials.PushRobotAccountName
-			}
-			Expect(robotAccountName).To(Equal(expectedRobotAccountName))
-
-			// get expected robot account token
-			expectedRobotAccountToken, err := build.GetRobotAccountToken(robotAccountName)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			// ensure secret points to the expected robot account token
-			Expect(robotAccountToken).To(Equal(expectedRobotAccountToken))
-		}
-
 		BeforeAll(func() {
 			// Initialize the tests controllers
 			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("rs-demos"))
@@ -237,30 +208,22 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("image-repository-cr-image-pul
 			pullTargets = imagePullRemoteSecret.Status.Targets
 			Expect(pullTargets).To(HaveLen(1))
 
-			target := pullTargets[0]
-			Expect(target.Namespace).To(Equal(namespace))
-			Expect(target.SecretName).To(Equal(imagePullRemoteSecret.Name))
-			Expect(target.ServiceAccountNames).To(HaveLen(1))
-			Expect(target.ServiceAccountNames[0]).To(Equal("default"))
+			IsTargetSecretLinkedToRightSA(namespace, imagePullRemoteSecret.Name, "default", pullTargets[0])
 		})
 
 		It("checks if image push secret is set and linked to the appstudio-pipeline service account", func() {
 			pushTargets = imagePushRemoteSecret.Status.Targets
 			Expect(pushTargets).To(HaveLen(1))
 
-			target := pushTargets[0]
-			Expect(target.Namespace).To(Equal(namespace))
-			Expect(target.SecretName).To(Equal(imagePushRemoteSecret.Name))
-			Expect(target.ServiceAccountNames).To(HaveLen(1))
-			Expect(target.ServiceAccountNames[0]).To(Equal("appstudio-pipeline"))
+			IsTargetSecretLinkedToRightSA(namespace, imagePushRemoteSecret.Name, "appstudio-pipeline", pushTargets[0])
 		})
 
 		It("checks if image pull secret is correct", func() {
-			checkTargetSecret(pullTargets[0].SecretName, namespace, "pull", imageRepository)
+			IsRobotAccountTokenCorrect(pullTargets[0].SecretName, namespace, "pull", imageRepository, fw)
 		})
 
 		It("checks if image push secret is correct", func() {
-			checkTargetSecret(pushTargets[0].SecretName, namespace, "push", imageRepository)
+			IsRobotAccountTokenCorrect(pushTargets[0].SecretName, namespace, "push", imageRepository, fw)
 		})
 
 	})
