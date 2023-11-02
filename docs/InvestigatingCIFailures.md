@@ -24,7 +24,7 @@
     - Every Prow job executed by the CI system generates an artifacts directory containing information about that execution and its results.
     1. Open a link to prow job from your PR -> **Open Artifacts link**
     2. Review logs from folders:
-        - **redhat-appstudio_e2e-tests/redhat-appstudio-e2e/**               
+        - **redhat-appstudio_e2e-tests/redhat-appstudio-e2e/**
             - Store xunit files related to appstudio e2e-tests.
         - **/artifacts/appstudio-e2e-tests/redhat-appstudio-gather/artifacts**
             - Contains information about pipelineruns, pipelines, operators, configuration, Stonesoup Kube APIs informations, components, application, environment..
@@ -34,7 +34,7 @@
                - For example there is log from application-service named like: application-service_application-service-application-service-controller-manager
            - This artifacts are present only with hypershift installer.
         - **redhat-appstudio_e2e-tests/gather-extra/**
-           - Stores all cluster pods logs, events, configmaps etc. 
+           - Stores all cluster pods logs, events, configmaps etc.
            - This artifacts are present only when we don't use hypershift.
         - More details on all artifacts can be found in [OpenShift CI documentation](https://docs.ci.openshift.org/docs/how-tos/artifacts/ )
 
@@ -47,6 +47,5 @@ Please include:
     - **Failure message**
     - **Relevant logs**
     - (+ could be helpful to also include Slack thread conversation link in the ticket)
-2. Post this issue in **#forum-stonesoup-qe**(ping **@ic-appstudio-qe**) channel and relevant component channel.
-    - You can also raise this issue on **#wg-developer-stonesoup** channel and your lead can raise this issue on SoS call(and PM call and architects call, if this is necessary).
-
+2. Post this issue in **#forum-rhtap-qe**(ping **@ic-appstudio-qe**) channel and relevant component channel.
+    - You can also raise this issue on **#forum-rhtap-developer** channel and your lead can raise this issue on SoS call(and PM call and architects call, if this is necessary).
