@@ -76,17 +76,20 @@ Good code that waits for something to happen meets the following criteria:
 * Both `gomega.Consistently` and `gomega.Eventually` can be aborted early via `gomega.StopPolling`.
 * Avoid polling with functions that don’t take a context (`wait.Poll`, `wait.PollImmediate`, `wait.Until`, …) and replace with their counterparts that do (`wait.PollWithContext`, `wait.PollImmediateWithContext`, `wait.UntilWithContext`, …) or even better, with `gomega.Eventually`.
 
-## E2E structure
-```bash
-# Is the main for all e2e tests. Don't put a lot of code in the application directory. If you think the code can be imported and used in other projects, then it should live in the `/pkg` directory.
-- /cmd Is the entrypoint of
-# Documentation
-- /docs          # Documentation and project-related documents
-- /src           # Source code for the project
-  - /app        # Main application code
-  - /config     # Configuration files
-  - /lib        # Shared libraries
-- /data          # Data files, datasets, or any data related to the project
-- /tests         # Unit tests and test data
-- /scripts       # Utility scripts
-```
+## E2E directory structure
+
+This is a basic layout for RHTAP E2E framework project. It is a set of common directories for all teams in RHTAP.
+
+* `/cmd`: Is the main for all e2e tests. Don't put a lot of code in the application directory. If you think the code can be imported and used in other projects, then it should live in the `/pkg` directory.
+* `docs`: Documentation about RHTAP e2e world.
+* `/magefiles`: The code definition about installing and running the e2e tests
+* `/pipelines`: Tekton pipelines utilities for QE team like IC.
+* `/pkg`: All used and imported packages for e2e tests.
+  * `/pkg/clients`: Defintion of different clients connection providers like Slack, GitHub, Kubernetes Server.
+  * `/pkg/constants`: Global constants of the e2e tests.
+  * `/pkg/framework`: In the framework folder are all controllers initialization, tests reports and the interaction with Report Portal.
+  * `/pkg/logs`: Tests logging utilities.
+  * `/pkg/sandbox`: Initialize Sandbox controller to make authenticated requests to a Kubernetes server.
+  * `/pkg/utils`: Util folders where all API interaction with different RHTAP controllers. Also some tests utils can be found in `/pkg/utils/util.go`.
+* `/scripts`: Scripts to perform operations which cannot be do it at magefiles level.
+* `/tests`: Folder where all RHTAP tests are defined and documented.

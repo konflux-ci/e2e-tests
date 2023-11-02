@@ -13,8 +13,8 @@ Requirements for installing RHTAP in E2E mode:
 * A machine from which to run the install (usually your laptop) with required tools:
   * A properly setup Go workspace using **Go 1.19 is required**
   * The OpenShift Command Line Tool (oc) **Use the version coresponding to the Openshift version**
-  * yq
-  * [jq](https://github.com/mikefarah/yq)
+  * [yq]((https://github.com/mikefarah/yq))
+  * jq
   * git
   * helm
   * vcluster (!optional! Only in case of running byoc testing)
@@ -52,6 +52,7 @@ $ go mod vendor
 <summary><h4>Advanced installation guidelines</h4></summary>
 <h5>GitHub Application for Pipelines as Code<h5>
 <p>
+
    Some tests could require you have a Github App created in order to test Component builds via Pipelines as Code.
 Such tests are [rhtap-demo](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/rhtap-demo/rhtap-demo.go) and [build](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/build/build.go).
 
