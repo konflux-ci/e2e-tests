@@ -180,7 +180,8 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 
 		})
 
-		It("SPITokenBinding should be in Injected phase", func() {
+		// Pending until: https://issues.redhat.com/browse/RHTAPBUGS-939
+		It("SPITokenBinding should be in Injected phase", Pending, func() {
 			Eventually(func() bool {
 				SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
 				Expect(err).NotTo(HaveOccurred())
