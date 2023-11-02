@@ -3,6 +3,7 @@ package release
 import (
 	"encoding/json"
 	"fmt"
+
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -92,7 +93,7 @@ var _ = framework.ReleaseSuiteDescribe("Release service happy path", Label("rele
 		_, err = fw.AsKubeAdmin.HasController.CreateApplication(applicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentDetected.ComponentStub, devNamespace, "", "", applicationNameDefault, false, map[string]string{})
+		component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentDetected.ComponentStub, devNamespace, "", "", applicationNameDefault, false, map[string]string{}, true)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "")

@@ -1307,15 +1307,10 @@ github.com/redhat-appstudio/build-service v0.0.0-20230727072250-19c7a8b5c63d h1:
 github.com/redhat-appstudio/build-service v0.0.0-20230727072250-19c7a8b5c63d/go.mod h1:zpT61sPazrKuE2GrFaoxVfyWO1x5vjmSntJtaMYAE2U=
 github.com/redhat-appstudio/image-controller v0.0.0-20230831131151-75d3928646d2 h1:5ulZ6EVjYCBSXlZ0j6ylZPyn5TcaJ5ev5ffHVkrW29M=
 github.com/redhat-appstudio/image-controller v0.0.0-20230831131151-75d3928646d2/go.mod h1:fNP2oUEejlHZUkAz2f0ViKNl0D8w4cD8QVoGy1pri9c=
-<<<<<<< HEAD
 github.com/redhat-appstudio/image-controller v0.0.0-20231003082540-48893226ba8b h1:kM+t/FZSMVUydXIbii+bduAJov7pcADCybP9u1WSBcw=
 github.com/redhat-appstudio/image-controller v0.0.0-20231003082540-48893226ba8b/go.mod h1:fNP2oUEejlHZUkAz2f0ViKNl0D8w4cD8QVoGy1pri9c=
-github.com/redhat-appstudio/integration-service v0.0.0-20230427084439-306b4611389b h1:+9QZ6tcV3cddqE1E/N8zu3GJKe9bPtmLbN7cbY/9lQU=
-github.com/redhat-appstudio/integration-service v0.0.0-20230427084439-306b4611389b/go.mod h1:OVpNXkUNwAxJoJT3JwJfqNt2kAwixMxizcgzCQq4n8g=
-=======
 github.com/redhat-appstudio/integration-service v0.0.0-20231017154915-ca19edc57d63 h1:W8vWfVOfGtQgo6ESmcmCxTN3MQlzv74kWUbBNSBsfTY=
 github.com/redhat-appstudio/integration-service v0.0.0-20231017154915-ca19edc57d63/go.mod h1:ixDzGXBJ2jRlWj0sY7XBMTxy5S+gxnxzZiZ2gT85KJg=
->>>>>>> main
 github.com/redhat-appstudio/jvm-build-service v0.0.0-20230821060312-4172397d68e8 h1:00i53LFAxOim46xJMe13FEfkqxTZMs+nXNlXu7hRCno=
 github.com/redhat-appstudio/jvm-build-service v0.0.0-20230821060312-4172397d68e8/go.mod h1:1L8D7nBUn8EJrlYLCl5NmX1yzoRjkAeEX5v4YmmxQNo=
 github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20230825175313-126ea8674329 h1:6M0ZNiTrjPyZjRYv9TO1b+cM0BuCedEdxTn8mI++Rck=
