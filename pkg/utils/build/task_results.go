@@ -3,6 +3,7 @@ package build
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"fmt"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
@@ -37,6 +38,12 @@ type Vulnerabilities struct {
 
 func ValidateBuildPipelineTestResults(pipelineRun *v1beta1.PipelineRun, c crclient.Client) error {
 	for _, taskName := range taskNames {
+		// The inspect-image task is only required for FBC pipelines which we can infer by the component name
+		prLabels := pipelineRun.GetLabels()
+		componentName := prLabels["appstudio.openshift.io/component"]
+		if taskName == "inspect-image" && !strings.HasPrefix(strings.ToLower(componentName),"fbc-") {
+			continue
+		}
 		results, err := fetchTaskRunResults(c, pipelineRun, taskName)
 		if err != nil {
 			return err

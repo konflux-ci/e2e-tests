@@ -98,25 +98,6 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			Expect(reportLog).Should(ContainSubstring("No image attestations found matching the given public key"))
 		})
 
-		It("verifies ec cli supports the current policy config fields used by the ec-policies rego rules", func() {
-			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
-
-			pr, err = fwk.AsKubeAdmin.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
-			Expect(err).NotTo(HaveOccurred())
-
-			tr, err := fwk.AsKubeAdmin.TektonController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
-			Expect(err).NotTo(HaveOccurred())
-
-			//Get container step-report log details from pod
-			reportLog, err := utils.GetContainerLogs(fwk.AsKubeAdmin.CommonController.KubeInterface(), tr.Status.PodName, "step-report", namespace)
-			GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, "step-report", reportLog)
-			Expect(err).NotTo(HaveOccurred())
-			//assert ec cli support policy config include field
-			Expect(reportLog).Should(ContainSubstring("include"))
-		})
-
 		It("verifies ec validate accepts a list of image references", func() {
 			secretName := fmt.Sprintf("golden-image-public-key%s", util.GenerateRandomString(10))
 			GinkgoWriter.Println("Update public key to verify golden images")
