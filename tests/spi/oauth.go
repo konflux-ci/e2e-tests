@@ -138,7 +138,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 							Name:    cypressPodName,
 							Image:   "quay.io/redhat-appstudio-qe/cypress/included:latest",
 							Command: []string{"/bin/sh", "-c"},
-							Args:    []string{"git clone https://github.com/redhat-appstudio-qe/cypress-browser-oauth-flow; cd cypress-browser-oauth-flow; npm install; cypress run --spec cypress/e2e/spec.cy.js; tail -f /dev/null;"},
+							Args:    []string{"git clone https://github.com/rsoaresd/cypress-browser-oauth-flow; cd cypress-browser-oauth-flow; npm install; cypress run --spec cypress/e2e/spec.cy.js; tail -f /dev/null;"},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "CYPRESS_GH_USER",
@@ -181,7 +181,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 		})
 
 		// Pending until: https://issues.redhat.com/browse/RHTAPBUGS-939
-		It("SPITokenBinding should be in Injected phase", Pending, func() {
+		It("SPITokenBinding should be in Injected phase", func() {
 			Eventually(func() bool {
 				SPITokenBinding, err = fw.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
 				Expect(err).NotTo(HaveOccurred())
