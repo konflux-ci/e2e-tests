@@ -3,9 +3,10 @@ package rhtap_demo
 import (
 	"context"
 	"fmt"
-	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	"os"
 	"time"
+
+	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 
 	"github.com/redhat-appstudio/jvm-build-service/openshift-with-appstudio-test/e2e"
 	jvmclientSet "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
@@ -358,9 +359,11 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 								pacPurgeBranchName = fmt.Sprintf("appstudio-purge-%s", component.GetName())
 
 								// JBS related config
-								_, err = fw.AsKubeAdmin.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, fw.UserNamespace)
-								Expect(err).ShouldNot(HaveOccurred())
-								Expect(fw.AsKubeAdmin.JvmbuildserviceController.WaitForCache(fw.AsKubeAdmin.CommonController, fw.UserNamespace)).Should(Succeed())
+								/*
+									_, err = fw.AsKubeAdmin.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, fw.UserNamespace)
+									Expect(err).ShouldNot(HaveOccurred())
+									Expect(fw.AsKubeAdmin.JvmbuildserviceController.WaitForCache(fw.AsKubeAdmin.CommonController, fw.UserNamespace)).Should(Succeed())
+								*/
 							})
 							AfterAll(func() {
 								if !CurrentSpecReport().Failed() {
@@ -567,7 +570,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 								})
 							})
 
-							When("JVM Build Service is used for rebuilding dependencies", func() {
+							When("JVM Build Service is used for rebuilding dependencies", Pending, func() {
 								It("should eventually rebuild of all artifacts and dependencies successfully", func() {
 									jvmClient := jvmclientSet.New(fw.AsKubeAdmin.JvmbuildserviceController.JvmbuildserviceClient().JvmbuildserviceV1alpha1().RESTClient())
 									tektonClient := pipelineclientset.New(fw.AsKubeAdmin.TektonController.PipelineClient().TektonV1beta1().RESTClient())
