@@ -18,7 +18,7 @@ import (
  * Component: remote secret
  * Description: SVPI-574 - Ensure existence of image pull remote secret and image pull secret when ImageRepository is created
  *              SVPI-652 - Ensure existence of image push remote secret and image push secret when ImageRepository is created
- * Note: This test covers the newer approach (ImageRepository CR) that it is not in prod yet
+ * Note: This test covers the preferred approach (ImageRepository CR) that it is already in prod
  * More info: https://github.com/redhat-appstudio/image-controller#general-purpose-image-repository
  */
 
@@ -116,6 +116,15 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("image-repository-cr-image-pul
 		It("creates an image repository", func() {
 			imageRepository, err = fw.AsKubeAdmin.ImageController.CreateImageRepositoryCR("image-repository", namespace, application.Name, component.Name)
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("checks if image repository is ready", func() {
+			Eventually(func() string {
+				imageRepository, err = fw.AsKubeAdmin.ImageController.GetImageRepositoryCR(imageRepository.Name, imageRepository.Namespace)
+				Expect(err).NotTo(HaveOccurred())
+
+				return string(imageRepository.Status.State)
+			}, 2*time.Minute, 5*time.Second).Should(Equal(image.ImageRepositoryStateReady), fmt.Sprintf("ImageRepository '%s/%s' is not ready", imageRepository.Name, imageRepository.Namespace))
 		})
 
 		It("updates component with generated image from ImageRepository CR", func() {
