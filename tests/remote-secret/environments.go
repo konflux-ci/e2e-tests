@@ -461,7 +461,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "rs-environme
 				_, errRs3Ns3 := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_3, targetSecretName_3)
 
 				return k8sErrors.IsNotFound(errRs1Ns1) && k8sErrors.IsNotFound(errRs1Ns2) && k8sErrors.IsNotFound(errRs2Ns2) && k8sErrors.IsNotFound(errRs3Ns2) && k8sErrors.IsNotFound(errRs3Ns3)
-			}, 2*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("secrets #1, #2, #3 are not deleted when Environment is deleted", targetSecretName))
+			}, 2*time.Minute, 1*time.Second).Should(BeTrue(), "secrets #1, #2, #3 are not deleted when Environment is deleted")
 
 		})
 
