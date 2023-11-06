@@ -47,7 +47,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "rs-environme
 	compDetected := appservice.ComponentDetectionDescription{}
 	componentObj := &appservice.Component{}
 
-	Describe("Check RemoteSecret behaviour when deployed in Environments of an Application and Component", Ordered, func() {
+	Describe("Check RemoteSecret behavior when deployed in Environments of an Application and Component", Ordered, func() {
 		BeforeAll(func() {
 			// Initialize the tests controllers
 			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("rs-demos"))
@@ -59,14 +59,14 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "rs-environme
 			Expect(namespace).NotTo(BeEmpty())
 		})
 
-		// Remove all resources created by the tests in case the suite was successfull
+		// Remove all resources created by the tests in case the suite was successful
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
 				if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(fw.UserNamespace, 90*time.Second); err != nil {
 					if err := fw.AsKubeAdmin.StoreAllArtifactsForNamespace(fw.UserNamespace); err != nil {
 						Fail(fmt.Sprintf("error archiving artifacts:\n%s", err))
 					}
-					Fail(fmt.Sprintf("error deleting all componentns in namespace:\n%s", err))
+					Fail(fmt.Sprintf("error deleting all components in namespace:\n%s", err))
 				}
 				Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 				Expect(fw.AsKubeAdmin.CommonController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
@@ -264,7 +264,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "rs-environme
 
 		})
 
-		It("(SVPI-654) create Remote Secret #3 with Application, Component and mutiple Environments (#2, #3) and injects data", func() {
+		It("(SVPI-654) create Remote Secret #3 with Application, Component and multiple Environments (#2, #3) and injects data", func() {
 			labels := map[string]string{
 				"appstudio.redhat.com/application": applicationName,
 				"appstudio.redhat.com/component":   componentName,
@@ -417,7 +417,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "rs-environme
 			remoteSecret, err := fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecretName, namespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			// remote secret #1 is deployed in all environement for the application and component
+			// remote secret #1 is deployed in all environment for the application and component
 			// target should therefore contain target namespaces of all three environments
 			Expect(fw.AsKubeAdmin.RemoteSecretController.RemoteSecretTargetsContainsNamespace(targetNamespace, remoteSecret)).To(BeTrue(), fmt.Sprintf("namespace %s is not in targets of %s", targetNamespace, remoteSecretName))
 			Expect(fw.AsKubeAdmin.RemoteSecretController.RemoteSecretTargetsContainsNamespace(targetNamespace_2, remoteSecret)).To(BeTrue(), fmt.Sprintf("namespace %s is not in targets of %s", targetNamespace_2, remoteSecretName))
@@ -429,7 +429,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "rs-environme
 			remoteSecret, err := fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecretName_2, namespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			// remote secret #2 is deployed only on environement #2
+			// remote secret #2 is deployed only on environment #2
 			// target should therefore contain target namespaces of only environment #2
 			Expect(fw.AsKubeAdmin.RemoteSecretController.RemoteSecretTargetsContainsNamespace(targetNamespace_2, remoteSecret)).To(BeTrue(), fmt.Sprintf("namespace %s is not in targets of %s", targetNamespace_2, remoteSecretName_2))
 			Expect(remoteSecret.Status.Targets).To(HaveLen(1))
@@ -439,40 +439,30 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "rs-environme
 			remoteSecret, err := fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecretName_3, namespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			// remote secret #3 is deployed on environement #2 and #3 for the applications and component
+			// remote secret #3 is deployed on environment #2 and #3 for the applications and component
 			// target should therefore contain target namespaces of both environments
 			Expect(fw.AsKubeAdmin.RemoteSecretController.RemoteSecretTargetsContainsNamespace(targetNamespace_2, remoteSecret)).To(BeTrue(), fmt.Sprintf("namespace %s is not in targets of %s", targetNamespace_2, remoteSecretName_3))
 			Expect(fw.AsKubeAdmin.RemoteSecretController.RemoteSecretTargetsContainsNamespace(targetNamespace_3, remoteSecret)).To(BeTrue(), fmt.Sprintf("namespace %s is not in targets of %s", targetNamespace_3, remoteSecretName_3))
 			Expect(remoteSecret.Status.Targets).To(HaveLen(2))
 		})
 
-		// Pending due to RHTAPBUGS-936
-		// https://github.com/redhat-appstudio/service-provider-integration-operator/pull/758 changes clean up logic
-		It("secrets #1, #2, #3 should be deleted when Environment is deleted", Pending, func() {
+		It("secrets #2 and #3 should be deleted when Environment is deleted", func() {
 			// Delete the existing Environments
 			Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 
+			// SPI cleans targets only in RS which explicitly have the environment name in labels or annotations
 			Eventually(func() bool {
 				// Secrets should not exist anymore in target namespaces
-				_, errRs1Ns1 := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace, targetSecretName)
-				_, errRs1Ns2 := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_2, targetSecretName)
 				_, errRs2Ns2 := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_2, targetSecretName_2)
 				_, errRs3Ns2 := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_2, targetSecretName_3)
 				_, errRs3Ns3 := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_3, targetSecretName_3)
 
-				return k8sErrors.IsNotFound(errRs1Ns1) && k8sErrors.IsNotFound(errRs1Ns2) && k8sErrors.IsNotFound(errRs2Ns2) && k8sErrors.IsNotFound(errRs3Ns2) && k8sErrors.IsNotFound(errRs3Ns3)
-			}, 2*time.Minute, 1*time.Second).Should(BeTrue(), "secrets #1, #2, #3 are not deleted when Environment is deleted")
+				return k8sErrors.IsNotFound(errRs2Ns2) && k8sErrors.IsNotFound(errRs3Ns2) && k8sErrors.IsNotFound(errRs3Ns3)
+			}, 2*time.Minute, 1*time.Second).Should(BeTrue(), "secrets #2 and #3 are not deleted when Environment is deleted")
 
 		})
 
-		// Pending due to RHTAPBUGS-936
-		// https://github.com/redhat-appstudio/service-provider-integration-operator/pull/758 changes clean up logic
-		It("after Environment is deleted target namespace is removed from targets in RemoteSecret status", Pending, func() {
-			remoteSecret, err := fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecretName, namespace)
-			Expect(err).NotTo(HaveOccurred())
-			targets := remoteSecret.Status.Targets
-			Expect(targets).To(BeEmpty())
-
+		It("after Environment is deleted target namespace #2 and #3 are removed from targets in RemoteSecret status", func() {
 			remoteSecret_2, err := fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecretName_2, namespace)
 			Expect(err).NotTo(HaveOccurred())
 			targets_2 := remoteSecret_2.Status.Targets
