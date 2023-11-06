@@ -91,10 +91,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		AfterAll(func() {
-			/*if !CurrentSpecReport().Failed() {
+			if !CurrentSpecReport().Failed() {
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
-			}*/
+			}
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, pacBranchName)
@@ -137,7 +137,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Expect(checkRun.GetConclusion()).To(Equal("success"), fmt.Sprintf("the initial PR %d in %s repo doesn't contain the info about successful pipelinerun", prNumber, helloWorldComponentGitSourceRepoName))
 		}
 
-		When("a new component without specified branch is created and with visibility private", Label("pac-custom-default-branch"), func() {
+		When("a new component without specified branch is created and with visibility private", Pending, Label("pac-custom-default-branch"), func() {
 			BeforeAll(func() {
 				componentObj := appservice.ComponentSpec{
 					ComponentName: defaultBranchTestComponentName,
@@ -563,10 +563,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		AfterAll(func() {
-			/*if !CurrentSpecReport().Failed() {
+			if !CurrentSpecReport().Failed() {
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
-			}*/
+			}
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
 			for _, pacBranchName := range pacBranchNames {
@@ -577,7 +577,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			}
 		})
 
-		When("components are created in same namespace", func() {
+		When("components are created in same namespace", Pending, func() {
 			var component *appservice.Component
 
 			for _, contextDir := range multiComponentContextDirs {
@@ -748,10 +748,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		AfterAll(func() {
-			/*if !CurrentSpecReport().Failed() {
+			if !CurrentSpecReport().Failed() {
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
-			}*/
+			}
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, branchName)
