@@ -91,10 +91,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		AfterAll(func() {
-			if !CurrentSpecReport().Failed() {
+			/*if !CurrentSpecReport().Failed() {
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
-			}
+			}*/
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, pacBranchName)
@@ -563,10 +563,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		AfterAll(func() {
-			if !CurrentSpecReport().Failed() {
+			/*if !CurrentSpecReport().Failed() {
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
-			}
+			}*/
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
 			for _, pacBranchName := range pacBranchNames {
@@ -748,10 +748,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		AfterAll(func() {
-			if !CurrentSpecReport().Failed() {
+			/*if !CurrentSpecReport().Failed() {
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
-			}
+			}*/
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, branchName)

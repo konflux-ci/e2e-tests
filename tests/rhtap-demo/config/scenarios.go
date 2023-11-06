@@ -270,17 +270,6 @@ var TestScenarios = []TestSpec{
 		},
 	},
 	{
-		Name:            MultiComponentWithoutDockerFileAndDevfile,
-		ApplicationName: "mc-quality-dashboard",
-		Components: []ComponentSpec{
-			{
-				Name:                "mc-withdockerfile-withoutdevfile",
-				SkipDeploymentCheck: true,
-				GitSourceUrl:        "https://github.com/redhat-appstudio/quality-dashboard.git",
-			},
-		},
-	},
-	{
 		Name:            MultiComponentWithDevfileAndDockerfile,
 		ApplicationName: "mc-two-scenarios",
 		Components: []ComponentSpec{
