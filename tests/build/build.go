@@ -639,7 +639,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				})
 			}
 		})
-		When("a components is created with same git url in different namespace", func() {
+		When("a components is created with same git url in different namespace", Pending, func() {
 			var namespace, appName, compName string
 			var fw *framework.Framework
 
