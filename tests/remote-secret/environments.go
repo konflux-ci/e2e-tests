@@ -446,7 +446,9 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "rs-environme
 			Expect(remoteSecret.Status.Targets).To(HaveLen(2))
 		})
 
-		It("secrets #1, #2, #3 should be deleted when Environment is deleted", func() {
+		// Pending due to RHTAPBUGS-936
+		// https://github.com/redhat-appstudio/service-provider-integration-operator/pull/758 changes clean up logic
+		It("secrets #1, #2, #3 should be deleted when Environment is deleted", Pending, func() {
 			// Delete the existing Environments
 			Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 
@@ -459,11 +461,13 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "rs-environme
 				_, errRs3Ns3 := fw.AsKubeAdmin.CommonController.GetSecret(targetNamespace_3, targetSecretName_3)
 
 				return k8sErrors.IsNotFound(errRs1Ns1) && k8sErrors.IsNotFound(errRs1Ns2) && k8sErrors.IsNotFound(errRs2Ns2) && k8sErrors.IsNotFound(errRs3Ns2) && k8sErrors.IsNotFound(errRs3Ns3)
-			}, 2*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("secrets %s is not created in all environments", targetSecretName))
+			}, 2*time.Minute, 1*time.Second).Should(BeTrue(), "secrets #1, #2, #3 are not deleted when Environment is deleted")
 
 		})
 
-		It("after Environment is deleted target namespace is removed from targets in RemoteSecret status", func() {
+		// Pending due to RHTAPBUGS-936
+		// https://github.com/redhat-appstudio/service-provider-integration-operator/pull/758 changes clean up logic
+		It("after Environment is deleted target namespace is removed from targets in RemoteSecret status", Pending, func() {
 			remoteSecret, err := fw.AsKubeDeveloper.RemoteSecretController.GetRemoteSecret(remoteSecretName, namespace)
 			Expect(err).NotTo(HaveOccurred())
 			targets := remoteSecret.Status.Targets
