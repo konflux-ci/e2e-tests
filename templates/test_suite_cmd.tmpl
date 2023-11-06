@@ -25,16 +25,10 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 }, func(data []byte) {})
 
 var webhookConfigPath string
-var polarionOutputFile string
-var polarionProjectID string
-var generateTestCases bool
 
 func init() {
 	rootDir, _ := os.Getwd()
 	flag.StringVar(&webhookConfigPath, "webhookConfigPath", "", "path to webhook config file")
-	flag.StringVar(&polarionOutputFile, "polarion-output-file", "polarion.xml", "Generated polarion test cases")
-	flag.StringVar(&polarionProjectID, "project-id", "AppStudio", "Set the Polarion project ID")
-	flag.BoolVar(&generateTestCases, "generate-test-cases", false, "Generate Test Cases for Polarion")
 }
 
 func {{ .SuiteName }}Test(t *testing.T) {
@@ -49,11 +43,5 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {}, func() {
 	if len(webhookConfigPath) > 0 {
 		GinkgoWriter.Println("Send webhook")
 		framework.SendWebhook(webhookConfigPath)
-	}
-})
-
-var _ = ginkgo.ReportAfterSuite("Polarion reporter", func(report types.Report) {
-	if generateTestCases {
-		framework.GeneratePolarionReport(report, polarionOutputFile, polarionProjectID)
 	}
 })

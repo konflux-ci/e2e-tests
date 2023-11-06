@@ -29,16 +29,10 @@ import (
 
 var generateRPPreprocReport bool
 var rpPreprocDir string
-var polarionOutputFile string
-var polarionProjectID string
-var generateTestCases bool
 
 func init() {
 	flag.BoolVar(&generateRPPreprocReport, "generate-rppreproc-report", false, "Generate report and folders for RP Preproc")
 	flag.StringVar(&rpPreprocDir, "rp-preproc-dir", ".", "Folder for RP Preproc")
-	flag.StringVar(&polarionOutputFile, "polarion-output-file", "polarion.xml", "Generated polarion test cases")
-	flag.StringVar(&polarionProjectID, "project-id", "AppStudio", "Set the Polarion project ID")
-	flag.BoolVar(&generateTestCases, "generate-test-cases", false, "Generate Test Cases for Polarion")
 
 	klog.SetLogger(ginkgo.GinkgoLogr)
 
@@ -73,11 +67,5 @@ var _ = ginkgo.ReportAfterSuite("RP Preproc reporter", func(report types.Report)
 		if err != nil {
 			klog.Error(err)
 		}
-	}
-})
-
-var _ = ginkgo.ReportAfterSuite("Polarion reporter", func(report types.Report) {
-	if generateTestCases {
-		framework.GeneratePolarionReport(report, polarionOutputFile, polarionProjectID)
 	}
 })
