@@ -137,7 +137,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Expect(checkRun.GetConclusion()).To(Equal("success"), fmt.Sprintf("the initial PR %d in %s repo doesn't contain the info about successful pipelinerun", prNumber, helloWorldComponentGitSourceRepoName))
 		}
 
-		When("a new component without specified branch is created and with visibility private", Pending, Label("pac-custom-default-branch"), func() {
+		When("a new component without specified branch is created and with visibility private", Label("pac-custom-default-branch"), func() {
 			BeforeAll(func() {
 				componentObj := appservice.ComponentSpec{
 					ComponentName: defaultBranchTestComponentName,
@@ -577,7 +577,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			}
 		})
 
-		When("components are created in same namespace", Pending, func() {
+		When("components are created in same namespace", func() {
 			var component *appservice.Component
 
 			for _, contextDir := range multiComponentContextDirs {
@@ -639,7 +639,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				})
 			}
 		})
-		When("a components is created with same git url in different namespace", Pending, func() {
+		When("a components is created with same git url in different namespace", func() {
 			var namespace, appName, compName string
 			var fw *framework.Framework
 
