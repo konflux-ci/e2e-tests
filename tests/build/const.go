@@ -25,12 +25,19 @@ const (
 	multiComponentGitSourceRepoName = "sample-multi-component"
 	multiComponentDefaultBranch     = "main"
 	multiComponentGitRevision       = "2e006bd8b58483e4d7999c5931b65c4d4550d223"
+
+	annotationsTestGitSourceRepoName = "multi-stage-build-go-sample"
+	annotationsTestRevision          = "529f65798777a5fe145e33d58e1e91c4c03704a4"
+
+	githubUrlFormat = "https://github.com/%s/%s"
 )
 
 var (
 	componentUrls                   = strings.Split(utils.GetEnv(COMPONENT_REPO_URLS_ENV, pythonComponentGitSourceURL), ",") //multiple urls
 	componentNames                  []string
-	helloWorldComponentGitSourceURL = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), helloWorldComponentGitSourceRepoName)
-	multiComponentGitSourceURL      = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), multiComponentGitSourceRepoName)
+	gihubOrg                        = utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
+	helloWorldComponentGitSourceURL = fmt.Sprintf(githubUrlFormat, gihubOrg, helloWorldComponentGitSourceRepoName)
+	annotationsTestGitSourceURL     = fmt.Sprintf(githubUrlFormat, gihubOrg, annotationsTestGitSourceRepoName)
+	multiComponentGitSourceURL      = fmt.Sprintf(githubUrlFormat, gihubOrg, multiComponentGitSourceRepoName)
 	multiComponentContextDirs       = []string{"go-component", "python-component"}
 )
