@@ -443,7 +443,7 @@ func (ci CI) setRequiredEnvVars() error {
 			requiresSprayProxyRegistering = true
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
-			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,spi-suite,remote-secret,integration-service,ec,byoc")
+			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,spi-suite,remote-secret,integration-service,ec,byoc,build")
 		} else { // openshift/release rehearse job for e2e-tests/infra-deployments repos
 			requiresSprayProxyRegistering = true
 		}
