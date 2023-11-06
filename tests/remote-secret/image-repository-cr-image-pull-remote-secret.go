@@ -119,11 +119,11 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("image-repository-cr-image-pul
 		})
 
 		It("checks if image repository is ready", func() {
-			Eventually(func() string {
+			Eventually(func() image.ImageRepositoryState {
 				imageRepository, err = fw.AsKubeAdmin.ImageController.GetImageRepositoryCR(imageRepository.Name, imageRepository.Namespace)
 				Expect(err).NotTo(HaveOccurred())
 
-				return string(imageRepository.Status.State)
+				return imageRepository.Status.State
 			}, 2*time.Minute, 5*time.Second).Should(Equal(image.ImageRepositoryStateReady), fmt.Sprintf("ImageRepository '%s/%s' is not ready", imageRepository.Name, imageRepository.Namespace))
 		})
 
