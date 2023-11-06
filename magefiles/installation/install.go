@@ -105,7 +105,7 @@ func NewAppStudioInstallController() (*InstallAppStudio, error) {
 		LocalForkName:                    DEFAULT_LOCAL_FORK_NAME,
 		LocalGithubForkOrganization:      utils.GetEnv("MY_GITHUB_ORG", DEFAULT_LOCAL_FORK_ORGANIZATION),
 		QuayToken:                        utils.GetEnv("QUAY_TOKEN", ""),
-		DefaultImageQuayOrg:              utils.GetEnv("DEFAULT_QUAY_ORG", DEFAULT_E2E_QUAY_ORG),
+		DefaultImageQuayOrg:              utils.GetEnv("DEFAULT_QUAY_ORG", ""),
 		DefaultImageQuayOrgOAuth2Token:   utils.GetEnv("DEFAULT_QUAY_ORG_TOKEN", ""),
 		DefaultImageTagExpiration:        utils.GetEnv(constants.IMAGE_TAG_EXPIRATION_ENV, constants.DefaultImageTagExpiration),
 	}, nil
