@@ -40,7 +40,7 @@ mhost=$PROMETHEUS_HOST
 
 status_data.py \
     --status-data-file "$monitoring_collection_data" \
-    --additional ./cluster_read_config.yaml \
+    --additional ./ci-scripts/stage/cluster_read_config.yaml \
     --monitoring-start "$mstart" \
     --monitoring-end "$mend" \
     --prometheus-host "https://$mhost" \
