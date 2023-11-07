@@ -23,6 +23,8 @@ const (
 	helloWorldComponentRevision          = "b915157dc9efac492ebc285d4a44ce67e6ab2075"
 
 	multiComponentGitSourceRepoName = "sample-multi-component"
+	multiComponentDefaultBranch     = "main"
+	multiComponentGitRevision       = "2e006bd8b58483e4d7999c5931b65c4d4550d223"
 )
 
 var (
