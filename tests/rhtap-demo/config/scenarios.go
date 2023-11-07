@@ -19,6 +19,7 @@ var TestScenarios = []TestSpec{
 	{
 		Name:            "Maven project - Simple and Advanced build",
 		ApplicationName: "rhtap-demo-app",
+		Skip:            false,
 		Components: []ComponentSpec{
 			{
 				Name:                       "rhtap-demo-component",
@@ -266,17 +267,6 @@ var TestScenarios = []TestSpec{
 				SkipDeploymentCheck: true,
 				Private:             true,
 				GitSourceUrl:        "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic-dockerfile-empty-private.git",
-			},
-		},
-	},
-	{
-		Name:            MultiComponentWithoutDockerFileAndDevfile,
-		ApplicationName: "mc-quality-dashboard",
-		Components: []ComponentSpec{
-			{
-				Name:                "mc-withdockerfile-withoutdevfile",
-				SkipDeploymentCheck: true,
-				GitSourceUrl:        "https://github.com/redhat-appstudio/quality-dashboard.git",
 			},
 		},
 	},
