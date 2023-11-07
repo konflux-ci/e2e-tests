@@ -3,8 +3,8 @@ package build
 import (
 	"context"
 	"encoding/json"
-	"strings"
 	"fmt"
+	"strings"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -41,7 +41,7 @@ func ValidateBuildPipelineTestResults(pipelineRun *v1beta1.PipelineRun, c crclie
 		// The inspect-image task is only required for FBC pipelines which we can infer by the component name
 		prLabels := pipelineRun.GetLabels()
 		componentName := prLabels["appstudio.openshift.io/component"]
-		if taskName == "inspect-image" && !strings.HasPrefix(strings.ToLower(componentName),"fbc-") {
+		if taskName == "inspect-image" && !strings.HasPrefix(strings.ToLower(componentName), "fbc-") {
 			continue
 		}
 		results, err := fetchTaskRunResults(c, pipelineRun, taskName)
