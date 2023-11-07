@@ -308,7 +308,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						Configuration: &ecp.EnterpriseContractPolicyConfiguration{
 							// The BuildahDemo pipeline used to generate the test data does not
 							// include the required test tasks, so this policy should always fail.
-							Collections: []string{"slsa2"},
+							Collections: []string{"slsa3"},
 							Exclude:     []string{"cve"},
 						},
 					}
@@ -400,8 +400,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					"pipelines/enterprise-contract-everything.yaml",
 					"pipelines/enterprise-contract-redhat.yaml",
 					"pipelines/enterprise-contract-redhat-no-hermetic.yaml",
-					"pipelines/enterprise-contract-slsa1.yaml",
-					"pipelines/enterprise-contract-slsa2.yaml",
 					"pipelines/enterprise-contract-slsa3.yaml",
 				}
 
