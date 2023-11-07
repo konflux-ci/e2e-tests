@@ -2,6 +2,8 @@ package pipelines
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
@@ -13,7 +15,6 @@ import (
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	corev1 "k8s.io/api/core/v1"
-	"os"
 )
 
 var _ = framework.ReleaseSuiteDescribe("[HACBS-1199]test-release-e2e-with-deployment", Label("release-pipelines", "withDeployment", "HACBS"), func() {

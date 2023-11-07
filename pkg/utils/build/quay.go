@@ -1,14 +1,19 @@
 package build
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 
+	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	quay "github.com/redhat-appstudio/image-controller/pkg/quay"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 var (
@@ -133,4 +138,33 @@ func DoesQuayOrgSupportPrivateRepo() (bool, error) {
 		return true, fmt.Errorf("error while deleting private image repo: %v", err)
 	}
 	return true, nil
+}
+
+// GetRobotAccountToken gets the robot account token from a given robot account name
+func GetRobotAccountToken(robotAccountName string) (string, error) {
+	ra, err := quayClient.GetRobotAccount(quayOrg, robotAccountName)
+	if err != nil {
+		return "", err
+	}
+
+	return ra.Token, nil
+}
+
+// GetRobotAccountInfoFromSecret gets robot account name and token from secret data
+func GetRobotAccountInfoFromSecret(secret *v1.Secret) (string, string) {
+	uploadSecretDockerconfigJson := string(secret.Data[corev1.DockerConfigJsonKey])
+	var authDataJson interface{}
+	Expect(json.Unmarshal([]byte(uploadSecretDockerconfigJson), &authDataJson)).To(Succeed())
+
+	authRegexp := regexp.MustCompile(`.*{"auth":"([A-Za-z0-9+/=]*)"}.*`)
+	uploadSecretAuthString, err := base64.StdEncoding.DecodeString(authRegexp.FindStringSubmatch(uploadSecretDockerconfigJson)[1])
+	Expect(err).To(Succeed())
+
+	auth := strings.Split(string(uploadSecretAuthString), ":")
+	Expect(auth).To(HaveLen(2))
+
+	robotAccountName := strings.TrimPrefix(auth[0], quayOrg+"+")
+	robotAccountToken := auth[1]
+
+	return robotAccountName, robotAccountToken
 }
