@@ -44,7 +44,7 @@ import (
 )
 
 func GenerateCustomJUnitReport(report types.Report, dst string) error {
-	return GenerateCustomJUnitReportWithConfig(report, dst, JunitReportConfig{})
+	return GenerateCustomJUnitReportWithConfig(report, dst, JunitReportConfig{OmitTimelinesForSpecState: types.SpecStatePassed | types.SpecStateSkipped | types.SpecStatePending})
 }
 
 func GenerateCustomJUnitReportWithConfig(report types.Report, dst string, config JunitReportConfig) error {
