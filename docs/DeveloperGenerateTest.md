@@ -287,7 +287,7 @@ pkg/framework/describe.go
 
  ### Generating Ginkgo Test Suite File
 
- This command will help setup a test suite file within the `cmd/` directory. It will do the test package import based on the name of the package you passed in. So using the example below it will assume there is a `tests/chaos` package to import as well. It uses a simplified version of the `cmd/e2e_test.go` as a template to allow you to leverage the existing functionality built into the framework like webhooks eventing and Polarion formatted XML test case generation. Edit this file as you feel necessary.
+ This command will help setup a test suite file within the `cmd/` directory. It will do the test package import based on the name of the package you passed in. So using the example below it will assume there is a `tests/chaos` package to import as well. It uses a simplified version of the `cmd/e2e_test.go` as a template to allow you to leverage the existing functionality built into the framework like webhooks eventing. Edit this file as you feel necessary.
 
 NOTE: You may not need to generate this file. This is useful when you want to move a type of testing into a separate suite that wouldn't go into the existing e2e test suite package. i.e. chaos testing. We have a current example with the existing `cmd/loadsTest.go` which are used to run the AppStudio Load tests.
 
