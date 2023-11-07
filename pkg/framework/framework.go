@@ -14,6 +14,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/gitops"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/has"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/imagecontroller"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/integration"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/jvmbuildservice"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
@@ -23,15 +24,16 @@ import (
 )
 
 type ControllerHub struct {
-	HasController                 *has.HasController
-	CommonController              *common.SuiteController
-	TektonController              *tekton.TektonController
-	GitOpsController              *gitops.GitopsController
-	SPIController                 *spi.SPIController
-	RemoteSecretController        *remotesecret.RemoteSecretController
-	ReleaseController             *release.ReleaseController
-	IntegrationController         *integration.IntegrationController
-	JvmbuildserviceController     *jvmbuildservice.JvmbuildserviceController
+	HasController             *has.HasController
+	CommonController          *common.SuiteController
+	TektonController          *tekton.TektonController
+	GitOpsController          *gitops.GitopsController
+	SPIController             *spi.SPIController
+	RemoteSecretController    *remotesecret.RemoteSecretController
+	ReleaseController         *release.ReleaseController
+	IntegrationController     *integration.IntegrationController
+	JvmbuildserviceController *jvmbuildservice.JvmbuildserviceController
+	ImageController           *imagecontroller.ImageController
 }
 
 type Framework struct {
@@ -159,12 +161,21 @@ func InitControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	// Initialize Integration Controller
 	integrationController, err := integration.NewSuiteController(cc)
 	if err != nil {
 		return nil, err
 	}
-	jvmbuildserviceController, err := jvmbuildservice.NewSuiteControler(cc)
+
+	// Initialize JVM Build Service Controller
+	jvmbuildserviceController, err := jvmbuildservice.NewSuiteController(cc)
+	if err != nil {
+		return nil, err
+	}
+
+	// Initialize Image Controller
+	imageController, err := imagecontroller.NewSuiteController(cc)
 	if err != nil {
 		return nil, err
 	}
@@ -179,5 +190,6 @@ func InitControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 		ReleaseController:         releaseController,
 		IntegrationController:     integrationController,
 		JvmbuildserviceController: jvmbuildserviceController,
+		ImageController:           imageController,
 	}, nil
 }
