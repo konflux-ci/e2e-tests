@@ -16,6 +16,20 @@ func (g *Github) GetPullRequest(repository string, id int) (*github.PullRequest,
 	return pr, nil
 }
 
+func (g *Github) CreatePullRequest(repository, title, body, head, base string) (*github.PullRequest, error) {
+	newPR := &github.NewPullRequest{
+		Title: &title,
+		Body:  &body,
+		Head:  &head,
+		Base:  &base,
+	}
+	pr, _, err := g.client.PullRequests.Create(context.Background(), g.organization, repository, newPR)
+	if err != nil {
+		return nil, err
+	}
+	return pr, nil
+}
+
 func (g *Github) ListPullRequests(repository string) ([]*github.PullRequest, error) {
 	prs, _, err := g.client.PullRequests.List(context.Background(), g.organization, repository, &github.PullRequestListOptions{})
 	if err != nil {
