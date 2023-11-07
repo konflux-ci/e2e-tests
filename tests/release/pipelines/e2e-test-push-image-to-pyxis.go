@@ -104,7 +104,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 			PublicKey:   string(publicKey),
 			Sources:     defaultEcPolicy.Spec.Sources,
 			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-				Collections: []string{"minimal", "slsa2"},
+				Collections: []string{"minimal", "slsa3"},
 				Exclude:     []string{"cve"},
 			},
 		}

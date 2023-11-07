@@ -120,7 +120,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
 				Collections: []string{"minimal"},
 				Exclude:     []string{"cve", "step_image_registries"},
-				Include:     []string{"@slsa1", "@slsa2", "@slsa3"},
+				Include:     []string{"@slsa3"},
 			},
 		}
 
