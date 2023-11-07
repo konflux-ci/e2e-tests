@@ -18,6 +18,7 @@ import (
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/sandbox"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	imagecontroller "github.com/redhat-appstudio/image-controller/api/v1alpha1"
 	integrationservice "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	integrationservicev1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	jvmbuildservice "github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
@@ -85,6 +86,7 @@ func init() {
 	utilruntime.Must(buildservice.AddToScheme(scheme))
 	utilruntime.Must(userv1.AddToScheme(scheme))
 	utilruntime.Must(rs.AddToScheme(scheme))
+	utilruntime.Must(imagecontroller.AddToScheme(scheme))
 }
 
 // Kube returns the clientset for Kubernetes upstream.

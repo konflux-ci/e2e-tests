@@ -8,7 +8,7 @@ type JvmbuildserviceController struct {
 	*kubeCl.CustomClient
 }
 
-func NewSuiteControler(kube *kubeCl.CustomClient) (*JvmbuildserviceController, error) {
+func NewSuiteController(kube *kubeCl.CustomClient) (*JvmbuildserviceController, error) {
 	return &JvmbuildserviceController{
 		kube,
 	}, nil
