@@ -15,7 +15,7 @@ import (
 )
 
 /*
- * Component: spi
+ * Component: remote secret
  * Description: SVPI-558 - Test all the options of the authz of remote secret target deployment
  * Test case: Authentication using Service Account
  */
@@ -41,7 +41,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "service-acco
 	Describe("SVPI-558 - Authentication using Service Account", Ordered, func() {
 		BeforeAll(func() {
 			// Initialize the tests controllers
-			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("spi-demos"))
+			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("rs-demos"))
 			Expect(err).NotTo(HaveOccurred())
 			namespace = fw.UserNamespace
 			Expect(namespace).NotTo(BeEmpty())
