@@ -30,7 +30,7 @@ require (
 	github.com/redhat-appstudio-qe/perf-monitoring/api v0.0.0-20231003074147-a076f9e620da
 	github.com/redhat-appstudio/application-api v0.0.0-20230704143842-035c661f115f
 	github.com/redhat-appstudio/build-service v0.0.0-20230727072250-19c7a8b5c63d
-	github.com/redhat-appstudio/image-controller v0.0.0-20230831131151-75d3928646d2
+	github.com/redhat-appstudio/image-controller v0.0.0-20231003082540-48893226ba8b
 	github.com/redhat-appstudio/integration-service v0.0.0-20231017154915-ca19edc57d63
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20230821060312-4172397d68e8
 	github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0
