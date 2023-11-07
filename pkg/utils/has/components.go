@@ -80,6 +80,24 @@ func (h *HasController) GetComponentPipelineRun(componentName string, applicatio
 	return nil, fmt.Errorf("no pipelinerun found for component %s", componentName)
 }
 
+// GetAllPipelineRunsForApplication returns the pipelineruns for a given application in the namespace
+func (h *HasController) GetAllPipelineRunsForApplication(applicationName, namespace string) (*v1beta1.PipelineRunList, error) {
+	pipelineRunLabels := map[string]string{"appstudio.openshift.io/application": applicationName}
+
+	list := &v1beta1.PipelineRunList{}
+	err := h.KubeRest().List(context.TODO(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
+
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error listing pipelineruns in %s namespace: %v", namespace, err)
+	}
+
+	if len(list.Items) > 0 {
+		return list, nil
+	}
+
+	return nil, fmt.Errorf("no pipelinerun found for application %s", applicationName)
+}
+
 // Waits for a given component to be finished and in case of hitting issue: https://issues.redhat.com/browse/SRVKP-2749 do a given retries.
 func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservice.Component, sha string, maxRetries int, t *tekton.TektonController) error {
 	attempts := 1
@@ -173,7 +191,8 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 		componentObject = h.refreshComponentForErrorDebug(componentObject)
 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
 	}
-	if err := utils.WaitUntil(h.CheckForImageAnnotation(componentObject), time.Minute*5); err != nil {
+
+	if utils.WaitUntil(h.CheckForImageAnnotation(componentObject), time.Minute*5) != nil {
 		componentObject = h.refreshComponentForErrorDebug(componentObject)
 		return nil, fmt.Errorf("timed out when waiting for image-controller annotations to be updated on component %s in namespace %s. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
 	}
@@ -465,4 +484,37 @@ func (h *HasController) StoreAllComponents(namespace string) error {
 		}
 	}
 	return nil
+}
+
+// specific for tests/remote-secret/image-repository-cr-image-pull-remote-secret.go
+func (h *HasController) CreateComponentWithoutGenerateAnnotation(componentSpec appservice.ComponentSpec, namespace string, secret string, applicationName string, skipInitialChecks bool) (*appservice.Component, error) {
+	componentObject := &appservice.Component{
+		ObjectMeta: metav1.ObjectMeta{
+			// adding default label because of the BuildPipelineSelector in build test
+			Labels:    constants.ComponentDefaultLabel,
+			Name:      componentSpec.ComponentName,
+			Namespace: namespace,
+			Annotations: map[string]string{
+				"skip-initial-checks": strconv.FormatBool(skipInitialChecks),
+			},
+		},
+		Spec: componentSpec,
+	}
+	componentObject.Spec.Secret = secret
+	componentObject.Spec.Application = applicationName
+
+	if componentObject.Spec.TargetPort == 0 {
+		componentObject.Spec.TargetPort = 8081
+	}
+
+	if err := h.KubeRest().Create(context.TODO(), componentObject); err != nil {
+		return nil, err
+	}
+
+	if err := utils.WaitUntil(h.ComponentReady(componentObject), time.Minute*10); err != nil {
+		componentObject = h.refreshComponentForErrorDebug(componentObject)
+		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
+	}
+
+	return componentObject, nil
 }

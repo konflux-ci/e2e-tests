@@ -114,3 +114,13 @@ func (h *HasController) StoreAllComponentDetectionQueries(namespace string) erro
 	}
 	return nil
 }
+
+// UpdateComponent updates a component
+func (h *HasController) UpdateComponent(component *appservice.Component) error {
+	err := h.KubeRest().Update(context.TODO(), component, &rclient.UpdateOptions{})
+
+	if err != nil {
+		return err
+	}
+	return nil
+}

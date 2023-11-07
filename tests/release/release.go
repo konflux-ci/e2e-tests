@@ -3,6 +3,7 @@ package release
 import (
 	"encoding/json"
 	"fmt"
+
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 

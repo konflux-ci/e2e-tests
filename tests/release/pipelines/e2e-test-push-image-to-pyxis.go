@@ -4,6 +4,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
+	"regexp"
+
 	"github.com/devfile/library/v2/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -16,8 +19,6 @@ import (
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"os"
-	"regexp"
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
