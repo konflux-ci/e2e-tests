@@ -20,6 +20,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/contract"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
@@ -82,7 +83,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 		var buildPipelineRunName, image, imageWithDigest string
 		var pipelineRunTimeout int
 		var attestationTimeout time.Duration
-		var policySource []ecp.Source
+		var defaultECP *ecp.EnterpriseContractPolicy
 
 		BeforeAll(func() {
 			buildPipelineRunName = fmt.Sprintf("buildah-demo-%s", util.GenerateRandomString(10))
@@ -109,9 +110,8 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			pipelineRunTimeout = int(time.Duration(20) * time.Minute)
 			attestationTimeout = time.Duration(60) * time.Second
 
-			defaultEcp, err := fwk.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+			defaultECP, err = fwk.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 			Expect(err).NotTo(HaveOccurred())
-			policySource = defaultEcp.Spec.Sources
 
 			// if there is a ConfigMap e2e-tests/ec-config with keys `revision` and
 			// `repository` values from those will replace the default policy source
@@ -213,14 +213,10 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 
 				// Since specs could update the config policy, make sure it has a consistent
 				// baseline at the start of each spec.
-				baselinePolicies := ecp.EnterpriseContractPolicySpec{
-					Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-						// A simple policy that should always succeed in a cluster where
-						// Tekton Chains is properly setup.
-						Include: []string{"slsa_provenance_available"},
-					},
-					Sources: policySource,
-				}
+				baselinePolicies := contract.PolicySpecWithSourceConfig(
+					// A simple policy that should always succeed in a cluster where
+					// Tekton Chains is properly setup.
+					defaultECP.Spec, ecp.SourceConfig{Include: []string{"slsa_provenance_available"}})
 				Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, baselinePolicies)).To(Succeed())
 				// printPolicyConfiguration(baselinePolicies)
 			})
@@ -248,14 +244,10 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			})
 
 			It("does not pass when tests are not satisfied on non-strict mode", func() {
-				policy := ecp.EnterpriseContractPolicySpec{
-					Sources: policySource,
-					Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-						// The BuildahDemo pipeline used to generate the test data does not
-						// include the required test tasks, so this policy should always fail.
-						Include: []string{"test"},
-					},
-				}
+				policy := contract.PolicySpecWithSourceConfig(
+					// The BuildahDemo pipeline used to generate the test data does not
+					// include the required test tasks, so this policy should always fail.
+					defaultECP.Spec, ecp.SourceConfig{Include: []string{"test"}})
 				Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 				// printPolicyConfiguration(policy)
 				generator.Strict = false
@@ -282,14 +274,10 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			})
 
 			It("fails when tests are not satisfied on strict mode", func() {
-				policy := ecp.EnterpriseContractPolicySpec{
-					Sources: policySource,
-					Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-						// The BuildahDemo pipeline used to generate the test data does not
-						// include the required test tasks, so this policy should always fail.
-						Include: []string{"test"},
-					},
-				}
+				policy := contract.PolicySpecWithSourceConfig(
+					// The BuildahDemo pipeline used to generate the test data does not
+					// include the required test tasks, so this policy should always fail.
+					defaultECP.Spec, ecp.SourceConfig{Include: []string{"test"}})
 				Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 				// printPolicyConfiguration(policy)
 
