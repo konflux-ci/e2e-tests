@@ -26,10 +26,6 @@
   monitoring_query: sum(rate(token_pool_gauge{rateLimited="secondary"}[5m]))
   monitoring_step: 15
 
-- name: measurements.cluster_nodes_worker_count
-  monitoring_query: count(kube_node_role{role="worker"})
-  monitoring_step: 15
-
 - name: measurements.cluster_pods_count
   monitoring_query: count(kube_pod_info)
   monitoring_step: 15
@@ -98,27 +94,6 @@
 - name: metadata.env.{{ var }}
   env_variable: {{ var }}
 {% endfor %}
-
-# Cluster nodes info
-- name: metadata.cluster.control-plane.count
-  command: oc get nodes -l node-role.kubernetes.io/master -o name | wc -l
-
-- name: metadata.cluster.control-plane.flavor
-  command: oc get nodes -l node-role.kubernetes.io/master -o json | jq --raw-output '.items | map(.metadata.labels."beta.kubernetes.io/instance-type") | unique | sort | join(",")'
-
-- name: metadata.cluster.control-plane.nodes
-  command: oc get nodes -l node-role.kubernetes.io/master -o json | jq '.items | map(.metadata.name)'
-  output: json
-
-- name: metadata.cluster.compute-nodes.count
-  command: oc get nodes -l node-role.kubernetes.io/worker -o name | wc -l
-
-- name: metadata.cluster.compute-nodes.flavor
-  command: oc get nodes -l node-role.kubernetes.io/worker -o json | jq --raw-output '.items | map(.metadata.labels."beta.kubernetes.io/instance-type") | unique | sort | join(",")'
-
-- name: metadata.cluster.compute-nodes.nodes
-  command: oc get nodes -l node-role.kubernetes.io/worker -o json | jq '.items | map(.metadata.name)'
-  output: json
 
 - name: metadata.scenario
   command: if [ -r /usr/local/ci-secrets/redhat-appstudio-load-test/load-test-scenario.${SCENARIO} ]; then cat /usr/local/ci-secrets/redhat-appstudio-load-test/load-test-scenario.${SCENARIO} | sed 's/\\ /,/g' | sed 's/[^ ]* \([^= ]*\)=\([^= ]*\)/"\1":"\2",/g' | sed 's/\(.*\),$/{\1}/g'; else echo '{}'; fi
