@@ -18,21 +18,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const (
-	gitSourceRepoName      = "devfile-sample-python-basic"
-	gitSourceURL           = "https://github.com/redhat-appstudio-qe/" + gitSourceRepoName
-	BundleURL              = "quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-pass"
-	BundleURLFail          = "quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-fail"
-	InPipelineName         = "integration-pipeline-pass"
-	InPipelineNameFail     = "integration-pipeline-fail"
-	EnvironmentName        = "development"
-	gitURL                 = "https://github.com/redhat-appstudio/integration-examples.git"
-	revision               = "843f455fe87a6d7f68c238f95a8f3eb304e65ac5"
-	pathInRepo             = "pipelines/integration_resolver_pipeline_pass.yaml"
-	autoReleasePlan        = "auto-releaseplan"
-	targetReleaseNamespace = "default"
-)
-
 var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests", Label("integration-service", "HACBS"), func() {
 	defer GinkgoRecover()
 

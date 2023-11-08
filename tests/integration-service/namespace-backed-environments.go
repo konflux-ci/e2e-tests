@@ -21,15 +21,6 @@ import (
 	managedgitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend-shared/apis/managed-gitops/v1alpha1"
 )
 
-const (
-	componentRepoName = "hacbs-test-project"
-	componentRepoURL  = "https://github.com/redhat-appstudio-qe/" + componentRepoName
-	EnvNameForNBE     = "user-picked-environment"
-	gitURLForNBE      = "https://github.com/redhat-appstudio/integration-examples.git"
-	revisionForNBE    = "main"
-	pathInRepoForNBE  = "pipelines/integration_test_app.yaml"
-)
-
 var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment (NBE) E2E tests", Label("integration-service", "HACBS", "namespace-backed-envs"), func() {
 	defer GinkgoRecover()
 
