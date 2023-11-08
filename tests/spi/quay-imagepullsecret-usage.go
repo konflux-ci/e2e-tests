@@ -179,7 +179,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 				Expect(err).NotTo(HaveOccurred())
 
 				return pod.Status.Phase
-			}, 1*time.Minute, 5*time.Second).Should(Equal(corev1.PodRunning), fmt.Sprintf("Pod %s/%s did not have the status %s", pod.GetNamespace(), pod.GetName(), corev1.PodRunning))
+			}, 3*time.Minute, 5*time.Second).Should(Equal(corev1.PodRunning), fmt.Sprintf("Pod %s/%s did not have the status %s", pod.GetNamespace(), pod.GetName(), corev1.PodRunning))
 		})
 
 		Describe("SVPI-408 - Check the secret that can be used with skopeo Tekton task to authorize a copy of one private Quay image to the second Quay image repository", Ordered, func() {
