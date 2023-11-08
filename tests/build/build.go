@@ -909,10 +909,18 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return buildStatus.Simple != nil && buildStatus.Simple.BuildStartTime != "", nil
 				}, timeout, interval).Should(BeTrue(), "build status has unexpected content")
 
-				// Delete all the pipelineruns before retriggering pipelinerun again
-				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
-				componentPipelineRun, _ := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-				Expect(componentPipelineRun).To(BeNil())
+				//Expect pipelinerun count to be 1
+				Eventually(func() error {
+					pipelineRuns, err := f.AsKubeAdmin.HasController.GetAllPipelineRunsForApplication(applicationName, testNamespace)
+					if err != nil {
+						GinkgoWriter.Println("PiplelineRun has not been created yet")
+						return err
+					}
+					if len(pipelineRuns.Items) != 1 {
+						return fmt.Errorf("pipelinerun count in the namespace %s is not one, got pipelineruns %v", testNamespace, pipelineRuns.Items)
+					}
+					return nil
+				}, time.Minute*5, constants.PipelineRunPollingInterval).Should(Succeed(), "timeout while waiting for first pipelinerun to start")
 			})
 
 			Specify("simple build can be triggered manually", func() {
@@ -920,17 +928,18 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 
 			It("another pipelineRun is triggered", func() {
+				//Expect pipelinerun count to be 2
 				Eventually(func() error {
-					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+					pipelineRuns, err := f.AsKubeAdmin.HasController.GetAllPipelineRunsForApplication(applicationName, testNamespace)
 					if err != nil {
-						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
+						GinkgoWriter.Println("Second piplelineRun has not been created yet")
 						return err
 					}
-					if !pr.HasStarted() {
-						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
+					if len(pipelineRuns.Items) != 2 {
+						return fmt.Errorf("pipelinerun count in the namespace %s is not two, got pipelineruns %v", testNamespace, pipelineRuns.Items)
 					}
 					return nil
-				}, time.Minute*5, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start after setting annotation manually for the component %s/%s", testNamespace, componentName))
+				}, time.Minute*5, constants.PipelineRunPollingInterval).Should(Succeed(), "timeout while waiting for second pipelinerun to start")
 			})
 
 			It("component build annotation is correct", func() {
@@ -962,21 +971,22 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 
 			It("handles invalid request annotation", func() {
-				// Delete all the pipelineruns before setting invalid annotation
-				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 
 				invalidAnnotation := "foo"
 
-				componentPipelineRun, _ := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-				Expect(componentPipelineRun).To(BeNil())
-
 				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.BuildRequestAnnotationName, invalidAnnotation, testNamespace)).To(Succeed())
 
-				// Waiting for 1 minute to see if pipelinerun is triggered
-				Consistently(func() bool {
-					componentPipelineRun, _ := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-					return componentPipelineRun == nil
-				}, 1*time.Minute, interval).Should(BeTrue(), fmt.Sprintf("expected no PipelineRun to be triggered for the component %s in %s namespace", componentName, testNamespace))
+				// Waiting for 2 minute to see if any more pipelinerun is triggered
+				Consistently(func() (bool, error) {
+					pipelineRuns, err := f.AsKubeAdmin.HasController.GetAllPipelineRunsForApplication(applicationName, testNamespace)
+					if err != nil {
+						return false, err
+					}
+					if len(pipelineRuns.Items) != 2 {
+						return false, fmt.Errorf("pipelinerun count in the namespace %s is not two, got pipelineruns %v", testNamespace, pipelineRuns.Items)
+					}
+					return true, nil
+				}, time.Minute*2, constants.PipelineRunPollingInterval).Should(BeTrue(), "timeout while checking if any more pipelinerun is triggered")
 
 				// Check build status annotation
 				component, err = f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
