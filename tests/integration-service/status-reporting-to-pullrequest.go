@@ -51,10 +51,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 
 			applicationName = createApp(*f, testNamespace)
 
-			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario_beta1(applicationName, testNamespace, gitURLForReporting, revision, pathInRepoForReportingPass)
+			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario_beta1(applicationName, testNamespace, gitURL, revision, pathInRepoForReportingPass)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			integrationTestScenarioFail, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario_beta1(applicationName, testNamespace, gitURLForReporting, revision, pathInRepoForReportingFail)
+			integrationTestScenarioFail, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario_beta1(applicationName, testNamespace, gitURL, revision, pathInRepoForReportingFail)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			componentName = fmt.Sprintf("%s-%s", "test-component-pac", util.GenerateRandomString(4))
@@ -73,11 +73,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, pacBranchName)
 			if err != nil {
-				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+				Expect(err.Error()).To(ContainSubstring(referenceDoesntExist))
 			}
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, componentBaseBranchName)
 			if err != nil {
-				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+				Expect(err.Error()).To(ContainSubstring(referenceDoesntExist))
 			}
 		})
 
@@ -136,7 +136,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
 			})
 			It("does not contain an annotation with a Snapshot Name", func() {
-				Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(""))
+				Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
 			})
 			It("eventually leads to the build PipelineRun's status reported at Checks tab", func() {
 				validateCheckRun(*f, componentName, checkrunConclusionSuccess, helloWorldComponentGitSourceRepoName, prHeadSha, prNumber)
@@ -154,7 +154,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			})
 
 			It("checks if the Build PipelineRun got annotated with Snapshot name", func() {
-				Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, "appstudio.openshift.io/snapshot")).To(Succeed())
+				Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, snapshotAnnotation)).To(Succeed())
 			})
 		})
 
@@ -162,13 +162,13 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			It("should find both the related Integration PipelineRuns", func() {
 				testPipelinerun, err = f.AsKubeDeveloper.IntegrationController.WaitForIntegrationPipelineToGetStarted(integrationTestScenarioPass.Name, snapshot.Name, testNamespace)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(testPipelinerun.Labels["appstudio.openshift.io/snapshot"]).To(ContainSubstring(snapshot.Name))
-				Expect(testPipelinerun.Labels["test.appstudio.openshift.io/scenario"]).To(ContainSubstring(integrationTestScenarioPass.Name))
+				Expect(testPipelinerun.Labels[snapshotAnnotation]).To(ContainSubstring(snapshot.Name))
+				Expect(testPipelinerun.Labels[scenarioAnnotation]).To(ContainSubstring(integrationTestScenarioPass.Name))
 	
 				testPipelinerun, err = f.AsKubeDeveloper.IntegrationController.WaitForIntegrationPipelineToGetStarted(integrationTestScenarioFail.Name, snapshot.Name, testNamespace)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(testPipelinerun.Labels["appstudio.openshift.io/snapshot"]).To(ContainSubstring(snapshot.Name))
-				Expect(testPipelinerun.Labels["test.appstudio.openshift.io/scenario"]).To(ContainSubstring(integrationTestScenarioFail.Name))
+				Expect(testPipelinerun.Labels[snapshotAnnotation]).To(ContainSubstring(snapshot.Name))
+				Expect(testPipelinerun.Labels[scenarioAnnotation]).To(ContainSubstring(integrationTestScenarioFail.Name))
 			})
 		})
 

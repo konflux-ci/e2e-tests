@@ -8,11 +8,10 @@ import (
 )
 
 const (
-	componentRepoURL  = "https://github.com/redhat-appstudio-qe/" + helloWorldComponentGitSourceRepoName
-	EnvNameForNBE     = "user-picked-environment"
-	gitURLForNBE      = "https://github.com/redhat-appstudio/integration-examples.git"
-	revisionForNBE    = "main"
-	pathInRepoForNBE  = "pipelines/integration_test_app.yaml"
+	componentRepoURL = "https://github.com/redhat-appstudio-qe/" + helloWorldComponentGitSourceRepoName
+	EnvNameForNBE    = "user-picked-environment"
+	revisionForNBE   = "main"
+	pathInRepoForNBE = "pipelines/integration_test_app.yaml"
 
 	BundleURL              = "quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-pass"
 	BundleURLFail          = "quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-fail"
@@ -28,13 +27,15 @@ const (
 	helloWorldComponentGitSourceRepoName = "hacbs-test-project"
 	helloWorldComponentDefaultBranch     = "main"
 	helloWorldComponentRevision          = "34da5a8f51fba6a8b7ec75a727d3c72ebb5e1274"
-	gitURLForReporting                   = "https://github.com/redhat-appstudio/integration-examples.git"
 	pathInRepoForReportingPass           = "pipelines/integration_resolver_pipeline_pass.yaml"
 	pathInRepoForReportingFail           = "pipelines/integration_resolver_pipeline_fail.yaml"
 	referenceDoesntExist                 = "Reference does not exist"
 	checkrunStatusCompleted              = "completed"
 	checkrunConclusionSuccess            = "success"
 	checkrunConclusionFailure            = "failure"
+
+	snapshotAnnotation = "appstudio.openshift.io/snapshot"
+	scenarioAnnotation = "test.appstudio.openshift.io/scenario"
 )
 
 var (
