@@ -427,6 +427,10 @@ func (ci CI) setRequiredEnvVars() error {
 				envVarPrefix = "SPI_OPERATOR"
 				imageTagSuffix = "spi-image"
 				testSuiteLabel = "spi-suite"
+
+				// spi also requires service-provider-integration-oauth image
+				os.Setenv("SPI_OAUTH_IMAGE_REPO", os.Getenv("CI_SPI_OAUTH_IMAGE"))
+				os.Setenv("SPI_OAUTH_IMAGE_TAG", fmt.Sprintf("redhat-appstudio-%s", "spi-oauth-image"))
 			}
 
 			os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", envVarPrefix), sp[0])
