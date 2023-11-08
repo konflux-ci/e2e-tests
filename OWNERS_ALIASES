@@ -1,0 +1,48 @@
+# See the OWNERS_ALIASES docs: https://git.k8s.io/community/contributors/guide/owners.md#owners_aliases
+
+aliases:
+  rhtap-qe:
+  - rhopp
+  - flacatus
+  - psturc
+  - jkopriva
+  - sawood14012
+  - albarbaro
+  - kasemAlem
+  - jinqi7
+  - tisutisu
+  - srivickynesh
+  - cuipinghuo
+  - dheerajodha
+  - naftalysh
+  - Dannyb48
+  - pmacik
+  - siddardh-ra
+  build-team:
+  - chmeliik
+  - mkosiarc
+  - mmorhun
+  - rcerven
+  - tkdchen
+  - stuartwdouglas
+  ec-team:
+  - simonbaird
+  - lcarva
+  - zregvart
+  - joejstuart
+  - robnester-rh
+  integration-team:
+  - dirgim
+  - jsztuka
+  - hongweiliu17
+  - Josh-Everett
+  - sonam1412
+  - MartinBasti
+  - 14rcole
+  release-team:
+  - davidmogar
+  - scoheb
+  - theflockers
+  - happybhati
+  - johnbieren
+  - mmalina

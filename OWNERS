@@ -1,25 +1,9 @@
 reviewers:
-- rhopp
-- flacatus
-- psturc
-- jkopriva
-- sawood14012
-- albarbaro
-- kasemAlem
-- jinqi7
-- tisutisu
-- srivickynesh
-- cuipinghuo
-- dheerajodha
-- naftalysh
-- Dannyb48
-- pmacik
-- siddardh-ra
+- build-team
+- ec-team
+- integration-team
+- release-team
+- rhtap-qe
 
 approvers:
-- rhopp
-- flacatus
-- jkopriva
-- Dannyb48
-- psturc
-- sawood14012
+- rhtap-qe
