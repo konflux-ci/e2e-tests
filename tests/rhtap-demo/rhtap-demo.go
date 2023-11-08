@@ -2,10 +2,12 @@ package rhtap_demo
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
 
+	buildcontrollers "github.com/redhat-appstudio/build-service/controllers"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 
 	"github.com/redhat-appstudio/jvm-build-service/openshift-with-appstudio-test/e2e"
@@ -414,6 +416,34 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 
 								})
 
+								It("component build status is set correctly", func() {
+									var buildStatus *buildcontrollers.BuildStatus
+									Eventually(func() (bool, error) {
+										component, err := fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), fw.UserNamespace)
+										if err != nil {
+											return false, err
+										}
+
+										statusBytes := []byte(component.Annotations[buildcontrollers.BuildStatusAnnotationName])
+
+										err = json.Unmarshal(statusBytes, &buildStatus)
+										if err != nil {
+											return false, err
+										}
+
+										if buildStatus.PaC != nil {
+											GinkgoWriter.Printf("state: %s\n", buildStatus.PaC.State)
+											GinkgoWriter.Printf("mergeUrl: %s\n", buildStatus.PaC.MergeUrl)
+											GinkgoWriter.Printf("errId: %d\n", buildStatus.PaC.ErrId)
+											GinkgoWriter.Printf("errMessage: %s\n", buildStatus.PaC.ErrMessage)
+											GinkgoWriter.Printf("configurationTime: %s\n", buildStatus.PaC.ConfigurationTime)
+										} else {
+											GinkgoWriter.Println("build status does not have PaC field")
+										}
+
+										return buildStatus.PaC != nil && buildStatus.PaC.State == "enabled" && buildStatus.PaC.MergeUrl != "" && buildStatus.PaC.ErrId == 0 && buildStatus.PaC.ConfigurationTime != "", nil
+									}, timeout, interval).Should(BeTrue(), "component build status has unexpected content")
+								})
 								It("should eventually lead to triggering another PipelineRun after merging the PaC init branch ", func() {
 									Eventually(func() error {
 										mergeResult, err = fw.AsKubeAdmin.CommonController.Github.MergePullRequest(componentRepositoryName, prNumber)
@@ -596,10 +626,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 
 							When("User switches to simple build", func() {
 								BeforeAll(func() {
-									comp, err := fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), fw.UserNamespace)
-									Expect(err).ShouldNot(HaveOccurred())
-									comp.Annotations["build.appstudio.openshift.io/request"] = "unconfigure-pac"
-									Expect(fw.AsKubeAdmin.CommonController.KubeRest().Update(context.TODO(), comp)).To(Succeed())
+									Expect(fw.AsKubeAdmin.HasController.SetComponentAnnotation(component.GetName(), buildcontrollers.BuildRequestAnnotationName, buildcontrollers.BuildRequestUnconfigurePaCAnnotationValue, fw.UserNamespace)).To(Succeed())
 								})
 								AfterAll(func() {
 									// Delete the new branch created by sending purge PR while moving to simple build
@@ -619,6 +646,29 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 										}
 										return fmt.Errorf("could not get the expected PaC purge PR branch %s", pacPurgeBranchName)
 									}, time.Minute*1, defaultPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for PaC purge PR to be created against the %q repo", componentRepositoryName))
+								})
+								It("component status annotation is set correctly", func() {
+									var buildStatus *buildcontrollers.BuildStatus
+
+									Eventually(func() (bool, error) {
+										component, err := fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), fw.UserNamespace)
+										status := component.Annotations[buildcontrollers.BuildStatusAnnotationName]
+
+										if err != nil {
+											GinkgoWriter.Printf("cannot get the build status annotation: %v\n", err)
+											return false, err
+										}
+
+										statusBytes := []byte(status)
+
+										err = json.Unmarshal(statusBytes, &buildStatus)
+										if err != nil {
+											GinkgoWriter.Printf("cannot unmarshal build status: %v\n", err)
+											return false, err
+										}
+
+										return buildStatus.PaC.State != "enabled", nil
+									}, timeout, interval).Should(BeTrue(), "PaC is still enabled, even after unprovisioning")
 								})
 							})
 						})
