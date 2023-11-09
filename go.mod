@@ -5,6 +5,9 @@ go 1.19
 require (
 	github.com/argoproj/argo-cd/v2 v2.8.3
 	github.com/avast/retry-go/v4 v4.3.3
+	github.com/aws/aws-sdk-go-v2 v1.23.0
+	github.com/aws/aws-sdk-go-v2/config v1.18.27
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.135.0
 	github.com/codeready-toolchain/api v0.0.0-20230502074949-f8c1d80bac96
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20220523142428-2558e76260fb
 	github.com/codeready-toolchain/toolchain-e2e v0.0.0-20220525131508-60876bfb99d3
@@ -115,6 +118,17 @@ require (
 	github.com/argoproj/gitops-engine v0.7.1-0.20230607163028-425d65e07695 // indirect
 	github.com/argoproj/pkg v0.13.7-0.20230626144333-d56162821bd1 // indirect
 	github.com/aws/aws-sdk-go v1.44.289 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.13.26 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.4 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.2.3 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.5.3 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.35 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.10.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.10.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.12.12 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.14.12 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.19.2 // indirect
+	github.com/aws/smithy-go v1.17.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/blendle/zapdriver v1.3.1 // indirect

@@ -82,6 +82,9 @@ const (
 	// Bundle ref for overriding the default Java build bundle specified in BuildPipelineSelectorYamlURL
 	CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV string = "CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE"
 
+	// Bundle ref for a buildah-remote build
+	CUSTOM_BUILDAH_REMOTE_PIPELINE_BUILD_BUNDLE_ENV string = "CUSTOM_BUILDAH_REMOTE_PIPELINE_BUILD_BUNDLE"
+
 	// QE slack bot token used for delivering messages about critical failures during CI runs
 	SLACK_BOT_TOKEN_ENV = "SLACK_BOT_TOKEN"
 
