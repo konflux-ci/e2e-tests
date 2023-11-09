@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -59,6 +60,7 @@ var (
 var (
 	UserCreationTimeMaxPerThread         []time.Duration
 	ApplicationCreationTimeMaxPerThread  []time.Duration
+	ItsCreationTimeMaxPerThread          []time.Duration
 	CDQCreationTimeMaxPerThread          []time.Duration
 	ComponentCreationTimeMaxPerThread    []time.Duration
 	PipelineRunSucceededTimeMaxPerThread []time.Duration
@@ -68,6 +70,7 @@ var (
 
 	UserCreationTimeSumPerThread         []time.Duration
 	ApplicationCreationTimeSumPerThread  []time.Duration
+	ItsCreationTimeSumPerThread          []time.Duration
 	CDQCreationTimeSumPerThread          []time.Duration
 	ComponentCreationTimeSumPerThread    []time.Duration
 	PipelineRunSucceededTimeSumPerThread []time.Duration
@@ -80,6 +83,7 @@ var (
 
 	SuccessfulUserCreationsPerThread                []int64
 	SuccessfulApplicationCreationsPerThread         []int64
+	SuccessfulItsCreationsPerThread                 []int64
 	SuccessfulCDQCreationsPerThread                 []int64
 	SuccessfulComponentCreationsPerThread           []int64
 	SuccessfulPipelineRunsPerThread                 []int64
@@ -88,6 +92,7 @@ var (
 
 	FailedUserCreationsPerThread                []int64
 	FailedApplicationCreationsPerThread         []int64
+	FailedItsCreationsPerThread                 []int64
 	FailedCDQCreationsPerThread                 []int64
 	FailedComponentCreationsPerThread           []int64
 	FailedPipelineRunsPerThread                 []int64
@@ -102,6 +107,7 @@ var (
 	errorMutex                        = &sync.Mutex{}
 	usersBarMutex                     = &sync.Mutex{}
 	applicationsBarMutex              = &sync.Mutex{}
+	itsBarMutex                       = &sync.Mutex{}
 	cdqsBarMutex                      = &sync.Mutex{}
 	componentsBarMutex                = &sync.Mutex{}
 	pipelinesBarMutex                 = &sync.Mutex{}
@@ -141,6 +147,8 @@ type LogData struct {
 	MaxTimeToSpinUpUsers              float64 `json:"createUserTimeMax"`
 	AverageTimeToCreateApplications   float64 `json:"createApplicationsTimeAvg"`
 	MaxTimeToCreateApplications       float64 `json:"createApplicationsTimeMax"`
+	AverageTimeToCreateIts            float64 `json:"createItsTimeAvg"`
+	MaxTimeToCreateIts                float64 `json:"createItsTimeMax"`
 	AverageTimeToCreateCDQs           float64 `json:"createCDQsTimeAvg"`
 	MaxTimeToCreateCDQs               float64 `json:"createCDQsTimeMax"`
 	AverageTimeToCreateComponents     float64 `json:"createComponentsTimeAvg"`
@@ -163,6 +171,9 @@ type LogData struct {
 	ApplicationCreationSuccessCount int64   `json:"createApplicationsSuccesses"`
 	ApplicationCreationFailureCount int64   `json:"createApplicationsFailures"`
 	ApplicationCreationFailureRate  float64 `json:"createApplicationsFailureRate"`
+	ItsCreationSuccessCount         int64   `json:"createItsSuccesses"`
+	ItsCreationFailureCount         int64   `json:"createItsFailures"`
+	ItsCreationFailureRate          float64 `json:"createItsFailureRate"`
 	CDQCreationSuccessCount         int64   `json:"createCDQsSuccesses"`
 	CDQCreationFailureCount         int64   `json:"createCDQsFailures"`
 	CDQCreationFailureRate          float64 `json:"createCDQsFailureRate"`
@@ -214,6 +225,7 @@ var rootCmd = &cobra.Command{
 
 var AppStudioUsersBar *uiprogress.Bar
 var ApplicationsBar *uiprogress.Bar
+var itsBar *uiprogress.Bar
 var CDQsBar *uiprogress.Bar
 var ComponentsBar *uiprogress.Bar
 var PipelinesBar *uiprogress.Bar
@@ -396,6 +408,11 @@ func setup(cmd *cobra.Command, args []string) {
 		})
 		ApplicationsBar = applicationProgress
 
+		itsProgress := uip.AddBar(overallCount).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
+			return strutil.PadLeft(fmt.Sprintf("Creating AppStudio Integration Test Scenarios (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedItsCreationsPerThread)), barLength, ' ')
+		})
+		itsBar = itsProgress
+
 		cdqProgress := uip.AddBar(overallCount).AppendCompleted().PrependFunc(func(b *uiprogress.Bar) string {
 			return strutil.PadLeft(fmt.Sprintf("Creating AppStudio CDQs (%d/%d) [%d failed]", b.Current(), overallCount, sumFromArray(FailedCDQCreationsPerThread)), barLength, ' ')
 		})
@@ -432,6 +449,7 @@ func setup(cmd *cobra.Command, args []string) {
 
 	UserCreationTimeMaxPerThread = make([]time.Duration, threadCount)
 	ApplicationCreationTimeMaxPerThread = make([]time.Duration, threadCount)
+	ItsCreationTimeMaxPerThread = make([]time.Duration, threadCount)
 	CDQCreationTimeMaxPerThread = make([]time.Duration, threadCount)
 	ComponentCreationTimeMaxPerThread = make([]time.Duration, threadCount)
 	PipelineRunSucceededTimeMaxPerThread = make([]time.Duration, threadCount)
@@ -441,6 +459,7 @@ func setup(cmd *cobra.Command, args []string) {
 
 	UserCreationTimeSumPerThread = make([]time.Duration, threadCount)
 	ApplicationCreationTimeSumPerThread = make([]time.Duration, threadCount)
+	ItsCreationTimeSumPerThread = make([]time.Duration, threadCount)
 	CDQCreationTimeSumPerThread = make([]time.Duration, threadCount)
 	ComponentCreationTimeSumPerThread = make([]time.Duration, threadCount)
 	PipelineRunSucceededTimeSumPerThread = make([]time.Duration, threadCount)
@@ -454,6 +473,7 @@ func setup(cmd *cobra.Command, args []string) {
 
 	SuccessfulUserCreationsPerThread = make([]int64, threadCount)
 	SuccessfulApplicationCreationsPerThread = make([]int64, threadCount)
+	SuccessfulItsCreationsPerThread = make([]int64, threadCount)
 	SuccessfulCDQCreationsPerThread = make([]int64, threadCount)
 	SuccessfulComponentCreationsPerThread = make([]int64, threadCount)
 	SuccessfulPipelineRunsPerThread = make([]int64, threadCount)
@@ -463,6 +483,7 @@ func setup(cmd *cobra.Command, args []string) {
 
 	FailedUserCreationsPerThread = make([]int64, threadCount)
 	FailedApplicationCreationsPerThread = make([]int64, threadCount)
+	FailedItsCreationsPerThread = make([]int64, threadCount)
 	FailedCDQCreationsPerThread = make([]int64, threadCount)
 	FailedComponentCreationsPerThread = make([]int64, threadCount)
 	FailedPipelineRunsPerThread = make([]int64, threadCount)
@@ -481,10 +502,9 @@ func setup(cmd *cobra.Command, args []string) {
 	threadsWG.Add(threadCount)
 
 	for thread := 0; thread < threadCount; thread++ {
-		go userJourneyThread(frameworkMap, threadsWG, thread, AppStudioUsersBar, ApplicationsBar, CDQsBar, ComponentsBar, PipelinesBar, IntegrationTestsPipelinesBar, DeploymentsBar)
+		go userJourneyThread(frameworkMap, threadsWG, thread, AppStudioUsersBar, ApplicationsBar, itsBar, CDQsBar, ComponentsBar, PipelinesBar, IntegrationTestsPipelinesBar, DeploymentsBar)
 	}
 
-	// Todo add cleanup functions that will delete user signups
 	threadsWG.Wait()
 	uip.Stop()
 
@@ -527,6 +547,24 @@ func setup(cmd *cobra.Command, args []string) {
 
 	applicationCreationFailureRate := float64(applicationCreationFailureCount) / float64(overallCount)
 	logData.ApplicationCreationFailureRate = applicationCreationFailureRate
+
+	// Compiling data about Its
+	itsCreationSuccessCount := sumFromArray(SuccessfulItsCreationsPerThread)
+	logData.ItsCreationSuccessCount = itsCreationSuccessCount
+
+	itsCreationFailureCount := sumFromArray(FailedItsCreationsPerThread)
+	logData.ItsCreationFailureCount = itsCreationFailureCount
+
+	averageTimeToCreateIts := float64(0)
+	if itsCreationSuccessCount > 0 {
+		averageTimeToCreateIts = sumDurationFromArray(ItsCreationTimeSumPerThread).Seconds() / float64(itsCreationSuccessCount)
+	}
+	logData.AverageTimeToCreateIts = averageTimeToCreateIts
+
+	logData.MaxTimeToCreateIts = maxDurationFromArray(ItsCreationTimeMaxPerThread).Seconds()
+
+	itsCreationFailureRate := float64(itsCreationFailureCount) / float64(overallCount)
+	logData.ItsCreationFailureRate = itsCreationFailureRate
 
 	// Compiling data about CDQs
 	cdqCreationSuccessCount := sumFromArray(SuccessfulCDQCreationsPerThread)
@@ -649,6 +687,7 @@ func setup(cmd *cobra.Command, args []string) {
 
 	klog.Infof("Avg/max time to spin up users: %.2f s/%.2f s", averageTimeToSpinUpUsers, logData.MaxTimeToSpinUpUsers)
 	klog.Infof("Avg/max time to create application: %.2f s/%.2f s", averageTimeToCreateApplications, logData.MaxTimeToCreateApplications)
+	klog.Infof("Avg/max time to create integration test: %.2f s/%.2f s", averageTimeToCreateIts, logData.MaxTimeToCreateIts)
 	klog.Infof("Avg/max time to create cdq: %.2f s/%.2f s", averageTimeToCreateCDQs, logData.MaxTimeToCreateCDQs)
 	klog.Infof("Avg/max time to create component: %.2f s/%.2f s", averageTimeToCreateComponents, logData.MaxTimeToCreateComponents)
 	klog.Infof("Avg/max time to complete pipelinesrun: %.2f s/%.2f s", averageTimeToRunPipelineSucceeded, logData.MaxTimeToRunPipelineSucceeded)
@@ -661,6 +700,8 @@ func setup(cmd *cobra.Command, args []string) {
 
 	klog.Infof("Number of times user creation worked/failed: %d/%d (%.2f %%)", userCreationSuccessCount, userCreationFailureCount, userCreationFailureRate*100)
 	klog.Infof("Number of times application creation worked/failed: %d/%d (%.2f %%)", applicationCreationSuccessCount, applicationCreationFailureCount, applicationCreationFailureRate*100)
+	klog.Infof("Number of times integration tests creation worked/failed: %d/%d (%.2f %%)", itsCreationSuccessCount, itsCreationFailureCount, itsCreationFailureRate*100)
+
 	klog.Infof("Number of times cdq creation worked/failed: %d/%d (%.2f %%)", cdqCreationSuccessCount, cdqCreationFailureCount, cdqCreationFailureRate*100)
 	klog.Infof("Number of times component creation worked/failed: %d/%d (%.2f %%)", componentCreationSuccessCount, componentCreationFailureCount, componentCreationFailureRate*100)
 	klog.Infof("Number of times pipeline run worked/failed: %d/%d (%.2f %%)", pipelineRunSuccessCount, pipelineRunFailureCount, pipelineRunFailureRate*100)
@@ -825,7 +866,7 @@ func tryNewFramework(username string, user loadtestUtils.User, timeout time.Dura
 	return ret, err
 }
 
-func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, threadIndex int, usersBar *uiprogress.Bar, applicationsBar *uiprogress.Bar, cdqsBar *uiprogress.Bar, componentsBar *uiprogress.Bar, pipelinesBar *uiprogress.Bar, integrationTestsPipelinesBar *uiprogress.Bar, deploymentsBar *uiprogress.Bar) {
+func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, threadIndex int, usersBar *uiprogress.Bar, applicationsBar *uiprogress.Bar, itsBar *uiprogress.Bar, cdqsBar *uiprogress.Bar, componentsBar *uiprogress.Bar, pipelinesBar *uiprogress.Bar, integrationTestsPipelinesBar *uiprogress.Bar, deploymentsBar *uiprogress.Bar) {
 	chUsers := make(chan string, numberOfUsers)
 	chPipelines := make(chan string, numberOfUsers)
 	chIntegrationTestsPipelines := make(chan string, numberOfUsers)
@@ -847,6 +888,21 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 	} else {
 		wg.Add(2)
 	}
+
+	// reduce the nested if blocks - SonarCloud suggestion
+	/*
+		addValue := 2
+		if waitPipelines {
+			addValue = 3
+			if waitIntegrationTestsPipelines {
+				addValue = 4
+				if waitDeployments {
+					addValue = 5
+				}
+			}
+		}
+		wg.Add(addValue)
+	*/
 
 	go func() {
 		defer wg.Done()
@@ -943,12 +999,94 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				It's considered also as part of the resources creation since Integration test scenarios are resources as well
 			*/
 			var integrationTestScenario *integrationv1beta1.IntegrationTestScenario
+
+			startTimeForIts := time.Now()
 			integrationTestScenario, err = framework.AsKubeDeveloper.IntegrationController.CreateIntegrationTestScenario_beta1(ApplicationName, usernamespace, testScenarioGitURL, testScenarioRevision, testScenarioPathInRepo)
+			itsCreationTime := time.Since(startTimeForIts)
 			if err != nil {
-				logError(5, fmt.Sprintf("Unable to create integrationTestScenario : %v \n", err))
+				logError(51, fmt.Sprintf("Unable to create integrationTestScenario for Application %s: %v \n", ApplicationName, err))
+				FailedItsCreationsPerThread[threadIndex] += 1
+				MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedIntegrationTestSenarioCreationCounter)
+				increaseBar(itsBar, itsBarMutex)
 				continue
 			}
-			userTestScenarioMap.Store(username, integrationTestScenario.Name)
+
+			itsName := integrationTestScenario.Name
+
+			ItsCreationTimeSumPerThread[threadIndex] += itsCreationTime
+			MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeGuage, metricsConstants.MetricIntegrationTestSenarioCreationTimeGauge, itsCreationTime.Seconds())
+			if itsCreationTime > ItsCreationTimeMaxPerThread[threadIndex] {
+				ItsCreationTimeMaxPerThread[threadIndex] = itsCreationTime
+			}
+
+			// Wait for
+			// 1. our its to be ready (condition.Type == "IntegrationTestScenarioValid" && condition.Status == "True")
+			// or
+			// 2. our its to be in error (condition.Status == "True" && (strings.HasPrefix(condition.Type, "Error") || strings.HasSuffix(condition.Type, "Error"))
+			integrationTestScenarioRepoInterval := 10 * time.Second
+			integrationTestScenarioValidationTimeout := time.Minute * 30
+
+			var conditionError error
+
+			if err = utils.WaitUntilWithInterval(func() (done bool, err error) {
+				integrationTestScenarios, err := framework.AsKubeDeveloper.IntegrationController.GetIntegrationTestScenarios(ApplicationName, usernamespace)
+				if err != nil {
+					// Return an error immediately if we cannot fetch the scenarios
+					return false, fmt.Errorf("unable to get created integrationTestScenario %s for Application %s: %v", itsName, ApplicationName, err)
+				}
+
+				conditionError = nil // Reset the condition error
+				for _, testScenario := range *integrationTestScenarios {
+					if testScenario.Name == itsName {
+						if len(testScenario.Status.Conditions) == 0 {
+							// store the error in conditionError
+							conditionError = fmt.Errorf("integrationTestScenario %s has 0 status conditions", testScenario.Name)
+							return false, nil // Continue polling
+						}
+						creationTimestamp := testScenario.ObjectMeta.CreationTimestamp.Time
+
+						for _, condition := range testScenario.Status.Conditions {
+							if condition.Type == "IntegrationTestScenarioValid" && condition.Status == "True" {
+								lastTransitionTime := condition.LastTransitionTime.Time
+								// itsActualCreationTime := lastTransitionTime.Sub(startTimeForIts)
+								// MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualIntegrationTestSenarioCreationTimeGauge, itsActualCreationTime.Seconds())
+
+								// Since we have a skewed time between the clocks of the test machine and the cluster,
+								//  we shall calculate itsActualCreationTime as below:
+								itsActualCreationTimeInSeconds := itsCreationTime.Seconds() + lastTransitionTime.Sub(creationTimestamp).Seconds()
+
+								MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualIntegrationTestSenarioCreationTimeGauge, itsActualCreationTimeInSeconds)
+								SuccessfulItsCreationsPerThread[threadIndex] += 1
+								MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulIntegrationTestSenarioCreationCounter)
+
+								increaseBar(itsBar, itsBarMutex)
+								userTestScenarioMap.Store(username, itsName)
+								return true, nil
+							}
+
+							// Error indicators for various CRs besides snapshotenvironmentbindings.json
+							// .status.conditions array has a .status of "True" and a .type that ends or starts with "Error"
+							if condition.Status == "True" && (strings.HasPrefix(condition.Type, "Error") || strings.HasSuffix(condition.Type, "Error")) {
+								return true, fmt.Errorf("integrationTestScenario %s is in Error state: %s", testScenario.Name, condition.Message)
+							}
+						}
+					}
+				}
+
+				return false, nil // Indicate to continue polling
+			}, integrationTestScenarioRepoInterval, integrationTestScenarioValidationTimeout); err != nil {
+				// If an error is returned, handle it immediately
+				logError(52, fmt.Sprintf("Failed to validate integrationTestScenario for Application %s due to an error: %v \n", ApplicationName, err))
+				FailedItsCreationsPerThread[threadIndex] += 1
+				MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedIntegrationTestSenarioCreationCounter)
+				increaseBar(itsBar, itsBarMutex)
+			} else if conditionError != nil {
+				// If no error is returned but conditionError is set, it means the timeout has occurred
+				logError(52, fmt.Sprintf("Failed to validate integrationTestScenario for Application %s due to an error: %v \n", ApplicationName, conditionError.Error()))
+				FailedItsCreationsPerThread[threadIndex] += 1
+				MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedIntegrationTestSenarioCreationCounter)
+				increaseBar(itsBar, itsBarMutex)
+			}
 
 			ComponentDetectionQueryName := fmt.Sprintf("%s-cdq", username)
 			startTimeForCDQ := time.Now()
