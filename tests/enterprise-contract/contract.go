@@ -11,6 +11,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/contract"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
@@ -20,8 +21,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 	var fwk *framework.Framework
 	var err error
 	var namespace string
-	var policySource []ecp.Source
-	var policyConfig *ecp.EnterpriseContractPolicyConfiguration
+	var defaultECP *ecp.EnterpriseContractPolicy
 	var imageWithDigest string
 	var pipelineRunTimeout int
 	var generator tekton.VerifyEnterpriseContract
@@ -43,10 +43,8 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 		GinkgoWriter.Printf("Copy public key from %s/signing-secrets to a new secret\n", constants.TEKTON_CHAINS_NS)
 		Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(publicKey, publicSecretName, namespace)).To(Succeed())
 
-		defaultEcp, err := fwk.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+		defaultECP, err = fwk.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 		Expect(err).NotTo(HaveOccurred())
-		policyConfig = defaultEcp.Spec.Configuration
-		policySource = defaultEcp.Spec.Sources
 
 		cm, err := fwk.AsKubeAdmin.CommonController.GetConfigMap("ec-defaults", "enterprise-contract-service")
 		Expect(err).ToNot(HaveOccurred())
@@ -69,11 +67,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			}
 			generator.WithComponentImage(imageWithDigest)
 			pipelineRunTimeout = int(time.Duration(5) * time.Minute)
-			baselinePolicies := ecp.EnterpriseContractPolicySpec{
-				Configuration: policyConfig,
-				Sources:       policySource,
-			}
-			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, baselinePolicies)).To(Succeed())
+			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, defaultECP.Spec)).To(Succeed())
 		})
 		It("verifies ec cli has error handling", func() {
 			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
@@ -103,13 +97,11 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			GinkgoWriter.Println("Update public key to verify golden images")
 			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(goldenImagePublicKey, secretName, namespace)).To(Succeed())
 			generator.PublicKey = fmt.Sprintf("k8s://%s/%s", namespace, secretName)
-			policy := ecp.EnterpriseContractPolicySpec{
-				Sources: policySource,
-				Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-					Include: []string{"minimal"},
-				},
-			}
+
+			policy := contract.PolicySpecWithSourceConfig(
+				defaultECP.Spec, ecp.SourceConfig{Include: []string{"minimal"}})
 			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
+
 			generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-out-of-date-task")
 			generator.AppendComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-unacceptable-task")
 			pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
@@ -154,12 +146,10 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 		})
 
 		It("verifies the release policy: Task bundles are in acceptable bundle list", func() {
-			policy := ecp.EnterpriseContractPolicySpec{
-				Sources: policySource,
-				Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-					Include: []string{"attestation_task_bundle.task_ref_bundles_acceptable"},
-				},
-			}
+			policy := contract.PolicySpecWithSourceConfig(
+				defaultECP.Spec,
+				ecp.SourceConfig{Include: []string{"attestation_task_bundle.task_ref_bundles_acceptable"}},
+			)
 			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
 			generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-unacceptable-task")
@@ -195,12 +185,11 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			GinkgoWriter.Println("Update public <key to verify unpinned task image")
 			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(unpinnedTaskPublicKey, secretName, namespace)).To(Succeed())
 			generator.PublicKey = fmt.Sprintf("k8s://%s/%s", namespace, secretName)
-			policy := ecp.EnterpriseContractPolicySpec{
-				Sources: policySource,
-				Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-					Include: []string{"attestation_task_bundle.task_ref_bundles_pinned"},
-				},
-			}
+
+			policy := contract.PolicySpecWithSourceConfig(
+				defaultECP.Spec,
+				ecp.SourceConfig{Include: []string{"attestation_task_bundle.task_ref_bundles_pinned"}},
+			)
 			Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
 			generator.WithComponentImage("quay.io/redhat-appstudio-qe/enterprise-contract-tests:e2e-test-unpinned-task-bundle")

@@ -18,6 +18,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/contract"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/pipeline"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -299,19 +300,16 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					Expect(kubeadminClient.TektonController.CreateOrUpdateSigningSecret(
 						publicKey, publicSecretName, testNamespace)).To(Succeed())
 
-					defaultEcp, err := kubeadminClient.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+					defaultECP, err := kubeadminClient.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 					Expect(err).NotTo(HaveOccurred())
 
-					policySource := defaultEcp.Spec.Sources
-					policy := ecp.EnterpriseContractPolicySpec{
-						Sources: policySource,
-						Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-							// The BuildahDemo pipeline used to generate the test data does not
-							// include the required test tasks, so this policy should always fail.
-							Collections: []string{"slsa3"},
-							Exclude:     []string{"cve"},
+					policy := contract.PolicySpecWithSourceConfig(
+						defaultECP.Spec,
+						ecp.SourceConfig{
+							Include: []string{"@slsa3"},
+							Exclude: []string{"cve"},
 						},
-					}
+					)
 					Expect(kubeadminClient.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
 
 					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
