@@ -28,6 +28,19 @@ Happy path testing describes tests that focus on the most common scenarios while
 - Asserting that the Snapshot was marked as Passed.
 - Verifying that the Ephemeral environment and related SnapshotEnvironmentBinding got deleted.
 
+### E2E tests of Status Reporting of Integration tests to CheckRuns (within `status-reporting-to-pullrequest.go`):
+
+- Creating 2 IntegrationTestScenarios: one that's supposed to pass and other one to fail.
+- Creating PaC branch and component base branches which will be used to create Pull request (PR).
+- Testing for successful creation of applications and component (with the above custom branch).
+- Checking if the Build pipelineRun is successfully triggered and completed.
+- Asserting the creation of PaC init PR within the component repo.
+- Asserting the proper status reporting of Build PipelineRun within the PR's CheckRun.
+- Asserting the signing of BuildPipelineRun.
+- Asserting the successful creation of a Snapshot after a push event.
+- Verifying that both the Integration pipelineRuns got created and finished successfully.
+- Checking that a Snapshot gets successfully marked as 'failed' after all Integration pipelinRuns finished.
+- Asserting the proper status reporting of both the Integration pipelineRuns within the PR's CheckRuns.
 
 ## Negative Test Cases
 

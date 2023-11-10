@@ -54,7 +54,7 @@ $ go mod vendor
 <p>
 
    Some tests could require you have a Github App created in order to test Component builds via Pipelines as Code.
-Such tests are [rhtap-demo](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/rhtap-demo/rhtap-demo.go) and [build](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/build/build.go).
+Such tests are [rhtap-demo](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/rhtap-demo/rhtap-demo.go), [build](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/build/build.go), and [status-reporting-to-pullrequest](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/integration-service/status-reporting-to-pullrequest.go).
 
 In this case, before you bootstrap a cluster, make sure you [created a Github App for your GitHub account](https://github.com/settings/apps). Fill in following details:
 </p>
