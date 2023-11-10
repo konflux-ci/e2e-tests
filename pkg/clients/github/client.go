@@ -9,6 +9,10 @@ import (
 	"golang.org/x/oauth2"
 )
 
+const (
+	HEADS = "heads/%s"
+)
+
 type Github struct {
 	client       *github.Client
 	organization string

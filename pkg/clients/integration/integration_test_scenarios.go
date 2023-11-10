@@ -6,6 +6,7 @@ import (
 
 	"github.com/devfile/library/v2/pkg/util"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,9 +19,7 @@ func (i *IntegrationController) CreateIntegrationTestScenario(applicationName, n
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "example-pass-" + util.GenerateRandomString(4),
 			Namespace: namespace,
-			Labels: map[string]string{
-				"test.appstudio.openshift.io/optional": "false",
-			},
+			Labels:    constants.IntegrationTestScenarioDefaultLabels,
 		},
 		Spec: integrationv1alpha1.IntegrationTestScenarioSpec{
 			Application: applicationName,
@@ -43,9 +42,7 @@ func (i *IntegrationController) CreateIntegrationTestScenarioWithEnvironment(app
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "example-pass-with-env-" + util.GenerateRandomString(4),
 			Namespace: namespace,
-			Labels: map[string]string{
-				"test.appstudio.openshift.io/optional": "false",
-			},
+			Labels:    constants.IntegrationTestScenarioDefaultLabels,
 		},
 		Spec: integrationv1beta1.IntegrationTestScenarioSpec{
 			Application: applicationName,
@@ -94,9 +91,7 @@ func (i *IntegrationController) CreateIntegrationTestScenario_beta1(applicationN
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "example-resolver-pass-" + util.GenerateRandomString(4),
 			Namespace: namespace,
-			Labels: map[string]string{
-				"test.appstudio.openshift.io/optional": "false",
-			},
+			Labels:    constants.IntegrationTestScenarioDefaultLabels,
 		},
 		Spec: integrationv1beta1.IntegrationTestScenarioSpec{
 			Application: applicationName,

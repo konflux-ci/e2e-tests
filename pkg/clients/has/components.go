@@ -29,6 +29,10 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+const (
+	RequiredLabelNotFound = "cannot retrigger PipelineRun - required label %q not found"
+)
+
 // GetComponent return a component object from kubernetes cluster
 func (h *HasController) GetComponent(name string, namespace string) (*appservice.Component, error) {
 	component := &appservice.Component{}
@@ -328,15 +332,15 @@ func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Comp
 		targetBranchAnnotationName := "build.appstudio.redhat.com/target_branch"
 
 		if repoName, ok = prLabels[pacRepoNameLabelName]; !ok {
-			return "", fmt.Errorf("cannot retrigger PipelineRun - required label %q not found", pacRepoNameLabelName)
+			return "", fmt.Errorf(RequiredLabelNotFound, pacRepoNameLabelName)
 		}
 		if eventType, ok = prLabels[pacEventTypeLabelName]; !ok {
-			return "", fmt.Errorf("cannot retrigger PipelineRun - required label %q not found", pacEventTypeLabelName)
+			return "", fmt.Errorf(RequiredLabelNotFound, pacEventTypeLabelName)
 		}
 		// PipelineRun is triggered from a pull request, need to update the PaC PR source branch
 		if eventType == "pull_request" {
 			if len(prLabels[componentLabelName]) < 1 {
-				return "", fmt.Errorf("cannot retrigger PipelineRun - required label %q not found", componentLabelName)
+				return "", fmt.Errorf(RequiredLabelNotFound, componentLabelName)
 			}
 			branchName = constants.PaCPullRequestBranchPrefix + prLabels[componentLabelName]
 		} else {

@@ -12,7 +12,7 @@ import (
 )
 
 func (g *Github) DeleteRef(repository, branchName string) error {
-	_, err := g.client.Git.DeleteRef(context.Background(), g.organization, repository, fmt.Sprintf("heads/%s", branchName))
+	_, err := g.client.Git.DeleteRef(context.Background(), g.organization, repository, fmt.Sprintf(HEADS, branchName))
 	if err != nil {
 		return err
 	}
@@ -24,12 +24,12 @@ func (g *Github) DeleteRef(repository, branchName string) error {
 // the latest commit from base branch will be used.
 func (g *Github) CreateRef(repository, baseBranchName, sha, newBranchName string) error {
 	ctx := context.Background()
-	ref, _, err := g.client.Git.GetRef(ctx, g.organization, repository, fmt.Sprintf("heads/%s", baseBranchName))
+	ref, _, err := g.client.Git.GetRef(ctx, g.organization, repository, fmt.Sprintf(HEADS, baseBranchName))
 	if err != nil {
 		return fmt.Errorf("error when getting the base branch name '%s' for the repo '%s': %+v", baseBranchName, repository, err)
 	}
 
-	ref.Ref = github.String(fmt.Sprintf("heads/%s", newBranchName))
+	ref.Ref = github.String(fmt.Sprintf(HEADS, newBranchName))
 
 	if sha != "" {
 		ref.Object.SHA = &sha
@@ -49,7 +49,7 @@ func (g *Github) CreateRef(repository, baseBranchName, sha, newBranchName string
 }
 
 func (g *Github) ExistsRef(repository, branchName string) (bool, error) {
-	_, _, err := g.client.Git.GetRef(context.Background(), g.organization, repository, fmt.Sprintf("heads/%s", branchName))
+	_, _, err := g.client.Git.GetRef(context.Background(), g.organization, repository, fmt.Sprintf(HEADS, branchName))
 	if err != nil {
 		if strings.Contains(err.Error(), "404 Not Found") {
 			return false, nil

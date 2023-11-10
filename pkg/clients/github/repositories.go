@@ -36,7 +36,7 @@ func (g *Github) CreateFile(repository, pathToFile, fileContent, branchName stri
 func (g *Github) GetFile(repository, pathToFile, branchName string) (*github.RepositoryContent, error) {
 	opts := &github.RepositoryContentGetOptions{}
 	if branchName != "" {
-		opts.Ref = fmt.Sprintf("heads/%s", branchName)
+		opts.Ref = fmt.Sprintf(HEADS, branchName)
 	}
 	file, _, _, err := g.client.Repositories.GetContents(context.Background(), g.organization, repository, pathToFile, opts)
 	if err != nil {
@@ -49,7 +49,7 @@ func (g *Github) GetFile(repository, pathToFile, branchName string) (*github.Rep
 func (g *Github) UpdateFile(repository, pathToFile, newContent, branchName, fileSHA string) (*github.RepositoryContentResponse, error) {
 	opts := &github.RepositoryContentGetOptions{}
 	if branchName != "" {
-		opts.Ref = fmt.Sprintf("heads/%s", branchName)
+		opts.Ref = fmt.Sprintf(HEADS, branchName)
 	}
 	newFileContent := &github.RepositoryContentFileOptions{
 		Message: github.String("e2e test commit message"),
@@ -70,7 +70,7 @@ func (g *Github) DeleteFile(repository, pathToFile, branchName string) error {
 	deleteOpts := &github.RepositoryContentFileOptions{}
 
 	if branchName != "" {
-		getOpts.Ref = fmt.Sprintf("heads/%s", branchName)
+		getOpts.Ref = fmt.Sprintf(HEADS, branchName)
 		deleteOpts.Branch = github.String(branchName)
 	}
 	file, _, _, err := g.client.Repositories.GetContents(context.Background(), g.organization, repository, pathToFile, getOpts)

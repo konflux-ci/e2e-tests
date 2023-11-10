@@ -173,4 +173,5 @@ var (
 	ComponentTriggerSimpleBuildAnnotation       = map[string]string{"build.appstudio.openshift.io/request": "trigger-simple-build"}
 	ImageControllerAnnotationRequestPublicRepo  = map[string]string{"image.redhat.com/generate": `{"visibility": "public"}`}
 	ImageControllerAnnotationRequestPrivateRepo = map[string]string{"image.redhat.com/generate": `{"visibility": "private"}`}
+	IntegrationTestScenarioDefaultLabels        = map[string]string{"test.appstudio.openshift.io/optional": "false"}
 )
