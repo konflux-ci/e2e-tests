@@ -252,6 +252,7 @@ func (t *TektonController) StoreAllPipelineRuns(namespace string) error {
 	}
 
 	for _, pipelineRun := range pipelineRuns.Items {
+		pipelineRun := pipelineRun
 		if err := t.StorePipelineRun(&pipelineRun); err != nil {
 			return fmt.Errorf("got error storing PR: %v\n", err.Error())
 		}
