@@ -19,13 +19,13 @@ import (
 
 // DeleteNamespace deletes the give namespace.
 func (s *SuiteController) DeleteNamespace(namespace string) error {
-	_, err := s.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
+	_, err := s.KubeInterface().CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
 
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return fmt.Errorf("could not check for namespace '%s' existence: %v", namespace, err)
 	}
 
-	if err := s.KubeInterface().CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{}); err != nil {
+	if err := s.KubeInterface().CoreV1().Namespaces().Delete(context.Background(), namespace, metav1.DeleteOptions{}); err != nil {
 		return fmt.Errorf("unable to delete namespace '%s': %v", namespace, err)
 	}
 
@@ -112,7 +112,7 @@ func (s *SuiteController) ListNamespaceScopedResourcesAsString(namespace string,
 // CreateTestNamespace creates a namespace where Application and Component CR will be created
 func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, error) {
 	// Check if the E2E test namespace already exists
-	ns, err := s.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), name, metav1.GetOptions{})
+	ns, err := s.KubeInterface().CoreV1().Namespaces().Get(context.Background(), name, metav1.GetOptions{})
 
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
@@ -122,7 +122,7 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 					Name:   name,
 					Labels: map[string]string{constants.ArgoCDLabelKey: constants.ArgoCDLabelValue},
 				}}
-			ns, err = s.KubeInterface().CoreV1().Namespaces().Create(context.TODO(), &nsTemplate, metav1.CreateOptions{})
+			ns, err = s.KubeInterface().CoreV1().Namespaces().Create(context.Background(), &nsTemplate, metav1.CreateOptions{})
 			if err != nil {
 				return nil, fmt.Errorf("error when creating %s namespace: %v", name, err)
 			}
@@ -136,14 +136,14 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 		}
 		// Update test namespace labels in case they are missing argoCD label
 		ns.Labels[constants.ArgoCDLabelKey] = constants.ArgoCDLabelValue
-		ns, err = s.KubeInterface().CoreV1().Namespaces().Update(context.TODO(), ns, metav1.UpdateOptions{})
+		ns, err = s.KubeInterface().CoreV1().Namespaces().Update(context.Background(), ns, metav1.UpdateOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("error when updating labels in '%s' namespace: %v", name, err)
 		}
 	}
 
 	// Create ServiceAccount which is used by Pipelines but created by Toolchain host operator
-	_, err = s.KubeInterface().CoreV1().ServiceAccounts(name).Get(context.TODO(), constants.DefaultPipelineServiceAccount, metav1.GetOptions{})
+	_, err = s.KubeInterface().CoreV1().ServiceAccounts(name).Get(context.Background(), constants.DefaultPipelineServiceAccount, metav1.GetOptions{})
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
 			saTemplate := corev1.ServiceAccount{
@@ -151,7 +151,7 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 					Name: constants.DefaultPipelineServiceAccount,
 				},
 			}
-			_, err = s.KubeInterface().CoreV1().ServiceAccounts(name).Create(context.TODO(), &saTemplate, metav1.CreateOptions{})
+			_, err = s.KubeInterface().CoreV1().ServiceAccounts(name).Create(context.Background(), &saTemplate, metav1.CreateOptions{})
 			if err != nil {
 				return nil, fmt.Errorf("error when creating %s serviceaccount: %v", constants.DefaultPipelineServiceAccount, err)
 			}
@@ -160,7 +160,7 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 		}
 	}
 
-	_, err = s.KubeInterface().RbacV1().RoleBindings(name).Get(context.TODO(), constants.DefaultPipelineServiceAccountRoleBinding, metav1.GetOptions{})
+	_, err = s.KubeInterface().RbacV1().RoleBindings(name).Get(context.Background(), constants.DefaultPipelineServiceAccountRoleBinding, metav1.GetOptions{})
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
 			roleBindingTemplate := rbacv1.RoleBinding{
@@ -178,7 +178,7 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 					Name: constants.DefaultPipelineServiceAccountClusterRole,
 				},
 			}
-			_, err = s.KubeInterface().RbacV1().RoleBindings(name).Create(context.TODO(), &roleBindingTemplate, metav1.CreateOptions{})
+			_, err = s.KubeInterface().RbacV1().RoleBindings(name).Create(context.Background(), &roleBindingTemplate, metav1.CreateOptions{})
 			if err != nil {
 				return nil, fmt.Errorf("error when creating %s roleBinding: %v", constants.DefaultPipelineServiceAccountRoleBinding, err)
 			}
@@ -200,7 +200,7 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 func (s *SuiteController) namespaceDoesNotExist(namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
 
-		_, err := s.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
+		_, err := s.KubeInterface().CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
 
 		return err != nil && k8sErrors.IsNotFound(err), nil
 	}
@@ -208,5 +208,5 @@ func (s *SuiteController) namespaceDoesNotExist(namespace string) wait.Condition
 
 // GetNamespace returns the requested Namespace object
 func (s *SuiteController) GetNamespace(namespace string) (*corev1.Namespace, error) {
-	return s.KubeInterface().CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
+	return s.KubeInterface().CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
 }

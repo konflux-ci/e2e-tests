@@ -75,7 +75,7 @@ func fetchTaskRunResults(c crclient.Client, pr *v1beta1.PipelineRun, pipelineTas
 		}
 		taskRun := &v1beta1.TaskRun{}
 		taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
-		if err := c.Get(context.TODO(), taskRunKey, taskRun); err != nil {
+		if err := c.Get(context.Background(), taskRunKey, taskRun); err != nil {
 			return nil, err
 		}
 		return taskRun.Status.TaskRunResults, nil

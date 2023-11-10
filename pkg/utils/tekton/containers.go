@@ -11,7 +11,7 @@ import (
 func (t *TektonController) fetchContainerLog(podName, containerName, namespace string) (string, error) {
 	podClient := t.KubeInterface().CoreV1().Pods(namespace)
 	req := podClient.GetLogs(podName, &corev1.PodLogOptions{Container: containerName})
-	readCloser, err := req.Stream(context.TODO())
+	readCloser, err := req.Stream(context.Background())
 	log := ""
 	if err != nil {
 		return log, err

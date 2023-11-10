@@ -9,5 +9,5 @@ import (
 
 // ListRebuiltArtifacts returns a list of all RebuiltArtifacts in a given namespace.
 func (j *JvmbuildserviceController) ListRebuiltArtifacts(namespace string) (*v1alpha1.RebuiltArtifactList, error) {
-	return j.JvmbuildserviceClient().JvmbuildserviceV1alpha1().RebuiltArtifacts(namespace).List(context.TODO(), metav1.ListOptions{})
+	return j.JvmbuildserviceClient().JvmbuildserviceV1alpha1().RebuiltArtifacts(namespace).List(context.Background(), metav1.ListOptions{})
 }

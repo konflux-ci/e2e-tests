@@ -144,7 +144,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "rs-environme
 					},
 				},
 			}
-			err := fw.AsKubeAdmin.RemoteSecretController.KubeRest().Create(context.TODO(), ephemeralEnvironmentObj)
+			err := fw.AsKubeAdmin.RemoteSecretController.KubeRest().Create(context.Background(), ephemeralEnvironmentObj)
 			Expect(err).NotTo(HaveOccurred())
 
 			ephemeralEnvironmentObj = &appservice.Environment{
@@ -168,7 +168,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "rs-environme
 					},
 				},
 			}
-			err = fw.AsKubeAdmin.RemoteSecretController.KubeRest().Create(context.TODO(), ephemeralEnvironmentObj)
+			err = fw.AsKubeAdmin.RemoteSecretController.KubeRest().Create(context.Background(), ephemeralEnvironmentObj)
 			Expect(err).NotTo(HaveOccurred())
 
 			ephemeralEnvironmentObj = &appservice.Environment{
@@ -192,7 +192,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "rs-environme
 					},
 				},
 			}
-			err = fw.AsKubeAdmin.RemoteSecretController.KubeRest().Create(context.TODO(), ephemeralEnvironmentObj)
+			err = fw.AsKubeAdmin.RemoteSecretController.KubeRest().Create(context.Background(), ephemeralEnvironmentObj)
 			Expect(err).NotTo(HaveOccurred())
 		})
 

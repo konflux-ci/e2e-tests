@@ -61,7 +61,7 @@ func (t *TektonController) CreateTaskRunCopy(name, namespace, serviceAccountName
 		},
 	}
 
-	err := t.KubeRest().Create(context.TODO(), &taskRun)
+	err := t.KubeRest().Create(context.Background(), &taskRun)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func (t *TektonController) GetTaskRun(name, namespace string) (*v1beta1.TaskRun,
 			Namespace: namespace,
 		},
 	}
-	err := t.KubeRest().Get(context.TODO(), namespacedName, &taskRun)
+	err := t.KubeRest().Get(context.Background(), namespacedName, &taskRun)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (t *TektonController) GetTaskRun(name, namespace string) (*v1beta1.TaskRun,
 // GetTaskRunLogs returns logs of a specified taskRun.
 func (t *TektonController) GetTaskRunLogs(pipelineRunName, pipelineTaskName, namespace string) (map[string]string, error) {
 	tektonClient := t.PipelineClient().TektonV1beta1().PipelineRuns(namespace)
-	pipelineRun, err := tektonClient.Get(context.TODO(), pipelineRunName, metav1.GetOptions{})
+	pipelineRun, err := tektonClient.Get(context.Background(), pipelineRunName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func (t *TektonController) GetTaskRunLogs(pipelineRunName, pipelineTaskName, nam
 		if childStatusReference.PipelineTaskName == pipelineTaskName {
 			taskRun := &v1beta1.TaskRun{}
 			taskRunKey := types.NamespacedName{Namespace: pipelineRun.Namespace, Name: childStatusReference.Name}
-			if err := t.KubeRest().Get(context.TODO(), taskRunKey, taskRun); err != nil {
+			if err := t.KubeRest().Get(context.Background(), taskRunKey, taskRun); err != nil {
 				return nil, err
 			}
 			podName = taskRun.Status.PodName
@@ -113,7 +113,7 @@ func (t *TektonController) GetTaskRunLogs(pipelineRunName, pipelineTaskName, nam
 	}
 
 	podClient := t.KubeInterface().CoreV1().Pods(namespace)
-	pod, err := podClient.Get(context.TODO(), podName, metav1.GetOptions{})
+	pod, err := podClient.Get(context.Background(), podName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func (t *TektonController) GetTaskRunFromPipelineRun(c crclient.Client, pr *v1be
 
 		taskRun := &v1beta1.TaskRun{}
 		taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
-		if err := c.Get(context.TODO(), taskRunKey, taskRun); err != nil {
+		if err := c.Get(context.Background(), taskRunKey, taskRun); err != nil {
 			return nil, err
 		}
 		return taskRun, nil
@@ -169,7 +169,7 @@ func (t *TektonController) GetTaskRunStatus(c crclient.Client, pr *v1beta1.Pipel
 		if chr.PipelineTaskName == pipelineTaskName {
 			taskRun := &v1beta1.TaskRun{}
 			taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
-			if err := c.Get(context.TODO(), taskRunKey, taskRun); err != nil {
+			if err := c.Get(context.Background(), taskRunKey, taskRun); err != nil {
 				return nil, err
 			}
 			return &v1beta1.PipelineRunTaskRunStatus{PipelineTaskName: chr.PipelineTaskName, Status: &taskRun.Status}, nil
@@ -192,5 +192,5 @@ func DidTaskRunSucceed(tr interface{}) bool {
 
 // DeleteAllTaskRunsInASpecificNamespace removes all TaskRuns from a given repository. Useful when creating a lot of resources and wanting to remove all of them.
 func (t *TektonController) DeleteAllTaskRunsInASpecificNamespace(namespace string) error {
-	return t.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.TaskRun{}, crclient.InNamespace(namespace))
+	return t.KubeRest().DeleteAllOf(context.Background(), &v1beta1.TaskRun{}, crclient.InNamespace(namespace))
 }

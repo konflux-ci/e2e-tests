@@ -385,7 +385,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 									for k, v := range constants.ComponentPaCRequestAnnotation {
 										component.Annotations[k] = v
 									}
-									Expect(fw.AsKubeAdmin.CommonController.KubeRest().Update(context.TODO(), component)).To(Succeed())
+									Expect(fw.AsKubeAdmin.CommonController.KubeRest().Update(context.Background(), component)).To(Succeed())
 									Expect(err).ShouldNot(HaveOccurred(), "failed to update component: %v", err)
 								})
 

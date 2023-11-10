@@ -17,7 +17,7 @@ import (
 
 // GetPod returns the pod object from a given namespace and pod name
 func (s *SuiteController) GetPod(namespace, podName string) (*corev1.Pod, error) {
-	return s.KubeInterface().CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+	return s.KubeInterface().CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
 }
 
 func (s *SuiteController) IsPodRunning(podName, namespace string) wait.ConditionFunc {
@@ -70,7 +70,7 @@ func (s *SuiteController) ListPods(namespace, labelKey, labelValue string, selec
 		LabelSelector: labels.Set(labelSelector.MatchLabels).String(),
 		Limit:         selectionLimit,
 	}
-	return s.KubeInterface().CoreV1().Pods(namespace).List(context.TODO(), listOptions)
+	return s.KubeInterface().CoreV1().Pods(namespace).List(context.Background(), listOptions)
 }
 
 // Wait for a pod selector until exists
@@ -95,7 +95,7 @@ func (s *SuiteController) WaitForPodSelector(
 
 // ListAllPods returns a list of all pods in a namespace.
 func (s *SuiteController) ListAllPods(namespace string) (*corev1.PodList, error) {
-	return s.KubeInterface().CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+	return s.KubeInterface().CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
 }
 
 func (s *SuiteController) GetPodLogs(pod *corev1.Pod) map[string][]byte {

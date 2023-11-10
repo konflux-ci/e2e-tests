@@ -27,7 +27,7 @@ func createPVC(pvcs v1.PersistentVolumeClaimInterface, pvcName string) error {
 		},
 	}
 
-	if _, err := pvcs.Create(context.TODO(), pvc, metav1.CreateOptions{}); err != nil {
+	if _, err := pvcs.Create(context.Background(), pvc, metav1.CreateOptions{}); err != nil {
 		return err
 	}
 
@@ -53,7 +53,7 @@ func (t *TektonController) CreatePVCInAccessMode(name, namespace string, accessM
 		},
 	}
 
-	createdPVC, err := t.KubeInterface().CoreV1().PersistentVolumeClaims(namespace).Create(context.TODO(), pvc, metav1.CreateOptions{})
+	createdPVC, err := t.KubeInterface().CoreV1().PersistentVolumeClaims(namespace).Create(context.Background(), pvc, metav1.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}

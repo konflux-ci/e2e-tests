@@ -107,7 +107,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 					},
 				}},
 			}
-			Expect(f.AsKubeAdmin.CommonController.KubeRest().Create(context.TODO(), ps)).To(Succeed())
+			Expect(f.AsKubeAdmin.CommonController.KubeRest().Create(context.Background(), ps)).To(Succeed())
 		}
 
 		timeout = time.Minute * 20
@@ -168,7 +168,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				for _, chr := range pr.Status.ChildReferences {
 					taskRun := &v1beta1.TaskRun{}
 					taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
-					err := f.AsKubeAdmin.CommonController.KubeRest().Get(context.TODO(), taskRunKey, taskRun)
+					err := f.AsKubeAdmin.CommonController.KubeRest().Get(context.Background(), taskRunKey, taskRun)
 					Expect(err).ShouldNot(HaveOccurred())
 
 					prTrStatus := &v1beta1.PipelineRunTaskRunStatus{
@@ -302,14 +302,14 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 			annotations := utils.MergeMaps(component.GetAnnotations(), constants.ComponentTriggerSimpleBuildAnnotation)
 			component.SetAnnotations(annotations)
-			Expect(f.AsKubeAdmin.CommonController.KubeRest().Update(context.TODO(), component, &client.UpdateOptions{})).To(Succeed())
+			Expect(f.AsKubeAdmin.CommonController.KubeRest().Update(context.Background(), component, &client.UpdateOptions{})).To(Succeed())
 
 			Eventually(func() error {
 				prun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 				return err
 			}, 1*time.Minute, constants.PipelineRunPollingInterval).Should(BeNil(), fmt.Sprintf("timed out when getting the pipelinerun for %s/%s component", testNamespace, componentName))
 
-			ctx := context.TODO()
+			ctx := context.Background()
 
 			watch, err := f.AsKubeAdmin.TektonController.GetPipelineRunWatch(ctx, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("watch pipelinerun failed in %s namespace", testNamespace))
@@ -343,7 +343,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 						listOptions := metav1.ListOptions{
 							LabelSelector: fmt.Sprintf("tekton.dev/pipelineRun=%s", pr.GetName()),
 						}
-						podList, err := podClient.List(context.TODO(), listOptions)
+						podList, err := podClient.List(context.Background(), listOptions)
 						Expect(err).ShouldNot(HaveOccurred(), "error listing pr pods")
 
 						pods := podList.Items

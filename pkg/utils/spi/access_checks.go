@@ -2,6 +2,7 @@ package spi
 
 import (
 	"context"
+	"time"
 
 	spi "github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,7 +19,9 @@ func (s *SPIController) CreateSPIAccessCheck(name, namespace, repoURL string) (*
 		},
 		Spec: spi.SPIAccessCheckSpec{RepoUrl: repoURL},
 	}
-	err := s.KubeRest().Create(context.Background(), &spiAccessCheck)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*1)
+	defer cancel()
+	err := s.KubeRest().Create(ctx, &spiAccessCheck)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +38,7 @@ func (s *SPIController) GetSPIAccessCheck(name, namespace string) (*spi.SPIAcces
 	spiAccessCheck := spi.SPIAccessCheck{
 		Spec: spi.SPIAccessCheckSpec{},
 	}
-	err := s.KubeRest().Get(context.TODO(), namespacedName, &spiAccessCheck)
+	err := s.KubeRest().Get(context.Background(), namespacedName, &spiAccessCheck)
 	if err != nil {
 		return nil, err
 	}
@@ -44,5 +47,5 @@ func (s *SPIController) GetSPIAccessCheck(name, namespace string) (*spi.SPIAcces
 
 // DeleteAllSPIAccessChecksInASpecificNamespace deletes all SPIAccessCheck from a given namespace
 func (s *SPIController) DeleteAllAccessChecksInASpecificNamespace(namespace string) error {
-	return s.KubeRest().DeleteAllOf(context.TODO(), &spi.SPIAccessCheck{}, client.InNamespace(namespace))
+	return s.KubeRest().DeleteAllOf(context.Background(), &spi.SPIAccessCheck{}, client.InNamespace(namespace))
 }

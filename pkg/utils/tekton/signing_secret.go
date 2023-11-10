@@ -11,7 +11,7 @@ import (
 // CreateOrUpdateSigningSecret creates a signing secret if it doesn't exist, otherwise updates the existing one.
 func (t *TektonController) CreateOrUpdateSigningSecret(publicKey []byte, name, namespace string) (err error) {
 	api := t.KubeInterface().CoreV1().Secrets(namespace)
-	ctx := context.TODO()
+	ctx := context.Background()
 
 	expectedSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: name},

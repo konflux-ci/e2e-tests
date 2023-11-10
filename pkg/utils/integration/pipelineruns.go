@@ -50,7 +50,7 @@ func (i *IntegrationController) CreateIntegrationPipelineRun(snapshotName, names
 			},
 		},
 	}
-	err := i.KubeRest().Create(context.TODO(), testpipelineRun)
+	err := i.KubeRest().Create(context.Background(), testpipelineRun)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (i *IntegrationController) GetBuildPipelineRun(componentName, applicationNa
 		}
 
 		list := &tektonv1beta1.PipelineRunList{}
-		err = i.KubeRest().List(context.TODO(), list, &client.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
+		err = i.KubeRest().List(context.Background(), list, &client.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
 
 		if err != nil && !k8sErrors.IsNotFound(err) {
 			GinkgoWriter.Printf("error listing pipelineruns in %s namespace: %v", namespace, err)
@@ -103,7 +103,7 @@ func (i *IntegrationController) GetIntegrationPipelineRun(integrationTestScenari
 	}
 
 	list := &tektonv1beta1.PipelineRunList{}
-	err := i.KubeRest().List(context.TODO(), list, opts...)
+	err := i.KubeRest().List(context.Background(), list, opts...)
 
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, fmt.Errorf("error listing pipelineruns in %s namespace", namespace)

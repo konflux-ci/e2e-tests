@@ -2,6 +2,7 @@ package spi
 
 import (
 	"context"
+	"time"
 
 	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
 	spi "github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
@@ -36,7 +37,9 @@ func (s *SPIController) CreateSPIAccessTokenBinding(name, namespace, repoURL, se
 			},
 		},
 	}
-	err := s.KubeRest().Create(context.Background(), &spiAccessTokenBinding)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*1)
+	defer cancel()
+	err := s.KubeRest().Create(ctx, &spiAccessTokenBinding)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +102,9 @@ func (s *SPIController) CreateSPIAccessTokenBindingWithSA(name, namespace, servi
 		}
 	}
 
-	err := s.KubeRest().Create(context.TODO(), &spiAccessTokenBinding)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*1)
+	defer cancel()
+	err := s.KubeRest().Create(ctx, &spiAccessTokenBinding)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +121,7 @@ func (s *SPIController) GetSPIAccessTokenBinding(name, namespace string) (*spi.S
 	spiAccessTokenBinding := spi.SPIAccessTokenBinding{
 		Spec: spi.SPIAccessTokenBindingSpec{},
 	}
-	err := s.KubeRest().Get(context.TODO(), namespacedName, &spiAccessTokenBinding)
+	err := s.KubeRest().Get(context.Background(), namespacedName, &spiAccessTokenBinding)
 	if err != nil {
 		return nil, err
 	}
@@ -125,5 +130,5 @@ func (s *SPIController) GetSPIAccessTokenBinding(name, namespace string) (*spi.S
 
 // Remove all SPIAccessTokenBinding from a given namespace. Useful when creating a lot of resources and wanting to remove all of them
 func (s *SPIController) DeleteAllBindingTokensInASpecificNamespace(namespace string) error {
-	return s.KubeRest().DeleteAllOf(context.TODO(), &spi.SPIAccessTokenBinding{}, client.InNamespace(namespace))
+	return s.KubeRest().DeleteAllOf(context.Background(), &spi.SPIAccessTokenBinding{}, client.InNamespace(namespace))
 }

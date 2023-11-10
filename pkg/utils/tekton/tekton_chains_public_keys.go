@@ -14,7 +14,7 @@ func (t *TektonController) GetTektonChainsPublicKey() ([]byte, error) {
 	secretName := "public-key"
 	dataKey := "cosign.pub"
 
-	secret, err := t.KubeInterface().CoreV1().Secrets(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
+	secret, err := t.KubeInterface().CoreV1().Secrets(namespace).Get(context.Background(), secretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("couldn't get the secret %s from %s namespace: %+v", secretName, namespace, err)
 	}

@@ -190,7 +190,7 @@ func GetFailedPipelineRunDetails(c crclient.Client, pipelineRun *v1beta1.Pipelin
 	for _, chr := range pipelineRun.Status.PipelineRunStatusFields.ChildReferences {
 		taskRun := &v1beta1.TaskRun{}
 		taskRunKey := types.NamespacedName{Namespace: pipelineRun.Namespace, Name: chr.Name}
-		if err := c.Get(context.TODO(), taskRunKey, taskRun); err != nil {
+		if err := c.Get(context.Background(), taskRunKey, taskRun); err != nil {
 			return nil, fmt.Errorf("failed to get details for PR %s: %+v", pipelineRun.GetName(), err)
 		}
 		for _, c := range taskRun.Status.Conditions {
@@ -310,7 +310,7 @@ func ExtractTektonObjectFromBundle(bundleRef, kind, name string) (runtime.Object
 	var err error
 
 	resolver := oci.NewResolver(bundleRef, authn.DefaultKeychain)
-	if obj, _, err = resolver.Get(context.TODO(), kind, name); err != nil {
+	if obj, _, err = resolver.Get(context.Background(), kind, name); err != nil {
 		return nil, fmt.Errorf("failed to fetch the tekton object %s with name %s: %v", kind, name, err)
 	}
 	return obj, nil
@@ -429,7 +429,7 @@ func GetContainerLogs(ki kubernetes.Interface, podName, containerName, namespace
 	}
 
 	req := ki.CoreV1().Pods(namespace).GetLogs(podName, &podLogOpts)
-	podLogs, err := req.Stream(context.TODO())
+	podLogs, err := req.Stream(context.Background())
 	if err != nil {
 		return "", fmt.Errorf("error in opening the stream: %v", err)
 	}

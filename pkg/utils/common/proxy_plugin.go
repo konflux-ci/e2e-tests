@@ -19,7 +19,7 @@ func (s *SuiteController) CreateProxyPlugin(proxyPluginName, proxyPluginNamespac
 	// Create the ProxyPlugin object
 	proxyPlugin := NewProxyPlugin(proxyPluginName, proxyPluginNamespace, routeName, routeNamespace)
 
-	if err := s.KubeRest().Create(context.TODO(), proxyPlugin); err != nil {
+	if err := s.KubeRest().Create(context.Background(), proxyPlugin); err != nil {
 		return nil, fmt.Errorf("unable to create proxy plugin due to %v", err)
 	}
 	return proxyPlugin, nil
@@ -34,11 +34,11 @@ func (s *SuiteController) DeleteProxyPlugin(proxyPluginName, proxyPluginNamespac
 		},
 	}
 
-	if err := s.KubeRest().Delete(context.TODO(), proxyPlugin); err != nil {
+	if err := s.KubeRest().Delete(context.Background(), proxyPlugin); err != nil {
 		return false, err
 	}
 	err := utils.WaitUntil(func() (done bool, err error) {
-		err = s.KubeRest().Get(context.TODO(), types.NamespacedName{
+		err = s.KubeRest().Get(context.Background(), types.NamespacedName{
 			Namespace: proxyPluginNamespace,
 			Name:      proxyPluginName,
 		}, proxyPlugin)

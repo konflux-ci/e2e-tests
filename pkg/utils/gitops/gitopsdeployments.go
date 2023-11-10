@@ -14,7 +14,7 @@ import (
 
 // Remove all gitopsdeployments from a given namespace. Useful when creating a lot of resources and want to remove all of them
 func (g *GitopsController) DeleteAllGitOpsDeploymentsInASpecificNamespace(namespace string, timeout time.Duration) error {
-	if err := g.KubeRest().DeleteAllOf(context.TODO(), &managedgitopsv1alpha1.GitOpsDeployment{}, client.InNamespace(namespace)); err != nil {
+	if err := g.KubeRest().DeleteAllOf(context.Background(), &managedgitopsv1alpha1.GitOpsDeployment{}, client.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error when deleting gitopsdeployments in %s namespace: %+v", namespace, err)
 	}
 
