@@ -429,7 +429,8 @@ func (ci CI) setRequiredEnvVars() error {
 				testSuiteLabel = "spi-suite"
 
 				// spi also requires service-provider-integration-oauth image
-				os.Setenv("SPI_OAUTH_IMAGE_REPO", os.Getenv("CI_SPI_OAUTH_IMAGE"))
+				im := strings.Split(os.Getenv("CI_SPI_OAUTH_IMAGE"), "@")
+				os.Setenv("SPI_OAUTH_IMAGE_REPO", im[0])
 				os.Setenv("SPI_OAUTH_IMAGE_TAG", fmt.Sprintf("redhat-appstudio-%s", "spi-oauth-image"))
 			}
 
