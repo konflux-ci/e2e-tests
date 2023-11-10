@@ -210,7 +210,7 @@ func (i *IntegrationController) GetAnnotationIfExists(testNamespace, application
 // WaitForBuildPipelineRunToGetAnnotated waits for given build pipeline to get annotated with a specific annotation.
 // In case of failure, this function retries till it gets timed out.
 func (i *IntegrationController) WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, annotationKey string) error {
-	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 10*time.Minute, true, func(ctx context.Context) (done bool, err error) {
+	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 5*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 		pipelineRun, err := i.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
 		if err != nil {
 			GinkgoWriter.Printf("pipelinerun for Component %s/%s can't be gotten successfully. Error: %v", testNamespace, componentName, err)

@@ -92,7 +92,7 @@ func (i *IntegrationController) CreateIntegrationTestScenarioWithEnvironment(app
 func (i *IntegrationController) CreateIntegrationTestScenario_beta1(applicationName, namespace, gitURL, revision, pathInRepo string) (*integrationv1beta1.IntegrationTestScenario, error) {
 	integrationTestScenario := &integrationv1beta1.IntegrationTestScenario{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "example-resolver-pass-" + util.GenerateRandomString(4),
+			Name:      "my-integration-test-" + util.GenerateRandomString(4),
 			Namespace: namespace,
 			Labels: map[string]string{
 				"test.appstudio.openshift.io/optional": "false",
