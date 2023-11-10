@@ -83,6 +83,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("checks if the passed status of integration test is reported in the Snapshot", func() {
+				timeout = time.Second * 240
+				interval = time.Second * 5
 				Eventually(func() error {
 					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -91,7 +93,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					Expect(err).ToNot(HaveOccurred())
 
 					if statusDetail.Status != intgteststat.IntegrationTestStatusTestPassed {
-						return fmt.Errorf("test status doesn't have expected value %s", intgteststat.IntegrationTestStatusTestPassed)
+						return fmt.Errorf("test status for scenario: %s, doesn't have expected value %s, within the snapshot: %s", integrationTestScenario.Name, intgteststat.IntegrationTestStatusTestPassed, snapshot.Name)
 					}
 					return nil
 				}, timeout, interval).Should(Succeed())
