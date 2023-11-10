@@ -34,10 +34,9 @@ const (
 	releasePipelineRunCompletionTimeout         = 20 * time.Minute
 	releasePlanOwnerReferencesTimeout           = 1 * time.Minute
 
-	defaultInterval = 100 * time.Millisecond
-	releaseDeploymentTimeout                    = 10 * time.Minute
-	releaseFinishedTimeout                      = 5 * time.Minute
-
+	defaultInterval          = 100 * time.Millisecond
+	releaseDeploymentTimeout = 10 * time.Minute
+	releaseFinishedTimeout   = 5 * time.Minute
 )
 
 var managednamespaceSecret = []corev1.ObjectReference{

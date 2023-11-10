@@ -18,7 +18,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 
 	appclientset "github.com/argoproj/argo-cd/v2/pkg/client/clientset/versioned"
-	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	corev1 "k8s.io/api/core/v1"

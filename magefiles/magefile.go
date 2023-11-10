@@ -25,7 +25,7 @@ import (
 	"github.com/magefile/mage/sh"
 	"github.com/redhat-appstudio/e2e-tests/magefiles/installation"
 	"github.com/redhat-appstudio/e2e-tests/magefiles/testspecs"
-	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/github"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/slack"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/sprayproxy"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"

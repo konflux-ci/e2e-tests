@@ -10,23 +10,9 @@ import (
 	"net/http"
 
 	routev1 "github.com/openshift/api/route/v1"
-	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
 	"k8s.io/apimachinery/pkg/types"
 )
-
-const (
-	sprayProxyNamespace = "sprayproxy"
-	sprayProxyName      = "sprayproxy-route"
-	pacNamespace        = "openshift-pipelines"
-	pacRouteName        = "pipelines-as-code-controller"
-)
-
-type SprayProxyConfig struct {
-	BaseURL    string
-	PaCHost    string
-	Token      string
-	HTTPClient *http.Client
-}
 
 func NewSprayProxyConfig(url string, token string) (*SprayProxyConfig, error) {
 	pacHost, err := getPaCHost()

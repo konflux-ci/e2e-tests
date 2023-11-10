@@ -7,20 +7,20 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 
 	"github.com/avast/retry-go/v4"
-	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/common"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/gitops"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/imagecontroller"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/integration"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/jvmbuildservice"
+	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/release"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/remotesecret"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/spi"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/tekton"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/sandbox"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/gitops"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/has"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/imagecontroller"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/integration"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/jvmbuildservice"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/release"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/remotesecret"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/spi"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
 type ControllerHub struct {
@@ -107,7 +107,7 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 	}
 
 	if !isStage {
-		if err = utils.WaitUntil(asAdmin.CommonController.ServiceaccountPresent(constants.DefaultPipelineServiceAccount, k.UserNamespace), timeout); err != nil {
+		if err = utils.WaitUntil(asAdmin.CommonController.ServiceAccountPresent(constants.DefaultPipelineServiceAccount, k.UserNamespace), timeout); err != nil {
 			return nil, fmt.Errorf("'%s' service account wasn't created in %s namespace: %+v", constants.DefaultPipelineServiceAccount, k.UserNamespace, err)
 		}
 	}

@@ -1,24 +1,18 @@
 package tekton
 
 import (
-	"context"
 	"fmt"
 	"strings"
-	"time"
-
-	"k8s.io/apimachinery/pkg/util/wait"
-
-	g "github.com/onsi/ginkgo/v2"
 )
 
 type CosignResult struct {
-	signatureImageRef   string
-	attestationImageRef string
+	SignatureImageRef   string
+	AttestationImageRef string
 }
 
-// findCosignResultsForImage looks for .sig and .att image tags in the OpenShift image stream for the provided image reference.
+// FindCosignResultsForImage looks for .sig and .att image tags in the OpenShift image stream for the provided image reference.
 // If none can be found errors.IsNotFound(err) is true, when err is nil CosignResult contains image references for signature and attestation images, otherwise other errors could be returned.
-func findCosignResultsForImage(imageRef string) (*CosignResult, error) {
+func FindCosignResultsForImage(imageRef string) (*CosignResult, error) {
 	var errMsg string
 	// Split the image ref into image repo+tag (e.g quay.io/repo/name:tag), and image digest (sha256:abcd...)
 	imageInfo := strings.Split(imageRef, "@")
@@ -36,14 +30,14 @@ func findCosignResultsForImage(imageRef string) (*CosignResult, error) {
 	if err != nil {
 		errMsg += fmt.Sprintf("error when getting signature tag: %+v\n", err)
 	} else {
-		results.signatureImageRef = signatureTag.ImageRef
+		results.SignatureImageRef = signatureTag.ImageRef
 	}
 
 	attestationTag, err := getImageInfoFromQuay(imageRepoName, imageTagPrefix+".att")
 	if err != nil {
 		errMsg += fmt.Sprintf("error when getting attestation tag: %+v\n", err)
 	} else {
-		results.attestationImageRef = attestationTag.ImageRef
+		results.AttestationImageRef = attestationTag.ImageRef
 	}
 
 	if len(errMsg) > 0 {
@@ -53,31 +47,19 @@ func findCosignResultsForImage(imageRef string) (*CosignResult, error) {
 	return &results, nil
 }
 
-// AwaitAttestationAndSignature awaits attestation and signature.
-func (t *TektonController) AwaitAttestationAndSignature(image string, timeout time.Duration) error {
-	return wait.PollUntilContextTimeout(context.Background(), time.Second, timeout, true, func(ctx context.Context) (done bool, err error) {
-		if _, err := findCosignResultsForImage(image); err != nil {
-			g.GinkgoWriter.Printf("failed to get cosign result for image %s: %+v\n", image, err)
-			return false, nil
-		}
-
-		return true, nil
-	})
-}
-
 // IsPresent checks if CosignResult is present.
 func (c CosignResult) IsPresent() bool {
-	return c.signatureImageRef != "" && c.attestationImageRef != ""
+	return c.SignatureImageRef != "" && c.AttestationImageRef != ""
 }
 
 // Missing checks if CosignResult is missing.
 func (c CosignResult) Missing(prefix string) string {
 	var ret []string = make([]string, 0, 2)
-	if c.signatureImageRef == "" {
+	if c.SignatureImageRef == "" {
 		ret = append(ret, prefix+".sig")
 	}
 
-	if c.attestationImageRef == "" {
+	if c.AttestationImageRef == "" {
 		ret = append(ret, prefix+".att")
 	}
 
