@@ -1,10 +1,2 @@
-approvers:
-- dirgim
-- jsztuka
-- hongweiliu17
-- jinqi7
-- Josh-Everett
-- sonam1412
-- MartinBasti
-- dheerajodha
-- 14rcole
+reviewers:
+- integration-team
