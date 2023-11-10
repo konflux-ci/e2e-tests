@@ -99,6 +99,7 @@ In that case, before you run the test, make sure you have created
   * https://github.com/redhat-appstudio-qe/devfile-sample-hello-world (for running build-service tests)
   * https://github.com/redhat-appstudio-qe/hacbs-test-project (for rhtap-demo test)
   * https://github.com/redhat-appstudio-qe/strategy-configs (for rhtap-demo test)
+  * https://github.com/redhat-appstudio-qe/hacbs-test-project-integration (for status-reporting-to-pullrequest test)
 
 Note: All Environments used in all e2e-tests are in [default.env](../default.env) file. In case you need to run a specific tests, not all environments are necessary to be defined.
 

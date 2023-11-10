@@ -61,7 +61,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
 			componentBaseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(4))
 
-			err = f.AsKubeAdmin.CommonController.Github.CreateRef(helloWorldComponentGitSourceRepoName, helloWorldComponentDefaultBranch, helloWorldComponentRevision, componentBaseBranchName)
+			err = f.AsKubeAdmin.CommonController.Github.CreateRef(componentRepoNameForStatusReporting, componentDefaultBranch, componentRevision, componentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
@@ -71,11 +71,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			}
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
-			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, pacBranchName)
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepoNameForStatusReporting, pacBranchName)
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring(referenceDoesntExist))
 			}
-			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, componentBaseBranchName)
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepoNameForStatusReporting, componentBaseBranchName)
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring(referenceDoesntExist))
 			}
@@ -89,7 +89,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 					Source: appstudioApi.ComponentSource{
 						ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
 							GitSource: &appstudioApi.GitSource{
-								URL:      helloWorldComponentGitSourceURL,
+								URL:      componentGitSourceURLForStatusReporting,
 								Revision: componentBaseBranchName,
 							},
 						},
@@ -119,7 +119,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 				interval = time.Second * 1
 
 				Eventually(func() bool {
-					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(helloWorldComponentGitSourceRepoName)
+					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepoNameForStatusReporting)
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, pr := range prs {
@@ -130,7 +130,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 						}
 					}
 					return false
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldComponentGitSourceRepoName))
+				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
 			})
 			It("the build PipelineRun should eventually finish successfully", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
@@ -139,7 +139,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 				Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
 			})
 			It("eventually leads to the build PipelineRun's status reported at Checks tab", func() {
-				validateCheckRun(*f, componentName, checkrunConclusionSuccess, helloWorldComponentGitSourceRepoName, prHeadSha, prNumber)
+				validateCheckRun(*f, componentName, checkrunConclusionSuccess, componentRepoNameForStatusReporting, prHeadSha, prNumber)
 			})
 		})
 
@@ -188,10 +188,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 				}, time.Minute*3, time.Second*5).Should(BeTrue(), fmt.Sprintf("Timed out waiting for Snapshot to be marked as failed %s/%s", snapshot.GetNamespace(), snapshot.GetName()))
 			})
 			It("eventually leads to the status reported at Checks tab for the successful Integration PipelineRun", func() {
-				validateCheckRun(*f, integrationTestScenarioPass.Name, checkrunConclusionSuccess, helloWorldComponentGitSourceRepoName, prHeadSha, prNumber)
+				validateCheckRun(*f, integrationTestScenarioPass.Name, checkrunConclusionSuccess, componentRepoNameForStatusReporting, prHeadSha, prNumber)
 			})
 			It("eventually leads to the status reported at Checks tab for the failed Integration PipelineRun", func() {
-				validateCheckRun(*f, integrationTestScenarioFail.Name, checkrunConclusionFailure, helloWorldComponentGitSourceRepoName, prHeadSha, prNumber)
+				validateCheckRun(*f, integrationTestScenarioFail.Name, checkrunConclusionFailure, componentRepoNameForStatusReporting, prHeadSha, prNumber)
 			})
 		})
 	})

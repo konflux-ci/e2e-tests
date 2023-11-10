@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	componentRepoURL = "https://github.com/redhat-appstudio-qe/" + helloWorldComponentGitSourceRepoName
+	componentRepoURL = "https://github.com/redhat-appstudio-qe/hacbs-test-project"
 	EnvNameForNBE    = "user-picked-environment"
 	revisionForNBE   = "main"
 	pathInRepoForNBE = "pipelines/integration_test_app.yaml"
@@ -24,9 +24,9 @@ const (
 	autoReleasePlan        = "auto-releaseplan"
 	targetReleaseNamespace = "default"
 
-	helloWorldComponentGitSourceRepoName = "hacbs-test-project"
-	helloWorldComponentDefaultBranch     = "main"
-	helloWorldComponentRevision          = "34da5a8f51fba6a8b7ec75a727d3c72ebb5e1274"
+	componentRepoNameForStatusReporting  = "hacbs-test-project-integration"
+	componentDefaultBranch               = "main"
+	componentRevision                    = "34da5a8f51fba6a8b7ec75a727d3c72ebb5e1274"
 	pathInRepoForReportingPass           = "pipelines/integration_resolver_pipeline_pass.yaml"
 	pathInRepoForReportingFail           = "pipelines/integration_resolver_pipeline_fail.yaml"
 	referenceDoesntExist                 = "Reference does not exist"
@@ -39,5 +39,5 @@ const (
 )
 
 var (
-	helloWorldComponentGitSourceURL = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), helloWorldComponentGitSourceRepoName)
+	componentGitSourceURLForStatusReporting = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), componentRepoNameForStatusReporting)
 )
