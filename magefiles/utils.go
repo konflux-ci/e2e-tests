@@ -295,6 +295,50 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 	return fmt.Errorf("encountered errors during CleanupQuayTags: %s", errBuilder.String())
 }
 
+func repoNameStartsWithPrefix(prefixes []string, repoName string) bool {
+	for _, prefix := range prefixes {
+		hasPrefix := strings.HasPrefix(repoName, prefix)
+		if hasPrefix {
+			return true
+		}
+	}
+	return false
+}
+
+// Deletes the private repos older than 7 days
+func cleanupPrivateRepos(quayService quay.QuayService, quayOrg string, repoNamePrefixes []string) error {
+	repos, err := quayService.GetAllRepositories(quayOrg)
+	if err != nil {
+		return err
+	}
+	foundError := false
+	var errors []error
+	for _, repo := range repos {
+		if !repo.IsPublic && repoNameStartsWithPrefix(repoNamePrefixes, repo.Name) {
+			lastModifiedTime := int64(repo.LastModified)
+			currentTime := time.Now().Unix()
+			timeDiff := int64(7 * 24 * 3600)
+			if currentTime-lastModifiedTime > timeDiff {
+				_, err := quayService.DeleteRepository(quayOrg, repo.Name)
+				if err != nil {
+					foundError = true
+					errors = append(errors, fmt.Errorf("failed to delete repository %s with error: %v", repo.Name, err))
+					continue
+				}
+				fmt.Printf("Deleted repo %s successfully\n", repo.Name)
+			}
+		}
+	}
+	if foundError {
+		var errBuilder strings.Builder
+		for _, err := range errors {
+			errBuilder.WriteString(fmt.Sprintf("%s\n", err))
+		}
+		return fmt.Errorf("encountered errors during cleanup of private repos: %s", errBuilder.String())
+	}
+	return nil
+}
+
 func MergePRInRemote(branch string, forkOrganization string, repoPath string) error {
 	if branch == "" {
 		klog.Fatal("The branch for upgrade is empty!")

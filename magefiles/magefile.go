@@ -208,6 +208,19 @@ func (Local) CleanupQuayTags() error {
 	return cleanupQuayTags(quayClient, quayOrg, "test-images")
 }
 
+// Deletes the private repos with prefix "build-e2e" or "rhtap-demo"
+func (Local) CleanupPrivateRepos() error {
+	repoNamePrefixes := []string{"build-e2e", "rhtap-demo"}
+	quayOrgToken := os.Getenv("DEFAULT_QUAY_ORG_TOKEN")
+	if quayOrgToken == "" {
+		return fmt.Errorf("DEFAULT_QUAY_ORG_TOKEN env var was not found")
+	}
+	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
+
+	quayClient := quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayOrgToken, "https://quay.io/api/v1")
+	return cleanupPrivateRepos(quayClient, quayOrg, repoNamePrefixes)
+}
+
 func (ci CI) TestE2E() error {
 	var testFailure bool
 
