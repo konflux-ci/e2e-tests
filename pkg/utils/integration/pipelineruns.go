@@ -35,10 +35,10 @@ func (i *IntegrationController) CreateIntegrationPipelineRun(snapshotName, names
 			},
 		},
 		Spec: tektonv1beta1.PipelineRunSpec{
-			PipelineRef: &tektonv1beta1.PipelineRef{
-				Name:   "integration-pipeline-pass",
-				Bundle: "quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-pass", //nolint:all
-			},
+			PipelineRef: utils.NewBundleResolverPipelineRef(
+				"integration-pipeline-pass",
+				"quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-pass",
+			),
 			Params: []tektonv1beta1.Param{
 				{
 					Name: "output-image",

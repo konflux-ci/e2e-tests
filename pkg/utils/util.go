@@ -389,6 +389,19 @@ func GetBundleRef(pipelineRef *v1beta1.PipelineRef) string {
 	return bundleRef
 }
 
+func NewBundleResolverPipelineRef(name string, bundleRef string) *v1beta1.PipelineRef {
+	return &v1beta1.PipelineRef{
+		ResolverRef: v1beta1.ResolverRef{
+			Resolver: "bundles",
+			Params: []v1beta1.Param{
+				{Name: "name", Value: v1beta1.ParamValue{StringVal: name, Type: v1beta1.ParamTypeString}},
+				{Name: "bundle", Value: v1beta1.ParamValue{StringVal: bundleRef, Type: v1beta1.ParamTypeString}},
+				{Name: "kind", Value: v1beta1.ParamValue{StringVal: "pipeline", Type: v1beta1.ParamTypeString}},
+			},
+		},
+	}
+}
+
 // ParseDevfileModel calls the devfile library's parse and returns the devfile data
 func ParseDevfileModel(devfileModel string) (data.DevfileData, error) {
 	// Retrieve the devfile from the body of the resource
