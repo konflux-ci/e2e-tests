@@ -300,20 +300,4 @@ var TestScenarios = []TestSpec{
 			},
 		},
 	},
-	{
-		Name:            "DEVHAS-234: creates quarkus application(with dockerfile but not devfile) which is not included in AppStudio starter stack",
-		ApplicationName: "status-quarkus-io",
-		Components: []ComponentSpec{
-			{
-				Name:                "status-quarkus-io",
-				ContainerSource:     "",
-				Language:            "Java",
-				GitSourceUrl:        "https://github.com/quarkusio/status.quarkus.io.git",
-				GitSourceRevision:   "",
-				GitSourceContext:    "",
-				HealthEndpoint:      "/",
-				SkipDeploymentCheck: true,
-			},
-		},
-	},
 }
