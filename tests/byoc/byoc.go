@@ -63,7 +63,7 @@ var byocTestScenario = []Scenario{
 	},
 }
 
-var _ = framework.E2ESuiteDescribe(Label("byoc"), Ordered, func() {
+var _ = framework.ByocSuiteDescribe(Label("byoc"), Ordered, func() {
 	rootPath, err := os.Getwd()
 	Expect(err).NotTo(HaveOccurred())
 
