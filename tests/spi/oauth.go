@@ -3,6 +3,7 @@ package spi
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"time"
 
@@ -31,6 +32,8 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 	var CYPRESS_GH_USER string
 	var CYPRESS_GH_PASSWORD string
 	var CYPRESS_GH_2FA_CODE string
+	var CYPRESS_SPI_LOGIN_URL string
+	var CYPRESS_K8S_TOKEN string
 	var cypressPodName string = "cypress-script"
 	AfterEach(framework.ReportFailure(&fw))
 
@@ -117,7 +120,18 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(k8s_token).NotTo(BeEmpty())
 
-			CYPRESS_SPI_OAUTH_URL = CYPRESS_SPI_OAUTH_URL + "&k8s_token=" + k8s_token
+			// Build the urls to login to spi
+			// An HTML form is server by the redirect-proxy to submit the k8s_token via spi POST /login endpoint
+			spi_oauth_url, err := url.Parse(CYPRESS_SPI_OAUTH_URL)
+			Expect(err).NotTo(HaveOccurred())
+			oauth_redirect_proxy_url, err := url.Parse(OAUTH_REDIRECT_PROXY_URL)
+			Expect(err).NotTo(HaveOccurred())
+
+			login_redirect_proxy_url := oauth_redirect_proxy_url.Scheme + "://" + oauth_redirect_proxy_url.Host + "/login"
+			spi_login_url := spi_oauth_url.Scheme + "://" + spi_oauth_url.Host + "/login"
+
+			CYPRESS_SPI_LOGIN_URL = login_redirect_proxy_url + "?url=" + spi_login_url
+			CYPRESS_K8S_TOKEN = k8s_token
 		})
 
 		It("run browser oauth login flow in cypress pod", func() {
@@ -155,6 +169,14 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 								{
 									Name:  "CYPRESS_SPI_OAUTH_URL",
 									Value: CYPRESS_SPI_OAUTH_URL,
+								},
+								{
+									Name:  "CYPRESS_SPI_LOGIN_URL",
+									Value: CYPRESS_SPI_LOGIN_URL,
+								},
+								{
+									Name:  "CYPRESS_K8S_TOKEN",
+									Value: CYPRESS_K8S_TOKEN,
 								},
 							},
 							ImagePullPolicy: corev1.PullIfNotPresent,

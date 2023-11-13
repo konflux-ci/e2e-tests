@@ -54,7 +54,7 @@ $ go mod vendor
 <p>
 
    Some tests could require you have a Github App created in order to test Component builds via Pipelines as Code.
-Such tests are [rhtap-demo](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/rhtap-demo/rhtap-demo.go) and [build](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/build/build.go).
+Such tests are [rhtap-demo](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/rhtap-demo/rhtap-demo.go), [build](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/build/build.go), and [status-reporting-to-pullrequest](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/integration-service/status-reporting-to-pullrequest.go).
 
 In this case, before you bootstrap a cluster, make sure you [created a Github App for your GitHub account](https://github.com/settings/apps). Fill in following details:
 </p>
@@ -99,6 +99,7 @@ In that case, before you run the test, make sure you have created
   * https://github.com/redhat-appstudio-qe/devfile-sample-hello-world (for running build-service tests)
   * https://github.com/redhat-appstudio-qe/hacbs-test-project (for rhtap-demo test)
   * https://github.com/redhat-appstudio-qe/strategy-configs (for rhtap-demo test)
+  * https://github.com/redhat-appstudio-qe/hacbs-test-project-integration (for status-reporting-to-pullrequest test)
 
 Note: All Environments used in all e2e-tests are in [default.env](../default.env) file. In case you need to run a specific tests, not all environments are necessary to be defined.
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"time"
+	"encoding/json"
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
@@ -12,22 +13,31 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"k8s.io/apimachinery/pkg/runtime"
+	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
+	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 )
 
 var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2e-test.", Label("release-pipelines", "fbcHappyPath"), func() {
 	defer GinkgoRecover()
 
 	const (
-		fbcApplicationName          = "fbc-pipelines-aplication"
-		fbcComponentName            = "fbc-pipelines-component"
-		fbcReleasePlanName          = "fbc-pipelines-releaseplan"
-		fbcReleasePlanAdmissionName = "fbc-pipelines-releaseplanadmission"
-		//fbcReleaseStrategyName          = "fbc-pipelines-strategy"
-		fbcEnterpriseContractPolicyName = "fbc-pipelines-policy"
-		//fbcServiceAccountName           = "release-service-account"
-		fbcSourceGitUrl = "https://github.com/redhat-appstudio-qe/fbc-sample-repo"
+		fbcApplicationName		= "fbc-pipelines-aplication"
+		fbcComponentName		= "fbc-pipelines-component"
+		fbcReleasePlanName		= "fbc-pipelines-releaseplan"
+		fbcReleasePlanAdmissionName	= "fbc-pipelines-releaseplanadmission"
+		fbcEnterpriseContractPolicyName	= "fbc-pipelines-policy"
+		fbcServiceAccountName		= "release-service-account"
+		fbcSourceGitUrl			= "https://github.com/redhat-appstudio-qe/fbc-sample-repo"
+		targetPort			= 50051
+		relSvcCatalogURL		= "https://github.com/redhat-appstudio/release-service-catalog"
+		relSvcCatalogRevision		= "main"
+		relSvcCatalogPathInRepo		= "pipelines/fbc-release/fbc-release.yaml"
+		ecPolicyLibPath			= "github.com/enterprise-contract/ec-policies//policy/lib"
+		ecPolicyReleasePath		= "github.com/enterprise-contract/ec-policies//policy/release"
+		ecPolicyDataPath		= "github.com/enterprise-contract/ec-policies//example/data"
+
 	)
 
 	var devWorkspace = os.Getenv(constants.RELEASE_DEV_WORKSPACE_ENV)
@@ -82,44 +92,50 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 					},
 				},
 			},
-			TargetPort: 50051,
+			TargetPort: targetPort,
 		}
 		component, err = dev_fw.AsKubeDeveloper.HasController.CreateComponent(componentObj, dev_fw.UserNamespace, "", "", fbcApplicationName, false, map[string]string{})
 		GinkgoWriter.Println("component : ", component.Name)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		// NOTE: This code has been commented until the tests in release/pipelines are fixed to adhere to the new API
-		// and to use git resolvers.
-		//
-		//_, err = managed_fw.AsKubeDeveloper.ReleaseController.CreateReleaseStrategy(fbcReleaseStrategyName, managedNamespace, "fbc-release", "quay.io/hacbs-release/pipeline-fbc-release:main", fbcEnterpriseContractPolicyName, fbcServiceAccountName, []releaseApi.Params{
-		//	{Name: "fromIndex", Value: constants.FromIndex},
-		//	{Name: "targetIndex", Value: constants.TargetIndex},
-		//	{Name: "binaryImage", Value: constants.BinaryImage},
-		//	{Name: "requestUpdateTimeout", Value: "420"},
-		//	{Name: "buildTimeoutSeconds", Value: "480"},
-		//})
-		//Expect(err).NotTo(HaveOccurred())
-
 		_, err = dev_fw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcReleasePlanName, devNamespace, fbcApplicationName, managedNamespace, "true")
 		Expect(err).NotTo(HaveOccurred())
 
-		// NOTE: This code has been commented until the tests in release/pipelines are fixed to adhere to the new API
-		// and to use git resolvers.
-		//
-		//_, err = managed_fw.AsKubeDeveloper.ReleaseController.CreateReleasePlanAdmission(fbcReleasePlanAdmissionName, devNamespace, fbcApplicationName, managedNamespace, "", "", fbcReleaseStrategyName)
-		//Expect(err).NotTo(HaveOccurred())
+		data, err := json.Marshal(map[string]interface{}{
+                        "fbc": map[string]interface{}{
+                                "fromIndex": constants.FromIndex,
+                                "targetIndex": constants.TargetIndex,
+				"binaryImage": constants.BinaryImage,
+				"requestUpdateTimeout": "420",
+				"buildTimeoutSeconds": "480",
+                        },
+                })
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = managed_fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(fbcReleasePlanAdmissionName, managedNamespace, "", devNamespace, fbcEnterpriseContractPolicyName, fbcServiceAccountName, []string{fbcApplicationName}, true, &tektonutils.PipelineRef{
+			Resolver: "git",
+			Params: []tektonutils.Param{
+				{Name: "url", Value: relSvcCatalogURL},
+				{Name: "revision", Value: relSvcCatalogRevision},
+				{Name: "pathInRepo", Value: relSvcCatalogPathInRepo},
+			},
+		}, &runtime.RawExtension{
+			Raw: data,
+		})
+
+		Expect(err).NotTo(HaveOccurred())
 
 		defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
 			Description: "Red Hat's enterprise requirements",
 			PublicKey:   "k8s://openshift-pipelines/public-key",
 			Sources: []ecp.Source{{
 				Name:   "Default",
-				Policy: []string{"github.com/enterprise-contract/ec-policies//policy/lib", "github.com/enterprise-contract/ec-policies//policy/release"},
-				Data:   []string{"github.com/enterprise-contract/ec-policies//data"},
+				Policy: []string{ecPolicyLibPath, ecPolicyReleasePath},
+				Data:   []string{ecPolicyDataPath},
 			}},
 			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
 				Collections: []string{"minimal"},
-				Exclude:     []string{"cve", "step_image_registries"},
+				Exclude:     []string{"cve", "step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
 				Include:     []string{"@slsa3"},
 			},
 		}

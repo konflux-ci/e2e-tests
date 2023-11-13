@@ -21,15 +21,6 @@ import (
 	managedgitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend-shared/apis/managed-gitops/v1alpha1"
 )
 
-const (
-	componentRepoName = "hacbs-test-project"
-	componentRepoURL  = "https://github.com/redhat-appstudio-qe/" + componentRepoName
-	EnvNameForNBE     = "user-picked-environment"
-	gitURLForNBE      = "https://github.com/redhat-appstudio/integration-examples.git"
-	revisionForNBE    = "main"
-	pathInRepoForNBE  = "pipelines/integration_test_app.yaml"
-)
-
 var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment (NBE) E2E tests", Label("integration-service", "HACBS", "namespace-backed-envs"), func() {
 	defer GinkgoRecover()
 
@@ -72,7 +63,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 			userPickedEnvironment, err = f.AsKubeAdmin.GitOpsController.CreatePocEnvironment(EnvNameForNBE, testNamespace)
 			Expect(err).ToNot(HaveOccurred())
 
-			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenarioWithEnvironment(applicationName, testNamespace, gitURLForNBE, revisionForNBE, pathInRepoForNBE, userPickedEnvironment)
+			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenarioWithEnvironment(applicationName, testNamespace, gitURL, revisionForNBE, pathInRepoForNBE, userPickedEnvironment)
 			Expect(err).ShouldNot(HaveOccurred())
 			phaseDTC = appstudioApi.DeploymentTargetClaimPhase_Bound
 			phaseDT = appstudioApi.DeploymentTargetPhase_Bound
@@ -127,13 +118,13 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 				dtcl, err = f.AsKubeDeveloper.GitOpsController.GetDeploymentTargetClaimsList(testNamespace)
 				Expect(err).ToNot(HaveOccurred())
 				if len(dtcl.Items) == 0 {
-					return fmt.Errorf("No DeploymentTargetClaim is found.")
+					return fmt.Errorf("no DeploymentTargetClaim is found")
 				}
 				if !reflect.ValueOf(dtcl.Items[0].Status).IsZero() && dtcl.Items[0].Status.Phase != phaseDTC {
 					return fmt.Errorf("DeploymentTargetClaimPhase is not yet equal to the expected phase: " + string(phaseDTC))
 				}
 				if dtcl.Items[0].Spec.DeploymentTargetClassName == "" {
-					return fmt.Errorf("deploymentTargetClassName field within deploymentTargetClaim is empty.")
+					return fmt.Errorf("deploymentTargetClassName field within deploymentTargetClaim is empty")
 				}
 				return err
 			}, time.Minute*1, time.Second*1).Should(Succeed(), fmt.Sprintf("timed out checking DeploymentTargetClaim after Ephemeral Environment %s was created ", ephemeralEnvironment.Name))
@@ -281,7 +272,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 
 			env, err = f.AsKubeAdmin.GitOpsController.CreatePocEnvironment(EnvNameForNBE, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
-			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenarioWithEnvironment(applicationName, testNamespace, gitURLForNBE, revisionForNBE, pathInRepoForNBE, env)
+			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenarioWithEnvironment(applicationName, testNamespace, gitURL, revisionForNBE, pathInRepoForNBE, env)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
