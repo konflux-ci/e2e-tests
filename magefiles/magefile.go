@@ -34,6 +34,10 @@ import (
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
+const (
+	quayApiUrl = "https://quay.io/api/v1"
+)
+
 var (
 	requiredBinaries = []string{"jq", "kubectl", "oc", "yq", "git", "helm"}
 	artifactDir      = utils.GetEnv("ARTIFACT_DIR", ".")
@@ -48,6 +52,7 @@ var (
 	// in order to run tests that require PaC application
 	requiresSprayProxyRegistering bool
 	sprayProxyConfig              *sprayproxy.SprayProxyConfig
+	quayTokenNotFoundError        = "DEFAULT_QUAY_ORG_TOKEN env var was not found"
 )
 
 func (CI) parseJobSpec() error {
@@ -188,11 +193,11 @@ func (Local) CleanupGithubOrg() error {
 func (Local) CleanupQuayReposAndRobots() error {
 	quayOrgToken := os.Getenv("DEFAULT_QUAY_ORG_TOKEN")
 	if quayOrgToken == "" {
-		return fmt.Errorf("DEFAULT_QUAY_ORG_TOKEN env var was not found")
+		return fmt.Errorf(quayTokenNotFoundError)
 	}
 	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
 
-	quayClient := quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayOrgToken, "https://quay.io/api/v1")
+	quayClient := quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayOrgToken, quayApiUrl)
 	return cleanupQuayReposAndRobots(quayClient, quayOrg)
 }
 
@@ -200,12 +205,25 @@ func (Local) CleanupQuayReposAndRobots() error {
 func (Local) CleanupQuayTags() error {
 	quayOrgToken := os.Getenv("DEFAULT_QUAY_ORG_TOKEN")
 	if quayOrgToken == "" {
-		return fmt.Errorf("DEFAULT_QUAY_ORG_TOKEN env var was not found")
+		return fmt.Errorf(quayTokenNotFoundError)
 	}
 	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
 
-	quayClient := quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayOrgToken, "https://quay.io/api/v1")
+	quayClient := quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayOrgToken, quayApiUrl)
 	return cleanupQuayTags(quayClient, quayOrg, "test-images")
+}
+
+// Deletes the private repos with prefix "build-e2e" or "rhtap-demo"
+func (Local) CleanupPrivateRepos() error {
+	repoNamePrefixes := []string{"build-e2e", "rhtap-demo"}
+	quayOrgToken := os.Getenv("DEFAULT_QUAY_ORG_TOKEN")
+	if quayOrgToken == "" {
+		return fmt.Errorf(quayTokenNotFoundError)
+	}
+	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
+
+	quayClient := quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayOrgToken, quayApiUrl)
+	return cleanupPrivateRepos(quayClient, quayOrg, repoNamePrefixes)
 }
 
 func (ci CI) TestE2E() error {
