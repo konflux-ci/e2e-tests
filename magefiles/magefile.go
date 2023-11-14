@@ -340,6 +340,7 @@ func (ci CI) setRequiredEnvVars() error {
 				imageTagSuffix = "release-service-image"
 				testSuiteLabel = "release"
 			case strings.Contains(jobName, "integration-service"):
+				requiresSprayProxyRegistering = true
 				envVarPrefix = "INTEGRATION_SERVICE"
 				imageTagSuffix = "integration-service-image"
 				testSuiteLabel = "integration-service"
