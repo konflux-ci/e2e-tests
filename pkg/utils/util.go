@@ -348,13 +348,45 @@ func GetDefaultPipelineBundleRef(buildPipelineSelectorYamlURL, selectorName stri
 	if err = yaml.Unmarshal(body, ps); err != nil {
 		return "", fmt.Errorf("failed to unmarshal build pipeline selector: %v", err)
 	}
-	for _, s := range ps.Spec.Selectors {
+	for i := range ps.Spec.Selectors {
+		s := &ps.Spec.Selectors[i]
 		if s.Name == selectorName {
-			return s.PipelineRef.Bundle, nil //nolint:all
+			return GetBundleRef(&s.PipelineRef), nil
 		}
 	}
 
 	return "", fmt.Errorf("could not find %s pipeline bundle in build pipeline selector fetched from %s", selectorName, buildPipelineSelectorYamlURL)
+}
+
+// GetPipelineNameAndBundleRef returns the pipeline name and bundle reference from a pipelineRef
+// https://tekton.dev/docs/pipelines/pipelineruns/#tekton-bundles
+func GetPipelineNameAndBundleRef(pipelineRef *v1beta1.PipelineRef) (string, string) {
+	var name string
+	var bundleRef string
+
+	// Prefer the v1 style
+	if pipelineRef.Resolver != "" {
+		for _, param := range pipelineRef.Params {
+			switch param.Name {
+			case "name":
+				name = param.Value.StringVal
+			case "bundle":
+				bundleRef = param.Value.StringVal
+			}
+		}
+	} else {
+		// Support the v1beta1 style
+		name = pipelineRef.Name
+		bundleRef = pipelineRef.Bundle //nolint:all
+	}
+
+	return name, bundleRef
+}
+
+// GetBundleRef returns the bundle reference from a pipelineRef
+func GetBundleRef(pipelineRef *v1beta1.PipelineRef) string {
+	_, bundleRef := GetPipelineNameAndBundleRef(pipelineRef)
+	return bundleRef
 }
 
 // ParseDevfileModel calls the devfile library's parse and returns the devfile data
