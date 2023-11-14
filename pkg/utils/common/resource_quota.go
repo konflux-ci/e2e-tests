@@ -10,7 +10,7 @@ import (
 
 // GetResourceQuota returns the ResourceQuota object from a given namespace and ResourceQuota name
 func (s *SuiteController) GetResourceQuota(namespace, ResourceQuotaName string) (*corev1.ResourceQuota, error) {
-	return s.KubeInterface().CoreV1().ResourceQuotas(namespace).Get(context.TODO(), ResourceQuotaName, metav1.GetOptions{})
+	return s.KubeInterface().CoreV1().ResourceQuotas(namespace).Get(context.Background(), ResourceQuotaName, metav1.GetOptions{})
 }
 
 // GetResourceQuotaInfo returns the available resources and its usage in a given test, namespace, and ResourceQuota name

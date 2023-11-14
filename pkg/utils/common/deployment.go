@@ -17,7 +17,7 @@ func (h *SuiteController) GetDeployment(deploymentName string, namespace string)
 	}
 
 	deployment := &appsv1.Deployment{}
-	err := h.KubeRest().Get(context.TODO(), namespacedName, deployment)
+	err := h.KubeRest().Get(context.Background(), namespacedName, deployment)
 	if err != nil {
 		return &appsv1.Deployment{}, err
 	}
@@ -33,7 +33,7 @@ func (h *SuiteController) DeploymentIsCompleted(deploymentName, namespace string
 		}
 
 		deployment := &appsv1.Deployment{}
-		err := h.KubeRest().Get(context.TODO(), namespacedName, deployment)
+		err := h.KubeRest().Get(context.Background(), namespacedName, deployment)
 		if err != nil && !k8sErrors.IsNotFound(err) {
 			return false, err
 		}

@@ -202,7 +202,7 @@ func (p ECIntegrationTestScenario) Generate() (*v1beta1.PipelineRun, error) {
 
 // CreatePipelineRun creates a tekton pipelineRun and returns the pipelineRun or error
 func (t *TektonController) CreatePipelineRun(pipelineRun *v1beta1.PipelineRun, ns string) (*v1beta1.PipelineRun, error) {
-	return t.PipelineClient().TektonV1beta1().PipelineRuns(ns).Create(context.TODO(), pipelineRun, metav1.CreateOptions{})
+	return t.PipelineClient().TektonV1beta1().PipelineRuns(ns).Create(context.Background(), pipelineRun, metav1.CreateOptions{})
 }
 
 // createAndWait creates a pipelineRun and waits until it starts.
@@ -225,7 +225,7 @@ func (t *TektonController) RunPipeline(g PipelineRunGenerator, namespace string,
 	for _, w := range pr.Spec.Workspaces {
 		if w.PersistentVolumeClaim != nil {
 			pvcName := w.PersistentVolumeClaim.ClaimName
-			if _, err := pvcs.Get(context.TODO(), pvcName, metav1.GetOptions{}); err != nil {
+			if _, err := pvcs.Get(context.Background(), pvcName, metav1.GetOptions{}); err != nil {
 				if errors.IsNotFound(err) {
 					err := createPVC(pvcs, pvcName)
 					if err != nil {
@@ -243,13 +243,13 @@ func (t *TektonController) RunPipeline(g PipelineRunGenerator, namespace string,
 
 // GetPipelineRun returns a pipelineRun with a given name.
 func (t *TektonController) GetPipelineRun(pipelineRunName, namespace string) (*v1beta1.PipelineRun, error) {
-	return t.PipelineClient().TektonV1beta1().PipelineRuns(namespace).Get(context.TODO(), pipelineRunName, metav1.GetOptions{})
+	return t.PipelineClient().TektonV1beta1().PipelineRuns(namespace).Get(context.Background(), pipelineRunName, metav1.GetOptions{})
 }
 
 // GetPipelineRunLogs returns logs of a given pipelineRun.
 func (t *TektonController) GetPipelineRunLogs(pipelineRunName, namespace string) (string, error) {
 	podClient := t.KubeInterface().CoreV1().Pods(namespace)
-	podList, err := podClient.List(context.TODO(), metav1.ListOptions{})
+	podList, err := podClient.List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return "", err
 	}
@@ -360,12 +360,12 @@ func (t *TektonController) CheckPipelineRunSucceeded(pipelineRunName, namespace 
 
 // ListAllPipelineRuns returns a list of all pipelineRuns in a namespace.
 func (t *TektonController) ListAllPipelineRuns(ns string) (*v1beta1.PipelineRunList, error) {
-	return t.PipelineClient().TektonV1beta1().PipelineRuns(ns).List(context.TODO(), metav1.ListOptions{})
+	return t.PipelineClient().TektonV1beta1().PipelineRuns(ns).List(context.Background(), metav1.ListOptions{})
 }
 
 // DeletePipelineRun deletes a pipelineRun form a given namespace.
 func (t *TektonController) DeletePipelineRun(name, ns string) error {
-	return t.PipelineClient().TektonV1beta1().PipelineRuns(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
+	return t.PipelineClient().TektonV1beta1().PipelineRuns(ns).Delete(context.Background(), name, metav1.DeleteOptions{})
 }
 
 // DeleteAllPipelineRunsInASpecificNamespace deletes all PipelineRuns in a given namespace (removing the finalizers field, first)
@@ -384,7 +384,7 @@ func (t *TektonController) DeleteAllPipelineRunsInASpecificNamespace(ns string) 
 					Namespace: ns,
 				},
 			}
-			if err := t.KubeRest().Get(context.TODO(), crclient.ObjectKeyFromObject(&pipelineRunCR), &pipelineRunCR); err != nil {
+			if err := t.KubeRest().Get(context.Background(), crclient.ObjectKeyFromObject(&pipelineRunCR), &pipelineRunCR); err != nil {
 				if errors.IsNotFound(err) {
 					// PipelinerRun CR is already removed
 					return true, nil
@@ -396,12 +396,12 @@ func (t *TektonController) DeleteAllPipelineRunsInASpecificNamespace(ns string) 
 
 			// Remove the finalizer, so that it can be deleted.
 			pipelineRunCR.Finalizers = []string{}
-			if err := t.KubeRest().Update(context.TODO(), &pipelineRunCR); err != nil {
+			if err := t.KubeRest().Update(context.Background(), &pipelineRunCR); err != nil {
 				g.GinkgoWriter.Printf("unable to remove finalizers from PipelineRun '%s' in '%s': %v\n", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
 				return false, nil
 			}
 
-			if err := t.KubeRest().Delete(context.TODO(), &pipelineRunCR); err != nil {
+			if err := t.KubeRest().Delete(context.Background(), &pipelineRunCR); err != nil {
 				g.GinkgoWriter.Printf("unable to delete PipelineRun '%s' in '%s': %v\n", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
 				return false, nil
 			}

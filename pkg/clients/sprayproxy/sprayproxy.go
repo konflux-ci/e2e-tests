@@ -113,7 +113,7 @@ func getPaCHost() (string, error) {
 	}
 
 	route := &routev1.Route{}
-	err = k8sClient.KubeRest().Get(context.TODO(), namespaceName, route)
+	err = k8sClient.KubeRest().Get(context.Background(), namespaceName, route)
 	if err != nil {
 		return "", err
 	}

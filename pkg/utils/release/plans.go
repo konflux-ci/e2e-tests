@@ -2,9 +2,10 @@ package release
 
 import (
 	"context"
+	"strconv"
+
 	"github.com/redhat-appstudio/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/runtime"
-	"strconv"
 
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	releaseMetadata "github.com/redhat-appstudio/release-service/metadata"
@@ -36,7 +37,7 @@ func (r *ReleaseController) CreateReleasePlan(name, namespace, application, targ
 		releasePlan.ObjectMeta.Labels[releaseMetadata.AutoReleaseLabel] = "false"
 	}
 
-	return releasePlan, r.KubeRest().Create(context.TODO(), releasePlan)
+	return releasePlan, r.KubeRest().Create(context.Background(), releasePlan)
 }
 
 // CreateReleasePlanAdmission creates a new ReleasePlanAdmission using the given parameters.
@@ -60,14 +61,14 @@ func (r *ReleaseController) CreateReleasePlanAdmission(name, namespace, environm
 		},
 	}
 
-	return releasePlanAdmission, r.KubeRest().Create(context.TODO(), releasePlanAdmission)
+	return releasePlanAdmission, r.KubeRest().Create(context.Background(), releasePlanAdmission)
 }
 
 // GetReleasePlan returns the ReleasePlan with the given name in the given namespace.
 func (r *ReleaseController) GetReleasePlan(name, namespace string) (*releaseApi.ReleasePlan, error) {
 	releasePlan := &releaseApi.ReleasePlan{}
 
-	err := r.KubeRest().Get(context.TODO(), types.NamespacedName{
+	err := r.KubeRest().Get(context.Background(), types.NamespacedName{
 		Name:      name,
 		Namespace: namespace,
 	}, releasePlan)
@@ -79,7 +80,7 @@ func (r *ReleaseController) GetReleasePlan(name, namespace string) (*releaseApi.
 func (r *ReleaseController) GetReleasePlanAdmission(name, namespace string) (*releaseApi.ReleasePlanAdmission, error) {
 	releasePlanAdmission := &releaseApi.ReleasePlanAdmission{}
 
-	err := r.KubeRest().Get(context.TODO(), types.NamespacedName{
+	err := r.KubeRest().Get(context.Background(), types.NamespacedName{
 		Name:      name,
 		Namespace: namespace,
 	}, releasePlanAdmission)
@@ -95,7 +96,7 @@ func (r *ReleaseController) DeleteReleasePlan(name, namespace string, failOnNotF
 			Namespace: namespace,
 		},
 	}
-	err := r.KubeRest().Delete(context.TODO(), releasePlan)
+	err := r.KubeRest().Delete(context.Background(), releasePlan)
 	if err != nil && !failOnNotFound && k8sErrors.IsNotFound(err) {
 		err = nil
 	}
@@ -112,7 +113,7 @@ func (r *ReleaseController) DeleteReleasePlanAdmission(name, namespace string, f
 			Namespace: namespace,
 		},
 	}
-	err := r.KubeRest().Delete(context.TODO(), &releasePlanAdmission)
+	err := r.KubeRest().Delete(context.Background(), &releasePlanAdmission)
 	if err != nil && !failOnNotFound && k8sErrors.IsNotFound(err) {
 		err = nil
 	}

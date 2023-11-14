@@ -151,7 +151,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "access-control"), func() 
 		checkSecretAccess := func(client crclient.Client, primaryUser User, shouldAccess bool) {
 			// checks that guest user can access a primary's secret in primary's workspace
 			spiAccessToken := &v1beta1.SPIAccessToken{}
-			err := client.Get(context.TODO(), types.NamespacedName{Name: primaryUser.LinkedAccessTokenName, Namespace: primaryUser.Framework.UserNamespace}, spiAccessToken)
+			err := client.Get(context.Background(), types.NamespacedName{Name: primaryUser.LinkedAccessTokenName, Namespace: primaryUser.Framework.UserNamespace}, spiAccessToken)
 
 			if shouldAccess {
 				Expect(err).NotTo(HaveOccurred())
@@ -170,14 +170,14 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "access-control"), func() 
 				},
 				Spec: v1beta1.SPIFileContentRequestSpec{RepoUrl: GithubPrivateRepoURL, FilePath: GithubPrivateRepoFilePath},
 			}
-			err := client.Create(context.TODO(), &spiFcr)
+			err := client.Create(context.Background(), &spiFcr)
 
 			if shouldRead {
 				Expect(err).NotTo(HaveOccurred())
 
 				// check that guest user can read a primary's GitHub repo in the primary's workspace
 				Eventually(func() v1beta1.SPIFileContentRequestStatus {
-					err = client.Get(context.TODO(), types.NamespacedName{Name: spiFcr.Name, Namespace: spiFcr.Namespace}, &spiFcr)
+					err = client.Get(context.Background(), types.NamespacedName{Name: spiFcr.Name, Namespace: spiFcr.Namespace}, &spiFcr)
 					Expect(err).NotTo(HaveOccurred())
 
 					return spiFcr.Status
@@ -193,7 +193,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "access-control"), func() 
 		// check if guest user can read a primary's secret in the primary's workspace
 		checkSecretReading := func(client crclient.Client, primaryUser User, shouldRead bool) {
 			resultSecret := &corev1.Secret{}
-			err := client.Get(context.TODO(), types.NamespacedName{Name: primaryUser.SPIGithubWorkSpaceSecretName, Namespace: primaryUser.Framework.UserNamespace}, resultSecret)
+			err := client.Get(context.Background(), types.NamespacedName{Name: primaryUser.SPIGithubWorkSpaceSecretName, Namespace: primaryUser.Framework.UserNamespace}, resultSecret)
 
 			if shouldRead {
 				Expect(err).ToNot(HaveOccurred())
@@ -329,7 +329,7 @@ spec:
 			if shouldRead {
 				// check that guest user's pod can read a primary's GitHub repo in the primary's workspace
 				Eventually(func() v1beta1.SPIFileContentRequestStatus {
-					err = client.Get(context.TODO(), types.NamespacedName{Name: spiFcrName, Namespace: primaryUser.Framework.UserNamespace}, &spiFcr)
+					err = client.Get(context.Background(), types.NamespacedName{Name: spiFcrName, Namespace: primaryUser.Framework.UserNamespace}, &spiFcr)
 					Expect(err).NotTo(HaveOccurred())
 
 					return spiFcr.Status
@@ -339,7 +339,7 @@ spec:
 				}), fmt.Sprintf("content not provided by SPIFileContentRequest %s/%s", primaryUser.Framework.UserNamespace, spiFcrName))
 			} else {
 				// check that guest user's pod can not read a primary's GitHub repo in the primary's workspace
-				err = client.Get(context.TODO(), types.NamespacedName{Name: spiFcrName, Namespace: primaryUser.Framework.UserNamespace}, &spiFcr)
+				err = client.Get(context.Background(), types.NamespacedName{Name: spiFcrName, Namespace: primaryUser.Framework.UserNamespace}, &spiFcr)
 				Expect(err).To(HaveOccurred())
 			}
 		}

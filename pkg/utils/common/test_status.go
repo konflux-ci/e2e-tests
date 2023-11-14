@@ -27,7 +27,7 @@ func (s *SuiteController) MarkTestsSucceeded(snapshot *appstudioApi.Snapshot) (*
 		Reason:  "Passed",
 		Message: "Snapshot Passed",
 	})
-	err := s.KubeRest().Status().Patch(context.TODO(), snapshot, patch)
+	err := s.KubeRest().Status().Patch(context.Background(), snapshot, patch)
 	if err != nil {
 		return nil, err
 	}

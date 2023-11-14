@@ -15,7 +15,7 @@ import (
 // reurn nil if not found
 func (g *GitopsController) HaveAvailableDeploymentTargetClassExist() (*appservice.DeploymentTargetClass, error) {
 	deploymentTargetClassList := &appservice.DeploymentTargetClassList{}
-	err := g.KubeRest().List(context.TODO(), deploymentTargetClassList)
+	err := g.KubeRest().List(context.Background(), deploymentTargetClassList)
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, fmt.Errorf("error occurred while trying to list all the available DeploymentTargetClass: %v", err)
 	}
@@ -42,7 +42,7 @@ func (g *GitopsController) CreateDeploymentTargetClass() (*appservice.Deployment
 		},
 	}
 
-	err := g.KubeRest().Create(context.TODO(), dtcls)
+	err := g.KubeRest().Create(context.Background(), dtcls)
 	if err != nil {
 		return nil, fmt.Errorf("error occurred when creating the DeploymentTargetClass: %+v", err)
 	}
@@ -55,7 +55,7 @@ func (g *GitopsController) DeleteDeploymentTargetClass() error {
 			Name: "test-sandbox-class",
 		},
 	}
-	if err := g.KubeRest().Delete(context.TODO(), &dtcls); err != nil {
+	if err := g.KubeRest().Delete(context.Background(), &dtcls); err != nil {
 		return fmt.Errorf("error occurred when deleting the DeploymentTargetClass: %+v", err)
 	}
 

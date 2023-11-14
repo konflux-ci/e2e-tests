@@ -139,7 +139,7 @@ var _ = framework.ByocSuiteDescribe(Label("byoc"), Ordered, func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				// Cluster is managed by a user so we need to create the target cluster where we will deploy the RHTAP components
-				ns, err := ephemeralClusterClient.CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: suite.Byoc.TargetNamespace}}, metav1.CreateOptions{})
+				ns, err := ephemeralClusterClient.CoreV1().Namespaces().Create(context.Background(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: suite.Byoc.TargetNamespace}}, metav1.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(ns.Name).To(Equal(suite.Byoc.TargetNamespace))
 			})
@@ -234,7 +234,7 @@ var _ = framework.ByocSuiteDescribe(Label("byoc"), Ordered, func() {
 				var deployment *appsv1.Deployment
 				var expectedReplicas int32 = 1
 				Eventually(func() error {
-					deployment, err = ephemeralClusterClient.AppsV1().Deployments(suite.Byoc.TargetNamespace).Get(context.TODO(), componentObj.Name, metav1.GetOptions{})
+					deployment, err = ephemeralClusterClient.AppsV1().Deployments(suite.Byoc.TargetNamespace).Get(context.Background(), componentObj.Name, metav1.GetOptions{})
 					if err != nil {
 						return fmt.Errorf("could not get deployment %s/%s: %+v", suite.Byoc.TargetNamespace, componentObj.GetName(), err)
 					}
@@ -250,7 +250,7 @@ var _ = framework.ByocSuiteDescribe(Label("byoc"), Ordered, func() {
 				It("checks if ingress exists and is accessible in the kubernetes ephemeral cluster", func() {
 					var ingress *v1.Ingress
 					Eventually(func() error {
-						ingress, err = ephemeralClusterClient.NetworkingV1().Ingresses(suite.Byoc.TargetNamespace).Get(context.TODO(), componentObj.Name, metav1.GetOptions{})
+						ingress, err = ephemeralClusterClient.NetworkingV1().Ingresses(suite.Byoc.TargetNamespace).Get(context.Background(), componentObj.Name, metav1.GetOptions{})
 						if err != nil {
 							return err
 						}

@@ -32,7 +32,7 @@ import (
 // GetComponent return a component object from kubernetes cluster
 func (h *HasController) GetComponent(name string, namespace string) (*appservice.Component, error) {
 	component := &appservice.Component{}
-	if err := h.KubeRest().Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, component); err != nil {
+	if err := h.KubeRest().Get(context.Background(), types.NamespacedName{Name: name, Namespace: namespace}, component); err != nil {
 		return nil, err
 	}
 
@@ -45,7 +45,7 @@ func (h *HasController) GetComponentByApplicationName(applicationName string, na
 	opts := []rclient.ListOption{
 		rclient.InNamespace(namespace),
 	}
-	err := h.KubeRest().List(context.TODO(), components, opts...)
+	err := h.KubeRest().List(context.Background(), components, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (h *HasController) GetComponentPipelineRun(componentName string, applicatio
 	}
 
 	list := &v1beta1.PipelineRunList{}
-	err := h.KubeRest().List(context.TODO(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
+	err := h.KubeRest().List(context.Background(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
 
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, fmt.Errorf("error listing pipelineruns in %s namespace: %v", namespace, err)
@@ -85,7 +85,7 @@ func (h *HasController) GetAllPipelineRunsForApplication(applicationName, namesp
 	pipelineRunLabels := map[string]string{"appstudio.openshift.io/application": applicationName}
 
 	list := &v1beta1.PipelineRunList{}
-	err := h.KubeRest().List(context.TODO(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
+	err := h.KubeRest().List(context.Background(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
 
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, fmt.Errorf("error listing pipelineruns in %s namespace: %v", namespace, err)
@@ -184,7 +184,9 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 		componentObject.Annotations = utils.MergeMaps(componentObject.Annotations, constants.ImageControllerAnnotationRequestPublicRepo)
 	}
 
-	if err := h.KubeRest().Create(context.TODO(), componentObject); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*1)
+	defer cancel()
+	if err := h.KubeRest().Create(ctx, componentObject); err != nil {
 		return nil, err
 	}
 	if err := utils.WaitUntil(h.ComponentReady(componentObject), time.Minute*10); err != nil {
@@ -224,7 +226,7 @@ func (h *HasController) CreateComponentWithDockerSource(applicationName, compone
 			Route:          "",
 		},
 	}
-	err := h.KubeRest().Create(context.TODO(), component)
+	err := h.KubeRest().Create(context.Background(), component)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +237,7 @@ func (h *HasController) CreateComponentWithDockerSource(applicationName, compone
 func (h *HasController) ScaleComponentReplicas(component *appservice.Component, replicas *int) (*appservice.Component, error) {
 	component.Spec.Replicas = replicas
 
-	err := h.KubeRest().Update(context.TODO(), component, &rclient.UpdateOptions{})
+	err := h.KubeRest().Update(context.Background(), component, &rclient.UpdateOptions{})
 	if err != nil {
 		return &appservice.Component{}, err
 	}
@@ -250,7 +252,7 @@ func (h *HasController) DeleteComponent(name string, namespace string, reportErr
 			Namespace: namespace,
 		},
 	}
-	if err := h.KubeRest().Delete(context.TODO(), &component); err != nil {
+	if err := h.KubeRest().Delete(context.Background(), &component); err != nil {
 		if !k8sErrors.IsNotFound(err) || (k8sErrors.IsNotFound(err) && reportErrorOnNotFound) {
 			return fmt.Errorf("error deleting a component: %+v", err)
 		}
@@ -261,7 +263,7 @@ func (h *HasController) DeleteComponent(name string, namespace string, reportErr
 
 // DeleteAllComponentsInASpecificNamespace removes all component CRs from a specific namespace. Useful when creating a lot of resources and want to remove all of them
 func (h *HasController) DeleteAllComponentsInASpecificNamespace(namespace string, timeout time.Duration) error {
-	if err := h.KubeRest().DeleteAllOf(context.TODO(), &appservice.Component{}, rclient.InNamespace(namespace)); err != nil {
+	if err := h.KubeRest().DeleteAllOf(context.Background(), &appservice.Component{}, rclient.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting components from the namespace %s: %+v", namespace, err)
 	}
 
@@ -312,7 +314,7 @@ func (h *HasController) GetComponentConditionStatusMessages(name, namespace stri
 
 // Universal method to retrigger pipelineruns in kubernetes cluster
 func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Component, pr *v1beta1.PipelineRun) (sha string, err error) {
-	if err = h.KubeRest().Delete(context.TODO(), pr); err != nil {
+	if err = h.KubeRest().Delete(context.Background(), pr); err != nil {
 		return "", fmt.Errorf("failed to delete PipelineRun %q from %q namespace", pr.GetName(), pr.GetNamespace())
 	}
 
@@ -441,7 +443,7 @@ func (h *HasController) SetComponentAnnotation(componentName, annotationKey, ann
 	newAnnotations := component.GetAnnotations()
 	newAnnotations[annotationKey] = annotationValue
 	component.SetAnnotations(newAnnotations)
-	err = h.KubeRest().Update(context.TODO(), component)
+	err = h.KubeRest().Update(context.Background(), component)
 	if err != nil {
 		return fmt.Errorf("error when updating component: %+v", err)
 	}
@@ -507,7 +509,7 @@ func (h *HasController) CreateComponentWithoutGenerateAnnotation(componentSpec a
 		componentObject.Spec.TargetPort = 8081
 	}
 
-	if err := h.KubeRest().Create(context.TODO(), componentObject); err != nil {
+	if err := h.KubeRest().Create(context.Background(), componentObject); err != nil {
 		return nil, err
 	}
 

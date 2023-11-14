@@ -18,7 +18,7 @@ func (t *TektonController) CreateEnterpriseContractPolicy(name, namespace string
 		},
 		Spec: ecpolicy,
 	}
-	return ec, t.KubeRest().Create(context.TODO(), ec)
+	return ec, t.KubeRest().Create(context.Background(), ec)
 }
 
 // CreateOrUpdatePolicyConfiguration creates new policy if it doesn't exist, otherwise updates the existing one, in a specified namespace.
@@ -31,7 +31,7 @@ func (t *TektonController) CreateOrUpdatePolicyConfiguration(namespace string, p
 	}
 
 	// fetch to see if it exists
-	err := t.KubeRest().Get(context.TODO(), crclient.ObjectKey{
+	err := t.KubeRest().Get(context.Background(), crclient.ObjectKey{
 		Namespace: namespace,
 		Name:      "ec-policy",
 	}, &ecPolicy)
@@ -48,12 +48,12 @@ func (t *TektonController) CreateOrUpdatePolicyConfiguration(namespace string, p
 	ecPolicy.Spec = policy
 	if !exists {
 		// it doesn't, so create
-		if err := t.KubeRest().Create(context.TODO(), &ecPolicy); err != nil {
+		if err := t.KubeRest().Create(context.Background(), &ecPolicy); err != nil {
 			return err
 		}
 	} else {
 		// it does, so update
-		if err := t.KubeRest().Update(context.TODO(), &ecPolicy); err != nil {
+		if err := t.KubeRest().Update(context.Background(), &ecPolicy); err != nil {
 			return err
 		}
 	}
@@ -69,7 +69,7 @@ func (t *TektonController) GetEnterpriseContractPolicy(name, namespace string) (
 			Namespace: namespace,
 		},
 	}
-	err := t.KubeRest().Get(context.TODO(), crclient.ObjectKey{
+	err := t.KubeRest().Get(context.Background(), crclient.ObjectKey{
 		Namespace: namespace,
 		Name:      name,
 	}, &defaultEcPolicy)
@@ -85,7 +85,7 @@ func (t *TektonController) DeleteEnterpriseContractPolicy(name string, namespace
 			Namespace: namespace,
 		},
 	}
-	err := t.KubeRest().Delete(context.TODO(), &ecPolicy)
+	err := t.KubeRest().Delete(context.Background(), &ecPolicy)
 	if err != nil && !failOnNotFound && errors.IsNotFound(err) {
 		err = nil
 	}

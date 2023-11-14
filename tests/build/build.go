@@ -1121,7 +1121,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					}},
 				}
 
-				Expect(f.AsKubeAdmin.CommonController.KubeRest().Create(context.TODO(), ps)).To(Succeed())
+				Expect(f.AsKubeAdmin.CommonController.KubeRest().Create(context.Background(), ps)).To(Succeed())
 				c, err := f.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, true, map[string]string{})
 				Expect(err).NotTo(HaveOccurred())
 				componentName = c.Name

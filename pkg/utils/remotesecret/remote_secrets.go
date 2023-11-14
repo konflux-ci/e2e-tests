@@ -2,6 +2,7 @@ package remotesecret
 
 import (
 	"context"
+	"time"
 
 	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
 	v1 "k8s.io/api/core/v1"
@@ -27,7 +28,9 @@ func (s *RemoteSecretController) CreateRemoteSecret(name, namespace string, targ
 
 	remoteSecret.Spec.Targets = targets
 
-	err := s.KubeRest().Create(context.TODO(), &remoteSecret)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*1)
+	defer cancel()
+	err := s.KubeRest().Create(ctx, &remoteSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +55,7 @@ func (s *RemoteSecretController) CreateRemoteSecretWithLabelsAndAnnotations(name
 	remoteSecret.ObjectMeta.Labels = labels
 	remoteSecret.ObjectMeta.Annotations = annotations
 
-	err := s.KubeRest().Create(context.TODO(), &remoteSecret)
+	err := s.KubeRest().Create(context.Background(), &remoteSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +71,7 @@ func (s *RemoteSecretController) GetRemoteSecret(name, namespace string) (*rs.Re
 
 	remoteSecret := rs.RemoteSecret{}
 
-	err := s.KubeRest().Get(context.TODO(), namespacedName, &remoteSecret)
+	err := s.KubeRest().Get(context.Background(), namespacedName, &remoteSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +108,7 @@ func (s *RemoteSecretController) CreateUploadSecret(name, namespace string, remo
 		StringData: stringData,
 	}
 
-	err := s.KubeRest().Create(context.TODO(), &uploadSecret)
+	err := s.KubeRest().Create(context.Background(), &uploadSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +132,7 @@ func (s *RemoteSecretController) GetImageRepositoryRemoteSecret(name, applicatio
 		},
 	}
 
-	err := s.KubeRest().Get(context.TODO(), namespacedName, &remoteSecret)
+	err := s.KubeRest().Get(context.Background(), namespacedName, &remoteSecret)
 	if err != nil {
 		return nil, err
 	}

@@ -19,7 +19,7 @@ func (h *HasController) GetComponentDetectionQuery(name, namespace string) (*app
 		Spec: appservice.ComponentDetectionQuerySpec{},
 	}
 
-	if err := h.KubeRest().Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, componentDetectionQuery); err != nil {
+	if err := h.KubeRest().Get(context.Background(), types.NamespacedName{Name: name, Namespace: namespace}, componentDetectionQuery); err != nil {
 		return nil, err
 	}
 
@@ -49,7 +49,9 @@ func (h *HasController) CreateComponentDetectionQueryWithTimeout(name string, na
 		},
 	}
 
-	if err := h.KubeRest().Create(context.TODO(), componentDetectionQuery); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*1)
+	defer cancel()
+	if err := h.KubeRest().Create(ctx, componentDetectionQuery); err != nil {
 		return nil, err
 	}
 
@@ -75,7 +77,7 @@ func (h *HasController) CreateComponentDetectionQueryWithTimeout(name string, na
 
 // DeleteAllComponentDetectionQueriesInASpecificNamespace removes all CDQs CRs from a specific namespace. Useful when creating a lot of resources and want to remove all of them
 func (h *HasController) DeleteAllComponentDetectionQueriesInASpecificNamespace(namespace string, timeout time.Duration) error {
-	if err := h.KubeRest().DeleteAllOf(context.TODO(), &appservice.ComponentDetectionQuery{}, rclient.InNamespace(namespace)); err != nil {
+	if err := h.KubeRest().DeleteAllOf(context.Background(), &appservice.ComponentDetectionQuery{}, rclient.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting component detection queries from the namespace %s: %+v", namespace, err)
 	}
 
@@ -117,7 +119,7 @@ func (h *HasController) StoreAllComponentDetectionQueries(namespace string) erro
 
 // UpdateComponent updates a component
 func (h *HasController) UpdateComponent(component *appservice.Component) error {
-	err := h.KubeRest().Update(context.TODO(), component, &rclient.UpdateOptions{})
+	err := h.KubeRest().Update(context.Background(), component, &rclient.UpdateOptions{})
 
 	if err != nil {
 		return err

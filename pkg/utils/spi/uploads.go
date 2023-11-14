@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,7 +37,9 @@ func (s *SPIController) UploadWithK8sSecret(secretName, namespace, spiTokenName,
 		k8sSecret.StringData["userName"] = username
 	}
 
-	err := s.KubeRest().Create(context.TODO(), k8sSecret)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*1)
+	defer cancel()
+	err := s.KubeRest().Create(ctx, k8sSecret)
 	if err != nil {
 		return nil, err
 	}

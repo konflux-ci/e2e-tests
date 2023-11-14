@@ -23,7 +23,7 @@ func (t *TektonController) NewBundles() (*Bundles, error) {
 	}
 	bundles := &Bundles{}
 	pipelineSelector := &buildservice.BuildPipelineSelector{}
-	err := t.KubeRest().Get(context.TODO(), namespacedName, pipelineSelector)
+	err := t.KubeRest().Get(context.Background(), namespacedName, pipelineSelector)
 	if err != nil {
 		return nil, err
 	}

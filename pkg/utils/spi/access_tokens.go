@@ -33,7 +33,7 @@ func (s *SPIController) GetSPIAccessToken(name, namespace string) (*spi.SPIAcces
 	spiAccessToken := spi.SPIAccessToken{
 		Spec: spi.SPIAccessTokenSpec{},
 	}
-	err := s.KubeRest().Get(context.TODO(), namespacedName, &spiAccessToken)
+	err := s.KubeRest().Get(context.Background(), namespacedName, &spiAccessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -117,10 +117,10 @@ func (s *SPIController) InjectManualSPIToken(namespace string, repoUrl string, o
 
 // Remove all SPIAccessToken from a given namespace. Useful when creating a lot of resources and wanting to remove all of them
 func (s *SPIController) DeleteAllAccessTokensInASpecificNamespace(namespace string) error {
-	return s.KubeRest().DeleteAllOf(context.TODO(), &spi.SPIAccessToken{}, client.InNamespace(namespace))
+	return s.KubeRest().DeleteAllOf(context.Background(), &spi.SPIAccessToken{}, client.InNamespace(namespace))
 }
 
 // Remove all SPIAccessTokenDataUpdate from a given namespace. Useful when creating a lot of resources and wanting to remove all of them
 func (s *SPIController) DeleteAllAccessTokenDataInASpecificNamespace(namespace string) error {
-	return s.KubeRest().DeleteAllOf(context.TODO(), &spi.SPIAccessTokenDataUpdate{}, client.InNamespace(namespace))
+	return s.KubeRest().DeleteAllOf(context.Background(), &spi.SPIAccessTokenDataUpdate{}, client.InNamespace(namespace))
 }

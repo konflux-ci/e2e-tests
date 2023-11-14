@@ -15,7 +15,7 @@ func (h *SuiteController) GetServiceByName(serviceName string, serviceNamespace 
 	}
 
 	service := &corev1.Service{}
-	err := h.KubeRest().Get(context.TODO(), namespacedName, service)
+	err := h.KubeRest().Get(context.Background(), namespacedName, service)
 	if err != nil {
 		return &corev1.Service{}, err
 	}

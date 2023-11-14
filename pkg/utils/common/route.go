@@ -20,7 +20,7 @@ func (h *SuiteController) GetOpenshiftRoute(routeName string, routeNamespace str
 	}
 
 	route := &routev1.Route{}
-	err := h.KubeRest().Get(context.TODO(), namespacedName, route)
+	err := h.KubeRest().Get(context.Background(), namespacedName, route)
 	if err != nil {
 		return &routev1.Route{}, err
 	}
@@ -50,7 +50,7 @@ func (h *SuiteController) RouteHostnameIsAccessible(routeName string, namespace 
 			Namespace: namespace,
 		}
 		route := &routev1.Route{}
-		if err := h.KubeRest().Get(context.TODO(), namespacedName, route); err != nil {
+		if err := h.KubeRest().Get(context.Background(), namespacedName, route); err != nil {
 			return false, nil
 		}
 
