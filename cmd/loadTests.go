@@ -1448,6 +1448,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 					TraceFunction("GetSnapshot", params)
 
 					if err != nil {
+						klog.Infof("Unable getting snapshot - %v", err)
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
 						return false, nil
 					}

@@ -92,7 +92,7 @@ func (i *IntegrationController) GetSnapshot(snapshotName, pipelineRunName, compo
 	}
 	err := i.KubeRest().List(ctx, snapshots, opts...)
 	if err != nil {
-		return nil, fmt.Errorf("error when listing Snapshots in '%s' namespace", namespace)
+		return nil, fmt.Errorf("error when listing Snapshots in '%s' namespace: %v", namespace, err)
 	}
 	for _, snapshot := range snapshots.Items {
 		if snapshot.Name == snapshotName {
