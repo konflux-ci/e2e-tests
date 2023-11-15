@@ -1,17 +1,20 @@
 package tekton
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
 
 	"k8s.io/client-go/kubernetes"
+	"knative.dev/pkg/apis"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -35,6 +38,12 @@ type ECIntegrationTestScenario struct {
 	PipelineGitURL        string
 	PipelineGitRevision   string
 	PipelineGitPathInRepo string
+}
+
+type FailedPipelineRunDetails struct {
+	FailedTaskRunName   string
+	PodName             string
+	FailedContainerName string
 }
 
 // This is a demo pipeline to create test image and task signing
@@ -192,10 +201,10 @@ func (p ECIntegrationTestScenario) Generate() (*v1beta1.PipelineRun, error) {
 
 // GetFailedPipelineRunLogs gets the logs of the pipelinerun failed task
 func GetFailedPipelineRunLogs(c crclient.Client, ki kubernetes.Interface, pipelineRun *v1beta1.PipelineRun) (string, error) {
-	var d *utils.FailedPipelineRunDetails
+	var d *FailedPipelineRunDetails
 	var err error
 	failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
-	if d, err = utils.GetFailedPipelineRunDetails(c, pipelineRun); err != nil {
+	if d, err = GetFailedPipelineRunDetails(c, pipelineRun); err != nil {
 		return "", err
 	}
 	if d.FailedContainerName != "" {
@@ -203,4 +212,36 @@ func GetFailedPipelineRunLogs(c crclient.Client, ki kubernetes.Interface, pipeli
 		failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
 	}
 	return failMessage, nil
+}
+
+func HasPipelineRunSucceeded(pr *v1beta1.PipelineRun) bool {
+	return pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue()
+}
+
+func HasPipelineRunFailed(pr *v1beta1.PipelineRun) bool {
+	return pr.IsDone() && pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsFalse()
+}
+
+func GetFailedPipelineRunDetails(c crclient.Client, pipelineRun *v1beta1.PipelineRun) (*FailedPipelineRunDetails, error) {
+	d := &FailedPipelineRunDetails{}
+	for _, chr := range pipelineRun.Status.PipelineRunStatusFields.ChildReferences {
+		taskRun := &v1beta1.TaskRun{}
+		taskRunKey := types.NamespacedName{Namespace: pipelineRun.Namespace, Name: chr.Name}
+		if err := c.Get(context.Background(), taskRunKey, taskRun); err != nil {
+			return nil, fmt.Errorf("failed to get details for PR %s: %+v", pipelineRun.GetName(), err)
+		}
+		for _, c := range taskRun.Status.Conditions {
+			if c.Reason == "Failed" {
+				d.FailedTaskRunName = taskRun.Name
+				d.PodName = taskRun.Status.PodName
+				for _, s := range taskRun.Status.TaskRunStatusFields.Steps {
+					if s.Terminated.Reason == "Error" {
+						d.FailedContainerName = s.ContainerName
+						return d, nil
+					}
+				}
+			}
+		}
+	}
+	return d, nil
 }

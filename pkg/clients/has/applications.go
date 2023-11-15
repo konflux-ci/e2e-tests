@@ -8,6 +8,7 @@ import (
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/gitops"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -42,7 +43,7 @@ func (h *HasController) ApplicationDevfilePresent(application *appservice.Applic
 // ApplicationGitopsRepoExists check from the devfile content if application-service creates a gitops repo in GitHub.
 func (s *HasController) ApplicationGitopsRepoExists(devfileContent string) wait.ConditionFunc {
 	return func() (bool, error) {
-		gitOpsRepoURL := utils.ObtainGitOpsRepositoryName(devfileContent)
+		gitOpsRepoURL := gitops.ObtainGitOpsRepositoryName(devfileContent)
 		return s.Github.CheckIfRepositoryExist(gitOpsRepoURL), nil
 	}
 }
