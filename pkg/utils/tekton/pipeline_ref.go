@@ -28,3 +28,16 @@ func GetPipelineNameAndBundleRef(pipelineRef *v1beta1.PipelineRef) (string, stri
 
 	return name, bundleRef
 }
+
+func NewBundleResolverPipelineRef(name string, bundleRef string) *v1beta1.PipelineRef {
+	return &v1beta1.PipelineRef{
+		ResolverRef: v1beta1.ResolverRef{
+			Resolver: "bundles",
+			Params: []v1beta1.Param{
+				{Name: "name", Value: v1beta1.ParamValue{StringVal: name, Type: v1beta1.ParamTypeString}},
+				{Name: "bundle", Value: v1beta1.ParamValue{StringVal: bundleRef, Type: v1beta1.ParamTypeString}},
+				{Name: "kind", Value: v1beta1.ParamValue{StringVal: "pipeline", Type: v1beta1.ParamTypeString}},
+			},
+		},
+	}
+}

@@ -1104,11 +1104,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					},
 					Spec: buildservice.BuildPipelineSelectorSpec{Selectors: []buildservice.PipelineSelector{
 						{
-							Name: "user-custom-selector",
-							PipelineRef: v1beta1.PipelineRef{
-								Name:   "docker-build",
-								Bundle: dummyPipelineBundleRef, //nolint:all
-							},
+							Name:           "user-custom-selector",
+							PipelineRef:    *tekton.NewBundleResolverPipelineRef("docker-build", dummyPipelineBundleRef),
 							PipelineParams: []buildservice.PipelineParam{expectedAdditionalPipelineParam},
 							WhenConditions: buildservice.WhenCondition{
 								ProjectType:        "hello-world",

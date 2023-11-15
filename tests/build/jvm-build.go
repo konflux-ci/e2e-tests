@@ -17,6 +17,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"github.com/redhat-appstudio/jvm-build-service/openshift-with-appstudio-test/e2e"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	jvmclientSet "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
@@ -98,11 +99,8 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				},
 				Spec: buildservice.BuildPipelineSelectorSpec{Selectors: []buildservice.PipelineSelector{
 					{
-						Name: "custom java selector",
-						PipelineRef: v1beta1.PipelineRef{
-							Name:   "java-builder",
-							Bundle: customJavaPipelineBundleRef, //nolint:all
-						},
+						Name:           "custom java selector",
+						PipelineRef:    *tekton.NewBundleResolverPipelineRef("java-builder", customJavaPipelineBundleRef),
 						WhenConditions: buildservice.WhenCondition{Language: "java"},
 					},
 				}},
