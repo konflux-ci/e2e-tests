@@ -56,10 +56,17 @@ func GetBundleRef(pipelineRef *v1beta1.PipelineRef) string {
 // GetDefaultPipelineBundleRef gets the specific Tekton pipeline bundle reference from a Build pipeline selector
 // (in a YAML format) from a URL specified in the parameter
 func GetDefaultPipelineBundleRef(buildPipelineSelectorYamlURL, selectorName string) (string, error) {
-	res, err := http.Get(buildPipelineSelectorYamlURL)
+	request, err := http.NewRequest("GET", buildPipelineSelectorYamlURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("error creating GET request: %s", err)
+	}
+
+	client := &http.Client{}
+	res, err := client.Do(request)
 	if err != nil {
 		return "", fmt.Errorf("failed to get a build pipeline selector from url %s: %v", buildPipelineSelectorYamlURL, err)
 	}
+
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
