@@ -99,10 +99,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				Spec: buildservice.BuildPipelineSelectorSpec{Selectors: []buildservice.PipelineSelector{
 					{
 						Name: "custom java selector",
-						PipelineRef: v1beta1.PipelineRef{
-							Name:   "java-builder",
-							Bundle: customJavaPipelineBundleRef, //nolint:all
-						},
+						PipelineRef: *utils.NewBundleResolverPipelineRef("java-builder", customJavaPipelineBundleRef),
 						WhenConditions: buildservice.WhenCondition{Language: "java"},
 					},
 				}},

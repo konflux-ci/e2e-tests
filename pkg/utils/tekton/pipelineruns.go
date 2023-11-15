@@ -73,10 +73,7 @@ func (b BuildahDemo) Generate() (*v1beta1.PipelineRun, error) {
 					Value: *v1beta1.NewArrayOrString("true"),
 				},
 			},
-			PipelineRef: &v1beta1.PipelineRef{
-				Name:   "docker-build",
-				Bundle: b.Bundle, //nolint:all
-			},
+			PipelineRef: utils.NewBundleResolverPipelineRef("docker-build", b.Bundle),
 			Workspaces: []v1beta1.WorkspaceBinding{
 				{
 					Name: "workspace",
