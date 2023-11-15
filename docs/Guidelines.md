@@ -4,7 +4,7 @@ The purpose of *this* document is to serve as a primer for developers/qe who are
 ## General tips
 
 * Make sure you've implemented any required controller functionality that is required for your tests within the following files
-   * `pkg/utils/<new controller directory>` - logic to interact with kube controllers via API
+   * `pkg/clients/<new controller directory>` - logic to interact with kube controllers via API
    * `pkg/framework/framework.go` - import the new controller and update the `Framework` struct to be able to initialize the new controller
 * Every test package should be imported to [cmd/e2e_test.go](https://github.com/redhat-appstudio/e2e-tests/blob/main/cmd/e2e_test.go#L15).
 * Every new test should have correct [labels](docs/LabelsNaming.md).
@@ -13,7 +13,7 @@ The purpose of *this* document is to serve as a primer for developers/qe who are
 * When running via mage you can filter the suites run by specifying the
   `E2E_TEST_SUITE_LABEL` environment variable. For example:
   `E2E_TEST_SUITE_LABEL=ec ./mage runE2ETests`
-* `klog` level can be controled via `KLOG_VERBOSITY` environment variable. For
+* `klog` level can be controlled via `KLOG_VERBOSITY` environment variable. For
   example: `KLOG_VERBOSITY=9 ./mage runE2ETests` would output http requests
   issued via Kubernetes client from sigs.k8s.io/controller-runtime
 * To quickly debug a test, you can run only the desired suite. Example: `./bin/e2e-appstudio --ginkgo.focus="e2e-demos-suite"`
@@ -85,11 +85,11 @@ This is a basic layout for RHTAP E2E framework project. It is a set of common di
 * `/magefiles`: The code definition about installing and running the e2e tests
 * `/pipelines`: Tekton pipelines utilities for QE team like IC.
 * `/pkg`: All used and imported packages for e2e tests.
-  * `/pkg/clients`: Defintion of different clients connection providers like Slack, GitHub, Kubernetes Server.
+  * `/pkg/clients`: Definition of different clients connection providers (like Slack, GitHub, and Kubernetes Server) and all API interaction with different RHTAP controllers.
   * `/pkg/constants`: Global constants of the e2e tests.
   * `/pkg/framework`: In the framework folder are all controllers initialization, tests reports and the interaction with Report Portal.
   * `/pkg/logs`: Tests logging utilities.
   * `/pkg/sandbox`: Initialize Sandbox controller to make authenticated requests to a Kubernetes server.
-  * `/pkg/utils`: Util folders where all API interaction with different RHTAP controllers. Also some tests utils can be found in `/pkg/utils/util.go`.
+  * `/pkg/utils`: Util folders with all auxiliary functions used in the different RHTAP controllers. Futhermore, it also contains some tests utils that can be found in `/pkg/utils/util.go`.
 * `/scripts`: Scripts to perform operations which cannot be do it at magefiles level.
 * `/tests`: Folder where all RHTAP tests are defined and documented.
