@@ -26,7 +26,7 @@ func (r *ReleaseController) CreateRelease(name, namespace, snapshot, releasePlan
 		},
 	}
 
-	return release, r.KubeRest().Create(context.TODO(), release)
+	return release, r.KubeRest().Create(context.Background(), release)
 }
 
 // CreateReleasePipelineRoleBindingForServiceAccount creates a RoleBinding for the passed serviceAccount to enable
@@ -50,7 +50,7 @@ func (r *ReleaseController) CreateReleasePipelineRoleBindingForServiceAccount(na
 			},
 		},
 	}
-	err := r.KubeRest().Create(context.TODO(), roleBinding)
+	err := r.KubeRest().Create(context.Background(), roleBinding)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func (r *ReleaseController) GetRelease(releaseName, snapshotName, namespace stri
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
 	}
-	if err := r.KubeRest().List(context.TODO(), releaseList, opts...); err != nil {
+	if err := r.KubeRest().List(context.Background(), releaseList, opts...); err != nil {
 		return nil, err
 	}
 	for _, r := range releaseList.Items {
@@ -90,7 +90,7 @@ func (r *ReleaseController) GetReleases(namespace string) (*releaseApi.ReleaseLi
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
 	}
-	err := r.KubeRest().List(context.TODO(), releaseList, opts...)
+	err := r.KubeRest().List(context.Background(), releaseList, opts...)
 
 	return releaseList, err
 }
@@ -116,7 +116,7 @@ func (r *ReleaseController) GetPipelineRunInNamespace(namespace, releaseName, re
 		client.InNamespace(namespace),
 	}
 
-	err := r.KubeRest().List(context.TODO(), pipelineRuns, opts...)
+	err := r.KubeRest().List(context.Background(), pipelineRuns, opts...)
 
 	if err == nil && len(pipelineRuns.Items) > 0 {
 		return &pipelineRuns.Items[0], nil

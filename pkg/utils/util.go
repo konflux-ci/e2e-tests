@@ -190,7 +190,7 @@ func GetFailedPipelineRunDetails(c crclient.Client, pipelineRun *v1beta1.Pipelin
 	for _, chr := range pipelineRun.Status.PipelineRunStatusFields.ChildReferences {
 		taskRun := &v1beta1.TaskRun{}
 		taskRunKey := types.NamespacedName{Namespace: pipelineRun.Namespace, Name: chr.Name}
-		if err := c.Get(context.TODO(), taskRunKey, taskRun); err != nil {
+		if err := c.Get(context.Background(), taskRunKey, taskRun); err != nil {
 			return nil, fmt.Errorf("failed to get details for PR %s: %+v", pipelineRun.GetName(), err)
 		}
 		for _, c := range taskRun.Status.Conditions {
@@ -310,7 +310,7 @@ func ExtractTektonObjectFromBundle(bundleRef, kind, name string) (runtime.Object
 	var err error
 
 	resolver := oci.NewResolver(bundleRef, authn.DefaultKeychain)
-	if obj, _, err = resolver.Get(context.TODO(), kind, name); err != nil {
+	if obj, _, err = resolver.Get(context.Background(), kind, name); err != nil {
 		return nil, fmt.Errorf("failed to fetch the tekton object %s with name %s: %v", kind, name, err)
 	}
 	return obj, nil
@@ -348,13 +348,45 @@ func GetDefaultPipelineBundleRef(buildPipelineSelectorYamlURL, selectorName stri
 	if err = yaml.Unmarshal(body, ps); err != nil {
 		return "", fmt.Errorf("failed to unmarshal build pipeline selector: %v", err)
 	}
-	for _, s := range ps.Spec.Selectors {
+	for i := range ps.Spec.Selectors {
+		s := &ps.Spec.Selectors[i]
 		if s.Name == selectorName {
-			return s.PipelineRef.Bundle, nil //nolint:all
+			return GetBundleRef(&s.PipelineRef), nil
 		}
 	}
 
 	return "", fmt.Errorf("could not find %s pipeline bundle in build pipeline selector fetched from %s", selectorName, buildPipelineSelectorYamlURL)
+}
+
+// GetPipelineNameAndBundleRef returns the pipeline name and bundle reference from a pipelineRef
+// https://tekton.dev/docs/pipelines/pipelineruns/#tekton-bundles
+func GetPipelineNameAndBundleRef(pipelineRef *v1beta1.PipelineRef) (string, string) {
+	var name string
+	var bundleRef string
+
+	// Prefer the v1 style
+	if pipelineRef.Resolver != "" {
+		for _, param := range pipelineRef.Params {
+			switch param.Name {
+			case "name":
+				name = param.Value.StringVal
+			case "bundle":
+				bundleRef = param.Value.StringVal
+			}
+		}
+	} else {
+		// Support the v1beta1 style
+		name = pipelineRef.Name
+		bundleRef = pipelineRef.Bundle //nolint:all
+	}
+
+	return name, bundleRef
+}
+
+// GetBundleRef returns the bundle reference from a pipelineRef
+func GetBundleRef(pipelineRef *v1beta1.PipelineRef) string {
+	_, bundleRef := GetPipelineNameAndBundleRef(pipelineRef)
+	return bundleRef
 }
 
 // ParseDevfileModel calls the devfile library's parse and returns the devfile data
@@ -397,7 +429,7 @@ func GetContainerLogs(ki kubernetes.Interface, podName, containerName, namespace
 	}
 
 	req := ki.CoreV1().Pods(namespace).GetLogs(podName, &podLogOpts)
-	podLogs, err := req.Stream(context.TODO())
+	podLogs, err := req.Stream(context.Background())
 	if err != nil {
 		return "", fmt.Errorf("error in opening the stream: %v", err)
 	}

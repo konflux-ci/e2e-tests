@@ -292,14 +292,14 @@ func (s *SandboxController) RegisterDeactivatedSandboxUser(userName string) (com
 
 func (s *SandboxController) UpdateUserSignup(userSignupName string, modifyUserSignup func(us *toolchainApi.UserSignup)) (*toolchainApi.UserSignup, error) {
 	var userSignup *toolchainApi.UserSignup
-	err := wait.PollUntilContextTimeout(context.TODO(), 2, 1*time.Minute, true, func(context.Context) (done bool, err error) {
+	err := wait.PollUntilContextTimeout(context.Background(), 2, 1*time.Minute, true, func(context.Context) (done bool, err error) {
 		freshUserSignup := &toolchainApi.UserSignup{}
-		if err := s.KubeRest.Get(context.TODO(), types.NamespacedName{Namespace: DEFAULT_TOOLCHAIN_NAMESPACE, Name: userSignupName}, freshUserSignup); err != nil {
+		if err := s.KubeRest.Get(context.Background(), types.NamespacedName{Namespace: DEFAULT_TOOLCHAIN_NAMESPACE, Name: userSignupName}, freshUserSignup); err != nil {
 			return true, err
 		}
 
 		modifyUserSignup(freshUserSignup)
-		if err := s.KubeRest.Update(context.TODO(), freshUserSignup); err != nil {
+		if err := s.KubeRest.Update(context.Background(), freshUserSignup); err != nil {
 			GinkgoWriter.Printf("error updating UserSignup '%s': %s. Will retry again...", userSignupName, err.Error())
 			return false, nil
 		}
@@ -310,7 +310,7 @@ func (s *SandboxController) UpdateUserSignup(userSignupName string, modifyUserSi
 }
 
 func (s *SandboxController) RegisterSandboxUserUserWithSignUp(userName string, userSignup *toolchainApi.UserSignup) (compliantUsername string, err error) {
-	if err := s.KubeRest.Create(context.TODO(), userSignup); err != nil {
+	if err := s.KubeRest.Create(context.Background(), userSignup); err != nil {
 		if k8sErrors.IsAlreadyExists(err) {
 			GinkgoWriter.Printf("User %s already exists\n", userName)
 		} else {
@@ -332,7 +332,7 @@ func (s *SandboxController) CheckUserCreated(userName string) (compliantUsername
 
 func (s *SandboxController) CheckUserCreatedWithSignUp(userName string, userSignup *toolchainApi.UserSignup) (compliantUsername string, err error) {
 	err = utils.WaitUntil(func() (done bool, err error) {
-		err = s.KubeRest.Get(context.TODO(), types.NamespacedName{
+		err = s.KubeRest.Get(context.Background(), types.NamespacedName{
 			Namespace: DEFAULT_TOOLCHAIN_NAMESPACE,
 			Name:      userName,
 		}, userSignup)
@@ -409,7 +409,7 @@ func (s *SandboxController) waitForNamespaceToBeProvisioned(userName string) (pr
 	err = utils.WaitUntil(func() (done bool, err error) {
 		var namespaceProvisioned bool
 		userSpace := &toolchainApi.Space{}
-		err = s.KubeRest.Get(context.TODO(), types.NamespacedName{
+		err = s.KubeRest.Get(context.Background(), types.NamespacedName{
 			Namespace: DEFAULT_TOOLCHAIN_NAMESPACE,
 			Name:      userName,
 		}, userSpace)
@@ -440,7 +440,7 @@ func (s *SandboxController) waitForNamespaceToBeProvisioned(userName string) (pr
 
 func (s *SandboxController) GetOpenshiftRouteHost(namespace string, name string) (string, error) {
 	route := &routev1.Route{}
-	err := s.KubeRest.Get(context.TODO(), types.NamespacedName{
+	err := s.KubeRest.Get(context.Background(), types.NamespacedName{
 		Namespace: namespace,
 		Name:      name,
 	}, route)
@@ -457,11 +457,11 @@ func (s *SandboxController) DeleteUserSignup(userName string) (bool, error) {
 			Namespace: DEFAULT_TOOLCHAIN_NAMESPACE,
 		},
 	}
-	if err := s.KubeRest.Delete(context.TODO(), userSignup); err != nil {
+	if err := s.KubeRest.Delete(context.Background(), userSignup); err != nil {
 		return false, err
 	}
 	err := utils.WaitUntil(func() (done bool, err error) {
-		err = s.KubeRest.Get(context.TODO(), types.NamespacedName{
+		err = s.KubeRest.Get(context.Background(), types.NamespacedName{
 			Namespace: DEFAULT_TOOLCHAIN_NAMESPACE,
 			Name:      userName,
 		}, userSignup)

@@ -27,7 +27,7 @@ func CreatePVC(pvcs v1.PersistentVolumeClaimInterface, pvcName string) error {
 		},
 	}
 
-	if _, err := pvcs.Create(context.TODO(), pvc, metav1.CreateOptions{}); err != nil {
+	if _, err := pvcs.Create(context.Background(), pvc, metav1.CreateOptions{}); err != nil {
 		return err
 	}
 

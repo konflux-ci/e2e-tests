@@ -12,20 +12,20 @@ import (
 
 func (s *SuiteController) ListRoles(namespace string) (*rbacv1.RoleList, error) {
 	listOptions := metav1.ListOptions{}
-	return s.KubeInterface().RbacV1().Roles(namespace).List(context.TODO(), listOptions)
+	return s.KubeInterface().RbacV1().Roles(namespace).List(context.Background(), listOptions)
 }
 
 func (s *SuiteController) ListRoleBindings(namespace string) (*rbacv1.RoleBindingList, error) {
 	listOptions := metav1.ListOptions{}
-	return s.KubeInterface().RbacV1().RoleBindings(namespace).List(context.TODO(), listOptions)
+	return s.KubeInterface().RbacV1().RoleBindings(namespace).List(context.Background(), listOptions)
 }
 
 func (s *SuiteController) GetRole(roleName, namespace string) (*rbacv1.Role, error) {
-	return s.KubeInterface().RbacV1().Roles(namespace).Get(context.TODO(), roleName, metav1.GetOptions{})
+	return s.KubeInterface().RbacV1().Roles(namespace).Get(context.Background(), roleName, metav1.GetOptions{})
 }
 
 func (s *SuiteController) GetRoleBinding(rolebindingName, namespace string) (*rbacv1.RoleBinding, error) {
-	return s.KubeInterface().RbacV1().RoleBindings(namespace).Get(context.TODO(), rolebindingName, metav1.GetOptions{})
+	return s.KubeInterface().RbacV1().RoleBindings(namespace).Get(context.Background(), rolebindingName, metav1.GetOptions{})
 }
 
 // argoCDNamespaceRBACPresent returns a condition which waits for the Argo CD role/rolebindings to be set on the namespace.
@@ -81,7 +81,7 @@ func (s *SuiteController) CreateRole(roleName, namespace string, roleRules map[s
 			*rules,
 		},
 	}
-	createdRole, err := s.KubeInterface().RbacV1().Roles(namespace).Create(context.TODO(), role, metav1.CreateOptions{})
+	createdRole, err := s.KubeInterface().RbacV1().Roles(namespace).Create(context.Background(), role, metav1.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func (s *SuiteController) CreateRoleBinding(roleBindingName, namespace, subjectK
 		RoleRef:  roleBindingRoleRef,
 	}
 
-	createdRoleBinding, err := s.KubeInterface().RbacV1().RoleBindings(namespace).Create(context.TODO(), roleBinding, metav1.CreateOptions{})
+	createdRoleBinding, err := s.KubeInterface().RbacV1().RoleBindings(namespace).Create(context.Background(), roleBinding, metav1.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}

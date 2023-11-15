@@ -18,7 +18,7 @@ func (s *SuiteController) GetSnapshotEnvironmentBinding(applicationName string, 
 		rclient.InNamespace(namespace),
 	}
 
-	err := s.KubeRest().List(context.TODO(), snapshotEnvironmentBindingList, opts...)
+	err := s.KubeRest().List(context.Background(), snapshotEnvironmentBindingList, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func (s *SuiteController) GetSnapshotEnvironmentBinding(applicationName string, 
 
 // DeleteAllSnapshotEnvBindingsInASpecificNamespace removes all snapshotEnvironmentBindings from a specific namespace. Useful when creating a lot of resources and want to remove all of them
 func (s *SuiteController) DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace string, timeout time.Duration) error {
-	if err := s.KubeRest().DeleteAllOf(context.TODO(), &appservice.SnapshotEnvironmentBinding{}, rclient.InNamespace(namespace)); err != nil {
+	if err := s.KubeRest().DeleteAllOf(context.Background(), &appservice.SnapshotEnvironmentBinding{}, rclient.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting snapshotEnvironmentBindings from the namespace %s: %+v", namespace, err)
 	}
 

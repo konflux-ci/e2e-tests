@@ -137,10 +137,10 @@ You can also specify which tests you want to run using [labels](docs/LabelsNamin
 
 The e2e tests are executed against almost all AppStudio repositories.
 
-Sometimes when we have changes in AppStudio we are introducing some breaking changes and the e2e will fail. To prevent this the e2e framework installation in openshift-ci support a new feature of pairing the PR opened against an AppStudio repository with the e2e forks based in branch names. Before the e2e framework will be executed in openshift-ci, the logic automatically tries to pair a PR opened in some repo with a branch of the same name that
+Sometimes when we have changes in AppStudio we are introducing some breaking changes and the e2e will fail. To prevent this the e2e framework installation in openshift-ci support a new feature of pairing the PR opened against an AppStudio repository with a corresponding PR opened against e2e-tests (based on branch names). Before the e2e framework will be executed in openshift-ci, the logic automatically tries to pair a PR opened in some repo with a branch of the same name that
 potentially could exists in the developer's fork of the e2e repository
 
-For example, if a developer with GH account `cooljohn` opens a PR (for application-service repo) from a branch `new-feature`, then the logic checks if there is a branch `new-feature` also in the `cooljohn/e2e-tests` fork and if exists will start to install the e2e framework from those branch
+For example, if a developer with GH account `cooljohn` opens a PR (for application-service repo) from a branch `new-feature`, then the logic checks if there is a PR open in e2e-tests from the `new-feature` branch in the `cooljohn/e2e-tests` fork. If such a PR is found, the CI will install the e2e framework from that branch.
 
 Once the service PR passes CI with its pairing and is merged, the next step is to get the references in infra-deployments updated.
 Many services have automation to create PRs in infra-deployments to update their component to the latest version.

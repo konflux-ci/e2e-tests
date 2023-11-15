@@ -21,7 +21,7 @@ func (i *ImageController) CreateImageRepositoryCR(name, namespace, applicationNa
 		},
 	}
 
-	err := i.KubeRest().Create(context.TODO(), imageRepository)
+	err := i.KubeRest().Create(context.Background(), imageRepository)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,7 @@ func (i *ImageController) GetImageRepositoryCR(name, namespace string) (*v1alpha
 
 	imageRepository := v1alpha1.ImageRepository{}
 
-	err := i.KubeRest().Get(context.TODO(), namespacedName, &imageRepository)
+	err := i.KubeRest().Get(context.Background(), namespacedName, &imageRepository)
 	if err != nil {
 		return nil, err
 	}

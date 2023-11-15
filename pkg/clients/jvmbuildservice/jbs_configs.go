@@ -68,10 +68,10 @@ func (j *JvmbuildserviceController) CreateJBSConfig(name, namespace string) (*v1
 			},
 		},
 	}
-	return j.JvmbuildserviceClient().JvmbuildserviceV1alpha1().JBSConfigs(namespace).Create(context.TODO(), config, metav1.CreateOptions{})
+	return j.JvmbuildserviceClient().JvmbuildserviceV1alpha1().JBSConfigs(namespace).Create(context.Background(), config, metav1.CreateOptions{})
 }
 
 // DeleteJBSConfig removes a JBSConfig from a given namespace.
 func (j *JvmbuildserviceController) DeleteJBSConfig(name string, namespace string) error {
-	return j.JvmbuildserviceClient().JvmbuildserviceV1alpha1().JBSConfigs(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+	return j.JvmbuildserviceClient().JvmbuildserviceV1alpha1().JBSConfigs(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
 }

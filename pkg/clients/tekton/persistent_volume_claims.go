@@ -27,7 +27,7 @@ func (t *TektonController) CreatePVCInAccessMode(name, namespace string, accessM
 		},
 	}
 
-	createdPVC, err := t.KubeInterface().CoreV1().PersistentVolumeClaims(namespace).Create(context.TODO(), pvc, metav1.CreateOptions{})
+	createdPVC, err := t.KubeInterface().CoreV1().PersistentVolumeClaims(namespace).Create(context.Background(), pvc, metav1.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}

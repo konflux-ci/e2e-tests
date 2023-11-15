@@ -22,7 +22,7 @@ func (g *GitopsController) GetEnvironmentsList(namespace string) (*appservice.En
 		client.InNamespace(namespace),
 	}
 
-	err := g.KubeRest().List(context.TODO(), environmentList, opts...)
+	err := g.KubeRest().List(context.Background(), environmentList, opts...)
 
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, fmt.Errorf("error occurred while trying to list environments in %s namespace: %v", namespace, err)
@@ -40,7 +40,7 @@ func (g *GitopsController) GetEphemeralEnvironment(applicationName, snapshotName
 	}
 
 	environmentList := &appservice.EnvironmentList{}
-	err := g.KubeRest().List(context.TODO(), environmentList, opts...)
+	err := g.KubeRest().List(context.Background(), environmentList, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("error occurred when listing the environments: %+v", err)
 	}
@@ -97,12 +97,12 @@ func (g *GitopsController) CreateEphemeralEnvironment(name string, namespace str
 		ephemeralEnvironmentObj.Spec.UnstableConfigurationFields.IngressDomain = kubeIngressDomain
 	}
 
-	if err := g.KubeRest().Create(context.TODO(), ephemeralEnvironmentObj); err != nil {
+	if err := g.KubeRest().Create(context.Background(), ephemeralEnvironmentObj); err != nil {
 		if err != nil {
 			if k8sErrors.IsAlreadyExists(err) {
 				environment := &appservice.Environment{}
 
-				err := g.KubeRest().Get(context.TODO(), types.NamespacedName{
+				err := g.KubeRest().Get(context.Background(), types.NamespacedName{
 					Name:      name,
 					Namespace: namespace,
 				}, environment)
@@ -146,7 +146,7 @@ func (g *GitopsController) CreatePocEnvironment(name string, namespace string) (
 			if k8sErrors.IsAlreadyExists(err) {
 				environment := &appservice.Environment{}
 
-				err := g.KubeRest().Get(context.TODO(), types.NamespacedName{
+				err := g.KubeRest().Get(context.Background(), types.NamespacedName{
 					Name:      name,
 					Namespace: namespace,
 				}, environment)
@@ -162,7 +162,7 @@ func (g *GitopsController) CreatePocEnvironment(name string, namespace string) (
 
 // DeleteAllEnvironmentsInASpecificNamespace removes all environments from a specific namespace. Useful when creating a lot of resources and want to remove all of them
 func (g *GitopsController) DeleteAllEnvironmentsInASpecificNamespace(namespace string, timeout time.Duration) error {
-	if err := g.KubeRest().DeleteAllOf(context.TODO(), &appservice.Environment{}, client.InNamespace(namespace)); err != nil {
+	if err := g.KubeRest().DeleteAllOf(context.Background(), &appservice.Environment{}, client.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting environments from the namespace %s: %+v", namespace, err)
 	}
 

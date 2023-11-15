@@ -4,9 +4,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 )
 
-// E2ESuiteDescribe annotates the e2e scenarios tests with the e2e-scenarios label.
-func E2ESuiteDescribe(args ...interface{}) bool {
-	return Describe("[e2e-demos-suite]", args)
+// ByocSuiteDescribe annotates the byoc scenarios.
+func ByocSuiteDescribe(args ...interface{}) bool {
+	return Describe("[byoc-suite]", args)
 }
 
 // CommonSuiteDescribe annotates the common tests with the application label.

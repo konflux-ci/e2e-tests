@@ -21,7 +21,7 @@ func (s *SPIController) CreateSPIFileContentRequest(name, namespace, repoURL, fi
 		},
 		Spec: spi.SPIFileContentRequestSpec{RepoUrl: repoURL, FilePath: filePath},
 	}
-	err := s.KubeRest().Create(context.TODO(), &spiFcr)
+	err := s.KubeRest().Create(context.Background(), &spiFcr)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (s *SPIController) GetSPIFileContentRequest(name, namespace string) (*spi.S
 	spiFcr := spi.SPIFileContentRequest{
 		Spec: spi.SPIFileContentRequestSpec{},
 	}
-	err := s.KubeRest().Get(context.TODO(), namespacedName, &spiFcr)
+	err := s.KubeRest().Get(context.Background(), namespacedName, &spiFcr)
 	if err != nil {
 		return nil, err
 	}

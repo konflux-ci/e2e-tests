@@ -12,7 +12,7 @@ import (
 
 // Create a tekton task and return the task or error.
 func (t *TektonController) CreateTask(task *v1beta1.Task, ns string) (*v1beta1.Task, error) {
-	return t.PipelineClient().TektonV1beta1().Tasks(ns).Create(context.TODO(), task, metav1.CreateOptions{})
+	return t.PipelineClient().TektonV1beta1().Tasks(ns).Create(context.Background(), task, metav1.CreateOptions{})
 }
 
 // CreateSkopeoCopyTask creates a skopeo copy task in the given namespace.
@@ -41,7 +41,7 @@ func (t *TektonController) GetTask(name, namespace string) (*v1beta1.Task, error
 			Namespace: namespace,
 		},
 	}
-	err := t.KubeRest().Get(context.TODO(), namespacedName, &task)
+	err := t.KubeRest().Get(context.Background(), namespacedName, &task)
 	if err != nil {
 		return nil, err
 	}
@@ -50,5 +50,5 @@ func (t *TektonController) GetTask(name, namespace string) (*v1beta1.Task, error
 
 // DeleteAllTasksInASpecificNamespace removes all Tasks from a given repository. Useful when creating a lot of resources and wanting to remove all of them.
 func (t *TektonController) DeleteAllTasksInASpecificNamespace(namespace string) error {
-	return t.KubeRest().DeleteAllOf(context.TODO(), &v1beta1.Task{}, crclient.InNamespace(namespace))
+	return t.KubeRest().DeleteAllOf(context.Background(), &v1beta1.Task{}, crclient.InNamespace(namespace))
 }

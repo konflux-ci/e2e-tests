@@ -4,6 +4,7 @@ import (
 	"context"
 
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -22,13 +23,13 @@ func (t *TektonController) NewBundles() (*Bundles, error) {
 	}
 	bundles := &Bundles{}
 	pipelineSelector := &buildservice.BuildPipelineSelector{}
-	err := t.KubeRest().Get(context.TODO(), namespacedName, pipelineSelector)
+	err := t.KubeRest().Get(context.Background(), namespacedName, pipelineSelector)
 	if err != nil {
 		return nil, err
 	}
-	for _, selector := range pipelineSelector.Spec.Selectors {
-		bundleName := selector.PipelineRef.Name
-		bundleRef := selector.PipelineRef.Bundle //nolint:all
+	for i := range pipelineSelector.Spec.Selectors {
+		selector := &pipelineSelector.Spec.Selectors[i]
+		bundleName, bundleRef := utils.GetPipelineNameAndBundleRef(&selector.PipelineRef)
 		switch bundleName {
 		case "docker-build":
 			bundles.DockerBuildBundle = bundleRef

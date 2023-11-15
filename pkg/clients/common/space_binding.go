@@ -31,7 +31,7 @@ func (s *SuiteController) CreateSpaceBinding(murName, spaceName, spaceRole strin
 		},
 	}
 
-	err := s.KubeRest().Create(context.TODO(), spaceBinding)
+	err := s.KubeRest().Create(context.Background(), spaceBinding)
 	if err != nil {
 		return &toolchainApi.SpaceBinding{}, err
 	}

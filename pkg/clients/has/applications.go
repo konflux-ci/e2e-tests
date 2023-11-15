@@ -20,7 +20,7 @@ func (h *HasController) GetApplication(name string, namespace string) (*appservi
 	application := appservice.Application{
 		Spec: appservice.ApplicationSpec{},
 	}
-	if err := h.KubeRest().Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, &application); err != nil {
+	if err := h.KubeRest().Get(context.Background(), types.NamespacedName{Name: name, Namespace: namespace}, &application); err != nil {
 		return nil, err
 	}
 
@@ -64,7 +64,9 @@ func (h *HasController) CreateApplicationWithTimeout(name string, namespace stri
 		},
 	}
 
-	if err := h.KubeRest().Create(context.Background(), application); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*1)
+	defer cancel()
+	if err := h.KubeRest().Create(ctx, application); err != nil {
 		return nil, err
 	}
 
@@ -86,7 +88,7 @@ func (h *HasController) DeleteApplication(name string, namespace string, reportE
 			Namespace: namespace,
 		},
 	}
-	if err := h.KubeRest().Delete(context.TODO(), &application); err != nil {
+	if err := h.KubeRest().Delete(context.Background(), &application); err != nil {
 		if !k8sErrors.IsNotFound(err) || (k8sErrors.IsNotFound(err) && reportErrorOnNotFound) {
 			return fmt.Errorf("error deleting an application: %+v", err)
 		}
@@ -104,7 +106,7 @@ func (h *HasController) ApplicationDeleted(application *appservice.Application) 
 
 // DeleteAllApplicationsInASpecificNamespace removes all application CRs from a specific namespace. Useful when creating a lot of resources and want to remove all of them
 func (h *HasController) DeleteAllApplicationsInASpecificNamespace(namespace string, timeout time.Duration) error {
-	if err := h.KubeRest().DeleteAllOf(context.TODO(), &appservice.Application{}, rclient.InNamespace(namespace)); err != nil {
+	if err := h.KubeRest().DeleteAllOf(context.Background(), &appservice.Application{}, rclient.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting applications from the namespace %s: %+v", namespace, err)
 	}
 

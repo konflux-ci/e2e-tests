@@ -10,7 +10,7 @@ import (
 // GetRekorHost returns a rekorHost.
 func (t *TektonController) GetRekorHost() (rekorHost string, err error) {
 	api := t.KubeInterface().CoreV1().ConfigMaps(constants.TEKTON_CHAINS_NS)
-	ctx := context.TODO()
+	ctx := context.Background()
 
 	cm, err := api.Get(ctx, "chains-config", metav1.GetOptions{})
 	if err != nil {

@@ -38,7 +38,7 @@ func (i *IntegrationController) CreateSnapshotWithComponents(snapshotName, compo
 			Components:  snapshotComponents,
 		},
 	}
-	return snapshot, i.KubeRest().Create(context.TODO(), snapshot)
+	return snapshot, i.KubeRest().Create(context.Background(), snapshot)
 }
 
 // CreateSnapshotWithImage creates a snapshot using an image.
@@ -64,7 +64,7 @@ func (i *IntegrationController) GetSnapshotByComponent(namespace string) (*appst
 		},
 		client.InNamespace(namespace),
 	}
-	err := i.KubeRest().List(context.TODO(), snapshot, opts...)
+	err := i.KubeRest().List(context.Background(), snapshot, opts...)
 
 	if err == nil && len(snapshot.Items) > 0 {
 		return &snapshot.Items[0], nil
@@ -114,13 +114,13 @@ func (i *IntegrationController) GetSnapshot(snapshotName, pipelineRunName, compo
 
 // DeleteSnapshot removes given snapshot from specified namespace.
 func (i *IntegrationController) DeleteSnapshot(hasSnapshot *appstudioApi.Snapshot, namespace string) error {
-	err := i.KubeRest().Delete(context.TODO(), hasSnapshot)
+	err := i.KubeRest().Delete(context.Background(), hasSnapshot)
 	return err
 }
 
 // DeleteAllSnapshotsInASpecificNamespace removes all snapshots from a specific namespace. Useful when creating a lot of resources and want to remove all of them
 func (i *IntegrationController) DeleteAllSnapshotsInASpecificNamespace(namespace string, timeout time.Duration) error {
-	if err := i.KubeRest().DeleteAllOf(context.TODO(), &appstudioApi.Snapshot{}, client.InNamespace(namespace)); err != nil {
+	if err := i.KubeRest().DeleteAllOf(context.Background(), &appstudioApi.Snapshot{}, client.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting snapshots from the namespace %s: %+v", namespace, err)
 	}
 

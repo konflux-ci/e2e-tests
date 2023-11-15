@@ -184,17 +184,17 @@ func (i *InstallAppStudio) CheckOperatorsReady() (err error) {
 	if err != nil {
 		klog.Fatal(err)
 	}
-	_, err = appClientset.ArgoprojV1alpha1().Applications("openshift-gitops").Patch(context.TODO(), "all-application-sets", types.JSONPatchType, patchPayloadBytes, metav1.PatchOptions{})
+	_, err = appClientset.ArgoprojV1alpha1().Applications("openshift-gitops").Patch(context.Background(), "all-application-sets", types.JSONPatchType, patchPayloadBytes, metav1.PatchOptions{})
 	if err != nil {
 		klog.Fatal(err)
 	}
 
 	for {
 		var count = 0
-		appsListFor, err := appClientset.ArgoprojV1alpha1().Applications("openshift-gitops").List(context.TODO(), metav1.ListOptions{})
+		appsListFor, err := appClientset.ArgoprojV1alpha1().Applications("openshift-gitops").List(context.Background(), metav1.ListOptions{})
 		for _, app := range appsListFor.Items {
 			fmt.Printf("Check application: %s\n", app.Name)
-			application, err := appClientset.ArgoprojV1alpha1().Applications("openshift-gitops").Get(context.TODO(), app.Name, metav1.GetOptions{})
+			application, err := appClientset.ArgoprojV1alpha1().Applications("openshift-gitops").Get(context.Background(), app.Name, metav1.GetOptions{})
 			if err != nil {
 				klog.Fatal(err)
 			}
@@ -215,7 +215,7 @@ func (i *InstallAppStudio) CheckOperatorsReady() (err error) {
 					klog.Fatal(err)
 				}
 				for _, app := range appsListFor.Items {
-					_, err = i.KubernetesClient.KubeInterface().AppsV1().Deployments("openshift-gitops").Patch(context.TODO(), app.Name, types.JSONPatchType, patchPayloadBytes, metav1.PatchOptions{})
+					_, err = i.KubernetesClient.KubeInterface().AppsV1().Deployments("openshift-gitops").Patch(context.Background(), app.Name, types.JSONPatchType, patchPayloadBytes, metav1.PatchOptions{})
 					if err != nil {
 						klog.Fatal(err)
 					}
@@ -287,7 +287,7 @@ func (i *InstallAppStudio) createE2EQuaySecret() error {
 			secret.Data = map[string][]byte{
 				corev1.DockerConfigJsonKey: decodedToken,
 			}
-			_, err = i.KubernetesClient.KubeInterface().CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+			_, err = i.KubernetesClient.KubeInterface().CoreV1().Secrets(namespace).Update(context.Background(), secret, metav1.UpdateOptions{})
 			if err != nil {
 				return fmt.Errorf("error when updating secret '%s' namespace: %v", secretName, err)
 			}
@@ -310,7 +310,7 @@ func (i *InstallAppStudio) addSPIOauthRedirectProxyUrl() {
 	deploymentName := "spi-oauth-service"
 
 	patchData := []byte(fmt.Sprintf(`{"data": {"OAUTH_REDIRECT_PROXY_URL": "%s"}}`, OauthRedirectProxyUrl))
-	_, err := i.KubernetesClient.KubeInterface().CoreV1().ConfigMaps(namespace).Patch(context.TODO(), configMapName, types.MergePatchType, patchData, metav1.PatchOptions{})
+	_, err := i.KubernetesClient.KubeInterface().CoreV1().ConfigMaps(namespace).Patch(context.Background(), configMapName, types.MergePatchType, patchData, metav1.PatchOptions{})
 	if err != nil {
 		klog.Error(err)
 		return
@@ -322,7 +322,7 @@ func (i *InstallAppStudio) addSPIOauthRedirectProxyUrl() {
 	}
 
 	deployment := &appsv1.Deployment{}
-	err = i.KubernetesClient.KubeRest().Get(context.TODO(), namespacedName, deployment)
+	err = i.KubernetesClient.KubeRest().Get(context.Background(), namespacedName, deployment)
 	if err != nil {
 		klog.Error(err)
 		return
@@ -338,7 +338,7 @@ func (i *InstallAppStudio) addSPIOauthRedirectProxyUrl() {
 	newDeployment.Spec.Replicas = &replicas
 	newDeployment.SetAnnotations(ann)
 
-	_, err = i.KubernetesClient.KubeInterface().AppsV1().Deployments(namespace).Update(context.TODO(), newDeployment, metav1.UpdateOptions{})
+	_, err = i.KubernetesClient.KubeInterface().AppsV1().Deployments(namespace).Update(context.Background(), newDeployment, metav1.UpdateOptions{})
 	if err != nil {
 		klog.Error(err)
 		return

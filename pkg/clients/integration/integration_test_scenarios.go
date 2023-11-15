@@ -28,7 +28,7 @@ func (i *IntegrationController) CreateIntegrationTestScenario(applicationName, n
 		},
 	}
 
-	err := i.KubeRest().Create(context.TODO(), integrationTestScenario)
+	err := i.KubeRest().Create(context.Background(), integrationTestScenario)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (i *IntegrationController) CreateIntegrationTestScenarioWithEnvironment(app
 		},
 	}
 
-	err := i.KubeRest().Create(context.TODO(), integrationTestScenario)
+	err := i.KubeRest().Create(context.Background(), integrationTestScenario)
 	if err != nil {
 		return nil, fmt.Errorf("error occurred when creating the IntegrationTestScenario: %+v", err)
 	}
@@ -115,7 +115,7 @@ func (i *IntegrationController) CreateIntegrationTestScenario_beta1(applicationN
 		},
 	}
 
-	err := i.KubeRest().Create(context.TODO(), integrationTestScenario)
+	err := i.KubeRest().Create(context.Background(), integrationTestScenario)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (i *IntegrationController) GetIntegrationTestScenarios(applicationName, nam
 	}
 
 	integrationTestScenarioList := &integrationv1beta1.IntegrationTestScenarioList{}
-	err := i.KubeRest().List(context.TODO(), integrationTestScenarioList, opts...)
+	err := i.KubeRest().List(context.Background(), integrationTestScenarioList, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -145,6 +145,6 @@ func (i *IntegrationController) GetIntegrationTestScenarios(applicationName, nam
 
 // DeleteIntegrationTestScenario removes given testScenario from specified namespace.
 func (i *IntegrationController) DeleteIntegrationTestScenario(testScenario *integrationv1beta1.IntegrationTestScenario, namespace string) error {
-	err := i.KubeRest().Delete(context.TODO(), testScenario)
+	err := i.KubeRest().Delete(context.Background(), testScenario)
 	return err
 }

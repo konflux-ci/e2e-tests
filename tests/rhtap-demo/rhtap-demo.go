@@ -114,12 +114,13 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					if !CurrentSpecReport().Failed() {
-						if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 90*time.Second); err != nil {
-							if err := fw.AsKubeAdmin.StoreAllArtifactsForNamespace(namespace); err != nil {
-								Fail(fmt.Sprintf("error archiving artifacts:\n%s", err))
-							}
-							Fail(fmt.Sprintf("error deleting all componentns in namespace:\n%s", err))
-						}
+						// skipped due to RHTAPBUGS-978
+						// if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 90*time.Second); err != nil {
+						// 	if err := fw.AsKubeAdmin.StoreAllArtifactsForNamespace(namespace); err != nil {
+						// 		Fail(fmt.Sprintf("error archiving artifacts:\n%s", err))
+						// 	}
+						// 	Fail(fmt.Sprintf("error deleting all componentns in namespace:\n%s", err))
+						// }
 						Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 						Expect(fw.AsKubeAdmin.CommonController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 						Expect(fw.AsKubeAdmin.IntegrationController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
@@ -384,7 +385,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 									for k, v := range constants.ComponentPaCRequestAnnotation {
 										component.Annotations[k] = v
 									}
-									Expect(fw.AsKubeAdmin.CommonController.KubeRest().Update(context.TODO(), component)).To(Succeed())
+									Expect(fw.AsKubeAdmin.CommonController.KubeRest().Update(context.Background(), component)).To(Succeed())
 									Expect(err).ShouldNot(HaveOccurred(), "failed to update component: %v", err)
 								})
 

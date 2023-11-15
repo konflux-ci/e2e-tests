@@ -10,7 +10,7 @@ import (
 )
 
 func (s *SuiteController) GetServiceAccount(saName, namespace string) (*corev1.ServiceAccount, error) {
-	return s.KubeInterface().CoreV1().ServiceAccounts(namespace).Get(context.TODO(), saName, metav1.GetOptions{})
+	return s.KubeInterface().CoreV1().ServiceAccounts(namespace).Get(context.Background(), saName, metav1.GetOptions{})
 }
 
 func (s *SuiteController) ServiceAccountPresent(saName, namespace string) wait.ConditionFunc {
@@ -33,10 +33,10 @@ func (s *SuiteController) CreateServiceAccount(name, namespace string, serviceAc
 		},
 		Secrets: serviceAccountSecretList,
 	}
-	return s.KubeInterface().CoreV1().ServiceAccounts(namespace).Create(context.TODO(), serviceAccount, metav1.CreateOptions{})
+	return s.KubeInterface().CoreV1().ServiceAccounts(namespace).Create(context.Background(), serviceAccount, metav1.CreateOptions{})
 }
 
 // DeleteAllServiceAccountsInASpecificNamespace deletes all ServiceAccount from a given namespace
 func (h *SuiteController) DeleteAllServiceAccountsInASpecificNamespace(namespace string) error {
-	return h.KubeRest().DeleteAllOf(context.TODO(), &corev1.ServiceAccount{}, client.InNamespace(namespace))
+	return h.KubeRest().DeleteAllOf(context.Background(), &corev1.ServiceAccount{}, client.InNamespace(namespace))
 }

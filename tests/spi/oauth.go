@@ -186,7 +186,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 				},
 			}
 
-			_, err := fw.AsKubeAdmin.CommonController.KubeInterface().CoreV1().Pods(namespace).Create(context.TODO(), cypressPod, metav1.CreateOptions{})
+			_, err := fw.AsKubeAdmin.CommonController.KubeInterface().CoreV1().Pods(namespace).Create(context.Background(), cypressPod, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			// check pod is running

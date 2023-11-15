@@ -16,24 +16,24 @@ import (
 
 // Creates a new secret in a specified namespace
 func (s *SuiteController) CreateSecret(ns string, secret *corev1.Secret) (*corev1.Secret, error) {
-	return s.KubeInterface().CoreV1().Secrets(ns).Create(context.TODO(), secret, metav1.CreateOptions{})
+	return s.KubeInterface().CoreV1().Secrets(ns).Create(context.Background(), secret, metav1.CreateOptions{})
 }
 
 // Check if a secret exists, return secret and error
 func (s *SuiteController) GetSecret(ns string, name string) (*corev1.Secret, error) {
-	return s.KubeInterface().CoreV1().Secrets(ns).Get(context.TODO(), name, metav1.GetOptions{})
+	return s.KubeInterface().CoreV1().Secrets(ns).Get(context.Background(), name, metav1.GetOptions{})
 }
 
 // Deleted a secret in a specified namespace
 func (s *SuiteController) DeleteSecret(ns string, name string) error {
-	return s.KubeInterface().CoreV1().Secrets(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
+	return s.KubeInterface().CoreV1().Secrets(ns).Delete(context.Background(), name, metav1.DeleteOptions{})
 }
 
 // Links a secret to a specified serviceaccount, if argument addImagePullSecrets is true secret will be added also to ImagePullSecrets of SA.
 func (s *SuiteController) LinkSecretToServiceAccount(ns, secret, serviceaccount string, addImagePullSecrets bool) error {
 	timeout := 20 * time.Second
 	return wait.PollUntilContextTimeout(context.Background(), time.Second, timeout, true, func(ctx context.Context) (bool, error) {
-		serviceAccountObject, err := s.KubeInterface().CoreV1().ServiceAccounts(ns).Get(context.TODO(), serviceaccount, metav1.GetOptions{})
+		serviceAccountObject, err := s.KubeInterface().CoreV1().ServiceAccounts(ns).Get(context.Background(), serviceaccount, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -47,7 +47,7 @@ func (s *SuiteController) LinkSecretToServiceAccount(ns, secret, serviceaccount 
 		if addImagePullSecrets {
 			serviceAccountObject.ImagePullSecrets = append(serviceAccountObject.ImagePullSecrets, corev1.LocalObjectReference{Name: secret})
 		}
-		_, err = s.KubeInterface().CoreV1().ServiceAccounts(ns).Update(context.TODO(), serviceAccountObject, metav1.UpdateOptions{})
+		_, err = s.KubeInterface().CoreV1().ServiceAccounts(ns).Update(context.Background(), serviceAccountObject, metav1.UpdateOptions{})
 		if err != nil {
 			return false, nil
 		}
@@ -57,7 +57,7 @@ func (s *SuiteController) LinkSecretToServiceAccount(ns, secret, serviceaccount 
 
 // UnlinkSecretFromServiceAccount unlinks secret from service account
 func (s *SuiteController) UnlinkSecretFromServiceAccount(namespace, secretName, serviceAccount string, rmImagePullSecrets bool) error {
-	serviceAccountObject, err := s.KubeInterface().CoreV1().ServiceAccounts(namespace).Get(context.TODO(), serviceAccount, metav1.GetOptions{})
+	serviceAccountObject, err := s.KubeInterface().CoreV1().ServiceAccounts(namespace).Get(context.Background(), serviceAccount, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (s *SuiteController) UnlinkSecretFromServiceAccount(namespace, secretName, 
 			}
 		}
 	}
-	_, err = s.KubeInterface().CoreV1().ServiceAccounts(namespace).Update(context.TODO(), serviceAccountObject, metav1.UpdateOptions{})
+	_, err = s.KubeInterface().CoreV1().ServiceAccounts(namespace).Update(context.Background(), serviceAccountObject, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func (s *SuiteController) CreateRegistryAuthSecret(secretName, namespace, secret
 		Type:       corev1.SecretTypeDockerConfigJson,
 		StringData: map[string]string{corev1.DockerConfigJsonKey: string(rawDecodedTextStringData)},
 	}
-	er := s.KubeRest().Create(context.TODO(), secret)
+	er := s.KubeRest().Create(context.Background(), secret)
 	if er != nil {
 		return nil, er
 	}
@@ -114,7 +114,7 @@ func (s *SuiteController) CreateRegistryJsonSecret(name, namespace, authKey, key
 		Type:       corev1.SecretTypeDockerConfigJson,
 		Data:       map[string][]byte{".dockerconfigjson": []byte(fmt.Sprintf("{\"auths\":{\"quay.io\":{\"username\":\"%s\",\"password\":\"%s\",\"auth\":\"dGVzdDp0ZXN0\",\"email\":\"\"}}}", keyName, authKey))},
 	}
-	err := s.KubeRest().Create(context.TODO(), secret)
+	err := s.KubeRest().Create(context.Background(), secret)
 	if err != nil {
 		return nil, err
 	}

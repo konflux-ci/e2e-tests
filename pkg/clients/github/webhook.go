@@ -29,7 +29,7 @@ func (g *Github) CreateWebhook(repository, url string) (int64, error) {
 		},
 	}
 
-	hook, _, err := g.client.Repositories.CreateHook(context.TODO(), g.organization, repository, newWebhook)
+	hook, _, err := g.client.Repositories.CreateHook(context.Background(), g.organization, repository, newWebhook)
 	if err != nil {
 		return 0, fmt.Errorf("error when creating a webhook: %v", err)
 	}

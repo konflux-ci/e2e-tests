@@ -117,7 +117,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			// `repository` values from those will replace the default policy source
 			// this gives us a way to set the tests to use a different policy if we
 			// break the tests in the default policy source
-			// if config, err := fwk.CommonController.K8sClient.KubeInterface().CoreV1().ConfigMaps("e2e-tests").Get(context.TODO(), "ec-config", v1.GetOptions{}); err != nil {
+			// if config, err := fwk.CommonController.K8sClient.KubeInterface().CoreV1().ConfigMaps("e2e-tests").Get(context.Background() , "ec-config", v1.GetOptions{}); err != nil {
 			// 	if v, ok := config.Data["revision"]; ok {
 			// 		policySource.Revision = &v
 			// 	}

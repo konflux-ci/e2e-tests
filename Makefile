@@ -50,3 +50,6 @@ clean-quay-repos-and-robots:
 
 clean-quay-tags:
 	./mage -v local:cleanupQuayTags
+
+clean-private-repos:
+	./mage -v local:cleanupPrivateRepos
