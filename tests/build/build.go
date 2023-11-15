@@ -1104,8 +1104,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					},
 					Spec: buildservice.BuildPipelineSelectorSpec{Selectors: []buildservice.PipelineSelector{
 						{
-							Name: "user-custom-selector",
-							PipelineRef: *utils.NewBundleResolverPipelineRef("docker-build", dummyPipelineBundleRef),
+							Name:           "user-custom-selector",
+							PipelineRef:    *tekton.NewBundleResolverPipelineRef("docker-build", dummyPipelineBundleRef),
 							PipelineParams: []buildservice.PipelineParam{expectedAdditionalPipelineParam},
 							WhenConditions: buildservice.WhenCondition{
 								ProjectType:        "hello-world",
@@ -1175,7 +1175,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(notMatchingComponentName, applicationName, testNamespace, "")
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(utils.GetBundleRef(pr.Spec.PipelineRef)).ToNot(Equal(dummyPipelineBundleRef)) //nolint:all
+			Expect(tekton.GetBundleRef(pr.Spec.PipelineRef)).ToNot(Equal(dummyPipelineBundleRef)) //nolint:all
 			Expect(pr.Spec.Params).ToNot(ContainElement(v1beta1.Param{
 				Name:  expectedAdditionalPipelineParam.Name,
 				Value: v1beta1.ParamValue{StringVal: expectedAdditionalPipelineParam.Value, Type: "string"}},

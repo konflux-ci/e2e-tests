@@ -25,11 +25,12 @@ import (
 	"github.com/magefile/mage/sh"
 	"github.com/redhat-appstudio/e2e-tests/magefiles/installation"
 	"github.com/redhat-appstudio/e2e-tests/magefiles/testspecs"
-	"github.com/redhat-appstudio/e2e-tests/pkg/apis/github"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/github"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/slack"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/sprayproxy"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"github.com/redhat-appstudio/image-controller/pkg/quay"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
@@ -373,10 +374,10 @@ func (ci CI) setRequiredEnvVars() error {
 				if err = utils.CreateDockerConfigFile(os.Getenv("QUAY_TOKEN")); err != nil {
 					return fmt.Errorf("failed to create docker config file: %+v", err)
 				}
-				if defaultBundleRef, err = utils.GetDefaultPipelineBundleRef(constants.BuildPipelineSelectorYamlURL, "Java"); err != nil {
+				if defaultBundleRef, err = tekton.GetDefaultPipelineBundleRef(constants.BuildPipelineSelectorYamlURL, "Java"); err != nil {
 					return fmt.Errorf("failed to get the pipeline bundle ref: %+v", err)
 				}
-				if tektonObj, err = utils.ExtractTektonObjectFromBundle(defaultBundleRef, "pipeline", "java-builder"); err != nil {
+				if tektonObj, err = tekton.ExtractTektonObjectFromBundle(defaultBundleRef, "pipeline", "java-builder"); err != nil {
 					return fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
 				}
 				javaPipelineObj := tektonObj.(tektonapi.PipelineObject)
@@ -400,7 +401,7 @@ func (ci CI) setRequiredEnvVars() error {
 						break
 					}
 				}
-				if tektonObj, err = utils.ExtractTektonObjectFromBundle(currentS2iJavaTaskRef, "task", "s2i-java"); err != nil {
+				if tektonObj, err = tekton.ExtractTektonObjectFromBundle(currentS2iJavaTaskRef, "task", "s2i-java"); err != nil {
 					return fmt.Errorf("failed to extract the Tekton Task from bundle: %+v", err)
 				}
 				taskObj := tektonObj.(tektonapi.TaskObject)
@@ -421,10 +422,10 @@ func (ci CI) setRequiredEnvVars() error {
 				keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
 				authOption := remoteimg.WithAuthFromKeychain(keychain)
 
-				if err = utils.BuildAndPushTektonBundle(newTaskYaml, newS2iJavaTaskRef, authOption); err != nil {
+				if err = tekton.BuildAndPushTektonBundle(newTaskYaml, newS2iJavaTaskRef, authOption); err != nil {
 					return fmt.Errorf("error when building/pushing a tekton task bundle: %v", err)
 				}
-				if err = utils.BuildAndPushTektonBundle(newPipelineYaml, newJavaBuilderPipelineRef, authOption); err != nil {
+				if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newJavaBuilderPipelineRef, authOption); err != nil {
 					return fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
 				}
 				os.Setenv(constants.CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV, newJavaBuilderPipelineRef.String())

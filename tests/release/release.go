@@ -180,7 +180,7 @@ var _ = framework.ReleaseSuiteDescribe("Release service happy path", Label("rele
 				if !pr.IsDone() {
 					return fmt.Errorf("release pipelinerun %s/%s did not finish yet", pr.GetNamespace(), pr.GetName())
 				}
-				Expect(utils.HasPipelineRunSucceeded(pr)).To(BeTrue(), fmt.Sprintf("release pipelinerun %s/%s did not succeed", pr.GetNamespace(), pr.GetName()))
+				Expect(tekton.HasPipelineRunSucceeded(pr)).To(BeTrue(), fmt.Sprintf("release pipelinerun %s/%s did not succeed", pr.GetNamespace(), pr.GetName()))
 				return nil
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(Succeed())
 		})

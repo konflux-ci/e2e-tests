@@ -1,10 +1,10 @@
 package pipelines
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
-	"encoding/json"
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
@@ -13,31 +13,31 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2e-test.", Label("release-pipelines", "fbcHappyPath"), func() {
 	defer GinkgoRecover()
 
 	const (
-		fbcApplicationName		= "fbc-pipelines-aplication"
-		fbcComponentName		= "fbc-pipelines-component"
-		fbcReleasePlanName		= "fbc-pipelines-releaseplan"
-		fbcReleasePlanAdmissionName	= "fbc-pipelines-releaseplanadmission"
-		fbcEnterpriseContractPolicyName	= "fbc-pipelines-policy"
-		fbcServiceAccountName		= "release-service-account"
-		fbcSourceGitUrl			= "https://github.com/redhat-appstudio-qe/fbc-sample-repo"
-		targetPort			= 50051
-		relSvcCatalogURL		= "https://github.com/redhat-appstudio/release-service-catalog"
-		relSvcCatalogRevision		= "main"
-		relSvcCatalogPathInRepo		= "pipelines/fbc-release/fbc-release.yaml"
-		ecPolicyLibPath			= "github.com/enterprise-contract/ec-policies//policy/lib"
-		ecPolicyReleasePath		= "github.com/enterprise-contract/ec-policies//policy/release"
-		ecPolicyDataPath		= "github.com/enterprise-contract/ec-policies//example/data"
-
+		fbcApplicationName              = "fbc-pipelines-aplication"
+		fbcComponentName                = "fbc-pipelines-component"
+		fbcReleasePlanName              = "fbc-pipelines-releaseplan"
+		fbcReleasePlanAdmissionName     = "fbc-pipelines-releaseplanadmission"
+		fbcEnterpriseContractPolicyName = "fbc-pipelines-policy"
+		fbcServiceAccountName           = "release-service-account"
+		fbcSourceGitUrl                 = "https://github.com/redhat-appstudio-qe/fbc-sample-repo"
+		targetPort                      = 50051
+		relSvcCatalogURL                = "https://github.com/redhat-appstudio/release-service-catalog"
+		relSvcCatalogRevision           = "main"
+		relSvcCatalogPathInRepo         = "pipelines/fbc-release/fbc-release.yaml"
+		ecPolicyLibPath                 = "github.com/enterprise-contract/ec-policies//policy/lib"
+		ecPolicyReleasePath             = "github.com/enterprise-contract/ec-policies//policy/release"
+		ecPolicyDataPath                = "github.com/enterprise-contract/ec-policies//example/data"
 	)
 
 	var devWorkspace = os.Getenv(constants.RELEASE_DEV_WORKSPACE_ENV)
@@ -102,14 +102,14 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 		Expect(err).NotTo(HaveOccurred())
 
 		data, err := json.Marshal(map[string]interface{}{
-                        "fbc": map[string]interface{}{
-                                "fromIndex": constants.FromIndex,
-                                "targetIndex": constants.TargetIndex,
-				"binaryImage": constants.BinaryImage,
+			"fbc": map[string]interface{}{
+				"fromIndex":            constants.FromIndex,
+				"targetIndex":          constants.TargetIndex,
+				"binaryImage":          constants.BinaryImage,
 				"requestUpdateTimeout": "420",
-				"buildTimeoutSeconds": "480",
-                        },
-                })
+				"buildTimeoutSeconds":  "480",
+			},
+		})
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = managed_fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(fbcReleasePlanAdmissionName, managedNamespace, "", devNamespace, fbcEnterpriseContractPolicyName, fbcServiceAccountName, []string{fbcApplicationName}, true, &tektonutils.PipelineRef{
@@ -175,7 +175,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 					return fmt.Errorf("release pipelinerun %s in namespace %s did not finish yet", releasePr.Name, releasePr.Namespace)
 				}
 				GinkgoWriter.Println("Release PR: ", releasePr.Name)
-				Expect(utils.HasPipelineRunSucceeded(releasePr)).To(BeTrue(), fmt.Sprintf("release pipelinerun %s/%s did not succeed", releasePr.GetNamespace(), releasePr.GetName()))
+				Expect(tekton.HasPipelineRunSucceeded(releasePr)).To(BeTrue(), fmt.Sprintf("release pipelinerun %s/%s did not succeed", releasePr.GetNamespace(), releasePr.GetName()))
 				return nil
 			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(Succeed(), "timed out when waiting for release pipelinerun to succeed")
 		})

@@ -11,10 +11,11 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
-	client "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
-	"github.com/redhat-appstudio/e2e-tests/pkg/apis/vcluster"
+	client "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/vcluster"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/gitops"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
@@ -188,7 +189,7 @@ var _ = framework.ByocSuiteDescribe(Label("byoc"), Ordered, func() {
 
 				Eventually(func() bool {
 					// application info should be stored even after deleting the application in application variable
-					gitOpsRepository := utils.ObtainGitOpsRepositoryName(application.Status.Devfile)
+					gitOpsRepository := gitops.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
 					return fw.AsKubeAdmin.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 				}, 1*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("timed out waiting for HAS controller to create gitops repository for the %s application in %s namespace", applicationName, fw.UserNamespace))

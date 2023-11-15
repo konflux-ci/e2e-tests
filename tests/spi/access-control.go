@@ -15,7 +15,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	client "github.com/redhat-appstudio/e2e-tests/pkg/apis/kubernetes"
+	client "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
