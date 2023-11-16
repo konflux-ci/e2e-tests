@@ -127,8 +127,8 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 			oauth_redirect_proxy_url, err := url.Parse(OAUTH_REDIRECT_PROXY_URL)
 			Expect(err).NotTo(HaveOccurred())
 
-			login_redirect_proxy_url := oauth_redirect_proxy_url.Scheme + "://" + oauth_redirect_proxy_url.Host + "/login"
-			spi_login_url := spi_oauth_url.Scheme + "://" + spi_oauth_url.Host + "/login"
+			login_redirect_proxy_url := oauth_redirect_proxy_url.Scheme + "://" + oauth_redirect_proxy_url.Host + "/logiiiin"
+			spi_login_url := spi_oauth_url.Scheme + "://" + spi_oauth_url.Host + "/logiiiin"
 
 			CYPRESS_SPI_LOGIN_URL = login_redirect_proxy_url + "?url=" + spi_login_url
 			CYPRESS_K8S_TOKEN = k8s_token
