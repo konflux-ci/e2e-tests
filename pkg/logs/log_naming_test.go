@@ -68,7 +68,7 @@ func TestShortenStringAddHash(t *testing.T) {
 			description:    "One char report",
 			input:          types.SpecReport{ContainerHierarchyTexts: []string{"f"}},
 			result:         "f sha: ",
-			expectedLength: len("f sha: ") + 40,
+			expectedLength: len("f sha: ") + 64,
 		},
 		{
 			description: "Short report",
@@ -79,7 +79,7 @@ func TestShortenStringAddHash(t *testing.T) {
 				},
 			},
 			result:         "[Foo Suite] BEGIN Lorem ipsum END sha: ",
-			expectedLength: len("[Foo Suite] BEGIN Lorem ipsum END sha: ") + 40, // Expecting hash
+			expectedLength: len("[Foo Suite] BEGIN Lorem ipsum END sha: ") + 64, // Expecting hash
 		},
 		{
 			description: "Limit with exact limit length",

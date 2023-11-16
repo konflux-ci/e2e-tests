@@ -1,7 +1,7 @@
 package logs
 
 import (
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"regexp"
@@ -21,7 +21,7 @@ func GetClassnameFromReport(report types.SpecReport) string {
 
 // This function is used to shorten classname and add hash to prevent issues with filesystems(255 chars for folder name) and to avoid conflicts(same shortened name of a classname)
 func ShortenStringAddHash(report types.SpecReport) string {
-	const maxNameLength = 209 // Max 255 chars minus SHA-1 (40 chars) and " sha: " is 6 chars => 255 - 40 - 6 = 209
+	const maxNameLength = 185 // Max 255 chars minus SHA-256 (64 chars) and " sha: " is 6 chars => 255 - 64 - 6 = 185
 
 	s := report.FullText()
 	if s == "" {
@@ -35,8 +35,8 @@ func ShortenStringAddHash(report types.SpecReport) string {
 	if len(removedClass) > maxNameLength {
 		removedClass = removedClass[:maxNameLength]
 	}
-	h := sha1.New()
+	h := sha256.New()
 	h.Write([]byte(removedClass))
-	sha1Hash := hex.EncodeToString(h.Sum(nil))
-	return removedClass + " sha: " + sha1Hash
+	shaHash := hex.EncodeToString(h.Sum(nil))
+	return removedClass + " sha: " + shaHash
 }
