@@ -21,7 +21,7 @@ func GetClassnameFromReport(report types.SpecReport) string {
 
 // This function is used to shorten classname and add hash to prevent issues with filesystems(255 chars for folder name) and to avoid conflicts(same shortened name of a classname)
 func ShortenStringAddHash(report types.SpecReport) string {
-	const maxNameLength = 185 // Max 255 chars minus SHA-256 (64 chars) and " sha: " is 6 chars => 255 - 64 - 6 = 185
+	const maxNameLength = 255 - sha256.BlockSize - 6 // Max 255 chars minus SHA-256 (64 chars) and " sha: " is 6 chars
 
 	s := report.FullText()
 	if s == "" {

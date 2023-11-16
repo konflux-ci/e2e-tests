@@ -1,6 +1,7 @@
 package logs
 
 import (
+	"crypto/sha256"
 	"github.com/onsi/ginkgo/v2/types"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -68,7 +69,7 @@ func TestShortenStringAddHash(t *testing.T) {
 			description:    "One char report",
 			input:          types.SpecReport{ContainerHierarchyTexts: []string{"f"}},
 			result:         "f sha: ",
-			expectedLength: len("f sha: ") + 64,
+			expectedLength: len("f sha: ") + sha256.BlockSize,
 		},
 		{
 			description: "Short report",
@@ -79,7 +80,7 @@ func TestShortenStringAddHash(t *testing.T) {
 				},
 			},
 			result:         "[Foo Suite] BEGIN Lorem ipsum END sha: ",
-			expectedLength: len("[Foo Suite] BEGIN Lorem ipsum END sha: ") + 64, // Expecting hash
+			expectedLength: len("[Foo Suite] BEGIN Lorem ipsum END sha: ") + sha256.BlockSize, // Expecting hash
 		},
 		{
 			description: "Limit with exact limit length",
