@@ -8,6 +8,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	intgteststat "github.com/redhat-appstudio/integration-service/pkg/integrationteststatus"
@@ -60,6 +61,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		It("triggers a build PipelineRun", Label("integration-service"), func() {
 			pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
+			Expect(pipelineRun.Finalizers).To(ContainElement("test.appstudio.openshift.io/pipelinerun"))
 			Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
 			Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(""))
 		})
@@ -97,6 +99,19 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					}
 					return nil
 				}, timeout, interval).Should(Succeed())
+			})
+
+			It("verifies that the finalizer has been removed", func() {
+				timeout := "60s"
+				interval := "1s"
+				Eventually(func() error {
+					// This is broken because the function is just checking the object rather than going to the cluster
+					pipelineRun, _ = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
+					if controllerutil.ContainsFinalizer(pipelineRun, "test.appstudio.openshift.io/pipelinerun") {
+						return fmt.Errorf("build pipelineRun %s/%s still contains the finalizer: %s", pipelineRun.GetNamespace(), pipelineRun.GetName(), "test.appstudio.openshift.io/pipelinerun")
+					}
+					return nil
+				}, timeout, interval).Should(Succeed(), "timeout when waiting for finalizer to be removed")
 			})
 		})
 
