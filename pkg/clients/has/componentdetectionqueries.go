@@ -28,7 +28,7 @@ func (h *HasController) GetComponentDetectionQuery(name, namespace string) (*app
 
 // CreateComponentDetectionQuery create a has componentdetectionquery from a given name, namespace, and git source
 func (h *HasController) CreateComponentDetectionQuery(name string, namespace string, gitSourceURL string, gitSourceRevision string, gitSourceContext string, secret string, isMultiComponent bool) (*appservice.ComponentDetectionQuery, error) {
-	return h.CreateComponentDetectionQueryWithTimeout(name, namespace, gitSourceURL, gitSourceRevision, gitSourceContext, secret, isMultiComponent, 5*time.Minute)
+	return h.CreateComponentDetectionQueryWithTimeout(name, namespace, gitSourceURL, gitSourceRevision, gitSourceContext, secret, isMultiComponent, 6*time.Minute)
 }
 
 // CreateComponentDetectionQueryWithTimeout create a has componentdetectionquery from a given name, namespace, and git source and waits for it to be read
