@@ -1414,7 +1414,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				componentPipelineRunName := userComponentPipelineRunForUser(username)
 				applicationName := fmt.Sprintf("%s-app", username)
 				SnapshotCreatedRetryInterval := time.Second * 5
-				SnapshotCreatedTimeout := time.Minute * 45
+				SnapshotCreatedTimeout := time.Minute * 30
 				IntegrationTestsPipelineCreatedRetryInterval := time.Second * 5
 				IntegrationTestsPipelineCreatedTimeout := time.Minute * 15
 
