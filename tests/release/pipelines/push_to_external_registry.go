@@ -15,6 +15,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/contract"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
@@ -26,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-to-pyxis", Label("release-pipelines", "pushPyxis", "HACBS"), func() {
+var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-to-pyxis", Label("release-pipelines", "pushPyxis", "HACBS"), func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	var fw *framework.Framework
@@ -45,10 +46,10 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 	var componentDetected, additionalComponentDetected appservice.ComponentDetectionDescription
 
 	BeforeAll(func() {
-		fw, err = framework.NewFramework("release-e2e-pyxis")
+		fw, err = framework.NewFramework("push-pyxis")
 		Expect(err).NotTo(HaveOccurred())
 		devNamespace = fw.UserNamespace
-		managedNamespace = utils.GetGeneratedNamespace("release-e2e-pyxis-managed")
+		managedNamespace = utils.GetGeneratedNamespace("push-pyxis-managed")
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating managedNamespace")
@@ -97,18 +98,9 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
 			publicKey, publicSecretNameAuth, managedNamespace)).To(Succeed())
 
-		defaultEcPolicy, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+		defaultECP, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 		Expect(err).NotTo(HaveOccurred())
-
-		defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
-			Description: "Red Hat's enterprise requirements",
-			PublicKey:   string(publicKey),
-			Sources:     defaultEcPolicy.Spec.Sources,
-			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-				Collections: []string{"minimal", "slsa3"},
-				Exclude:     []string{"cve"},
-			},
-		}
+		policy := contract.PolicySpecWithSourceConfig(defaultECP.Spec, ecp.SourceConfig{Include: []string{"minimal", "slsa3"}})
 
 		managedServiceAccount, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(releaseStrategyServiceAccountDefault, managedNamespace, managednamespaceSecret, nil)
 		Expect(err).NotTo(HaveOccurred())
@@ -178,7 +170,7 @@ var _ = framework.ReleaseSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicyDefault, managedNamespace, defaultEcPolicySpec)
+		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicyDefault, managedNamespace, policy)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasePvcName, managedNamespace, corev1.ReadWriteOnce)

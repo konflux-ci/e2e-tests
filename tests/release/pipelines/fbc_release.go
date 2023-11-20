@@ -49,8 +49,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 	var defaultInterval = 100 * time.Millisecond
 
 	var err error
-	var dev_fw *framework.Framework
-	var managed_fw *framework.Framework
+	var devFw *framework.Framework
+	var managedFw *framework.Framework
 	var component *appservice.Component
 	var releaseCR *releaseApi.Release
 	var buildPr *v1beta1.PipelineRun
@@ -65,21 +65,21 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 
 	BeforeAll(func() {
 
-		dev_fw, err = framework.NewFrameworkWithTimeout(
+		devFw, err = framework.NewFrameworkWithTimeout(
 			devWorkspace,
 			time.Minute*60,
 			stageOptions,
 		)
 		Expect(err).NotTo(HaveOccurred())
 
-		managed_fw, err = framework.NewFrameworkWithTimeout(
+		managedFw, err = framework.NewFrameworkWithTimeout(
 			managedWorkspace,
 			time.Minute*60,
 			stageOptions,
 		)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = dev_fw.AsKubeDeveloper.HasController.CreateApplication(fbcApplicationName, dev_fw.UserNamespace)
+		_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcApplicationName, devFw.UserNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
 		componentObj := appservice.ComponentSpec{
@@ -94,11 +94,11 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 			},
 			TargetPort: targetPort,
 		}
-		component, err = dev_fw.AsKubeDeveloper.HasController.CreateComponent(componentObj, dev_fw.UserNamespace, "", "", fbcApplicationName, false, map[string]string{})
+		component, err = devFw.AsKubeDeveloper.HasController.CreateComponent(componentObj, devFw.UserNamespace, "", "", fbcApplicationName, false, map[string]string{})
 		GinkgoWriter.Println("component : ", component.Name)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		_, err = dev_fw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcReleasePlanName, devNamespace, fbcApplicationName, managedNamespace, "true")
+		_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcReleasePlanName, devNamespace, fbcApplicationName, managedNamespace, "true")
 		Expect(err).NotTo(HaveOccurred())
 
 		data, err := json.Marshal(map[string]interface{}{
@@ -112,7 +112,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = managed_fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(fbcReleasePlanAdmissionName, managedNamespace, "", devNamespace, fbcEnterpriseContractPolicyName, fbcServiceAccountName, []string{fbcApplicationName}, true, &tektonutils.PipelineRef{
+		_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(fbcReleasePlanAdmissionName, managedNamespace, "", devNamespace, fbcEnterpriseContractPolicyName, fbcServiceAccountName, []string{fbcApplicationName}, true, &tektonutils.PipelineRef{
 			Resolver: "git",
 			Params: []tektonutils.Param{
 				{Name: "url", Value: relSvcCatalogURL},
@@ -140,36 +140,36 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 			},
 		}
 
-		_, err = managed_fw.AsKubeDeveloper.TektonController.CreateEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, managedNamespace, defaultEcPolicySpec)
+		_, err = managedFw.AsKubeDeveloper.TektonController.CreateEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, managedNamespace, defaultEcPolicySpec)
 		Expect(err).NotTo(HaveOccurred())
 
 	})
 
 	AfterAll(func() {
 		if !CurrentSpecReport().Failed() {
-			Expect(dev_fw.AsKubeDeveloper.HasController.DeleteApplication(fbcApplicationName, devNamespace, false)).NotTo(HaveOccurred())
-			Expect(managed_fw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
-			Expect(managed_fw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
+			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(fbcApplicationName, devNamespace, false)).NotTo(HaveOccurred())
+			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
+			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
 		}
 	})
 
 	var _ = Describe("Post-release verification", func() {
 
 		It("verifies that a build PipelineRun is created in dev namespace and succeeds", func() {
-			Expect(dev_fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, dev_fw.AsKubeDeveloper.TektonController)).To(Succeed())
-			buildPr, err = dev_fw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, fbcApplicationName, devNamespace, "")
+			Expect(devFw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, devFw.AsKubeDeveloper.TektonController)).To(Succeed())
+			buildPr, err = devFw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, fbcApplicationName, devNamespace, "")
 			Expect(err).ShouldNot(HaveOccurred())
 
 		})
 
 		It("verifies the fbc release pipelinerun is running and succeeds", func() {
-			snapshot, err = dev_fw.AsKubeDeveloper.IntegrationController.GetSnapshot("", buildPr.Name, component.Name, devNamespace)
+			snapshot, err = devFw.AsKubeDeveloper.IntegrationController.GetSnapshot("", buildPr.Name, component.Name, devNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
-			releaseCR, err = dev_fw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
+			releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Eventually(func() error {
-				releasePr, err = managed_fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managed_fw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
+				releasePr, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 				Expect(err).ShouldNot(HaveOccurred())
 				if !releasePr.IsDone() {
 					return fmt.Errorf("release pipelinerun %s in namespace %s did not finish yet", releasePr.Name, releasePr.Namespace)
@@ -182,7 +182,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 
 		It("verifies release CR completed and set succeeded.", func() {
 			Eventually(func() error {
-				releaseCR, err = dev_fw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
+				releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 				if err != nil {
 					return err
 				}

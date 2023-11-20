@@ -26,10 +26,6 @@ func JVMBuildSuiteDescribe(text string, args ...interface{}) bool {
 	return Describe("[jvm-build-service-suite "+text+"]", args, Ordered)
 }
 
-func ReleaseSuiteDescribe(text string, args ...interface{}) bool {
-	return Describe("[release-suite "+text+"]", args, Ordered)
-}
-
 func IntegrationServiceSuiteDescribe(text string, args ...interface{}) bool {
 	return Describe("[integration-service-suite "+text+"]", args, Ordered)
 }
@@ -56,4 +52,8 @@ func UpgradeSuiteDescribe(text string, args ...interface{}) bool {
 
 func ReleasePipelinesSuiteDescribe(text string, args ...interface{}) bool {
 	return Describe("[release-pipelines-suite "+text+"]", args, Ordered)
+}
+
+func ReleaseServiceSuiteDescribe(text string, args ...interface{}) bool {
+	return Describe("[release-service-suite "+text+"]", args, Ordered)
 }
