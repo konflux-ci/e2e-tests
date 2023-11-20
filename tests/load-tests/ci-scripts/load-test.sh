@@ -45,6 +45,7 @@ kill_rate_limits() {
 }
 trap kill_rate_limits EXIT
 
+../measure-time-skew.sh 
 ./run.sh
 
 popd

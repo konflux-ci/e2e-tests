@@ -355,12 +355,23 @@ func setup(cmd *cobra.Command, args []string) {
 
 	if stage {
 		klog.Infof("Loading Stage Users...\n")
+		// Debug
+		klog.Infof("** Stage Users - %s ...\n", constants.JsonStageUsersPath)
 		stageUsers, err = loadtestUtils.LoadStageUsers(constants.JsonStageUsersPath)
+		// Debug
+
 		if err != nil {
 			klog.Fatalf("Error Loading Stage Users from the given Path Please check file/contents exists: %v", err)
 		}
 
+		// Debug
+		klog.Infof("** Stage Users - %s ...\n", constants.JsonStageUsersPath)
+
 		selectedUsers, err = loadtestUtils.SelectUsers(stageUsers, numberOfUsers, threadCount, len(stageUsers))
+		// Debug
+		klog.Infof("** numberOfUsers - %d; len(stageUsers) - %d ...\n", numberOfUsers, len(stageUsers))
+		klog.Infof("** selectedUsers - %v ...\n", selectedUsers)
+
 		if err != nil {
 			klog.Fatalf("Error Selecting the Users Based on thread count: %v", err)
 		}
@@ -837,6 +848,10 @@ func tryNewFramework(username string, user loadtestUtils.User, timeout time.Dura
 	ch := make(chan *framework.Framework)
 	var fw *framework.Framework
 	var err error
+
+	// Debug
+	klog.Infof("** Stage username - %s; ToolchainApiUrl - %s; KeycloakUrl - %s; OfflineToken - %s; user - %v; timeout - %f...\n", username, user.APIURL, user.SSOURL, user.Token, user, timeout)
+
 	go func() {
 		if stage {
 			fw, err = framework.NewFrameworkWithTimeout(
@@ -1297,11 +1312,12 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 
 					//Trace GetComponentPipelineRun call
 					params := map[string]interface{}{
-						"BeforeOrAfter":   "Before",
-						"ApplicationName": applicationName,
-						"username":        username,
-						"usernamespace":   usernamespace,
-						"componentName":   componentName,
+						"BeforeOrAfter":            "Before",
+						"ApplicationName":          applicationName,
+						"username":                 username,
+						"usernamespace":            usernamespace,
+						"componentName":            componentName,
+						"componentPipelineRunName": "",
 					}
 					TraceFunction("GetComponentPipelineRun", params)
 
@@ -1310,11 +1326,12 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 
 					//Trace GetComponentPipelineRun call
 					params = map[string]interface{}{
-						"BeforeOrAfter":   "After",
-						"ApplicationName": applicationName,
-						"username":        username,
-						"usernamespace":   usernamespace,
-						"componentName":   componentName,
+						"BeforeOrAfter":            "After",
+						"ApplicationName":          applicationName,
+						"username":                 username,
+						"usernamespace":            usernamespace,
+						"componentName":            componentName,
+						"componentPipelineRunName": pipelineRun.Name,
 					}
 					TraceFunction("GetComponentPipelineRun", params)
 
@@ -1334,17 +1351,22 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				}
 				userComponentPipelineRunMap.Store(username, pipelineRun.Name)
 
+				// Debug
+				klog.Infof("build-pipelinerun from GetComponentPipelineRun - %s, pipelineRunName fetched from userComponentPipelineRunMap - %s", pipelineRun.Name, userComponentPipelineRunForUser(username))
+				// Debug
+
 				pipelineRunRetryInterval := time.Second * 5
 				pipelineRunTimeout := time.Minute * 60
 				err = k8swait.PollUntilContextTimeout(context.Background(), pipelineRunRetryInterval, pipelineRunTimeout, false, func(ctx context.Context) (done bool, err error) {
 
 					//Trace GetComponentPipelineRun call
 					params := map[string]interface{}{
-						"BeforeOrAfter":   "Before",
-						"ApplicationName": applicationName,
-						"username":        username,
-						"usernamespace":   usernamespace,
-						"componentName":   componentName,
+						"BeforeOrAfter":            "Before",
+						"ApplicationName":          applicationName,
+						"username":                 username,
+						"usernamespace":            usernamespace,
+						"componentName":            componentName,
+						"componentPipelineRunName": pipelineRun.Name,
 					}
 					TraceFunction("GetComponentPipelineRun", params)
 
@@ -1352,11 +1374,12 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 
 					//Trace GetComponentPipelineRun call
 					params = map[string]interface{}{
-						"BeforeOrAfter":   "After",
-						"ApplicationName": applicationName,
-						"username":        username,
-						"usernamespace":   usernamespace,
-						"componentName":   componentName,
+						"BeforeOrAfter":            "After",
+						"ApplicationName":          applicationName,
+						"username":                 username,
+						"usernamespace":            usernamespace,
+						"componentName":            componentName,
+						"componentPipelineRunName": pipelineRun.Name,
 					}
 					TraceFunction("GetComponentPipelineRun", params)
 
