@@ -15,6 +15,8 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	releaseConst "github.com/redhat-appstudio/e2e-tests/tests/release"
+
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -43,9 +45,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 	var managedWorkspace = os.Getenv(constants.RELEASE_MANAGED_WORKSPACE_ENV)
 	var devNamespace = devWorkspace + "-tenant"
 	var managedNamespace = managedWorkspace + "-tenant"
-	var releasePipelineRunCompletionTimeout = 20 * time.Minute
-	var releaseCreationTimeout = 5 * time.Minute
-	var defaultInterval = 100 * time.Millisecond
 
 	var err error
 	var devFw *framework.Framework
@@ -114,8 +113,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 		_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(fbcReleasePlanAdmissionName, managedNamespace, "", devNamespace, fbcEnterpriseContractPolicyName, fbcServiceAccountName, []string{fbcApplicationName}, true, &tektonutils.PipelineRef{
 			Resolver: "git",
 			Params: []tektonutils.Param{
-				{Name: "url", Value: relSvcCatalogURL},
-				{Name: "revision", Value: relSvcCatalogRevision},
+				{Name: "url", Value: releaseConst.RelSvcCatalogURL},
+				{Name: "revision", Value: releaseConst.RelSvcCatalogRevision},
 				{Name: "pathInRepo", Value: relSvcCatalogPathInRepo},
 			},
 		}, &runtime.RawExtension{
@@ -123,7 +122,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 		})
 
 		Expect(err).NotTo(HaveOccurred())
-
 		defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
 			Description: "Red Hat's enterprise requirements",
 			PublicKey:   "k8s://openshift-pipelines/public-key",
@@ -138,10 +136,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 				Include:     []string{"@slsa3"},
 			},
 		}
-
 		_, err = managedFw.AsKubeDeveloper.TektonController.CreateEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, managedNamespace, defaultEcPolicySpec)
 		Expect(err).NotTo(HaveOccurred())
-
 	})
 
 	AfterAll(func() {
@@ -177,7 +173,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 				GinkgoWriter.Println("Release PR: ", releasePr.Name)
 				Expect(tekton.HasPipelineRunSucceeded(releasePr)).To(BeTrue(), fmt.Sprintf("release pipelinerun %s/%s did not succeed", releasePr.GetNamespace(), releasePr.GetName()))
 				return nil
-			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(Succeed(), "timed out when waiting for release pipelinerun to succeed")
+			}, releaseConst.ReleasePipelineRunCompletionTimeout, releaseConst.DefaultInterval).Should(Succeed(), "timed out when waiting for release pipelinerun to succeed")
 		})
 
 		It("verifies release CR completed and set succeeded.", func() {
@@ -191,7 +187,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 					return fmt.Errorf("release %s/%s is not marked as finished yet", releaseCR.GetNamespace(), releaseCR.GetName())
 				}
 				return nil
-			}, releaseCreationTimeout, defaultInterval).Should(Succeed())
+			}, releaseConst.ReleaseCreationTimeout, releaseConst.DefaultInterval).Should(Succeed())
 		})
 
 	})
