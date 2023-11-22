@@ -33,7 +33,7 @@ var (
 
 const pipelineCompletionRetries = 2
 
-var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", "HACBS"), func() {
+var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", "build-templates", "HACBS"), func() {
 	var f *framework.Framework
 	var err error
 	AfterEach(framework.ReportFailure(&f))
