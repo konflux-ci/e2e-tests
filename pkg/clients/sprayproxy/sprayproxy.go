@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	routev1 "github.com/openshift/api/route/v1"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
@@ -15,10 +16,6 @@ import (
 )
 
 func NewSprayProxyConfig(url string, token string) (*SprayProxyConfig, error) {
-	pacHost, err := getPaCHost()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get PaC host: %+v", err)
-	}
 	return &SprayProxyConfig{
 		BaseURL: url,
 		HTTPClient: &http.Client{
@@ -29,21 +26,30 @@ func NewSprayProxyConfig(url string, token string) (*SprayProxyConfig, error) {
 				},
 			},
 		},
-		PaCHost: pacHost,
 		Token:   token,
 	}, nil
 }
 
-func (s *SprayProxyConfig) RegisterServer() (string, error) {
-	result, err := s.sendRequest(http.MethodPost)
+func (s *SprayProxyConfig) RegisterServer(pacHost string) (string, error) {
+	bytesData, err := buildBodyData(pacHost)
+	if err != nil {
+		return "", err
+	}
+
+	result, err := s.sendRequest(http.MethodPost, bytes.NewReader(bytesData))
 	if err != nil {
 		return "", err
 	}
 	return result, nil
 }
 
-func (s *SprayProxyConfig) UnregisterServer() (string, error) {
-	result, err := s.sendRequest(http.MethodDelete)
+func (s *SprayProxyConfig) UnregisterServer(pacHost string) (string, error) {
+	bytesData, err := buildBodyData(pacHost)
+	if err != nil {
+		return "", err
+	}
+	
+	result, err := s.sendRequest(http.MethodDelete, bytes.NewReader(bytesData))
 	if err != nil {
 		return "", err
 	}
@@ -51,21 +57,18 @@ func (s *SprayProxyConfig) UnregisterServer() (string, error) {
 }
 
 func (s *SprayProxyConfig) GetServers() (string, error) {
-	result, err := s.sendRequest(http.MethodGet)
+	result, err := s.sendRequest(http.MethodGet, nil)
 	if err != nil {
 		return "", err
 	}
-	return result, nil
+	return strings.TrimPrefix(result, "Backend urls:"), nil
 }
 
-func (s *SprayProxyConfig) sendRequest(httpMethod string) (string, error) {
+
+func (s *SprayProxyConfig) sendRequest(httpMethod string, data io.Reader) (string, error) {
 	requestURL := s.BaseURL + "/backends"
 
-	data := make(map[string]string)
-	data["url"] = s.PaCHost
-	bytesData, _ := json.Marshal(data)
-
-	req, err := http.NewRequest(httpMethod, requestURL, bytes.NewReader(bytesData))
+	req, err := http.NewRequest(httpMethod, requestURL, data)
 	if err != nil {
 		return "", err
 	}
@@ -87,7 +90,7 @@ func (s *SprayProxyConfig) sendRequest(httpMethod string) (string, error) {
 	return string(body), err
 }
 
-func getPaCHost() (string, error) {
+func GetPaCHost() (string, error) {
 	k8sClient, err := kubeCl.NewAdminKubernetesClient()
 	if err != nil {
 		return "", err
@@ -104,4 +107,14 @@ func getPaCHost() (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("https://%s", route.Spec.Host), nil
+}
+
+func buildBodyData(pacHost string) ([]byte, error) {
+	data := make(map[string]string)
+	data["url"] = pacHost
+	bytesData, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	return bytesData, nil
 }
