@@ -14,9 +14,9 @@ import (
 	"github.com/tektoncd/cli/pkg/bundle"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tektoncd/pipeline/pkg/remote/oci"
-	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog"
+	"sigs.k8s.io/yaml"
 )
 
 // ExtractTektonObjectFromBundle extracts specified Tekton object from specified bundle reference
