@@ -43,12 +43,79 @@ import (
 	"k8s.io/klog/v2"
 )
 
+/*
+These custom structures are copied from https://github.com/onsi/ginkgo/blob/v2.13.1/reporters/junit_report.go
+
+These custom structures are modified to use Skipped field instead of Disabled and the Status field is removed
+See RHTAP-1902 for more details.
+*/
+type CustomJUnitTestSuites struct {
+	XMLName xml.Name `xml:"testsuites"`
+	// Tests maps onto the total number of specs in all test suites (this includes any suite nodes such as BeforeSuite)
+	Tests int `xml:"tests,attr"`
+	// Skipped maps onto specs that are pending and/or disabled
+	Skipped int `xml:"skipped,attr"`
+	// Errors maps onto specs that panicked or were interrupted
+	Errors int `xml:"errors,attr"`
+	// Failures maps onto specs that failed
+	Failures int `xml:"failures,attr"`
+	// Time is the time in seconds to execute all test suites
+	Time float64 `xml:"time,attr"`
+
+	//The set of all test suites
+	TestSuites []CustomJUnitTestSuite `xml:"testsuite"`
+}
+
+type CustomJUnitTestSuite struct {
+	// Name maps onto the description of the test suite - maps onto Report.SuiteDescription
+	Name string `xml:"name,attr"`
+	// Package maps onto the absolute path to the test suite - maps onto Report.SuitePath
+	Package string `xml:"package,attr"`
+	// Tests maps onto the total number of specs in the test suite (this includes any suite nodes such as BeforeSuite)
+	Tests int `xml:"tests,attr"`
+	// Skiped maps onto specs that are skipped/pending
+	Skipped int `xml:"skipped,attr"`
+	// Errors maps onto specs that panicked or were interrupted
+	Errors int `xml:"errors,attr"`
+	// Failures maps onto specs that failed
+	Failures int `xml:"failures,attr"`
+	// Time is the time in seconds to execute all the test suite - maps onto Report.RunTime
+	Time float64 `xml:"time,attr"`
+	// Timestamp is the ISO 8601 formatted start-time of the suite - maps onto Report.StartTime
+	Timestamp string `xml:"timestamp,attr"`
+
+	//Properties captures the information stored in the rest of the Report type (including SuiteConfig) as key-value pairs
+	Properties JUnitProperties `xml:"properties"`
+
+	//TestCases capture the individual specs
+	TestCases []CustomJUnitTestCase `xml:"testcase"`
+}
+
+type CustomJUnitTestCase struct {
+	// Name maps onto the full text of the spec - equivalent to "[SpecReport.LeafNodeType] SpecReport.FullText()"
+	Name string `xml:"name,attr"`
+	// Classname maps onto the name of the test suite - equivalent to Report.SuiteDescription
+	Classname string `xml:"classname,attr"`
+	// Time is the time in seconds to execute the spec - maps onto SpecReport.RunTime
+	Time float64 `xml:"time,attr"`
+	//Skipped is populated with a message if the test was skipped or pending
+	Skipped *JUnitSkipped `xml:"skipped,omitempty"`
+	//Error is populated if the test panicked or was interrupted
+	Error *JUnitError `xml:"error,omitempty"`
+	//Failure is populated if the test failed
+	Failure *JUnitFailure `xml:"failure,omitempty"`
+	//SystemOut maps onto any captured stdout/stderr output - maps onto SpecReport.CapturedStdOutErr
+	SystemOut string `xml:"system-out,omitempty"`
+	//SystemOut maps onto any captured GinkgoWriter output - maps onto SpecReport.CapturedGinkgoWriterOutput
+	SystemErr string `xml:"system-err,omitempty"`
+}
+
 func GenerateCustomJUnitReport(report types.Report, dst string) error {
 	return GenerateCustomJUnitReportWithConfig(report, dst, JunitReportConfig{OmitTimelinesForSpecState: types.SpecStatePassed | types.SpecStateSkipped | types.SpecStatePending})
 }
 
 func GenerateCustomJUnitReportWithConfig(report types.Report, dst string, config JunitReportConfig) error {
-	suite := JUnitTestSuite{
+	suite := CustomJUnitTestSuite{
 		Name:      report.SuiteDescription,
 		Package:   report.SuitePath,
 		Time:      report.RunTime.Seconds(),
@@ -80,10 +147,9 @@ func GenerateCustomJUnitReportWithConfig(report types.Report, dst string, config
 		if spec.LeafNodeType != types.NodeTypeIt {
 			continue
 		}
-		test := JUnitTestCase{
+		test := CustomJUnitTestCase{
 			Name:      logs.ShortenStringAddHash(spec),
 			Classname: logs.GetClassnameFromReport(spec),
-			Status:    spec.State.String(),
 			Time:      spec.RunTime.Seconds(),
 		}
 		if !spec.State.Is(config.OmitTimelinesForSpecState) {
@@ -95,6 +161,7 @@ func GenerateCustomJUnitReportWithConfig(report types.Report, dst string, config
 		suite.Tests += 1
 
 		switch spec.State {
+		// pending tests are also counted to skipped instead of disabled. See RHTAP-1902 for more details.
 		case types.SpecStateSkipped:
 			message := "skipped"
 			if spec.Failure.Message != "" {
@@ -104,7 +171,7 @@ func GenerateCustomJUnitReportWithConfig(report types.Report, dst string, config
 			suite.Skipped += 1
 		case types.SpecStatePending:
 			test.Skipped = &JUnitSkipped{Message: "pending"}
-			suite.Disabled += 1
+			suite.Skipped += 1
 		case types.SpecStateFailed:
 			test.Failure = &JUnitFailure{
 				Message:     spec.Failure.Message,
@@ -138,13 +205,13 @@ func GenerateCustomJUnitReportWithConfig(report types.Report, dst string, config
 		suite.TestCases = append(suite.TestCases, test)
 	}
 
-	junitReport := JUnitTestSuites{
+	junitReport := CustomJUnitTestSuites{
 		Tests:      suite.Tests,
-		Disabled:   suite.Disabled + suite.Skipped,
+		Skipped:    suite.Skipped,
 		Errors:     suite.Errors,
 		Failures:   suite.Failures,
 		Time:       suite.Time,
-		TestSuites: []JUnitTestSuite{suite},
+		TestSuites: []CustomJUnitTestSuite{suite},
 	}
 
 	f, err := os.Create(dst)
