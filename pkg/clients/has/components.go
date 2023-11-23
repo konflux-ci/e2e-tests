@@ -140,8 +140,9 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 
 		if err != nil {
 			GinkgoWriter.Printf("attempt %d/%d: PipelineRun %q failed: %+v", attempts, maxRetries+1, pr.GetName(), err)
-			// Retry the PipelineRun only in case we hit the known issue https://issues.redhat.com/browse/SRVKP-2749
-			if attempts == maxRetries+1 || pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason() != "CouldntGetTask" {
+			//CouldntGetTask: Retry the PipelineRun only in case we hit the known issue https://issues.redhat.com/browse/SRVKP-2749
+			// TaskRunImagePullFailed: Retry in case of https://issues.redhat.com/browse/RHTAPBUGS-985 and https://github.com/tektoncd/pipeline/issues/7184
+			if attempts == maxRetries+1 || (pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason() != "CouldntGetTask" && pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason() != "TaskRunImagePullFailed") {
 				return err
 			}
 			if sha, err = h.RetriggerComponentPipelineRun(component, pr); err != nil {
