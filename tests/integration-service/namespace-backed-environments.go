@@ -86,7 +86,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 		It("triggers a build PipelineRun", Label("integration-service"), func() {
 			pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
 			Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
-			Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(""))
+			Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
 		})
 
 		When("the build pipelineRun run succeeded", func() {
@@ -100,7 +100,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 			})
 
 			It("checks if the Build PipelineRun got annotated with Snapshot name", func() {
-				Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, "appstudio.openshift.io/snapshot")).To(Succeed())
+				Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, snapshotAnnotation)).To(Succeed())
 			})
 		})
 
@@ -222,9 +222,9 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 		It("should find the related Integration Test PipelineRun", func() {
 			testPipelinerun, err = f.AsKubeDeveloper.IntegrationController.WaitForIntegrationPipelineToGetStarted(integrationTestScenario.Name, snapshot.Name, testNamespace)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(testPipelinerun.Labels["appstudio.openshift.io/snapshot"]).To(ContainSubstring(snapshot.Name))
-			Expect(testPipelinerun.Labels["test.appstudio.openshift.io/scenario"]).To(ContainSubstring(integrationTestScenario.Name))
-			Expect(testPipelinerun.Labels["appstudio.openshift.io/environment"]).To(ContainSubstring(ephemeralEnvironment.Name))
+			Expect(testPipelinerun.Labels[snapshotAnnotation]).To(ContainSubstring(snapshot.Name))
+			Expect(testPipelinerun.Labels[scenarioAnnotation]).To(ContainSubstring(integrationTestScenario.Name))
+			Expect(testPipelinerun.Labels[environmentLabel]).To(ContainSubstring(ephemeralEnvironment.Name))
 		})
 
 		When("Integration Test PipelineRun is created", func() {

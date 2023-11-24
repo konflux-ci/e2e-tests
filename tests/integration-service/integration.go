@@ -59,11 +59,27 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			}
 		})
 
-		It("triggers a build PipelineRun", Label("integration-service"), func() {
-			pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
-			Expect(pipelineRun.Finalizers).To(ContainElement("test.appstudio.openshift.io/pipelinerun"))
-			Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
-			Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(""))
+		When("a new Component is created", func() {
+			It("triggers a build PipelineRun", Label("integration-service"), func() {
+				pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+
+			It("verifies if the build PipelineRun contains the finalizer", Label("integration-service"), func() {
+				Eventually(func() error {
+					pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
+					Expect(err).ShouldNot(HaveOccurred())
+					if !controllerutil.ContainsFinalizer(pipelineRun, pipelinerunFinalizerByIntegrationService) {
+						return fmt.Errorf("build pipelineRun %s/%s doesn't contain the finalizer: %s yet", pipelineRun.GetNamespace(), pipelineRun.GetName(), pipelinerunFinalizerByIntegrationService)
+					}
+					return nil
+				}, 1*time.Minute, 1*time.Second).Should(Succeed(), "timeout when waiting for finalizer to be added")
+			})
+
+			It("waits for build PipelineRun to succeed", Label("integration-service"), func() {
+				Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
+				Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
+			})
 		})
 
 		When("the build pipelineRun run succeeded", func() {
@@ -77,7 +93,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("checks if the Build PipelineRun got annotated with Snapshot name", func() {
-				Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, "appstudio.openshift.io/snapshot")).To(Succeed())
+				Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, snapshotAnnotation)).To(Succeed())
 			})
 
 			It("checks if all of the integrationPipelineRuns passed", Label("slow"), func() {
@@ -101,14 +117,14 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				}, timeout, interval).Should(Succeed())
 			})
 
-			It("verifies that the finalizer has been removed", func() {
+			It("verifies that the finalizer has been removed from the build pipelinerun", func() {
 				timeout := "60s"
 				interval := "1s"
 				Eventually(func() error {
-					// This is broken because the function is just checking the object rather than going to the cluster
-					pipelineRun, _ = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
-					if controllerutil.ContainsFinalizer(pipelineRun, "test.appstudio.openshift.io/pipelinerun") {
-						return fmt.Errorf("build pipelineRun %s/%s still contains the finalizer: %s", pipelineRun.GetNamespace(), pipelineRun.GetName(), "test.appstudio.openshift.io/pipelinerun")
+					pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
+					Expect(err).ShouldNot(HaveOccurred())
+					if controllerutil.ContainsFinalizer(pipelineRun, pipelinerunFinalizerByIntegrationService) {
+						return fmt.Errorf("build pipelineRun %s/%s still contains the finalizer: %s", pipelineRun.GetNamespace(), pipelineRun.GetName(), pipelinerunFinalizerByIntegrationService)
 					}
 					return nil
 				}, timeout, interval).Should(Succeed(), "timeout when waiting for finalizer to be removed")
@@ -202,7 +218,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		It("triggers a build PipelineRun", Label("integration-service"), func() {
 			pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
 			Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
-			Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(""))
+			Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
 		})
 
 		It("checks if the BuildPipelineRun is signed", func() {
@@ -215,7 +231,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 
 		It("checks if the Build PipelineRun got annotated with Snapshot name", func() {
-			Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, "appstudio.openshift.io/snapshot")).To(Succeed())
+			Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, snapshotAnnotation)).To(Succeed())
 		})
 
 		It("checks if all of the integrationPipelineRuns finished", Label("slow"), func() {
