@@ -203,6 +203,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 func validateCheckRun(f framework.Framework, checkRunName, conclusion, repoName, prHeadSha string, prNumber int) {
 	var checkRun *github.CheckRun
 	var timeout, interval time.Duration
+	var err error
 
 	timeout = time.Minute * 10
 	interval = time.Second * 2
@@ -220,7 +221,7 @@ func validateCheckRun(f framework.Framework, checkRunName, conclusion, repoName,
 	}, timeout, interval).ShouldNot(BeNil(), fmt.Sprintf("timed out when waiting for the PaC CheckRun, with `Name` field containing the substring %s, to appear in the PR #%d of the Component repo %s", checkRunName, prNumber, repoName))
 
 	Eventually(func() string {
-		checkRun, err := f.AsKubeAdmin.CommonController.Github.GetCheckRun(repoName, checkRun.GetID())
+		checkRun, err = f.AsKubeAdmin.CommonController.Github.GetCheckRun(repoName, checkRun.GetID())
 		Expect(err).ShouldNot(HaveOccurred())
 		return checkRun.GetStatus()
 	}, timeout, interval).Should(Equal(checkrunStatusCompleted), fmt.Sprintf("timed out when waiting for the PaC Check suite status to be 'completed' in the Component repo %s in PR #%d", repoName, prNumber))
