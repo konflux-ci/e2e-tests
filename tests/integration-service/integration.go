@@ -61,7 +61,15 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		It("triggers a build PipelineRun", Label("integration-service"), func() {
 			pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
-			Expect(pipelineRun.Finalizers).To(ContainElement("test.appstudio.openshift.io/pipelinerun"))
+			Eventually(func() error {
+				pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
+				Expect(err).ShouldNot(HaveOccurred())
+				if !controllerutil.ContainsFinalizer(pipelineRun, pipelinerunFinalizerByIntegrationService) {
+					return fmt.Errorf("build pipelineRun %s/%s doesn't contain the finalizer: %s yet", pipelineRun.GetNamespace(), pipelineRun.GetName(), pipelinerunFinalizerByIntegrationService)
+				}
+				return nil
+			}, 1*time.Minute, 1*time.Second).Should(Succeed(), "timeout when waiting for finalizer to be added")
+
 			Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
 			Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(""))
 		})
