@@ -78,7 +78,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			It("waits for build PipelineRun to succeed", Label("integration-service"), func() {
 				Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
-				Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(""))
+				Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
 			})
 		})
 
@@ -93,7 +93,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("checks if the Build PipelineRun got annotated with Snapshot name", func() {
-				Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, "appstudio.openshift.io/snapshot")).To(Succeed())
+				Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, snapshotAnnotation)).To(Succeed())
 			})
 
 			It("checks if all of the integrationPipelineRuns passed", Label("slow"), func() {
@@ -218,7 +218,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		It("triggers a build PipelineRun", Label("integration-service"), func() {
 			pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
 			Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
-			Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(""))
+			Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
 		})
 
 		It("checks if the BuildPipelineRun is signed", func() {
@@ -231,7 +231,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 
 		It("checks if the Build PipelineRun got annotated with Snapshot name", func() {
-			Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, "appstudio.openshift.io/snapshot")).To(Succeed())
+			Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, snapshotAnnotation)).To(Succeed())
 		})
 
 		It("checks if all of the integrationPipelineRuns finished", Label("slow"), func() {
