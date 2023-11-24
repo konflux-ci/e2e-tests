@@ -101,14 +101,14 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				}, timeout, interval).Should(Succeed())
 			})
 
-			It("verifies that the finalizer has been removed", func() {
+			It("verifies that the finalizer has been removed from the build pipelinerun", func() {
 				timeout := "60s"
 				interval := "1s"
 				Eventually(func() error {
-					// This is broken because the function is just checking the object rather than going to the cluster
-					pipelineRun, _ = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
-					if controllerutil.ContainsFinalizer(pipelineRun, "test.appstudio.openshift.io/pipelinerun") {
-						return fmt.Errorf("build pipelineRun %s/%s still contains the finalizer: %s", pipelineRun.GetNamespace(), pipelineRun.GetName(), "test.appstudio.openshift.io/pipelinerun")
+					pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
+					Expect(err).ShouldNot(HaveOccurred())
+					if controllerutil.ContainsFinalizer(pipelineRun, pipelinerunFinalizerByIntegrationService) {
+						return fmt.Errorf("build pipelineRun %s/%s still contains the finalizer: %s", pipelineRun.GetNamespace(), pipelineRun.GetName(), pipelinerunFinalizerByIntegrationService)
 					}
 					return nil
 				}, timeout, interval).Should(Succeed(), "timeout when waiting for finalizer to be removed")

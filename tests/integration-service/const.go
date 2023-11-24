@@ -34,8 +34,9 @@ const (
 	checkrunConclusionSuccess           = "success"
 	checkrunConclusionFailure           = "failure"
 
-	snapshotAnnotation = "appstudio.openshift.io/snapshot"
-	scenarioAnnotation = "test.appstudio.openshift.io/scenario"
+	snapshotAnnotation                       = "appstudio.openshift.io/snapshot"
+	scenarioAnnotation                       = "test.appstudio.openshift.io/scenario"
+	pipelinerunFinalizerByIntegrationService = "test.appstudio.openshift.io/pipelinerun"
 )
 
 var (
