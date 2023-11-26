@@ -32,7 +32,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"github.com/redhat-appstudio/image-controller/pkg/quay"
-	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
 const (
@@ -382,7 +382,7 @@ func (ci CI) setRequiredEnvVars() error {
 				if tektonObj, err = tekton.ExtractTektonObjectFromBundle(defaultBundleRef, "pipeline", "java-builder"); err != nil {
 					return fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
 				}
-				javaPipelineObj := tektonObj.(tektonapi.PipelineObject)
+				javaPipelineObj := tektonObj.(*tektonapi.Pipeline)
 
 				var currentS2iJavaTaskRef string
 				for _, t := range javaPipelineObj.PipelineSpec().Tasks {
@@ -406,11 +406,11 @@ func (ci CI) setRequiredEnvVars() error {
 				if tektonObj, err = tekton.ExtractTektonObjectFromBundle(currentS2iJavaTaskRef, "task", "s2i-java"); err != nil {
 					return fmt.Errorf("failed to extract the Tekton Task from bundle: %+v", err)
 				}
-				taskObj := tektonObj.(tektonapi.TaskObject)
+				taskObj := tektonObj.(*tektonapi.Task)
 
-				for i, s := range taskObj.TaskSpec().Steps {
+				for i, s := range taskObj.Spec.Steps {
 					if s.Name == "analyse-dependencies-java-sbom" {
-						taskObj.TaskSpec().Steps[i].Image = newReqprocessorImage
+						taskObj.Spec.Steps[i].Image = newReqprocessorImage
 					}
 				}
 
