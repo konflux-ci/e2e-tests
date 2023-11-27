@@ -251,6 +251,10 @@ func (h *HasController) ScaleComponentReplicas(component *appservice.Component, 
 
 // DeleteComponent delete an has component from a given name and namespace
 func (h *HasController) DeleteComponent(name string, namespace string, reportErrorOnNotFound bool) error {
+	// temporary logs
+	start := time.Now()
+	GinkgoWriter.Println("Start to delete component '%s' at %s", name, start.Format(time.RFC3339))
+
 	component := appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -263,22 +267,40 @@ func (h *HasController) DeleteComponent(name string, namespace string, reportErr
 		}
 	}
 
-	return utils.WaitUntil(h.ComponentDeleted(&component), 1*time.Minute)
+	// RHTAPBUGS-978: temporary timeout to 10min
+	err := utils.WaitUntil(h.ComponentDeleted(&component), 10*time.Minute)
+
+	// temporary logs
+	deletionTime := time.Since(start).Minutes()
+	GinkgoWriter.Printf("Finish to delete component '%s' at %s. It took '%f' minutes", name, time.Now().Format(time.RFC3339), deletionTime)
+
+	return err
 }
 
 // DeleteAllComponentsInASpecificNamespace removes all component CRs from a specific namespace. Useful when creating a lot of resources and want to remove all of them
 func (h *HasController) DeleteAllComponentsInASpecificNamespace(namespace string, timeout time.Duration) error {
+	// temporary logs
+	start := time.Now()
+	GinkgoWriter.Println("Start to delete all components in namespace '%s' at %s", namespace, start.String())
+
 	if err := h.KubeRest().DeleteAllOf(context.Background(), &appservice.Component{}, rclient.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting components from the namespace %s: %+v", namespace, err)
 	}
 
 	componentList := &appservice.ComponentList{}
-	return utils.WaitUntil(func() (done bool, err error) {
+
+	err := utils.WaitUntil(func() (done bool, err error) {
 		if err := h.KubeRest().List(context.Background(), componentList, &rclient.ListOptions{Namespace: namespace}); err != nil {
 			return false, nil
 		}
 		return len(componentList.Items) == 0, nil
 	}, timeout)
+
+	// temporary logs
+	deletionTime := time.Since(start).Minutes()
+	GinkgoWriter.Println("Finish to delete all components in namespace '%s' at %s. It took '%f' minutes", namespace, time.Now().Format(time.RFC3339), deletionTime)
+
+	return err
 }
 
 // Waits for a component to be reconciled in the application service.
