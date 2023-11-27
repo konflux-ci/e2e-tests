@@ -1198,7 +1198,9 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				pipelineCreatedTimeout := time.Minute * 15
 				var pipelineRun *v1beta1.PipelineRun
 				err := k8swait.PollUntilContextTimeout(context.Background(), pipelineCreatedRetryInterval, pipelineCreatedTimeout, false, func(ctx context.Context) (done bool, err error) {
-					pipelineRun, err = framework.AsKubeDeveloper.HasController.GetComponentPipelineRun(componentName, applicationName, usernamespace, "")
+					// Searching for "build" type of pipelineRun
+					pipelineRun, err = framework.AsKubeDeveloper.HasController.GetComponentPipelineRunWithType(componentName, applicationName, usernamespace, "build", "")
+
 					if err != nil {
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
 						return false, nil
@@ -1218,7 +1220,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				pipelineRunRetryInterval := time.Second * 5
 				pipelineRunTimeout := time.Minute * 60
 				err = k8swait.PollUntilContextTimeout(context.Background(), pipelineRunRetryInterval, pipelineRunTimeout, false, func(ctx context.Context) (done bool, err error) {
-					pipelineRun, err = framework.AsKubeDeveloper.HasController.GetComponentPipelineRun(componentName, applicationName, usernamespace, "")
+					pipelineRun, err = framework.AsKubeDeveloper.HasController.GetComponentPipelineRunWithType(componentName, applicationName, usernamespace, "build", "")
 					if err != nil {
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
 						return false, nil
@@ -1364,13 +1366,14 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				componentName := componentForUser(username)
 				applicationName := fmt.Sprintf("%s-app", username)
 				deploymentCreatedRetryInterval := time.Second * 5
-				deploymentCreatedTimeout := time.Minute * 15
+				deploymentCreatedTimeout := time.Minute * 30
 				var deployment *appsv1.Deployment
 
 				// Deploy the component using gitops and check for the health
 				err := k8swait.PollUntilContextTimeout(context.Background(), deploymentCreatedRetryInterval, deploymentCreatedTimeout, false, func(ctx context.Context) (done bool, err error) {
 					deployment, err = framework.AsKubeDeveloper.CommonController.GetDeployment(componentName, usernamespace)
 					if err != nil {
+						klog.Infof("Unable getting deployment - %v", err)
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
 						return false, nil
 					}
@@ -1386,39 +1389,36 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				deploymentRetryIntervalInitialValue := time.Second * 5
 				deploymentRetryInterval := deploymentRetryIntervalInitialValue
 				deploymentTimeout := time.Minute * 30
-				deploymentFailCount := 0
-				deploymentFailCountThreshold := 5
+				var conditionError error
+				var (
+					deploymentFailed       bool
+					errorMessage           string
+					lastUpdateTimeOfFailed metav1.Time
+					creationTimestamp      metav1.Time
+				)
 
 				// To avoid race conditions we want to check for deployment failure that occurs more than once to signify failure (deploymentFailCount > 3)
 				err = k8swait.PollUntilContextTimeout(context.Background(), deploymentRetryInterval, deploymentTimeout, false, func(ctx context.Context) (done bool, err error) {
+
+					conditionError = nil // Reset the condition error
 					deployment, err = framework.AsKubeDeveloper.CommonController.GetDeployment(componentName, usernamespace)
 					if err != nil {
 						time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
+						conditionError = err
 						return false, nil
 					}
 
-					creationTimestamp := deployment.ObjectMeta.CreationTimestamp
+					creationTimestamp = deployment.ObjectMeta.CreationTimestamp
 					deploymentIsDone, lastUpdateTimeOfDone := checkDeploymentIsDone(deployment)
 
-					var (
-						deploymentFailed       bool
-						errorMessage           string
-						lastUpdateTimeOfFailed metav1.Time
-					)
 					if !deploymentIsDone {
 						deploymentFailed, errorMessage, lastUpdateTimeOfFailed = checkDeploymentFailed(deployment)
 						if deploymentFailed {
-							deploymentFailCount++
-							deploymentRetryInterval += 10 // increase retry interval by 5 seconds to give more time for the deploymnt to get ready or to make sure the failure persists
-						} else {
-							deploymentFailCount = 0
-							deploymentRetryInterval = deploymentRetryIntervalInitialValue // reset deploymentRetryInterval to its initial value
+							conditionError = fmt.Errorf("%s", errorMessage)
+							// the deployment can succeed later so we don't return until success or timeout
+							return false, nil
 						}
 					} else {
-						deploymentFailCount = 0
-						deploymentRetryInterval = deploymentRetryIntervalInitialValue // reset deploymentRetryInterval to its initial value
-					}
-					if deploymentIsDone {
 						dur := lastUpdateTimeOfDone.Time.Sub(creationTimestamp.Time)
 						MetricsWrapper(MetricsController, metricsConstants.CollectorDeployments, metricsConstants.MetricTypeGuage, metricsConstants.MetricDeploymentsCreationTimeGauge, dur.Seconds())
 						DeploymentSucceededTimeSumPerThread[threadIndex] += dur
@@ -1428,22 +1428,24 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 						SuccessfulDeploymentsPerThread[threadIndex] += 1
 						MetricsWrapper(MetricsController, metricsConstants.CollectorDeployments, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulDeploymentsCreationCounter)
 						increaseBar(deploymentsBar, deploymentsBarMutex)
-					} else if deploymentFailed && deploymentFailCount > deploymentFailCountThreshold {
+					}
+					return deploymentIsDone, nil
+				})
+				// Only timeout error returns here
+				if err != nil {
+					if conditionError != nil {
+						// If timeout error occured but conditionError is set, it means the timeout has occurred related to GetDeployment or checkDeploymentFailed functions
+						// The idea is that deployment errors can disappear until a successful deployment occurs
 						dur := lastUpdateTimeOfFailed.Time.Sub(creationTimestamp.Time)
 						DeploymentFailedTimeSumPerThread[threadIndex] += dur
-						logError(21, fmt.Sprintf("Deployment for applicationName/componentName %s/%s failed due to %s", applicationName, componentName, errorMessage))
-						FailedDeploymentsPerThread[threadIndex] += 1
-						MetricsWrapper(MetricsController, metricsConstants.CollectorDeployments, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedDeploymentsCreationCounter)
-						increaseBar(deploymentsBar, deploymentsBarMutex)
+						logError(21, fmt.Sprintf("Deployment for applicationName/componentName %s/%s failed : %v", applicationName, componentName, conditionError))
+					} else {
+						// regular timeout error
+						logError(22, fmt.Sprintf("Deployment for applicationName/componentName %s/%s failed to succeed within %v: %v", applicationName, componentName, deploymentTimeout, err))
 					}
-					return deploymentIsDone || (deploymentFailed && deploymentFailCount > deploymentFailCountThreshold), nil
-				})
-				if err != nil {
-					logError(22, fmt.Sprintf("Deployment for applicationName/componentName %s/%s failed to succeed within %v: %v", applicationName, componentName, deploymentTimeout, err))
 					FailedDeploymentsPerThread[threadIndex] += 1
 					MetricsWrapper(MetricsController, metricsConstants.CollectorDeployments, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedDeploymentsCreationCounter)
 					increaseBar(deploymentsBar, deploymentsBarMutex)
-					continue
 				}
 			}
 		}()
