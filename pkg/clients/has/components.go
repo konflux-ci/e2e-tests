@@ -64,30 +64,15 @@ func (h *HasController) GetComponentByApplicationName(applicationName string, na
 
 // GetComponentPipeline returns the pipeline for a given component labels
 func (h *HasController) GetComponentPipelineRun(componentName string, applicationName string, namespace, sha string) (*v1beta1.PipelineRun, error) {
-	pipelineRunLabels := map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName}
-
-	if sha != "" {
-		pipelineRunLabels["pipelinesascode.tekton.dev/sha"] = sha
-	}
-
-	list := &v1beta1.PipelineRunList{}
-	err := h.KubeRest().List(context.Background(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
-
-	if err != nil && !k8sErrors.IsNotFound(err) {
-		return nil, fmt.Errorf("error listing pipelineruns in %s namespace: %v", namespace, err)
-	}
-
-	if len(list.Items) > 0 {
-		return &list.Items[0], nil
-	}
-
-	return nil, fmt.Errorf("no pipelinerun found for component %s", componentName)
+	return h.GetComponentPipelineRunWithType(componentName, applicationName, namespace, "", sha)
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels with pipeline type within label "pipelines.appstudio.openshift.io/type" ("build", "test")
 func (h *HasController) GetComponentPipelineRunWithType(componentName string, applicationName string, namespace, pipelineType string, sha string) (*v1beta1.PipelineRun, error) {
 	pipelineRunLabels := map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName}
-	pipelineRunLabels["pipelines.appstudio.openshift.io/type"] = pipelineType
+	if pipelineType != "" {
+		pipelineRunLabels["pipelines.appstudio.openshift.io/type"] = pipelineType
+	}
 
 	if sha != "" {
 		pipelineRunLabels["pipelinesascode.tekton.dev/sha"] = sha
