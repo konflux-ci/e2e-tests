@@ -1032,17 +1032,17 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// collect Build ResourceQuota metrics (temporary)
-			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, "appstudio-crds-build")
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, appstudioCrdsBuild)
 			Expect(err).NotTo(HaveOccurred())
-			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, "compute-build")
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, computeBuild)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterAll(func() {
 			// collect Build ResourceQuota metrics (temporary)
-			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, "appstudio-crds-build")
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, appstudioCrdsBuild)
 			Expect(err).NotTo(HaveOccurred())
-			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, "compute-build")
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, computeBuild)
 			Expect(err).NotTo(HaveOccurred())
 			if !CurrentSpecReport().Failed() {
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
@@ -1089,17 +1089,17 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			timeout = time.Second * 600
 
 			// collect Build ResourceQuota metrics (temporary)
-			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, "appstudio-crds-build")
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, appstudioCrdsBuild)
 			Expect(err).NotTo(HaveOccurred())
-			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, "compute-build")
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, computeBuild)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterAll(func() {
 			// collect Build ResourceQuota metrics (temporary)
-			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, "appstudio-crds-build")
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, appstudioCrdsBuild)
 			Expect(err).NotTo(HaveOccurred())
-			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, "compute-build")
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, computeBuild)
 			Expect(err).NotTo(HaveOccurred())
 
 			if !CurrentSpecReport().Failed() {
@@ -1267,17 +1267,17 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			}
 
 			// collect Build ResourceQuota metrics (temporary)
-			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, "appstudio-crds-build")
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, appstudioCrdsBuild)
 			Expect(err).NotTo(HaveOccurred())
-			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, "compute-build")
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, computeBuild)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterAll(func() {
 			// collect Build ResourceQuota metrics (temporary)
-			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, "appstudio-crds-build")
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, appstudioCrdsBuild)
 			Expect(err).NotTo(HaveOccurred())
-			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, "compute-build")
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, computeBuild)
 			Expect(err).NotTo(HaveOccurred())
 
 			if !CurrentSpecReport().Failed() {
