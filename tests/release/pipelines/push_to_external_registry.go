@@ -142,12 +142,14 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 			"mapping": map[string]interface{}{
 				"components": []map[string]interface{}{
 					{
-						"component":  compName,
-						"repository": releasedImagePushRepo,
+						"name":  compName,
+						//"repository": "quay.io/redhat-appstudio-qe/dcmetromap",
+						"repository": "quay.io/" + utils.GetQuayIOOrganization()+ "/dcmetromap",
 					},
 					{
-						"component":  additionalComponentName,
-						"repository": additionalReleasedImagePushRepo,
+						"name":  additionalComponentName,
+						//"repository": "quay.io/redhat-appstudio-qe/simplepython",
+						"repository": "quay.io/" + utils.GetQuayIOOrganization()+ "/simplepython",
 					},
 				},
 			},
