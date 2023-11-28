@@ -45,4 +45,4 @@ jobs:
       - name: Setup Golang
         uses: actions/setup-go@v3
       - name: Run unit tests
-        run: go test -v ./pkg/... ./magefiles/...
+        run: make test/unit
