@@ -2,8 +2,17 @@ FROM registry.ci.openshift.org/openshift/release:golang-1.19 AS builder
 
 WORKDIR /github.com/redhat-appstudio/e2e-tests
 USER root
-COPY . .
-RUN GOOS=linux make build
+
+COPY go.mod .
+COPY go.sum .
+RUN go mod download -x
+COPY cmd/ cmd/
+COPY magefiles/ magefiles/
+COPY pkg/ pkg/
+COPY tests/ tests/
+COPY Makefile .
+
+RUN make build
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 

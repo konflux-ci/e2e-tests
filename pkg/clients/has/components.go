@@ -64,7 +64,15 @@ func (h *HasController) GetComponentByApplicationName(applicationName string, na
 
 // GetComponentPipeline returns the pipeline for a given component labels
 func (h *HasController) GetComponentPipelineRun(componentName string, applicationName string, namespace, sha string) (*v1beta1.PipelineRun, error) {
+	return h.GetComponentPipelineRunWithType(componentName, applicationName, namespace, "", sha)
+}
+
+// GetComponentPipeline returns the pipeline for a given component labels with pipeline type within label "pipelines.appstudio.openshift.io/type" ("build", "test")
+func (h *HasController) GetComponentPipelineRunWithType(componentName string, applicationName string, namespace, pipelineType string, sha string) (*v1beta1.PipelineRun, error) {
 	pipelineRunLabels := map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName}
+	if pipelineType != "" {
+		pipelineRunLabels["pipelines.appstudio.openshift.io/type"] = pipelineType
+	}
 
 	if sha != "" {
 		pipelineRunLabels["pipelinesascode.tekton.dev/sha"] = sha

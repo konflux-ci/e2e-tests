@@ -74,6 +74,9 @@ var TestScenarios = []TestSpec{
 	{
 		Name:            "DEVHAS-234: creates an application with dotnet component from RHTAP samples",
 		ApplicationName: "e2e-dotnet",
+		// https://redhat-appstudio.github.io/docs.appstudio.io/Documentation/main/getting-started/get-started/#choosing-a-bundled-sample
+		// Seems like RHTAP dont support yet a dotnet sample. Disabling for not this tests.
+		Skip: true,
 		Components: []ComponentSpec{
 			{
 				Name:              "dotnet-component",
