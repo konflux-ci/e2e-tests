@@ -374,7 +374,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 							}
 							break
 						}
-						GinkgoWriter.Println("pr is done and has correct analyse-dependecies output, exiting")
+						GinkgoWriter.Println("pr is done and has correct analyse-dependencies output, exiting")
 						exitForLoop = true
 					}
 				}
