@@ -59,3 +59,6 @@ clean-quay-tags:
 
 clean-private-repos:
 	./mage -v local:cleanupPrivateRepos
+
+clean-registered-servers:
+	./mage -v CleanupRegisteredPacServers

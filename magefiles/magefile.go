@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"reflect"
@@ -784,16 +785,22 @@ func newSprayProxy() (*sprayproxy.SprayProxyConfig, error) {
 
 func registerPacServer() error {
 	var err error
+	var pacHost string
 	sprayProxyConfig, err = newSprayProxy()
 	if err != nil {
 		return fmt.Errorf("failed to set up SprayProxy credentials: %+v", err)
 	}
-	_, err = sprayProxyConfig.RegisterServer()
+
+	pacHost, err = sprayproxy.GetPaCHost()
 	if err != nil {
-		return fmt.Errorf("error when registering PaC server %s to SprayProxy server %s: %+v", sprayProxyConfig.PaCHost, sprayProxyConfig.BaseURL, err)
+		return fmt.Errorf("failed to get PaC host: %+v", err)
+	}
+	_, err = sprayProxyConfig.RegisterServer(pacHost)
+	if err != nil {
+		return fmt.Errorf("error when registering PaC server %s to SprayProxy server %s: %+v", pacHost, sprayProxyConfig.BaseURL, err)
 	}
 	// for debugging purposes
-	klog.Infof("Registered PaC server: %s", sprayProxyConfig.PaCHost)
+	klog.Infof("Registered PaC server: %s",pacHost)
 
 	return nil
 }
@@ -802,16 +809,20 @@ func unregisterPacServer() error {
 	if sprayProxyConfig == nil {
 		return fmt.Errorf("SprayProxy config is empty")
 	}
-	_, err := sprayProxyConfig.UnregisterServer()
+	pacHost, err := sprayproxy.GetPaCHost()
 	if err != nil {
-		return fmt.Errorf("error when unregistering PaC server %s from SprayProxy server %s: %+v", sprayProxyConfig.PaCHost, sprayProxyConfig.BaseURL, err)
+		return fmt.Errorf("failed to get PaC host: %+v", err)
+	}
+	_, err = sprayProxyConfig.UnregisterServer(pacHost)
+	if err != nil {
+		return fmt.Errorf("error when unregistering PaC server %s from SprayProxy server %s: %+v", pacHost, sprayProxyConfig.BaseURL, err)
 	}
 	// for debugging purposes
 	servers, err := sprayProxyConfig.GetServers()
 	if err != nil {
 		klog.Error("Failed to get registered PaC servers from SprayProxy: %+v", err)
 	} else {
-		klog.Infof("Registered PaC servers: %v", servers)
+		klog.Infof("Unregistered PaC servers: %v", servers)
 	}
 	return nil
 }
@@ -942,4 +953,33 @@ func CleanWorkload() error {
 func runTests(labelsToRun string, junitReportFile string) error {
 	// added --output-interceptor-mode=none to mitigate RHTAPBUGS-34
 	return sh.RunV("ginkgo", "-p", "--output-interceptor-mode=none", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report="+junitReportFile, "--label-filter="+labelsToRun, "./cmd", "--", "--generate-rppreproc-report=true", fmt.Sprintf("--rp-preproc-dir=%s", artifactDir))
+}
+
+func CleanupRegisteredPacServers() error {
+	var err error
+	sprayProxyConfig, err = newSprayProxy()
+	if err != nil {
+		return fmt.Errorf("failed to initialize SprayProxy config: %+v", err)
+	}
+	
+	servers, err := sprayProxyConfig.GetServers()
+	if err != nil {
+		return fmt.Errorf("failed to get registered PaC servers from SprayProxy: %+v", err)
+	}
+	
+	for _, server := range strings.Split(servers, ",") {
+		// Verify if the server is a valid host, if not, unregister it
+		if !isValidPacHost(server) {
+			_, err := sprayProxyConfig.UnregisterServer(strings.TrimSpace(server))
+			if err != nil {
+				return fmt.Errorf("error when unregistering PaC server %s from SprayProxy server %s: %+v", server, sprayProxyConfig.BaseURL, err)
+			}
+		}
+	}
+	return nil
+}
+
+func isValidPacHost(server string) bool {
+	_, err := net.LookupHost(strings.TrimPrefix(server, "https://"))
+	return err == nil
 }
