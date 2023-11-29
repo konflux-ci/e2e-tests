@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -36,6 +37,11 @@ const (
 	releaseFinishedTimeout                     = 5 * time.Minute
 
 	defaultInterval = 100 * time.Millisecond
+)
+
+var (
+	relSvcCatalogURL      string = utils.GetEnv("RELEASE_SERVICE_CATALOG_URL", "https://github.com/redhat-appstudio/release-service-catalog")
+	relSvcCatalogRevision string = utils.GetEnv("RELEASE_SERVICE_CATALOG_REVISION", "main")
 )
 
 var managednamespaceSecret = []corev1.ObjectReference{

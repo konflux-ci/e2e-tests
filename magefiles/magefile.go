@@ -338,7 +338,10 @@ func (ci CI) setRequiredEnvVars() error {
 				imageTagSuffix = "has-image"
 				testSuiteLabel = "e2e-demo,byoc"
 			case strings.Contains(jobName, "release-service-catalog"):
+				envVarPrefix = "RELEASE_SERVICE"
 				testSuiteLabel = "release-pipelines"
+				os.Setenv(fmt.Sprintf("%s_CATALOG_URL", envVarPrefix), fmt.Sprintf("https://github.com/%s/%s", pr.Organization, pr.RepoName))
+				os.Setenv(fmt.Sprintf("%s_CATALOG_REVISION", envVarPrefix), pr.CommitSHA)
 			case strings.Contains(jobName, "release-service"):
 				envVarPrefix = "RELEASE_SERVICE"
 				imageTagSuffix = "release-service-image"
@@ -800,7 +803,7 @@ func registerPacServer() error {
 		return fmt.Errorf("error when registering PaC server %s to SprayProxy server %s: %+v", pacHost, sprayProxyConfig.BaseURL, err)
 	}
 	// for debugging purposes
-	klog.Infof("Registered PaC server: %s",pacHost)
+	klog.Infof("Registered PaC server: %s", pacHost)
 
 	return nil
 }
@@ -961,12 +964,12 @@ func CleanupRegisteredPacServers() error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize SprayProxy config: %+v", err)
 	}
-	
+
 	servers, err := sprayProxyConfig.GetServers()
 	if err != nil {
 		return fmt.Errorf("failed to get registered PaC servers from SprayProxy: %+v", err)
 	}
-	
+
 	for _, server := range strings.Split(servers, ",") {
 		// Verify if the server is a valid host, if not, unregister it
 		if !isValidPacHost(server) {
