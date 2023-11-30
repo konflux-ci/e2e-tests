@@ -11,7 +11,6 @@ const (
 
 type SprayProxyConfig struct {
 	BaseURL    string
-	PaCHost    string
 	Token      string
 	HTTPClient *http.Client
 }
