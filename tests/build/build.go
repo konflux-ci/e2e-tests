@@ -1030,9 +1030,20 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			}
 			_, err = f.AsKubeAdmin.HasController.CreateComponent(component, testNamespace, outputContainerImage, "", applicationName, true, map[string]string{})
 			Expect(err).ShouldNot(HaveOccurred())
+
+			// collect Build ResourceQuota metrics (temporary)
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, appstudioCrdsBuild)
+			Expect(err).NotTo(HaveOccurred())
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, computeBuild)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterAll(func() {
+			// collect Build ResourceQuota metrics (temporary)
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, appstudioCrdsBuild)
+			Expect(err).NotTo(HaveOccurred())
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, computeBuild)
+			Expect(err).NotTo(HaveOccurred())
 			if !CurrentSpecReport().Failed() {
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
@@ -1076,13 +1087,24 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			}
 
 			timeout = time.Second * 600
+
+			// collect Build ResourceQuota metrics (temporary)
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, appstudioCrdsBuild)
+			Expect(err).NotTo(HaveOccurred())
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, computeBuild)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterAll(func() {
+			// collect Build ResourceQuota metrics (temporary)
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, appstudioCrdsBuild)
+			Expect(err).NotTo(HaveOccurred())
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, computeBuild)
+			Expect(err).NotTo(HaveOccurred())
+
 			if !CurrentSpecReport().Failed() {
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				// skipped due to RHTAPBUGS-978
-				// Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 			}
@@ -1243,9 +1265,21 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(err).NotTo(HaveOccurred())
 				componentName = c.Name
 			}
+
+			// collect Build ResourceQuota metrics (temporary)
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, appstudioCrdsBuild)
+			Expect(err).NotTo(HaveOccurred())
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, computeBuild)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterAll(func() {
+			// collect Build ResourceQuota metrics (temporary)
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, appstudioCrdsBuild)
+			Expect(err).NotTo(HaveOccurred())
+			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, computeBuild)
+			Expect(err).NotTo(HaveOccurred())
+
 			if !CurrentSpecReport().Failed() {
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())

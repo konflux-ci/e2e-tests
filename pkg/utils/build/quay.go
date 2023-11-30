@@ -13,7 +13,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	quay "github.com/redhat-appstudio/image-controller/pkg/quay"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 )
 
 var (
@@ -151,7 +150,7 @@ func GetRobotAccountToken(robotAccountName string) (string, error) {
 }
 
 // GetRobotAccountInfoFromSecret gets robot account name and token from secret data
-func GetRobotAccountInfoFromSecret(secret *v1.Secret) (string, string) {
+func GetRobotAccountInfoFromSecret(secret *corev1.Secret) (string, string) {
 	uploadSecretDockerconfigJson := string(secret.Data[corev1.DockerConfigJsonKey])
 	var authDataJson interface{}
 	Expect(json.Unmarshal([]byte(uploadSecretDockerconfigJson), &authDataJson)).To(Succeed())

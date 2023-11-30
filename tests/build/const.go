@@ -30,6 +30,9 @@ const (
 	annotationsTestRevision          = "529f65798777a5fe145e33d58e1e91c4c03704a4"
 
 	githubUrlFormat = "https://github.com/%s/%s"
+
+	appstudioCrdsBuild = "appstudio-crds-build"
+	computeBuild       = "compute-build"
 )
 
 var (
