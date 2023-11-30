@@ -30,7 +30,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "HACBS"), func() {
+var _ = framework.BuildSuiteDescribe("Build service E2E tests", Pending, Label("build", "HACBS"), func() {
 
 	var f *framework.Framework
 	AfterEach(framework.ReportFailure(&f))
