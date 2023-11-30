@@ -1,8 +1,6 @@
 package logs
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
 	"strings"
 
 	types "github.com/onsi/ginkgo/v2/types"
@@ -27,14 +25,5 @@ func ShortenStringAddHash(report types.SpecReport) string {
 	className := GetClassnameFromReport(report)
 	s := report.FullText()
 	replacedClass := strings.Replace(s, className, "", 1)
-	if len(replacedClass) > 100 {
-		stringToHash := replacedClass[100:]
-		h := sha1.New()
-		h.Write([]byte(stringToHash))
-		sha1_hash := hex.EncodeToString(h.Sum(nil))
-		stringWithHash := replacedClass[0:100] + " sha: " + sha1_hash
-		return stringWithHash
-	} else {
-		return replacedClass
-	}
+	return replacedClass[0:255]
 }
