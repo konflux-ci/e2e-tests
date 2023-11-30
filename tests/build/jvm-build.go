@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -191,7 +192,9 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		})
 
 		It("that PipelineRun completes successfully", func() {
-			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
+			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
+				f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
+
 			pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			//now delete it so it can't interfere with later test logic

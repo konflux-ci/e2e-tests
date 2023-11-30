@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/contract"
@@ -141,7 +142,8 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", Labe
 
 	var _ = Describe("Post-release verification", func() {
 		It("verifies that a build PipelineRun is created in dev namespace and succeeds", func() {
-			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, fw.AsKubeAdmin.TektonController)).To(Succeed())
+			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
+				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
 		})
 
 		It("verifies that a Release CR should have been created in the dev namespace", func() {

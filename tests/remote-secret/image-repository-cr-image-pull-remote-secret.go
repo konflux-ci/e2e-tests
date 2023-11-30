@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/gitops"
@@ -148,7 +149,8 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("image-repository-cr-image-pul
 			component, err = fw.AsKubeAdmin.HasController.GetComponent(component.Name, namespace)
 			Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
 
-			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, fw.AsKubeAdmin.TektonController)).To(Succeed())
+			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
+				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
 		})
 
 		It("finds the snapshot and checks if it is marked as successful", func() {

@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/go-github/v44/github"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 
@@ -330,7 +331,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldComponentGitSourceRepoName))
 			})
 			It("the PipelineRun should eventually finish successfully", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
+					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
 			})
 			It("image repo and robot account created successfully", func() {
 
@@ -438,7 +440,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldComponentGitSourceRepoName))
 			})
 			It("PipelineRun should eventually finish", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, createdFileSHA, 2, f.AsKubeAdmin.TektonController)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, createdFileSHA,
+					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
 			})
 			It("eventually leads to another update of a PR about the PipelineRun status report at Checks tab", func() {
 				validateChecks()
@@ -477,7 +480,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 
 			It("pipelineRun should eventually finish", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResultSha, 2, f.AsKubeAdmin.TektonController)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component,
+					mergeResultSha, f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
 			})
 
 			It("does not have expiration set", func() {
@@ -686,7 +690,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				})
 
 				It(fmt.Sprintf("the PipelineRun should eventually finish successfully for component %s", componentName), func() {
-					Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
+					Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
+						f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
 				})
 
 				It("merging the PR should be successful", func() {

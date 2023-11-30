@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/gitops"
@@ -352,7 +353,8 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "rs-environme
 		})
 
 		It("wait for Component pipeline to finish", func() {
-			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(componentObj, "", 2, fw.AsKubeAdmin.TektonController)).To(Succeed())
+			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(componentObj, "",
+				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
 		})
 
 		It("(SVPI-633) secret #1 should exist in all environments' target namespace", func() {
