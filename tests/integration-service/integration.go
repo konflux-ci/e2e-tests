@@ -335,8 +335,7 @@ func createComponent(f framework.Framework, testNamespace, applicationName strin
 func cleanup(f framework.Framework, testNamespace, applicationName, componentName string) {
 	if !CurrentSpecReport().Failed() {
 		Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-		// skipped due to RHTAPBUGS-978
-		// Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
+		Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
 		integrationTestScenarios, err := f.AsKubeAdmin.IntegrationController.GetIntegrationTestScenarios(applicationName, testNamespace)
 		Expect(err).ShouldNot(HaveOccurred())
 

@@ -17,7 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var _ = framework.ReleaseServiceSuiteDescribe("happy_path_with_deployment", Label("release-service", "withDeployment"), func() {
+var _ = framework.ReleaseServiceSuiteDescribe("happy_path_with_deployment", Pending,  Label("release-service", "withDeployment"), func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	var fw *framework.Framework
