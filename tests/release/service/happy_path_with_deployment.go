@@ -11,6 +11,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/contract"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -54,16 +55,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("happy_path_with_deployment", Labe
 
 		defaultEcPolicy, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 		Expect(err).NotTo(HaveOccurred())
-
-		defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
-			Description: "Red Hat's enterprise requirements",
-			PublicKey:   string(publicKey),
-			Sources:     defaultEcPolicy.Spec.Sources,
-			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-				Collections: []string{"minimal"},
-				Exclude:     []string{"cve"},
-			},
-		}
+		policy := contract.PolicySpecWithSourceConfig(defaultEcPolicy.Spec, ecp.SourceConfig{Include: []string{"minimal"}, Exclude: []string{"cve"}})
 
 		// using cdq since git ref is not known
 		compName = componentName
@@ -90,10 +82,10 @@ var _ = framework.ReleaseServiceSuiteDescribe("happy_path_with_deployment", Labe
 				{Name: "revision", Value: "main"},
 				{Name: "pathInRepo", Value: "pipelines/e2e/e2e.yaml"},
 			},
-		}, nil)
+		}, nil )
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicyDefault, managedNamespace, defaultEcPolicySpec)
+		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicyDefault, managedNamespace, policy)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasePvcName, managedNamespace, corev1.ReadWriteOnce)
