@@ -238,7 +238,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 							component, err = fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), namespace)
 							Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
 
-							Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, fw.AsKubeAdmin.TektonController)).To(Succeed())
+							Expect(fw.AsKubeAdmin.HasController.WaitPipelineToFinishAndRetryIfAnyError(component, "", 2, fw.AsKubeAdmin.TektonController)).To(Succeed())
 						}
 					})
 
