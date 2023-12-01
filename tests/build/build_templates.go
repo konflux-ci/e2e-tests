@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/github"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	kubeapi "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
@@ -147,7 +148,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			It(fmt.Sprintf("should eventually finish successfully for component with Git source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
 				component, err := kubeadminClient.HasController.GetComponent(componentNames[i], testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "", pipelineCompletionRetries, kubeadminClient.TektonController)).To(Succeed())
+				Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "",
+					kubeadminClient.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true})).To(Succeed())
 			})
 
 			It(fmt.Sprintf("should ensure SBOM is shown for component with Git source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
@@ -435,7 +437,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					component, err := kubeadminClient.HasController.GetComponent(componentNames[i], testNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
 					Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(
-						component, "", pipelineCompletionRetries, kubeadminClient.TektonController)).To(Succeed())
+						component, "", kubeadminClient.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true})).To(Succeed())
 
 					imageWithDigest, err = getImageWithDigest(kubeadminClient, componentNames[i], applicationName, testNamespace)
 					Expect(err).NotTo(HaveOccurred())
@@ -519,7 +521,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		It(fmt.Sprintf("pipelineRun should fail for symlink component with Git source URL %s", pythonComponentGitSourceURL), Label(buildTemplatesTestLabel), func() {
 			component, err := kubeadminClient.HasController.GetComponent(symlinkComponentName, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "", pipelineCompletionRetries, kubeadminClient.TektonController)).Should(MatchError(ContainSubstring("cloned repository contains symlink pointing outside of the cloned repository")))
+			Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "",
+				kubeadminClient.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries})).Should(MatchError(ContainSubstring("cloned repository contains symlink pointing outside of the cloned repository")))
 		})
 	})
 })

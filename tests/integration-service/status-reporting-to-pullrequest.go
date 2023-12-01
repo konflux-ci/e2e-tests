@@ -7,6 +7,7 @@ import (
 
 	"github.com/devfile/library/v2/pkg/util"
 	"github.com/google/go-github/v44/github"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -133,7 +134,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
 			})
 			It("the build PipelineRun should eventually finish successfully", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component,
+					"", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
 			})
 			It("does not contain an annotation with a Snapshot Name", func() {
 				Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))

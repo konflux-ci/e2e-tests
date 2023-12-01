@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -156,7 +157,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[RHTAPREL-373]fbc happy path e2
 	var _ = Describe("Post-release verification", func() {
 
 		It("verifies that a build PipelineRun is created in dev namespace and succeeds", func() {
-			Expect(devFw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "", 2, devFw.AsKubeDeveloper.TektonController)).To(Succeed())
+			Expect(devFw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "",
+				devFw.AsKubeDeveloper.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
 			buildPr, err = devFw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, fbcApplicationName, devNamespace, "")
 			Expect(err).ShouldNot(HaveOccurred())
 

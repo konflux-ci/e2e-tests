@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -85,7 +86,9 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 
 		It("triggers a build PipelineRun", Label("integration-service"), func() {
 			pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
-			Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
+			Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "",
+				f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
+
 			Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
 		})
 

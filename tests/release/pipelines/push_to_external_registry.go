@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/release"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
@@ -142,14 +143,14 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 			"mapping": map[string]interface{}{
 				"components": []map[string]interface{}{
 					{
-						"name":  compName,
+						"name": compName,
 						//"repository": "quay.io/redhat-appstudio-qe/dcmetromap",
-						"repository": "quay.io/" + utils.GetQuayIOOrganization()+ "/dcmetromap",
+						"repository": "quay.io/" + utils.GetQuayIOOrganization() + "/dcmetromap",
 					},
 					{
-						"name":  additionalComponentName,
+						"name": additionalComponentName,
 						//"repository": "quay.io/redhat-appstudio-qe/simplepython",
-						"repository": "quay.io/" + utils.GetQuayIOOrganization()+ "/simplepython",
+						"repository": "quay.io/" + utils.GetQuayIOOrganization() + "/simplepython",
 					},
 				},
 			},
@@ -208,13 +209,15 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		It("verifies that Component 1 can be created and build PipelineRun is created for it in dev namespace and succeeds", func() {
 			component1, err = fw.AsKubeAdmin.HasController.CreateComponent(componentDetected.ComponentStub, devNamespace, "", "", applicationNameDefault, true, map[string]string{})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component1, "", 2, fw.AsKubeAdmin.TektonController)).To(Succeed())
+			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component1, "",
+				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
 		})
 
 		It("verifies that Component 2 can be created and build PipelineRun is created for it in dev namespace and succeeds", func() {
 			component2, err = fw.AsKubeAdmin.HasController.CreateComponent(additionalComponentDetected.ComponentStub, devNamespace, "", "", applicationNameDefault, true, map[string]string{})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component2, "", 2, fw.AsKubeAdmin.TektonController)).To(Succeed())
+			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component2, "",
+				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
 		})
 
 		It("tests that Snapshot is created for each Component", func() {

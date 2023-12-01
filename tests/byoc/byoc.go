@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	client "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/vcluster"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
@@ -227,7 +228,8 @@ var _ = framework.ByocSuiteDescribe(Label("byoc"), Ordered, func() {
 			})
 
 			It("waits component pipeline to finish", func() {
-				Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(componentObj, "", 2, fw.AsKubeAdmin.TektonController)).To(Succeed())
+				Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(componentObj, "",
+					fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
 			})
 
 			// Deploy the component using gitops and check for the health

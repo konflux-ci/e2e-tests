@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -77,7 +78,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("waits for build PipelineRun to succeed", Label("integration-service"), func() {
-				Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
+				Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "",
+					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
 				Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
 			})
 		})
@@ -217,7 +219,9 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		It("triggers a build PipelineRun", Label("integration-service"), func() {
 			pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
-			Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", 2, f.AsKubeAdmin.TektonController)).To(Succeed())
+			Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", f.AsKubeAdmin.TektonController,
+				&has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
+
 			Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
 		})
 

@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -238,7 +239,8 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 							component, err = fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), namespace)
 							Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
 
-							Expect(fw.AsKubeAdmin.HasController.WaitPipelineToFinishAndRetryIfAnyError(component, "", 2, fw.AsKubeAdmin.TektonController)).To(Succeed())
+							Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
+								fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 3, Always: true})).To(Succeed())
 						}
 					})
 
@@ -471,7 +473,8 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 
 							When("SLSA level 3 customizable PipelineRun is created", func() {
 								It("should eventually complete successfully", func() {
-									Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResultSha, 2, fw.AsKubeAdmin.TektonController)).To(Succeed())
+									Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResultSha,
+										fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 5, Always: true})).To(Succeed())
 								})
 
 								It("does not contain an annotation with a Snapshot Name", func() {

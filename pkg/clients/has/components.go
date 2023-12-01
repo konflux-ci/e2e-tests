@@ -110,8 +110,19 @@ func (h *HasController) GetAllPipelineRunsForApplication(applicationName, namesp
 	return nil, fmt.Errorf("no pipelinerun found for application %s", applicationName)
 }
 
+// Set of options to retrigger pipelineRuns in CI to fight against flakynes
+type RetryOptions struct {
+	// Indicate how many times a pipelineRun should be retriggered in case of flakines
+	Retries int
+
+	// If is set to true the PipelineRun will be retriggered always in case if pipelinerun fail for any reason. Time to time in RHTAP CI
+	// we see that there are a lot of components which fail with QPS in build-container which cannot be controlled.
+	// By default is false will retrigger a pipelineRun only when meet CouldntGetTask or TaskRunImagePullFailed conditions
+	Always bool
+}
+
 // Waits for a given component to be finished and in case of hitting issue: https://issues.redhat.com/browse/SRVKP-2749 do a given retries.
-func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservice.Component, sha string, maxRetries int, t *tekton.TektonController) error {
+func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservice.Component, sha string, t *tekton.TektonController, r *RetryOptions) error {
 	attempts := 1
 	app := component.Spec.Application
 	var pr *v1beta1.PipelineRun
@@ -147,12 +158,13 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 		})
 
 		if err != nil {
-			GinkgoWriter.Printf("attempt %d/%d: PipelineRun %q failed: %+v", attempts, maxRetries+1, pr.GetName(), err)
-			//CouldntGetTask: Retry the PipelineRun only in case we hit the known issue https://issues.redhat.com/browse/SRVKP-2749
+			GinkgoWriter.Printf("attempt %d/%d: PipelineRun %q failed: %+v", attempts, r.Retries+1, pr.GetName(), err)
+			// CouldntGetTask: Retry the PipelineRun only in case we hit the known issue https://issues.redhat.com/browse/SRVKP-2749
 			// TaskRunImagePullFailed: Retry in case of https://issues.redhat.com/browse/RHTAPBUGS-985 and https://github.com/tektoncd/pipeline/issues/7184
-			if attempts == maxRetries+1 || (pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason() != "CouldntGetTask" && pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason() != "TaskRunImagePullFailed") {
+			if attempts == r.Retries+1 || (!r.Always && pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason() != "CouldntGetTask" && pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason() != "TaskRunImagePullFailed") {
 				return err
 			}
+
 			if sha, err = h.RetriggerComponentPipelineRun(component, pr); err != nil {
 				return fmt.Errorf("unable to retrigger component %s:%s: %+v", component.GetNamespace(), component.GetName(), err)
 			}
@@ -554,60 +566,4 @@ func (h *HasController) CreateComponentWithoutGenerateAnnotation(componentSpec a
 	}
 
 	return componentObject, nil
-}
-
-// Waits for a given component to be finished and in case of hitting issue: https://issues.redhat.com/browse/SRVKP-2749 do a given retries.
-// TODO: This is an workaround for random failed pipelineruns in rhtap-demo. This func will be merged with WaitForComponentPipelineToBeFinished
-func (h *HasController) WaitPipelineToFinishAndRetryIfAnyError(component *appservice.Component, sha string, maxRetries int, t *tekton.TektonController) error {
-	attempts := 1
-	app := component.Spec.Application
-	var pr *v1beta1.PipelineRun
-
-	for {
-		err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 30*time.Minute, true, func(ctx context.Context) (done bool, err error) {
-			pr, err = h.GetComponentPipelineRun(component.GetName(), app, component.GetNamespace(), sha)
-
-			if err != nil {
-				GinkgoWriter.Printf("PipelineRun has not been created yet for the Component %s/%s\n", component.GetNamespace(), component.GetName())
-				return false, nil
-			}
-
-			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pr.Name, pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
-
-			if !pr.IsDone() {
-				return false, nil
-			}
-
-			if pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-				return true, nil
-			}
-
-			var prLogs string
-			if err = t.StorePipelineRun(pr); err != nil {
-				GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
-			}
-			if prLogs, err = t.GetPipelineRunLogs(pr.Name, pr.Namespace); err != nil {
-				GinkgoWriter.Printf("failed to get logs for PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
-			}
-
-			return false, fmt.Errorf(prLogs)
-		})
-
-		if err != nil {
-			GinkgoWriter.Printf("attempt %d/%d: PipelineRun %q failed: %+v", attempts, maxRetries+1, pr.GetName(), err)
-			//CouldntGetTask: Retry the PipelineRun only in case we hit the known issue https://issues.redhat.com/browse/SRVKP-2749
-			// TaskRunImagePullFailed: Retry in case of https://issues.redhat.com/browse/RHTAPBUGS-985 and https://github.com/tektoncd/pipeline/issues/7184
-			if attempts == maxRetries+1 {
-				return err
-			}
-			if sha, err = h.RetriggerComponentPipelineRun(component, pr); err != nil {
-				return fmt.Errorf("unable to retrigger component %s:%s: %+v", component.GetNamespace(), component.GetName(), err)
-			}
-			attempts++
-		} else {
-			break
-		}
-	}
-
-	return nil
 }
