@@ -195,7 +195,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 						// we need to create a new branch that we will target
 						// and that will contain the PaC configuration, so we can avoid polluting the default (main) branch
 						if componentSpec.AdvancedBuildSpec != nil {
-							componentNewBaseBranch = fmt.Sprintf("base-%s", util.GenerateRandomString(4))
+							componentNewBaseBranch = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
 							gitRevision = componentNewBaseBranch
 							Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef(componentRepositoryName, componentSpec.GitSourceDefaultBranchName, componentSpec.GitSourceRevision, componentNewBaseBranch)).To(Succeed())
 						}

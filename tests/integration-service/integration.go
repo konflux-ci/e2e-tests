@@ -315,7 +315,7 @@ func createApp(f framework.Framework, testNamespace string) string {
 func createComponent(f framework.Framework, testNamespace, applicationName string) (string, *appstudioApi.Component) {
 	var originalComponent *appstudioApi.Component
 
-	componentName := fmt.Sprintf("integration-suite-test-component-git-source-%s", util.GenerateRandomString(4))
+	componentName := fmt.Sprintf("integration-suite-test-component-git-source-%s", util.GenerateRandomString(6))
 	// Create a component with Git Source URL being defined
 	// using cdq since git ref is not known
 	cdq, err := f.AsKubeAdmin.HasController.CreateComponentDetectionQuery(componentName, testNamespace, componentRepoURL, "", "", "", false)

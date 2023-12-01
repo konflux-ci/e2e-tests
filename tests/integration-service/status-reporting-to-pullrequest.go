@@ -58,9 +58,9 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			integrationTestScenarioFail, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario_beta1(applicationName, testNamespace, gitURL, revision, pathInRepoForReportingFail)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			componentName = fmt.Sprintf("%s-%s", "test-component-pac", util.GenerateRandomString(4))
+			componentName = fmt.Sprintf("%s-%s", "test-component-pac", util.GenerateRandomString(6))
 			pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
-			componentBaseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(4))
+			componentBaseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
 
 			err = f.AsKubeAdmin.CommonController.Github.CreateRef(componentRepoNameForStatusReporting, componentDefaultBranch, componentRevision, componentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
