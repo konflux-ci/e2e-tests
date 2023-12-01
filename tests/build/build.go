@@ -927,6 +927,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 
 			Specify("simple build can be triggered manually", func() {
+				// Wait 1 second before sending the second build request, so that we get different buildStatus.Simple.BuildStartTime timestamp
+				time.Sleep(1 * time.Second)
 				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.BuildRequestAnnotationName, controllers.BuildRequestTriggerSimpleBuildAnnotationValue, testNamespace)).To(Succeed())
 			})
 
@@ -991,15 +993,24 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return true, nil
 				}, time.Minute*2, constants.PipelineRunPollingInterval).Should(BeTrue(), "timeout while checking if any more pipelinerun is triggered")
 
-				// Check build status annotation
-				component, err = f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
-				Expect(component).ToNot(BeNil())
-				Expect(err).ShouldNot(HaveOccurred())
-
-				statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
 				buildStatus := &controllers.BuildStatus{}
-				Expect(json.Unmarshal(statusBytes, buildStatus)).To(Succeed())
-				Expect(buildStatus.Message).To(Equal(fmt.Sprintf("unexpected build request: %s", invalidAnnotation)))
+				Eventually(func() error {
+					component, err = f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
+					if err != nil {
+						return err
+					} else if component == nil {
+						return fmt.Errorf("got component as nil after getting component %s in namespace %s", componentName, testNamespace)
+					}
+					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+					err = json.Unmarshal(statusBytes, buildStatus)
+					if err != nil {
+						return err
+					}
+					if !strings.Contains(buildStatus.Message, fmt.Sprintf("unexpected build request: %s", invalidAnnotation)) {
+						return fmt.Errorf("build status message is not as expected, got %s", buildStatus.Message)
+					}
+					return nil
+				}, time.Minute*1, 2*time.Second).Should(Succeed(), "failed while checking build status message is correct after setting invalid annotations")
 			})
 		})
 	})
