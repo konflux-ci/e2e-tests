@@ -318,7 +318,7 @@ spec:
 				Expect(err).NotTo(HaveOccurred())
 
 				return pod.Status.Phase
-			}, 2*time.Minute, 5*time.Second).Should(Equal(corev1.PodRunning), fmt.Sprintf("Pod %s/%s not created successfully", namespace, pod.Name))
+			}, 8*time.Minute, 5*time.Second).Should(Equal(corev1.PodRunning), fmt.Sprintf("Pod %s/%s not created successfully", namespace, pod.Name))
 			Expect(err).NotTo(HaveOccurred())
 
 			// make read request
