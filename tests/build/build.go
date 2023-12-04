@@ -80,14 +80,14 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
 			)
 
-			componentName = fmt.Sprintf("%s-%s", "test-component-pac", util.GenerateRandomString(4))
+			componentName = fmt.Sprintf("%s-%s", "test-component-pac", util.GenerateRandomString(6))
 			pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
-			componentBaseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(4))
+			componentBaseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
 
 			err = f.AsKubeAdmin.CommonController.Github.CreateRef(helloWorldComponentGitSourceRepoName, helloWorldComponentDefaultBranch, helloWorldComponentRevision, componentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			defaultBranchTestComponentName = fmt.Sprintf("test-custom-default-branch-%s", util.GenerateRandomString(4))
+			defaultBranchTestComponentName = fmt.Sprintf("test-custom-default-branch-%s", util.GenerateRandomString(6))
 		})
 
 		AfterAll(func() {
@@ -595,12 +595,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
 			)
 
-			multiComponentBaseBranchName = fmt.Sprintf("multi-component-base-%s", util.GenerateRandomString(4))
+			multiComponentBaseBranchName = fmt.Sprintf("multi-component-base-%s", util.GenerateRandomString(6))
 			err = f.AsKubeAdmin.CommonController.Github.CreateRef(multiComponentGitSourceRepoName, multiComponentDefaultBranch, multiComponentGitRevision, multiComponentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			//Branch for creating pull request
-			multiComponentPRBranchName = fmt.Sprintf("%s-%s", "pr-branch", util.GenerateRandomString(4))
+			multiComponentPRBranchName = fmt.Sprintf("%s-%s", "pr-branch", util.GenerateRandomString(6))
 
 		})
 
@@ -634,7 +634,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			for _, contextDir := range multiComponentContextDirs {
 				contextDir := contextDir
-				componentName := fmt.Sprintf("%s-%s", contextDir, util.GenerateRandomString(4))
+				componentName := fmt.Sprintf("%s-%s", contextDir, util.GenerateRandomString(6))
 				pacBranchName := constants.PaCPullRequestBranchPrefix + componentName
 				pacBranchNames = append(pacBranchNames, pacBranchName)
 
@@ -763,7 +763,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
 				)
 
-				compName = fmt.Sprintf("%s-%s", multiComponentContextDirs[0], util.GenerateRandomString(4))
+				compName = fmt.Sprintf("%s-%s", multiComponentContextDirs[0], util.GenerateRandomString(6))
 
 				componentObj := appservice.ComponentSpec{
 					ComponentName: compName,
@@ -841,7 +841,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
 			)
 
-			componentName = fmt.Sprintf("%s-%s", "test-annotations", util.GenerateRandomString(4))
+			componentName = fmt.Sprintf("%s-%s", "test-annotations", util.GenerateRandomString(6))
 
 		})
 
@@ -1036,12 +1036,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
 			)
 
-			componentName = fmt.Sprintf("build-suite-test-component-image-source-%s", util.GenerateRandomString(4))
+			componentName = fmt.Sprintf("build-suite-test-component-image-source-%s", util.GenerateRandomString(6))
 			outputContainerImage := ""
 			timeout = time.Second * 10
 			// Create a component with containerImageSource being defined
 			component := appservice.ComponentSpec{
-				ComponentName:  fmt.Sprintf("build-suite-test-component-image-source-%s", util.GenerateRandomString(4)),
+				ComponentName:  fmt.Sprintf("build-suite-test-component-image-source-%s", util.GenerateRandomString(6)),
 				ContainerImage: containerImageSource,
 			}
 			_, err = f.AsKubeAdmin.HasController.CreateComponent(component, testNamespace, outputContainerImage, "", applicationName, true, map[string]string{})
@@ -1187,7 +1187,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		It("default Pipeline bundle should be used and no additional Pipeline params should be added to the PipelineRun if one of the WhenConditions does not match", func() {
-			notMatchingComponentName := componentName + util.GenerateRandomString(4)
+			notMatchingComponentName := componentName + util.GenerateRandomString(6)
 			// using cdq since git ref is not known
 			cdq, err := f.AsKubeAdmin.HasController.CreateComponentDetectionQuery(notMatchingComponentName, testNamespace, helloWorldComponentGitSourceURL, "", "", "", false)
 			Expect(err).NotTo(HaveOccurred())

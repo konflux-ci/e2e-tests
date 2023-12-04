@@ -119,7 +119,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
 		)
 
-		componentName = fmt.Sprintf("jvm-build-suite-component-%s", util.GenerateRandomString(4))
+		componentName = fmt.Sprintf("jvm-build-suite-component-%s", util.GenerateRandomString(6))
 
 		// Create a component with Git Source URL being defined
 		componentObj := appservice.ComponentSpec{
