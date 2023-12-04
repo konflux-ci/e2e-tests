@@ -137,7 +137,7 @@ func (t *TektonController) CheckPipelineRunFinished(pipelineRunName, namespace s
 	return func() (bool, error) {
 		pr, err := t.GetPipelineRun(pipelineRunName, namespace)
 		if err != nil {
-			return false, err
+			return false, nil
 		}
 		if pr.Status.CompletionTime != nil {
 			return true, nil
