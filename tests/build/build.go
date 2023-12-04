@@ -1323,7 +1323,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 		It("should not be possible to push to quay.io repo (PipelineRun should fail)", func() {
-			pipelineRunTimeout := int(time.Duration(20) * time.Minute)
+			pipelineRunTimeout := int(time.Duration(30) * time.Minute)
 
 			Expect(f.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, testNamespace, pipelineRunTimeout)).To(Succeed())
 			pr, err = f.AsKubeAdmin.TektonController.GetPipelineRun(pr.GetName(), pr.GetNamespace())
