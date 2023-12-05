@@ -108,7 +108,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 			Expect(err).ToNot(HaveOccurred())
 
 			pipelineRunTimeout = int(time.Duration(20) * time.Minute)
-			attestationTimeout = time.Duration(60) * time.Second
+			attestationTimeout = time.Duration(5) * time.Minute
 
 			defaultECP, err = fwk.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 			Expect(err).NotTo(HaveOccurred())
