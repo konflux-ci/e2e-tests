@@ -1,4 +1,4 @@
-package constants
+package common
 
 import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
