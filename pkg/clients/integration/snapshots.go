@@ -118,6 +118,13 @@ func (i *IntegrationController) DeleteSnapshot(hasSnapshot *appstudioApi.Snapsho
 	return err
 }
 
+// PatchSnapshot patches the given snapshot with the provided patch.
+func (i *IntegrationController) PatchSnapshot(oldSnapshot *appstudioApi.Snapshot, newSnapshot *appstudioApi.Snapshot) error {
+	patch := client.MergeFrom(oldSnapshot)
+	err := i.KubeRest().Patch(context.Background(), newSnapshot, patch)
+	return err
+}
+
 // DeleteAllSnapshotsInASpecificNamespace removes all snapshots from a specific namespace. Useful when creating a lot of resources and want to remove all of them
 func (i *IntegrationController) DeleteAllSnapshotsInASpecificNamespace(namespace string, timeout time.Duration) error {
 	if err := i.KubeRest().DeleteAllOf(context.Background(), &appstudioApi.Snapshot{}, client.InNamespace(namespace)); err != nil {

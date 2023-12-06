@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"github.com/redhat-appstudio/release-service/metadata"
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
@@ -28,6 +29,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 	var applicationName, componentName, testNamespace string
 	var integrationTestScenario *integrationv1alpha1.IntegrationTestScenario
+	var newIntegrationTestScenario *integrationv1alpha1.IntegrationTestScenario
 	var timeout, interval time.Duration
 	var originalComponent *appstudioApi.Component
 	var pipelineRun *v1beta1.PipelineRun
@@ -261,6 +263,65 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)).To(BeFalse(), "expected tests to fail for snapshot %s/%s", snapshot.GetNamespace(), snapshot.GetName())
+		})
+
+		It("creates a new IntegrationTestScenario", FlakeAttempts(3), func() {
+			newIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, testNamespace, BundleURL, InPipelineName)
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+
+		It("updates the Snapshot with the re-run label for the new scenario", FlakeAttempts(3), func() {
+			updatedSnapshot := snapshot.DeepCopy()
+			metadata.AddLabels(updatedSnapshot, map[string]string{snapshotRerunLabel: newIntegrationTestScenario.Name})
+			Expect(f.AsKubeAdmin.IntegrationController.PatchSnapshot(snapshot, updatedSnapshot)).Should(Succeed())
+			Expect(metadata.GetLabelsWithPrefix(updatedSnapshot, snapshotRerunLabel)).NotTo(BeEmpty())
+		})
+
+		When("An snapshot is updated with a rerun label for a given scenario", func() {
+			It("checks if the new integration pipelineRun started", Label("slow"), func() {
+				reRunPipelineRun, err := f.AsKubeDeveloper.IntegrationController.WaitForIntegrationPipelineToGetStarted(newIntegrationTestScenario.Name, snapshot.Name, testNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(reRunPipelineRun).ShouldNot(BeNil())
+			})
+
+			It("checks if the rerun label was removed from the Snapshot", FlakeAttempts(3), func() {
+				Eventually(func() error {
+					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					Expect(metadata.GetLabelsWithPrefix(snapshot, snapshotRerunLabel)).To(BeEmpty())
+					return nil
+				}, timeout, interval).Should(Succeed())
+			})
+
+			It("checks if all integration pipelineRuns finished successfully", Label("slow"), func() {
+				Expect(f.AsKubeDeveloper.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshot)).To(Succeed())
+			})
+
+			It("checks if the status of the re-triggered integration test is reported in the Snapshot", FlakeAttempts(3), func() {
+				Eventually(func() error {
+					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					statusDetail, err := f.AsKubeDeveloper.IntegrationController.GetIntegrationTestStatusDetailFromSnapshot(snapshot, newIntegrationTestScenario.Name)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(statusDetail).NotTo(BeNil())
+
+					integrationPipelineRun, err := f.AsKubeDeveloper.IntegrationController.GetIntegrationPipelineRun(newIntegrationTestScenario.Name, snapshot.Name, testNamespace)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(integrationPipelineRun).NotTo(BeNil())
+
+					Expect(statusDetail.TestPipelineRunName).To(Equal(integrationPipelineRun.Name))
+					return nil
+				}, timeout, interval).Should(Succeed())
+			})
+
+			It("checks if snapshot is still marked as failed", func() {
+				snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)).To(BeFalse(), "expected tests to fail for snapshot %s/%s", snapshot.GetNamespace(), snapshot.GetName())
+			})
+
 		})
 
 		It("creates an snapshot of push event", func() {
