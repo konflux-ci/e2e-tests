@@ -75,6 +75,7 @@ var (
 	ComponentCreationTimeSumPerThread    []time.Duration
 	PipelineRunSucceededTimeSumPerThread []time.Duration
 	PipelineRunFailedTimeSumPerThread    []time.Duration
+	PipelineRunWaitTimeForPVCSumPerThread      []time.Duration
 
 	DeploymentSucceededTimeSumPerThread                  []time.Duration
 	DeploymentFailedTimeSumPerThread                     []time.Duration
@@ -156,6 +157,7 @@ type LogData struct {
 	AverageTimeToRunPipelineSucceeded float64 `json:"runPipelineSucceededTimeAvg"`
 	MaxTimeToRunPipelineSucceeded     float64 `json:"runPipelineSucceededTimeMax"`
 	AverageTimeToRunPipelineFailed    float64 `json:"runPipelineFailedTimeAvg"`
+    AverageWaitTimeForPVCProvisioning float64 `json:"WaitTimeForPVCProvisioningAvg"`
 
 	AverageTimeToDeploymentSucceeded float64 `json:"deploymentSucceededTimeAvg"`
 	MaxTimeToDeploymentSucceeded     float64 `json:"deploymentSucceededTimeMax"`
@@ -464,6 +466,7 @@ func setup(cmd *cobra.Command, args []string) {
 	ComponentCreationTimeSumPerThread = make([]time.Duration, threadCount)
 	PipelineRunSucceededTimeSumPerThread = make([]time.Duration, threadCount)
 	PipelineRunFailedTimeSumPerThread = make([]time.Duration, threadCount)
+	PipelineRunWaitTimeForPVCSumPerThread = make([]time.Duration, threadCount)
 
 	DeploymentSucceededTimeSumPerThread = make([]time.Duration, threadCount)
 	DeploymentFailedTimeSumPerThread = make([]time.Duration, threadCount)
@@ -526,6 +529,10 @@ func setup(cmd *cobra.Command, args []string) {
 	logData.AverageTimeToSpinUpUsers = averageTimeToSpinUpUsers
 
 	logData.MaxTimeToSpinUpUsers = maxDurationFromArray(UserCreationTimeMaxPerThread).Seconds()
+
+    averageWaitTimeForPVCProvisioning := float64(0)
+    averageWaitTimeForPVCProvisioning = sumDurationFromArray(PipelineRunWaitTimeForPVCSumPerThread).Seconds() / float64(overallCount)
+	logData.AverageWaitTimeForPVCProvisioning = averageWaitTimeForPVCProvisioning
 
 	userCreationFailureRate := float64(userCreationFailureCount) / float64(overallCount)
 	logData.UserCreationFailureRate = userCreationFailureRate
@@ -693,6 +700,7 @@ func setup(cmd *cobra.Command, args []string) {
 	klog.Infof("Avg/max time to complete pipelinesrun: %.2f s/%.2f s", averageTimeToRunPipelineSucceeded, logData.MaxTimeToRunPipelineSucceeded)
 	klog.Infof("Avg/max time to complete integration test: %.2f s/%.2f s", IntegrationTestsAverageTimeToRunPipelineSucceeded, logData.IntegrationTestsMaxTimeToRunPipelineSucceeded)
 	klog.Infof("Avg/max time to complete deployment: %.2f s/%.2f s", averageTimeToDeploymentSucceeded, logData.MaxTimeToDeploymentSucceeded)
+	klog.Infof("Avg time to provision PVC : %.2f s", averageWaitTimeForPVCProvisioning)
 
 	klog.Infof("Average time to fail pipelinerun: %.2f s", averageTimeToRunPipelineFailed)
 	klog.Infof("Average time to fail integration test: %.2f s", IntegrationTestsAverageTimeToRunPipelineFailed)
@@ -1227,6 +1235,20 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 					}
 					if pipelineRun.IsDone() {
 						succeededCondition := pipelineRun.Status.GetCondition(apis.ConditionSucceeded)
+
+                        pvcs, err := framework.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumeClaims(pipelineRun.Namespace).List(context.TODO(), metav1.ListOptions{})
+                            if err != nil {
+                                fmt.Printf("Error getting PVC: %v\n", err)
+                            }
+                            for _, pvc := range pvcs.Items {
+                                pv, err := framework.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumes().Get(context.TODO(), pvc.Spec.VolumeName, metav1.GetOptions{})
+                                if err != nil {
+                                    fmt.Printf("Error getting PV: %v\n", err)
+                                    continue
+                                }
+                                diff := (pv.ObjectMeta.CreationTimestamp.Time).Sub(pvc.ObjectMeta.CreationTimestamp.Time)
+                                PipelineRunWaitTimeForPVCSumPerThread[threadIndex] += diff
+                            }
 						if succeededCondition.IsFalse() {
 							dur := pipelineRun.Status.CompletionTime.Sub(pipelineRun.CreationTimestamp.Time)
 							PipelineRunFailedTimeSumPerThread[threadIndex] += dur
