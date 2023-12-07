@@ -40,7 +40,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	var osConsoleHost string
 	defer GinkgoRecover()
 
-	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), func() {
+	// Unskip after RHTAPBUGS-1049 is fixed
+	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), Pending, func() {
 		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, defaultBranchTestComponentName, imageRepoName, robotAccountName string
 		var component *appservice.Component
 
@@ -565,7 +566,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 	})
 
-	Describe("test pac with multiple components using same repository", Ordered, Label("pac-build", "multi-component"), func() {
+	// Unskip after RHTAPBUGS-1049 is fixed
+	Describe("test pac with multiple components using same repository", Ordered, Label("pac-build", "multi-component"), Pending, func() {
 		var applicationName, testNamespace, multiComponentBaseBranchName, multiComponentPRBranchName, mergeResultSha string
 		var pacBranchNames []string
 		var prNumber int
