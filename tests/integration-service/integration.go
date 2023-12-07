@@ -85,8 +85,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 
 		When("the build pipelineRun run succeeded", func() {
-			It("checks if the BuildPipelineRun is signed", func() {
-				Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToBeSigned(testNamespace, applicationName, componentName)).To(Succeed())
+			It("checks if the BuildPipelineRun have the annotation of chains signed", func() {
+				Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, chainsSignedAnnotation)).To(Succeed())
 			})
 
 			It("checks if the Snapshot is created", func() {
@@ -225,8 +225,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
 		})
 
-		It("checks if the BuildPipelineRun is signed", func() {
-			Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToBeSigned(testNamespace, applicationName, componentName)).To(Succeed())
+		It("checks if the BuildPipelineRun have the annotation of chains signed", func() {
+			Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, chainsSignedAnnotation)).To(Succeed())
 		})
 
 		It("checks if the Snapshot is created", func() {

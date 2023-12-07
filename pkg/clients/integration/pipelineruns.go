@@ -180,23 +180,6 @@ func (i *IntegrationController) WaitForAllIntegrationPipelinesToBeFinished(testN
 	return nil
 }
 
-// WaitForBuildPipelineRunToBeSigned waits for given build pipeline to get signed.
-// In case of failure, this function retries till it gets timed out.
-func (i *IntegrationController) WaitForBuildPipelineRunToBeSigned(testNamespace, applicationName, componentName string) error {
-	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 10*time.Minute, true, func(ctx context.Context) (done bool, err error) {
-		pipelineRun, err := i.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
-		if err != nil {
-			GinkgoWriter.Printf("pipelinerun for Component %s/%s can't be gotten successfully. Error: %v", testNamespace, componentName, err)
-			return false, nil
-		}
-		if pipelineRun.Annotations["chains.tekton.dev/signed"] != "true" {
-			GinkgoWriter.Printf("pipelinerun %s/%s hasn't been signed yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
-			return false, nil
-		}
-		return true, nil
-	})
-}
-
 // GetAnnotationIfExists returns the value of a given annotation within a pipelinerun, if it exists.
 func (i *IntegrationController) GetAnnotationIfExists(testNamespace, applicationName, componentName, annotationKey string) (string, error) {
 	pipelineRun, err := i.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
