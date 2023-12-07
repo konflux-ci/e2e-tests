@@ -532,7 +532,7 @@ func setup(cmd *cobra.Command, args []string) {
 
     averageWaitTimeForPVCProvisioning := float64(0)
     averageWaitTimeForPVCProvisioning = sumDurationFromArray(PipelineRunWaitTimeForPVCSumPerThread).Seconds() / float64(overallCount)
-	logData.AverageWaitTimeForPVCProvisioning = averageWaitTimeForPVCProvisioning
+    logData.AverageWaitTimeForPVCProvisioning = averageWaitTimeForPVCProvisioning
 
 	userCreationFailureRate := float64(userCreationFailureCount) / float64(overallCount)
 	logData.UserCreationFailureRate = userCreationFailureRate
@@ -1235,7 +1235,6 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 					}
 					if pipelineRun.IsDone() {
 						succeededCondition := pipelineRun.Status.GetCondition(apis.ConditionSucceeded)
-
                         pvcs, err := framework.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumeClaims(pipelineRun.Namespace).List(context.TODO(), metav1.ListOptions{})
                             if err != nil {
                                 fmt.Printf("Error getting PVC: %v\n", err)
