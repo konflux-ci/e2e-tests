@@ -530,9 +530,9 @@ func setup(cmd *cobra.Command, args []string) {
 
 	logData.MaxTimeToSpinUpUsers = maxDurationFromArray(UserCreationTimeMaxPerThread).Seconds()
 
-    averageWaitTimeForPVCProvisioning := float64(0)
-    averageWaitTimeForPVCProvisioning = sumDurationFromArray(PipelineRunWaitTimeForPVCSumPerThread).Seconds() / float64(overallCount)
-    logData.AverageWaitTimeForPVCProvisioning = averageWaitTimeForPVCProvisioning
+	averageWaitTimeForPVCProvisioning := float64(0)
+	averageWaitTimeForPVCProvisioning = sumDurationFromArray(PipelineRunWaitTimeForPVCSumPerThread).Seconds() / float64(overallCount)
+	logData.AverageWaitTimeForPVCProvisioning = averageWaitTimeForPVCProvisioning
 
 	userCreationFailureRate := float64(userCreationFailureCount) / float64(overallCount)
 	logData.UserCreationFailureRate = userCreationFailureRate
@@ -1238,7 +1238,6 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
                         pvcs, err := framework.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumeClaims(pipelineRun.Namespace).List(context.TODO(), metav1.ListOptions{})
                             if err != nil {
                                 fmt.Printf("Error getting PVC: %v\n", err)
-                                continue
                             }
                             for _, pvc := range pvcs.Items {
                                 pv, err := framework.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumes().Get(context.TODO(), pvc.Spec.VolumeName, metav1.GetOptions{})
