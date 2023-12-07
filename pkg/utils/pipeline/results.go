@@ -2,7 +2,6 @@ package pipeline
 
 import (
 	"crypto/tls"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -95,17 +94,7 @@ func (c *ResultClient) GetLogByName(logName string) (string, error) {
 		return "", err
 	}
 
-	var result *Result
-
-	err = json.Unmarshal(body, &result)
-	if err != nil {
-		return "", err
-	}
-	data, err := base64.StdEncoding.DecodeString(result.Result.Data)
-	if err != nil {
-		return "", err
-	}
-	return string(data), nil
+	return string(body), nil
 }
 
 type Record struct {
@@ -125,13 +114,4 @@ type Log struct {
 }
 type Logs struct {
 	Record []Record `json:"records"`
-}
-
-type Result struct {
-	Result Data `json:"result"`
-}
-
-type Data struct {
-	Name string `json:"name"`
-	Data string `json:"data"`
 }
