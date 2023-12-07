@@ -75,7 +75,7 @@ var (
 	ComponentCreationTimeSumPerThread    []time.Duration
 	PipelineRunSucceededTimeSumPerThread []time.Duration
 	PipelineRunFailedTimeSumPerThread    []time.Duration
-	PipelineRunWaitTimeForPVCSumPerThread      []time.Duration
+	PipelineRunWaitTimeForPVCSumPerThread[]time.Duration
 
 	DeploymentSucceededTimeSumPerThread                  []time.Duration
 	DeploymentFailedTimeSumPerThread                     []time.Duration
@@ -157,7 +157,7 @@ type LogData struct {
 	AverageTimeToRunPipelineSucceeded float64 `json:"runPipelineSucceededTimeAvg"`
 	MaxTimeToRunPipelineSucceeded     float64 `json:"runPipelineSucceededTimeMax"`
 	AverageTimeToRunPipelineFailed    float64 `json:"runPipelineFailedTimeAvg"`
-    AverageWaitTimeForPVCProvisioning float64 `json:"WaitTimeForPVCProvisioningAvg"`
+	AverageWaitTimeForPVCProvisioning float64 `json:"WaitTimeForPVCProvisioningAvg"`
 
 	AverageTimeToDeploymentSucceeded float64 `json:"deploymentSucceededTimeAvg"`
 	MaxTimeToDeploymentSucceeded     float64 `json:"deploymentSucceededTimeMax"`
