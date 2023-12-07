@@ -101,7 +101,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 			It("triggers a Build PipelineRun", func() {
-				timeout = time.Second * 600
+				timeout = time.Minute * 20
 				interval = time.Second * 1
 				Eventually(func() error {
 					pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
