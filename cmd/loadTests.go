@@ -1238,6 +1238,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
                         pvcs, err := framework.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumeClaims(pipelineRun.Namespace).List(context.TODO(), metav1.ListOptions{})
                             if err != nil {
                                 fmt.Printf("Error getting PVC: %v\n", err)
+                                continue
                             }
                             for _, pvc := range pvcs.Items {
                                 pv, err := framework.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumes().Get(context.TODO(), pvc.Spec.VolumeName, metav1.GetOptions{})
@@ -1245,8 +1246,8 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
                                     fmt.Printf("Error getting PV: %v\n", err)
                                     continue
                                 }
-                                diff := (pv.ObjectMeta.CreationTimestamp.Time).Sub(pvc.ObjectMeta.CreationTimestamp.Time)
-                                PipelineRunWaitTimeForPVCSumPerThread[threadIndex] += diff
+                                waittime := (pv.ObjectMeta.CreationTimestamp.Time).Sub(pvc.ObjectMeta.CreationTimestamp.Time)
+                                PipelineRunWaitTimeForPVCSumPerThread[threadIndex] += waittime
                             }
 						if succeededCondition.IsFalse() {
 							dur := pipelineRun.Status.CompletionTime.Sub(pipelineRun.CreationTimestamp.Time)
