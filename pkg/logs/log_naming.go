@@ -25,5 +25,8 @@ func ShortenStringAddHash(report types.SpecReport) string {
 	className := GetClassnameFromReport(report)
 	s := report.FullText()
 	replacedClass := strings.Replace(s, className, "", 1)
-	return replacedClass[0:255]
+	if len(replacedClass) > 255 {
+		return replacedClass[0:255]
+	}
+	return replacedClass
 }
