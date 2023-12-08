@@ -164,8 +164,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, managedNamespace, releaseEnvironment, devNamespace, releaseStrategyPolicyDefault, releaseStrategyServiceAccountDefault, []string{applicationNameDefault}, true, &tektonutils.PipelineRef{
 			Resolver: "git",
 			Params: []tektonutils.Param{
-				{Name: "url", Value: "https://github.com/redhat-appstudio/release-service-catalog"},
-				{Name: "revision", Value: "main"},
+				{Name: "url", Value: relSvcCatalogURL},
+				{Name: "revision", Value: relSvcCatalogRevision},
 				{Name: "pathInRepo", Value: "pipelines/push-to-external-registry/push-to-external-registry.yaml"},
 			},
 		}, &runtime.RawExtension{

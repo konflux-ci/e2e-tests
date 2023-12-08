@@ -338,7 +338,10 @@ func (ci CI) setRequiredEnvVars() error {
 				imageTagSuffix = "has-image"
 				testSuiteLabel = "e2e-demo,byoc"
 			case strings.Contains(jobName, "release-service-catalog"):
+				envVarPrefix = "RELEASE_SERVICE"
 				testSuiteLabel = "release-pipelines"
+				os.Setenv(fmt.Sprintf("%s_CATALOG_URL", envVarPrefix), fmt.Sprintf("https://github.com/%s/%s", pr.Organization, pr.RepoName))
+				os.Setenv(fmt.Sprintf("%s_CATALOG_REVISION", envVarPrefix), pr.CommitSHA)
 			case strings.Contains(jobName, "release-service"):
 				envVarPrefix = "RELEASE_SERVICE"
 				imageTagSuffix = "release-service-image"
