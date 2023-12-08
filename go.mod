@@ -1,8 +1,6 @@
 module github.com/redhat-appstudio/e2e-tests
 
-go 1.21
-
-toolchain go1.21.4
+go 1.19
 
 require (
 	github.com/argoproj/argo-cd/v2 v2.8.3
