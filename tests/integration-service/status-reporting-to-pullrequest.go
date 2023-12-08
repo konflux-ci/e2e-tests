@@ -36,8 +36,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 
 	AfterEach(framework.ReportFailure(&f))
 
-	// Unskip after RHTAPBUGS-1049 is fixed
-	Describe("with status reporting of Integration tests in CheckRuns", Ordered, Pending, func() {
+	Describe("with status reporting of Integration tests in CheckRuns", Ordered, func() {
 		BeforeAll(func() {
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("stat-rep"))
 			Expect(err).NotTo(HaveOccurred())
