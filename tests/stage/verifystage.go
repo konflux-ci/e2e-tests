@@ -6,7 +6,6 @@ import (
 
 	g "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"math/rand"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
@@ -27,9 +26,9 @@ var _ = framework.RhtapStageSuiteDescribe("Stage E2E tests", g.Label("stage"), f
 	defer g.GinkgoRecover()
 	
 	var err error
-	source := rand.NewSource(time.Now().UnixNano())
-	randomNumber := rand.New(source).Intn(9000) + 1000
-	ApplicationName := fmt.Sprintf("verify-stage-app-%d", randomNumber)
+	
+	randomNumber, err := utils.GenerateRandom4DigitNumber()
+	ApplicationName := fmt.Sprintf("verify-stage-app-%s", randomNumber)
 	componentRepoUrl := "https://github.com/devfile-samples/devfile-sample-java-springboot-basic"
 	ComponentDetectionQueryName := fmt.Sprintf("%s-cdq", ApplicationName)
 	app := &appservice.Application{}

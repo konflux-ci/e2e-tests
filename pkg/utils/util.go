@@ -19,6 +19,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"crypto/rand"
+	"math/big"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -427,4 +429,14 @@ func FilterSliceUsingPattern(pattern string, lString []string) []string {
 		}
 	}
 	return results
+}
+
+func GenerateRandom4DigitNumber() (string, error) {
+	max := big.NewInt(9000)
+	randomNumber, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return "", err
+	}
+	randomNumber.Add(randomNumber, big.NewInt(1000))
+	return fmt.Sprintf("%04d", randomNumber), nil
 }
