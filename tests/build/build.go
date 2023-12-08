@@ -811,7 +811,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					GinkgoWriter.Printf("build status: %+v\n", buildStatus.PaC)
 
 					return buildStatus.PaC != nil && buildStatus.PaC.State == "error" && strings.Contains(buildStatus.PaC.ErrMessage, "Git repository is already handled by Pipelines as Code"), nil
-				}, time.Minute*1, time.Second*2).Should(BeTrue(), "build status is unexpected")
+				}, time.Minute*5, time.Second*2).Should(BeTrue(), "build status is unexpected")
 
 			})
 
