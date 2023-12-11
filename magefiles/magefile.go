@@ -53,8 +53,11 @@ var (
 	// determine whether CI will run tests that require to register SprayProxy
 	// in order to run tests that require PaC application
 	requiresSprayProxyRegistering bool
-	sprayProxyConfig              *sprayproxy.SprayProxyConfig
-	quayTokenNotFoundError        = "DEFAULT_QUAY_ORG_TOKEN env var was not found"
+
+	requiresMultiPlatformTests bool
+
+	sprayProxyConfig       *sprayproxy.SprayProxyConfig
+	quayTokenNotFoundError = "DEFAULT_QUAY_ORG_TOKEN env var was not found"
 )
 
 func (CI) parseJobSpec() error {
@@ -247,6 +250,12 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
 	}
 
+	if requiresMultiPlatformTests {
+		if err := setupMultiPlatformTests(); err != nil {
+			return err
+		}
+	}
+
 	if requiresSprayProxyRegistering {
 		err := registerPacServer()
 		if err != nil {
@@ -321,6 +330,7 @@ func (ci CI) setRequiredEnvVars() error {
 	// RHTAP Nightly E2E job
 	// The job name is taken from https://github.com/openshift/release/blob/f03153fa4ad36c0e10050d977e7f0f7619d2163a/ci-operator/config/redhat-appstudio/infra-deployments/redhat-appstudio-infra-deployments-main.yaml#L59C7-L59C35
 	if strings.Contains(jobName, "appstudio-e2e-tests-periodic") {
+		requiresMultiPlatformTests = true
 		requiresSprayProxyRegistering = true
 		return nil
 	}
@@ -461,10 +471,7 @@ func (ci CI) setRequiredEnvVars() error {
 				envVarPrefix = "MULTI_PLATFORM_CONTROLLER"
 				imageTagSuffix = "multi-platform-controller"
 				testSuiteLabel = "multi-platform"
-				err := setupMultiPlatformTests()
-				if err != nil {
-					return err
-				}
+				requiresMultiPlatformTests = true
 			}
 
 			os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", envVarPrefix), sp[0])
@@ -477,7 +484,8 @@ func (ci CI) setRequiredEnvVars() error {
 
 			os.Setenv("E2E_TEST_SUITE_LABEL", testSuiteLabel)
 
-		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" || jobType == "periodic" {
+		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
+			requiresMultiPlatformTests = true
 			requiresSprayProxyRegistering = true
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
@@ -486,19 +494,13 @@ func (ci CI) setRequiredEnvVars() error {
 			https://issues.redhat.com/browse/RHTAPBUGS-992, https://issues.redhat.com/browse/RHTAPBUGS-991, https://issues.redhat.com/browse/RHTAPBUGS-989,
 			https://issues.redhat.com/browse/RHTAPBUGS-978,https://issues.redhat.com/browse/RHTAPBUGS-956
 			*/
-			err := setupMultiPlatformTests()
-			if err != nil {
-				return err
-			}
 			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,spi-suite,remote-secret,integration-service,ec,byoc,build-templates,multi-platform")
 		} else { // openshift/release rehearse job for e2e-tests/infra-deployments repos
+			requiresMultiPlatformTests = true
 			requiresSprayProxyRegistering = true
 		}
 	} else { // e2e-tests repository PR
-		err := setupMultiPlatformTests()
-		if err != nil {
-			return err
-		}
+		requiresMultiPlatformTests = true
 		requiresSprayProxyRegistering = true
 		if ci.isPRPairingRequired("infra-deployments") {
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
@@ -927,6 +929,12 @@ func (ci CI) TestUpgrade() error {
 
 	if err := ci.setRequiredEnvVars(); err != nil {
 		return fmt.Errorf("error when setting up required env vars: %v", err)
+	}
+
+	if requiresMultiPlatformTests {
+		if err := setupMultiPlatformTests(); err != nil {
+			return err
+		}
 	}
 
 	if err := UpgradeTestsWorkflow(); err != nil {
