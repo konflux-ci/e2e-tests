@@ -1,0 +1,43 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: e2e-tests-update-build-definitions
+  annotations:
+    pipelinesascode.tekton.dev/on-event: "[push]"
+    pipelinesascode.tekton.dev/on-target-branch: "[main]"
+    pipelinesascode.tekton.dev/max-keep-runs: "5"
+spec:
+  params:
+    - name: git-url
+      value: "{{ repo_url }}"
+    - name: revision
+      value: "{{ revision }}"
+    - name: build-definitions-update-script
+      value: |
+        sed -i -E 's/[0-9a-f]{40}/{{ revision }}/g' .tekton/tasks/e2e-test.yaml
+  pipelineSpec:
+    params:
+      - description: 'Source Repository URL'
+        name: git-url
+        type: string
+      - description: 'Revision of the Source Repository'
+        name: revision
+        type: string
+      - default: ""
+        name: build-definitions-update-script
+    tasks:
+      - name: update-infra-repo
+        params:
+          - name: ORIGIN_REPO
+            value: $(params.git-url)
+          - name: REVISION
+            value: $(params.revision)
+          - name: SCRIPT
+            value: $(params.build-definitions-update-script)
+          - name: TARGET_GH_REPO
+            value: redhat-appstudio/build-definitions
+          - name: GITHUB_APP_INSTALLATION_ID
+            value: "35269675"
+        taskRef:
+          bundle: quay.io/redhat-appstudio-tekton-catalog/task-update-infra-deployments:0.1
+          name: update-infra-deployments

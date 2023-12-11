@@ -193,7 +193,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						return false, err
 					}
 
-					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+					buildStatusAnnotationValue := component.Annotations[controllers.BuildStatusAnnotationName]
+					GinkgoWriter.Printf(buildStatusAnnotationValueLoggingFormat, buildStatusAnnotationValue)
+					statusBytes := []byte(buildStatusAnnotationValue)
 
 					err = json.Unmarshal(statusBytes, &buildStatus)
 					if err != nil {
@@ -800,7 +802,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						return false, err
 					}
 
-					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+					buildStatusAnnotationValue := component.Annotations[controllers.BuildStatusAnnotationName]
+					GinkgoWriter.Printf(buildStatusAnnotationValueLoggingFormat, buildStatusAnnotationValue)
+					statusBytes := []byte(buildStatusAnnotationValue)
 
 					err = json.Unmarshal(statusBytes, &buildStatus)
 					if err != nil {
@@ -899,7 +903,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						return false, err
 					}
 
-					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+					buildStatusAnnotationValue := component.Annotations[controllers.BuildStatusAnnotationName]
+					GinkgoWriter.Printf(buildStatusAnnotationValueLoggingFormat, buildStatusAnnotationValue)
+					statusBytes := []byte(buildStatusAnnotationValue)
 
 					err = json.Unmarshal(statusBytes, &buildStatus)
 					if err != nil {
@@ -962,7 +968,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						return false, err
 					}
 
-					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+					buildStatusAnnotationValue := component.Annotations[controllers.BuildStatusAnnotationName]
+					GinkgoWriter.Printf(buildStatusAnnotationValueLoggingFormat, buildStatusAnnotationValue)
+					statusBytes := []byte(buildStatusAnnotationValue)
 
 					err = json.Unmarshal(statusBytes, &buildStatus)
 					if err != nil {
@@ -1006,7 +1014,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					} else if component == nil {
 						return fmt.Errorf("got component as nil after getting component %s in namespace %s", componentName, testNamespace)
 					}
-					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+					buildStatusAnnotationValue := component.Annotations[controllers.BuildStatusAnnotationName]
+					GinkgoWriter.Printf(buildStatusAnnotationValueLoggingFormat, buildStatusAnnotationValue)
+					statusBytes := []byte(buildStatusAnnotationValue)
 					err = json.Unmarshal(statusBytes, buildStatus)
 					if err != nil {
 						return err
