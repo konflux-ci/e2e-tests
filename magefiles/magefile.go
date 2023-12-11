@@ -467,7 +467,7 @@ func (ci CI) setRequiredEnvVars() error {
 
 			os.Setenv("E2E_TEST_SUITE_LABEL", testSuiteLabel)
 
-		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
+		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" || jobType == "periodic" {
 			requiresSprayProxyRegistering = true
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
@@ -800,7 +800,7 @@ func registerPacServer() error {
 		return fmt.Errorf("error when registering PaC server %s to SprayProxy server %s: %+v", pacHost, sprayProxyConfig.BaseURL, err)
 	}
 	// for debugging purposes
-	klog.Infof("Registered PaC server: %s",pacHost)
+	klog.Infof("Registered PaC server: %s", pacHost)
 
 	return nil
 }
@@ -961,12 +961,12 @@ func CleanupRegisteredPacServers() error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize SprayProxy config: %+v", err)
 	}
-	
+
 	servers, err := sprayProxyConfig.GetServers()
 	if err != nil {
 		return fmt.Errorf("failed to get registered PaC servers from SprayProxy: %+v", err)
 	}
-	
+
 	for _, server := range strings.Split(servers, ",") {
 		// Verify if the server is a valid host, if not, unregister it
 		if !isValidPacHost(server) {
