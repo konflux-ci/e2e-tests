@@ -902,12 +902,13 @@ func unregisterPacServer() error {
 	if err != nil {
 		return fmt.Errorf("error when unregistering PaC server %s from SprayProxy server %s: %+v", pacHost, sprayProxyConfig.BaseURL, err)
 	}
+	klog.Infof("Unregistered PaC servers: %v", pacHost)
 	// for debugging purposes
 	servers, err := sprayProxyConfig.GetServers()
 	if err != nil {
 		klog.Error("Failed to get registered PaC servers from SprayProxy: %+v", err)
 	} else {
-		klog.Infof("Unregistered PaC servers: %v", servers)
+		klog.Infof("The leftover PaC servers: %v", servers)
 	}
 	return nil
 }
@@ -1059,6 +1060,7 @@ func CleanupRegisteredPacServers() error {
 			if err != nil {
 				return fmt.Errorf("error when unregistering PaC server %s from SprayProxy server %s: %+v", server, sprayProxyConfig.BaseURL, err)
 			}
+			klog.Infof("Cleanup invalid PaC server: %s", server)
 		}
 	}
 	return nil
