@@ -477,7 +477,7 @@ func (ci CI) setRequiredEnvVars() error {
 
 			os.Setenv("E2E_TEST_SUITE_LABEL", testSuiteLabel)
 
-		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
+		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" || jobType == "periodic" {
 			requiresSprayProxyRegistering = true
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
