@@ -90,6 +90,7 @@ var (
 	SuccessfulPipelineRunsPerThread                 []int64
 	SuccessfulDeploymentsPerThread                  []int64
 	SuccessfulIntegrationTestsPipelineRunsPerThread []int64
+	SuccessfulPVCCreationsPerThread                 []int64
 
 	FailedUserCreationsPerThread                []int64
 	FailedApplicationCreationsPerThread         []int64
@@ -185,6 +186,7 @@ type LogData struct {
 	PipelineRunSuccessCount         int64   `json:"runPipelineSuccesses"`
 	PipelineRunFailureCount         int64   `json:"runPipelineFailures"`
 	PipelineRunFailureRate          float64 `json:"runPipelineFailureRate"`
+	PVCCreationSuccessCount         int64   `json:"createPVCSuccesses"`
 
 	DeploymentSuccessCount int64   `json:"deploymentSuccesses"`
 	DeploymentFailureCount int64   `json:"deploymentFailures"`
@@ -480,6 +482,7 @@ func setup(cmd *cobra.Command, args []string) {
 	SuccessfulCDQCreationsPerThread = make([]int64, threadCount)
 	SuccessfulComponentCreationsPerThread = make([]int64, threadCount)
 	SuccessfulPipelineRunsPerThread = make([]int64, threadCount)
+	SuccessfulPVCCreationsPerThread = make([]int64, threadCount)
 
 	SuccessfulDeploymentsPerThread = make([]int64, threadCount)
 	SuccessfulIntegrationTestsPipelineRunsPerThread = make([]int64, threadCount)
@@ -530,8 +533,11 @@ func setup(cmd *cobra.Command, args []string) {
 
 	logData.MaxTimeToSpinUpUsers = maxDurationFromArray(UserCreationTimeMaxPerThread).Seconds()
 
+	PVCCreationSuccessCount := sumFromArray(SuccessfulPVCCreationsPerThread)
+	logData.PVCCreationSuccessCount = PVCCreationSuccessCount
+
 	averageWaitTimeForPVCProvisioning := float64(0)
-	averageWaitTimeForPVCProvisioning = sumDurationFromArray(PipelineRunWaitTimeForPVCSumPerThread).Seconds() / float64(overallCount)
+	averageWaitTimeForPVCProvisioning = sumDurationFromArray(PipelineRunWaitTimeForPVCSumPerThread).Seconds() / float64(PVCCreationSuccessCount)
 	logData.AverageWaitTimeForPVCProvisioning = averageWaitTimeForPVCProvisioning
 
 	userCreationFailureRate := float64(userCreationFailureCount) / float64(overallCount)
@@ -1235,18 +1241,19 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 					}
 					if pipelineRun.IsDone() {
 						succeededCondition := pipelineRun.Status.GetCondition(apis.ConditionSucceeded)
-                        pvcs, err := framework.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumeClaims(pipelineRun.Namespace).List(context.TODO(), metav1.ListOptions{})
+                        pvcs, err := framework.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumeClaims(pipelineRun.Namespace).List(context.Background(), metav1.ListOptions{})
                             if err != nil {
-                                fmt.Printf("Error getting PVC: %v\n", err)
+                                fmt.Sprintf("Error getting PVC: %v\n", err)
                             }
                             for _, pvc := range pvcs.Items {
-                                pv, err := framework.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumes().Get(context.TODO(), pvc.Spec.VolumeName, metav1.GetOptions{})
+                                pv, err := framework.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumes().Get(context.Background(), pvc.Spec.VolumeName, metav1.GetOptions{})
                                 if err != nil {
-                                    fmt.Printf("Error getting PV: %v\n", err)
+                                    fmt.Sprintf("Error getting PV: %v\n", err)
                                     continue
                                 }
                                 waittime := (pv.ObjectMeta.CreationTimestamp.Time).Sub(pvc.ObjectMeta.CreationTimestamp.Time)
                                 PipelineRunWaitTimeForPVCSumPerThread[threadIndex] += waittime
+                                SuccessfulPVCCreationsPerThread[threadIndex] += 1
                             }
 						if succeededCondition.IsFalse() {
 							dur := pipelineRun.Status.CompletionTime.Sub(pipelineRun.CreationTimestamp.Time)
