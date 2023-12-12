@@ -332,6 +332,8 @@ func (ci CI) setRequiredEnvVars() error {
 	if strings.Contains(jobName, "appstudio-e2e-tests-periodic") {
 		requiresMultiPlatformTests = true
 		requiresSprayProxyRegistering = true
+		// Run specific tests instead of all. TODO: Remove this line once build-service tests get stable.
+		os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,spi-suite,remote-secret,integration-service,ec,byoc,build-templates,multi-platform")
 		return nil
 	}
 
