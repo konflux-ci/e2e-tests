@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"github.com/redhat-appstudio/operator-toolkit/metadata"
 	"reflect"
 	"strings"
 	"time"
@@ -33,6 +34,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 	var originalComponent *appstudioApi.Component
 	var snapshot, snapshot_push *appstudioApi.Snapshot
 	var integrationTestScenario *integrationv1beta1.IntegrationTestScenario
+	var newIntegrationTestScenario *integrationv1beta1.IntegrationTestScenario
 	var env, ephemeralEnvironment, userPickedEnvironment *appstudioApi.Environment
 	var dtcl *appstudioApi.DeploymentTargetClaimList
 	var dtl *appstudioApi.DeploymentTargetList
@@ -259,6 +261,109 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 				}, time.Minute*3, time.Second*1).ShouldNot(Succeed(), fmt.Sprintf("timed out when waiting for the Ephemeral Environment %s to be deleted", ephemeralEnvironment.Name))
 				Expect(err.Error()).To(ContainSubstring(constants.EphemeralEnvAbsenceErrorString))
 			})
+		})
+
+		It("creates a new IntegrationTestScenario with ephemeral environment", func() {
+			var err error
+			newIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenarioWithEnvironment(applicationName, testNamespace, gitURL, revisionForNBE, pathInRepoForNBE, userPickedEnvironment)
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+
+		It("updates the Snapshot with the re-run label for the new scenario", FlakeAttempts(3), func() {
+			updatedSnapshot := snapshot.DeepCopy()
+			err := metadata.AddLabels(updatedSnapshot, map[string]string{snapshotRerunLabel: newIntegrationTestScenario.Name})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(f.AsKubeAdmin.IntegrationController.PatchSnapshot(snapshot, updatedSnapshot)).Should(Succeed())
+			Expect(metadata.GetLabelsWithPrefix(updatedSnapshot, snapshotRerunLabel)).NotTo(BeEmpty())
+		})
+
+		When("An snapshot is updated with a re-run label for a given scenario", func() {
+			It("checks if the re-run label was removed from the Snapshot", func() {
+				Eventually(func() error {
+					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
+					if err != nil {
+						return fmt.Errorf("encountered error while getting Snapshot %s/%s: %w", snapshot.Name, snapshot.Namespace, err)
+					}
+
+					if metadata.HasLabel(snapshot, snapshotRerunLabel) {
+						return fmt.Errorf("the Snapshot %s/%s shouldn't contain the %s label", snapshot.Name, snapshot.Namespace, snapshotRerunLabel)
+					}
+					return nil
+				}, time.Minute*2, time.Second*5).Should(Succeed())
+			})
+
+			It("creates an Ephemeral Environment", func() {
+				Eventually(func() error {
+					ephemeralEnvironment, err = f.AsKubeAdmin.GitOpsController.GetEphemeralEnvironment(snapshot.Spec.Application, snapshot.Name, newIntegrationTestScenario.Name, testNamespace)
+					return err
+				}, time.Minute*3, time.Second*1).Should(Succeed(), fmt.Sprintf("timed out when waiting for the creation of Ephemeral Environment related to snapshot %s", snapshot.Name))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(ephemeralEnvironment.Name).ToNot(BeEmpty())
+			})
+
+			It("checks for SEB after Ephemeral env has been created", func() {
+				seb, err = f.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(applicationName, testNamespace, ephemeralEnvironment)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(seb).ToNot(BeNil())
+				Expect(seb.Spec.Snapshot).To(Equal(snapshot.Name))
+				Expect(seb.Spec.Application).To(Equal(applicationName))
+				Expect(seb.Spec.Environment).To(Equal(ephemeralEnvironment.Name))
+				Expect(seb.Spec.Components).ToNot(BeEmpty())
+			})
+
+			It("checks if the new integration pipelineRun started", Label("slow"), func() {
+				reRunPipelineRun, err := f.AsKubeDeveloper.IntegrationController.WaitForIntegrationPipelineToGetStarted(newIntegrationTestScenario.Name, snapshot.Name, testNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(reRunPipelineRun).ShouldNot(BeNil())
+
+				Expect(reRunPipelineRun.Labels[snapshotAnnotation]).To(ContainSubstring(snapshot.Name))
+				Expect(reRunPipelineRun.Labels[scenarioAnnotation]).To(ContainSubstring(newIntegrationTestScenario.Name))
+				Expect(reRunPipelineRun.Labels[environmentLabel]).To(ContainSubstring(ephemeralEnvironment.Name))
+			})
+
+			It("checks if all integration pipelineRuns finished successfully", Label("slow"), func() {
+				Expect(f.AsKubeDeveloper.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshot)).To(Succeed())
+			})
+
+			It("checks if the name of the re-triggered pipelinerun is reported in the Snapshot", FlakeAttempts(3), func() {
+				Eventually(func(g Gomega) {
+					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
+					g.Expect(err).ShouldNot(HaveOccurred())
+
+					statusDetail, err := f.AsKubeDeveloper.IntegrationController.GetIntegrationTestStatusDetailFromSnapshot(snapshot, newIntegrationTestScenario.Name)
+					g.Expect(err).ToNot(HaveOccurred())
+					g.Expect(statusDetail).NotTo(BeNil())
+
+					integrationPipelineRun, err := f.AsKubeDeveloper.IntegrationController.GetIntegrationPipelineRun(newIntegrationTestScenario.Name, snapshot.Name, testNamespace)
+					g.Expect(err).ToNot(HaveOccurred())
+					g.Expect(integrationPipelineRun).NotTo(BeNil())
+
+					g.Expect(statusDetail.TestPipelineRunName).To(Equal(integrationPipelineRun.Name))
+				}, time.Minute*2, time.Second*5).Should(Succeed())
+			})
+
+			It("checks if snapshot is still marked as successful", func() {
+				snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)).To(BeTrue(), "expected tests to succeed for snapshot %s/%s", snapshot.GetNamespace(), snapshot.GetName())
+			})
+
+			It("should lead to SnapshotEnvironmentBinding getting deleted", func() {
+				Eventually(func() error {
+					_, err = f.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(applicationName, testNamespace, ephemeralEnvironment)
+					return err
+				}, time.Minute*3, time.Second*5).ShouldNot(Succeed(), fmt.Sprintf("timed out when waiting for SnapshotEnvironmentBinding to be deleted for application %s/%s", testNamespace, applicationName))
+				Expect(err.Error()).To(ContainSubstring(constants.SEBAbsenceErrorString))
+			})
+
+			It("should lead to ephemeral environment getting deleted", func() {
+				Eventually(func() error {
+					ephemeralEnvironment, err = f.AsKubeAdmin.GitOpsController.GetEphemeralEnvironment(snapshot.Spec.Application, snapshot.Name, newIntegrationTestScenario.Name, testNamespace)
+					return err
+				}, time.Minute*3, time.Second*1).ShouldNot(Succeed(), fmt.Sprintf("timed out when waiting for the Ephemeral Environment %s to be deleted", ephemeralEnvironment.Name))
+				Expect(err.Error()).To(ContainSubstring(constants.EphemeralEnvAbsenceErrorString))
+			})
+
 		})
 	})
 

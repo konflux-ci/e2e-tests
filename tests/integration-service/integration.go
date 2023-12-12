@@ -2,7 +2,7 @@ package integration
 
 import (
 	"fmt"
-	"github.com/redhat-appstudio/release-service/metadata"
+	"github.com/redhat-appstudio/operator-toolkit/metadata"
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
@@ -265,31 +265,36 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			Expect(f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)).To(BeFalse(), "expected tests to fail for snapshot %s/%s", snapshot.GetNamespace(), snapshot.GetName())
 		})
 
-		It("creates a new IntegrationTestScenario", FlakeAttempts(3), func() {
+		It("creates a new IntegrationTestScenario", func() {
 			newIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, testNamespace, BundleURL, InPipelineName)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
 		It("updates the Snapshot with the re-run label for the new scenario", FlakeAttempts(3), func() {
 			updatedSnapshot := snapshot.DeepCopy()
-			metadata.AddLabels(updatedSnapshot, map[string]string{snapshotRerunLabel: newIntegrationTestScenario.Name})
+			err := metadata.AddLabels(updatedSnapshot, map[string]string{snapshotRerunLabel: newIntegrationTestScenario.Name})
+			Expect(err).ShouldNot(HaveOccurred())
 			Expect(f.AsKubeAdmin.IntegrationController.PatchSnapshot(snapshot, updatedSnapshot)).Should(Succeed())
 			Expect(metadata.GetLabelsWithPrefix(updatedSnapshot, snapshotRerunLabel)).NotTo(BeEmpty())
 		})
 
-		When("An snapshot is updated with a rerun label for a given scenario", func() {
+		When("An snapshot is updated with a re-run label for a given scenario", func() {
 			It("checks if the new integration pipelineRun started", Label("slow"), func() {
 				reRunPipelineRun, err := f.AsKubeDeveloper.IntegrationController.WaitForIntegrationPipelineToGetStarted(newIntegrationTestScenario.Name, snapshot.Name, testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(reRunPipelineRun).ShouldNot(BeNil())
 			})
 
-			It("checks if the rerun label was removed from the Snapshot", FlakeAttempts(3), func() {
+			It("checks if the re-run label was removed from the Snapshot", func() {
 				Eventually(func() error {
 					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
-					Expect(err).ShouldNot(HaveOccurred())
+					if err != nil {
+						return fmt.Errorf("encountered error while getting Snapshot %s/%s: %w", snapshot.Name, snapshot.Namespace, err)
+					}
 
-					Expect(metadata.GetLabelsWithPrefix(snapshot, snapshotRerunLabel)).To(BeEmpty())
+					if metadata.HasLabel(snapshot, snapshotRerunLabel) {
+						return fmt.Errorf("the Snapshot %s/%s shouldn't contain the %s label", snapshot.Name, snapshot.Namespace, snapshotRerunLabel)
+					}
 					return nil
 				}, timeout, interval).Should(Succeed())
 			})
@@ -298,21 +303,20 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				Expect(f.AsKubeDeveloper.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshot)).To(Succeed())
 			})
 
-			It("checks if the status of the re-triggered integration test is reported in the Snapshot", FlakeAttempts(3), func() {
-				Eventually(func() error {
+			It("checks if the name of the re-triggered pipelinerun is reported in the Snapshot", FlakeAttempts(3), func() {
+				Eventually(func(g Gomega) {
 					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
-					Expect(err).ShouldNot(HaveOccurred())
+					g.Expect(err).ShouldNot(HaveOccurred())
 
 					statusDetail, err := f.AsKubeDeveloper.IntegrationController.GetIntegrationTestStatusDetailFromSnapshot(snapshot, newIntegrationTestScenario.Name)
-					Expect(err).ToNot(HaveOccurred())
-					Expect(statusDetail).NotTo(BeNil())
+					g.Expect(err).ToNot(HaveOccurred())
+					g.Expect(statusDetail).NotTo(BeNil())
 
 					integrationPipelineRun, err := f.AsKubeDeveloper.IntegrationController.GetIntegrationPipelineRun(newIntegrationTestScenario.Name, snapshot.Name, testNamespace)
-					Expect(err).ToNot(HaveOccurred())
-					Expect(integrationPipelineRun).NotTo(BeNil())
+					g.Expect(err).ToNot(HaveOccurred())
+					g.Expect(integrationPipelineRun).NotTo(BeNil())
 
-					Expect(statusDetail.TestPipelineRunName).To(Equal(integrationPipelineRun.Name))
-					return nil
+					g.Expect(statusDetail.TestPipelineRunName).To(Equal(integrationPipelineRun.Name))
 				}, timeout, interval).Should(Succeed())
 			})
 
