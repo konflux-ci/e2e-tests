@@ -26,6 +26,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/onsi/gomega v1.28.0
+	github.com/openshift-pipelines/pipelines-as-code v0.18.0
 	github.com/openshift/api v0.0.0-20230213134911-7ba313770556
 	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
@@ -57,7 +58,7 @@ require (
 	k8s.io/kubectl v0.24.9
 	k8s.io/test-infra v0.0.0-20231004164548-dee1fe445410
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
-	knative.dev/pkg v0.0.0-20230221145627-8efb3485adcf
+	knative.dev/pkg v0.0.0-20230320014357-4c84b1b51ee8
 	sigs.k8s.io/controller-runtime v0.16.3
 	sigs.k8s.io/yaml v1.3.0
 )
@@ -171,13 +172,13 @@ require (
 	github.com/fatih/camelcase v1.0.0 // indirect
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/fvbommel/sortorder v1.0.2 // indirect
+	github.com/fvbommel/sortorder v1.1.0 // indirect
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.4.1 // indirect
 	github.com/go-kit/log v0.2.1 // indirect
-	github.com/go-logfmt/logfmt v0.5.1 // indirect
+	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.2.4 // indirect
@@ -205,7 +206,7 @@ require (
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2 // indirect
 	github.com/h2non/parth v0.0.0-20190131123155-b4df798d6542 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
@@ -248,7 +249,6 @@ require (
 	github.com/opencontainers/image-spec v1.1.0-rc3 // indirect
 	github.com/opencontainers/runc v1.1.4 // indirect
 	github.com/opencontainers/runtime-spec v1.1.0-rc.1 // indirect
-	github.com/openshift-pipelines/pipelines-as-code v0.17.3 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
@@ -258,7 +258,7 @@ require (
 	github.com/prometheus/client_model v0.4.1-0.20230718164431-9a2bf3000d16 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.11.1 // indirect
-	github.com/prometheus/statsd_exporter v0.23.0 // indirect
+	github.com/prometheus/statsd_exporter v0.23.1 // indirect
 	github.com/redhat-appstudio/application-service v0.0.0-20230717184417-67d31a01a776 // indirect
 	github.com/redhat-appstudio/operator-toolkit v0.0.0-20230913085326-6c5e9d368a6a // indirect
 	github.com/redhat-developer/alizer/go v0.0.0-20230516215932-135a2bb3fb90 // indirect
