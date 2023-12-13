@@ -327,7 +327,7 @@ func (ci CI) setRequiredEnvVars() error {
 
 	if openshiftJobSpec.Refs.Repo != "e2e-tests" {
 
-		if strings.Contains(jobName, "-service") || strings.Contains(jobName, "image-controller") {
+		if strings.HasSuffix(jobName, "-service-e2e") || strings.Contains(jobName, "image-controller") {
 			var envVarPrefix, imageTagSuffix, testSuiteLabel string
 			sp := strings.Split(os.Getenv("COMPONENT_IMAGE"), "@")
 
@@ -337,11 +337,6 @@ func (ci CI) setRequiredEnvVars() error {
 				envVarPrefix = "HAS"
 				imageTagSuffix = "has-image"
 				testSuiteLabel = "e2e-demo,byoc"
-			case strings.Contains(jobName, "release-service-catalog"):
-				envVarPrefix = "RELEASE_SERVICE"
-				testSuiteLabel = "release-pipelines"
-				os.Setenv(fmt.Sprintf("%s_CATALOG_URL", envVarPrefix), fmt.Sprintf("https://github.com/%s/%s", pr.Organization, pr.RepoName))
-				os.Setenv(fmt.Sprintf("%s_CATALOG_REVISION", envVarPrefix), pr.CommitSHA)
 			case strings.Contains(jobName, "release-service"):
 				envVarPrefix = "RELEASE_SERVICE"
 				imageTagSuffix = "release-service-image"
@@ -491,6 +486,11 @@ func (ci CI) setRequiredEnvVars() error {
 				return err
 			}
 			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,spi-suite,remote-secret,integration-service,ec,byoc,build-templates,multi-platform")
+		} else if openshiftJobSpec.Refs.Repo == "release-service-catalog" {
+			envVarPrefix := "RELEASE_SERVICE"
+			os.Setenv(fmt.Sprintf("%s_CATALOG_URL", envVarPrefix), fmt.Sprintf("https://github.com/%s/%s", pr.Organization, pr.RepoName))
+			os.Setenv(fmt.Sprintf("%s_CATALOG_REVISION", envVarPrefix), pr.CommitSHA)
+			os.Setenv("E2E_TEST_SUITE_LABEL", "release-pipelines")
 		} else { // openshift/release rehearse job for e2e-tests/infra-deployments repos
 			requiresSprayProxyRegistering = true
 		}
