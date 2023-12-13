@@ -38,6 +38,8 @@ const (
 	snapshotAnnotation                       = "appstudio.openshift.io/snapshot"
 	scenarioAnnotation                       = "test.appstudio.openshift.io/scenario"
 	pipelinerunFinalizerByIntegrationService = "test.appstudio.openshift.io/pipelinerun"
+
+	chainsSignedAnnotation = "chains.tekton.dev/signed"
 )
 
 var (
