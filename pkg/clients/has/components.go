@@ -362,7 +362,7 @@ func (h *HasController) GetComponentConditionStatusMessages(name, namespace stri
 // Universal method to retrigger pipelineruns in kubernetes cluster
 func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Component, pr *v1beta1.PipelineRun) (sha string, err error) {
 	if err = h.KubeRest().Delete(context.Background(), pr); err != nil {
-		return "", fmt.Errorf("failed to delete PipelineRun %q from %q namespace", pr.GetName(), pr.GetNamespace())
+		return "", fmt.Errorf("failed to delete PipelineRun %q from %q namespace with error: %v", pr.GetName(), pr.GetNamespace(), err)
 	}
 
 	prLabels := pr.GetLabels()
