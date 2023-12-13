@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -38,6 +39,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 
 	Describe("with status reporting of Integration tests in CheckRuns", Ordered, func() {
 		BeforeAll(func() {
+			if os.Getenv(constants.SKIP_PAC_TESTS_ENV) == "true" {
+				Skip("Skipping this test due to configuration issue with Spray proxy")
+			}
+
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("stat-rep"))
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace

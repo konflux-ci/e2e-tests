@@ -53,8 +53,11 @@ var (
 	// determine whether CI will run tests that require to register SprayProxy
 	// in order to run tests that require PaC application
 	requiresSprayProxyRegistering bool
-	sprayProxyConfig              *sprayproxy.SprayProxyConfig
-	quayTokenNotFoundError        = "DEFAULT_QUAY_ORG_TOKEN env var was not found"
+
+	requiresMultiPlatformTests bool
+
+	sprayProxyConfig       *sprayproxy.SprayProxyConfig
+	quayTokenNotFoundError = "DEFAULT_QUAY_ORG_TOKEN env var was not found"
 )
 
 func (CI) parseJobSpec() error {
@@ -247,6 +250,12 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
 	}
 
+	if requiresMultiPlatformTests {
+		if err := setupMultiPlatformTests(); err != nil {
+			return err
+		}
+	}
+
 	if requiresSprayProxyRegistering {
 		err := registerPacServer()
 		if err != nil {
@@ -321,6 +330,7 @@ func (ci CI) setRequiredEnvVars() error {
 	// RHTAP Nightly E2E job
 	// The job name is taken from https://github.com/openshift/release/blob/f03153fa4ad36c0e10050d977e7f0f7619d2163a/ci-operator/config/redhat-appstudio/infra-deployments/redhat-appstudio-infra-deployments-main.yaml#L59C7-L59C35
 	if strings.Contains(jobName, "appstudio-e2e-tests-periodic") {
+		requiresMultiPlatformTests = true
 		requiresSprayProxyRegistering = true
 		return nil
 	}
@@ -338,7 +348,10 @@ func (ci CI) setRequiredEnvVars() error {
 				imageTagSuffix = "has-image"
 				testSuiteLabel = "e2e-demo,byoc"
 			case strings.Contains(jobName, "release-service-catalog"):
+				envVarPrefix = "RELEASE_SERVICE"
 				testSuiteLabel = "release-pipelines"
+				os.Setenv(fmt.Sprintf("%s_CATALOG_URL", envVarPrefix), fmt.Sprintf("https://github.com/%s/%s", pr.Organization, pr.RepoName))
+				os.Setenv(fmt.Sprintf("%s_CATALOG_REVISION", envVarPrefix), pr.CommitSHA)
 			case strings.Contains(jobName, "release-service"):
 				envVarPrefix = "RELEASE_SERVICE"
 				imageTagSuffix = "release-service-image"
@@ -458,10 +471,7 @@ func (ci CI) setRequiredEnvVars() error {
 				envVarPrefix = "MULTI_PLATFORM_CONTROLLER"
 				imageTagSuffix = "multi-platform-controller"
 				testSuiteLabel = "multi-platform"
-				err := setupMultiPlatformTests()
-				if err != nil {
-					return err
-				}
+				requiresMultiPlatformTests = true
 			}
 
 			os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", envVarPrefix), sp[0])
@@ -475,6 +485,7 @@ func (ci CI) setRequiredEnvVars() error {
 			os.Setenv("E2E_TEST_SUITE_LABEL", testSuiteLabel)
 
 		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
+			requiresMultiPlatformTests = true
 			requiresSprayProxyRegistering = true
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
@@ -483,19 +494,13 @@ func (ci CI) setRequiredEnvVars() error {
 			https://issues.redhat.com/browse/RHTAPBUGS-992, https://issues.redhat.com/browse/RHTAPBUGS-991, https://issues.redhat.com/browse/RHTAPBUGS-989,
 			https://issues.redhat.com/browse/RHTAPBUGS-978,https://issues.redhat.com/browse/RHTAPBUGS-956
 			*/
-			err := setupMultiPlatformTests()
-			if err != nil {
-				return err
-			}
 			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,spi-suite,remote-secret,integration-service,ec,byoc,build-templates,multi-platform")
 		} else { // openshift/release rehearse job for e2e-tests/infra-deployments repos
+			requiresMultiPlatformTests = true
 			requiresSprayProxyRegistering = true
 		}
 	} else { // e2e-tests repository PR
-		err := setupMultiPlatformTests()
-		if err != nil {
-			return err
-		}
+		requiresMultiPlatformTests = true
 		requiresSprayProxyRegistering = true
 		if ci.isPRPairingRequired("infra-deployments") {
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
@@ -899,12 +904,13 @@ func unregisterPacServer() error {
 	if err != nil {
 		return fmt.Errorf("error when unregistering PaC server %s from SprayProxy server %s: %+v", pacHost, sprayProxyConfig.BaseURL, err)
 	}
+	klog.Infof("Unregistered PaC servers: %v", pacHost)
 	// for debugging purposes
 	servers, err := sprayProxyConfig.GetServers()
 	if err != nil {
 		klog.Error("Failed to get registered PaC servers from SprayProxy: %+v", err)
 	} else {
-		klog.Infof("Unregistered PaC servers: %v", servers)
+		klog.Infof("The leftover PaC servers: %v", servers)
 	}
 	return nil
 }
@@ -923,6 +929,12 @@ func (ci CI) TestUpgrade() error {
 
 	if err := ci.setRequiredEnvVars(); err != nil {
 		return fmt.Errorf("error when setting up required env vars: %v", err)
+	}
+
+	if requiresMultiPlatformTests {
+		if err := setupMultiPlatformTests(); err != nil {
+			return err
+		}
 	}
 
 	if err := UpgradeTestsWorkflow(); err != nil {
@@ -1056,6 +1068,7 @@ func CleanupRegisteredPacServers() error {
 			if err != nil {
 				return fmt.Errorf("error when unregistering PaC server %s from SprayProxy server %s: %+v", server, sprayProxyConfig.BaseURL, err)
 			}
+			klog.Infof("Cleanup invalid PaC server: %s", server)
 		}
 	}
 	return nil

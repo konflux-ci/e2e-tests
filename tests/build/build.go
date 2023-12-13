@@ -171,6 +171,22 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return false
 				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR to be created against %s branch in %s repository", helloWorldComponentDefaultBranch, helloWorldComponentGitSourceRepoName))
 			})
+			It("workspace parameter is set correctly in PaC repository CR", func() {
+				nsObj, err := f.AsKubeAdmin.CommonController.GetNamespace(testNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+				wsName := nsObj.Labels["appstudio.redhat.com/workspace_name"]
+				repositoryParams, err := f.AsKubeAdmin.TektonController.GetRepositoryParams(defaultBranchTestComponentName, testNamespace)
+				Expect(err).ShouldNot(HaveOccurred(), "error while trying to get repository params")
+				paramExists := false
+				for _, param := range repositoryParams {
+					if param.Name == "appstudio_workspace" {
+						paramExists = true
+						Expect(param.Value).To(Equal(wsName), fmt.Sprintf("got workspace param value: %s, expected %s", param.Value, wsName))
+					}
+				}
+				Expect(paramExists).To(BeTrue(), "appstudio_workspace param does not exists in repository CR")
+
+			})
 			It("triggers a PipelineRun", func() {
 				timeout = time.Minute * 5
 				Eventually(func() error {
@@ -193,7 +209,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						return false, err
 					}
 
-					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+					buildStatusAnnotationValue := component.Annotations[controllers.BuildStatusAnnotationName]
+					GinkgoWriter.Printf(buildStatusAnnotationValueLoggingFormat, buildStatusAnnotationValue)
+					statusBytes := []byte(buildStatusAnnotationValue)
 
 					err = json.Unmarshal(statusBytes, &buildStatus)
 					if err != nil {
@@ -800,7 +818,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						return false, err
 					}
 
-					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+					buildStatusAnnotationValue := component.Annotations[controllers.BuildStatusAnnotationName]
+					GinkgoWriter.Printf(buildStatusAnnotationValueLoggingFormat, buildStatusAnnotationValue)
+					statusBytes := []byte(buildStatusAnnotationValue)
 
 					err = json.Unmarshal(statusBytes, &buildStatus)
 					if err != nil {
@@ -899,7 +919,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						return false, err
 					}
 
-					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+					buildStatusAnnotationValue := component.Annotations[controllers.BuildStatusAnnotationName]
+					GinkgoWriter.Printf(buildStatusAnnotationValueLoggingFormat, buildStatusAnnotationValue)
+					statusBytes := []byte(buildStatusAnnotationValue)
 
 					err = json.Unmarshal(statusBytes, &buildStatus)
 					if err != nil {
@@ -962,7 +984,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						return false, err
 					}
 
-					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+					buildStatusAnnotationValue := component.Annotations[controllers.BuildStatusAnnotationName]
+					GinkgoWriter.Printf(buildStatusAnnotationValueLoggingFormat, buildStatusAnnotationValue)
+					statusBytes := []byte(buildStatusAnnotationValue)
 
 					err = json.Unmarshal(statusBytes, &buildStatus)
 					if err != nil {
@@ -1006,7 +1030,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					} else if component == nil {
 						return fmt.Errorf("got component as nil after getting component %s in namespace %s", componentName, testNamespace)
 					}
-					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+					buildStatusAnnotationValue := component.Annotations[controllers.BuildStatusAnnotationName]
+					GinkgoWriter.Printf(buildStatusAnnotationValueLoggingFormat, buildStatusAnnotationValue)
+					statusBytes := []byte(buildStatusAnnotationValue)
 					err = json.Unmarshal(statusBytes, buildStatus)
 					if err != nil {
 						return err

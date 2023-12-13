@@ -33,6 +33,9 @@ const (
 
 	appstudioCrdsBuild = "appstudio-crds-build"
 	computeBuild       = "compute-build"
+
+	//Logging related
+	buildStatusAnnotationValueLoggingFormat = "build status annotation value: %s\n"
 )
 
 var (
