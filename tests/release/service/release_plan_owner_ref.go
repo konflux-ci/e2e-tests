@@ -2,12 +2,15 @@ package service
 
 import (
 	"fmt"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	releaseConst "github.com/redhat-appstudio/e2e-tests/tests/release"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 )
 
@@ -17,17 +20,18 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2469]test-releaseplan-owne
 	var err error
 	var devNamespace string
 	var releasePlan *releaseApi.ReleasePlan
+	var releasePlanOwnerReferencesTimeout = 1 * time.Minute
 	AfterEach(framework.ReportFailure(&fw))
 
 	BeforeAll(func() {
-		fw, err = framework.NewFramework("releaseplan-ownerref")
+		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("rp-ownerref"))
 		Expect(err).NotTo(HaveOccurred())
 		devNamespace = fw.UserNamespace
 
-		_, err = fw.AsKubeAdmin.HasController.CreateApplication(applicationNameDefault, devNamespace)
+		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releaseConst.ApplicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, "managed", "true")
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releaseConst.SourceReleasePlanName, devNamespace, releaseConst.ApplicationNameDefault, "managed", "true")
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -40,7 +44,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2469]test-releaseplan-owne
 	var _ = Describe("ReleasePlan verification", Ordered, func() {
 		It("verifies that the ReleasePlan has an owner reference for the application", func() {
 			Eventually(func() error {
-				releasePlan, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(sourceReleasePlanName, devNamespace)
+				releasePlan, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releaseConst.SourceReleasePlanName, devNamespace)
 				Expect(err).NotTo(HaveOccurred())
 
 				if len(releasePlan.OwnerReferences) != 1 {
@@ -48,22 +52,22 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2469]test-releaseplan-owne
 				}
 
 				ownerRef := releasePlan.OwnerReferences[0]
-				if ownerRef.Name != applicationNameDefault {
-					return fmt.Errorf("ReleasePlan %s have OwnerReference Name %s and it's not as expected in Application Name %s", releasePlan.Name, ownerRef.Name, applicationNameDefault)
+				if ownerRef.Name != releaseConst.ApplicationNameDefault {
+					return fmt.Errorf("ReleasePlan %s have OwnerReference Name %s and it's not as expected in Application Name %s", releasePlan.Name, ownerRef.Name, releaseConst.ApplicationNameDefault)
 				}
 				return nil
-			}, releasePlanOwnerReferencesTimeout, defaultInterval).Should(Succeed(), "timed out waiting for ReleasePlan OwnerReference to be set.")
+			}, releasePlanOwnerReferencesTimeout, releaseConst.DefaultInterval).Should(Succeed(), "timed out waiting for ReleasePlan OwnerReference to be set.")
 		})
 
 		It("verifies that the ReleasePlan is deleted if the application is deleted", func() {
-			Expect(fw.AsKubeAdmin.HasController.DeleteApplication(applicationNameDefault, devNamespace, true)).To(Succeed())
+			Expect(fw.AsKubeAdmin.HasController.DeleteApplication(releaseConst.ApplicationNameDefault, devNamespace, true)).To(Succeed())
 			Eventually(func() error {
-				releasePlan, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(sourceReleasePlanName, devNamespace)
+				releasePlan, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releaseConst.SourceReleasePlanName, devNamespace)
 				if !errors.IsNotFound(err) {
-					return fmt.Errorf("ReleasePlan %s for application %s still not deleted\n", releasePlan.GetName(), applicationNameDefault)
+					return fmt.Errorf("ReleasePlan %s for application %s still not deleted\n", releasePlan.GetName(), releaseConst.ApplicationNameDefault)
 				}
 				return nil
-			}, cacheSyncTimeout, defaultInterval).Should(Succeed(), "timed out waiting for ReleasePlan to be deleted in %s namespace", devNamespace)
+			}, 1*time.Minute, releaseConst.DefaultInterval).Should(Succeed(), "timed out waiting for ReleasePlan to be deleted in %s namespace", devNamespace)
 		})
 	})
 })

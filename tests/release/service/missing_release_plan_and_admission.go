@@ -6,10 +6,13 @@ import (
 	"github.com/redhat-appstudio/application-api/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 
+	releaseConst "github.com/redhat-appstudio/e2e-tests/tests/release"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 )
 
@@ -22,23 +25,27 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails whe
 	var devNamespace, managedNamespace string
 
 	var releaseCR *releaseApi.Release
+	var snapshotName = "snapshot"
+	var destinationReleasePlanAdmissionName = "sre-production"
+	var releaseName = "release"
+
 	AfterEach(framework.ReportFailure(&fw))
 
 	BeforeAll(func() {
 		// Initialize the tests controllers
-		fw, err = framework.NewFramework("release-neg-rp-dev")
+		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("neg-rp-dev"))
 		Expect(err).NotTo(HaveOccurred())
 		devNamespace = fw.UserNamespace
 
 		// Create the managed namespace
-		managedNamespace = "release-neg-rp-managed"
+		managedNamespace = utils.GetGeneratedNamespace("neg-rp-managed")
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", managedNamespace, err)
 
-		_, err = fw.AsKubeAdmin.IntegrationController.CreateSnapshotWithComponents(snapshotName, "", applicationName, devNamespace, []v1alpha1.SnapshotComponent{})
+		_, err = fw.AsKubeAdmin.IntegrationController.CreateSnapshotWithComponents(snapshotName, "", releaseConst.ApplicationName, devNamespace, []v1alpha1.SnapshotComponent{})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(destinationReleasePlanAdmissionName, managedNamespace, "", devNamespace, releaseStrategyPolicy, serviceAccount, []string{applicationName}, true, &tektonutils.PipelineRef{
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(destinationReleasePlanAdmissionName, managedNamespace, "", devNamespace, releaseConst.ReleaseStrategyPolicy, constants.DefaultPipelineServiceAccount, []string{releaseConst.ApplicationName}, true, &tektonutils.PipelineRef{
 			Resolver: "git",
 			Params: []tektonutils.Param{
 				{Name: "url", Value: "https://github.com/redhat-appstudio/release-service-catalog"},
@@ -47,7 +54,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails whe
 			},
 		}, nil)
 		Expect(err).NotTo(HaveOccurred())
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, sourceReleasePlanName)
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, releaseConst.SourceReleasePlanName)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -67,7 +74,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails whe
 						strings.Contains(releaseCR.Status.Conditions[0].Message, "Release validation failed")
 				}
 				return false
-			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
+			}, releaseConst.ReleaseCreationTimeout, releaseConst.DefaultInterval).Should(BeTrue())
 		})
 		It("missing ReleasePlanAdmission makes a Release CR set as failed in both IsReleased and IsValid with a proper message to user.", func() {
 			Expect(fw.AsKubeAdmin.ReleaseController.DeleteReleasePlanAdmission(destinationReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
@@ -78,7 +85,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails whe
 						strings.Contains(releaseCR.Status.Conditions[0].Message, "Release validation failed")
 				}
 				return false
-			}, releaseCreationTimeout, defaultInterval).Should(BeTrue())
+			}, releaseConst.ReleaseCreationTimeout, releaseConst.DefaultInterval).Should(BeTrue())
 		})
 	})
 })
