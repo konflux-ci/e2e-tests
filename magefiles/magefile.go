@@ -886,9 +886,12 @@ func registerPacServer() error {
 	if err != nil {
 		return fmt.Errorf("error when registering PaC server %s to SprayProxy server %s: %+v", pacHost, sprayProxyConfig.BaseURL, err)
 	}
-	// for debugging purposes
 	klog.Infof("Registered PaC server: %s", pacHost)
-
+	// for debugging purposes
+	err = printRegisteredPacServers()
+	if err != nil {
+		klog.Error(err)
+	}
 	return nil
 }
 
@@ -896,6 +899,13 @@ func unregisterPacServer() error {
 	if sprayProxyConfig == nil {
 		return fmt.Errorf("SprayProxy config is empty")
 	}
+	// for debugging purposes
+	klog.Infof("Before unregistering pac server...")
+	err := printRegisteredPacServers()
+	if err != nil {
+		klog.Error(err)
+	}
+
 	pacHost, err := sprayproxy.GetPaCHost()
 	if err != nil {
 		return fmt.Errorf("failed to get PaC host: %+v", err)
@@ -906,15 +916,22 @@ func unregisterPacServer() error {
 	}
 	klog.Infof("Unregistered PaC servers: %v", pacHost)
 	// for debugging purposes
-	servers, err := sprayProxyConfig.GetServers()
+	klog.Infof("After unregistering server...")
+	err = printRegisteredPacServers()
 	if err != nil {
-		klog.Error("Failed to get registered PaC servers from SprayProxy: %+v", err)
-	} else {
-		klog.Infof("The leftover PaC servers: %v", servers)
+		klog.Error(err)
 	}
 	return nil
 }
 
+func printRegisteredPacServers() error {
+	servers, err := sprayProxyConfig.GetServers()
+	if err != nil {
+		return fmt.Errorf("failed to get registered PaC servers from SprayProxy: %+v", err)
+	}
+	klog.Infof("The PaC servers registered in Sprayproxy: %v", servers)
+	return nil
+}
 // Run upgrade tests in CI
 func (ci CI) TestUpgrade() error {
 	var testFailure bool
@@ -1060,6 +1077,7 @@ func CleanupRegisteredPacServers() error {
 	if err != nil {
 		return fmt.Errorf("failed to get registered PaC servers from SprayProxy: %+v", err)
 	}
+	klog.Infof("Before cleaningup Pac servers, the registered PaC servers: %v", servers)
 
 	for _, server := range strings.Split(servers, ",") {
 		// Verify if the server is a valid host, if not, unregister it
@@ -1070,6 +1088,11 @@ func CleanupRegisteredPacServers() error {
 			}
 			klog.Infof("Cleanup invalid PaC server: %s", server)
 		}
+	}
+	klog.Infof("After cleaningup Pac servers...")
+	err = printRegisteredPacServers()
+	if err != nil {
+		klog.Error(err)
 	}
 	return nil
 }
