@@ -38,6 +38,7 @@ const (
 	snapshotAnnotation                       = "appstudio.openshift.io/snapshot"
 	scenarioAnnotation                       = "test.appstudio.openshift.io/scenario"
 	pipelinerunFinalizerByIntegrationService = "test.appstudio.openshift.io/pipelinerun"
+	snapshotRerunLabel                       = "test.appstudio.openshift.io/run"
 
 	chainsSignedAnnotation = "chains.tekton.dev/signed"
 )
