@@ -36,7 +36,8 @@ import (
 )
 
 const (
-	quayApiUrl = "https://quay.io/api/v1"
+	quayApiUrl       = "https://quay.io/api/v1"
+	gitopsRepository = "GitOps Repository"
 )
 
 var (
@@ -166,7 +167,7 @@ func (Local) CleanupGithubOrg() error {
 		dayDuration, _ := time.ParseDuration("24h")
 		if time.Since(repo.GetCreatedAt().Time) > dayDuration {
 			// Add only repos matching the regex
-			if r.MatchString(*repo.Name) {
+			if r.MatchString(*repo.Name) || *repo.Description == gitopsRepository {
 				reposToDelete = append(reposToDelete, repo)
 			}
 		}
