@@ -1,6 +1,7 @@
 package logs
 
 import (
+	"k8s.io/klog"
 	"strings"
 
 	types "github.com/onsi/ginkgo/v2/types"
@@ -25,8 +26,6 @@ func ShortenStringAddHash(report types.SpecReport) string {
 	className := GetClassnameFromReport(report)
 	s := report.FullText()
 	replacedClass := strings.Replace(s, className, "", 1)
-	if len(replacedClass) > 255 {
-		return replacedClass[0:255]
-	}
+	klog.Info(replacedClass)
 	return replacedClass
 }
