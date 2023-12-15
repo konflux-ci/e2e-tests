@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"reflect"
@@ -1102,6 +1101,6 @@ func CleanupRegisteredPacServers() error {
 }
 
 func isValidPacHost(server string) bool {
-	_, err := net.LookupHost(strings.TrimPrefix(server, "https://"))
+	_, err := http.Get(strings.TrimSpace(server))
 	return err == nil
 }
