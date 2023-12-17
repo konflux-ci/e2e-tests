@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	"golang.org/x/crypto/ssh"
 	v1 "k8s.io/api/core/v1"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -33,6 +35,7 @@ const (
 	HostConfig          = "host-config"
 	ControllerNamespace = "multi-platform-controller"
 	SecretName          = "awskeys"
+	Ec2User             = "ec2-user"
 )
 
 var (
@@ -47,7 +50,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 
 	defer GinkgoRecover()
 
-	var testNamespace, applicationName, componentName string
+	var testNamespace, applicationName, componentName, multiPlatformSecretName, host, userDir string
 	var component *appservice.Component
 	var timeout, interval time.Duration
 
@@ -83,7 +86,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 		for _, instance := range armInstances {
 			hostConfig.Data[fmt.Sprintf("host.aws-arm64-%d.address", count)] = instance
 			hostConfig.Data[fmt.Sprintf("host.aws-arm64-%d.platform", count)] = "linux/arm64"
-			hostConfig.Data[fmt.Sprintf("host.aws-arm64-%d.user", count)] = "ec2-user"
+			hostConfig.Data[fmt.Sprintf("host.aws-arm64-%d.user", count)] = Ec2User
 			hostConfig.Data[fmt.Sprintf("host.aws-arm64-%d.secret", count)] = SecretName
 			hostConfig.Data[fmt.Sprintf("host.aws-arm64-%d.concurrency", count)] = "4"
 			count++
@@ -181,6 +184,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 					if chr.PipelineTaskName == constants.BuildTaskRunName && prTrStatus.Status != nil && prTrStatus.Status.TaskSpec != nil && prTrStatus.Status.TaskSpec.Volumes != nil {
 						for _, vol := range prTrStatus.Status.TaskSpec.Volumes {
 							if vol.Secret != nil && strings.HasPrefix(vol.Secret.SecretName, "multi-platform-ssh-") {
+								multiPlatformSecretName = vol.Secret.SecretName
 								return nil
 							}
 						}
@@ -188,6 +192,27 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 				}
 				return fmt.Errorf("couldn't find a matching step buildah-remote in task %s in PipelineRun %s/%s", constants.BuildTaskRunName, testNamespace, pr.GetName())
 			}, timeout, interval).Should(Succeed(), "timed out when verifying the buildah-remote image reference in pipelinerun")
+		})
+		It("The multi platform secret is populated", func() {
+
+			var secret *v1.Secret
+			Eventually(func() error {
+				secret, err = f.AsKubeAdmin.CommonController.GetSecret(testNamespace, multiPlatformSecretName)
+				if err != nil {
+					return err
+				}
+				return nil
+			}, timeout, interval).Should(Succeed(), "timed out when verifying the secret is created")
+
+			// Get the host and the user directory so we can verify they are cleaned up at the end of the run
+			fullHost, present := secret.Data["host"]
+			Expect(present).To(BeTrue())
+
+			userDirTmp, present := secret.Data["user-dir"]
+			Expect(present).To(BeTrue())
+			userDir = string(userDirTmp)
+			hostParts := strings.Split(string(fullHost), "@")
+			host = strings.TrimSpace(hostParts[1])
 		})
 
 		It("that PipelineRun completes successfully", func() {
@@ -198,8 +223,58 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			Expect(f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.Name, testNamespace)).Should(Succeed())
 		})
 
+		It("test that cleanup happened successfully", func() {
+
+			// Parse the private key
+			signer, err := ssh.ParsePrivateKey([]byte(os.Getenv("MULTI_PLATFORM_AWS_SSH_KEY")))
+			if err != nil {
+				log.Fatalf("Unable to parse private key: %v", err)
+			}
+
+			Eventually(func() error {
+				// SSH configuration using public key authentication
+				config := &ssh.ClientConfig{
+					User: Ec2User,
+					Auth: []ssh.AuthMethod{
+						ssh.PublicKeys(signer),
+					},
+					HostKeyCallback: ssh.InsecureIgnoreHostKey(), // #nosec
+				}
+
+				client, err := ssh.Dial("tcp", host+":22", config)
+				if err != nil {
+					return err
+				}
+				defer client.Close()
+
+				// Create a new session
+				session, err := client.NewSession()
+				if err != nil {
+					return err
+				}
+				defer session.Close()
+
+				// Check if the file exists
+				if dirExists(session, userDir) {
+					return fmt.Errorf("cleanup not successful, user dir still exists")
+				}
+				return nil
+			}, timeout, interval).Should(Succeed(), "timed out when verifying that the remote host was cleaned up correctly")
+		})
+
 	})
 })
+
+// Function to check if a file exists on the remote host
+func dirExists(session *ssh.Session, dirPath string) bool {
+	cmd := fmt.Sprintf("[ -d %s ] && echo 'exists'", dirPath)
+	output, err := session.CombinedOutput(cmd)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error running command: %s\n", err)
+		return false
+	}
+	return string(output) == "exists\n"
+}
 
 // Get AWS instances that are running
 // These are identified by tag
