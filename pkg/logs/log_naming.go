@@ -11,7 +11,9 @@ func GetClassnameFromReport(report types.SpecReport) string {
 	texts := report.ContainerHierarchyTexts
 	if len(texts) > 0 {
 		classStrings := strings.Fields(texts[0])
-		return classStrings[0][1:len(classStrings[0])]
+		firstClass := classStrings[0]
+		reg := regexp.MustCompile("^\\s*\\[+\\s*|\\s*]+\\s*$") // Remove whitespace and square brackets on both sides
+		return reg.ReplaceAllString(firstClass, "")
 	}
 	return report.LeafNodeText
 }
