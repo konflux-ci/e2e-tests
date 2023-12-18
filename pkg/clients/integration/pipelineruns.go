@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // CreateIntegrationPipelineRun creates new integrationPipelineRun.
@@ -178,6 +179,45 @@ func (i *IntegrationController) WaitForAllIntegrationPipelinesToBeFinished(testN
 	}
 
 	return nil
+}
+
+// WaitForFinalizerToGetRemovedFromAllIntegrationPipelineRuns waits for
+// the given finalizer to get removed from all integration pipelinesruns
+// that are related to the given application and namespace.
+func (i *IntegrationController) WaitForFinalizerToGetRemovedFromAllIntegrationPipelineRuns(testNamespace, applicationName string, snapshot *appstudioApi.Snapshot) error {
+	integrationTestScenarios, err := i.GetIntegrationTestScenarios(applicationName, testNamespace)
+	if err != nil {
+		return fmt.Errorf("unable to get IntegrationTestScenarios for Application %s/%s. Error: %v", testNamespace, applicationName, err)
+	}
+
+	for _, testScenario := range *integrationTestScenarios {
+		testScenario := testScenario
+		GinkgoWriter.Printf("Integration test scenario %s is found\n", testScenario.Name)
+		err = i.WaitForFinalizerToGetRemovedFromIntegrationPipeline(&testScenario, snapshot, testNamespace)
+		if err != nil {
+			return fmt.Errorf("error occurred while waiting for Integration PLR (associated with IntegrationTestScenario: %s) to NOT have the finalizer. Error: %v", testScenario.Name, err)
+		}
+	}
+
+	return nil
+}
+
+// WaitForFinalizerToGetRemovedFromIntegrationPipeline waits for the
+// given finalizer to get removed from the given integration pipelinerun
+func (i *IntegrationController) WaitForFinalizerToGetRemovedFromIntegrationPipeline(testScenario *integrationv1beta1.IntegrationTestScenario, snapshot *appstudioApi.Snapshot, appNamespace string) error {
+	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 10*time.Minute, true, func(ctx context.Context) (done bool, err error) {
+		pipelineRun, err := i.GetIntegrationPipelineRun(testScenario.Name, snapshot.Name, appNamespace)
+		if err != nil {
+			GinkgoWriter.Println("PipelineRun has not been created yet for test scenario %s and snapshot %s/%s", testScenario.GetName(), snapshot.GetNamespace(), snapshot.GetName())
+			return false, nil
+		}
+		if controllerutil.ContainsFinalizer(pipelineRun, "test.appstudio.openshift.io/pipelinerun") {
+			GinkgoWriter.Printf("build pipelineRun %s/%s still contains the finalizer: %s", pipelineRun.GetNamespace(), pipelineRun.GetName(), "test.appstudio.openshift.io/pipelinerun")
+			return false, nil
+		}
+
+		return true, nil
+	})
 }
 
 // GetAnnotationIfExists returns the value of a given annotation within a pipelinerun, if it exists.

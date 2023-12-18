@@ -100,6 +100,19 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, snapshotAnnotation)).To(Succeed())
 			})
 
+			It("verifies that the finalizer has been removed from the build pipelinerun", func() {
+				timeout := "60s"
+				interval := "1s"
+				Eventually(func() error {
+					pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
+					Expect(err).ShouldNot(HaveOccurred())
+					if controllerutil.ContainsFinalizer(pipelineRun, pipelinerunFinalizerByIntegrationService) {
+						return fmt.Errorf("build pipelineRun %s/%s still contains the finalizer: %s", pipelineRun.GetNamespace(), pipelineRun.GetName(), pipelinerunFinalizerByIntegrationService)
+					}
+					return nil
+				}, timeout, interval).Should(Succeed(), "timeout when waiting for finalizer to be removed")
+			})
+
 			It("checks if all of the integrationPipelineRuns passed", Label("slow"), func() {
 				Expect(f.AsKubeDeveloper.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshot)).To(Succeed())
 			})
@@ -121,17 +134,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				}, timeout, interval).Should(Succeed())
 			})
 
-			It("verifies that the finalizer has been removed from the build pipelinerun", func() {
-				timeout := "60s"
-				interval := "1s"
-				Eventually(func() error {
-					pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
-					Expect(err).ShouldNot(HaveOccurred())
-					if controllerutil.ContainsFinalizer(pipelineRun, pipelinerunFinalizerByIntegrationService) {
-						return fmt.Errorf("build pipelineRun %s/%s still contains the finalizer: %s", pipelineRun.GetNamespace(), pipelineRun.GetName(), pipelinerunFinalizerByIntegrationService)
-					}
-					return nil
-				}, timeout, interval).Should(Succeed(), "timeout when waiting for finalizer to be removed")
+			It("checks if the finalizer was removed from all of the related Integration pipelineRuns", func() {
+				Expect(f.AsKubeDeveloper.IntegrationController.WaitForFinalizerToGetRemovedFromAllIntegrationPipelineRuns(testNamespace, applicationName, snapshot)).To(Succeed())
 			})
 		})
 
@@ -263,6 +267,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)).To(BeFalse(), "expected tests to fail for snapshot %s/%s", snapshot.GetNamespace(), snapshot.GetName())
+		})
+
+		It("checks if the finalizer was removed from all of the related Integration pipelineRuns", func() {
+			Expect(f.AsKubeDeveloper.IntegrationController.WaitForFinalizerToGetRemovedFromAllIntegrationPipelineRuns(testNamespace, applicationName, snapshot)).To(Succeed())
 		})
 
 		It("creates a new IntegrationTestScenario", func() {
