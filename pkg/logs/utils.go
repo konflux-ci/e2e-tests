@@ -14,7 +14,7 @@ import (
 func createArtifactDirectory() (string, error) {
 	wd, _ := os.Getwd()
 	artifactDir := GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
-	classname := ShortenStringAddHash(CurrentSpecReport())
+	classname := ShortenTestName(CurrentSpecReport())
 	testLogsDir := fmt.Sprintf("%s/%s", artifactDir, classname)
 
 	if err := os.MkdirAll(testLogsDir, os.ModePerm); err != nil {

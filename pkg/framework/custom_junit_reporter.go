@@ -148,7 +148,7 @@ func GenerateCustomJUnitReportWithConfig(report types.Report, dst string, config
 			continue
 		}
 		test := CustomJUnitTestCase{
-			Name:      logs.ShortenStringAddHash(spec),
+			Name:      logs.ShortenTestName(spec),
 			Classname: logs.GetClassnameFromReport(spec),
 			Time:      spec.RunTime.Seconds(),
 		}
@@ -248,7 +248,7 @@ func GenerateRPPreprocReport(report types.Report, rpPreprocParentDir string) {
 	// Generate folder structure for RPPreproc with logs
 	for i := range report.SpecReports {
 		reportSpec := report.SpecReports[i]
-		name := logs.ShortenStringAddHash(reportSpec)
+		name := logs.ShortenTestName(reportSpec)
 		artifactsDirPath := artifactDir + "/" + name
 		reportPortalDirPath := rpPreprocDir + "/attachments/xunit/" + name
 		//generate folders only for failed tests

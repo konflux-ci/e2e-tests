@@ -18,8 +18,8 @@ func GetClassnameFromReport(report types.SpecReport) string {
 	return report.LeafNodeText
 }
 
-// This function is used to shorten classname
-func ShortenStringAddHash(report types.SpecReport) string {
+// ShortenTestName This function is used to shorten test name by removing class name
+func ShortenTestName(report types.SpecReport) string {
 	s := report.FullText()
 
 	reg := regexp.MustCompile("\\[+.*]+\\s*")
