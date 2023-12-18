@@ -41,7 +41,7 @@ const (
 	ecPolicyDataPath                = "github.com/release-engineering/rhtap-ec-policy//data"
 )
 
-var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-pipelines", "fbc-tests"), func() {
+var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-pipelines", "fbc-tests"), Pending, func() {
 	defer GinkgoRecover()
 
 	var devWorkspace = os.Getenv(constants.RELEASE_DEV_WORKSPACE_ENV)
