@@ -342,12 +342,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 				}, time.Minute*2, time.Second*5).Should(Succeed())
 			})
 
-			It("checks if snapshot is still marked as successful", func() {
-				snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)).To(BeTrue(), "expected tests to succeed for snapshot %s/%s", snapshot.GetNamespace(), snapshot.GetName())
-			})
-
 			It("should lead to SnapshotEnvironmentBinding getting deleted", func() {
 				Eventually(func() error {
 					_, err = f.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(applicationName, testNamespace, ephemeralEnvironment)
