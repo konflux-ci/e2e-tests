@@ -168,6 +168,10 @@ const (
 
 	// #app-studio-ci-reports channel id
 	SlackCIReportsChannelID = "C02M210JZ7B"
+
+	// URLs for stage cluster
+	STAGE_TOOLCHAIN_API_URL="https://api-toolchain-host-operator.apps.stone-stg-host.qc0p.p1.openshiftapps.com"
+	STAGE_KEYLOAK_URL="https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
 )
 
 var (

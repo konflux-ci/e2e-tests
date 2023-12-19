@@ -497,6 +497,8 @@ func (ci CI) setRequiredEnvVars() error {
 				os.Setenv(fmt.Sprintf("%s_CATALOG_URL", envVarPrefix), fmt.Sprintf("https://github.com/%s/%s", pr.Organization, pr.RepoName))
 				os.Setenv(fmt.Sprintf("%s_CATALOG_REVISION", envVarPrefix), pr.CommitSHA)
 			}
+			os.Setenv("TOOLCHAIN_API_URL", constants.STAGE_TOOLCHAIN_API_URL)
+			os.Setenv("KEYLOAK_URL", constants.STAGE_KEYLOAK_URL)
 			os.Setenv("E2E_TEST_SUITE_LABEL", "release-pipelines")
 		} else { // openshift/release rehearse job for e2e-tests/infra-deployments repos
 			requiresMultiPlatformTests = true
