@@ -383,6 +383,13 @@ func getUserSignupSpecsWithState(username string, state toolchainApi.UserSignupS
 		Spec: toolchainApi.UserSignupSpec{
 			Userid:   username,
 			Username: username,
+			IdentityClaims: toolchainApi.IdentityClaimsEmbedded{
+				PropagatedClaims: toolchainApi.PropagatedClaims{
+					Email: fmt.Sprintf("%s@user.us", username),
+					Sub:   username,
+				},
+				PreferredUsername: username,
+			},
 			States: []toolchainApi.UserSignupState{
 				state,
 			},
