@@ -18,6 +18,7 @@ import (
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/runtime"
+	"knative.dev/pkg/apis"
 )
 
 const (
@@ -139,7 +140,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcHotfixRPName, devNamespace, fbcHotfixAppName, managedNamespace, "true")
 			Expect(err).NotTo(HaveOccurred())
 
-			createFBCReleasePlanAdmission(fbcHotfixRPAName, *managedFw, devNamespace, managedNamespace,fbcHotfixAppName, fbcHotfixECPolicyName, relSvcCatalogPathInRepo, "true", issueId)
+			createFBCReleasePlanAdmission(fbcHotfixRPAName, *managedFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixECPolicyName, relSvcCatalogPathInRepo, "true", issueId)
 			component = releasecommon.CreateComponentByCDQ(*devFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixCompName, fbcSourceGitURL)
 			createFBCEnterpriseContractPolicy(fbcHotfixECPolicyName, *managedFw, devNamespace, managedNamespace)
 		})
@@ -195,7 +196,8 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw framework.Framework, dev
 			return fmt.Errorf("release pipelinerun %s in namespace %s did not finish yet", releasePr.Name, releasePr.Namespace)
 		}
 		GinkgoWriter.Println("Release PR: ", releasePr.Name)
-		Expect(tekton.HasPipelineRunSucceeded(releasePr)).To(BeTrue(), fmt.Sprintf("release pipelinerun %s/%s did not succeed", releasePr.GetNamespace(), releasePr.GetName()))
+		//Expect(tekton.HasPipelineRunSucceeded(releasePr)).To(BeTrue(), fmt.Sprintf("release pipelinerun %s/%s did not succeed", releasePr.GetNamespace(), releasePr.GetName()))
+		Expect(releasePr.GetStatusCondition().GetCondition(apis.ConditionSucceeded)).To(BeTrue(), fmt.Sprintf("release pipelinerun %s/%s did not succeed", releasePr.GetNamespace(), releasePr.GetName()))
 		return nil
 	}, releasecommon.ReleasePipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for release pipelinerun to succeed")
 }
@@ -204,7 +206,7 @@ func assertReleaseCRSucceeded(devFw framework.Framework, devNamespace, managedNa
 	Eventually(func() error {
 		buildPr, err := devFw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, fbcAppName, devNamespace, "")
 		Expect(err).ShouldNot(HaveOccurred())
-		snapshot, err := devFw.AsKubeDeveloper.IntegrationController.GetSnapshot("", buildPr.Name , "", devNamespace)
+		snapshot, err := devFw.AsKubeDeveloper.IntegrationController.GetSnapshot("", buildPr.Name, "", devNamespace)
 		Expect(err).ShouldNot(HaveOccurred())
 		releaseCR, err := devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 		if err != nil {
@@ -218,7 +220,7 @@ func assertReleaseCRSucceeded(devFw framework.Framework, devNamespace, managedNa
 	}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed())
 }
 
-func createFBCEnterpriseContractPolicy(fbcECPName string,managedFw framework.Framework, devNamespace, managedNamespace string) {
+func createFBCEnterpriseContractPolicy(fbcECPName string, managedFw framework.Framework, devNamespace, managedNamespace string) {
 	defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
 		Description: "Red Hat's enterprise requirements",
 		PublicKey:   "k8s://openshift-pipelines/public-key",
@@ -228,8 +230,8 @@ func createFBCEnterpriseContractPolicy(fbcECPName string,managedFw framework.Fra
 			Data:   []string{ecPolicyDataBundle, ecPolicyDataPath},
 		}},
 		Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-			Exclude:     []string{"cve", "step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
-			Include:     []string{"minimal"},
+			Exclude: []string{"cve", "step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
+			Include: []string{"minimal"},
 		},
 	}
 
@@ -242,16 +244,16 @@ func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framew
 	var err error
 	data, err := json.Marshal(map[string]interface{}{
 		"fbc": map[string]interface{}{
-			"fromIndex":            constants.FromIndex,
-			"targetIndex":          constants.TargetIndex,
-			"binaryImage":          constants.BinaryImage,
-			"publishingCredentials": "fbc-preview-publishing-credentials",
-			"iibServiceConfigSecret": "iib-preview-services-config",
+			"fromIndex":                       constants.FromIndex,
+			"targetIndex":                     constants.TargetIndex,
+			"binaryImage":                     constants.BinaryImage,
+			"publishingCredentials":           "fbc-preview-publishing-credentials",
+			"iibServiceConfigSecret":          "iib-preview-services-config",
 			"iibOverwriteFromIndexCredential": "iib-preview-overwritefromimage-credential",
-			"requestUpdateTimeout": "420",
-			"buildTimeoutSeconds":  "480",
-			"hotfix": hotfix,
-			"issueId": issueId,
+			"requestUpdateTimeout":            "420",
+			"buildTimeoutSeconds":             "480",
+			"hotfix":                          hotfix,
+			"issueId":                         issueId,
 		},
 		"sign": map[string]interface{}{
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",

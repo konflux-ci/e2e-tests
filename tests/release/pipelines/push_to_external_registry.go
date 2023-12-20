@@ -30,7 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-to-pyxis", Label("release-pipelines", "pushPyxis", "HACBS"), Pending, func() {
+var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-to-pyxis", Label("release-pipelines", "pushPyxis", "HACBS"), func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	var fw *framework.Framework
@@ -139,7 +139,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 			additionalComponentDetected = compDetected
 		}
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releaseConst.SourceReleasePlanName, devNamespace, releaseConst.ApplicationNameDefault, managedNamespace, "")
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releaseConst.SourceReleasePlanName, devNamespace, releaseConst.ApplicationNameDefault, managedNamespace, "true")
 		Expect(err).NotTo(HaveOccurred())
 
 		data, err := json.Marshal(map[string]interface{}{
@@ -151,7 +151,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 						"repository": "quay.io/" + utils.GetQuayIOOrganization() + "/dcmetromap",
 					},
 					{
-						"name": releaseConst.AdditionalComponentName,
+						"name": additionalCompName,
 						//"repository": "quay.io/redhat-appstudio-qe/simplepython",
 						"repository": "quay.io/" + utils.GetQuayIOOrganization() + "/simplepython",
 					},
@@ -164,12 +164,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(releaseConst.TargetReleasePlanAdmissionName, managedNamespace, releaseConst.ReleaseEnvironment, devNamespace, releaseConst.ReleaseStrategyPolicyDefault, releaseConst.ReleasePipelineServiceAccountDefault, []string{releaseConst.ApplicationNameDefault}, true, &tektonutils.PipelineRef{
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(releaseConst.TargetReleasePlanAdmissionName, managedNamespace, "", devNamespace, releaseConst.ReleaseStrategyPolicyDefault, releaseConst.ReleasePipelineServiceAccountDefault, []string{releaseConst.ApplicationNameDefault}, true, &tektonutils.PipelineRef{
 			Resolver: "git",
 			Params: []tektonutils.Param{
 				{Name: "url", Value: releaseConst.RelSvcCatalogURL},
 				{Name: "revision", Value: releaseConst.RelSvcCatalogRevision},
-				{Name: "pathInRepo", Value: "pipelines/push-to-external-registry/push-to-external-registry.yaml"},
+				{Name: "pathInRepo", Value: "pipelines/rh-push-to-external-registry/rh-push-to-external-registry.yaml"},
 			},
 		}, &runtime.RawExtension{
 			Raw: data,
