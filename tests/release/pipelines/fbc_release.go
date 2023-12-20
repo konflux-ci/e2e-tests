@@ -41,7 +41,7 @@ const (
 	ecPolicyDataPath                = "github.com/release-engineering/rhtap-ec-policy//data"
 )
 
-var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-pipelines", "fbc-tests"), Pending, func() {
+var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-pipelines", "fbc-tests"), func() {
 	defer GinkgoRecover()
 
 	var devWorkspace = os.Getenv(constants.RELEASE_DEV_WORKSPACE_ENV)
@@ -245,6 +245,9 @@ func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framew
 			"fromIndex":            constants.FromIndex,
 			"targetIndex":          constants.TargetIndex,
 			"binaryImage":          constants.BinaryImage,
+			"publishingCredentials": "fbc-preview-publishing-credentials",
+			"iibServiceConfigSecret": "iib-preview-services-config",
+			"iibOverwriteFromIndexCredential": "iib-preview-overwritefromimage-credential",
 			"requestUpdateTimeout": "420",
 			"buildTimeoutSeconds":  "480",
 			"hotfix": hotfix,
