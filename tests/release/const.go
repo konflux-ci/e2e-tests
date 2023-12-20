@@ -46,5 +46,5 @@ var ManagednamespaceSecret = []corev1.ObjectReference{
 // Pipelines variables
 var (
 	RelSvcCatalogURL      string = utils.GetEnv("RELEASE_SERVICE_CATALOG_URL", "https://github.com/redhat-appstudio/release-service-catalog")
-	RelSvcCatalogRevision string = utils.GetEnv("RELEASE_SERVICE_CATALOG_REVISION", "main")
+	RelSvcCatalogRevision string = utils.GetEnv("RELEASE_SERVICE_CATALOG_REVISION", "development")
 )
