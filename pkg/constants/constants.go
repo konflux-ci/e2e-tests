@@ -128,9 +128,9 @@ const (
 
 	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.20"
 
-	FromIndex   = "quay.io/scoheb/fbc-index-testing:latest"
-	TargetIndex = "quay.io/scoheb/fbc-target-index-testing:latest"
-	BinaryImage = "registry.redhat.io/openshift4/ose-operator-registry:v4.12"
+	FromIndex   = "registry-proxy.engineering.redhat.com/rh-osbs/iib-preview-rhtap:v4.13"
+	TargetIndex = "quay.io/redhat/redhat----preview-operator-index:v4.13"
+	BinaryImage = "registry.redhat.io/openshift4/ose-operator-registry:v4.13"
 
 	StrategyConfigsRepo          = "strategy-configs"
 	StrategyConfigsDefaultBranch = "main"
@@ -168,6 +168,9 @@ const (
 
 	// #app-studio-ci-reports channel id
 	SlackCIReportsChannelID = "C02M210JZ7B"
+
+	DevReleaseTeam     = "dev-release-team"
+	ManagedReleaseTeam = "managed-release-team"
 )
 
 var (
