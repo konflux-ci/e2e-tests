@@ -17,6 +17,7 @@ const (
 	ReleasePipelineServiceAccountDefault string = "release-service-account"
 
 	SourceReleasePlanName          string = "source-releaseplan"
+	SecondReleasePlanName          string = "the-second-releaseplan"
 	TargetReleasePlanAdmissionName string = "demo"
 	ReleasePvcName                 string = "release-pvc"
 	ReleaseEnvironment             string = "production"
@@ -24,6 +25,7 @@ const (
 	ReleaseCreationTimeout              = 5 * time.Minute
 	ReleasePipelineRunCreationTimeout   = 10 * time.Minute
 	ReleasePipelineRunCompletionTimeout = 20 * time.Minute
+	ReleasePlanStatusUpdateTimeout      = 1 * time.Minute
 	DefaultInterval                     = 100 * time.Millisecond
 
 	// Pipelines constants
