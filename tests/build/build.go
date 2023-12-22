@@ -516,7 +516,14 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			It("After updating image visibility to private, it should not trigger another PipelineRun", func() {
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
-				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.ImageRepoGenerateAnnotationName, constants.ImageControllerAnnotationRequestPrivateRepo[controllers.ImageRepoGenerateAnnotationName], testNamespace)).To(Succeed())
+				Eventually(func() error {
+					err := f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.ImageRepoGenerateAnnotationName, constants.ImageControllerAnnotationRequestPrivateRepo[controllers.ImageRepoGenerateAnnotationName], testNamespace)
+					if err != nil {
+						GinkgoWriter.Printf("failed to update the component %s with error %v\n", componentName, err)
+						return err
+					}
+					return nil
+				}, time.Second*20, time.Second*1).Should(Succeed(), fmt.Sprintf("timed out when trying to update the component %s/%s", testNamespace, componentName))
 
 				Consistently(func() bool {
 					componentPipelineRun, _ := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
