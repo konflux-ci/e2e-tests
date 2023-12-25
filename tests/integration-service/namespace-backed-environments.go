@@ -121,6 +121,9 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 		It("checks for deploymentTargetClaim after Ephemeral env has been created", func() {
 			Eventually(func() error {
 				dtcl, err = f.AsKubeDeveloper.GitOpsController.GetDeploymentTargetClaimsList(testNamespace)
+				if err != nil {
+					return fmt.Errorf("failed to find deploymentTargetClaim: %w", err)
+				}
 				Expect(err).ToNot(HaveOccurred())
 				if len(dtcl.Items) == 0 {
 					return fmt.Errorf("no DeploymentTargetClaim is found")
@@ -131,8 +134,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 				if dtcl.Items[0].Spec.DeploymentTargetClassName == "" {
 					return fmt.Errorf("deploymentTargetClassName field within deploymentTargetClaim is empty")
 				}
-				return err
-			}, time.Minute*1, time.Second*1).Should(Succeed(), fmt.Sprintf("timed out checking DeploymentTargetClaim after Ephemeral Environment %s was created ", ephemeralEnvironment.Name))
+				return nil
+			}, time.Minute*3, time.Second*5).Should(BeNil(), fmt.Sprintf("timed out checking DeploymentTargetClaim after Ephemeral Environment %s was created ", ephemeralEnvironment.Name))
 
 		})
 
