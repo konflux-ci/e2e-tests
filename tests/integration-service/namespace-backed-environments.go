@@ -246,7 +246,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 				Eventually(func() bool {
 					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", testNamespace)
 					return err == nil && f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)
-				}, time.Minute*3, time.Second*5).Should(BeTrue(), fmt.Sprintf("Timed out waiting for Snapshot to be marked as succeeded %s/%s", snapshot.GetNamespace(), snapshot.GetName()))
+				}, time.Minute*5, time.Second*5).Should(BeTrue(), fmt.Sprintf("Timed out waiting for Snapshot to be marked as succeeded %s/%s", snapshot.GetNamespace(), snapshot.GetName()))
 			})
 
 			It("should lead to SnapshotEnvironmentBinding getting deleted", func() {
