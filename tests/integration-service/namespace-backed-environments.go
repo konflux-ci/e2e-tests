@@ -121,9 +121,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 		It("checks for deploymentTargetClaim after Ephemeral env has been created", func() {
 			Eventually(func() error {
 				dtcl, err = f.AsKubeDeveloper.GitOpsController.GetDeploymentTargetClaimsList(testNamespace)
-				if err != nil {
-					return fmt.Errorf("failed to find deploymentTargetClaim: %w", err)
-				}
 				Expect(err).ToNot(HaveOccurred())
 				if len(dtcl.Items) == 0 {
 					return fmt.Errorf("no DeploymentTargetClaim is found")
