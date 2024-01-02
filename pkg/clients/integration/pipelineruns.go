@@ -91,7 +91,8 @@ func (i *IntegrationController) GetBuildPipelineRun(componentName, applicationNa
 	return pipelineRun, err
 }
 
-// GetComponentPipeline returns the pipeline for a given component labels.
+// GetIntegrationPipelineRun returns the integration pipelineRun
+// for a given scenario, snapshot labels.
 func (i *IntegrationController) GetIntegrationPipelineRun(integrationTestScenarioName string, snapshotName string, namespace string) (*tektonv1beta1.PipelineRun, error) {
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
