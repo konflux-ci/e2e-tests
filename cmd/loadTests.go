@@ -23,7 +23,7 @@ import (
 	loadtestUtils "github.com/redhat-appstudio/e2e-tests/pkg/utils/loadtests"
 	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	"github.com/spf13/cobra"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1449,8 +1449,8 @@ func (h *ConcreteHandlerPipelines) Handle(ctx *JourneyContext) {
 				}
 				applicationName := fmt.Sprintf("%s-app", username)
 				pipelineCreatedRetryInterval := time.Second * 20
-				pipelineCreatedTimeout := time.Minute * 30
-				var pipelineRun *v1beta1.PipelineRun
+				pipelineCreatedTimeout := time.Minute * 15
+				var pipelineRun *tektonv1.PipelineRun
 				err := k8swait.PollUntilContextTimeout(context.Background(), pipelineCreatedRetryInterval, pipelineCreatedTimeout, false, func(ctx context.Context) (done bool, err error) {
 					// Searching for "build" type of pipelineRun
 					pipelineRun, err = framework.AsKubeDeveloper.HasController.GetComponentPipelineRunWithType(componentName, applicationName, usernamespace, "build", "")
@@ -1580,7 +1580,7 @@ func (h *ConcreteHandlerItsPipelines) Handle(ctx *JourneyContext) {
 					continue
 				}
 
-				var IntegrationTestsPipelineRun *v1beta1.PipelineRun
+				var IntegrationTestsPipelineRun *tektonv1.PipelineRun
 				err = k8swait.PollUntilContextTimeout(context.Background(), IntegrationTestsPipelineCreatedRetryInterval, IntegrationTestsPipelineCreatedTimeout, false, func(ctx context.Context) (done bool, err error) {
 					IntegrationTestsPipelineRun, err = framework.AsKubeDeveloper.IntegrationController.GetIntegrationPipelineRun(testScenarioName, snapshot.Name, usernamespace)
 					if err != nil {

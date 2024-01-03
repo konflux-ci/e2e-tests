@@ -14,7 +14,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
-	taskrunv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -201,7 +201,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "quay-imagepullsecret-usag
 				Eventually, there will be a release that provides those as regular Tasks in a special namespace so cluster resolver can be used. At that point, we should switch over.
 
 			*/
-			var TaskRun *taskrunv1beta1.TaskRun
+			var TaskRun *tektonv1.TaskRun
 			taskRunName := "skopeo-run"
 
 			It("creates taskrun", func() {

@@ -1,9 +1,8 @@
 package tekton
 
 import (
-	"knative.dev/pkg/apis"
-
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"knative.dev/pkg/apis"
 )
 
 // DidTaskRunSucceed checks if task succeeded.

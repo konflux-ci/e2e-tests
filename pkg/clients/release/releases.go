@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -106,8 +106,8 @@ func (r *ReleaseController) GetFirstReleaseInNamespace(namespace string) (*relea
 }
 
 // GetPipelineRunInNamespace returns the Release PipelineRun referencing the given release.
-func (r *ReleaseController) GetPipelineRunInNamespace(namespace, releaseName, releaseNamespace string) (*v1beta1.PipelineRun, error) {
-	pipelineRuns := &v1beta1.PipelineRunList{}
+func (r *ReleaseController) GetPipelineRunInNamespace(namespace, releaseName, releaseNamespace string) (*tektonv1.PipelineRun, error) {
+	pipelineRuns := &tektonv1.PipelineRunList{}
 	opts := []client.ListOption{
 		client.MatchingLabels{
 			"release.appstudio.openshift.io/name":      releaseName,

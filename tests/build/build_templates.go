@@ -22,7 +22,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/contract"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/pipeline"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/yaml"
 )
@@ -128,7 +128,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		for i, gitUrl := range componentUrls {
 			i := i
 			gitUrl := gitUrl
-			var pr *v1beta1.PipelineRun
+			var pr *tektonv1.PipelineRun
 			It(fmt.Sprintf("triggers PipelineRun for component with source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
 				timeout := time.Minute * 5
 
@@ -205,7 +205,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 			When(fmt.Sprintf("Pipeline Results are stored for component with Git source URL %s", gitUrl), Label("pipeline"), func() {
 				var resultClient *pipeline.ResultClient
-				var pr *v1beta1.PipelineRun
+				var pr *tektonv1.PipelineRun
 
 				BeforeAll(func() {
 					// create the proxyplugin for tekton-results
@@ -273,7 +273,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 			When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", gitUrl), Label("sbom", "slow"), func() {
 				var imageWithDigest string
-				var pr *v1beta1.PipelineRun
+				var pr *tektonv1.PipelineRun
 
 				BeforeAll(func() {
 					var err error
@@ -362,7 +362,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					tr, err := kubeadminClient.TektonController.GetTaskRunStatus(kubeadminClient.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(tekton.DidTaskRunSucceed(tr)).To(BeTrue())
-					Expect(tr.Status.TaskRunResults).Should(Or(
+					Expect(tr.Status.Results).Should(Or(
 						// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
 						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
 						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
@@ -462,7 +462,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 						pr, err := kubeadminClient.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
 						Expect(err).NotTo(HaveOccurred())
-						defer func(pr *v1beta1.PipelineRun) {
+						defer func(pr *tektonv1.PipelineRun) {
 							// Avoid blowing up PipelineRun usage
 							err := kubeadminClient.TektonController.DeletePipelineRun(pr.Name, pr.Namespace)
 							Expect(err).NotTo(HaveOccurred())
@@ -548,7 +548,7 @@ func getImageWithDigest(c *framework.ControllerHub, componentName, applicationNa
 		return "", fmt.Errorf("output-image of a component %q could not be found", componentName)
 	}
 
-	for _, r := range pipelineRun.Status.PipelineResults {
+	for _, r := range pipelineRun.Status.Results {
 		if r.Name == "IMAGE_DIGEST" {
 			digest = r.Value.StringVal
 		}

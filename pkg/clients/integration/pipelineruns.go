@@ -11,7 +11,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
-	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -22,8 +22,8 @@ import (
 )
 
 // CreateIntegrationPipelineRun creates new integrationPipelineRun.
-func (i *IntegrationController) CreateIntegrationPipelineRun(snapshotName, namespace, componentName, integrationTestScenarioName string) (*tektonv1beta1.PipelineRun, error) {
-	testpipelineRun := &tektonv1beta1.PipelineRun{
+func (i *IntegrationController) CreateIntegrationPipelineRun(snapshotName, namespace, componentName, integrationTestScenarioName string) (*tektonv1.PipelineRun, error) {
+	testpipelineRun := &tektonv1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "component-pipelinerun" + "-",
 			Namespace:    namespace,
@@ -35,15 +35,15 @@ func (i *IntegrationController) CreateIntegrationPipelineRun(snapshotName, names
 				"test.appstudio.openshift.io/scenario":  integrationTestScenarioName,
 			},
 		},
-		Spec: tektonv1beta1.PipelineRunSpec{
+		Spec: tektonv1.PipelineRunSpec{
 			PipelineRef: tekton.NewBundleResolverPipelineRef(
 				"integration-pipeline-pass",
 				"quay.io/redhat-appstudio/example-tekton-bundle:integration-pipeline-pass",
 			),
-			Params: []tektonv1beta1.Param{
+			Params: []tektonv1.Param{
 				{
 					Name: "output-image",
-					Value: tektonv1beta1.ParamValue{
+					Value: tektonv1.ParamValue{
 						Type:      "string",
 						StringVal: "quay.io/redhat-appstudio/sample-image",
 					},
@@ -60,8 +60,8 @@ func (i *IntegrationController) CreateIntegrationPipelineRun(snapshotName, names
 
 // GetComponentPipeline returns the pipeline for a given component labels.
 // In case of failure, this function retries till it gets timed out.
-func (i *IntegrationController) GetBuildPipelineRun(componentName, applicationName, namespace string, pacBuild bool, sha string) (*tektonv1beta1.PipelineRun, error) {
-	var pipelineRun *tektonv1beta1.PipelineRun
+func (i *IntegrationController) GetBuildPipelineRun(componentName, applicationName, namespace string, pacBuild bool, sha string) (*tektonv1.PipelineRun, error) {
+	var pipelineRun *tektonv1.PipelineRun
 
 	err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 20*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 		pipelineRunLabels := map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName, "pipelines.appstudio.openshift.io/type": "build"}
@@ -70,7 +70,7 @@ func (i *IntegrationController) GetBuildPipelineRun(componentName, applicationNa
 			pipelineRunLabels["pipelinesascode.tekton.dev/sha"] = sha
 		}
 
-		list := &tektonv1beta1.PipelineRunList{}
+		list := &tektonv1.PipelineRunList{}
 		err = i.KubeRest().List(context.Background(), list, &client.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
 
 		if err != nil && !k8sErrors.IsNotFound(err) {
@@ -83,7 +83,7 @@ func (i *IntegrationController) GetBuildPipelineRun(componentName, applicationNa
 			return true, nil
 		}
 
-		pipelineRun = &tektonv1beta1.PipelineRun{}
+		pipelineRun = &tektonv1.PipelineRun{}
 		GinkgoWriter.Printf("no pipelinerun found for component %s %s", componentName, utils.GetAdditionalInfo(applicationName, namespace))
 		return false, nil
 	})
@@ -93,7 +93,7 @@ func (i *IntegrationController) GetBuildPipelineRun(componentName, applicationNa
 
 // GetIntegrationPipelineRun returns the integration pipelineRun
 // for a given scenario, snapshot labels.
-func (i *IntegrationController) GetIntegrationPipelineRun(integrationTestScenarioName string, snapshotName string, namespace string) (*tektonv1beta1.PipelineRun, error) {
+func (i *IntegrationController) GetIntegrationPipelineRun(integrationTestScenarioName string, snapshotName string, namespace string) (*tektonv1.PipelineRun, error) {
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
 		client.MatchingLabels{
@@ -103,7 +103,7 @@ func (i *IntegrationController) GetIntegrationPipelineRun(integrationTestScenari
 		},
 	}
 
-	list := &tektonv1beta1.PipelineRunList{}
+	list := &tektonv1.PipelineRunList{}
 	err := i.KubeRest().List(context.Background(), list, opts...)
 
 	if err != nil && !k8sErrors.IsNotFound(err) {
@@ -114,13 +114,13 @@ func (i *IntegrationController) GetIntegrationPipelineRun(integrationTestScenari
 		return &list.Items[0], nil
 	}
 
-	return &tektonv1beta1.PipelineRun{}, fmt.Errorf("no pipelinerun found for integrationTestScenario %s (snapshot: %s, namespace: %s)", integrationTestScenarioName, snapshotName, namespace)
+	return &tektonv1.PipelineRun{}, fmt.Errorf("no pipelinerun found for integrationTestScenario %s (snapshot: %s, namespace: %s)", integrationTestScenarioName, snapshotName, namespace)
 }
 
 // WaitForIntegrationPipelineToGetStarted wait for given integration pipeline to get started.
 // In case of failure, this function retries till it gets timed out.
-func (i *IntegrationController) WaitForIntegrationPipelineToGetStarted(testScenarioName, snapshotName, appNamespace string) (*tektonv1beta1.PipelineRun, error) {
-	var testPipelinerun *tektonv1beta1.PipelineRun
+func (i *IntegrationController) WaitForIntegrationPipelineToGetStarted(testScenarioName, snapshotName, appNamespace string) (*tektonv1.PipelineRun, error) {
+	var testPipelinerun *tektonv1.PipelineRun
 
 	err := wait.PollUntilContextTimeout(context.Background(), time.Second*2, time.Minute*5, true, func(ctx context.Context) (done bool, err error) {
 		testPipelinerun, err = i.GetIntegrationPipelineRun(testScenarioName, snapshotName, appNamespace)

@@ -9,7 +9,7 @@ import (
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -236,7 +236,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s succeeded\n", tr.PipelineTaskName, pr.Name)
 				Expect(tekton.DidTaskRunSucceed(tr)).To(BeTrue())
 				GinkgoWriter.Printf("Make sure result for TaskRun %q succeeded\n", tr.PipelineTaskName)
-				Expect(tr.Status.TaskRunResults).Should(Or(
+				Expect(tr.Status.Results).Should(Or(
 					// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
 					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
 					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
@@ -266,7 +266,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 				GinkgoWriter.Printf("Make sure TaskRun %s of PipelineRun %s succeeded\n", tr.PipelineTaskName, pr.Name)
 				Expect(tekton.DidTaskRunSucceed(tr)).To(BeTrue())
 				GinkgoWriter.Printf("Make sure result for TaskRun %q succeeded\n", tr.PipelineTaskName)
-				Expect(tr.Status.TaskRunResults).Should(Or(
+				Expect(tr.Status.Results).Should(Or(
 					// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
 					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
 					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
@@ -330,7 +330,7 @@ var _ = framework.ChainsSuiteDescribe("Tekton Chains E2E tests", Label("ec", "HA
 	})
 })
 
-func printTaskRunStatus(tr *v1beta1.PipelineRunTaskRunStatus, namespace string, sc common.SuiteController) {
+func printTaskRunStatus(tr *tektonv1.PipelineRunTaskRunStatus, namespace string, sc common.SuiteController) {
 	if tr.Status == nil {
 		GinkgoWriter.Println("*** TaskRun status: nil")
 		return
@@ -343,10 +343,10 @@ func printTaskRunStatus(tr *v1beta1.PipelineRunTaskRunStatus, namespace string, 
 	}
 
 	for _, s := range tr.Status.TaskRunStatusFields.Steps {
-		if logs, err := utils.GetContainerLogs(sc.KubeInterface(), tr.Status.PodName, s.ContainerName, namespace); err == nil {
-			GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, s.ContainerName, logs)
+		if logs, err := utils.GetContainerLogs(sc.KubeInterface(), tr.Status.PodName, s.Name, namespace); err == nil {
+			GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, s.Name, logs)
 		} else {
-			GinkgoWriter.Printf("*** Can't fetch logs from pod '%s', container '%s': %s\n", tr.Status.PodName, s.ContainerName, err)
+			GinkgoWriter.Printf("*** Can't fetch logs from pod '%s', container '%s': %s\n", tr.Status.PodName, s.Name, err)
 		}
 	}
 }

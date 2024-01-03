@@ -2,14 +2,15 @@ package integration
 
 import (
 	"fmt"
-	"github.com/redhat-appstudio/operator-toolkit/metadata"
 	"time"
+
+	"github.com/redhat-appstudio/operator-toolkit/metadata"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 	"github.com/devfile/library/v2/pkg/util"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
@@ -32,7 +33,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	var newIntegrationTestScenario *integrationv1alpha1.IntegrationTestScenario
 	var timeout, interval time.Duration
 	var originalComponent *appstudioApi.Component
-	var pipelineRun *v1beta1.PipelineRun
+	var pipelineRun *tektonv1.PipelineRun
 	var snapshot *appstudioApi.Snapshot
 	var snapshotPush *appstudioApi.Snapshot
 	var env *appstudioApi.Environment

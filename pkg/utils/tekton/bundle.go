@@ -12,7 +12,7 @@ import (
 	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/tektoncd/cli/pkg/bundle"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"github.com/tektoncd/pipeline/pkg/remote/oci"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog"
@@ -48,7 +48,7 @@ func BuildAndPushTektonBundle(YamlContent []byte, ref name.Reference, remoteOpti
 }
 
 // GetBundleRef returns the bundle reference from a pipelineRef
-func GetBundleRef(pipelineRef *v1beta1.PipelineRef) string {
+func GetBundleRef(pipelineRef *tektonv1.PipelineRef) string {
 	_, bundleRef := GetPipelineNameAndBundleRef(pipelineRef)
 	return bundleRef
 }

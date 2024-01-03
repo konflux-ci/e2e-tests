@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
 const (
@@ -20,7 +20,7 @@ const (
 	pipDependencySubDir   = "deps/pip/"
 )
 
-func GetBinaryImage(pr *v1beta1.PipelineRun) string {
+func GetBinaryImage(pr *tektonv1.PipelineRun) string {
 	for _, p := range pr.Spec.Params {
 		if p.Name == "output-image" {
 			return p.Value.StringVal
@@ -29,7 +29,7 @@ func GetBinaryImage(pr *v1beta1.PipelineRun) string {
 	return ""
 }
 
-func IsSourceBuildEnabled(pr *v1beta1.PipelineRun) bool {
+func IsSourceBuildEnabled(pr *tektonv1.PipelineRun) bool {
 	for _, p := range pr.Status.PipelineRunStatusFields.PipelineSpec.Params {
 		if p.Name == "build-source-image" {
 			if p.Default.StringVal == "true" {
@@ -40,7 +40,7 @@ func IsSourceBuildEnabled(pr *v1beta1.PipelineRun) bool {
 	return false
 }
 
-func IsHermeticBuildEnabled(pr *v1beta1.PipelineRun) bool {
+func IsHermeticBuildEnabled(pr *tektonv1.PipelineRun) bool {
 	for _, p := range pr.Spec.Params {
 		if p.Name == "hermetic" {
 			if p.Value.StringVal == "true" {
@@ -51,7 +51,7 @@ func IsHermeticBuildEnabled(pr *v1beta1.PipelineRun) bool {
 	return false
 }
 
-func GetPrefetchValue(pr *v1beta1.PipelineRun) string {
+func GetPrefetchValue(pr *tektonv1.PipelineRun) string {
 	for _, p := range pr.Spec.Params {
 		if p.Name == "prefetch-input" {
 			return p.Value.StringVal

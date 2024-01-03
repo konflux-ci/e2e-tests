@@ -36,7 +36,7 @@ import (
 
 	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
-	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 	e2eConfig "github.com/redhat-appstudio/e2e-tests/tests/rhtap-demo/config"
 )

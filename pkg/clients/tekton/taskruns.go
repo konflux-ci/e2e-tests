@@ -6,41 +6,41 @@ import (
 	"strings"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/pod"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // CreateTaskRunCopy creates a TaskRun that copies one image to a second image repository.
-func (t *TektonController) CreateTaskRunCopy(name, namespace, serviceAccountName, srcImageURL, destImageURL string) (*v1beta1.TaskRun, error) {
-	taskRun := v1beta1.TaskRun{
+func (t *TektonController) CreateTaskRunCopy(name, namespace, serviceAccountName, srcImageURL, destImageURL string) (*tektonv1.TaskRun, error) {
+	taskRun := tektonv1.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: v1beta1.TaskRunSpec{
+		Spec: tektonv1.TaskRunSpec{
 			ServiceAccountName: serviceAccountName,
-			TaskRef: &v1beta1.TaskRef{
+			TaskRef: &tektonv1.TaskRef{
 				Name: "skopeo-copy",
-				Kind: v1beta1.ClusterTaskKind,
+				Kind: tektonv1.ClusterTaskRefKind,
 			},
-			Params: []v1beta1.Param{
+			Params: []tektonv1.Param{
 				{
 					Name: "srcImageURL",
-					Value: v1beta1.ParamValue{
+					Value: tektonv1.ParamValue{
 						StringVal: srcImageURL,
-						Type:      v1beta1.ParamTypeString,
+						Type:      tektonv1.ParamTypeString,
 					},
 				},
 				{
 					Name: "destImageURL",
-					Value: v1beta1.ParamValue{
+					Value: tektonv1.ParamValue{
 						StringVal: destImageURL,
-						Type:      v1beta1.ParamTypeString,
+						Type:      tektonv1.ParamTypeString,
 					},
 				},
 			},
@@ -51,7 +51,7 @@ func (t *TektonController) CreateTaskRunCopy(name, namespace, serviceAccountName
 					RunAsUser:    pointer.Int64(65532),
 				},
 			},
-			Workspaces: []v1beta1.WorkspaceBinding{
+			Workspaces: []tektonv1.WorkspaceBinding{
 				{
 					Name:     "images-url",
 					EmptyDir: &corev1.EmptyDirVolumeSource{},
@@ -68,13 +68,13 @@ func (t *TektonController) CreateTaskRunCopy(name, namespace, serviceAccountName
 }
 
 // GetTaskRun returns the requested TaskRun object.
-func (t *TektonController) GetTaskRun(name, namespace string) (*v1beta1.TaskRun, error) {
+func (t *TektonController) GetTaskRun(name, namespace string) (*tektonv1.TaskRun, error) {
 	namespacedName := types.NamespacedName{
 		Name:      name,
 		Namespace: namespace,
 	}
 
-	taskRun := v1beta1.TaskRun{
+	taskRun := tektonv1.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -98,7 +98,7 @@ func (t *TektonController) GetTaskRunLogs(pipelineRunName, pipelineTaskName, nam
 	podName := ""
 	for _, childStatusReference := range pipelineRun.Status.ChildReferences {
 		if childStatusReference.PipelineTaskName == pipelineTaskName {
-			taskRun := &v1beta1.TaskRun{}
+			taskRun := &tektonv1.TaskRun{}
 			taskRunKey := types.NamespacedName{Namespace: pipelineRun.Namespace, Name: childStatusReference.Name}
 			if err := t.KubeRest().Get(context.Background(), taskRunKey, taskRun); err != nil {
 				return nil, err
@@ -129,13 +129,13 @@ func (t *TektonController) GetTaskRunLogs(pipelineRunName, pipelineTaskName, nam
 	return logs, nil
 }
 
-func (t *TektonController) GetTaskRunFromPipelineRun(c crclient.Client, pr *v1beta1.PipelineRun, pipelineTaskName string) (*v1beta1.TaskRun, error) {
+func (t *TektonController) GetTaskRunFromPipelineRun(c crclient.Client, pr *tektonv1.PipelineRun, pipelineTaskName string) (*tektonv1.TaskRun, error) {
 	for _, chr := range pr.Status.ChildReferences {
 		if chr.PipelineTaskName != pipelineTaskName {
 			continue
 		}
 
-		taskRun := &v1beta1.TaskRun{}
+		taskRun := &tektonv1.TaskRun{}
 		taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
 		if err := c.Get(context.Background(), taskRunKey, taskRun); err != nil {
 			return nil, err
@@ -146,13 +146,13 @@ func (t *TektonController) GetTaskRunFromPipelineRun(c crclient.Client, pr *v1be
 	return nil, fmt.Errorf("task %q not found in PipelineRun %q/%q", pipelineTaskName, pr.Namespace, pr.Name)
 }
 
-func (t *TektonController) GetTaskRunResult(c crclient.Client, pr *v1beta1.PipelineRun, pipelineTaskName string, result string) (string, error) {
+func (t *TektonController) GetTaskRunResult(c crclient.Client, pr *tektonv1.PipelineRun, pipelineTaskName string, result string) (string, error) {
 	taskRun, err := t.GetTaskRunFromPipelineRun(c, pr, pipelineTaskName)
 	if err != nil {
 		return "", err
 	}
 
-	for _, trResult := range taskRun.Status.TaskRunResults {
+	for _, trResult := range taskRun.Status.Results {
 		if trResult.Name == result {
 			// for some reason the result might contain \n suffix
 			return strings.TrimSuffix(trResult.Value.StringVal, "\n"), nil
@@ -163,15 +163,15 @@ func (t *TektonController) GetTaskRunResult(c crclient.Client, pr *v1beta1.Pipel
 }
 
 // GetTaskRunStatus returns the status of a specified taskRun.
-func (t *TektonController) GetTaskRunStatus(c crclient.Client, pr *v1beta1.PipelineRun, pipelineTaskName string) (*v1beta1.PipelineRunTaskRunStatus, error) {
+func (t *TektonController) GetTaskRunStatus(c crclient.Client, pr *tektonv1.PipelineRun, pipelineTaskName string) (*tektonv1.PipelineRunTaskRunStatus, error) {
 	for _, chr := range pr.Status.ChildReferences {
 		if chr.PipelineTaskName == pipelineTaskName {
-			taskRun := &v1beta1.TaskRun{}
+			taskRun := &tektonv1.TaskRun{}
 			taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
 			if err := c.Get(context.Background(), taskRunKey, taskRun); err != nil {
 				return nil, err
 			}
-			return &v1beta1.PipelineRunTaskRunStatus{PipelineTaskName: chr.PipelineTaskName, Status: &taskRun.Status}, nil
+			return &tektonv1.PipelineRunTaskRunStatus{PipelineTaskName: chr.PipelineTaskName, Status: &taskRun.Status}, nil
 		}
 	}
 	return nil, fmt.Errorf(
@@ -180,5 +180,5 @@ func (t *TektonController) GetTaskRunStatus(c crclient.Client, pr *v1beta1.Pipel
 
 // DeleteAllTaskRunsInASpecificNamespace removes all TaskRuns from a given repository. Useful when creating a lot of resources and wanting to remove all of them.
 func (t *TektonController) DeleteAllTaskRunsInASpecificNamespace(namespace string) error {
-	return t.KubeRest().DeleteAllOf(context.Background(), &v1beta1.TaskRun{}, crclient.InNamespace(namespace))
+	return t.KubeRest().DeleteAllOf(context.Background(), &tektonv1.TaskRun{}, crclient.InNamespace(namespace))
 }

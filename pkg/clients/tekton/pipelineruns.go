@@ -8,9 +8,9 @@ import (
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -22,12 +22,12 @@ import (
 )
 
 // CreatePipelineRun creates a tekton pipelineRun and returns the pipelineRun or error
-func (t *TektonController) CreatePipelineRun(pipelineRun *v1beta1.PipelineRun, ns string) (*v1beta1.PipelineRun, error) {
-	return t.PipelineClient().TektonV1beta1().PipelineRuns(ns).Create(context.Background(), pipelineRun, metav1.CreateOptions{})
+func (t *TektonController) CreatePipelineRun(pipelineRun *tektonv1.PipelineRun, ns string) (*tektonv1.PipelineRun, error) {
+	return t.PipelineClient().TektonV1().PipelineRuns(ns).Create(context.Background(), pipelineRun, metav1.CreateOptions{})
 }
 
 // createAndWait creates a pipelineRun and waits until it starts.
-func (t *TektonController) createAndWait(pr *v1beta1.PipelineRun, namespace string, taskTimeout int) (*v1beta1.PipelineRun, error) {
+func (t *TektonController) createAndWait(pr *tektonv1.PipelineRun, namespace string, taskTimeout int) (*tektonv1.PipelineRun, error) {
 	pipelineRun, err := t.CreatePipelineRun(pr, namespace)
 	if err != nil {
 		return nil, err
@@ -37,7 +37,7 @@ func (t *TektonController) createAndWait(pr *v1beta1.PipelineRun, namespace stri
 }
 
 // RunPipeline creates a pipelineRun and waits for it to start.
-func (t *TektonController) RunPipeline(g tekton.PipelineRunGenerator, namespace string, taskTimeout int) (*v1beta1.PipelineRun, error) {
+func (t *TektonController) RunPipeline(g tekton.PipelineRunGenerator, namespace string, taskTimeout int) (*tektonv1.PipelineRun, error) {
 	pr, err := g.Generate()
 	if err != nil {
 		return nil, err
@@ -63,8 +63,8 @@ func (t *TektonController) RunPipeline(g tekton.PipelineRunGenerator, namespace 
 }
 
 // GetPipelineRun returns a pipelineRun with a given name.
-func (t *TektonController) GetPipelineRun(pipelineRunName, namespace string) (*v1beta1.PipelineRun, error) {
-	return t.PipelineClient().TektonV1beta1().PipelineRuns(namespace).Get(context.Background(), pipelineRunName, metav1.GetOptions{})
+func (t *TektonController) GetPipelineRun(pipelineRunName, namespace string) (*tektonv1.PipelineRun, error) {
+	return t.PipelineClient().TektonV1().PipelineRuns(namespace).Get(context.Background(), pipelineRunName, metav1.GetOptions{})
 }
 
 // GetPipelineRunLogs returns logs of a given pipelineRun.
@@ -165,13 +165,13 @@ func (t *TektonController) CheckPipelineRunSucceeded(pipelineRunName, namespace 
 }
 
 // ListAllPipelineRuns returns a list of all pipelineRuns in a namespace.
-func (t *TektonController) ListAllPipelineRuns(ns string) (*v1beta1.PipelineRunList, error) {
-	return t.PipelineClient().TektonV1beta1().PipelineRuns(ns).List(context.Background(), metav1.ListOptions{})
+func (t *TektonController) ListAllPipelineRuns(ns string) (*tektonv1.PipelineRunList, error) {
+	return t.PipelineClient().TektonV1().PipelineRuns(ns).List(context.Background(), metav1.ListOptions{})
 }
 
 // DeletePipelineRun deletes a pipelineRun form a given namespace.
 func (t *TektonController) DeletePipelineRun(name, ns string) error {
-	return t.PipelineClient().TektonV1beta1().PipelineRuns(ns).Delete(context.Background(), name, metav1.DeleteOptions{})
+	return t.PipelineClient().TektonV1().PipelineRuns(ns).Delete(context.Background(), name, metav1.DeleteOptions{})
 }
 
 // DeleteAllPipelineRunsInASpecificNamespace deletes all PipelineRuns in a given namespace (removing the finalizers field, first)
@@ -184,7 +184,7 @@ func (t *TektonController) DeleteAllPipelineRunsInASpecificNamespace(ns string) 
 
 	for _, pipelineRun := range pipelineRunList.Items {
 		err := wait.PollUntilContextTimeout(context.Background(), time.Second, 30*time.Second, true, func(ctx context.Context) (done bool, err error) {
-			pipelineRunCR := v1beta1.PipelineRun{
+			pipelineRunCR := tektonv1.PipelineRun{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      pipelineRun.Name,
 					Namespace: ns,
@@ -223,7 +223,7 @@ func (t *TektonController) DeleteAllPipelineRunsInASpecificNamespace(ns string) 
 }
 
 // StorePipelineRun stores a given PipelineRun as an artifact.
-func (t *TektonController) StorePipelineRun(pipelineRun *v1beta1.PipelineRun) error {
+func (t *TektonController) StorePipelineRun(pipelineRun *tektonv1.PipelineRun) error {
 	artifacts := make(map[string][]byte)
 	pipelineRunLog, err := t.GetPipelineRunLogs(pipelineRun.Name, pipelineRun.Namespace)
 	if err != nil {

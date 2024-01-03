@@ -2,16 +2,17 @@ package integration
 
 import (
 	"fmt"
-	"github.com/redhat-appstudio/operator-toolkit/metadata"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/redhat-appstudio/operator-toolkit/metadata"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 
 	"github.com/codeready-toolchain/api/api/v1alpha1"
@@ -30,7 +31,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 	var err error
 
 	var applicationName, componentName, testNamespace string
-	var pipelineRun, testPipelinerun *v1beta1.PipelineRun
+	var pipelineRun, testPipelinerun *tektonv1.PipelineRun
 	var originalComponent *appstudioApi.Component
 	var snapshot, snapshot_push *appstudioApi.Snapshot
 	var integrationTestScenario *integrationv1beta1.IntegrationTestScenario

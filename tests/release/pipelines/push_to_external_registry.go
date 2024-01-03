@@ -22,7 +22,7 @@ import (
 	releaseConst "github.com/redhat-appstudio/e2e-tests/tests/release"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
@@ -41,7 +41,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 
 	var imageIDs []string
 	var pyxisKeyDecoded, pyxisCertDecoded []byte
-	var releasePR1, releasePR2 *v1beta1.PipelineRun
+	var releasePR1, releasePR2 *tektonv1.PipelineRun
 	scGitRevision := fmt.Sprintf("test-pyxis-%s", util.GenerateRandomString(4))
 
 	var component1, component2 *appservice.Component
@@ -268,7 +268,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 					return err
 				}
 				var errMsg string
-				for _, pr := range []*v1beta1.PipelineRun{releasePR1, releasePR2} {
+				for _, pr := range []*tektonv1.PipelineRun{releasePR1, releasePR2} {
 					Expect(tekton.HasPipelineRunFailed(pr)).ToNot(BeTrue(), fmt.Sprintf("Release PipelineRun %s/%s failed", pr.GetNamespace(), pr.GetName()))
 					if !pr.HasStarted() {
 						errMsg += fmt.Sprintf("Release PipelineRun %s/%s did not started yet\n", pr.GetNamespace(), pr.GetName())
@@ -284,7 +284,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		It("verifies a release PipelineRun for each component succeeded in managed namespace", func() {
 			Eventually(func() error {
 				var errMsg string
-				for _, pr := range []*v1beta1.PipelineRun{releasePR1, releasePR2} {
+				for _, pr := range []*tektonv1.PipelineRun{releasePR1, releasePR2} {
 					pr, err = fw.AsKubeAdmin.TektonController.GetPipelineRun(pr.GetName(), pr.GetNamespace())
 					Expect(err).ShouldNot(HaveOccurred())
 					Expect(tekton.HasPipelineRunFailed(pr)).ToNot(BeTrue(), fmt.Sprintf("Release PipelineRun %s/%s failed", pr.GetNamespace(), pr.GetName()))
@@ -316,13 +316,13 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 				trAdditionalReleasePr, err := fw.AsKubeAdmin.TektonController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), releasePR2, "create-pyxis-image")
 				Expect(err).NotTo(HaveOccurred())
 
-				trReleaseImageIDs := re.FindAllString(trReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)
-				trAdditionalReleaseIDs := re.FindAllString(trAdditionalReleasePr.Status.TaskRunResults[0].Value.StringVal, -1)
+				trReleaseImageIDs := re.FindAllString(trReleasePr.Status.Results[0].Value.StringVal, -1)
+				trAdditionalReleaseIDs := re.FindAllString(trAdditionalReleasePr.Status.Results[0].Value.StringVal, -1)
 
-				Expect(trReleaseImageIDs).ToNot(BeEmpty(), fmt.Sprintf("Invalid ImageID in results of task create-pyxis-image. taskrun results: %+v", trReleasePr.Status.TaskRunResults[0]))
-				Expect(trAdditionalReleaseIDs).ToNot(BeEmpty(), fmt.Sprintf("Invalid ImageID in results of task create-pyxis-image. taskrun results: %+v", trAdditionalReleasePr.Status.TaskRunResults[0]))
+				Expect(trReleaseImageIDs).ToNot(BeEmpty(), fmt.Sprintf("Invalid ImageID in results of task create-pyxis-image. taskrun results: %+v", trReleasePr.Status.Results[0]))
+				Expect(trAdditionalReleaseIDs).ToNot(BeEmpty(), fmt.Sprintf("Invalid ImageID in results of task create-pyxis-image. taskrun results: %+v", trAdditionalReleasePr.Status.Results[0]))
 
-				Expect(trReleaseImageIDs).ToNot(HaveLen(len(trAdditionalReleaseIDs)), "the number of image IDs should not be the same in both taskrun results. (%+v vs. %+v)", trReleasePr.Status.TaskRunResults[0], trAdditionalReleasePr.Status.TaskRunResults[0])
+				Expect(trReleaseImageIDs).ToNot(HaveLen(len(trAdditionalReleaseIDs)), "the number of image IDs should not be the same in both taskrun results. (%+v vs. %+v)", trReleasePr.Status.Results[0], trAdditionalReleasePr.Status.Results[0])
 
 				if len(trReleaseImageIDs) > len(trAdditionalReleaseIDs) {
 					imageIDs = trReleaseImageIDs

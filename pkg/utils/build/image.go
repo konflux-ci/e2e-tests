@@ -7,12 +7,12 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 	"github.com/openshift/library-go/pkg/image/reference"
 	"github.com/openshift/oc/pkg/cli/image/extract"
 	"github.com/openshift/oc/pkg/cli/image/imagesource"
 	imageInfo "github.com/openshift/oc/pkg/cli/image/info"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
@@ -39,7 +39,7 @@ func ExtractImage(image string) (string, error) {
 	return tmpDir, nil
 }
 
-func ImageFromPipelineRun(pipelineRun *v1beta1.PipelineRun) (*imageInfo.Image, error) {
+func ImageFromPipelineRun(pipelineRun *tektonv1.PipelineRun) (*imageInfo.Image, error) {
 	var outputImage string
 	for _, parameter := range pipelineRun.Spec.Params {
 		if parameter.Name == "output-image" {

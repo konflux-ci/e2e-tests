@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,7 +36,7 @@ type Vulnerabilities struct {
 	Low      int `json:"low"`
 }
 
-func ValidateBuildPipelineTestResults(pipelineRun *v1beta1.PipelineRun, c crclient.Client) error {
+func ValidateBuildPipelineTestResults(pipelineRun *tektonv1.PipelineRun, c crclient.Client) error {
 	for _, taskName := range taskNames {
 		// The inspect-image task is only required for FBC pipelines which we can infer by the component name
 		prLabels := pipelineRun.GetLabels()
@@ -68,23 +68,23 @@ func ValidateBuildPipelineTestResults(pipelineRun *v1beta1.PipelineRun, c crclie
 	return nil
 }
 
-func fetchTaskRunResults(c crclient.Client, pr *v1beta1.PipelineRun, pipelineTaskName string) ([]v1beta1.TaskRunResult, error) {
+func fetchTaskRunResults(c crclient.Client, pr *tektonv1.PipelineRun, pipelineTaskName string) ([]tektonv1.TaskRunResult, error) {
 	for _, chr := range pr.Status.ChildReferences {
 		if chr.PipelineTaskName != pipelineTaskName {
 			continue
 		}
-		taskRun := &v1beta1.TaskRun{}
+		taskRun := &tektonv1.TaskRun{}
 		taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
 		if err := c.Get(context.Background(), taskRunKey, taskRun); err != nil {
 			return nil, err
 		}
-		return taskRun.Status.TaskRunResults, nil
+		return taskRun.Status.Results, nil
 	}
 	return nil, fmt.Errorf(
 		"pipelineTaskName %q not found in PipelineRun %s/%s", pipelineTaskName, pr.GetName(), pr.GetNamespace())
 }
 
-func validateTaskRunResult(trResults []v1beta1.TaskRunResult, expectedResultNames []string, taskName string) error {
+func validateTaskRunResult(trResults []tektonv1.TaskRunResult, expectedResultNames []string, taskName string) error {
 	for _, rn := range expectedResultNames {
 		found := false
 		for _, r := range trResults {
