@@ -92,25 +92,24 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 	AfterEach(framework.ReportFailure(&fw))
 	var username, token, ssourl, apiurl string
 	var TestScenarios []e2eConfig.TestSpec
-	BeforeSuite(func() {
-		if Label("verify-stage").MatchesLabelFilter(GinkgoLabelFilter()) {
-			token = utils.GetEnv("STAGEUSER_TOKEN", "")
-			ssourl = utils.GetEnv("STAGE_SSOURL", "")
-			apiurl = utils.GetEnv("STAGE_APIURL", "")
-			username = utils.GetEnv("STAGE_USERNAME", "")
-			if token == "" && ssourl == "" && apiurl == "" && username == "" {
-				Fail("Failed: Please set the required Stage Variables for user")
-			}
-			TestScenarios = e2eConfig.GetScenarios(true)
 
+	if Label("verify-stage").MatchesLabelFilter(GinkgoLabelFilter()) {
+		token = utils.GetEnv("STAGEUSER_TOKEN", "")
+		ssourl = utils.GetEnv("STAGE_SSOURL", "")
+		apiurl = utils.GetEnv("STAGE_APIURL", "")
+		username = utils.GetEnv("STAGE_USERNAME", "")
+		if token == "" && ssourl == "" && apiurl == "" && username == "" {
+			Fail("Failed: Please set the required Stage Variables for user")
 		}
+		TestScenarios = e2eConfig.GetScenarios(true)
 
-		if Label("rhtap-demo").MatchesLabelFilter(GinkgoLabelFilter()) {
+	}
 
-			TestScenarios = e2eConfig.GetScenarios(false)
+	if Label("rhtap-demo").MatchesLabelFilter(GinkgoLabelFilter()) {
 
-		}
-	})
+		TestScenarios = e2eConfig.GetScenarios(false)
+
+	}
 
 	for _, appTest := range TestScenarios {
 		appTest := appTest
