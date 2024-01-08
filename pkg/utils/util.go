@@ -19,8 +19,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"crypto/rand"
-	"math/big"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
