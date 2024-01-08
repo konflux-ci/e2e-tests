@@ -101,13 +101,13 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 		if token == "" && ssourl == "" && apiurl == "" && username == "" {
 			Fail("Failed: Please set the required Stage Variables for user")
 		}
-		TestScenarios = e2eConfig.GetScenarios(true)
+		TestScenarios = append(TestScenarios, e2eConfig.GetScenarios(true)...)
 
 	}
 
 	if Label("rhtap-demo").MatchesLabelFilter(GinkgoLabelFilter()) {
 
-		TestScenarios = e2eConfig.GetScenarios(false)
+		TestScenarios = append(TestScenarios, e2eConfig.GetScenarios(false)...)
 
 	}
 
