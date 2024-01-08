@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"reflect"
@@ -37,7 +36,8 @@ import (
 )
 
 const (
-	quayApiUrl = "https://quay.io/api/v1"
+	quayApiUrl       = "https://quay.io/api/v1"
+	gitopsRepository = "GitOps Repository"
 )
 
 var (
@@ -53,8 +53,11 @@ var (
 	// determine whether CI will run tests that require to register SprayProxy
 	// in order to run tests that require PaC application
 	requiresSprayProxyRegistering bool
-	sprayProxyConfig              *sprayproxy.SprayProxyConfig
-	quayTokenNotFoundError        = "DEFAULT_QUAY_ORG_TOKEN env var was not found"
+
+	requiresMultiPlatformTests bool
+
+	sprayProxyConfig       *sprayproxy.SprayProxyConfig
+	quayTokenNotFoundError = "DEFAULT_QUAY_ORG_TOKEN env var was not found"
 )
 
 func (CI) parseJobSpec() error {
@@ -164,7 +167,7 @@ func (Local) CleanupGithubOrg() error {
 		dayDuration, _ := time.ParseDuration("24h")
 		if time.Since(repo.GetCreatedAt().Time) > dayDuration {
 			// Add only repos matching the regex
-			if r.MatchString(*repo.Name) {
+			if r.MatchString(*repo.Name) || *repo.Description == gitopsRepository {
 				reposToDelete = append(reposToDelete, repo)
 			}
 		}
@@ -247,6 +250,12 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
 	}
 
+	if requiresMultiPlatformTests {
+		if err := setupMultiPlatformTests(); err != nil {
+			return err
+		}
+	}
+
 	if requiresSprayProxyRegistering {
 		err := registerPacServer()
 		if err != nil {
@@ -321,13 +330,14 @@ func (ci CI) setRequiredEnvVars() error {
 	// RHTAP Nightly E2E job
 	// The job name is taken from https://github.com/openshift/release/blob/f03153fa4ad36c0e10050d977e7f0f7619d2163a/ci-operator/config/redhat-appstudio/infra-deployments/redhat-appstudio-infra-deployments-main.yaml#L59C7-L59C35
 	if strings.Contains(jobName, "appstudio-e2e-tests-periodic") {
+		requiresMultiPlatformTests = true
 		requiresSprayProxyRegistering = true
 		return nil
 	}
 
 	if openshiftJobSpec.Refs.Repo != "e2e-tests" {
 
-		if strings.Contains(jobName, "-service") || strings.Contains(jobName, "image-controller") {
+		if strings.HasSuffix(jobName, "-service-e2e") || strings.Contains(jobName, "image-controller") {
 			var envVarPrefix, imageTagSuffix, testSuiteLabel string
 			sp := strings.Split(os.Getenv("COMPONENT_IMAGE"), "@")
 
@@ -337,8 +347,6 @@ func (ci CI) setRequiredEnvVars() error {
 				envVarPrefix = "HAS"
 				imageTagSuffix = "has-image"
 				testSuiteLabel = "e2e-demo,byoc"
-			case strings.Contains(jobName, "release-service-catalog"):
-				testSuiteLabel = "release-pipelines"
 			case strings.Contains(jobName, "release-service"):
 				envVarPrefix = "RELEASE_SERVICE"
 				imageTagSuffix = "release-service-image"
@@ -450,11 +458,15 @@ func (ci CI) setRequiredEnvVars() error {
 				envVarPrefix = "SPI_OPERATOR"
 				imageTagSuffix = "spi-image"
 				testSuiteLabel = "spi-suite"
-
 				// spi also requires service-provider-integration-oauth image
 				im := strings.Split(os.Getenv("CI_SPI_OAUTH_IMAGE"), "@")
 				os.Setenv("SPI_OAUTH_IMAGE_REPO", im[0])
 				os.Setenv("SPI_OAUTH_IMAGE_TAG", fmt.Sprintf("redhat-appstudio-%s", "spi-oauth-image"))
+			case strings.Contains(jobName, "multi-platform-controller"):
+				envVarPrefix = "MULTI_PLATFORM_CONTROLLER"
+				imageTagSuffix = "multi-platform-controller"
+				testSuiteLabel = "multi-platform"
+				requiresMultiPlatformTests = true
 			}
 
 			os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", envVarPrefix), sp[0])
@@ -468,6 +480,7 @@ func (ci CI) setRequiredEnvVars() error {
 			os.Setenv("E2E_TEST_SUITE_LABEL", testSuiteLabel)
 
 		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
+			requiresMultiPlatformTests = true
 			requiresSprayProxyRegistering = true
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
@@ -476,11 +489,21 @@ func (ci CI) setRequiredEnvVars() error {
 			https://issues.redhat.com/browse/RHTAPBUGS-992, https://issues.redhat.com/browse/RHTAPBUGS-991, https://issues.redhat.com/browse/RHTAPBUGS-989,
 			https://issues.redhat.com/browse/RHTAPBUGS-978,https://issues.redhat.com/browse/RHTAPBUGS-956
 			*/
-			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,spi-suite,remote-secret,integration-service,ec,byoc,build-templates")
+			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,spi-suite,remote-secret,integration-service,ec,byoc,build-templates,multi-platform")
+		} else if strings.Contains(jobName, "release-service-catalog") { // release-service-catalog jobs (pull, rehearsal)
+			envVarPrefix := "RELEASE_SERVICE"
+			// "rehearse" jobs metadata are not relevant for testing
+			if !strings.Contains(jobName, "rehearse") {
+				os.Setenv(fmt.Sprintf("%s_CATALOG_URL", envVarPrefix), fmt.Sprintf("https://github.com/%s/%s", pr.Organization, pr.RepoName))
+				os.Setenv(fmt.Sprintf("%s_CATALOG_REVISION", envVarPrefix), pr.CommitSHA)
+			}
+			os.Setenv("E2E_TEST_SUITE_LABEL", "release-pipelines")
 		} else { // openshift/release rehearse job for e2e-tests/infra-deployments repos
+			requiresMultiPlatformTests = true
 			requiresSprayProxyRegistering = true
 		}
 	} else { // e2e-tests repository PR
+		requiresMultiPlatformTests = true
 		requiresSprayProxyRegistering = true
 		if ci.isPRPairingRequired("infra-deployments") {
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
@@ -488,6 +511,73 @@ func (ci CI) setRequiredEnvVars() error {
 		}
 	}
 
+	return nil
+}
+
+func setupMultiPlatformTests() error {
+	klog.Infof("going to create new Tekton bundle remote-build for the purpose of testing multi-platform-controller PR")
+	var err error
+	var defaultBundleRef string
+	var tektonObj runtime.Object
+
+	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
+	quayOrg := utils.GetEnv(constants.DEFAULT_QUAY_ORG_ENV, constants.DefaultQuayOrg)
+	newMultiPlatformBuilderPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
+	var newRemotePipeline, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newMultiPlatformBuilderPipelineImg, tag))
+	var newPipelineYaml []byte
+
+	if err = utils.CreateDockerConfigFile(os.Getenv("QUAY_TOKEN")); err != nil {
+		return fmt.Errorf("failed to create docker config file: %+v", err)
+	}
+	if defaultBundleRef, err = tekton.GetDefaultPipelineBundleRef(constants.BuildPipelineSelectorYamlURL, "Docker build"); err != nil {
+		return fmt.Errorf("failed to get the pipeline bundle ref: %+v", err)
+	}
+	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(defaultBundleRef, "pipeline", "docker-build"); err != nil {
+		return fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
+	}
+	dockerPipelineObject := tektonObj.(*tektonapi.Pipeline)
+
+	var currentBuildahTaskRef string
+	for i := range dockerPipelineObject.PipelineSpec().Tasks {
+		t := &dockerPipelineObject.PipelineSpec().Tasks[i]
+		params := t.TaskRef.Params
+		var lastBundle *tektonapi.Param
+		var lastName *tektonapi.Param
+		buildahTask := false
+		for i, param := range params {
+			if param.Name == "bundle" {
+				lastBundle = &t.TaskRef.Params[i]
+			} else if param.Name == "name" && param.Value.StringVal == "buildah" {
+				lastName = &t.TaskRef.Params[i]
+				buildahTask = true
+			}
+		}
+		if buildahTask {
+			currentBuildahTaskRef = lastBundle.Value.StringVal
+			klog.Infof("Found current task ref %s", currentBuildahTaskRef)
+			//TODO: current use pinned sha?
+			lastBundle.Value = *tektonapi.NewStructuredValues("quay.io/redhat-appstudio-tekton-catalog/task-buildah-remote:0.1")
+			lastName.Value = *tektonapi.NewStructuredValues("buildah-remote")
+			t.Params = append(t.Params, tektonapi.Param{Name: "PLATFORM", Value: *tektonapi.NewStructuredValues("$(params.PLATFORM)")})
+			dockerPipelineObject.Spec.Params = append(dockerPipelineObject.PipelineSpec().Params, tektonapi.ParamSpec{Name: "PLATFORM", Default: tektonapi.NewStructuredValues("linux/arm64")})
+			dockerPipelineObject.Name = "buildah-remote-pipeline"
+			break
+		}
+	}
+	if currentBuildahTaskRef == "" {
+		return fmt.Errorf("failed to extract the Tekton Task from bundle: %+v", err)
+	}
+	if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
+		return fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
+	}
+
+	keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
+	authOption := remoteimg.WithAuthFromKeychain(keychain)
+
+	if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newRemotePipeline, authOption); err != nil {
+		return fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
+	}
+	os.Setenv(constants.CUSTOM_BUILDAH_REMOTE_PIPELINE_BUILD_BUNDLE_ENV, newRemotePipeline.String())
 	return nil
 }
 
@@ -799,9 +889,12 @@ func registerPacServer() error {
 	if err != nil {
 		return fmt.Errorf("error when registering PaC server %s to SprayProxy server %s: %+v", pacHost, sprayProxyConfig.BaseURL, err)
 	}
+	klog.Infof("Registered PaC server: %s", pacHost)
 	// for debugging purposes
-	klog.Infof("Registered PaC server: %s",pacHost)
-
+	err = printRegisteredPacServers()
+	if err != nil {
+		klog.Error(err)
+	}
 	return nil
 }
 
@@ -809,6 +902,13 @@ func unregisterPacServer() error {
 	if sprayProxyConfig == nil {
 		return fmt.Errorf("SprayProxy config is empty")
 	}
+	// for debugging purposes
+	klog.Infof("Before unregistering pac server...")
+	err := printRegisteredPacServers()
+	if err != nil {
+		klog.Error(err)
+	}
+
 	pacHost, err := sprayproxy.GetPaCHost()
 	if err != nil {
 		return fmt.Errorf("failed to get PaC host: %+v", err)
@@ -817,13 +917,22 @@ func unregisterPacServer() error {
 	if err != nil {
 		return fmt.Errorf("error when unregistering PaC server %s from SprayProxy server %s: %+v", pacHost, sprayProxyConfig.BaseURL, err)
 	}
+	klog.Infof("Unregistered PaC servers: %v", pacHost)
 	// for debugging purposes
+	klog.Infof("After unregistering server...")
+	err = printRegisteredPacServers()
+	if err != nil {
+		klog.Error(err)
+	}
+	return nil
+}
+
+func printRegisteredPacServers() error {
 	servers, err := sprayProxyConfig.GetServers()
 	if err != nil {
-		klog.Error("Failed to get registered PaC servers from SprayProxy: %+v", err)
-	} else {
-		klog.Infof("Unregistered PaC servers: %v", servers)
+		return fmt.Errorf("failed to get registered PaC servers from SprayProxy: %+v", err)
 	}
+	klog.Infof("The PaC servers registered in Sprayproxy: %v", servers)
 	return nil
 }
 
@@ -841,6 +950,12 @@ func (ci CI) TestUpgrade() error {
 
 	if err := ci.setRequiredEnvVars(); err != nil {
 		return fmt.Errorf("error when setting up required env vars: %v", err)
+	}
+
+	if requiresMultiPlatformTests {
+		if err := setupMultiPlatformTests(); err != nil {
+			return err
+		}
 	}
 
 	if err := UpgradeTestsWorkflow(); err != nil {
@@ -961,12 +1076,13 @@ func CleanupRegisteredPacServers() error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize SprayProxy config: %+v", err)
 	}
-	
+
 	servers, err := sprayProxyConfig.GetServers()
 	if err != nil {
 		return fmt.Errorf("failed to get registered PaC servers from SprayProxy: %+v", err)
 	}
-	
+	klog.Infof("Before cleaningup Pac servers, the registered PaC servers: %v", servers)
+
 	for _, server := range strings.Split(servers, ",") {
 		// Verify if the server is a valid host, if not, unregister it
 		if !isValidPacHost(server) {
@@ -974,12 +1090,18 @@ func CleanupRegisteredPacServers() error {
 			if err != nil {
 				return fmt.Errorf("error when unregistering PaC server %s from SprayProxy server %s: %+v", server, sprayProxyConfig.BaseURL, err)
 			}
+			klog.Infof("Cleanup invalid PaC server: %s", server)
 		}
+	}
+	klog.Infof("After cleaningup Pac servers...")
+	err = printRegisteredPacServers()
+	if err != nil {
+		klog.Error(err)
 	}
 	return nil
 }
 
 func isValidPacHost(server string) bool {
-	_, err := net.LookupHost(strings.TrimPrefix(server, "https://"))
+	_, err := http.Get(strings.TrimSpace(server))
 	return err == nil
 }

@@ -273,7 +273,7 @@ func (h *HasController) ScaleComponentReplicas(component *appservice.Component, 
 func (h *HasController) DeleteComponent(name string, namespace string, reportErrorOnNotFound bool) error {
 	// temporary logs
 	start := time.Now()
-	GinkgoWriter.Println("Start to delete component '%s' at %s", name, start.Format(time.RFC3339))
+	GinkgoWriter.Printf("Start to delete component '%s' at %s\n", name, start.Format(time.RFC3339))
 
 	component := appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
@@ -287,12 +287,12 @@ func (h *HasController) DeleteComponent(name string, namespace string, reportErr
 		}
 	}
 
-	// RHTAPBUGS-978: temporary timeout to 10min
-	err := utils.WaitUntil(h.ComponentDeleted(&component), 10*time.Minute)
+	// RHTAPBUGS-978: temporary timeout to 15min
+	err := utils.WaitUntil(h.ComponentDeleted(&component), 15*time.Minute)
 
 	// temporary logs
 	deletionTime := time.Since(start).Minutes()
-	GinkgoWriter.Printf("Finish to delete component '%s' at %s. It took '%f' minutes", name, time.Now().Format(time.RFC3339), deletionTime)
+	GinkgoWriter.Printf("Finish to delete component '%s' at %s. It took '%f' minutes\n", name, time.Now().Format(time.RFC3339), deletionTime)
 
 	return err
 }
@@ -362,7 +362,7 @@ func (h *HasController) GetComponentConditionStatusMessages(name, namespace stri
 // Universal method to retrigger pipelineruns in kubernetes cluster
 func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Component, pr *v1beta1.PipelineRun) (sha string, err error) {
 	if err = h.KubeRest().Delete(context.Background(), pr); err != nil {
-		return "", fmt.Errorf("failed to delete PipelineRun %q from %q namespace", pr.GetName(), pr.GetNamespace())
+		return "", fmt.Errorf("failed to delete PipelineRun %q from %q namespace with error: %v", pr.GetName(), pr.GetNamespace(), err)
 	}
 
 	prLabels := pr.GetLabels()

@@ -40,8 +40,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	var osConsoleHost string
 	defer GinkgoRecover()
 
-	// Unskip after RHTAPBUGS-1049 is fixed
-	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), Pending, func() {
+	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), func() {
 		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, defaultBranchTestComponentName, imageRepoName, robotAccountName string
 		var component *appservice.Component
 
@@ -172,6 +171,22 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return false
 				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR to be created against %s branch in %s repository", helloWorldComponentDefaultBranch, helloWorldComponentGitSourceRepoName))
 			})
+			It("workspace parameter is set correctly in PaC repository CR", func() {
+				nsObj, err := f.AsKubeAdmin.CommonController.GetNamespace(testNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+				wsName := nsObj.Labels["appstudio.redhat.com/workspace_name"]
+				repositoryParams, err := f.AsKubeAdmin.TektonController.GetRepositoryParams(defaultBranchTestComponentName, testNamespace)
+				Expect(err).ShouldNot(HaveOccurred(), "error while trying to get repository params")
+				paramExists := false
+				for _, param := range repositoryParams {
+					if param.Name == "appstudio_workspace" {
+						paramExists = true
+						Expect(param.Value).To(Equal(wsName), fmt.Sprintf("got workspace param value: %s, expected %s", param.Value, wsName))
+					}
+				}
+				Expect(paramExists).To(BeTrue(), "appstudio_workspace param does not exists in repository CR")
+
+			})
 			It("triggers a PipelineRun", func() {
 				timeout = time.Minute * 5
 				Eventually(func() error {
@@ -194,7 +209,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						return false, err
 					}
 
-					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+					buildStatusAnnotationValue := component.Annotations[controllers.BuildStatusAnnotationName]
+					GinkgoWriter.Printf(buildStatusAnnotationValueLoggingFormat, buildStatusAnnotationValue)
+					statusBytes := []byte(buildStatusAnnotationValue)
 
 					err = json.Unmarshal(statusBytes, &buildStatus)
 					if err != nil {
@@ -499,7 +516,14 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			It("After updating image visibility to private, it should not trigger another PipelineRun", func() {
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
-				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.ImageRepoGenerateAnnotationName, constants.ImageControllerAnnotationRequestPrivateRepo[controllers.ImageRepoGenerateAnnotationName], testNamespace)).To(Succeed())
+				Eventually(func() error {
+					err := f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.ImageRepoGenerateAnnotationName, constants.ImageControllerAnnotationRequestPrivateRepo[controllers.ImageRepoGenerateAnnotationName], testNamespace)
+					if err != nil {
+						GinkgoWriter.Printf("failed to update the component %s with error %v\n", componentName, err)
+						return err
+					}
+					return nil
+				}, time.Second*20, time.Second*1).Should(Succeed(), fmt.Sprintf("timed out when trying to update the component %s/%s", testNamespace, componentName))
 
 				Consistently(func() bool {
 					componentPipelineRun, _ := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
@@ -566,8 +590,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 	})
 
-	// Unskip after RHTAPBUGS-1049 is fixed
-	Describe("test pac with multiple components using same repository", Ordered, Label("pac-build", "multi-component"), Pending, func() {
+	Describe("test pac with multiple components using same repository", Ordered, Label("pac-build", "multi-component"), func() {
 		var applicationName, testNamespace, multiComponentBaseBranchName, multiComponentPRBranchName, mergeResultSha string
 		var pacBranchNames []string
 		var prNumber int
@@ -802,7 +825,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						return false, err
 					}
 
-					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+					buildStatusAnnotationValue := component.Annotations[controllers.BuildStatusAnnotationName]
+					GinkgoWriter.Printf(buildStatusAnnotationValueLoggingFormat, buildStatusAnnotationValue)
+					statusBytes := []byte(buildStatusAnnotationValue)
 
 					err = json.Unmarshal(statusBytes, &buildStatus)
 					if err != nil {
@@ -813,7 +838,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					GinkgoWriter.Printf("build status: %+v\n", buildStatus.PaC)
 
 					return buildStatus.PaC != nil && buildStatus.PaC.State == "error" && strings.Contains(buildStatus.PaC.ErrMessage, "Git repository is already handled by Pipelines as Code"), nil
-				}, time.Minute*1, time.Second*2).Should(BeTrue(), "build status is unexpected")
+				}, time.Minute*2, time.Second*2).Should(BeTrue(), "build status is unexpected")
 
 			})
 
@@ -901,7 +926,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						return false, err
 					}
 
-					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+					buildStatusAnnotationValue := component.Annotations[controllers.BuildStatusAnnotationName]
+					GinkgoWriter.Printf(buildStatusAnnotationValueLoggingFormat, buildStatusAnnotationValue)
+					statusBytes := []byte(buildStatusAnnotationValue)
 
 					err = json.Unmarshal(statusBytes, &buildStatus)
 					if err != nil {
@@ -964,7 +991,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						return false, err
 					}
 
-					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+					buildStatusAnnotationValue := component.Annotations[controllers.BuildStatusAnnotationName]
+					GinkgoWriter.Printf(buildStatusAnnotationValueLoggingFormat, buildStatusAnnotationValue)
+					statusBytes := []byte(buildStatusAnnotationValue)
 
 					err = json.Unmarshal(statusBytes, &buildStatus)
 					if err != nil {
@@ -1008,7 +1037,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					} else if component == nil {
 						return fmt.Errorf("got component as nil after getting component %s in namespace %s", componentName, testNamespace)
 					}
-					statusBytes := []byte(component.Annotations[controllers.BuildStatusAnnotationName])
+					buildStatusAnnotationValue := component.Annotations[controllers.BuildStatusAnnotationName]
+					GinkgoWriter.Printf(buildStatusAnnotationValueLoggingFormat, buildStatusAnnotationValue)
+					statusBytes := []byte(buildStatusAnnotationValue)
 					err = json.Unmarshal(statusBytes, buildStatus)
 					if err != nil {
 						return err

@@ -145,19 +145,13 @@ type LoggingRoundTripper struct {
 }
 
 func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (res *http.Response, e error) {
-	// Do "before sending requests" actions here.
-	GinkgoWriter.Printf("Sandbox proxy sending request to %v:%v %v\n", req.URL, req.Header, req.Body)
-
 	// Send the request, get the response (or the error)
 	res, e = lrt.Proxied.RoundTrip(req)
 
 	// Handle the result.
 	if e != nil {
 		GinkgoWriter.Printf("Sandbox proxy error: %v", e)
-	} else {
-		GinkgoWriter.Printf("Sandbox proxy received %v response\n", res.Status)
 	}
-
 	return res, e
 }
 
@@ -389,6 +383,13 @@ func getUserSignupSpecsWithState(username string, state toolchainApi.UserSignupS
 		Spec: toolchainApi.UserSignupSpec{
 			Userid:   username,
 			Username: username,
+			IdentityClaims: toolchainApi.IdentityClaimsEmbedded{
+				PropagatedClaims: toolchainApi.PropagatedClaims{
+					Email: fmt.Sprintf("%s@user.us", username),
+					Sub:   username,
+				},
+				PreferredUsername: username,
+			},
 			States: []toolchainApi.UserSignupState{
 				state,
 			},

@@ -10,6 +10,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	pacv1alpha1 "github.com/openshift-pipelines/pipelines-as-code/pkg/apis/pipelinesascode/v1alpha1"
 	ocpOauth "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	userv1 "github.com/openshift/api/user/v1"
@@ -87,6 +88,7 @@ func init() {
 	utilruntime.Must(userv1.AddToScheme(scheme))
 	utilruntime.Must(rs.AddToScheme(scheme))
 	utilruntime.Must(imagecontroller.AddToScheme(scheme))
+	utilruntime.Must(pacv1alpha1.AddToScheme(scheme))
 }
 
 // Kube returns the clientset for Kubernetes upstream.

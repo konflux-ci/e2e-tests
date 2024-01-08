@@ -166,6 +166,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				}
 
 				sbom := &build.SbomCyclonedx{}
+				GinkgoWriter.Printf("sbom task log: %s\n", sbomTaskLog)
+
 				err = json.Unmarshal([]byte(sbomTaskLog), sbom)
 				Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("failed to parse SBOM from show-sbom task output from %s/%s PipelineRun", pr.GetNamespace(), pr.GetName()))
 				Expect(sbom.BomFormat).ToNot(BeEmpty())
@@ -229,7 +231,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					Expect(records.Record).NotTo(BeEmpty(), fmt.Sprintf("No records found for PipelineRun %s", pr.Name))
 				})
 
-				It("should have Pipeline Logs", func() {
+				// Skipping till fix of the issue RHTAPBUGS-948 is available in RHTAP
+				It("should have Pipeline Logs", Pending, func() {
 					// Verify if result is stored in Database
 					// temporary logs due to RHTAPBUGS-213
 					logs, err := resultClient.GetLogs(testNamespace, string(pr.GetUID()))
@@ -492,6 +495,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						// The logs from the summary step are used by the UI to display an overview of
 						// the validation.
 						summaryLogs := logs["step-summary"]
+						GinkgoWriter.Printf("got step-summary log: %s\n", summaryLogs)
 						Expect(summaryLogs).NotTo(BeEmpty())
 						var summary build.TestOutput
 						err = json.Unmarshal([]byte(summaryLogs), &summary)

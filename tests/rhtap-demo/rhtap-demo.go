@@ -117,8 +117,8 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					if !CurrentSpecReport().Failed() {
-						// RHTAPBUGS-978: temporary timeout to 10min
-						if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 10*time.Minute); err != nil {
+						// RHTAPBUGS-978: temporary timeout to 15min
+						if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 15*time.Minute); err != nil {
 							if err := fw.AsKubeAdmin.StoreAllArtifactsForNamespace(namespace); err != nil {
 								Fail(fmt.Sprintf("error archiving artifacts:\n%s", err))
 							}

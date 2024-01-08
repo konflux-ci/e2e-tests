@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -36,9 +37,12 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 
 	AfterEach(framework.ReportFailure(&f))
 
-	// Unskip after RHTAPBUGS-1049 is fixed
-	Describe("with status reporting of Integration tests in CheckRuns", Ordered, Pending, func() {
+	Describe("with status reporting of Integration tests in CheckRuns", Ordered, func() {
 		BeforeAll(func() {
+			if os.Getenv(constants.SKIP_PAC_TESTS_ENV) == "true" {
+				Skip("Skipping this test due to configuration issue with Spray proxy")
+			}
+
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("stat-rep"))
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace
@@ -116,7 +120,14 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 					return nil
 				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the component %s/%s", testNamespace, componentName))
 			})
-			It("should lead to a PaC init PR creation", func() {
+			It("does not contain an annotation with a Snapshot Name", func() {
+				Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
+			})
+			It("should lead to build PipelineRun finishing successfully", func() {
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component,
+					"", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
+			})
+			It("should have a related PaC init PR created", func() {
 				timeout = time.Second * 300
 				interval = time.Second * 1
 
@@ -133,22 +144,20 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 					}
 					return false
 				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
+
+				// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
+				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, prHeadSha)
+				Expect(err).ShouldNot(HaveOccurred())
 			})
-			It("the build PipelineRun should eventually finish successfully", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component,
-					"", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
-			})
-			It("does not contain an annotation with a Snapshot Name", func() {
-				Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
-			})
+
 			It("eventually leads to the build PipelineRun's status reported at Checks tab", func() {
 				validateCheckRun(*f, componentName, checkrunConclusionSuccess, componentRepoNameForStatusReporting, prHeadSha, prNumber)
 			})
 		})
 
 		When("the PaC build pipelineRun run succeeded", func() {
-			It("checks if the BuildPipelineRun is signed", func() {
-				Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToBeSigned(testNamespace, applicationName, componentName)).To(Succeed())
+			It("checks if the BuildPipelineRun have the annotation of chains signed", func() {
+				Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, chainsSignedAnnotation)).To(Succeed())
 			})
 
 			It("checks if the Snapshot is created", func() {

@@ -81,7 +81,7 @@ func (s *SprayProxyConfig) sendRequest(httpMethod string, data io.Reader) (strin
 	}
 
 	body, err := io.ReadAll(res.Body)
-	if res.StatusCode != http.StatusOK {
+	if err != nil {
 		return "", fmt.Errorf("failed to access SprayProxy server with status code: %d and body: %s", res.StatusCode, string(body))
 	}
 

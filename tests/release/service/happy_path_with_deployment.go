@@ -3,22 +3,25 @@ package service
 import (
 	"fmt"
 	"os"
+	"time"
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/contract"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	releaseConst "github.com/redhat-appstudio/e2e-tests/tests/release"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	corev1 "k8s.io/api/core/v1"
 )
 
-var _ = framework.ReleaseServiceSuiteDescribe("happy_path_with_deployment", Pending,  Label("release-service", "withDeployment"), func() {
+var _ = framework.ReleaseServiceSuiteDescribe("happy_path_with_deployment", Label("release-service", "withDeployment"), func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	var fw *framework.Framework
@@ -29,39 +32,42 @@ var _ = framework.ReleaseServiceSuiteDescribe("happy_path_with_deployment", Pend
 
 	var component *appservice.Component
 	var releaseCR *releaseApi.Release
-	var managedNamespace = utils.GetGeneratedNamespace("happy-path-with-depl-managed")
+	var managedNamespace string
+	var releaseEnvironment = "production"
+	var releaseDeploymentTimeout = 10 * time.Minute
+	var releaseFinishedTimeout = 5 * time.Minute
 
 	BeforeAll(func() {
-		fw, err = framework.NewFramework("happy-path-with-depl")
+		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("happy-depl"))
 		Expect(err).NotTo(HaveOccurred())
 		devNamespace = fw.UserNamespace
-
+		managedNamespace = utils.GetGeneratedNamespace("happy-depl-managed")
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating managed namespace: %v", err)
+		Expect(err).NotTo(HaveOccurred(), "Error when creating managedNamespace: %v", err)
 
 		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
 		Expect(sourceAuthJson).ToNot(BeEmpty())
 
-		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(redhatAppstudioUserSecret, managedNamespace, sourceAuthJson)
+		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(releaseConst.RedhatAppstudioUserSecret, managedNamespace, sourceAuthJson)
 		Expect(err).ToNot(HaveOccurred())
 
-		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, hacbsReleaseTestsTokenSecret, serviceAccount, true)
+		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, releaseConst.HacbsReleaseTestsTokenSecret, constants.DefaultPipelineServiceAccount, true)
 		Expect(err).ToNot(HaveOccurred())
 
 		publicKey, err := fw.AsKubeAdmin.TektonController.GetTektonChainsPublicKey()
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
-			publicKey, publicSecretNameAuth, managedNamespace)).To(Succeed())
+			publicKey, releaseConst.PublicSecretNameAuth, managedNamespace)).To(Succeed())
 
 		defaultEcPolicy, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 		Expect(err).NotTo(HaveOccurred())
-		policy := contract.PolicySpecWithSourceConfig(defaultEcPolicy.Spec, ecp.SourceConfig{Include: []string{"minimal"}, Exclude: []string{"cve"}})
+		policy := contract.PolicySpecWithSourceConfig(defaultEcPolicy.Spec, ecp.SourceConfig{Include: []string{"@minimal"}, Exclude: []string{"cve"}})
 
 		// using cdq since git ref is not known
-		compName = componentName
+		compName = releaseConst.ComponentName
 		var componentDetected appservice.ComponentDetectionDescription
-		cdq, err := fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(compName, devNamespace, gitSourceComponentUrl, "", "", "", false)
+		cdq, err := fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(compName, devNamespace, releaseConst.GitSourceComponentUrl, "", "", "", false)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
 
@@ -70,29 +76,29 @@ var _ = framework.ReleaseServiceSuiteDescribe("happy_path_with_deployment", Pend
 			componentDetected = compDetected
 		}
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(sourceReleasePlanName, devNamespace, applicationNameDefault, managedNamespace, "")
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releaseConst.SourceReleasePlanName, devNamespace, releaseConst.ApplicationNameDefault, managedNamespace, "")
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.GitOpsController.CreatePocEnvironment(releaseEnvironment, managedNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(targetReleasePlanAdmissionName, managedNamespace, releaseEnvironment, devNamespace, releaseStrategyPolicyDefault, releasePipelineServiceAccountDefault, []string{applicationNameDefault}, true, &tektonutils.PipelineRef{
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(releaseConst.TargetReleasePlanAdmissionName, managedNamespace, releaseEnvironment, devNamespace, releaseConst.ReleaseStrategyPolicyDefault, releaseConst.ReleasePipelineServiceAccountDefault, []string{releaseConst.ApplicationNameDefault}, true, &tektonutils.PipelineRef{
 			Resolver: "git",
 			Params: []tektonutils.Param{
 				{Name: "url", Value: "https://github.com/redhat-appstudio/release-service-catalog"},
 				{Name: "revision", Value: "main"},
 				{Name: "pathInRepo", Value: "pipelines/e2e/e2e.yaml"},
 			},
-		}, nil )
+		}, nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releaseStrategyPolicyDefault, managedNamespace, policy)
+		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releaseConst.ReleaseStrategyPolicyDefault, managedNamespace, policy)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasePvcName, managedNamespace, corev1.ReadWriteOnce)
+		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releaseConst.ReleasePvcName, managedNamespace, corev1.ReadWriteOnce)
 		Expect(err).NotTo(HaveOccurred())
 
-		managedServiceAccount, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(releasePipelineServiceAccountDefault, managedNamespace, managednamespaceSecret, nil)
+		managedServiceAccount, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(releaseConst.ReleasePipelineServiceAccountDefault, managedNamespace, releaseConst.ManagednamespaceSecret, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(devNamespace, managedServiceAccount)
@@ -107,13 +113,13 @@ var _ = framework.ReleaseServiceSuiteDescribe("happy_path_with_deployment", Pend
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.CommonController.CreateRoleBinding("role-release-service-account-binding", managedNamespace, "ServiceAccount", releasePipelineServiceAccountDefault, managedNamespace, "Role", "role-release-service-account", "rbac.authorization.k8s.io")
+		_, err = fw.AsKubeAdmin.CommonController.CreateRoleBinding("role-release-service-account-binding", managedNamespace, "ServiceAccount", releaseConst.ReleasePipelineServiceAccountDefault, managedNamespace, "Role", "role-release-service-account", "rbac.authorization.k8s.io")
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.HasController.CreateApplication(applicationNameDefault, devNamespace)
+		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releaseConst.ApplicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentDetected.ComponentStub, devNamespace, "", "", applicationNameDefault, true, map[string]string{})
+		component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentDetected.ComponentStub, devNamespace, "", "", releaseConst.ApplicationNameDefault, true, map[string]string{})
 		Expect(err).NotTo(HaveOccurred())
 
 		workingDir, err := os.Getwd()
@@ -130,7 +136,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("happy_path_with_deployment", Pend
 		args = []string{"775", "copy-application.sh"}
 		Expect(utils.ExecuteCommandInASpecificDirectory("chmod", args, workingDir)).To(Succeed())
 		// Copying application in dev namespace to managed namespace
-		args = []string{managedNamespace, "-a", devNamespace + "/" + applicationNameDefault}
+		args = []string{managedNamespace, "-a", devNamespace + "/" + releaseConst.ApplicationNameDefault}
 		Expect(utils.ExecuteCommandInASpecificDirectory("./copy-application.sh", args, workingDir)).To(Succeed())
 
 	})
@@ -153,7 +159,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("happy_path_with_deployment", Pend
 			Eventually(func() error {
 				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				return err
-			}, releaseCreationTimeout, defaultInterval).Should(Succeed())
+			}, releaseConst.ReleaseCreationTimeout, releaseConst.DefaultInterval).Should(Succeed())
 		})
 
 		It("verifies that Release PipelineRun is triggered", func() {
@@ -167,7 +173,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("happy_path_with_deployment", Pend
 					return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
 				}
 				return nil
-			}, releasePipelineRunCreationTimeout, defaultInterval).Should(Succeed(), fmt.Sprintf("timed out waiting for a pipelinerun to start for a release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
+			}, releaseConst.ReleasePipelineRunCreationTimeout, releaseConst.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out waiting for a pipelinerun to start for a release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
 		})
 
 		It("verifies that Release PipelineRun should eventually succeed", func() {
@@ -179,7 +185,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("happy_path_with_deployment", Pend
 				}
 				Expect(tekton.HasPipelineRunSucceeded(pr)).To(BeTrue(), fmt.Sprintf("release pipelinerun %s/%s did not succeed", pr.GetNamespace(), pr.GetName()))
 				return nil
-			}, releasePipelineRunCompletionTimeout, defaultInterval).Should(Succeed())
+			}, releaseConst.ReleasePipelineRunCompletionTimeout, releaseConst.DefaultInterval).Should(Succeed())
 		})
 		// phase Deployed happens before phase Released
 		It("tests a Release CR reports that the deployment was successful", func() {
@@ -192,7 +198,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("happy_path_with_deployment", Pend
 					return fmt.Errorf("release %s/%s is not marked as deployed yet", releaseCR.GetNamespace(), releaseCR.GetName())
 				}
 				return nil
-			}, releaseDeploymentTimeout, defaultInterval).Should(Succeed())
+			}, releaseDeploymentTimeout, releaseConst.DefaultInterval).Should(Succeed())
 		})
 		It("tests a Release CR is marked as successfully deployed", func() {
 			Eventually(func() error {
@@ -204,7 +210,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("happy_path_with_deployment", Pend
 					return fmt.Errorf("release %s/%s is not marked as finished yet", releaseCR.GetNamespace(), releaseCR.GetName())
 				}
 				return nil
-			}, releaseFinishedTimeout, defaultInterval).Should(Succeed())
+			}, releaseFinishedTimeout, releaseConst.DefaultInterval).Should(Succeed())
 		})
 	})
 })
