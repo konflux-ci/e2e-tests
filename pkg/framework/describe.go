@@ -61,7 +61,3 @@ func ReleasePipelinesSuiteDescribe(text string, args ...interface{}) bool {
 func ReleaseServiceSuiteDescribe(text string, args ...interface{}) bool {
 	return Describe("[release-service-suite "+text+"]", args, Ordered)
 }
-
-func RhtapStageSuiteDescribe(text string, args ...interface{}) bool {
-	return Describe("[rhtap-stage-suite "+text+"]", args, Ordered)
-}

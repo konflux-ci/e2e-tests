@@ -291,7 +291,7 @@ func (ci CI) TestE2E() error {
 }
 
 func RunE2ETests() error {
-	labelFilter := utils.GetEnv("E2E_TEST_SUITE_LABEL", "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines && !stage")
+	labelFilter := utils.GetEnv("E2E_TEST_SUITE_LABEL", "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines && !verify-stage")
 	return runTests(labelFilter, "e2e-report.xml")
 }
 
