@@ -10,13 +10,15 @@ Happy path testing describes tests that focus on the most common scenarios while
 
 - Testing for successful creation of applications and components.
 - Asserting the successful creation of a snapshot after a push event.
-- Checking if the BuildPipelineRun is successfully triggered and completed.
+- Checking if the BuildPipelineRun is successfully triggered, contains the finalizer, and got completed.
 - Asserting the signing of BuildPipelineRun.
+- Validating the successful creation of a Snapshot, and removal of finalizer from BuildPipelineRun.
+- Verifying that all the Integration PipelineRuns finished successfully.
+- Checking that the status of integration tests were reported to the Snapshot.
+- Checking that a snapshot gets successfully marked as 'passed' after all Integration pipeline runs finished.
+- Validating the Global Candidate is updated
 - Validating the successful creation of a SnapshotEnvironmentBinding.
 - Validating the successful creation of a Release.
-- Validating the Global Candidate is updated
-- Verifying that all the Integration PipelineRuns finished successfully.
-- Checking that a snapshot gets successfully marked as 'passed' after all Integration pipeline runs finished.
 
 ### E2E tests of Namespace-backed Environments (within `namespace-backed-environments.go`):
 
@@ -48,6 +50,11 @@ Happy path testing describes tests that focus on the most common scenarios while
 
 - Creating an IntegrationTestScenario that is expected to fail.
 - Asserting that a snapshot is marked as failed.
+- Creating a new IntegrationTestScenario that is expected to pass.
+- Updating the Snapshot with a re-run label for the new scenario.
+- Validating that a new Integration PLR is created and finished.
+- Asserting that the Snapshot doesn't contain re-run label, and contains the name of re-triggered pipelinerun.
+- Asserting that a snapshot is still marked as failed.
 - Validating that no Release CRs and no SnapshotEnvironmentBinding are created in certain scenarios.
 - Checking that the global candidate does not get updated unexpectedly.
 
