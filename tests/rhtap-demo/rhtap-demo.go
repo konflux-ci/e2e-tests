@@ -70,11 +70,13 @@ const (
 	jvmRebuildPollingInterval = time.Second * 10
 	snapshotPollingInterval   = time.Second * 1
 	releasePollingInterval    = time.Second * 1
+
+	stageTimeout = time.Minute * 5
 )
 
 var supportedRuntimes = []string{"Dockerfile", "Node.js", "Go", "Quarkus", "Python", "JavaScript", "springboot", "dotnet", "maven"}
 
-var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
+var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stage"), func() {
 	defer GinkgoRecover()
 
 	var timeout, interval time.Duration
@@ -85,24 +87,56 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 	application := &appservice.Application{}
 	snapshot := &appservice.Snapshot{}
 	env := &appservice.Environment{}
+
 	fw := &framework.Framework{}
 	AfterEach(framework.ReportFailure(&fw))
+	var username, token, ssourl, apiurl string
+	var TestScenarios []e2eConfig.TestSpec
 
-	for _, appTest := range e2eConfig.TestScenarios {
+	if Label("verify-stage").MatchesLabelFilter(GinkgoLabelFilter()) {
+		token = utils.GetEnv("STAGEUSER_TOKEN", "")
+		ssourl = utils.GetEnv("STAGE_SSOURL", "")
+		apiurl = utils.GetEnv("STAGE_APIURL", "")
+		username = utils.GetEnv("STAGE_USERNAME", "")
+		if token == "" && ssourl == "" && apiurl == "" && username == "" {
+			Fail("Failed: Please set the required Stage Variables for user")
+		}
+		TestScenarios = append(TestScenarios, e2eConfig.GetScenarios(true)...)
+
+	}
+
+	if Label("rhtap-demo").MatchesLabelFilter(GinkgoLabelFilter()) {
+
+		TestScenarios = append(TestScenarios, e2eConfig.GetScenarios(false)...)
+
+	}
+
+	for _, appTest := range TestScenarios {
 		appTest := appTest
 		if !appTest.Skip {
 
 			Describe(appTest.Name, Ordered, func() {
 				BeforeAll(func() {
 					// Initialize the tests controllers
-					fw, err = framework.NewFramework(utils.GetGeneratedNamespace("rhtap-demo"))
-					Expect(err).NotTo(HaveOccurred())
-					namespace = fw.UserNamespace
-					Expect(namespace).NotTo(BeEmpty())
+					if !appTest.Stage {
 
-					// collect SPI ResourceQuota metrics (temporary)
-					err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("rhtap-demo", namespace, "appstudio-crds-spi")
-					Expect(err).NotTo(HaveOccurred())
+						fw, err = framework.NewFramework(utils.GetGeneratedNamespace("rhtap-demo"))
+						Expect(err).NotTo(HaveOccurred())
+						namespace = fw.UserNamespace
+						Expect(namespace).NotTo(BeEmpty())
+
+						// collect SPI ResourceQuota metrics (temporary)
+						err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("rhtap-demo", namespace, "appstudio-crds-spi")
+						Expect(err).NotTo(HaveOccurred())
+					} else {
+						fw, err = framework.NewFrameworkWithTimeout(username, stageTimeout, utils.Options{
+							ToolchainApiUrl: apiurl,
+							KeycloakUrl:     ssourl,
+							OfflineToken:    token,
+						})
+						namespace = fw.UserNamespace
+						Expect(err).NotTo(HaveOccurred())
+					}
 
 					suiteConfig, _ := GinkgoConfiguration()
 					GinkgoWriter.Printf("Parallel processes: %d\n", suiteConfig.ParallelTotal)
@@ -112,25 +146,38 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 
 				// Remove all resources created by the tests
 				AfterAll(func() {
-					// collect SPI ResourceQuota metrics (temporary)
-					err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("rhtap-demo", namespace, "appstudio-crds-spi")
-					Expect(err).NotTo(HaveOccurred())
+					if !appTest.Stage {
+						// collect SPI ResourceQuota metrics (temporary)
+						err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("rhtap-demo", namespace, "appstudio-crds-spi")
+						Expect(err).NotTo(HaveOccurred())
 
-					if !CurrentSpecReport().Failed() {
-						// RHTAPBUGS-978: temporary timeout to 15min
-						if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 15*time.Minute); err != nil {
-							if err := fw.AsKubeAdmin.StoreAllArtifactsForNamespace(namespace); err != nil {
-								Fail(fmt.Sprintf("error archiving artifacts:\n%s", err))
+						if !CurrentSpecReport().Failed() {
+							// RHTAPBUGS-978: temporary timeout to 15min
+							if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 15*time.Minute); err != nil {
+								if err := fw.AsKubeAdmin.StoreAllArtifactsForNamespace(namespace); err != nil {
+									Fail(fmt.Sprintf("error archiving artifacts:\n%s", err))
+								}
+								Fail(fmt.Sprintf("error deleting all componentns in namespace:\n%s", err))
 							}
-							Fail(fmt.Sprintf("error deleting all componentns in namespace:\n%s", err))
+							Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+							Expect(fw.AsKubeAdmin.CommonController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+							Expect(fw.AsKubeAdmin.IntegrationController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+							Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+							Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)).To(Succeed())
+							Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllGitOpsDeploymentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
+							Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 						}
-						Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-						Expect(fw.AsKubeAdmin.CommonController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-						Expect(fw.AsKubeAdmin.IntegrationController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-						Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-						Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)).To(Succeed())
-						Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllGitOpsDeploymentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-						Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
+					} else {
+						err := fw.AsKubeDeveloper.HasController.DeleteAllApplicationsInASpecificNamespace(fw.UserNamespace, stageTimeout)
+						if err != nil {
+							GinkgoWriter.Println("Error while deleting resources for user, got error: %v\n", err)
+						}
+						Expect(err).NotTo(HaveOccurred())
+						err = fw.AsKubeDeveloper.HasController.DeleteAllComponentDetectionQueriesInASpecificNamespace(fw.UserNamespace, stageTimeout)
+						if err != nil {
+							GinkgoWriter.Println("while deleting component detection queries for user, got error: %v\n", err)
+						}
+						Expect(err).NotTo(HaveOccurred())
 					}
 				})
 
@@ -153,18 +200,21 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 						return application.Status.Devfile
 					}, 3*time.Minute, 100*time.Millisecond).Should(Not(BeEmpty()), fmt.Sprintf("timed out waiting for gitOps repository to be created for the %s application in %s namespace", appTest.ApplicationName, fw.UserNamespace))
 
-					Eventually(func() bool {
-						gitOpsRepository := gitops.ObtainGitOpsRepositoryName(application.Status.Devfile)
+					if !appTest.Stage {
+						Eventually(func() bool {
+							gitOpsRepository := gitops.ObtainGitOpsRepositoryName(application.Status.Devfile)
 
-						return fw.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
-					}, 1*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("timed out waiting for HAS controller to create gitops repository for the %s application in %s namespace", appTest.ApplicationName, fw.UserNamespace))
+							return fw.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+						}, 1*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("timed out waiting for HAS controller to create gitops repository for the %s application in %s namespace", appTest.ApplicationName, fw.UserNamespace))
+					}
 				})
 
-				// Create an environment in a specific namespace
-				It("creates an environment", func() {
-					env, err = fw.AsKubeDeveloper.GitOpsController.CreatePocEnvironment(EnvironmentName, namespace)
-					Expect(err).NotTo(HaveOccurred())
-				})
+				if !appTest.Stage { // Create an environment in a specific namespace
+					It("creates an environment", func() {
+						env, err = fw.AsKubeDeveloper.GitOpsController.CreatePocEnvironment(EnvironmentName, namespace)
+						Expect(err).NotTo(HaveOccurred())
+					})
+				}
 
 				for _, componentSpec := range appTest.Components {
 					componentSpec := componentSpec
@@ -236,42 +286,44 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 							Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skipping pipelinerun check.", componentSpec.Name))
 						}
 						for _, component := range componentList {
-							component, err = fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), namespace)
+							component, err = fw.AsKubeDeveloper.HasController.GetComponent(component.GetName(), namespace)
 							Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
 
-							Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
-								fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 3, Always: true})).To(Succeed())
+							Expect(fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "",
+								fw.AsKubeDeveloper.TektonController, &has.RetryOptions{Retries: 3, Always: true})).To(Succeed())
 						}
 					})
 
-					It("finds the snapshot and checks if it is marked as successful", func() {
-						timeout = time.Second * 600
-						interval = time.Second * 10
-						for _, component := range componentList {
+					if !appTest.Stage {
+						It("finds the snapshot and checks if it is marked as successful", func() {
+							timeout = time.Second * 600
+							interval = time.Second * 10
+							for _, component := range componentList {
+								Eventually(func() error {
+									snapshot, err = fw.AsKubeAdmin.IntegrationController.GetSnapshot("", "", component.Name, namespace)
+									if err != nil {
+										GinkgoWriter.Println("snapshot has not been found yet")
+										return err
+									}
+									if !fw.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot) {
+										return fmt.Errorf("tests haven't succeeded for snapshot %s/%s. snapshot status: %+v", snapshot.GetNamespace(), snapshot.GetName(), snapshot.Status)
+									}
+									return nil
+								}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the snapshot for the component %s/%s to be marked as successful", component.GetNamespace(), component.GetName()))
+							}
+						})
+
+						It("checks if a SnapshotEnvironmentBinding is created successfully", func() {
 							Eventually(func() error {
-								snapshot, err = fw.AsKubeAdmin.IntegrationController.GetSnapshot("", "", component.Name, namespace)
+								_, err := fw.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
 								if err != nil {
-									GinkgoWriter.Println("snapshot has not been found yet")
+									GinkgoWriter.Println("SnapshotEnvironmentBinding has not been found yet")
 									return err
 								}
-								if !fw.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot) {
-									return fmt.Errorf("tests haven't succeeded for snapshot %s/%s. snapshot status: %+v", snapshot.GetNamespace(), snapshot.GetName(), snapshot.Status)
-								}
 								return nil
-							}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the snapshot for the component %s/%s to be marked as successful", component.GetNamespace(), component.GetName()))
-						}
-					})
-
-					It("checks if a SnapshotEnvironmentBinding is created successfully", func() {
-						Eventually(func() error {
-							_, err := fw.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
-							if err != nil {
-								GinkgoWriter.Println("SnapshotEnvironmentBinding has not been found yet")
-								return err
-							}
-							return nil
-						}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the SnapshotEnvironmentBinding to be created (snapshot: %s, env: %s, namespace: %s)", snapshot.GetName(), env.GetName(), snapshot.GetNamespace()))
-					})
+							}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the SnapshotEnvironmentBinding to be created (snapshot: %s, env: %s, namespace: %s)", snapshot.GetName(), env.GetName(), snapshot.GetNamespace()))
+						})
+					}
 
 					// Deploy the component using gitops and check for the health
 					if !componentSpec.SkipDeploymentCheck {
@@ -310,7 +362,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 						})
 					}
 
-					if componentSpec.K8sSpec != nil && componentSpec.K8sSpec.Replicas > 1 {
+					if !appTest.Stage && componentSpec.K8sSpec != nil && componentSpec.K8sSpec.Replicas > 1 {
 						It(fmt.Sprintf("scales component %s replicas", componentSpec.Name), Pending, func() {
 							for _, component := range componentList {
 								c, err := fw.AsKubeDeveloper.HasController.GetComponent(component.Name, namespace)
@@ -331,7 +383,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), func() {
 							}
 						})
 					}
-					if componentSpec.AdvancedBuildSpec != nil {
+					if !appTest.Stage && componentSpec.AdvancedBuildSpec != nil {
 						Describe(fmt.Sprintf("RHTAP Advanced build test for %s", componentSpec.Name), Ordered, func() {
 							var managedNamespace string
 

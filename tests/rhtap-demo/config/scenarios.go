@@ -303,4 +303,41 @@ var TestScenarios = []TestSpec{
 			},
 		},
 	},
+	{
+		Name:            "Stage Test - Simple Stage Test With SpringBoot Basic",
+		ApplicationName: "rhtap-stage-demo-app",
+		Skip:            false,
+		Stage:           true,
+		Components: []ComponentSpec{
+			{
+				Name:                 "rhtap-stage-demo-component",
+				ContainerSource:      "",
+				Language:             "Java",
+				GitSourceUrl:         "https://github.com/devfile-samples/devfile-sample-java-springboot-basic",
+				GitSourceRevision:    "",
+				GitSourceContext:     "",
+				HealthEndpoint:       "/",
+				SkipDeploymentCheck:  false,
+			},
+		},
+	},
+}
+
+func GetScenarios(isStage bool) []TestSpec {
+	var StageScenarios []TestSpec
+	var NormalScenarios []TestSpec
+
+	for _, Scenario := range TestScenarios {
+		if Scenario.Stage {
+			StageScenarios = append(StageScenarios, Scenario)
+		} else{
+			NormalScenarios = append(NormalScenarios, Scenario)
+		}
+	}
+
+	if isStage{
+		return StageScenarios
+	} else {
+		return NormalScenarios
+	}
 }
