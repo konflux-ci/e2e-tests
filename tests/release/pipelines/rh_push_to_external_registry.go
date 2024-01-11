@@ -30,7 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-to-pyxis", Label("release-pipelines", "pushPyxis", "HACBS"), Pending, func() {
+var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-push-image-to-pyxis", Label("release-pipelines", "pushPyxis", "HACBS"), func() {
 	defer GinkgoRecover()
 	// Initialize the tests controllers
 	var fw *framework.Framework
@@ -82,6 +82,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		// Creating k8s secret to access Pyxis stage based on base64 decoded of key and cert
 		pyxisKeyDecoded, err = base64.StdEncoding.DecodeString(string(keyPyxisStage))
 		Expect(err).ToNot(HaveOccurred())
+
 		pyxisCertDecoded, err = base64.StdEncoding.DecodeString(string(certPyxisStage))
 		Expect(err).ToNot(HaveOccurred())
 
@@ -139,20 +140,18 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 			additionalComponentDetected = compDetected
 		}
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releaseConst.SourceReleasePlanName, devNamespace, releaseConst.ApplicationNameDefault, managedNamespace, "")
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releaseConst.SourceReleasePlanName, devNamespace, releaseConst.ApplicationNameDefault, managedNamespace, "true")
 		Expect(err).NotTo(HaveOccurred())
 
 		data, err := json.Marshal(map[string]interface{}{
 			"mapping": map[string]interface{}{
 				"components": []map[string]interface{}{
 					{
-						"name": compName,
-						//"repository": "quay.io/redhat-appstudio-qe/dcmetromap",
+						"name":       compName,
 						"repository": "quay.io/" + utils.GetQuayIOOrganization() + "/dcmetromap",
 					},
 					{
-						"name": releaseConst.AdditionalComponentName,
-						//"repository": "quay.io/redhat-appstudio-qe/simplepython",
+						"name":       additionalCompName,
 						"repository": "quay.io/" + utils.GetQuayIOOrganization() + "/simplepython",
 					},
 				},
@@ -164,12 +163,13 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(releaseConst.TargetReleasePlanAdmissionName, managedNamespace, releaseConst.ReleaseEnvironment, devNamespace, releaseConst.ReleaseStrategyPolicyDefault, releaseConst.ReleasePipelineServiceAccountDefault, []string{releaseConst.ApplicationNameDefault}, true, &tektonutils.PipelineRef{
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(releaseConst.TargetReleasePlanAdmissionName, managedNamespace, "", devNamespace, releaseConst.ReleaseStrategyPolicyDefault, releaseConst.ReleasePipelineServiceAccountDefault, []string{releaseConst.ApplicationNameDefault}, true, &tektonutils.PipelineRef{
 			Resolver: "git",
 			Params: []tektonutils.Param{
 				{Name: "url", Value: releaseConst.RelSvcCatalogURL},
-				{Name: "revision", Value: releaseConst.RelSvcCatalogRevision},
-				{Name: "pathInRepo", Value: "pipelines/push-to-external-registry/push-to-external-registry.yaml"},
+			//	{Name: "revision", Value: releaseConst.RelSvcCatalogRevision},
+				{Name: "revision", Value: "development"},
+				{Name: "pathInRepo", Value: "pipelines/rh-push-to-external-registry/rh-push-to-external-registry.yaml"},
 			},
 		}, &runtime.RawExtension{
 			Raw: data,
@@ -286,7 +286,9 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 				var errMsg string
 				for _, pr := range []*v1beta1.PipelineRun{releasePR1, releasePR2} {
 					pr, err = fw.AsKubeAdmin.TektonController.GetPipelineRun(pr.GetName(), pr.GetNamespace())
-					Expect(err).ShouldNot(HaveOccurred())
+					if err != nil {
+						return err
+					}
 					Expect(tekton.HasPipelineRunFailed(pr)).ToNot(BeTrue(), fmt.Sprintf("Release PipelineRun %s/%s failed", pr.GetNamespace(), pr.GetName()))
 					if pr.IsDone() {
 						Expect(tekton.HasPipelineRunSucceeded(pr)).To(BeTrue(), fmt.Sprintf("Release PipelineRun %s/%s did not succceed", pr.GetNamespace(), pr.GetName()))

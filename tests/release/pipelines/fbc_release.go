@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -21,31 +22,22 @@ import (
 )
 
 const (
-	fbcApplicationName              = "fbc-pipelines-aplication"
-	fbcHotfixAppName                = "fbc-hotfix-aplication"
-	fbcComponentName                = "fbc-pipelines-component"
-	fbcHotfixCompName               = "fbc-hotfix-component"
-	fbcReleasePlanName              = "fbc-pipelines-releaseplan"
-	fbcHotfixRPName                 = "fbc-hotfix-releaseplan"
-	fbcReleasePlanAdmissionName     = "fbc-pipelines-releaseplanadmission"
-	fbcHotfixRPAName                = "fbc-hotfix-releaseplanadmission"
-	fbcEnterpriseContractPolicyName = "fbc-pipelines-policy"
-	fbcHotfixECPolicyName           = "fbc-hotfix-policy"
-	fbcServiceAccountName           = "release-service-account"
-	fbcSourceGitURL                 = "https://github.com/redhat-appstudio-qe/fbc-sample-repo"
-	targetPort                      = 50051
-	relSvcCatalogPathInRepo         = "pipelines/fbc-release/fbc-release.yaml"
-	ecPolicyLibPath                 = "github.com/enterprise-contract/ec-policies//policy/lib"
-	ecPolicyReleasePath             = "github.com/enterprise-contract/ec-policies//policy/release"
-	ecPolicyDataBundle              = "oci::quay.io/redhat-appstudio-tekton-catalog/data-acceptable-bundles:latest"
-	ecPolicyDataPath                = "github.com/release-engineering/rhtap-ec-policy//data"
+	fbcServiceAccountName   = "release-service-account"
+	fbcSourceGitURL         = "https://github.com/redhat-appstudio-qe/fbc-sample-repo"
+	targetPort              = 50051
+	relSvcCatalogPathInRepo = "pipelines/fbc-release/fbc-release.yaml"
+	ecPolicyLibPath         = "github.com/enterprise-contract/ec-policies//policy/lib"
+	ecPolicyReleasePath     = "github.com/enterprise-contract/ec-policies//policy/release"
+	ecPolicyDataBundle      = "oci::quay.io/redhat-appstudio-tekton-catalog/data-acceptable-bundles:latest"
+	ecPolicyDataPath        = "github.com/release-engineering/rhtap-ec-policy//data"
 )
 
 var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-pipelines", "fbc-tests"), func() {
 	defer GinkgoRecover()
 
-	var devWorkspace = os.Getenv(constants.RELEASE_DEV_WORKSPACE_ENV)
-	var managedWorkspace = os.Getenv(constants.RELEASE_MANAGED_WORKSPACE_ENV)
+	var devWorkspace = utils.GetEnv(constants.RELEASE_DEV_WORKSPACE_ENV, constants.DevReleaseTeam)
+	var managedWorkspace = utils.GetEnv(constants.RELEASE_MANAGED_WORKSPACE_ENV, constants.ManagedReleaseTeam)
+
 	var devNamespace = devWorkspace + "-tenant"
 	var managedNamespace = managedWorkspace + "-tenant"
 
@@ -53,6 +45,16 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 	var devFw *framework.Framework
 	var managedFw *framework.Framework
 	var issueId = "bz12345"
+	var fbcApplicationName = "fbc-pipelines-app-" + util.GenerateRandomString(4)
+	var fbcHotfixAppName = "fbc-hotfix-app-" + util.GenerateRandomString(4)
+	var fbcComponentName = "fbc-pipelines-comp-" + util.GenerateRandomString(4)
+	var fbcHotfixCompName = "fbc-hotfix-comp-" + util.GenerateRandomString(4)
+	var fbcReleasePlanName = "fbc-pipelines-rp-" + util.GenerateRandomString(4)
+	var fbcHotfixRPName = "fbc-hotfix-rp-" + util.GenerateRandomString(4)
+	var fbcReleasePlanAdmissionName = "fbc-pipelines-rpa-" + util.GenerateRandomString(4)
+	var fbcHotfixRPAName = "fbc-hotfix-rpa-" + util.GenerateRandomString(4)
+	var fbcEnterpriseContractPolicyName = "fbc-pipelines-policy-" + util.GenerateRandomString(4)
+	var fbcHotfixECPolicyName = "fbc-hotfix-policy-" + util.GenerateRandomString(4)
 
 	AfterEach(framework.ReportFailure(&devFw))
 
@@ -81,6 +83,10 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			Expect(err).NotTo(HaveOccurred())
 			managedNamespace = managedFw.UserNamespace
 
+			// Linking the build secret to the pipeline service account in dev namespace.
+			err = devFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, releasecommon.HacbsReleaseTestsTokenSecret, constants.DefaultPipelineServiceAccount, true)
+			Expect(err).ToNot(HaveOccurred())
+
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcApplicationName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -90,6 +96,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			createFBCReleasePlanAdmission(fbcReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, fbcApplicationName, fbcEnterpriseContractPolicyName, relSvcCatalogPathInRepo, "false", "")
 			component = releasecommon.CreateComponentByCDQ(*devFw, devNamespace, managedNamespace, fbcApplicationName, fbcComponentName, fbcSourceGitURL)
 			createFBCEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
+
 		})
 
 		AfterAll(func() {
@@ -139,7 +146,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcHotfixRPName, devNamespace, fbcHotfixAppName, managedNamespace, "true")
 			Expect(err).NotTo(HaveOccurred())
 
-			createFBCReleasePlanAdmission(fbcHotfixRPAName, *managedFw, devNamespace, managedNamespace,fbcHotfixAppName, fbcHotfixECPolicyName, relSvcCatalogPathInRepo, "true", issueId)
+			createFBCReleasePlanAdmission(fbcHotfixRPAName, *managedFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixECPolicyName, relSvcCatalogPathInRepo, "true", issueId)
 			component = releasecommon.CreateComponentByCDQ(*devFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixCompName, fbcSourceGitURL)
 			createFBCEnterpriseContractPolicy(fbcHotfixECPolicyName, *managedFw, devNamespace, managedNamespace)
 		})
@@ -181,16 +188,20 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw framework.Framework, dev
 	Eventually(func() error {
 		snapshot, err := devFw.AsKubeDeveloper.IntegrationController.GetSnapshot("", buildPr.Name, "", devNamespace)
 		if err != nil {
-			return fmt.Errorf("snapshot %s in namespace %s has not been found yet", snapshot.Name, devNamespace)
+			return fmt.Errorf("snapshot in namespace %s has not been found yet", devNamespace)
 		}
 		releaseCR, err := devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 		if err != nil {
-			return fmt.Errorf("release %s in namespace %s has not been found yet", releaseCR.Name, managedNamespace)
+			return fmt.Errorf("release in namespace %s has not been found yet", managedNamespace)
 		}
 		Expect(err).ShouldNot(HaveOccurred())
 
 		releasePr, err := managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
+		if err != nil {
+			return fmt.Errorf("releasePipelineRun in namespace %s has not been found yet", managedNamespace)
+		}
 		Expect(err).ShouldNot(HaveOccurred())
+
 		if !releasePr.IsDone() {
 			return fmt.Errorf("release pipelinerun %s in namespace %s did not finish yet", releasePr.Name, releasePr.Namespace)
 		}
@@ -203,9 +214,13 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw framework.Framework, dev
 func assertReleaseCRSucceeded(devFw framework.Framework, devNamespace, managedNamespace, fbcAppName string, component *appservice.Component) {
 	Eventually(func() error {
 		buildPr, err := devFw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, fbcAppName, devNamespace, "")
-		Expect(err).ShouldNot(HaveOccurred())
-		snapshot, err := devFw.AsKubeDeveloper.IntegrationController.GetSnapshot("", buildPr.Name , "", devNamespace)
-		Expect(err).ShouldNot(HaveOccurred())
+		if  err != nil {
+			return err
+		}
+		snapshot, err := devFw.AsKubeDeveloper.IntegrationController.GetSnapshot("", buildPr.Name, "", devNamespace)
+		if err != nil {
+			return err
+		}
 		releaseCR, err := devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 		if err != nil {
 			return err
@@ -218,7 +233,7 @@ func assertReleaseCRSucceeded(devFw framework.Framework, devNamespace, managedNa
 	}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed())
 }
 
-func createFBCEnterpriseContractPolicy(fbcECPName string,managedFw framework.Framework, devNamespace, managedNamespace string) {
+func createFBCEnterpriseContractPolicy(fbcECPName string, managedFw framework.Framework, devNamespace, managedNamespace string) {
 	defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
 		Description: "Red Hat's enterprise requirements",
 		PublicKey:   "k8s://openshift-pipelines/public-key",
@@ -228,8 +243,8 @@ func createFBCEnterpriseContractPolicy(fbcECPName string,managedFw framework.Fra
 			Data:   []string{ecPolicyDataBundle, ecPolicyDataPath},
 		}},
 		Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-			Exclude:     []string{"cve", "step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
-			Include:     []string{"minimal"},
+			Exclude: []string{"cve", "step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
+			Include: []string{"minimal", "slsa3"},
 		},
 	}
 
@@ -242,16 +257,16 @@ func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framew
 	var err error
 	data, err := json.Marshal(map[string]interface{}{
 		"fbc": map[string]interface{}{
-			"fromIndex":            constants.FromIndex,
-			"targetIndex":          constants.TargetIndex,
-			"binaryImage":          constants.BinaryImage,
-			"publishingCredentials": "fbc-preview-publishing-credentials",
-			"iibServiceConfigSecret": "iib-preview-services-config",
-			"iibOverwriteFromIndexCredential": "iib-preview-overwritefromimage-credential",
-			"requestUpdateTimeout": "420",
-			"buildTimeoutSeconds":  "480",
-			"hotfix": hotfix,
-			"issueId": issueId,
+			"fromIndex":                       constants.FromIndex,
+			"targetIndex":                     constants.TargetIndex,
+			"binaryImage":                     constants.BinaryImage,
+			"publishingCredentials":           "fbc-preview-publishing-credentials",
+			"iibServiceConfigSecret":          "iib-preview-services-config",
+			"iibOverwriteFromIndexCredential": "iib-overwrite-fromimage-credentials",
+			"requestUpdateTimeout":            "420",
+			"buildTimeoutSeconds":             "480",
+			"hotfix":                          hotfix,
+			"issueId":                         issueId,
 		},
 		"sign": map[string]interface{}{
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",

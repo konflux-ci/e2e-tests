@@ -24,7 +24,7 @@ const (
 
 	ReleaseCreationTimeout              = 5 * time.Minute
 	ReleasePipelineRunCreationTimeout   = 10 * time.Minute
-	ReleasePipelineRunCompletionTimeout = 20 * time.Minute
+	ReleasePipelineRunCompletionTimeout = 60 * time.Minute
 	ReleasePlanStatusUpdateTimeout      = 1 * time.Minute
 	DefaultInterval                     = 100 * time.Millisecond
 
@@ -48,5 +48,5 @@ var ManagednamespaceSecret = []corev1.ObjectReference{
 // Pipelines variables
 var (
 	RelSvcCatalogURL      string = utils.GetEnv("RELEASE_SERVICE_CATALOG_URL", "https://github.com/redhat-appstudio/release-service-catalog")
-	RelSvcCatalogRevision string = utils.GetEnv("RELEASE_SERVICE_CATALOG_REVISION", "main")
+	RelSvcCatalogRevision string = utils.GetEnv("RELEASE_SERVICE_CATALOG_REVISION", "development")
 )
