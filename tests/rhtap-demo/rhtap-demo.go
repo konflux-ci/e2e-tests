@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	buildcontrollers "github.com/redhat-appstudio/build-service/controllers"
@@ -151,7 +152,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 						err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("rhtap-demo", namespace, "appstudio-crds-spi")
 						Expect(err).NotTo(HaveOccurred())
 
-						if !CurrentSpecReport().Failed() {
+						if !(strings.EqualFold(utils.GetEnv("E2E_SKIP_CLEANUP", ""), "true") && !CurrentSpecReport().Failed()) {
 							// RHTAPBUGS-978: temporary timeout to 15min
 							if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 15*time.Minute); err != nil {
 								if err := fw.AsKubeAdmin.StoreAllArtifactsForNamespace(namespace); err != nil {
