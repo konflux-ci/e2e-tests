@@ -2,9 +2,6 @@ package jvmbuildservice
 
 import (
 	"context"
-	"strconv"
-	"time"
-
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/reconciler/jbsconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,10 +32,6 @@ func (j *JvmbuildserviceController) CreateJBSConfig(name, namespace string) (*v1
 				"maven-repository-314-jcs":                        "https://packages.jetbrains.team/maven/p/jcs/maven",
 				"maven-repository-315-kotlin-bootstrap":           "https://maven.pkg.jetbrains.space/kotlin/p/kotlin/bootstrap/",
 				"maven-repository-315-kotlin-kotlin-dependencies": "https://maven.pkg.jetbrains.space/kotlin/p/kotlin/kotlin-dependencies"},
-			ImageRegistry: v1alpha1.ImageRegistry{
-				Host:       "quay.io",
-				PrependTag: strconv.FormatInt(time.Now().UnixMilli(), 10),
-			},
 			CacheSettings: v1alpha1.CacheSettings{
 				RequestMemory: "256Mi",
 				RequestCPU:    "100m",
