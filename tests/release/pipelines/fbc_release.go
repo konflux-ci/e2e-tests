@@ -214,7 +214,7 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw framework.Framework, dev
 func assertReleaseCRSucceeded(devFw framework.Framework, devNamespace, managedNamespace, fbcAppName string, component *appservice.Component) {
 	Eventually(func() error {
 		buildPr, err := devFw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, fbcAppName, devNamespace, "")
-		if  err != nil {
+		if err != nil {
 			return err
 		}
 		snapshot, err := devFw.AsKubeDeveloper.IntegrationController.GetSnapshot("", buildPr.Name, "", devNamespace)

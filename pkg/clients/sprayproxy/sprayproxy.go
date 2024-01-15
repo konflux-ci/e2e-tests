@@ -26,7 +26,7 @@ func NewSprayProxyConfig(url string, token string) (*SprayProxyConfig, error) {
 				},
 			},
 		},
-		Token:   token,
+		Token: token,
 	}, nil
 }
 
@@ -48,7 +48,7 @@ func (s *SprayProxyConfig) UnregisterServer(pacHost string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	result, err := s.sendRequest(http.MethodDelete, bytes.NewReader(bytesData))
 	if err != nil {
 		return "", err
@@ -63,7 +63,6 @@ func (s *SprayProxyConfig) GetServers() (string, error) {
 	}
 	return strings.TrimPrefix(result, "Backend urls:"), nil
 }
-
 
 func (s *SprayProxyConfig) sendRequest(httpMethod string, data io.Reader) (string, error) {
 	requestURL := s.BaseURL + "/backends"
