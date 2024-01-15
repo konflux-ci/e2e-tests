@@ -121,9 +121,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 		It("checks for deploymentTargetClaim after Ephemeral env has been created", func() {
 			Eventually(func() error {
 				dtcl, err = f.AsKubeDeveloper.GitOpsController.GetDeploymentTargetClaimsList(testNamespace)
-				if err != nil {
-					return fmt.Errorf("failed to find deploymentTargetClaim: %w", err)
-				}
 				Expect(err).ToNot(HaveOccurred())
 				if len(dtcl.Items) == 0 {
 					return fmt.Errorf("no DeploymentTargetClaim is found")
@@ -266,13 +263,15 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 			})
 		})
 
-		It("creates a new IntegrationTestScenario with ephemeral environment", func() {
+		// skipped due to RHTAPBUGS-1051
+		It("creates a new IntegrationTestScenario with ephemeral environment", Pending, func() {
 			var err error
 			newIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenarioWithEnvironment(applicationName, testNamespace, gitURL, revisionForNBE, pathInRepoForNBE, userPickedEnvironment)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
-		It("updates the Snapshot with the re-run label for the new scenario", FlakeAttempts(3), func() {
+		// skipped due to RHTAPBUGS-1051
+		It("updates the Snapshot with the re-run label for the new scenario", Pending, FlakeAttempts(3), func() {
 			updatedSnapshot := snapshot.DeepCopy()
 			err := metadata.AddLabels(updatedSnapshot, map[string]string{snapshotRerunLabel: newIntegrationTestScenario.Name})
 			Expect(err).ShouldNot(HaveOccurred())
@@ -280,7 +279,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 			Expect(metadata.GetLabelsWithPrefix(updatedSnapshot, snapshotRerunLabel)).NotTo(BeEmpty())
 		})
 
-		When("An snapshot is updated with a re-run label for a given scenario", func() {
+		// skipped due to RHTAPBUGS-1051
+		When("An snapshot is updated with a re-run label for a given scenario", Pending, func() {
 			It("checks if the re-run label was removed from the Snapshot", func() {
 				Eventually(func() error {
 					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)

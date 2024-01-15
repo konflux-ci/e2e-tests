@@ -291,7 +291,7 @@ func (ci CI) TestE2E() error {
 }
 
 func RunE2ETests() error {
-	labelFilter := utils.GetEnv("E2E_TEST_SUITE_LABEL", "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines")
+	labelFilter := utils.GetEnv("E2E_TEST_SUITE_LABEL", "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines && !verify-stage")
 	return runTests(labelFilter, "e2e-report.xml")
 }
 
@@ -494,8 +494,14 @@ func (ci CI) setRequiredEnvVars() error {
 			envVarPrefix := "RELEASE_SERVICE"
 			// "rehearse" jobs metadata are not relevant for testing
 			if !strings.Contains(jobName, "rehearse") {
-				os.Setenv(fmt.Sprintf("%s_CATALOG_URL", envVarPrefix), fmt.Sprintf("https://github.com/%s/%s", pr.Organization, pr.RepoName))
+				os.Setenv(fmt.Sprintf("%s_CATALOG_URL", envVarPrefix), fmt.Sprintf("https://github.com/%s/%s", pr.RemoteName, pr.RepoName))
 				os.Setenv(fmt.Sprintf("%s_CATALOG_REVISION", envVarPrefix), pr.CommitSHA)
+			}
+			if os.Getenv("REL_IMAGE_CONTROLLER_QUAY_ORG") != "" {
+				os.Setenv("IMAGE_CONTROLLER_QUAY_ORG", os.Getenv("REL_IMAGE_CONTROLLER_QUAY_ORG"))
+			}
+			if os.Getenv("REL_IMAGE_CONTROLLER_QUAY_TOKEN") != "" {
+				os.Setenv("IMAGE_CONTROLLER_QUAY_TOKEN", os.Getenv("REL_IMAGE_CONTROLLER_QUAY_TOKEN"))
 			}
 			os.Setenv("E2E_TEST_SUITE_LABEL", "release-pipelines")
 		} else { // openshift/release rehearse job for e2e-tests/infra-deployments repos

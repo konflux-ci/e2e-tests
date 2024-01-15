@@ -8,6 +8,9 @@ type TestSpec struct {
 	// Indicate if a test can be skipped, by default is true
 	Skip bool `yaml:"skip,omitempty"`
 
+	// Indicate if a test is to be run against stage
+	Stage bool `yaml:"stage,omitempty"`
+
 	// Name of the application created in the cluster
 	ApplicationName string `yaml:"applicationName"`
 

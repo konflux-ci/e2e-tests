@@ -68,14 +68,14 @@ var (
 	DeploymentSucceededTimeMaxPerThread                  []time.Duration
 	IntegrationTestsPipelineRunSucceededTimeMaxPerThread []time.Duration
 
-	UserCreationTimeSumPerThread         []time.Duration
-	ApplicationCreationTimeSumPerThread  []time.Duration
-	ItsCreationTimeSumPerThread          []time.Duration
-	CDQCreationTimeSumPerThread          []time.Duration
-	ComponentCreationTimeSumPerThread    []time.Duration
-	PipelineRunSucceededTimeSumPerThread []time.Duration
-	PipelineRunFailedTimeSumPerThread    []time.Duration
-	PipelineRunWaitTimeForPVCSumPerThread[]time.Duration
+	UserCreationTimeSumPerThread          []time.Duration
+	ApplicationCreationTimeSumPerThread   []time.Duration
+	ItsCreationTimeSumPerThread           []time.Duration
+	CDQCreationTimeSumPerThread           []time.Duration
+	ComponentCreationTimeSumPerThread     []time.Duration
+	PipelineRunSucceededTimeSumPerThread  []time.Duration
+	PipelineRunFailedTimeSumPerThread     []time.Duration
+	PipelineRunWaitTimeForPVCSumPerThread []time.Duration
 
 	DeploymentSucceededTimeSumPerThread                  []time.Duration
 	DeploymentFailedTimeSumPerThread                     []time.Duration
@@ -201,6 +201,25 @@ type LogData struct {
 	ErrorCounts []ErrorCount      `json:"errorCounts"`
 	Errors      []ErrorOccurrence `json:"errors"`
 	ErrorsTotal int               `json:"errorsTotal"`
+}
+
+type JourneyContext struct {
+	FrameworkMap                 *sync.Map
+	threadsWG                    *sync.WaitGroup
+	innerThreadWG                *sync.WaitGroup
+	ThreadIndex                  int
+	AppStudioUsersBar            *uiprogress.Bar
+	ApplicationsBar              *uiprogress.Bar
+	ItsBar                       *uiprogress.Bar
+	CDQsBar                      *uiprogress.Bar
+	ComponentsBar                *uiprogress.Bar
+	PipelinesBar                 *uiprogress.Bar
+	IntegrationTestsPipelinesBar *uiprogress.Bar
+	DeploymentsBar               *uiprogress.Bar
+	ChUsers                      chan string
+	ChPipelines                  chan string
+	ChIntegrationTestsPipelines  chan string
+	ChDeployments                chan string
 }
 
 func createLogDataJSON(outputFile string, logDataInput LogData) error {
@@ -507,8 +526,28 @@ func setup(cmd *cobra.Command, args []string) {
 	threadsWG = &sync.WaitGroup{}
 	threadsWG.Add(threadCount)
 
-	for thread := 0; thread < threadCount; thread++ {
-		go userJourneyThread(frameworkMap, threadsWG, thread, AppStudioUsersBar, ApplicationsBar, itsBar, CDQsBar, ComponentsBar, PipelinesBar, IntegrationTestsPipelinesBar, DeploymentsBar)
+	for threadIndex := 0; threadIndex < threadCount; threadIndex++ {
+		// Create a new context for each goroutine
+		threadCtx := &JourneyContext{
+			FrameworkMap:                 frameworkMap,
+			threadsWG:                    threadsWG,
+			innerThreadWG:                new(sync.WaitGroup),
+			ThreadIndex:                  threadIndex,
+			AppStudioUsersBar:            AppStudioUsersBar,
+			ApplicationsBar:              ApplicationsBar,
+			ItsBar:                       itsBar,
+			CDQsBar:                      CDQsBar,
+			ComponentsBar:                ComponentsBar,
+			PipelinesBar:                 PipelinesBar,
+			IntegrationTestsPipelinesBar: IntegrationTestsPipelinesBar,
+			DeploymentsBar:               DeploymentsBar,
+			ChUsers:                      make(chan string, numberOfUsers),
+			ChPipelines:                  make(chan string, numberOfUsers),
+			ChIntegrationTestsPipelines:  make(chan string, numberOfUsers),
+			ChDeployments:                make(chan string, numberOfUsers),
+		}
+
+		go userJourneyThread(threadCtx)
 	}
 
 	threadsWG.Wait()
@@ -880,46 +919,33 @@ func tryNewFramework(username string, user loadtestUtils.User, timeout time.Dura
 	return ret, err
 }
 
-func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, threadIndex int, usersBar *uiprogress.Bar, applicationsBar *uiprogress.Bar, itsBar *uiprogress.Bar, cdqsBar *uiprogress.Bar, componentsBar *uiprogress.Bar, pipelinesBar *uiprogress.Bar, integrationTestsPipelinesBar *uiprogress.Bar, deploymentsBar *uiprogress.Bar) {
-	chUsers := make(chan string, numberOfUsers)
-	chPipelines := make(chan string, numberOfUsers)
-	chIntegrationTestsPipelines := make(chan string, numberOfUsers)
-	chDeployments := make(chan string, numberOfUsers)
+type Handler interface {
+	SetNext(handler Handler)
+	Handle(ctx *JourneyContext)
+}
 
-	defer threadWaitGroup.Done()
-	var wg *sync.WaitGroup = &sync.WaitGroup{}
+type BaseHandler struct {
+	next Handler
+}
 
-	if waitPipelines {
-		if waitIntegrationTestsPipelines {
-			if waitDeployments {
-				wg.Add(5)
-			} else {
-				wg.Add(4)
-			}
-		} else {
-			wg.Add(3)
-		}
-	} else {
-		wg.Add(2)
+func (h *BaseHandler) SetNext(handler Handler) {
+	h.next = handler
+}
+
+func (h *BaseHandler) Handle(ctx *JourneyContext) {
+	if h.next != nil {
+		h.next.Handle(ctx)
 	}
+}
 
-	// reduce the nested if blocks - SonarCloud suggestion
-	/*
-		addValue := 2
-		if waitPipelines {
-			addValue = 3
-			if waitIntegrationTestsPipelines {
-				addValue = 4
-				if waitDeployments {
-					addValue = 5
-				}
-			}
-		}
-		wg.Add(addValue)
-	*/
+type ConcreteHandlerUsers struct {
+	BaseHandler
+}
 
+func (h *ConcreteHandlerUsers) Handle(ctx *JourneyContext) {
 	go func() {
-		defer wg.Done()
+		defer ctx.innerThreadWG.Done()
+
 		for userIndex := 1; userIndex <= numberOfUsers; userIndex++ {
 			startTime := time.Now()
 
@@ -927,16 +953,16 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			if randomString {
 				// Create a 5 characters wide random string to be added to username (https://issues.redhat.com/browse/RHTAP-1338)
 				randomStr := randomStringFromCharset(5)
-				username = fmt.Sprintf("%s-%s-%04d", usernamePrefix, randomStr, threadIndex*numberOfUsers+userIndex)
+				username = fmt.Sprintf("%s-%s-%04d", usernamePrefix, randomStr, ctx.ThreadIndex*numberOfUsers+userIndex)
 			} else {
-				username = fmt.Sprintf("%s-%04d", usernamePrefix, threadIndex*numberOfUsers+userIndex)
+				username = fmt.Sprintf("%s-%04d", usernamePrefix, ctx.ThreadIndex*numberOfUsers+userIndex)
 			}
 
 			var user loadtestUtils.User
 			var framework *framework.Framework
 			var err error
 			if stage {
-				user = selectedUsers[threadIndex*numberOfUsers+userIndex-1]
+				user = selectedUsers[ctx.ThreadIndex*numberOfUsers+userIndex-1]
 				username = user.Username
 				framework, err = tryNewFramework(username, user, 60*time.Minute)
 			} else {
@@ -944,34 +970,45 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			}
 			if err != nil {
 				logError(1, fmt.Sprintf("Unable to provision user '%s': %v", username, err))
-				FailedUserCreationsPerThread[threadIndex] += 1
+				FailedUserCreationsPerThread[ctx.ThreadIndex] += 1
 				MetricsWrapper(MetricsController, metricsConstants.CollectorUsers, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedUserCreationsCounter)
-				increaseBar(usersBar, usersBarMutex)
+				increaseBar(ctx.AppStudioUsersBar, usersBarMutex)
 				continue
 			} else {
 				frameworkMap.Store(username, framework)
 			}
 
-			chUsers <- username
+			ctx.ChUsers <- username
 
 			userCreationTime := time.Since(startTime)
-			UserCreationTimeSumPerThread[threadIndex] += userCreationTime
+			UserCreationTimeSumPerThread[ctx.ThreadIndex] += userCreationTime
 			MetricsWrapper(MetricsController, metricsConstants.CollectorUsers, metricsConstants.MetricTypeGuage, metricsConstants.MetricUserCreationTimeGauge, userCreationTime.Seconds())
-			if userCreationTime > UserCreationTimeMaxPerThread[threadIndex] {
-				UserCreationTimeMaxPerThread[threadIndex] = userCreationTime
+			if userCreationTime > UserCreationTimeMaxPerThread[ctx.ThreadIndex] {
+				UserCreationTimeMaxPerThread[ctx.ThreadIndex] = userCreationTime
 			}
 
-			SuccessfulUserCreationsPerThread[threadIndex] += 1
+			SuccessfulUserCreationsPerThread[ctx.ThreadIndex] += 1
 			MetricsWrapper(MetricsController, metricsConstants.CollectorUsers, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulUserCreationsCounter)
-			increaseBar(usersBar, usersBarMutex)
+			increaseBar(ctx.AppStudioUsersBar, usersBarMutex)
 		}
-		close(chUsers)
+		close(ctx.ChUsers)
 	}()
 
-	go func() {
-		defer wg.Done()
+	// After calling ConcreteHandlerUsers's logic, trigger the next handler in a new goroutine
+	if h.next != nil {
+		h.next.Handle(ctx)
+	}
+}
 
-		for username := range chUsers {
+type ConcreteHandlerResources struct {
+	BaseHandler
+}
+
+func (h *ConcreteHandlerResources) Handle(ctx *JourneyContext) {
+	go func() {
+		defer ctx.innerThreadWG.Done()
+
+		for username := range ctx.ChUsers {
 			framework := frameworkForUser(username)
 			if framework == nil {
 				logError(2, fmt.Sprintf("Framework not found for username %s", username))
@@ -979,393 +1016,440 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			}
 			usernamespace := framework.UserNamespace
 
-			ApplicationName := fmt.Sprintf("%s-app", username)
-			startTimeForApplication := time.Now()
-			app, err := framework.AsKubeDeveloper.HasController.CreateApplicationWithTimeout(ApplicationName, usernamespace, 60*time.Minute)
-			applicationCreationTime := time.Since(startTimeForApplication)
-			if err != nil {
-				logError(3, fmt.Sprintf("Unable to create the Application %s: %v", ApplicationName, err))
-				FailedApplicationCreationsPerThread[threadIndex] += 1
-				MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedApplicationCreationCounter)
-				increaseBar(applicationsBar, applicationsBarMutex)
+			// Handle application creation and check for success
+			if !h.handleApplicationCreation(ctx, framework, username, usernamespace) {
+				// If application creation failed, continue with the next user
 				continue
 			}
 
-			ApplicationCreationTimeSumPerThread[threadIndex] += applicationCreationTime
-			MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeGuage, metricsConstants.MetricApplicationCreationTimeGauge, applicationCreationTime.Seconds())
-			if applicationCreationTime > ApplicationCreationTimeMaxPerThread[threadIndex] {
-				ApplicationCreationTimeMaxPerThread[threadIndex] = applicationCreationTime
-			}
-
-			// Wait for
-			// 1. our application was created (condition.Type == "Created" && condition.Status == "True")
-			// or
-			// 2. our application to be in error (condition.Status == "True" && (strings.HasPrefix(condition.Type, "Error") || strings.HasSuffix(condition.Type, "Error"))
-			applicationValidationInterval := time.Second * 20
-			applicationValidationTimeout := time.Minute * 15
-
-			var conditionError error
-
-			if err = utils.WaitUntilWithInterval(func() (done bool, err error) {
-				app, err = framework.AsKubeDeveloper.HasController.GetApplication(ApplicationName, usernamespace)
-				if err != nil {
-					// Return an error immediately if we cannot fetch the scenarios
-					return false, fmt.Errorf("unable to get created application %s in namespace %s: %v", ApplicationName, usernamespace, err)
-				}
-
-				conditionError = nil // Reset the condition error
-				if len(app.Status.Conditions) == 0 {
-					// store the error in conditionError
-					conditionError = fmt.Errorf("application %s has 0 status conditions", ApplicationName)
-					return false, nil // Continue polling
-				}
-				creationTimestamp := app.ObjectMeta.CreationTimestamp.Time
-
-				for _, condition := range app.Status.Conditions {
-					if condition.Type == "Created" && condition.Status == "True" {
-						lastTransitionTime := condition.LastTransitionTime.Time
-						// Since we have a skewed time between the clocks of the test machine and the cluster,
-						//  we shall calculate applicationActualCreationTimeInSeconds as below:
-						applicationActualCreationTimeInSeconds := CalculateActualCreationTimeInSeconds(lastTransitionTime, creationTimestamp, applicationCreationTime)
-						MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualApplicationCreationTimeGauge, applicationActualCreationTimeInSeconds)
-						SuccessfulApplicationCreationsPerThread[threadIndex] += 1
-						MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulApplicationCreationCounter)
-						increaseBar(applicationsBar, applicationsBarMutex)
-						return true, nil
-					}
-
-					// Error indicators for various CRs besides snapshotenvironmentbindings.json
-					// .status.conditions array has a .status of "True" and a .type that ends or starts with "Error"
-					if condition.Status == "True" && (strings.HasPrefix(condition.Type, "Error") || strings.HasSuffix(condition.Type, "Error")) {
-						return true, fmt.Errorf("application %s is in Error state: %s", ApplicationName, condition.Message)
-					}
-				}
-
-				return false, nil // Indicate to continue polling
-			}, applicationValidationInterval, applicationValidationTimeout); err != nil {
-				// If an error is returned, handle it immediately
-				logError(4, fmt.Sprintf("Failed to validate Application %s for username %s due to an error: %v \n", ApplicationName, username, err))
-				FailedApplicationCreationsPerThread[threadIndex] += 1
-				MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedApplicationCreationCounter)
-				increaseBar(applicationsBar, applicationsBarMutex)
-			} else if conditionError != nil {
-				// If no error is returned but conditionError is set, it means the timeout has occurred
-				logError(5, fmt.Sprintf("Failed to validate Application %s for username %s due to an error: %v \n", ApplicationName, username, conditionError.Error()))
-				FailedApplicationCreationsPerThread[threadIndex] += 1
-				MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedApplicationCreationCounter)
-				increaseBar(applicationsBar, applicationsBarMutex)
-			}
-
-			/*
-				This part adds the Integration test scenario part
-				It's considered also as part of the resources creation since Integration test scenarios are resources as well
-			*/
-			var integrationTestScenario *integrationv1beta1.IntegrationTestScenario
-
-			startTimeForIts := time.Now()
-			integrationTestScenario, err = framework.AsKubeDeveloper.IntegrationController.CreateIntegrationTestScenario_beta1(ApplicationName, usernamespace, testScenarioGitURL, testScenarioRevision, testScenarioPathInRepo)
-			itsCreationTime := time.Since(startTimeForIts)
-			if err != nil {
-				logError(6, fmt.Sprintf("Unable to create integrationTestScenario for Application %s: %v \n", ApplicationName, err))
-				FailedItsCreationsPerThread[threadIndex] += 1
-				MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedIntegrationTestSenarioCreationCounter)
-				increaseBar(itsBar, itsBarMutex)
+			// Handle Integration Test Scenario Creation
+			if !h.handleIntegrationTestScenarioCreation(ctx, framework, username, usernamespace) {
+				// If its creation failed, continue with the next user
 				continue
 			}
 
-			itsName := integrationTestScenario.Name
-
-			ItsCreationTimeSumPerThread[threadIndex] += itsCreationTime
-			MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeGuage, metricsConstants.MetricIntegrationTestSenarioCreationTimeGauge, itsCreationTime.Seconds())
-			if itsCreationTime > ItsCreationTimeMaxPerThread[threadIndex] {
-				ItsCreationTimeMaxPerThread[threadIndex] = itsCreationTime
-			}
-
-			// Wait for
-			// 1. our its to be ready (condition.Type == "IntegrationTestScenarioValid" && condition.Status == "True")
-			// or
-			// 2. our its to be in error (condition.Status == "True" && (strings.HasPrefix(condition.Type, "Error") || strings.HasSuffix(condition.Type, "Error"))
-			integrationTestScenarioRepoInterval := time.Second * 20
-			integrationTestScenarioValidationTimeout := time.Minute * 30
-
-			if err = utils.WaitUntilWithInterval(func() (done bool, err error) {
-				integrationTestScenarios, err := framework.AsKubeDeveloper.IntegrationController.GetIntegrationTestScenarios(ApplicationName, usernamespace)
-				if err != nil {
-					// Return an error immediately if we cannot fetch the scenarios
-					return false, fmt.Errorf("unable to get created integrationTestScenario %s for Application %s: %v", itsName, ApplicationName, err)
-				}
-
-				conditionError = nil // Reset the condition error
-				for _, testScenario := range *integrationTestScenarios {
-					if testScenario.Name == itsName {
-						if len(testScenario.Status.Conditions) == 0 {
-							// store the error in conditionError
-							conditionError = fmt.Errorf("integrationTestScenario %s has 0 status conditions", testScenario.Name)
-							return false, nil // Continue polling
-						}
-						creationTimestamp := testScenario.ObjectMeta.CreationTimestamp.Time
-
-						for _, condition := range testScenario.Status.Conditions {
-							if condition.Type == "IntegrationTestScenarioValid" && condition.Status == "True" {
-								lastTransitionTime := condition.LastTransitionTime.Time
-								// itsActualCreationTime := lastTransitionTime.Sub(startTimeForIts)
-								// MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualIntegrationTestSenarioCreationTimeGauge, itsActualCreationTime.Seconds())
-
-								// Since we have a skewed time between the clocks of the test machine and the cluster,
-								//  we shall calculate itsActualCreationTime as below:
-								itsActualCreationTimeInSeconds := CalculateActualCreationTimeInSeconds(lastTransitionTime, creationTimestamp, itsCreationTime)
-								MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualIntegrationTestSenarioCreationTimeGauge, itsActualCreationTimeInSeconds)
-								SuccessfulItsCreationsPerThread[threadIndex] += 1
-								MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulIntegrationTestSenarioCreationCounter)
-
-								increaseBar(itsBar, itsBarMutex)
-								userTestScenarioMap.Store(username, itsName)
-								return true, nil
-							}
-
-							// Error indicators for various CRs besides snapshotenvironmentbindings.json
-							// .status.conditions array has a .status of "True" and a .type that ends or starts with "Error"
-							if condition.Status == "True" && (strings.HasPrefix(condition.Type, "Error") || strings.HasSuffix(condition.Type, "Error")) {
-								return true, fmt.Errorf("integrationTestScenario %s is in Error state: %s", testScenario.Name, condition.Message)
-							}
-						}
-					}
-				}
-
-				return false, nil // Indicate to continue polling
-			}, integrationTestScenarioRepoInterval, integrationTestScenarioValidationTimeout); err != nil {
-				// If an error is returned, handle it immediately
-				logError(7, fmt.Sprintf("Failed to validate integrationTestScenario for Application %s due to an error: %v \n", ApplicationName, err))
-				FailedItsCreationsPerThread[threadIndex] += 1
-				MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedIntegrationTestSenarioCreationCounter)
-				increaseBar(itsBar, itsBarMutex)
-			} else if conditionError != nil {
-				// If no error is returned but conditionError is set, it means the timeout has occurred
-				logError(8, fmt.Sprintf("Failed to validate integrationTestScenario for Application %s due to an error: %v \n", ApplicationName, conditionError.Error()))
-				FailedItsCreationsPerThread[threadIndex] += 1
-				MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedIntegrationTestSenarioCreationCounter)
-				increaseBar(itsBar, itsBarMutex)
-			}
-
-			// CDQ
-			ComponentDetectionQueryName := fmt.Sprintf("%s-cdq", username)
-			startTimeForCDQ := time.Now()
-			cdq, err := framework.AsKubeDeveloper.HasController.CreateComponentDetectionQueryWithTimeout(ComponentDetectionQueryName, usernamespace, componentRepoUrl, "", "", "", false, 60*time.Minute)
-			cdqCreationTime := time.Since(startTimeForCDQ)
-
-			if err != nil {
-				logError(9, fmt.Sprintf("Unable to create ComponentDetectionQuery %s: %v", ComponentDetectionQueryName, err))
-				FailedCDQCreationsPerThread[threadIndex] += 1
-				MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
-				increaseBar(cdqsBar, cdqsBarMutex)
-				continue
-			}
-			if cdq.Name != ComponentDetectionQueryName {
-				logError(10, fmt.Sprintf("Actual cdq name (%s) does not match expected (%s): %v", cdq.Name, ComponentDetectionQueryName, err))
-				FailedCDQCreationsPerThread[threadIndex] += 1
-				MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
-				increaseBar(cdqsBar, cdqsBarMutex)
-				continue
-			}
-			if len(cdq.Status.ComponentDetected) > 1 {
-				logError(11, fmt.Sprintf("cdq (%s) detected more than 1 component", cdq.Name))
-				FailedCDQCreationsPerThread[threadIndex] += 1
-				MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
-				increaseBar(cdqsBar, cdqsBarMutex)
+			// Handle Component Detection Query Creation
+			blnOK, cdq := h.handleCDQCreation(ctx, framework, username, usernamespace)
+			if !blnOK {
+				// If CDQ creation failed, continue with the next user
 				continue
 			}
 
-			CDQCreationTimeSumPerThread[threadIndex] += cdqCreationTime
-			MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeGuage, metricsConstants.MetricCDQCreationTimeGauge, cdqCreationTime.Seconds())
-			if cdqCreationTime > CDQCreationTimeMaxPerThread[threadIndex] {
-				CDQCreationTimeMaxPerThread[threadIndex] = cdqCreationTime
-			}
-
-			// Wait for
-			// 1. our CDQ was created (condition.Type == "Completed" && condition.Status == "True")
-			// or
-			// 2. our CDQ to be in error (condition.Status == "True" && (strings.HasPrefix(condition.Type, "Error") || strings.HasSuffix(condition.Type, "Error"))
-			cdqValidationInterval := time.Second * 20
-			cdqValidationTimeout := time.Minute * 15
-
-			if err = utils.WaitUntilWithInterval(func() (done bool, err error) {
-				cdq, err = framework.AsKubeDeveloper.HasController.GetComponentDetectionQuery(ComponentDetectionQueryName, usernamespace)
-				if err != nil {
-					// Return an error immediately if we cannot fetch the cdq
-					return false, fmt.Errorf("unable to get created cdq %s in namespace %s: %v", ComponentDetectionQueryName, usernamespace, err)
-				}
-
-				conditionError = nil // Reset the condition error
-				if len(cdq.Status.Conditions) == 0 {
-					// store the error in conditionError
-					conditionError = fmt.Errorf("cdq %s has 0 status conditions", ComponentDetectionQueryName)
-					return false, nil // Continue polling
-				}
-				creationTimestamp := cdq.ObjectMeta.CreationTimestamp.Time
-
-				for _, condition := range cdq.Status.Conditions {
-					if condition.Type == "Completed" && condition.Status == "True" {
-						lastTransitionTime := condition.LastTransitionTime.Time
-						// Since we have a skewed time between the clocks of the test machine and the cluster,
-						//  we shall calculate cdqActualCreationTimeInSeconds as below:
-						cdqActualCreationTimeInSeconds := CalculateActualCreationTimeInSeconds(lastTransitionTime, creationTimestamp, cdqCreationTime)
-						MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualCDQCreationTimeGauge, cdqActualCreationTimeInSeconds)
-						SuccessfulCDQCreationsPerThread[threadIndex] += 1
-						MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulCDQCreationCounter)
-						increaseBar(cdqsBar, cdqsBarMutex)
-						return true, nil
-					}
-
-					// Error indicators for various CRs besides snapshotenvironmentbindings.json
-					// .status.conditions array has a .status of "True" and a .type that ends or starts with "Error"
-					if condition.Status == "True" && (strings.HasPrefix(condition.Type, "Error") || strings.HasSuffix(condition.Type, "Error")) {
-						return true, fmt.Errorf("cdq %s is in Error state: %s", ComponentDetectionQueryName, condition.Message)
-					}
-				}
-
-				return false, nil // Indicate to continue polling
-			}, cdqValidationInterval, cdqValidationTimeout); err != nil {
-				// If an error is returned, handle it immediately
-				logError(12, fmt.Sprintf("Failed to validate cdq %s for username %s due to an error: %v \n", ComponentDetectionQueryName, username, err))
-				FailedCDQCreationsPerThread[threadIndex] += 1
-				MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
-				increaseBar(cdqsBar, cdqsBarMutex)
-			} else if conditionError != nil {
-				// If no error is returned but conditionError is set, it means the timeout has occurred
-				logError(13, fmt.Sprintf("Failed to validate cdq %s for username %s due to an error: %v \n", ComponentDetectionQueryName, username, conditionError.Error()))
-				FailedCDQCreationsPerThread[threadIndex] += 1
-				MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
-				increaseBar(cdqsBar, cdqsBarMutex)
-			}
-
-			// Component
-			var (
-				componentValidationInterval = time.Second * 20
-				componentValidationTimeout  = time.Minute * 15
-				component                   *appstudioApi.Component
-				componentName               string
-				startTimeForComponent       time.Time
-				componentCreationTime       time.Duration
-				shouldContinue              bool
-			)
-
-			for _, compStub := range cdq.Status.ComponentDetected {
-				startTimeForComponent = time.Now()
-				component, err = framework.AsKubeDeveloper.HasController.CreateComponent(compStub.ComponentStub, usernamespace, "", "", ApplicationName, pipelineSkipInitialChecks, map[string]string{})
-				componentCreationTime = time.Since(startTimeForComponent)
-
-				if err != nil {
-					logError(14, fmt.Sprintf("Unable to create the Component %s: %v", compStub.ComponentStub.ComponentName, err))
-					FailedComponentCreationsPerThread[threadIndex] += 1
-					MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedComponentCreationCounter)
-					increaseBar(componentsBar, componentsBarMutex)
-					shouldContinue = true
-					break // Exit the inner loop
-				}
-				if component.Name != compStub.ComponentStub.ComponentName {
-					logError(15, fmt.Sprintf("Actual component name (%s) does not match expected (%s): %v", component.Name, compStub.ComponentStub.ComponentName, err))
-					FailedComponentCreationsPerThread[threadIndex] += 1
-					MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedComponentCreationCounter)
-					increaseBar(componentsBar, componentsBarMutex)
-					shouldContinue = true
-					break // Exit the inner loop
-				}
-				componentName = component.Name
-
-				ComponentCreationTimeSumPerThread[threadIndex] += componentCreationTime
-				MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeGuage, metricsConstants.MetricComponentCreationTimeGauge, componentCreationTime.Seconds())
-				if componentCreationTime > ComponentCreationTimeMaxPerThread[threadIndex] {
-					ComponentCreationTimeMaxPerThread[threadIndex] = componentCreationTime
-				}
-			}
-
-			// Continue the outer loop if the component could not be created successfully
-			if shouldContinue {
+			// Handle Component Creation
+			if !h.handleComponentCreation(ctx, framework, username, usernamespace, cdq) {
+				// If Component creation failed, continue with the next user
 				continue
-			}
-
-			// New for Component
-			// Wait for
-			// 1. our Component was created (condition.Type == "Created" && condition.Status == "True")
-			// or
-			// 2. our Component to be in error (condition.Status == "True" && (strings.HasPrefix(condition.Type, "Error") || strings.HasSuffix(condition.Type, "Error"))
-
-			if err = utils.WaitUntilWithInterval(func() (done bool, err error) {
-				component, err = framework.AsKubeDeveloper.HasController.GetComponent(componentName, usernamespace)
-				if err != nil {
-					// Return an error immediately if we cannot fetch the scenarios
-					return false, fmt.Errorf("unable to get created component %s in namespace %s: %v", componentName, usernamespace, err)
-				}
-
-				conditionError = nil // Reset the condition error
-				if len(component.Status.Conditions) == 0 {
-					// store the error in conditionError
-					conditionError = fmt.Errorf("component %s has 0 status conditions", componentName)
-					return false, nil // Continue polling
-				}
-				creationTimestamp := component.ObjectMeta.CreationTimestamp.Time
-
-				for _, condition := range component.Status.Conditions {
-					if condition.Type == "Created" && condition.Status == "True" {
-						lastTransitionTime := condition.LastTransitionTime.Time
-						// Since we have a skewed time between the clocks of the test machine and the cluster,
-						//  we shall calculate componentActualCreationTimeInSeconds as below:
-						// componentActualCreationTimeInSeconds := componentCreationTime.Seconds() + lastTransitionTime.Sub(creationTimestamp).Seconds()
-						componentActualCreationTimeInSeconds := CalculateActualCreationTimeInSeconds(lastTransitionTime, creationTimestamp, componentCreationTime)
-						MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualComponentCreationTimeGauge, componentActualCreationTimeInSeconds)
-						SuccessfulComponentCreationsPerThread[threadIndex] += 1
-						MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulComponentCreationCounter)
-						userComponentMap.Store(username, componentName)
-						increaseBar(componentsBar, componentsBarMutex)
-						chPipelines <- username
-						return true, nil
-					}
-
-					// Error indicators for various CRs besides snapshotenvironmentbindings.json
-					// .status.conditions array has a .status of "True" and a .type that ends or starts with "Error"
-					if condition.Status == "True" && (strings.HasPrefix(condition.Type, "Error") || strings.HasSuffix(condition.Type, "Error")) {
-						return true, fmt.Errorf("component %s is in Error state: %s", componentName, condition.Message)
-					}
-				}
-
-				return false, nil // Indicate to continue polling
-			}, componentValidationInterval, componentValidationTimeout); err != nil {
-				// If an error is returned, handle it immediately
-				logError(16, fmt.Sprintf("Failed to validate component %s for username %s due to an error: %v \n", componentName, username, err))
-				FailedComponentCreationsPerThread[threadIndex] += 1
-				MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedComponentCreationCounter)
-				increaseBar(componentsBar, componentsBarMutex)
-			} else if conditionError != nil {
-				// If no error is returned but conditionError is set, it means the timeout has occurred
-				logError(17, fmt.Sprintf("Failed to validate component %s for username %s due to an error: %v \n", componentName, username, conditionError.Error()))
-				FailedComponentCreationsPerThread[threadIndex] += 1
-				MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedComponentCreationCounter)
-				increaseBar(componentsBar, componentsBarMutex)
 			}
 		}
-		close(chPipelines)
+		close(ctx.ChPipelines)
 	}()
 
+	// Trigger the next handler
+	if h.next != nil {
+		h.next.Handle(ctx)
+	}
+}
+
+func (h *ConcreteHandlerResources) handleApplicationCreation(ctx *JourneyContext, framework *framework.Framework, username, usernamespace string) bool {
+	ApplicationName := fmt.Sprintf("%s-app", username)
+	startTimeForApplication := time.Now()
+	app, err := framework.AsKubeDeveloper.HasController.CreateApplicationWithTimeout(ApplicationName, usernamespace, 60*time.Minute)
+	applicationCreationTime := time.Since(startTimeForApplication)
+	if err != nil {
+		logError(3, fmt.Sprintf("Unable to create the Application %s: %v", ApplicationName, err))
+		FailedApplicationCreationsPerThread[ctx.ThreadIndex] += 1
+		MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedApplicationCreationCounter)
+		increaseBar(ctx.ApplicationsBar, applicationsBarMutex)
+		return false
+	}
+
+	ApplicationCreationTimeSumPerThread[ctx.ThreadIndex] += applicationCreationTime
+	MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeGuage, metricsConstants.MetricApplicationCreationTimeGauge, applicationCreationTime.Seconds())
+	if applicationCreationTime > ApplicationCreationTimeMaxPerThread[ctx.ThreadIndex] {
+		ApplicationCreationTimeMaxPerThread[ctx.ThreadIndex] = applicationCreationTime
+	}
+
+	// Wait for
+	// 1. our application was created (condition.Type == "Created" && condition.Status == "True")
+	// or
+	// 2. our application to be in error (condition.Status == "True" && (strings.HasPrefix(condition.Type, "Error") || strings.HasSuffix(condition.Type, "Error"))
+	applicationValidationInterval := time.Second * 20
+	applicationValidationTimeout := time.Minute * 30
+	var conditionError error
+
+	if err = utils.WaitUntilWithInterval(func() (done bool, err error) {
+		app, err = framework.AsKubeDeveloper.HasController.GetApplication(ApplicationName, usernamespace)
+		if err != nil {
+			// Return an error immediately if we cannot fetch the scenarios
+			return false, fmt.Errorf("unable to get created application %s in namespace %s: %v", ApplicationName, usernamespace, err)
+		}
+
+		conditionError = nil // Reset the condition error
+		if len(app.Status.Conditions) == 0 {
+			// store the error in conditionError
+			conditionError = fmt.Errorf("application %s has 0 status conditions", ApplicationName)
+			return false, nil // Continue polling
+		}
+		creationTimestamp := app.ObjectMeta.CreationTimestamp.Time
+
+		for _, condition := range app.Status.Conditions {
+			if condition.Type == "Created" && condition.Status == "True" {
+				lastTransitionTime := condition.LastTransitionTime.Time
+				applicationActualCreationTimeInSeconds := CalculateActualCreationTimeInSeconds(lastTransitionTime, creationTimestamp, applicationCreationTime)
+				MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualApplicationCreationTimeGauge, applicationActualCreationTimeInSeconds)
+				SuccessfulApplicationCreationsPerThread[ctx.ThreadIndex] += 1
+				MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulApplicationCreationCounter)
+				increaseBar(ctx.ApplicationsBar, applicationsBarMutex)
+				return true, nil
+			}
+
+			// Error indicators for various CRs besides snapshotenvironmentbindings.json
+			// .status.conditions array has a .status of "True" and a .type that ends or starts with "Error"
+			if condition.Status == "True" && (strings.HasPrefix(condition.Type, "Error") || strings.HasSuffix(condition.Type, "Error")) {
+				return true, fmt.Errorf("application %s is in Error state: %s", ApplicationName, condition.Message)
+			}
+		}
+		return false, nil // Indicate to continue polling
+	}, applicationValidationInterval, applicationValidationTimeout); err != nil {
+		// If an error is returned, handle it immediately
+		logError(4, fmt.Sprintf("Failed to validate Application %s for username %s due to an error: %v \n", ApplicationName, username, err))
+		FailedApplicationCreationsPerThread[ctx.ThreadIndex] += 1
+		MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedApplicationCreationCounter)
+		increaseBar(ctx.ApplicationsBar, applicationsBarMutex)
+		return false
+	} else if conditionError != nil {
+		// If no error is returned but conditionError is set, it means the timeout has occurred
+		logError(5, fmt.Sprintf("Failed to validate Application %s for username %s due to an error: %v \n", ApplicationName, username, conditionError.Error()))
+		FailedApplicationCreationsPerThread[ctx.ThreadIndex] += 1
+		MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedApplicationCreationCounter)
+		increaseBar(ctx.ApplicationsBar, applicationsBarMutex)
+		return false
+	}
+	return true
+}
+
+// func (h *ConcreteHandlerResources) handleCDQCreation(ctx *JourneyContext, framework *framework.Framework, username, usernamespace string) bool {
+func (h *ConcreteHandlerResources) handleIntegrationTestScenarioCreation(ctx *JourneyContext, framework *framework.Framework, username, usernamespace string) bool {
+	var integrationTestScenario *integrationv1beta1.IntegrationTestScenario
+
+	ApplicationName := fmt.Sprintf("%s-app", username)
+	startTimeForIts := time.Now()
+	integrationTestScenario, err := framework.AsKubeDeveloper.IntegrationController.CreateIntegrationTestScenario_beta1(ApplicationName, usernamespace, testScenarioGitURL, testScenarioRevision, testScenarioPathInRepo)
+	itsCreationTime := time.Since(startTimeForIts)
+	if err != nil {
+		logError(6, fmt.Sprintf("Unable to create integrationTestScenario for Application %s: %v \n", ApplicationName, err))
+		FailedItsCreationsPerThread[ctx.ThreadIndex] += 1
+		MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedIntegrationTestSenarioCreationCounter)
+		increaseBar(ctx.ItsBar, itsBarMutex)
+		return false
+	}
+
+	itsName := integrationTestScenario.Name
+	ItsCreationTimeSumPerThread[ctx.ThreadIndex] += itsCreationTime
+	MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeGuage, metricsConstants.MetricIntegrationTestSenarioCreationTimeGauge, itsCreationTime.Seconds())
+	if itsCreationTime > ItsCreationTimeMaxPerThread[ctx.ThreadIndex] {
+		ItsCreationTimeMaxPerThread[ctx.ThreadIndex] = itsCreationTime
+	}
+
+	// Wait for
+	// 1. our its to be ready (condition.Type == "IntegrationTestScenarioValid" && condition.Status == "True")
+	// or
+	// 2. our its to be in error (condition.Status == "True" && (strings.HasPrefix(condition.Type, "Error") || strings.HasSuffix(condition.Type, "Error"))
+	integrationTestScenarioRepoInterval := time.Second * 20
+	integrationTestScenarioValidationTimeout := time.Minute * 30
+	var conditionError error
+
+	if err = utils.WaitUntilWithInterval(func() (done bool, err error) {
+		integrationTestScenarios, err := framework.AsKubeDeveloper.IntegrationController.GetIntegrationTestScenarios(ApplicationName, usernamespace)
+		if err != nil {
+			// Return an error immediately if we cannot fetch the scenarios
+			return false, fmt.Errorf("unable to get created integrationTestScenario %s for Application %s: %v", itsName, ApplicationName, err)
+		}
+
+		conditionError = nil // Reset the condition error
+		for _, testScenario := range *integrationTestScenarios {
+			if testScenario.Name == itsName {
+				if len(testScenario.Status.Conditions) == 0 {
+					// store the error in conditionError
+					conditionError = fmt.Errorf("integrationTestScenario %s has 0 status conditions", testScenario.Name)
+					return false, nil // Continue polling
+				}
+				creationTimestamp := testScenario.ObjectMeta.CreationTimestamp.Time
+
+				for _, condition := range testScenario.Status.Conditions {
+					if condition.Type == "IntegrationTestScenarioValid" && condition.Status == "True" {
+						lastTransitionTime := condition.LastTransitionTime.Time
+						itsActualCreationTimeInSeconds := CalculateActualCreationTimeInSeconds(lastTransitionTime, creationTimestamp, itsCreationTime)
+						MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualIntegrationTestSenarioCreationTimeGauge, itsActualCreationTimeInSeconds)
+						SuccessfulItsCreationsPerThread[ctx.ThreadIndex] += 1
+						MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulIntegrationTestSenarioCreationCounter)
+
+						increaseBar(ctx.ItsBar, itsBarMutex)
+						userTestScenarioMap.Store(username, itsName)
+						return true, nil
+					}
+
+					// Error indicators for various CRs besides snapshotenvironmentbindings.json
+					// .status.conditions array has a .status of "True" and a .type that ends or starts with "Error"
+					if condition.Status == "True" && (strings.HasPrefix(condition.Type, "Error") || strings.HasSuffix(condition.Type, "Error")) {
+						return true, fmt.Errorf("integrationTestScenario %s is in Error state: %s", testScenario.Name, condition.Message)
+					}
+				}
+			}
+		}
+		return false, nil // Indicate to continue polling
+	}, integrationTestScenarioRepoInterval, integrationTestScenarioValidationTimeout); err != nil {
+		// If an error is returned, handle it immediately
+		logError(7, fmt.Sprintf("Failed to validate integrationTestScenario for Application %s due to an error: %v \n", ApplicationName, err))
+		FailedItsCreationsPerThread[ctx.ThreadIndex] += 1
+		MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedIntegrationTestSenarioCreationCounter)
+		increaseBar(ctx.ItsBar, itsBarMutex)
+		return false
+	} else if conditionError != nil {
+		// If no error is returned but conditionError is set, it means the timeout has occurred
+		logError(8, fmt.Sprintf("Failed to validate integrationTestScenario for Application %s due to an error: %v \n", ApplicationName, conditionError.Error()))
+		FailedItsCreationsPerThread[ctx.ThreadIndex] += 1
+		MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedIntegrationTestSenarioCreationCounter)
+		increaseBar(ctx.ItsBar, itsBarMutex)
+		return false
+	}
+	return true
+}
+
+func (h *ConcreteHandlerResources) handleCDQCreation(ctx *JourneyContext, framework *framework.Framework, username, usernamespace string) (bool, *appstudioApi.ComponentDetectionQuery) {
+	ComponentDetectionQueryName := fmt.Sprintf("%s-cdq", username)
+	startTimeForCDQ := time.Now()
+	cdq, err := framework.AsKubeDeveloper.HasController.CreateComponentDetectionQueryWithTimeout(ComponentDetectionQueryName, usernamespace, componentRepoUrl, "", "", "", false, 60*time.Minute)
+	cdqCreationTime := time.Since(startTimeForCDQ)
+
+	if err != nil {
+		logError(9, fmt.Sprintf("Unable to create ComponentDetectionQuery %s: %v", ComponentDetectionQueryName, err))
+		FailedCDQCreationsPerThread[ctx.ThreadIndex] += 1
+		MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
+		increaseBar(ctx.CDQsBar, cdqsBarMutex)
+		return false, nil
+	}
+	if cdq.Name != ComponentDetectionQueryName {
+		logError(10, fmt.Sprintf("Actual cdq name (%s) does not match expected (%s): %v", cdq.Name, ComponentDetectionQueryName, err))
+		FailedCDQCreationsPerThread[ctx.ThreadIndex] += 1
+		MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
+		increaseBar(ctx.CDQsBar, cdqsBarMutex)
+		return false, nil
+	}
+	if len(cdq.Status.ComponentDetected) > 1 {
+		logError(11, fmt.Sprintf("cdq (%s) detected more than 1 component", cdq.Name))
+		FailedCDQCreationsPerThread[ctx.ThreadIndex] += 1
+		MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
+		increaseBar(ctx.CDQsBar, cdqsBarMutex)
+		return false, nil
+	}
+
+	CDQCreationTimeSumPerThread[ctx.ThreadIndex] += cdqCreationTime
+	MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeGuage, metricsConstants.MetricCDQCreationTimeGauge, cdqCreationTime.Seconds())
+	if cdqCreationTime > CDQCreationTimeMaxPerThread[ctx.ThreadIndex] {
+		CDQCreationTimeMaxPerThread[ctx.ThreadIndex] = cdqCreationTime
+	}
+
+	// Wait for
+	// 1. our CDQ was created (condition.Type == "Completed" && condition.Status == "True")
+	// or
+	// 2. our CDQ to be in error (condition.Status == "True" && (strings.HasPrefix(condition.Type, "Error") || strings.HasSuffix(condition.Type, "Error"))
+	cdqValidationInterval := time.Second * 20
+	cdqValidationTimeout := time.Minute * 30
+	var conditionError error
+
+	if err = utils.WaitUntilWithInterval(func() (done bool, err error) {
+		cdq, err = framework.AsKubeDeveloper.HasController.GetComponentDetectionQuery(ComponentDetectionQueryName, usernamespace)
+		if err != nil {
+			// Return an error immediately if we cannot fetch the cdq
+			return false, fmt.Errorf("unable to get created cdq %s in namespace %s: %v", ComponentDetectionQueryName, usernamespace, err)
+		}
+
+		conditionError = nil // Reset the condition error
+		if len(cdq.Status.Conditions) == 0 {
+			// store the error in conditionError
+			conditionError = fmt.Errorf("cdq %s has 0 status conditions", ComponentDetectionQueryName)
+			return false, nil // Continue polling
+		}
+		creationTimestamp := cdq.ObjectMeta.CreationTimestamp.Time
+
+		for _, condition := range cdq.Status.Conditions {
+			if condition.Type == "Completed" && condition.Status == "True" {
+				lastTransitionTime := condition.LastTransitionTime.Time
+				// Since we have a skewed time between the clocks of the test machine and the cluster,
+				//  we shall calculate cdqActualCreationTimeInSeconds as below:
+				cdqActualCreationTimeInSeconds := CalculateActualCreationTimeInSeconds(lastTransitionTime, creationTimestamp, cdqCreationTime)
+				MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualCDQCreationTimeGauge, cdqActualCreationTimeInSeconds)
+				SuccessfulCDQCreationsPerThread[ctx.ThreadIndex] += 1
+				MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulCDQCreationCounter)
+				increaseBar(ctx.CDQsBar, cdqsBarMutex)
+				return true, nil
+			}
+
+			// Error indicators for various CRs besides snapshotenvironmentbindings.json
+			// .status.conditions array has a .status of "True" and a .type that ends or starts with "Error"
+			if condition.Status == "True" && (strings.HasPrefix(condition.Type, "Error") || strings.HasSuffix(condition.Type, "Error")) {
+				return true, fmt.Errorf("cdq %s is in Error state: %s", ComponentDetectionQueryName, condition.Message)
+			}
+		}
+		return false, nil // Indicate to continue polling
+	}, cdqValidationInterval, cdqValidationTimeout); err != nil {
+		// If an error is returned, handle it immediately
+		logError(12, fmt.Sprintf("Failed to validate cdq %s for username %s due to an error: %v \n", ComponentDetectionQueryName, username, err))
+		FailedCDQCreationsPerThread[ctx.ThreadIndex] += 1
+		MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
+		increaseBar(ctx.CDQsBar, cdqsBarMutex)
+		return false, nil
+	} else if conditionError != nil {
+		// If no error is returned but conditionError is set, it means the timeout has occurred
+		logError(13, fmt.Sprintf("Failed to validate cdq %s for username %s due to an error: %v \n", ComponentDetectionQueryName, username, conditionError.Error()))
+		FailedCDQCreationsPerThread[ctx.ThreadIndex] += 1
+		MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
+		increaseBar(ctx.CDQsBar, cdqsBarMutex)
+		return false, nil
+	}
+	return true, cdq
+}
+
+func (h *ConcreteHandlerResources) handleComponentCreation(ctx *JourneyContext, framework *framework.Framework, username, usernamespace string, cdq *appstudioApi.ComponentDetectionQuery) bool {
+	var (
+		componentValidationInterval = time.Second * 20
+		componentValidationTimeout  = time.Minute * 30
+		component                   *appstudioApi.Component
+		componentName               string
+		startTimeForComponent       time.Time
+		componentCreationTime       time.Duration
+		shouldContinue              bool
+		conditionError              error
+		ApplicationName             = fmt.Sprintf("%s-app", username)
+	)
+
+	for _, compStub := range cdq.Status.ComponentDetected {
+		startTimeForComponent = time.Now()
+		component, err := framework.AsKubeDeveloper.HasController.CreateComponent(compStub.ComponentStub, usernamespace, "", "", ApplicationName, pipelineSkipInitialChecks, map[string]string{})
+		componentCreationTime = time.Since(startTimeForComponent)
+
+		if err != nil {
+			logError(14, fmt.Sprintf("Unable to create the Component %s: %v", compStub.ComponentStub.ComponentName, err))
+			FailedComponentCreationsPerThread[ctx.ThreadIndex] += 1
+			MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedComponentCreationCounter)
+			increaseBar(ctx.ComponentsBar, componentsBarMutex)
+			shouldContinue = true
+			break // Exit the inner loop
+		}
+		if component.Name != compStub.ComponentStub.ComponentName {
+			logError(15, fmt.Sprintf("Actual component name (%s) does not match expected (%s): %v", component.Name, compStub.ComponentStub.ComponentName, err))
+			FailedComponentCreationsPerThread[ctx.ThreadIndex] += 1
+			MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedComponentCreationCounter)
+			increaseBar(ctx.ComponentsBar, componentsBarMutex)
+			shouldContinue = true
+			break // Exit the inner loop
+		}
+		componentName = component.Name
+
+		ComponentCreationTimeSumPerThread[ctx.ThreadIndex] += componentCreationTime
+		MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeGuage, metricsConstants.MetricComponentCreationTimeGauge, componentCreationTime.Seconds())
+		if componentCreationTime > ComponentCreationTimeMaxPerThread[ctx.ThreadIndex] {
+			ComponentCreationTimeMaxPerThread[ctx.ThreadIndex] = componentCreationTime
+		}
+	}
+
+	// Continue the outer loop if the component could not be created successfully
+	if shouldContinue {
+		return false
+	}
+
+	// New for Component
+	// Wait for
+	// 1. our Component was created (condition.Type == "Created" && condition.Status == "True")
+	// or
+	// 2. our Component to be in error (condition.Status == "True" && (strings.HasPrefix(condition.Type, "Error") || strings.HasSuffix(condition.Type, "Error"))
+
+	if err := utils.WaitUntilWithInterval(func() (done bool, err error) {
+		component, err = framework.AsKubeDeveloper.HasController.GetComponent(componentName, usernamespace)
+		if err != nil {
+			// Return an error immediately if we cannot fetch the scenarios
+			return false, fmt.Errorf("unable to get created component %s in namespace %s: %v", componentName, usernamespace, err)
+		}
+
+		conditionError = nil // Reset the condition error
+		if len(component.Status.Conditions) == 0 {
+			// store the error in conditionError
+			conditionError = fmt.Errorf("component %s has 0 status conditions", componentName)
+			return false, nil // Continue polling
+		}
+		creationTimestamp := component.ObjectMeta.CreationTimestamp.Time
+
+		for _, condition := range component.Status.Conditions {
+			if condition.Type == "Created" && condition.Status == "True" {
+				lastTransitionTime := condition.LastTransitionTime.Time
+				// Since we have a skewed time between the clocks of the test machine and the cluster,
+				//  we shall calculate componentActualCreationTimeInSeconds as below:
+				// componentActualCreationTimeInSeconds := componentCreationTime.Seconds() + lastTransitionTime.Sub(creationTimestamp).Seconds()
+				componentActualCreationTimeInSeconds := CalculateActualCreationTimeInSeconds(lastTransitionTime, creationTimestamp, componentCreationTime)
+				MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualComponentCreationTimeGauge, componentActualCreationTimeInSeconds)
+				SuccessfulComponentCreationsPerThread[ctx.ThreadIndex] += 1
+				MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulComponentCreationCounter)
+				userComponentMap.Store(username, componentName)
+				increaseBar(ctx.ComponentsBar, componentsBarMutex)
+				ctx.ChPipelines <- username
+				return true, nil
+			}
+
+			// Error indicators for various CRs besides snapshotenvironmentbindings.json
+			// .status.conditions array has a .status of "True" and a .type that ends or starts with "Error"
+			if condition.Status == "True" && (strings.HasPrefix(condition.Type, "Error") || strings.HasSuffix(condition.Type, "Error")) {
+				return true, fmt.Errorf("component %s is in Error state: %s", componentName, condition.Message)
+			}
+		}
+		return false, nil // Indicate to continue polling
+	}, componentValidationInterval, componentValidationTimeout); err != nil {
+		// If an error is returned, handle it immediately
+		logError(16, fmt.Sprintf("Failed to validate component %s for username %s due to an error: %v \n", componentName, username, err))
+		FailedComponentCreationsPerThread[ctx.ThreadIndex] += 1
+		MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedComponentCreationCounter)
+		increaseBar(ctx.ComponentsBar, componentsBarMutex)
+		return false
+	} else if conditionError != nil {
+		// If no error is returned but conditionError is set, it means the timeout has occurred
+		logError(17, fmt.Sprintf("Failed to validate component %s for username %s due to an error: %v \n", componentName, username, conditionError.Error()))
+		FailedComponentCreationsPerThread[ctx.ThreadIndex] += 1
+		MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedComponentCreationCounter)
+		increaseBar(ctx.ComponentsBar, componentsBarMutex)
+		return false
+	}
+	return true
+}
+
+type ConcreteHandlerPipelines struct {
+	BaseHandler
+}
+
+func (h *ConcreteHandlerPipelines) Handle(ctx *JourneyContext) {
 	if waitPipelines {
 		go func() {
-			defer wg.Done()
-			for username := range chPipelines {
+			defer ctx.innerThreadWG.Done()
+			threadIndex := ctx.ThreadIndex
+			chIntegrationTestsPipelines := ctx.ChIntegrationTestsPipelines
+			pipelinesBar := ctx.PipelinesBar
+
+			for username := range ctx.ChPipelines {
 				framework := frameworkForUser(username)
 				if framework == nil {
 					logError(18, fmt.Sprintf("Framework not found for username %s", username))
-					increaseBar(pipelinesBar, pipelinesBarMutex)
+					increaseBar(ctx.PipelinesBar, pipelinesBarMutex)
 					continue
 				}
 				usernamespace := framework.UserNamespace
 				componentName := componentForUser(username)
 				if componentName == "" {
 					logError(19, fmt.Sprintf("Component not found for username %s", username))
-					increaseBar(pipelinesBar, pipelinesBarMutex)
+					increaseBar(ctx.PipelinesBar, pipelinesBarMutex)
 					continue
 				}
 				applicationName := fmt.Sprintf("%s-app", username)
 				pipelineCreatedRetryInterval := time.Second * 20
-				pipelineCreatedTimeout := time.Minute * 15
+				pipelineCreatedTimeout := time.Minute * 30
 				var pipelineRun *v1beta1.PipelineRun
 				err := k8swait.PollUntilContextTimeout(context.Background(), pipelineCreatedRetryInterval, pipelineCreatedTimeout, false, func(ctx context.Context) (done bool, err error) {
 					// Searching for "build" type of pipelineRun
@@ -1379,7 +1463,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				})
 				if err != nil {
 					logError(20, fmt.Sprintf("PipelineRun for applicationName/componentName %s/%s has not been created within %v: %v", applicationName, componentName, pipelineCreatedTimeout, err))
-					FailedPipelineRunsPerThread[threadIndex] += 1
+					FailedPipelineRunsPerThread[ctx.ThreadIndex] += 1
 					MetricsWrapper(MetricsController, metricsConstants.CollectorPipelines, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedPipelineRunsCreationCounter)
 
 					increaseBar(pipelinesBar, pipelinesBarMutex)
@@ -1398,19 +1482,19 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 					if pipelineRun.IsDone() {
 						succeededCondition := pipelineRun.Status.GetCondition(apis.ConditionSucceeded)
 						pvcs, err := framework.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumeClaims(pipelineRun.Namespace).List(context.Background(), metav1.ListOptions{})
+						if err != nil {
+							logError(23, fmt.Sprintf("Error getting PVC: %v\n", err))
+						}
+						for _, pvc := range pvcs.Items {
+							pv, err := framework.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumes().Get(context.Background(), pvc.Spec.VolumeName, metav1.GetOptions{})
 							if err != nil {
-								logError(23, fmt.Sprintf("Error getting PVC: %v\n", err))
+								logError(24, fmt.Sprintf("Error getting PV: %v\n", err))
+								continue
 							}
-							for _, pvc := range pvcs.Items {
-								pv, err := framework.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumes().Get(context.Background(), pvc.Spec.VolumeName, metav1.GetOptions{})
-								if err != nil {
-									logError(24, fmt.Sprintf("Error getting PV: %v\n", err))
-									continue
-								}
-								waittime := (pv.ObjectMeta.CreationTimestamp.Time).Sub(pvc.ObjectMeta.CreationTimestamp.Time)
-								PipelineRunWaitTimeForPVCSumPerThread[threadIndex] += waittime
-								SuccessfulPVCCreationsPerThread[threadIndex] += 1
-							}
+							waittime := (pv.ObjectMeta.CreationTimestamp.Time).Sub(pvc.ObjectMeta.CreationTimestamp.Time)
+							PipelineRunWaitTimeForPVCSumPerThread[threadIndex] += waittime
+							SuccessfulPVCCreationsPerThread[threadIndex] += 1
+						}
 						if succeededCondition.IsFalse() {
 							dur := pipelineRun.Status.CompletionTime.Sub(pipelineRun.CreationTimestamp.Time)
 							PipelineRunFailedTimeSumPerThread[threadIndex] += dur
@@ -1444,12 +1528,27 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			}
 			close(chIntegrationTestsPipelines)
 		}()
-	}
 
+		// After calling ConcreteHandlerPipelines's logic, trigger the next handler in a new goroutine
+		if h.next != nil {
+			h.next.Handle(ctx)
+		}
+	}
+}
+
+type ConcreteHandlerItsPipelines struct {
+	BaseHandler
+}
+
+func (h *ConcreteHandlerItsPipelines) Handle(ctx *JourneyContext) {
 	if waitIntegrationTestsPipelines {
 		go func() {
-			defer wg.Done()
-			for username := range chIntegrationTestsPipelines {
+			defer ctx.innerThreadWG.Done()
+			threadIndex := ctx.ThreadIndex
+			chDeployments := ctx.ChDeployments
+			integrationTestsPipelinesBar := ctx.IntegrationTestsPipelinesBar
+
+			for username := range ctx.ChIntegrationTestsPipelines {
 				// since username added to chIntegrationTestsPipelinesents only after valid framework, usernamespace, componentName, testScenarioName,
 				//  componentPipelineRunName, and applicationName have been created
 				//  we don't need to verify validity for neither
@@ -1462,7 +1561,7 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				SnapshotCreatedRetryInterval := time.Second * 20
 				SnapshotCreatedTimeout := time.Minute * 30
 				IntegrationTestsPipelineCreatedRetryInterval := time.Second * 20
-				IntegrationTestsPipelineCreatedTimeout := time.Minute * 15
+				IntegrationTestsPipelineCreatedTimeout := time.Minute * 30
 
 				var snapshot *appstudioApi.Snapshot
 				err := k8swait.PollUntilContextTimeout(context.Background(), SnapshotCreatedRetryInterval, SnapshotCreatedTimeout, false, func(ctx context.Context) (done bool, err error) {
@@ -1539,12 +1638,26 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 			}
 			close(chDeployments)
 		}()
-	}
 
+		// After calling ConcreteHandlerItsPipelines's logic, trigger the next handler in a new goroutine
+		if h.next != nil {
+			h.next.Handle(ctx)
+		}
+	}
+}
+
+type ConcreteHandlerDeployments struct {
+	BaseHandler
+}
+
+func (h *ConcreteHandlerDeployments) Handle(ctx *JourneyContext) {
 	if waitDeployments {
 		go func() {
-			defer wg.Done()
-			for username := range chDeployments {
+			defer ctx.innerThreadWG.Done()
+			threadIndex := ctx.ThreadIndex
+			deploymentsBar := ctx.DeploymentsBar
+
+			for username := range ctx.ChDeployments {
 				// since username added to chDeployments only after valid framework, usernamespace, componentName, and applicationName have been created
 				//  we don't need to verify validity for neither
 				framework := frameworkForUser(username)
@@ -1636,8 +1749,46 @@ func userJourneyThread(frameworkMap *sync.Map, threadWaitGroup *sync.WaitGroup, 
 				}
 			}
 		}()
+
+		// After calling ConcreteHandlerDeployments's logic, trigger the next handler in a new goroutine
+		if h.next != nil {
+			h.next.Handle(ctx)
+		}
 	}
-	wg.Wait()
+}
+
+func userJourneyThread(threadCtx *JourneyContext) {
+	defer threadCtx.threadsWG.Done()
+
+	addValue := 2
+	if waitPipelines {
+		addValue = 3
+		if waitIntegrationTestsPipelines {
+			addValue = 4
+			if waitDeployments {
+				addValue = 5
+			}
+		}
+	}
+	threadCtx.innerThreadWG.Add(addValue)
+
+	// Using Chain of responsibility pattern to separate the userJourneyThread function separate handlers (https://refactoring.guru/design-patterns/go)
+	// Initialize handlers
+	HandlerUsers := &ConcreteHandlerUsers{}
+	HandlerResources := &ConcreteHandlerResources{}
+	HandlerPipelines := &ConcreteHandlerPipelines{}
+	HandlerItsPipelines := &ConcreteHandlerItsPipelines{}
+	HandlerDeployments := &ConcreteHandlerDeployments{}
+
+	HandlerUsers.SetNext(HandlerResources)
+	HandlerResources.SetNext(HandlerPipelines)
+	HandlerPipelines.SetNext(HandlerItsPipelines)
+	HandlerItsPipelines.SetNext(HandlerDeployments)
+	HandlerDeployments.SetNext(nil)
+	// Start the chain with the users handler
+	HandlerUsers.Handle(threadCtx)
+
+	threadCtx.innerThreadWG.Wait()
 }
 
 func checkDeploymentFailed(deployment *appsv1.Deployment) (bool, string, metav1.Time) {
