@@ -24,7 +24,7 @@ import (
  * More info: https://github.com/redhat-appstudio/image-controller#general-purpose-image-repository
  */
 
-var _ = framework.RemoteSecretSuiteDescribe(Label("image-repository-cr-image-pull-remote-secret"), func() {
+var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "image-repository-cr-image-pull-remote-secret"), func() {
 
 	defer GinkgoRecover()
 

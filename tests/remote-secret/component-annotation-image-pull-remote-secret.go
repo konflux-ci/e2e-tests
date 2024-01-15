@@ -22,7 +22,7 @@ import (
  * More info: https://github.com/redhat-appstudio/image-controller#legacy-deprecated-component-image-repository
  */
 
-var _ = framework.RemoteSecretSuiteDescribe(Label("component-annotation-image-pull-remote-secret"), func() {
+var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "component-annotation-image-pull-remote-secret"), func() {
 
 	defer GinkgoRecover()
 
