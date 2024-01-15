@@ -79,7 +79,7 @@ func (i *IntegrationController) GetBuildPipelineRun(componentName, applicationNa
 		}
 
 		if len(list.Items) > 0 {
-			pipelineRun = &list.Items[0]
+			pipelineRun = &list.Items[len(list.Items)-1]
 			return true, nil
 		}
 
