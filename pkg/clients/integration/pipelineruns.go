@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -79,6 +80,11 @@ func (i *IntegrationController) GetBuildPipelineRun(componentName, applicationNa
 		}
 
 		if len(list.Items) > 0 {
+			// sort PipelineRuns by StartTime in ascending order
+			sort.Slice(list.Items, func(i, j int) bool {
+				return list.Items[i].Status.StartTime.Before(list.Items[j].Status.StartTime)
+			})
+			// get latest pipelineRun
 			pipelineRun = &list.Items[len(list.Items)-1]
 			return true, nil
 		}
