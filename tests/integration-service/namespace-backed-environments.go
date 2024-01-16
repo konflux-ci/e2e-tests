@@ -250,7 +250,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 						return fmt.Errorf("tests haven't succeeded for snapshot %s/%s. snapshot status: %+v", snapshot.GetNamespace(), snapshot.GetName(), snapshot.Status)
 					}
 					return nil
-				}, time.Minute*5, time.Second*5).Should(Succeed(), fmt.Sprintf("timed out waiting for the Snapshot for the Build Test PipelineRun %s/%s to be marked as succeeded", testNamespace, pipelineRun.Name))
+				}, time.Minute*5, time.Second*5).Should(Succeed(), fmt.Sprintf("timed out waiting for the Snapshot for the Build PipelineRun %s/%s to be marked as succeeded", testNamespace, pipelineRun.Name))
 			})
 
 			It("should lead to SnapshotEnvironmentBinding getting deleted", func() {
