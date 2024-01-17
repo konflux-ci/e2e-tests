@@ -88,8 +88,13 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 		})
 
 		It("triggers a build PipelineRun", Label("integration-service"), func() {
+			pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
+
 			Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "",
 				f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
+
 			pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
 			Expect(err).ToNot(HaveOccurred())
 		})
