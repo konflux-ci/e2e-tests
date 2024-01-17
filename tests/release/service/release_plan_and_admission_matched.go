@@ -96,7 +96,6 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 					}
 					return nil
 				}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(Succeed(), "time out when waiting for ReleasePlanAdmission being reconciled to matched")
-				//}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("time out when waiting for ReleasePlanAdmission %s being reconciled to matched", releasePlanAdmissionCR.Name))
 				condition := meta.FindStatusCondition(releasePlanAdmissionCR.Status.Conditions, releaseApi.MatchedConditionType.String())
 				Expect(condition).NotTo(BeNil())
 				Expect(condition.Status).To(Equal(metav1.ConditionTrue))
@@ -188,9 +187,13 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 					if condition == nil {
 						return fmt.Errorf("failed to get the MatchedConditon of %s", secondReleasePlanCR.Name)
 					}
+
+					// it may need a period of time for the secondReleasePlanCR to be reconciled
+					if condition.Status == metav1.ConditionTrue {
+						return fmt.Errorf("the MatchedConditon of %s has not reconciled yet", secondReleasePlanCR.Name)
+					}
 					return nil
 				}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(Succeed())
-				Expect(secondReleasePlanCR.IsMatched()).To(BeFalse())
 				Expect(secondReleasePlanCR.Status.ReleasePlanAdmission).To(Equal(releaseApi.MatchedReleasePlanAdmission{}))
 			})
 		})
