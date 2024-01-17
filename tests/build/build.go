@@ -1387,6 +1387,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		var mergeResult *github.PullRequestMergeResult
 		var timeout time.Duration
 		var parentFirstDigest string
+		var parentPostPacMergeDigest string
+		var parentImageNameWithNoDigest string
 
 		BeforeAll(func() {
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
@@ -1440,32 +1442,32 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		When("components are created in same namespace", func() {
 
 			It("creates component with nudges", func() {
-				for _, inst := range components {
+				for _, comp := range components {
 					componentObj := appservice.ComponentSpec{
-						ComponentName: inst.componentName,
+						ComponentName: comp.componentName,
 						Application:   applicationName,
 						Source: appservice.ComponentSource{
 							ComponentSourceUnion: appservice.ComponentSourceUnion{
 								GitSource: &appservice.GitSource{
-									URL:           inst.gitRepo,
-									Revision:      inst.componentBranch,
+									URL:           comp.gitRepo,
+									Revision:      comp.componentBranch,
 									DockerfileURL: "Dockerfile",
 								},
 							},
 						},
 					}
 					//make the parent repo nudge the child repo
-					if inst.repoName == componentDependenciesParentRepoName {
+					if comp.repoName == componentDependenciesParentRepoName {
 						componentObj.BuildNudgesRef = []string{ChildComponentDef.componentName}
-						inst.component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
+						comp.component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
 					} else {
-						inst.component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, constants.ImageControllerAnnotationRequestPublicRepo)
+						comp.component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, constants.ImageControllerAnnotationRequestPublicRepo)
 					}
 					Expect(err).ShouldNot(HaveOccurred())
 				}
 			})
-
-			It("triggers a PipelineRun for parent component", func() {
+			// Initial pipeline run, we need this so we have an initial image that we can then update
+			It(fmt.Sprintf("triggers a PipelineRun for parent component %s", ParentComponentDef.componentName), func() {
 				timeout = time.Minute * 5
 
 				Eventually(func() error {
@@ -1480,7 +1482,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return nil
 				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", ParentComponentDef.componentName, testNamespace))
 			})
-			It(fmt.Sprintf("the PipelineRun should eventually finish successfully for component %s", ParentComponentDef.componentName), func() {
+			It(fmt.Sprintf("the PipelineRun should eventually finish successfully for parent component %s", ParentComponentDef.componentName), func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ParentComponentDef.component, "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2})).To(Succeed())
 				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(ParentComponentDef.component.GetName(), ParentComponentDef.component.Spec.Application, ParentComponentDef.component.GetNamespace(), "")
 				Expect(err).ShouldNot(HaveOccurred())
@@ -1491,8 +1493,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}
 				Expect(parentFirstDigest).ShouldNot(BeEmpty())
 			})
-
-			It("create dockerfile to update referencing build repository", func() {
+			// Now we have an initial image we create a dockerfile in the child that references this new image
+			// This is the file that will be updated by the nudge
+			It("create dockerfile that references build repository", func() {
 
 				component, err := f.AsKubeAdmin.HasController.GetComponent(ParentComponentDef.componentName, testNamespace)
 				Expect(err).ShouldNot(HaveOccurred(), "could not get component %s in the %s namespace", ParentComponentDef.componentName, testNamespace)
@@ -1502,7 +1505,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(err).ShouldNot(HaveOccurred())
 				err = f.AsKubeAdmin.CommonController.Github.CreateRef(ChildComponentDef.repoName, ChildComponentDef.baseBranch, ChildComponentDef.baseRevision, ChildComponentDef.pacBranchName)
 				Expect(err).ShouldNot(HaveOccurred())
-				_, err = f.AsKubeAdmin.CommonController.Github.CreateFile(ChildComponentDef.repoName, "Dockerfile.tmp", "FROM quay.io/"+gihubOrg+"/"+imageRepoName+"@"+parentFirstDigest+"\nRUN echo hello\n", ChildComponentDef.pacBranchName)
+				parentImageNameWithNoDigest = "quay.io/" + gihubOrg + "/" + imageRepoName
+				_, err = f.AsKubeAdmin.CommonController.Github.CreateFile(ChildComponentDef.repoName, "Dockerfile.tmp", "FROM "+parentImageNameWithNoDigest+"@"+parentFirstDigest+"\nRUN echo hello\n", ChildComponentDef.pacBranchName)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				_, err = f.AsKubeAdmin.CommonController.Github.CreatePullRequest(ChildComponentDef.repoName, "update to build repo image", "update to build repo image", ChildComponentDef.pacBranchName, ChildComponentDef.componentBranch)
@@ -1511,19 +1515,18 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(err).ShouldNot(HaveOccurred())
 
 				prno := -1
-				found := false
 				for _, pr := range prs {
 					if pr.Head.GetRef() == ChildComponentDef.pacBranchName {
 						prno = pr.GetNumber()
-						found = true
 					}
 				}
-				Expect(found).To(BeTrue())
+				Expect(prno).ShouldNot(Equal(-1))
 				_, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(ChildComponentDef.repoName, prno)
 				Expect(err).ShouldNot(HaveOccurred())
 
 			})
-			It("should lead to a PaC PR creation for parent component", func() {
+			// This actually happens immediately, but we only need the PR number now
+			It(fmt.Sprintf("should lead to a PaC PR creation for parent component %s", ParentComponentDef.componentName), func() {
 				timeout = time.Second * 300
 				interval := time.Second * 1
 
@@ -1540,8 +1543,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return false
 				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for PaC PR (branch name '%s') to be created in %s repository", ParentComponentDef.pacBranchName, ParentComponentDef.repoName))
 			})
-
-			It("merging the PR should be successful", func() {
+			It(fmt.Sprintf("Merging the PaC PR should be successful for parent component %s", ParentComponentDef.componentName), func() {
 				Eventually(func() error {
 					mergeResult, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(ParentComponentDef.repoName, prNumber)
 					return err
@@ -1551,7 +1553,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
 
 			})
-			It("leads to triggering on push PipelineRun", func() {
+			// Now the PR is merged this will kick off another build. The result of this build is what we want to update in dockerfile we created
+			It(fmt.Sprintf("PR merge triggers PAC PipelineRun for parent component %s", ParentComponentDef.componentName), func() {
 				timeout = time.Minute * 5
 
 				Eventually(func() error {
@@ -1566,8 +1569,19 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return nil
 				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, ParentComponentDef.componentName))
 			})
-
-			It("should lead to a nudge PR creation for child component", func() {
+			// Wait for this PR to be done and store the digest, we will need it to verify that the nudge was correct
+			It(fmt.Sprintf("PAC PipelineRun for parent component %s is successful", ParentComponentDef.componentName), func() {
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ParentComponentDef.component, mergeResultSha, f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2})).To(Succeed())
+				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(ParentComponentDef.component.GetName(), ParentComponentDef.component.Spec.Application, ParentComponentDef.component.GetNamespace(), mergeResultSha)
+				Expect(err).ShouldNot(HaveOccurred())
+				for _, result := range pr.Status.PipelineResults {
+					if result.Name == "IMAGE_DIGEST" {
+						parentPostPacMergeDigest = result.Value.StringVal
+					}
+				}
+				Expect(parentPostPacMergeDigest).ShouldNot(BeEmpty())
+			})
+			It(fmt.Sprintf("should lead to a nudge PR creation for child component %s", ChildComponentDef.componentName), func() {
 				timeout = time.Minute * 20
 				interval := time.Second * 1
 
@@ -1584,8 +1598,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return false
 				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for component nudge PR to be created in %s repository", componentDependenciesChildRepoName))
 			})
-
-			It("merging the PR should be successful", func() {
+			It(fmt.Sprintf("merging the PR should be successful for child component %s", ChildComponentDef.componentName), func() {
 				Eventually(func() error {
 					mergeResult, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(componentDependenciesChildRepoName, prNumber)
 					return err
@@ -1595,9 +1608,23 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
 
 			})
+			// Now the nudge has been merged we verify the dockerfile is what we expected
+			It("Verify the nudge updated the contents", func() {
 
-			//TODO: check results of update
+				GinkgoWriter.Printf("Verifying Dockerfile.tmp updated to sha %s", parentPostPacMergeDigest)
+				component, err := f.AsKubeAdmin.HasController.GetComponent(ParentComponentDef.componentName, testNamespace)
+				Expect(err).ShouldNot(HaveOccurred(), "could not get component %s in the %s namespace", ParentComponentDef.componentName, testNamespace)
 
+				annotations := component.GetAnnotations()
+				imageRepoName, err := build.GetQuayImageName(annotations)
+				Expect(err).ShouldNot(HaveOccurred())
+				contents, err := f.AsKubeAdmin.CommonController.Github.GetFile(ChildComponentDef.repoName, "Dockerfile.tmp", ChildComponentDef.componentBranch)
+				Expect(err).ShouldNot(HaveOccurred())
+				content, err := contents.GetContent()
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(content).Should(Equal("FROM quay.io/" + gihubOrg + "/" + imageRepoName + "@" + parentPostPacMergeDigest + "\nRUN echo hello\n"))
+
+			})
 		})
 
 	})
