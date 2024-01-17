@@ -2,10 +2,11 @@ package integration
 
 import (
 	"fmt"
-	"github.com/redhat-appstudio/operator-toolkit/metadata"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/redhat-appstudio/operator-toolkit/metadata"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
@@ -88,10 +89,14 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 
 		It("triggers a build PipelineRun", Label("integration-service"), func() {
 			pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
+
 			Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "",
 				f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
 
-			Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
+			pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		When("the build pipelineRun run succeeded", func() {
@@ -240,10 +245,17 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 
 		When("Integration Test PipelineRun completes successfully", func() {
 			It("should lead to Snapshot CR being marked as passed", FlakeAttempts(3), func() {
-				Eventually(func() bool {
+				Eventually(func() error {
 					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", testNamespace)
-					return err == nil && f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)
-				}, time.Minute*5, time.Second*5).Should(BeTrue(), fmt.Sprintf("Timed out waiting for Snapshot to be marked as succeeded %s/%s", snapshot.GetNamespace(), snapshot.GetName()))
+					if err != nil {
+						GinkgoWriter.Println("snapshot has not been found yet")
+						return err
+					}
+					if !f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot) {
+						return fmt.Errorf("tests haven't succeeded for snapshot %s/%s. snapshot status: %+v", snapshot.GetNamespace(), snapshot.GetName(), snapshot.Status)
+					}
+					return nil
+				}, time.Minute*5, time.Second*5).Should(Succeed(), fmt.Sprintf("timed out waiting for the Snapshot for the Build PipelineRun %s/%s to be marked as succeeded", testNamespace, pipelineRun.Name))
 			})
 
 			It("should lead to SnapshotEnvironmentBinding getting deleted", func() {
