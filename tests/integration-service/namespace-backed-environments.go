@@ -13,7 +13,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"k8s.io/apimachinery/pkg/api/meta"
 
 	"github.com/codeready-toolchain/api/api/v1alpha1"
 
@@ -21,7 +20,6 @@ import (
 	. "github.com/onsi/gomega"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
-	managedgitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend-shared/apis/managed-gitops/v1alpha1"
 )
 
 var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment (NBE) E2E tests", Label("integration-service", "HACBS", "namespace-backed-envs"), func() {
@@ -39,8 +37,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 	var env, ephemeralEnvironment, userPickedEnvironment *appstudioApi.Environment
 	var dtcl *appstudioApi.DeploymentTargetClaimList
 	var dtl *appstudioApi.DeploymentTargetList
-	var godmel *managedgitopsv1alpha1.GitOpsDeploymentManagedEnvironmentList
-	var godl *managedgitopsv1alpha1.GitOpsDeploymentList
 	var phaseDTC appstudioApi.DeploymentTargetClaimPhase
 	var phaseDT appstudioApi.DeploymentTargetPhase
 	var sr *v1alpha1.SpaceRequestList
@@ -181,42 +177,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Namespace-backed Environment 
 				}
 				return err
 			}, time.Minute*1, time.Second*1).Should(Succeed(), fmt.Sprintf("timed out checking DeploymentTarget after Ephemeral Environment %s was created ", ephemeralEnvironment.Name))
-		})
-
-		It("checks for GitOpsDeploymentManagedEnvironment after Ephemeral env has been created", func() {
-			Eventually(func() error {
-				godmel, err = f.AsKubeAdmin.GitOpsController.GetGitOpsDeploymentManagedEnvironmentList(testNamespace)
-				Expect(err).ToNot(HaveOccurred())
-				if len(godmel.Items) == 0 {
-					return fmt.Errorf("No GitOpsDeploymentManagedEnvironments found, GitOpsDeploymentManagedEnvironmentList is empty.")
-				}
-				if godmel.Items[0].Status.Conditions != nil && !meta.IsStatusConditionTrue(godmel.Items[0].Status.Conditions, "ConnectionInitializationSucceeded") {
-					return fmt.Errorf("The GitOpsDeploymentManagedEnvironment doesn't have the ConnectionInitializationSucceeded status condition set to true.")
-				}
-				return err
-			}, time.Minute*1, time.Second*1).Should(Succeed(), fmt.Sprintf("timed out checking GitOpsDeploymentManagedEnvironment after Ephemeral Environment was created %s", ephemeralEnvironment.Name))
-			Expect(godmel.Items[0].Spec.ClusterCredentialsSecret).ToNot(BeEmpty())
-			Expect(godmel.Items[0].Spec.APIURL).ToNot(BeEmpty())
-			Expect(godmel.Items[0].Spec.AllowInsecureSkipTLSVerify).ToNot(BeNil())
-		})
-
-		It("checks for GitOpsDeployments after Ephemeral env has been created", func() {
-			Eventually(func() error {
-				godl, err = f.AsKubeAdmin.GitOpsController.ListAllGitOpsDeployments(testNamespace)
-				Expect(err).ToNot(HaveOccurred())
-				if len(godl.Items) == 0 {
-					return fmt.Errorf("No GitOpsDeployments found.")
-				}
-				if !reflect.ValueOf(godl.Items[0].Status).IsZero() && reflect.ValueOf(godl.Items[0].Status.ReconciledState).IsZero() {
-					return fmt.Errorf("ReconciledState doesn't exist yet for GitOpsDeployment.")
-				}
-				return err
-			}, time.Minute*1, time.Second*1).Should(Succeed(), fmt.Sprintf("timed out checking GitOpsDeployments after Ephemeral Environment was created %s", ephemeralEnvironment.Name))
-
-			Expect(godl.Items[0].Spec.Source.RepoURL).ToNot(BeEmpty())
-			Expect(godl.Items[0].Spec.Source.Path).ToNot(BeEmpty())
-			Expect(godl.Items[0].Spec.Source.TargetRevision).To(Equal("main"))
-			Expect(godl.Items[0].Spec.Type).To(Equal("automated"))
 		})
 
 		It("checks for SEB after Ephemeral env has been created", func() {

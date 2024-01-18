@@ -37,7 +37,6 @@ require (
 	github.com/redhat-appstudio/image-controller v0.0.0-20231003082540-48893226ba8b
 	github.com/redhat-appstudio/integration-service v0.0.0-20231025084434-b3f521c408d1
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20230821060312-4172397d68e8
-	github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20231205213954-bc325588ba28
 	github.com/redhat-appstudio/operator-toolkit v0.0.0-20230913085326-6c5e9d368a6a
 	github.com/redhat-appstudio/release-service v0.0.0-20231208114934-416d42aeffb8
 	github.com/redhat-appstudio/remote-secret v0.0.0-20230713072146-a6094c712436
