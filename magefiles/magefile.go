@@ -103,6 +103,10 @@ func (ci CI) PrepareE2EBranch() error {
 		return err
 	}
 
+	if err := ci.setRequiredEnvVars(); err != nil {
+		return fmt.Errorf("error when setting up required env vars: %v", err)
+	}
+
 	if openshiftJobSpec.Refs.Repo == "e2e-tests" {
 		if err := gitCheckoutRemoteBranch(pr.RemoteName, pr.CommitSHA); err != nil {
 			return err
