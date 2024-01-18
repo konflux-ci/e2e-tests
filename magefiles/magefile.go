@@ -103,16 +103,12 @@ func (ci CI) PrepareE2EBranch() error {
 		return err
 	}
 
-	if err := ci.setRequiredEnvVars(); err != nil {
-		return fmt.Errorf("error when setting up required env vars: %v", err)
-	}
-
 	if openshiftJobSpec.Refs.Repo == "e2e-tests" {
 		if err := gitCheckoutRemoteBranch(pr.RemoteName, pr.CommitSHA); err != nil {
 			return err
 		}
 	} else {
-		if ci.isPRPairingRequired("e2e-tests") {
+		if isPRPairingRequired("e2e-tests") {
 			if err := gitCheckoutRemoteBranch(pr.RemoteName, pr.BranchName); err != nil {
 				return err
 			}
@@ -246,7 +242,7 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when running preflight checks: %v", err)
 	}
 
-	if err := ci.setRequiredEnvVars(); err != nil {
+	if err := setRequiredEnvVars(); err != nil {
 		return fmt.Errorf("error when setting up required env vars: %v", err)
 	}
 
@@ -329,7 +325,7 @@ func PreflightChecks() error {
 	return nil
 }
 
-func (ci CI) setRequiredEnvVars() error {
+func setRequiredEnvVars() error {
 
 	// RHTAP Nightly E2E job
 	// The job name is taken from https://github.com/openshift/release/blob/f03153fa4ad36c0e10050d977e7f0f7619d2163a/ci-operator/config/redhat-appstudio/infra-deployments/redhat-appstudio-infra-deployments-main.yaml#L59C7-L59C35
@@ -515,7 +511,7 @@ func (ci CI) setRequiredEnvVars() error {
 	} else { // e2e-tests repository PR
 		requiresMultiPlatformTests = true
 		requiresSprayProxyRegistering = true
-		if ci.isPRPairingRequired("infra-deployments") {
+		if isPRPairingRequired("infra-deployments") {
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
 		}
@@ -594,10 +590,15 @@ func setupMultiPlatformTests() error {
 func BootstrapCluster() error {
 	envVars := map[string]string{}
 
-	if os.Getenv("CI") == "true" && os.Getenv("REPO_NAME") == "e2e-tests" {
-		// Some scripts in infra-deployments repo are referencing scripts/utils in e2e-tests repo
-		// This env var allows to test changes introduced in "e2e-tests" repo PRs in CI
-		envVars["E2E_TESTS_COMMIT_SHA"] = os.Getenv("PULL_PULL_SHA")
+	if os.Getenv("CI") == "true" {
+		if err := setRequiredEnvVars(); err != nil {
+			return fmt.Errorf("error when setting up required env vars: %v", err)
+		}
+		if os.Getenv("REPO_NAME") == "e2e-tests" {
+			// Some scripts in infra-deployments repo are referencing scripts/utils in e2e-tests repo
+			// This env var allows to test changes introduced in "e2e-tests" repo PRs in CI
+			envVars["E2E_TESTS_COMMIT_SHA"] = os.Getenv("PULL_PULL_SHA")
+		}
 	}
 
 	ic, err := installation.NewAppStudioInstallController()
@@ -608,7 +609,7 @@ func BootstrapCluster() error {
 	return ic.InstallAppStudioPreviewMode()
 }
 
-func (CI) isPRPairingRequired(repoForPairing string) bool {
+func isPRPairingRequired(repoForPairing string) bool {
 	var pullRequests []gh.PullRequest
 
 	url := fmt.Sprintf("https://api.github.com/repos/redhat-appstudio/%s/pulls?per_page=100", repoForPairing)
@@ -958,7 +959,7 @@ func (ci CI) TestUpgrade() error {
 		return fmt.Errorf("error when running preflight checks: %v", err)
 	}
 
-	if err := ci.setRequiredEnvVars(); err != nil {
+	if err := setRequiredEnvVars(); err != nil {
 		return fmt.Errorf("error when setting up required env vars: %v", err)
 	}
 
