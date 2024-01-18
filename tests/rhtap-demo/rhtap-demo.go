@@ -166,7 +166,6 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 							Expect(fw.AsKubeAdmin.IntegrationController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 							Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 							Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)).To(Succeed())
-							Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllGitOpsDeploymentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 							Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 						}
 					} else {

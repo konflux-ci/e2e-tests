@@ -24,7 +24,7 @@ import (
 	integrationservicev1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	jvmbuildservice "github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	jvmbuildserviceclientset "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
-	gitopsv1alpha1 "github.com/redhat-appstudio/managed-gitops/backend-shared/apis/managed-gitops/v1alpha1"
+
 	release "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
 	spi "github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
@@ -79,7 +79,6 @@ func init() {
 	utilruntime.Must(spi.AddToScheme(scheme))
 	utilruntime.Must(toolchainv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(release.AddToScheme(scheme))
-	utilruntime.Must(gitopsv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(integrationservice.AddToScheme(scheme))
 	utilruntime.Must(integrationservicev1beta1.AddToScheme(scheme))
 	utilruntime.Must(jvmbuildservice.AddToScheme(scheme))

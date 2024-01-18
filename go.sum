@@ -1349,8 +1349,6 @@ github.com/redhat-appstudio/integration-service v0.0.0-20231025084434-b3f521c408
 github.com/redhat-appstudio/integration-service v0.0.0-20231025084434-b3f521c408d1/go.mod h1:bh8uJ4whJ92ef5PXH6Rfm4F8tRXkDAlSYR7Pqp1LLT4=
 github.com/redhat-appstudio/jvm-build-service v0.0.0-20230821060312-4172397d68e8 h1:00i53LFAxOim46xJMe13FEfkqxTZMs+nXNlXu7hRCno=
 github.com/redhat-appstudio/jvm-build-service v0.0.0-20230821060312-4172397d68e8/go.mod h1:1L8D7nBUn8EJrlYLCl5NmX1yzoRjkAeEX5v4YmmxQNo=
-github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20231205213954-bc325588ba28 h1:zw11J4BqdZLIXpDID+Rdcb1EvGmBIpeq40D/QQ0aVx4=
-github.com/redhat-appstudio/managed-gitops/backend-shared v0.0.0-20231205213954-bc325588ba28/go.mod h1:t6h38WYCHEQKL1AA3eKpyzsZ5vu2fEMRP+UIrOmhNp0=
 github.com/redhat-appstudio/operator-toolkit v0.0.0-20230913085326-6c5e9d368a6a h1:pwTvkRzRF6zyLW1Bb4vEuqaNXlGJOnBtt9n5gNp0/r4=
 github.com/redhat-appstudio/operator-toolkit v0.0.0-20230913085326-6c5e9d368a6a/go.mod h1:7cX2+4KGZLJ4Yoj+1v0iV5hkCGBzbSd9wkNJQjCdDJs=
 github.com/redhat-appstudio/release-service v0.0.0-20231208114934-416d42aeffb8 h1:XoyHIP9ZJCif/kj2Zy80IPpOqrDgAsAZpaNr3Dxno1k=
