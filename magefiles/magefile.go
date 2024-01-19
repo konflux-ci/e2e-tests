@@ -231,6 +231,17 @@ func (Local) CleanupPrivateRepos() error {
 	return cleanupPrivateRepos(quayClient, quayOrg, repoNamePrefixes)
 }
 
+func (ci CI) Bootstrap() error {
+	if err := ci.init(); err != nil {
+		return fmt.Errorf("error when running ci init: %v", err)
+	}
+
+	if err := BootstrapCluster(); err != nil {
+		return fmt.Errorf("error when bootstrapping cluster: %v", err)
+	}
+	return nil
+}
+
 func (ci CI) TestE2E() error {
 	var testFailure bool
 
@@ -240,10 +251,6 @@ func (ci CI) TestE2E() error {
 
 	if err := PreflightChecks(); err != nil {
 		return fmt.Errorf("error when running preflight checks: %v", err)
-	}
-
-	if err := setRequiredEnvVars(); err != nil {
-		return fmt.Errorf("error when setting up required env vars: %v", err)
 	}
 
 	if err := retry(BootstrapCluster, 2, 10*time.Second); err != nil {
