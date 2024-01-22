@@ -208,7 +208,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				return SPITokenBinding.Status.Phase == v1beta1.SPIAccessTokenBindingPhaseInjected
-			}, 15*time.Minute, 10*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in Injected phase")
+			}, 15*time.Minute, 10*time.Second).Should(BeTrue(), "SPIAccessTokenBinding is not in Injected phase after Oauth flow")
 		})
 
 	})
