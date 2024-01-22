@@ -47,7 +47,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/tektoncd/cli v0.29.1
 	github.com/tektoncd/pipeline v0.49.0
-	golang.org/x/crypto v0.16.0
+	golang.org/x/crypto v0.17.0
 	golang.org/x/oauth2 v0.13.0
 	golang.org/x/tools v0.13.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -142,7 +142,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
 	github.com/cjwagner/httpcache v0.0.0-20230907212505-d4841bbad466 // indirect
-	github.com/cloudflare/circl v1.3.3 // indirect
+	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/containerd/containerd v1.7.11 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
