@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
+	"k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"strings"
 	"time"
@@ -1419,7 +1421,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		var parentFirstDigest string
 		var parentPostPacMergeDigest string
 		var parentImageNameWithNoDigest string
+		const distributionRepository = "quay.io/redhat-appstudio-qe/release-repository"
 
+		var managedNamespace string
 		BeforeAll(func() {
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
 			Expect(err).NotTo(HaveOccurred())
@@ -1446,6 +1450,36 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				err = f.AsKubeAdmin.CommonController.Github.CreateRef(i.repoName, i.baseBranch, i.baseRevision, i.componentBranch)
 				Expect(err).ShouldNot(HaveOccurred())
 			}
+			// Also setup a release namespace so we can test nudging of distribution repository images
+			managedNamespace = testNamespace + "-managed"
+			_, err = f.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			// We just need the ReleaseAdmissionPlan to contain a mapping between component and distribution repositories
+			data := struct {
+				Mapping struct {
+					Components []struct {
+						Name       string
+						Repository string
+					}
+				}
+			}{}
+			data.Mapping.Components = append(data.Mapping.Components, struct {
+				Name       string
+				Repository string
+			}{Name: ParentComponentDef.componentName, Repository: distributionRepository})
+			rawData, err := json.Marshal(&data)
+
+			GinkgoWriter.Printf("ReleaseAdmissionPlan data: %s", string(rawData))
+			Expect(err).NotTo(HaveOccurred())
+			_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission("demo", managedNamespace, "", f.UserNamespace, "demo", constants.DefaultPipelineServiceAccount, []string{applicationName}, false, &tektonutils.PipelineRef{
+				Resolver: "git",
+				Params: []tektonutils.Param{
+					{Name: "url", Value: "https://github.com/redhat-appstudio/release-service-catalog"},
+					{Name: "revision", Value: "main"},
+					{Name: "pathInRepo", Value: "pipelines/e2e/e2e.yaml"},
+				}}, &runtime.RawExtension{Raw: rawData})
+			Expect(err).NotTo(HaveOccurred())
 
 		})
 
@@ -1454,6 +1488,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 			}
+			Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).ShouldNot(HaveOccurred())
 
 			// Delete new branches created by renovate and a testing branch used as a component's base branch
 			for _, c := range components {
@@ -1525,7 +1560,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 			// Now we have an initial image we create a dockerfile in the child that references this new image
 			// This is the file that will be updated by the nudge
-			It("create dockerfile that references build repository", func() {
+			It("create dockerfile and yaml manifest that references build and distribution repositorys", func() {
 
 				component, err := f.AsKubeAdmin.HasController.GetComponent(ParentComponentDef.componentName, testNamespace)
 				Expect(err).ShouldNot(HaveOccurred(), "could not get component %s in the %s namespace", ParentComponentDef.componentName, testNamespace)
@@ -1537,6 +1572,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(err).ShouldNot(HaveOccurred())
 				parentImageNameWithNoDigest = "quay.io/" + gihubOrg + "/" + imageRepoName
 				_, err = f.AsKubeAdmin.CommonController.Github.CreateFile(ChildComponentDef.repoName, "Dockerfile.tmp", "FROM "+parentImageNameWithNoDigest+"@"+parentFirstDigest+"\nRUN echo hello\n", ChildComponentDef.pacBranchName)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				_, err = f.AsKubeAdmin.CommonController.Github.CreateFile(ChildComponentDef.repoName, "manifest.yaml", "image: "+distributionRepository+"@"+parentFirstDigest, ChildComponentDef.pacBranchName)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				_, err = f.AsKubeAdmin.CommonController.Github.CreatePullRequest(ChildComponentDef.repoName, "update to build repo image", "update to build repo image", ChildComponentDef.pacBranchName, ChildComponentDef.componentBranch)
@@ -1653,6 +1691,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				content, err := contents.GetContent()
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(content).Should(Equal("FROM quay.io/" + gihubOrg + "/" + imageRepoName + "@" + parentPostPacMergeDigest + "\nRUN echo hello\n"))
+
+				contents, err = f.AsKubeAdmin.CommonController.Github.GetFile(ChildComponentDef.repoName, "manifest.yaml", ChildComponentDef.componentBranch)
+				Expect(err).ShouldNot(HaveOccurred())
+				content, err = contents.GetContent()
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(content).Should(Equal("image: " + distributionRepository + "@" + parentPostPacMergeDigest))
 
 			})
 		})
