@@ -286,10 +286,6 @@ func (ci CI) TestE2E() error {
 		}
 	}
 
-	if err := ci.sendWebhook(); err != nil {
-		klog.Infof("error when sending webhook: %v", err)
-	}
-
 	if testFailure {
 		return fmt.Errorf("error when running e2e tests - see the log above for more details")
 	}
@@ -632,59 +628,6 @@ func isPRPairingRequired(repoForPairing string) bool {
 	}
 
 	return false
-}
-
-func (CI) sendWebhook() error {
-	// AppStudio QE webhook configuration values will be used by default (if none are provided via env vars)
-	const appstudioQESaltSecret = "123456789"
-	const appstudioQEWebhookTargetURL = "https://hook.pipelinesascode.com/EyFYTakxEgEy"
-
-	var repoURL string
-
-	var repoOwner = os.Getenv("REPO_OWNER")
-	var repoName = os.Getenv("REPO_NAME")
-	var prNumber = os.Getenv("PULL_NUMBER")
-	var saltSecret = utils.GetEnv("WEBHOOK_SALT_SECRET", appstudioQESaltSecret)
-	var webhookTargetURL = utils.GetEnv("WEBHOOK_TARGET_URL", appstudioQEWebhookTargetURL)
-
-	if strings.Contains(jobName, "hacbs-e2e-periodic") {
-		// TODO configure webhook channel for sending HACBS test results
-		klog.Infof("not sending webhook for HACBS periodic job yet")
-		return nil
-	}
-
-	if jobType == "periodic" {
-		repoURL = "https://github.com/redhat-appstudio/infra-deployments"
-		repoOwner = "redhat-appstudio"
-		repoName = "infra-deployments"
-		prNumber = "periodic"
-	} else if repoName == "e2e-tests" || repoName == "infra-deployments" {
-		repoURL = openshiftJobSpec.Refs.RepoLink
-	} else {
-		klog.Infof("sending webhook for jobType %s, jobName %s is not supported", jobType, jobName)
-		return nil
-	}
-
-	path, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("error when sending webhook: %+v", err)
-	}
-
-	wh := Webhook{
-		Path: path,
-		Repository: Repository{
-			FullName:   fmt.Sprintf("%s/%s", repoOwner, repoName),
-			PullNumber: prNumber,
-		},
-		RepositoryURL: repoURL,
-	}
-	resp, err := wh.CreateAndSend(saltSecret, webhookTargetURL)
-	if err != nil {
-		return fmt.Errorf("error sending webhook: %+v", err)
-	}
-	klog.Infof("webhook response: %+v", resp)
-
-	return nil
 }
 
 // Generates ginkgo test suite files under the cmd/ directory.
