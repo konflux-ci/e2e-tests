@@ -45,16 +45,23 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 	var devFw *framework.Framework
 	var managedFw *framework.Framework
 	var issueId = "bz12345"
+	var productName = "preGA-product"
+	var productVersion = "v2"
 	var fbcApplicationName = "fbc-pipelines-app-" + util.GenerateRandomString(4)
 	var fbcHotfixAppName = "fbc-hotfix-app-" + util.GenerateRandomString(4)
+	var fbcPreGAAppName = "fbc-prega-app-" + util.GenerateRandomString(4)
 	var fbcComponentName = "fbc-pipelines-comp-" + util.GenerateRandomString(4)
 	var fbcHotfixCompName = "fbc-hotfix-comp-" + util.GenerateRandomString(4)
+	var fbcPreGACompName = "fbc-prega-comp-" + util.GenerateRandomString(4)
 	var fbcReleasePlanName = "fbc-pipelines-rp-" + util.GenerateRandomString(4)
 	var fbcHotfixRPName = "fbc-hotfix-rp-" + util.GenerateRandomString(4)
+	var fbcPreGARPName = "fbc-prega-rp-" + util.GenerateRandomString(4)
 	var fbcReleasePlanAdmissionName = "fbc-pipelines-rpa-" + util.GenerateRandomString(4)
 	var fbcHotfixRPAName = "fbc-hotfix-rpa-" + util.GenerateRandomString(4)
+	var fbcPreGARPAName = "fbc-prega-rpa-" + util.GenerateRandomString(4)
 	var fbcEnterpriseContractPolicyName = "fbc-pipelines-policy-" + util.GenerateRandomString(4)
 	var fbcHotfixECPolicyName = "fbc-hotfix-policy-" + util.GenerateRandomString(4)
+	var fbcPreGAECPolicyName = "fbc-prega-policy-" + util.GenerateRandomString(4)
 
 	AfterEach(framework.ReportFailure(&devFw))
 
@@ -93,7 +100,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcReleasePlanName, devNamespace, fbcApplicationName, managedNamespace, "true")
 			Expect(err).NotTo(HaveOccurred())
 
-			createFBCReleasePlanAdmission(fbcReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, fbcApplicationName, fbcEnterpriseContractPolicyName, relSvcCatalogPathInRepo, "false", "")
+			createFBCReleasePlanAdmission(fbcReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, fbcApplicationName, fbcEnterpriseContractPolicyName, relSvcCatalogPathInRepo, "false", "", "", "", "")
 			component = releasecommon.CreateComponentByCDQ(*devFw, devNamespace, managedNamespace, fbcApplicationName, fbcComponentName, fbcSourceGitURL)
 			createFBCEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 
@@ -146,7 +153,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcHotfixRPName, devNamespace, fbcHotfixAppName, managedNamespace, "true")
 			Expect(err).NotTo(HaveOccurred())
 
-			createFBCReleasePlanAdmission(fbcHotfixRPAName, *managedFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixECPolicyName, relSvcCatalogPathInRepo, "true", issueId)
+			createFBCReleasePlanAdmission(fbcHotfixRPAName, *managedFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixECPolicyName, relSvcCatalogPathInRepo, "true", issueId, "false", "", "")
 			component = releasecommon.CreateComponentByCDQ(*devFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixCompName, fbcSourceGitURL)
 			createFBCEnterpriseContractPolicy(fbcHotfixECPolicyName, *managedFw, devNamespace, managedNamespace)
 		})
@@ -170,6 +177,58 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 
 			It("verifies release CR completed and set succeeded.", func() {
 				assertReleaseCRSucceeded(*devFw, devNamespace, managedNamespace, fbcHotfixAppName, component)
+			})
+		})
+	})
+
+	Describe("with FBC pre-GA process", Label("fbcPreGA"), func() {
+		var component *appservice.Component
+
+		BeforeAll(func() {
+			devFw, err = framework.NewFrameworkWithTimeout(
+				devWorkspace,
+				time.Minute*60,
+				stageOptions,
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			managedFw, err = framework.NewFrameworkWithTimeout(
+				managedWorkspace,
+				time.Minute*60,
+				stageOptions,
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcPreGAAppName, devNamespace)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcPreGARPName, devNamespace, fbcPreGAAppName, managedNamespace, "true")
+			Expect(err).NotTo(HaveOccurred())
+
+			createFBCReleasePlanAdmission(fbcPreGARPAName, *managedFw, devNamespace, managedNamespace, fbcPreGAAppName, fbcPreGAECPolicyName, relSvcCatalogPathInRepo, "true", issueId, "true", productName, productVersion)
+			component = releasecommon.CreateComponentByCDQ(*devFw, devNamespace, managedNamespace, fbcPreGAAppName, fbcPreGACompName, fbcSourceGitURL)
+			createFBCEnterpriseContractPolicy(fbcPreGAECPolicyName, *managedFw, devNamespace, managedNamespace)
+		})
+
+		AfterAll(func() {
+			if !CurrentSpecReport().Failed() {
+				Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(fbcPreGAAppName, devNamespace, false)).NotTo(HaveOccurred())
+				Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcPreGAECPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
+				Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcPreGARPAName, managedNamespace, false)).NotTo(HaveOccurred())
+			}
+		})
+
+		var _ = Describe("FBC pre-GA post-release verification", func() {
+			It("verifies that a build PipelineRun is created in dev namespace and succeeds", func() {
+				assertBuildPipelineRunCreated(*devFw, devNamespace, managedNamespace, fbcPreGAAppName, component)
+			})
+
+			It("verifies the fbc release pipelinerun is running and succeeds", func() {
+				assertReleasePipelineRunSucceeded(*devFw, *managedFw, devNamespace, managedNamespace, fbcPreGAAppName, component)
+			})
+
+			It("verifies release CR completed and set succeeded.", func() {
+				assertReleaseCRSucceeded(*devFw, devNamespace, managedNamespace, fbcPreGAAppName, component)
 			})
 		})
 	})
@@ -253,7 +312,7 @@ func createFBCEnterpriseContractPolicy(fbcECPName string, managedFw framework.Fr
 
 }
 
-func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framework, devNamespace, managedNamespace, fbcAppName, fbcECPName, pathInRepoValue, hotfix, issueId string) {
+func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framework, devNamespace, managedNamespace, fbcAppName, fbcECPName, pathInRepoValue, hotfix, issueId, preGA, productName, productVersion string) {
 	var err error
 	data, err := json.Marshal(map[string]interface{}{
 		"fbc": map[string]interface{}{
@@ -267,6 +326,9 @@ func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framew
 			"buildTimeoutSeconds":             "480",
 			"hotfix":                          hotfix,
 			"issueId":                         issueId,
+			"preGA":                           preGA,
+			"productName":                     productName,
+                        "productVersion":                  productVersion,
 		},
 		"sign": map[string]interface{}{
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",
