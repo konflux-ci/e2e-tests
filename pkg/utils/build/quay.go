@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	. "github.com/onsi/gomega"
+	"github.com/openshift/library-go/pkg/image/reference"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	quay "github.com/redhat-appstudio/image-controller/pkg/quay"
@@ -88,21 +89,22 @@ func DeleteImageRepo(imageName string) (bool, error) {
 
 // imageURL format example: quay.io/redhat-appstudio-qe/devfile-go-rhtap-uvv7:build-66d4e-1685533053
 func DoesTagExistsInQuay(imageURL string) (bool, error) {
-	urlParts := strings.Split(imageURL, ":")
-	if len(urlParts) != 2 {
-		return false, fmt.Errorf("image URL %s has incorrect format", imageURL)
+	ref, err := reference.Parse(imageURL)
+	if err != nil {
+		return false, err
 	}
-	repoParts := strings.Split(urlParts[0], "/")
-	if len(repoParts) <= 2 {
-		return false, fmt.Errorf("image URL %s is not complete", imageURL)
+	if ref.Tag == "" {
+		return false, fmt.Errorf("image URL %s does not have tag", imageURL)
 	}
-	repoName := strings.Join(repoParts[2:], "/")
-	tagList, _, err := quayClient.GetTagsFromPage(quayOrg, repoName, 0)
+	if ref.Namespace == "" {
+		return false, fmt.Errorf("image URL %s does not have namespace", imageURL)
+	}
+	tagList, _, err := quayClient.GetTagsFromPage(ref.Namespace, ref.Name, 0)
 	if err != nil {
 		return false, err
 	}
 	for _, tag := range tagList {
-		if tag.Name == urlParts[1] {
+		if tag.Name == ref.Tag {
 			return true, nil
 		}
 	}
@@ -166,4 +168,23 @@ func GetRobotAccountInfoFromSecret(secret *corev1.Secret) (string, string) {
 	robotAccountToken := auth[1]
 
 	return robotAccountName, robotAccountToken
+}
+
+func GetImageTag(organization, repository, tagName string) (quay.Tag, error) {
+	page := 0
+	for {
+		page++
+		tags, hasAdditional, err := quayClient.GetTagsFromPage(organization, repository, page)
+		if err != nil {
+			return quay.Tag{}, err
+		}
+		for _, tag := range tags {
+			if tag.Name == tagName {
+				return tag, nil
+			}
+		}
+		if !hasAdditional {
+			return quay.Tag{}, fmt.Errorf(fmt.Sprintf("cannot find tag %s", tagName))
+		}
+	}
 }

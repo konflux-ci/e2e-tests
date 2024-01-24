@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/openshift/library-go/pkg/image/reference"
 	"github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/github"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
@@ -242,7 +244,37 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					Fail("Failed to get the binary image url from pipelinerun")
 				}
 
-				srcImage := binaryImage + ".src"
+				binaryImageRef, err := reference.Parse(binaryImage)
+				Expect(err).ShouldNot(HaveOccurred(),
+					fmt.Sprintf("cannot parse binary image pullspec %s", binaryImage))
+
+				tagInfo, err := build.GetImageTag(binaryImageRef.Namespace, binaryImageRef.Name, binaryImageRef.Tag)
+				Expect(err).ShouldNot(HaveOccurred(),
+					fmt.Sprintf("failed to get tag %s info for constructing source container image", binaryImageRef.Tag),
+				)
+
+				srcImageRef := reference.DockerImageReference{
+					Registry:  binaryImageRef.Registry,
+					Namespace: binaryImageRef.Namespace,
+					Name:      binaryImageRef.Name,
+					Tag:       fmt.Sprintf("%s.src", strings.Replace(tagInfo.ManifestDigest, ":", "-", 1)),
+				}
+
+				srcImage := srcImageRef.String()
+
+				tagExists, err := build.DoesTagExistsInQuay(srcImage)
+				Expect(err).ShouldNot(HaveOccurred(),
+					fmt.Sprintf("failed to check existence of source container image %s", srcImage))
+				Expect(tagExists).To(BeTrue(),
+					fmt.Sprintf("cannot find source container image %s", srcImage))
+
+				deprecatedSourceImage := binaryImage + ".src"
+				tagExists, err = build.DoesTagExistsInQuay(deprecatedSourceImage)
+				Expect(err).ShouldNot(HaveOccurred(),
+					fmt.Sprintf("failed to check existence of deprecated source container image %s", deprecatedSourceImage))
+				Expect(tagExists).To(BeTrue(),
+					fmt.Sprintf("cannot find deprecated source container image %s", deprecatedSourceImage))
+
 				filesExists, err := build.IsSourceFilesExistsInSourceImage(srcImage, gitUrl, isHermeticBuildEnabled, prefetchInputValue)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(filesExists).To(BeTrue())
