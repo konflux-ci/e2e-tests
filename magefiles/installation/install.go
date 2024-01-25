@@ -105,6 +105,29 @@ func NewAppStudioInstallController() (*InstallAppStudio, error) {
 		LocalForkName:                    DEFAULT_LOCAL_FORK_NAME,
 		LocalGithubForkOrganization:      utils.GetEnv("MY_GITHUB_ORG", DEFAULT_LOCAL_FORK_ORGANIZATION),
 		QuayToken:                        utils.GetEnv("QUAY_TOKEN", ""),
+		DefaultImageQuayOrg:              utils.GetEnv("DEFAULT_QUAY_ORG", DEFAULT_E2E_QUAY_ORG),
+		DefaultImageQuayOrgOAuth2Token:   utils.GetEnv("DEFAULT_QUAY_ORG_TOKEN", ""),
+		DefaultImageTagExpiration:        utils.GetEnv(constants.IMAGE_TAG_EXPIRATION_ENV, constants.DefaultImageTagExpiration),
+	}, nil
+}
+
+func NewAppStudioInstallControllerUpgrade(infraFork string, infraBranch string) (*InstallAppStudio, error) {
+	cwd, _ := os.Getwd()
+	k8sClient, err := kubeCl.NewAdminKubernetesClient()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &InstallAppStudio{
+		KubernetesClient:                 k8sClient,
+		TmpDirectory:                     DEFAULT_TMP_DIR,
+		InfraDeploymentsCloneDir:         fmt.Sprintf("%s/%s/infra-deployments", cwd, DEFAULT_TMP_DIR),
+		InfraDeploymentsBranch:           infraBranch,
+		InfraDeploymentsOrganizationName: infraFork,
+		LocalForkName:                    DEFAULT_LOCAL_FORK_NAME,
+		LocalGithubForkOrganization:      utils.GetEnv("MY_GITHUB_ORG", DEFAULT_LOCAL_FORK_ORGANIZATION),
+		QuayToken:                        utils.GetEnv("QUAY_TOKEN", ""),
 		DefaultImageQuayOrg:              utils.GetEnv("DEFAULT_QUAY_ORG", ""),
 		DefaultImageQuayOrgOAuth2Token:   utils.GetEnv("DEFAULT_QUAY_ORG_TOKEN", ""),
 		DefaultImageTagExpiration:        utils.GetEnv(constants.IMAGE_TAG_EXPIRATION_ENV, constants.DefaultImageTagExpiration),

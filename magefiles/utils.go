@@ -377,10 +377,11 @@ func MergePRInRemote(branch string, forkOrganization string, repoPath string) er
 	err = wt.Checkout(&git.CheckoutOptions{
 		Branch: previewBranchRef.Name(),
 	})
+	klog.Infof("Preview branch name: %s", previewBranchRef.Name())
 	if err != nil {
 		klog.Fatal(err)
 	}
-
+	klog.Infof("Fork organization: %s", forkOrganization)
 	if forkOrganization == "redhat-appstudio" {
 		// Cloned repository have as origin set redhat-appstudio organization
 		err = mergeBranch(repoPath, "remotes/origin/"+branch)
