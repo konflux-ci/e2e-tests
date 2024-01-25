@@ -998,7 +998,8 @@ func UpgradeTestsWorkflow() error {
 }
 
 func BootstrapClusterForUpgrade() (*installation.InstallAppStudio, error) {
-	ic, err := installation.NewAppStudioInstallController()
+	//Use main branch of infra-deployments in redhat-appstudio org as default version for upgrade
+	ic, err := installation.NewAppStudioInstallControllerUpgrade("redhat-appstudio", "main")
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize installation controller: %+v", err)
 	}
