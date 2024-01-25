@@ -44,6 +44,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 		var applicationName, componentName, symlinkComponentName, testNamespace string
 		var kubeadminClient *framework.ControllerHub
+		var finalizerName string = "e2e-test"
 
 		BeforeAll(func() {
 			if os.Getenv("APP_SUFFIX") != "" {
@@ -112,6 +113,20 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		})
 
 		AfterAll(func() {
+			//Remove finalizer from symlink check pipelinerun
+			pr, err := kubeadminClient.HasController.GetComponentPipelineRun(symlinkComponentName, applicationName, testNamespace, "")
+			Expect(err).ShouldNot(HaveOccurred())
+			err = kubeadminClient.TektonController.RemoveFinalizerFromPipelineRun(pr, finalizerName)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			//Remove finalizer from other pipelineruns
+			for i := range componentUrls {
+				pr, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
+				Expect(err).ShouldNot(HaveOccurred())
+				err = kubeadminClient.TektonController.RemoveFinalizerFromPipelineRun(pr, finalizerName)
+				Expect(err).ShouldNot(HaveOccurred())
+			}
+
 			// Do cleanup only in case the test succeeded
 			if !CurrentSpecReport().Failed() {
 				// Clean up only Application CR (Component and Pipelines are included) in case we are targeting specific namespace
@@ -125,10 +140,28 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			}
 		})
 
+		It(fmt.Sprintf("triggers PipelineRun for symlink component with source URL %s", pythonComponentGitSourceURL), Label(buildTemplatesTestLabel), func() {
+			timeout := time.Minute * 5
+			Eventually(func() error {
+				pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(symlinkComponentName, applicationName, testNamespace, "")
+				if err != nil {
+					GinkgoWriter.Printf("PipelineRun has not been created yet for symlink Component %s/%s\n", testNamespace, symlinkComponentName)
+					return err
+				}
+				if !pipelineRun.HasStarted() {
+					return fmt.Errorf("pipelinerun %s/%s has not started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
+				}
+				err = kubeadminClient.TektonController.AddFinalizerToPipelineRun(pipelineRun, finalizerName)
+				if err != nil {
+					return fmt.Errorf("error while adding finalizer %q to the pipelineRun %q: %v", finalizerName, pipelineRun.GetName(), err)
+				}
+				return nil
+			}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the Component %s/%s", testNamespace, symlinkComponentName))
+		})
+
 		for i, gitUrl := range componentUrls {
 			i := i
 			gitUrl := gitUrl
-			var pr *v1beta1.PipelineRun
 			It(fmt.Sprintf("triggers PipelineRun for component with source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
 				timeout := time.Minute * 5
 
@@ -141,9 +174,20 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					if !pipelineRun.HasStarted() {
 						return fmt.Errorf("pipelinerun %s/%s has not started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
 					}
+					err = kubeadminClient.TektonController.AddFinalizerToPipelineRun(pipelineRun, finalizerName)
+					if err != nil {
+						return fmt.Errorf("error while adding finalizer %q to the pipelineRun %q: %v", finalizerName, pipelineRun.GetName(), err)
+					}
 					return nil
 				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the Component %s/%s", testNamespace, componentNames[i]))
 			})
+
+		}
+
+		for i, gitUrl := range componentUrls {
+			i := i
+			gitUrl := gitUrl
+			var pr *v1beta1.PipelineRun
 
 			It(fmt.Sprintf("should eventually finish successfully for component with Git source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
 				component, err := kubeadminClient.HasController.GetComponent(componentNames[i], testNamespace)
@@ -505,22 +549,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				}
 			})
 		}
-
-		It(fmt.Sprintf("triggers PipelineRun for symlink component with source URL %s", pythonComponentGitSourceURL), Label(buildTemplatesTestLabel), func() {
-			timeout := time.Minute * 5
-
-			Eventually(func() error {
-				pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(symlinkComponentName, applicationName, testNamespace, "")
-				if err != nil {
-					GinkgoWriter.Printf("PipelineRun has not been created yet for symlink Component %s/%s\n", testNamespace, symlinkComponentName)
-					return err
-				}
-				if !pipelineRun.HasStarted() {
-					return fmt.Errorf("pipelinerun %s/%s has not started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
-				}
-				return nil
-			}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the Component %s/%s", testNamespace, symlinkComponentName))
-		})
 
 		It(fmt.Sprintf("pipelineRun should fail for symlink component with Git source URL %s", pythonComponentGitSourceURL), Label(buildTemplatesTestLabel), func() {
 			component, err := kubeadminClient.HasController.GetComponent(symlinkComponentName, testNamespace)
