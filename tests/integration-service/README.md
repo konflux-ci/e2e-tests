@@ -20,16 +20,6 @@ Happy path testing describes tests that focus on the most common scenarios while
 - Validating the successful creation of a SnapshotEnvironmentBinding.
 - Validating the successful creation of a Release.
 
-### E2E tests of Namespace-backed Environments (within `namespace-backed-environments.go`):
-
-- Testing for successful creation of applications, components, DeploymentTargetClass, Environment, and IntegrationTestScenario
-- Checking if the BuildPipelineRun is successfully triggered and completed.
-- Asserting the signing of BuildPipelineRun.
-- Validating the successful creation of a Snapshot, an Ephemeral environment, and an Integration PipelineRun.
-- Verifying that the Integration PipelineRun succeeded.
-- Asserting that the Snapshot was marked as Passed.
-- Verifying that the Ephemeral environment and related SnapshotEnvironmentBinding got deleted.
-
 ### E2E tests of Status Reporting of Integration tests to CheckRuns (within `status-reporting-to-pullrequest.go`):
 
 - Creating 2 IntegrationTestScenarios: one that's supposed to pass and other one to fail.
@@ -58,11 +48,6 @@ Happy path testing describes tests that focus on the most common scenarios while
 - Validating that no Release CRs and no SnapshotEnvironmentBinding are created in certain scenarios.
 - Checking that the global candidate does not get updated unexpectedly.
 
-
-### Failed Ephemeral Environment provisioning due to missing DeploymentTargetClass (within `namespace-backed-environments.go`):
-- Verifying that entities like deploymentTargetClass and GitOpsCR don't exist under certain conditions.
-- Asserting that no GitOpsCR is created for a non-existing deploymentTargetClass.
-- Checking that a snapshot doesn't get marked as 'passed' under specific conditions.
   
 
 ## Running e2e tests
