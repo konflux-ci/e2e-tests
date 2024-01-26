@@ -167,8 +167,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 			Resolver: "git",
 			Params: []tektonutils.Param{
 				{Name: "url", Value: releaseConst.RelSvcCatalogURL},
-				//	{Name: "revision", Value: releaseConst.RelSvcCatalogRevision},
-				{Name: "revision", Value: "development"},
+				{Name: "revision", Value: releaseConst.RelSvcCatalogRevision},
 				{Name: "pathInRepo", Value: "pipelines/rh-push-to-external-registry/rh-push-to-external-registry.yaml"},
 			},
 		}, &runtime.RawExtension{

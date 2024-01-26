@@ -29,6 +29,13 @@ const (
 	annotationsTestGitSourceRepoName = "multi-stage-build-go-sample"
 	annotationsTestRevision          = "529f65798777a5fe145e33d58e1e91c4c03704a4"
 
+	componentDependenciesParentRepoName      = "build-nudge-parent"
+	componentDependenciesParentDefaultBranch = "main"
+	componentDependenciesParentGitRevision   = "a8dce08dbdf290e5d616a83672ad3afcb4b455ef"
+	componentDependenciesChildRepoName       = "build-nudge-child"
+	componentDependenciesChildDefaultBranch  = "main"
+	componentDependenciesChildGitRevision    = "56c13d17b1a8f801f2c41091e6f4e62cf16ee5f2"
+
 	githubUrlFormat = "https://github.com/%s/%s"
 
 	appstudioCrdsBuild = "appstudio-crds-build"

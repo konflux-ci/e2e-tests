@@ -24,6 +24,9 @@ test/unit:
 ci/test/e2e:
 	./mage -v ci:teste2e
 
+ci/bootstrap:
+	./mage -v ci:bootstrap
+
 ci/test/upgrade:
 	./mage -v ci:testUpgrade 
 

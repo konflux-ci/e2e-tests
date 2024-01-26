@@ -108,7 +108,7 @@ func (ci CI) PrepareE2EBranch() error {
 			return err
 		}
 	} else {
-		if ci.isPRPairingRequired("e2e-tests") {
+		if isPRPairingRequired("e2e-tests") {
 			if err := gitCheckoutRemoteBranch(pr.RemoteName, pr.BranchName); err != nil {
 				return err
 			}
@@ -231,6 +231,17 @@ func (Local) CleanupPrivateRepos() error {
 	return cleanupPrivateRepos(quayClient, quayOrg, repoNamePrefixes)
 }
 
+func (ci CI) Bootstrap() error {
+	if err := ci.init(); err != nil {
+		return fmt.Errorf("error when running ci init: %v", err)
+	}
+
+	if err := BootstrapCluster(); err != nil {
+		return fmt.Errorf("error when bootstrapping cluster: %v", err)
+	}
+	return nil
+}
+
 func (ci CI) TestE2E() error {
 	var testFailure bool
 
@@ -240,10 +251,6 @@ func (ci CI) TestE2E() error {
 
 	if err := PreflightChecks(); err != nil {
 		return fmt.Errorf("error when running preflight checks: %v", err)
-	}
-
-	if err := ci.setRequiredEnvVars(); err != nil {
-		return fmt.Errorf("error when setting up required env vars: %v", err)
 	}
 
 	if err := retry(BootstrapCluster, 2, 10*time.Second); err != nil {
@@ -277,10 +284,6 @@ func (ci CI) TestE2E() error {
 				klog.Warning(alertErr)
 			}
 		}
-	}
-
-	if err := ci.sendWebhook(); err != nil {
-		klog.Infof("error when sending webhook: %v", err)
 	}
 
 	if testFailure {
@@ -325,7 +328,7 @@ func PreflightChecks() error {
 	return nil
 }
 
-func (ci CI) setRequiredEnvVars() error {
+func setRequiredEnvVars() error {
 
 	// RHTAP Nightly E2E job
 	// The job name is taken from https://github.com/openshift/release/blob/f03153fa4ad36c0e10050d977e7f0f7619d2163a/ci-operator/config/redhat-appstudio/infra-deployments/redhat-appstudio-infra-deployments-main.yaml#L59C7-L59C35
@@ -511,7 +514,7 @@ func (ci CI) setRequiredEnvVars() error {
 	} else { // e2e-tests repository PR
 		requiresMultiPlatformTests = true
 		requiresSprayProxyRegistering = true
-		if ci.isPRPairingRequired("infra-deployments") {
+		if isPRPairingRequired("infra-deployments") {
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
 		}
@@ -590,10 +593,15 @@ func setupMultiPlatformTests() error {
 func BootstrapCluster() error {
 	envVars := map[string]string{}
 
-	if os.Getenv("CI") == "true" && os.Getenv("REPO_NAME") == "e2e-tests" {
-		// Some scripts in infra-deployments repo are referencing scripts/utils in e2e-tests repo
-		// This env var allows to test changes introduced in "e2e-tests" repo PRs in CI
-		envVars["E2E_TESTS_COMMIT_SHA"] = os.Getenv("PULL_PULL_SHA")
+	if os.Getenv("CI") == "true" {
+		if err := setRequiredEnvVars(); err != nil {
+			return fmt.Errorf("error when setting up required env vars: %v", err)
+		}
+		if os.Getenv("REPO_NAME") == "e2e-tests" {
+			// Some scripts in infra-deployments repo are referencing scripts/utils in e2e-tests repo
+			// This env var allows to test changes introduced in "e2e-tests" repo PRs in CI
+			envVars["E2E_TESTS_COMMIT_SHA"] = os.Getenv("PULL_PULL_SHA")
+		}
 	}
 
 	ic, err := installation.NewAppStudioInstallController()
@@ -604,7 +612,7 @@ func BootstrapCluster() error {
 	return ic.InstallAppStudioPreviewMode()
 }
 
-func (CI) isPRPairingRequired(repoForPairing string) bool {
+func isPRPairingRequired(repoForPairing string) bool {
 	var pullRequests []gh.PullRequest
 
 	url := fmt.Sprintf("https://api.github.com/repos/redhat-appstudio/%s/pulls?per_page=100", repoForPairing)
@@ -620,59 +628,6 @@ func (CI) isPRPairingRequired(repoForPairing string) bool {
 	}
 
 	return false
-}
-
-func (CI) sendWebhook() error {
-	// AppStudio QE webhook configuration values will be used by default (if none are provided via env vars)
-	const appstudioQESaltSecret = "123456789"
-	const appstudioQEWebhookTargetURL = "https://hook.pipelinesascode.com/EyFYTakxEgEy"
-
-	var repoURL string
-
-	var repoOwner = os.Getenv("REPO_OWNER")
-	var repoName = os.Getenv("REPO_NAME")
-	var prNumber = os.Getenv("PULL_NUMBER")
-	var saltSecret = utils.GetEnv("WEBHOOK_SALT_SECRET", appstudioQESaltSecret)
-	var webhookTargetURL = utils.GetEnv("WEBHOOK_TARGET_URL", appstudioQEWebhookTargetURL)
-
-	if strings.Contains(jobName, "hacbs-e2e-periodic") {
-		// TODO configure webhook channel for sending HACBS test results
-		klog.Infof("not sending webhook for HACBS periodic job yet")
-		return nil
-	}
-
-	if jobType == "periodic" {
-		repoURL = "https://github.com/redhat-appstudio/infra-deployments"
-		repoOwner = "redhat-appstudio"
-		repoName = "infra-deployments"
-		prNumber = "periodic"
-	} else if repoName == "e2e-tests" || repoName == "infra-deployments" {
-		repoURL = openshiftJobSpec.Refs.RepoLink
-	} else {
-		klog.Infof("sending webhook for jobType %s, jobName %s is not supported", jobType, jobName)
-		return nil
-	}
-
-	path, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("error when sending webhook: %+v", err)
-	}
-
-	wh := Webhook{
-		Path: path,
-		Repository: Repository{
-			FullName:   fmt.Sprintf("%s/%s", repoOwner, repoName),
-			PullNumber: prNumber,
-		},
-		RepositoryURL: repoURL,
-	}
-	resp, err := wh.CreateAndSend(saltSecret, webhookTargetURL)
-	if err != nil {
-		return fmt.Errorf("error sending webhook: %+v", err)
-	}
-	klog.Infof("webhook response: %+v", resp)
-
-	return nil
 }
 
 // Generates ginkgo test suite files under the cmd/ directory.
@@ -954,7 +909,7 @@ func (ci CI) TestUpgrade() error {
 		return fmt.Errorf("error when running preflight checks: %v", err)
 	}
 
-	if err := ci.setRequiredEnvVars(); err != nil {
+	if err := setRequiredEnvVars(); err != nil {
 		return fmt.Errorf("error when setting up required env vars: %v", err)
 	}
 
@@ -1043,7 +998,8 @@ func UpgradeTestsWorkflow() error {
 }
 
 func BootstrapClusterForUpgrade() (*installation.InstallAppStudio, error) {
-	ic, err := installation.NewAppStudioInstallController()
+	//Use main branch of infra-deployments in redhat-appstudio org as default version for upgrade
+	ic, err := installation.NewAppStudioInstallControllerUpgrade("redhat-appstudio", "main")
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize installation controller: %+v", err)
 	}

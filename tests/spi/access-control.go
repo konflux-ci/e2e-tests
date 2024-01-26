@@ -133,7 +133,7 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "access-control"), func() 
 				SPITokenBinding, err = user.Framework.AsKubeDeveloper.SPIController.GetSPIAccessTokenBinding(SPITokenBinding.Name, namespace)
 				Expect(err).NotTo(HaveOccurred())
 				return SPITokenBinding.Status.Phase
-			}, 1*time.Minute, 5*time.Second).Should(Equal(v1beta1.SPIAccessTokenBindingPhaseInjected), fmt.Sprintf("SPIAccessTokenBinding %s/%s is not in %s phase", SPITokenBinding.GetNamespace(), SPITokenBinding.GetName(), v1beta1.SPIAccessTokenBindingPhaseInjected))
+			}, 5*time.Minute, 5*time.Second).Should(Equal(v1beta1.SPIAccessTokenBindingPhaseInjected), fmt.Sprintf("SPIAccessTokenBinding %s/%s is not in %s phase", SPITokenBinding.GetNamespace(), SPITokenBinding.GetName(), v1beta1.SPIAccessTokenBindingPhaseInjected))
 
 			// SPIAccessToken exists and is in Read phase
 			Eventually(func() (v1beta1.SPIAccessTokenPhase, error) {

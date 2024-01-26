@@ -1337,8 +1337,8 @@ github.com/quobyte/api v0.1.8/go.mod h1:jL7lIHrmqQ7yh05OJ+eEEdHr0u/kmT1Ff9iHd+4H
 github.com/rasky/go-xdr v0.0.0-20170217172119-4930550ba2e2/go.mod h1:Nfe4efndBz4TibWycNE+lqyJZiMX4ycx+QKV8Ta0f/o=
 github.com/redhat-appstudio-qe/perf-monitoring/api v0.0.0-20231003074147-a076f9e620da h1:xmweq8s/Swij76dF7oMIolghzM1iVw6Cpkd8Aw/wrf8=
 github.com/redhat-appstudio-qe/perf-monitoring/api v0.0.0-20231003074147-a076f9e620da/go.mod h1:E6snXS/FN6RBbfm1SOIab/bPL8WiUcvDL40wgF9Rfho=
-github.com/redhat-appstudio/application-api v0.0.0-20231025105224-2790bb451725 h1:9808yVdQmzCLGrbedW6h4brggYqdnMpyMwKhFpx9/pE=
-github.com/redhat-appstudio/application-api v0.0.0-20231025105224-2790bb451725/go.mod h1:OvmeiVOItG2OSX/QE+vQwzOYfbOMBhBy43ZFxkWZJyc=
+github.com/redhat-appstudio/application-api v0.0.0-20231026192857-89515ad2504f h1:PoKf7gCV/g5blkzVlODkqeynmfIACcR7NqWF8eqnuec=
+github.com/redhat-appstudio/application-api v0.0.0-20231026192857-89515ad2504f/go.mod h1:YvckuKHe82eWloGk0/BpSw4YYG2owrGZAanztbOj3pQ=
 github.com/redhat-appstudio/application-service v0.0.0-20230717184417-67d31a01a776 h1:qaNoaKn+RHg3Z3SsDYSkLEto8qlNjHJGUJ5CCMzE8gY=
 github.com/redhat-appstudio/application-service v0.0.0-20230717184417-67d31a01a776/go.mod h1:meLjzNehwlqPyjd8Gg78oXRpRy5HQ4nCulk8u8mCjqs=
 github.com/redhat-appstudio/build-service v0.0.0-20230727072250-19c7a8b5c63d h1:bk/mBxEb1mSRQ/xuCuNQfxm4Riz/KNJ1AI8pekrNsmo=

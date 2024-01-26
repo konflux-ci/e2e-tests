@@ -85,6 +85,11 @@ func (h *HasController) GetComponentPipelineRunWithType(componentName string, ap
 		return nil, fmt.Errorf("error listing pipelineruns in %s namespace: %v", namespace, err)
 	}
 
+	// If we hit any other error, while fetching pipelineRun list
+	if err != nil {
+		return nil, fmt.Errorf("error while trying to get pipelinerun list in %s namespace: %v", namespace, err)
+	}
+
 	if len(list.Items) > 0 {
 		return &list.Items[0], nil
 	}

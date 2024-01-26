@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	buildcontrollers "github.com/redhat-appstudio/build-service/controllers"
@@ -98,17 +99,12 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 		ssourl = utils.GetEnv("STAGE_SSOURL", "")
 		apiurl = utils.GetEnv("STAGE_APIURL", "")
 		username = utils.GetEnv("STAGE_USERNAME", "")
-		if token == "" && ssourl == "" && apiurl == "" && username == "" {
-			Fail("Failed: Please set the required Stage Variables for user")
-		}
-		TestScenarios = append(TestScenarios, e2eConfig.GetScenarios(true)...)
 
+		TestScenarios = append(TestScenarios, e2eConfig.GetScenarios(true)...)
 	}
 
 	if Label("rhtap-demo").MatchesLabelFilter(GinkgoLabelFilter()) {
-
 		TestScenarios = append(TestScenarios, e2eConfig.GetScenarios(false)...)
-
 	}
 
 	for _, appTest := range TestScenarios {
@@ -117,6 +113,12 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 
 			Describe(appTest.Name, Ordered, func() {
 				BeforeAll(func() {
+					if Label("verify-stage").MatchesLabelFilter(GinkgoLabelFilter()) {
+						if token == "" && ssourl == "" && apiurl == "" && username == "" {
+							Fail("Failed: Please set the required Stage Variables for user")
+						}
+					}
+
 					// Initialize the tests controllers
 					if !appTest.Stage {
 
@@ -151,7 +153,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 						err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("rhtap-demo", namespace, "appstudio-crds-spi")
 						Expect(err).NotTo(HaveOccurred())
 
-						if !CurrentSpecReport().Failed() {
+						if !(strings.EqualFold(utils.GetEnv("E2E_SKIP_CLEANUP", ""), "true") && !CurrentSpecReport().Failed()) {
 							// RHTAPBUGS-978: temporary timeout to 15min
 							if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 15*time.Minute); err != nil {
 								if err := fw.AsKubeAdmin.StoreAllArtifactsForNamespace(namespace); err != nil {
