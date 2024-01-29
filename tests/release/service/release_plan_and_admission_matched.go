@@ -10,8 +10,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
+	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -23,7 +23,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 	var devNamespace string
 	var managedNamespace = utils.GetGeneratedNamespace("plan-and-admission-managed")
 
-	var releasePlanCR, secondReleasePlanCR  *releaseApi.ReleasePlan
+	var releasePlanCR, secondReleasePlanCR *releaseApi.ReleasePlan
 	var releasePlanAdmissionCR *releaseApi.ReleasePlanAdmission
 	AfterEach(framework.ReportFailure(&fw))
 
@@ -100,7 +100,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 				Expect(condition).NotTo(BeNil())
 				Expect(condition.Status).To(Equal(metav1.ConditionTrue))
 				Expect(releasePlanAdmissionCR.Status.ReleasePlans).To(HaveLen(1))
-				Expect(releasePlanAdmissionCR.Status.ReleasePlans).To(Equal([]releaseApi.MatchedReleasePlan{{Name: devNamespace+ "/" + releasecommon.SourceReleasePlanName, Active: true}}))
+				Expect(releasePlanAdmissionCR.Status.ReleasePlans).To(Equal([]releaseApi.MatchedReleasePlan{{Name: devNamespace + "/" + releasecommon.SourceReleasePlanName, Active: true}}))
 			})
 		})
 
@@ -134,7 +134,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 						return fmt.Errorf("failed to get the MatchedConditon of RPA %s ", releasePlanAdmissionCR.Name)
 					}
 
-					if len(releasePlanAdmissionCR.Status.ReleasePlans) < 2  {
+					if len(releasePlanAdmissionCR.Status.ReleasePlans) < 2 {
 						return fmt.Errorf("the second ReleasePlan CR has not being added to %s", releasePlanAdmissionCR.Name)
 					}
 					Expect(condition).NotTo(BeNil())
@@ -142,7 +142,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 					return nil
 				}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("time out when waiting for ReleasePlanAdmission %s being reconciled to matched", releasePlanAdmissionCR.Name))
 				Expect(releasePlanAdmissionCR.Status.ReleasePlans).To(HaveLen(2))
-				Expect(releasePlanAdmissionCR.Status.ReleasePlans).To(Equal([]releaseApi.MatchedReleasePlan{{Name: devNamespace+ "/" + releasecommon.SourceReleasePlanName, Active: true}, {Name: devNamespace + "/" + releasecommon.SecondReleasePlanName, Active: false}}))
+				Expect(releasePlanAdmissionCR.Status.ReleasePlans).To(Equal([]releaseApi.MatchedReleasePlan{{Name: devNamespace + "/" + releasecommon.SourceReleasePlanName, Active: true}, {Name: devNamespace + "/" + releasecommon.SecondReleasePlanName, Active: false}}))
 			})
 		})
 
@@ -161,7 +161,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 						return fmt.Errorf("failed to find the MatchedConditon of %s", releasePlanAdmissionCR.Name)
 					}
 
-					if len(releasePlanAdmissionCR.Status.ReleasePlans) > 1  {
+					if len(releasePlanAdmissionCR.Status.ReleasePlans) > 1 {
 						return fmt.Errorf("ReleasePlan CR is deleted, but ReleasePlanAdmission CR %s has not been reconciled", releasePlanAdmissionCR.Name)
 					}
 					Expect(condition).NotTo(BeNil())

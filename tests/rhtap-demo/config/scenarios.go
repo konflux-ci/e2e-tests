@@ -310,14 +310,14 @@ var TestScenarios = []TestSpec{
 		Stage:           true,
 		Components: []ComponentSpec{
 			{
-				Name:                 "rhtap-stage-demo-component",
-				ContainerSource:      "",
-				Language:             "Java",
-				GitSourceUrl:         "https://github.com/devfile-samples/devfile-sample-java-springboot-basic",
-				GitSourceRevision:    "",
-				GitSourceContext:     "",
-				HealthEndpoint:       "/",
-				SkipDeploymentCheck:  false,
+				Name:                "rhtap-stage-demo-component",
+				ContainerSource:     "",
+				Language:            "Java",
+				GitSourceUrl:        "https://github.com/devfile-samples/devfile-sample-java-springboot-basic",
+				GitSourceRevision:   "",
+				GitSourceContext:    "",
+				HealthEndpoint:      "/",
+				SkipDeploymentCheck: false,
 			},
 		},
 	},
@@ -330,12 +330,12 @@ func GetScenarios(isStage bool) []TestSpec {
 	for _, Scenario := range TestScenarios {
 		if Scenario.Stage {
 			StageScenarios = append(StageScenarios, Scenario)
-		} else{
+		} else {
 			NormalScenarios = append(NormalScenarios, Scenario)
 		}
 	}
 
-	if isStage{
+	if isStage {
 		return StageScenarios
 	} else {
 		return NormalScenarios
