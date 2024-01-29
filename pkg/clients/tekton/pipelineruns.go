@@ -15,7 +15,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/yaml"
 
 	g "github.com/onsi/ginkgo/v2"
@@ -258,5 +260,31 @@ func (t *TektonController) StoreAllPipelineRuns(namespace string) error {
 		}
 	}
 
+	return nil
+}
+
+func (t *TektonController) AddFinalizerToPipelineRun(pipelineRun *v1beta1.PipelineRun, finalizerName string) error {
+	ctx := context.Background()
+	kubeClient := t.KubeRest()
+	patch := crclient.MergeFrom(pipelineRun.DeepCopy())
+	if ok := controllerutil.AddFinalizer(pipelineRun, finalizerName); ok {
+		err := kubeClient.Patch(ctx, pipelineRun, patch)
+		if err != nil {
+			return fmt.Errorf("error occurred while patching the updated PipelineRun after finalizer addition: %v", err)
+		}
+	}
+	return nil
+}
+
+func (t *TektonController) RemoveFinalizerFromPipelineRun(pipelineRun *v1beta1.PipelineRun, finalizerName string) error {
+	ctx := context.Background()
+	kubeClient := t.KubeRest()
+	patch := client.MergeFrom(pipelineRun.DeepCopy())
+	if ok := controllerutil.RemoveFinalizer(pipelineRun, finalizerName); ok {
+		err := kubeClient.Patch(ctx, pipelineRun, patch)
+		if err != nil {
+			return fmt.Errorf("error occurred while patching the updated PipelineRun after finalizer removal: %v", err)
+		}
+	}
 	return nil
 }
