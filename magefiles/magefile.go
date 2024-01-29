@@ -220,7 +220,7 @@ func (Local) CleanupQuayTags() error {
 
 // Deletes the private repos with prefix "build-e2e" or "rhtap-demo"
 func (Local) CleanupPrivateRepos() error {
-	repoNamePrefixes := []string{"build-e2e", "rhtap-demo"}
+	repoNamePrefixes := []string{"build-e2e", "rhtap-demo", "multi-platform", "jvm-build"}
 	quayOrgToken := os.Getenv("DEFAULT_QUAY_ORG_TOKEN")
 	if quayOrgToken == "" {
 		return fmt.Errorf(quayTokenNotFoundError)
