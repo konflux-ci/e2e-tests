@@ -261,7 +261,7 @@ spec:
 
 				buffer := &bytes.Buffer{}
 				errBuffer := &bytes.Buffer{}
-				err = exec.Stream(remotecommand.StreamOptions{
+				err = exec.StreamWithContext(context.TODO(), remotecommand.StreamOptions{
 					Stdout: buffer,
 					Stderr: errBuffer,
 				})

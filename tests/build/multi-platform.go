@@ -3,14 +3,15 @@ package build
 import (
 	"context"
 	"fmt"
-	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
-	"golang.org/x/crypto/ssh"
-	v1 "k8s.io/api/core/v1"
 	"log"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	"golang.org/x/crypto/ssh"
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/devfile/library/v2/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
@@ -20,7 +21,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -171,12 +172,12 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 				Expect(err).ShouldNot(HaveOccurred())
 
 				for _, chr := range pr.Status.ChildReferences {
-					taskRun := &v1beta1.TaskRun{}
+					taskRun := &pipeline.TaskRun{}
 					taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
 					err := f.AsKubeAdmin.CommonController.KubeRest().Get(context.TODO(), taskRunKey, taskRun)
 					Expect(err).ShouldNot(HaveOccurred())
 
-					prTrStatus := &v1beta1.PipelineRunTaskRunStatus{
+					prTrStatus := &pipeline.PipelineRunTaskRunStatus{
 						PipelineTaskName: chr.PipelineTaskName,
 						Status:           &taskRun.Status,
 					}

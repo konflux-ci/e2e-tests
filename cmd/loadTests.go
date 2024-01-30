@@ -23,7 +23,7 @@ import (
 	loadtestUtils "github.com/redhat-appstudio/e2e-tests/pkg/utils/loadtests"
 	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	"github.com/spf13/cobra"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1568,7 +1568,7 @@ func (h *ConcreteHandlerPipelines) Handle(ctx *JourneyContext) {
 func (h *ConcreteHandlerPipelines) validatePipeline(ctx *JourneyContext, framework *framework.Framework, componentName, applicationName, username, usernamespace string) {
 	pipelineCreatedRetryInterval := time.Second * 20
 	pipelineCreatedTimeout := time.Minute * 30
-	var pipelineRun *v1beta1.PipelineRun
+	var pipelineRun *pipeline.PipelineRun
 
 	threadIndex := ctx.ThreadIndex
 	chIntegrationTestsPipelines := ctx.ChIntegrationTestsPipelines
@@ -1628,7 +1628,7 @@ func (h *ConcreteHandlerPipelines) validatePipeline(ctx *JourneyContext, framewo
 }
 
 func (h *ConcreteHandlerPipelines) validatePipelineCreation(ctx *JourneyContext, framework *framework.Framework, componentName, applicationName, usernamespace string, pipelineCreatedRetryInterval, pipelineCreatedTimeout time.Duration) (error, string) {
-	var pipelineRun *v1beta1.PipelineRun
+	var pipelineRun *pipeline.PipelineRun
 
 	err := k8swait.PollUntilContextTimeout(context.Background(), pipelineCreatedRetryInterval, pipelineCreatedTimeout, false, func(ctx context.Context) (done bool, err error) {
 		// Searching for "build" type of pipelineRun
@@ -1648,7 +1648,7 @@ func (h *ConcreteHandlerPipelines) validatePipelineCreation(ctx *JourneyContext,
 	}
 }
 
-func (h *ConcreteHandlerPipelines) handlePVCS(threadIndex int, framework *framework.Framework, pipelineRun *v1beta1.PipelineRun) {
+func (h *ConcreteHandlerPipelines) handlePVCS(threadIndex int, framework *framework.Framework, pipelineRun *pipeline.PipelineRun) {
 	pvcs, err := framework.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumeClaims(pipelineRun.Namespace).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		logError(23, fmt.Sprintf("Error getting PVC: %v\n", err))
@@ -1727,7 +1727,7 @@ func (h *ConcreteHandlerItsPipelines) validateItsPipeline(ctx *JourneyContext, a
 
 	IntegrationTestsPipelineRunRetryInterval := time.Second * 20
 	IntegrationTestsPipelineRunTimeout := time.Minute * 60
-	var IntegrationTestsPipelineRun *v1beta1.PipelineRun
+	var IntegrationTestsPipelineRun *pipeline.PipelineRun
 	err = k8swait.PollUntilContextTimeout(context.Background(), IntegrationTestsPipelineRunRetryInterval, IntegrationTestsPipelineRunTimeout, false, func(ctx context.Context) (done bool, err error) {
 		IntegrationTestsPipelineRun, err = framework.AsKubeDeveloper.IntegrationController.GetIntegrationPipelineRun(testScenarioName, snapshotName, usernamespace)
 		if err != nil {

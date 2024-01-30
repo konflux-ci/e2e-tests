@@ -3,15 +3,15 @@ package tekton
 import (
 	"knative.dev/pkg/apis"
 
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
 // DidTaskRunSucceed checks if task succeeded.
 func DidTaskRunSucceed(tr interface{}) bool {
 	switch tr := tr.(type) {
-	case *v1beta1.PipelineRunTaskRunStatus:
+	case *pipeline.PipelineRunTaskRunStatus:
 		return tr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
-	case *v1beta1.TaskRunStatus:
+	case *pipeline.TaskRunStatus:
 		return tr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 	}
 	return false

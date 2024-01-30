@@ -33,11 +33,11 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	pointer "k8s.io/utils/ptr"
 
 	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
-	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 	e2eConfig "github.com/redhat-appstudio/e2e-tests/tests/rhtap-demo/config"
 )
@@ -153,8 +153,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 						err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("rhtap-demo", namespace, "appstudio-crds-spi")
 						Expect(err).NotTo(HaveOccurred())
 
-						if !(strings.EqualFold(utils.GetEnv("E2E_SKIP_CLEANUP", ""), "true") && !CurrentSpecReport().Failed()) {
-							// RHTAPBUGS-978: temporary timeout to 15min
+						if !(strings.EqualFold(os.Getenv("E2E_SKIP_CLEANUP"), "true")) && !CurrentSpecReport().Failed() { // RHTAPBUGS-978: temporary timeout to 15min
 							if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 15*time.Minute); err != nil {
 								if err := fw.AsKubeAdmin.StoreAllArtifactsForNamespace(namespace); err != nil {
 									Fail(fmt.Sprintf("error archiving artifacts:\n%s", err))
@@ -166,7 +165,6 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 							Expect(fw.AsKubeAdmin.IntegrationController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 							Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 							Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)).To(Succeed())
-							Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllGitOpsDeploymentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 							Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 						}
 					} else {
@@ -369,7 +367,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 							for _, component := range componentList {
 								c, err := fw.AsKubeDeveloper.HasController.GetComponent(component.Name, namespace)
 								Expect(err).NotTo(HaveOccurred())
-								_, err = fw.AsKubeDeveloper.HasController.ScaleComponentReplicas(c, pointer.Int(int(componentSpec.K8sSpec.Replicas)))
+								_, err = fw.AsKubeDeveloper.HasController.ScaleComponentReplicas(c, pointer.To[int](int(componentSpec.K8sSpec.Replicas)))
 								Expect(err).NotTo(HaveOccurred())
 								var deployment *appsv1.Deployment
 

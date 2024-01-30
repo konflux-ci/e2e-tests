@@ -22,7 +22,7 @@ import (
 	"github.com/redhat-appstudio/jvm-build-service/openshift-with-appstudio-test/e2e"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	jvmclientSet "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	pipelineclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
 
@@ -49,7 +49,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 	AfterAll(func() {
 		jvmClient := jvmclientSet.New(f.AsKubeAdmin.JvmbuildserviceController.JvmbuildserviceClient().JvmbuildserviceV1alpha1().RESTClient())
-		tektonClient := pipelineclientset.New(f.AsKubeAdmin.TektonController.PipelineClient().TektonV1beta1().RESTClient())
+		tektonClient := pipelineclientset.New(f.AsKubeAdmin.TektonController.PipelineClient().TektonV1().RESTClient())
 		kubeClient := kubernetes.New(f.AsKubeAdmin.CommonController.KubeInterface().CoreV1().RESTClient())
 		//status report ends up in artifacts/redhat-appstudio-e2e/redhat-appstudio-e2e/artifacts/rp_preproc/attachments/xunit
 		e2e.GenerateStatusReport(testNamespace, jvmClient, kubeClient, tektonClient)
@@ -165,12 +165,12 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				Expect(err).ShouldNot(HaveOccurred())
 
 				for _, chr := range pr.Status.ChildReferences {
-					taskRun := &v1beta1.TaskRun{}
+					taskRun := &pipeline.TaskRun{}
 					taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
 					err := f.AsKubeAdmin.CommonController.KubeRest().Get(context.Background(), taskRunKey, taskRun)
 					Expect(err).ShouldNot(HaveOccurred())
 
-					prTrStatus := &v1beta1.PipelineRunTaskRunStatus{
+					prTrStatus := &pipeline.PipelineRunTaskRunStatus{
 						PipelineTaskName: chr.PipelineTaskName,
 						Status:           &taskRun.Status,
 					}
@@ -296,7 +296,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		})
 
 		It("does rebuild using cached dependencies", func() {
-			prun := &v1beta1.PipelineRun{}
+			prun := &pipeline.PipelineRun{}
 
 			component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("could not get component %s/%s", testNamespace, componentName))
@@ -325,7 +325,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 					if event.Object == nil {
 						continue
 					}
-					pr, ok := event.Object.(*v1beta1.PipelineRun)
+					pr, ok := event.Object.(*pipeline.PipelineRun)
 					if !ok {
 						continue
 					}

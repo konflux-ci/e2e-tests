@@ -12,12 +12,12 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
 var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integration tests", Label("integration-service", "HACBS", "status-reporting"), func() {
@@ -31,7 +31,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 	var osConsoleHost, prHeadSha string
 	var snapshot *appstudioApi.Snapshot
 	var component *appstudioApi.Component
-	var pipelineRun, testPipelinerun *v1beta1.PipelineRun
+	var pipelineRun, testPipelinerun *pipeline.PipelineRun
 	var integrationTestScenarioPass, integrationTestScenarioFail *integrationv1beta1.IntegrationTestScenario
 	var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace string
 

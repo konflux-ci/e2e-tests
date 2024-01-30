@@ -51,13 +51,15 @@ func (r *ReleaseController) CreateReleasePlanAdmission(name, namespace, environm
 			},
 		},
 		Spec: releaseApi.ReleasePlanAdmissionSpec{
-			Applications:   applications,
-			Data:           data,
-			Environment:    environment,
-			Origin:         origin,
-			PipelineRef:    pipelineRef,
-			Policy:         policy,
-			ServiceAccount: serviceAccount,
+			Applications: applications,
+			Data:         data,
+			Environment:  environment,
+			Origin:       origin,
+			Pipeline: &utils.Pipeline{
+				PipelineRef:    *pipelineRef,
+				ServiceAccount: serviceAccount,
+			},
+			Policy: policy,
 		},
 	}
 

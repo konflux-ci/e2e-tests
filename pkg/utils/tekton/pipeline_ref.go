@@ -1,12 +1,12 @@
 package tekton
 
 import (
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
 // GetPipelineNameAndBundleRef returns the pipeline name and bundle reference from a pipelineRef
 // https://tekton.dev/docs/pipelines/pipelineruns/#tekton-bundles
-func GetPipelineNameAndBundleRef(pipelineRef *v1beta1.PipelineRef) (string, string) {
+func GetPipelineNameAndBundleRef(pipelineRef *pipeline.PipelineRef) (string, string) {
 	var name string
 	var bundleRef string
 
@@ -20,23 +20,19 @@ func GetPipelineNameAndBundleRef(pipelineRef *v1beta1.PipelineRef) (string, stri
 				bundleRef = param.Value.StringVal
 			}
 		}
-	} else {
-		// Support the v1beta1 style
-		name = pipelineRef.Name
-		bundleRef = pipelineRef.Bundle //nolint:all
 	}
 
 	return name, bundleRef
 }
 
-func NewBundleResolverPipelineRef(name string, bundleRef string) *v1beta1.PipelineRef {
-	return &v1beta1.PipelineRef{
-		ResolverRef: v1beta1.ResolverRef{
+func NewBundleResolverPipelineRef(name string, bundleRef string) *pipeline.PipelineRef {
+	return &pipeline.PipelineRef{
+		ResolverRef: pipeline.ResolverRef{
 			Resolver: "bundles",
-			Params: []v1beta1.Param{
-				{Name: "name", Value: v1beta1.ParamValue{StringVal: name, Type: v1beta1.ParamTypeString}},
-				{Name: "bundle", Value: v1beta1.ParamValue{StringVal: bundleRef, Type: v1beta1.ParamTypeString}},
-				{Name: "kind", Value: v1beta1.ParamValue{StringVal: "pipeline", Type: v1beta1.ParamTypeString}},
+			Params: []pipeline.Param{
+				{Name: "name", Value: pipeline.ParamValue{StringVal: name, Type: pipeline.ParamTypeString}},
+				{Name: "bundle", Value: pipeline.ParamValue{StringVal: bundleRef, Type: pipeline.ParamTypeString}},
+				{Name: "kind", Value: pipeline.ParamValue{StringVal: "pipeline", Type: pipeline.ParamTypeString}},
 			},
 		},
 	}
