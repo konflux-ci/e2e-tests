@@ -66,10 +66,15 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Skip("Using private cluster (not reachable from Github), skipping...")
 			}
 
+			quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "")
 			supports, err := build.DoesQuayOrgSupportPrivateRepo()
 			Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error while checking if quay org supports private repo: %+v", err))
 			if !supports {
-				Skip("Quay org does not support private quay repository creation, please add support for private repo creation before running this test")
+				if quayOrg == "redhat-appstudio-qe" {
+					Fail("Failed to create private image repo in redhat-appstudio-qe org")
+				} else {
+					Skip("Quay org does not support private quay repository creation, please add support for private repo creation before running this test")
+				}
 			}
 			Expect(err).ShouldNot(HaveOccurred())
 
