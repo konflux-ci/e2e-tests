@@ -28,6 +28,7 @@ import (
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/build-service/controllers"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	imagecontollers "github.com/redhat-appstudio/image-controller/controllers"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -529,6 +530,30 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					componentPipelineRun, _ := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 					return componentPipelineRun == nil
 				}, time.Minute, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("expected no PipelineRun to be triggered for the component %s in %s namespace", componentName, testNamespace))
+			})
+			It("check image repo status after switching to private", func() {
+				var imageStatus imagecontollers.ImageRepositoryStatus
+				Eventually(func() (bool, error) {
+					component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
+					if err != nil {
+						GinkgoWriter.Printf("error while getting component: %v\n", err)
+						return false, err
+					}
+
+					imageAnnotationValue := component.Annotations[controllers.ImageRepoAnnotationName]
+					GinkgoWriter.Printf("image annotation value: %s\n", imageAnnotationValue)
+					statusBytes := []byte(imageAnnotationValue)
+
+					err = json.Unmarshal(statusBytes, &imageStatus)
+					if err != nil {
+						GinkgoWriter.Printf("cannot unmarshal image status: %v\n", err)
+						return false, err
+					}
+					if imageStatus.Message != "" && strings.Contains(imageStatus.Message, "Quay organization plan doesn't allow private image repositories") {
+						return false, fmt.Errorf("failed to switch to private image")
+					}
+					return true, nil
+				}, time.Second*20, time.Second*2).Should(BeTrue(), "component image status annotation has unexpected content")
 			})
 			It("image repo is updated to private", func() {
 				isPublic, err := build.IsImageRepoPublic(imageRepoName)
