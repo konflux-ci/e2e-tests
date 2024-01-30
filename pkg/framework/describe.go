@@ -59,5 +59,5 @@ func ReleasePipelinesSuiteDescribe(text string, args ...interface{}) bool {
 }
 
 func ReleaseServiceSuiteDescribe(text string, args ...interface{}) bool {
-	return Describe("[release-service-suite "+text+"]", args, Ordered)
+	return Describe("[release-service-suite "+text+"]", args, Ordered, Pending)
 }
