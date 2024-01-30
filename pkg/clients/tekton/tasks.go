@@ -4,15 +4,15 @@ import (
 	"context"
 	"os/exec"
 
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Create a tekton task and return the task or error.
-func (t *TektonController) CreateTask(task *v1beta1.Task, ns string) (*v1beta1.Task, error) {
-	return t.PipelineClient().TektonV1beta1().Tasks(ns).Create(context.Background(), task, metav1.CreateOptions{})
+func (t *TektonController) CreateTask(task *pipeline.Task, ns string) (*pipeline.Task, error) {
+	return t.PipelineClient().TektonV1().Tasks(ns).Create(context.Background(), task, metav1.CreateOptions{})
 }
 
 // CreateSkopeoCopyTask creates a skopeo copy task in the given namespace.
@@ -29,13 +29,13 @@ func (t *TektonController) CreateSkopeoCopyTask(namespace string) error {
 }
 
 // GetTask returns the requested Task object.
-func (t *TektonController) GetTask(name, namespace string) (*v1beta1.Task, error) {
+func (t *TektonController) GetTask(name, namespace string) (*pipeline.Task, error) {
 	namespacedName := types.NamespacedName{
 		Name:      name,
 		Namespace: namespace,
 	}
 
-	task := v1beta1.Task{
+	task := pipeline.Task{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -50,5 +50,5 @@ func (t *TektonController) GetTask(name, namespace string) (*v1beta1.Task, error
 
 // DeleteAllTasksInASpecificNamespace removes all Tasks from a given repository. Useful when creating a lot of resources and wanting to remove all of them.
 func (t *TektonController) DeleteAllTasksInASpecificNamespace(namespace string) error {
-	return t.KubeRest().DeleteAllOf(context.Background(), &v1beta1.Task{}, crclient.InNamespace(namespace))
+	return t.KubeRest().DeleteAllOf(context.Background(), &pipeline.Task{}, crclient.InNamespace(namespace))
 }

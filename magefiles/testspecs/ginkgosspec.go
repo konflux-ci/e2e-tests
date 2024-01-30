@@ -200,7 +200,7 @@ func createTestPath(cwd string, destination string) (string, error) {
 	dir := filepath.Dir(destination)
 	err = os.MkdirAll(dir, 0775)
 	if err != nil {
-		klog.Error("failed to create package directory, %s", dir)
+		klog.Errorf("failed to create package directory, %s", dir)
 		return "", err
 	}
 	return destination, nil

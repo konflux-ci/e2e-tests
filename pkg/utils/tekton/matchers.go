@@ -8,7 +8,7 @@ import (
 
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	tektonpipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/client-go/util/jsonpath"
 	"knative.dev/pkg/apis"
 )
@@ -24,9 +24,9 @@ type TaskRunResultMatcher struct {
 // FailureMessage returns failure message for a TaskRunResult matcher.
 func (matcher *TaskRunResultMatcher) FailureMessage(actual interface{}) (message string) {
 	if matcher.value != nil {
-		return fmt.Sprintf("%v to equal %v", actual, v1beta1.TaskRunResult{
+		return fmt.Sprintf("%v to equal %v", actual, tektonpipeline.TaskRunResult{
 			Name:  matcher.name,
-			Value: *v1beta1.NewArrayOrString(*matcher.value),
+			Value: *tektonpipeline.NewStructuredValues(*matcher.value),
 		})
 	}
 
@@ -35,7 +35,7 @@ func (matcher *TaskRunResultMatcher) FailureMessage(actual interface{}) (message
 
 // Match matches the matcher with a given taskRun.
 func (matcher *TaskRunResultMatcher) Match(actual interface{}) (success bool, err error) {
-	if tr, ok := actual.(v1beta1.TaskRunResult); !ok {
+	if tr, ok := actual.(tektonpipeline.TaskRunResult); !ok {
 		return false, fmt.Errorf("not given TaskRunResult")
 	} else {
 		if tr.Name != matcher.name {
@@ -76,12 +76,12 @@ func (matcher *TaskRunResultMatcher) Match(actual interface{}) (success bool, er
 				if b, err := json.Marshal(values[0]); err != nil {
 					return false, err
 				} else {
-					given = *v1beta1.NewArrayOrString(string(b))
+					given = *tektonpipeline.NewStructuredValues(string(b))
 				}
 			} else if b, err := json.Marshal(values); err != nil {
 				return false, err
 			} else {
-				given = *v1beta1.NewArrayOrString(string(b))
+				given = *tektonpipeline.NewStructuredValues(string(b))
 			}
 		}
 
@@ -100,9 +100,9 @@ func (matcher *TaskRunResultMatcher) NegatedFailureMessage(actual interface{}) (
 		return fmt.Sprintf("value `%s` for JSONPath `%s` not to equal `%s`", actual, *matcher.jsonPath, *matcher.jsonValue)
 	}
 	if matcher.value != nil {
-		return fmt.Sprintf("%v not to equal %v", actual, v1beta1.TaskRunResult{
+		return fmt.Sprintf("%v not to equal %v", actual, tektonpipeline.TaskRunResult{
 			Name:  matcher.name,
-			Value: *v1beta1.NewArrayOrString(strings.TrimSpace(*matcher.value)),
+			Value: *tektonpipeline.NewStructuredValues(strings.TrimSpace(*matcher.value)),
 		})
 	}
 
@@ -126,9 +126,9 @@ func MatchTaskRunResultWithJSONPathValue(name, path string, json interface{}) ty
 
 func DidTaskSucceed(tr interface{}) bool {
 	switch tr := tr.(type) {
-	case *v1beta1.PipelineRunTaskRunStatus:
+	case *tektonpipeline.PipelineRunTaskRunStatus:
 		return tr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
-	case *v1beta1.TaskRunStatus:
+	case *tektonpipeline.TaskRunStatus:
 		return tr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
 	}
 	return false

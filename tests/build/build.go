@@ -19,7 +19,7 @@ import (
 	"github.com/devfile/library/v2/pkg/util"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -265,7 +265,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				interval = time.Second * 1
 				Expect(f.AsKubeAdmin.HasController.DeleteComponent(defaultBranchTestComponentName, testNamespace, true)).To(Succeed())
 				// Test removal of PipelineRun
-				var pr *v1beta1.PipelineRun
+				var pr *pipeline.PipelineRun
 				Eventually(func() error {
 					pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(defaultBranchTestComponentName, applicationName, testNamespace, "")
 					if err == nil {
@@ -475,7 +475,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		When("the PaC init branch is merged", func() {
 			var mergeResult *github.PullRequestMergeResult
 			var mergeResultSha string
-			var pipelineRun *v1beta1.PipelineRun
+			var pipelineRun *pipeline.PipelineRun
 
 			BeforeAll(func() {
 				Eventually(func() error {
@@ -1144,7 +1144,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		var timeout time.Duration
 		var componentName, applicationName, testNamespace string
 		var expectedAdditionalPipelineParam buildservice.PipelineParam
-		var pr *v1beta1.PipelineRun
+		var pr *pipeline.PipelineRun
 
 		BeforeAll(func() {
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
@@ -1239,13 +1239,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(pr.Spec.PipelineRef.Params).To(ContainElement(v1beta1.Param{
+			Expect(pr.Spec.PipelineRef.Params).To(ContainElement(pipeline.Param{
 				Name:  "bundle",
-				Value: v1beta1.ParamValue{StringVal: dummyPipelineBundleRef, Type: "string"}},
+				Value: pipeline.ParamValue{StringVal: dummyPipelineBundleRef, Type: "string"}},
 			))
-			Expect(pr.Spec.Params).To(ContainElement(v1beta1.Param{
+			Expect(pr.Spec.Params).To(ContainElement(pipeline.Param{
 				Name:  expectedAdditionalPipelineParam.Name,
-				Value: v1beta1.ParamValue{StringVal: expectedAdditionalPipelineParam.Value, Type: "string"}},
+				Value: pipeline.ParamValue{StringVal: expectedAdditionalPipelineParam.Value, Type: "string"}},
 			))
 		})
 
@@ -1277,9 +1277,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(notMatchingComponentName, applicationName, testNamespace, "")
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(tekton.GetBundleRef(pr.Spec.PipelineRef)).ToNot(Equal(dummyPipelineBundleRef)) //nolint:all
-			Expect(pr.Spec.Params).ToNot(ContainElement(v1beta1.Param{
+			Expect(pr.Spec.Params).ToNot(ContainElement(pipeline.Param{
 				Name:  expectedAdditionalPipelineParam.Name,
-				Value: v1beta1.ParamValue{StringVal: expectedAdditionalPipelineParam.Value, Type: "string"}},
+				Value: pipeline.ParamValue{StringVal: expectedAdditionalPipelineParam.Value, Type: "string"}},
 			))
 		})
 	})
@@ -1289,7 +1289,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		var applicationName, componentName, testNamespace string
 		var timeout time.Duration
 		var err error
-		var pr *v1beta1.PipelineRun
+		var pr *pipeline.PipelineRun
 
 		BeforeAll(func() {
 
@@ -1516,7 +1516,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ParentComponentDef.component, "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2})).To(Succeed())
 				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(ParentComponentDef.component.GetName(), ParentComponentDef.component.Spec.Application, ParentComponentDef.component.GetNamespace(), "")
 				Expect(err).ShouldNot(HaveOccurred())
-				for _, result := range pr.Status.PipelineResults {
+				for _, result := range pr.Status.PipelineRunStatusFields.Results {
 					if result.Name == "IMAGE_DIGEST" {
 						parentFirstDigest = result.Value.StringVal
 					}
@@ -1604,7 +1604,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ParentComponentDef.component, mergeResultSha, f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2})).To(Succeed())
 				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(ParentComponentDef.component.GetName(), ParentComponentDef.component.Spec.Application, ParentComponentDef.component.GetNamespace(), mergeResultSha)
 				Expect(err).ShouldNot(HaveOccurred())
-				for _, result := range pr.Status.PipelineResults {
+				for _, result := range pr.Status.PipelineRunStatusFields.Results {
 					if result.Name == "IMAGE_DIGEST" {
 						parentPostPacMergeDigest = result.Value.StringVal
 					}

@@ -15,7 +15,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -63,12 +63,12 @@ func (h *HasController) GetComponentByApplicationName(applicationName string, na
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels
-func (h *HasController) GetComponentPipelineRun(componentName string, applicationName string, namespace, sha string) (*v1beta1.PipelineRun, error) {
+func (h *HasController) GetComponentPipelineRun(componentName string, applicationName string, namespace, sha string) (*pipeline.PipelineRun, error) {
 	return h.GetComponentPipelineRunWithType(componentName, applicationName, namespace, "", sha)
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels with pipeline type within label "pipelines.appstudio.openshift.io/type" ("build", "test")
-func (h *HasController) GetComponentPipelineRunWithType(componentName string, applicationName string, namespace, pipelineType string, sha string) (*v1beta1.PipelineRun, error) {
+func (h *HasController) GetComponentPipelineRunWithType(componentName string, applicationName string, namespace, pipelineType string, sha string) (*pipeline.PipelineRun, error) {
 	pipelineRunLabels := map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName}
 	if pipelineType != "" {
 		pipelineRunLabels["pipelines.appstudio.openshift.io/type"] = pipelineType
@@ -78,7 +78,7 @@ func (h *HasController) GetComponentPipelineRunWithType(componentName string, ap
 		pipelineRunLabels["pipelinesascode.tekton.dev/sha"] = sha
 	}
 
-	list := &v1beta1.PipelineRunList{}
+	list := &pipeline.PipelineRunList{}
 	err := h.KubeRest().List(context.Background(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
 
 	if err != nil && !k8sErrors.IsNotFound(err) {
@@ -98,10 +98,10 @@ func (h *HasController) GetComponentPipelineRunWithType(componentName string, ap
 }
 
 // GetAllPipelineRunsForApplication returns the pipelineruns for a given application in the namespace
-func (h *HasController) GetAllPipelineRunsForApplication(applicationName, namespace string) (*v1beta1.PipelineRunList, error) {
+func (h *HasController) GetAllPipelineRunsForApplication(applicationName, namespace string) (*pipeline.PipelineRunList, error) {
 	pipelineRunLabels := map[string]string{"appstudio.openshift.io/application": applicationName}
 
-	list := &v1beta1.PipelineRunList{}
+	list := &pipeline.PipelineRunList{}
 	err := h.KubeRest().List(context.Background(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
 
 	if err != nil && !k8sErrors.IsNotFound(err) {
@@ -130,7 +130,7 @@ type RetryOptions struct {
 func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservice.Component, sha string, t *tekton.TektonController, r *RetryOptions) error {
 	attempts := 1
 	app := component.Spec.Application
-	var pr *v1beta1.PipelineRun
+	var pr *pipeline.PipelineRun
 
 	for {
 		err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 30*time.Minute, true, func(ctx context.Context) (done bool, err error) {
@@ -365,7 +365,7 @@ func (h *HasController) GetComponentConditionStatusMessages(name, namespace stri
 }
 
 // Universal method to retrigger pipelineruns in kubernetes cluster
-func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Component, pr *v1beta1.PipelineRun) (sha string, err error) {
+func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Component, pr *pipeline.PipelineRun) (sha string, err error) {
 	if err = h.KubeRest().Delete(context.Background(), pr); err != nil {
 		return "", fmt.Errorf("failed to delete PipelineRun %q from %q namespace with error: %v", pr.GetName(), pr.GetNamespace(), err)
 	}
@@ -424,7 +424,7 @@ func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Comp
 			return "", err
 		}
 	}
-	watch, err := h.PipelineClient().TektonV1beta1().PipelineRuns(component.GetNamespace()).Watch(context.Background(), metav1.ListOptions{})
+	watch, err := h.PipelineClient().TektonV1().PipelineRuns(component.GetNamespace()).Watch(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return "", fmt.Errorf("error when initiating watch for new PipelineRun after retriggering it for component %s:%s", component.GetNamespace(), component.GetName())
 	}
@@ -437,7 +437,7 @@ func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Comp
 			if event.Object == nil {
 				continue
 			}
-			newPR, ok := event.Object.(*v1beta1.PipelineRun)
+			newPR, ok := event.Object.(*pipeline.PipelineRun)
 			if !ok {
 				continue
 			}
