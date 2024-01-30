@@ -7,7 +7,7 @@ import (
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/pod"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	pointer "k8s.io/utils/ptr"
 
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -47,8 +47,8 @@ func (t *TektonController) CreateTaskRunCopy(name, namespace, serviceAccountName
 			// workaround to avoid the error "container has runAsNonRoot and image will run as root"
 			PodTemplate: &pod.Template{
 				SecurityContext: &corev1.PodSecurityContext{
-					RunAsNonRoot: pointer.Bool(true),
-					RunAsUser:    pointer.Int64(65532),
+					RunAsNonRoot: pointer.To[bool](true),
+					RunAsUser:    pointer.To[int64](65532),
 				},
 			},
 			Workspaces: []pipeline.WorkspaceBinding{

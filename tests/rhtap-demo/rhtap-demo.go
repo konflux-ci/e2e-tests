@@ -33,7 +33,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	pointer "k8s.io/utils/ptr"
 
 	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
@@ -367,7 +367,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 							for _, component := range componentList {
 								c, err := fw.AsKubeDeveloper.HasController.GetComponent(component.Name, namespace)
 								Expect(err).NotTo(HaveOccurred())
-								_, err = fw.AsKubeDeveloper.HasController.ScaleComponentReplicas(c, pointer.Int(int(componentSpec.K8sSpec.Replicas)))
+								_, err = fw.AsKubeDeveloper.HasController.ScaleComponentReplicas(c, pointer.To[int](int(componentSpec.K8sSpec.Replicas)))
 								Expect(err).NotTo(HaveOccurred())
 								var deployment *appsv1.Deployment
 

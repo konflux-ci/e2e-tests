@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/utils/pointer"
+	pointer "k8s.io/utils/ptr"
 
 	"github.com/google/go-github/v44/github"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -1210,7 +1210,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 							PipelineParams: []buildservice.PipelineParam{expectedAdditionalPipelineParam},
 							WhenConditions: buildservice.WhenCondition{
 								ProjectType:        "hello-world",
-								DockerfileRequired: pointer.Bool(true),
+								DockerfileRequired: pointer.To[bool](true),
 								ComponentName:      compDetected.ComponentStub.ComponentName,
 								Annotations:        map[string]string{"skip-initial-checks": "true"},
 								Labels:             constants.ComponentDefaultLabel,

@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog"
-	"k8s.io/utils/pointer"
+	pointer "k8s.io/utils/ptr"
 	"knative.dev/pkg/apis"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -251,7 +251,7 @@ func (h *HasController) CreateComponentWithDockerSource(applicationName, compone
 			},
 			Secret:         secret,
 			ContainerImage: outputContainerImage,
-			Replicas:       pointer.Int(1),
+			Replicas:       pointer.To[int](1),
 			TargetPort:     8081,
 			Route:          "",
 		},
