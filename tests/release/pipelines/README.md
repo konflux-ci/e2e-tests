@@ -10,9 +10,9 @@ All tests must have the label `release-pipelines`.
    - development: this branch is the default branch for development
 
 ## Test cases 
-### The happy path with pushing to Pyxis stage (push_to_external_registry.go)
+### The happy path with pushing to Pyxis stage (rh_push_to_external_registry.go)
 
-This test is designed to run the release pipeline `push-to-external-registry` and validates that the artifacts are successfully pushed to Pyxis.
+This test is designed to run the release pipeline `rh-push-to-external-registry` and validates that the artifacts are successfully pushed to Pyxis.
 
 Checkpoints:
   - Two build PipelineRuns are created in the dev namespace.
@@ -21,6 +21,18 @@ Checkpoints:
   - The release PipelineRuns are expected to pass.
   - The Releases pass.
   - Validate that the SBOM for both components were uploaded to Pyxis stage.
+
+### The happy path with pushing to external registry (push_to_external_registry.go)
+
+This test is designed to run the release pipeline `push-to-external-registry`. 
+
+Checkpoints:
+  - A build PipelineRun is created in the dev namespace.
+  - The build PipelineRun passes.
+  - The release PipelineRun is successfully created in the managed namespace.
+  - The release PipelineRun is expected to pass.
+  - Test if the image from the snapshot is pushed to Quay
+  - The Release passes.
 
 ### The happy path of FBC related tests (fbc_release.go)
 
