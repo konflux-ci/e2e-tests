@@ -77,11 +77,13 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 					Expect(err).NotTo(HaveOccurred())
 					condition := meta.FindStatusCondition(releasePlanCR.Status.Conditions, releaseApi.MatchedConditionType.String())
 					if condition == nil {
-						return fmt.Errorf("the MatchedConditon of %s is still not set", releasePlanCR.Name)
+						return fmt.Errorf("the MatchedCondition of %s is still not set", releasePlanCR.Name)
+					}
+					if !releasePlanCR.IsMatched() {
+						return fmt.Errorf("the MatchedCondition of %s is still false", releasePlanCR.Name)
 					}
 					return nil
 				}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(Succeed())
-				Expect(releasePlanCR.IsMatched()).To(BeTrue())
 				Expect(releasePlanCR.Status.ReleasePlanAdmission.Name).To(Equal(managedNamespace + "/" + releasecommon.TargetReleasePlanAdmissionName))
 				Expect(releasePlanCR.Status.ReleasePlanAdmission.Active).To(BeTrue())
 			})
