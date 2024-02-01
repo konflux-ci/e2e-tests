@@ -123,3 +123,39 @@
 - name: metadata.scenario
   command: if [ -r /usr/local/ci-secrets/redhat-appstudio-load-test/load-test-scenario.${SCENARIO} ]; then cat /usr/local/ci-secrets/redhat-appstudio-load-test/load-test-scenario.${SCENARIO} | sed 's/\\ /,/g' | sed 's/[^ ]* \([^= ]*\)=\([^= ]*\)/"\1":"\2",/g' | sed 's/\(.*\),$/{\1}/g'; else echo '{}'; fi
   output: json
+
+{% macro monitor_pod(namespace, pod, step=15, pod_suffix_regex='-[0-9a-f]+-.*') -%}
+# Gather monitoring data about the pod
+- name: measurements.{{ pod }}.cpu
+  monitoring_query: sum(pod:container_cpu_usage:sum{namespace='{{ namespace }}', pod=~'{{ pod }}{{ pod_suffix_regex }}'})
+  monitoring_step: {{ step }}
+- name: measurements.{{ pod }}.memory
+  monitoring_query: sum(container_memory_usage_bytes{namespace='{{ namespace }}', pod=~'{{ pod }}{{ pod_suffix_regex }}', container!='POD', container!=''})
+  monitoring_step: {{ step }}
+- name: measurements.{{ pod }}.network_throughput
+  monitoring_query: sum( rate(container_network_transmit_bytes_total{namespace='{{ namespace }}', pod=~'{{ pod }}{{ pod_suffix_regex }}'}[{{ step * 4 }}s]) + rate(container_network_receive_bytes_total{namespace='{{ namespace }}', pod=~'{{ pod }}{{ pod_suffix_regex }}'}[{{ step * 4 }}s]) )
+  monitoring_step: {{ step * 4 }}
+- name: measurements.{{ pod }}.network_drop
+  monitoring_query: sum( rate(container_network_transmit_packets_dropped_total{namespace='{{ namespace }}', pod=~'{{ pod }}{{ pod_suffix_regex }}'}[{{ step * 4 }}s]) + rate(container_network_receive_packets_dropped_total{namespace='{{ namespace }}', pod=~'{{ pod }}{{ pod_suffix_regex }}'}[{{ step * 4 }}s]) )
+  monitoring_step: {{ step * 4 }}
+- name: measurements.{{ pod }}.disk_throughput
+  monitoring_query: sum( sum(rate(container_fs_reads_bytes_total{namespace='{{ namespace }}', pod=~'{{ pod }}{{ pod_suffix_regex }}', device!='/dev/dm-0'}[{{ step * 4 }}s])) + sum(rate(container_fs_writes_bytes_total{namespace='{{ namespace }}', pod=~'{{ pod }}{{ pod_suffix_regex }}', device!='/dev/dm-0'}[{{ step * 4 }}s])) )
+  monitoring_step: {{ step * 4 }}
+- name: measurements.{{ pod }}.restarts
+  monitoring_query: sum(kube_pod_container_status_restarts_total{namespace='{{ namespace }}', pod=~'{{ pod }}{{ pod_suffix_regex }}'})
+  monitoring_step: {{ step }}
+- name: measurements.{{ pod }}.count_ready
+  monitoring_query: sum( kube_pod_status_ready{namespace='{{ namespace }}', pod=~'{{ pod }}{{ pod_suffix_regex }}'} )
+  monitoring_step: {{ step }}
+{%- endmacro %}
+
+{% macro monitor_pod_container(namespace, pod, container, step=15, pod_suffix_regex='-[0-9a-f]+-.*') -%}
+# Gather monitoring data about the pod's container
+- name: measurements.{{ pod }}.container[{{ container }}].memory
+  monitoring_query: sum(container_memory_usage_bytes{namespace='{{ namespace }}', pod=~'{{ pod }}{{ pod_suffix_regex }}', container='{{container}}'})
+  monitoring_step: {{ step }}
+{%- endmacro %}
+
+{{ monitor_pod('openshift-pipelines', 'tekton-pipelines-controller', 15) }}
+{{ monitor_pod('tekton-results', 'tekton-results-watcher', 1, '-.*') }}
+{{ monitor_pod_container('tekton-results', 'tekton-results-watcher', 'watcher', 1, '-.*') }}

@@ -11,62 +11,91 @@ pushd "${2:-.}"
 
 output_dir="${OUTPUT_DIR:-./tests/load-tests}"
 
-echo "Collecting load test results"
-find "$output_dir" -type f -name 'load-tests.max-concurrency.*.log' -exec cp -vf {} "${ARTIFACT_DIR}" \;
-find "$output_dir" -type f -name 'load-tests.max-concurrency.json' -exec cp -vf {} "${ARTIFACT_DIR}" \;
+collect_artifacts() {
+    echo "Collecting load test artifacts.."
+    find "$output_dir" -type f -name 'load-tests.max-concurrency.*.log' -exec cp -vf {} "${ARTIFACT_DIR}" \;
+    find "$output_dir" -type f -name 'load-tests.max-concurrency.json' -exec cp -vf {} "${ARTIFACT_DIR}" \;
+    find "$output_dir" -type f -name '*.pprof' -exec cp -vf {} "${ARTIFACT_DIR}" \;
+}
 
-echo "Setting up tool to collect monitoring data..."
-python3 -m venv venv
-set +u
-# shellcheck disable=SC1091
-source venv/bin/activate
-set -u
-python3 -m pip install -U pip
-python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team-core&subdirectory=core"
+collect_monitoring_data() {
+    echo "Collecting monitoring data..."
+    echo "Setting up tool to collect monitoring data..."
+    python3 -m venv venv
+    set +u
+    # shellcheck disable=SC1091
+    source venv/bin/activate
+    set -u
+    python3 -m pip install -U pip
+    python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team-core&subdirectory=core"
 
-for monitoring_collection_data in $(find "$output_dir" -type f -name 'load-tests.max-concurrency.*.json'); do
-    index=$(echo "$monitoring_collection_data" | sed -e 's,.*/load-tests.max-concurrency.\([0-9]\+\).json,\1,')
-    monitoring_collection_log="$ARTIFACT_DIR/monitoring-collection.$index.log"
-
-    ## Monitoring data
-    echo "Collecting monitoring data for step $index..."
-    mstart=$(date --utc --date "$(status_data.py --status-data-file "$monitoring_collection_data" --get timestamp)" --iso-8601=seconds)
+    ## Monitoring data for entire test
+    monitoring_collection_data=$(find "$output_dir" -type f -name 'load-tests.max-concurrency.json')
+    monitoring_collection_log="$ARTIFACT_DIR/monitoring-collection.log"
+    monitoring_collection_dir=$ARTIFACT_DIR/monitoring-collection-raw-data-dir
+    mkdir -p "$monitoring_collection_dir"
+    echo "Collecting monitoring data for entire test"
+    mstart=$(date --utc --date "$(status_data.py --status-data-file "$monitoring_collection_data" --get startTimestamp)" --iso-8601=seconds)
     mend=$(date --utc --date "$(status_data.py --status-data-file "$monitoring_collection_data" --get endTimestamp)" --iso-8601=seconds)
     mhost=$(oc -n openshift-monitoring get route -l app.kubernetes.io/name=thanos-query -o json | jq --raw-output '.items[0].spec.host')
     status_data.py \
         --status-data-file "$monitoring_collection_data" \
-        --additional ./tests/load-tests/cluster_read_config.yaml \
+        --additional ./tests/load-tests/ci-scripts/max-concurrency/cluster_read_config.yaml \
         --monitoring-start "$mstart" \
         --monitoring-end "$mend" \
+        --monitoring-raw-data-dir "$monitoring_collection_dir" \
         --prometheus-host "https://$mhost" \
         --prometheus-port 443 \
         --prometheus-token "$(oc whoami -t)" \
         -d &>"$monitoring_collection_log"
     cp -f "$monitoring_collection_data" "$ARTIFACT_DIR"
-    ## Tekton prifiling data
-    if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
-        echo "Collecting profiling data from Tekton controller"
-        pprof_profile="$output_dir/cpu-profile.$index.pprof"
-        if [ -f "$pprof_profile" ]; then
-            cp "$pprof_profile" "$ARTIFACT_DIR"
-            go tool pprof -text "$pprof_profile" >"$ARTIFACT_DIR/cpu-profile.$index.txt" || true
-            go tool pprof -svg -output="$ARTIFACT_DIR/cpu-profile.$index.svg" "$pprof_profile" || true
-        else
-            echo "WARNING: File $pprof_profile not found!"
-        fi
+
+    ## Monitoring data per iteration
+    for monitoring_collection_data in $(find "$output_dir" -type f -name 'load-tests.max-concurrency.*.json'); do
+        iteration_index=$(echo "$monitoring_collection_data" | sed -e 's,.*/load-tests.max-concurrency.\([0-9]\+-[0-9]\+\).json,\1,')
+        monitoring_collection_log="$ARTIFACT_DIR/monitoring-collection.$iteration_index.log"
+        echo "Collecting monitoring data for step $iteration_index..."
+        mstart=$(date --utc --date "$(status_data.py --status-data-file "$monitoring_collection_data" --get timestamp)" --iso-8601=seconds)
+        mend=$(date --utc --date "$(status_data.py --status-data-file "$monitoring_collection_data" --get endTimestamp)" --iso-8601=seconds)
+        mhost=$(oc -n openshift-monitoring get route -l app.kubernetes.io/name=thanos-query -o json | jq --raw-output '.items[0].spec.host')
+        status_data.py \
+            --status-data-file "$monitoring_collection_data" \
+            --additional ./tests/load-tests/cluster_read_config.yaml \
+            --monitoring-start "$mstart" \
+            --monitoring-end "$mend" \
+            --prometheus-host "https://$mhost" \
+            --prometheus-port 443 \
+            --prometheus-token "$(oc whoami -t)" \
+            -d &>"$monitoring_collection_log"
+        cp -f "$monitoring_collection_data" "$ARTIFACT_DIR"
+    done
+    set +u
+    deactivate
+    set -u
+}
+
+collect_tekton_profiling_data() {
+    echo "Collecting Tekton prifiling data..."
+    if [ "${TEKTON_PERF_ENABLE_CPU_PROFILING:-}" == "true" ] || [ "${TEKTON_PERF_ENABLE_MEMORY_PROFILING:-}" == "true" ]; then
+        echo "Collecting profiling data from Tekton"
+        for pprof_profile in $(find "$output_dir" -name "*.pprof"); do
+            if [ -s "$pprof_profile" ]; then
+                file=$(basename "$pprof_profile")
+                go tool pprof -text "$pprof_profile" >"$ARTIFACT_DIR/$file.txt" || true
+                go tool pprof -svg -output="$ARTIFACT_DIR/$file.svg" "$pprof_profile" || true
+            fi
+        done
     fi
-done
-set +u
-deactivate
-set -u
+}
 
-csv_delim=";"
-csv_delim_quoted="\"$csv_delim\""
-dt_format='"%Y-%m-%dT%H:%M:%SZ"'
+collect_scalability_data() {
+    echo "Collecting scalability data..."
+    csv_delim=";"
+    csv_delim_quoted="\"$csv_delim\""
+    dt_format='"%Y-%m-%dT%H:%M:%SZ"'
 
-## Max concurrency scalability
-max_concurrency_csv=$ARTIFACT_DIR/max-concurrency.csv
-echo "Threads\
+    max_concurrency_csv=$ARTIFACT_DIR/max-concurrency.csv
+    echo "Threads\
 ${csv_delim}WorkloadKPI\
 ${csv_delim}Errors\
 ${csv_delim}UserAvgTime\
@@ -103,11 +132,11 @@ ${csv_delim}ClusterNetworkBytesTotalAvg\
 ${csv_delim}ClusterNetworkReceiveBytesTotalAvg\
 ${csv_delim}ClusterNetworkTransmitBytesTotalAvg\
 ${csv_delim}NodeDiskIoTimeSecondsTotalAvg" \
-    >"$max_concurrency_csv"
-mc_files=$(find "$output_dir" -type f -name 'load-tests.max-concurrency.*.json')
-if [ -n "$mc_files" ]; then
-    cat $mc_files |
-        jq -rc "(.threads | tostring) \
+        >"$max_concurrency_csv"
+    mc_files=$(find "$output_dir" -type f -name 'load-tests.max-concurrency.*.json')
+    if [ -n "$mc_files" ]; then
+        cat $mc_files |
+            jq -rc "(.threads | tostring) \
         + $csv_delim_quoted + (.workloadKPI | tostring) \
         + $csv_delim_quoted + (.errorsTotal | tostring) \
         + $csv_delim_quoted + (.createUserTimeAvg | tostring) \
@@ -144,16 +173,17 @@ if [ -n "$mc_files" ]; then
         + $csv_delim_quoted + (.measurements.cluster_network_receive_bytes_total.mean | tostring) \
         + $csv_delim_quoted + (.measurements.cluster_network_transmit_bytes_total.mean | tostring) \
         + $csv_delim_quoted + (.measurements.node_disk_io_time_seconds_total.mean | tostring)" \
-            >>"$max_concurrency_csv"
-else
-    echo "WARNING: No file matching '$output_dir/load-tests.max-concurrency.*.json' found!"
-fi
+                >>"$max_concurrency_csv"
+    else
+        echo "WARNING: No file matching '$output_dir/load-tests.max-concurrency.*.json' found!"
+    fi
+}
 
-## PipelineRun timestamps
-echo "Collecting PipelineRun timestamps..."
-pipelinerun_timestamps=$ARTIFACT_DIR/pipelineruns.tekton.dev_timestamps.csv
-echo "PipelineRun${csv_delim}Namespace${csv_delim}Succeeded${csv_delim}Reason${csv_delim}Message${csv_delim}Created${csv_delim}Started${csv_delim}FinallyStarted${csv_delim}Completed${csv_delim}Created->Started${csv_delim}Started->FinallyStarted${csv_delim}FinallyStarted->Completed${csv_delim}SucceededDuration${csv_delim}FailedDuration" >"$pipelinerun_timestamps"
-jq_cmd=".items[] | (.metadata.name) \
+collect_timestamp_csvs() {
+    echo "Collecting PipelineRun timestamps..."
+    pipelinerun_timestamps=$ARTIFACT_DIR/pipelineruns.tekton.dev_timestamps.csv
+    echo "PipelineRun${csv_delim}Namespace${csv_delim}Succeeded${csv_delim}Reason${csv_delim}Message${csv_delim}Created${csv_delim}Started${csv_delim}FinallyStarted${csv_delim}Completed${csv_delim}Created->Started${csv_delim}Started->FinallyStarted${csv_delim}FinallyStarted->Completed${csv_delim}SucceededDuration${csv_delim}FailedDuration" >"$pipelinerun_timestamps"
+    jq_cmd=".items[] | (.metadata.name) \
 + $csv_delim_quoted + (.metadata.namespace) \
 + $csv_delim_quoted + (.status.conditions[0].status) \
 + $csv_delim_quoted + (.status.conditions[0].reason) \
@@ -167,6 +197,14 @@ jq_cmd=".items[] | (.metadata.name) \
 + $csv_delim_quoted + (if .status.completionTime != null and .status.finallyStartTime != null then ((.status.completionTime | strptime($dt_format) | mktime) - (.status.finallyStartTime | strptime($dt_format) | mktime) | tostring) else \"\" end) \
 + $csv_delim_quoted + (if .status.conditions[0].status == \"True\" and .status.completionTime != null and .metadata.creationTimestamp != null then ((.status.completionTime | strptime($dt_format) | mktime) - (.metadata.creationTimestamp | strptime($dt_format) | mktime) | tostring) else \"\" end) \
 + $csv_delim_quoted + (if .status.conditions[0].status == \"False\" and .status.completionTime != null and .metadata.creationTimestamp != null then ((.status.completionTime | strptime($dt_format) | mktime) - (.metadata.creationTimestamp | strptime($dt_format) | mktime) | tostring) else \"\" end)"
-oc get pipelineruns.tekton.dev -A -o json | jq "$jq_cmd" | sed -e "s/\n//g" -e "s/^\"//g" -e "s/\"$//g" -e "s/Z;/;/g" | sort -t ";" -k 13 -r -n >>"$pipelinerun_timestamps"
+    oc get pipelineruns.tekton.dev -A -o json | jq "$jq_cmd" | sed -e "s/\n//g" -e "s/^\"//g" -e "s/\"$//g" -e "s/Z;/;/g" | sort -t ";" -k 13 -r -n >>"$pipelinerun_timestamps"
+}
+
+echo "Collecting max concurrency results..."
+collect_artifacts
+collect_scalability_data
+collect_tekton_profiling_data
+collect_timestamp_csvs
+collect_monitoring_data
 
 popd
