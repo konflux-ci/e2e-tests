@@ -53,9 +53,18 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 
 	var _ = Describe("RP and PRA status change verification", func() {
 		It("verifies that the ReleasePlan CR is unmatched in the beginning", func() {
-			releasePlanCR, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releasecommon.SourceReleasePlanName, devNamespace)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(releasePlanCR.IsMatched()).To(BeFalse())
+			var condition *metav1.Condition
+			Eventually(func() error {
+				releasePlanCR, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releasecommon.SourceReleasePlanName, devNamespace)
+				Expect(err).NotTo(HaveOccurred())
+				condition = meta.FindStatusCondition(releasePlanCR.Status.Conditions, releaseApi.MatchedConditionType.String())
+				if condition == nil {
+					return fmt.Errorf("the MatchedConditon of %s is still not set", releasePlanCR.Name)
+				}
+				return nil
+			}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(Succeed())
+			condition = meta.FindStatusCondition(releasePlanCR.Status.Conditions, releaseApi.MatchedConditionType.String())
+			Expect(condition.Status).To(Equal(metav1.ConditionFalse))
 		})
 
 		It("Creates ReleasePlanAdmission CR in corresponding managed namespace", func() {
@@ -72,31 +81,36 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 
 		When("ReleasePlanAdmission CR is created in managed namespace", func() {
 			It("verifies that the ReleasePlan CR is set to matched", func() {
+				var condition *metav1.Condition
 				Eventually(func() error {
 					releasePlanCR, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releasecommon.SourceReleasePlanName, devNamespace)
 					Expect(err).NotTo(HaveOccurred())
-					condition := meta.FindStatusCondition(releasePlanCR.Status.Conditions, releaseApi.MatchedConditionType.String())
+					condition = meta.FindStatusCondition(releasePlanCR.Status.Conditions, releaseApi.MatchedConditionType.String())
 					if condition == nil {
 						return fmt.Errorf("the MatchedConditon of %s is still not set", releasePlanCR.Name)
 					}
+					// it may need a period of time for the ReleasePlanCR to be reconciled
+					if condition.Status == metav1.ConditionFalse {
+						return fmt.Errorf("the MatchedConditon of %s has not reconciled yet", releasePlanCR.Name)
+					}
 					return nil
 				}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(Succeed())
-				Expect(releasePlanCR.IsMatched()).To(BeTrue())
+				Expect(condition.Status).To(Equal(metav1.ConditionTrue))
 				Expect(releasePlanCR.Status.ReleasePlanAdmission.Name).To(Equal(managedNamespace + "/" + releasecommon.TargetReleasePlanAdmissionName))
 				Expect(releasePlanCR.Status.ReleasePlanAdmission.Active).To(BeTrue())
 			})
 
 			It("verifies that the ReleasePlanAdmission CR is set to matched", func() {
+				var condition *metav1.Condition
 				Eventually(func() error {
 					releasePlanAdmissionCR, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace)
 					Expect(err).NotTo(HaveOccurred())
-					condition := meta.FindStatusCondition(releasePlanAdmissionCR.Status.Conditions, releaseApi.MatchedConditionType.String())
-					if condition == nil {
-						return fmt.Errorf("the MatchedConditon of %s is still not set", releasePlanAdmissionCR.Name)
+					condition = meta.FindStatusCondition(releasePlanAdmissionCR.Status.Conditions, releaseApi.MatchedConditionType.String())
+					if condition.Status == metav1.ConditionFalse {
+						return fmt.Errorf("the MatchedConditon of %s has not reconciled yet", releasePlanCR.Name)
 					}
 					return nil
 				}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(Succeed(), "time out when waiting for ReleasePlanAdmission being reconciled to matched")
-				condition := meta.FindStatusCondition(releasePlanAdmissionCR.Status.Conditions, releaseApi.MatchedConditionType.String())
 				Expect(condition).NotTo(BeNil())
 				Expect(condition.Status).To(Equal(metav1.ConditionTrue))
 				Expect(releasePlanAdmissionCR.Status.ReleasePlans).To(HaveLen(1))
@@ -111,16 +125,22 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 
 		When("the second ReleasePlan CR is created", func() {
 			It("verifies that the second ReleasePlan CR is set to matched", func() {
+				var condition *metav1.Condition
 				Eventually(func() error {
 					secondReleasePlanCR, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releasecommon.SecondReleasePlanName, devNamespace)
 					Expect(err).NotTo(HaveOccurred())
-					condition := meta.FindStatusCondition(secondReleasePlanCR.Status.Conditions, releaseApi.MatchedConditionType.String())
+					condition = meta.FindStatusCondition(secondReleasePlanCR.Status.Conditions, releaseApi.MatchedConditionType.String())
+
 					if condition == nil {
 						return fmt.Errorf("the MatchedConditon of %s is still not set", secondReleasePlanCR.Name)
 					}
+					// it may need a period of time for the secondReleasePlanCR to be reconciled
+					if condition.Status == metav1.ConditionFalse {
+						return fmt.Errorf("the MatchedConditon of %s has not reconciled yet", secondReleasePlanCR.Name)
+					}
 					return nil
 				}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(Succeed())
-				Expect(secondReleasePlanCR.IsMatched()).To(BeTrue())
+				Expect(condition.Status).To(Equal(metav1.ConditionTrue))
 				Expect(secondReleasePlanCR.Status.ReleasePlanAdmission.Name).To(Equal(managedNamespace + "/" + releasecommon.TargetReleasePlanAdmissionName))
 				Expect(secondReleasePlanCR.Status.ReleasePlanAdmission.Active).To(BeTrue())
 			})
