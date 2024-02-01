@@ -1206,7 +1206,7 @@ func (h *ConcreteHandlerResources) handleIntegrationTestScenarioCreation(ctx *Jo
 
 	ApplicationName := fmt.Sprintf("%s-app", username)
 	startTimeForIts := time.Now()
-	integrationTestScenario, err := framework.AsKubeDeveloper.IntegrationController.CreateIntegrationTestScenario_beta1(ApplicationName, usernamespace, testScenarioGitURL, testScenarioRevision, testScenarioPathInRepo)
+	integrationTestScenario, err := framework.AsKubeDeveloper.IntegrationController.CreateIntegrationTestScenario(ApplicationName, usernamespace, testScenarioGitURL, testScenarioRevision, testScenarioPathInRepo)
 	itsCreationTime := time.Since(startTimeForIts)
 	if err != nil {
 		logError(6, fmt.Sprintf("Unable to create integrationTestScenario for Application %s: %v \n", ApplicationName, err))

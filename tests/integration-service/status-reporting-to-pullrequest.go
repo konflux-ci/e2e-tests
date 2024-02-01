@@ -57,10 +57,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 
 			applicationName = createApp(*f, testNamespace)
 
-			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario_beta1(applicationName, testNamespace, gitURL, revision, pathInRepoForReportingPass)
+			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, testNamespace, gitURL, revision, pathInRepoPass)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			integrationTestScenarioFail, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario_beta1(applicationName, testNamespace, gitURL, revision, pathInRepoForReportingFail)
+			integrationTestScenarioFail, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, testNamespace, gitURL, revision, pathInRepoFail)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			componentName = fmt.Sprintf("%s-%s", "test-component-pac", util.GenerateRandomString(6))
