@@ -72,12 +72,17 @@ const (
 	snapshotPollingInterval   = time.Second * 1
 	releasePollingInterval    = time.Second * 1
 
-	stageTimeout = time.Minute * 5
+	// test metadata
+	devEnvTestLabel = "rhtap-demo"
+
+	// stage env test related env vars
+	stageTimeout      = time.Minute * 5
+	stageEnvTestLabel = "verify-stage"
 )
 
 var supportedRuntimes = []string{"Dockerfile", "Node.js", "Go", "Quarkus", "Python", "JavaScript", "springboot", "dotnet", "maven"}
 
-var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stage"), func() {
+var _ = framework.RhtapDemoSuiteDescribe(func() {
 	defer GinkgoRecover()
 
 	var timeout, interval time.Duration
@@ -91,19 +96,12 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 
 	fw := &framework.Framework{}
 	AfterEach(framework.ReportFailure(&fw))
-	var username, token, ssourl, apiurl string
+	var token, ssourl, apiurl string
 	var TestScenarios []e2eConfig.TestSpec
 
-	if Label("verify-stage").MatchesLabelFilter(GinkgoLabelFilter()) {
-		token = utils.GetEnv("STAGEUSER_TOKEN", "")
-		ssourl = utils.GetEnv("STAGE_SSOURL", "")
-		apiurl = utils.GetEnv("STAGE_APIURL", "")
-		username = utils.GetEnv("STAGE_USERNAME", "")
-
+	if strings.Contains(GinkgoLabelFilter(), stageEnvTestLabel) {
 		TestScenarios = append(TestScenarios, e2eConfig.GetScenarios(true)...)
-	}
-
-	if Label("rhtap-demo").MatchesLabelFilter(GinkgoLabelFilter()) {
+	} else {
 		TestScenarios = append(TestScenarios, e2eConfig.GetScenarios(false)...)
 	}
 
@@ -113,32 +111,22 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 
 			Describe(appTest.Name, Ordered, func() {
 				BeforeAll(func() {
-					if Label("verify-stage").MatchesLabelFilter(GinkgoLabelFilter()) {
-						if token == "" && ssourl == "" && apiurl == "" && username == "" {
-							Fail("Failed: Please set the required Stage Variables for user")
-						}
-					}
-
-					// Initialize the tests controllers
-					if !appTest.Stage {
-
-						fw, err = framework.NewFramework(utils.GetGeneratedNamespace("rhtap-demo"))
-						Expect(err).NotTo(HaveOccurred())
-						namespace = fw.UserNamespace
-						Expect(namespace).NotTo(BeEmpty())
-
-						// collect SPI ResourceQuota metrics (temporary)
-						err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("rhtap-demo", namespace, "appstudio-crds-spi")
-						Expect(err).NotTo(HaveOccurred())
-					} else {
+					if strings.Contains(GinkgoLabelFilter(), stageEnvTestLabel) {
+						token = utils.GetEnv("STAGEUSER_TOKEN", "")
+						ssourl = utils.GetEnv("STAGE_SSOURL", "")
+						apiurl = utils.GetEnv("STAGE_APIURL", "")
+						username := utils.GetEnv("STAGE_USERNAME", "")
 						fw, err = framework.NewFrameworkWithTimeout(username, stageTimeout, utils.Options{
 							ToolchainApiUrl: apiurl,
 							KeycloakUrl:     ssourl,
 							OfflineToken:    token,
 						})
-						namespace = fw.UserNamespace
-						Expect(err).NotTo(HaveOccurred())
+					} else {
+						fw, err = framework.NewFramework(utils.GetGeneratedNamespace(devEnvTestLabel))
 					}
+					Expect(err).NotTo(HaveOccurred())
+					namespace = fw.UserNamespace
+					Expect(err).NotTo(HaveOccurred())
 
 					suiteConfig, _ := GinkgoConfiguration()
 					GinkgoWriter.Printf("Parallel processes: %d\n", suiteConfig.ParallelTotal)
@@ -150,7 +138,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 				AfterAll(func() {
 					if !appTest.Stage {
 						// collect SPI ResourceQuota metrics (temporary)
-						err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo("rhtap-demo", namespace, "appstudio-crds-spi")
+						err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo(devEnvTestLabel, namespace, "appstudio-crds-spi")
 						Expect(err).NotTo(HaveOccurred())
 
 						if !(strings.EqualFold(os.Getenv("E2E_SKIP_CLEANUP"), "true")) && !CurrentSpecReport().Failed() { // RHTAPBUGS-978: temporary timeout to 15min
@@ -182,7 +170,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 				})
 
 				// Create an application in a specific namespace
-				It("creates an application", func() {
+				It("creates an application", Label(devEnvTestLabel, stageEnvTestLabel), func() {
 					GinkgoWriter.Printf("Parallel process %d\n", GinkgoParallelProcess())
 					createdApplication, err := fw.AsKubeDeveloper.HasController.CreateApplication(appTest.ApplicationName, namespace)
 					Expect(err).NotTo(HaveOccurred())
@@ -190,31 +178,28 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 					Expect(createdApplication.Namespace).To(Equal(namespace))
 				})
 
-				// Check the application health and check if a devfile was generated in the status
-				It("checks if application is healthy", func() {
+				It("checks if application is healthy", Label(devEnvTestLabel, stageEnvTestLabel), func() {
 					Eventually(func() string {
-						appstudioApp, err := fw.AsKubeDeveloper.HasController.GetApplication(appTest.ApplicationName, namespace)
+						application, err = fw.AsKubeDeveloper.HasController.GetApplication(appTest.ApplicationName, namespace)
 						Expect(err).NotTo(HaveOccurred())
-						application = appstudioApp
 
 						return application.Status.Devfile
 					}, 3*time.Minute, 100*time.Millisecond).Should(Not(BeEmpty()), fmt.Sprintf("timed out waiting for gitOps repository to be created for the %s application in %s namespace", appTest.ApplicationName, fw.UserNamespace))
-
-					if !appTest.Stage {
-						Eventually(func() bool {
-							gitOpsRepository := gitops.ObtainGitOpsRepositoryName(application.Status.Devfile)
-
-							return fw.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
-						}, 1*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("timed out waiting for HAS controller to create gitops repository for the %s application in %s namespace", appTest.ApplicationName, fw.UserNamespace))
-					}
 				})
 
-				if !appTest.Stage { // Create an environment in a specific namespace
-					It("creates an environment", func() {
-						env, err = fw.AsKubeDeveloper.GitOpsController.CreatePocEnvironment(EnvironmentName, namespace)
-						Expect(err).NotTo(HaveOccurred())
-					})
-				}
+				It("checks if a devfile was generated in the application's status", Label(devEnvTestLabel), func() {
+					Eventually(func() bool {
+						gitOpsRepository := gitops.ObtainGitOpsRepositoryName(application.Status.Devfile)
+
+						return fw.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
+					}, 1*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("timed out waiting for HAS controller to create gitops repository for the %s application in %s namespace", appTest.ApplicationName, fw.UserNamespace))
+				})
+
+				// Create an environment in a specific namespace
+				It("creates an environment", Label(devEnvTestLabel), func() {
+					env, err = fw.AsKubeDeveloper.GitOpsController.CreatePocEnvironment(EnvironmentName, namespace)
+					Expect(err).NotTo(HaveOccurred())
+				})
 
 				for _, componentSpec := range appTest.Components {
 					componentSpec := componentSpec
@@ -226,7 +211,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 
 					if componentSpec.Private {
 						secret = SPIGithubSecretName
-						It(fmt.Sprintf("injects manually SPI token for component %s", componentSpec.Name), func() {
+						It(fmt.Sprintf("injects manually SPI token for component %s", componentSpec.Name), Label(devEnvTestLabel, stageEnvTestLabel), func() {
 							// Inject spi tokens to work with private components
 							if componentSpec.ContainerSource != "" {
 								// More info about manual token upload for quay.io here: https://github.com/redhat-appstudio/service-provider-integration-operator/pull/115
@@ -239,7 +224,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 						})
 					}
 
-					It(fmt.Sprintf("creates componentdetectionquery for component %s", componentSpec.Name), func() {
+					It(fmt.Sprintf("creates componentdetectionquery for component %s", componentSpec.Name), Label(devEnvTestLabel, stageEnvTestLabel), func() {
 						gitRevision := componentSpec.GitSourceRevision
 						// In case the advanced build (PaC) is enabled for this component,
 						// we need to create a new branch that we will target
@@ -253,7 +238,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 						Expect(err).NotTo(HaveOccurred())
 					})
 
-					It("check if components have supported languages by AppStudio", func() {
+					It("checks if components have supported languages by AppStudio", Label(devEnvTestLabel, stageEnvTestLabel), func() {
 						if appTest.Name == e2eConfig.MultiComponentWithUnsupportedRuntime {
 							// Validate that the completed CDQ only has detected 1 component and not also the unsupported component
 							Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "cdq also detect unsupported component")
@@ -265,7 +250,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 
 					// Components for now can be imported from gitUrl, container image or a devfile
 					if componentSpec.GitSourceUrl != "" {
-						It(fmt.Sprintf("creates component %s (private: %t) from git source %s", componentSpec.Name, componentSpec.Private, componentSpec.GitSourceUrl), func() {
+						It(fmt.Sprintf("creates component %s (private: %t) from git source %s", componentSpec.Name, componentSpec.Private, componentSpec.GitSourceUrl), Label(devEnvTestLabel, stageEnvTestLabel), func() {
 							for _, compDetected := range cdq.Status.ComponentDetected {
 								c, err := fw.AsKubeDeveloper.HasController.CreateComponent(compDetected.ComponentStub, namespace, "", secret, appTest.ApplicationName, true, map[string]string{})
 								Expect(err).NotTo(HaveOccurred())
@@ -281,7 +266,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 					}
 
 					// Start to watch the pipeline until is finished
-					It(fmt.Sprintf("waits for %s component (private: %t) pipeline to be finished", componentSpec.Name, componentSpec.Private), func() {
+					It(fmt.Sprintf("waits for %s component (private: %t) pipeline to be finished", componentSpec.Name, componentSpec.Private), Label(devEnvTestLabel, stageEnvTestLabel), func() {
 						if componentSpec.ContainerSource != "" {
 							Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skipping pipelinerun check.", componentSpec.Name))
 						}
@@ -294,41 +279,39 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 						}
 					})
 
-					if !appTest.Stage {
-						It("finds the snapshot and checks if it is marked as successful", func() {
-							timeout = time.Second * 600
-							interval = time.Second * 10
-							for _, component := range componentList {
-								Eventually(func() error {
-									snapshot, err = fw.AsKubeAdmin.IntegrationController.GetSnapshot("", "", component.Name, namespace)
-									if err != nil {
-										GinkgoWriter.Println("snapshot has not been found yet")
-										return err
-									}
-									if !fw.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot) {
-										return fmt.Errorf("tests haven't succeeded for snapshot %s/%s. snapshot status: %+v", snapshot.GetNamespace(), snapshot.GetName(), snapshot.Status)
-									}
-									return nil
-								}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the snapshot for the component %s/%s to be marked as successful", component.GetNamespace(), component.GetName()))
-							}
-						})
-
-						It("checks if a SnapshotEnvironmentBinding is created successfully", func() {
+					It("finds the snapshot and checks if it is marked as successful", Label(devEnvTestLabel), func() {
+						timeout = time.Second * 600
+						interval = time.Second * 10
+						for _, component := range componentList {
 							Eventually(func() error {
-								_, err := fw.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
+								snapshot, err = fw.AsKubeAdmin.IntegrationController.GetSnapshot("", "", component.Name, namespace)
 								if err != nil {
-									GinkgoWriter.Println("SnapshotEnvironmentBinding has not been found yet")
+									GinkgoWriter.Println("snapshot has not been found yet")
 									return err
 								}
+								if !fw.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot) {
+									return fmt.Errorf("tests haven't succeeded for snapshot %s/%s. snapshot status: %+v", snapshot.GetNamespace(), snapshot.GetName(), snapshot.Status)
+								}
 								return nil
-							}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the SnapshotEnvironmentBinding to be created (snapshot: %s, env: %s, namespace: %s)", snapshot.GetName(), env.GetName(), snapshot.GetNamespace()))
-						})
-					}
+							}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the snapshot for the component %s/%s to be marked as successful", component.GetNamespace(), component.GetName()))
+						}
+					})
+
+					It("checks if a SnapshotEnvironmentBinding is created successfully", Label(devEnvTestLabel), func() {
+						Eventually(func() error {
+							_, err := fw.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
+							if err != nil {
+								GinkgoWriter.Println("SnapshotEnvironmentBinding has not been found yet")
+								return err
+							}
+							return nil
+						}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the SnapshotEnvironmentBinding to be created (snapshot: %s, env: %s, namespace: %s)", snapshot.GetName(), env.GetName(), snapshot.GetNamespace()))
+					})
 
 					// Deploy the component using gitops and check for the health
 					if !componentSpec.SkipDeploymentCheck {
 						var expectedReplicas int32 = 1
-						It(fmt.Sprintf("deploys component %s successfully using gitops", componentSpec.Name), func() {
+						It(fmt.Sprintf("deploys component %s successfully using gitops", componentSpec.Name), Label(devEnvTestLabel, stageEnvTestLabel), func() {
 							var deployment *appsv1.Deployment
 							for _, component := range componentList {
 								Eventually(func() error {
@@ -344,7 +327,7 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 							}
 						})
 
-						It(fmt.Sprintf("checks if component %s route(s) exist and health endpoint (if defined) is reachable", componentSpec.Name), func() {
+						It(fmt.Sprintf("checks if component %s route(s) exist and health endpoint (if defined) is reachable", componentSpec.Name), Label(devEnvTestLabel, stageEnvTestLabel), func() {
 							for _, component := range componentList {
 								Eventually(func() error {
 									gitOpsRoute, err := fw.AsKubeDeveloper.CommonController.GetOpenshiftRouteByComponentName(component.Name, namespace)
@@ -362,8 +345,8 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 						})
 					}
 
-					if !appTest.Stage && componentSpec.K8sSpec != nil && componentSpec.K8sSpec.Replicas > 1 {
-						It(fmt.Sprintf("scales component %s replicas", componentSpec.Name), Pending, func() {
+					if componentSpec.K8sSpec != nil && componentSpec.K8sSpec.Replicas > 1 {
+						It(fmt.Sprintf("scales component %s replicas", componentSpec.Name), Label(devEnvTestLabel), Pending, func() {
 							for _, component := range componentList {
 								c, err := fw.AsKubeDeveloper.HasController.GetComponent(component.Name, namespace)
 								Expect(err).NotTo(HaveOccurred())
@@ -383,8 +366,8 @@ var _ = framework.RhtapDemoSuiteDescribe(Label("rhtap-demo"), Label("verify-stag
 							}
 						})
 					}
-					if !appTest.Stage && componentSpec.AdvancedBuildSpec != nil {
-						Describe(fmt.Sprintf("RHTAP Advanced build test for %s", componentSpec.Name), Ordered, func() {
+					if componentSpec.AdvancedBuildSpec != nil {
+						Describe(fmt.Sprintf("RHTAP Advanced build test for %s", componentSpec.Name), Label(devEnvTestLabel), Ordered, func() {
 							var managedNamespace string
 
 							var component *appservice.Component
