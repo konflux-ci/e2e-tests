@@ -5,7 +5,20 @@
 2. Make sure the cluster you are about to run this test against is public (i.e. hosted on a public cloud provider)
 
 ### Description
-This test simulates typical user scenario: 
+This test simulates typical user scenario.
+
+#### Note
+
+In order to run this test against **staging** cluster, export following environment variables (after updating their values with valid data) and run the test suite:
+```bash
+export STAGEUSER_TOKEN=<Offline token used for getting Keycloak token in order to authenticate against stage> \
+STAGE_SSOURL=<Keycloak URL used for authentication against stage cluster> \
+STAGE_APIURL=<Toolchain API URL used for authentication against stage cluster> \
+STAGE_USERNAME=<Your stage cluster username>
+# Run the test suite
+ginkgo --label-filter='verify-stage' ./cmd/
+```
+
 
 #### Simple build
 1. Setup

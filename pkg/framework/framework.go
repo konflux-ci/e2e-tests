@@ -55,11 +55,13 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 	var k *kubeCl.K8SClient
 	var supplyopts utils.Options
 
+	if userName == "" {
+		return nil, fmt.Errorf("userName cannot be empty when initializing a new framework instance")
+	}
 	isStage, err := utils.CheckOptions(options)
 	if err != nil {
 		return nil, err
 	}
-
 	if isStage {
 		options[0].ToolchainApiUrl = fmt.Sprintf("%s/workspaces/%s", options[0].ToolchainApiUrl, userName)
 		supplyopts = options[0]
