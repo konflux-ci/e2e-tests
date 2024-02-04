@@ -1356,13 +1356,8 @@ func (h *ConcreteHandlerResources) handleApplicationCreation(ctx *JourneyContext
 		return false
 	}
 
-	ApplicationCreationTimeSumPerThread[ctx.ThreadIndex] += applicationCreationTime
 	MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeGuage, metricsConstants.MetricApplicationCreationTimeGauge, applicationCreationTime.Seconds())
-	if applicationCreationTime > ApplicationCreationTimeMaxPerThread[ctx.ThreadIndex] {
-		ApplicationCreationTimeMaxPerThread[ctx.ThreadIndex] = applicationCreationTime
-	}
-
-	return h.validateApplicationCreation(ctx, framework, applicationName, username, usernamespace, applicationCreationTime)
+	return h.validateApplicationCreation(ctx, framework, ApplicationName, username, usernamespace, applicationCreationTime)
 }
 
 func isConditionError(condition metav1.Condition) bool {
@@ -1484,7 +1479,13 @@ func handleApplicationSuccess(ctx *JourneyContext, username, applicationName str
 	SuccessfulApplicationCreationsPerThread[ctx.ThreadIndex] += 1
 	MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulApplicationCreationCounter)
 	increaseBar(ctx.ApplicationsBar, applicationsBarMutex)
-	ctx.userAppsCompsMap.AddApplication(username, applicationName)
+
+	// Transform applicationActualCreationTimeInSeconds from float64 to time.Duration
+	applicationActualCreationTimeInSecondsToDuration := time.Duration(applicationActualCreationTimeInSeconds * float64(time.Second))
+	ApplicationCreationTimeSumPerThread[ctx.ThreadIndex] += applicationActualCreationTimeInSecondsToDuration
+	if applicationActualCreationTimeInSecondsToDuration > ApplicationCreationTimeMaxPerThread[ctx.ThreadIndex] {
+		ApplicationCreationTimeMaxPerThread[ctx.ThreadIndex] = applicationActualCreationTimeInSecondsToDuration
+	}
 }
 
 func handleApplicationFailure(ctx *JourneyContext, applicationName string, username string, err error, conditionError error) {
@@ -1519,13 +1520,9 @@ func (h *ConcreteHandlerResources) handleIntegrationTestScenarioCreation(ctx *Jo
 		return false
 	}
 
-	ItsCreationTimeSumPerThread[ctx.ThreadIndex] += itsCreationTime
+	itsName := integrationTestScenario.Name
 	MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeGuage, metricsConstants.MetricIntegrationTestSenarioCreationTimeGauge, itsCreationTime.Seconds())
-	if itsCreationTime > ItsCreationTimeMaxPerThread[ctx.ThreadIndex] {
-		ItsCreationTimeMaxPerThread[ctx.ThreadIndex] = itsCreationTime
-	}
-
-	return h.validateIntegrationTestScenarioCreation(ctx, framework, itsName, applicationName, username, usernamespace, itsCreationTime)
+	return h.validateIntegrationTestScenario(ctx, framework, itsName, ApplicationName, username, usernamespace, itsCreationTime)
 }
 
 func findTestScenarioByName(scenarios []integrationv1beta1.IntegrationTestScenario, name string) *integrationv1beta1.IntegrationTestScenario {
@@ -1595,7 +1592,14 @@ func handleItsSuccess(ctx *JourneyContext, itsName, username string, application
 	SuccessfulItsCreationsPerThread[ctx.ThreadIndex] += 1
 	MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulIntegrationTestSenarioCreationCounter)
 	increaseBar(ctx.ItsBar, itsBarMutex)
-	ctx.userAppsCompsMap.AddIntegrationTestScenario(username, applicationName, itsName)
+	userTestScenarioMap.Store(username, itsName)
+
+	// Transform itsActualCreationTimeInSeconds from float64 to time.Duration
+	itsActualCreationTimeInSecondsToDuration := time.Duration(itsActualCreationTimeInSeconds * float64(time.Second))
+	ItsCreationTimeSumPerThread[ctx.ThreadIndex] += itsActualCreationTimeInSecondsToDuration
+	if itsActualCreationTimeInSecondsToDuration > ItsCreationTimeMaxPerThread[ctx.ThreadIndex] {
+		ItsCreationTimeMaxPerThread[ctx.ThreadIndex] = itsActualCreationTimeInSecondsToDuration
+	}
 }
 
 func handleItsFailure(ctx *JourneyContext, applicationName string, err, conditionError error) {
@@ -1648,13 +1652,8 @@ func (h *ConcreteHandlerResources) handleCDQCreation(ctx *JourneyContext, framew
 		return false, nil
 	}
 
-	CDQCreationTimeSumPerThread[ctx.ThreadIndex] += cdqCreationTime
 	MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeGuage, metricsConstants.MetricCDQCreationTimeGauge, cdqCreationTime.Seconds())
-	if cdqCreationTime > CDQCreationTimeMaxPerThread[ctx.ThreadIndex] {
-		CDQCreationTimeMaxPerThread[ctx.ThreadIndex] = cdqCreationTime
-	}
-
-	return h.validateCDQCreation(ctx, framework, cdqName, applicationName, username, usernamespace, cdqCreationTime)
+	return h.validateCDQ(ctx, framework, ComponentDetectionQueryName, ApplicationName, username, usernamespace, cdqCreationTime)
 }
 
 func handleRepoTemplating(ctx *JourneyContext, framework *framework.Framework, username, usernamespace string) (error, string) {
@@ -1776,6 +1775,13 @@ func handleCdqSuccess(ctx *JourneyContext, cdqName string, cdqActualCreationTime
 	SuccessfulCDQCreationsPerThread[ctx.ThreadIndex] += 1
 	MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulCDQCreationCounter)
 	increaseBar(ctx.CDQsBar, cdqsBarMutex)
+
+	// Transform cdqActualCreationTimeInSeconds from float64 to time.Duration
+	cdqActualCreationTimeInSecondsToDuration := time.Duration(cdqActualCreationTimeInSeconds * float64(time.Second))
+	CDQCreationTimeSumPerThread[ctx.ThreadIndex] += cdqActualCreationTimeInSecondsToDuration
+	if cdqActualCreationTimeInSecondsToDuration > CDQCreationTimeMaxPerThread[ctx.ThreadIndex] {
+		CDQCreationTimeMaxPerThread[ctx.ThreadIndex] = cdqActualCreationTimeInSecondsToDuration
+	}
 }
 
 func handleCdqFailure(ctx *JourneyContext, applicationName string, err, conditionError error) {
@@ -1839,18 +1845,8 @@ func (h *ConcreteHandlerResources) handleComponentCreation(ctx *JourneyContext, 
 			increaseBar(ctx.ComponentsBar, componentsBarMutex)
 			return false
 		}
-
-		ComponentCreationTimeSumPerThread[ctx.ThreadIndex] += componentCreationTime
+		componentName = component.Name
 		MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeGuage, metricsConstants.MetricComponentCreationTimeGauge, componentCreationTime.Seconds())
-		if componentCreationTime > ComponentCreationTimeMaxPerThread[ctx.ThreadIndex] {
-			ComponentCreationTimeMaxPerThread[ctx.ThreadIndex] = componentCreationTime
-		}
-
-		validated := h.validateComponent(ctx, framework, component.Name, applicationName, username, usernamespace, componentCreationTime)
-		if !validated {
-			logError(30, fmt.Sprintf("Validation of component name (%s) failed with: %v", component.Name, err))
-			return false
-		}
 	}
 
 	ctx.ChPipelines <- username
@@ -1913,7 +1909,14 @@ func handleComponentSuccess(ctx *JourneyContext, username, applicationName, comp
 	SuccessfulComponentCreationsPerThread[ctx.ThreadIndex] += 1
 	MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulComponentCreationCounter)
 	increaseBar(ctx.ComponentsBar, componentsBarMutex)
-	ctx.userAppsCompsMap.AddComponent(username, applicationName, componentName)
+	ctx.ChPipelines <- username
+
+	// Transform componentActualCreationTimeInSeconds from float64 to time.Duration
+	componentActualCreationTimeInSecondsToDuration := time.Duration(componentActualCreationTimeInSeconds * float64(time.Second))
+	ComponentCreationTimeSumPerThread[ctx.ThreadIndex] += componentActualCreationTimeInSecondsToDuration
+	if componentActualCreationTimeInSecondsToDuration > ComponentCreationTimeMaxPerThread[ctx.ThreadIndex] {
+		ComponentCreationTimeMaxPerThread[ctx.ThreadIndex] = componentActualCreationTimeInSecondsToDuration
+	}
 }
 
 func handleComponentFailure(ctx *JourneyContext, applicationName string, err, conditionError error) {
