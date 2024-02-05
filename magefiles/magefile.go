@@ -499,6 +499,16 @@ func setRequiredEnvVars() error {
 			if !strings.Contains(jobName, "rehearse") {
 				os.Setenv(fmt.Sprintf("%s_CATALOG_URL", envVarPrefix), fmt.Sprintf("https://github.com/%s/%s", pr.RemoteName, pr.RepoName))
 				os.Setenv(fmt.Sprintf("%s_CATALOG_REVISION", envVarPrefix), pr.CommitSHA)
+				if isPRPairingRequired("release-service") {
+					os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", envVarPrefix),
+						"quay.io/redhat-user-workloads/rhtap-release-2-tenant/release-service/release-service")
+					pairedSha := getPairedCommitSha("release-service")
+					if pairedSha != "" {
+						os.Setenv(fmt.Sprintf("%s_IMAGE_TAG", envVarPrefix), fmt.Sprintf("on-pr-%s", pairedSha))
+					}
+					os.Setenv(fmt.Sprintf("%s_PR_OWNER", envVarPrefix), pr.RemoteName)
+					os.Setenv(fmt.Sprintf("%s_PR_SHA", envVarPrefix), pairedSha)
+				}
 			}
 			if os.Getenv("REL_IMAGE_CONTROLLER_QUAY_ORG") != "" {
 				os.Setenv("IMAGE_CONTROLLER_QUAY_ORG", os.Getenv("REL_IMAGE_CONTROLLER_QUAY_ORG"))
@@ -628,6 +638,25 @@ func isPRPairingRequired(repoForPairing string) bool {
 	}
 
 	return false
+}
+
+func getPairedCommitSha(repoForPairing string) string {
+	var pullRequests []gh.PullRequest
+
+	url := fmt.Sprintf("https://api.github.com/repos/redhat-appstudio/%s/pulls?per_page=100", repoForPairing)
+	if err := sendHttpRequestAndParseResponse(url, "GET", &pullRequests); err != nil {
+		klog.Infof("cannot determine %s Github branches for author %s: %v. will stick with the redhat-appstudio/%s main branch for running tests", repoForPairing, pr.RemoteName, err, repoForPairing)
+		return ""
+	}
+
+	for _, pull := range pullRequests {
+		if pull.GetHead().GetRef() == pr.BranchName && pull.GetUser().GetLogin() == pr.RemoteName {
+			return pull.GetHead().GetSHA()
+		}
+	}
+
+	klog.Infof("cannot determine %s commit sha for author %s", repoForPairing, pr.RemoteName)
+	return ""
 }
 
 // Generates ginkgo test suite files under the cmd/ directory.
