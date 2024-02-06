@@ -13,7 +13,7 @@ import (
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
+	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	intgteststat "github.com/redhat-appstudio/integration-service/pkg/integrationteststatus"
 
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -29,8 +29,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	var err error
 
 	var applicationName, componentName, testNamespace string
-	var integrationTestScenario *integrationv1alpha1.IntegrationTestScenario
-	var newIntegrationTestScenario *integrationv1alpha1.IntegrationTestScenario
+	var integrationTestScenario *integrationv1beta1.IntegrationTestScenario
+	var newIntegrationTestScenario *integrationv1beta1.IntegrationTestScenario
 	var timeout, interval time.Duration
 	var originalComponent *appstudioApi.Component
 	var pipelineRun *pipeline.PipelineRun
@@ -48,9 +48,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			applicationName = createApp(*f, testNamespace)
 			componentName, originalComponent = createComponent(*f, testNamespace, applicationName)
-			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, testNamespace, BundleURL, InPipelineName)
-			// create a integrationTestScenario v1beta1 version works also here
-			// ex: _, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario_beta1(applicationName, testNamespace, gitURL, revision, pathInRepo)
+			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, testNamespace, gitURL, revision, pathInRepoPass)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
@@ -212,7 +210,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			env, err = f.AsKubeAdmin.GitOpsController.CreatePocEnvironment(EnvironmentName, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
-			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, testNamespace, BundleURLFail, InPipelineNameFail)
+			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, testNamespace, gitURL, revision, pathInRepoFail)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
@@ -275,7 +273,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 
 		It("creates a new IntegrationTestScenario", func() {
-			newIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, testNamespace, BundleURL, InPipelineName)
+			newIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, testNamespace, gitURL, revision, pathInRepoPass)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 

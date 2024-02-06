@@ -7,33 +7,10 @@ import (
 	"github.com/devfile/library/v2/pkg/util"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	integrationv1alpha1 "github.com/redhat-appstudio/integration-service/api/v1alpha1"
 	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// CreateIntegrationTestScenario creates new integrationTestScenario.
-func (i *IntegrationController) CreateIntegrationTestScenario(applicationName, namespace, bundleURL, pipelineName string) (*integrationv1alpha1.IntegrationTestScenario, error) {
-	integrationTestScenario := &integrationv1alpha1.IntegrationTestScenario{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "example-pass-" + util.GenerateRandomString(4),
-			Namespace: namespace,
-			Labels:    constants.IntegrationTestScenarioDefaultLabels,
-		},
-		Spec: integrationv1alpha1.IntegrationTestScenarioSpec{
-			Application: applicationName,
-			Bundle:      bundleURL,
-			Pipeline:    pipelineName,
-		},
-	}
-
-	err := i.KubeRest().Create(context.Background(), integrationTestScenario)
-	if err != nil {
-		return nil, err
-	}
-	return integrationTestScenario, nil
-}
 
 // CreateIntegrationTestScenarioWithEnvironment will create an IntegrationTestScenario with a
 // user-supplied environment embedded in its Spec.Environment
@@ -85,8 +62,8 @@ func (i *IntegrationController) CreateIntegrationTestScenarioWithEnvironment(app
 	return integrationTestScenario, nil
 }
 
-// CreateIntegrationTestScenario_beta1 creates new beta1 version integrationTestScenario.
-func (i *IntegrationController) CreateIntegrationTestScenario_beta1(applicationName, namespace, gitURL, revision, pathInRepo string) (*integrationv1beta1.IntegrationTestScenario, error) {
+// CreateIntegrationTestScenario creates beta1 version integrationTestScenario.
+func (i *IntegrationController) CreateIntegrationTestScenario(applicationName, namespace, gitURL, revision, pathInRepo string) (*integrationv1beta1.IntegrationTestScenario, error) {
 	integrationTestScenario := &integrationv1beta1.IntegrationTestScenario{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "my-integration-test-" + util.GenerateRandomString(4),
