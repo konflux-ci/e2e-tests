@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
-	"k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"strings"
 	"time"
+
+	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	pointer "k8s.io/utils/ptr"
 
@@ -1422,6 +1423,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		var parentPostPacMergeDigest string
 		var parentImageNameWithNoDigest string
 		const distributionRepository = "quay.io/redhat-appstudio-qe/release-repository"
+		quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "")
 
 		var managedNamespace string
 		BeforeAll(func() {
@@ -1570,7 +1572,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(err).ShouldNot(HaveOccurred())
 				err = f.AsKubeAdmin.CommonController.Github.CreateRef(ChildComponentDef.repoName, ChildComponentDef.baseBranch, ChildComponentDef.baseRevision, ChildComponentDef.pacBranchName)
 				Expect(err).ShouldNot(HaveOccurred())
-				parentImageNameWithNoDigest = "quay.io/" + gihubOrg + "/" + imageRepoName
+				parentImageNameWithNoDigest = "quay.io/" + quayOrg + "/" + imageRepoName
 				_, err = f.AsKubeAdmin.CommonController.Github.CreateFile(ChildComponentDef.repoName, "Dockerfile.tmp", "FROM "+parentImageNameWithNoDigest+"@"+parentFirstDigest+"\nRUN echo hello\n", ChildComponentDef.pacBranchName)
 				Expect(err).ShouldNot(HaveOccurred())
 
@@ -1690,7 +1692,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(err).ShouldNot(HaveOccurred())
 				content, err := contents.GetContent()
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(content).Should(Equal("FROM quay.io/" + gihubOrg + "/" + imageRepoName + "@" + parentPostPacMergeDigest + "\nRUN echo hello\n"))
+				Expect(content).Should(Equal("FROM quay.io/" + quayOrg + "/" + imageRepoName + "@" + parentPostPacMergeDigest + "\nRUN echo hello\n"))
 
 				contents, err = f.AsKubeAdmin.CommonController.Github.GetFile(ChildComponentDef.repoName, "manifest.yaml", ChildComponentDef.componentBranch)
 				Expect(err).ShouldNot(HaveOccurred())
