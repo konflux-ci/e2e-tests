@@ -14,10 +14,6 @@ func CommonSuiteDescribe(text string, args ...interface{}) bool {
 	return Describe("[common-suite "+text+"]", args, Ordered)
 }
 
-func ChainsSuiteDescribe(text string, args ...interface{}) bool {
-	return Describe("[chains-suite "+text+"]", args, Ordered)
-}
-
 func BuildSuiteDescribe(text string, args ...interface{}) bool {
 	return Describe("[build-service-suite "+text+"]", args)
 }
