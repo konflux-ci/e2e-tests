@@ -81,7 +81,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			It("waits for build PipelineRun to succeed", Label("integration-service"), func() {
 				Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "",
 					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
-				Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
+				Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal("unrealistic-annotation-value"))
 			})
 		})
 
