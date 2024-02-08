@@ -44,8 +44,7 @@ var (
 	multiPlatformProjectRevision = utils.GetEnv("MULTI_PLATFORM_TEST_REPO_REVISION", "c713067b0e65fb3de50d1f7c457eb51c2ab0dbb0")
 )
 
-// Marking the test as pending until https://issues.redhat.com/browse/RHTAPBUGS-1125 is resolved
-var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E tests", Label("multi-platform"), Pending, func() {
+var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E tests", Label("multi-platform"), func() {
 	var f *framework.Framework
 	AfterEach(framework.ReportFailure(&f))
 	var err error
