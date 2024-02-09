@@ -304,7 +304,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			})
 		})
-
+		///////////////
 		When("a new Component with specified custom branch is created", Label("custom-branch"), func() {
 			var outputImage string
 			BeforeAll(func() {
