@@ -49,6 +49,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		var applicationName, componentName, symlinkComponentName, testNamespace string
 		var kubeadminClient *framework.ControllerHub
 		var finalizerName string = "e2e-test"
+		var pipelineRunsWithE2eFinalizer []string
 
 		BeforeAll(func() {
 			if os.Getenv("APP_SUFFIX") != "" {
@@ -117,20 +118,15 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		})
 
 		AfterAll(func() {
-			//Remove finalizer from symlink check pipelinerun
-			pr, err := kubeadminClient.HasController.GetComponentPipelineRun(symlinkComponentName, applicationName, testNamespace, "")
+			//Remove finalizers from pipelineruns
+			pipelineRuns, err := kubeadminClient.HasController.GetAllPipelineRunsForApplication(applicationName, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
-			err = kubeadminClient.TektonController.RemoveFinalizerFromPipelineRun(pr, finalizerName)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			//Remove finalizer from other pipelineruns
-			for i := range componentUrls {
-				pr, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
-				Expect(err).ShouldNot(HaveOccurred())
-				err = kubeadminClient.TektonController.RemoveFinalizerFromPipelineRun(pr, finalizerName)
-				Expect(err).ShouldNot(HaveOccurred())
+			for i := 0; i < len(pipelineRuns.Items); i++ {
+				if utils.Contains(pipelineRunsWithE2eFinalizer, pipelineRuns.Items[i].GetName()) {
+					err = kubeadminClient.TektonController.RemoveFinalizerFromPipelineRun(&pipelineRuns.Items[i], finalizerName)
+					Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error removing e2e test finalizer from %s : %v", pipelineRuns.Items[i].GetName(), err))
+				}
 			}
-
 			// Do cleanup only in case the test succeeded
 			if !CurrentSpecReport().Failed() {
 				// Clean up only Application CR (Component and Pipelines are included) in case we are targeting specific namespace
@@ -159,6 +155,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				if err != nil {
 					return fmt.Errorf("error while adding finalizer %q to the pipelineRun %q: %v", finalizerName, pipelineRun.GetName(), err)
 				}
+				pipelineRunsWithE2eFinalizer = append(pipelineRunsWithE2eFinalizer, pipelineRun.GetName())
 				return nil
 			}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the Component %s/%s", testNamespace, symlinkComponentName))
 		})
@@ -182,6 +179,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					if err != nil {
 						return fmt.Errorf("error while adding finalizer %q to the pipelineRun %q: %v", finalizerName, pipelineRun.GetName(), err)
 					}
+					pipelineRunsWithE2eFinalizer = append(pipelineRunsWithE2eFinalizer, pipelineRun.GetName())
 					return nil
 				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the Component %s/%s", testNamespace, componentNames[i]))
 			})
