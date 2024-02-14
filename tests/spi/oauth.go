@@ -37,7 +37,8 @@ var _ = framework.SPISuiteDescribe(Label("spi-suite", "gh-oauth-flow"), func() {
 	var cypressPodName string = "cypress-script"
 	AfterEach(framework.ReportFailure(&fw))
 
-	Describe("SVPI-395 - Github OAuth flow to upload token", Ordered, func() {
+	// TODO: skip until https://issues.redhat.com/browse/KFLUXBUGS-1108 is fixed
+	Describe("SVPI-395 - Github OAuth flow to upload token", Pending, Ordered, func() {
 		BeforeAll(func() {
 
 			if os.Getenv("CI") != "true" {
