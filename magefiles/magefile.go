@@ -25,6 +25,7 @@ import (
 	"github.com/magefile/mage/sh"
 	"github.com/redhat-appstudio/e2e-tests/magefiles/installation"
 	"github.com/redhat-appstudio/e2e-tests/magefiles/testspecs"
+	"github.com/redhat-appstudio/e2e-tests/magefiles/upgrade"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/github"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/slack"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/sprayproxy"
@@ -242,6 +243,13 @@ func (ci CI) Bootstrap() error {
 	return nil
 }
 
+func (ci CI) PerformOpenShiftUpgrade() error {
+	if err := upgrade.PerformUpgrade(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (ci CI) TestE2E() error {
 	var testFailure bool
 
@@ -253,8 +261,10 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when running preflight checks: %v", err)
 	}
 
-	if err := retry(BootstrapCluster, 2, 10*time.Second); err != nil {
-		return fmt.Errorf("error when bootstrapping cluster: %v", err)
+	if os.Getenv("SKIP_BOOTSTRAP") != "true" {
+		if err := retry(BootstrapCluster, 2, 10*time.Second); err != nil {
+			return fmt.Errorf("error when bootstrapping cluster: %v", err)
+		}
 	}
 
 	if requiresMultiPlatformTests {
