@@ -265,6 +265,10 @@ func (ci CI) TestE2E() error {
 		if err := retry(BootstrapCluster, 2, 10*time.Second); err != nil {
 			return fmt.Errorf("error when bootstrapping cluster: %v", err)
 		}
+	} else {
+		if err := setRequiredEnvVars(); err != nil {
+			return fmt.Errorf("error when setting up required env vars: %v", err)
+		}
 	}
 
 	if requiresMultiPlatformTests {
