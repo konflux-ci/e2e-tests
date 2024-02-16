@@ -344,9 +344,8 @@ func PreflightChecks() error {
 
 func setRequiredEnvVars() error {
 
-	// RHTAP Nightly E2E job
-	// The job name is taken from https://github.com/openshift/release/blob/f03153fa4ad36c0e10050d977e7f0f7619d2163a/ci-operator/config/redhat-appstudio/infra-deployments/redhat-appstudio-infra-deployments-main.yaml#L59C7-L59C35
-	if strings.Contains(jobName, "appstudio-e2e-tests-periodic") {
+	// Konflux Nightly E2E job
+	if strings.Contains(jobName, "-periodic") {
 		requiresMultiPlatformTests = true
 		requiresSprayProxyRegistering = true
 		return nil
