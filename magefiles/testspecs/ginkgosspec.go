@@ -134,15 +134,9 @@ func generateGinkgoSpec(cwd string, destination string, dataFile string) error {
 	// Doing this to avoid errcheck flagging this in a defer.
 	// Refer to https://github.com/kisielk/errcheck
 	// issues 101, 77, 55
-	tmpl, err := GetTemplate("test-file")
-	if err != nil {
-		return err
-	}
-
-	fullTemplatePath := fmt.Sprintf("%s/%s", cwd, tmpl)
 
 	klog.Infof("Creating new test package directory and spec file %s.\n", destination)
-	_, err = ginkgoGenerateSpecCmd("--template", fullTemplatePath, "--template-data", dataFile)
+	_, err = ginkgoGenerateSpecCmd("--template", TestFilePath, "--template-data", dataFile)
 	if err != nil {
 		err = os.Remove(ginkgoFileName)
 		if err != nil {
