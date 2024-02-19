@@ -174,6 +174,39 @@ Before generating anything make sure you have Ginkgo in place. To install Ginkgo
 
 `go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo`
 
+## Team specific template
+Teams can create their own templates according to their needs.
+These should utilize the provided `specs.tmpl` by including the following line wherever they want their specs to be. (do not forget the dot!) 
+
+`{{ template "specs" . }}`
+
+Please see the provided example:
+```
+package {{ .CustomData.PackageName }}
+
+/* This was generated from a template file. Please feel free to update as necessary!
+   a couple things to note:
+    - Remember to implement specific logic of the service/domain you are trying to test if it not already there in the pkg/
+
+    - To include the tests as part of the E2E Test suite:
+       - Update the pkg/framework/describe.go to include the `Describe func` of this new test suite, If you haven't already done so.
+       - Import this new package into the cmd/e2e_test.go
+*/
+
+import (
+	// Imports here
+)
+
+{{ range .CustomData.Outline }}
+var _ = framework.{{ .Name }}
+("{{ .Text }}", {{ range .Labels }}Label("{{.}}"), {{ end }} func() {
+	// Setup here
+
+	// Generated specs:
+ 	{{ template "specs" . }}
+})
+{{ end -}}
+```
  
  ## Usage
 
@@ -218,20 +251,30 @@ I0622 22:19:41.865837   20923 textspec.go:67] successfully written to /tmp/outli
 
 ```
  
- ### Generating the ginkgo spec file from an existing text outline file
- This will generate the Ginkgo spec in a subdirectory within our tests directory
+ ### Generating a generic Ginkgo spec file from an existing text outline file
+ This will generate a generic Ginkgo spec in a subdirectory within our tests directory
 
- `./mage GenerateGinkoSpecFromTextOutline <path>/<to>/<outline> <subpath-under-tests>/<filename>.go`
+ `./mage GenerateGinkgoSpecFromTextOutline <path>/<to>/<outline> <subpath-under-tests>/<filename>.go`
 
  ```bash
  $ ./mage GenerateGinkoSpecFromTextOutline dummy_test.outline books/books.go
 I0622 22:14:22.140583   20356 testcasemapper.go:58] Mapping outline from a text file, dummy_test.outline
 I0622 22:14:22.140673   20356 testcasemapper.go:47] Mapping outline to a Ginkgo test file, books/books.go
 I0622 22:14:22.140841   20356 ginkgosspec.go:242] Creating new test package directory and spec file tests/books/books.go.
-
-
  ```
 As noted above, this command will create a new package under the `tests/` directory and a test spec file `<filename>.go` for you. It will contain some basic imports but more importantly it will generate a basic structured Ginkgo spec skeleton that you can code against.
+
+### Generating a team specific Ginkgo spec file from an existing text outline file
+This will generate the Ginkgo spec in a subdirectory within our tests directory using a team specific template provided by user. Please see the [Team specific template](#team-specific-template) section.
+
+`./mage GenerateTeamSpecificGinkgoSpecFromTextOutline <path>/<to>/<outline> <path>/<to>/<team-specific-template> <subpath-under-tests>/<filename>.go`
+
+```bash
+➜ ./mage GenerateTeamSpecificGinkgoSpecFromTextOutline templates/testOutline templates/barebones/barebones.tmpl tests/template_poc/template_poc.go
+I0219 15:42:17.808595  351210 magefile.go:755] Mapping outline from a text file, templates/testOutline
+I0219 15:42:17.808685  351210 magefile.go:762] Mapping outline to a Ginkgo spec file, tests/template_poc/template_poc.go
+I0219 15:42:17.809210  351210 ginkgosspec.go:144] Creating new test package directory and spec file /home/tnevrlka/Work/e2e-tests/tests/template_poc/template_poc.go.
+```
 
 ### Printing a text outline in JSON format of an existing ginkgo spec file
  This will generate the outline and output to your terminal in JSON format. This is the format we use when rendering the template. You can pipe this output to tools like `jq` for formatting and filtering. This would only be useful for troubleshooting purposes 
