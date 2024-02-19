@@ -758,26 +758,31 @@ func GenerateTextOutlineFromGinkgoSpec(source string, destination string) error 
 }
 
 // Generate a Ginkgo Spec file from a Text Outline file
-func GenerateGinkoSpecFromTextOutline(source string, destination string) error {
+func GenerateGinkgoSpecFromTextOutline(source string, destination string) error {
+	return GenerateTeamSpecificGinkgoSpecFromTextOutline(source, testspecs.TestFilePath, destination)
+}
 
+// Generate a team specific file using specs in templates/specs.tmpl file and a provided team specific template
+func GenerateTeamSpecificGinkgoSpecFromTextOutline(outlinePath, teamTmplPath, destinationPath string) error {
 	gs := testspecs.NewGinkgoSpecTranslator()
 	ts := testspecs.NewTextSpecTranslator()
 
-	klog.Infof("Mapping outline from a text file, %s", source)
-	outline, err := ts.FromFile(source)
+	klog.Infof("Mapping outline from a text file, %s", outlinePath)
+	outline, err := ts.FromFile(outlinePath)
 	if err != nil {
 		klog.Error("Failed to map text outline file")
 		return err
 	}
 
-	klog.Infof("Mapping outline to a Ginkgo spec file, %s", destination)
-	err = gs.ToFile(destination, outline)
+	klog.Infof("Mapping outline to a Ginkgo spec file, %s", destinationPath)
+	err = gs.ToFile(destinationPath, teamTmplPath, outline)
 	if err != nil {
 		klog.Error("Failed to map Ginkgo spec file")
 		return err
 	}
 
 	return err
+
 }
 
 // Print the outline of the Ginkgo spec
