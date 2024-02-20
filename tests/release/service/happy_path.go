@@ -51,8 +51,6 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", Labe
 		managedServiceAccount, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(releasecommon.ReleasePipelineServiceAccountDefault, managedNamespace, releasecommon.ManagednamespaceSecret, nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(devNamespace, managedServiceAccount)
-		Expect(err).NotTo(HaveOccurred())
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
 		Expect(err).NotTo(HaveOccurred())
 
