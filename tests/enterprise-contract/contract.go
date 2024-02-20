@@ -9,11 +9,6 @@ import (
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
-	corev1 "k8s.io/api/core/v1"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/yaml"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/common"
 	kubeapi "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
@@ -21,6 +16,11 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/contract"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 )
 
 var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests", Label("ec", "HACBS"), func() {
@@ -316,13 +316,13 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 					pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
-		
+
 					pr, err = fwk.AsKubeAdmin.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
 					Expect(err).NotTo(HaveOccurred())
-		
+
 					tr, err := fwk.AsKubeAdmin.TektonController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 					Expect(err).NotTo(HaveOccurred())
-		
+
 					Expect(tr.Status.TaskRunStatusFields.Results).Should(Or(
 						// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
 						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
@@ -334,7 +334,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 					Expect(err).NotTo(HaveOccurred())
 					Expect(reportLog).Should(ContainSubstring("No image attestations found matching the given public key"))
 				})
-		
+
 				It("verifies ec validate accepts a list of image references", func() {
 					secretName := fmt.Sprintf("golden-image-public-key%s", util.GenerateRandomString(10))
 					GinkgoWriter.Println("Update public key to verify golden images")
@@ -344,23 +344,23 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 						"-----END PUBLIC KEY-----")
 					Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(goldenImagePublicKey, secretName, namespace)).To(Succeed())
 					generator.PublicKey = fmt.Sprintf("k8s://%s/%s", namespace, secretName)
-		
+
 					policy := contract.PolicySpecWithSourceConfig(
 						defaultECP.Spec, ecp.SourceConfig{Include: []string{"minimal"}})
 					Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
-		
+
 					generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-out-of-date-task")
 					generator.AppendComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-unacceptable-task")
 					pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
-		
+
 					pr, err = fwk.AsKubeAdmin.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
 					Expect(err).NotTo(HaveOccurred())
-		
+
 					tr, err := fwk.AsKubeAdmin.TektonController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 					Expect(err).NotTo(HaveOccurred())
-		
+
 					Expect(tr.Status.TaskRunStatusFields.Results).Should(Or(
 						// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
 						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
@@ -388,31 +388,31 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 						ecp.SourceConfig{Include: []string{"attestation_task_bundle.task_ref_bundles_acceptable"}},
 					)
 					Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
-		
+
 					generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-unacceptable-task")
 					pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
-		
+
 					pr, err = fwk.AsKubeAdmin.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
 					Expect(err).NotTo(HaveOccurred())
-		
+
 					tr, err := fwk.AsKubeAdmin.TektonController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 					Expect(err).NotTo(HaveOccurred())
-		
+
 					Expect(tr.Status.TaskRunStatusFields.Results).Should(Or(
 						// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
 						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
 						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
 					))
-		
+
 					//Get container step-report log details from pod
 					reportLog, err := utils.GetContainerLogs(fwk.AsKubeAdmin.CommonController.KubeInterface(), tr.Status.PodName, "step-report", namespace)
 					GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, "step-report", reportLog)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(reportLog).Should(MatchRegexp(`Pipeline task .* uses an untrusted task bundle`))
+					Expect(reportLog).Should(MatchRegexp(`Pipeline task .* uses an (?:untrusted|unacceptable) task bundle`))
 				})
-		
+
 				It("verifies the release policy: Task bundle references pinned to digest", func() {
 					secretName := fmt.Sprintf("unpinned-task-bundle-public-key%s", util.GenerateRandomString(10))
 					unpinnedTaskPublicKey := []byte("-----BEGIN PUBLIC KEY-----\n" +
@@ -422,30 +422,30 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 					GinkgoWriter.Println("Update public <key to verify unpinned task image")
 					Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(unpinnedTaskPublicKey, secretName, namespace)).To(Succeed())
 					generator.PublicKey = fmt.Sprintf("k8s://%s/%s", namespace, secretName)
-		
+
 					policy := contract.PolicySpecWithSourceConfig(
 						defaultECP.Spec,
 						ecp.SourceConfig{Include: []string{"attestation_task_bundle.task_ref_bundles_pinned"}},
 					)
 					Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
-		
+
 					generator.WithComponentImage("quay.io/redhat-appstudio-qe/enterprise-contract-tests:e2e-test-unpinned-task-bundle")
 					pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
-		
+
 					pr, err = fwk.AsKubeAdmin.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
 					Expect(err).NotTo(HaveOccurred())
-		
+
 					tr, err := fwk.AsKubeAdmin.TektonController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 					Expect(err).NotTo(HaveOccurred())
-		
+
 					Expect(tr.Status.TaskRunStatusFields.Results).Should(Or(
 						// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
 						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["WARNING"]`)),
 						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["WARNING"]`)),
 					))
-		
+
 					//Get container step-report log details from pod
 					reportLog, err := utils.GetContainerLogs(fwk.AsKubeAdmin.CommonController.KubeInterface(), tr.Status.PodName, "step-report", namespace)
 					GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, "step-report", reportLog)
