@@ -25,10 +25,6 @@ import (
 	k8swait "k8s.io/apimachinery/pkg/util/wait"
 )
 
-var adminAcks = map[string]string{
-	"4.14": "{\"data\":{\"ack-4.13-kube-1.27-api-removals-in-4.14\":\"true\"}}",
-}
-
 const majorMinorVersionFormat = "4.%d"
 const fastChannelFormat = "fast-" + majorMinorVersionFormat
 
@@ -46,7 +42,10 @@ type statusHelper struct {
 	desiredMajorMinorVersion string
 	desiredFullVersion       string
 
-	initialVersion string
+	currentMajorMinorVersion string
+	initialVersion           string
+
+	adminAckData string
 }
 
 func (s *statusHelper) update() error {
@@ -81,6 +80,7 @@ func newStatusHelper(kcs *kubeclient.Clientset, ccs *configv1client.Clientset) (
 	if _, err = fmt.Sscanf(currentChannel, fastChannelFormat, &minorVersion); err != nil {
 		return nil, fmt.Errorf("can't detect the next version channel: %+v", err)
 	}
+	currentMajorMinorVersion := fmt.Sprintf(majorMinorVersionFormat, minorVersion+1)
 	nextMajorMinorVersion := fmt.Sprintf(majorMinorVersionFormat, minorVersion+1)
 	nextVersionChannel := fmt.Sprintf(fastChannelFormat, minorVersion+1)
 
@@ -94,14 +94,29 @@ func newStatusHelper(kcs *kubeclient.Clientset, ccs *configv1client.Clientset) (
 		return nil, fmt.Errorf("the channel for updating to next version was not found in the list of desired channels: %+v", clusterVersion.Status.Desired.Channels)
 	}
 
+	cm, err := kcs.CoreV1().ConfigMaps("openshift-config-managed").Get(context.Background(), "admin-gates", metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("error when getting configmap admin-gates: %+v", err)
+	}
+
+	var adminAckData string
+	for k := range cm.Data {
+		if strings.Contains(k, currentMajorMinorVersion) {
+			adminAckData = fmt.Sprintf("{\"data\":{\"%s\":\"true\"}}", k)
+			break
+		}
+	}
+
 	klog.Infof("desired major.minor version is %q, desired channel is %q", nextMajorMinorVersion, nextVersionChannel)
 
 	return &statusHelper{
 		kubeClientSet:            kcs,
 		configClientset:          ccs,
+		currentMajorMinorVersion: currentMajorMinorVersion,
 		desiredChannel:           nextVersionChannel,
 		desiredMajorMinorVersion: nextMajorMinorVersion,
 		initialVersion:           initialVersion,
+		adminAckData:             adminAckData,
 	}, nil
 }
 
@@ -119,8 +134,8 @@ func (s *statusHelper) isCompleted() bool {
 	return false
 }
 
-func (s *statusHelper) performAdminAck(ackData string) error {
-	_, err := s.kubeClientSet.CoreV1().ConfigMaps("openshift-config").Patch(context.Background(), "admin-acks", types.MergePatchType, []byte(ackData), metav1.PatchOptions{})
+func (s *statusHelper) performAdminAck() error {
+	_, err := s.kubeClientSet.CoreV1().ConfigMaps("openshift-config").Patch(context.Background(), "admin-acks", types.MergePatchType, []byte(s.adminAckData), metav1.PatchOptions{})
 	if err != nil {
 		return err
 	}
@@ -162,11 +177,11 @@ func PerformUpgrade() error {
 		return fmt.Errorf("failed when updating the upgrade channel to %q: %+v", ch.Channel, err)
 	}
 
-	if val, ok := adminAcks[us.desiredMajorMinorVersion]; ok {
-		klog.Infof("about to perform an admin ack, since %q version requires it...", us.desiredMajorMinorVersion)
-		if err := us.performAdminAck(val); err != nil {
+	if us.adminAckData != "" {
+		if err := us.performAdminAck(); err != nil {
 			return fmt.Errorf("unable to perform admin ack: %+v", err)
 		}
+		klog.Infof("admin ack %s successfully applied", us.adminAckData)
 	}
 
 	err = k8swait.PollUntilContextTimeout(context.Background(), 2*time.Second, 5*time.Minute, true, func(ctx context.Context) (done bool, err error) {
