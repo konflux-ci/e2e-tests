@@ -411,7 +411,10 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 								}
 
 								// Delete new branch created by PaC and a testing branch used as a component's base branch
-								Expect(fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, pacBranchName)).To(Succeed())
+								err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, pacBranchName)
+								if err != nil {
+									Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+								}
 								Expect(fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, componentNewBaseBranch)).To(Succeed())
 							})
 							When("Component is switched to Advanced Build mode", func() {
