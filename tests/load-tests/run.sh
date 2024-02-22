@@ -8,6 +8,8 @@ else
     RANDOM_PREFIX_FLAG=""
 fi
 
+TEKTON_PERF_PROFILE_CPU_PERIOD=${TEKTON_PERF_PROFILE_CPU_PERIOD:-300}
+
 output_dir="${OUTPUT_DIR:-.}"
 USER_PREFIX=${USER_PREFIX:-testuser}
 # Max length of compliant username is 20 characters. We add -"-XXXXX-XXXX" suffix for the test users' name so max length of the prefix is 9.
@@ -26,12 +28,38 @@ if [ "${RANDOM_PREFIX_FLAG}" == "-r" ] && [ ${#USER_PREFIX} -gt 9 ]; then
 elif [ "${RANDOM_PREFIX_FLAG}" == "" ] && [ ${#USER_PREFIX} -gt 15 ]; then
     echo "Maximal allowed length of user prefix is 15 characters. The '$USER_PREFIX' length of ${#USER_PREFIX} exceeds the limit."
 else
-    ## Enable profiling in Tekton controller
-    if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
+    ## Enable CPU profiling in Tekton
+    if [ "${TEKTON_PERF_ENABLE_CPU_PROFILING:-}" == "true" ]; then
         echo "Starting CPU profiling with pprof"
-        TEKTON_PERF_PROFILE_CPU_PERIOD=${TEKTON_PERF_PROFILE_CPU_PERIOD:-300}
-        oc exec -n openshift-pipelines $(oc get pods -n openshift-pipelines -l app=tekton-pipelines-controller -o name) -- bash -c "curl -SsL --max-time $((TEKTON_PERF_PROFILE_CPU_PERIOD + 10)) localhost:8008/debug/pprof/profile?seconds=${TEKTON_PERF_PROFILE_CPU_PERIOD} | base64" | base64 -d >"$output_dir/cpu-profile.pprof" &
-        TEKTON_PROFILER_PID=$!
+        for p in $(oc get pods -n openshift-pipelines -l app=tekton-pipelines-controller -o name); do
+            pod="${p##*/}"
+            file="tekton-pipelines-controller.$pod.cpu-profile"
+            oc exec -n openshift-pipelines "$p" -- bash -c "curl -SsL --max-time $((TEKTON_PERF_PROFILE_CPU_PERIOD + 10)) localhost:8008/debug/pprof/profile?seconds=${TEKTON_PERF_PROFILE_CPU_PERIOD} | base64" | base64 -d >"$output_dir/$file.pprof" &
+            echo $! >"$output_dir/$file.pid"
+        done
+        p=$(oc get pods -n tekton-results -l app.kubernetes.io/name=tekton-results-watcher -o name)
+        pod="${p##*/}"
+        file=tekton-results-watcher.$pod.cpu-profile
+        oc exec -n tekton-results "$p" -c watcher -- bash -c "curl -SsL --max-time $((TEKTON_PERF_PROFILE_CPU_PERIOD + 10)) localhost:8008/debug/pprof/profile?seconds=${TEKTON_PERF_PROFILE_CPU_PERIOD} | base64" | base64 -d >"$output_dir/$file.pprof" &
+        echo $! >"$output_dir/$file.pid"
+    fi
+    ## Enable memory profiling in Tekton
+    if [ "${TEKTON_PERF_ENABLE_MEMORY_PROFILING:-}" == "true" ]; then
+        file=tekton-pipelines-controller.memory-profile
+        echo "Starting memory profiling of Tekton controller with pprof"
+        for p in $(oc get pods -n openshift-pipelines -l app=tekton-pipelines-controller -o name); do
+            pod="${p##*/}"
+            file="tekton-pipelines-controller.$pod.memory-profile"
+            oc exec -n openshift-pipelines "$p" -- bash -c "curl -SsL --max-time $((TEKTON_PERF_PROFILE_CPU_PERIOD + 10)) localhost:8008/debug/pprof/heap?seconds=${TEKTON_PERF_PROFILE_CPU_PERIOD} | base64" | base64 -d >"$output_dir/$file.pprof" &
+            echo $! >"$output_dir/$file.pid"
+        done
+        echo "Starting memory profiling of Tekton results watcher with pprof"
+        for p in $(oc get pods -n tekton-results -l app.kubernetes.io/name=tekton-results-watcher -o name); do
+            pod="${p##*/}"
+            file=tekton-results-watcher.$pod.memory-profile
+            oc exec -n tekton-results "$p" -c watcher -- bash -c "curl -SsL --max-time $((TEKTON_PERF_PROFILE_CPU_PERIOD + 10)) localhost:8008/debug/pprof/heap?seconds=${TEKTON_PERF_PROFILE_CPU_PERIOD} | base64" | base64 -d >"$output_dir/$file.pprof" &
+            echo $! >"$output_dir/$file.pid"
+        done
     fi
     ## Switch KubeScheduler Debugging on
     if [ -n "$KUBE_SCHEDULER_LOG_LEVEL" ]; then
@@ -73,9 +101,28 @@ else
 
     DRY_RUN=false ./clear.sh "$USER_PREFIX"
 
-    if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
-        echo "Waiting for the Tekton controller profiling to finish up to ${TEKTON_PERF_PROFILE_CPU_PERIOD}s"
-        wait "$TEKTON_PROFILER_PID"
+    if [ "${TEKTON_PERF_ENABLE_CPU_PROFILING:-}" == "true" ] || [ "${TEKTON_PERF_ENABLE_MEMORY_PROFILING:-}" == "true" ]; then
+        echo "Waiting for the Tekton profiling to finish up to ${TEKTON_PERF_PROFILE_CPU_PERIOD}s"
+        for pid_file in $(find $output_dir -name 'tekton*.pid'); do
+            wait "$(cat "$pid_file")"
+            rm -rvf "$pid_file"
+        done
+        echo "Getting Tekton controller goroutine dump"
+        for p in $(oc get pods -n openshift-pipelines -l app=tekton-pipelines-controller -o name); do
+            pod="${p##*/}"
+            for i in 0 1 2; do
+                file="tekton-pipelines-controller.$pod.goroutine-dump-$i"
+                oc exec -n tekton-results "$p" -- bash -c "curl -SsL localhost:8008/debug/pprof/goroutine?debug=$i | base64" | base64 -d >"$output_dir/$file.pprof"
+            done
+        done
+        echo "Getting Tekton results watcher goroutine dump"
+        for p in $(oc get pods -n tekton-results -l app.kubernetes.io/name=tekton-results-watcher -o name); do
+            pod="${p##*/}"
+            for i in 0 1 2; do
+                file="tekton-results-watcher.$pod.goroutine-dump-$i"
+                oc exec -n tekton-results "$p" -c watcher -- bash -c "curl -SsL localhost:8008/debug/pprof/goroutine?debug=$i | base64" | base64 -d >"$output_dir/$file.pprof"
+            done
+        done
     fi
     if [ -n "$KUBE_SCHEDULER_LOG_LEVEL" ]; then
         echo "Killing kube collector log collector"

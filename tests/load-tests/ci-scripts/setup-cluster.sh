@@ -13,7 +13,7 @@ pushd "${2:-.}"
 echo "Installing app-studio and tweaking cluster configuration"
 go mod tidy
 go mod vendor
-export MY_GITHUB_ORG QUAY_E2E_ORGANIZATION INFRA_DEPLOYMENTS_ORG INFRA_DEPLOYMENTS_BRANCH TEKTON_PERF_ENABLE_PROFILING TEKTON_PERF_PROFILE_CPU_PERIOD
+export MY_GITHUB_ORG QUAY_E2E_ORGANIZATION INFRA_DEPLOYMENTS_ORG INFRA_DEPLOYMENTS_BRANCH TEKTON_PERF_ENABLE_PROFILING TEKTON_PERF_ENABLE_CPU_PROFILING TEKTON_PERF_ENABLE_MEMORY_PROFILING TEKTON_PERF_PROFILE_CPU_PERIOD
 MY_GITHUB_ORG=$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/github-org)
 QUAY_E2E_ORGANIZATION=$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/quay-org)
 INFRA_DEPLOYMENTS_ORG=${INFRA_DEPLOYMENTS_ORG:-redhat-appstudio}
@@ -48,9 +48,11 @@ echo "  GitHub branch: ${INFRA_DEPLOYMENTS_BRANCH}"
 make local/cluster/prepare
 
 ## Enable profiling in Tekton controller
-if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
+if [ "${TEKTON_PERF_ENABLE_CPU_PROFILING:-}" == "true" ] || [ "${TEKTON_PERF_ENABLE_MEMORY_PROFILING:-}" == "true" ]; then
     echo "Enabling profiling in Tekton controller"
     oc patch -n openshift-pipelines cm config-observability --type=json -p='[{"op": "add", "path": "/data/profiling.enable", "value": "true"}]'
+    echo "Enabling profiling in Tekton results watcher"
+    oc patch -n tekton-results cm tekton-results-config-observability --type=json -p='[{"op": "add", "path": "/data/profiling.enable", "value": "true"}]'
 fi
 
 ## Patch HAS github secret

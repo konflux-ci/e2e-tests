@@ -18,6 +18,7 @@ load_test_log=$ARTIFACT_DIR/load-tests.log
 find "$output_dir" -type f -name '*.log' -exec cp -vf {} "${ARTIFACT_DIR}" \;
 find "$output_dir" -type f -name 'load-tests.json' -exec cp -vf {} "${ARTIFACT_DIR}" \;
 find "$output_dir" -type f -name 'gh-rate-limits-remaining.csv' -exec cp -vf {} "${ARTIFACT_DIR}" \;
+find "$output_dir" -type f -name '*.pprof' -exec cp -vf {} "${ARTIFACT_DIR}" \;
 
 pipelineruns_json=$ARTIFACT_DIR/pipelineruns.json
 taskruns_json=$ARTIFACT_DIR/taskruns.json
@@ -33,6 +34,8 @@ application_service_log=$ARTIFACT_DIR/application-service.log
 application_service_log_segments=$ARTIFACT_DIR/application-service-log-segments
 monitoring_collection_log=$ARTIFACT_DIR/monitoring-collection.log
 monitoring_collection_data=$ARTIFACT_DIR/load-tests.json
+monitoring_collection_dir=$ARTIFACT_DIR/monitoring-collection-raw-data-dir
+mkdir -p "$monitoring_collection_dir"
 csv_delim=";"
 csv_delim_quoted="\"$csv_delim\""
 dt_format='"%Y-%m-%dT%H:%M:%SZ"'
@@ -129,6 +132,7 @@ if [ -f "$monitoring_collection_data" ]; then
         --additional ./tests/load-tests/cluster_read_config.yaml \
         --monitoring-start "$mstart" \
         --monitoring-end "$mend" \
+        --monitoring-raw-data-dir "$monitoring_collection_dir" \
         --prometheus-host "https://$mhost" \
         --prometheus-port 443 \
         --prometheus-token "$(oc whoami -t)" \
@@ -140,16 +144,13 @@ else
     echo "WARNING: File $monitoring_collection_data not found!"
 fi
 
-## Tekton prifiling data
-if [ "${TEKTON_PERF_ENABLE_PROFILING:-}" == "true" ]; then
-    echo "Collecting profiling data from Tekton controller"
-    pprof_profile="$output_dir/cpu-profile.pprof"
-    if [ -f "$pprof_profile" ]; then
-        go tool pprof -text "$pprof_profile" >"$ARTIFACT_DIR/cpu-profile.txt" || true
-        go tool pprof -svg -output="$ARTIFACT_DIR/cpu-profile.svg" "$pprof_profile" || true
-    else
-        echo "WARNING: File $pprof_profile not found!"
-    fi
+if [ "${TEKTON_PERF_ENABLE_CPU_PROFILING:-}" == "true" ] || [ "${TEKTON_PERF_ENABLE_MEMORY_PROFILING:-}" == "true" ]; then
+    echo "Collecting profiling data from Tekton"
+    for pprof_profile in $(find "$output_dir" -name "*.pprof"); do
+        file=$(basename "$pprof_profile")
+        go tool pprof -text "$pprof_profile" >"$ARTIFACT_DIR/$file.txt" || true
+        go tool pprof -svg -output="$ARTIFACT_DIR/$file.svg" "$pprof_profile" || true
+    done
 fi
 
 ## Pods on Nodes distribution
