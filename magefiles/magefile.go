@@ -354,6 +354,7 @@ func setRequiredEnvVars() error {
 				envVarPrefix = "RELEASE_SERVICE"
 				imageTagSuffix = "release-service-image"
 				testSuiteLabel = "release-service"
+				os.Setenv(fmt.Sprintf("%s_CATALOG_REVISION", envVarPrefix), "development")
 			case strings.Contains(jobName, "integration-service"):
 				requiresSprayProxyRegistering = true
 				envVarPrefix = "INTEGRATION_SERVICE"
