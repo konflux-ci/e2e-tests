@@ -496,6 +496,7 @@ func setRequiredEnvVars() error {
 			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,spi-suite,remote-secret,integration-service,ec,byoc,build-templates,multi-platform")
 		} else if strings.Contains(jobName, "release-service-catalog") { // release-service-catalog jobs (pull, rehearsal)
 			envVarPrefix := "RELEASE_SERVICE"
+			os.Setenv("E2E_TEST_SUITE_LABEL", "release-pipelines")
 			// "rehearse" jobs metadata are not relevant for testing
 			if !strings.Contains(jobName, "rehearse") {
 				os.Setenv(fmt.Sprintf("%s_CATALOG_URL", envVarPrefix), fmt.Sprintf("https://github.com/%s/%s", pr.RemoteName, pr.RepoName))
@@ -509,6 +510,7 @@ func setRequiredEnvVars() error {
 					}
 					os.Setenv(fmt.Sprintf("%s_PR_OWNER", envVarPrefix), pr.RemoteName)
 					os.Setenv(fmt.Sprintf("%s_PR_SHA", envVarPrefix), pairedSha)
+					os.Setenv("E2E_TEST_SUITE_LABEL", "release-pipelines && !fbc-tests")
 				}
 			}
 			if os.Getenv("REL_IMAGE_CONTROLLER_QUAY_ORG") != "" {
@@ -517,7 +519,6 @@ func setRequiredEnvVars() error {
 			if os.Getenv("REL_IMAGE_CONTROLLER_QUAY_TOKEN") != "" {
 				os.Setenv("IMAGE_CONTROLLER_QUAY_TOKEN", os.Getenv("REL_IMAGE_CONTROLLER_QUAY_TOKEN"))
 			}
-			os.Setenv("E2E_TEST_SUITE_LABEL", "release-pipelines")
 		} else { // openshift/release rehearse job for e2e-tests/infra-deployments repos
 			requiresMultiPlatformTests = true
 			requiresSprayProxyRegistering = true
