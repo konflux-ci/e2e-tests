@@ -35,6 +35,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pointer "k8s.io/utils/ptr"
 
+	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
 	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -769,8 +770,8 @@ func createReleaseConfig(fw framework.Framework, managedNamespace, componentName
 	_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission("demo", managedNamespace, "", fw.UserNamespace, ecPolicyName, "release-service-account", []string{appName}, true, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
-			{Name: "url", Value: "https://github.com/redhat-appstudio/release-service-catalog"},
-			{Name: "revision", Value: "main"},
+			{Name: "url", Value: releasecommon.RelSvcCatalogURL},
+			{Name: "revision", Value: releasecommon.RelSvcCatalogRevision},
 			{Name: "pathInRepo", Value: "pipelines/e2e/e2e.yaml"},
 		},
 	}, nil)
