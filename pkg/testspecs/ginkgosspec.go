@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -186,21 +187,29 @@ func mergeTemplates(paths ...string) (*os.File, error) {
 	}
 	defer tempFile.Close()
 
-	for _, path := range paths {
-		tmplFile, err := os.Open(cwd + "/" + path)
-		if err != nil {
-			return nil, err
-		}
-		defer tmplFile.Close()
+	for _, templatePath := range paths {
+		// Avoid possible memory leak caused by defer by wrapping in a function
+		appendToTempPath := func() error {
+			tmplFile, err := os.Open(path.Clean(cwd + "/" + templatePath))
+			if err != nil {
+				return err
+			}
+			defer tmplFile.Close()
 
-		_, err = io.Copy(tempFile, tmplFile)
-		if err != nil {
-			return nil, err
-		}
+			_, err = io.Copy(tempFile, tmplFile)
+			if err != nil {
+				return err
+			}
 
-		_, err = tempFile.Write([]byte{'\n', '\n'})
+			_, err = tempFile.Write([]byte{'\n', '\n'})
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+		err = appendToTempPath()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error during appending to temp templatePath: %+v", err)
 		}
 	}
 	return tempFile, nil
