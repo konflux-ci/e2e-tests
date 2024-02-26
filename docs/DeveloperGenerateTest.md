@@ -180,33 +180,10 @@ These should utilize the provided `specs.tmpl` by including the following line w
 
 `{{ template "specs" . }}`
 
-Please see the provided example:
-```
-package {{ .CustomData.PackageName }}
+Everything needed to get started is in the [templates/default](../templates/default) directory.
 
-/* This was generated from a template file. Please feel free to update as necessary!
-   a couple things to note:
-    - Remember to implement specific logic of the service/domain you are trying to test if it not already there in the pkg/
-
-    - To include the tests as part of the E2E Test suite:
-       - Update the pkg/framework/describe.go to include the `Describe func` of this new test suite, If you haven't already done so.
-       - Import this new package into the cmd/e2e_test.go
-*/
-
-import (
-	// Imports here
-)
-
-{{ range .CustomData.Outline }}
-var _ = framework.{{ .Name }}
-("{{ .Text }}", {{ range .Labels }}Label("{{.}}"), {{ end }} func() {
-	// Setup here
-
-	// Generated specs:
- 	{{ template "specs" . }}
-})
-{{ end -}}
-```
+Please see the provided [recommended](../templates/default/recommended.tmpl) and [barebones](../templates/default/barebones.tmpl) templates.
+Copy them and make your own.
  
  ## Usage
 
@@ -267,11 +244,13 @@ As noted above, this command will create a new package under the `tests/` direct
 ### Generating a team specific Ginkgo spec file from an existing text outline file
 This will generate the Ginkgo spec in a subdirectory within our tests directory using a team specific template provided by user. Please see the [Team specific template](#team-specific-template) section.
 
+Feel free to use the provided [testOutline](../templates/default/testOutline) file for testing.
+
 `./mage GenerateTeamSpecificGinkgoSpecFromTextOutline <path>/<to>/<outline> <path>/<to>/<team-specific-template> <subpath-under-tests>/<filename>.go`
 
 ```bash
-➜ ./mage GenerateTeamSpecificGinkgoSpecFromTextOutline templates/testOutline templates/barebones/barebones.tmpl tests/template_poc/template_poc.go
-I0219 15:42:17.808595  351210 magefile.go:755] Mapping outline from a text file, templates/testOutline
+➜ ./mage GenerateTeamSpecificGinkgoSpecFromTextOutline templates/default/testOutline templates/default/recommended.tmpl tests/template_poc/template_poc.go
+I0219 15:42:17.808595  351210 magefile.go:755] Mapping outline from a text file, templates/default/testOutline
 I0219 15:42:17.808685  351210 magefile.go:762] Mapping outline to a Ginkgo spec file, tests/template_poc/template_poc.go
 I0219 15:42:17.809210  351210 ginkgosspec.go:144] Creating new test package directory and spec file /home/tnevrlka/Work/e2e-tests/tests/template_poc/template_poc.go.
 ```
