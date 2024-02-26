@@ -71,8 +71,8 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 			_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, "", devNamespace, releasecommon.ReleaseStrategyPolicyDefault, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationNameDefault}, true, &tektonutils.PipelineRef{
 				Resolver: "git",
 				Params: []tektonutils.Param{
-					{Name: "url", Value: "https://github.com/redhat-appstudio/release-service-catalog"},
-					{Name: "revision", Value: "main"},
+					{Name: "url", Value: releasecommon.RelSvcCatalogURL},
+					{Name: "revision", Value: releasecommon.RelSvcCatalogRevision},
 					{Name: "pathInRepo", Value: "pipelines/e2e/e2e.yaml"},
 				},
 			}, nil)

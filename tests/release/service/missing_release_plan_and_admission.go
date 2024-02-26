@@ -6,7 +6,7 @@ import (
 	"github.com/redhat-appstudio/application-api/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 
-	releaseConst "github.com/redhat-appstudio/e2e-tests/tests/release"
+	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -42,19 +42,19 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails whe
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", managedNamespace, err)
 
-		_, err = fw.AsKubeAdmin.IntegrationController.CreateSnapshotWithComponents(snapshotName, "", releaseConst.ApplicationName, devNamespace, []v1alpha1.SnapshotComponent{})
+		_, err = fw.AsKubeAdmin.IntegrationController.CreateSnapshotWithComponents(snapshotName, "", releasecommon.ApplicationName, devNamespace, []v1alpha1.SnapshotComponent{})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(destinationReleasePlanAdmissionName, managedNamespace, "", devNamespace, releaseConst.ReleaseStrategyPolicy, constants.DefaultPipelineServiceAccount, []string{releaseConst.ApplicationName}, true, &tektonutils.PipelineRef{
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(destinationReleasePlanAdmissionName, managedNamespace, "", devNamespace, releasecommon.ReleaseStrategyPolicy, constants.DefaultPipelineServiceAccount, []string{releasecommon.ApplicationName}, true, &tektonutils.PipelineRef{
 			Resolver: "git",
 			Params: []tektonutils.Param{
-				{Name: "url", Value: "https://github.com/redhat-appstudio/release-service-catalog"},
-				{Name: "revision", Value: "main"},
+				{Name: "url", Value: releasecommon.RelSvcCatalogURL},
+				{Name: "revision", Value: releasecommon.RelSvcCatalogRevision},
 				{Name: "pathInRepo", Value: "pipelines/e2e/e2e.yaml"},
 			},
 		}, nil)
 		Expect(err).NotTo(HaveOccurred())
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, releaseConst.SourceReleasePlanName)
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, releasecommon.SourceReleasePlanName)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -74,7 +74,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails whe
 						strings.Contains(releaseCR.Status.Conditions[0].Message, "Release validation failed")
 				}
 				return false
-			}, releaseConst.ReleaseCreationTimeout, releaseConst.DefaultInterval).Should(BeTrue())
+			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(BeTrue())
 		})
 		It("missing ReleasePlanAdmission makes a Release CR set as failed in both IsReleased and IsValid with a proper message to user.", func() {
 			Expect(fw.AsKubeAdmin.ReleaseController.DeleteReleasePlanAdmission(destinationReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
@@ -85,7 +85,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails whe
 						strings.Contains(releaseCR.Status.Conditions[0].Message, "Release validation failed")
 				}
 				return false
-			}, releaseConst.ReleaseCreationTimeout, releaseConst.DefaultInterval).Should(BeTrue())
+			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(BeTrue())
 		})
 	})
 })

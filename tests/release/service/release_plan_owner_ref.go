@@ -10,7 +10,7 @@ import (
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	releaseConst "github.com/redhat-appstudio/e2e-tests/tests/release"
+	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 )
 
@@ -28,10 +28,10 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2469]test-releaseplan-owne
 		Expect(err).NotTo(HaveOccurred())
 		devNamespace = fw.UserNamespace
 
-		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releaseConst.ApplicationNameDefault, devNamespace)
+		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releaseConst.SourceReleasePlanName, devNamespace, releaseConst.ApplicationNameDefault, "managed", "true")
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, "managed", "true")
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -44,7 +44,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2469]test-releaseplan-owne
 	var _ = Describe("ReleasePlan verification", Ordered, func() {
 		It("verifies that the ReleasePlan has an owner reference for the application", func() {
 			Eventually(func() error {
-				releasePlan, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releaseConst.SourceReleasePlanName, devNamespace)
+				releasePlan, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releasecommon.SourceReleasePlanName, devNamespace)
 				Expect(err).NotTo(HaveOccurred())
 
 				if len(releasePlan.OwnerReferences) != 1 {
@@ -52,22 +52,22 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2469]test-releaseplan-owne
 				}
 
 				ownerRef := releasePlan.OwnerReferences[0]
-				if ownerRef.Name != releaseConst.ApplicationNameDefault {
-					return fmt.Errorf("ReleasePlan %s have OwnerReference Name %s and it's not as expected in Application Name %s", releasePlan.Name, ownerRef.Name, releaseConst.ApplicationNameDefault)
+				if ownerRef.Name != releasecommon.ApplicationNameDefault {
+					return fmt.Errorf("ReleasePlan %s have OwnerReference Name %s and it's not as expected in Application Name %s", releasePlan.Name, ownerRef.Name, releasecommon.ApplicationNameDefault)
 				}
 				return nil
-			}, releasePlanOwnerReferencesTimeout, releaseConst.DefaultInterval).Should(Succeed(), "timed out waiting for ReleasePlan OwnerReference to be set.")
+			}, releasePlanOwnerReferencesTimeout, releasecommon.DefaultInterval).Should(Succeed(), "timed out waiting for ReleasePlan OwnerReference to be set.")
 		})
 
 		It("verifies that the ReleasePlan is deleted if the application is deleted", func() {
-			Expect(fw.AsKubeAdmin.HasController.DeleteApplication(releaseConst.ApplicationNameDefault, devNamespace, true)).To(Succeed())
+			Expect(fw.AsKubeAdmin.HasController.DeleteApplication(releasecommon.ApplicationNameDefault, devNamespace, true)).To(Succeed())
 			Eventually(func() error {
-				releasePlan, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releaseConst.SourceReleasePlanName, devNamespace)
+				releasePlan, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releasecommon.SourceReleasePlanName, devNamespace)
 				if !errors.IsNotFound(err) {
-					return fmt.Errorf("ReleasePlan %s for application %s still not deleted\n", releasePlan.GetName(), releaseConst.ApplicationNameDefault)
+					return fmt.Errorf("ReleasePlan %s for application %s still not deleted\n", releasePlan.GetName(), releasecommon.ApplicationNameDefault)
 				}
 				return nil
-			}, 1*time.Minute, releaseConst.DefaultInterval).Should(Succeed(), "timed out waiting for ReleasePlan to be deleted in %s namespace", devNamespace)
+			}, 1*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out waiting for ReleasePlan to be deleted in %s namespace", devNamespace)
 		})
 	})
 })

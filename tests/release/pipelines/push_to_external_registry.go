@@ -84,7 +84,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 			"mapping": map[string]interface{}{
 				"components": []map[string]interface{}{
 					{
-						"name":  component.GetName(),
+						"name":       component.GetName(),
 						"repository": releasecommon.ReleasedImagePushRepo,
 					},
 				},
@@ -168,15 +168,15 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 		})
 
 		It("tests if the image was pushed to quay", func() {
-			//retrieve the component to get the latest data 
+			//retrieve the component to get the latest data
 			component, err := fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), devNamespace)
 			Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("could not get component %s in the %s namespace", component.GetName(), devNamespace))
 			containerImageDigest := strings.Split(component.Spec.ContainerImage, "@")[1]
 
 			imageDigest, err := releasecommon.GetDigestWithTagInQuay(releasecommon.ReleasedImagePushRepo + ":latest")
-			Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while getting Digest for quay image %s with error: %+v", releasecommon.ReleasedImagePushRepo + ":latest", err))
+			Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while getting Digest for quay image %s with error: %+v", releasecommon.ReleasedImagePushRepo+":latest", err))
 			Expect(imageDigest).To(Equal(containerImageDigest))
-                })
+		})
 
 		It("verifies that a Release is marked as succeeded.", func() {
 			Eventually(func() error {

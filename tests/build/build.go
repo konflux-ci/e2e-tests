@@ -31,6 +31,7 @@ import (
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/build-service/controllers"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
 	imagecontollers "github.com/redhat-appstudio/image-controller/controllers"
 	v1 "k8s.io/api/core/v1"
 )
@@ -1477,8 +1478,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission("demo", managedNamespace, "", f.UserNamespace, "demo", constants.DefaultPipelineServiceAccount, []string{applicationName}, false, &tektonutils.PipelineRef{
 				Resolver: "git",
 				Params: []tektonutils.Param{
-					{Name: "url", Value: "https://github.com/redhat-appstudio/release-service-catalog"},
-					{Name: "revision", Value: "main"},
+					{Name: "url", Value: releasecommon.RelSvcCatalogURL},
+					{Name: "revision", Value: releasecommon.RelSvcCatalogRevision},
 					{Name: "pathInRepo", Value: "pipelines/e2e/e2e.yaml"},
 				}}, &runtime.RawExtension{Raw: rawData})
 			Expect(err).NotTo(HaveOccurred())
