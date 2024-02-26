@@ -27,6 +27,9 @@ ci/test/e2e:
 ci/bootstrap:
 	./mage -v ci:bootstrap
 
+ci/test/openshift-upgrade:
+	./mage -v ci:performOpenShiftUpgrade
+
 ci/test/upgrade:
 	./mage -v ci:testUpgrade 
 

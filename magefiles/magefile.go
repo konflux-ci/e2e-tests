@@ -25,6 +25,7 @@ import (
 	"github.com/magefile/mage/sh"
 	"github.com/redhat-appstudio/e2e-tests/magefiles/installation"
 	"github.com/redhat-appstudio/e2e-tests/magefiles/testspecs"
+	"github.com/redhat-appstudio/e2e-tests/magefiles/upgrade"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/github"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/slack"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/sprayproxy"
@@ -242,6 +243,13 @@ func (ci CI) Bootstrap() error {
 	return nil
 }
 
+func (ci CI) PerformOpenShiftUpgrade() error {
+	if err := upgrade.PerformUpgrade(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (ci CI) TestE2E() error {
 	var testFailure bool
 
@@ -253,8 +261,14 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when running preflight checks: %v", err)
 	}
 
-	if err := retry(BootstrapCluster, 2, 10*time.Second); err != nil {
-		return fmt.Errorf("error when bootstrapping cluster: %v", err)
+	if os.Getenv("SKIP_BOOTSTRAP") != "true" {
+		if err := retry(BootstrapCluster, 2, 10*time.Second); err != nil {
+			return fmt.Errorf("error when bootstrapping cluster: %v", err)
+		}
+	} else {
+		if err := setRequiredEnvVars(); err != nil {
+			return fmt.Errorf("error when setting up required env vars: %v", err)
+		}
 	}
 
 	if requiresMultiPlatformTests {
@@ -330,9 +344,8 @@ func PreflightChecks() error {
 
 func setRequiredEnvVars() error {
 
-	// RHTAP Nightly E2E job
-	// The job name is taken from https://github.com/openshift/release/blob/f03153fa4ad36c0e10050d977e7f0f7619d2163a/ci-operator/config/redhat-appstudio/infra-deployments/redhat-appstudio-infra-deployments-main.yaml#L59C7-L59C35
-	if strings.Contains(jobName, "appstudio-e2e-tests-periodic") {
+	// Konflux Nightly E2E job
+	if strings.Contains(jobName, "-periodic") {
 		requiresMultiPlatformTests = true
 		requiresSprayProxyRegistering = true
 		return nil
