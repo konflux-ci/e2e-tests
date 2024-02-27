@@ -26,7 +26,7 @@ import (
 )
 
 const majorMinorVersionFormat = "4.%d"
-const fastChannelFormat = "fast-" + majorMinorVersionFormat
+const channelFormat = "%s-" + majorMinorVersionFormat
 
 const spiVaultNamespaceName = "spi-vault"
 const spiVaultPodName = "vault-0"
@@ -76,13 +76,15 @@ func newStatusHelper(kcs *kubeclient.Clientset, ccs *configv1client.Clientset) (
 	currentChannel := clusterVersion.Spec.Channel
 	klog.Infof("current channel is %q, current ocp version is %q", currentChannel, initialVersion)
 
+	sp := strings.Split(currentChannel, "-")
+	channelType, currentChannelVersion := sp[0], sp[1]
 	var minorVersion int
-	if _, err = fmt.Sscanf(currentChannel, fastChannelFormat, &minorVersion); err != nil {
+	if _, err = fmt.Sscanf(currentChannelVersion, majorMinorVersionFormat, &minorVersion); err != nil {
 		return nil, fmt.Errorf("can't detect the next version channel: %+v", err)
 	}
 	currentMajorMinorVersion := fmt.Sprintf(majorMinorVersionFormat, minorVersion+1)
 	nextMajorMinorVersion := fmt.Sprintf(majorMinorVersionFormat, minorVersion+1)
-	nextVersionChannel := fmt.Sprintf(fastChannelFormat, minorVersion+1)
+	nextVersionChannel := fmt.Sprintf(channelFormat, channelType, minorVersion+1)
 
 	var foundNextVersionChannel bool
 	for _, ch := range clusterVersion.Status.Desired.Channels {
