@@ -1475,7 +1475,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			GinkgoWriter.Printf("ReleaseAdmissionPlan data: %s", string(rawData))
 			Expect(err).NotTo(HaveOccurred())
-			_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission("demo", managedNamespace, "", f.UserNamespace, "demo", constants.DefaultPipelineServiceAccount, []string{applicationName}, false, &tektonutils.PipelineRef{
+			_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission("demo", managedNamespace, f.UserNamespace, "demo", constants.DefaultPipelineServiceAccount, []string{applicationName}, false, &tektonutils.PipelineRef{
 				Resolver: "git",
 				Params: []tektonutils.Param{
 					{Name: "url", Value: releasecommon.RelSvcCatalogURL},

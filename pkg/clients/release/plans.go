@@ -41,7 +41,7 @@ func (r *ReleaseController) CreateReleasePlan(name, namespace, application, targ
 }
 
 // CreateReleasePlanAdmission creates a new ReleasePlanAdmission using the given parameters.
-func (r *ReleaseController) CreateReleasePlanAdmission(name, namespace, environment, origin, policy, serviceAccount string, applications []string, autoRelease bool, pipelineRef *utils.PipelineRef, data *runtime.RawExtension) (*releaseApi.ReleasePlanAdmission, error) {
+func (r *ReleaseController) CreateReleasePlanAdmission(name, namespace, origin, policy, serviceAccount string, applications []string, autoRelease bool, pipelineRef *utils.PipelineRef, data *runtime.RawExtension) (*releaseApi.ReleasePlanAdmission, error) {
 	releasePlanAdmission := &releaseApi.ReleasePlanAdmission{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -53,7 +53,6 @@ func (r *ReleaseController) CreateReleasePlanAdmission(name, namespace, environm
 		Spec: releaseApi.ReleasePlanAdmissionSpec{
 			Applications: applications,
 			Data:         data,
-			Environment:  environment,
 			Origin:       origin,
 			Pipeline: &utils.Pipeline{
 				PipelineRef:    *pipelineRef,

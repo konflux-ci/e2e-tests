@@ -767,7 +767,7 @@ func createReleaseConfig(fw framework.Framework, managedNamespace, componentName
 	_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(ecPolicyName, managedNamespace, defaultEcPolicySpec)
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission("demo", managedNamespace, "", fw.UserNamespace, ecPolicyName, "release-service-account", []string{appName}, true, &tektonutils.PipelineRef{
+	_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission("demo", managedNamespace, fw.UserNamespace, ecPolicyName, "release-service-account", []string{appName}, true, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
 			{Name: "url", Value: releasecommon.RelSvcCatalogURL},

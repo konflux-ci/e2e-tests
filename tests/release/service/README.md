@@ -19,19 +19,6 @@ Checkpoints:
   - The Release passes.
   - Validate that the Release object is referenced by the PipelineRun.
 
-## The happy path with deployment (happy_path_with_deployment.go)
-
-This test is designed to test release-service functionalities with an environment defined. Once the release successfully passes, the application and components will be copied to the specified environment.
-
-Checkpoints:
-  - A build PipelineRun is created in the dev namespace.
-  - The build PipelineRun passes.
-  - The Release CR is created.
-  - The release PipelineRun is successfully created in the managed namespace.
-  - The release PipelineRun is expected to pass.
-  - The Release passes.
-  - Copy the application and component to the environment and ensure the process succeeds.
-
 ## Ensure ReleasePlan has owner references set (release_plan_owner_ref.go)
 
 This test is designed to ensure that the ReleasePlan controller reconciles ReleasePlans to have an owner reference for its application.
