@@ -190,7 +190,7 @@ func mergeTemplates(paths ...string) (*os.File, error) {
 	for _, templatePath := range paths {
 		// Avoid possible memory leak caused by defer by wrapping in a function
 		appendToTempPath := func() error {
-			tmplFile, err := os.Open(path.Clean(cwd + "/" + templatePath))
+			tmplFile, err := os.Open(path.Clean(templatePath))
 			if err != nil {
 				return err
 			}
