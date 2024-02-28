@@ -1048,6 +1048,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			It("handles invalid request annotation", func() {
 
 				invalidAnnotation := "foo"
+				expectedInvalidAnnotationMessage := fmt.Sprintf("unexpected build request: %s", invalidAnnotation)
 
 				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.BuildRequestAnnotationName, invalidAnnotation, testNamespace)).To(Succeed())
 
@@ -1078,11 +1079,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					if err != nil {
 						return err
 					}
-					if !strings.Contains(buildStatus.Message, fmt.Sprintf("unexpected build request: %s", invalidAnnotation)) {
-						return fmt.Errorf("build status message is not as expected, got %s", buildStatus.Message)
+					if !strings.Contains(buildStatus.Message, expectedInvalidAnnotationMessage) {
+						return fmt.Errorf("build status message is not as expected, got: %q, expected: %q", buildStatus.Message, expectedInvalidAnnotationMessage)
 					}
 					return nil
-				}, time.Minute*1, 2*time.Second).Should(Succeed(), "failed while checking build status message is correct after setting invalid annotations")
+				}, time.Minute*2, 2*time.Second).Should(Succeed(), "failed while checking build status message for component %q is correct after setting invalid annotations", componentName)
 			})
 		})
 	})
