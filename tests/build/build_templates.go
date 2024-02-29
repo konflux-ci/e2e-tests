@@ -129,7 +129,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					if utils.Contains(pipelineRunsWithE2eFinalizer, pipelineRuns.Items[i].GetName()) {
 						err = kubeadminClient.TektonController.RemoveFinalizerFromPipelineRun(&pipelineRuns.Items[i], finalizerName)
 						if err != nil {
-							fmt.Printf("error removing e2e test finalizer from %s : %v\n", pipelineRuns.Items[i].GetName(), err)
+							GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pipelineRuns.Items[i].GetName(), err)
 							return err
 						}
 					}
