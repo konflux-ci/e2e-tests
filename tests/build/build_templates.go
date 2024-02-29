@@ -122,7 +122,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			Eventually(func() error {
 				pipelineRuns, err := kubeadminClient.HasController.GetAllPipelineRunsForApplication(applicationName, testNamespace)
 				if err != nil {
-					fmt.Printf("error while getting pipelineruns: %v\n", err)
+					GinkgoWriter.Printf("error while getting pipelineruns: %v\n", err)
 					return err
 				}
 				for i := 0; i < len(pipelineRuns.Items); i++ {
