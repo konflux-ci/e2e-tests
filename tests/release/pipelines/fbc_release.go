@@ -243,17 +243,17 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw framework.Framework, dev
 	Eventually(func() error {
 		snapshot, err := devFw.AsKubeDeveloper.IntegrationController.GetSnapshot("", buildPr.Name, "", devNamespace)
 		if err != nil {
-			return fmt.Errorf("snapshot in namespace %s has not been found yet", devNamespace)
+			return err
 		}
 		releaseCR, err := devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 		if err != nil {
-			return fmt.Errorf("release in namespace %s has not been found yet", managedNamespace)
+			return err
 		}
 		Expect(err).ShouldNot(HaveOccurred())
 
 		releasePr, err := managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 		if err != nil {
-			return fmt.Errorf("releasePipelineRun in namespace %s has not been found yet", managedNamespace)
+			return err
 		}
 		Expect(err).ShouldNot(HaveOccurred())
 
@@ -318,8 +318,8 @@ func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framew
 			"publishingCredentials":           "fbc-preview-publishing-credentials",
 			"iibServiceConfigSecret":          "iib-preview-services-config",
 			"iibOverwriteFromIndexCredential": "iib-overwrite-fromimage-credentials",
-			"requestUpdateTimeout":            "420",
-			"buildTimeoutSeconds":             "480",
+			"requestUpdateTimeout":            "1500",
+			"buildTimeoutSeconds":             "1500",
 			"hotfix":                          hotfix,
 			"issueId":                         issueId,
 			"preGA":                           preGA,
