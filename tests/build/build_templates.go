@@ -119,14 +119,23 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 		AfterAll(func() {
 			//Remove finalizers from pipelineruns
-			pipelineRuns, err := kubeadminClient.HasController.GetAllPipelineRunsForApplication(applicationName, testNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
-			for i := 0; i < len(pipelineRuns.Items); i++ {
-				if utils.Contains(pipelineRunsWithE2eFinalizer, pipelineRuns.Items[i].GetName()) {
-					err = kubeadminClient.TektonController.RemoveFinalizerFromPipelineRun(&pipelineRuns.Items[i], finalizerName)
-					Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error removing e2e test finalizer from %s : %v", pipelineRuns.Items[i].GetName(), err))
+			Eventually(func() error {
+				pipelineRuns, err := kubeadminClient.HasController.GetAllPipelineRunsForApplication(applicationName, testNamespace)
+				if err != nil {
+					GinkgoWriter.Printf("error while getting pipelineruns: %v\n", err)
+					return err
 				}
-			}
+				for i := 0; i < len(pipelineRuns.Items); i++ {
+					if utils.Contains(pipelineRunsWithE2eFinalizer, pipelineRuns.Items[i].GetName()) {
+						err = kubeadminClient.TektonController.RemoveFinalizerFromPipelineRun(&pipelineRuns.Items[i], finalizerName)
+						if err != nil {
+							GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pipelineRuns.Items[i].GetName(), err)
+							return err
+						}
+					}
+				}
+				return nil
+			}, time.Minute*1, time.Second*10).Should(Succeed(), "timed out when trying to remove the e2e-test finalizer from pipelineruns")
 			// Do cleanup only in case the test succeeded
 			if !CurrentSpecReport().Failed() {
 				// Clean up only Application CR (Component and Pipelines are included) in case we are targeting specific namespace
