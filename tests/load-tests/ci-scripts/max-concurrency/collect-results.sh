@@ -11,11 +11,17 @@ pushd "${2:-.}"
 
 output_dir="${OUTPUT_DIR:-./tests/load-tests}"
 
+csv_delim=";"
+csv_delim_quoted="\"$csv_delim\""
+dt_format='"%Y-%m-%dT%H:%M:%SZ"'
+
 collect_artifacts() {
     echo "Collecting load test artifacts.."
-    find "$output_dir" -type f -name 'load-tests.max-concurrency.*.log' -exec cp -vf {} "${ARTIFACT_DIR}" \;
+    mkdir -p "${ARTIFACT_DIR}/logs"
+    find "$output_dir" -type f -name 'load-tests.max-concurrency.*.log' -exec cp -vf {} "${ARTIFACT_DIR}/logs" \;
     find "$output_dir" -type f -name 'load-tests.max-concurrency.json' -exec cp -vf {} "${ARTIFACT_DIR}" \;
-    find "$output_dir" -type f -name '*.pprof' -exec cp -vf {} "${ARTIFACT_DIR}" \;
+    mkdir -p "${ARTIFACT_DIR}/pprof"
+    find "$output_dir" -type f -name '*.pprof' -exec cp -vf {} "${ARTIFACT_DIR}/pprof" \;
 }
 
 collect_monitoring_data() {
@@ -81,21 +87,29 @@ collect_tekton_profiling_data() {
         for pprof_profile in $(find "$output_dir" -name "*.pprof"); do
             if [ -s "$pprof_profile" ]; then
                 file=$(basename "$pprof_profile")
-                go tool pprof -text "$pprof_profile" >"$ARTIFACT_DIR/$file.txt" || true
-                go tool pprof -svg -output="$ARTIFACT_DIR/$file.svg" "$pprof_profile" || true
+                go tool pprof -text "$pprof_profile" >"$ARTIFACT_DIR/pprof/$file.txt" || true
+                go tool pprof -svg -output="$ARTIFACT_DIR/pprof/$file.svg" "$pprof_profile" || true
             fi
         done
     fi
 }
 
+get_tekton_results_watcher_pod_count() {
+    find "$output_dir" -type f -name 'tekton-results-watcher.tekton-results-watcher-*.goroutine-dump-0.0001-*.pprof' | wc -l
+}
+
 collect_scalability_data() {
     echo "Collecting scalability data..."
-    csv_delim=";"
-    csv_delim_quoted="\"$csv_delim\""
-    dt_format='"%Y-%m-%dT%H:%M:%SZ"'
+
+    tekton_results_watcher_pod_count=$(get_tekton_results_watcher_pod_count)
+    tekton_results_watcher_pod_headers=""
+    for i in $(seq -w 1 "$tekton_results_watcher_pod_count"); do
+        tekton_results_watcher_pod_headers="${tekton_results_watcher_pod_headers}${csv_delim}ParkedGoRoutinesPod$i"
+    done
 
     max_concurrency_csv=$ARTIFACT_DIR/max-concurrency.csv
-    echo "Threads\
+    echo "Iteration\
+${csv_delim}Threads\
 ${csv_delim}WorkloadKPI\
 ${csv_delim}Errors\
 ${csv_delim}UserAvgTime\
@@ -108,10 +122,10 @@ ${csv_delim}ComponentsAvgTime\
 ${csv_delim}ComponentsMaxTime\
 ${csv_delim}PipelineRunAvgTime\
 ${csv_delim}PipelineRunMaxTime\
-${csv_delim}integrationTestsRunPipelineSucceededTimeAvg\
-${csv_delim}integrationTestsRunPipelineSucceededTimeMax\
-${csv_delim}deploymentSucceededTimeAvg\
-${csv_delim}deploymentSucceededTimeMax\
+${csv_delim}IntegrationTestsRunPipelineSucceededTimeAvg\
+${csv_delim}IntegrationTestsRunPipelineSucceededTimeMax\
+${csv_delim}DeploymentSucceededTimeAvg\
+${csv_delim}DeploymentSucceededTimeMax\
 ${csv_delim}ClusterCPUUsageAvg\
 ${csv_delim}ClusterDiskUsageAvg\
 ${csv_delim}ClusterMemoryUsageAvg\
@@ -119,6 +133,10 @@ ${csv_delim}ClusterPodCountAvg\
 ${csv_delim}ClusterNodesWorkerCountAvg\
 ${csv_delim}ClusterRunningPodsOnWorkersCountAvg\
 ${csv_delim}ClusterPVCInUseAvg\
+${csv_delim}TektonResultsWatcherMemoryMin\
+${csv_delim}TektonResultsWatcherMemoryMax\
+${csv_delim}TektonResultsWatcherMemoryRange\
+${tekton_results_watcher_pod_headers}\
 ${csv_delim}SchedulerPendingPodsCountAvg\
 ${csv_delim}TokenPoolRatePrimaryAvg\
 ${csv_delim}TokenPoolRateSecondaryAvg\
@@ -135,48 +153,79 @@ ${csv_delim}NodeDiskIoTimeSecondsTotalAvg" \
         >"$max_concurrency_csv"
     mc_files=$(find "$output_dir" -type f -name 'load-tests.max-concurrency.*.json')
     if [ -n "$mc_files" ]; then
-        cat $mc_files |
-            jq -rc "(.threads | tostring) \
-        + $csv_delim_quoted + (.workloadKPI | tostring) \
-        + $csv_delim_quoted + (.errorsTotal | tostring) \
-        + $csv_delim_quoted + (.createUserTimeAvg | tostring) \
-        + $csv_delim_quoted + (.createUserTimeMax | tostring) \
-        + $csv_delim_quoted + (.createApplicationsTimeAvg | tostring) \
-        + $csv_delim_quoted + (.createApplicationsTimeMax | tostring) \
-        + $csv_delim_quoted + (.createCDQsTimeAvg | tostring) \
-        + $csv_delim_quoted + (.createCDQsTimeMax | tostring) \
-        + $csv_delim_quoted + (.createComponentsTimeAvg | tostring) \
-        + $csv_delim_quoted + (.createComponentsTimeMax | tostring) \
-        + $csv_delim_quoted + (.runPipelineSucceededTimeAvg | tostring) \
-        + $csv_delim_quoted + (.runPipelineSucceededTimeMax | tostring) \
-        + $csv_delim_quoted + (.integrationTestsRunPipelineSucceededTimeAvg | tostring) \
-        + $csv_delim_quoted + (.integrationTestsRunPipelineSucceededTimeMax | tostring) \
-        + $csv_delim_quoted + (.deploymentSucceededTimeAvg | tostring) \
-        + $csv_delim_quoted + (.deploymentSucceededTimeMax | tostring) \
-        + $csv_delim_quoted + (.measurements.cluster_cpu_usage_seconds_total_rate.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.cluster_disk_throughput_total.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.cluster_memory_usage_rss_total.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.cluster_pods_count.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.cluster_nodes_worker_count.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.cluster_running_pods_on_workers_count.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.storage_count_attachable_volumes_in_use.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.scheduler_pending_pods_count.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.token_pool_rate_primary.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.token_pool_rate_secondary.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_pipelineruns_count.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.tekton_tekton_pipelines_controller_workqueue_depth.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.pipelinerun_duration_scheduled_seconds.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_node.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_quota.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.etcd_request_duration_seconds_average.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.cluster_network_bytes_total.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.cluster_network_receive_bytes_total.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.cluster_network_transmit_bytes_total.mean | tostring) \
-        + $csv_delim_quoted + (.measurements.node_disk_io_time_seconds_total.mean | tostring)" \
-                >>"$max_concurrency_csv"
+        for i in $mc_files; do
+            iteration_index=$(echo "$i" | sed -e 's,'"$output_dir"'/load-tests.max-concurrency.\([0-9-]\+\).*,\1,g')
+
+            parked_go_routines=$(get_parked_go_routines "$iteration_index")
+            parked_go_routines_columns=""
+            if [ -n "$parked_go_routines" ]; then
+                for g in $parked_go_routines; do
+                    parked_go_routines_columns="$parked_go_routines_columns + $csv_delim_quoted + \"$g\""
+                done
+            else
+                for _ in $(seq 1 "$(get_tekton_results_watcher_pod_count)"); do
+                    parked_go_routines_columns="$parked_go_routines_columns + $csv_delim_quoted"
+                done
+            fi
+            jq -rc "(.metadata.\"max-concurrency\".iteration | tostring) \
+                + $csv_delim_quoted + (.threads | tostring) \
+                + $csv_delim_quoted + (.workloadKPI | tostring) \
+                + $csv_delim_quoted + (.errorsTotal | tostring) \
+                + $csv_delim_quoted + (.createUserTimeAvg | tostring) \
+                + $csv_delim_quoted + (.createUserTimeMax | tostring) \
+                + $csv_delim_quoted + (.createApplicationsTimeAvg | tostring) \
+                + $csv_delim_quoted + (.createApplicationsTimeMax | tostring) \
+                + $csv_delim_quoted + (.createCDQsTimeAvg | tostring) \
+                + $csv_delim_quoted + (.createCDQsTimeMax | tostring) \
+                + $csv_delim_quoted + (.createComponentsTimeAvg | tostring) \
+                + $csv_delim_quoted + (.createComponentsTimeMax | tostring) \
+                + $csv_delim_quoted + (.runPipelineSucceededTimeAvg | tostring) \
+                + $csv_delim_quoted + (.runPipelineSucceededTimeMax | tostring) \
+                + $csv_delim_quoted + (.integrationTestsRunPipelineSucceededTimeAvg | tostring) \
+                + $csv_delim_quoted + (.integrationTestsRunPipelineSucceededTimeMax | tostring) \
+                + $csv_delim_quoted + (.deploymentSucceededTimeAvg | tostring) \
+                + $csv_delim_quoted + (.deploymentSucceededTimeMax | tostring) \
+                + $csv_delim_quoted + (.measurements.cluster_cpu_usage_seconds_total_rate.mean | tostring) \
+                + $csv_delim_quoted + (.measurements.cluster_disk_throughput_total.mean | tostring) \
+                + $csv_delim_quoted + (.measurements.cluster_memory_usage_rss_total.mean | tostring) \
+                + $csv_delim_quoted + (.measurements.cluster_pods_count.mean | tostring) \
+                + $csv_delim_quoted + (.measurements.cluster_nodes_worker_count.mean | tostring) \
+                + $csv_delim_quoted + (.measurements.cluster_running_pods_on_workers_count.mean | tostring) \
+                + $csv_delim_quoted + (.measurements.storage_count_attachable_volumes_in_use.mean | tostring) \
+                + $csv_delim_quoted + (.measurements.\"tekton-results-watcher\".\"container[watcher]\".memory.min | tostring) \
+                + $csv_delim_quoted + (.measurements.\"tekton-results-watcher\".\"container[watcher]\".memory.max | tostring) \
+                + $csv_delim_quoted + (.measurements.\"tekton-results-watcher\".\"container[watcher]\".memory.range | tostring) \
+                ${parked_go_routines_columns} \
+                + $csv_delim_quoted + (.measurements.scheduler_pending_pods_count.mean | tostring) \
+                + $csv_delim_quoted + (.measurements.token_pool_rate_primary.mean | tostring) \
+                + $csv_delim_quoted + (.measurements.token_pool_rate_secondary.mean | tostring) \
+                + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_pipelineruns_count.mean | tostring) \
+                + $csv_delim_quoted + (.measurements.tekton_tekton_pipelines_controller_workqueue_depth.mean | tostring) \
+                + $csv_delim_quoted + (.measurements.pipelinerun_duration_scheduled_seconds.mean | tostring) \
+                + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_node.mean | tostring) \
+                + $csv_delim_quoted + (.measurements.tekton_pipelines_controller_running_taskruns_throttled_by_quota.mean | tostring) \
+                + $csv_delim_quoted + (.measurements.etcd_request_duration_seconds_average.mean | tostring) \
+                + $csv_delim_quoted + (.measurements.cluster_network_bytes_total.mean | tostring) \
+                + $csv_delim_quoted + (.measurements.cluster_network_receive_bytes_total.mean | tostring) \
+                + $csv_delim_quoted + (.measurements.cluster_network_transmit_bytes_total.mean | tostring) \
+                + $csv_delim_quoted + (.measurements.node_disk_io_time_seconds_total.mean | tostring)" \
+                "$i" >>"$max_concurrency_csv"
+        done
     else
         echo "WARNING: No file matching '$output_dir/load-tests.max-concurrency.*.json' found!"
     fi
+}
+
+get_parked_go_routines() {
+    goroutines_pprof=$(find "$output_dir" -name "tekton-results-watcher.tekton-results-watcher-*.goroutine-dump-0.$1.pprof")
+    count=0
+    for i in $goroutines_pprof; do
+        if [ $count -gt 0 ]; then
+            echo -n " "
+        fi
+        echo -n "$(go tool pprof -text "$i" 2>/dev/null | grep 'runtime.gopark$' | sed -e 's,[ ]*\([0-9]\+\) .*,\1,g')"
+        count=$((count + 1))
+    done
 }
 
 collect_timestamp_csvs() {
@@ -201,10 +250,9 @@ collect_timestamp_csvs() {
 }
 
 echo "Collecting max concurrency results..."
-collect_artifacts
-collect_scalability_data
-collect_tekton_profiling_data
-collect_timestamp_csvs
-collect_monitoring_data
-
+collect_artifacts || true
+collect_timestamp_csvs || true
+collect_monitoring_data || true
+collect_scalability_data || true
+collect_tekton_profiling_data || true
 popd
