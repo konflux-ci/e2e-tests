@@ -13,11 +13,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-var templates = map[string]string{
-	"test-file":          "templates/test_output_spec.tmpl",
-	"framework-describe": "templates/framework_describe_func.tmpl",
-}
-
 func NewTemplateData(specOutline TestOutline, destination string) *TemplateData {
 
 	// This regex will find all the words that start with capital letter
@@ -47,22 +42,10 @@ func NewTemplateData(specOutline TestOutline, destination string) *TemplateData 
 	return &TemplateData{Outline: specOutline, PackageName: dirName, FrameworkDescribeString: newSpecName}
 }
 
-func GetTemplate(name string) (string, error) {
-	if s, ok := templates[name]; ok {
-		return s, nil
-	}
-	return "", fmt.Errorf("no Template found for %q", name)
-}
-
 func RenderFrameworkDescribeGoFile(t TemplateData) error {
-
-	templatePath, err := GetTemplate("framework-describe")
-	if err != nil {
-		return err
-	}
 	var describeFile = "pkg/framework/describe.go"
 
-	err = renderTemplate(describeFile, templatePath, t, true)
+	err := renderTemplate(describeFile, FrameworkDescribePath, t, true)
 	if err != nil {
 		klog.Errorf("failed to append to pkg/framework/describe.go with : %s", err)
 		return err

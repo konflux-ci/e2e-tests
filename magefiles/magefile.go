@@ -24,12 +24,12 @@ import (
 	gh "github.com/google/go-github/v44/github"
 	"github.com/magefile/mage/sh"
 	"github.com/redhat-appstudio/e2e-tests/magefiles/installation"
-	"github.com/redhat-appstudio/e2e-tests/magefiles/testspecs"
 	"github.com/redhat-appstudio/e2e-tests/magefiles/upgrade"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/github"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/slack"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/sprayproxy"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/redhat-appstudio/e2e-tests/pkg/testspecs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"github.com/redhat-appstudio/image-controller/pkg/quay"
@@ -758,26 +758,31 @@ func GenerateTextOutlineFromGinkgoSpec(source string, destination string) error 
 }
 
 // Generate a Ginkgo Spec file from a Text Outline file
-func GenerateGinkoSpecFromTextOutline(source string, destination string) error {
+func GenerateGinkgoSpecFromTextOutline(source string, destination string) error {
+	return GenerateTeamSpecificGinkgoSpecFromTextOutline(source, testspecs.TestFilePath, destination)
+}
 
+// Generate a team specific file using specs in templates/specs.tmpl file and a provided team specific template
+func GenerateTeamSpecificGinkgoSpecFromTextOutline(outlinePath, teamTmplPath, destinationPath string) error {
 	gs := testspecs.NewGinkgoSpecTranslator()
 	ts := testspecs.NewTextSpecTranslator()
 
-	klog.Infof("Mapping outline from a text file, %s", source)
-	outline, err := ts.FromFile(source)
+	klog.Infof("Mapping outline from a text file, %s", outlinePath)
+	outline, err := ts.FromFile(outlinePath)
 	if err != nil {
 		klog.Error("Failed to map text outline file")
 		return err
 	}
 
-	klog.Infof("Mapping outline to a Ginkgo spec file, %s", destination)
-	err = gs.ToFile(destination, outline)
+	klog.Infof("Mapping outline to a Ginkgo spec file, %s", destinationPath)
+	err = gs.ToFile(destinationPath, teamTmplPath, outline)
 	if err != nil {
 		klog.Error("Failed to map Ginkgo spec file")
 		return err
 	}
 
 	return err
+
 }
 
 // Print the outline of the Ginkgo spec

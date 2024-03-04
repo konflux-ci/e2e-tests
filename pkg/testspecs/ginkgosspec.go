@@ -3,8 +3,9 @@ package testspecs
 import (
 	"encoding/json"
 	"fmt"
-
+	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -54,7 +55,7 @@ func (gst *GinkgosSpecTranslator) FromFile(file string) (TestOutline, error) {
 }
 
 // ToFile generates a Ginkgo test file from a TestOutline
-func (gst *GinkgosSpecTranslator) ToFile(destination string, outline TestOutline) error {
+func (gst *GinkgosSpecTranslator) ToFile(destination, teamTmplPath string, outline TestOutline) error {
 
 	e2ePath, err := os.Getwd()
 	if err != nil {
@@ -71,7 +72,7 @@ func (gst *GinkgosSpecTranslator) ToFile(destination string, outline TestOutline
 		return err
 	}
 
-	return generateGinkgoSpec(e2ePath, testFilePath, dataFile)
+	return generateGinkgoSpec(e2ePath, teamTmplPath, testFilePath, dataFile)
 
 }
 
@@ -112,9 +113,18 @@ func excludeSetupTeardownNodes(nodes TestOutline) TestOutline {
 // generateGinkgoSpec will call the ginkgo generate command
 // to generate the ginkgo data json file we created and
 // the template located in out templates directory
-func generateGinkgoSpec(cwd string, destination string, dataFile string) error {
+func generateGinkgoSpec(cwd, teamTmplPath, destination string, dataFile string) error {
 
 	var err error
+
+	if teamTmplPath != TestFilePath {
+		tmplFile, err := mergeTemplates(teamTmplPath, SpecsPath)
+		if err != nil {
+			return err
+		}
+		defer os.Remove(tmplFile.Name())
+		teamTmplPath = tmplFile.Name()
+	}
 
 	// Note I change into the directory and rename things because ginkgo
 	// by default generates the test file name as <package>_test.go.
@@ -134,15 +144,9 @@ func generateGinkgoSpec(cwd string, destination string, dataFile string) error {
 	// Doing this to avoid errcheck flagging this in a defer.
 	// Refer to https://github.com/kisielk/errcheck
 	// issues 101, 77, 55
-	tmpl, err := GetTemplate("test-file")
-	if err != nil {
-		return err
-	}
-
-	fullTemplatePath := fmt.Sprintf("%s/%s", cwd, tmpl)
 
 	klog.Infof("Creating new test package directory and spec file %s.\n", destination)
-	_, err = ginkgoGenerateSpecCmd("--template", fullTemplatePath, "--template-data", dataFile)
+	_, err = ginkgoGenerateSpecCmd("--template", teamTmplPath, "--template-data", dataFile)
 	if err != nil {
 		err = os.Remove(ginkgoFileName)
 		if err != nil {
@@ -168,6 +172,47 @@ func generateGinkgoSpec(cwd string, destination string, dataFile string) error {
 		return err
 	}
 	return err
+}
+
+// mergeTemplates creates a new template file from files provided in the argument
+func mergeTemplates(paths ...string) (*os.File, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+
+	tempFile, err := os.CreateTemp(cwd, "merged-tmpl")
+	if err != nil {
+		return nil, err
+	}
+	defer tempFile.Close()
+
+	for _, templatePath := range paths {
+		// Avoid possible memory leak caused by defer by wrapping in a function
+		appendToTempPath := func() error {
+			tmplFile, err := os.Open(path.Clean(templatePath))
+			if err != nil {
+				return err
+			}
+			defer tmplFile.Close()
+
+			_, err = io.Copy(tempFile, tmplFile)
+			if err != nil {
+				return err
+			}
+
+			_, err = tempFile.Write([]byte{'\n', '\n'})
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+		err = appendToTempPath()
+		if err != nil {
+			return nil, fmt.Errorf("error during appending to temp templatePath: %+v", err)
+		}
+	}
+	return tempFile, nil
 }
 
 // createTestPath will create the full test path in the tests

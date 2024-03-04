@@ -1,0 +1,121 @@
+{{ define "specs" }}
+    {{ range .Nodes }}
+    {{ if eq .Name "DescribeTable" }}
+    {{ .Name }}("{{ .Text }} is table",
+        func() {
+        {{range .Nodes }}
+        {{ if eq .Name "By" }}
+        {{ .Name }}("{{ .Text }}")
+        {{ end -}}
+        {{ end -}}
+        },
+        {{range .Nodes }}
+        {{ if eq .Name "Entry" }}
+        {{ .Name }}("{{ .Text }}",),
+        {{ end -}}
+        {{ end -}}
+    )
+    {{ end -}}
+    {{ if ne .Name "DescribeTable" }}
+    {{ .Name }}("{{ .Text }}", {{range .Labels }}Label("{{.}}"), {{ end }}func() {
+        // Declare variables here.
+        {{range .Nodes }}
+        {{ if eq .Name "DescribeTable" }}
+        {{ .Name }}("{{ .Text }}",
+        func() {
+        {{range .Nodes }}
+        {{ if eq .Name "By" }}
+        {{ .Name }}("{{ .Text }}")
+        {{ end -}}
+        {{ end -}}
+        },
+        {{range .Nodes }}
+        {{ if eq .Name "Entry" }}
+        {{ .Name }}("{{ .Text }}",),
+        {{ end -}}
+        {{ end -}}
+        )
+        {{ end -}}
+        {{ if eq .Name "By" }}
+        {{ .Name }}("{{ .Text }}")
+        {{ continue }}
+        {{ end -}}
+        {{ if eq .Name "Entry" }}
+        {{ continue }}
+        {{ end -}}
+        {{ if ne .Name "DescribeTable" -}}
+        {{ .Name }}("{{ .Text }}", {{range .Labels }}Label("{{.}}"), {{ end }} func() {
+        {{ if eq .Name "It" -}}
+        // Implement test and assertions here
+        {{ end -}}
+            {{ range .Nodes -}}
+            {{ if eq .Name "DescribeTable" -}}
+            {{ .Name }}("{{ .Text }}",
+            func() {
+            {{range .Nodes -}}
+            {{ if eq .Name "By" -}}
+            {{ .Name }}("{{ .Text }}")
+            {{ end -}}
+            {{ end -}}
+            },
+            {{range .Nodes -}}
+            {{ if eq .Name "Entry" -}}
+            {{ .Name }}("{{ .Text }}",),
+            {{ end -}}
+            {{ end -}}
+            )
+            {{ end }}
+            {{ if eq .Name "By" -}}
+            {{ .Name }}("{{ .Text }}")
+            {{ continue }}
+            {{ end -}}
+            {{ if eq .Name "Entry" -}}
+            {{ continue }}
+            {{ end -}}
+            {{ if ne .Name "DescribeTable" -}}
+            {{ .Name }}("{{ .Text }}", {{range .Labels }}Label("{{.}}"), {{ end }} func() {
+            {{ if eq .Name "It" -}}
+            // Implement test and assertions here
+            {{ end -}}
+                 {{ range .Nodes -}}
+                 {{ if eq .Name "DescribeTable" -}}
+                 {{ .Name }}("{{ .Text }}",
+                 func() {
+                 {{range .Nodes }}
+                 {{ if eq .Name "By" }}
+                 {{ .Name }}("{{ .Text }}")
+                 {{ end -}}
+                 {{ end -}}
+                 },
+                 {{range .Nodes }}
+                 {{ if eq .Name "Entry" }}
+                 {{ .Name }}("{{ .Text }}",),
+                 {{ end -}}
+                 {{ end -}}
+                 )
+                 {{ end -}}
+                 {{ if eq .Name "By" }}
+                 {{ .Name }}("{{ .Text }}")
+                 {{ continue }}
+                 {{ end -}}
+                 {{ if eq .Name "Entry" }}
+                 {{ continue }}
+                 {{ end -}}
+                 {{ if ne .Name "DescribeTable" }}
+                 {{ .Name }}("{{ .Text }}", {{range .Labels }}Label("{{.}}"), {{ end }} func() {
+                 {{ if eq .Name "It" -}}
+                 // Implement test and assertions here
+                 {{ end }}
+                 })
+                 {{ end -}}
+                 {{ end }}
+            })
+            {{ end -}}
+            {{ end }}
+        })
+        {{ end -}}
+        {{ end }}
+    })
+    {{ end -}}
+    {{ end -}}
+{{ end }}
