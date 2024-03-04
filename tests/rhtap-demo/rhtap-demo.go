@@ -588,7 +588,9 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 								It("should lead to Snapshot CR being marked as passed", func() {
 									snapshot, err = fw.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", fw.UserNamespace)
 									Expect(err).ShouldNot(HaveOccurred())
-									Expect(fw.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)).To(BeTrue(), fmt.Sprintf("tests have not succeeded for snapshot %s/%s", snapshot.GetNamespace(), snapshot.GetName()))
+									Eventually(func() bool {
+										return fw.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)
+									}, time.Minute*5, defaultPollingInterval).Should(BeTrue(), fmt.Sprintf("tests have not succeeded for snapshot %s/%s", snapshot.GetNamespace(), snapshot.GetName()))
 								})
 
 								It("should trigger creation of Release CR", func() {
