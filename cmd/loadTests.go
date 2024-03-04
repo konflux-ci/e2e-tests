@@ -1672,25 +1672,8 @@ func (h *ConcreteHandlerPipelines) handlePVCS(threadIndex int, framework *framew
 	}
 }
 
-func (h *ConcreteHandlerItsPipelines) handlePVCSforITS(threadIndex int, framework *framework.Framework, pipelineRun *pipeline.PipelineRun) {
-	pvcs, err := framework.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumeClaims(pipelineRun.Namespace).List(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		logError(23, fmt.Sprintf("Error getting PVC: %v\n", err))
-	}
-	for _, pvc := range pvcs.Items {
-		pv, err := framework.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumes().Get(context.Background(), pvc.Spec.VolumeName, metav1.GetOptions{})
-		if err != nil {
-			logError(24, fmt.Sprintf("Error getting PV: %v\n", err))
-			continue
-		}
-		waittime := (pv.ObjectMeta.CreationTimestamp.Time).Sub(pvc.ObjectMeta.CreationTimestamp.Time)
-		PipelineRunWaitTimeForPVCSumPerThread[threadIndex] += waittime
-		SuccessfulPVCCreationsPerThread[threadIndex] += 1
-	}
-}
-
 type ConcreteHandlerItsPipelines struct {
-	BaseHandler
+    *ConcreteHandlerPipelines // Embedding ConcreteHandlerPipelines
 }
 
 func (h *ConcreteHandlerItsPipelines) Handle(ctx *JourneyContext) {
@@ -1760,7 +1743,7 @@ func (h *ConcreteHandlerItsPipelines) validateItsPipeline(ctx *JourneyContext, a
 		}
 		if IntegrationTestsPipelineRun.IsDone() {
 			if !stage {
-				h.handlePVCSforITS(threadIndex, framework, IntegrationTestsPipelineRun)
+                h.handlePVCS(threadIndex, framework, IntegrationTestsPipelineRun)
 			}
 			succeededCondition := IntegrationTestsPipelineRun.Status.GetCondition(apis.ConditionSucceeded)
 			if succeededCondition.IsFalse() {
