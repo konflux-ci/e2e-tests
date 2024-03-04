@@ -238,6 +238,9 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				logs, err := kubeadminClient.TektonController.GetTaskRunLogs(pr.GetName(), "show-summary", testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(logs).To(HaveLen(1))
+				buildSummaryLog := logs["step-appstudio-summary"]
+				binaryImage := build.GetBinaryImage(pr)
+				Expect(buildSummaryLog).To(ContainSubstring(binaryImage))
 			})
 
 			It("check for source images if enabled in pipeline", Label(buildTemplatesTestLabel), func() {
