@@ -155,7 +155,8 @@ const (
 
 	PipelineRunPollingInterval = 10 * time.Second
 
-	ChainsAttestationTimeout = 10 * time.Minute
+	// Increased to 30 min from 10 min due to https://issues.redhat.com/browse/KFLUXBUGS-24
+	ChainsAttestationTimeout = 30 * time.Minute
 
 	JsonStageUsersPath = "users.json"
 
