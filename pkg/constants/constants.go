@@ -155,6 +155,9 @@ const (
 
 	PipelineRunPollingInterval = 10 * time.Second
 
+	// Increased to 30 min from 10 min due to https://issues.redhat.com/browse/KFLUXBUGS-24
+	ChainsAttestationTimeout = 30 * time.Minute
+
 	JsonStageUsersPath = "users.json"
 
 	SamplePrivateRepoName = "test-private-repo"

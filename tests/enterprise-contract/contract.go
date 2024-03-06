@@ -82,7 +82,6 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 		// pushed to.
 		var buildPipelineRunName, image, imageWithDigest string
 		var pipelineRunTimeout int
-		var attestationTimeout time.Duration
 		var defaultECP *ecp.EnterpriseContractPolicy
 
 		BeforeAll(func() {
@@ -108,7 +107,6 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			Expect(err).ToNot(HaveOccurred())
 
 			pipelineRunTimeout = int(time.Duration(20) * time.Minute)
-			attestationTimeout = time.Duration(5) * time.Minute
 
 			defaultECP, err = fwk.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 			Expect(err).NotTo(HaveOccurred())
@@ -144,13 +142,13 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 		})
 
 		It("creates signature and attestation", func() {
-			err := fwk.AsKubeAdmin.TektonController.AwaitAttestationAndSignature(imageWithDigest, attestationTimeout)
+			err := fwk.AsKubeAdmin.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)
 			Expect(err).NotTo(
 				HaveOccurred(),
 				"Could not find .att or .sig ImageStreamTags within the %s timeout. "+
 					"Most likely the chains-controller did not create those in time. "+
 					"Look at the chains-controller logs.",
-				attestationTimeout.String(),
+				constants.ChainsAttestationTimeout.String(),
 			)
 			GinkgoWriter.Printf("Cosign verify pass with .att and .sig ImageStreamTags found for %s\n", imageWithDigest)
 		})
