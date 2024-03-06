@@ -44,6 +44,9 @@ func ValidateBuildPipelineTestResults(pipelineRun *pipeline.PipelineRun, c crcli
 		if taskName == "inspect-image" && !strings.HasPrefix(strings.ToLower(componentName), "fbc-") {
 			continue
 		}
+		if taskName == "clair-scan" && !strings.HasPrefix(strings.ToLower(componentName), "fbc-") {
+			continue
+		}
 		results, err := fetchTaskRunResults(c, pipelineRun, taskName)
 		if err != nil {
 			return err
