@@ -1673,7 +1673,7 @@ func (h *ConcreteHandlerPipelines) handlePVCS(threadIndex int, framework *framew
 }
 
 type ConcreteHandlerItsPipelines struct {
-    *ConcreteHandlerPipelines // Embedding ConcreteHandlerPipelines
+    ConcreteHandlerPipelines // Embedding ConcreteHandlerPipelines
 }
 
 func (h *ConcreteHandlerItsPipelines) Handle(ctx *JourneyContext) {
