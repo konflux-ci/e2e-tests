@@ -230,6 +230,19 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				Expect(sbom.Components).ToNot(BeEmpty())
 			})
 
+			It(fmt.Sprintf("should ensure show-summary task ran for component with Git source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
+				pr, err = kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(pr).ToNot(BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentNames[i]))
+
+				logs, err := kubeadminClient.TektonController.GetTaskRunLogs(pr.GetName(), "show-summary", testNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(logs).To(HaveLen(1))
+				buildSummaryLog := logs["step-appstudio-summary"]
+				binaryImage := build.GetBinaryImage(pr)
+				Expect(buildSummaryLog).To(ContainSubstring(binaryImage))
+			})
+
 			It("check for source images if enabled in pipeline", Label(buildTemplatesTestLabel), func() {
 
 				isSourceBuildEnabled := build.IsSourceBuildEnabled(pr)
