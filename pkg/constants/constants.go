@@ -155,6 +155,8 @@ const (
 
 	PipelineRunPollingInterval = 10 * time.Second
 
+	ChainsAttestationTimeout = 10 * time.Minute
+
 	JsonStageUsersPath = "users.json"
 
 	SamplePrivateRepoName = "test-private-repo"

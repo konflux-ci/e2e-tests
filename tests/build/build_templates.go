@@ -32,8 +32,7 @@ import (
 )
 
 var (
-	ecPipelineRunTimeout     = time.Duration(10 * time.Minute)
-	chainsAttestationTimeout = time.Duration(10 * time.Minute)
+	ecPipelineRunTimeout = time.Duration(10 * time.Minute)
 )
 
 const pipelineCompletionRetries = 2
@@ -386,7 +385,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				It("verify-enterprise-contract check should pass", Label(buildTemplatesTestLabel), func() {
 					// If the Tekton Chains controller is busy, it may take longer than usual for it
 					// to sign and attest the image built in BeforeAll.
-					err = kubeadminClient.TektonController.AwaitAttestationAndSignature(imageWithDigest, chainsAttestationTimeout)
+					err = kubeadminClient.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)
 					Expect(err).ToNot(HaveOccurred())
 
 					cm, err := kubeadminClient.CommonController.GetConfigMap("ec-defaults", "enterprise-contract-service")
@@ -542,7 +541,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					imageWithDigest, err = getImageWithDigest(kubeadminClient, componentNames[i], applicationName, testNamespace)
 					Expect(err).NotTo(HaveOccurred())
 
-					err = kubeadminClient.TektonController.AwaitAttestationAndSignature(imageWithDigest, chainsAttestationTimeout)
+					err = kubeadminClient.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)
 					Expect(err).NotTo(HaveOccurred())
 				})
 

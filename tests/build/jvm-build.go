@@ -399,7 +399,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 				imageWithDigest := i.Spec.Image + "@" + i.Spec.Digest
 
-				Expect(f.AsKubeAdmin.TektonController.AwaitAttestationAndSignature(imageWithDigest, 5*time.Minute)).To(
+				Expect(f.AsKubeAdmin.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)).To(
 					Succeed(),
 					"Could not find .att or .sig ImageStreamTags within the 1 minute timeout. "+
 						"Most likely the chains-controller did not create those in time. "+
