@@ -325,6 +325,7 @@ func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framew
 			"preGA":                           preGA,
 			"productName":                     productName,
 			"productVersion":                  productVersion,
+			"allowedPackages":                 []string{"example-operator"},
 		},
 		"sign": map[string]interface{}{
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",
