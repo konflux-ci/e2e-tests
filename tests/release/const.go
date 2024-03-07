@@ -25,6 +25,8 @@ const (
 	ReleaseCreationTimeout              = 5 * time.Minute
 	ReleasePipelineRunCreationTimeout   = 10 * time.Minute
 	ReleasePipelineRunCompletionTimeout = 60 * time.Minute
+	BuildPipelineRunCompletionTimeout   = 60 * time.Minute
+	BuildPipelineRunCreationTimeout     = 10 * time.Minute
 	ReleasePlanStatusUpdateTimeout      = 1 * time.Minute
 	DefaultInterval                     = 100 * time.Millisecond
 
@@ -36,6 +38,12 @@ const (
 	ReleasedImagePushRepo           string = "quay.io/redhat-appstudio-qe/dcmetromap"
 	AdditionalReleasedImagePushRepo string = "quay.io/redhat-appstudio-qe/simplepython"
 	PyxisStageImagesApiEndpoint     string = "https://pyxis.preprod.api.redhat.com/v1/images/id/"
+
+	// EC constants
+	EcPolicyLibPath         = "github.com/enterprise-contract/ec-policies//policy/lib"
+	EcPolicyReleasePath     = "github.com/enterprise-contract/ec-policies//policy/release"
+	EcPolicyDataBundle      = "oci::quay.io/redhat-appstudio-tekton-catalog/data-acceptable-bundles:latest"
+	EcPolicyDataPath        = "github.com/release-engineering/rhtap-ec-policy//data"
 
 	// Service constants
 	ApplicationName string = "application"

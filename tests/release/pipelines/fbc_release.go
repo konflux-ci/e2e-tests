@@ -3,7 +3,6 @@ package pipelines
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
@@ -28,10 +27,6 @@ const (
 	fbcSourceGitURL         = "https://github.com/redhat-appstudio-qe/fbc-sample-repo"
 	targetPort              = 50051
 	relSvcCatalogPathInRepo = "pipelines/fbc-release/fbc-release.yaml"
-	ecPolicyLibPath         = "github.com/enterprise-contract/ec-policies//policy/lib"
-	ecPolicyReleasePath     = "github.com/enterprise-contract/ec-policies//policy/release"
-	ecPolicyDataBundle      = "oci::quay.io/redhat-appstudio-tekton-catalog/data-acceptable-bundles:latest"
-	ecPolicyDataPath        = "github.com/release-engineering/rhtap-ec-policy//data"
 )
 
 var snapshot *appservice.Snapshot
@@ -75,8 +70,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 	Describe("with FBC happy path", Label("fbcHappyPath"), func() {
 		var component *appservice.Component
 		BeforeAll(func() {
-			devFw = newFramework(devWorkspace)
-			managedFw = newFramework(managedWorkspace)
+			devFw = releasecommon.NewFramework(devWorkspace)
+			managedFw = releasecommon.NewFramework(managedWorkspace)
 
 			managedNamespace = managedFw.UserNamespace
 
@@ -98,8 +93,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		})
 
 		AfterAll(func() {
-			devFw = newFramework(devWorkspace)
-			managedFw = newFramework(managedWorkspace)
+			devFw = releasecommon.NewFramework(devWorkspace)
+			managedFw = releasecommon.NewFramework(managedWorkspace)
 			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(fbcApplicationName, devNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
@@ -124,8 +119,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		var component *appservice.Component
 
 		BeforeAll(func() {
-			devFw = newFramework(devWorkspace)
-			managedFw = newFramework(managedWorkspace)
+			devFw = releasecommon.NewFramework(devWorkspace)
+			managedFw = releasecommon.NewFramework(managedWorkspace)
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcHotfixAppName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
@@ -140,8 +135,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		})
 
 		AfterAll(func() {
-			devFw = newFramework(devWorkspace)
-			managedFw = newFramework(managedWorkspace)
+			devFw = releasecommon.NewFramework(devWorkspace)
+			managedFw = releasecommon.NewFramework(managedWorkspace)
 			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(fbcHotfixAppName, devNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcHotfixECPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcHotfixRPAName, managedNamespace, false)).NotTo(HaveOccurred())
@@ -166,8 +161,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		var component *appservice.Component
 
 		BeforeAll(func() {
-			devFw = newFramework(devWorkspace)
-			managedFw = newFramework(managedWorkspace)
+			devFw = releasecommon.NewFramework(devWorkspace)
+			managedFw = releasecommon.NewFramework(managedWorkspace)
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcPreGAAppName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
@@ -182,8 +177,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		})
 
 		AfterAll(func() {
-			devFw = newFramework(devWorkspace)
-			managedFw = newFramework(managedWorkspace)
+			devFw = releasecommon.NewFramework(devWorkspace)
+			managedFw = releasecommon.NewFramework(managedWorkspace)
 			if !CurrentSpecReport().Failed() {
 				Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(fbcPreGAAppName, devNamespace, false)).NotTo(HaveOccurred())
 				Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcPreGAECPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
@@ -228,7 +223,7 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw framework.Framework, dev
 		return nil
 	}, 5 * time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for Snapshot and Release being created")
 
-	mFw := newFramework(managedWorkspace)
+	mFw := releasecommon.NewFramework(managedWorkspace)
 	Eventually(func() error {
 		releasePr, err = mFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(mFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 		if err != nil {
@@ -247,7 +242,7 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw framework.Framework, dev
 }
 
 func assertReleaseCRSucceeded(devFw framework.Framework, devNamespace, managedNamespace, fbcAppName string, component *appservice.Component) {
-	dFw := newFramework(devWorkspace)
+	dFw := releasecommon.NewFramework(devWorkspace)
 	Eventually(func() error {
 		releaseCR, err = dFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 		if err != nil {
@@ -275,8 +270,8 @@ func createFBCEnterpriseContractPolicy(fbcECPName string, managedFw framework.Fr
 		PublicKey:   "k8s://openshift-pipelines/public-key",
 		Sources: []ecp.Source{{
 			Name:   "Default",
-			Policy: []string{ecPolicyLibPath, ecPolicyReleasePath},
-			Data:   []string{ecPolicyDataBundle, ecPolicyDataPath},
+			Policy: []string{releasecommon.EcPolicyLibPath, releasecommon.EcPolicyReleasePath},
+			Data:   []string{releasecommon.EcPolicyDataBundle, releasecommon.EcPolicyDataPath},
 		}},
 		Configuration: &ecp.EnterpriseContractPolicyConfiguration{
 			Exclude: []string{"cve", "step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
@@ -325,20 +320,4 @@ func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framew
 		Raw: data,
 	})
 	Expect(err).NotTo(HaveOccurred())
-}
-
-func newFramework(workspace string) *framework.Framework {
-
-	stageOptions := utils.Options{
-		ToolchainApiUrl: os.Getenv(constants.TOOLCHAIN_API_URL_ENV),
-		KeycloakUrl:     os.Getenv(constants.KEYLOAK_URL_ENV),
-		OfflineToken:    os.Getenv(constants.OFFLINE_TOKEN_ENV),
-	}
-	fw, err := framework.NewFrameworkWithTimeout(
-			workspace,
-			time.Minute*60,
-			stageOptions,
-	)
-	Expect(err).NotTo(HaveOccurred())
-	return fw
 }
