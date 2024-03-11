@@ -276,7 +276,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			// Restart multi-platform-controller pod to reload configMap again
 			podList, err := f.AsKubeAdmin.CommonController.ListAllPods(ControllerNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
-			for i, _ := range podList.Items {
+			for i := range podList.Items {
 				podName := podList.Items[i].Name
 				if strings.HasPrefix(podName, ControllerNamespace) {
 					err := f.AsKubeAdmin.CommonController.RestartPod(podName, ControllerNamespace)
