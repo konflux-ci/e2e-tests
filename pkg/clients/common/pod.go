@@ -126,3 +126,10 @@ func (s *SuiteController) StoreAllPods(namespace string) error {
 	}
 	return nil
 }
+
+func (s *SuiteController) RestartPod(podName string, namespace string) error {
+	if err := s.KubeInterface().CoreV1().Pods(namespace).Delete(context.Background(), podName, metav1.DeleteOptions{}); err != nil {
+		return fmt.Errorf("failed to restart pod '%s' in '%s' namespace: %+v", podName, namespace, err)
+	}
+	return nil
+}
