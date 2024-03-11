@@ -68,8 +68,11 @@ func (h *HasController) GetComponentPipelineRun(componentName string, applicatio
 }
 
 // GetComponentPipeline returns the pipeline for a given component labels with pipeline type within label "pipelines.appstudio.openshift.io/type" ("build", "test")
-func (h *HasController) GetComponentPipelineRunWithType(componentName string, applicationName string, namespace, pipelineType string, sha string) (*pipeline.PipelineRun, error) {
-	pipelineRunLabels := map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName}
+func (h *HasController) GetComponentPipelineRunWithType(componentName, applicationName, namespace, pipelineType, sha string) (*pipeline.PipelineRun, error) {
+	// pipelineRunLabels := map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName}
+	pipelineRunLabels := map[string]string{}
+	pipelineRunLabels["appstudio.openshift.io/application"] = applicationName
+	// pipelineRunLabels["appstudio.openshift.io/component"] = componentName
 	if pipelineType != "" {
 		pipelineRunLabels["pipelines.appstudio.openshift.io/type"] = pipelineType
 	}
@@ -77,6 +80,9 @@ func (h *HasController) GetComponentPipelineRunWithType(componentName string, ap
 	if sha != "" {
 		pipelineRunLabels["pipelinesascode.tekton.dev/sha"] = sha
 	}
+
+	// debug
+	klog.Infof("GetComponentPipelineRunWithType - componentName=%s; applicationName=%s; namespace=%s; pipelineType=%s; sha=%s", componentName, applicationName, namespace, pipelineType, sha)
 
 	list := &pipeline.PipelineRunList{}
 	err := h.KubeRest().List(context.Background(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
@@ -182,13 +188,23 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 	return nil
 }
 
-// Universal method to create a component in the kubernetes clusters.
-func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string) (*appservice.Component, error) {
+// Universal method to create a component in the kubernetes clusters and adds a suffix to the component name to allow multiple components with unique names.
+// Generate a random component name with #combinations > 11M, Create unique resource names that adhere to RFC 1123 Label Names
+// https://kubernetes.io/docs/concepts/overview/working-with-objects/names/
+func (h *HasController) CreateComponentV2(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string, option string) (*appservice.Component, string, error) {
+	var componentName string
+
+	if option == "default" {
+		componentName = componentSpec.ComponentName
+	} else {
+		componentName = componentSpec.ComponentName + "-" + util.GenerateRandomString(5)
+	}
+
 	componentObject := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			// adding default label because of the BuildPipelineSelector in build test
 			Labels:    constants.ComponentDefaultLabel,
-			Name:      componentSpec.ComponentName,
+			Name:      componentName,
 			Namespace: namespace,
 			Annotations: map[string]string{
 				"skip-initial-checks": strconv.FormatBool(skipInitialChecks),
@@ -217,19 +233,74 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*1)
 	defer cancel()
 	if err := h.KubeRest().Create(ctx, componentObject); err != nil {
-		return nil, err
+		return nil, componentName, err
 	}
 	if err := utils.WaitUntil(h.ComponentReady(componentObject), time.Minute*10); err != nil {
 		componentObject = h.refreshComponentForErrorDebug(componentObject)
-		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
+		return nil, componentName, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentName, namespace, utils.ToPrettyJSONString(componentObject))
 	}
 
 	if utils.WaitUntil(h.CheckForImageAnnotation(componentObject), time.Minute*5) != nil {
 		componentObject = h.refreshComponentForErrorDebug(componentObject)
-		return nil, fmt.Errorf("timed out when waiting for image-controller annotations to be updated on component %s in namespace %s. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
+		return nil, componentName, fmt.Errorf("timed out when waiting for image-controller annotations to be updated on component %s in namespace %s. component: %s", componentName, namespace, utils.ToPrettyJSONString(componentObject))
 	}
-	return componentObject, nil
+	return componentObject, componentName, nil
 }
+
+// Universal method to create a component in the kubernetes clusters.
+func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string) (*appservice.Component, error) {
+	componentObject, _, err := h.CreateComponentV2(componentSpec, namespace, outputContainerImage, secret, applicationName, skipInitialChecks, annotations, "default")
+	return componentObject, err
+}
+
+// Universal method to create a component in the kubernetes clusters.
+// func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string) (*appservice.Component, error) {
+// 	componentObject := &appservice.Component{
+// 		ObjectMeta: metav1.ObjectMeta{
+// 			// adding default label because of the BuildPipelineSelector in build test
+// 			Labels:    constants.ComponentDefaultLabel,
+// 			Name:      componentSpec.ComponentName,
+// 			Namespace: namespace,
+// 			Annotations: map[string]string{
+// 				"skip-initial-checks": strconv.FormatBool(skipInitialChecks),
+// 			},
+// 		},
+// 		Spec: componentSpec,
+// 	}
+// 	componentObject.Spec.Secret = secret
+// 	componentObject.Spec.Application = applicationName
+
+// 	if len(annotations) > 0 {
+// 		componentObject.Annotations = utils.MergeMaps(componentObject.Annotations, annotations)
+
+// 	}
+
+// 	if componentObject.Spec.TargetPort == 0 {
+// 		componentObject.Spec.TargetPort = 8081
+// 	}
+// 	if outputContainerImage != "" {
+// 		componentObject.Spec.ContainerImage = outputContainerImage
+// 	} else if componentObject.Annotations["image.redhat.com/generate"] == "" {
+// 		// Generate default public image repo since nothing is mentioned specifically
+// 		componentObject.Annotations = utils.MergeMaps(componentObject.Annotations, constants.ImageControllerAnnotationRequestPublicRepo)
+// 	}
+
+// 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*1)
+// 	defer cancel()
+// 	if err := h.KubeRest().Create(ctx, componentObject); err != nil {
+// 		return nil, err
+// 	}
+// 	if err := utils.WaitUntil(h.ComponentReady(componentObject), time.Minute*10); err != nil {
+// 		componentObject = h.refreshComponentForErrorDebug(componentObject)
+// 		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
+// 	}
+
+// 	if utils.WaitUntil(h.CheckForImageAnnotation(componentObject), time.Minute*5) != nil {
+// 		componentObject = h.refreshComponentForErrorDebug(componentObject)
+// 		return nil, fmt.Errorf("timed out when waiting for image-controller annotations to be updated on component %s in namespace %s. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
+// 	}
+// 	return componentObject, nil
+// }
 
 // CreateComponentWithDockerSource creates a component based on container image source.
 func (h *HasController) CreateComponentWithDockerSource(applicationName, componentName, namespace, gitSourceURL, containerImageSource, outputContainerImage, secret string) (*appservice.Component, error) {
