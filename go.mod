@@ -3,10 +3,10 @@ module github.com/redhat-appstudio/e2e-tests
 go 1.20
 
 require (
-	github.com/argoproj/argo-cd/v2 v2.8.8
+	github.com/argoproj/argo-cd/v2 v2.10.2
 	github.com/avast/retry-go/v4 v4.3.3
-	github.com/aws/aws-sdk-go-v2 v1.23.0
-	github.com/aws/aws-sdk-go-v2/config v1.19.1
+	github.com/aws/aws-sdk-go-v2 v1.24.1
+	github.com/aws/aws-sdk-go-v2/config v1.25.12
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.135.0
 	github.com/codeready-toolchain/api v0.0.0-20231217224957-34f7cb3fcbf7
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20220523142428-2558e76260fb
@@ -56,7 +56,7 @@ require (
 	k8s.io/client-go v1.5.2
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.110.1
-	k8s.io/kubectl v0.24.9
+	k8s.io/kubectl v0.26.4
 	k8s.io/test-infra v0.0.0-20231004164548-dee1fe445410
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	knative.dev/pkg v0.0.0-20231023160942-0c39ce4b3a7f
@@ -117,20 +117,20 @@ require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/Microsoft/hcsshim v0.11.4 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20230828082145-3c4c8a2d2371 // indirect
-	github.com/argoproj/gitops-engine v0.7.1-0.20230607163028-425d65e07695 // indirect
+	github.com/argoproj/gitops-engine v0.7.1-0.20240122213038-792124280fcc // indirect
 	github.com/argoproj/pkg v0.13.7-0.20230626144333-d56162821bd1 // indirect
-	github.com/aws/aws-sdk-go v1.50.3 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.13.43 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.13 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.2.3 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.5.3 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.45 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.10.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.10.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.15.2 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.17.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.23.2 // indirect
-	github.com/aws/smithy-go v1.17.0 // indirect
+	github.com/aws/aws-sdk-go v1.50.8 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.16.16 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.14.11 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.2.10 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.5.10 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.7.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.10.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.10.10 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.18.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.21.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.26.7 // indirect
+	github.com/aws/smithy-go v1.19.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/blendle/zapdriver v1.3.1 // indirect
@@ -294,9 +294,9 @@ require (
 	github.com/xlab/treeprint v1.2.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0 // indirect
-	go.opentelemetry.io/otel v1.19.0 // indirect
-	go.opentelemetry.io/otel/metric v1.19.0 // indirect
-	go.opentelemetry.io/otel/trace v1.19.0 // indirect
+	go.opentelemetry.io/otel v1.21.0 // indirect
+	go.opentelemetry.io/otel/metric v1.21.0 // indirect
+	go.opentelemetry.io/otel/trace v1.21.0 // indirect
 	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
@@ -323,7 +323,7 @@ require (
 	k8s.io/apiserver v0.28.5 // indirect
 	k8s.io/component-base v0.28.5 // indirect
 	k8s.io/component-helpers v0.28.5 // indirect
-	k8s.io/kube-aggregator v0.24.2 // indirect
+	k8s.io/kube-aggregator v0.26.4 // indirect
 	k8s.io/kube-openapi v0.0.0-20231113174909-778a5567bc1e // indirect
 	k8s.io/kubernetes v1.28.5 // indirect
 	k8s.io/pod-security-admission v0.26.1 // indirect
