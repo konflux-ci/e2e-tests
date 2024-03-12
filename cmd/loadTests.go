@@ -575,7 +575,9 @@ func setup(cmd *cobra.Command, args []string) {
 	logData.PVCCreationSuccessCount = PVCCreationSuccessCount
 
 	averageWaitTimeForPVCProvisioning := float64(0)
-	averageWaitTimeForPVCProvisioning = sumDurationFromArray(PipelineRunWaitTimeForPVCSumPerThread).Seconds() / float64(PVCCreationSuccessCount)
+	if PVCCreationSuccessCount > 0 {
+		averageWaitTimeForPVCProvisioning = sumDurationFromArray(PipelineRunWaitTimeForPVCSumPerThread).Seconds() / float64(PVCCreationSuccessCount)
+	}
 	logData.AverageWaitTimeForPVCProvisioning = averageWaitTimeForPVCProvisioning
 
 	userCreationFailureRate := float64(userCreationFailureCount) / float64(overallCount)
@@ -744,7 +746,9 @@ func setup(cmd *cobra.Command, args []string) {
 	klog.Infof("Avg/max time to complete pipelinesrun: %.2f s/%.2f s", averageTimeToRunPipelineSucceeded, logData.MaxTimeToRunPipelineSucceeded)
 	klog.Infof("Avg/max time to complete integration test: %.2f s/%.2f s", IntegrationTestsAverageTimeToRunPipelineSucceeded, logData.IntegrationTestsMaxTimeToRunPipelineSucceeded)
 	klog.Infof("Avg/max time to complete deployment: %.2f s/%.2f s", averageTimeToDeploymentSucceeded, logData.MaxTimeToDeploymentSucceeded)
-	klog.Infof("Avg time to provision PVC : %.2f s", averageWaitTimeForPVCProvisioning)
+	if !stage {
+		klog.Infof("Avg time to provision PVC : %.2f s", averageWaitTimeForPVCProvisioning)
+	}
 
 	klog.Infof("Average time to fail pipelinerun: %.2f s", averageTimeToRunPipelineFailed)
 	klog.Infof("Average time to fail integration test: %.2f s", IntegrationTestsAverageTimeToRunPipelineFailed)
@@ -1594,7 +1598,10 @@ func (h *ConcreteHandlerPipelines) validatePipeline(ctx *JourneyContext, framewo
 			return false, nil
 		}
 		if pipelineRun.IsDone() {
-			h.handlePVCS(threadIndex, framework, pipelineRun)
+			// This PVC test could not work on stage because our test users are not admins and because as developers they don't have access to query for PVs
+			if !stage {
+				h.handlePVCS(threadIndex, framework, pipelineRun)
+			}
 			succeededCondition := pipelineRun.Status.GetCondition(apis.ConditionSucceeded)
 			if succeededCondition.IsFalse() {
 				dur := pipelineRun.Status.CompletionTime.Sub(pipelineRun.CreationTimestamp.Time)
@@ -1666,7 +1673,7 @@ func (h *ConcreteHandlerPipelines) handlePVCS(threadIndex int, framework *framew
 }
 
 type ConcreteHandlerItsPipelines struct {
-	BaseHandler
+    ConcreteHandlerPipelines // Embedding ConcreteHandlerPipelines
 }
 
 func (h *ConcreteHandlerItsPipelines) Handle(ctx *JourneyContext) {
@@ -1735,6 +1742,9 @@ func (h *ConcreteHandlerItsPipelines) validateItsPipeline(ctx *JourneyContext, a
 			return false, nil
 		}
 		if IntegrationTestsPipelineRun.IsDone() {
+			if !stage {
+                h.handlePVCS(threadIndex, framework, IntegrationTestsPipelineRun)
+			}
 			succeededCondition := IntegrationTestsPipelineRun.Status.GetCondition(apis.ConditionSucceeded)
 			if succeededCondition.IsFalse() {
 				dur := IntegrationTestsPipelineRun.Status.CompletionTime.Sub(IntegrationTestsPipelineRun.CreationTimestamp.Time)
