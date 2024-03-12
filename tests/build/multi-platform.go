@@ -40,7 +40,7 @@ const (
 	Ec2User                = "ec2-user"
 	AwsRegion              = "us-east-1"
 	AwsPlatform            = "linux/arm64"
-	DynamicInstanceTag     = "dynamic-test-instance"
+	DynamicMaxInstances    = "1"
 	MultiPlatformSecretKey = "build.appstudio.redhat.com/multi-platform-secret"
 	MultiPlatformConfigKey = "build.appstudio.redhat.com/multi-platform-config"
 )
@@ -165,7 +165,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 							}
 						}
 					}
-					return fmt.Errorf("couldn't find a matching step buildah-remote in task %s in PipelineRun %s/%s", constants.BuildTaskRunName, testNamespace, pr.GetName())
+					return fmt.Errorf("couldn't find a matching step buildah-remote or ssh secret attached as a volume in the task %s in PipelineRun %s/%s", constants.BuildTaskRunName, testNamespace, pr.GetName())
 				}, timeout, interval).Should(Succeed(), "timed out when verifying the buildah-remote image reference in pipelinerun")
 			})
 			It("The multi platform secret is populated", func() {
@@ -205,17 +205,15 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 				if err != nil {
 					log.Fatalf("Unable to parse private key: %v", err)
 				}
-
+				// SSH configuration using public key authentication
+				config := &ssh.ClientConfig{
+					User: Ec2User,
+					Auth: []ssh.AuthMethod{
+						ssh.PublicKeys(signer),
+					},
+					HostKeyCallback: ssh.InsecureIgnoreHostKey(), // #nosec
+				}
 				Eventually(func() error {
-					// SSH configuration using public key authentication
-					config := &ssh.ClientConfig{
-						User: Ec2User,
-						Auth: []ssh.AuthMethod{
-							ssh.PublicKeys(signer),
-						},
-						HostKeyCallback: ssh.InsecureIgnoreHostKey(), // #nosec
-					}
-
 					client, err := ssh.Dial("tcp", host+":22", config)
 					if err != nil {
 						return err
@@ -239,7 +237,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 		})
 	})
 	Describe("aws dynamic allocation", Label("aws-dynamic"), func() {
-		var testNamespace, applicationName, componentName, multiPlatformSecretName, multiPlatformTaskName, instanceId string
+		var testNamespace, applicationName, componentName, multiPlatformSecretName, multiPlatformTaskName, dynamicInstanceTag, instanceId string
 		var component *appservice.Component
 		var timeout, interval time.Duration
 
@@ -273,13 +271,16 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			Expect(testNamespace).NotTo(BeNil(), "failed to create sandbox user namespace")
 			Expect(err).ShouldNot(HaveOccurred())
 
+			dynamicInstanceTag := "dynamic-instance" + "-" + util.GenerateRandomString(4)
+			GinkgoWriter.Printf("Generated dynamic instance tag: %q\n", dynamicInstanceTag)
+
 			// Restart multi-platform-controller pod to reload configMap again
 			podList, err := f.AsKubeAdmin.CommonController.ListAllPods(ControllerNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
 			for i := range podList.Items {
 				podName := podList.Items[i].Name
 				if strings.HasPrefix(podName, ControllerNamespace) {
-					err := f.AsKubeAdmin.CommonController.RestartPod(podName, ControllerNamespace)
+					err := f.AsKubeAdmin.CommonController.DeletePod(podName, ControllerNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
 				}
 			}
@@ -288,7 +289,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			// sleep for 10 sec so that multi-platform-controller pod comes up
 			time.Sleep(10 * time.Second)
 
-			err = createConfigMapForDynamicInstance(f)
+			err = createConfigMapForDynamicInstance(f, dynamicInstanceTag)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			err = createSecretsForDynamicInstance(f)
@@ -366,7 +367,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 							}
 						}
 					}
-					return fmt.Errorf("couldn't find a matching step buildah-remote in task %s in PipelineRun %s/%s", constants.BuildTaskRunName, testNamespace, pr.GetName())
+					return fmt.Errorf("couldn't find a matching step buildah-remote or ssh secret attached as a volume in the task %s in PipelineRun %s/%s", constants.BuildTaskRunName, testNamespace, pr.GetName())
 				}, timeout, interval).Should(Succeed(), "timed out when verifying the buildah-remote image reference in pipelinerun")
 			})
 
@@ -384,6 +385,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 				Expect(err).ShouldNot(HaveOccurred())
 				instanceId = taskRun.Annotations["build.appstudio.redhat.com/cloud-instance-id"]
 				GinkgoWriter.Printf("INSTANCE ID: %s\n", instanceId)
+				Expect(instanceId).ShouldNot(BeEmpty())
 			})
 
 			It("that PipelineRun completes successfully", func() {
@@ -396,7 +398,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 
 			It("check cleanup happened successfully", func() {
 				Eventually(func() error {
-					instances, err := getDynamicAwsInstance(DynamicInstanceTag)
+					instances, err := getDynamicAwsInstance(dynamicInstanceTag)
 					if err != nil {
 						return err
 					}
@@ -477,7 +479,7 @@ func createConfigMapForHostPool(f *framework.Framework) error {
 	return nil
 }
 
-func createConfigMapForDynamicInstance(f *framework.Framework) error {
+func createConfigMapForDynamicInstance(f *framework.Framework, instanceTag string) error {
 	hostConfig := &v1.ConfigMap{}
 	hostConfig.Name = HostConfig
 	hostConfig.Namespace = ControllerNamespace
@@ -485,16 +487,16 @@ func createConfigMapForDynamicInstance(f *framework.Framework) error {
 
 	hostConfig.Data = map[string]string{}
 	hostConfig.Data["dynamic-platforms"] = AwsPlatform
-	hostConfig.Data["instance-tag"] = DynamicInstanceTag
+	hostConfig.Data["instance-tag"] = instanceTag
 	hostConfig.Data["dynamic.linux-arm64.type"] = "aws"
 	hostConfig.Data["dynamic.linux-arm64.region"] = AwsRegion
 	hostConfig.Data["dynamic.linux-arm64.ami"] = "ami-09d5d0912f52f9514"
-	hostConfig.Data["dynamic.linux-arm64.instance-type"] = "t4g.medium"
+	hostConfig.Data["dynamic.linux-arm64.instance-type"] = "t4g.micro"
 	hostConfig.Data["dynamic.linux-arm64.key-name"] = "multi-platform-e2e"
 	hostConfig.Data["dynamic.linux-arm64.aws-secret"] = AwsSecretName
 	hostConfig.Data["dynamic.linux-arm64.ssh-secret"] = SshSecretName
 	hostConfig.Data["dynamic.linux-arm64.security-group"] = "launch-wizard-7"
-	hostConfig.Data["dynamic.linux-arm64.max-instances"] = "1"
+	hostConfig.Data["dynamic.linux-arm64.max-instances"] = DynamicMaxInstances
 
 	_, err := f.AsKubeAdmin.CommonController.CreateConfigMap(hostConfig, ControllerNamespace)
 	if err != nil {
