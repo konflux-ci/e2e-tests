@@ -182,3 +182,17 @@ func (t *TektonController) GetTaskRunStatus(c crclient.Client, pr *pipeline.Pipe
 func (t *TektonController) DeleteAllTaskRunsInASpecificNamespace(namespace string) error {
 	return t.KubeRest().DeleteAllOf(context.Background(), &pipeline.TaskRun{}, crclient.InNamespace(namespace))
 }
+
+// GetTaskRunParam gets value of a TaskRun param.
+func (t *TektonController) GetTaskRunParam(c crclient.Client, pr *pipeline.PipelineRun, pipelineTaskName, paramName string) (string, error) {
+	taskRun, err := t.GetTaskRunFromPipelineRun(c, pr, pipelineTaskName)
+	if err != nil {
+		return "", err
+	}
+	for _, param := range taskRun.Spec.Params {
+		if param.Name == paramName {
+			return strings.TrimSpace(param.Value.StringVal), nil
+		}
+	}
+	return "", fmt.Errorf("cannot find param %s from TaskRun %s", paramName, pipelineTaskName)
+}
