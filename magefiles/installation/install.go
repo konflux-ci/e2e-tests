@@ -16,6 +16,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
+	configv1client "github.com/openshift/client-go/config/clientset/versioned"
 
 	appclientset "github.com/argoproj/argo-cd/v2/pkg/client/clientset/versioned"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
@@ -28,6 +29,8 @@ import (
 
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
+
+	sigsConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 const (
@@ -141,6 +144,10 @@ func (i *InstallAppStudio) InstallAppStudioPreviewMode() error {
 	}
 	i.setInstallationEnvironments()
 
+	if err := i.MarkMasterNodesAsSchedulable(); err != nil {
+		return err
+	}
+
 	if err := utils.ExecuteCommandInASpecificDirectory("hack/bootstrap-cluster.sh", previewInstallArgs, i.InfraDeploymentsCloneDir); err != nil {
 		return err
 	}
@@ -148,6 +155,24 @@ func (i *InstallAppStudio) InstallAppStudioPreviewMode() error {
 	i.addSPIOauthRedirectProxyUrl()
 
 	return i.createE2EQuaySecret()
+}
+
+// MarkMasterNodesAsSchedulable uses configv1client for updating scheduler/cluster with "spec.mastersSchedulable:true"
+func (i *InstallAppStudio) MarkMasterNodesAsSchedulable() error {
+	kubeconfig, err := sigsConfig.GetConfig()
+	if err != nil {
+		return fmt.Errorf("error when getting config: %+v", err)
+	}
+
+	configv1client, err := configv1client.NewForConfig(kubeconfig)
+	if err != nil {
+		return fmt.Errorf("error when creating configv1client: %+v", err)
+	}
+	_, err = configv1client.ConfigV1().Schedulers().Patch(context.Background(), "cluster", types.MergePatchType, []byte("{\"spec\":{\"mastersSchedulable\":true}}"), metav1.PatchOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to mark master nodes as schedulable: %+v", err)
+	}
+	return nil
 }
 
 func (i *InstallAppStudio) setInstallationEnvironments() {
