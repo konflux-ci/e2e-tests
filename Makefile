@@ -68,3 +68,6 @@ clean-private-repos:
 
 clean-registered-servers:
 	./mage -v CleanupRegisteredPacServers
+
+setup-multi-platform-tests:
+	./mage -v SetupMultiPlatformTests
