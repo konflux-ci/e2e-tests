@@ -1,0 +1,35 @@
+name: Estimate-review
+
+on: pull_request_target
+
+env:
+  QE_TOOLS_VERSION: v0.1.0
+
+permissions:
+  pull-requests: write
+
+jobs:
+  estimate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download qe-tools release
+        run: gh release download $QE_TOOLS_VERSION -R redhat-appstudio/qe-tools
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Unpack tarball
+        run: tar -xzvf qe-tools-$QE_TOOLS_VERSION-linux-amd64.tar.gz
+
+      - name: Run qe-tools PR review time estimation
+        run: |
+          ./qe-tools estimate-review \
+            --owner ${{ github.repository_owner }} \
+            --repository ${{ github.event.repository.name }} \
+            --number ${{ github.event.pull_request.number }} \
+            --config ${{ env.CONFIG_PATH }} \
+            --token ${{ github.token }} \
+            --add-label \
+            --human
+        env:
+          CONFIG_PATH: 'config/estimate/config.yaml'
