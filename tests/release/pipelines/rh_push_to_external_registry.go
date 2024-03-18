@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"regexp"
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
@@ -37,7 +36,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 	AfterEach(framework.ReportFailure(&fw))
 	var err error
 	var devNamespace, managedNamespace, compName, additionalCompName string
-	var avgControllerQueryTimeout = 5 * time.Minute
 
 	var imageIDs []string
 	var pyxisKeyDecoded, pyxisCertDecoded []byte
