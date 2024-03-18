@@ -1,8 +1,4 @@
 reviewers:
-- build-team
-- ec-team
-- integration-team
-- release-team
 - rhtap-qe
 
 approvers:
