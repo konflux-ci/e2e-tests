@@ -300,7 +300,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 			}, releasecommon.ReleasePipelineRunCompletionTimeout, constants.PipelineRunPollingInterval).Should(Succeed())
 		})
 
-		It("validate the result of task create-pyxis-image contains image ids", func() {
+/*		It("validate the result of task create-pyxis-image contains image ids", func() {
 			Eventually(func() []string {
 				re := regexp.MustCompile("[a-fA-F0-9]{24}")
 
@@ -331,7 +331,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 
 				return imageIDs
 			}, avgControllerQueryTimeout, releasecommon.DefaultInterval).Should(HaveLen(2))
-		})
+		})*/
+        // IDs are not stored in results anymore
 
 		It("tests that associated Release CR has completed for each Component's Snapshot", func() {
 			Eventually(func() error {
