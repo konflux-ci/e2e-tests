@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -1113,6 +1114,7 @@ func CleanupRegisteredPacServers() error {
 }
 
 func isValidPacHost(server string) bool {
-	_, err := http.Get(strings.TrimSpace(server))
+	httpClient := http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
+	_, err := httpClient.Get(strings.TrimSpace(server))
 	return err == nil
 }
