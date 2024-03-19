@@ -99,6 +99,26 @@
   env_variable: {{ var }}
 {% endfor %}
 
+# Git info
+{% macro git_info(dir, path) -%}
+- name: metadata.git.{{ path }}.commit.hash
+  command: cd "{{ dir }}" && git log -1 --pretty=format:"%H"
+- name: metadata.git.{{ path }}.commit.abbreviated_hash
+  command: cd "{{ dir }}" && git log -1 --pretty=format:"%h"
+- name: metadata.git.{{ path }}.commit.author_date
+  command: cd "{{ dir }}" && git log -1 --pretty=format:"%aI"
+- name: metadata.git.{{ path }}.commit.committer_date
+  command: cd "{{ dir }}" && git log -1 --pretty=format:"%cI"
+- name: metadata.git.{{ path }}.commit.subject
+  command: cd "{{ dir }}" && git log -1 --pretty=format:"%s"
+- name: metadata.git.{{ path }}.commit.author_name
+  command: cd "{{ dir }}" && git log -1 --pretty=format:"%aN"
+- name: metadata.git.{{ path }}.commit.author_email
+  command: cd "{{ dir }}" && git log -1 --pretty=format:"%aE"
+{%- endmacro %}
+{{ git_info('.', 'redhat_appstudio.e2e_tests') }}
+{{ git_info('tmp/infra-deployments', 'redhat_appstudio.infra_deployments') }}
+
 # Cluster nodes info
 - name: metadata.cluster.control-plane.count
   command: oc get nodes -l node-role.kubernetes.io/master -o name | wc -l
