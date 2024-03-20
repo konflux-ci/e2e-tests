@@ -191,15 +191,24 @@ func PerformUpgrade() error {
 			klog.Errorf("failed to get an update about upgrade status: %+v", err)
 			return false, nil
 		}
-
+		// Prefer standard (available) updates over conditional ones
+		for _, au := range us.clusterVersion.Status.AvailableUpdates {
+			if strings.Contains(au.Version, us.desiredMajorMinorVersion) {
+				klog.Infof("found the desired version %q in available updates", au.Version)
+				us.desiredFullVersion = au.Version
+				return true, nil
+			}
+		}
+		// https://www.redhat.com/en/blog/introducing-conditional-openshift-updates
 		for _, au := range us.clusterVersion.Status.ConditionalUpdates {
 			if strings.Contains(au.Release.Version, us.desiredMajorMinorVersion) {
-				klog.Infof("found the desired version %q in available updates", au.Release.Version)
+				klog.Infof("found the desired version %q in conditional updates", au.Release.Version)
 				us.desiredFullVersion = au.Release.Version
 				return true, nil
 			}
 		}
-		klog.Infof("desired minor version %q not yet present in available updates", us.desiredMajorMinorVersion)
+
+		klog.Infof("desired minor version %q not yet present in available/conditional updates", us.desiredMajorMinorVersion)
 		return false, nil
 	})
 	if err != nil {
