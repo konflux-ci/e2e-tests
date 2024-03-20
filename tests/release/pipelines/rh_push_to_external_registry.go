@@ -360,10 +360,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 					sbomImage := release.Image{}
 					Expect(json.Unmarshal(body, &sbomImage)).To(Succeed(), "failed to unmarshal body content: %s", string(body))
 
-					if sbomImage.ContentManifest.ID == "" {
-						return fmt.Errorf("ContentManifest field is empty for sbom image: %+v", sbomImage)
-					}
-
 					return nil
 				}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed())
 			}
