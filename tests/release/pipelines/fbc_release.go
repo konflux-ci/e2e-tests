@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
-	"github.com/redhat-appstudio/e2e-tests/pkg/clients/github"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
@@ -38,7 +37,6 @@ const (
 var snapshot *appservice.Snapshot
 var releaseCR *releaseapi.Release
 var releasePr, buildPr *tektonv1.PipelineRun
-var gh *github.Github
 var err error
 var devWorkspace = utils.GetEnv(constants.RELEASE_DEV_WORKSPACE_ENV, constants.DevReleaseTeam)
 var managedWorkspace = utils.GetEnv(constants.RELEASE_MANAGED_WORKSPACE_ENV, constants.ManagedReleaseTeam)
@@ -72,29 +70,14 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 	var fbcPreGAECPolicyName = "fbc-prega-policy-" + util.GenerateRandomString(4)
 
 	AfterEach(framework.ReportFailure(&devFw))
-	stageOptions := utils.Options{
-		ToolchainApiUrl: os.Getenv(constants.TOOLCHAIN_API_URL_ENV),
-		KeycloakUrl:     os.Getenv(constants.KEYLOAK_URL_ENV),
-		OfflineToken:    os.Getenv(constants.OFFLINE_TOKEN_ENV),
-	}
 
 
 	Describe("with FBC happy path", Label("fbcHappyPath"), func() {
 		var component *appservice.Component
 		BeforeAll(func() {
-			devFw, err = framework.NewFrameworkWithTimeout(
-				devWorkspace,
-				time.Minute*60,
-				stageOptions,
-			)
-			Expect(err).NotTo(HaveOccurred())
+			devFw = newFramework(devWorkspace)
+			managedFw = newFramework(managedWorkspace)
 
-			managedFw, err = framework.NewFrameworkWithTimeout(
-				managedWorkspace,
-				time.Minute*60,
-				stageOptions,
-			)
-			Expect(err).NotTo(HaveOccurred())
 			managedNamespace = managedFw.UserNamespace
 
 			// Linking the build secret to the pipeline service account in dev namespace.
@@ -103,7 +86,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcApplicationName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			GinkgoWriter.Println("Application %s is created", fbcApplicationName)
+			GinkgoWriter.Println("Created application :", fbcApplicationName)
 
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcReleasePlanName, devNamespace, fbcApplicationName, managedNamespace, "true")
 			Expect(err).NotTo(HaveOccurred())
@@ -115,19 +98,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		})
 
 		AfterAll(func() {
-			devFw, err = framework.NewFrameworkWithTimeout(
-				devWorkspace,
-				time.Minute*60,
-				stageOptions,
-			)
-			Expect(err).NotTo(HaveOccurred())
-
-			managedFw, err = framework.NewFrameworkWithTimeout(
-				managedWorkspace,
-				time.Minute*60,
-				stageOptions,
-			)
-			Expect(err).NotTo(HaveOccurred())
+			devFw = newFramework(devWorkspace)
+			managedFw = newFramework(managedWorkspace)
 			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(fbcApplicationName, devNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
@@ -152,23 +124,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		var component *appservice.Component
 
 		BeforeAll(func() {
-			devFw, err = framework.NewFrameworkWithTimeout(
-				devWorkspace,
-				time.Minute*60,
-				stageOptions,
-			)
-			Expect(err).NotTo(HaveOccurred())
-
-			managedFw, err = framework.NewFrameworkWithTimeout(
-				managedWorkspace,
-				time.Minute*60,
-				stageOptions,
-			)
-			Expect(err).NotTo(HaveOccurred())
+			devFw = newFramework(devWorkspace)
+			managedFw = newFramework(managedWorkspace)
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcHotfixAppName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			GinkgoWriter.Println("Application %s is created", fbcHotfixAppName)
+			GinkgoWriter.Println("Created application :", fbcHotfixAppName)
 
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcHotfixRPName, devNamespace, fbcHotfixAppName, managedNamespace, "true")
 			Expect(err).NotTo(HaveOccurred())
@@ -179,19 +140,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		})
 
 		AfterAll(func() {
-			devFw, err = framework.NewFrameworkWithTimeout(
-				devWorkspace,
-				time.Minute*60,
-				stageOptions,
-			)
-			Expect(err).NotTo(HaveOccurred())
-
-			managedFw, err = framework.NewFrameworkWithTimeout(
-				managedWorkspace,
-				time.Minute*60,
-				stageOptions,
-			)
-			Expect(err).NotTo(HaveOccurred())
+			devFw = newFramework(devWorkspace)
+			managedFw = newFramework(managedWorkspace)
 			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(fbcHotfixAppName, devNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcHotfixECPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcHotfixRPAName, managedNamespace, false)).NotTo(HaveOccurred())
@@ -216,23 +166,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		var component *appservice.Component
 
 		BeforeAll(func() {
-			devFw, err = framework.NewFrameworkWithTimeout(
-				devWorkspace,
-				time.Minute*60,
-				stageOptions,
-			)
-			Expect(err).NotTo(HaveOccurred())
-
-			managedFw, err = framework.NewFrameworkWithTimeout(
-				managedWorkspace,
-				time.Minute*60,
-				stageOptions,
-			)
-			Expect(err).NotTo(HaveOccurred())
+			devFw = newFramework(devWorkspace)
+			managedFw = newFramework(managedWorkspace)
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcPreGAAppName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			GinkgoWriter.Println("Application %s is created", fbcPreGAAppName)
+			GinkgoWriter.Println("Created application :", fbcPreGAAppName)
 
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcPreGARPName, devNamespace, fbcPreGAAppName, managedNamespace, "true")
 			Expect(err).NotTo(HaveOccurred())
@@ -243,19 +182,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		})
 
 		AfterAll(func() {
-			devFw, err = framework.NewFrameworkWithTimeout(
-				devWorkspace,
-				time.Minute*60,
-				stageOptions,
-			)
-			Expect(err).NotTo(HaveOccurred())
-
-			managedFw, err = framework.NewFrameworkWithTimeout(
-				managedWorkspace,
-				time.Minute*60,
-				stageOptions,
-			)
-			Expect(err).NotTo(HaveOccurred())
+			devFw = newFramework(devWorkspace)
+			managedFw = newFramework(managedWorkspace)
 			if !CurrentSpecReport().Failed() {
 				Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(fbcPreGAAppName, devNamespace, false)).NotTo(HaveOccurred())
 				Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcPreGAECPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
@@ -269,7 +197,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			})
 
 			It("verifies the fbc release pipelinerun is running and succeeds", func() {
-					assertReleasePipelineRunSucceeded(*devFw, *managedFw, devNamespace, managedNamespace, fbcPreGAAppName, component)
+				assertReleasePipelineRunSucceeded(*devFw, *managedFw, devNamespace, managedNamespace, fbcPreGAAppName, component)
 			})
 
 			It("verifies release CR completed and set succeeded.", func() {
@@ -300,28 +228,18 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw framework.Framework, dev
 		return nil
 	}, 5 * time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for Snapshot and Release being created")
 
-	stageOptions := utils.Options{
-		ToolchainApiUrl: os.Getenv(constants.TOOLCHAIN_API_URL_ENV),
-		KeycloakUrl:     os.Getenv(constants.KEYLOAK_URL_ENV),
-		OfflineToken:    os.Getenv(constants.OFFLINE_TOKEN_ENV),
-	}
-	mFw, err := framework.NewFrameworkWithTimeout(
-		managedWorkspace,
-		time.Minute*60,
-		stageOptions,
-	)
-	Expect(err).NotTo(HaveOccurred())
+	mFw := newFramework(managedWorkspace)
 	Eventually(func() error {
 		releasePr, err = mFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(mFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 		if err != nil {
 			return err
 		}
 		Expect(err).ShouldNot(HaveOccurred())
+		GinkgoWriter.Println("Release PR: ", releasePr.Name)
 
 		if !releasePr.IsDone() {
 			return fmt.Errorf("release pipelinerun %s in namespace %s did not finish yet", releasePr.Name, releasePr.Namespace)
 		}
-		GinkgoWriter.Println("Release PR is Done")
 		Expect(tekton.HasPipelineRunSucceeded(releasePr)).To(BeTrue(), fmt.Sprintf("release pipelinerun %s/%s did not succeed", releasePr.GetNamespace(), releasePr.GetName()))
 		GinkgoWriter.Println("Release PR succeeded")
 		return nil
@@ -329,19 +247,7 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw framework.Framework, dev
 }
 
 func assertReleaseCRSucceeded(devFw framework.Framework, devNamespace, managedNamespace, fbcAppName string, component *appservice.Component) {
-	GinkgoWriter.Println("snapshot: ", snapshot.Name)
-
-	stageOptions := utils.Options{
-		ToolchainApiUrl: os.Getenv(constants.TOOLCHAIN_API_URL_ENV),
-		KeycloakUrl:     os.Getenv(constants.KEYLOAK_URL_ENV),
-		OfflineToken:    os.Getenv(constants.OFFLINE_TOKEN_ENV),
-	}
-	dFw, err := framework.NewFrameworkWithTimeout(
-			devWorkspace,
-			time.Minute*60,
-			stageOptions,
-	)
-	Expect(err).NotTo(HaveOccurred())
+	dFw := newFramework(devWorkspace)
 	Eventually(func() error {
 		releaseCR, err = dFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 		if err != nil {
@@ -419,4 +325,20 @@ func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framew
 		Raw: data,
 	})
 	Expect(err).NotTo(HaveOccurred())
+}
+
+func newFramework(workspace string) *framework.Framework {
+
+	stageOptions := utils.Options{
+		ToolchainApiUrl: os.Getenv(constants.TOOLCHAIN_API_URL_ENV),
+		KeycloakUrl:     os.Getenv(constants.KEYLOAK_URL_ENV),
+		OfflineToken:    os.Getenv(constants.OFFLINE_TOKEN_ENV),
+	}
+	fw, err := framework.NewFrameworkWithTimeout(
+			workspace,
+			time.Minute*60,
+			stageOptions,
+	)
+	Expect(err).NotTo(HaveOccurred())
+	return fw
 }
