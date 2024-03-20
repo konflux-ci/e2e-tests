@@ -58,6 +58,8 @@ var (
 	IbmVpc                       = "us-east-default-vpc"
 	multiPlatformProjectGitUrl   = utils.GetEnv("MULTI_PLATFORM_TEST_REPO_URL", "https://github.com/devfile-samples/devfile-sample-go-basic")
 	multiPlatformProjectRevision = utils.GetEnv("MULTI_PLATFORM_TEST_REPO_REVISION", "c713067b0e65fb3de50d1f7c457eb51c2ab0dbb0")
+	timeout                      = 20 * time.Minute
+	interval                     = 10 * time.Second
 )
 
 var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E tests", Label("multi-platform"), func() {
@@ -71,7 +73,6 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 
 		var testNamespace, applicationName, componentName, multiPlatformSecretName, host, userDir string
 		var component *appservice.Component
-		var timeout, interval time.Duration
 
 		AfterAll(func() {
 			// Cleanup aws secet and host-config
@@ -106,80 +107,18 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			err = createBuildPipelineSelector(f, testNamespace, "ARM64")
 			Expect(err).ShouldNot(HaveOccurred())
 
-			timeout = time.Minute * 20
-			interval = time.Second * 10
-
-			applicationName = fmt.Sprintf("multi-platform-suite-application-%s", util.GenerateRandomString(4))
-			app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
-				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
-			)
-
-			componentName = fmt.Sprintf("multi-platform-suite-component-%s", util.GenerateRandomString(4))
-
-			// Create a component with Git Source URL being defined
-			componentObj := appservice.ComponentSpec{
-				ComponentName: componentName,
-				Source: appservice.ComponentSource{
-					ComponentSourceUnion: appservice.ComponentSourceUnion{
-						GitSource: &appservice.GitSource{
-							URL:      multiPlatformProjectGitUrl,
-							Revision: multiPlatformProjectRevision,
-						},
-					},
-				},
-			}
-			component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, map[string]string{})
-			Expect(err).ShouldNot(HaveOccurred())
+			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace)
 		})
 
 		When("the Component with multi-platform-build is created", func() {
 			It("a PipelineRun is triggered", func() {
-				Eventually(func() error {
-					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-					if err != nil {
-						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s", testNamespace, componentName)
-						return err
-					}
-					if !pr.HasStarted() {
-						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
-					}
-					return nil
-				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
+				validatePipelineRunIsRunning(f, componentName, applicationName, testNamespace)
 			})
 
 			It("the build-container task from component pipelinerun is buildah-remote", func() {
-
-				Eventually(func() error {
-					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-					Expect(err).ShouldNot(HaveOccurred())
-
-					for _, chr := range pr.Status.ChildReferences {
-						taskRun := &pipeline.TaskRun{}
-						taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
-						err := f.AsKubeAdmin.CommonController.KubeRest().Get(context.TODO(), taskRunKey, taskRun)
-						Expect(err).ShouldNot(HaveOccurred())
-
-						prTrStatus := &pipeline.PipelineRunTaskRunStatus{
-							PipelineTaskName: chr.PipelineTaskName,
-							Status:           &taskRun.Status,
-						}
-
-						if chr.PipelineTaskName == constants.BuildTaskRunName && prTrStatus.Status != nil && prTrStatus.Status.TaskSpec != nil && prTrStatus.Status.TaskSpec.Volumes != nil {
-							for _, vol := range prTrStatus.Status.TaskSpec.Volumes {
-								if vol.Secret != nil && strings.HasPrefix(vol.Secret.SecretName, "multi-platform-ssh-") {
-									multiPlatformSecretName = vol.Secret.SecretName
-									return nil
-								}
-							}
-						}
-					}
-					return fmt.Errorf("couldn't find a matching step buildah-remote or ssh secret attached as a volume in the task %s in PipelineRun %s/%s", constants.BuildTaskRunName, testNamespace, pr.GetName())
-				}, timeout, interval).Should(Succeed(), "timed out when verifying the buildah-remote image reference in pipelinerun")
+				_, multiPlatformSecretName = validateBuildContainerTaskIsBuildahRemote(f, componentName, applicationName, testNamespace)
 			})
 			It("The multi platform secret is populated", func() {
-
 				var secret *v1.Secret
 				Eventually(func() error {
 					secret, err = f.AsKubeAdmin.CommonController.GetSecret(testNamespace, multiPlatformSecretName)
@@ -202,10 +141,6 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 
 			It("that PipelineRun completes successfully", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
-				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-				Expect(err).ShouldNot(HaveOccurred())
-				//now delete it so it can't interfere with later test logic
-				Expect(f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.Name, testNamespace)).Should(Succeed())
 			})
 
 			It("test that cleanup happened successfully", func() {
@@ -249,7 +184,6 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 	Describe("aws dynamic allocation", Label("aws-dynamic"), func() {
 		var testNamespace, applicationName, componentName, multiPlatformSecretName, multiPlatformTaskName, dynamicInstanceTag, instanceId string
 		var component *appservice.Component
-		var timeout, interval time.Duration
 
 		AfterAll(func() {
 			// Cleanup aws&ssh secrets and host-config
@@ -285,19 +219,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			GinkgoWriter.Printf("Generated dynamic instance tag: %q\n", dynamicInstanceTag)
 
 			// Restart multi-platform-controller pod to reload configMap again
-			podList, err := f.AsKubeAdmin.CommonController.ListAllPods(ControllerNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
-			for i := range podList.Items {
-				podName := podList.Items[i].Name
-				if strings.HasPrefix(podName, ControllerNamespace) {
-					err := f.AsKubeAdmin.CommonController.DeletePod(podName, ControllerNamespace)
-					Expect(err).ShouldNot(HaveOccurred())
-				}
-			}
-			Expect(err).ShouldNot(HaveOccurred())
-
-			// sleep for 10 sec so that multi-platform-controller pod comes up
-			time.Sleep(10 * time.Second)
+			restartMultiPlatformControllerPod(f)
 
 			err = createConfigMapForDynamicInstance(f, dynamicInstanceTag)
 			Expect(err).ShouldNot(HaveOccurred())
@@ -308,102 +230,24 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			err = createBuildPipelineSelector(f, testNamespace, "ARM64")
 			Expect(err).ShouldNot(HaveOccurred())
 
-			timeout = time.Minute * 20
-			interval = time.Second * 10
-
-			applicationName = fmt.Sprintf("multi-platform-suite-application-%s", util.GenerateRandomString(4))
-			app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
-				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
-			)
-
-			componentName = fmt.Sprintf("multi-platform-suite-component-%s", util.GenerateRandomString(4))
-
-			// Create a component with Git Source URL being defined
-			componentObj := appservice.ComponentSpec{
-				ComponentName: componentName,
-				Source: appservice.ComponentSource{
-					ComponentSourceUnion: appservice.ComponentSourceUnion{
-						GitSource: &appservice.GitSource{
-							URL:      multiPlatformProjectGitUrl,
-							Revision: multiPlatformProjectRevision,
-						},
-					},
-				},
-			}
-			component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, map[string]string{})
-			Expect(err).ShouldNot(HaveOccurred())
+			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace)
 		})
 
 		When("the Component with multi-platform-build is created", func() {
 			It("a PipelineRun is triggered", func() {
-				Eventually(func() error {
-					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-					if err != nil {
-						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s", testNamespace, componentName)
-						return err
-					}
-					if !pr.HasStarted() {
-						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
-					}
-					return nil
-				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
+				validatePipelineRunIsRunning(f, componentName, applicationName, testNamespace)
 			})
 
 			It("the build-container task from component pipelinerun is buildah-remote", func() {
-				Eventually(func() error {
-					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-					Expect(err).ShouldNot(HaveOccurred())
-
-					for _, chr := range pr.Status.ChildReferences {
-						taskRun := &pipeline.TaskRun{}
-						taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
-						err := f.AsKubeAdmin.CommonController.KubeRest().Get(context.TODO(), taskRunKey, taskRun)
-						Expect(err).ShouldNot(HaveOccurred())
-
-						prTrStatus := &pipeline.PipelineRunTaskRunStatus{
-							PipelineTaskName: chr.PipelineTaskName,
-							Status:           &taskRun.Status,
-						}
-
-						if chr.PipelineTaskName == constants.BuildTaskRunName && prTrStatus.Status != nil && prTrStatus.Status.TaskSpec != nil && prTrStatus.Status.TaskSpec.Volumes != nil {
-							multiPlatformTaskName = chr.Name
-							for _, vol := range prTrStatus.Status.TaskSpec.Volumes {
-								if vol.Secret != nil && strings.HasPrefix(vol.Secret.SecretName, "multi-platform-ssh-") {
-									multiPlatformSecretName = vol.Secret.SecretName
-									return nil
-								}
-							}
-						}
-					}
-					return fmt.Errorf("couldn't find a matching step buildah-remote or ssh secret attached as a volume in the task %s in PipelineRun %s/%s", constants.BuildTaskRunName, testNamespace, pr.GetName())
-				}, timeout, interval).Should(Succeed(), "timed out when verifying the buildah-remote image reference in pipelinerun")
+				multiPlatformTaskName, multiPlatformSecretName = validateBuildContainerTaskIsBuildahRemote(f, componentName, applicationName, testNamespace)
 			})
 
 			It("The multi platform secret is populated", func() {
-				Eventually(func() error {
-					_, err := f.AsKubeAdmin.CommonController.GetSecret(testNamespace, multiPlatformSecretName)
-					if err != nil {
-						return err
-					}
-					return nil
-				}, timeout, interval).Should(Succeed(), "timed out when verifying the secret is created")
-
-				// Get the instance id from the task so that we can check during cleanup
-				taskRun, err := f.AsKubeDeveloper.TektonController.GetTaskRun(multiPlatformTaskName, testNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-				instanceId = taskRun.Annotations["build.appstudio.redhat.com/cloud-instance-id"]
-				GinkgoWriter.Printf("INSTANCE ID: %s\n", instanceId)
-				Expect(instanceId).ShouldNot(BeEmpty())
+				instanceId = validateMultiPlatformSecretIsPopulated(f, testNamespace, multiPlatformTaskName, multiPlatformSecretName)
 			})
 
 			It("that PipelineRun completes successfully", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
-				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-				Expect(err).ShouldNot(HaveOccurred())
-				//now delete it so it can't interfere with later test logic
-				Expect(f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.Name, testNamespace)).Should(Succeed())
 			})
 
 			It("check cleanup happened successfully", func() {
@@ -421,10 +265,9 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 
 		})
 	})
-	Describe("ibmz dynamic allocation", Label("ibmz-dynamic"), func() {
+	Describe("ibm system z dynamic allocation", Label("ibmz-dynamic"), func() {
 		var testNamespace, applicationName, componentName, multiPlatformSecretName, multiPlatformTaskName, dynamicInstanceTag, instanceId string
 		var component *appservice.Component
-		var timeout, interval time.Duration
 
 		AfterAll(func() {
 			//Cleanup ibm&ssh secrets and host-config
@@ -456,19 +299,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			Expect(testNamespace).NotTo(BeNil(), "failed to create sandbox user namespace")
 			Expect(err).ShouldNot(HaveOccurred())
 
-			// Restart multi-platform-controller pod to reload configMap again
-			podList, err := f.AsKubeAdmin.CommonController.ListAllPods(ControllerNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
-			for i := range podList.Items {
-				podName := podList.Items[i].Name
-				if strings.HasPrefix(podName, ControllerNamespace) {
-					err := f.AsKubeAdmin.CommonController.DeletePod(podName, ControllerNamespace)
-					Expect(err).ShouldNot(HaveOccurred())
-				}
-			}
-
-			//sleep for 10 sec so that multi-platform-controller pod comes up
-			time.Sleep(10 * time.Second)
+			restartMultiPlatformControllerPod(f)
 
 			dynamicInstanceTag = "ibmz-instance-" + util.GenerateRandomString(4)
 			err = createConfigMapForIbmZDynamicInstance(f, dynamicInstanceTag)
@@ -480,102 +311,24 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			err = createBuildPipelineSelector(f, testNamespace, "S390X")
 			Expect(err).ShouldNot(HaveOccurred())
 
-			timeout = time.Minute * 20
-			interval = time.Second * 10
-
-			applicationName = fmt.Sprintf("multi-platform-suite-application-%s", util.GenerateRandomString(4))
-			app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
-				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
-			)
-
-			componentName = fmt.Sprintf("multi-platform-suite-component-%s", util.GenerateRandomString(4))
-
-			// Create a component with Git Source URL being defined
-			componentObj := appservice.ComponentSpec{
-				ComponentName: componentName,
-				Source: appservice.ComponentSource{
-					ComponentSourceUnion: appservice.ComponentSourceUnion{
-						GitSource: &appservice.GitSource{
-							URL:      multiPlatformProjectGitUrl,
-							Revision: multiPlatformProjectRevision,
-						},
-					},
-				},
-			}
-			component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, map[string]string{})
-			Expect(err).ShouldNot(HaveOccurred())
+			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace)
 		})
 
 		When("the Component with multi-platform-build is created", func() {
 			It("a PipelineRun is triggered", func() {
-				Eventually(func() error {
-					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-					if err != nil {
-						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s", testNamespace, componentName)
-						return err
-					}
-					if !pr.HasStarted() {
-						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
-					}
-					return nil
-				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
+				validatePipelineRunIsRunning(f, componentName, applicationName, testNamespace)
 			})
 
 			It("the build-container task from component pipelinerun is buildah-remote", func() {
-				Eventually(func() error {
-					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-					Expect(err).ShouldNot(HaveOccurred())
-
-					for _, chr := range pr.Status.ChildReferences {
-						taskRun := &pipeline.TaskRun{}
-						taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
-						err := f.AsKubeAdmin.CommonController.KubeRest().Get(context.TODO(), taskRunKey, taskRun)
-						Expect(err).ShouldNot(HaveOccurred())
-
-						prTrStatus := &pipeline.PipelineRunTaskRunStatus{
-							PipelineTaskName: chr.PipelineTaskName,
-							Status:           &taskRun.Status,
-						}
-
-						if chr.PipelineTaskName == constants.BuildTaskRunName && prTrStatus.Status != nil && prTrStatus.Status.TaskSpec != nil && prTrStatus.Status.TaskSpec.Volumes != nil {
-							multiPlatformTaskName = chr.Name
-							for _, vol := range prTrStatus.Status.TaskSpec.Volumes {
-								if vol.Secret != nil && strings.HasPrefix(vol.Secret.SecretName, "multi-platform-ssh-") {
-									multiPlatformSecretName = vol.Secret.SecretName
-									return nil
-								}
-							}
-						}
-					}
-					return fmt.Errorf("couldn't find a matching step buildah-remote or ssh secret attached as a volume in the task %s in PipelineRun %s/%s", constants.BuildTaskRunName, testNamespace, pr.GetName())
-				}, timeout, interval).Should(Succeed(), "timed out when verifying the buildah-remote image reference in pipelinerun")
+				multiPlatformTaskName, multiPlatformSecretName = validateBuildContainerTaskIsBuildahRemote(f, componentName, applicationName, testNamespace)
 			})
 
 			It("The multi platform secret is populated", func() {
-				Eventually(func() error {
-					_, err := f.AsKubeAdmin.CommonController.GetSecret(testNamespace, multiPlatformSecretName)
-					if err != nil {
-						return err
-					}
-					return nil
-				}, timeout, interval).Should(Succeed(), "timed out when verifying the secret is created")
-
-				// Get the instance id from the task so that we can check during cleanup
-				taskRun, err := f.AsKubeDeveloper.TektonController.GetTaskRun(multiPlatformTaskName, testNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-				instanceId = taskRun.Annotations["build.appstudio.redhat.com/cloud-instance-id"]
-				GinkgoWriter.Printf("INSTANCE ID: %s\n", instanceId)
-				Expect(instanceId).ShouldNot(BeEmpty())
+				instanceId = validateMultiPlatformSecretIsPopulated(f, testNamespace, multiPlatformTaskName, multiPlatformSecretName)
 			})
 
 			It("that PipelineRun completes successfully", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
-				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-				Expect(err).ShouldNot(HaveOccurred())
-				//now delete it so it can't interfere with later test logic
-				Expect(f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.Name, testNamespace)).Should(Succeed())
 			})
 
 			It("check cleanup happened successfully", func() {
@@ -593,10 +346,9 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 
 		})
 	})
-	Describe("ibmp dynamic allocation", Label("ibmp-dynamic"), func() {
+	Describe("ibm power pc dynamic allocation", Label("ibmp-dynamic"), func() {
 		var testNamespace, applicationName, componentName, multiPlatformSecretName, multiPlatformTaskName, dynamicInstanceTag, instanceId string
 		var component *appservice.Component
-		var timeout, interval time.Duration
 
 		AfterAll(func() {
 			// Cleanup ibm key & ssh secrets and host-config
@@ -629,18 +381,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Restart multi-platform-controller pod to reload configMap again
-			podList, err := f.AsKubeAdmin.CommonController.ListAllPods(ControllerNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
-			for i := range podList.Items {
-				podName := podList.Items[i].Name
-				if strings.HasPrefix(podName, ControllerNamespace) {
-					err := f.AsKubeAdmin.CommonController.DeletePod(podName, ControllerNamespace)
-					Expect(err).ShouldNot(HaveOccurred())
-				}
-			}
-
-			//sleep for 10 sec so that multi-platform-controller pod comes up
-			time.Sleep(10 * time.Second)
+			restartMultiPlatformControllerPod(f)
 
 			dynamicInstanceTag = "ibmp-instance-" + util.GenerateRandomString(4)
 			err = createConfigMapForIbmPDynamicInstance(f, dynamicInstanceTag)
@@ -652,102 +393,24 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			err = createBuildPipelineSelector(f, testNamespace, "PPC64LE")
 			Expect(err).ShouldNot(HaveOccurred())
 
-			timeout = time.Minute * 20
-			interval = time.Second * 10
-
-			applicationName = fmt.Sprintf("multi-platform-suite-application-%s", util.GenerateRandomString(4))
-			app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
-				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
-			)
-
-			componentName = fmt.Sprintf("multi-platform-suite-component-%s", util.GenerateRandomString(4))
-
-			// Create a component with Git Source URL being defined
-			componentObj := appservice.ComponentSpec{
-				ComponentName: componentName,
-				Source: appservice.ComponentSource{
-					ComponentSourceUnion: appservice.ComponentSourceUnion{
-						GitSource: &appservice.GitSource{
-							URL:      multiPlatformProjectGitUrl,
-							Revision: multiPlatformProjectRevision,
-						},
-					},
-				},
-			}
-			component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, map[string]string{})
-			Expect(err).ShouldNot(HaveOccurred())
+			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace)
 		})
 
 		When("the Component with multi-platform-build is created", func() {
 			It("a PipelineRun is triggered", func() {
-				Eventually(func() error {
-					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-					if err != nil {
-						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s", testNamespace, componentName)
-						return err
-					}
-					if !pr.HasStarted() {
-						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
-					}
-					return nil
-				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
+				validatePipelineRunIsRunning(f, componentName, applicationName, testNamespace)
 			})
 
 			It("the build-container task from component pipelinerun is buildah-remote", func() {
-				Eventually(func() error {
-					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-					Expect(err).ShouldNot(HaveOccurred())
-
-					for _, chr := range pr.Status.ChildReferences {
-						taskRun := &pipeline.TaskRun{}
-						taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
-						err := f.AsKubeAdmin.CommonController.KubeRest().Get(context.TODO(), taskRunKey, taskRun)
-						Expect(err).ShouldNot(HaveOccurred())
-
-						prTrStatus := &pipeline.PipelineRunTaskRunStatus{
-							PipelineTaskName: chr.PipelineTaskName,
-							Status:           &taskRun.Status,
-						}
-
-						if chr.PipelineTaskName == constants.BuildTaskRunName && prTrStatus.Status != nil && prTrStatus.Status.TaskSpec != nil && prTrStatus.Status.TaskSpec.Volumes != nil {
-							multiPlatformTaskName = chr.Name
-							for _, vol := range prTrStatus.Status.TaskSpec.Volumes {
-								if vol.Secret != nil && strings.HasPrefix(vol.Secret.SecretName, "multi-platform-ssh-") {
-									multiPlatformSecretName = vol.Secret.SecretName
-									return nil
-								}
-							}
-						}
-					}
-					return fmt.Errorf("couldn't find a matching step buildah-remote or ssh secret attached as a volume in the task %s in PipelineRun %s/%s", constants.BuildTaskRunName, testNamespace, pr.GetName())
-				}, timeout, interval).Should(Succeed(), "timed out when verifying the buildah-remote image reference in pipelinerun")
+				multiPlatformTaskName, multiPlatformSecretName = validateBuildContainerTaskIsBuildahRemote(f, componentName, applicationName, testNamespace)
 			})
 
 			It("The multi platform secret is populated", func() {
-				Eventually(func() error {
-					_, err := f.AsKubeAdmin.CommonController.GetSecret(testNamespace, multiPlatformSecretName)
-					if err != nil {
-						return err
-					}
-					return nil
-				}, timeout, interval).Should(Succeed(), "timed out when verifying the secret is created")
-
-				// Get the instance id from the task so that we can check during cleanup
-				taskRun, err := f.AsKubeDeveloper.TektonController.GetTaskRun(multiPlatformTaskName, testNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-				instanceId = taskRun.Annotations["build.appstudio.redhat.com/cloud-instance-id"]
-				GinkgoWriter.Printf("INSTANCE ID: %s\n", instanceId)
-				Expect(instanceId).ShouldNot(BeEmpty())
+				instanceId = validateMultiPlatformSecretIsPopulated(f, testNamespace, multiPlatformTaskName, multiPlatformSecretName)
 			})
 
 			It("that PipelineRun completes successfully", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
-				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-				Expect(err).ShouldNot(HaveOccurred())
-				//now delete it so it can't interfere with later test logic
-				Expect(f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.Name, testNamespace)).Should(Succeed())
 			})
 
 			It("check cleanup happened successfully", func() {
@@ -766,6 +429,130 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 		})
 	})
 })
+
+func createApplicationAndComponent(f *framework.Framework, testNamespace string) (component *appservice.Component, applicationName, componentName string) {
+	applicationName = fmt.Sprintf("multi-platform-suite-application-%s", util.GenerateRandomString(4))
+	app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
+		Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
+	)
+
+	componentName = fmt.Sprintf("multi-platform-suite-component-%s", util.GenerateRandomString(4))
+
+	// Create a component with Git Source URL being defined
+	componentObj := appservice.ComponentSpec{
+		ComponentName: componentName,
+		Source: appservice.ComponentSource{
+			ComponentSourceUnion: appservice.ComponentSourceUnion{
+				GitSource: &appservice.GitSource{
+					URL:      multiPlatformProjectGitUrl,
+					Revision: multiPlatformProjectRevision,
+				},
+			},
+		},
+	}
+	component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, map[string]string{})
+	Expect(err).ShouldNot(HaveOccurred())
+	return
+}
+
+func validateMultiPlatformSecretIsPopulated(f *framework.Framework, testNamespace, multiPlatformTaskName, multiPlatformSecretName string) (instanceId string) {
+	Eventually(func() error {
+		_, err := f.AsKubeAdmin.CommonController.GetSecret(testNamespace, multiPlatformSecretName)
+		if err != nil {
+			return err
+		}
+		return nil
+	}, timeout, interval).Should(Succeed(), "timed out when verifying the secret is created")
+
+	// Get the instance id from the task so that we can check during cleanup
+	taskRun, err := f.AsKubeDeveloper.TektonController.GetTaskRun(multiPlatformTaskName, testNamespace)
+	Expect(err).ShouldNot(HaveOccurred())
+	instanceId = taskRun.Annotations["build.appstudio.redhat.com/cloud-instance-id"]
+	GinkgoWriter.Printf("INSTANCE ID: %s\n", instanceId)
+	Expect(instanceId).ShouldNot(BeEmpty())
+	return
+}
+
+func validateBuildContainerTaskIsBuildahRemote(f *framework.Framework, componentName, applicationName, testNamespace string) (multiPlatformTaskName, multiPlatformSecretName string) {
+	Eventually(func() error {
+		pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+		Expect(err).ShouldNot(HaveOccurred())
+
+		for _, chr := range pr.Status.ChildReferences {
+			taskRun := &pipeline.TaskRun{}
+			taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
+			err := f.AsKubeAdmin.CommonController.KubeRest().Get(context.TODO(), taskRunKey, taskRun)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			prTrStatus := &pipeline.PipelineRunTaskRunStatus{
+				PipelineTaskName: chr.PipelineTaskName,
+				Status:           &taskRun.Status,
+			}
+
+			if chr.PipelineTaskName == constants.BuildTaskRunName && prTrStatus.Status != nil && prTrStatus.Status.TaskSpec != nil && prTrStatus.Status.TaskSpec.Volumes != nil {
+				multiPlatformTaskName = chr.Name
+				for _, vol := range prTrStatus.Status.TaskSpec.Volumes {
+					if vol.Secret != nil && strings.HasPrefix(vol.Secret.SecretName, "multi-platform-ssh-") {
+						multiPlatformSecretName = vol.Secret.SecretName
+						return nil
+					}
+				}
+			}
+		}
+		return fmt.Errorf("couldn't find a matching step buildah-remote or ssh secret attached as a volume in the task %s in PipelineRun %s/%s", constants.BuildTaskRunName, testNamespace, pr.GetName())
+	}, timeout, interval).Should(Succeed(), "timed out when verifying the buildah-remote image reference in pipelinerun")
+	return
+}
+
+func validatePipelineRunIsRunning(f *framework.Framework, componentName, applicationName, testNamespace string) {
+	Eventually(func() error {
+		pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+		if err != nil {
+			GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s", testNamespace, componentName)
+			return err
+		}
+		if !pr.HasStarted() {
+			return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
+		}
+		return nil
+	}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
+}
+
+func restartMultiPlatformControllerPod(f *framework.Framework) {
+	// Restart multi-platform-controller pod to reload configMap again
+	podList, err := f.AsKubeAdmin.CommonController.ListAllPods(ControllerNamespace)
+	Expect(err).ShouldNot(HaveOccurred())
+	for i := range podList.Items {
+		podName := podList.Items[i].Name
+		if strings.HasPrefix(podName, ControllerNamespace) {
+			err := f.AsKubeAdmin.CommonController.DeletePod(podName, ControllerNamespace)
+			Expect(err).ShouldNot(HaveOccurred())
+		}
+	}
+	time.Sleep(10 * time.Second)
+	//check that multi-platform-controller pod is running
+	Eventually(func() (bool, error) {
+		podList, err := f.AsKubeAdmin.CommonController.ListAllPods(ControllerNamespace)
+		if err != nil {
+			return false, err
+		}
+		for i := range podList.Items {
+			podName := podList.Items[i].Name
+			if strings.HasPrefix(podName, ControllerNamespace) {
+				pod, err := f.AsKubeAdmin.CommonController.GetPod(ControllerNamespace, podName)
+				if err != nil {
+					return false, err
+				}
+				if pod.Status.Phase == v1.PodRunning {
+					return true, nil
+				}
+			}
+		}
+		return false, nil
+	}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "timed out while checking if the pod is running")
+}
 
 func pCloudId() string {
 	return strings.Split(strings.Split(CRN, "/")[1], ":")[1]
