@@ -3,7 +3,7 @@ module github.com/redhat-appstudio/e2e-tests
 go 1.20
 
 require (
-	github.com/argoproj/argo-cd/v2 v2.10.2
+	github.com/argoproj/argo-cd/v2 v2.10.4
 	github.com/avast/retry-go/v4 v4.3.3
 	github.com/aws/aws-sdk-go-v2 v1.24.1
 	github.com/aws/aws-sdk-go-v2/config v1.25.12
