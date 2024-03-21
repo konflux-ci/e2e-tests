@@ -355,6 +355,9 @@ func setup(cmd *cobra.Command, args []string) {
 	setKlogFlag(fs, "log_file", logFile.Name())
 	setKlogFlag(fs, "logtostderr", "false")
 	setKlogFlag(fs, "alsologtostderr", strconv.FormatBool(logConsole))
+	if verbose {
+		setKlogFlag(fs, "v", "5")
+	}
 
 	overallCount := numberOfUsers * threadCount
 
@@ -1032,6 +1035,8 @@ type ConcreteHandlerUsers struct {
 
 func (h *ConcreteHandlerUsers) Handle(ctx *JourneyContext) {
 	go func() {
+		klog.V(5).Infof("ConcreteHandlerUsers thread start")
+		defer klog.V(5).Infof("ConcreteHandlerUsers thread end")
 		defer ctx.innerThreadWG.Done()
 
 		for userIndex := 1; userIndex <= numberOfUsers; userIndex++ {
@@ -1095,6 +1100,8 @@ type ConcreteHandlerResources struct {
 
 func (h *ConcreteHandlerResources) Handle(ctx *JourneyContext) {
 	go func() {
+		klog.V(5).Infof("ConcreteHandlerResources thread start")
+		defer klog.V(5).Infof("ConcreteHandlerResources thread end")
 		defer ctx.innerThreadWG.Done()
 
 		for username := range ctx.ChUsers {
@@ -1144,6 +1151,8 @@ func (h *ConcreteHandlerResources) Handle(ctx *JourneyContext) {
 }
 
 func (h *ConcreteHandlerResources) handleApplicationCreation(ctx *JourneyContext, framework *framework.Framework, username, usernamespace, applicationName string) bool {
+	klog.V(5).Infof("handleApplicationCreation start username: %s, usernamespace: %s, applicationName: %s", username, usernamespace, applicationName)
+	defer klog.V(5).Infof("handleApplicationCreation end username: %s, usernamespace: %s, applicationName: %s", username, usernamespace, applicationName)
 
 	startTimeForApplication := time.Now()
 	_, err := framework.AsKubeDeveloper.HasController.CreateApplicationWithTimeout(applicationName, usernamespace, 60*time.Minute)
@@ -1213,6 +1222,8 @@ func (h ComponentSuccessHandler) HandleSuccess(ctx *JourneyContext, componentNam
 }
 
 func handleCondition(condition metav1.Condition, ctx *JourneyContext, name string, creationDetails CreationDetails, conditionDetails ConditionDetails, successHandler SuccessHandler) (bool, error) {
+	klog.V(5).Infof("handleCondition start name: %s, creationDetails: %s, conditionDetails: %s, condition: %s", name, creationDetails, conditionDetails, condition)
+	defer klog.V(5).Infof("handleCondition end name: %s, creationDetails: %s, conditionDetails: %s, condition: %s", name, creationDetails, conditionDetails, condition)
 
 	if condition.Type == conditionDetails.Type && condition.Status == conditionDetails.Status {
 		actualCreationTimeInSeconds := CalculateActualCreationTimeInSeconds(condition.LastTransitionTime.Time, creationDetails.Timestamp, creationDetails.Duration)
@@ -1300,6 +1311,8 @@ func handleApplicationFailure(ctx *JourneyContext, ApplicationName string, usern
 
 // CreateIntegrationTestScenario creates a random its name with #combinations > 450K
 func (h *ConcreteHandlerResources) handleIntegrationTestScenarioCreation(ctx *JourneyContext, framework *framework.Framework, username, usernamespace, applicationName string) bool {
+	klog.V(5).Infof("handleIntegrationTestScenarioCreation start username: %s, usernamespace: %s, applicationName: %s", username, usernamespace, applicationName)
+	defer klog.V(5).Infof("handleIntegrationTestScenarioCreation end username: %s, usernamespace: %s, applicationName: %s", username, usernamespace, applicationName)
 
 	// Generate a random name with #combinations > 11M
 	itsName := fmt.Sprintf("%s-its-%s", username, util.GenerateRandomString(5))
@@ -1404,6 +1417,8 @@ func handleItsFailure(ctx *JourneyContext, applicationName string, err, conditio
 }
 
 func (h *ConcreteHandlerResources) handleCDQCreation(ctx *JourneyContext, framework *framework.Framework, username, usernamespace, applicationName string) (bool, *appstudioApi.ComponentDetectionQuery) {
+	klog.V(5).Infof("handleCDQCreation start username: %s, usernamespace: %s, applicationName: %s", username, usernamespace, applicationName)
+	defer klog.V(5).Infof("handleCDQCreation end username: %s, usernamespace: %s, applicationName: %s", username, usernamespace, applicationName)
 
 	// Generate a random name with #combinatireation(ctx *JourneyContext, framework *framework.Framework, username, usernamespace, applicationName string) (bool, *appstudioApi.ComponentDetectionQuery) {
 	// Generate a random name with #combinations > 11M
@@ -1511,6 +1526,8 @@ func handleCdqFailure(ctx *JourneyContext, applicationName string, err, conditio
 }
 
 func (h *ConcreteHandlerResources) handleComponentCreation(ctx *JourneyContext, framework *framework.Framework, username, usernamespace, applicationName string, cdq *appstudioApi.ComponentDetectionQuery) bool {
+	klog.V(5).Infof("handleComponentCreation start username: %s, usernamespace: %s, applicationName: %s", username, usernamespace, applicationName)
+	defer klog.V(5).Infof("handleComponentCreation end username: %s, usernamespace: %s, applicationName: %s", username, usernamespace, applicationName)
 
 	var (
 		startTimeForComponent time.Time
@@ -1519,16 +1536,19 @@ func (h *ConcreteHandlerResources) handleComponentCreation(ctx *JourneyContext, 
 	)
 
 	for _, compStub := range cdq.Status.ComponentDetected {
+
 		var annotationsMap map[string]string
 		if pipelineRequestConfigurePac {
 			annotationsMap = constants.ComponentPaCRequestAnnotation
 		} else {
 			annotationsMap = map[string]string{}
 		}
+		klog.V(5).Infof("framework.AsKubeDeveloper.HasController.CreateComponent start usernamespace: %s, applicationName: %s, componentsCounter: %d", usernamespace, applicationName, componentsCounter)
 		startTimeForComponent = time.Now()
 		compStub.ComponentStub.ComponentName = fmt.Sprintf("%s-comp-%d", applicationName, componentsCounter)
 		component, innerComponentName, err := framework.AsKubeDeveloper.HasController.CreateComponent(compStub.ComponentStub, usernamespace, "", "", applicationName, pipelineSkipInitialChecks, annotationsMap)
 		componentCreationTime = time.Since(startTimeForComponent)
+		klog.V(5).Infof("framework.AsKubeDeveloper.HasController.CreateComponent end usernamespace: %s, applicationName: %s, componentsCounter: %d", usernamespace, applicationName, componentsCounter)
 
 		if err != nil {
 			logError(14, fmt.Sprintf("Unable to create the Component %s: %v", innerComponentName, err))
@@ -1571,6 +1591,8 @@ func (h *ConcreteHandlerResources) handleComponentCreation(ctx *JourneyContext, 
 }
 
 func (h *ConcreteHandlerResources) validateComponent(ctx *JourneyContext, framework *framework.Framework, componentName, applicationName, username, usernamespace string, componentCreationTime time.Duration) bool {
+	klog.V(5).Infof("validateComponent start username: %s, usernamespace: %s, applicationName: %s, componentName: %s", username, usernamespace, applicationName, componentName)
+	defer klog.V(5).Infof("validateComponent end username: %s, usernamespace: %s, applicationName: %s, componentName: %s", username, usernamespace, applicationName, componentName)
 
 	componentValidationInterval := time.Second * 20
 	componentValidationTimeout := time.Minute * 30
@@ -1647,6 +1669,8 @@ type ConcreteHandlerPipelines struct {
 func (h *ConcreteHandlerPipelines) Handle(ctx *JourneyContext) {
 	if waitPipelines {
 		go func() {
+			klog.V(5).Infof("ConcreteHandlerPipelines thread start")
+			defer klog.V(5).Infof("ConcreteHandlerPipelines thread end")
 			defer ctx.innerThreadWG.Done()
 
 			chIntegrationTestsPipelines := ctx.ChIntegrationTestsPipelines
@@ -1663,6 +1687,7 @@ func (h *ConcreteHandlerPipelines) Handle(ctx *JourneyContext) {
 
 				for _, applicationName := range ctx.userAppsCompsMap.GetUserApps(username) {
 					for _, componentName := range ctx.userAppsCompsMap.GetAppComps(username, applicationName) {
+						klog.V(5).Infof("ConcreteHandlerPipelines validating %s - %s - %s\n", username, applicationName, componentName)
 						h.validatePipeline(ctx, framework, componentName, applicationName, username, usernamespace)
 					}
 				}
@@ -1670,6 +1695,8 @@ func (h *ConcreteHandlerPipelines) Handle(ctx *JourneyContext) {
 			}
 			close(chIntegrationTestsPipelines)
 		}()
+	} else {
+		klog.V(5).Infof("ConcreteHandlerPipelines skipped")
 	}
 
 	// After calling ConcreteHandlerPipelines's logic, trigger the next handler in a new goroutine
@@ -1679,6 +1706,8 @@ func (h *ConcreteHandlerPipelines) Handle(ctx *JourneyContext) {
 }
 
 func (h *ConcreteHandlerPipelines) validatePipeline(ctx *JourneyContext, framework *framework.Framework, componentName, applicationName, username, usernamespace string) {
+	klog.V(5).Infof("validatePipeline start username: %s, usernamespace: %s, applicationName: %s, componentName: %s", username, usernamespace, applicationName, componentName)
+	defer klog.V(5).Infof("validatePipeline end username: %s, usernamespace: %s, applicationName: %s, componentName: %s", username, usernamespace, applicationName, componentName)
 
 	pipelineCreatedRetryInterval := time.Second * 20
 	pipelineCreatedTimeout := time.Minute * 30
@@ -1745,6 +1774,8 @@ func (h *ConcreteHandlerPipelines) validatePipeline(ctx *JourneyContext, framewo
 }
 
 func (h *ConcreteHandlerPipelines) validatePipelineCreation(ctx *JourneyContext, framework *framework.Framework, componentName, applicationName, usernamespace string, pipelineCreatedRetryInterval, pipelineCreatedTimeout time.Duration) (error, string) {
+	klog.V(5).Infof("validatePipelineCreation start usernamespace: %s, applicationName: %s, componentName: %s", usernamespace, applicationName, componentName)
+	defer klog.V(5).Infof("validatePipelineCreation end usernamespace: %s, applicationName: %s, componentName: %s", usernamespace, applicationName, componentName)
 
 	var pipelineRun *pipeline.PipelineRun
 
@@ -1790,6 +1821,8 @@ type ConcreteHandlerItsPipelines struct {
 func (h *ConcreteHandlerItsPipelines) Handle(ctx *JourneyContext) {
 	if waitIntegrationTestsPipelines {
 		go func() {
+			klog.V(5).Infof("ConcreteHandlerItsPipelines thread start")
+			defer klog.V(5).Infof("ConcreteHandlerItsPipelines thread end")
 			defer ctx.innerThreadWG.Done()
 			chDeployments := ctx.ChDeployments
 
@@ -1800,6 +1833,8 @@ func (h *ConcreteHandlerItsPipelines) Handle(ctx *JourneyContext) {
 			}
 			close(chDeployments)
 		}()
+	} else {
+		klog.V(5).Infof("ConcreteHandlerItsPipelines skipped")
 	}
 
 	// After calling ConcreteHandlerItsPipelines's logic, trigger the next handler in a new goroutine
@@ -1927,6 +1962,8 @@ type ConcreteHandlerDeployments struct {
 func (h *ConcreteHandlerDeployments) Handle(ctx *JourneyContext) {
 	if waitDeployments {
 		go func() {
+			klog.V(5).Infof("ConcreteHandlerDeployments thread start")
+			defer klog.V(5).Infof("ConcreteHandlerDeployments thread end")
 			defer ctx.innerThreadWG.Done()
 
 			for username := range ctx.ChDeployments {
@@ -1937,6 +1974,8 @@ func (h *ConcreteHandlerDeployments) Handle(ctx *JourneyContext) {
 				h.validateDeployment(ctx, framework, applicationName, username)
 			}
 		}()
+	} else {
+		klog.V(5).Infof("ConcreteHandlerDeployments skipped")
 	}
 
 	// After calling ConcreteHandlerDeployments's logic, trigger the next handler in a new goroutine
