@@ -13,6 +13,7 @@ const (
 	ReleaseStrategyPolicy        string = "policy"
 
 	RedhatAppstudioUserSecret            string = "hacbs-release-tests-token"
+	RedhatAppstudioQESecret              string = "redhat-appstudio-qe-bot-token"
 	HacbsReleaseTestsTokenSecret         string = "redhat-appstudio-registry-pull-secret"
 	PublicSecretNameAuth                 string = "cosign-public-key"
 	ReleasePipelineServiceAccountDefault string = "release-service-account"
