@@ -6,6 +6,10 @@ output_dir="${OUTPUT_DIR:-.}"
 export TEKTON_PERF_PROFILE_CPU_PERIOD=${TEKTON_PERF_PROFILE_CPU_PERIOD:-${THRESHOLD:-300}}
 USER_PREFIX=${USER_PREFIX:-testuser}
 
+OPENSHIFT_API="${OPENSHIFT_API:-$(yq '.clusters[0].cluster.server' "$KUBECONFIG")}"
+OPENSHIFT_USERNAME="${OPENSHIFT_USERNAME:-kubeadmin}"
+OPENSHIFT_PASSWORD="${OPENSHIFT_PASSWORD:-$(cat "$KUBEADMIN_PASSWORD_FILE")}"
+
 load_test() {
     local threads iteration index iteration_index
     threads=${1:-1}
@@ -45,6 +49,8 @@ load_test() {
             echo $! >"$output_dir/$file.pid"
         done
     fi
+    rm -rvf "$output_dir/load-test.json"
+    rm -rvf "$output_dir/load-test.log"
     go run loadtest.go \
         --component-repo "${COMPONENT_REPO:-https://github.com/nodeshift-starters/devfile-sample.git}" \
         --username "$USER_PREFIX-$index" \
@@ -61,7 +67,7 @@ load_test() {
         --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}"
     if [ "${TEKTON_PERF_ENABLE_CPU_PROFILING:-}" == "true" ] || [ "${TEKTON_PERF_ENABLE_MEMORY_PROFILING:-}" == "true" ]; then
         echo "Waiting for the Tekton profiling to finish up to ${TEKTON_PERF_PROFILE_CPU_PERIOD}s"
-        for pid_file in $(find $output_dir -name 'tekton*.pid'); do
+        for pid_file in $(find "$output_dir" -name 'tekton*.pid'); do
             wait "$(cat "$pid_file")"
             rm -rvf "$pid_file"
         done
@@ -88,9 +94,9 @@ remove_finalizers() {
     res=$1
     while [ "$(oc get "$res" -A -o json | jq -rc '.items[] | select(.metadata.namespace | startswith("'"$USER_PREFIX"'"))' | wc -l)" != "0" ]; do
         echo "## Removing finalizers for all $res"
-        while read line; do
+        while read -r line; do
             echo "$line '{\"metadata\":{\"finalizers\":[]}}' --type=merge;"
-        done <<<$(oc get "$res" -A -o json | jq -rc '.items[] | select(.metadata.namespace | startswith("'"$USER_PREFIX"'")) | "oc patch '"$res"' " + .metadata.name + " -n " + .metadata.namespace + " -p "') | bash -s
+        done <<<"$(oc get "$res" -A -o json | jq -rc '.items[] | select(.metadata.namespace | startswith("'"$USER_PREFIX"'")) | "oc patch '"$res"' " + .metadata.name + " -n " + .metadata.namespace + " -p "')" | bash -s
     done
 }
 
@@ -134,16 +140,18 @@ max_concurrency() {
         IFS="," read -r -a maxConcurrencySteps <<<"$(echo "${MAX_CONCURRENCY_STEPS:-1\ 5\ 10\ 25\ 50\ 100\ 150\ 200}" | sed 's/ /,/g')"
         maxThreads=${MAX_THREADS:-10}
         threshold=${THRESHOLD:-300}
-        echo '{"startTimestamp":"'$(date +%FT%T%:z)'", "maxThreads": '"$maxThreads"', "maxConcurrencySteps": "'"${maxConcurrencySteps[*]}"'", "threshold": '"$threshold"', "maxConcurrencyReached": 0, "computedConcurrency": 0, "workloadKPI": 0, "endTimestamp": "", "errorsTotal": -1}' | jq >"$output"
+        echo '{"startTimestamp":"'"$(date +%FT%T%:z)"'", "maxThreads": '"$maxThreads"', "maxConcurrencySteps": "'"${maxConcurrencySteps[*]}"'", "threshold": '"$threshold"', "maxConcurrencyReached": 0, "computedConcurrency": 0, "workloadKPI": 0, "endTimestamp": "", "errorsTotal": -1}' | jq >"$output"
         iteration=0
         for t in "${maxConcurrencySteps[@]}"; do
             iteration="$((iteration + 1))"
             if (("$t" > "$maxThreads")); then
                 break
             fi
+            oc login "$OPENSHIFT_API" -u "$OPENSHIFT_USERNAME" -p "$OPENSHIFT_PASSWORD"
             clean_namespaces
             load_test "$t" "$iteration"
             iteration_index="$(printf "%04d" "$iteration")-$(printf "%04d" "$t")"
+            jq ".metadata.\"max-concurrency\".iteration = \"$(printf "%04d" "$iteration")\"" "$output_dir/load-tests.json" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output_dir/load-tests.json"
             cp -vf "$output_dir/load-tests.json" "$output_dir/load-tests.max-concurrency.$iteration_index.json"
             cp -vf "$output_dir/load-tests.log" "$output_dir/load-tests.max-concurrency.$iteration_index.log"
             workloadKPI=$(jq '.workloadKPI' "$output_dir/load-tests.json")
@@ -158,7 +166,7 @@ max_concurrency() {
                 jq ".maxConcurrencyReached = $t" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
                 jq ".workloadKPI = $workloadKPI" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
                 jq ".computedConcurrency = $t" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
-                jq '.endTimestamp = "'$(date +%FT%T%:z)'"' "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
+                jq '.endTimestamp = "'"$(date +%FT%T%:z)"'"' "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
                 errorsTotal=$(jq '.errorsTotal' "$output_dir/load-tests.json")
                 jq ".errorsTotal = $errorsTotal" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
             fi
