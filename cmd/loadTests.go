@@ -34,20 +34,18 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-
-
 type UserAppsCompsMap struct {
 	mutex sync.RWMutex
 	Users map[string]*UserInfo
 }
 
 type UserInfo struct {
-	Framework framework.Framework
+	Framework    framework.Framework
 	Applications map[string]*AppInfo
 }
 
 type AppInfo struct {
-	Components []string
+	Components               []string
 	IntegrationTestScenarios map[string]*ItsInfo
 }
 
@@ -279,11 +277,9 @@ func (u *UserAppsCompsMap) GetIntegrationTestScenarios(userName, appName string)
 	return itss
 }
 
-
-
 var (
 	componentRepoUrl              string = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
-	componentsCount               int = 1
+	componentsCount               int    = 1
 	usernamePrefix                string = "testuser"
 	numberOfUsers                 int
 	testScenarioGitURL            string = "https://github.com/konflux-ci/integration-examples.git"
@@ -785,9 +781,9 @@ func setup(cmd *cobra.Command, args []string) {
 			IntegrationTestsPipelinesBar: IntegrationTestsPipelinesBar,
 			DeploymentsBar:               DeploymentsBar,
 			ChUsers:                      make(chan string, numberOfUsers),
-			ChPipelines:                  make(chan string, numberOfUsers * componentsCount),
-			ChIntegrationTestsPipelines:  make(chan string, numberOfUsers * componentsCount),
-			ChDeployments:                make(chan string, numberOfUsers * componentsCount),
+			ChPipelines:                  make(chan string, numberOfUsers*componentsCount),
+			ChIntegrationTestsPipelines:  make(chan string, numberOfUsers*componentsCount),
+			ChDeployments:                make(chan string, numberOfUsers*componentsCount),
 			userAppsCompsMap:             UserAppsCompsMap{mutex: sync.RWMutex{}, Users: make(map[string]*UserInfo)},
 		}
 
@@ -1181,7 +1177,6 @@ func (h *ConcreteHandlerUsers) Handle(ctx *JourneyContext) {
 				ctx.ChUsers <- username
 			}
 
-
 			userCreationTime := time.Since(startTime)
 			UserCreationTimeSumPerThread[ctx.ThreadIndex] += userCreationTime
 			MetricsWrapper(MetricsController, metricsConstants.CollectorUsers, metricsConstants.MetricTypeGuage, metricsConstants.MetricUserCreationTimeGauge, userCreationTime.Seconds())
@@ -1304,7 +1299,7 @@ type SuccessHandler interface {
 	HandleSuccess(ctx *JourneyContext, name string, timeInSeconds float64)
 }
 
-type ApplicationSuccessHandler struct{
+type ApplicationSuccessHandler struct {
 	Username string
 }
 
@@ -1313,7 +1308,7 @@ func (h ApplicationSuccessHandler) HandleSuccess(ctx *JourneyContext, appName st
 }
 
 type ItsSuccessHandler struct {
-	Username string
+	Username    string
 	Application string
 }
 
@@ -1328,7 +1323,7 @@ func (h CdqSuccessHandler) HandleSuccess(ctx *JourneyContext, cdqName string, ti
 }
 
 type ComponentSuccessHandler struct {
-	Username string
+	Username    string
 	Application string
 }
 
@@ -1643,7 +1638,7 @@ func (h *ConcreteHandlerResources) handleComponentCreation(ctx *JourneyContext, 
 	var (
 		startTimeForComponent time.Time
 		componentCreationTime time.Duration
-		compStub appstudioApi.ComponentDetectionDescription
+		compStub              appstudioApi.ComponentDetectionDescription
 	)
 
 	compStubs := make([]appstudioApi.ComponentDetectionDescription, 0, len(cdq.Status.ComponentDetected))
@@ -1692,7 +1687,7 @@ func (h *ConcreteHandlerResources) handleComponentCreation(ctx *JourneyContext, 
 		}
 
 		validated := h.validateComponent(ctx, framework, component.Name, applicationName, username, usernamespace, componentCreationTime)
-		if ! validated {
+		if !validated {
 			logError(30, fmt.Sprintf("Validation of component name (%s) failed with: %v", component.Name, err))
 			return false
 		}
