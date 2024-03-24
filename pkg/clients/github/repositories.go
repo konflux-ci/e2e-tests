@@ -3,10 +3,40 @@ package github
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/go-github/v44/github"
 	. "github.com/onsi/ginkgo/v2"
 )
+
+func (g *Github) CheckIfReleaseExist(owner, repositoryName, releaseURL string) bool {
+	urlParts := strings.Split(releaseURL, "/")
+	tagName := urlParts[len(urlParts)-1]
+	_, _, err := g.client.Repositories.GetReleaseByTag(context.Background(), owner, repositoryName, tagName)
+	if err != nil {
+		GinkgoWriter.Printf("GetReleaseByTag %s returned error in repo %s : %v\n", tagName, repositoryName, err)
+		return false
+	}
+	GinkgoWriter.Printf("Release tag %s is found in repository %s \n", tagName, repositoryName)
+	return true
+}
+
+func (g *Github) DeleteRelease(owner, repositoryName, releaseURL string) bool {
+	urlParts := strings.Split(releaseURL, "/")
+	tagName := urlParts[len(urlParts)-1]
+	release, _, err := g.client.Repositories.GetReleaseByTag(context.Background(), owner, repositoryName, tagName)
+	if err != nil {
+		GinkgoWriter.Printf("GetReleaseByTag returned error in repo %s : %v\n", repositoryName, err)
+		return false
+	}
+
+	_, err = g.client.Repositories.DeleteRelease(context.Background(), owner, repositoryName, *release.ID)
+	if err != nil {
+		GinkgoWriter.Printf("DeleteRelease returned error: %v", err)
+	}
+	GinkgoWriter.Printf("Release tag %s is deleted in repository %s \n", tagName, repositoryName)
+	return true
+}
 
 func (g *Github) CheckIfRepositoryExist(repository string) bool {
 	_, resp, err := g.client.Repositories.Get(context.Background(), g.organization, repository)
