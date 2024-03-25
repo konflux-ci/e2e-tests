@@ -397,7 +397,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						verifyECTaskBundle := cm.Data["verify_ec_task_bundle"]
 						Expect(verifyECTaskBundle).ToNot(BeEmpty())
 
-						publicSecretName := "cosign-public-key"
+						publicSecretName := "cosign-public-key" // #nosec G101 -- the name of a secret is not a secret
 						publicKey, err := kubeadminClient.TektonController.GetTektonChainsPublicKey()
 						Expect(err).ToNot(HaveOccurred())
 
