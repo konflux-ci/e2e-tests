@@ -377,93 +377,98 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					Expect(err).NotTo(HaveOccurred())
 				})
 				AfterAll(func() {
-					if !CurrentSpecReport().Failed() {
+					if !CurrentSpecReport().Failed() && pr != nil {
 						Expect(kubeadminClient.TektonController.DeletePipelineRun(pr.GetName(), pr.GetNamespace())).To(Succeed())
 					}
 				})
 
-				It("verify-enterprise-contract check should pass", Label(buildTemplatesTestLabel), func() {
-					// If the Tekton Chains controller is busy, it may take longer than usual for it
-					// to sign and attest the image built in BeforeAll.
-					err = kubeadminClient.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)
-					Expect(err).ToNot(HaveOccurred())
+				// temp: run only one enterprise-contract check because of https://issues.redhat.com/browse/KFLUXBUGS-24
+				// (have to wait for Tekton Chains to generate the attestation before the check can pass)
+				if i == 0 {
+					It("verify-enterprise-contract check should pass", Label(buildTemplatesTestLabel), func() {
+						// If the Tekton Chains controller is busy, it may take longer than usual for it
+						// to sign and attest the image built in BeforeAll.
+						err = kubeadminClient.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)
+						Expect(err).ToNot(HaveOccurred())
 
-					cm, err := kubeadminClient.CommonController.GetConfigMap("ec-defaults", "enterprise-contract-service")
-					Expect(err).ToNot(HaveOccurred())
+						cm, err := kubeadminClient.CommonController.GetConfigMap("ec-defaults", "enterprise-contract-service")
+						Expect(err).ToNot(HaveOccurred())
 
-					verifyECTaskBundle := cm.Data["verify_ec_task_bundle"]
-					Expect(verifyECTaskBundle).ToNot(BeEmpty())
+						verifyECTaskBundle := cm.Data["verify_ec_task_bundle"]
+						Expect(verifyECTaskBundle).ToNot(BeEmpty())
 
-					publicSecretName := "cosign-public-key"
-					publicKey, err := kubeadminClient.TektonController.GetTektonChainsPublicKey()
-					Expect(err).ToNot(HaveOccurred())
+						publicSecretName := "cosign-public-key"
+						publicKey, err := kubeadminClient.TektonController.GetTektonChainsPublicKey()
+						Expect(err).ToNot(HaveOccurred())
 
-					Expect(kubeadminClient.TektonController.CreateOrUpdateSigningSecret(
-						publicKey, publicSecretName, testNamespace)).To(Succeed())
+						Expect(kubeadminClient.TektonController.CreateOrUpdateSigningSecret(
+							publicKey, publicSecretName, testNamespace)).To(Succeed())
 
-					defaultECP, err := kubeadminClient.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
-					Expect(err).NotTo(HaveOccurred())
+						defaultECP, err := kubeadminClient.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+						Expect(err).NotTo(HaveOccurred())
 
-					policy := contract.PolicySpecWithSourceConfig(
-						defaultECP.Spec,
-						ecp.SourceConfig{
-							Include: []string{"@slsa3"},
-							Exclude: []string{"cve"},
-						},
-					)
-					Expect(kubeadminClient.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
+						policy := contract.PolicySpecWithSourceConfig(
+							defaultECP.Spec,
+							ecp.SourceConfig{
+								Include: []string{"@slsa3"},
+								Exclude: []string{"cve"},
+							},
+						)
+						Expect(kubeadminClient.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
 
-					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
-					Expect(err).ToNot(HaveOccurred())
+						pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
+						Expect(err).ToNot(HaveOccurred())
 
-					revision := pipelineRun.Annotations["build.appstudio.redhat.com/commit_sha"]
-					Expect(revision).ToNot(BeEmpty())
+						revision := pipelineRun.Annotations["build.appstudio.redhat.com/commit_sha"]
+						Expect(revision).ToNot(BeEmpty())
 
-					generator := tekton.VerifyEnterpriseContract{
-						Snapshot: v1alpha1.SnapshotSpec{
-							Application: applicationName,
-							Components: []v1alpha1.SnapshotComponent{
-								{
-									Name:           componentNames[i],
-									ContainerImage: imageWithDigest,
-									Source: v1alpha1.ComponentSource{
-										ComponentSourceUnion: v1alpha1.ComponentSourceUnion{
-											GitSource: &v1alpha1.GitSource{
-												URL:      gitUrl,
-												Revision: revision,
+						generator := tekton.VerifyEnterpriseContract{
+							Snapshot: v1alpha1.SnapshotSpec{
+								Application: applicationName,
+								Components: []v1alpha1.SnapshotComponent{
+									{
+										Name:           componentNames[i],
+										ContainerImage: imageWithDigest,
+										Source: v1alpha1.ComponentSource{
+											ComponentSourceUnion: v1alpha1.ComponentSourceUnion{
+												GitSource: &v1alpha1.GitSource{
+													URL:      gitUrl,
+													Revision: revision,
+												},
 											},
 										},
 									},
 								},
 							},
-						},
-						TaskBundle:          verifyECTaskBundle,
-						Name:                "verify-enterprise-contract",
-						Namespace:           testNamespace,
-						PolicyConfiguration: "ec-policy",
-						PublicKey:           fmt.Sprintf("k8s://%s/%s", testNamespace, publicSecretName),
-						Strict:              true,
-						EffectiveTime:       "now",
-						IgnoreRekor:         true,
-					}
+							TaskBundle:          verifyECTaskBundle,
+							Name:                "verify-enterprise-contract",
+							Namespace:           testNamespace,
+							PolicyConfiguration: "ec-policy",
+							PublicKey:           fmt.Sprintf("k8s://%s/%s", testNamespace, publicSecretName),
+							Strict:              true,
+							EffectiveTime:       "now",
+							IgnoreRekor:         true,
+						}
 
-					pr, err = kubeadminClient.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
-					Expect(err).NotTo(HaveOccurred())
+						pr, err = kubeadminClient.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
+						Expect(err).NotTo(HaveOccurred())
 
-					Expect(kubeadminClient.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(Succeed())
+						Expect(kubeadminClient.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(Succeed())
 
-					pr, err = kubeadminClient.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
-					Expect(err).NotTo(HaveOccurred())
+						pr, err = kubeadminClient.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
+						Expect(err).NotTo(HaveOccurred())
 
-					tr, err := kubeadminClient.TektonController.GetTaskRunStatus(kubeadminClient.CommonController.KubeRest(), pr, "verify-enterprise-contract")
-					Expect(err).NotTo(HaveOccurred())
-					Expect(tekton.DidTaskRunSucceed(tr)).To(BeTrue())
-					Expect(tr.Status.TaskRunStatusFields.Results).Should(Or(
-						// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
-						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
-						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
-					))
-				})
+						tr, err := kubeadminClient.TektonController.GetTaskRunStatus(kubeadminClient.CommonController.KubeRest(), pr, "verify-enterprise-contract")
+						Expect(err).NotTo(HaveOccurred())
+						Expect(tekton.DidTaskRunSucceed(tr)).To(BeTrue())
+						Expect(tr.Status.TaskRunStatusFields.Results).Should(Or(
+							// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
+							ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
+							ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
+						))
+					})
+				}
+
 				It("contains non-empty sbom files", Label(buildTemplatesTestLabel), func() {
 					purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(imageWithDigest)
 					Expect(err).NotTo(HaveOccurred())
