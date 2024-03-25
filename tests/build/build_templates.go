@@ -93,7 +93,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				// Create a component with Git Source URL being defined
 				// using cdq since git ref is not known
 				cdq, err := kubeadminClient.HasController.CreateComponentDetectionQuery(componentName, testNamespace, gitUrl, "", "", "", false)
-				Expect(err).ShouldNot(HaveOccurred())
+				Expect(err).ShouldNot(HaveOccurred(),
+					fmt.Sprintf("failed to create CDQ for component %s in namespace %s: %s", componentName, testNamespace, gitUrl))
 				Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
 
 				for _, compDetected := range cdq.Status.ComponentDetected {
