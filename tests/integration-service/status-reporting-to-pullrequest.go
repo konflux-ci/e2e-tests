@@ -151,7 +151,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			})
 
 			It("eventually leads to the build PipelineRun's status reported at Checks tab", func() {
-				validateCheckRun(*f, componentName, checkrunConclusionSuccess, componentRepoNameForStatusReporting, prHeadSha, prNumber)
+				expectedCheckRunName := fmt.Sprintf("%s-%s", componentName, "on-pull-request")
+				validateCheckRun(*f, expectedCheckRunName, checkrunConclusionSuccess, componentRepoNameForStatusReporting, prHeadSha, prNumber)
 			})
 		})
 
