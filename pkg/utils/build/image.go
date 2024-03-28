@@ -6,6 +6,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	. "github.com/onsi/ginkgo/v2"
 
 	"github.com/openshift/library-go/pkg/image/reference"
@@ -64,4 +68,41 @@ func ImageFromPipelineRun(pipelineRun *pipeline.PipelineRun) (*imageInfo.Image, 
 		return nil, fmt.Errorf("error getting image from imageRetriver, %w", err)
 	}
 	return image, nil
+}
+
+// FetchImageConfig fetches image config from remote registry.
+// It uses the registry authentication credentials stored in default place ~/.docker/config.json
+func FetchImageConfig(imagePullspec string) (*v1.ConfigFile, error) {
+	ref, err := name.ParseReference(imagePullspec)
+	if err != nil {
+		return nil, err
+	}
+	// Fetch the manifest using default credentials.
+	descriptor, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	if err != nil {
+		return nil, err
+	}
+
+	image, err := descriptor.Image()
+	if err != nil {
+		return nil, err
+	}
+	configFile, err := image.ConfigFile()
+	if err != nil {
+		return nil, err
+	}
+	return configFile, nil
+}
+
+func FetchImageDigest(imagePullspec string) (string, error) {
+	ref, err := name.ParseReference(imagePullspec)
+	if err != nil {
+		return "", err
+	}
+	// Fetch the manifest using default credentials.
+	descriptor, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	if err != nil {
+		return "", err
+	}
+	return descriptor.Digest.Hex, nil
 }

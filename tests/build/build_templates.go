@@ -243,11 +243,16 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			})
 
 			It("check for source images if enabled in pipeline", Label(buildTemplatesTestLabel), func() {
+				if isFBCBuild(pr) {
+					GinkgoWriter.Println("This is FBC build, which does not require source container build.")
+					Skip(fmt.Sprintf("Skiping FBC build %s", pr.GetName()))
+					return
+				}
 
 				isSourceBuildEnabled := build.IsSourceBuildEnabled(pr)
 				GinkgoWriter.Printf("Source build is enabled: %v\n", isSourceBuildEnabled)
 				if !isSourceBuildEnabled {
-					Skip("Skiping source image check since it is not enabled in the pipeline")
+					Skip("Skipping source image check since it is not enabled in the pipeline")
 				}
 
 				//Check if hermetic enabled
@@ -278,9 +283,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					Name:      binaryImageRef.Name,
 					Tag:       fmt.Sprintf("%s.src", strings.Replace(tagInfo.ManifestDigest, ":", "-", 1)),
 				}
-
 				srcImage := srcImageRef.String()
-
 				tagExists, err := build.DoesTagExistsInQuay(srcImage)
 				Expect(err).ShouldNot(HaveOccurred(),
 					fmt.Sprintf("failed to check existence of source container image %s", srcImage))
@@ -298,6 +301,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(filesExists).To(BeTrue())
 
+				c := kubeadminClient.CommonController.KubeRest()
+				CheckParentSources(c, kubeadminClient.TektonController, pr)
 			})
 
 			When(fmt.Sprintf("Pipeline Results are stored for component with Git source URL %s", gitUrl), Label("pipeline"), func() {
