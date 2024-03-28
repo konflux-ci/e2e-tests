@@ -346,7 +346,8 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 
 		})
 	})
-	Describe("ibm power pc dynamic allocation", Label("ibmp-dynamic"), func() {
+	// TODO: Enable the test after https://issues.redhat.com/browse/KFLUXBUGS-1179 is fixed
+	Describe("ibm power pc dynamic allocation", Label("ibmp-dynamic"), Pending, func() {
 		var testNamespace, applicationName, componentName, multiPlatformSecretName, multiPlatformTaskName, dynamicInstanceTag, instanceId string
 		var component *appservice.Component
 
