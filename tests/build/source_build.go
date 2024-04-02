@@ -13,35 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type PipelineBuildInfo struct {
-	runtime  string
-	strategy string
-}
-
-func getPipelineBuildInfo(pr *pipeline.PipelineRun) PipelineBuildInfo {
-	var runtime, strategy string
-	var exists bool
-	labels := pr.GetLabels()
-	runtime, exists = labels["pipelines.openshift.io/runtime"]
-	Expect(exists).Should(BeTrue())
-	strategy, exists = labels["pipelines.openshift.io/strategy"]
-	Expect(exists).Should(BeTrue())
-	return PipelineBuildInfo{
-		runtime:  runtime,
-		strategy: strategy,
-	}
-}
-
-func isDockerBuild(pr *pipeline.PipelineRun) bool {
-	info := getPipelineBuildInfo(pr)
-	return info.runtime == "generic" && info.strategy == "docker"
-}
-
-func isFBCBuild(pr *pipeline.PipelineRun) bool {
-	info := getPipelineBuildInfo(pr)
-	return info.runtime == "fbc" && info.strategy == "fbc"
-}
-
 func ensureBaseImagesDigestsOrder(
 	c client.Client, tektonController *tekton.TektonController, pr *pipeline.PipelineRun, baseImagesDigests []string,
 ) *build.Dockerfile {
@@ -79,7 +50,7 @@ func CheckParentSources(c client.Client, tektonController *tekton.TektonControll
 	buildResult, err := build.ReadSourceBuildResult(c, tektonController, pr)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	if isDockerBuild(pr) {
+	if build.IsDockerBuild(pr) {
 		parsedDockerfile := ensureBaseImagesDigestsOrder(c, tektonController, pr, baseImagesDigests)
 		if parsedDockerfile.IsBuildFromScratch() {
 			Expect(buildResult.BaseImageSourceIncluded).Should(BeFalse())

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -36,15 +35,40 @@ type Vulnerabilities struct {
 	Low      int `json:"low"`
 }
 
+type PipelineBuildInfo struct {
+	runtime  string
+	strategy string
+}
+
+func GetPipelineBuildInfo(pr *pipeline.PipelineRun) PipelineBuildInfo {
+	labels := pr.GetLabels()
+	runtime := labels["pipelines.openshift.io/runtime"]
+	strategy := labels["pipelines.openshift.io/strategy"]
+	return PipelineBuildInfo{
+		runtime:  runtime,
+		strategy: strategy,
+	}
+}
+
+func IsDockerBuild(pr *pipeline.PipelineRun) bool {
+	info := GetPipelineBuildInfo(pr)
+	return info.runtime == "generic" && info.strategy == "docker"
+}
+
+func IsFBCBuild(pr *pipeline.PipelineRun) bool {
+	info := GetPipelineBuildInfo(pr)
+	return info.runtime == "fbc" && info.strategy == "fbc"
+}
+
 func ValidateBuildPipelineTestResults(pipelineRun *pipeline.PipelineRun, c crclient.Client) error {
 	for _, taskName := range taskNames {
 		// The inspect-image task is only required for FBC pipelines which we can infer by the component name
-		prLabels := pipelineRun.GetLabels()
-		componentName := prLabels["appstudio.openshift.io/component"]
-		if taskName == "inspect-image" && !strings.HasPrefix(strings.ToLower(componentName), "fbc-") {
+		isFBCBuild := IsFBCBuild(pipelineRun)
+
+		if !isFBCBuild && taskName == "inspect-image" {
 			continue
 		}
-		if taskName == "clair-scan" && !strings.HasPrefix(strings.ToLower(componentName), "fbc-") {
+		if isFBCBuild && (taskName == "clair-scan" || taskName == "clamav-scan") {
 			continue
 		}
 		results, err := fetchTaskRunResults(c, pipelineRun, taskName)

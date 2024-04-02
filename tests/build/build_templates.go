@@ -243,7 +243,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			})
 
 			It("check for source images if enabled in pipeline", Label(buildTemplatesTestLabel), func() {
-				if isFBCBuild(pr) {
+				if build.IsFBCBuild(pr) {
 					GinkgoWriter.Println("This is FBC build, which does not require source container build.")
 					Skip(fmt.Sprintf("Skiping FBC build %s", pr.GetName()))
 					return
