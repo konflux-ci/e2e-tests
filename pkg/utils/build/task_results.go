@@ -73,7 +73,7 @@ func ValidateBuildPipelineTestResults(pipelineRun *pipeline.PipelineRun, c crcli
 		if !isFBCBuild && taskName == "inspect-image" {
 			continue
 		}
-		if isFBCBuild && taskName == "clair-scan" {
+		if isFBCBuild && (taskName == "clair-scan" || taskName == "clamav-scan") {
 			continue
 		}
 		results, err := fetchTaskRunResults(c, pipelineRun, taskName)
