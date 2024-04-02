@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -42,13 +41,9 @@ type PipelineBuildInfo struct {
 }
 
 func GetPipelineBuildInfo(pr *pipeline.PipelineRun) PipelineBuildInfo {
-	var runtime, strategy string
-	var exists bool
 	labels := pr.GetLabels()
-	runtime, exists = labels["pipelines.openshift.io/runtime"]
-	Expect(exists).Should(BeTrue())
-	strategy, exists = labels["pipelines.openshift.io/strategy"]
-	Expect(exists).Should(BeTrue())
+	runtime := labels["pipelines.openshift.io/runtime"]
+	strategy := labels["pipelines.openshift.io/strategy"]
 	return PipelineBuildInfo{
 		runtime:  runtime,
 		strategy: strategy,
