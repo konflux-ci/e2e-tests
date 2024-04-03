@@ -3,7 +3,9 @@ module github.com/redhat-appstudio/e2e-tests
 go 1.20
 
 require (
-	github.com/argoproj/argo-cd/v2 v2.10.4
+	github.com/IBM/go-sdk-core/v5 v5.15.3
+	github.com/IBM/vpc-go-sdk v0.48.0
+	github.com/argoproj/argo-cd/v2 v2.10.5
 	github.com/avast/retry-go/v4 v4.3.3
 	github.com/aws/aws-sdk-go-v2 v1.24.1
 	github.com/aws/aws-sdk-go-v2/config v1.25.12
@@ -113,8 +115,6 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/CycloneDX/cyclonedx-go v0.7.1 // indirect
-	github.com/IBM/go-sdk-core/v5 v5.15.3 // indirect
-	github.com/IBM/vpc-go-sdk v0.48.0 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/Masterminds/semver/v3 v3.2.1 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
