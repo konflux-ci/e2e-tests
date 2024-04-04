@@ -333,7 +333,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					Expect(records.Record).NotTo(BeEmpty(), fmt.Sprintf("No records found for PipelineRun %s", pr.Name))
 				})
 
-				It("should have Pipeline Logs", func() {
+				// Temporarily disabled until https://issues.redhat.com/browse/SRVKP-4348 is resolved
+				It("should have Pipeline Logs", Pending, func() {
 					// Verify if result is stored in Database
 					// temporary logs due to RHTAPBUGS-213
 					logs, err := resultClient.GetLogs(testNamespace, string(pr.GetUID()))
