@@ -593,7 +593,7 @@ func SetupMultiPlatformTests() error {
 				currentBuildahTaskRef = lastBundle.Value.StringVal
 				klog.Infof("Found current task ref %s", currentBuildahTaskRef)
 				//TODO: current use pinned sha?
-				lastBundle.Value = *tektonapi.NewStructuredValues("quay.io/redhat-appstudio-tekton-catalog/task-buildah-remote:0.1")
+				lastBundle.Value = *tektonapi.NewStructuredValues("quay.io/redhat-appstudio-tekton-catalog/task-buildah-remote:0.1-ac185e95bbd7a25c1c4acf86995cbaf30eebedc4")
 				lastName.Value = *tektonapi.NewStructuredValues("buildah-remote")
 				t.Params = append(t.Params, tektonapi.Param{Name: "PLATFORM", Value: *tektonapi.NewStructuredValues("$(params.PLATFORM)")})
 				dockerPipelineObject.Spec.Params = append(dockerPipelineObject.PipelineSpec().Params, tektonapi.ParamSpec{Name: "PLATFORM", Default: tektonapi.NewStructuredValues(platformType)})
