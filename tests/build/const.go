@@ -26,6 +26,13 @@ const (
 	multiComponentDefaultBranch     = "main"
 	multiComponentGitRevision       = "0d1835404efb8ab7bb1ab5b5b82cda1ebfda4b25"
 
+	secretLookupGitSourceRepoOneName = "secret-lookup-sample-repo-one"
+	secretLookupDefaultBranchOne     = "main"
+	secretLookupGitRevisionOne       = "4b86bbfba19586f9ec8b648b3f47de3a5c62d460"
+	secretLookupGitSourceRepoTwoName = "secret-lookup-sample-repo-two"
+	secretLookupDefaultBranchTwo     = "main"
+	secretLookupGitRevisionTwo       = "9fd1358a22212d03ed938ea3bed8df98dddd2652"
+
 	annotationsTestGitSourceRepoName = "multi-stage-build-go-sample"
 	annotationsTestRevision          = "529f65798777a5fe145e33d58e1e91c4c03704a4"
 
@@ -53,4 +60,7 @@ var (
 	annotationsTestGitSourceURL     = fmt.Sprintf(githubUrlFormat, gihubOrg, annotationsTestGitSourceRepoName)
 	multiComponentGitSourceURL      = fmt.Sprintf(githubUrlFormat, gihubOrg, multiComponentGitSourceRepoName)
 	multiComponentContextDirs       = []string{"go-component", "python-component"}
+
+	secretLookupComponentOneGitSourceURL = fmt.Sprintf(githubUrlFormat, gihubOrg, secretLookupGitSourceRepoOneName)
+	secretLookupComponentTwoGitSourceURL = fmt.Sprintf(githubUrlFormat, gihubOrg, secretLookupGitSourceRepoTwoName)
 )

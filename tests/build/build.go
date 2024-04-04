@@ -309,6 +309,16 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		When("a new Component with specified custom branch is created", Label("custom-branch"), func() {
 			var outputImage string
 			BeforeAll(func() {
+
+				// create the build secret in the user namespace
+				secretName := "build-secret"
+				token := os.Getenv("GITHUB_TOKEN")
+				secretAnnotations := map[string]string{
+					"appstudio.redhat.com/scm.repository": os.Getenv("MY_GITHUB_ORG") + "/*",
+				}
+				err = createBuildSecret(f, secretName, secretAnnotations, token)
+				Expect(err).ShouldNot(HaveOccurred())
+
 				componentObj := appservice.ComponentSpec{
 					ComponentName: componentName,
 					Application:   applicationName,
@@ -879,7 +889,167 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		})
 
 	})
+	Describe("test build secret lookup", Label("pac-build", "secret-lookup"), Ordered, func() {
+		var testNamespace, applicationName, firstComponentBaseBranchName, secondComponentBaseBranchName, firstComponentName, secondComponentName, firstPacBranchName, secondPacBranchName string
+		BeforeAll(func() {
+			if os.Getenv(constants.SKIP_PAC_TESTS_ENV) == "true" {
+				Skip("Skipping this test due to configuration issue with Spray proxy")
+			}
+			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
+			Expect(err).NotTo(HaveOccurred())
+			testNamespace = f.UserNamespace
 
+			applicationName = fmt.Sprintf("build-secret-lookup-%s", util.GenerateRandomString(4))
+			app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
+				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
+			)
+
+			firstComponentBaseBranchName = fmt.Sprintf("component-one-base-%s", util.GenerateRandomString(6))
+			err = f.AsKubeAdmin.CommonController.Github.CreateRef(secretLookupGitSourceRepoOneName, secretLookupDefaultBranchOne, secretLookupGitRevisionOne, firstComponentBaseBranchName)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			secondComponentBaseBranchName = fmt.Sprintf("component-two-base-%s", util.GenerateRandomString(6))
+			err = f.AsKubeAdmin.CommonController.Github.CreateRef(secretLookupGitSourceRepoTwoName, secretLookupDefaultBranchTwo, secretLookupGitRevisionTwo, secondComponentBaseBranchName)
+			Expect(err).ShouldNot(HaveOccurred())
+
+		})
+
+		AfterAll(func() {
+			if !CurrentSpecReport().Failed() {
+				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
+				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
+			}
+
+			// Delete new branches created by PaC
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(secretLookupGitSourceRepoOneName, firstPacBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(secretLookupGitSourceRepoTwoName, secondPacBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+
+			// Delete the created first component base branch
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(secretLookupGitSourceRepoOneName, firstComponentBaseBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			// Delete the created second component base branch
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(secretLookupGitSourceRepoTwoName, secondComponentBaseBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+		})
+		When("two secrets are created", func() {
+			BeforeAll(func() {
+				// create the correct build secret for second component
+				secretName1 := "build-secret-1"
+				secretAnnotations := map[string]string{
+					"appstudio.redhat.com/scm.repository": os.Getenv("MY_GITHUB_ORG") + "/" + secretLookupGitSourceRepoTwoName,
+				}
+				token := os.Getenv("GITHUB_TOKEN")
+				err = createBuildSecret(f, secretName1, secretAnnotations, token)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				// create incorrect build-secret for the first component
+				secretName2 := "build-secret-2"
+				dummyToken := "ghp_dummy_secret"
+				err = createBuildSecret(f, secretName2, nil, dummyToken)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				// component names and pac branch names
+				firstComponentName = fmt.Sprintf("%s-%s", "component-one", util.GenerateRandomString(4))
+				secondComponentName = fmt.Sprintf("%s-%s", "component-two", util.GenerateRandomString(4))
+				firstPacBranchName = constants.PaCPullRequestBranchPrefix + firstComponentName
+				secondPacBranchName = constants.PaCPullRequestBranchPrefix + secondComponentName
+			})
+
+			It("creates first component", func() {
+				componentObj1 := appservice.ComponentSpec{
+					ComponentName: firstComponentName,
+					Application:   applicationName,
+					Source: appservice.ComponentSource{
+						ComponentSourceUnion: appservice.ComponentSourceUnion{
+							GitSource: &appservice.GitSource{
+								URL:      secretLookupComponentOneGitSourceURL,
+								Revision: firstComponentBaseBranchName,
+							},
+						},
+					},
+				}
+				_, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj1, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+			It("creates second component", func() {
+				componentObj2 := appservice.ComponentSpec{
+					ComponentName: secondComponentName,
+					Application:   applicationName,
+					Source: appservice.ComponentSource{
+						ComponentSourceUnion: appservice.ComponentSourceUnion{
+							GitSource: &appservice.GitSource{
+								URL:      secretLookupComponentTwoGitSourceURL,
+								Revision: secondComponentBaseBranchName,
+							},
+						},
+					},
+				}
+				_, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj2, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+
+			It("check first component annotation has errors", func() {
+				buildStatus := &controllers.BuildStatus{}
+				Eventually(func() (bool, error) {
+					component, err := f.AsKubeAdmin.HasController.GetComponent(firstComponentName, testNamespace)
+					if err != nil {
+						return false, err
+					} else if component == nil {
+						return false, fmt.Errorf("got component as nil after getting component %s in namespace %s", firstComponentName, testNamespace)
+					}
+					buildStatusAnnotationValue := component.Annotations[controllers.BuildStatusAnnotationName]
+					GinkgoWriter.Printf(buildStatusAnnotationValueLoggingFormat, buildStatusAnnotationValue)
+					statusBytes := []byte(buildStatusAnnotationValue)
+					err = json.Unmarshal(statusBytes, buildStatus)
+					if err != nil {
+						return false, err
+					}
+					return buildStatus.PaC != nil && buildStatus.PaC.State == "error" && strings.Contains(buildStatus.PaC.ErrMessage, "Access token is unrecognizable by GitHub"), nil
+				}, time.Minute*2, 5*time.Second).Should(BeTrue(), "failed while checking build status for component %q is correct", firstComponentName)
+			})
+
+			It(fmt.Sprintf("triggered PipelineRun is for component %s", secondComponentName), func() {
+				timeout = time.Minute * 5
+				Eventually(func() error {
+					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(secondComponentName, applicationName, testNamespace, "")
+					if err != nil {
+						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, secondComponentName)
+						return err
+					}
+					if !pr.HasStarted() {
+						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
+					}
+					return nil
+				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", secondComponentName, testNamespace))
+			})
+
+			It("check only one pipelinerun should be triggered", func() {
+				// Waiting for 2 minute to see if only one pipelinerun is triggered
+				Consistently(func() (bool, error) {
+					pipelineRuns, err := f.AsKubeAdmin.HasController.GetAllPipelineRunsForApplication(applicationName, testNamespace)
+					if err != nil {
+						return false, err
+					}
+					if len(pipelineRuns.Items) != 1 {
+						return false, fmt.Errorf("plr count in the namespace %s is not one, got pipelineruns %v", testNamespace, pipelineRuns.Items)
+					}
+					return true, nil
+				}, time.Minute*2, constants.PipelineRunPollingInterval).Should(BeTrue(), "timeout while checking if any more pipelinerun is triggered")
+			})
+		})
+	})
 	Describe("test build annotations", Label("annotations"), Ordered, func() {
 		var testNamespace, componentName, applicationName string
 		var componentObj appservice.ComponentSpec
@@ -1708,3 +1878,24 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	})
 
 })
+
+func createBuildSecret(f *framework.Framework, secretName string, annotations map[string]string, token string) error {
+	buildSecret := v1.Secret{}
+	buildSecret.Name = secretName
+	buildSecret.Labels = map[string]string{
+		"appstudio.redhat.com/credentials": "scm",
+		"appstudio.redhat.com/scm.host":    "github.com",
+	}
+	if annotations != nil {
+		buildSecret.Annotations = annotations
+	}
+	buildSecret.Type = "kubernetes.io/basic-auth"
+	buildSecret.StringData = map[string]string{
+		"password": token,
+	}
+	_, err := f.AsKubeAdmin.CommonController.CreateSecret(f.UserNamespace, &buildSecret)
+	if err != nil {
+		return fmt.Errorf("error creating build secret: %v", err)
+	}
+	return nil
+}
