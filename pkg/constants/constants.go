@@ -91,6 +91,9 @@ const (
 	// This variable is set by an automation in case Spray Proxy configuration fails in CI
 	SKIP_PAC_TESTS_ENV = "SKIP_PAC_TESTS"
 
+	// If set to "true", e2e-tests installer will configure master/control plane nodes as schedulable
+	ENABLE_SCHEDULING_ON_MASTER_NODES_ENV = "ENABLE_SCHEDULING_ON_MASTER_NODES"
+
 	// Test namespace's required labels
 	ArgoCDLabelKey   string = "argocd.argoproj.io/managed-by"
 	ArgoCDLabelValue string = "gitops-service-argocd"
