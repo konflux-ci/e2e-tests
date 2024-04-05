@@ -34,13 +34,14 @@ import (
 )
 
 const (
-	DEFAULT_TMP_DIR                     = "tmp"
-	DEFAULT_INFRA_DEPLOYMENTS_BRANCH    = "main"
-	DEFAULT_INFRA_DEPLOYMENTS_GH_ORG    = "redhat-appstudio"
-	DEFAULT_LOCAL_FORK_NAME             = "qe"
-	DEFAULT_LOCAL_FORK_ORGANIZATION     = "redhat-appstudio-qe"
-	DEFAULT_E2E_APPLICATIONS_NAMEPSPACE = "appstudio-e2e-test"
-	DEFAULT_E2E_QUAY_ORG                = "redhat-appstudio-qe"
+	DEFAULT_TMP_DIR                  = "tmp"
+	DEFAULT_INFRA_DEPLOYMENTS_BRANCH = "main"
+	DEFAULT_INFRA_DEPLOYMENTS_GH_ORG = "redhat-appstudio"
+	DEFAULT_LOCAL_FORK_NAME          = "qe"
+	DEFAULT_LOCAL_FORK_ORGANIZATION  = "redhat-appstudio-qe"
+	DEFAULT_E2E_QUAY_ORG             = "redhat-appstudio-qe"
+
+	enableSchedulingOnMasterNodes = "true"
 )
 
 var (
@@ -89,6 +90,9 @@ type InstallAppStudio struct {
 
 	// Default expiration for image tags
 	DefaultImageTagExpiration string
+
+	// If set to "true", e2e-tests installer will mark master/control plane nodes as schedulable
+	EnableSchedulingOnMasterNodes string
 }
 
 func NewAppStudioInstallController() (*InstallAppStudio, error) {
@@ -111,6 +115,7 @@ func NewAppStudioInstallController() (*InstallAppStudio, error) {
 		DefaultImageQuayOrg:              utils.GetEnv("DEFAULT_QUAY_ORG", DEFAULT_E2E_QUAY_ORG),
 		DefaultImageQuayOrgOAuth2Token:   utils.GetEnv("DEFAULT_QUAY_ORG_TOKEN", ""),
 		DefaultImageTagExpiration:        utils.GetEnv(constants.IMAGE_TAG_EXPIRATION_ENV, constants.DefaultImageTagExpiration),
+		EnableSchedulingOnMasterNodes:    utils.GetEnv(constants.ENABLE_SCHEDULING_ON_MASTER_NODES_ENV, enableSchedulingOnMasterNodes),
 	}, nil
 }
 
@@ -134,6 +139,7 @@ func NewAppStudioInstallControllerUpgrade(infraFork string, infraBranch string) 
 		DefaultImageQuayOrg:              utils.GetEnv("DEFAULT_QUAY_ORG", ""),
 		DefaultImageQuayOrgOAuth2Token:   utils.GetEnv("DEFAULT_QUAY_ORG_TOKEN", ""),
 		DefaultImageTagExpiration:        utils.GetEnv(constants.IMAGE_TAG_EXPIRATION_ENV, constants.DefaultImageTagExpiration),
+		EnableSchedulingOnMasterNodes:    utils.GetEnv(constants.ENABLE_SCHEDULING_ON_MASTER_NODES_ENV, enableSchedulingOnMasterNodes),
 	}, nil
 }
 
@@ -144,8 +150,10 @@ func (i *InstallAppStudio) InstallAppStudioPreviewMode() error {
 	}
 	i.setInstallationEnvironments()
 
-	if err := i.MarkMasterNodesAsSchedulable(); err != nil {
-		return err
+	if i.EnableSchedulingOnMasterNodes == "true" {
+		if err := i.MarkMasterNodesAsSchedulable(); err != nil {
+			return err
+		}
 	}
 
 	if err := utils.ExecuteCommandInASpecificDirectory("hack/bootstrap-cluster.sh", previewInstallArgs, i.InfraDeploymentsCloneDir); err != nil {
@@ -159,6 +167,8 @@ func (i *InstallAppStudio) InstallAppStudioPreviewMode() error {
 
 // MarkMasterNodesAsSchedulable uses configv1client for updating scheduler/cluster with "spec.mastersSchedulable:true"
 func (i *InstallAppStudio) MarkMasterNodesAsSchedulable() error {
+	klog.Infof("Configuring master/control plane nodes as schedulable")
+
 	kubeconfig, err := sigsConfig.GetConfig()
 	if err != nil {
 		return fmt.Errorf("error when getting config: %+v", err)
@@ -186,6 +196,7 @@ func (i *InstallAppStudio) setInstallationEnvironments() {
 	os.Setenv("BUILD_SERVICE_IMAGE_TAG_EXPIRATION", i.DefaultImageTagExpiration)
 	os.Setenv("PAC_GITHUB_APP_ID", utils.GetEnv("E2E_PAC_GITHUB_APP_ID", ""))                   // #nosec G104
 	os.Setenv("PAC_GITHUB_APP_PRIVATE_KEY", utils.GetEnv("E2E_PAC_GITHUB_APP_PRIVATE_KEY", "")) // #nosec G104
+	os.Setenv(constants.ENABLE_SCHEDULING_ON_MASTER_NODES_ENV, i.EnableSchedulingOnMasterNodes)
 }
 
 func (i *InstallAppStudio) cloneInfraDeployments() (*git.Remote, error) {
