@@ -19,10 +19,12 @@ import (
 	metricsConstants "github.com/redhat-appstudio-qe/perf-monitoring/api/pkg/constants"
 	"github.com/redhat-appstudio-qe/perf-monitoring/api/pkg/metrics"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	loadtestUtils "github.com/redhat-appstudio/e2e-tests/pkg/utils/loadtests"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	"github.com/spf13/cobra"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -33,6 +35,7 @@ import (
 	k8swait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"knative.dev/pkg/apis"
+	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type UserAppsCompsMap struct {
@@ -244,6 +247,7 @@ var (
 	enableProgressBars            bool
 	pushGatewayURI                string = ""
 	jobName                       string = ""
+	buildPipelineSelectorBundle   string = ""
 )
 
 var (
@@ -479,6 +483,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&enableProgressBars, "enable-progress-bars", false, "if you want to enable progress bars")
 	rootCmd.Flags().StringVar(&pushGatewayURI, "pushgateway-url", pushGatewayURI, "PushGateway url (needs to be set if metrics are enabled)")
 	rootCmd.Flags().StringVar(&jobName, "job-name", jobName, "Job Name to track Metrics (needs to be set if metrics are enabled)")
+	rootCmd.Flags().StringVar(&buildPipelineSelectorBundle, "build-pipeline-selector-bundle", buildPipelineSelectorBundle, "BuildPipelineSelector bundle to use when testing with build-definition PR")
 }
 
 func logError(errCode int, message string) {
@@ -991,6 +996,11 @@ func StageCleanup(journeyContexts []*JourneyContext) {
 				klog.Errorf("while deleting component detection queries for username: %s, got error: %v\n", username, err)
 			}
 		}
+
+		err = deleteAllBuildPipelineSelectors(framework, time.Minute)
+		if err != nil {
+			klog.Errorf("while deleting build pipeline selectors for user: %s, got error: %v\n", user.Username, err)
+		}
 	}
 }
 
@@ -1032,6 +1042,128 @@ func increaseBar(bar *uiprogress.Bar, mutex *sync.Mutex) {
 		defer mutex.Unlock()
 		bar.Incr()
 	}
+}
+
+func componentForUser(username string) string {
+	val, ok := userComponentMap.Load(username)
+	if ok {
+		componentName, ok2 := val.(string)
+		if ok2 {
+			return componentName
+		} else {
+			klog.Errorf("Invalid type of map value: %+v", val)
+		}
+	}
+	return ""
+}
+
+func listAllBuildPipelineSelectors(f *framework.Framework) (*buildservice.BuildPipelineSelectorList, error) {
+	list := &buildservice.BuildPipelineSelectorList{}
+	err := f.AsKubeDeveloper.HasController.KubeRest().List(context.Background(), list, &rclient.ListOptions{Namespace: f.UserNamespace})
+	klog.V(5).Infof("listAllBuildPipelineSelectors namespace: %s, len: %d, err: %v", f.UserNamespace, len(list.Items), err)
+	return list, err
+}
+
+func deleteAllBuildPipelineSelectors(f *framework.Framework, timeout time.Duration) error {
+	klog.V(5).Infof("deleteAllBuildPipelineSelectors start namespace: %s", f.UserNamespace)
+	defer klog.V(5).Infof("deleteAllBuildPipelineSelectors end")
+
+	list, err := listAllBuildPipelineSelectors(f)
+	if err != nil {
+		return fmt.Errorf("error listing build pipeline selectors from %s: %v", f.UserNamespace, err)
+	}
+
+	for _, bps := range list.Items {
+		toDelete := bps
+		err = f.AsKubeDeveloper.HasController.KubeRest().Delete(context.Background(), &toDelete)
+		if err != nil {
+			return fmt.Errorf("error deleting build pipeline selector %s from %s: %v", bps.Name, f.UserNamespace, err)
+		}
+	}
+
+	return utils.WaitUntil(func() (done bool, err error) {
+		list, err := listAllBuildPipelineSelectors(f)
+		if err != nil {
+			return false, nil
+		}
+		return len(list.Items) == 0, nil
+	}, timeout)
+}
+
+func createBuildPipelineSelector(f *framework.Framework, bundle *string) error {
+	klog.V(5).Infof("createBuildPipelineSelector start bundle: %s, namespace: %s", *bundle, f.UserNamespace)
+	defer klog.V(5).Infof("createBuildPipelineSelector end")
+
+	var err error
+
+	err = deleteAllBuildPipelineSelectors(f, time.Minute)
+	if err != nil {
+		klog.Errorf("error deleting build pipeline selectors from %s: %v\n", f.UserNamespace, err)
+	}
+
+	bps := &buildservice.BuildPipelineSelector{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "build-pipeline-selector",
+			Namespace: f.UserNamespace,
+		},
+		Spec: buildservice.BuildPipelineSelectorSpec{Selectors: []buildservice.PipelineSelector{
+			{
+				Name:        "all-pipelines",
+				PipelineRef: *tekton.NewBundleResolverPipelineRef("docker-build", *bundle),
+			},
+		}},
+	}
+	err = f.AsKubeAdmin.CommonController.KubeRest().Create(context.TODO(), bps)
+	if err != nil {
+		return fmt.Errorf("error creating build pipeline selector in %s with bundle %s: %v", f.UserNamespace, *bundle, err)
+	}
+
+	return nil
+}
+
+func frameworkForUser(username string) *framework.Framework {
+	val, ok := frameworkMap.Load(username)
+	if ok {
+		framework, ok2 := val.(*framework.Framework)
+		if ok2 {
+			if buildPipelineSelectorBundle != "" {
+				err := createBuildPipelineSelector(framework, &buildPipelineSelectorBundle)
+				if err != nil {
+					klog.Errorf("Error creating build pipeline selector: %v", err)
+				}
+			}
+			return framework
+		} else {
+			klog.Errorf("Invalid type of map value: %+v", val)
+		}
+	}
+	return nil
+}
+
+func testScenarioForUser(username string) string {
+	val, ok := userTestScenarioMap.Load(username)
+	if ok {
+		testScenarioName, ok2 := val.(string)
+		if ok2 {
+			return testScenarioName
+		} else {
+			klog.Errorf("Invalid type of map value: %+v", val)
+		}
+	}
+	return ""
+}
+
+func userComponentPipelineRunForUser(username string) string {
+	val, ok := userComponentPipelineRunMap.Load(username)
+	if ok {
+		componentPipelineRunName, ok2 := val.(string)
+		if ok2 {
+			return componentPipelineRunName
+		} else {
+			klog.Errorf("Invalid type of map value: %+v", val)
+		}
+	}
+	return ""
 }
 
 func tryNewFramework(username string, user loadtestUtils.User, timeout time.Duration) (*framework.Framework, error) {

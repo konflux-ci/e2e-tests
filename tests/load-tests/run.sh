@@ -82,6 +82,7 @@ else
     ## To enable progress bar , add `--enable-progress-bars` in [OPTIONS]
     go run loadtest.go \
         --component-repo "${COMPONENT_REPO:-https://github.com/devfile-samples/devfile-sample-code-with-quarkus}" \
+        --build-pipeline-selector-bundle "${BUILD_PIPELINE_SELECTOR_BUNDLE:-}" \
         --username "$USER_PREFIX" \
         --users "${USERS_PER_THREAD:-50}" \
         --test-scenario-git-url "${TEST_SCENARIO_GIT_URL:-https://github.com/konflux-ci/integration-examples.git}" \

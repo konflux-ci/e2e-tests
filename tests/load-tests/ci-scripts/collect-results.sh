@@ -23,6 +23,7 @@ find "$output_dir" -type f -name '*.pprof' -exec cp -vf {} "${ARTIFACT_DIR}" \;
 pipelineruns_json=$ARTIFACT_DIR/pipelineruns.json
 taskruns_json=$ARTIFACT_DIR/taskruns.json
 pods_json=$ARTIFACT_DIR/pods.json
+buildpipelineselectors_json=$ARTIFACT_DIR/buildpipelineselectors.json
 
 application_timestamps=$ARTIFACT_DIR/applications.appstudio.redhat.com_timestamps
 application_timestamps_csv=${application_timestamps}.csv
@@ -181,6 +182,9 @@ echo "Node;Pods" >"$all_pods_distribution_csv"
 jq -r ".items[] | .spec.nodeName" "$pods_json" | sort | uniq -c | sed -e 's,\s\+\([0-9]\+\)\s\+\(.*\),\2;\1,g' >>"$all_pods_distribution_csv"
 echo "Node;Pods" >"$task_pods_distribution_csv"
 jq -r '.items[] | select(.metadata.labels."appstudio.openshift.io/application" != null).spec.nodeName' "$pods_json" | sort | uniq -c | sed -e 's,\s\+\([0-9]\+\)\s\+\(.*\),\2;\1,g' >>"$task_pods_distribution_csv"
+
+## Record BuildPipelineSelectors
+oc get BuildPipelineSelectors -A -o json >"$buildpipelineselectors_json"
 
 ## Tekton Artifact Performance Analysis
 tapa_dir=./tapa.git
