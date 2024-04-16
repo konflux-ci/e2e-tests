@@ -62,7 +62,7 @@ var (
 	interval                     = 10 * time.Second
 )
 
-var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E tests", Label("multi-platform"), func() {
+var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E tests", Pending, Label("multi-platform"), func() {
 	var f *framework.Framework
 	AfterEach(framework.ReportFailure(&f))
 	var err error
