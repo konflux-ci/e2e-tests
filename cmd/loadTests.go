@@ -539,6 +539,7 @@ func setup(cmd *cobra.Command, args []string) {
 	klog.Infof("Number of threads: %d", threadCount)
 	klog.Infof("Number of users per thread: %d", numberOfUsers)
 	klog.Infof("Number of users overall: %d", overallCount)
+	klog.Infof("Number of components per application: %d", componentsCount)
 	klog.Infof("Pipeline run initial checks skipped: %t", pipelineSkipInitialChecks)
 	klog.Infof("Pipeline configure PaC requested: %t", pipelineRequestConfigurePac)
 
