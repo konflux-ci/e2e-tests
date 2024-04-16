@@ -122,7 +122,6 @@ var _ = framework.ByocSuiteDescribe(Label("byoc"), Ordered, func() {
 						Fail(fmt.Sprintf("error deleting all componentns in namespace:\n%s", err))
 					}
 					Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
-					Expect(fw.AsKubeAdmin.CommonController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.IntegrationController.DeleteAllSnapshotsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(fw.UserNamespace, 30*time.Second)).To(Succeed())
 					Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(fw.UserNamespace)).To(Succeed())

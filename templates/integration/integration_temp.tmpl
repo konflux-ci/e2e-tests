@@ -1,0 +1,48 @@
+package {{ .CustomData.PackageName }}
+
+/* This was generated from a template file. Please feel free to update as necessary!
+   a couple things to note:
+    - Remember to implement specific logic of the service/domain you are trying to test if it not already there in the pkg/
+
+    - To include the tests as part of the E2E Test suite:
+       - Update the pkg/framework/describe.go to include the `Describe func` of this new test suite, If you haven't already done so.
+       - Import this new package into the cmd/e2e_test.go
+*/
+
+import (
+	"fmt"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/devfile/library/v2/pkg/util"
+	"github.com/google/go-github/v44/github"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+
+)
+
+{{ range .CustomData.Outline }}
+var _ = framework.{{ .Name }}("{{ .Text }}", {{range .Labels }}Label("{{.}}"), {{ end }} func() {
+	defer GinkgoRecover()
+    var err error
+    var f *framework.Framework
+    // use 'f' to access common controllers or the specific service controllers within the framework
+	BeforeAll(func() {
+		// Initialize the tests controllers
+		f, err = framework.NewFramework()
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+    // Generated specs:
+    {{ template "specs" . }}
+})
+{{ end }}

@@ -1,0 +1,32 @@
+BuildSuiteDescribe: Build service E2E tests @build, @HACBS
+  Describe: test PaC component build @github-webhook, @pac-build, @pipeline
+    When: a new component without specified branch is created @pac-custom-default-branch
+      It: correctly targets the default branch (that is not named 'main') with PaC
+      It: triggers a PipelineRun
+      It: a related PipelineRun and Github webhook should be deleted after deleting the component
+      It: PR branch should not exists in the repo
+    When: a new component with specified custom branch branch is created
+      It: triggers a PipelineRun
+      It: should lead to a PaC init PR creation
+      It: the PipelineRun should eventually finish successfully
+      It: eventually leads to a creation of a PR comment with the PipelineRun status report
+    When: the PaC init branch is updated
+      It: eventually leads to triggering another PipelineRun
+      It: PipelineRun should eventually finish
+      It: eventually leads to another update of a PR with a comment about the PipelineRun status report
+    When: the PaC init branch is merged
+      It: eventually leads to triggering another PipelineRun
+      It: pipelineRun should eventually finish
+    When: the component is removed and recreated (with the same name in the same namespace)
+      It: should no longer lead to a creation of a PaC PR
+
+  Describe: Creating component with container image source
+    It: should not trigger a PipelineRun
+
+  Describe: PLNSRVCE-799 - test pipeline selector @pipeline-selector
+    It: a specific Pipeline bundle should be used and additional pipeline params should be added to the PipelineRun if all WhenConditions match
+    It: default Pipeline bundle should be used and no additional Pipeline params should be added to the PipelineRun if one of the WhenConditions does not match
+
+  Describe: A secret with dummy quay.io credentials is created in the testing namespace
+    It: should override the shared secret
+    It: should not be possible to push to quay.io repo (PipelineRun should fail)
