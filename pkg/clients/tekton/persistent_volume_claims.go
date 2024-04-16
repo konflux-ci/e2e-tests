@@ -33,3 +33,11 @@ func (t *TektonController) CreatePVCInAccessMode(name, namespace string, accessM
 	}
 	return createdPVC, err
 }
+
+func (t *TektonController) DeletePVC(name, namespace string) error {
+	return t.KubeInterface().CoreV1().PersistentVolumeClaims(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
+}
+
+func (t *TektonController) GetPVC(name, namespace string) (*corev1.PersistentVolumeClaim, error) {
+	return t.KubeInterface().CoreV1().PersistentVolumeClaims(namespace).Get(context.Background(), name, metav1.GetOptions{})
+}

@@ -133,3 +133,16 @@ func (s *SuiteController) DeletePod(podName string, namespace string) error {
 	}
 	return nil
 }
+
+func (s *SuiteController) CreatePod(pod *corev1.Pod, namespace string) (*corev1.Pod, error) {
+	return s.KubeInterface().CoreV1().Pods(namespace).Create(context.Background(), pod, metav1.CreateOptions{})
+}
+
+func (s *SuiteController) GetPodLogsByName(podName, namespace string) (map[string][]byte, error) {
+	pod, err := s.GetPod(namespace, podName)
+	if err != nil {
+		return map[string][]byte{}, err
+	}
+	logs := s.GetPodLogs(pod)
+	return logs, nil
+}
