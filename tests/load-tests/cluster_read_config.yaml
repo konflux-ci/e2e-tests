@@ -119,6 +119,11 @@
 {{ git_info('.', 'redhat_appstudio.e2e_tests') }}
 {{ git_info('tmp/infra-deployments', 'redhat_appstudio.infra_deployments') }}
 
+# Cluster version
+- name: metadata.cluster.versions
+  command: oc version -o json
+  output: json
+
 # Cluster nodes info
 - name: metadata.cluster.control-plane.count
   command: oc get nodes -l node-role.kubernetes.io/master -o name | wc -l
