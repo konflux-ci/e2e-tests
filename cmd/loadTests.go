@@ -50,6 +50,7 @@ var (
 	threadCount                   int
 	randomString                  bool
 	pipelineSkipInitialChecks     bool
+	pipelineRequestConfigurePac   bool
 	stage                         bool
 	outputDir                     string = "."
 	enableProgressBars            bool
@@ -144,6 +145,7 @@ type LogData struct {
 	NumberOfUsersPerThread            int     `json:"usersPerThread"`
 	NumberOfUsers                     int     `json:"totalUsers"`
 	PipelineSkipInitialChecks         bool    `json:"pipelineSkipInitialChecks"`
+	PipelineRequestConfigurePac       bool    `json:"pipelineRequestConfigurePac"`
 	LoadTestCompletionStatus          string  `json:"status"`
 	AverageTimeToSpinUpUsers          float64 `json:"createUserTimeAvg"`
 	MaxTimeToSpinUpUsers              float64 `json:"createUserTimeMax"`
@@ -292,7 +294,8 @@ func init() {
 	rootCmd.Flags().BoolVar(&disableMetrics, "disable-metrics", false, "if you want to disable metrics gathering")
 	rootCmd.Flags().IntVarP(&threadCount, "threads", "t", 1, "number of concurrent threads to execute")
 	rootCmd.Flags().BoolVarP(&randomString, "randomstring", "r", false, "if you want to add random string to the user prefix")
-	rootCmd.Flags().BoolVar(&pipelineSkipInitialChecks, "pipeline-skip-initial-checks", true, "if pipeline runs' initial checks are to be skipped")
+	rootCmd.Flags().BoolVar(&pipelineSkipInitialChecks, "pipeline-skip-initial-checks", true, "if build pipeline runs' initial checks are to be skipped")
+	rootCmd.Flags().BoolVar(&pipelineRequestConfigurePac, "pipeline-request-configure-pac", false, "if build pipeline should be taken from component repository .tekton directory")
 	rootCmd.Flags().StringVarP(&outputDir, "output-dir", "o", ".", "directory where output files such as load-tests.log or load-tests.json are stored")
 	rootCmd.Flags().BoolVar(&enableProgressBars, "enable-progress-bars", false, "if you want to enable progress bars")
 	rootCmd.Flags().StringVar(&pushGatewayURI, "pushgateway-url", pushGatewayURI, "PushGateway url (needs to be set if metrics are enabled)")
@@ -357,10 +360,16 @@ func setup(cmd *cobra.Command, args []string) {
 
 	overallCount := numberOfUsers * threadCount
 
+	if pipelineRequestConfigurePac && pipelineSkipInitialChecks {
+		klog.Info("Using '--pipeline-request-configure-pac' disallows '--pipeline-skip-initial-checks', resetting it")
+		pipelineSkipInitialChecks = false
+	}
+
 	klog.Infof("Number of threads: %d", threadCount)
 	klog.Infof("Number of users per thread: %d", numberOfUsers)
 	klog.Infof("Number of users overall: %d", overallCount)
 	klog.Infof("Pipeline run initial checks skipped: %t", pipelineSkipInitialChecks)
+	klog.Infof("Pipeline configure PaC requested: %t", pipelineRequestConfigurePac)
 
 	klog.Infof("🕖 initializing...\n")
 
@@ -400,16 +409,17 @@ func setup(cmd *cobra.Command, args []string) {
 	binaryDetails := fmt.Sprintf("Built with %s for %s/%s", goVersion, goOS, goArch)
 
 	logData = LogData{
-		Timestamp:                 time.Now().Format("2006-01-02T15:04:05Z07:00"),
-		MachineName:               machineName,
-		BinaryDetails:             binaryDetails,
-		ComponentRepoUrl:          componentRepoUrl,
-		NumberOfThreads:           threadCount,
-		NumberOfUsersPerThread:    numberOfUsers,
-		NumberOfUsers:             overallCount,
-		PipelineSkipInitialChecks: pipelineSkipInitialChecks,
-		Errors:                    []ErrorOccurrence{},
-		ErrorCounts:               []ErrorCount{},
+		Timestamp:                   time.Now().Format("2006-01-02T15:04:05Z07:00"),
+		MachineName:                 machineName,
+		BinaryDetails:               binaryDetails,
+		ComponentRepoUrl:            componentRepoUrl,
+		NumberOfThreads:             threadCount,
+		NumberOfUsersPerThread:      numberOfUsers,
+		NumberOfUsers:               overallCount,
+		PipelineSkipInitialChecks:   pipelineSkipInitialChecks,
+		PipelineRequestConfigurePac: pipelineRequestConfigurePac,
+		Errors:                      []ErrorOccurrence{},
+		ErrorCounts:                 []ErrorCount{},
 	}
 
 	klog.Infof("🍿 provisioning users...\n")
@@ -1425,8 +1435,14 @@ func (h *ConcreteHandlerResources) handleComponentCreation(ctx *JourneyContext, 
 	)
 
 	for _, compStub := range cdq.Status.ComponentDetected {
+		var annotationsMap map[string]string
+		if pipelineRequestConfigurePac {
+			annotationsMap = constants.ComponentPaCRequestAnnotation
+		} else {
+			annotationsMap = map[string]string{}
+		}
 		startTimeForComponent = time.Now()
-		component, err := framework.AsKubeDeveloper.HasController.CreateComponent(compStub.ComponentStub, usernamespace, "", "", ApplicationName, pipelineSkipInitialChecks, map[string]string{})
+		component, err := framework.AsKubeDeveloper.HasController.CreateComponent(compStub.ComponentStub, usernamespace, "", "", ApplicationName, pipelineSkipInitialChecks, annotationsMap)
 		componentCreationTime = time.Since(startTimeForComponent)
 
 		if err != nil {
