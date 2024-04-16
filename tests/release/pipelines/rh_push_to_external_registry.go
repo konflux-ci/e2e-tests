@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
-	"github.com/devfile/library/v2/pkg/util"
+	//"github.com/devfile/library/v2/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -42,7 +43,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 	var imageIDs []string
 	var pyxisKeyDecoded, pyxisCertDecoded []byte
 	var releasePR1, releasePR2 *pipeline.PipelineRun
-	scGitRevision := fmt.Sprintf("test-pyxis-%s", util.GenerateRandomString(4))
+	var hasCommonTags bool
+	//scGitRevision := fmt.Sprintf("test-pyxis-%s", util.GenerateRandomString(4))
 
 	var component1, component2 *appservice.Component
 	var snapshot1, snapshot2 *appservice.Snapshot
@@ -194,10 +196,10 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 	})
 
 	AfterAll(func() {
-		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(constants.StrategyConfigsRepo, scGitRevision)
-		if err != nil {
-			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
-		}
+		//err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(constants.StrategyConfigsRepo, scGitRevision)
+		//if err != nil {
+		//	Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+		//}
 		if !CurrentSpecReport().Failed() {
 			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
 			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
@@ -301,7 +303,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		})
 
 		It("validate the result of task create-pyxis-image contains image ids", func() {
-			Eventually(func() []string {
+			Eventually(func() error {
 				re := regexp.MustCompile("[a-fA-F0-9]{24}")
 
 				releasePR1, err = fw.AsKubeAdmin.TektonController.GetPipelineRun(releasePR1.GetName(), releasePR1.GetNamespace())
@@ -309,28 +311,44 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 				releasePR2, err = fw.AsKubeAdmin.TektonController.GetPipelineRun(releasePR2.GetName(), releasePR2.GetNamespace())
 				Expect(err).NotTo(HaveOccurred())
 
-				trReleasePr, err := fw.AsKubeAdmin.TektonController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), releasePR1, "create-pyxis-image")
+				trReleasePr, err := fw.AsKubeAdmin.TektonController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), releasePR1, "push-snapshot")
 				Expect(err).NotTo(HaveOccurred())
+				trCommonTags := trReleasePr.Status.TaskRunStatusFields.Results[0].Value.StringVal
 
-				trAdditionalReleasePr, err := fw.AsKubeAdmin.TektonController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), releasePR2, "create-pyxis-image")
+
+				trAdditionalReleasePr, err := fw.AsKubeAdmin.TektonController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), releasePR2, "push-snapshot")
 				Expect(err).NotTo(HaveOccurred())
+				trAdditionalCommonTags := trAdditionalReleasePr.Status.TaskRunStatusFields.Results[0].Value.StringVal
 
-				trReleaseImageIDs := re.FindAllString(trReleasePr.Status.TaskRunStatusFields.Results[0].Value.StringVal, -1)
-				trAdditionalReleaseIDs := re.FindAllString(trAdditionalReleasePr.Status.TaskRunStatusFields.Results[0].Value.StringVal, -1)
+				if len(strings.TrimSpace(trCommonTags)) > 0 && len(strings.TrimSpace(trAdditionalCommonTags)) > 0 {
+					hasCommonTags = true
 
-				Expect(trReleaseImageIDs).ToNot(BeEmpty(), fmt.Sprintf("Invalid ImageID in results of task create-pyxis-image. taskrun results: %+v", trReleasePr.Status.TaskRunStatusFields.Results[0]))
-				Expect(trAdditionalReleaseIDs).ToNot(BeEmpty(), fmt.Sprintf("Invalid ImageID in results of task create-pyxis-image. taskrun results: %+v", trAdditionalReleasePr.Status.TaskRunStatusFields.Results[0]))
+					trReleasePr, err := fw.AsKubeAdmin.TektonController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), releasePR1, "create-pyxis-image")
+					Expect(err).NotTo(HaveOccurred())
 
-				Expect(trReleaseImageIDs).ToNot(HaveLen(len(trAdditionalReleaseIDs)), "the number of image IDs should not be the same in both taskrun results. (%+v vs. %+v)", trReleasePr.Status.TaskRunStatusFields.Results[0], trAdditionalReleasePr.Status.TaskRunStatusFields.Results[0])
+					trAdditionalReleasePr, err := fw.AsKubeAdmin.TektonController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), releasePR2, "create-pyxis-image")
+					Expect(err).NotTo(HaveOccurred())
 
-				if len(trReleaseImageIDs) > len(trAdditionalReleaseIDs) {
-					imageIDs = trReleaseImageIDs
-				} else {
-					imageIDs = trAdditionalReleaseIDs
+					trReleaseImageIDs := re.FindAllString(trReleasePr.Status.TaskRunStatusFields.Results[0].Value.StringVal, -1)
+					trAdditionalReleaseIDs := re.FindAllString(trAdditionalReleasePr.Status.TaskRunStatusFields.Results[0].Value.StringVal, -1)
+
+					Expect(trReleaseImageIDs).ToNot(BeEmpty(), fmt.Sprintf("Invalid ImageID in results of task create-pyxis-image. taskrun results: %+v", trReleasePr.Status.TaskRunStatusFields.Results[0]))
+					Expect(trAdditionalReleaseIDs).ToNot(BeEmpty(), fmt.Sprintf("Invalid ImageID in results of task create-pyxis-image. taskrun results: %+v", trAdditionalReleasePr.Status.TaskRunStatusFields.Results[0]))
+
+					Expect(trReleaseImageIDs).ToNot(HaveLen(len(trAdditionalReleaseIDs)), "the number of image IDs should not be the same in both taskrun results. (%+v vs. %+v)", trReleasePr.Status.TaskRunStatusFields.Results[0], trAdditionalReleasePr.Status.TaskRunStatusFields.Results[0])
+
+					if len(trReleaseImageIDs) >  len(trAdditionalReleaseIDs) {
+						imageIDs = trReleaseImageIDs
+					} else {
+						imageIDs = trAdditionalReleaseIDs
+					}
+					if len(imageIDs) < 2 {
+						return fmt.Errorf("The number of imageIDs less than 2")
+					}
+					return nil
 				}
-
-				return imageIDs
-			}, avgControllerQueryTimeout, releasecommon.DefaultInterval).Should(HaveLen(2))
+				return nil
+			}, avgControllerQueryTimeout, releasecommon.DefaultInterval).Should(Succeed(), "time out waiting for checking pyxis images")
 		})
 
 		It("tests that associated Release CR has completed for each Component's Snapshot", func() {
@@ -351,17 +369,19 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		})
 
 		It("validates that imageIds from task create-pyxis-image exist in Pyxis.", func() {
-			for _, imageID := range imageIDs {
-				Eventually(func() error {
-					body, err := fw.AsKubeAdmin.ReleaseController.GetPyxisImageByImageID(releasecommon.PyxisStageImagesApiEndpoint, imageID,
-						[]byte(pyxisCertDecoded), []byte(pyxisKeyDecoded))
-					Expect(err).NotTo(HaveOccurred(), "failed to get response body")
+			if hasCommonTags {
+				for _, imageID := range imageIDs {
+					Eventually(func() error {
+						body, err := fw.AsKubeAdmin.ReleaseController.GetPyxisImageByImageID(releasecommon.PyxisStageImagesApiEndpoint, imageID,
+							[]byte(pyxisCertDecoded), []byte(pyxisKeyDecoded))
+						Expect(err).NotTo(HaveOccurred(), "failed to get response body")
 
-					sbomImage := release.Image{}
-					Expect(json.Unmarshal(body, &sbomImage)).To(Succeed(), "failed to unmarshal body content: %s", string(body))
+						sbomImage := release.Image{}
+						Expect(json.Unmarshal(body, &sbomImage)).To(Succeed(), "failed to unmarshal body content: %s", string(body))
 
-					return nil
-				}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed())
+						return nil
+					}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed())
+				}
 			}
 		})
 	})

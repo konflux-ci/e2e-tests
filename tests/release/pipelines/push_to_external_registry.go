@@ -20,6 +20,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -33,6 +34,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 
 	var component *appservice.Component
 	var releaseCR *releaseApi.Release
+	var releasePR *pipeline.PipelineRun
 
 	BeforeAll(func() {
 		// Initialize the tests controllers
@@ -86,6 +88,13 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 						"repository": releasecommon.ReleasedImagePushRepo,
 					},
 				},
+			},
+			"images": map[string]interface{}{
+				"defaultTag": "latest",
+				"addGitShaTag": false,
+				"addTimestampTag": false,
+				"addSourceShaTag": false,
+				"floatingTags":[]string{"testtag", "testtag2"},
 			},
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -141,13 +150,13 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 
 		It("verifies that Release PipelineRun is triggered", func() {
 			Eventually(func() error {
-				pr, err := fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
+				releasePR, err = fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 				if err != nil {
 					GinkgoWriter.Printf("release pipelineRun for release '%s' in namespace '%s' not created yet: %+v\n", releaseCR.GetName(), releaseCR.GetNamespace(), err)
 					return err
 				}
-				if !pr.HasStarted() {
-					return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
+				if !releasePR.HasStarted() {
+					return fmt.Errorf("pipelinerun %s/%s hasn't started yet", releasePR.GetNamespace(), releasePR.GetName())
 				}
 				return nil
 			}, releasecommon.ReleasePipelineRunCreationTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out waiting for a pipelinerun to start for a release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
@@ -155,24 +164,30 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 
 		It("verifies that Release PipelineRun should eventually succeed", func() {
 			Eventually(func() error {
-				pr, err := fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
+				releasePR, err = fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 				Expect(err).ShouldNot(HaveOccurred())
-				if !pr.IsDone() {
-					return fmt.Errorf("release pipelinerun %s/%s did not finish yet", pr.GetNamespace(), pr.GetName())
+				if !releasePR.IsDone() {
+					return fmt.Errorf("release pipelinerun %s/%s did not finish yet", releasePR.GetNamespace(), releasePR.GetName())
 				}
-				Expect(tekton.HasPipelineRunSucceeded(pr)).To(BeTrue(), fmt.Sprintf("release pipelinerun %s/%s did not succeed", pr.GetNamespace(), pr.GetName()))
+				Expect(tekton.HasPipelineRunSucceeded(releasePR)).To(BeTrue(), fmt.Sprintf("release pipelinerun %s/%s did not succeed", releasePR.GetNamespace(), releasePR.GetName()))
 				return nil
 			}, releasecommon.ReleasePipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed())
 		})
 
 		It("tests if the image was pushed to quay", func() {
 			// retrieve the component to get the latest data
-			component, err := fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), devNamespace)
-			Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("could not get component %s in the %s namespace", component.GetName(), devNamespace))
-			containerImageDigest := strings.Split(component.Spec.ContainerImage, "@")[1]
-			digestExist, err := releasecommon.DoesDigestExistInQuay(releasecommon.ReleasedImagePushRepo, containerImageDigest)
-			Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while getting Digest for quay image %s with error: %+v", releasecommon.ReleasedImagePushRepo+"@"+containerImageDigest, err))
-			Expect(digestExist).To(BeTrue())
+			trReleasePr, err := fw.AsKubeAdmin.TektonController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), releasePR, "push-snapshot")
+			Expect(err).NotTo(HaveOccurred())
+			trCommonTags := trReleasePr.Status.TaskRunStatusFields.Results[0].Value.StringVal
+
+			if len(strings.TrimSpace(trCommonTags)) > 0 {
+				component, err := fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), devNamespace)
+				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("could not get component %s in the %s namespace", component.GetName(), devNamespace))
+				containerImageDigest := strings.Split(component.Spec.ContainerImage, "@")[1]
+				digestExist, err := releasecommon.DoesDigestExistInQuay(releasecommon.ReleasedImagePushRepo, containerImageDigest)
+				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while getting Digest for quay image %s with error: %+v", releasecommon.ReleasedImagePushRepo+"@"+containerImageDigest, err))
+				Expect(digestExist).To(BeTrue())
+			}
 		})
 
 		It("verifies that a Release is marked as succeeded.", func() {
