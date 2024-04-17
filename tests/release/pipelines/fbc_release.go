@@ -36,6 +36,7 @@ var err error
 var devWorkspace = utils.GetEnv(constants.RELEASE_DEV_WORKSPACE_ENV, constants.DevReleaseTeam)
 var managedWorkspace = utils.GetEnv(constants.RELEASE_MANAGED_WORKSPACE_ENV, constants.ManagedReleaseTeam)
 var devFw *framework.Framework
+var mFw *framework.Framework
 var managedFw *framework.Framework
 
 var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-pipelines", "fbc-tests"), func() {
@@ -223,7 +224,21 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw framework.Framework, dev
 		return nil
 	}, 5 * time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for Snapshot and Release being created")
 
-	mFw := releasecommon.NewFramework(managedWorkspace)
+	mFw = releasecommon.NewFramework(managedWorkspace)
+	// Create a ticker that ticks every 3 minutes
+	ticker := time.NewTicker(3 * time.Minute)
+	// Schedule the stop of the ticker after 15 minutes
+	time.AfterFunc(15*time.Minute, func() {
+		ticker.Stop()
+		fmt.Println("Stopped executing every 3 minutes.")
+	})
+	// Run a goroutine to handle the ticker ticks
+	go func() {
+		for range ticker.C {
+			mFw = releasecommon.NewFramework(managedWorkspace)
+		}
+	}()
+
 	Eventually(func() error {
 		releasePr, err = mFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(mFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 		if err != nil {
