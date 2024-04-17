@@ -891,6 +891,7 @@ func userComponentPipelineRunForUser(username string) string {
 
 func tryNewFramework(username string, user loadtestUtils.User, timeout time.Duration) (*framework.Framework, error) {
 	ch := make(chan *framework.Framework)
+	quit := make(chan bool)
 	var fw *framework.Framework
 	var err error
 	go func() {
@@ -906,7 +907,10 @@ func tryNewFramework(username string, user loadtestUtils.User, timeout time.Dura
 		} else {
 			fw, err = framework.NewFrameworkWithTimeout(username, time.Minute*60)
 		}
-		ch <- fw
+		select {
+		case <-quit:
+		case ch <- fw:
+		}
 	}()
 
 	var ret *framework.Framework
@@ -915,6 +919,7 @@ func tryNewFramework(username string, user loadtestUtils.User, timeout time.Dura
 	case result := <-ch:
 		ret = result
 	case <-time.After(timeout):
+		close(quit)
 		ret = nil
 		err = fmt.Errorf("unable to create new framework for user %s within %v", username, timeout)
 	}
