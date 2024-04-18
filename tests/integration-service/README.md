@@ -17,7 +17,6 @@ Happy path testing describes tests that focus on the most common scenarios while
 - Checking that the status of integration tests were reported to the Snapshot.
 - Checking that a snapshot gets successfully marked as 'passed' after all Integration pipeline runs finished.
 - Validating the Global Candidate is updated
-- Validating the successful creation of a SnapshotEnvironmentBinding.
 - Validating the successful creation of a Release.
 
 ### E2E tests of Status Reporting of Integration tests to CheckRuns (within `status-reporting-to-pullrequest.go`):
@@ -45,7 +44,7 @@ Happy path testing describes tests that focus on the most common scenarios while
 - Validating that a new Integration PLR is created and finished.
 - Asserting that the Snapshot doesn't contain re-run label, and contains the name of re-triggered pipelinerun.
 - Asserting that a snapshot is still marked as failed.
-- Validating that no Release CRs and no SnapshotEnvironmentBinding are created in certain scenarios.
+- Validating that no Release CRs is created in certain scenarios.
 - Checking that the global candidate does not get updated unexpectedly.
 
   
