@@ -169,9 +169,14 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 			if attempts == r.Retries+1 || (!r.Always && pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason() != "CouldntGetTask" && pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason() != "TaskRunImagePullFailed") {
 				return err
 			}
-
+			if err = t.RemoveFinalizerFromPipelineRun(pr, constants.E2ETestFinalizerName); err != nil {
+				return fmt.Errorf("failed to remove the finalizer from pipelinerun %s:%s in order to retrigger it: %+v", pr.GetNamespace(), pr.GetName(), err)
+			}
+			if err = h.PipelineClient().TektonV1().PipelineRuns(pr.GetNamespace()).Delete(context.Background(), pr.GetName(), metav1.DeleteOptions{}); err != nil {
+				return fmt.Errorf("failed to delete PipelineRun %q from %q namespace with error: %v", pr.GetName(), pr.GetNamespace(), err)
+			}
 			if sha, err = h.RetriggerComponentPipelineRun(component, pr); err != nil {
-				return fmt.Errorf("unable to retrigger component %s:%s: %+v", component.GetNamespace(), component.GetName(), err)
+				return fmt.Errorf("unable to retrigger pipelinerun for component %s:%s: %+v", component.GetNamespace(), component.GetName(), err)
 			}
 			attempts++
 		} else {
@@ -366,10 +371,6 @@ func (h *HasController) GetComponentConditionStatusMessages(name, namespace stri
 
 // Universal method to retrigger pipelineruns in kubernetes cluster
 func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Component, pr *pipeline.PipelineRun) (sha string, err error) {
-	if err = h.KubeRest().Delete(context.Background(), pr); err != nil {
-		return "", fmt.Errorf("failed to delete PipelineRun %q from %q namespace with error: %v", pr.GetName(), pr.GetNamespace(), err)
-	}
-
 	prLabels := pr.GetLabels()
 	// In case of PipelineRun managed by PaC we are able to retrigger the pipeline only
 	// by updating the related branch
@@ -441,7 +442,7 @@ func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Comp
 			if !ok {
 				continue
 			}
-			if pr.GetName() != newPR.GetName() {
+			if pr.GetGenerateName() == newPR.GetGenerateName() && pr.GetName() != newPR.GetName() {
 				newPRFound = true
 			}
 		}

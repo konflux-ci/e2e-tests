@@ -178,6 +178,9 @@ const (
 
 	DevReleaseTeam     = "dev-release-team"
 	ManagedReleaseTeam = "managed-release-team"
+
+	// Name of the finalizer used for blocking pruning of E2E test PipelineRuns
+	E2ETestFinalizerName = "e2e-test"
 )
 
 var (

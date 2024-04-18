@@ -47,7 +47,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 		var applicationName, componentName, symlinkComponentName, testNamespace string
 		var kubeadminClient *framework.ControllerHub
-		var finalizerName string = "e2e-test"
 		var pipelineRunsWithE2eFinalizer []string
 
 		BeforeAll(func() {
@@ -126,7 +125,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				}
 				for i := 0; i < len(pipelineRuns.Items); i++ {
 					if utils.Contains(pipelineRunsWithE2eFinalizer, pipelineRuns.Items[i].GetName()) {
-						err = kubeadminClient.TektonController.RemoveFinalizerFromPipelineRun(&pipelineRuns.Items[i], finalizerName)
+						err = kubeadminClient.TektonController.RemoveFinalizerFromPipelineRun(&pipelineRuns.Items[i], constants.E2ETestFinalizerName)
 						if err != nil {
 							GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pipelineRuns.Items[i].GetName(), err)
 							return err
@@ -159,9 +158,9 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				if !pipelineRun.HasStarted() {
 					return fmt.Errorf("pipelinerun %s/%s has not started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
 				}
-				err = kubeadminClient.TektonController.AddFinalizerToPipelineRun(pipelineRun, finalizerName)
+				err = kubeadminClient.TektonController.AddFinalizerToPipelineRun(pipelineRun, constants.E2ETestFinalizerName)
 				if err != nil {
-					return fmt.Errorf("error while adding finalizer %q to the pipelineRun %q: %v", finalizerName, pipelineRun.GetName(), err)
+					return fmt.Errorf("error while adding finalizer %q to the pipelineRun %q: %v", constants.E2ETestFinalizerName, pipelineRun.GetName(), err)
 				}
 				pipelineRunsWithE2eFinalizer = append(pipelineRunsWithE2eFinalizer, pipelineRun.GetName())
 				return nil
@@ -183,9 +182,9 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					if !pipelineRun.HasStarted() {
 						return fmt.Errorf("pipelinerun %s/%s has not started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
 					}
-					err = kubeadminClient.TektonController.AddFinalizerToPipelineRun(pipelineRun, finalizerName)
+					err = kubeadminClient.TektonController.AddFinalizerToPipelineRun(pipelineRun, constants.E2ETestFinalizerName)
 					if err != nil {
-						return fmt.Errorf("error while adding finalizer %q to the pipelineRun %q: %v", finalizerName, pipelineRun.GetName(), err)
+						return fmt.Errorf("error while adding finalizer %q to the pipelineRun %q: %v", constants.E2ETestFinalizerName, pipelineRun.GetName(), err)
 					}
 					pipelineRunsWithE2eFinalizer = append(pipelineRunsWithE2eFinalizer, pipelineRun.GetName())
 					return nil
