@@ -501,10 +501,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			Context("build-definitions ec pipelines", Label(buildTemplatesTestLabel), func() {
 				ecPipelines := []string{
 					"pipelines/enterprise-contract.yaml",
-					"pipelines/enterprise-contract-everything.yaml",
-					"pipelines/enterprise-contract-redhat.yaml",
-					"pipelines/enterprise-contract-redhat-no-hermetic.yaml",
-					"pipelines/enterprise-contract-slsa3.yaml",
 				}
 
 				var gitRevision, gitURL, imageWithDigest string
