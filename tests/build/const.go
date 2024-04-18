@@ -24,7 +24,7 @@ const (
 
 	multiComponentGitSourceRepoName = "sample-multi-component"
 	multiComponentDefaultBranch     = "main"
-	multiComponentGitRevision       = "2e006bd8b58483e4d7999c5931b65c4d4550d223"
+	multiComponentGitRevision       = "0d1835404efb8ab7bb1ab5b5b82cda1ebfda4b25"
 
 	annotationsTestGitSourceRepoName = "multi-stage-build-go-sample"
 	annotationsTestRevision          = "529f65798777a5fe145e33d58e1e91c4c03704a4"
