@@ -24,6 +24,7 @@ require (
 	github.com/gosuri/uiprogress v0.0.1
 	github.com/gosuri/uitable v0.0.4
 	github.com/h2non/gock v1.2.0
+	github.com/konflux-ci/operator-toolkit v0.0.0-20240402130556-ef6dcbeca69d
 	github.com/magefile/mage v1.13.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/moby/buildkit v0.12.5
@@ -40,7 +41,6 @@ require (
 	github.com/redhat-appstudio/image-controller v0.0.0-20231003082540-48893226ba8b
 	github.com/redhat-appstudio/integration-service v0.0.0-20231025084434-b3f521c408d1
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20240126122210-0e2ee7e2e5b0
-	github.com/redhat-appstudio/operator-toolkit v0.0.0-20231201124606-2087182322ae
 	github.com/redhat-appstudio/release-service v0.0.0-20240126184040-c1b86f4617e1
 	github.com/redhat-appstudio/remote-secret v0.0.0-20230713072146-a6094c712436
 	github.com/redhat-appstudio/service-provider-integration-operator v0.2023.22-0.20230713080056-eae17aa8c172
@@ -278,6 +278,7 @@ require (
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/prometheus/statsd_exporter v0.23.1 // indirect
 	github.com/redhat-appstudio/application-service v0.0.0-20230717184417-67d31a01a776 // indirect
+	github.com/redhat-appstudio/operator-toolkit v0.0.0-20231201124606-2087182322ae // indirect
 	github.com/redhat-developer/alizer/go v0.0.0-20230516215932-135a2bb3fb90 // indirect
 	github.com/redhat-developer/gitops-generator v0.0.0-20230614175323-aff86c6bc55e // indirect
 	github.com/redis/go-redis/v9 v9.0.5 // indirect
