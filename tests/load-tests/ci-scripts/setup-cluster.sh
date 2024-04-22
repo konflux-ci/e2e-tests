@@ -58,10 +58,15 @@ if [ "${TEKTON_PERF_ENABLE_CPU_PROFILING:-}" == "true" ] || [ "${TEKTON_PERF_ENA
     oc patch -n tekton-results cm tekton-results-config-observability --type=json -p='[{"op": "add", "path": "/data/profiling.enable", "value": "true"}]'
 fi
 
+## Patch Build Service github secret
+echo "Patching Build Service github token"
+oc patch -n build-service secret pipelines-as-code-secret --type=json -p='[{"op": "add", "path": "/data/password", "value": "'"$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/github-token | tr -d "\n" | base64 -w0)"'"}]'
+oc rollout restart deployment -n build-service
+oc rollout status deployment -n build-service -w
+
 ## Patch HAS github secret
 echo "Patching HAS github tokens"
-oc patch -n application-service secret has-github-token --type=json -p='[{"op": "add", "path": "/data/tokens", "value": "'"$(base64 -w0 </usr/local/ci-secrets/redhat-appstudio-load-test/github_accounts)"'"}]'
-oc patch -n application-service secret has-github-token -p '{"data": {"token": null}}'
+oc patch -n application-service secret has-github-token --type=json -p='[{"op": "add", "path": "/data/tokens", "value": "'"$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/github_accounts | tr -d "\n" | base64 -w0)"'"},{"op": "add", "path": "/data/token", "value": "'"$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/github-token | tr -d "\n" | base64 -w0)"'"},{"op": "add", "path": "/data/cdq-token", "value": "'"$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/github-token | tr -d "\n" | base64 -w0)"'"}]'
 oc rollout restart deployment -n application-service
 oc rollout status deployment -n application-service -w
 
