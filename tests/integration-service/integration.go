@@ -36,7 +36,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	var pipelineRun *pipeline.PipelineRun
 	var snapshot *appstudioApi.Snapshot
 	var snapshotPush *appstudioApi.Snapshot
-	var env *appstudioApi.Environment
 	AfterEach(framework.ReportFailure(&f))
 
 	Describe("with happy path for general flow of Integration service", Ordered, func() {
@@ -57,7 +56,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				cleanup(*f, testNamespace, applicationName, componentName)
 
 				Expect(f.AsKubeAdmin.IntegrationController.DeleteSnapshot(snapshotPush, testNamespace)).To(Succeed())
-				Expect(f.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(EnvironmentName, time.Minute*5)).To(Succeed())
 			}
 		})
 
@@ -138,10 +136,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 		})
 
-		It("creates a ReleasePlan and an environment", func() {
+		It("creates a ReleasePlan", func() {
 			_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlan(autoReleasePlan, testNamespace, applicationName, targetReleaseNamespace, "")
-			Expect(err).ShouldNot(HaveOccurred())
-			env, err = f.AsKubeAdmin.GitOpsController.CreatePocEnvironment(EnvironmentName, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
 			testScenarios, err := f.AsKubeAdmin.IntegrationController.GetIntegrationTestScenarios(applicationName, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
@@ -186,15 +182,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					return err
 				}, timeout, interval).Should(Succeed(), fmt.Sprintf("time out when waiting for release created for snapshot %s/%s", snapshotPush.GetNamespace(), snapshotPush.GetName()))
 			})
-
-			It("checks if an SnapshotEnvironmentBinding is created successfully", func() {
-				timeout = time.Second * 600
-				interval = time.Second * 2
-				Eventually(func() error {
-					_, err := f.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(applicationName, testNamespace, env)
-					return err
-				}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out when waiting for SnapshotEnvironmentBinding to be created for application %s/%s", testNamespace, applicationName))
-			})
 		})
 	})
 
@@ -208,8 +195,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			applicationName = createApp(*f, testNamespace)
 			componentName, originalComponent = createComponent(*f, testNamespace, applicationName)
 
-			env, err = f.AsKubeAdmin.GitOpsController.CreatePocEnvironment(EnvironmentName, testNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
 			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, testNamespace, gitURL, revision, pathInRepoFail)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
@@ -218,7 +203,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			if !CurrentSpecReport().Failed() {
 				cleanup(*f, testNamespace, applicationName, componentName)
 
-				Expect(f.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(EnvironmentName, time.Minute*5)).To(Succeed())
 			}
 		})
 
@@ -346,16 +330,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				releases, err := f.AsKubeAdmin.ReleaseController.GetReleases(testNamespace)
 				Expect(err).NotTo(HaveOccurred(), "Error when fetching the Releases")
 				Expect(releases.Items).To(BeEmpty(), "Expected no Release CRs to be present, but found some")
-			})
-
-			It("checks no SnapshotEnvironmentBinding is created", func() {
-				seb, err := f.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(applicationName, testNamespace, env)
-
-				if err != nil {
-					Expect(err.Error()).To(ContainSubstring("no SnapshotEnvironmentBinding found"))
-				} else {
-					Expect(seb).To(BeNil(), "Expected no SnapshotEnvironmentBinding to be present, but found one")
-				}
 			})
 
 			It("checks if the global candidate is not updated", func() {
