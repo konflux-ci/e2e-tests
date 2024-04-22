@@ -1,9 +1,10 @@
 package common
 
 import (
+	"time"
+
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
-	"time"
 )
 
 const (
@@ -40,10 +41,10 @@ const (
 	PyxisStageImagesApiEndpoint     string = "https://pyxis.preprod.api.redhat.com/v1/images/id/"
 
 	// EC constants
-	EcPolicyLibPath         = "github.com/enterprise-contract/ec-policies//policy/lib"
-	EcPolicyReleasePath     = "github.com/enterprise-contract/ec-policies//policy/release"
-	EcPolicyDataBundle      = "oci::quay.io/redhat-appstudio-tekton-catalog/data-acceptable-bundles:latest"
-	EcPolicyDataPath        = "github.com/release-engineering/rhtap-ec-policy//data"
+	EcPolicyLibPath     = "github.com/enterprise-contract/ec-policies//policy/lib"
+	EcPolicyReleasePath = "github.com/enterprise-contract/ec-policies//policy/release"
+	EcPolicyDataBundle  = "oci::quay.io/redhat-appstudio-tekton-catalog/data-acceptable-bundles:latest"
+	EcPolicyDataPath    = "github.com/release-engineering/rhtap-ec-policy//data"
 
 	// Service constants
 	ApplicationName string = "application"
@@ -55,6 +56,6 @@ var ManagednamespaceSecret = []corev1.ObjectReference{
 
 // Pipelines variables
 var (
-	RelSvcCatalogURL      string = utils.GetEnv("RELEASE_SERVICE_CATALOG_URL", "https://github.com/redhat-appstudio/release-service-catalog")
+	RelSvcCatalogURL      string = utils.GetEnv("RELEASE_SERVICE_CATALOG_URL", "https://github.com/konflux-ci/release-service-catalog")
 	RelSvcCatalogRevision string = utils.GetEnv("RELEASE_SERVICE_CATALOG_REVISION", "staging")
 )
