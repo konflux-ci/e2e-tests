@@ -347,7 +347,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 })
 
 func createApp(f framework.Framework, testNamespace string) string {
-	applicationName := fmt.Sprintf("integ-app-%s", util.GenerateRandomString(4))
+	applicationName := fmt.Sprintf("integ-app-gitlab-%s", util.GenerateRandomString(4))
 
 	app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 	Expect(err).NotTo(HaveOccurred())
