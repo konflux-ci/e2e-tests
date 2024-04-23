@@ -172,7 +172,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcPreGARPName, devNamespace, fbcPreGAAppName, managedNamespace, "true")
 			Expect(err).NotTo(HaveOccurred())
 
-			createFBCReleasePlanAdmission(fbcPreGARPAName, *managedFw, devNamespace, managedNamespace, fbcPreGAAppName, fbcPreGAECPolicyName, relSvcCatalogPathInRepo, "true", issueId, "true", productName, productVersion)
+			createFBCReleasePlanAdmission(fbcPreGARPAName, *managedFw, devNamespace, managedNamespace, fbcPreGAAppName, fbcPreGAECPolicyName, relSvcCatalogPathInRepo, "false", issueId, "true", productName, productVersion)
 			component = releasecommon.CreateComponentByCDQ(*devFw, devNamespace, managedNamespace, fbcPreGAAppName, fbcPreGACompName, fbcSourceGitURL)
 			createFBCEnterpriseContractPolicy(fbcPreGAECPolicyName, *managedFw, devNamespace, managedNamespace)
 		})
