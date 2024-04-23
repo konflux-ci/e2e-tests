@@ -383,7 +383,11 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 					generator.PublicKey = fmt.Sprintf("k8s://%s/%s", namespace, secretName)
 					policy := contract.PolicySpecWithSourceConfig(
 						defaultECP.Spec,
-						ecp.SourceConfig{Include: []string{"attestation_task_bundle.task_ref_bundles_acceptable"}},
+						ecp.SourceConfig{Include: []string{
+							// Account for "acceptable" to "trusted" renaming. Eventually remove "acceptable" from this list
+							"attestation_task_bundle.task_ref_bundles_acceptable",
+							"attestation_task_bundle.task_ref_bundles_trusted",
+						}},
 					)
 					Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
