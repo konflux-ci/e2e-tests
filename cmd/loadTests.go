@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -219,7 +220,9 @@ func (u *UserAppsCompsMap) GetIntegrationTestScenarios(userName, appName string)
 
 var (
 	componentRepoUrl              string = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
-	componentsCount               int    = 1
+	componentRepoRevision         string = "main"
+	componentRepoTemplate         bool
+	quayRepo                      string = "redhat-user-workloads-stage"
 	usernamePrefix                string = "testuser"
 	numberOfUsers                 int
 	testScenarioGitURL            string = "https://github.com/konflux-ci/integration-examples.git"
@@ -322,7 +325,9 @@ type LogData struct {
 	MachineName                       string  `json:"machineName"`
 	BinaryDetails                     string  `json:"binaryDetails"`
 	ComponentRepoUrl                  string  `json:"componentRepoUrl"`
-	ComponentsCount                   int     `json:"componentsCount"`
+	ComponentRepoRevision             string  `json:"componentRepoRevision"`
+	ComponentRepoTemplate             bool    `json:"componentRepoTemplate"`
+	QuayRepo                          string  `json:"quayRepo"`
 	NumberOfThreads                   int     `json:"threads"`
 	NumberOfUsersPerThread            int     `json:"usersPerThread"`
 	NumberOfUsers                     int     `json:"totalUsers"`
@@ -450,7 +455,9 @@ func ExecuteLoadTest() {
 
 func init() {
 	rootCmd.Flags().StringVar(&componentRepoUrl, "component-repo", componentRepoUrl, "the component repo URL to be used")
-	rootCmd.Flags().IntVar(&componentsCount, "components-count", componentsCount, "number of components to create per application")
+	rootCmd.Flags().StringVar(&componentRepoRevision, "component-repo-revision", componentRepoRevision, "the component repo revision, git branch")
+	rootCmd.Flags().BoolVarP(&componentRepoTemplate, "component-repo-template", "e", false, "if you want to use per-user branch based on provided branch for PaC testing")
+	rootCmd.Flags().StringVar(&quayRepo, "quay-repo", quayRepo, "the target quay repo for PaC templated image pushes")
 	rootCmd.Flags().StringVar(&usernamePrefix, "username", usernamePrefix, "the prefix used for usersignup names")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "if 'debug' traces should be displayed in the console")
 	rootCmd.Flags().BoolVarP(&stage, "stage", "s", false, "is you want to run the test on stage")
@@ -589,7 +596,9 @@ func setup(cmd *cobra.Command, args []string) {
 		MachineName:                 machineName,
 		BinaryDetails:               binaryDetails,
 		ComponentRepoUrl:            componentRepoUrl,
-		ComponentsCount:             componentsCount,
+		ComponentRepoRevision:       componentRepoRevision,
+		ComponentRepoTemplate:       componentRepoTemplate,
+		QuayRepo:                    quayRepo,
 		NumberOfThreads:             threadCount,
 		NumberOfUsersPerThread:      numberOfUsers,
 		NumberOfUsers:               overallCount,
@@ -1469,12 +1478,20 @@ func handleItsFailure(ctx *JourneyContext, applicationName string, err, conditio
 	increaseBar(ctx.ItsBar, itsBarMutex)
 }
 
-func (h *ConcreteHandlerResources) handleCDQCreation(ctx *JourneyContext, framework *framework.Framework, username, usernamespace, applicationName, cdqName string) (bool, *appstudioApi.ComponentDetectionQuery) {
-	klog.V(5).Infof("handleCDQCreation start username: %s, usernamespace: %s, applicationName: %s", username, usernamespace, applicationName)
-	defer klog.V(5).Infof("handleCDQCreation end username: %s, usernamespace: %s, applicationName: %s", username, usernamespace, applicationName)
+func (h *ConcreteHandlerResources) handleCDQCreation(ctx *JourneyContext, framework *framework.Framework, username, usernamespace string) (bool, *appstudioApi.ComponentDetectionQuery) {
+	err, componentRepoRevisionFinal := handleRepoTemplating(ctx, framework, username, usernamespace)
+	if err != nil {
+		logError(30, fmt.Sprintf("Unable to template repository for user %s: %v", username, err))
+		//FailedCDQCreationsPerThread[ctx.ThreadIndex] += 1
+		//MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
+		increaseBar(ctx.CDQsBar, cdqsBarMutex)
+		return false, nil
+	}
 
+	ApplicationName := fmt.Sprintf("%s-app", username)
+	ComponentDetectionQueryName := fmt.Sprintf("%s-cdq", username)
 	startTimeForCDQ := time.Now()
-	cdq, err := framework.AsKubeDeveloper.HasController.CreateComponentDetectionQueryWithTimeout(cdqName, usernamespace, componentRepoUrl, "", "", "", false, 60*time.Minute)
+	cdq, err := framework.AsKubeDeveloper.HasController.CreateComponentDetectionQueryWithTimeout(ComponentDetectionQueryName, usernamespace, componentRepoUrl, componentRepoRevisionFinal, "", "", false, 60*time.Minute)
 	cdqCreationTime := time.Since(startTimeForCDQ)
 
 	if err != nil {
@@ -1508,7 +1525,73 @@ func (h *ConcreteHandlerResources) handleCDQCreation(ctx *JourneyContext, framew
 	return h.validateCDQCreation(ctx, framework, cdqName, applicationName, username, usernamespace, cdqCreationTime)
 }
 
-func (h *ConcreteHandlerResources) validateCDQCreation(ctx *JourneyContext, framework *framework.Framework, cdqName, applicationName, username, usernamespace string, cdqCreationTime time.Duration) (bool, *appstudioApi.ComponentDetectionQuery) {
+func handleRepoTemplating(ctx *JourneyContext, framework *framework.Framework, username, usernamespace string) (error, string) {
+	// Usual case, no repo templating takes place
+	if ! componentRepoTemplate {
+		return nil, componentRepoRevision
+	}
+
+	// PaC testing, let's template repo and return branch name
+	var branchName string
+	var componentRepoName string
+	var err error
+	var exists bool
+
+	// Parse just repo name out of url
+	regex := regexp.MustCompile(`/([^/]+)/?$`)
+	match := regex.FindStringSubmatch(componentRepoUrl)
+	if match != nil {
+		componentRepoName = match[1]
+	} else {
+		return fmt.Errorf("Failed to parse repo name out of url %s", componentRepoUrl), ""
+	}
+
+	// Cleanup if it already exists
+	branchName = username
+	exists, err = framework.AsKubeAdmin.CommonController.Github.ExistsRef(componentRepoName, branchName)
+	if err != nil {
+		return err, ""
+	}
+	if exists {
+		klog.Errorf("Branch %s already exists, deleting it", branchName)
+		err := framework.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepoName, branchName)
+		if err != nil {
+			return err, ""
+		}
+	}
+
+	// Create branch
+	err = framework.AsKubeAdmin.CommonController.Github.CreateRef(componentRepoName, componentRepoRevision, "", branchName)
+	if err != nil {
+		return err, ""
+	}
+
+	// Template files we care about
+	fileList := []string{".tekton/multi-platform-test-pull-request.yaml", ".tekton/multi-platform-test-push.yaml"}
+	for _, file := range fileList {
+		fileResponse, err := framework.AsKubeAdmin.CommonController.Github.GetFile(componentRepoName, file, branchName)
+		if err != nil {
+			return err, ""
+		}
+
+		fileContent, err2 := fileResponse.GetContent()
+		if err2 != nil {
+			return err2, ""
+		}
+
+		fileContentNew := strings.ReplaceAll(fileContent, "NAMESPACE", usernamespace)
+		fileContentNew = strings.ReplaceAll(fileContentNew, "QUAY_REPO", quayRepo)
+
+		_, err3 := framework.AsKubeAdmin.CommonController.Github.UpdateFile(componentRepoName, file, fileContentNew, branchName, *fileResponse.SHA)
+		if err3 != nil {
+			return err3, ""
+		}
+	}
+
+	return nil, branchName
+}
+
+func (h *ConcreteHandlerResources) validateCDQ(ctx *JourneyContext, framework *framework.Framework, CDQName, ApplicationName, username, usernamespace string, cdqCreationTime time.Duration) (bool, *appstudioApi.ComponentDetectionQuery) {
 	cdqValidationInterval := time.Second * 20
 	cdqValidationTimeout := time.Minute * 30
 	var conditionError error
