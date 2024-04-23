@@ -37,7 +37,7 @@ var (
 	componentRepoUrl              string = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
 	usernamePrefix                string = "testuser"
 	numberOfUsers                 int
-	testScenarioGitURL            string = "https://github.com/redhat-appstudio/integration-examples.git"
+	testScenarioGitURL            string = "https://github.com/konflux-ci/integration-examples.git"
 	testScenarioRevision          string = "main"
 	testScenarioPathInRepo        string = "pipelines/integration_resolver_pipeline_pass.yaml"
 	waitPipelines                 bool
