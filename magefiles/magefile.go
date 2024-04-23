@@ -297,7 +297,7 @@ func (ci CI) UnregisterSprayproxy() {
 }
 
 func RunE2ETests() error {
-	labelFilter := utils.GetEnv("E2E_TEST_SUITE_LABEL", "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines")
+	labelFilter := utils.GetEnv("E2E_TEST_SUITE_LABEL", "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines && !multi-platform-dynamic")
 	return runTests(labelFilter, "e2e-report.xml")
 }
 
@@ -472,6 +472,9 @@ func setRequiredEnvVars() error {
 				envVarPrefix = "MULTI_PLATFORM_CONTROLLER"
 				imageTagSuffix = "multi-platform-controller"
 				testSuiteLabel = "multi-platform"
+				im := strings.Split(os.Getenv("OTP_SERVER_IMAGE"), "@")
+				os.Setenv("MULTI_PLATFORM_CONTROLLER_OTP_IMAGE_REPO", im[0])
+				os.Setenv("MULTI_PLATFORM_CONTROLLER_OTP_IMAGE_TAG", im[1])
 				requiresMultiPlatformTests = true
 			}
 
@@ -495,12 +498,12 @@ func setRequiredEnvVars() error {
 			requiresSprayProxyRegistering = true
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
-			/* Disabling "build tests" temporary due:
+			/* Disabling "build tests" and multi-platform tests temporary due:
 			TODO: Enable when issues are done:
 			https://issues.redhat.com/browse/RHTAPBUGS-992, https://issues.redhat.com/browse/RHTAPBUGS-991, https://issues.redhat.com/browse/RHTAPBUGS-989,
 			https://issues.redhat.com/browse/RHTAPBUGS-978,https://issues.redhat.com/browse/RHTAPBUGS-956
 			*/
-			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,spi-suite,remote-secret,integration-service,ec,build-templates,multi-platform")
+			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,spi-suite,remote-secret,integration-service,ec,build-templates")
 		} else if strings.Contains(jobName, "release-service-catalog") { // release-service-catalog jobs (pull, rehearsal)
 			envVarPrefix := "RELEASE_SERVICE"
 			os.Setenv("E2E_TEST_SUITE_LABEL", "release-pipelines")
