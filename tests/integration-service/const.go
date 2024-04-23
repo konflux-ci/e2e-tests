@@ -11,7 +11,7 @@ const (
 	componentRepoURL = "https://github.com/redhat-appstudio-qe/hacbs-test-project"
 
 	EnvironmentName        = "development"
-	gitURL                 = "https://github.com/redhat-appstudio/integration-examples.git"
+	gitURL                 = "https://github.com/konflux-ci/integration-examples.git"
 	revision               = "843f455fe87a6d7f68c238f95a8f3eb304e65ac5"
 	pathInRepoPass         = "pipelines/integration_resolver_pipeline_pass.yaml"
 	pathInRepoFail         = "pipelines/integration_resolver_pipeline_fail.yaml"

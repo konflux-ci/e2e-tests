@@ -32,7 +32,7 @@ var TestScenarios = []TestSpec{
 				SkipDeploymentCheck:        false,
 				AdvancedBuildSpec: &AdvancedBuildSpec{
 					TestScenario: TestScenarioSpec{
-						GitURL:      "https://github.com/redhat-appstudio/integration-examples.git",
+						GitURL:      "https://github.com/konflux-ci/integration-examples.git",
 						GitRevision: "843f455fe87a6d7f68c238f95a8f3eb304e65ac5",
 						TestPath:    "pipelines/integration_resolver_pipeline_pass.yaml",
 					},
