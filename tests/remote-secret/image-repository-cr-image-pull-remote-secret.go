@@ -43,11 +43,9 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "image-reposi
 	pushTargets := []rs.TargetStatus{}
 	imageRepository := &image.ImageRepository{}
 	snapshot := &appservice.Snapshot{}
-	env := &appservice.Environment{}
 
 	applicationName := "image-repository-cr-dotnet-component"
 	gitSourceUrl := "https://github.com/devfile-samples/devfile-sample-dotnet60-basic"
-	environmentName := "image-pull-remote-secret"
 	secret := ""
 
 	AfterEach(framework.ReportFailure(&fw))
@@ -88,11 +86,6 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "image-reposi
 
 				return fw.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 			}, 1*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("timed out waiting for HAS controller to create gitops repository for the %s application in %s namespace", applicationName, fw.UserNamespace))
-		})
-
-		It("creates an environment", func() {
-			env, err = fw.AsKubeDeveloper.GitOpsController.CreatePocEnvironment(environmentName, namespace)
-			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("creates component detection query", func() {
@@ -169,17 +162,6 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "image-reposi
 				return nil
 			}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the snapshot for the component %s/%s to be marked as successful", component.GetNamespace(), component.GetName()))
 
-		})
-
-		It("checks if a SnapshotEnvironmentBinding is created successfully", func() {
-			Eventually(func() error {
-				_, err := fw.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
-				if err != nil {
-					GinkgoWriter.Println("SnapshotEnvironmentBinding has not been found yet")
-					return err
-				}
-				return nil
-			}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the SnapshotEnvironmentBinding to be created (snapshot: %s, env: %s, namespace: %s)", snapshot.GetName(), env.GetName(), snapshot.GetNamespace()))
 		})
 
 		It("checks if image pull remote secret was created", func() {

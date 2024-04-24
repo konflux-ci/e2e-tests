@@ -44,8 +44,6 @@ import (
 )
 
 const (
-	// Environment name used for rhtap-demo tests
-	EnvironmentName string = "development"
 
 	// Secret Name created by spi to interact with github
 	SPIGithubSecretName string = "e2e-github-secret"
@@ -93,7 +91,6 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 	// Initialize the application struct
 	application := &appservice.Application{}
 	snapshot := &appservice.Snapshot{}
-	env := &appservice.Environment{}
 
 	fw := &framework.Framework{}
 	AfterEach(framework.ReportFailure(&fw))
@@ -150,9 +147,7 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 								Fail(fmt.Sprintf("error deleting all componentns in namespace:\n%s", err))
 							}
 							Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-							Expect(fw.AsKubeAdmin.CommonController.DeleteAllSnapshotEnvBindingsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 							Expect(fw.AsKubeAdmin.IntegrationController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
-							Expect(fw.AsKubeAdmin.GitOpsController.DeleteAllEnvironmentsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 							Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)).To(Succeed())
 							Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 						}
@@ -194,12 +189,6 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 
 						return fw.AsKubeDeveloper.CommonController.Github.CheckIfRepositoryExist(gitOpsRepository)
 					}, 1*time.Minute, 1*time.Second).Should(BeTrue(), fmt.Sprintf("timed out waiting for HAS controller to create gitops repository for the %s application in %s namespace", appTest.ApplicationName, fw.UserNamespace))
-				})
-
-				// Create an environment in a specific namespace
-				It("creates an environment", Label(devEnvTestLabel), func() {
-					env, err = fw.AsKubeDeveloper.GitOpsController.CreatePocEnvironment(EnvironmentName, namespace)
-					Expect(err).NotTo(HaveOccurred())
 				})
 
 				for _, componentSpec := range appTest.Components {
@@ -296,17 +285,6 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 								return nil
 							}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the snapshot for the component %s/%s to be marked as successful", component.GetNamespace(), component.GetName()))
 						}
-					})
-
-					It("checks if a SnapshotEnvironmentBinding is created successfully", Label(devEnvTestLabel), func() {
-						Eventually(func() error {
-							_, err := fw.AsKubeAdmin.CommonController.GetSnapshotEnvironmentBinding(application.Name, namespace, env)
-							if err != nil {
-								GinkgoWriter.Println("SnapshotEnvironmentBinding has not been found yet")
-								return err
-							}
-							return nil
-						}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the SnapshotEnvironmentBinding to be created (snapshot: %s, env: %s, namespace: %s)", snapshot.GetName(), env.GetName(), snapshot.GetNamespace()))
 					})
 
 					// Deploy the component using gitops and check for the health
