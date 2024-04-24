@@ -2210,7 +2210,6 @@ func (h *ConcreteHandlerDeployments) validateDeploymentCreation(ctx *JourneyCont
 	err := k8swait.PollUntilContextTimeout(context.Background(), deploymentCreatedRetryInterval, deploymentCreatedTimeout, false, func(ctx context.Context) (done bool, err error) {
 		_, err = framework.AsKubeDeveloper.CommonController.GetDeployment(componentName, usernamespace)
 		if err != nil {
-			klog.Infof("Unable getting deployment - %v", err)
 			time.Sleep(time.Millisecond * time.Duration(rand.IntnRange(10, 200)))
 			return false, nil
 		}
