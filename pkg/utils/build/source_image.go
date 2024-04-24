@@ -24,7 +24,7 @@ import (
 const (
 	extraSourceSubDir     = "extra_src_dir"
 	rpmSubDir             = "rpm_dir"
-	srcTarFileRegex       = "extra-src-[0-9]+.tar"
+	srcTarFileRegex       = "extra-src-[0-9a-f]+.tar"
 	shaValueRegex         = "[a-f0-9]{40}"
 	tarGzFileRegex        = ".tar.gz$"
 	gomodDependencySubDir = "deps/gomod/pkg/mod/cache/download/"
@@ -89,12 +89,12 @@ func IsSourceFilesExistsInSourceImage(srcImage string, gitUrl string, isHermetic
 		return false, fmt.Errorf("no tar file found in extra_src_dir, found files %v", fileNames)
 	}
 
-	// Get all the extra-src-[0-9]+.tar files
+	// Get all the extra-src-*.tar files
 	extraSrcTarFiles := utils.FilterSliceUsingPattern(srcTarFileRegex, fileNames)
-	fmt.Printf("Files found with pattern extra-src-[0-9]+.tar: %v\n", extraSrcTarFiles)
 	if len(extraSrcTarFiles) == 0 {
-		return false, fmt.Errorf("no tar file found with pattern extra-src-[0-9]+.tar")
+		return false, fmt.Errorf("no tar file found with pattern %s", srcTarFileRegex)
 	}
+	fmt.Printf("Files found with pattern %s: %v\n", srcTarFileRegex, extraSrcTarFiles)
 
 	//Untar all the extra-src-[0-9]+.tar files
 	for _, tarFile := range extraSrcTarFiles {
