@@ -1,10 +1,10 @@
 # Release pipelines e2e tests suite
 
-This suite contains e2e-tests for testing release pipelines from repository [release-service-catalog](https://github.com/redhat-appstudio/release-service-catalog/tree/development).
+This suite contains e2e-tests for testing release pipelines from repository [release-service-catalog](https://github.com/konflux-ci/release-service-catalog/tree/development).
 All tests must have the label `release-pipelines`.
 
 ## Branch alignment
- * Below are the branches in [release-service-catalog](https://github.com/redhat-appstudio/release-service-catalog/tree/development). All these branches will be tested per requirement.  
+ * Below are the branches in [release-service-catalog](https://github.com/konflux-ci/release-service-catalog/tree/development). All these branches will be tested per requirement.  
    - production	: this branch will be used for RHTAP production environment
    - stage	: this branch will be used for RHTAP stage environment
    - development: this branch is the default branch for development
