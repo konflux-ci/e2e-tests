@@ -73,7 +73,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 			err = devFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, releasecommon.HacbsReleaseTestsTokenSecret, constants.DefaultPipelineServiceAccount, true)
 			Expect(err).ToNot(HaveOccurred())
 
-			githubUser := utils.GetEnv("GITHUB_USER","")
+			githubUser := utils.GetEnv("GITHUB_USER","redhat-appstudio-qe-bot")
 			githubToken := utils.GetEnv(constants.GITHUB_TOKEN_ENV, "")
 			gh, err = github.NewGithubClient(githubToken, githubUser)
 			Expect(githubToken).ToNot(BeEmpty())
@@ -83,11 +83,11 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 				gh.DeleteRelease(sampRepoOwner, sampRepo, sampReleaseURL)
 			}
 
-			_, err = managedFw.AsKubeAdmin.CommonController.GetSecret(managedNamespace, releasecommon.RedhatAppstudioUserSecret)
+			_, err = managedFw.AsKubeAdmin.CommonController.GetSecret(managedNamespace, releasecommon.RedhatAppstudioQESecret)
 			if errors.IsNotFound(err) {
 				githubSecret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      releasecommon.RedhatAppstudioUserSecret,
+						Name:      releasecommon.RedhatAppstudioQESecret,
 						Namespace: managedNamespace,
 					},
 					Type: corev1.SecretTypeOpaque,
@@ -100,13 +100,13 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
+			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioQESecret, constants.DefaultPipelineServiceAccount, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(sampApplicationName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(sampReleasePlanName, devNamespace, sampApplicationName, managedNamespace, "true")
+			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(sampReleasePlanName, devNamespace, sampApplicationName, managedNamespace, "true", nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			createGHReleasePlanAdmission(sampReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, sampApplicationName, sampEnterpriseContractPolicyName, sampCatalogPathInRepo, "false", "", "", "", "")
@@ -214,7 +214,7 @@ func createGHReleasePlanAdmission(sampRPAName string, managedFw framework.Framew
 
 	data, err := json.Marshal(map[string]interface{}{
 		"github": map[string]interface{}{
-			"githubSecret": releasecommon.RedhatAppstudioUserSecret,
+			"githubSecret": releasecommon.RedhatAppstudioQESecret,
 		},
 		"sign": map[string]interface{}{
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",
