@@ -38,8 +38,9 @@ func NewTemplateData(specOutline TestOutline, destination string) *TemplateData 
 
 	dir := filepath.Dir(destination)
 	dirName := strings.Split(dir, "/")[len(strings.Split(dir, "/"))-1]
+	packageName := regexp.MustCompile(`^([a-z]+)`).FindString(dirName)
 
-	return &TemplateData{Outline: specOutline, PackageName: dirName, FrameworkDescribeString: newSpecName}
+	return &TemplateData{Outline: specOutline, PackageName: packageName, FrameworkDescribeString: newSpecName}
 }
 
 func RenderFrameworkDescribeGoFile(t TemplateData) error {

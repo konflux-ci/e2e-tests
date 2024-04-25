@@ -131,6 +131,7 @@ func generateGinkgoSpec(cwd, teamTmplPath, destination string, dataFile string) 
 	// Since that is not a semantic we follow I perform this action.
 	dirs := strings.Split(filepath.Dir(destination), "/")
 	dir := dirs[len(dirs)-1]
+	dir = strings.ReplaceAll(dir, "-", "_")
 	ginkgoFileName := fmt.Sprintf("%s_test.go", dir)
 	postFileName := filepath.Base(destination)
 	err = os.Chdir(filepath.Dir(destination))
