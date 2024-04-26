@@ -78,6 +78,22 @@
   monitoring_query: sum(irate(node_disk_io_time_seconds_total{cluster="",namespace=~".*"}[5m]))
   monitoring_step: 15
 
+# redhat-appstudio metrics
+# Availability of GitHub app
+- name: measurements.redhat_appstudio_buildservice_global_github_app_available
+  monitoring_query: sum(redhat_appstudio_buildservice_global_github_app_available)
+  monitoring_step: 15
+
+# Component creation til simple build pipeline submision or PaC provision in seconds
+- name: measurements.redhat_appstudio_buildservice_component_onboarding_time_sum
+  monitoring_query: sum(redhat_appstudio_buildservice_component_onboarding_time_sum)
+  monitoring_step: 15
+
+# Image repository provision to ready to use in seconds
+- name: measurements.redhat_appstudio_imagecontroller_image_repository_provision_time_sum
+  monitoring_query: sum(redhat_appstudio_imagecontroller_image_repository_provision_time_sum)
+  monitoring_step: 15
+
 # Interesting CI environment variables
 {% for var in [
   'BUILD_ID',
