@@ -53,6 +53,7 @@ load_test() {
     rm -rvf "$output_dir/load-test.log"
     go run loadtest.go \
         --component-repo "${COMPONENT_REPO:-https://github.com/nodeshift-starters/devfile-sample.git}" \
+        --component-repo-revision "${COMPONENT_REPO_REVISION:-main}" \
         --username "$USER_PREFIX-$index" \
         --users 1 \
         -w="${WAIT_PIPELINES:-true}" \

@@ -1,5 +1,6 @@
 go run loadtest.go \
     --component-repo "${COMPONENT_REPO:-https://github.com/devfile-samples/devfile-sample-code-with-quarkus}" \
+    --component-repo-revision "${COMPONENT_REPO_REVISION:-main}" \
     --build-pipeline-selector-bundle "${BUILD_PIPELINE_SELECTOR_BUNDLE:-}" \
     --username "$USER_PREFIX" \
     --users "${USERS_PER_THREAD:-2}" \
