@@ -3,7 +3,6 @@ package tasks
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
@@ -69,7 +68,9 @@ var _ = framework.TaskSuiteDescribe("tkn bundle task", Label("tasks", "HACBS"), 
 			_, err = kubeClient.TektonController.CreatePVCInAccessMode(pvcName, namespace, pvcAccessMode)
 			Expect(err).NotTo(HaveOccurred())
 			// use a pod to copy test data to the pvc
-			_, err = kubeClient.CommonController.CreatePod(setupTestData(pvcName), namespace)
+			testData, err := setupTestData(pvcName)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = kubeClient.CommonController.CreatePod(testData, namespace)
 			Expect(err).NotTo(HaveOccurred())
 		}
 	})
@@ -227,12 +228,12 @@ func fetchImage(image string, visitor func(version, kind, name string, element r
 }
 
 // sets the task files on a pvc for use by the task
-func setupTestData(pvcName string) *corev1.Pod {
+func setupTestData(pvcName string) (*corev1.Pod, error) {
 	// setup test data
-	testTasks := testData()
-	task1Json := serializeTask(testTasks["task1"])
-	task2Json := serializeTask(testTasks["task2"])
-	task3Json := serializeTask(testTasks["task3"])
+	testTasks, err := testData([]string{"task1", "task2", "task3"})
+	if err != nil {
+		return nil, err
+	}
 
 	return &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
@@ -261,15 +262,15 @@ func setupTestData(pvcName string) *corev1.Pod {
 					Env: []corev1.EnvVar{
 						{
 							Name:  "TASK1_JSON",
-							Value: task1Json,
+							Value: testTasks["task1"],
 						},
 						{
 							Name:  "TASK2_JSON",
-							Value: task2Json,
+							Value: testTasks["task2"],
 						},
 						{
 							Name:  "TASK3_JSON",
-							Value: task3Json,
+							Value: testTasks["task3"],
 						},
 					},
 				},
@@ -285,69 +286,37 @@ func setupTestData(pvcName string) *corev1.Pod {
 				},
 			},
 		},
-	}
+	}, nil
 }
 
 // the test tasks
-func testData() map[string]*pipeline.Task {
+func testData(tasks []string) (map[string]string, error) {
 	apiVersion := "tekton.dev/v1"
-	task1 := &pipeline.Task{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Task",
-			APIVersion: apiVersion,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "task1",
-		},
-		Spec: pipeline.TaskSpec{
-			Steps: []pipeline.Step{
-				{
-					Name:  "test1-step",
-					Image: "ubuntu",
+	allTasks := make(map[string]string)
+	for idx, task := range tasks {
+		taskJson, err := serializeTask(&pipeline.Task{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Task",
+				APIVersion: apiVersion,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: task,
+			},
+			Spec: pipeline.TaskSpec{
+				Steps: []pipeline.Step{
+					{
+						Name:  fmt.Sprintf("test%d-step", idx),
+						Image: "ubuntu",
+					},
 				},
 			},
-		},
+		})
+		if err != nil {
+			return nil, err
+		}
+		allTasks[task] = taskJson
 	}
-	task2 := &pipeline.Task{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Task",
-			APIVersion: apiVersion,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "task2",
-		},
-		Spec: pipeline.TaskSpec{
-			Steps: []pipeline.Step{
-				{
-					Name:  "test2-step",
-					Image: "ubuntu",
-				},
-			},
-		},
-	}
-	task3 := &pipeline.Task{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Task",
-			APIVersion: apiVersion,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "task3",
-		},
-		Spec: pipeline.TaskSpec{
-			Steps: []pipeline.Step{
-				{
-					Name:  "test3-step",
-					Image: "ubuntu",
-				},
-			},
-		},
-	}
-
-	return map[string]*pipeline.Task{
-		"task1": task1,
-		"task2": task2,
-		"task3": task3,
-	}
+	return allTasks, nil
 }
 
 // the taskRun that runs tkn-bundle
@@ -386,10 +355,10 @@ func taskRunTemplate(taskName, pvcName, bundleImg string) *pipeline.TaskRun {
 	}
 }
 
-func serializeTask(task *pipeline.Task) string {
+func serializeTask(task *pipeline.Task) (string, error) {
 	taskJson, err := json.Marshal(task)
 	if err != nil {
-		log.Fatalf("Error serializing task: %v", err)
+		return "", err
 	}
-	return string(taskJson)
+	return string(taskJson), nil
 }
