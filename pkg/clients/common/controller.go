@@ -10,12 +10,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 )
 
-// Kasem
-const (
-	gitlabToken = ""
-	gitlabURL   = "https://gitlab.com/api/v4" //"KONFLUX QE"
-)
-
 // Create the struct for kubernetes and github clients.
 type SuiteController struct {
 	// Wrap K8S client go to interact with Kube cluster
@@ -36,17 +30,10 @@ func NewSuiteController(kubeC *kubeCl.CustomClient) (*SuiteController, error) {
 		return nil, err
 	}
 
-	gl, err := gitlab.NewGitlabClient(gitlabToken, gitlabURL)
+	gl, err := gitlab.NewGitlabClient(utils.GetEnv(constants.GITLAB_TOKEN_ENV, ""), utils.GetEnv(constants.GITLAB_URL_ENV, ""))
 	if err != nil {
 		return nil, fmt.Errorf("failed to authenticate with GitLab: %w", err)
 	}
-
-	// Test GitLab token
-	user, _, err := gl.GetClient().Users.CurrentUser()
-	if err != nil {
-		return nil, fmt.Errorf("failed to authenticate with GitLab: %w", err)
-	}
-	fmt.Printf("Authenticated as GitLab user: %s (%s)\n", user.Username, user.Email)
 
 	return &SuiteController{
 		kubeC,

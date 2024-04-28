@@ -2,6 +2,7 @@ package gitlab
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	. "github.com/onsi/gomega"
@@ -85,4 +86,36 @@ func (gc *GitlabClient) DeleteBranch(projectID, branchName string) (bool, error)
 	fmt.Printf("Deleted branch: %s", branchName)
 
 	return true, nil
+}
+
+// CreateGitlabRef creates a new ref (Gitlab branch) in a specified Gitlab repository,
+// that will be based on the commit specified with sha. If sha is not specified,
+// the latest commit from base branch will be used.
+func (gc *GitlabClient) CreateGitlabNewBranch(projectID, branchName, sha, baseBranch string) error {
+	ref := fmt.Sprintf(HEADS, branchName)
+
+	fmt.Println("ref : ", ref)
+	// If sha is not provided, get the latest commit from the base branch
+	if sha == "" {
+		commit, _, err := gc.client.Commits.GetCommit(projectID, baseBranch)
+		if err != nil {
+			return fmt.Errorf("failed to get latest commit from base branch: %v", err)
+		}
+		sha = commit.ID
+	}
+
+	opt := &gitlab.CreateBranchOptions{
+		Branch: &branchName,
+		Ref:    &sha,
+	}
+	_, resp, err := gc.client.Branches.CreateBranch(projectID, opt)
+	if err != nil {
+		// Check if the error is due to the branch already existing
+		if resp != nil && resp.StatusCode == http.StatusConflict {
+			return fmt.Errorf("branch '%s' already exists", branchName)
+		}
+		return fmt.Errorf("failed to create branch '%s': %v", branchName, err)
+	}
+
+	return nil
 }

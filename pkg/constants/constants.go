@@ -94,6 +94,12 @@ const (
 	// If set to "true", e2e-tests installer will configure master/control plane nodes as schedulable
 	ENABLE_SCHEDULING_ON_MASTER_NODES_ENV = "ENABLE_SCHEDULING_ON_MASTER_NODES"
 
+	// A gitlab token is required to run tests against gitlab.com. The token need to have permissions to the given github organization.
+	GITLAB_TOKEN_ENV string = "GITLAB_TOKEN" // #nosec
+
+	// The gitlab URL used to run integration reporting e2e tests against
+	GITLAB_URL_ENV string = "GITLAB_URL" // #nosec
+
 	// Test namespace's required labels
 	ArgoCDLabelKey   string = "argocd.argoproj.io/managed-by"
 	ArgoCDLabelValue string = "gitops-service-argocd"
