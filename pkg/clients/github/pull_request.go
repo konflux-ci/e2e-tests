@@ -76,3 +76,11 @@ func (g *Github) GetCheckRun(repository string, id int64) (*github.CheckRun, err
 	}
 	return checkRun, nil
 }
+
+func (g *Github) GetPRDetails(ghRepo string, prID int) (string, string, error) {
+	pullRequest, err := g.GetPullRequest(ghRepo, prID)
+	if err != nil {
+		return "", "", err
+	}
+	return *pullRequest.Head.Repo.CloneURL, *pullRequest.Head.Ref, nil
+}

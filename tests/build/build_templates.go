@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -14,7 +13,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/openshift/library-go/pkg/image/reference"
 	"github.com/redhat-appstudio/application-api/api/v1alpha1"
-	"github.com/redhat-appstudio/e2e-tests/pkg/clients/github"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	kubeapi "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
@@ -505,31 +503,11 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 				var gitRevision, gitURL, imageWithDigest string
 
-				defaultGHOrg := "redhat-appstudio"
-				defaultGHRepo := "build-definitions"
-				defaultGitURL := fmt.Sprintf("https://github.com/%s/%s", defaultGHOrg, defaultGHRepo)
-				defaultGitRevision := "main"
-
 				BeforeAll(func() {
-					// If we are testing the changes from a pull request, APP_SUFFIX may contain the
-					// pull request ID. If it looks like an ID, then fetch information about the pull
-					// request and use it to determine which git URL and revision to use for the EC
-					// pipelines. NOTE: This is a workaround until Pipeline as Code supports passing
-					// the source repo URL: https://issues.redhat.com/browse/SRVKP-3427. Once that's
-					// implemented, remove the APP_SUFFIX support below and simply rely on the other
-					// environment variables to set the git revision and URL directly.
-					appSuffix := os.Getenv("APP_SUFFIX")
-					if pullRequestID, err := strconv.ParseInt(appSuffix, 10, 64); err == nil {
-						gh, err := github.NewGithubClient(utils.GetEnv(constants.GITHUB_TOKEN_ENV, ""), defaultGHOrg)
-						Expect(err).NotTo(HaveOccurred())
-						pullRequest, err := gh.GetPullRequest(defaultGHRepo, int(pullRequestID))
-						Expect(err).NotTo(HaveOccurred())
-						gitURL = *pullRequest.Head.Repo.CloneURL
-						gitRevision = *pullRequest.Head.Ref
-					} else {
-						gitRevision = utils.GetEnv(constants.EC_PIPELINES_REPO_REVISION_ENV, defaultGitRevision)
-						gitURL = utils.GetEnv(constants.EC_PIPELINES_REPO_URL_ENV, defaultGitURL)
-					}
+					// resolve the gitURL and gitRevision
+					var err error
+					gitURL, gitRevision, err = build.ResolveGitDetails(constants.EC_PIPELINES_REPO_URL_ENV, constants.EC_PIPELINES_REPO_REVISION_ENV)
+					Expect(err).NotTo(HaveOccurred())
 
 					// Double check that the component has finished. There's an earlier test that
 					// verifies this so this should be a no-op. It is added here in order to avoid

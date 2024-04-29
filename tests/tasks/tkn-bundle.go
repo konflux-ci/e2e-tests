@@ -14,6 +14,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	"github.com/tektoncd/cli/pkg/bundle"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -29,10 +30,12 @@ var _ = framework.TaskSuiteDescribe("tkn bundle task", Label("tasks", "HACBS"), 
 	var kubeClient *framework.ControllerHub
 	var fwk *framework.Framework
 	var taskName string = "tkn-bundle"
+	var pathInRepo string = "task/tkn-bundle/0.1"
 	var pvcName string = "source-pvc"
 	var pvcAccessMode corev1.PersistentVolumeAccessMode = "ReadWriteOnce"
 	var baseTaskRun *pipeline.TaskRun
-	var bundleImg string
+
+	var gitRevision, gitURL, bundleImg string
 
 	AfterEach(framework.ReportFailure(&fwk))
 
@@ -63,6 +66,11 @@ var _ = framework.TaskSuiteDescribe("tkn bundle task", Label("tasks", "HACBS"), 
 			bundleImg = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), taskName)
 		}
 
+		// resolve the gitURL and gitRevision
+		var err error
+		gitURL, gitRevision, err = build.ResolveGitDetails(constants.TASK_REPO_URL_ENV, constants.TASK_REPO_REVISION_ENV)
+		Expect(err).NotTo(HaveOccurred())
+
 		// if pvc does not exist create it
 		if _, err := kubeClient.TektonController.GetPVC(pvcName, namespace); err != nil {
 			_, err = kubeClient.TektonController.CreatePVCInAccessMode(pvcName, namespace, pvcAccessMode)
@@ -76,12 +84,16 @@ var _ = framework.TaskSuiteDescribe("tkn bundle task", Label("tasks", "HACBS"), 
 	})
 
 	BeforeEach(func() {
-		// if the task isn't installed on the cluster, don't run
-		if _, err := kubeClient.TektonController.GetTask(taskName, namespace); err != nil {
-			Skip("Skipping test because TKN_BUNDLE_TASK is not set")
+		resolverRef := pipeline.ResolverRef{
+			Resolver: "git",
+			Params: []pipeline.Param{
+				{Name: "url", Value: *pipeline.NewStructuredValues(gitURL)},
+				{Name: "revision", Value: *pipeline.NewStructuredValues(gitRevision)},
+				{Name: "pathInRepo", Value: *pipeline.NewStructuredValues(pathInRepo)},
+			},
 		}
 		// get a new taskRun on each Entry
-		baseTaskRun = taskRunTemplate(taskName, pvcName, bundleImg)
+		baseTaskRun = taskRunTemplate(taskName, pvcName, bundleImg, resolverRef)
 	})
 
 	DescribeTable("creates Tekton bundles with different params",
@@ -320,7 +332,7 @@ func testData(tasks []string) (map[string]string, error) {
 }
 
 // the taskRun that runs tkn-bundle
-func taskRunTemplate(taskName, pvcName, bundleImg string) *pipeline.TaskRun {
+func taskRunTemplate(taskName, pvcName, bundleImg string, resolverRef pipeline.ResolverRef) *pipeline.TaskRun {
 	return &pipeline.TaskRun{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Task",
@@ -332,7 +344,7 @@ func taskRunTemplate(taskName, pvcName, bundleImg string) *pipeline.TaskRun {
 		Spec: pipeline.TaskRunSpec{
 			ServiceAccountName: constants.DefaultPipelineServiceAccount,
 			TaskRef: &pipeline.TaskRef{
-				Name: taskName,
+				ResolverRef: resolverRef,
 			},
 			Params: pipeline.Params{
 				{

@@ -25,8 +25,14 @@ const (
 	// The git repo url for the EC pipelines.
 	EC_PIPELINES_REPO_URL_ENV string = "EC_PIPELINES_REPO_URL"
 
+	// The repo url for a task. This is used in a git resolver in the tasks package
+	TASK_REPO_URL_ENV string = "TASK_REPO_URL"
+
 	// The git repo revision for the EC pipelines.
 	EC_PIPELINES_REPO_REVISION_ENV string = "EC_PIPELINES_REPO_REVISION"
+
+	// The task revision to retrieve. This is used in a git resolver in the tasks package
+	TASK_REPO_REVISION_ENV string = "TASK_REPO_REVISION"
 
 	// The private devfile sample git repository to use in certain HAS e2e tests
 	PRIVATE_DEVFILE_SAMPLE string = "PRIVATE_DEVFILE_SAMPLE" // #nosec
@@ -181,6 +187,10 @@ const (
 
 	// Name of the finalizer used for blocking pruning of E2E test PipelineRuns
 	E2ETestFinalizerName = "e2e-test"
+
+	// Default github repo values for build
+	DEFAULT_GITHUB_BUILD_ORG  = "redhat-appstudio"
+	DEFAULT_GITHUB_BUILD_REPO = "build-definitions"
 )
 
 var (
