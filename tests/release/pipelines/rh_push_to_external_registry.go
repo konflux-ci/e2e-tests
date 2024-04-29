@@ -210,14 +210,14 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 			component1, err = fw.AsKubeAdmin.HasController.CreateComponent(componentDetected.ComponentStub, devNamespace, "", "", releasecommon.ApplicationNameDefault, true, map[string]string{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component1, "",
-				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
+				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
 		})
 
 		It("verifies that Component 2 can be created and build PipelineRun is created for it in dev namespace and succeeds", func() {
 			component2, err = fw.AsKubeAdmin.HasController.CreateComponent(additionalComponentDetected.ComponentStub, devNamespace, "", "", releasecommon.ApplicationNameDefault, true, map[string]string{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component2, "",
-				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
+				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
 		})
 
 		It("tests that Snapshot is created for each Component", func() {

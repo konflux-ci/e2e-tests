@@ -127,10 +127,10 @@ type RetryOptions struct {
 }
 
 // Waits for a given component to be finished and in case of hitting issue: https://issues.redhat.com/browse/SRVKP-2749 do a given retries.
-func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservice.Component, sha string, t *tekton.TektonController, r *RetryOptions) error {
+func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservice.Component, sha string, t *tekton.TektonController, r *RetryOptions, prToUpdate *pipeline.PipelineRun) error {
 	attempts := 1
 	app := component.Spec.Application
-	var pr *pipeline.PipelineRun
+	pr := &pipeline.PipelineRun{}
 
 	for {
 		err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 30*time.Minute, true, func(ctx context.Context) (done bool, err error) {
@@ -182,6 +182,11 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 		} else {
 			break
 		}
+	}
+
+	// If prToUpdate variable was passed to this function, update it with the latest version of the PipelineRun object
+	if prToUpdate != nil {
+		pr.DeepCopyInto(prToUpdate)
 	}
 
 	return nil

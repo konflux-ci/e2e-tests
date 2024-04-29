@@ -125,7 +125,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			})
 			It("should lead to build PipelineRun finishing successfully", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component,
-					"", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
+					"", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
 			})
 			It("should have a related PaC init PR created", func() {
 				timeout = time.Second * 300

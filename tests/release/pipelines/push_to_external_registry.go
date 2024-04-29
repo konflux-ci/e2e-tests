@@ -129,7 +129,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 	var _ = Describe("Post-release verification", func() {
 		It("verifies that a build PipelineRun is created in dev namespace and succeeds", func() {
 			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
-				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
+				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
 		})
 
 		It("verifies that a Release CR should have been created in the dev namespace", func() {

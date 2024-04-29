@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"time"
 	"regexp"
+	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
@@ -18,18 +18,18 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
-	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
-	releaseapi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
+	releaseapi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
-	"k8s.io/apimachinery/pkg/runtime"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 const (
-	advsServiceAccountName   = "release-service-account"
-	advsCatalogPathInRepo    = "pipelines/rh-advisories/rh-advisories.yaml"
+	advsServiceAccountName = "release-service-account"
+	advsCatalogPathInRepo  = "pipelines/rh-advisories/rh-advisories.yaml"
 )
 
 var component *appservice.Component
@@ -134,7 +134,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 					}
 					return nil
 				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for build pipelinerun to be created")
-				Expect(devFw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "", devFw.AsKubeDeveloper.TektonController, &has.RetryOptions{Retries: 3, Always: true})).To(Succeed())
+				Expect(devFw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "", devFw.AsKubeDeveloper.TektonController, &has.RetryOptions{Retries: 3, Always: true}, nil)).To(Succeed())
 			})
 			It("verifies the advs release pipelinerun is running and succeeds", func() {
 				devFw = releasecommon.NewFramework(devWorkspace)
@@ -148,7 +148,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 						return err
 					}
 					GinkgoWriter.Println("Release PR: ", releasePR.Name)
-					if  !releasePR.IsDone(){
+					if !releasePR.IsDone() {
 						return fmt.Errorf("release pipelinerun %s in namespace %s did not finished yet", releasePR.Name, releasePR.Namespace)
 					}
 					return nil
@@ -168,7 +168,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 						return fmt.Errorf("release %s/%s is not marked as finished yet", releaseCR.GetNamespace(), releaseCR.GetName())
 					}
 					return nil
-				}, 10 * time.Minute, releasecommon.DefaultInterval).Should(Succeed())
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
 			})
 
 			It("verifies if the repository URL is valid", func() {
@@ -211,16 +211,16 @@ func createADVSReleasePlan(advsReleasePlanName string, devFw framework.Framework
 	data, err := json.Marshal(map[string]interface{}{
 		"releaseNotes": map[string]interface{}{
 			"description": "releaseNotes description",
-			"references": []string{"https://server.com/ref1", "http://server2.com/ref2"},
-			"solution": "some solution",
-			"synopsis": "test synopsis",
-			"topic": "test topic",
+			"references":  []string{"https://server.com/ref1", "http://server2.com/ref2"},
+			"solution":    "some solution",
+			"synopsis":    "test synopsis",
+			"topic":       "test topic",
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 
 	_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(advsReleasePlanName, devNamespace, advsAppName,
-			managedNamespace, autoRelease, &runtime.RawExtension{
+		managedNamespace, autoRelease, &runtime.RawExtension{
 			Raw: data,
 		})
 	Expect(err).NotTo(HaveOccurred())
@@ -243,20 +243,20 @@ func createADVSReleasePlanAdmission(advsRPAName string, managedFw framework.Fram
 			"secret": "pyxis",
 		},
 		"releaseNotes": map[string]interface{}{
-			"cpe": "cpe:/a:example.com",
-			"product_id": "555",
-			"product_name": "test product",
-			"product_stream" : "rhtas-tp1",
-			"product_version" : "v1.0",
-			"type": "RHSA",
+			"cpe":             "cpe:/a:example.com",
+			"product_id":      "555",
+			"product_name":    "test product",
+			"product_stream":  "rhtas-tp1",
+			"product_version": "v1.0",
+			"type":            "RHSA",
 		},
 		"images": map[string]interface{}{
-			"defaultTag": "latest",
-			"addGitShaTag": false,
+			"defaultTag":      "latest",
+			"addGitShaTag":    false,
 			"addTimestampTag": false,
 			"addSourceShaTag": false,
-			"floatingTags":[]string{"testtag", "testtag2"},
-                },
+			"floatingTags":    []string{"testtag", "testtag2"},
+		},
 		"sign": map[string]interface{}{
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",
 		},

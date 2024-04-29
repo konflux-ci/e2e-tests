@@ -3,8 +3,8 @@ package pipelines
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
@@ -17,23 +17,23 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
-	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
-	releaseapi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
+	releaseapi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 const (
-	sampServiceAccountName   = "release-service-account"
-	sampSourceGitURL         = "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic"
-	sampReleaseURL           = "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic/releases/tag/v2.1"
-	sampRepoOwner            = "redhat-appstudio-qe"
-	sampRepo                 = "devfile-sample-go-basic"
-	sampCatalogPathInRepo    = "pipelines/release-to-github/release-to-github.yaml"
+	sampServiceAccountName = "release-service-account"
+	sampSourceGitURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic"
+	sampReleaseURL         = "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic/releases/tag/v2.1"
+	sampRepoOwner          = "redhat-appstudio-qe"
+	sampRepo               = "devfile-sample-go-basic"
+	sampCatalogPathInRepo  = "pipelines/release-to-github/release-to-github.yaml"
 )
 
 var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github pipeline", Label("release-pipelines", "release-to-github"), func() {
@@ -73,7 +73,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 			err = devFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, releasecommon.HacbsReleaseTestsTokenSecret, constants.DefaultPipelineServiceAccount, true)
 			Expect(err).ToNot(HaveOccurred())
 
-			githubUser := utils.GetEnv("GITHUB_USER","redhat-appstudio-qe-bot")
+			githubUser := utils.GetEnv("GITHUB_USER", "redhat-appstudio-qe-bot")
 			githubToken := utils.GetEnv(constants.GITHUB_TOKEN_ENV, "")
 			gh, err = github.NewGithubClient(githubToken, githubUser)
 			Expect(githubToken).ToNot(BeEmpty())
@@ -140,7 +140,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 					}
 					return nil
 				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for build pipelinerun to be created")
-				Expect(devFw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "", devFw.AsKubeDeveloper.TektonController, &has.RetryOptions{Retries: 3, Always: true})).To(Succeed())
+				Expect(devFw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "", devFw.AsKubeDeveloper.TektonController, &has.RetryOptions{Retries: 3, Always: true}, nil)).To(Succeed())
 			})
 			It("verifies the samp release pipelinerun is running and succeeds", func() {
 				devFw = releasecommon.NewFramework(devWorkspace)
@@ -154,7 +154,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 						return err
 					}
 					GinkgoWriter.Println("Release PR: ", releasePR.Name)
-					if  !releasePR.IsDone(){
+					if !releasePR.IsDone() {
 						return fmt.Errorf("release pipelinerun %s in namespace %s did not finished yet", releasePR.Name, releasePR.Namespace)
 					}
 					return nil
@@ -174,7 +174,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 						return fmt.Errorf("release %s/%s is not marked as finished yet", releaseCR.GetNamespace(), releaseCR.GetName())
 					}
 					return nil
-				}, 10 * time.Minute, releasecommon.DefaultInterval).Should(Succeed())
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
 			})
 
 			It("verifies if the Release exists in github repo", func() {
