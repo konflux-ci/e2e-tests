@@ -31,7 +31,6 @@ ginkgo --label-filter='verify-stage' ./cmd/
    3. The Component Detection Query was created successfully
    4. The Component (simple) Build finished successfully
    5. Snapshot was created and integration test finished successfully
-   6. Component was successfully deployed to a dev environment and the health endpoint is reachable
 
 ### Advanced build (enabled only if AdvancedBuildSpec is set)
 1. Setup

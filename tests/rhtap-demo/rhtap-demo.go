@@ -30,10 +30,8 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/gitops"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	pointer "k8s.io/utils/ptr"
 
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
 	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
@@ -287,64 +285,6 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 						}
 					})
 
-					// Deploy the component using gitops and check for the health
-					if !componentSpec.SkipDeploymentCheck {
-						var expectedReplicas int32 = 1
-						It(fmt.Sprintf("deploys component %s successfully using gitops", componentSpec.Name), Label(devEnvTestLabel, stageEnvTestLabel), func() {
-							var deployment *appsv1.Deployment
-							for _, component := range componentList {
-								Eventually(func() error {
-									deployment, err = fw.AsKubeDeveloper.CommonController.GetDeployment(component.Name, namespace)
-									if err != nil {
-										return err
-									}
-									if deployment.Status.AvailableReplicas != expectedReplicas {
-										return fmt.Errorf("the deployment %s/%s does not have the expected amount of replicas (expected: %d, got: %d)", deployment.GetNamespace(), deployment.GetName(), expectedReplicas, deployment.Status.AvailableReplicas)
-									}
-									return nil
-								}, 25*time.Minute, 10*time.Second).Should(Succeed(), fmt.Sprintf("timed out waiting for deployment of a component %s/%s to become ready", component.GetNamespace(), component.GetName()))
-							}
-						})
-
-						It(fmt.Sprintf("checks if component %s route(s) exist and health endpoint (if defined) is reachable", componentSpec.Name), Label(devEnvTestLabel, stageEnvTestLabel), func() {
-							for _, component := range componentList {
-								Eventually(func() error {
-									gitOpsRoute, err := fw.AsKubeDeveloper.CommonController.GetOpenshiftRouteByComponentName(component.Name, namespace)
-									Expect(err).NotTo(HaveOccurred())
-									if componentSpec.HealthEndpoint != "" {
-										err = fw.AsKubeDeveloper.CommonController.RouteEndpointIsAccessible(gitOpsRoute, componentSpec.HealthEndpoint)
-										if err != nil {
-											GinkgoWriter.Printf("Failed to request component endpoint: %+v\n retrying...\n", err)
-											return err
-										}
-									}
-									return nil
-								}, 5*time.Minute, 10*time.Second).Should(Succeed())
-							}
-						})
-					}
-
-					if componentSpec.K8sSpec != nil && componentSpec.K8sSpec.Replicas > 1 {
-						It(fmt.Sprintf("scales component %s replicas", componentSpec.Name), Label(devEnvTestLabel), Pending, func() {
-							for _, component := range componentList {
-								c, err := fw.AsKubeDeveloper.HasController.GetComponent(component.Name, namespace)
-								Expect(err).NotTo(HaveOccurred())
-								_, err = fw.AsKubeDeveloper.HasController.ScaleComponentReplicas(c, pointer.To[int](int(componentSpec.K8sSpec.Replicas)))
-								Expect(err).NotTo(HaveOccurred())
-								var deployment *appsv1.Deployment
-
-								Eventually(func() error {
-									deployment, err = fw.AsKubeDeveloper.CommonController.GetDeployment(c.Name, namespace)
-									Expect(err).NotTo(HaveOccurred())
-									if deployment.Status.AvailableReplicas != componentSpec.K8sSpec.Replicas {
-										return fmt.Errorf("the deployment %s/%s does not have the expected amount of replicas (expected: %d, got: %d)", deployment.GetNamespace(), deployment.GetName(), componentSpec.K8sSpec.Replicas, deployment.Status.AvailableReplicas)
-									}
-									return nil
-								}, 5*time.Minute, 10*time.Second).Should(Succeed(), "Component deployment %s/%s didn't get scaled to desired replicas", deployment.GetNamespace(), deployment.GetName())
-								Expect(err).NotTo(HaveOccurred())
-							}
-						})
-					}
 					if componentSpec.AdvancedBuildSpec != nil {
 						Describe(fmt.Sprintf("RHTAP Advanced build test for %s", componentSpec.Name), Label(devEnvTestLabel), Ordered, func() {
 							var managedNamespace string

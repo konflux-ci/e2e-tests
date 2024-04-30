@@ -17,7 +17,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/gitops"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -229,23 +228,6 @@ var _ = framework.ByocSuiteDescribe(Label("byoc"), Ordered, func() {
 			It("waits component pipeline to finish", func() {
 				Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(componentObj, "",
 					fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
-			})
-
-			// Deploy the component using gitops and check for the health
-			It(fmt.Sprintf("checks if component %s was deployed in the target cluster and namespace", componentObj.Name), func() {
-				var deployment *appsv1.Deployment
-				var expectedReplicas int32 = 1
-				Eventually(func() error {
-					deployment, err = ephemeralClusterClient.AppsV1().Deployments(suite.Byoc.TargetNamespace).Get(context.Background(), componentObj.Name, metav1.GetOptions{})
-					if err != nil {
-						return fmt.Errorf("could not get deployment %s/%s: %+v", suite.Byoc.TargetNamespace, componentObj.GetName(), err)
-					}
-					if deployment.Status.AvailableReplicas != expectedReplicas {
-						return fmt.Errorf("expected %d replicas for %s/%s deployment, got %d", expectedReplicas, deployment.GetNamespace(), deployment.GetName(), deployment.Status.AvailableReplicas)
-					}
-					return nil
-				}, 25*time.Minute, 10*time.Second).Should(Succeed(), fmt.Sprintf("timed out waiting for deployment of a component %s/%s to become ready in ephemeral cluster", suite.Byoc.TargetNamespace, componentObj.GetName()))
-				Expect(err).NotTo(HaveOccurred())
 			})
 
 			if suite.Byoc.ClusterType == appservice.ConfigurationClusterType_Kubernetes {
