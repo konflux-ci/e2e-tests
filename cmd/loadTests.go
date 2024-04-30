@@ -832,7 +832,7 @@ func setup(cmd *cobra.Command, args []string) {
 
 	logData.MaxTimeToCreateComponents = maxDurationFromArray(ComponentCreationTimeMaxPerThread).Seconds()
 
-	componentCreationFailureRate := float64(componentCreationFailureCount) / float64(overallCount)
+	componentCreationFailureRate := float64(componentCreationFailureCount) / float64(overallCount * componentsCount)
 	logData.ComponentCreationFailureRate = componentCreationFailureRate
 
 	// Compile data about PipelineRuns
@@ -856,7 +856,7 @@ func setup(cmd *cobra.Command, args []string) {
 	}
 	logData.AverageTimeToRunPipelineFailed = averageTimeToRunPipelineFailed
 
-	pipelineRunFailureRate := float64(pipelineRunFailureCount) / float64(overallCount)
+	pipelineRunFailureRate := float64(pipelineRunFailureCount) / float64(overallCount * componentsCount)
 	logData.PipelineRunFailureRate = pipelineRunFailureRate
 
 	// Compile data about integration tests
@@ -880,7 +880,7 @@ func setup(cmd *cobra.Command, args []string) {
 	}
 	logData.IntegrationTestsAverageTimeToRunPipelineFailed = IntegrationTestsAverageTimeToRunPipelineFailed
 
-	IntegrationTestsPipelineRunFailureRate := float64(integrationTestsPipelineRunFailureCount) / float64(overallCount)
+	IntegrationTestsPipelineRunFailureRate := float64(integrationTestsPipelineRunFailureCount) / float64(overallCount * componentsCount)
 	logData.IntegrationTestsPipelineRunFailureRate = IntegrationTestsPipelineRunFailureRate
 
 	// Compile data about Deployments
@@ -904,7 +904,7 @@ func setup(cmd *cobra.Command, args []string) {
 	}
 	logData.AverageTimeToDeploymentFailed = averageTimeToDeploymentFailed
 
-	deploymentFailureRate := float64(deploymentFailureCount) / float64(overallCount)
+	deploymentFailureRate := float64(deploymentFailureCount) / float64(overallCount * componentsCount)
 	logData.DeploymentFailureRate = deploymentFailureRate
 
 	workloadKPI := logData.AverageTimeToCreateApplications + logData.AverageTimeToCreateCDQs + logData.AverageTimeToCreateComponents + logData.AverageTimeToRunPipelineSucceeded + logData.AverageTimeToDeploymentSucceeded
