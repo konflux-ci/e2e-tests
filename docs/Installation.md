@@ -16,8 +16,6 @@ Requirements for installing RHTAP in E2E mode:
   * [yq]((https://github.com/mikefarah/yq))
   * jq
   * git
-  * helm
-  * vcluster (!optional! Only in case of running byoc testing)
 * Tokens
   * Github Token with the following permissions
     * `repo`

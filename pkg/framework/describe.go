@@ -4,11 +4,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 )
 
-// ByocSuiteDescribe annotates the byoc scenarios.
-func ByocSuiteDescribe(args ...interface{}) bool {
-	return Describe("[byoc-suite]", args)
-}
-
 // CommonSuiteDescribe annotates the common tests with the application label.
 func CommonSuiteDescribe(text string, args ...interface{}) bool {
 	return Describe("[common-suite "+text+"]", args, Ordered)

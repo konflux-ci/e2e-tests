@@ -43,7 +43,7 @@ const (
 )
 
 var (
-	requiredBinaries = []string{"jq", "kubectl", "oc", "yq", "git", "helm"}
+	requiredBinaries = []string{"jq", "kubectl", "oc", "yq", "git"}
 	artifactDir      = utils.GetEnv("ARTIFACT_DIR", ".")
 	openshiftJobSpec = &OpenshiftJobSpec{}
 	pr               = &PullRequestMetadata{}
@@ -364,7 +364,7 @@ func setRequiredEnvVars() error {
 				requiresSprayProxyRegistering = true
 				envVarPrefix = "HAS"
 				imageTagSuffix = "has-image"
-				testSuiteLabel = "e2e-demo,byoc"
+				testSuiteLabel = "e2e-demo"
 			case strings.Contains(jobName, "release-service"):
 				envVarPrefix = "RELEASE_SERVICE"
 				imageTagSuffix = "release-service-image"
@@ -508,7 +508,7 @@ func setRequiredEnvVars() error {
 			https://issues.redhat.com/browse/RHTAPBUGS-992, https://issues.redhat.com/browse/RHTAPBUGS-991, https://issues.redhat.com/browse/RHTAPBUGS-989,
 			https://issues.redhat.com/browse/RHTAPBUGS-978,https://issues.redhat.com/browse/RHTAPBUGS-956
 			*/
-			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,spi-suite,remote-secret,integration-service,ec,byoc,build-templates,multi-platform")
+			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,spi-suite,remote-secret,integration-service,ec,build-templates,multi-platform")
 		} else if strings.Contains(jobName, "release-service-catalog") { // release-service-catalog jobs (pull, rehearsal)
 			envVarPrefix := "RELEASE_SERVICE"
 			os.Setenv("E2E_TEST_SUITE_LABEL", "release-pipelines")
