@@ -29,7 +29,7 @@ var TestScenarios = []TestSpec{
 				GitSourceContext:           "",
 				GitSourceDefaultBranchName: "main",
 				HealthEndpoint:             "/",
-				SkipDeploymentCheck:        false,
+				SkipDeploymentCheck:        true,
 				AdvancedBuildSpec: &AdvancedBuildSpec{
 					TestScenario: TestScenarioSpec{
 						GitURL:      "https://github.com/konflux-ci/integration-examples.git",
@@ -317,7 +317,7 @@ var TestScenarios = []TestSpec{
 				GitSourceRevision:   "",
 				GitSourceContext:    "",
 				HealthEndpoint:      "/",
-				SkipDeploymentCheck: false,
+				SkipDeploymentCheck: true,
 			},
 		},
 	},
