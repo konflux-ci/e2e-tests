@@ -1,4 +1,4 @@
-package tasks
+package build
 
 import (
 	"encoding/json"
@@ -22,7 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-var _ = framework.TaskSuiteDescribe("tkn bundle task", Label("tasks", "HACBS"), func() {
+var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("tasks", "HACBS", buildTemplatesTestLabel), func() {
 
 	defer GinkgoRecover()
 
@@ -30,7 +30,7 @@ var _ = framework.TaskSuiteDescribe("tkn bundle task", Label("tasks", "HACBS"), 
 	var kubeClient *framework.ControllerHub
 	var fwk *framework.Framework
 	var taskName string = "tkn-bundle"
-	var pathInRepo string = "task/tkn-bundle/0.1"
+	var pathInRepo string = fmt.Sprintf("task/%s/0.1/%s.yaml", taskName, taskName)
 	var pvcName string = "source-pvc"
 	var pvcAccessMode corev1.PersistentVolumeAccessMode = "ReadWriteOnce"
 	var baseTaskRun *pipeline.TaskRun
@@ -339,7 +339,7 @@ func taskRunTemplate(taskName, pvcName, bundleImg string, resolverRef pipeline.R
 			APIVersion: "tekton.dev/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "tkn-bundle-",
+			GenerateName: fmt.Sprintf("%s-", taskName),
 		},
 		Spec: pipeline.TaskRunSpec{
 			ServiceAccountName: constants.DefaultPipelineServiceAccount,

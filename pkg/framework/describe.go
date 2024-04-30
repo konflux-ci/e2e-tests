@@ -53,6 +53,6 @@ func ReleaseServiceSuiteDescribe(text string, args ...interface{}) bool {
 	return Describe("[release-service-suite "+text+"]", args, Ordered)
 }
 
-func TaskSuiteDescribe(text string, args ...interface{}) bool {
+func TknBundleSuiteDescribe(text string, args ...interface{}) bool {
 	return Describe("[task-suite "+text+"]", args, Ordered)
 }

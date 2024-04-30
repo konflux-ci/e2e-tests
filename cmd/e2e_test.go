@@ -17,7 +17,6 @@ import (
 	_ "github.com/redhat-appstudio/e2e-tests/tests/remote-secret"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/rhtap-demo"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/spi"
-	_ "github.com/redhat-appstudio/e2e-tests/tests/tasks"
 	_ "github.com/redhat-appstudio/e2e-tests/tests/upgrade"
 
 	"flag"

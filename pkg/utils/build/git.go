@@ -13,7 +13,6 @@ import (
 // resolve the git url and revision from a pull request. If not found, return a default
 // that is set from environment variables.
 func ResolveGitDetails(repoUrlENV, repoRevisionENV string) (string, string, error) {
-	var gitURL, gitRevision string
 	defaultGitURL := fmt.Sprintf("https://github.com/%s/%s", constants.DEFAULT_GITHUB_BUILD_ORG, constants.DEFAULT_GITHUB_BUILD_REPO)
 	defaultGitRevision := "main"
 	// If we are testing the changes from a pull request, APP_SUFFIX may contain the
@@ -29,13 +28,8 @@ func ResolveGitDetails(repoUrlENV, repoRevisionENV string) (string, string, erro
 		if err != nil {
 			return "", "", err
 		}
-		gitURL, gitRevision, err = gh.GetPRDetails(constants.DEFAULT_GITHUB_BUILD_REPO, int(pullRequestID))
-		if err != nil {
-			return "", "", err
-		}
-	} else {
-		gitRevision = utils.GetEnv(repoUrlENV, defaultGitRevision)
-		gitURL = utils.GetEnv(repoRevisionENV, defaultGitURL)
+		return gh.GetPRDetails(constants.DEFAULT_GITHUB_BUILD_REPO, int(pullRequestID))
+
 	}
-	return gitURL, gitRevision, nil
+	return utils.GetEnv(repoUrlENV, defaultGitURL), utils.GetEnv(repoRevisionENV, defaultGitRevision), nil
 }
