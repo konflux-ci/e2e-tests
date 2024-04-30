@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
+	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	pointer "k8s.io/utils/ptr"

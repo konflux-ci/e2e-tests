@@ -8,10 +8,10 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/errors"
 
+	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
-	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 )
 
 var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2469]test-releaseplan-owner-ref-added", Label("release-service", "releaseplan-ownerref", "HACBS"), func() {

@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
+	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
+	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -19,8 +21,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/contract"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
-	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
-	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 

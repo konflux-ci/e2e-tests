@@ -23,7 +23,7 @@ import (
 	jvmbuildservice "github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	jvmbuildserviceclientset "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
 
-	release "github.com/redhat-appstudio/release-service/api/v1alpha1"
+	release "github.com/konflux-ci/release-service/api/v1alpha1"
 	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
 	spi "github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"

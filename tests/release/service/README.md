@@ -1,6 +1,6 @@
 # Release Service e2e tests suite
 
-Contains E2E tests related to [Release Service](https://github.com/redhat-appstudio/release-service).
+Contains E2E tests related to [Release Service](https://github.com/konflux-ci/release-service).
 
 The test cases in this suite are to test release-service functionalities.
 All tests must have the label `release-service`. 

@@ -4,11 +4,11 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/redhat-appstudio/release-service/tekton/utils"
+	"github.com/konflux-ci/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
-	releaseMetadata "github.com/redhat-appstudio/release-service/metadata"
+	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
+	releaseMetadata "github.com/konflux-ci/release-service/metadata"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"

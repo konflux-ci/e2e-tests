@@ -4,7 +4,7 @@ When SBOM components are uploaded to Pyxis, key names have to be modified
 to conform to GraphQL naming conventions.
 1. Use _ instead of camel case, e.g. camelCase -> camel_case
 2. Use _ instead of -, e.g. key-with-dash -> key_with_dash
-See https://github.com/redhat-appstudio/release-service-utils/blob/main/pyxis/upload_sbom.py
+See https://github.com/konflux-ci/release-service-utils/blob/main/pyxis/upload_sbom.py
 
 */
 

@@ -7,6 +7,8 @@ import (
 
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
+	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
@@ -16,8 +18,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
-	releaseapi "github.com/redhat-appstudio/release-service/api/v1alpha1"
-	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )

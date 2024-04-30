@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
+	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
