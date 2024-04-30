@@ -5,13 +5,11 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -213,20 +211,6 @@ func CreateDockerConfigFile(base64EncodedString string) error {
 	}
 
 	return nil
-}
-
-func HostIsAccessible(host string) bool {
-	tc := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-	}
-	client := http.Client{Transport: tc}
-	res, err := client.Get(host)
-	if err != nil || res.StatusCode > 499 {
-		return false
-	}
-	return true
 }
 
 // Return a container logs from a given pod and namespace

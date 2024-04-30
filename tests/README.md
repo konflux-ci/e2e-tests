@@ -5,7 +5,6 @@ Tests folder contains E2E related to several components divided in folders:
 | Folder | Component repository | README | Note |
 |---|---|---|---|
 | `build` | [build-service](https://github.com/redhat-appstudio/build-service), [jvm-build-service](https://github.com/redhat-appstudio/jvm-build-service) | [README.md](/tests/build/README.md) | |
-| `byoc` | [application-service](https://github.com/redhat-appstudio/application-service) | [README.md](/tests/byoc/README.md) | |
 | `enterprise-contract` | N/A | [README.md](/tests/enterprise-contract/README.md) | |
 | `integration-service` | [integration-service](https://github.com/redhat-appstudio/integration-service) | [README.md](/tests/integration-service/README.md) |  |
 | `load-tests` | N/A | [LoadTests.md](/docs/LoadTests.md) |  |

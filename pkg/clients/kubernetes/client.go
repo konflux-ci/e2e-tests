@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
-	"os"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -36,7 +35,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
@@ -252,20 +250,6 @@ var noTimeoutDialerProxy = func(ctx context.Context, network, addr string) (net.
 		KeepAlive: 0,
 	}
 	return dialer.DialContext(ctx, network, addr)
-}
-
-func NewKubeFromKubeConfigFile(kubeconfig string) (*kubernetes.Clientset, error) {
-	kubeConfData, err := os.ReadFile(kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	config, err := clientcmd.RESTConfigFromKubeConfig(kubeConfData)
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetes.NewForConfig(config)
 }
 
 func createClientSetsFromConfig(cfg *rest.Config) (*CustomClient, error) {
