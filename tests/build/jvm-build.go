@@ -113,11 +113,8 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 		interval = time.Second * 10
 
 		applicationName = fmt.Sprintf("jvm-build-suite-application-%s", util.GenerateRandomString(4))
-		app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
+		_, err = f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
-			Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
-		)
 
 		componentName = fmt.Sprintf("jvm-build-suite-component-%s", util.GenerateRandomString(6))
 

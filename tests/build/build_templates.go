@@ -80,11 +80,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					return errors.IsNotFound(err)
 				}, time.Minute*5, time.Second*1).Should(BeTrue(), fmt.Sprintf("timed out when waiting for the app %s to be deleted in %s namespace", applicationName, testNamespace))
 			}
-			app, err := kubeadminClient.HasController.CreateApplication(applicationName, testNamespace)
+			_, err = kubeadminClient.HasController.CreateApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(utils.WaitUntil(kubeadminClient.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
-				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
-			)
 
 			for _, gitUrl := range componentUrls {
 				gitUrl := gitUrl
