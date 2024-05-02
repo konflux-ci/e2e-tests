@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	. "github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -134,6 +136,40 @@ func (s *SuiteController) AddRegistryAuthSecretToSA(registryAuth, namespace stri
 	}
 
 	err = s.LinkSecretToServiceAccount(namespace, RegistryAuthSecretName, DefaultPipelineServiceAccount, true)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// copy the quay secret to a user defined namespace
+func (s *SuiteController) CreateQuayRegistrySecret(namespace string) error {
+	sharedSecret, err := s.GetSecret(constants.QuayRepositorySecretNamespace, constants.QuayRepositorySecretName)
+	if err != nil {
+		return err
+	}
+	_, err = s.GetSecret(namespace, constants.QuayRepositorySecretName)
+	if err != nil {
+		if !k8sErrors.IsNotFound(err) {
+			return err
+		}
+	} else {
+		err = s.DeleteSecret(namespace, constants.QuayRepositorySecretName)
+		if err != nil {
+			return err
+		}
+	}
+
+	repositorySecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: constants.QuayRepositorySecretName, Namespace: namespace},
+		Type: corev1.SecretTypeDockerConfigJson,
+		Data: map[string][]byte{corev1.DockerConfigJsonKey: sharedSecret.Data[".dockerconfigjson"]}}
+	_, err = s.CreateSecret(namespace, repositorySecret)
+	if err != nil {
+		return err
+	}
+
+	err = s.LinkSecretToServiceAccount(namespace, constants.QuayRepositorySecretName, constants.DefaultPipelineServiceAccount, true)
 	if err != nil {
 		return err
 	}
