@@ -139,8 +139,8 @@ func (u *UserAppsCompsMap) AddIntegrationTestScenario(userName, appName, itsName
 	klog.V(5).Infof("AddIntegrationTestScenario added userName: %s, appName: %s, itsName: %s", userName, appName, itsName)
 }
 
-// GetUsers retrieves list of users
-func (u *UserAppsCompsMap) GetUsers() []string {
+// GetUserNames retrieves list of users
+func (u *UserAppsCompsMap) GetUserNames() []string {
 	u.mutex.RLock() // Use Read lock for retrieving data
 	defer u.mutex.RUnlock()
 
@@ -970,7 +970,7 @@ func StageCleanup(journeyContexts []*JourneyContext) {
 	defer klog.V(5).Infof("StageCleanup end")
 
 	for _, journeyCtx := range journeyContexts {
-		for _, username := range journeyCtx.userAppsCompsMap.GetUsers() {
+		for _, username := range journeyCtx.userAppsCompsMap.GetUserNames() {
 			framework := journeyCtx.userAppsCompsMap.GetUserFramework(username)
 			err := framework.AsKubeDeveloper.HasController.DeleteAllApplicationsInASpecificNamespace(framework.UserNamespace, 5*time.Minute)
 			if err != nil {
