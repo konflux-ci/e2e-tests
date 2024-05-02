@@ -312,7 +312,7 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 								createReleaseConfig(*fw, managedNamespace, component.GetName(), appTest.ApplicationName, sharedSecret.Data[".dockerconfigjson"])
 
 								its := componentSpec.AdvancedBuildSpec.TestScenario
-								integrationTestScenario, err = fw.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(appTest.ApplicationName, fw.UserNamespace, its.GitURL, its.GitRevision, its.TestPath)
+								integrationTestScenario, err = fw.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", appTest.ApplicationName, fw.UserNamespace, its.GitURL, its.GitRevision, its.TestPath)
 								Expect(err).ShouldNot(HaveOccurred())
 
 								pacBranchName = fmt.Sprintf("appstudio-%s", component.GetName())
