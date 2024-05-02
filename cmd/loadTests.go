@@ -55,7 +55,7 @@ func (u *UserAppsCompsMap) AddUser(userName string) {
 	defer u.mutex.Unlock()
 
 	if _, exists := u.Users[userName]; exists {
-		panic(fmt.Sprintf("User '%s' already exists", userName))
+		klog.Fatalf("User '%s' already exists", userName)
 	}
 
 	u.Users[userName] = &UserInfo{}
@@ -158,7 +158,7 @@ func (u *UserAppsCompsMap) GetUserFramework(userName string) *framework.Framewor
 
 	userInfo, ok := u.Users[userName]
 	if !ok {
-		klog.Fatalln("Can not get framework for nonexistent user %s", userName)
+		klog.Fatalf("Can not get framework for nonexistent user %s", userName)
 	}
 
 	return &userInfo.Framework
@@ -171,7 +171,7 @@ func (u *UserAppsCompsMap) GetUserAppNames(userName string) []string {
 
 	userInfo, ok := u.Users[userName]
 	if !ok {
-		klog.Fatalln("Can not get applications for nonexistent user")
+		klog.Fatalf("Can not get applications for nonexistent user %s", userName)
 	}
 
 	apps := make([]string, 0, len(userInfo.Applications))
@@ -188,12 +188,12 @@ func (u *UserAppsCompsMap) GetAppComps(userName, appName string) []string {
 
 	userInfo, ok := u.Users[userName]
 	if !ok {
-		klog.Fatalln("Can not get components for nonexistent user")
+		klog.Fatalf("Can not get components for nonexistent user %s", userName)
 	}
 
 	appInfo, ok := userInfo.Applications[appName]
 	if !ok {
-		klog.Fatalln("Can not get components for nonexistent application")
+		klog.Fatalf("Can not get components for nonexistent application %s", appName)
 	}
 
 	return appInfo.Components
@@ -206,12 +206,12 @@ func (u *UserAppsCompsMap) GetIntegrationTestScenarios(userName, appName string)
 
 	userInfo, ok := u.Users[userName]
 	if !ok {
-		klog.Fatalln("Can not get integration test scenarios for nonexistent user")
+		klog.Fatalf("Can not get integration test scenarios for nonexistent user %s", userName)
 	}
 
 	appInfo, ok := userInfo.Applications[appName]
 	if !ok {
-		klog.Fatalln("Can not get integration test scenarios for nonexistent application")
+		klog.Fatalf("Can not get integration test scenarios for nonexistent application %s", appName)
 	}
 
 	return appInfo.IntegrationTestScenarios
