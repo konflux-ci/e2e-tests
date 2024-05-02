@@ -158,7 +158,7 @@ func (u *UserAppsCompsMap) GetUserFramework(userName string) *framework.Framewor
 
 	userInfo, ok := u.Users[userName]
 	if !ok {
-		klog.Fatalln("Can not get framework for nonexistent application")
+		klog.Fatalln("Can not get framework for nonexistent user %s", userName)
 	}
 
 	return &userInfo.Framework
