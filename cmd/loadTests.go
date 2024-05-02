@@ -54,6 +54,10 @@ func (u *UserAppsCompsMap) AddUser(userName string) {
 	u.mutex.Lock()
 	defer u.mutex.Unlock()
 
+	if _, exists := u.Users[userName]; exists {
+		panic(fmt.Sprintf("User '%s' already exists", userName))
+	}
+
 	u.Users[userName] = &UserInfo{}
 }
 
