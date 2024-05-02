@@ -164,8 +164,8 @@ func (u *UserAppsCompsMap) GetUserFramework(userName string) *framework.Framewor
 	return &userInfo.Framework
 }
 
-// GetUserApps retrieves a list of applications for a specific user
-func (u *UserAppsCompsMap) GetUserApps(userName string) []string {
+// GetUserAppNames retrieves a list of applications for a specific user
+func (u *UserAppsCompsMap) GetUserAppNames(userName string) []string {
 	u.mutex.RLock()
 	defer u.mutex.RUnlock()
 
@@ -1738,7 +1738,7 @@ func (h *ConcreteHandlerPipelines) Handle(ctx *JourneyContext) {
 
 				usernamespace := framework.UserNamespace
 
-				for _, applicationName := range ctx.userAppsCompsMap.GetUserApps(username) {
+				for _, applicationName := range ctx.userAppsCompsMap.GetUserAppNames(username) {
 					for _, componentName := range ctx.userAppsCompsMap.GetAppComps(username, applicationName) {
 						h.validatePipeline(ctx, framework, componentName, applicationName, username, usernamespace)
 					}
@@ -1878,7 +1878,7 @@ func (h *ConcreteHandlerItsPipelines) Handle(ctx *JourneyContext) {
 			chDeployments := ctx.ChDeployments
 
 			for username := range ctx.ChIntegrationTestsPipelines {
-				for _, applicationName := range ctx.userAppsCompsMap.GetUserApps(username) {
+				for _, applicationName := range ctx.userAppsCompsMap.GetUserAppNames(username) {
 					for _, componentName := range ctx.userAppsCompsMap.GetAppComps(username, applicationName) {
 						for _, itsName := range ctx.userAppsCompsMap.GetIntegrationTestScenarios(username, applicationName) {
 							h.validateItsPipeline(ctx, applicationName, componentName, itsName, username)
@@ -2022,7 +2022,7 @@ func (h *ConcreteHandlerDeployments) Handle(ctx *JourneyContext) {
 			defer ctx.innerThreadWG.Done()
 
 			for username := range ctx.ChDeployments {
-				for _, applicationName := range ctx.userAppsCompsMap.GetUserApps(username) {
+				for _, applicationName := range ctx.userAppsCompsMap.GetUserAppNames(username) {
 					for _, componentName := range ctx.userAppsCompsMap.GetAppComps(username, applicationName) {
 						// since username added to chDeployments only after valid framework, usernamespace, componentName, and applicationName have been created
 						//  we don't need to verify validity for neither
