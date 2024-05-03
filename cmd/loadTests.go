@@ -223,6 +223,7 @@ func (u *UserAppsCompsMap) GetIntegrationTestScenarios(userName, appName string)
 
 var (
 	componentRepoUrl              string = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
+	componentsCount               int    = 1
 	componentRepoRevision         string = "main"
 	componentRepoTemplate         bool
 	quayRepo                      string = "redhat-user-workloads-stage"
@@ -329,6 +330,7 @@ type LogData struct {
 	MachineName                       string  `json:"machineName"`
 	BinaryDetails                     string  `json:"binaryDetails"`
 	ComponentRepoUrl                  string  `json:"componentRepoUrl"`
+	ComponentsCount                   int     `json:"componentsCount"`
 	ComponentRepoRevision             string  `json:"componentRepoRevision"`
 	ComponentRepoTemplate             bool    `json:"componentRepoTemplate"`
 	QuayRepo                          string  `json:"quayRepo"`
@@ -459,6 +461,7 @@ func ExecuteLoadTest() {
 
 func init() {
 	rootCmd.Flags().StringVar(&componentRepoUrl, "component-repo", componentRepoUrl, "the component repo URL to be used")
+	rootCmd.Flags().IntVar(&componentsCount, "components-count", componentsCount, "number of components to create per application")
 	rootCmd.Flags().StringVar(&componentRepoRevision, "component-repo-revision", componentRepoRevision, "the component repo revision, git branch")
 	rootCmd.Flags().BoolVarP(&componentRepoTemplate, "component-repo-template", "e", false, "if you want to use per-user branch based on provided branch for PaC testing")
 	rootCmd.Flags().StringVar(&quayRepo, "quay-repo", quayRepo, "the target quay repo for PaC templated image pushes")
@@ -601,6 +604,7 @@ func setup(cmd *cobra.Command, args []string) {
 		MachineName:                 machineName,
 		BinaryDetails:               binaryDetails,
 		ComponentRepoUrl:            componentRepoUrl,
+		ComponentsCount:             componentsCount,
 		ComponentRepoRevision:       componentRepoRevision,
 		ComponentRepoTemplate:       componentRepoTemplate,
 		QuayRepo:                    quayRepo,
@@ -983,10 +987,13 @@ func StageCleanup(journeyContexts []*JourneyContext) {
 	klog.V(5).Infof("StageCleanup start")
 	defer klog.V(5).Infof("StageCleanup end")
 
+	var err error
+	var framework *framework.Framework
+
 	for _, journeyCtx := range journeyContexts {
 		for _, username := range journeyCtx.userAppsCompsMap.GetUserNames() {
-			framework := journeyCtx.userAppsCompsMap.GetUserFramework(username)
-			err := framework.AsKubeDeveloper.HasController.DeleteAllApplicationsInASpecificNamespace(framework.UserNamespace, 5*time.Minute)
+			framework = journeyCtx.userAppsCompsMap.GetUserFramework(username)
+			err = framework.AsKubeDeveloper.HasController.DeleteAllApplicationsInASpecificNamespace(framework.UserNamespace, 5*time.Minute)
 			if err != nil {
 				klog.Errorf("while deleting resources for username: %s, got error: %v\n", username, err)
 			}
@@ -995,11 +1002,11 @@ func StageCleanup(journeyContexts []*JourneyContext) {
 			if err != nil {
 				klog.Errorf("while deleting component detection queries for username: %s, got error: %v\n", username, err)
 			}
-		}
 
-		err = deleteAllBuildPipelineSelectors(framework, time.Minute)
-		if err != nil {
-			klog.Errorf("while deleting build pipeline selectors for user: %s, got error: %v\n", user.Username, err)
+			err = deleteAllBuildPipelineSelectors(framework, time.Minute)
+			if err != nil {
+				klog.Errorf("while deleting build pipeline selectors for user: %s, got error: %v\n", username, err)
+			}
 		}
 	}
 }
@@ -1042,19 +1049,6 @@ func increaseBar(bar *uiprogress.Bar, mutex *sync.Mutex) {
 		defer mutex.Unlock()
 		bar.Incr()
 	}
-}
-
-func componentForUser(username string) string {
-	val, ok := userComponentMap.Load(username)
-	if ok {
-		componentName, ok2 := val.(string)
-		if ok2 {
-			return componentName
-		} else {
-			klog.Errorf("Invalid type of map value: %+v", val)
-		}
-	}
-	return ""
 }
 
 func listAllBuildPipelineSelectors(f *framework.Framework) (*buildservice.BuildPipelineSelectorList, error) {
@@ -1119,51 +1113,6 @@ func createBuildPipelineSelector(f *framework.Framework, bundle *string) error {
 	}
 
 	return nil
-}
-
-func frameworkForUser(username string) *framework.Framework {
-	val, ok := frameworkMap.Load(username)
-	if ok {
-		framework, ok2 := val.(*framework.Framework)
-		if ok2 {
-			if buildPipelineSelectorBundle != "" {
-				err := createBuildPipelineSelector(framework, &buildPipelineSelectorBundle)
-				if err != nil {
-					klog.Errorf("Error creating build pipeline selector: %v", err)
-				}
-			}
-			return framework
-		} else {
-			klog.Errorf("Invalid type of map value: %+v", val)
-		}
-	}
-	return nil
-}
-
-func testScenarioForUser(username string) string {
-	val, ok := userTestScenarioMap.Load(username)
-	if ok {
-		testScenarioName, ok2 := val.(string)
-		if ok2 {
-			return testScenarioName
-		} else {
-			klog.Errorf("Invalid type of map value: %+v", val)
-		}
-	}
-	return ""
-}
-
-func userComponentPipelineRunForUser(username string) string {
-	val, ok := userComponentPipelineRunMap.Load(username)
-	if ok {
-		componentPipelineRunName, ok2 := val.(string)
-		if ok2 {
-			return componentPipelineRunName
-		} else {
-			klog.Errorf("Invalid type of map value: %+v", val)
-		}
-	}
-	return ""
 }
 
 func tryNewFramework(username string, user loadtestUtils.User, timeout time.Duration) (*framework.Framework, error) {
@@ -1319,8 +1268,7 @@ func (h *ConcreteHandlerResources) Handle(ctx *JourneyContext) {
 			}
 
 			// Handle Component Detection Query Creation
-			cdqName := fmt.Sprintf("%s-cdq-%s", username, util.GenerateRandomString(5))
-			blnOK, cdq := h.handleCDQCreation(ctx, framework, username, usernamespace, applicationName, cdqName)
+			blnOK, cdq := h.handleCDQCreation(ctx, framework, username, usernamespace)
 			if !blnOK {
 				// If CDQ creation failed, continue with the next user
 				continue
@@ -1357,7 +1305,7 @@ func (h *ConcreteHandlerResources) handleApplicationCreation(ctx *JourneyContext
 	}
 
 	MetricsWrapper(MetricsController, metricsConstants.CollectorApplications, metricsConstants.MetricTypeGuage, metricsConstants.MetricApplicationCreationTimeGauge, applicationCreationTime.Seconds())
-	return h.validateApplicationCreation(ctx, framework, ApplicationName, username, usernamespace, applicationCreationTime)
+	return h.validateApplicationCreation(ctx, framework, applicationName, username, usernamespace, applicationCreationTime)
 }
 
 func isConditionError(condition metav1.Condition) bool {
@@ -1520,9 +1468,8 @@ func (h *ConcreteHandlerResources) handleIntegrationTestScenarioCreation(ctx *Jo
 		return false
 	}
 
-	itsName := integrationTestScenario.Name
 	MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeGuage, metricsConstants.MetricIntegrationTestSenarioCreationTimeGauge, itsCreationTime.Seconds())
-	return h.validateIntegrationTestScenario(ctx, framework, itsName, ApplicationName, username, usernamespace, itsCreationTime)
+	return h.validateIntegrationTestScenarioCreation(ctx, framework, itsName, applicationName, username, usernamespace, itsCreationTime)
 }
 
 func findTestScenarioByName(scenarios []integrationv1beta1.IntegrationTestScenario, name string) *integrationv1beta1.IntegrationTestScenario {
@@ -1592,7 +1539,6 @@ func handleItsSuccess(ctx *JourneyContext, itsName, username string, application
 	SuccessfulItsCreationsPerThread[ctx.ThreadIndex] += 1
 	MetricsWrapper(MetricsController, metricsConstants.CollectorIntegrationTestsSC, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulIntegrationTestSenarioCreationCounter)
 	increaseBar(ctx.ItsBar, itsBarMutex)
-	userTestScenarioMap.Store(username, itsName)
 
 	// Transform itsActualCreationTimeInSeconds from float64 to time.Duration
 	itsActualCreationTimeInSecondsToDuration := time.Duration(itsActualCreationTimeInSeconds * float64(time.Second))
@@ -1631,14 +1577,14 @@ func (h *ConcreteHandlerResources) handleCDQCreation(ctx *JourneyContext, framew
 	cdqCreationTime := time.Since(startTimeForCDQ)
 
 	if err != nil {
-		logError(9, fmt.Sprintf("Unable to create ComponentDetectionQuery %s: %v", cdqName, err))
+		logError(9, fmt.Sprintf("Unable to create ComponentDetectionQuery %s: %v", ComponentDetectionQueryName, err))
 		FailedCDQCreationsPerThread[ctx.ThreadIndex] += 1
 		MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
 		increaseBar(ctx.CDQsBar, cdqsBarMutex)
 		return false, nil
 	}
-	if cdq.Name != cdqName {
-		logError(10, fmt.Sprintf("Actual cdq name (%s) does not match expected (%s): %v", cdq.Name, cdqName, err))
+	if cdq.Name != ComponentDetectionQueryName {
+		logError(10, fmt.Sprintf("Actual cdq name (%s) does not match expected (%s): %v", cdq.Name, ComponentDetectionQueryName, err))
 		FailedCDQCreationsPerThread[ctx.ThreadIndex] += 1
 		MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
 		increaseBar(ctx.CDQsBar, cdqsBarMutex)
@@ -1722,7 +1668,7 @@ func handleRepoTemplating(ctx *JourneyContext, framework *framework.Framework, u
 	return nil, branchName
 }
 
-func (h *ConcreteHandlerResources) validateCDQ(ctx *JourneyContext, framework *framework.Framework, CDQName, ApplicationName, username, usernamespace string, cdqCreationTime time.Duration) (bool, *appstudioApi.ComponentDetectionQuery) {
+func (h *ConcreteHandlerResources) validateCDQ(ctx *JourneyContext, framework *framework.Framework, cdqName, ApplicationName, username, usernamespace string, cdqCreationTime time.Duration) (bool, *appstudioApi.ComponentDetectionQuery) {
 	cdqValidationInterval := time.Second * 20
 	cdqValidationTimeout := time.Minute * 30
 	var conditionError error
@@ -1763,7 +1709,7 @@ func (h *ConcreteHandlerResources) validateCDQ(ctx *JourneyContext, framework *f
 	}, cdqValidationInterval, cdqValidationTimeout)
 
 	if err != nil || conditionError != nil {
-		handleCdqFailure(ctx, applicationName, err, conditionError)
+		handleCdqFailure(ctx, ApplicationName, err, conditionError)
 		return false, nil
 	}
 	return true, cdq
@@ -1845,7 +1791,6 @@ func (h *ConcreteHandlerResources) handleComponentCreation(ctx *JourneyContext, 
 			increaseBar(ctx.ComponentsBar, componentsBarMutex)
 			return false
 		}
-		componentName = component.Name
 		MetricsWrapper(MetricsController, metricsConstants.CollectorComponents, metricsConstants.MetricTypeGuage, metricsConstants.MetricComponentCreationTimeGauge, componentCreationTime.Seconds())
 	}
 
