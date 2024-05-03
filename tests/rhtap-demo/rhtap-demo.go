@@ -263,7 +263,7 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 							Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
 
 							Expect(fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "",
-								fw.AsKubeDeveloper.TektonController, &has.RetryOptions{Retries: 3, Always: true})).To(Succeed())
+								fw.AsKubeDeveloper.TektonController, &has.RetryOptions{Retries: 3, Always: true}, nil)).To(Succeed())
 						}
 					})
 
@@ -297,7 +297,7 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 
 							// PaC related variables
 							var prNumber int
-							var mergeResultSha, pacBranchName, pacPurgeBranchName string
+							var headSHA, pacBranchName, pacPurgeBranchName string
 							var mergeResult *github.PullRequestMergeResult
 
 							BeforeAll(func() {
@@ -412,10 +412,10 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 										return err
 									}, mergePRTimeout).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request: %+v\n", err))
 
-									mergeResultSha = mergeResult.GetSHA()
+									headSHA = mergeResult.GetSHA()
 
 									Eventually(func() error {
-										pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appTest.ApplicationName, fw.UserNamespace, mergeResultSha)
+										pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appTest.ApplicationName, fw.UserNamespace, headSHA)
 										if err != nil {
 											GinkgoWriter.Printf("PipelineRun has not been created yet for component %s/%s\n", fw.UserNamespace, component.GetName())
 											return err
@@ -424,18 +424,20 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 											return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
 										}
 										return nil
-									}, pipelineRunStartedTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for a PipelineRun in namespace %q with label component label %q and application label %q and sha label %q to start", fw.UserNamespace, component.GetName(), appTest.ApplicationName, mergeResultSha))
+									}, pipelineRunStartedTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for a PipelineRun in namespace %q with label component label %q and application label %q and sha label %q to start", fw.UserNamespace, component.GetName(), appTest.ApplicationName, headSHA))
 								})
 							})
 
 							When("SLSA level 3 customizable PipelineRun is created", func() {
-								It("should eventually complete successfully", func() {
-									Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, mergeResultSha,
-										fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 5, Always: true})).To(Succeed())
-								})
-
 								It("does not contain an annotation with a Snapshot Name", func() {
 									Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(""))
+								})
+								It("should eventually complete successfully", func() {
+									Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, headSHA,
+										fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 5, Always: true}, pipelineRun)).To(Succeed())
+
+									// in case the first pipelineRun attempt has failed and was retried, we need to update the git branch head ref
+									headSHA = pipelineRun.Labels["pipelinesascode.tekton.dev/sha"]
 								})
 							})
 
@@ -454,13 +456,13 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 								})
 
 								It("should validate Tekton TaskRun test results successfully", func() {
-									pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appTest.ApplicationName, fw.UserNamespace, mergeResultSha)
+									pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appTest.ApplicationName, fw.UserNamespace, headSHA)
 									Expect(err).ShouldNot(HaveOccurred())
 									Expect(build.ValidateBuildPipelineTestResults(pipelineRun, fw.AsKubeAdmin.CommonController.KubeRest())).To(Succeed())
 								})
 
 								It("should validate pipelineRun is signed", func() {
-									pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appTest.ApplicationName, fw.UserNamespace, mergeResultSha)
+									pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appTest.ApplicationName, fw.UserNamespace, headSHA)
 									Expect(err).ShouldNot(HaveOccurred())
 									Expect(pipelineRun.Annotations["chains.tekton.dev/signed"]).To(Equal("true"), fmt.Sprintf("pipelinerun %s/%s does not have the expected value of annotation 'chains.tekton.dev/signed'", pipelineRun.GetNamespace(), pipelineRun.GetName()))
 								})
@@ -473,7 +475,7 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 								})
 
 								It("should validate the pipelineRun is annotated with the name of the Snapshot", func() {
-									pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appTest.ApplicationName, fw.UserNamespace, mergeResultSha)
+									pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appTest.ApplicationName, fw.UserNamespace, headSHA)
 									Expect(err).ShouldNot(HaveOccurred())
 									Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(snapshot.GetName()))
 								})

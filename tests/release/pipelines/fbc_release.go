@@ -15,8 +15,8 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
-        releaseapi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
+	releaseapi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -42,7 +42,6 @@ var managedFw *framework.Framework
 var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-pipelines", "fbc-tests"), func() {
 	defer GinkgoRecover()
 
-
 	var devNamespace = devWorkspace + "-tenant"
 	var managedNamespace = managedWorkspace + "-tenant"
 
@@ -66,7 +65,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 	var fbcPreGAECPolicyName = "fbc-prega-policy-" + util.GenerateRandomString(4)
 
 	AfterEach(framework.ReportFailure(&devFw))
-
 
 	Describe("with FBC happy path", Label("fbcHappyPath"), func() {
 		var component *appservice.Component
@@ -204,7 +202,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 })
 
 func assertBuildPipelineRunCreated(devFw framework.Framework, devNamespace, managedNamespace, fbcAppName string, component *appservice.Component) {
-	Expect(devFw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "", devFw.AsKubeDeveloper.TektonController, &has.RetryOptions{Retries: 3, Always: true})).To(Succeed())
+	Expect(devFw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "", devFw.AsKubeDeveloper.TektonController, &has.RetryOptions{Retries: 3, Always: true}, nil)).To(Succeed())
 	buildPr, err = devFw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, fbcAppName, devNamespace, "")
 	Expect(err).ShouldNot(HaveOccurred())
 }
@@ -222,7 +220,7 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw framework.Framework, dev
 		}
 		GinkgoWriter.Println("Release CR: ", releaseCR.Name)
 		return nil
-	}, 5 * time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for Snapshot and Release being created")
+	}, 5*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for Snapshot and Release being created")
 
 	mFw = releasecommon.NewFramework(managedWorkspace)
 	// Create a ticker that ticks every 3 minutes
@@ -265,12 +263,12 @@ func assertReleaseCRSucceeded(devFw framework.Framework, devNamespace, managedNa
 		}
 		conditions := releaseCR.Status.Conditions
 		if len(conditions) > 0 {
-                        for _, c := range conditions {
-                                if c.Type == "Released" && c.Status == "True" {
+			for _, c := range conditions {
+				if c.Type == "Released" && c.Status == "True" {
 					GinkgoWriter.Println("Release CR is released")
-                                }
-                       }
-                }
+				}
+			}
+		}
 
 		if !releaseCR.IsReleased() {
 			return fmt.Errorf("release %s/%s is not marked as finished yet", releaseCR.GetNamespace(), releaseCR.GetName())

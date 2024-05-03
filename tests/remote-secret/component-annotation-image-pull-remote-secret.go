@@ -109,7 +109,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "component-an
 				Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
 
 				Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
-					fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
+					fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
 			}
 		})
 

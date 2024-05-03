@@ -143,7 +143,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "image-reposi
 			Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
 
 			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
-				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true})).To(Succeed())
+				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
 		})
 
 		It("finds the snapshot and checks if it is marked as successful", func() {

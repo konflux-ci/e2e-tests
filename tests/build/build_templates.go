@@ -200,7 +200,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				component, err := kubeadminClient.HasController.GetComponent(componentNames[i], testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "",
-					kubeadminClient.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true})).To(Succeed())
+					kubeadminClient.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(Succeed())
 			})
 
 			It(fmt.Sprintf("should ensure SBOM is shown for component with Git source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
@@ -515,7 +515,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					component, err := kubeadminClient.HasController.GetComponent(componentNames[i], testNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
 					Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(
-						component, "", kubeadminClient.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true})).To(Succeed())
+						component, "", kubeadminClient.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(Succeed())
 
 					imageWithDigest, err = getImageWithDigest(kubeadminClient, componentNames[i], applicationName, testNamespace)
 					Expect(err).NotTo(HaveOccurred())
@@ -585,7 +585,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			component, err := kubeadminClient.HasController.GetComponent(symlinkComponentName, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "",
-				kubeadminClient.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries})).Should(MatchError(ContainSubstring("cloned repository contains symlink pointing outside of the cloned repository")))
+				kubeadminClient.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries}, nil)).Should(MatchError(ContainSubstring("cloned repository contains symlink pointing outside of the cloned repository")))
 		})
 	})
 })
