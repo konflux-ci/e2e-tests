@@ -1,0 +1,4 @@
+filters:
+  "loadTests.go":
+    approvers:
+    - perf-team
