@@ -1368,7 +1368,7 @@ func (h *ConcreteHandlerResources) handleIntegrationTestScenarioCreation(ctx *Jo
 	defer klog.V(5).Infof("handleIntegrationTestScenarioCreation end username: %s, usernamespace: %s, applicationName: %s, itsName: %s", username, usernamespace, applicationName, itsName)
 
 	startTimeForIts := time.Now()
-	_, err := framework.AsKubeDeveloper.IntegrationController.CreateIntegrationTestScenarioV2(itsName, applicationName, usernamespace, testScenarioGitURL, testScenarioRevision, testScenarioPathInRepo)
+	_, err := framework.AsKubeDeveloper.IntegrationController.CreateIntegrationTestScenario(itsName, applicationName, usernamespace, testScenarioGitURL, testScenarioRevision, testScenarioPathInRepo)
 	itsCreationTime := time.Since(startTimeForIts)
 	if err != nil {
 		logError(6, fmt.Sprintf("Unable to create integrationTestScenario for Application %s: %v \n", applicationName, err))

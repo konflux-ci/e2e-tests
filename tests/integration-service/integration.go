@@ -47,7 +47,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			applicationName = createApp(*f, testNamespace)
 			componentName, originalComponent = createComponent(*f, testNamespace, applicationName)
-			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, testNamespace, gitURL, revision, pathInRepoPass)
+			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
@@ -195,7 +195,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			applicationName = createApp(*f, testNamespace)
 			componentName, originalComponent = createComponent(*f, testNamespace, applicationName)
 
-			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, testNamespace, gitURL, revision, pathInRepoFail)
+			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
@@ -257,7 +257,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 
 		It("creates a new IntegrationTestScenario", func() {
-			newIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(applicationName, testNamespace, gitURL, revision, pathInRepoPass)
+			newIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
