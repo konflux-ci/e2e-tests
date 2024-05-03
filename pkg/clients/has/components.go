@@ -126,7 +126,13 @@ type RetryOptions struct {
 	Always bool
 }
 
-// Waits for a given component to be finished and in case of hitting issue: https://issues.redhat.com/browse/SRVKP-2749 do a given retries.
+// WaitForComponentPipelineToBeFinished waits for a given component PipelineRun to be finished
+// In case of hitting issues like `TaskRunImagePullFailed` or `CouldntGetTask` it will re-trigger the PLR.
+// Due to re-trigger mechanism this function can invalidate the related PLR object which might be used later in the test
+// (by deleting the original PLR and creating a new one in case the PLR fails on one of the attempts).
+// For that case this function gives an option to pass in a pointer to a related PLR object (`prToUpdate`) which will be updated (with a valid PLR object) before the end of this function
+// and the PLR object can be then used for making assertions later in the test.
+// If there's no intention for using the original PLR object later in the test, use `nil` instead of the pointer.
 func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservice.Component, sha string, t *tekton.TektonController, r *RetryOptions, prToUpdate *pipeline.PipelineRun) error {
 	attempts := 1
 	app := component.Spec.Application
