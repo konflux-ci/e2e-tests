@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"regexp"
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
@@ -302,26 +301,26 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 
 		It("validate the result of task create-pyxis-image contains image ids", func() {
 			Eventually(func() []string {
-				re := regexp.MustCompile("[a-fA-F0-9]{24}")
-
 				releasePR1, err = fw.AsKubeAdmin.TektonController.GetPipelineRun(releasePR1.GetName(), releasePR1.GetNamespace())
 				Expect(err).NotTo(HaveOccurred())
 				releasePR2, err = fw.AsKubeAdmin.TektonController.GetPipelineRun(releasePR2.GetName(), releasePR2.GetNamespace())
 				Expect(err).NotTo(HaveOccurred())
 
-				trReleasePr, err := fw.AsKubeAdmin.TektonController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), releasePR1, "create-pyxis-image")
+				trReleaseLogs, err := fw.AsKubeAdmin.TektonController.GetTaskRunLogs(releasePR1.GetName(), "create-pyxis-image", releasePR1.GetNamespace())
 				Expect(err).NotTo(HaveOccurred())
 
-				trAdditionalReleasePr, err := fw.AsKubeAdmin.TektonController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), releasePR2, "create-pyxis-image")
+				trAdditionalReleaseLogs, err := fw.AsKubeAdmin.TektonController.GetTaskRunLogs(releasePR2.GetName(), "create-pyxis-image", releasePR2.GetNamespace())
 				Expect(err).NotTo(HaveOccurred())
 
-				trReleaseImageIDs := re.FindAllString(trReleasePr.Status.TaskRunStatusFields.Results[0].Value.StringVal, -1)
-				trAdditionalReleaseIDs := re.FindAllString(trAdditionalReleasePr.Status.TaskRunStatusFields.Results[0].Value.StringVal, -1)
+				trReleaseImageIDs, err := fw.AsKubeAdmin.ReleaseController.GetPyxisImageIDsFromCreatePyxisImageTaskLogs(trReleaseLogs)
+				Expect(err).NotTo(HaveOccurred())
+				trAdditionalReleaseIDs, err := fw.AsKubeAdmin.ReleaseController.GetPyxisImageIDsFromCreatePyxisImageTaskLogs(trAdditionalReleaseLogs)
+				Expect(err).NotTo(HaveOccurred())
 
-				Expect(trReleaseImageIDs).ToNot(BeEmpty(), fmt.Sprintf("Invalid ImageID in results of task create-pyxis-image. taskrun results: %+v", trReleasePr.Status.TaskRunStatusFields.Results[0]))
-				Expect(trAdditionalReleaseIDs).ToNot(BeEmpty(), fmt.Sprintf("Invalid ImageID in results of task create-pyxis-image. taskrun results: %+v", trAdditionalReleasePr.Status.TaskRunStatusFields.Results[0]))
+				Expect(trReleaseImageIDs).NotTo(BeEmpty(), fmt.Sprintf("Invalid ImageID in results of task create-pyxis-image. TaskRun log: %+s", trReleaseLogs))
+				Expect(trAdditionalReleaseIDs).ToNot(BeEmpty(), fmt.Sprintf("Invalid ImageID in results of task create-pyxis-image. TaskRun log: %+s", trAdditionalReleaseLogs))
 
-				Expect(trReleaseImageIDs).ToNot(HaveLen(len(trAdditionalReleaseIDs)), "the number of image IDs should not be the same in both taskrun results. (%+v vs. %+v)", trReleasePr.Status.TaskRunStatusFields.Results[0], trAdditionalReleasePr.Status.TaskRunStatusFields.Results[0])
+				Expect(trReleaseImageIDs).ToNot(HaveLen(len(trAdditionalReleaseIDs)), "the number of image IDs should not be the same in both taskrun results. (%+v vs. %+v)", trReleaseImageIDs, trAdditionalReleaseIDs)
 
 				if len(trReleaseImageIDs) > len(trAdditionalReleaseIDs) {
 					imageIDs = trReleaseImageIDs
