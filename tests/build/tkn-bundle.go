@@ -34,6 +34,7 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("tasks", "HACB
 	var pvcName string = "source-pvc"
 	var pvcAccessMode corev1.PersistentVolumeAccessMode = "ReadWriteOnce"
 	var baseTaskRun *pipeline.TaskRun
+	var qeBundleRepo string = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), taskName)
 
 	var gitRevision, gitURL, bundleImg string
 
@@ -50,7 +51,7 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("tasks", "HACB
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// set a custom bundle repo for the task
-			bundleRepo := os.Getenv("TKN_BUNDLE_REPO")
+			bundleRepo := utils.GetEnv("TKN_BUNDLE_REPO", qeBundleRepo)
 			Expect(bundleRepo).NotTo(BeEmpty())
 			bundleImg = fmt.Sprintf("%s:%s", bundleRepo, taskName)
 		} else {
@@ -63,7 +64,7 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("tasks", "HACB
 
 			err = kubeClient.CommonController.CreateQuayRegistrySecret(namespace)
 			Expect(err).NotTo(HaveOccurred())
-			bundleImg = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), taskName)
+			bundleImg = qeBundleRepo
 		}
 
 		// resolve the gitURL and gitRevision
