@@ -95,10 +95,13 @@ const (
 	ENABLE_SCHEDULING_ON_MASTER_NODES_ENV = "ENABLE_SCHEDULING_ON_MASTER_NODES"
 
 	// A gitlab token is required to run tests against gitlab.com. The token need to have permissions to the given github organization.
-	GITLAB_TOKEN_ENV string = "GITLAB_TOKEN" // #nosec
+	GITLAB_TOKEN_ENV string = "PAC_GITLAB_TOKEN" // #nosec
 
 	// The gitlab URL used to run integration reporting e2e tests against
-	GITLAB_URL_ENV string = "GITLAB_URL" // #nosec
+	GITLAB_URL_ENV string = "PAC_GITLAB_URL" // #nosec
+
+	// For PaC Gitlab tests required project ID
+	GITLAB_PRIJECT_ID string = "PAC_PRIJECT_ID"
 
 	// Test namespace's required labels
 	ArgoCDLabelKey   string = "argocd.argoproj.io/managed-by"
