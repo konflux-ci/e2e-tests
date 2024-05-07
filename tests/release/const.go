@@ -40,6 +40,7 @@ const (
 	ReleasedImagePushRepo           string = "quay.io/redhat-appstudio-qe/dcmetromap"
 	AdditionalReleasedImagePushRepo string = "quay.io/redhat-appstudio-qe/simplepython"
 	PyxisStageImagesApiEndpoint     string = "https://pyxis.preprod.api.redhat.com/v1/images/id/"
+	GitLabRunFileUpdatesTestRepo    string = "https://gitlab.cee.redhat.com/hacbs-release-tests/app-interface"
 
 	// EC constants
 	EcPolicyLibPath     = "github.com/enterprise-contract/ec-policies//policy/lib"
