@@ -1,7 +1,10 @@
 package common
 
 import (
+	"fmt"
+
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/github"
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/gitlab"
 	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -14,6 +17,7 @@ type SuiteController struct {
 
 	// Github client to interact with GH apis
 	Github *github.Github
+	Gitlab *gitlab.GitlabClient
 }
 
 /*
@@ -25,8 +29,15 @@ func NewSuiteController(kubeC *kubeCl.CustomClient) (*SuiteController, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	gl, err := gitlab.NewGitlabClient(utils.GetEnv(constants.GITLAB_TOKEN_ENV, ""), utils.GetEnv(constants.GITLAB_URL_ENV, ""))
+	if err != nil {
+		return nil, fmt.Errorf("failed to authenticate with GitLab: %w", err)
+	}
+
 	return &SuiteController{
 		kubeC,
 		gh,
+		gl,
 	}, nil
 }
