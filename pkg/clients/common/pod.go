@@ -62,6 +62,14 @@ func (s *SuiteController) ListPods(namespace, labelKey, labelValue string, selec
 	return s.KubeInterface().CoreV1().Pods(namespace).List(context.Background(), listOptions)
 }
 
+// wait for a pod based on a condition. cond can be IsPodSuccessful for example
+func (s *SuiteController) WaitForPod(cond wait.ConditionFunc, timeout int) error {
+	if err := utils.WaitUntil(cond, time.Duration(timeout)*time.Second); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Wait for a pod selector until exists
 func (s *SuiteController) WaitForPodSelector(
 	fn func(podName, namespace string) wait.ConditionFunc, namespace, labelKey string, labelValue string,

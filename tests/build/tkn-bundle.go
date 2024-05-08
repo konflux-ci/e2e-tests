@@ -22,6 +22,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+/* to run locally on a kind cluster
+1. set environment variables with examples
+  - E2E_APPLICATIONS_NAMESPACE=konflux-tasks
+  - TKN_BUNDLE_REPO=quay.io/my-user-org/tkn-bundle:latest
+2. AFTER the namespace is created, create a docker secret and patch the sa
+  - kubectl create secret generic docker-config --from-file=.dockerconfigjson="$HOME/.docker/config.json" --type=kubernetes.io/dockerconfigjson --dry-run=client -o yaml | kubectl apply -f
+  - kubectl patch serviceaccount appstudio-pipeline -p '{"imagePullSecrets": [{"name": "docker-config"}], "secrets": [{"name": "docker-config"}]}'
+*/
+
 var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("tasks", "HACBS", buildTemplatesTestLabel), func() {
 
 	defer GinkgoRecover()
@@ -51,9 +60,7 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("tasks", "HACB
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// set a custom bundle repo for the task
-			bundleRepo := utils.GetEnv("TKN_BUNDLE_REPO", qeBundleRepo)
-			Expect(bundleRepo).NotTo(BeEmpty())
-			bundleImg = fmt.Sprintf("%s:%s", bundleRepo, taskName)
+			bundleImg = utils.GetEnv("TKN_BUNDLE_REPO", qeBundleRepo)
 		} else {
 			var err error
 			fwk, err = framework.NewFramework(utils.GetGeneratedNamespace("konflux-task-runner"))
@@ -76,12 +83,15 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("tasks", "HACB
 		if _, err := kubeClient.TektonController.GetPVC(pvcName, namespace); err != nil {
 			_, err = kubeClient.TektonController.CreatePVCInAccessMode(pvcName, namespace, pvcAccessMode)
 			Expect(err).NotTo(HaveOccurred())
-			// use a pod to copy test data to the pvc
-			testData, err := setupTestData(pvcName)
-			Expect(err).NotTo(HaveOccurred())
-			_, err = kubeClient.CommonController.CreatePod(testData, namespace)
-			Expect(err).NotTo(HaveOccurred())
 		}
+		// use a pod to copy test data to the pvc
+		testData, err := setupTestData(pvcName)
+		Expect(err).NotTo(HaveOccurred())
+		pod, err := kubeClient.CommonController.CreatePod(testData, namespace)
+		Expect(err).NotTo(HaveOccurred())
+		// wait for setup pod. make sure it's successful
+		err = kubeClient.CommonController.WaitForPod(kubeClient.CommonController.IsPodSuccessful(pod.Name, namespace), 300)
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	BeforeEach(func() {
@@ -110,6 +120,11 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("tasks", "HACB
 			}
 			tr, err := kubeClient.TektonController.RunTaskAndWait(baseTaskRun, namespace)
 			Expect(err).NotTo(HaveOccurred())
+
+			// check for a success of the taskRun
+			status, err := kubeClient.TektonController.CheckTaskRunSucceeded(tr.Name, namespace)()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(status).To(BeTrue(), fmt.Sprintf("taskRun %q failed", tr.Name))
 
 			// verify taskRun results
 			imgUrl, err := kubeClient.TektonController.GetResultFromTaskRun(tr, "IMAGE_URL")
@@ -257,6 +272,7 @@ func setupTestData(pvcName string) (*corev1.Pod, error) {
 			GenerateName: "setup-pod-",
 		},
 		Spec: corev1.PodSpec{
+			RestartPolicy: "Never",
 			Containers: []corev1.Container{
 				{
 					Command: []string{
@@ -264,7 +280,7 @@ func setupTestData(pvcName string) (*corev1.Pod, error) {
 						"-c",
 						"mkdir -p /source/sub; echo $TASK1_JSON > /source/task1.yaml; echo $TASK2_JSON > /source/task2.yaml; echo $TASK3_JSON > /source/sub/task3.yaml",
 					},
-					Image: "fedora",
+					Image: "registry.access.redhat.com/ubi9/ubi-minimal:latest",
 					Name:  "setup-pod",
 					VolumeMounts: []corev1.VolumeMount{
 						{
