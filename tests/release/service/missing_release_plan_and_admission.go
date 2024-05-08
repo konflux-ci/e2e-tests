@@ -3,7 +3,7 @@ package service
 import (
 	"strings"
 
-	"github.com/redhat-appstudio/application-api/api/v1alpha1"
+	"github.com/konflux-ci/application-api/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"

@@ -15,9 +15,9 @@ import (
 	"github.com/devfile/library/v2/pkg/util"
 	"github.com/gosuri/uiprogress"
 	"github.com/gosuri/uitable/util/strutil"
+	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 	metricsConstants "github.com/redhat-appstudio-qe/perf-monitoring/api/pkg/constants"
 	"github.com/redhat-appstudio-qe/perf-monitoring/api/pkg/metrics"
-	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
@@ -406,7 +406,8 @@ type JourneyContext struct {
 	ChDeployments                chan string
 	userAppsCompsMap             UserAppsCompsMap
 }
-var journeyContexts []*JourneyContext   // pointers to all thread contexts
+
+var journeyContexts []*JourneyContext // pointers to all thread contexts
 
 func createLogDataJSON(outputFile string, logDataInput LogData) error {
 	jsonData, err := json.MarshalIndent(logDataInput, "", "  ")
@@ -836,7 +837,7 @@ func setup(cmd *cobra.Command, args []string) {
 
 	logData.MaxTimeToCreateComponents = maxDurationFromArray(ComponentCreationTimeMaxPerThread).Seconds()
 
-	componentCreationFailureRate := float64(componentCreationFailureCount) / float64(overallCount * componentsCount)
+	componentCreationFailureRate := float64(componentCreationFailureCount) / float64(overallCount*componentsCount)
 	logData.ComponentCreationFailureRate = componentCreationFailureRate
 
 	// Compile data about PipelineRuns
@@ -860,7 +861,7 @@ func setup(cmd *cobra.Command, args []string) {
 	}
 	logData.AverageTimeToRunPipelineFailed = averageTimeToRunPipelineFailed
 
-	pipelineRunFailureRate := float64(pipelineRunFailureCount) / float64(overallCount * componentsCount)
+	pipelineRunFailureRate := float64(pipelineRunFailureCount) / float64(overallCount*componentsCount)
 	logData.PipelineRunFailureRate = pipelineRunFailureRate
 
 	// Compile data about integration tests
@@ -884,7 +885,7 @@ func setup(cmd *cobra.Command, args []string) {
 	}
 	logData.IntegrationTestsAverageTimeToRunPipelineFailed = IntegrationTestsAverageTimeToRunPipelineFailed
 
-	IntegrationTestsPipelineRunFailureRate := float64(integrationTestsPipelineRunFailureCount) / float64(overallCount * componentsCount)
+	IntegrationTestsPipelineRunFailureRate := float64(integrationTestsPipelineRunFailureCount) / float64(overallCount*componentsCount)
 	logData.IntegrationTestsPipelineRunFailureRate = IntegrationTestsPipelineRunFailureRate
 
 	// Compile data about Deployments
@@ -908,7 +909,7 @@ func setup(cmd *cobra.Command, args []string) {
 	}
 	logData.AverageTimeToDeploymentFailed = averageTimeToDeploymentFailed
 
-	deploymentFailureRate := float64(deploymentFailureCount) / float64(overallCount * componentsCount)
+	deploymentFailureRate := float64(deploymentFailureCount) / float64(overallCount*componentsCount)
 	logData.DeploymentFailureRate = deploymentFailureRate
 
 	workloadKPI := logData.AverageTimeToCreateApplications + logData.AverageTimeToCreateCDQs + logData.AverageTimeToCreateComponents + logData.AverageTimeToRunPipelineSucceeded + logData.AverageTimeToDeploymentSucceeded

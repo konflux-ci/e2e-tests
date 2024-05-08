@@ -16,7 +16,7 @@ import (
 	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	intgteststat "github.com/redhat-appstudio/integration-service/pkg/integrationteststatus"
 
-	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

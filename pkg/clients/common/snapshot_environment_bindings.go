@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"

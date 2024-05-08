@@ -1951,10 +1951,10 @@ github.com/prometheus/statsd_exporter v0.23.1/go.mod h1:FFmnBRWf+HxX+PR+2fnc0ciB
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
 github.com/redhat-appstudio-qe/perf-monitoring/api v0.0.0-20231003074147-a076f9e620da h1:xmweq8s/Swij76dF7oMIolghzM1iVw6Cpkd8Aw/wrf8=
 github.com/redhat-appstudio-qe/perf-monitoring/api v0.0.0-20231003074147-a076f9e620da/go.mod h1:E6snXS/FN6RBbfm1SOIab/bPL8WiUcvDL40wgF9Rfho=
-github.com/redhat-appstudio/application-api v0.0.0-20231026192857-89515ad2504f h1:PoKf7gCV/g5blkzVlODkqeynmfIACcR7NqWF8eqnuec=
-github.com/redhat-appstudio/application-api v0.0.0-20231026192857-89515ad2504f/go.mod h1:YvckuKHe82eWloGk0/BpSw4YYG2owrGZAanztbOj3pQ=
-github.com/redhat-appstudio/application-service v0.0.0-20230717184417-67d31a01a776 h1:qaNoaKn+RHg3Z3SsDYSkLEto8qlNjHJGUJ5CCMzE8gY=
-github.com/redhat-appstudio/application-service v0.0.0-20230717184417-67d31a01a776/go.mod h1:meLjzNehwlqPyjd8Gg78oXRpRy5HQ4nCulk8u8mCjqs=
+github.com/konflux-ci/application-api v0.0.0-20231026192857-89515ad2504f h1:PoKf7gCV/g5blkzVlODkqeynmfIACcR7NqWF8eqnuec=
+github.com/konflux-ci/application-api v0.0.0-20231026192857-89515ad2504f/go.mod h1:YvckuKHe82eWloGk0/BpSw4YYG2owrGZAanztbOj3pQ=
+github.com/konflux-ci/application-service v0.0.0-20230717184417-67d31a01a776 h1:qaNoaKn+RHg3Z3SsDYSkLEto8qlNjHJGUJ5CCMzE8gY=
+github.com/konflux-ci/application-service v0.0.0-20230717184417-67d31a01a776/go.mod h1:meLjzNehwlqPyjd8Gg78oXRpRy5HQ4nCulk8u8mCjqs=
 github.com/redhat-appstudio/build-service v0.0.0-20240130032352-f0efbb6ad6e2 h1:/g/j58OjZhsbs/07BwIoxpN6sj2oxegfuXKihETU6tg=
 github.com/redhat-appstudio/build-service v0.0.0-20240130032352-f0efbb6ad6e2/go.mod h1:AwZ226ApDH0dcHv/rDjI1k8xKPqj/pmQye+fxT0Krvw=
 github.com/redhat-appstudio/image-controller v0.0.0-20231003082540-48893226ba8b h1:kM+t/FZSMVUydXIbii+bduAJov7pcADCybP9u1WSBcw=

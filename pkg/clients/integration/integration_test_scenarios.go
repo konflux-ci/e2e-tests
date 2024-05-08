@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/devfile/library/v2/pkg/util"
-	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
