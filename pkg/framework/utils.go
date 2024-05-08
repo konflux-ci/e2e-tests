@@ -10,11 +10,9 @@ func (c *ControllerHub) StoreAllArtifactsForNamespace(namespace string) error {
 	finalError = appendErrorToString(finalError, c.IntegrationController.StoreAllSnapshots(namespace))
 	finalError = appendErrorToString(finalError, c.TektonController.StoreAllPipelineRuns(namespace))
 	finalError = appendErrorToString(finalError, c.CommonController.StoreAllPods(namespace))
-	finalError = appendErrorToString(finalError, c.CommonController.StoreAllSnapshotEnvironmentBindings(namespace))
 	finalError = appendErrorToString(finalError, c.GitOpsController.StoreAllDeploymentTargetClaims(namespace))
 	finalError = appendErrorToString(finalError, c.GitOpsController.StoreAllDeploymentTargetClasses(namespace))
 	finalError = appendErrorToString(finalError, c.GitOpsController.StoreAllDeploymentTargets(namespace))
-	finalError = appendErrorToString(finalError, c.GitOpsController.StoreAllEnvironments(namespace))
 	if len(finalError) > 0 {
 		return fmt.Errorf(finalError)
 	}
