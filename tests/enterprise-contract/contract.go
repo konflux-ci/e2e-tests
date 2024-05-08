@@ -310,7 +310,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 
 			Context("ec-cli command", func() {
 				It("verifies ec cli has error handling", func() {
-					generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image@sha256:4b318620a32349fd37827163c67b5ff6e503f05b3ca4dde066ee03bb34be9ae1")
+					generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:latest")
 					pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
@@ -347,7 +347,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 						defaultECP.Spec, ecp.SourceConfig{Include: []string{"minimal"}})
 					Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
-					generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-out-of-date-task")
+					generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:latest")
 					generator.AppendComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-unacceptable-task")
 					pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 					Expect(err).NotTo(HaveOccurred())
