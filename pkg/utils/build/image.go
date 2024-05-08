@@ -73,27 +73,32 @@ func ImageFromPipelineRun(pipelineRun *pipeline.PipelineRun) (*imageInfo.Image, 
 // FetchImageConfig fetches image config from remote registry.
 // It uses the registry authentication credentials stored in default place ~/.docker/config.json
 func FetchImageConfig(imagePullspec string) (*v1.ConfigFile, error) {
+	wrapErr := func(err error) error {
+		return fmt.Errorf("error while fetching image config %s: %w", imagePullspec, err)
+	}
 	ref, err := name.ParseReference(imagePullspec)
 	if err != nil {
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	// Fetch the manifest using default credentials.
 	descriptor, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	image, err := descriptor.Image()
 	if err != nil {
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	configFile, err := image.ConfigFile()
 	if err != nil {
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	return configFile, nil
 }
 
+// FetchImageDigest fetches image manifest digest.
+// Digest is returned as a hex string without sha256: prefix.
 func FetchImageDigest(imagePullspec string) (string, error) {
 	ref, err := name.ParseReference(imagePullspec)
 	if err != nil {
