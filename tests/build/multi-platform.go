@@ -434,11 +434,8 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 
 func createApplicationAndComponent(f *framework.Framework, testNamespace string) (component *appservice.Component, applicationName, componentName string) {
 	applicationName = fmt.Sprintf("multi-platform-suite-application-%s", util.GenerateRandomString(4))
-	app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
+	_, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 	Expect(err).NotTo(HaveOccurred())
-	Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
-		Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
-	)
 
 	componentName = fmt.Sprintf("multi-platform-suite-component-%s", util.GenerateRandomString(4))
 

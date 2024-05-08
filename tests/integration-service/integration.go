@@ -349,11 +349,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 func createApp(f framework.Framework, testNamespace string) string {
 	applicationName := fmt.Sprintf("integ-app-%s", util.GenerateRandomString(4))
 
-	app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
+	_, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 	Expect(err).NotTo(HaveOccurred())
-	Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
-		Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
-	)
 
 	return applicationName
 }

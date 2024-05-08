@@ -364,7 +364,7 @@ func setRequiredEnvVars() error {
 				requiresSprayProxyRegistering = true
 				envVarPrefix = "HAS"
 				imageTagSuffix = "has-image"
-				testSuiteLabel = "e2e-demo"
+				testSuiteLabel = "rhtap-demo"
 			case strings.Contains(jobName, "release-service"):
 				envVarPrefix = "RELEASE_SERVICE"
 				imageTagSuffix = "release-service-image"

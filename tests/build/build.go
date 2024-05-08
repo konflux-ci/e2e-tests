@@ -84,11 +84,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Expect(err).ShouldNot(HaveOccurred())
 
 			applicationName = fmt.Sprintf("build-suite-test-application-%s", util.GenerateRandomString(4))
-			app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
+			_, err = f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
-				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
-			)
 
 			componentName = fmt.Sprintf("%s-%s", "test-component-pac", util.GenerateRandomString(6))
 			pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
@@ -661,11 +658,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			}
 
 			applicationName = fmt.Sprintf("build-suite-positive-mc-%s", util.GenerateRandomString(4))
-			app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
+			_, err = f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
-				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
-			)
 
 			multiComponentBaseBranchName = fmt.Sprintf("multi-component-base-%s", util.GenerateRandomString(6))
 			err = f.AsKubeAdmin.CommonController.Github.CreateRef(multiComponentGitSourceRepoName, multiComponentDefaultBranch, multiComponentGitRevision, multiComponentBaseBranchName)
@@ -829,11 +823,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				namespace = fw.UserNamespace
 
 				appName = fmt.Sprintf("build-suite-negative-mc-%s", util.GenerateRandomString(4))
-				app, err := f.AsKubeAdmin.HasController.CreateApplication(appName, namespace)
+				_, err = f.AsKubeAdmin.HasController.CreateApplication(appName, namespace)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
-					Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
-				)
 
 				compName = fmt.Sprintf("%s-%s", multiComponentContextDirs[0], util.GenerateRandomString(6))
 
@@ -903,11 +894,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			testNamespace = f.UserNamespace
 
 			applicationName = fmt.Sprintf("build-secret-lookup-%s", util.GenerateRandomString(4))
-			app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
+			_, err = f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
-				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
-			)
 
 			firstComponentBaseBranchName = fmt.Sprintf("component-one-base-%s", util.GenerateRandomString(6))
 			err = f.AsKubeAdmin.CommonController.Github.CreateRef(secretLookupGitSourceRepoOneName, secretLookupDefaultBranchOne, secretLookupGitRevisionOne, firstComponentBaseBranchName)
@@ -1069,11 +1057,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			interval = 5 * time.Second
 
 			applicationName = fmt.Sprintf("build-suite-test-application-%s", util.GenerateRandomString(4))
-			app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
+			_, err = f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
-				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
-			)
 
 			componentName = fmt.Sprintf("%s-%s", "test-annotations", util.GenerateRandomString(6))
 
@@ -1271,11 +1256,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace
 
-			app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
+			_, err = f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
-				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
-			)
 
 			componentName = fmt.Sprintf("build-suite-test-component-image-source-%s", util.GenerateRandomString(6))
 			outputContainerImage := ""
@@ -1330,11 +1312,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			testNamespace = f.UserNamespace
 			applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
 
-			app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
+			_, err = f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
-				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
-			)
 
 			componentName = "build-suite-test-bundle-overriding"
 
@@ -1493,11 +1472,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
 
-			app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
+			_, err = f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
-				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s", app.Name, app.Namespace),
-			)
+
 			timeout = time.Minute * 5
 
 			dummySecret := &v1.Secret{
@@ -1607,11 +1584,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			testNamespace = f.UserNamespace
 
 			applicationName = fmt.Sprintf("build-suite-component-update-%s", util.GenerateRandomString(4))
-			app, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
+			_, err = f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(utils.WaitUntil(f.AsKubeAdmin.HasController.ApplicationGitopsRepoExists(app.Status.Devfile), 30*time.Second)).To(
-				Succeed(), fmt.Sprintf("timed out waiting for gitops content to be created for app %s in namespace %s: %+v", app.Name, app.Namespace, err),
-			)
 			branchString := util.GenerateRandomString(4)
 			ParentComponentDef.componentBranch = fmt.Sprintf("multi-component-parent-base-%s", branchString)
 			ChildComponentDef.componentBranch = fmt.Sprintf("multi-component-child-base-%s", branchString)
