@@ -57,7 +57,7 @@ func (b BuildahDemo) Generate() (*pipeline.PipelineRun, error) {
 			Params: []pipeline.Param{
 				{
 					Name:  "dockerfile",
-					Value: *pipeline.NewStructuredValues("docker/Dockerfile"),
+					Value: *pipeline.NewStructuredValues("Containerfile"),
 				},
 				{
 					Name:  "output-image",
@@ -65,7 +65,7 @@ func (b BuildahDemo) Generate() (*pipeline.PipelineRun, error) {
 				},
 				{
 					Name:  "git-url",
-					Value: *pipeline.NewStructuredValues("https://github.com/redhat-appstudio-qe/devfile-sample-hello-world.git"),
+					Value: *pipeline.NewStructuredValues("https://github.com/enterprise-contract/golden-container.git"),
 				},
 				{
 					Name:  "skip-checks",
