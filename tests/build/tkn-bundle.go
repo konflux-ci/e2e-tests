@@ -31,7 +31,7 @@ import (
   - kubectl patch serviceaccount appstudio-pipeline -p '{"imagePullSecrets": [{"name": "docker-config"}], "secrets": [{"name": "docker-config"}]}'
 */
 
-var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("tasks", "HACBS", buildTemplatesTestLabel), func() {
+var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("tasks", "HACBS"), func() {
 
 	defer GinkgoRecover()
 
