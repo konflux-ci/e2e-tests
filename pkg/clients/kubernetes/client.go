@@ -19,7 +19,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/sandbox"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	imagecontroller "github.com/redhat-appstudio/image-controller/api/v1alpha1"
-	integrationservicev1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
+	integrationservicev1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
 	jvmbuildservice "github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	jvmbuildserviceclientset "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
 

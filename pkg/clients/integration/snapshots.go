@@ -11,7 +11,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	intgteststat "github.com/redhat-appstudio/integration-service/pkg/integrationteststatus"
+	intgteststat "github.com/konflux-ci/integration-service/pkg/integrationteststatus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"

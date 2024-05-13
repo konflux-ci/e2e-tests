@@ -16,7 +16,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
-	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
+	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
