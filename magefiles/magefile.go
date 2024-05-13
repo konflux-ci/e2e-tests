@@ -622,6 +622,90 @@ func SetupMultiPlatformTests() error {
 	return nil
 }
 
+func SetupSourceBuild() {
+	var err error
+	var defaultBundleRef string
+	var tektonObj runtime.Object
+	var newPipelineYaml []byte
+	klog.Info("creating new tekton bundle for the purpose of testing build-task-dockerfiles PR")
+
+	sourceImage := utils.GetEnv("SOURCE_IMAGE", "")
+	if sourceImage == "" {
+		klog.Error("SOURCE_IMAGE env is not set")
+		return
+	}
+	// if err = utils.CreateDockerConfigFile(os.Getenv("QUAY_TOKEN")); err != nil {
+	// 	klog.Errorf("failed to create docker config file: %+v", err)
+	// 	return
+	// }
+	if defaultBundleRef, err = tekton.GetDefaultPipelineBundleRef(constants.BuildPipelineSelectorYamlURL, "Docker build"); err != nil {
+		klog.Errorf("failed to get the pipeline bundle ref: %+v", err)
+		return
+	}
+	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(defaultBundleRef, "pipeline", "docker-build"); err != nil {
+		klog.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
+		return
+	}
+	dockerPipelineObject := tektonObj.(*tektonapi.Pipeline)
+
+	// Update build-source-image param value to true
+	for i := range dockerPipelineObject.PipelineSpec().Params {
+		if dockerPipelineObject.PipelineSpec().Params[i].Name == "build-source-image" {
+			//fmt.Printf("Current build-source-image param default value: %q\n", dockerPipelineObject.PipelineSpec().Params[i].Default.StringVal)
+			dockerPipelineObject.PipelineSpec().Params[i].Default.StringVal = "true"
+		}
+	}
+	// Update the source-build task image reference to SOURCE_IMAGE
+	var currentSourceTaskRef string
+	for i := range dockerPipelineObject.PipelineSpec().Tasks {
+		t := &dockerPipelineObject.PipelineSpec().Tasks[i]
+		params := t.TaskRef.Params
+		var lastBundle *tektonapi.Param
+		sourceTask := false
+		for i, param := range params {
+			if param.Name == "bundle" {
+				lastBundle = &t.TaskRef.Params[i]
+			} else if param.Name == "name" && param.Value.StringVal == "source-build" {
+				sourceTask = true
+			}
+		}
+		if sourceTask {
+			currentSourceTaskRef = lastBundle.Value.StringVal
+			klog.Infof("found current task ref %s", currentSourceTaskRef)
+			lastBundle.Value = *tektonapi.NewStructuredValues(sourceImage)
+			break
+		}
+	}
+	if currentSourceTaskRef == "" {
+		klog.Errorf("failed to extract the Tekton Task from bundle: %+v", err)
+		return
+	}
+	if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
+		klog.Errorf("error when marshalling a new pipeline to YAML: %v", err)
+		return
+	}
+	keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
+	authOption := remoteimg.WithAuthFromKeychain(keychain)
+
+	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
+	quayOrg := utils.GetEnv(constants.DEFAULT_QUAY_ORG_ENV, constants.DefaultQuayOrg)
+	newSourceBuildPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
+	var newSourceBuildPipeline, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newSourceBuildPipelineImg, tag))
+
+	if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newSourceBuildPipeline, authOption); err != nil {
+		klog.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
+		return
+	}
+
+	// Update CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE env variable with the new bundle
+	// klog.Infof("SETTING ENV VAR %s to value %s\n", constants.CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE_ENV, newSourceBuildPipeline.String())
+	// err = os.Setenv(constants.CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE_ENV, newSourceBuildPipeline.String())
+	// // if err != nil {
+	// // 	klog.Errorf("error while setting env: %v\n", err)
+	// // }
+	fmt.Printf("custom_source_image_bundle=%s\n", newSourceBuildPipeline.String())
+}
+
 func BootstrapCluster() error {
 	envVars := map[string]string{}
 
