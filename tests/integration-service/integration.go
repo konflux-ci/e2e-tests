@@ -13,8 +13,8 @@ import (
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
-	intgteststat "github.com/redhat-appstudio/integration-service/pkg/integrationteststatus"
+	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
+	intgteststat "github.com/konflux-ci/integration-service/pkg/integrationteststatus"
 
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 

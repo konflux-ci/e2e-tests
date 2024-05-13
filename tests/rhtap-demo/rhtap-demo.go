@@ -33,7 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
-	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
+	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 

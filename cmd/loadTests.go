@@ -22,7 +22,7 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	loadtestUtils "github.com/redhat-appstudio/e2e-tests/pkg/utils/loadtests"
-	integrationv1beta1 "github.com/redhat-appstudio/integration-service/api/v1beta1"
+	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
 	"github.com/spf13/cobra"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	appsv1 "k8s.io/api/apps/v1"
