@@ -10,7 +10,7 @@ import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/loggi
 import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
 import util "github.com/devfile/library/v2/pkg/util"
 import utils "github.com/redhat-appstudio/e2e-tests/pkg/utils"
-import integrationApi "github.com/redhat-appstudio/integration-service/api/v1beta1"
+import integrationApi "github.com/konflux-ci/integration-service/api/v1beta1"
 import types "k8s.io/apimachinery/pkg/types"
 
 
