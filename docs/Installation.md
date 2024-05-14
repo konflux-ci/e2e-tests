@@ -38,7 +38,7 @@ Requirements for installing RHTAP in E2E mode:
 ``` bash
 # Install dependencies
 $ go mod tidy
-# or go mod tidy -compat=1.20
+# or go mod tidy -compat=1.21
 ```
 
 4. By default the installation script will use the `redhat-appstudio-qe` GitHub organization for pushing changes to `infra-deployments` repository.

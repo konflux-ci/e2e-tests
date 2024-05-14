@@ -1,4 +1,4 @@
-FROM registry.ci.openshift.org/openshift/release:golang-1.20 AS builder
+FROM registry.ci.openshift.org/openshift/release:golang-1.21 AS builder
 
 WORKDIR /github.com/redhat-appstudio/e2e-tests
 USER root
