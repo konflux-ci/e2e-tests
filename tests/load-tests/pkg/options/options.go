@@ -13,7 +13,6 @@ type Opts struct {
 	LogDebug                      bool
 	LogTrace                      bool
 	LogVerbose                    bool
-	NumberOfUsers                 int
 	OutputDir                     string
 	PipelineRequestConfigurePac   bool
 	PipelineSkipInitialChecks     bool
