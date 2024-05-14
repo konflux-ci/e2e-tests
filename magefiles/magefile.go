@@ -342,7 +342,7 @@ func setRequiredEnvVars() error {
 
 	if openshiftJobSpec.Refs.Repo != "e2e-tests" {
 
-		if strings.HasSuffix(jobName, "-service-e2e") || strings.Contains(jobName, "image-controller") {
+		if strings.HasSuffix(jobName, "-service-e2e") || strings.Contains(jobName, "controller-e2e") {
 			var envVarPrefix, imageTagSuffix, testSuiteLabel string
 			sp := strings.Split(os.Getenv("COMPONENT_IMAGE"), "@")
 
