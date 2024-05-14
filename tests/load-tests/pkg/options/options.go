@@ -1,5 +1,7 @@
 package options
 
+import "time"
+
 
 // Struct to hold command line options
 type Opts struct {
@@ -10,6 +12,9 @@ type Opts struct {
 	ComponentsCount               int
 	Concurrency                   int
 	FailFast                      bool
+	JourneyDuration               string
+	JourneyUntil                  time.Time
+	JourneyRepeats                int
 	LogDebug                      bool
 	LogTrace                      bool
 	LogVerbose                    bool
@@ -25,4 +30,14 @@ type Opts struct {
 	UsernamePrefix                string
 	WaitIntegrationTestsPipelines bool
 	WaitPipelines                 bool
+}
+
+func (o *Opts) ProcessOptions() error {
+	parsed, err := time.ParseDuration(o.JourneyDuration)
+	if err != nil {
+		return err
+	}
+
+	o.JourneyUntil = time.Now().UTC().Add(parsed)
+	return nil
 }

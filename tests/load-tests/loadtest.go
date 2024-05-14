@@ -1,6 +1,7 @@
 package main
 
 import "fmt"
+import "time"
 
 import journey "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/journey"
 import options "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/options"
@@ -46,6 +47,8 @@ func init() {
 	rootCmd.Flags().BoolVarP(&opts.WaitIntegrationTestsPipelines, "waitintegrationtestspipelines", "i", false, "if you want to wait for IntegrationTests (Integration Test Scenario) pipelines to finish")
 	rootCmd.Flags().BoolVar(&opts.FailFast, "fail-fast", false, "if you want the test to fail fast at first failure")
 	rootCmd.Flags().IntVarP(&opts.Concurrency, "concurrency", "c", 1, "number of concurrent threads to execute")
+	rootCmd.Flags().IntVar(&opts.JourneyRepeats, "journey-repeats", 1, "number of times to repeat user journey (either this or --journey-duration)")
+	rootCmd.Flags().StringVar(&opts.JourneyDuration, "journey-duration", "1h", "repeat user journey until this timeout (either this or --journey-repeats)")
 	rootCmd.Flags().BoolVar(&opts.PipelineSkipInitialChecks, "pipeline-skip-initial-checks", true, "if build pipeline runs' initial checks are to be skipped")
 	rootCmd.Flags().BoolVar(&opts.PipelineRequestConfigurePac, "pipeline-request-configure-pac", false, "if build pipeline should be taken from component repository .tekton directory")
 	rootCmd.Flags().StringVarP(&opts.OutputDir, "output-dir", "o", ".", "directory where output files such as load-tests.log or load-tests.json are stored")
@@ -66,6 +69,10 @@ func main() {
 	if rootCmd.Flags().Lookup("help").Value.String() == "true" {
 		fmt.Println(rootCmd.UsageString())
 		return
+	}
+	err = opts.ProcessOptions()
+	if err != nil {
+		logging.Logger.Fatal("Failed to process options: %v", err)
 	}
 
 	// Setup logging
@@ -198,38 +205,48 @@ func userJourneyThread(threadCtx *journey.MainContext) {
 		return
 	}
 
-	// Create application
-	_, err = timeandlog.Measure(journey.HandleApplication, threadCtx)
-	if err != nil {
-		logging.Logger.Error("Thread failed: %v", err)
-		return
-	}
+	for i := 1; i <= threadCtx.Opts.JourneyRepeats; i++ {
 
-	// Create integration test scenario
-	_, err = timeandlog.Measure(journey.HandleIntegrationTestScenario, threadCtx)
-	if err != nil {
-		logging.Logger.Error("Thread failed: %v", err)
-		return
-	}
+		// Create application
+		_, err = timeandlog.Measure(journey.HandleApplication, threadCtx)
+		if err != nil {
+			logging.Logger.Error("Thread failed: %v", err)
+			return
+		}
 
-	// Template repo
-	_, err = timeandlog.Measure(journey.HandleRepoTemplating, threadCtx)
-	if err != nil {
-		logging.Logger.Error("Thread failed: %v", err)
-		return
-	}
+		// Create integration test scenario
+		_, err = timeandlog.Measure(journey.HandleIntegrationTestScenario, threadCtx)
+		if err != nil {
+			logging.Logger.Error("Thread failed: %v", err)
+			return
+		}
 
-	// Create component detection query
-	_, err = timeandlog.Measure(journey.HandleComponentDetectionQuery, threadCtx)
-	if err != nil {
-		logging.Logger.Error("Thread failed: %v", err)
-		return
-	}
+		// Template repo
+		_, err = timeandlog.Measure(journey.HandleRepoTemplating, threadCtx)
+		if err != nil {
+			logging.Logger.Error("Thread failed: %v", err)
+			return
+		}
 
-	// Start given number of `perComponentThread()` threads using `journey.PerComponentSetup()` and wait for them to finish
-	_, err = timeandlog.Measure(journey.PerComponentSetup, perComponentThread, threadCtx)
-	if err != nil {
-		logging.Logger.Fatal("Per component threads setup failed: %v", err)
+		// Create component detection query
+		_, err = timeandlog.Measure(journey.HandleComponentDetectionQuery, threadCtx)
+		if err != nil {
+			logging.Logger.Error("Thread failed: %v", err)
+			return
+		}
+
+		// Start given number of `perComponentThread()` threads using `journey.PerComponentSetup()` and wait for them to finish
+		_, err = timeandlog.Measure(journey.PerComponentSetup, perComponentThread, threadCtx)
+		if err != nil {
+			logging.Logger.Fatal("Per component threads setup failed: %v", err)
+		}
+
+		// Check if we are supposed to guit based on --journey-duration
+		if time.Now().UTC().After(threadCtx.Opts.JourneyUntil) {
+			logging.Logger.Debug("Done with user journey because of timeout")
+			break
+		}
+
 	}
 
 	// Collect info about PVCs
