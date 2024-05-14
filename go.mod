@@ -49,6 +49,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/tektoncd/cli v0.33.0
 	github.com/tektoncd/pipeline v0.58.0
+	github.com/xanzy/go-gitlab v0.104.1
 	golang.org/x/crypto v0.22.0
 	golang.org/x/oauth2 v0.20.0
 	golang.org/x/tools v0.20.0
@@ -297,7 +298,6 @@ require (
 	github.com/vmihailenco/go-tinylfu v0.2.2 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.4 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	github.com/xanzy/go-gitlab v0.104.1 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
