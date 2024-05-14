@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/openshift/library-go/pkg/image/reference"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/tekton"
+	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,21 +68,45 @@ func CheckParentSources(c client.Client, tektonController *tekton.TektonControll
 
 	allowed, err := build.IsImagePulledFromAllowedRegistry(imageWithoutTag)
 	Expect(err).ShouldNot(HaveOccurred())
-	if !allowed {
-		Expect(buildResult.BaseImageSourceIncluded).Should(BeFalse())
-		containsLog, err := build.SourceBuildTaskRunLogsContain(
-			tektonController, pr,
-			fmt.Sprintf("Image %s does not come from supported allowed registry", lastBaseImage),
-		)
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(containsLog).Should(BeTrue())
-		return
+
+	var parentSourceImage string
+
+	if allowed {
+		parentSourceImage, err = build.ResolveSourceImageByVersionRelease(imageWithoutTag)
+	} else {
+		parentSourceImage, err = build.ResolveKonfluxSourceImage(imageWithoutTag)
+	}
+	Expect(err).ShouldNot(HaveOccurred())
+
+	allIncluded, err := build.AllParentSourcesIncluded(parentSourceImage, buildResult.ImageUrl)
+
+	if err != nil {
+		msg := err.Error()
+		if strings.Contains(msg, "parent source image manifest") && strings.Contains(msg, "MANIFEST_UNKNOWN:") {
+			return
+		} else {
+			Fail(fmt.Sprintf("failed to check parent sources: %v", err))
+		}
 	}
 
-	parentSourceImage, err := build.ResolveSourceImage(imageWithoutTag)
-	Expect(err).ShouldNot(HaveOccurred())
-	allIncluded, err := build.AllParentSourcesIncluded(parentSourceImage, buildResult.ImageUrl)
-	Expect(err).ShouldNot(HaveOccurred())
 	Expect(allIncluded).Should(BeTrue())
 	Expect(buildResult.BaseImageSourceIncluded).Should(BeTrue())
+}
+
+func CheckSourceImage(srcImage, gitUrl string, hub *framework.ControllerHub, pr *pipeline.PipelineRun) {
+	//Check if hermetic enabled
+	isHermeticBuildEnabled := build.IsHermeticBuildEnabled(pr)
+	GinkgoWriter.Printf("HERMETIC STATUS: %v\n", isHermeticBuildEnabled)
+
+	//Get prefetch input value
+	prefetchInputValue := build.GetPrefetchValue(pr)
+	GinkgoWriter.Printf("PRE-FETCH VALUE: %v\n", prefetchInputValue)
+
+	filesExists, err := build.IsSourceFilesExistsInSourceImage(
+		srcImage, gitUrl, isHermeticBuildEnabled, prefetchInputValue)
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(filesExists).To(BeTrue())
+
+	c := hub.CommonController.KubeRest()
+	CheckParentSources(c, hub.TektonController, pr)
 }

@@ -1,13 +1,17 @@
 package build
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/go-git/go-git/v5"
@@ -16,7 +20,9 @@ import (
 	"github.com/openshift/library-go/pkg/image/reference"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/redhat-appstudio/e2e-tests/pkg/clients/github"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/tekton"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
@@ -104,14 +110,15 @@ func IsSourceFilesExistsInSourceImage(srcImage string, gitUrl string, isHermetic
 			return false, fmt.Errorf("error while untaring %s: %v", tarFile, err)
 		}
 	}
+
 	//Check if application source files exists
-	_, err = IsAppSourceFilesExists(absExtraSourceDirPath, gitUrl)
+	_, err = doAppSourceFilesExist(absExtraSourceDirPath)
 	if err != nil {
 		return false, err
 	}
 	// Check the pre-fetch dependency related files
 	if isHermetic {
-		_, err := IsPreFetchDependencysFilesExists(absExtraSourceDirPath, isHermetic, prefetchValue)
+		_, err := IsPreFetchDependenciesFilesExists(gitUrl, absExtraSourceDirPath, isHermetic, prefetchValue)
 		if err != nil {
 			return false, err
 		}
@@ -120,7 +127,9 @@ func IsSourceFilesExistsInSourceImage(srcImage string, gitUrl string, isHermetic
 	return true, nil
 }
 
-func IsAppSourceFilesExists(absExtraSourceDirPath string, gitUrl string) (bool, error) {
+// doAppSourceFilesExist checks if there is app source archive included.
+// For the builds based on Konflux image, multiple app sources could be included.
+func doAppSourceFilesExist(absExtraSourceDirPath string) (bool, error) {
 	//Get the file list from extra_src_dir
 	fileNames, err := utils.GetFileNamesFromDir(absExtraSourceDirPath)
 	if err != nil {
@@ -128,34 +137,112 @@ func IsAppSourceFilesExists(absExtraSourceDirPath string, gitUrl string) (bool, 
 	}
 
 	//Get the component source with pattern <repo-name>-<git-sha>.tar.gz
-	repoName := utils.GetRepoName(gitUrl)
-	filePatternToFind := repoName + "-" + shaValueRegex + tarGzFileRegex
+	filePatternToFind := "^.+-" + shaValueRegex + tarGzFileRegex
 	resultFiles := utils.FilterSliceUsingPattern(filePatternToFind, fileNames)
 	if len(resultFiles) == 0 {
 		return false, fmt.Errorf("did not found the component source inside extra_src_dir, files found are: %v", fileNames)
 	}
-	sourceGzTarFileName := resultFiles[0]
 
-	//Untar the <repo-name>-<git-sha>.tar.gz file
-	err = utils.Untar(absExtraSourceDirPath, filepath.Join(absExtraSourceDirPath, sourceGzTarFileName))
-	if err != nil {
-		return false, fmt.Errorf("error while untaring %s: %v", sourceGzTarFileName, err)
+	fmt.Println("file names:", fileNames)
+	fmt.Println("app sources:", resultFiles)
+
+	for _, sourceGzTarFileName := range resultFiles {
+		//Untar the <repo-name>-<git-sha>.tar.gz file
+		err = utils.Untar(absExtraSourceDirPath, filepath.Join(absExtraSourceDirPath, sourceGzTarFileName))
+		if err != nil {
+			return false, fmt.Errorf("error while untaring %s: %v", sourceGzTarFileName, err)
+		}
+
+		//Get the file list from extra_src_dir/<repo-name>-<sha>
+		sourceGzTarDirName := strings.TrimSuffix(sourceGzTarFileName, ".tar.gz")
+		absSourceGzTarPath := filepath.Join(absExtraSourceDirPath, sourceGzTarDirName)
+		fileNames, err = utils.GetFileNamesFromDir(absSourceGzTarPath)
+		if err != nil {
+			return false, fmt.Errorf("error while getting files from %s: %v", sourceGzTarDirName, err)
+		}
+		if len(fileNames) == 0 {
+			return false, fmt.Errorf("no file found under extra_src_dir/<repo-name>-<git-sha>")
+		}
 	}
 
-	//Get the file list from extra_src_dir/<repo-name>-<sha>
-	sourceGzTarDirName := strings.TrimSuffix(sourceGzTarFileName, ".tar.gz")
-	absSourceGzTarPath := filepath.Join(absExtraSourceDirPath, sourceGzTarDirName)
-	fileNames, err = utils.GetFileNamesFromDir(absSourceGzTarPath)
-	if err != nil {
-		return false, fmt.Errorf("error while getting files from %s: %v", sourceGzTarDirName, err)
-	}
-	if len(fileNames) == 0 {
-		return false, fmt.Errorf("no file found under extra_src_dir/<repo-name>-<git-sha>")
-	}
 	return true, nil
 }
 
-func IsPreFetchDependencysFilesExists(absExtraSourceDirPath string, isHermetic bool, prefetchValue string) (bool, error) {
+// NewGithubClient creates a GitHub client with custom organization.
+// The token is retrieved in the same way as what SuiteController does.
+func NewGithubClient(organization string) (*github.Github, error) {
+	token := utils.GetEnv(constants.GITHUB_TOKEN_ENV, "")
+	if gh, err := github.NewGithubClient(token, organization); err != nil {
+		return nil, err
+	} else {
+		return gh, nil
+	}
+}
+
+// ReadFileFromGitRepo reads a file from a remote Git repository hosted in GitHub.
+// The filePath should be a relative path to the root of the repository.
+// File content is returned. If error occurs, the error will be returned and
+// empty string is returned as nothing is read.
+// If branch is omitted, file is read from the "main" branch.
+func ReadFileFromGitRepo(repoUrl, filePath, branch string) (string, error) {
+	fromBranch := branch
+	if fromBranch == "" {
+		fromBranch = "main"
+	}
+	wrapErr := func(err error) error {
+		return fmt.Errorf("error while reading file %s from repository %s: %v", filePath, repoUrl, err)
+	}
+	parsedUrl, err := url.Parse(repoUrl)
+	if err != nil {
+		return "", wrapErr(err)
+	}
+	org, repo := path.Split(parsedUrl.Path)
+	gh, err := NewGithubClient(strings.Trim(org, "/"))
+	if err != nil {
+		return "", wrapErr(err)
+	}
+	repoContent, err := gh.GetFile(repo, filePath, fromBranch)
+	if err != nil {
+		return "", wrapErr(err)
+	}
+	if content, err := repoContent.GetContent(); err != nil {
+		return "", wrapErr(err)
+	} else {
+		return content, nil
+	}
+}
+
+// ReadRequirements reads dependencies from compiled requirements.txt by pip-compile,
+// and it assumes the requirements.txt is simple in the root of the repository.
+// The requirements are returned a list of strings, each of them is in form name==version.
+func ReadRequirements(repoUrl string) ([]string, error) {
+	const requirementsFile = "requirements.txt"
+
+	wrapErr := func(err error) error {
+		return fmt.Errorf("error while reading requirements.txt from repo %s: %v", repoUrl, err)
+	}
+
+	content, err := ReadFileFromGitRepo(repoUrl, requirementsFile, "")
+	if err != nil {
+		return nil, wrapErr(err)
+	}
+
+	reqs := make([]string, 0, 5)
+	// Match line: "requests==2.31.0 \"
+	reqRegex := regexp.MustCompile(`^\S.+ \\$`)
+
+	scanner := bufio.NewScanner(strings.NewReader(content))
+	for scanner.Scan() {
+		line := scanner.Text()
+		if reqRegex.MatchString(line) {
+			reqs = append(reqs, strings.TrimSuffix(line, " \\"))
+		}
+	}
+
+	return reqs, nil
+}
+
+func IsPreFetchDependenciesFilesExists(gitUrl, absExtraSourceDirPath string, isHermetic bool, prefetchValue string) (bool, error) {
 	var absDependencyPath string
 	if prefetchValue == "gomod" {
 		fmt.Println("Checking go dependency files")
@@ -174,6 +261,36 @@ func IsPreFetchDependencysFilesExists(absExtraSourceDirPath string, isHermetic b
 	if len(fileNames) == 0 {
 		return false, fmt.Errorf("no file found under extra_src_dir/deps/")
 	}
+
+	// Easy to check for pip. Check if all requirements are included in the built source image.
+	if prefetchValue == "pip" {
+		fileSet := make(map[string]int)
+		for _, name := range fileNames {
+			fileSet[name] = 1
+		}
+		fmt.Println("file set:", fileSet)
+
+		requirements, err := ReadRequirements(gitUrl)
+		fmt.Println("requirements:", requirements)
+		if err != nil {
+			return false, fmt.Errorf("error while reading requirements.txt from repo %s: %v", gitUrl, err)
+		}
+		var sdistFilename string
+		for _, requirement := range requirements {
+			if strings.Contains(requirement, "==") {
+				sdistFilename = strings.Replace(requirement, "==", "-", 1) + ".tar.gz"
+			} else if strings.Contains(requirement, " @ https://") {
+				sdistFilename = fmt.Sprintf("external-%s", strings.Split(requirement, " ")[0])
+			} else {
+				fmt.Println("unknown requirement form:", requirement)
+				continue
+			}
+			if _, exists := fileSet[sdistFilename]; !exists {
+				return false, fmt.Errorf("requirement '%s' is not included", requirement)
+			}
+		}
+	}
+
 	return true, nil
 }
 
@@ -399,7 +516,7 @@ func SourceBuildTaskRunLogsContain(
 	return false, nil
 }
 
-func ResolveSourceImage(image string) (string, error) {
+func ResolveSourceImageByVersionRelease(image string) (string, error) {
 	config, err := FetchImageConfig(image)
 	if err != nil {
 		return "", err
@@ -425,11 +542,11 @@ func ResolveSourceImage(image string) (string, error) {
 func AllParentSourcesIncluded(parentSourceImage, builtSourceImage string) (bool, error) {
 	parentConfig, err := FetchImageConfig(parentSourceImage)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("error while getting parent source image manifest %s: %w", parentSourceImage, err)
 	}
 	builtConfig, err := FetchImageConfig(builtSourceImage)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("error while getting built source image manifest %s: %w", builtSourceImage, err)
 	}
 	srpmSha256Sums := make(map[string]int)
 	var parts []string
@@ -446,4 +563,18 @@ func AllParentSourcesIncluded(parentSourceImage, builtSourceImage string) (bool,
 		}
 	}
 	return true, nil
+}
+
+func ResolveKonfluxSourceImage(image string) (string, error) {
+	digest, err := FetchImageDigest(image)
+	if err != nil {
+		return "", fmt.Errorf("error while fetching image digest of %s: %w", image, err)
+	}
+	ref, err := reference.Parse(image)
+	if err != nil {
+		return "", fmt.Errorf("error while parsing image %s: %w", image, err)
+	}
+	ref.ID = ""
+	ref.Tag = fmt.Sprintf("sha256-%s.src", digest)
+	return ref.Exact(), nil
 }
