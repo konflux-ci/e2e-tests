@@ -15,7 +15,7 @@ split_encode_and_save_json() {
     local parts_count="$2"
 
     # Calculate the total number of records in the JSON array
-    local total_lines=$(jq '.creds | length' < "$input_file")
+    local total_lines=$(jq '. | length' < "$input_file")
 
     # Calculate the number of records per part, ensuring it rounds up
     # This ensures that each part will have an equal number of records
@@ -36,7 +36,7 @@ split_encode_and_save_json() {
         fi
 
         # Extract part of the JSON array and save base64 encoded to a file
-        jq "{ \"creds\": .creds | .[$start:$end] }" < "$input_file" | base64 -w 0 > "part_$(($i + 1)).encoded"
+        jq ".[$start:$end]" < "$input_file" | base64 -w 0 > "part_$(($i + 1)).encoded"
     done
 }
 

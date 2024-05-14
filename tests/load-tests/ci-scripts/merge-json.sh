@@ -34,24 +34,17 @@ EOF
 
 # Function to decode and save JSON data from variable to pre_N.json
 decode_and_save_json() {
-    local variable_name="$1"
-    local file_name="pre_${variable_name#*_}.json"
-    echo "${!variable_name}" | base64 --decode > "$file_name"
+    local file_name="pre_${1}.json"
+    cat "$f" | base64 --decode > "$file_name"
 }
 
-# Get the total number of parameters passed to the script (N)
-N=$#
-
 # Loop through all the variables
-for ((i = 1; i <= N; i++)); do
-    var_name="STAGING_USERS_$i"
-    decode_and_save_json "$var_name"
+for f in $@; do
+    decode_and_save_json "$f"
 done
 
-# Merge all the pre_N.json files into output.json
-jq -s '[.[].creds]' pre_*.json > data.json
-jq 'add' data.json > users.json
-
+# Merge all the pre_N.json files into users.json
+jq -s '.[]' pre_*.json | jq -s 'add' > users.json
 
 # Optionally, you can remove the temporary pre_N.json files
 # Uncomment the next line to delete the files
