@@ -14,7 +14,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
 	releaseapi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
@@ -31,7 +30,7 @@ const (
 
 var snapshot *appservice.Snapshot
 var releaseCR *releaseapi.Release
-var releasePr, buildPr *tektonv1.PipelineRun
+var buildPr *tektonv1.PipelineRun
 var err error
 var devWorkspace = utils.GetEnv(constants.RELEASE_DEV_WORKSPACE_ENV, constants.DevReleaseTeam)
 var managedWorkspace = utils.GetEnv(constants.RELEASE_MANAGED_WORKSPACE_ENV, constants.ManagedReleaseTeam)
@@ -207,7 +206,7 @@ func assertBuildPipelineRunCreated(devFw framework.Framework, devNamespace, mana
 	// Create a ticker that ticks every 3 minutes
 	ticker := time.NewTicker(3 * time.Minute)
 	// Schedule the stop of the ticker after 10 minutes
-	time.AfterFunc(10*time.Minute, func() {
+	time.AfterFunc(5*time.Minute, func() {
 		ticker.Stop()
 		fmt.Println("Stopped executing every 3 minutes.")
 	})
@@ -253,21 +252,7 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw framework.Framework, dev
 		}
 	}()
 
-	Eventually(func() error {
-		releasePr, err = mFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(mFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
-		if err != nil {
-			return err
-		}
-		Expect(err).ShouldNot(HaveOccurred())
-		GinkgoWriter.Println("Release PR: ", releasePr.Name)
-
-		if !releasePr.IsDone() {
-			return fmt.Errorf("release pipelinerun %s in namespace %s did not finish yet", releasePr.Name, releasePr.Namespace)
-		}
-		Expect(tekton.HasPipelineRunSucceeded(releasePr)).To(BeTrue(), fmt.Sprintf("release pipelinerun %s/%s did not succeed", releasePr.GetNamespace(), releasePr.GetName()))
-		GinkgoWriter.Println("Release PR succeeded")
-		return nil
-	}, releasecommon.ReleasePipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for release pipelinerun to succeed")
+	Expect(mFw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
 }
 
 func assertReleaseCRSucceeded(devFw framework.Framework, devNamespace, managedNamespace, fbcAppName string, component *appservice.Component) {

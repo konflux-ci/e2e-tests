@@ -22,6 +22,7 @@ import (
 	releaseapi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -78,22 +79,23 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 			pyxisCertDecoded, err = base64.StdEncoding.DecodeString(string(certPyxisStage))
 			Expect(err).ToNot(HaveOccurred())
 
-			secret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pyxis",
-					Namespace: managedNamespace,
-				},
-				Type: corev1.SecretTypeOpaque,
-				Data: map[string][]byte{
-					"cert": pyxisCertDecoded,
-					"key":  pyxisKeyDecoded,
-				},
-			}
+			_, err = managedFw.AsKubeAdmin.CommonController.GetSecret(managedNamespace, releasecommon.RedhatAppstudioQESecret)
+                        if errors.IsNotFound(err) {
+				secret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pyxis",
+						Namespace: managedNamespace,
+					},
+					Type: corev1.SecretTypeOpaque,
+					Data: map[string][]byte{
+						"cert": pyxisCertDecoded,
+						"key":  pyxisKeyDecoded,
+					},
+				}
 
-			// Delete the secret if it exists in case it is not correct
-			_ = managedFw.AsKubeAdmin.CommonController.DeleteSecret(managedNamespace, "pyxis")
-			_, err = managedFw.AsKubeAdmin.CommonController.CreateSecret(managedNamespace, secret)
-			Expect(err).ToNot(HaveOccurred())
+				_, err = managedFw.AsKubeAdmin.CommonController.CreateSecret(managedNamespace, secret)
+				Expect(err).ToNot(HaveOccurred())
+			}
 
 			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
 			Expect(err).ToNot(HaveOccurred())
@@ -155,33 +157,21 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 				devFw = releasecommon.NewFramework(devWorkspace)
 				managedFw = releasecommon.NewFramework(managedWorkspace)
 
-				Eventually(func() error {
-					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
-					if err != nil {
-						return err
-					}
-					releasePR, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
-					if err != nil {
-						return err
-					}
-					GinkgoWriter.Println("Release PR: ", releasePR.Name)
-					if  !releasePR.IsDone(){
-						return fmt.Errorf("release pipelinerun %s in namespace %s did not finished yet", releasePR.Name, releasePR.Namespace)
-					}
-					return nil
-				}, releasecommon.ReleasePipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for release pipelinerun to succeed")
-				Expect(tekton.HasPipelineRunSucceeded(releasePR)).To(BeTrue(), fmt.Sprintf("release pipelinerun %s/%s did not succeed", releasePR.GetNamespace(), releasePR.GetName()))
+				releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				Expect(managedFw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
 			})
 
 			It("verifies release CR completed and set succeeded.", func() {
 				devFw = releasecommon.NewFramework(devWorkspace)
 				Eventually(func() error {
-					releaseCr, err := devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
+					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 					if err != nil {
 						return err
 					}
-					GinkgoWriter.Println("Release CR: ", releaseCr.Name)
-					if !releaseCr.IsReleased() {
+					GinkgoWriter.Println("Release CR: ", releaseCR.Name)
+					if !releaseCR.IsReleased() {
 						return fmt.Errorf("release %s/%s is not marked as finished yet", releaseCR.GetNamespace(), releaseCR.GetName())
 					}
 					return nil

@@ -3,12 +3,18 @@ package release
 import (
 	"context"
 	"fmt"
+	"time"
 
+	. "github.com/onsi/ginkgo/v2"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	"knative.dev/pkg/apis"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -123,4 +129,51 @@ func (r *ReleaseController) GetPipelineRunInNamespace(namespace, releaseName, re
 	}
 
 	return nil, fmt.Errorf("couldn't find PipelineRun in managed namespace '%s' for a release '%s' in '%s' namespace because of err:'%w'", namespace, releaseName, releaseNamespace, err)
+}
+
+// WaitForReleasePipelineToGetStarted wait for given release pipeline to get started.
+// In case of failure, this function retries till it gets timed out.
+func (r *ReleaseController) WaitForReleasePipelineToGetStarted(release *releaseApi.Release, managedNamespace string) (*pipeline.PipelineRun, error) {
+	var releasePipelinerun *pipeline.PipelineRun
+
+	err := wait.PollUntilContextTimeout(context.Background(), time.Second*2, time.Minute*5, true, func(ctx context.Context) (done bool, err error) {
+		releasePipelinerun, err = r.GetPipelineRunInNamespace(managedNamespace, release.GetName(), release.GetNamespace())
+		if err != nil {
+			GinkgoWriter.Println("PipelineRun has not been created yet for release %s/%s", release.GetNamespace(), release.GetName())
+			return false, nil
+		}
+		if !releasePipelinerun.HasStarted() {
+			GinkgoWriter.Println("pipelinerun %s/%s hasn't started yet", releasePipelinerun.GetNamespace(), releasePipelinerun.GetName())
+			return false, nil
+		}
+		return true, nil
+	})
+
+	return releasePipelinerun, err
+}
+
+// WaitForReleasePipelineToBeFinished wait for given release pipeline to finish.
+// It exposes the error message from the failed task to the end user when the pipelineRun failed.
+func (r *ReleaseController) WaitForReleasePipelineToBeFinished(release *releaseApi.Release, managedNamespace string) error {
+	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 20*time.Minute, true, func(ctx context.Context) (done bool, err error) {
+		pipelineRun, err := r.GetPipelineRunInNamespace(managedNamespace, release.GetName(), release.GetNamespace())
+		if err != nil {
+			GinkgoWriter.Println("PipelineRun has not been created yet for release %s/%s", release.GetNamespace(), release.GetName())
+			return false, nil
+		}
+		for _, condition := range pipelineRun.Status.Conditions {
+			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
+
+			if !pipelineRun.IsDone() {
+				return false, nil
+			}
+
+			if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+				return true, nil
+			} else {
+				return false, fmt.Errorf(tekton.GetFailedPipelineRunLogs(r.KubeRest(), r.KubeInterface(), pipelineRun))
+			}
+		}
+		return false, nil
+	})
 }
