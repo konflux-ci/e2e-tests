@@ -4,7 +4,6 @@ import "context"
 import "fmt"
 
 import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/logging"
-import timeandlog "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/timeandlog"
 
 import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,7 +21,7 @@ func CollectPersistentVolumeClaims(f *framework.Framework, namespace string) err
 			continue
 		}
 		waittime := (pv.ObjectMeta.CreationTimestamp.Time).Sub(pvc.ObjectMeta.CreationTimestamp.Time)
-		timeandlog.LogMeasurement("PVC_to_PV_CreationTimestamp", pv.Name, waittime, "", nil)
+		logging.LogMeasurement("PVC_to_PV_CreationTimestamp", map[string]string{"pv.Name": pv.Name}, waittime, "", nil)
 	}
 	return nil
 }

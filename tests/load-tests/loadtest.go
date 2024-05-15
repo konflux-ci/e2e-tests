@@ -5,7 +5,6 @@ import "time"
 
 import journey "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/journey"
 import options "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/options"
-import timeandlog "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/timeandlog"
 import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/logging"
 
 import cobra "github.com/spf13/cobra"
@@ -91,22 +90,22 @@ func main() {
 	logging.Logger.Debug("Options: %+v", opts)
 
 	// Tier up measurements logger
-	timeandlog.MeasurementsStart(opts.OutputDir)
+	logging.MeasurementsStart(opts.OutputDir)
 
 	// Start given number of `userJourneyThread()` threads using `journey.Setup()` and wait for them to finish
-	_, err = timeandlog.Measure(journey.Setup, userJourneyThread, &opts)
+	_, err = logging.Measure(journey.Setup, userJourneyThread, &opts)
 	if err != nil {
 		logging.Logger.Fatal("Threads setup failed: %v", err)
 	}
 
 	// Cleanup resources
-	_, err = timeandlog.Measure(journey.Purge)
+	_, err = logging.Measure(journey.Purge)
 	if err != nil {
 		logging.Logger.Error("Purging failed: %v", err)
 	}
 
 	// Tier down measurements logger
-	timeandlog.MeasurementsStop()
+	logging.MeasurementsStop()
 }
 
 func userJourneyThread(threadCtx *journey.MainContext) {
@@ -115,7 +114,7 @@ func userJourneyThread(threadCtx *journey.MainContext) {
 	var err error
 
 	// Create user if needed
-	_, err = timeandlog.Measure(journey.HandleUser, threadCtx)
+	_, err = logging.Measure(journey.HandleUser, threadCtx)
 	if err != nil {
 		logging.Logger.Error("Thread failed: %v", err)
 		return
@@ -199,7 +198,7 @@ func userJourneyThread(threadCtx *journey.MainContext) {
 	//os.Exit(10)
 
 	// Cleanup and possibly create build pipline selector
-	_, err = timeandlog.Measure(journey.HandleBuildPipelineSelector, threadCtx)
+	_, err = logging.Measure(journey.HandleBuildPipelineSelector, threadCtx)
 	if err != nil {
 		logging.Logger.Error("Thread failed: %v", err)
 		return
@@ -208,35 +207,35 @@ func userJourneyThread(threadCtx *journey.MainContext) {
 	for i := 1; i <= threadCtx.Opts.JourneyRepeats; i++ {
 
 		// Create application
-		_, err = timeandlog.Measure(journey.HandleApplication, threadCtx)
+		_, err = logging.Measure(journey.HandleApplication, threadCtx)
 		if err != nil {
 			logging.Logger.Error("Thread failed: %v", err)
 			return
 		}
 
 		// Create integration test scenario
-		_, err = timeandlog.Measure(journey.HandleIntegrationTestScenario, threadCtx)
+		_, err = logging.Measure(journey.HandleIntegrationTestScenario, threadCtx)
 		if err != nil {
 			logging.Logger.Error("Thread failed: %v", err)
 			return
 		}
 
 		// Template repo
-		_, err = timeandlog.Measure(journey.HandleRepoTemplating, threadCtx)
+		_, err = logging.Measure(journey.HandleRepoTemplating, threadCtx)
 		if err != nil {
 			logging.Logger.Error("Thread failed: %v", err)
 			return
 		}
 
 		// Create component detection query
-		_, err = timeandlog.Measure(journey.HandleComponentDetectionQuery, threadCtx)
+		_, err = logging.Measure(journey.HandleComponentDetectionQuery, threadCtx)
 		if err != nil {
 			logging.Logger.Error("Thread failed: %v", err)
 			return
 		}
 
 		// Start given number of `perComponentThread()` threads using `journey.PerComponentSetup()` and wait for them to finish
-		_, err = timeandlog.Measure(journey.PerComponentSetup, perComponentThread, threadCtx)
+		_, err = logging.Measure(journey.PerComponentSetup, perComponentThread, threadCtx)
 		if err != nil {
 			logging.Logger.Fatal("Per component threads setup failed: %v", err)
 		}
@@ -250,7 +249,7 @@ func userJourneyThread(threadCtx *journey.MainContext) {
 	}
 
 	// Collect info about PVCs
-	_, err = timeandlog.Measure(journey.HandlePersistentVolumeClaim, threadCtx)
+	_, err = logging.Measure(journey.HandlePersistentVolumeClaim, threadCtx)
 	if err != nil {
 		logging.Logger.Error("Thread failed: %v", err)
 		return
@@ -264,28 +263,28 @@ func perComponentThread(perComponentCtx *journey.PerComponentContext) {
 	var err error
 
 	// Create framework so we do not have to share framework with parent thread
-	_, err = timeandlog.Measure(journey.HandleNewFramework, perComponentCtx)
+	_, err = logging.Measure(journey.HandleNewFramework, perComponentCtx)
 	if err != nil {
 		logging.Logger.Error("Per component thread failed: %v", err)
 		return
 	}
 
 	// Create component
-	_, err = timeandlog.Measure(journey.HandleComponent, perComponentCtx)
+	_, err = logging.Measure(journey.HandleComponent, perComponentCtx)
 	if err != nil {
 		logging.Logger.Error("Per component thread failed: %v", err)
 		return
 	}
 
 	// Wait for build pipiline run
-	_, err = timeandlog.Measure(journey.HandlePipelineRun, perComponentCtx)
+	_, err = logging.Measure(journey.HandlePipelineRun, perComponentCtx)
 	if err != nil {
 		logging.Logger.Error("Per component thread failed: %v", err)
 		return
 	}
 
 	// Wait for test pipiline run
-	_, err = timeandlog.Measure(journey.HandleTest, perComponentCtx)
+	_, err = logging.Measure(journey.HandleTest, perComponentCtx)
 	if err != nil {
 		logging.Logger.Error("Per component thread failed: %v", err)
 		return

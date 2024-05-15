@@ -1,6 +1,7 @@
 package logging
 
 import "fmt"
+import "time"
 
 import klog "k8s.io/klog/v2"
 
@@ -63,5 +64,11 @@ func (l *logger) Fatal(msg string, params ...interface{}) {
 func (l *logger) Fail(errCode int, msg string, params ...interface{}) error {
 	errorMessage := fmt.Sprintf("FAIL(%d): %s", errCode, msg)
 	klog.Infof(errorMessage, params...)
+	data := ErrorEntry{
+		Timestamp:  time.Now(),
+		Code:       errCode,
+		Message:    fmt.Sprintf(errorMessage, params...),
+	}
+	errorsQueue <- data
 	return fmt.Errorf(errorMessage, params...)
 }

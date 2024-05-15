@@ -4,7 +4,6 @@ import "fmt"
 import "time"
 
 import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/logging"
-//import timeandlog "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/timeandlog"
 
 import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
 
