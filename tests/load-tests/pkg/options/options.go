@@ -22,6 +22,7 @@ type Opts struct {
 	PipelineRequestConfigurePac   bool
 	PipelineSkipInitialChecks     bool
 	Purge                         bool
+	PurgeOnly                     bool
 	QuayRepo                      string
 	Stage                         bool
 	TestScenarioGitURL            string

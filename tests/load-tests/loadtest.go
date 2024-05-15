@@ -39,6 +39,7 @@ func init() {
 	rootCmd.Flags().StringVar(&opts.UsernamePrefix, "username", "testuser", "the prefix used for usersignup names")
 	rootCmd.Flags().BoolVarP(&opts.Stage, "stage", "s", false, "is you want to run the test on stage")
 	rootCmd.Flags().BoolVarP(&opts.Purge, "purge", "p", false, "purge all users or resources (on stage) after test is done")
+	rootCmd.Flags().BoolVarP(&opts.PurgeOnly, "purge-only", "u", false, "do not run test, only purge resources")
 	rootCmd.Flags().StringVar(&opts.TestScenarioGitURL, "test-scenario-git-url", "https://github.com/konflux-ci/integration-examples.git", "test scenario GIT URL")
 	rootCmd.Flags().StringVar(&opts.TestScenarioRevision, "test-scenario-revision", "main", "test scenario GIT URL repo revision to use")
 	rootCmd.Flags().StringVar(&opts.TestScenarioPathInRepo, "test-scenario-path-in-repo", "pipelines/integration_resolver_pipeline_pass.yaml", "test scenario path in GIT repo")
@@ -117,6 +118,12 @@ func userJourneyThread(threadCtx *journey.MainContext) {
 	_, err = logging.Measure(journey.HandleUser, threadCtx)
 	if err != nil {
 		logging.Logger.Error("Thread failed: %v", err)
+		return
+	}
+
+	// If we are supposed to only purge resources, now when frameworks are initialized, we are done
+	if threadCtx.Opts.PurgeOnly {
+		logging.Logger.Info("Skipping rest of user journey as we were asked to just purge resources")
 		return
 	}
 

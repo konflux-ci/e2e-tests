@@ -26,6 +26,7 @@ func purgeStage(f *framework.Framework, namespace string) error {
 		return fmt.Errorf("Error when deleting build pipeline selectors in namespace %s: %v", namespace, err)
 	}
 
+	logging.Logger.Debug("Finished purging namespace %s", namespace)
 	return nil
 }
 
@@ -37,6 +38,7 @@ func purgeCi(f *framework.Framework, username string) error {
 		return fmt.Errorf("Error when deleting user signup %s: %v", username, err)
 	}
 
+	logging.Logger.Debug("Finished purging user %s", username)
 	return nil
 }
 
