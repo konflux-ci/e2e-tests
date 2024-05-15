@@ -138,24 +138,17 @@ func (r *ReleaseController) GetPyxisImageByImageID(pyxisStageImagesApiEndpoint, 
 }
 
 // GetPyxisImageIDsFromCreatePyxisImageTaskLogs takes a slice of task logs (as this is what
-// TektonController.GetTaskRunLogs returns), ensures it has just one log in it, parses it for
-// the imageIDs, and returns them as a slice.
+// TektonController.GetTaskRunLogs returns) and parses them for the imageIDs, returning them
+// as a slice.
 func (r *ReleaseController) GetPyxisImageIDsFromCreatePyxisImageTaskLogs(logs map[string]string) ([]string, error) {
-	var log string
 	var imageIDs []string
 
 	re := regexp.MustCompile(`(?:The image id is: )(.+)`)
 
-	if len(logs) != 1 {
-		return []string{}, fmt.Errorf("expected pyxis task logs to contain one log but it contained multiple. Length was: %d", len(logs))
-	}
-
 	for _, tasklog := range logs {
-		log = tasklog
-	}
-
-	for _, matchingString := range re.FindAllString(log, -1) {
-		imageIDs = append(imageIDs, re.FindStringSubmatch(matchingString)[1])
+		for _, matchingString := range re.FindAllString(tasklog, -1) {
+			imageIDs = append(imageIDs, re.FindStringSubmatch(matchingString)[1])
+		}
 	}
 
 	return imageIDs, nil
