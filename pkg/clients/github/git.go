@@ -6,9 +6,8 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/gomega"
-
 	"github.com/google/go-github/v44/github"
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 )
 
 func (g *Github) DeleteRef(repository, branchName string) error {
@@ -39,12 +38,19 @@ func (g *Github) CreateRef(repository, baseBranchName, sha, newBranchName string
 	if err != nil {
 		return fmt.Errorf("error when creating a new branch '%s' for the repo '%s': %+v", newBranchName, repository, err)
 	}
-	Eventually(func(gomega Gomega) {
+	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
 		exist, err := g.ExistsRef(repository, newBranchName)
-		gomega.Expect((err)).NotTo(HaveOccurred())
-		gomega.Expect(exist).To(BeTrue())
-
-	}, 2*time.Minute, 2*time.Second).Should(Succeed()) //Wait for the branch to actually exist
+		if err != nil {
+			return false, err
+		}
+		if exist && err == nil {
+			return exist, err
+		}
+		return false, nil
+	}, 2*time.Second, 2*time.Minute) //Wait for the branch to actually exist
+	if err != nil {
+		return fmt.Errorf("error when waiting for ref: %+v", err)
+	}
 	return nil
 }
 
@@ -97,11 +103,18 @@ func (g *Github) CreateRefInOrg(githubOrg, repository, baseBranchName, sha, newB
 	if err != nil {
 		return fmt.Errorf("error when creating a new branch '%s' for the repo '%s': %+v", newBranchName, repository, err)
 	}
-	Eventually(func(gomega Gomega) {
+	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
 		exist, err := g.ExistsRefInOrg(githubOrg, repository, newBranchName)
-		gomega.Expect((err)).NotTo(HaveOccurred())
-		gomega.Expect(exist).To(BeTrue())
-
-	}, 2*time.Minute, 2*time.Second).Should(Succeed()) //Wait for the branch to actually exist
+		if err != nil {
+			return false, err
+		}
+		if exist && err == nil {
+			return exist, err
+		}
+		return false, nil
+	}, 2*time.Second, 2*time.Minute) //Wait for the branch to actually exist
+	if err != nil {
+		return fmt.Errorf("error when waiting for ref: %+v", err)
+	}
 	return nil
 }
