@@ -26,6 +26,7 @@ const (
 	checkrunConclusionSuccess                 = "success"
 	checkrunConclusionFailure                 = "failure"
 	integrationPipelineRunCommitStatusSuccess = "success"
+	integrationPipelineRunCommitStatusFail    = "failed"
 
 	snapshotAnnotation                       = "appstudio.openshift.io/snapshot"
 	scenarioAnnotation                       = "test.appstudio.openshift.io/scenario"

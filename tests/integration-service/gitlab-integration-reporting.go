@@ -16,10 +16,10 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
@@ -36,7 +36,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 	var snapshot *appstudioApi.Snapshot
 	var component *appstudioApi.Component
 	var buildPipelineRun, testPipelinerun *pipeline.PipelineRun
-	var integrationTestScenarioPass *integrationv1beta1.IntegrationTestScenario
+	var integrationTestScenarioPass, integrationTestScenarioFail *integrationv1beta1.IntegrationTestScenario
 	var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace string
 
 	AfterEach(framework.ReportFailure(&f))
@@ -62,6 +62,9 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 			applicationName = createApp(*f, testNamespace)
 
 			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			integrationTestScenarioFail, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			componentName = fmt.Sprintf("%s-%s", "test-comp-pac-gitlab", util.GenerateRandomString(6))
@@ -178,8 +181,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 			})
 
 			It("eventually leads to the build PipelineRun's status reported at MR notes", func() {
-
-				validateBuildPipelineRunReported(f, buildPipelineRun.Name, projectID, mrSha, mrID)
+				expectedNote := fmt.Sprintf("**Pipelines as Code CI/%s-on-pull-request** has successfully validated your commit", componentName)
+				validateNoteInMergeRequestComment(f, projectID, expectedNote, mrID)
 			})
 		})
 
@@ -213,9 +216,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 		When("Integration PipelineRun is created", func() {
 			It("should eventually complete successfully", func() {
 				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioPass, snapshot, testNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
+				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioFail, snapshot, testNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
 			})
 
-			It("validates the Integration test secnario PipelineRun is reported to merge request CommitStatus, and it pass", func() {
+			It("validates the Integration test scenario PipelineRun is reported to merge request CommitStatus, and it pass", func() {
 				timeout = time.Second * 300
 				interval = time.Second * 1
 
@@ -232,7 +236,37 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 						}
 					}
 					return ""
-				}, timeout, interval).Should(Equal(integrationPipelineRunCommitStatusSuccess), fmt.Sprintf("timed out when waiting for init PaC MR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
+				}, timeout, interval).Should(Equal(integrationPipelineRunCommitStatusSuccess), fmt.Sprintf("timed out when waiting for expected commitStatus to be created for sha %s in %s repository", mrSha, componentRepoNameForStatusReporting))
+			})
+
+			It("eventually leads to the integration test PipelineRun's Pass status reported at MR notes", func() {
+				expectedNote := fmt.Sprintf("Integration test for snapshot %s and scenario %s has passed", snapshot.Name, integrationTestScenarioPass.Name)
+				validateNoteInMergeRequestComment(f, projectID, expectedNote, mrID)
+			})
+
+			It("validates the Integration test scenario PipelineRun is reported to merge request CommitStatus, and it fails", func() {
+				timeout = time.Second * 300
+				interval = time.Second * 1
+
+				Eventually(func() string {
+					commitStatuses, _, err := f.AsKubeAdmin.CommonController.Gitlab.GetClient().Commits.GetCommitStatuses(projectID, mrSha, nil)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					for _, commitStatus := range commitStatuses {
+						commitStatusNames := strings.Split(commitStatus.Name, "/")
+						if len(commitStatusNames) > 2 {
+							if strings.Contains(integrationTestScenarioFail.Name, strings.TrimSpace(commitStatusNames[1])) {
+								return commitStatus.Status
+							}
+						}
+					}
+					return ""
+				}, timeout, interval).Should(Equal(integrationPipelineRunCommitStatusFail), fmt.Sprintf("timed out when waiting for expected commitStatus to be created for sha %s in %s repository", mrSha, componentRepoNameForStatusReporting))
+			})
+
+			It("eventually leads to the integration test PipelineRun's Fail status reported at MR notes", func() {
+				expectedNote := fmt.Sprintf("Integration test for snapshot %s and scenario %s has failed", snapshot.Name, integrationTestScenarioFail.Name)
+				validateNoteInMergeRequestComment(f, projectID, expectedNote, mrID)
 			})
 		})
 
@@ -261,28 +295,23 @@ func createBuildSecret(f *framework.Framework, secretName string, annotations ma
 	return nil
 }
 
-// validateBuildPipelineRunReported within a given project ID and MR ID
-// build PipelineRun name is in MR notes
-func validateBuildPipelineRunReported(f *framework.Framework, pipelineRunName, projectID, mrSha string, mergeResquestID int) {
+// validateNoteInMergeRequestComment verify expected note is commented in MR comment
+func validateNoteInMergeRequestComment(f *framework.Framework, projectID, expectedNote string, mergeRequestID int) {
 
 	var timeout, interval time.Duration
 
 	timeout = time.Minute * 10
 	interval = time.Second * 2
 
-	Eventually(func() string {
+	Eventually(func() bool {
 		// Continue here, get as argument MR ID so use in ListMergeRequestNotes
-		mrCommitStatuses, _, err := f.AsKubeAdmin.CommonController.Gitlab.GetClient().Commits.GetCommitStatuses(projectID, mrSha, nil)
+		allNotes, _, err := f.AsKubeAdmin.CommonController.Gitlab.GetClient().Notes.ListMergeRequestNotes(projectID, mergeRequestID, nil)
 		Expect(err).ShouldNot(HaveOccurred())
-		for _, commitStatus := range mrCommitStatuses {
-			commitStatusNames := strings.Split(commitStatus.Name, "/")
-			if len(commitStatusNames) > 2 {
-				if strings.Contains(pipelineRunName, strings.TrimSpace(commitStatusNames[2])) {
-					return commitStatus.Status
-				}
+		for _, note := range allNotes {
+			if strings.Contains(note.Body, expectedNote) {
+				return true
 			}
 		}
-		return ""
-	}, timeout, interval).Should(Equal(integrationPipelineRunCommitStatusSuccess), fmt.Sprintf("timed out waiting to validate build pipelineRun name (%s) be reported in mergerequest%d notes", pipelineRunName, mergeResquestID))
-
+		return false
+	}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out waiting to validate merge request note ('%s') be reported in mergerequest %d's notes", expectedNote, mergeRequestID))
 }
