@@ -114,19 +114,6 @@ func userJourneyThread(threadCtx *journey.MainContext) {
 
 	var err error
 
-	// Create user if needed
-	_, err = logging.Measure(journey.HandleUser, threadCtx)
-	if err != nil {
-		logging.Logger.Error("Thread failed: %v", err)
-		return
-	}
-
-	// If we are supposed to only purge resources, now when frameworks are initialized, we are done
-	if threadCtx.Opts.PurgeOnly {
-		logging.Logger.Info("Skipping rest of user journey as we were asked to just purge resources")
-		return
-	}
-
 	//watchCtx := context.Background()
 	//gvr := schema.GroupVersionResource{
 	//	Group:   "appstudio.redhat.com",

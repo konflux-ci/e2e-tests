@@ -30,6 +30,19 @@ type MainContext struct {
 	PerComponentContexts         []*PerComponentContext
 }
 
+func initUserThread(threadCtx *MainContext) {
+	defer threadCtx.ThreadsWG.Done()
+
+	var err error
+
+	// Create user if needed
+	_, err = logging.Measure(HandleUser, threadCtx)
+	if err != nil {
+		logging.Logger.Error("Thread failed: %v", err)
+		return
+	}
+}
+
 func Setup(fn func(*MainContext), opts *options.Opts) (string, error) {
 	threadsWG := &sync.WaitGroup{}
 	threadsWG.Add(opts.Concurrency)
@@ -57,6 +70,20 @@ func Setup(fn func(*MainContext), opts *options.Opts) (string, error) {
 
 		MainContexts = append(MainContexts, threadCtx)
 
+		go initUserThread(threadCtx)
+	}
+
+	threadsWG.Wait()
+
+	// If we are supposed to only purge resources, now when frameworks are initialized, we are done
+	if opts.PurgeOnly {
+		logging.Logger.Info("Skipping rest of user journey as we were asked to just purge resources")
+		return "", nil
+	}
+
+	threadsWG.Add(opts.Concurrency)
+
+	for _, threadCtx := range MainContexts {
 		go fn(threadCtx)
 	}
 
