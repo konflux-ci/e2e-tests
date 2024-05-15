@@ -46,7 +46,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	defer GinkgoRecover()
 
 	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), func() {
-		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, defaultBranchTestComponentName, imageRepoName, robotAccountName string
+		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, defaultBranchTestComponentName, imageRepoName, robotAccountName, pacControllerHost string
 		var component *appservice.Component
 
 		var timeout, interval time.Duration
@@ -70,6 +70,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			if utils.IsPrivateHostname(osConsoleHost) {
 				Skip("Using private cluster (not reachable from Github), skipping...")
 			}
+
+			// Used for identifying related webhook on GitHub - in order to delete it
+			pacControllerHost = getPacControllerHost(f)
 
 			quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "")
 			supports, err := build.DoesQuayOrgSupportPrivateRepo()
@@ -116,6 +119,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 			}
+
+			// Delete created webhook from GitHub
+			cleanupWebhooks(f, helloWorldComponentGitSourceRepoName, pacControllerHost)
 
 		})
 
@@ -303,7 +309,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 		})
 
-		When("a new Component with specified custom branch is created", Label("custom-branch"), func() {
+		When("a new Component with specified custom branch is created", Label("build-custom-branch"), func() {
 			var outputImage string
 			BeforeAll(func() {
 
@@ -428,7 +434,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 		})
 
-		When("the PaC init branch is updated", func() {
+		When("the PaC init branch is updated", Label("build-custom-branch"), func() {
 			var createdFileSHA string
 
 			BeforeAll(func() {
@@ -485,7 +491,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 		})
 
-		When("the PaC init branch is merged", func() {
+		When("the PaC init branch is merged", Label("build-custom-branch"), func() {
 			var mergeResult *github.PullRequestMergeResult
 			var mergeResultSha string
 			var pipelineRun *pipeline.PipelineRun
@@ -582,7 +588,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 		})
 
-		When("the component is removed and recreated (with the same name in the same namespace)", func() {
+		When("the component is removed and recreated (with the same name in the same namespace)", Label("build-custom-branch"), func() {
 			BeforeAll(func() {
 				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, true)).To(Succeed())
 
@@ -884,7 +890,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 	})
 	Describe("test build secret lookup", Label("pac-build", "secret-lookup"), Ordered, func() {
-		var testNamespace, applicationName, firstComponentBaseBranchName, secondComponentBaseBranchName, firstComponentName, secondComponentName, firstPacBranchName, secondPacBranchName string
+		var testNamespace, applicationName, firstComponentBaseBranchName, secondComponentBaseBranchName, firstComponentName, secondComponentName, firstPacBranchName, secondPacBranchName, pacControllerHost string
 		BeforeAll(func() {
 			if os.Getenv(constants.SKIP_PAC_TESTS_ENV) == "true" {
 				Skip("Skipping this test due to configuration issue with Spray proxy")
@@ -892,6 +898,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace
+
+			// Used for identifying related webhook on GitHub - in order to delete it
+			pacControllerHost = getPacControllerHost(f)
 
 			applicationName = fmt.Sprintf("build-secret-lookup-%s", util.GenerateRandomString(4))
 			_, err = f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
@@ -933,6 +942,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 			}
+
+			// Delete created webhook from GitHub
+			cleanupWebhooks(f, secretLookupGitSourceRepoTwoName, pacControllerHost)
+
 		})
 		When("two secrets are created", func() {
 			BeforeAll(func() {
@@ -1875,4 +1888,23 @@ func createBuildSecret(f *framework.Framework, secretName string, annotations ma
 		return fmt.Errorf("error creating build secret: %v", err)
 	}
 	return nil
+}
+
+func getPacControllerHost(f *framework.Framework) string {
+	pacControllerRoute, err := f.AsKubeAdmin.CommonController.GetOpenshiftRoute(constants.PaCControllerRouteName, constants.PaCControllerNamespace)
+	Expect(err).ShouldNot(HaveOccurred())
+	return pacControllerRoute.Spec.Host
+}
+
+func cleanupWebhooks(f *framework.Framework, repoName, pacHost string) {
+	hooks, err := f.AsKubeAdmin.CommonController.Github.ListRepoWebhooks(repoName)
+	Expect(err).NotTo(HaveOccurred())
+	for _, h := range hooks {
+		hookUrl := h.Config["url"].(string)
+		if strings.Contains(hookUrl, pacHost) {
+			GinkgoWriter.Printf("removing webhook URL: %s\n", hookUrl)
+			Expect(f.AsKubeAdmin.CommonController.Github.DeleteWebhook(repoName, h.GetID())).To(Succeed())
+			break
+		}
+	}
 }

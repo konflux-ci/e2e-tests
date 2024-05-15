@@ -200,6 +200,9 @@ const (
 	// Default github repo values for build
 	DEFAULT_GITHUB_BUILD_ORG  = "redhat-appstudio"
 	DEFAULT_GITHUB_BUILD_REPO = "build-definitions"
+
+	PaCControllerNamespace = "openshift-pipelines"
+	PaCControllerRouteName = "pipelines-as-code-controller"
 )
 
 var (
