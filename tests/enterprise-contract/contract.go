@@ -372,6 +372,39 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 			})
 
 			Context("Release Policy", func() {
+				It("verifies redhat products pass the redhat policy rule collection before release ", func() {
+					secretName := fmt.Sprintf("golden-image-public-key%s", util.GenerateRandomString(10))
+					GinkgoWriter.Println("Update public key to verify golden images")
+					goldenImagePublicKey := []byte("-----BEGIN PUBLIC KEY-----\n" +
+						"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZP/0htjhVt2y0ohjgtIIgICOtQtA\n" +
+						"naYJRuLprwIv6FDhZ5yFjYUEtsmoNcW7rx2KM6FOXGsCX3BNc7qhHELT+g==\n" +
+						"-----END PUBLIC KEY-----")
+					Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(goldenImagePublicKey, secretName, namespace)).To(Succeed())
+					redhatECP, error := fwk.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("redhat", "enterprise-contract-service")
+					Expect(error).NotTo(HaveOccurred())
+					generator.PublicKey = fmt.Sprintf("k8s://%s/%s", namespace, secretName)
+					policy := contract.PolicySpecWithSourceConfig(
+						redhatECP.Spec,
+						ecp.SourceConfig{Include: []string{"redhat"}})
+					Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
+
+					generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:latest")
+					pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
+
+					pr, err = fwk.AsKubeAdmin.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
+					Expect(err).NotTo(HaveOccurred())
+
+					tr, err := fwk.AsKubeAdmin.TektonController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(tr.Status.TaskRunStatusFields.Results).Should(Or(
+					// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
+					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
+					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
+					))
+				})
 				It("verifies the release policy: Task bundles are in acceptable bundle list", func() {
 					secretName := fmt.Sprintf("golden-image-public-key%s", util.GenerateRandomString(10))
 					GinkgoWriter.Println("Update public key to verify golden images")
