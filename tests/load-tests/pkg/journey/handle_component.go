@@ -70,14 +70,14 @@ func HandleComponent(ctx *PerComponentContext) error {
 
 	name := fmt.Sprintf("%s-comp-%d", ctx.ParentContext.ApplicationName, ctx.ComponentIndex)
 	stub := ctx.ParentContext.ComponentStubList[ctx.ComponentIndex]
-	logging.Logger.Debug("Creating component %s in namespace %s", name, ctx.ParentContext.Namespace)
+	logging.Logger.Debug("Creating component %s in namespace %s", name, ctx.ParentContext.ParentContext.Namespace)
 
-	_, err = logging.Measure(CreateComponent, ctx.Framework, ctx.ParentContext.Namespace, name, ctx.ParentContext.ApplicationName, stub, ctx.ParentContext.Opts.PipelineSkipInitialChecks, ctx.ParentContext.Opts.PipelineRequestConfigurePac)
+	_, err = logging.Measure(CreateComponent, ctx.Framework, ctx.ParentContext.ParentContext.Namespace, name, ctx.ParentContext.ApplicationName, stub, ctx.ParentContext.ParentContext.Opts.PipelineSkipInitialChecks, ctx.ParentContext.ParentContext.Opts.PipelineRequestConfigurePac)
 	if err != nil {
 		return logging.Logger.Fail(60, "Component failed creation: %v", err)
 	}
 
-	_, err = logging.Measure(ValidateComponent, ctx.Framework, ctx.ParentContext.Namespace, name)
+	_, err = logging.Measure(ValidateComponent, ctx.Framework, ctx.ParentContext.ParentContext.Namespace, name)
 	if err != nil {
 		return logging.Logger.Fail(61, "Component failed validation: %v", err)
 	}

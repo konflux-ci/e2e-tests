@@ -32,6 +32,7 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.Flags().StringVar(&opts.ComponentRepoUrl, "component-repo", "https://github.com/devfile-samples/devfile-sample-code-with-quarkus", "the component repo URL to be used")
+	rootCmd.Flags().IntVar(&opts.ApplicationsCount, "applications-count", 1, "number of applications to create per user")
 	rootCmd.Flags().IntVar(&opts.ComponentsCount, "components-count", 1, "number of components to create per application")
 	rootCmd.Flags().StringVar(&opts.ComponentRepoRevision, "component-repo-revision", "main", "the component repo revision, git branch")
 	rootCmd.Flags().BoolVarP(&opts.ComponentRepoTemplate, "component-repo-template", "e", false, "if you want to use per-user branch based on provided branch for PaC testing")
@@ -198,43 +199,23 @@ func userJourneyThread(threadCtx *journey.MainContext) {
 		return
 	}
 
+	// Template repo if needed
+	_, err = logging.Measure(journey.HandleRepoTemplating, threadCtx)
+	if err != nil {
+		logging.Logger.Error("Thread failed: %v", err)
+		return
+	}
+
+
 	for i := 1; i <= threadCtx.Opts.JourneyRepeats; i++ {
 
-		// Create application
-		_, err = logging.Measure(journey.HandleApplication, threadCtx)
+		// Start given number of `perApplicationThread()` threads using `journey.PerApplicationSetup()` and wait for them to finish
+		_, err = logging.Measure(journey.PerApplicationSetup, perApplicationThread, threadCtx)
 		if err != nil {
-			logging.Logger.Error("Thread failed: %v", err)
-			return
+			logging.Logger.Fatal("Per application threads setup failed: %v", err)
 		}
 
-		// Create integration test scenario
-		_, err = logging.Measure(journey.HandleIntegrationTestScenario, threadCtx)
-		if err != nil {
-			logging.Logger.Error("Thread failed: %v", err)
-			return
-		}
-
-		// Template repo
-		_, err = logging.Measure(journey.HandleRepoTemplating, threadCtx)
-		if err != nil {
-			logging.Logger.Error("Thread failed: %v", err)
-			return
-		}
-
-		// Create component detection query
-		_, err = logging.Measure(journey.HandleComponentDetectionQuery, threadCtx)
-		if err != nil {
-			logging.Logger.Error("Thread failed: %v", err)
-			return
-		}
-
-		// Start given number of `perComponentThread()` threads using `journey.PerComponentSetup()` and wait for them to finish
-		_, err = logging.Measure(journey.PerComponentSetup, perComponentThread, threadCtx)
-		if err != nil {
-			logging.Logger.Fatal("Per component threads setup failed: %v", err)
-		}
-
-		// Check if we are supposed to guit based on --journey-duration
+		// Check if we are supposed to quit based on --journey-duration
 		if time.Now().UTC().After(threadCtx.Opts.JourneyUntil) {
 			logging.Logger.Debug("Done with user journey because of timeout")
 			break
@@ -251,13 +232,54 @@ func userJourneyThread(threadCtx *journey.MainContext) {
 
 }
 
+func perApplicationThread(perApplicationCtx *journey.PerApplicationContext) {
+	defer perApplicationCtx.PerApplicationWG.Done()
+
+	var err error
+
+	// Create framework so we do not have to share framework with parent thread
+	_, err = logging.Measure(journey.HandleNewFrameworkForApp, perApplicationCtx)
+	if err != nil {
+		logging.Logger.Error("Per application thread failed: %v", err)
+		return
+	}
+
+	// Create application
+	_, err = logging.Measure(journey.HandleApplication, perApplicationCtx)
+	if err != nil {
+		logging.Logger.Error("Thread failed: %v", err)
+		return
+	}
+
+	// Create integration test scenario
+	_, err = logging.Measure(journey.HandleIntegrationTestScenario, perApplicationCtx)
+	if err != nil {
+		logging.Logger.Error("Thread failed: %v", err)
+		return
+	}
+
+	// Create component detection query
+	_, err = logging.Measure(journey.HandleComponentDetectionQuery, perApplicationCtx)
+	if err != nil {
+		logging.Logger.Error("Thread failed: %v", err)
+		return
+	}
+
+	// Start given number of `perComponentThread()` threads using `journey.PerComponentSetup()` and wait for them to finish
+	_, err = logging.Measure(journey.PerComponentSetup, perComponentThread, perApplicationCtx)
+	if err != nil {
+		logging.Logger.Fatal("Per component threads setup failed: %v", err)
+	}
+
+}
+
 func perComponentThread(perComponentCtx *journey.PerComponentContext) {
 	defer perComponentCtx.PerComponentWG.Done()
 
 	var err error
 
 	// Create framework so we do not have to share framework with parent thread
-	_, err = logging.Measure(journey.HandleNewFramework, perComponentCtx)
+	_, err = logging.Measure(journey.HandleNewFrameworkForComp, perComponentCtx)
 	if err != nil {
 		logging.Logger.Error("Per component thread failed: %v", err)
 		return

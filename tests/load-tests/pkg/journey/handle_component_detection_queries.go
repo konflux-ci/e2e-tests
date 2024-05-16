@@ -77,20 +77,20 @@ func ExtractComponentStubs(cdq *appstudioApi.ComponentDetectionQuery, count int)
 }
 
 
-func HandleComponentDetectionQuery(ctx *MainContext) error {
+func HandleComponentDetectionQuery(ctx *PerApplicationContext) error {
 	var err error
 
 	name := fmt.Sprintf("%s-cdq", ctx.ApplicationName)
-	logging.Logger.Debug("Creating component detection query %s in namespace %s", name, ctx.Namespace)
+	logging.Logger.Debug("Creating component detection query %s in namespace %s", name, ctx.ParentContext.Namespace)
 
-	_, err = logging.Measure(CreateComponentDetectionQuery, ctx.Framework, ctx.Namespace, time.Minute * 60, name, ctx.Opts.ComponentRepoUrl, ctx.ComponentRepoRevision)
+	_, err = logging.Measure(CreateComponentDetectionQuery, ctx.Framework, ctx.ParentContext.Namespace, time.Minute * 60, name, ctx.ParentContext.Opts.ComponentRepoUrl, ctx.ParentContext.ComponentRepoRevision)
 	if err != nil {
 		return logging.Logger.Fail(50, "Component Detection Query failed creation: %v", err)
 	}
 
 	var cdq *appstudioApi.ComponentDetectionQuery
 	var ok bool
-	result1, err1 := logging.Measure(ValidateComponentDetectionQuery, ctx.Framework, ctx.Namespace, name)
+	result1, err1 := logging.Measure(ValidateComponentDetectionQuery, ctx.Framework, ctx.ParentContext.Namespace, name)
 	if err1 != nil {
 		return logging.Logger.Fail(51, "Component Detection Query failed validation: %v", err1)
 	}
@@ -100,7 +100,7 @@ func HandleComponentDetectionQuery(ctx *MainContext) error {
 	}
 
 	ctx.ComponentDetectionQueryName = name
-	ctx.ComponentStubList = ExtractComponentStubs(cdq, ctx.Opts.ComponentsCount)
+	ctx.ComponentStubList = ExtractComponentStubs(cdq, ctx.ParentContext.Opts.ComponentsCount)
 
 	return nil
 }

@@ -38,7 +38,32 @@ func HandleUser(ctx *MainContext) error {
 	return nil
 }
 
-func HandleNewFramework(ctx *PerComponentContext) error {
+func HandleNewFrameworkForComp(ctx *PerComponentContext) error {
+	var err error
+
+	// TODO This framework generation code is duplicate to above
+	if ctx.ParentContext.ParentContext.Opts.Stage {
+		user := (*ctx.ParentContext.ParentContext.StageUsers)[ctx.ParentContext.ParentContext.ThreadIndex]
+		ctx.Framework, err = framework.NewFrameworkWithTimeout(
+			ctx.ParentContext.ParentContext.Username,
+			time.Minute * 60,
+			utils.Options{
+				ToolchainApiUrl: user.APIURL,
+				KeycloakUrl:     user.SSOURL,
+				OfflineToken:    user.Token,
+			})
+	} else {
+		ctx.Framework, err = framework.NewFrameworkWithTimeout(ctx.ParentContext.ParentContext.Username, time.Minute * 60)
+	}
+
+	if err != nil {
+		return logging.Logger.Fail(11, "Unable to provision framework for user %s: %v", ctx.ParentContext.ParentContext.Username, err)
+	}
+
+	return nil
+}
+
+func HandleNewFrameworkForApp(ctx *PerApplicationContext) error {
 	var err error
 
 	// TODO This framework generation code is duplicate to above
@@ -57,7 +82,7 @@ func HandleNewFramework(ctx *PerComponentContext) error {
 	}
 
 	if err != nil {
-		return logging.Logger.Fail(11, "Unable to provision framework for user %s: %v", ctx.ParentContext.Username, err)
+		return logging.Logger.Fail(12, "Unable to provision framework for user %s: %v", ctx.ParentContext.Username, err)
 	}
 
 	return nil

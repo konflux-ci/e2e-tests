@@ -5,6 +5,7 @@ import "time"
 
 // Struct to hold command line options
 type Opts struct {
+	ApplicationsCount             int
 	BuildPipelineSelectorBundle   string
 	ComponentRepoRevision         string
 	ComponentRepoTemplate         bool

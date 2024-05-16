@@ -60,18 +60,18 @@ func ValidateIntegrationTestScenario(f *framework.Framework, namespace, name, ap
 }
 
 
-func HandleIntegrationTestScenario(ctx *MainContext) error {
+func HandleIntegrationTestScenario(ctx *PerApplicationContext) error {
 	var err error
 
-	name := fmt.Sprintf("%s-its-%s", ctx.Username, util.GenerateRandomString(5))
-	logging.Logger.Debug("Creating integration test scenario %s for application %s in namespace %s", name, ctx.ApplicationName, ctx.Namespace)
+	name := fmt.Sprintf("%s-its-%s", ctx.ParentContext.Username, util.GenerateRandomString(5))
+	logging.Logger.Debug("Creating integration test scenario %s for application %s in namespace %s", name, ctx.ApplicationName, ctx.ParentContext.Namespace)
 
-	_, err = logging.Measure(CreateIntegrationTestScenario, ctx.Framework, ctx.Namespace, name, ctx.ApplicationName, ctx.Opts.TestScenarioGitURL, ctx.Opts.TestScenarioRevision, ctx.Opts.TestScenarioPathInRepo)
+	_, err = logging.Measure(CreateIntegrationTestScenario, ctx.Framework, ctx.ParentContext.Namespace, name, ctx.ApplicationName, ctx.ParentContext.Opts.TestScenarioGitURL, ctx.ParentContext.Opts.TestScenarioRevision, ctx.ParentContext.Opts.TestScenarioPathInRepo)
 	if err != nil {
 		return logging.Logger.Fail(40, "Integration test scenario failed creation: %v", err)
 	}
 
-	_, err = logging.Measure(ValidateIntegrationTestScenario, ctx.Framework, ctx.Namespace, name, ctx.ApplicationName)
+	_, err = logging.Measure(ValidateIntegrationTestScenario, ctx.Framework, ctx.ParentContext.Namespace, name, ctx.ApplicationName)
 	if err != nil {
 		return logging.Logger.Fail(41, "Integration test scenario failed validation: %v", err)
 	}

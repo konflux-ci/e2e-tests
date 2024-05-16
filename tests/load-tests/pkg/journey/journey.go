@@ -22,12 +22,8 @@ type MainContext struct {
 	Framework                    *framework.Framework
 	Username                     string
 	Namespace                    string
-	ApplicationName              string
-	IntegrationTestScenarioName  string
 	ComponentRepoRevision        string // overrides same value from Opts, needed when templating repos
-	ComponentDetectionQueryName  string
-	ComponentStubList            []appstudioApi.ComponentDetectionDescription
-	PerComponentContexts         []*PerComponentContext
+	PerApplicationContexts       []*PerApplicationContext
 }
 
 func initUserThread(threadCtx *MainContext) {
@@ -57,7 +53,7 @@ func Setup(fn func(*MainContext), opts *options.Opts) (string, error) {
 	}
 
 	for threadIndex := 0; threadIndex < opts.Concurrency; threadIndex++ {
-		logging.Logger.Trace("Initiating thread %d", threadIndex)
+		logging.Logger.Info("Initiating thread %d", threadIndex)
 
 		threadCtx := &MainContext{
 			ThreadsWG:                    threadsWG,
@@ -92,22 +88,58 @@ func Setup(fn func(*MainContext), opts *options.Opts) (string, error) {
 	return "", nil
 }
 
+// Struct to hold data for thread to process each application
+type PerApplicationContext struct {
+	PerApplicationWG             *sync.WaitGroup
+	ApplicationIndex             int
+	Framework                    *framework.Framework
+	ParentContext                *MainContext
+	ApplicationName              string
+	IntegrationTestScenarioName  string
+	ComponentDetectionQueryName  string
+	ComponentStubList            []appstudioApi.ComponentDetectionDescription
+	PerComponentContexts         []*PerComponentContext
+}
+
+func PerApplicationSetup(fn func(*PerApplicationContext), parentContext *MainContext) (string, error) {
+	perApplicationWG := &sync.WaitGroup{}
+	perApplicationWG.Add(parentContext.Opts.ApplicationsCount)
+
+	for applicationIndex := 0; applicationIndex < parentContext.Opts.ApplicationsCount; applicationIndex++ {
+		logging.Logger.Info("Initiating per application thread %d-%d", parentContext.ThreadIndex, applicationIndex)
+
+		perApplicationCtx := &PerApplicationContext{
+			PerApplicationWG:             perApplicationWG,
+			ApplicationIndex:             applicationIndex,
+			ParentContext:                parentContext,
+		}
+
+		parentContext.PerApplicationContexts = append(parentContext.PerApplicationContexts, perApplicationCtx)
+
+		go fn(perApplicationCtx)
+	}
+
+	perApplicationWG.Wait()
+
+	return "", nil
+}
+
 // Struct to hold data for thread to process each component
 type PerComponentContext struct {
 	PerComponentWG               *sync.WaitGroup
 	ComponentIndex               int
 	Framework                    *framework.Framework
-	ParentContext                *MainContext
+	ParentContext                *PerApplicationContext
 	ComponentName                string
 	SnapshotName                 string
 }
 
-func PerComponentSetup(fn func(*PerComponentContext), parentContext *MainContext) (string, error) {
+func PerComponentSetup(fn func(*PerComponentContext), parentContext *PerApplicationContext) (string, error) {
 	perComponentWG := &sync.WaitGroup{}
-	perComponentWG.Add(parentContext.Opts.ComponentsCount)
+	perComponentWG.Add(parentContext.ParentContext.Opts.ComponentsCount)
 
-	for componentIndex := 0; componentIndex < parentContext.Opts.ComponentsCount; componentIndex++ {
-		logging.Logger.Trace("Initiating per component thread %d", componentIndex)
+	for componentIndex := 0; componentIndex < parentContext.ParentContext.Opts.ComponentsCount; componentIndex++ {
+		logging.Logger.Info("Initiating per component thread %d-%d-%d", parentContext.ParentContext.ThreadIndex, parentContext.ApplicationIndex, componentIndex)
 
 		perComponentCtx := &PerComponentContext{
 			PerComponentWG:               perComponentWG,

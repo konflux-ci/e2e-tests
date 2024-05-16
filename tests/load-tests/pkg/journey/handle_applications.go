@@ -57,18 +57,18 @@ func ValidateApplication(f *framework.Framework, name, namespace string) error {
 }
 
 
-func HandleApplication(ctx *MainContext) error {
+func HandleApplication(ctx *PerApplicationContext) error {
 	var err error
 
-	name := fmt.Sprintf("%s-app-%s", ctx.Username, util.GenerateRandomString(5))
-	logging.Logger.Debug("Creating application %s in namespace %s", name, ctx.Namespace)
+	name := fmt.Sprintf("%s-app-%s", ctx.ParentContext.Username, util.GenerateRandomString(5))
+	logging.Logger.Debug("Creating application %s in namespace %s", name, ctx.ParentContext.Namespace)
 
-	_, err = logging.Measure(CreateApplication, ctx.Framework, ctx.Namespace, time.Minute * 60, name)
+	_, err = logging.Measure(CreateApplication, ctx.Framework, ctx.ParentContext.Namespace, time.Minute * 60, name)
 	if err != nil {
 		return logging.Logger.Fail(30, "Application failed creation: %v", err)
 	}
 
-	_, err = logging.Measure(ValidateApplication, ctx.Framework, name, ctx.Namespace)
+	_, err = logging.Measure(ValidateApplication, ctx.Framework, name, ctx.ParentContext.Namespace)
 	if err != nil {
 		return logging.Logger.Fail(31, "Application failed validation: %v", err)
 	}
