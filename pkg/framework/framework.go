@@ -1,10 +1,13 @@
 package framework
 
 import (
+	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/common"
@@ -37,13 +40,15 @@ type ControllerHub struct {
 }
 
 type Framework struct {
-	AsKubeAdmin       *ControllerHub
-	AsKubeDeveloper   *ControllerHub
-	ProxyUrl          string
-	SandboxController *sandbox.SandboxController
-	UserNamespace     string
-	UserName          string
-	UserToken         string
+	AsKubeAdmin          *ControllerHub
+	AsKubeDeveloper      *ControllerHub
+	ClusterAppDomain     string
+	OpenshiftConsoleHost string
+	ProxyUrl             string
+	SandboxController    *sandbox.SandboxController
+	UserNamespace        string
+	UserName             string
+	UserToken            string
 }
 
 func NewFramework(userName string, stageConfig ...utils.Options) (*Framework, error) {
@@ -54,6 +59,7 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 	var err error
 	var k *kubeCl.K8SClient
 	var supplyopts utils.Options
+	var clusterAppDomain, openshiftConsoleHost string
 
 	if userName == "" {
 		return nil, fmt.Errorf("userName cannot be empty when initializing a new framework instance")
@@ -112,15 +118,23 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 		if err = utils.WaitUntil(asAdmin.CommonController.ServiceAccountPresent(constants.DefaultPipelineServiceAccount, k.UserNamespace), timeout); err != nil {
 			return nil, fmt.Errorf("'%s' service account wasn't created in %s namespace: %+v", constants.DefaultPipelineServiceAccount, k.UserNamespace, err)
 		}
+		r, err := asAdmin.CommonController.CustomClient.RouteClient().RouteV1().Routes("openshift-console").Get(context.Background(), "console", v1.GetOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("cannot get openshift console route in order to determine cluster app domain: %+v", err)
+		}
+		openshiftConsoleHost = r.Spec.Host
+		clusterAppDomain = strings.Join(strings.Split(openshiftConsoleHost, ".")[1:], ".")
 	}
 	return &Framework{
-		AsKubeAdmin:       asAdmin,
-		AsKubeDeveloper:   asUser,
-		ProxyUrl:          k.ProxyUrl,
-		SandboxController: k.SandboxController,
-		UserNamespace:     k.UserNamespace,
-		UserName:          k.UserName,
-		UserToken:         k.UserToken,
+		AsKubeAdmin:          asAdmin,
+		AsKubeDeveloper:      asUser,
+		ClusterAppDomain:     clusterAppDomain,
+		OpenshiftConsoleHost: openshiftConsoleHost,
+		ProxyUrl:             k.ProxyUrl,
+		SandboxController:    k.SandboxController,
+		UserNamespace:        k.UserNamespace,
+		UserName:             k.UserName,
+		UserToken:            k.UserToken,
 	}, nil
 }
 

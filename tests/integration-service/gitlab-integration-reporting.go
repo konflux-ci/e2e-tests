@@ -16,10 +16,10 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
-	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
@@ -32,7 +32,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 	var mrID int
 	// var mrNote *gitlab.Note
 	var timeout, interval time.Duration
-	var osConsoleHost, mrSha, projectID, gitlabToken string
+	var mrSha, projectID, gitlabToken string
 	var snapshot *appstudioApi.Snapshot
 	var component *appstudioApi.Component
 	var buildPipelineRun, testPipelinerun *pipeline.PipelineRun
@@ -51,11 +51,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace
 
-			consoleRoute, err := f.AsKubeAdmin.CommonController.GetOpenshiftRoute("console", "openshift-console")
-			Expect(err).ShouldNot(HaveOccurred())
-			osConsoleHost = consoleRoute.Spec.Host
-
-			if utils.IsPrivateHostname(osConsoleHost) {
+			if utils.IsPrivateHostname(f.OpenshiftConsoleHost) {
 				Skip("Using private cluster (not reachable from Github), skipping...")
 			}
 
