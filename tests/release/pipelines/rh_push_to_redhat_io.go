@@ -121,6 +121,19 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 		var _ = Describe("Post-release verification", func() {
 			It("verifies that a build PipelineRun is created in dev namespace and succeeds", func() {
 				devFw = releasecommon.NewFramework(devWorkspace)
+				// Create a ticker that ticks every 3 minutes
+				ticker := time.NewTicker(3 * time.Minute)
+				// Schedule the stop of the ticker after 15 minutes
+				time.AfterFunc(10*time.Minute, func() {
+					ticker.Stop()
+					fmt.Println("Stopped executing every 3 minutes.")
+				})
+				// Run a goroutine to handle the ticker ticks
+				go func() {
+					for range ticker.C {
+						devFw = releasecommon.NewFramework(devWorkspace)
+					}
+				}()
 				Eventually(func() error {
 					buildPR, err = devFw.AsKubeDeveloper.HasController.GetComponentPipelineRun(testComponent.Name, rhioApplicationName, devNamespace, "")
 					if err != nil {

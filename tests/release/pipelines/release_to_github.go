@@ -125,6 +125,21 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 		var _ = Describe("Post-release verification", func() {
 			It("verifies that a build PipelineRun is created in dev namespace and succeeds", func() {
 				devFw = releasecommon.NewFramework(devWorkspace)
+				managedFw = releasecommon.NewFramework(managedWorkspace)
+				// Create a ticker that ticks every 3 minutes
+				ticker := time.NewTicker(3 * time.Minute)
+				// Schedule the stop of the ticker after 15 minutes
+				time.AfterFunc(15*time.Minute, func() {
+					ticker.Stop()
+					fmt.Println("Stopped executing every 3 minutes.")
+				})
+				// Run a goroutine to handle the ticker ticks
+				go func() {
+					for range ticker.C {
+						devFw = releasecommon.NewFramework(devWorkspace)
+						managedFw = releasecommon.NewFramework(managedWorkspace)
+					}
+				}()
 				Eventually(func() error {
 					buildPR, err = devFw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, sampApplicationName, devNamespace, "")
 					if err != nil {
@@ -142,7 +157,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for build pipelinerun to be created")
 				Expect(devFw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "", devFw.AsKubeDeveloper.TektonController, &has.RetryOptions{Retries: 3, Always: true}, nil)).To(Succeed())
 			})
-			It("verifies the samp release pipelinerun is running and succeeds", func() {
+			It("verifies release pipelinerun is running and succeeds", func() {
 				devFw = releasecommon.NewFramework(devWorkspace)
 				managedFw = releasecommon.NewFramework(managedWorkspace)
 
