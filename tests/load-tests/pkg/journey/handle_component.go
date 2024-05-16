@@ -11,7 +11,6 @@ import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
 import utils "github.com/redhat-appstudio/e2e-tests/pkg/utils"
 import appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 
-
 func CreateComponent(f *framework.Framework, namespace, name, appName string, stub appstudioApi.ComponentDetectionDescription, skipInitialChecks, requestConfigurePac bool) error {
 	// Prepare annotations to add
 	var annotationsMap map[string]string

@@ -8,7 +8,6 @@ import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/loggi
 import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-
 func CollectPersistentVolumeClaims(f *framework.Framework, namespace string) error {
 	pvcs, err := f.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumeClaims(namespace).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
@@ -27,7 +26,7 @@ func CollectPersistentVolumeClaims(f *framework.Framework, namespace string) err
 }
 
 func HandlePersistentVolumeClaim(ctx *MainContext) error {
-	if ! ctx.Opts.WaitPipelines {
+	if !ctx.Opts.WaitPipelines {
 		return nil // if build pipeline runs are not done yet, it does not make sense to collect PV timings
 	}
 

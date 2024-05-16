@@ -7,26 +7,25 @@ import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/loggi
 
 import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
 
-
 func purgeStage(f *framework.Framework, namespace string) error {
 	var err error
 
-	err = f.AsKubeDeveloper.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, time.Minute * 5)
+	err = f.AsKubeDeveloper.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, time.Minute*5)
 	if err != nil {
 		return fmt.Errorf("Error when deleting applications in namespace %s: %v", namespace, err)
 	}
 
-	err = f.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, time.Minute * 5)
+	err = f.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, time.Minute*5)
 	if err != nil {
 		return fmt.Errorf("Error when deleting components in namespace %s: %v", namespace, err)
 	}
 
-	err = f.AsKubeDeveloper.HasController.DeleteAllComponentDetectionQueriesInASpecificNamespace(namespace, time.Minute * 5)
+	err = f.AsKubeDeveloper.HasController.DeleteAllComponentDetectionQueriesInASpecificNamespace(namespace, time.Minute*5)
 	if err != nil {
 		return fmt.Errorf("Error when deleting component detection queries in namespace %s: %v", namespace, err)
 	}
 
-	err = DeleteAllBuildPipelineSelectors(f, namespace, time.Minute * 5)
+	err = DeleteAllBuildPipelineSelectors(f, namespace, time.Minute*5)
 	if err != nil {
 		return fmt.Errorf("Error when deleting build pipeline selectors in namespace %s: %v", namespace, err)
 	}

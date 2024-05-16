@@ -13,7 +13,6 @@ import rclient "sigs.k8s.io/controller-runtime/pkg/client"
 import tekton "github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 import utils "github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
-
 func ListAllBuildPipelineSelectors(f *framework.Framework, namespace string) (*buildservice.BuildPipelineSelectorList, error) {
 	list := &buildservice.BuildPipelineSelectorList{}
 	err := f.AsKubeDeveloper.HasController.KubeRest().List(context.Background(), list, &rclient.ListOptions{Namespace: namespace})

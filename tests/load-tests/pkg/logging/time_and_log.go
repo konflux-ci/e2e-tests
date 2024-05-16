@@ -8,7 +8,6 @@ import "os"
 import "encoding/csv"
 import "sync"
 
-
 // Channel to send measurements to
 var measurementsQueue chan MeasurementEntry
 var errorsQueue chan ErrorEntry
@@ -25,16 +24,18 @@ type MeasurementEntry struct {
 	Parameters string
 	Error      error
 }
+
 func (e *MeasurementEntry) GetSliceOfStrings() []string {
 	return []string{e.Timestamp.Format(time.RFC3339Nano), e.Metric, fmt.Sprintf("%f", e.Duration.Seconds()), e.Parameters, fmt.Sprintf("%v", e.Error)}
 }
 
 // Data struct represents the data about failure to be stored
 type ErrorEntry struct {
-	Timestamp  time.Time
-	Code       int
-	Message    string
+	Timestamp time.Time
+	Code      int
+	Message   string
 }
+
 func (e *ErrorEntry) GetSliceOfStrings() []string {
 	return []string{e.Timestamp.Format(time.RFC3339Nano), fmt.Sprintf("%d", e.Code), e.Message}
 }

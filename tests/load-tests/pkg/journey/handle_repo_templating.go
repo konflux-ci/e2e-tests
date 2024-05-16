@@ -8,7 +8,6 @@ import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/loggi
 
 import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
 
-
 func TemplateRepo(f *framework.Framework, repoUrl, repoRevision, username, namespace, quayRepoName string) (string, error) {
 	// PaC testing, let's template repo and return branch name
 	var branchName string
@@ -71,7 +70,7 @@ func TemplateRepo(f *framework.Framework, repoUrl, repoRevision, username, names
 }
 
 func HandleRepoTemplating(ctx *MainContext) error {
-	if ! ctx.Opts.ComponentRepoTemplate{
+	if !ctx.Opts.ComponentRepoTemplate {
 		ctx.ComponentRepoRevision = ctx.Opts.ComponentRepoRevision
 		return nil
 	}

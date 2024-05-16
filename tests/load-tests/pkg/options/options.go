@@ -2,7 +2,6 @@ package options
 
 import "time"
 
-
 // Struct to hold command line options
 type Opts struct {
 	ApplicationsCount             int

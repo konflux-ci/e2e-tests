@@ -8,7 +8,6 @@ import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/loggi
 import "github.com/redhat-appstudio/e2e-tests/pkg/framework"
 import "github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
-
 func HandleUser(ctx *MainContext) error {
 	var err error
 
@@ -18,7 +17,7 @@ func HandleUser(ctx *MainContext) error {
 		ctx.Username = user.Username
 		ctx.Framework, err = framework.NewFrameworkWithTimeout(
 			ctx.Username,
-			time.Minute * 60,
+			time.Minute*60,
 			utils.Options{
 				ToolchainApiUrl: user.APIURL,
 				KeycloakUrl:     user.SSOURL,
@@ -26,7 +25,7 @@ func HandleUser(ctx *MainContext) error {
 			})
 	} else {
 		ctx.Username = fmt.Sprintf("%s-%04d", ctx.Opts.UsernamePrefix, ctx.ThreadIndex)
-		ctx.Framework, err = framework.NewFrameworkWithTimeout(ctx.Username, time.Minute * 60)
+		ctx.Framework, err = framework.NewFrameworkWithTimeout(ctx.Username, time.Minute*60)
 	}
 
 	if err != nil {
@@ -46,14 +45,14 @@ func HandleNewFrameworkForComp(ctx *PerComponentContext) error {
 		user := (*ctx.ParentContext.ParentContext.StageUsers)[ctx.ParentContext.ParentContext.ThreadIndex]
 		ctx.Framework, err = framework.NewFrameworkWithTimeout(
 			ctx.ParentContext.ParentContext.Username,
-			time.Minute * 60,
+			time.Minute*60,
 			utils.Options{
 				ToolchainApiUrl: user.APIURL,
 				KeycloakUrl:     user.SSOURL,
 				OfflineToken:    user.Token,
 			})
 	} else {
-		ctx.Framework, err = framework.NewFrameworkWithTimeout(ctx.ParentContext.ParentContext.Username, time.Minute * 60)
+		ctx.Framework, err = framework.NewFrameworkWithTimeout(ctx.ParentContext.ParentContext.Username, time.Minute*60)
 	}
 
 	if err != nil {
@@ -71,14 +70,14 @@ func HandleNewFrameworkForApp(ctx *PerApplicationContext) error {
 		user := (*ctx.ParentContext.StageUsers)[ctx.ParentContext.ThreadIndex]
 		ctx.Framework, err = framework.NewFrameworkWithTimeout(
 			ctx.ParentContext.Username,
-			time.Minute * 60,
+			time.Minute*60,
 			utils.Options{
 				ToolchainApiUrl: user.APIURL,
 				KeycloakUrl:     user.SSOURL,
 				OfflineToken:    user.Token,
 			})
 	} else {
-		ctx.Framework, err = framework.NewFrameworkWithTimeout(ctx.ParentContext.Username, time.Minute * 60)
+		ctx.Framework, err = framework.NewFrameworkWithTimeout(ctx.ParentContext.Username, time.Minute*60)
 	}
 
 	if err != nil {

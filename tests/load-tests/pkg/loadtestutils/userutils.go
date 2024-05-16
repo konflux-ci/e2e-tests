@@ -3,11 +3,10 @@ package loadtestutils
 import (
 	"encoding/json"
 	"errors"
-//	"net/url"
+	//	"net/url"
 	"os"
-//	"time"
-
-//	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	//	"time"
+	//	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 )
 
 // User represents a user in the list

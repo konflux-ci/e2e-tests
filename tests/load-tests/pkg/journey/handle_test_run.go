@@ -11,7 +11,6 @@ import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
 import utils "github.com/redhat-appstudio/e2e-tests/pkg/utils"
 import pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
-
 func ValidateSnapshotCreation(f *framework.Framework, namespace, compName string) (string, error) {
 	interval := time.Second * 20
 	timeout := time.Minute * 30
@@ -48,8 +47,8 @@ func ValidateTestPipelineRunCreation(f *framework.Framework, namespace, itsName,
 }
 
 func ValidateTestPipelineRunCondition(f *framework.Framework, namespace, itsName, snapName string) error {
-	interval:= time.Second * 20
-	timeout:= time.Minute * 60
+	interval := time.Second * 20
+	timeout := time.Minute * 60
 	var pr *pipeline.PipelineRun
 
 	// TODO It would be much better to watch this resource for a condition
@@ -84,7 +83,7 @@ func ValidateTestPipelineRunCondition(f *framework.Framework, namespace, itsName
 }
 
 func HandleTest(ctx *PerComponentContext) error {
-	if ! ctx.ParentContext.ParentContext.Opts.WaitPipelines || ! ctx.ParentContext.ParentContext.Opts.WaitIntegrationTestsPipelines{
+	if !ctx.ParentContext.ParentContext.Opts.WaitPipelines || !ctx.ParentContext.ParentContext.Opts.WaitIntegrationTestsPipelines {
 		return nil
 	}
 

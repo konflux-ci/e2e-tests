@@ -21,13 +21,12 @@ import klog "k8s.io/klog/v2"
 /////import eventsv1 "k8s.io/api/events/v1"
 //import unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-
 var opts = options.Opts{}
 
 var rootCmd = &cobra.Command{
-	Use:          "load-test",
-	Short:        "Konflux performance test",
-	Long:         `Konflux performance test`,
+	Use:   "load-test",
+	Short: "Konflux performance test",
+	Long:  `Konflux performance test`,
 }
 
 func init() {
@@ -205,7 +204,6 @@ func userJourneyThread(threadCtx *journey.MainContext) {
 		logging.Logger.Error("Thread failed: %v", err)
 		return
 	}
-
 
 	for i := 1; i <= threadCtx.Opts.JourneyRepeats; i++ {
 

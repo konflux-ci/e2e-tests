@@ -11,7 +11,6 @@ import util "github.com/devfile/library/v2/pkg/util"
 import utils "github.com/redhat-appstudio/e2e-tests/pkg/utils"
 import appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 
-
 func CreateApplication(f *framework.Framework, namespace string, timeout time.Duration, name string) error {
 	_, err := f.AsKubeDeveloper.HasController.CreateApplicationWithTimeout(name, namespace, timeout)
 	if err != nil {
@@ -56,14 +55,13 @@ func ValidateApplication(f *framework.Framework, name, namespace string) error {
 	return err
 }
 
-
 func HandleApplication(ctx *PerApplicationContext) error {
 	var err error
 
 	name := fmt.Sprintf("%s-app-%s", ctx.ParentContext.Username, util.GenerateRandomString(5))
 	logging.Logger.Debug("Creating application %s in namespace %s", name, ctx.ParentContext.Namespace)
 
-	_, err = logging.Measure(CreateApplication, ctx.Framework, ctx.ParentContext.Namespace, time.Minute * 60, name)
+	_, err = logging.Measure(CreateApplication, ctx.Framework, ctx.ParentContext.Namespace, time.Minute*60, name)
 	if err != nil {
 		return logging.Logger.Fail(30, "Application failed creation: %v", err)
 	}

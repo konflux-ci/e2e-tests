@@ -13,7 +13,6 @@ import utils "github.com/redhat-appstudio/e2e-tests/pkg/utils"
 import integrationApi "github.com/konflux-ci/integration-service/api/v1beta1"
 import types "k8s.io/apimachinery/pkg/types"
 
-
 func CreateIntegrationTestScenario(f *framework.Framework, namespace, name, appName, scenarioGitURL, scenarioRevision, scenarioPathInRepo string) error {
 	_, err := f.AsKubeDeveloper.IntegrationController.CreateIntegrationTestScenario(name, appName, namespace, scenarioGitURL, scenarioRevision, scenarioPathInRepo)
 	if err != nil {
@@ -58,7 +57,6 @@ func ValidateIntegrationTestScenario(f *framework.Framework, namespace, name, ap
 	return err
 
 }
-
 
 func HandleIntegrationTestScenario(ctx *PerApplicationContext) error {
 	var err error
