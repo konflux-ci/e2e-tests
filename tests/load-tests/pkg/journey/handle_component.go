@@ -58,7 +58,7 @@ func ValidateComponent(f *framework.Framework, namespace, name string) error {
 			}
 		}
 
-		logging.Logger.Debug("Still waiting for condition in component %s in namespace %s", name, namespace)
+		logging.Logger.Trace("Still waiting for condition in component %s in namespace %s", name, namespace)
 		return false, nil
 	}, interval, timeout)
 

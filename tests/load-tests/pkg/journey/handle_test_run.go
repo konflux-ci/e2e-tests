@@ -76,7 +76,7 @@ func ValidateTestPipelineRunCondition(f *framework.Framework, namespace, itsName
 			}
 		}
 
-		logging.Logger.Debug("Still waiting for test pipeline run for integration test pipeline %s in namespace %s", snapName, namespace)
+		logging.Logger.Trace("Still waiting for test pipeline run for integration test pipeline %s in namespace %s", snapName, namespace)
 		return false, nil
 	}, interval, timeout)
 

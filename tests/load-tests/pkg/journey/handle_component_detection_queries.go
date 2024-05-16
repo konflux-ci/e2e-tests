@@ -54,7 +54,7 @@ func ValidateComponentDetectionQuery(f *framework.Framework, namespace, name str
 			return false, nil
 		}
 
-		logging.Logger.Debug("Still waiting for condition in component detection query %s in namespace %s", name, namespace)
+		logging.Logger.Trace("Still waiting for condition in component detection query %s in namespace %s", name, namespace)
 		return false, nil
 	}, interval, timeout)
 

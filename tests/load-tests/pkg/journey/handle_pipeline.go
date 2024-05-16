@@ -57,7 +57,7 @@ func ValidatePipelineRunCondition(f *framework.Framework, namespace, appName, co
 			}
 		}
 
-		logging.Logger.Debug("Still waiting for pipeline run condition for component %s in namespace %s", compName, namespace)
+		logging.Logger.Trace("Still waiting for pipeline run condition for component %s in namespace %s", compName, namespace)
 		return false, nil
 	}, interval, timeout)
 
@@ -96,7 +96,7 @@ func ValidatePipelineRunSignature(f *framework.Framework, namespace, appName, co
 			return false, nil
 		}
 
-		logging.Logger.Debug("Still waiting for pipeline run annotation for component %s in namespace %s", compName, namespace)
+		logging.Logger.Trace("Still waiting for pipeline run annotation for component %s in namespace %s", compName, namespace)
 		return false, nil
 	}, interval, timeout)
 
