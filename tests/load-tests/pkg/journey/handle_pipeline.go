@@ -28,7 +28,7 @@ func ValidatePipelineRunCreation(f *framework.Framework, namespace, appName, com
 	return err
 }
 
-func ValidatePipelineRun(f *framework.Framework, namespace, appName, compName string) error {
+func ValidatePipelineRunCondition(f *framework.Framework, namespace, appName, compName string) error {
 	interval:= time.Second * 20
 	timeout:= time.Minute * 60
 	var pr *pipeline.PipelineRun
@@ -57,12 +57,52 @@ func ValidatePipelineRun(f *framework.Framework, namespace, appName, compName st
 			}
 		}
 
-		logging.Logger.Debug("Still waiting for pipeline run for component %s in namespace %s", compName, namespace)
+		logging.Logger.Debug("Still waiting for pipeline run condition for component %s in namespace %s", compName, namespace)
 		return false, nil
 	}, interval, timeout)
 
 	return err
 }
+
+func ValidatePipelineRunSignature(f *framework.Framework, namespace, appName, compName string) error {
+	interval:= time.Second * 20
+	timeout:= time.Minute * 60
+	var pr *pipeline.PipelineRun
+
+	// TODO It would be much better to watch this resource for a condition
+	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
+		pr, err = f.AsKubeDeveloper.HasController.GetComponentPipelineRunWithType(compName, appName, namespace, "build", "")
+		if err != nil {
+			logging.Logger.Debug("Unable to get created PipelineRun for component %s in namespace %s: %v", compName, namespace, err)
+			return false, nil
+		}
+
+		// Check if there are some annotations
+		if len(pr.Annotations) == 0 {
+			logging.Logger.Debug("PipelineRun for component %s in namespace %s lacks metadata annotations", compName, namespace)
+			return false, nil
+		}
+
+		// Check for right annotation
+		if _, exists := pr.Annotations["chains.tekton.dev/signed"]; exists {
+			if pr.Annotations["chains.tekton.dev/signed"] == "true" {
+				return true, nil
+			} else {
+				logging.Logger.Debug("PipelineRun for component %s in namespace %s still not signed", compName, namespace)
+				return false, nil
+			}
+		} else {
+			logging.Logger.Debug("PipelineRun for component %s in namespace %s do not have 'chains.tekton.dev/signed' annotation", compName, namespace)
+			return false, nil
+		}
+
+		logging.Logger.Debug("Still waiting for pipeline run annotation for component %s in namespace %s", compName, namespace)
+		return false, nil
+	}, interval, timeout)
+
+	return err
+}
+
 
 func HandlePipelineRun(ctx *PerComponentContext) error {
 	if ! ctx.ParentContext.Opts.WaitPipelines {
@@ -73,14 +113,19 @@ func HandlePipelineRun(ctx *PerComponentContext) error {
 
 	logging.Logger.Debug("Creating build pipeline run for component %s in namespace %s", ctx.ComponentName, ctx.ParentContext.Namespace)
 
-	err = ValidatePipelineRunCreation(ctx.Framework, ctx.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName)
+	_, err = logging.Measure(ValidatePipelineRunCreation, ctx.Framework, ctx.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName)
 	if err != nil {
 		return logging.Logger.Fail(70, "Build Pipeline Run failed creation: %v", err)
 	}
 
-	err = ValidatePipelineRun(ctx.Framework, ctx.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName)
+	_, err = logging.Measure(ValidatePipelineRunCondition, ctx.Framework, ctx.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName)
 	if err != nil {
 		return logging.Logger.Fail(71, "Build Pipeline Run failed run: %v", err)
+	}
+
+	_, err = logging.Measure(ValidatePipelineRunSignature, ctx.Framework, ctx.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName)
+	if err != nil {
+		return logging.Logger.Fail(72, "Build Pipeline Run failed signing: %v", err)
 	}
 
 	return nil
