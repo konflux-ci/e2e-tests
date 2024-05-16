@@ -39,7 +39,7 @@ require (
 	github.com/redhat-appstudio-qe/perf-monitoring/api v0.0.0-20231003074147-a076f9e620da
 	github.com/redhat-appstudio/application-api v0.0.0-20231026192857-89515ad2504f
 	github.com/redhat-appstudio/build-service v0.0.0-20240130032352-f0efbb6ad6e2
-	github.com/redhat-appstudio/image-controller v0.0.0-20231003082540-48893226ba8b
+	github.com/konflux-ci/image-controller v0.0.0-20231003082540-48893226ba8b
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20240126122210-0e2ee7e2e5b0
 	github.com/redhat-appstudio/release-service v0.0.0-20240126184040-c1b86f4617e1
 	github.com/redhat-appstudio/remote-secret v0.0.0-20230713072146-a6094c712436

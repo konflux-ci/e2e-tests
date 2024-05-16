@@ -1981,8 +1981,8 @@ github.com/redhat-appstudio/application-service v0.0.0-20230717184417-67d31a01a7
 github.com/redhat-appstudio/application-service v0.0.0-20230717184417-67d31a01a776/go.mod h1:meLjzNehwlqPyjd8Gg78oXRpRy5HQ4nCulk8u8mCjqs=
 github.com/redhat-appstudio/build-service v0.0.0-20240130032352-f0efbb6ad6e2 h1:/g/j58OjZhsbs/07BwIoxpN6sj2oxegfuXKihETU6tg=
 github.com/redhat-appstudio/build-service v0.0.0-20240130032352-f0efbb6ad6e2/go.mod h1:AwZ226ApDH0dcHv/rDjI1k8xKPqj/pmQye+fxT0Krvw=
-github.com/redhat-appstudio/image-controller v0.0.0-20231003082540-48893226ba8b h1:kM+t/FZSMVUydXIbii+bduAJov7pcADCybP9u1WSBcw=
-github.com/redhat-appstudio/image-controller v0.0.0-20231003082540-48893226ba8b/go.mod h1:fNP2oUEejlHZUkAz2f0ViKNl0D8w4cD8QVoGy1pri9c=
+github.com/konflux-ci/image-controller v0.0.0-20231003082540-48893226ba8b h1:kM+t/FZSMVUydXIbii+bduAJov7pcADCybP9u1WSBcw=
+github.com/konflux-ci/image-controller v0.0.0-20231003082540-48893226ba8b/go.mod h1:fNP2oUEejlHZUkAz2f0ViKNl0D8w4cD8QVoGy1pri9c=
 github.com/redhat-appstudio/jvm-build-service v0.0.0-20240126122210-0e2ee7e2e5b0 h1:wqP4/99Lg68zRpzt9zSc5OGf3zigaBlvflDuDLmDLdM=
 github.com/redhat-appstudio/jvm-build-service v0.0.0-20240126122210-0e2ee7e2e5b0/go.mod h1:awZP3qi/GpBhQ50N3rRjFPsGbFperwWYSTN+OVG1Gb8=
 github.com/redhat-appstudio/operator-toolkit v0.0.0-20231201124606-2087182322ae h1:98thWrMrr9YUNCVNGqkZxKfZkaWUmMC5dmkgAI7p3uY=

@@ -8,11 +8,11 @@ import (
 	"regexp"
 	"strings"
 
+	quay "github.com/konflux-ci/image-controller/pkg/quay"
 	. "github.com/onsi/gomega"
 	"github.com/openshift/library-go/pkg/image/reference"
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	quay "github.com/redhat-appstudio/image-controller/pkg/quay"
 	corev1 "k8s.io/api/core/v1"
 )
 

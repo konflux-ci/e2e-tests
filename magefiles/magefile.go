@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
 	gh "github.com/google/go-github/v44/github"
+	"github.com/konflux-ci/image-controller/pkg/quay"
 	"github.com/magefile/mage/sh"
 	"github.com/redhat-appstudio/e2e-tests/magefiles/installation"
 	"github.com/redhat-appstudio/e2e-tests/magefiles/upgrade"
@@ -33,7 +34,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/testspecs"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
-	"github.com/redhat-appstudio/image-controller/pkg/quay"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 

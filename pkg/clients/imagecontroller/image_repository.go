@@ -3,7 +3,7 @@ package imagecontroller
 import (
 	"context"
 
-	"github.com/redhat-appstudio/image-controller/api/v1alpha1"
+	"github.com/konflux-ci/image-controller/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )

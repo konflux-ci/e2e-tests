@@ -26,13 +26,13 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	imagecontollers "github.com/konflux-ci/image-controller/controllers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/build-service/controllers"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
-	imagecontollers "github.com/redhat-appstudio/image-controller/controllers"
 	v1 "k8s.io/api/core/v1"
 )
 
