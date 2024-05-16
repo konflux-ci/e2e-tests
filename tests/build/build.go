@@ -46,7 +46,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	defer GinkgoRecover()
 
 	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), func() {
-		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, defaultBranchTestComponentName, imageRepoName, robotAccountName, pacControllerHost string
+		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, defaultBranchTestComponentName, imageRepoName, robotAccountName string
 		var component *appservice.Component
 
 		var timeout, interval time.Duration
@@ -63,16 +63,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace
 
-			consoleRoute, err := f.AsKubeAdmin.CommonController.GetOpenshiftRoute("console", "openshift-console")
-			Expect(err).ShouldNot(HaveOccurred())
-			osConsoleHost = consoleRoute.Spec.Host
-
-			if utils.IsPrivateHostname(osConsoleHost) {
+			if utils.IsPrivateHostname(f.OpenshiftConsoleHost) {
 				Skip("Using private cluster (not reachable from Github), skipping...")
 			}
-
-			// Used for identifying related webhook on GitHub - in order to delete it
-			pacControllerHost = getPacControllerHost(f)
 
 			quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "")
 			supports, err := build.DoesQuayOrgSupportPrivateRepo()
@@ -121,7 +114,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			}
 
 			// Delete created webhook from GitHub
-			cleanupWebhooks(f, helloWorldComponentGitSourceRepoName, pacControllerHost)
+			cleanupWebhooks(f, helloWorldComponentGitSourceRepoName)
 
 		})
 
@@ -655,11 +648,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace
 
-			consoleRoute, err := f.AsKubeAdmin.CommonController.GetOpenshiftRoute("console", "openshift-console")
-			Expect(err).ShouldNot(HaveOccurred())
-			osConsoleHost = consoleRoute.Spec.Host
-
-			if utils.IsPrivateHostname(osConsoleHost) {
+			if utils.IsPrivateHostname(f.OpenshiftConsoleHost) {
 				Skip("Using private cluster (not reachable from Github), skipping...")
 			}
 
@@ -890,7 +879,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 	})
 	Describe("test build secret lookup", Label("pac-build", "secret-lookup"), Ordered, func() {
-		var testNamespace, applicationName, firstComponentBaseBranchName, secondComponentBaseBranchName, firstComponentName, secondComponentName, firstPacBranchName, secondPacBranchName, pacControllerHost string
+		var testNamespace, applicationName, firstComponentBaseBranchName, secondComponentBaseBranchName, firstComponentName, secondComponentName, firstPacBranchName, secondPacBranchName string
 		BeforeAll(func() {
 			if os.Getenv(constants.SKIP_PAC_TESTS_ENV) == "true" {
 				Skip("Skipping this test due to configuration issue with Spray proxy")
@@ -898,9 +887,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace
-
-			// Used for identifying related webhook on GitHub - in order to delete it
-			pacControllerHost = getPacControllerHost(f)
 
 			applicationName = fmt.Sprintf("build-secret-lookup-%s", util.GenerateRandomString(4))
 			_, err = f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
@@ -944,7 +930,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			}
 
 			// Delete created webhook from GitHub
-			cleanupWebhooks(f, secretLookupGitSourceRepoTwoName, pacControllerHost)
+			cleanupWebhooks(f, secretLookupGitSourceRepoTwoName)
 
 		})
 		When("two secrets are created", func() {
@@ -1890,18 +1876,12 @@ func createBuildSecret(f *framework.Framework, secretName string, annotations ma
 	return nil
 }
 
-func getPacControllerHost(f *framework.Framework) string {
-	pacControllerRoute, err := f.AsKubeAdmin.CommonController.GetOpenshiftRoute(constants.PaCControllerRouteName, constants.PaCControllerNamespace)
-	Expect(err).ShouldNot(HaveOccurred())
-	return pacControllerRoute.Spec.Host
-}
-
-func cleanupWebhooks(f *framework.Framework, repoName, pacHost string) {
+func cleanupWebhooks(f *framework.Framework, repoName string) {
 	hooks, err := f.AsKubeAdmin.CommonController.Github.ListRepoWebhooks(repoName)
 	Expect(err).NotTo(HaveOccurred())
 	for _, h := range hooks {
 		hookUrl := h.Config["url"].(string)
-		if strings.Contains(hookUrl, pacHost) {
+		if strings.Contains(hookUrl, f.ClusterAppDomain) {
 			GinkgoWriter.Printf("removing webhook URL: %s\n", hookUrl)
 			Expect(f.AsKubeAdmin.CommonController.Github.DeleteWebhook(repoName, h.GetID())).To(Succeed())
 			break

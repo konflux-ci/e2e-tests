@@ -13,10 +13,10 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 
+	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
-	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
@@ -28,7 +28,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 
 	var prNumber int
 	var timeout, interval time.Duration
-	var osConsoleHost, prHeadSha string
+	var prHeadSha string
 	var snapshot *appstudioApi.Snapshot
 	var component *appstudioApi.Component
 	var pipelineRun, testPipelinerun *pipeline.PipelineRun
@@ -47,11 +47,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace
 
-			consoleRoute, err := f.AsKubeAdmin.CommonController.GetOpenshiftRoute("console", "openshift-console")
-			Expect(err).ShouldNot(HaveOccurred())
-			osConsoleHost = consoleRoute.Spec.Host
-
-			if utils.IsPrivateHostname(osConsoleHost) {
+			if utils.IsPrivateHostname(f.OpenshiftConsoleHost) {
 				Skip("Using private cluster (not reachable from Github), skipping...")
 			}
 
