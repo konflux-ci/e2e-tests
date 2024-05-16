@@ -72,12 +72,12 @@ func HandleComponent(ctx *PerComponentContext) error {
 	stub := ctx.ParentContext.ComponentStubList[ctx.ComponentIndex]
 	logging.Logger.Debug("Creating component %s in namespace %s", name, ctx.ParentContext.Namespace)
 
-	err = CreateComponent(ctx.Framework, ctx.ParentContext.Namespace, name, ctx.ParentContext.ApplicationName, stub, ctx.ParentContext.Opts.PipelineSkipInitialChecks, ctx.ParentContext.Opts.PipelineRequestConfigurePac)
+	_, err = logging.Measure(CreateComponent, ctx.Framework, ctx.ParentContext.Namespace, name, ctx.ParentContext.ApplicationName, stub, ctx.ParentContext.Opts.PipelineSkipInitialChecks, ctx.ParentContext.Opts.PipelineRequestConfigurePac)
 	if err != nil {
 		return logging.Logger.Fail(60, "Component failed creation: %v", err)
 	}
 
-	err = ValidateComponent(ctx.Framework, ctx.ParentContext.Namespace, name)
+	_, err = logging.Measure(ValidateComponent, ctx.Framework, ctx.ParentContext.Namespace, name)
 	if err != nil {
 		return logging.Logger.Fail(61, "Component failed validation: %v", err)
 	}

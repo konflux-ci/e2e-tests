@@ -83,15 +83,20 @@ func HandleComponentDetectionQuery(ctx *MainContext) error {
 	name := fmt.Sprintf("%s-cdq", ctx.ApplicationName)
 	logging.Logger.Debug("Creating component detection query %s in namespace %s", name, ctx.Namespace)
 
-	err = CreateComponentDetectionQuery(ctx.Framework, ctx.Namespace, time.Minute * 60, name, ctx.Opts.ComponentRepoUrl, ctx.ComponentRepoRevision)
+	_, err = logging.Measure(CreateComponentDetectionQuery, ctx.Framework, ctx.Namespace, time.Minute * 60, name, ctx.Opts.ComponentRepoUrl, ctx.ComponentRepoRevision)
 	if err != nil {
 		return logging.Logger.Fail(50, "Component Detection Query failed creation: %v", err)
 	}
 
 	var cdq *appstudioApi.ComponentDetectionQuery
-	cdq, err = ValidateComponentDetectionQuery(ctx.Framework, ctx.Namespace, name)
-	if err != nil {
-		return logging.Logger.Fail(51, "Component Detection Query failed validation: %v", err)
+	var ok bool
+	result1, err1 := logging.Measure(ValidateComponentDetectionQuery, ctx.Framework, ctx.Namespace, name)
+	if err1 != nil {
+		return logging.Logger.Fail(51, "Component Detection Query failed validation: %v", err1)
+	}
+	cdq, ok = result1.(*appstudioApi.ComponentDetectionQuery)
+	if !ok {
+		return logging.Logger.Fail(52, "Component Detection Query type assertion failed")
 	}
 
 	ctx.ComponentDetectionQueryName = name

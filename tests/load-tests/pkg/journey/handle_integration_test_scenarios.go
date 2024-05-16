@@ -66,12 +66,12 @@ func HandleIntegrationTestScenario(ctx *MainContext) error {
 	name := fmt.Sprintf("%s-its-%s", ctx.Username, util.GenerateRandomString(5))
 	logging.Logger.Debug("Creating integration test scenario %s for application %s in namespace %s", name, ctx.ApplicationName, ctx.Namespace)
 
-	err = CreateIntegrationTestScenario(ctx.Framework, ctx.Namespace, name, ctx.ApplicationName, ctx.Opts.TestScenarioGitURL, ctx.Opts.TestScenarioRevision, ctx.Opts.TestScenarioPathInRepo)
+	_, err = logging.Measure(CreateIntegrationTestScenario, ctx.Framework, ctx.Namespace, name, ctx.ApplicationName, ctx.Opts.TestScenarioGitURL, ctx.Opts.TestScenarioRevision, ctx.Opts.TestScenarioPathInRepo)
 	if err != nil {
 		return logging.Logger.Fail(40, "Integration test scenario failed creation: %v", err)
 	}
 
-	err = ValidateIntegrationTestScenario(ctx.Framework, ctx.Namespace, name, ctx.ApplicationName)
+	_, err = logging.Measure(ValidateIntegrationTestScenario, ctx.Framework, ctx.Namespace, name, ctx.ApplicationName)
 	if err != nil {
 		return logging.Logger.Fail(41, "Integration test scenario failed validation: %v", err)
 	}

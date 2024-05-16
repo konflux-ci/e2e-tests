@@ -47,7 +47,7 @@ func ValidateTestPipelineRunCreation(f *framework.Framework, namespace, itsName,
 	return err
 }
 
-func ValidateTestPipelineRun(f *framework.Framework, namespace, itsName, snapName string) error {
+func ValidateTestPipelineRunCondition(f *framework.Framework, namespace, itsName, snapName string) error {
 	interval:= time.Second * 20
 	timeout:= time.Minute * 60
 	var pr *pipeline.PipelineRun
@@ -89,25 +89,27 @@ func HandleTest(ctx *PerComponentContext) error {
 	}
 
 	var err error
-	var snapName string
+	var ok bool
 
 	logging.Logger.Debug("Creating test pipeline run for component %s in namespace %s", ctx.ComponentName, ctx.ParentContext.Namespace)
 
-	snapName, err = ValidateSnapshotCreation(ctx.Framework, ctx.ParentContext.Namespace, ctx.ComponentName)
-	if err != nil {
-		return logging.Logger.Fail(80, "Snapshot failed creation: %v", err)
+	result1, err1 := logging.Measure(ValidateSnapshotCreation, ctx.Framework, ctx.ParentContext.Namespace, ctx.ComponentName)
+	if err1 != nil {
+		return logging.Logger.Fail(80, "Snapshot failed creation: %v", err1)
+	}
+	ctx.SnapshotName, ok = result1.(string)
+	if !ok {
+		return logging.Logger.Fail(81, "Snapshot name type assertion failed")
 	}
 
-	ctx.SnapshotName = snapName
-
-	err = ValidateTestPipelineRunCreation(ctx.Framework, ctx.ParentContext.Namespace, ctx.ParentContext.IntegrationTestScenarioName, snapName)
+	_, err = logging.Measure(ValidateTestPipelineRunCreation, ctx.Framework, ctx.ParentContext.Namespace, ctx.ParentContext.IntegrationTestScenarioName, ctx.SnapshotName)
 	if err != nil {
-		return logging.Logger.Fail(81, "Test Pipeline Run failed creation: %v", err)
+		return logging.Logger.Fail(82, "Test Pipeline Run failed creation: %v", err)
 	}
 
-	err = ValidateTestPipelineRun(ctx.Framework, ctx.ParentContext.Namespace, ctx.ParentContext.IntegrationTestScenarioName, snapName)
+	_, err = logging.Measure(ValidateTestPipelineRunCondition, ctx.Framework, ctx.ParentContext.Namespace, ctx.ParentContext.IntegrationTestScenarioName, ctx.SnapshotName)
 	if err != nil {
-		return logging.Logger.Fail(82, "Test Pipeline Run failed run: %v", err)
+		return logging.Logger.Fail(83, "Test Pipeline Run failed run: %v", err)
 	}
 
 	return nil
