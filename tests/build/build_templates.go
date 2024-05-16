@@ -277,13 +277,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				Expect(tagExists).To(BeTrue(),
 					fmt.Sprintf("cannot find source container image %s", srcImage))
 
-				deprecatedSourceImage := binaryImage + ".src"
-				tagExists, err = build.DoesTagExistsInQuay(deprecatedSourceImage)
-				Expect(err).ShouldNot(HaveOccurred(),
-					fmt.Sprintf("failed to check existence of deprecated source container image %s", deprecatedSourceImage))
-				Expect(tagExists).To(BeTrue(),
-					fmt.Sprintf("cannot find deprecated source container image %s", deprecatedSourceImage))
-
 				CheckSourceImage(srcImage, gitUrl, kubeadminClient, pr)
 			})
 
