@@ -202,6 +202,22 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 })
 
 func assertBuildPipelineRunCreated(devFw framework.Framework, devNamespace, managedNamespace, fbcAppName string, component *appservice.Component) {
+	dFw := releasecommon.NewFramework(devWorkspace)
+	devFw = *dFw
+	// Create a ticker that ticks every 3 minutes
+	ticker := time.NewTicker(3 * time.Minute)
+	// Schedule the stop of the ticker after 10 minutes
+	time.AfterFunc(10*time.Minute, func() {
+		ticker.Stop()
+		fmt.Println("Stopped executing every 3 minutes.")
+	})
+	// Run a goroutine to handle the ticker ticks
+	go func() {
+		for range ticker.C {
+			dFw = releasecommon.NewFramework(devWorkspace)
+			devFw = *dFw
+		}
+	}()
 	Expect(devFw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "", devFw.AsKubeDeveloper.TektonController, &has.RetryOptions{Retries: 3, Always: true}, nil)).To(Succeed())
 	buildPr, err = devFw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, fbcAppName, devNamespace, "")
 	Expect(err).ShouldNot(HaveOccurred())
