@@ -145,8 +145,8 @@ func NewAppStudioInstallControllerUpgrade(infraFork string, infraBranch string) 
 
 // Start the appstudio installation in preview mode.
 func (i *InstallAppStudio) InstallAppStudioPreviewMode() error {
-	if _, err := i.cloneInfraDeployments(); err != nil {
-		return err
+	if err := i.cloneInfraDeployments(); err != nil {
+		return fmt.Errorf("failed to clone infra-deployments repository: %+v", err)
 	}
 	i.setInstallationEnvironments()
 
@@ -199,7 +199,7 @@ func (i *InstallAppStudio) setInstallationEnvironments() {
 	os.Setenv(constants.ENABLE_SCHEDULING_ON_MASTER_NODES_ENV, i.EnableSchedulingOnMasterNodes)
 }
 
-func (i *InstallAppStudio) cloneInfraDeployments() (*git.Remote, error) {
+func (i *InstallAppStudio) cloneInfraDeployments() error {
 	dirInfo, err := os.Stat(i.InfraDeploymentsCloneDir)
 
 	if !os.IsNotExist(err) && dirInfo.IsDir() {
@@ -207,7 +207,7 @@ func (i *InstallAppStudio) cloneInfraDeployments() (*git.Remote, error) {
 
 		err := os.RemoveAll(i.InfraDeploymentsCloneDir)
 		if err != nil {
-			return nil, fmt.Errorf("error removing %s folder", i.InfraDeploymentsCloneDir)
+			return fmt.Errorf("error removing %s folder", i.InfraDeploymentsCloneDir)
 		}
 	}
 
@@ -220,7 +220,17 @@ func (i *InstallAppStudio) cloneInfraDeployments() (*git.Remote, error) {
 		Progress:      os.Stdout,
 	})
 
-	return repo.CreateRemote(&config.RemoteConfig{Name: i.LocalForkName, URLs: []string{fmt.Sprintf("https://github.com/%s/infra-deployments.git", i.LocalGithubForkOrganization)}})
+	if _, err := repo.CreateRemote(&config.RemoteConfig{Name: "upstream", URLs: []string{"https://github.com/redhat-appstudio/infra-deployments.git"}}); err != nil {
+		return err
+	}
+	if _, err := repo.CreateRemote(&config.RemoteConfig{Name: i.LocalForkName, URLs: []string{fmt.Sprintf("https://github.com/%s/infra-deployments.git", i.LocalGithubForkOrganization)}}); err != nil {
+		return err
+	}
+	if err := utils.ExecuteCommandInASpecificDirectory("git", []string{"pull", "--rebase", "upstream", "main"}, i.InfraDeploymentsCloneDir); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (i *InstallAppStudio) CheckOperatorsReady() (err error) {

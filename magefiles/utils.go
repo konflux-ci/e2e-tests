@@ -51,6 +51,7 @@ func gitCheckoutRemoteBranch(remoteName, branchName string) error {
 		{"remote", "add", remoteName, fmt.Sprintf("https://github.com/%s/e2e-tests.git", remoteName)},
 		{"fetch", remoteName},
 		{"checkout", branchName},
+		{"pull", "--rebase", "upstream", "main"},
 	} {
 		if err := git(arg...); err != nil {
 			return fmt.Errorf("error when checkout out remote branch %s from remote %s: %v", branchName, remoteName, err)
@@ -383,8 +384,8 @@ func MergePRInRemote(branch string, forkOrganization string, repoPath string) er
 	}
 	klog.Infof("Fork organization: %s", forkOrganization)
 	if forkOrganization == "redhat-appstudio" {
-		// Cloned repository have as origin set redhat-appstudio organization
-		err = mergeBranch(repoPath, "remotes/origin/"+branch)
+		// Cloned repository have as upstream set redhat-appstudio organization
+		err = mergeBranch(repoPath, "remotes/upstream/"+branch)
 	} else {
 		repoURL := fmt.Sprintf("https://github.com/%s/infra-deployments.git", forkOrganization)
 		_, err = repo.CreateRemote(&config.RemoteConfig{
