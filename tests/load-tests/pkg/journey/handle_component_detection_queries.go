@@ -81,7 +81,7 @@ func HandleComponentDetectionQuery(ctx *PerApplicationContext) error {
 	name := fmt.Sprintf("%s-cdq", ctx.ApplicationName)
 	logging.Logger.Debug("Creating component detection query %s in namespace %s", name, ctx.ParentContext.Namespace)
 
-	_, err = logging.Measure(CreateComponentDetectionQuery, ctx.Framework, ctx.ParentContext.Namespace, time.Minute*60, name, ctx.ParentContext.Opts.ComponentRepoUrl, ctx.ParentContext.ComponentRepoRevision)
+	_, err = logging.Measure(CreateComponentDetectionQuery, ctx.Framework, ctx.ParentContext.Namespace, time.Minute*60, name, ctx.ParentContext.ComponentRepoUrl, ctx.ParentContext.Opts.ComponentRepoRevision)
 	if err != nil {
 		return logging.Logger.Fail(50, "Component Detection Query failed creation: %v", err)
 	}

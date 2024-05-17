@@ -18,10 +18,11 @@ type MainContext struct {
 	ThreadIndex            int
 	Opts                   *options.Opts
 	StageUsers             *[]loadtestutils.User
+	TemplatingDoneWG       *sync.WaitGroup
 	Framework              *framework.Framework
 	Username               string
 	Namespace              string
-	ComponentRepoRevision  string // overrides same value from Opts, needed when templating repos
+	ComponentRepoUrl       string // overrides same value from Opts, needed when templating repos
 	PerApplicationContexts []*PerApplicationContext
 }
 
@@ -42,6 +43,9 @@ func Setup(fn func(*MainContext), opts *options.Opts) (string, error) {
 	threadsWG := &sync.WaitGroup{}
 	threadsWG.Add(opts.Concurrency)
 
+	templatingDoneWG := &sync.WaitGroup{}
+	templatingDoneWG.Add(opts.Concurrency)
+
 	var stageUsers []loadtestutils.User
 	var err error
 	if opts.Stage {
@@ -55,12 +59,13 @@ func Setup(fn func(*MainContext), opts *options.Opts) (string, error) {
 		logging.Logger.Info("Initiating thread %d", threadIndex)
 
 		threadCtx := &MainContext{
-			ThreadsWG:   threadsWG,
-			ThreadIndex: threadIndex,
-			Opts:        opts,
-			StageUsers:  &stageUsers,
-			Username:    "",
-			Namespace:   "",
+			ThreadsWG:        threadsWG,
+			ThreadIndex:      threadIndex,
+			Opts:             opts,
+			StageUsers:       &stageUsers,
+			TemplatingDoneWG: templatingDoneWG,
+			Username:         "",
+			Namespace:        "",
 		}
 
 		MainContexts = append(MainContexts, threadCtx)

@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/google/go-github/v44/github"
 	. "github.com/onsi/ginkgo/v2"
 )
@@ -149,4 +151,77 @@ func (g *Github) DeleteRepository(repository *github.Repository) error {
 		return err
 	}
 	return nil
+}
+
+func (g *Github) DeleteRepositoryIfExists(name string) error {
+	ctx := context.Background()
+
+	_, resp, err := g.client.Repositories.Get(ctx, g.organization, name)
+	if err != nil {
+		if resp.StatusCode != 404 {
+			return fmt.Errorf("Error checking repository %s/%s: %v\n", g.organization, name, err)
+		}
+	} else {
+		_, deleteErr := g.client.Repositories.Delete(ctx, g.organization, name)
+		if deleteErr != nil {
+			return fmt.Errorf("Error deleting repository %s/%s: %v\n", g.organization, name, deleteErr)
+		}
+	}
+
+	return nil
+}
+
+func (g *Github) ForkRepository(sourceName, targetName string) (*github.Repository, error) {
+	var fork *github.Repository
+	var resp *github.Response
+
+	ctx := context.Background()
+
+	forkOptions := &github.RepositoryCreateForkOptions{
+		Organization: g.organization,
+	}
+
+	err1 := utils.WaitUntilWithInterval(func() (done bool, err error) {
+		fork, resp, err = g.client.Repositories.CreateFork(ctx, g.organization, sourceName, forkOptions)
+		if err != nil {
+			if _, ok := err.(*github.AcceptedError); ok && resp.StatusCode == 202 {
+				// This meens forking is happening asynchronously
+				return true, nil
+			}
+			if resp.StatusCode == 403 {
+				// This catches error: "403 Repository is already being forked."
+				// This happens whem more than ~3 forks of one repo is ongoing in parallel
+				return false, nil
+			}
+			return false, fmt.Errorf("Error forking %s/%s: %v", g.organization, sourceName, err)
+		}
+		return true, nil
+	}, time.Second * 2, time.Minute * 30)
+	if err1 != nil {
+		return nil, fmt.Errorf("Failed waiting for repo %s/%s: %v", g.organization, sourceName, err1)
+	}
+
+	err2 := utils.WaitUntilWithInterval(func() (done bool, err error) {
+		// Using this to detect repo is created and populated with content
+		// https://stackoverflow.com/questions/33666838/determine-if-a-fork-is-ready
+		_, _, err = g.client.Repositories.ListCommits(ctx, g.organization, fork.GetName(), &github.CommitsListOptions{})
+		if err != nil {
+			return false, nil
+		}
+		return true, nil
+	}, time.Second * 2, time.Minute * 10)
+	if err2 != nil {
+		return nil, fmt.Errorf("Failed waiting for repo %s/%s: %v", g.organization, sourceName, err2)
+	}
+
+	editedRepo := &github.Repository{
+		Name: github.String(targetName),
+	}
+
+	repo, _, err3 := g.client.Repositories.Edit(ctx, g.organization, fork.GetName(), editedRepo)
+	if err3 != nil {
+		return nil, fmt.Errorf("Error renaming %s/%s to %s: %v\n", g.organization, fork.GetName(), targetName, err3)
+	}
+
+	return repo, nil
 }
