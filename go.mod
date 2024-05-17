@@ -8,7 +8,7 @@ require (
 	github.com/argoproj/argo-cd/v2 v2.10.8
 	github.com/avast/retry-go/v4 v4.3.3
 	github.com/aws/aws-sdk-go-v2 v1.24.1
-	github.com/aws/aws-sdk-go-v2/config v1.25.12
+	github.com/aws/aws-sdk-go-v2/config v1.26.2
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.135.0
 	github.com/codeready-toolchain/api v0.0.0-20231217224957-34f7cb3fcbf7
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20220523142428-2558e76260fb
@@ -24,6 +24,7 @@ require (
 	github.com/gosuri/uiprogress v0.0.1
 	github.com/gosuri/uitable v0.0.4
 	github.com/h2non/gock v1.2.0
+	github.com/konflux-ci/image-controller v0.0.0-20240517120231-4f18f640e7d9
 	github.com/konflux-ci/integration-service v0.0.0-20240513113947-6c76e6e0eb83
 	github.com/konflux-ci/operator-toolkit v0.0.0-20240402130556-ef6dcbeca69d
 	github.com/magefile/mage v1.13.0
@@ -39,10 +40,9 @@ require (
 	github.com/redhat-appstudio-qe/perf-monitoring/api v0.0.0-20231003074147-a076f9e620da
 	github.com/redhat-appstudio/application-api v0.0.0-20231026192857-89515ad2504f
 	github.com/redhat-appstudio/build-service v0.0.0-20240130032352-f0efbb6ad6e2
-	github.com/konflux-ci/image-controller v0.0.0-20231003082540-48893226ba8b
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20240126122210-0e2ee7e2e5b0
 	github.com/redhat-appstudio/release-service v0.0.0-20240126184040-c1b86f4617e1
-	github.com/redhat-appstudio/remote-secret v0.0.0-20230713072146-a6094c712436
+	github.com/redhat-appstudio/remote-secret v0.0.0-20240103070316-c146261dd544
 	github.com/redhat-appstudio/service-provider-integration-operator v0.2023.22-0.20230713080056-eae17aa8c172
 	github.com/slack-go/slack v0.12.3
 	github.com/spf13/cobra v1.8.0
@@ -127,7 +127,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.14.11 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.2.10 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.5.10 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.7.1 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.7.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.10.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.10.10 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.18.7 // indirect
@@ -191,10 +191,10 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/errors v0.21.0 // indirect
-	github.com/go-openapi/jsonpointer v0.20.0 // indirect
-	github.com/go-openapi/jsonreference v0.20.2 // indirect
+	github.com/go-openapi/jsonpointer v0.20.2 // indirect
+	github.com/go-openapi/jsonreference v0.20.4 // indirect
 	github.com/go-openapi/strfmt v0.22.0 // indirect
-	github.com/go-openapi/swag v0.22.4 // indirect
+	github.com/go-openapi/swag v0.22.7 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.17.0 // indirect
@@ -277,6 +277,7 @@ require (
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/prometheus/statsd_exporter v0.23.1 // indirect
 	github.com/redhat-appstudio/application-service v0.0.0-20230717184417-67d31a01a776 // indirect
+	github.com/redhat-appstudio/image-controller v0.0.0-20231003082540-48893226ba8b // indirect
 	github.com/redhat-appstudio/operator-toolkit v0.0.0-20231201124606-2087182322ae // indirect
 	github.com/redhat-developer/alizer/go v0.0.0-20230516215932-135a2bb3fb90 // indirect
 	github.com/redhat-developer/gitops-generator v0.0.0-20230614175323-aff86c6bc55e // indirect
@@ -313,7 +314,7 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa // indirect
+	golang.org/x/exp v0.0.0-20231226003508-02704c960a9b // indirect
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/net v0.24.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
@@ -336,7 +337,7 @@ require (
 	k8s.io/component-base v0.29.2 // indirect
 	k8s.io/component-helpers v0.28.5 // indirect
 	k8s.io/kube-aggregator v0.26.4 // indirect
-	k8s.io/kube-openapi v0.0.0-20231113174909-778a5567bc1e // indirect
+	k8s.io/kube-openapi v0.0.0-20240103051144-eec4567ac022 // indirect
 	k8s.io/kubernetes v1.28.5 // indirect
 	k8s.io/pod-security-admission v0.26.1 // indirect
 	oras.land/oras-go v1.1.0 // indirect
