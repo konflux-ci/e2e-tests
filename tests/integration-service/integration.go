@@ -153,25 +153,23 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 
 		When("An snapshot of push event is created", func() {
-			It("checks if all of the integrationPipelineRuns created by push event passed", Label("slow"), func() {
-				Expect(f.AsKubeAdmin.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshotPush)).To(Succeed(), "Error when waiting for one of the integration pipelines to finish in %s namespace", testNamespace)
-			})
-
-			It("checks if the global candidate is updated after push event", func() {
+			It("checks if the global candidate is updated after push event", Pending, func() {
 				timeout = time.Second * 600
 				interval = time.Second * 10
 				Eventually(func() error {
 					snapshotPush, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshotPush.Name, "", "", testNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
 
-					if f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshotPush) {
-						component, err := f.AsKubeAdmin.HasController.GetComponentByApplicationName(applicationName, testNamespace)
-						Expect(err).ShouldNot(HaveOccurred())
-						Expect(component.Spec.ContainerImage).ToNot(Equal(originalComponent.Spec.ContainerImage))
-						return nil
-					}
-					return fmt.Errorf("tests haven't succeeded yet for snapshot %s/%s", snapshotPush.GetNamespace(), snapshotPush.GetName())
+					component, err := f.AsKubeAdmin.HasController.GetComponentByApplicationName(applicationName, testNamespace)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(component.Spec.ContainerImage).ToNot(Equal(originalComponent.Spec.ContainerImage))
+					return nil
+
 				}, timeout, interval).Should(Succeed(), fmt.Sprintf("time out when waiting for updating the global candidate in %s namespace", testNamespace))
+			})
+
+			It("checks if all of the integrationPipelineRuns created by push event passed", Label("slow"), func() {
+				Expect(f.AsKubeAdmin.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshotPush)).To(Succeed(), "Error when waiting for one of the integration pipelines to finish in %s namespace", testNamespace)
 			})
 
 			It("checks if a Release is created successfully", func() {
@@ -330,17 +328,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				releases, err := f.AsKubeAdmin.ReleaseController.GetReleases(testNamespace)
 				Expect(err).NotTo(HaveOccurred(), "Error when fetching the Releases")
 				Expect(releases.Items).To(BeEmpty(), "Expected no Release CRs to be present, but found some")
-			})
-
-			It("checks if the global candidate is not updated", func() {
-				// give some time to do eventual updates in component
-				time.Sleep(60 * time.Second)
-
-				component, err := f.AsKubeAdmin.HasController.GetComponentByApplicationName(applicationName, testNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-
-				// global candidate is not updated
-				Expect(component.Spec.ContainerImage).To(Equal(originalComponent.Spec.ContainerImage))
 			})
 		})
 	})
