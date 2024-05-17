@@ -10,7 +10,7 @@ import (
 
 func IsTargetSecretLinkedToRightSA(ns, imageRemoteSecretName, serviceAccountName string, target rs.TargetStatus) {
 	Expect(target.Namespace).To(Equal(ns))
-	Expect(target.SecretName).To(Equal(imageRemoteSecretName))
+	Expect(target.DeployedSecret.Name).To(Equal(imageRemoteSecretName))
 	Expect(target.ServiceAccountNames).To(HaveLen(1))
 	Expect(target.ServiceAccountNames[0]).To(Equal(serviceAccountName))
 }

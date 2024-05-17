@@ -141,7 +141,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "component-an
 		})
 
 		It("checks if image pull secret is correct", func() {
-			IsRobotAccountTokenCorrect(targets[0].SecretName, namespace, "", nil, fw)
+			IsRobotAccountTokenCorrect(targets[0].DeployedSecret.Name, namespace, "", nil, fw)
 		})
 	})
 })

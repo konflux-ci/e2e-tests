@@ -206,11 +206,11 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "image-reposi
 		})
 
 		It("checks if image pull secret is correct", func() {
-			IsRobotAccountTokenCorrect(pullTargets[0].SecretName, namespace, "pull", imageRepository, fw)
+			IsRobotAccountTokenCorrect(pullTargets[0].DeployedSecret.Name, namespace, "pull", imageRepository, fw)
 		})
 
 		It("checks if image push secret is correct", func() {
-			IsRobotAccountTokenCorrect(pushTargets[0].SecretName, namespace, "push", imageRepository, fw)
+			IsRobotAccountTokenCorrect(pushTargets[0].DeployedSecret.Name, namespace, "push", imageRepository, fw)
 		})
 
 	})
