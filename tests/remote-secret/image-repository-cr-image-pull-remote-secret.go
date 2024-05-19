@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"time"
 
+	image "github.com/konflux-ci/image-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	image "github.com/redhat-appstudio/image-controller/api/v1alpha1"
 	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 )
@@ -20,7 +20,7 @@ import (
  * Description: SVPI-574 - Ensure existence of image pull remote secret and image pull secret when ImageRepository is created
  *              SVPI-652 - Ensure existence of image push remote secret and image push secret when ImageRepository is created
  * Note: This test covers the preferred approach (ImageRepository CR) that it is already in prod
- * More info: https://github.com/redhat-appstudio/image-controller#general-purpose-image-repository
+ * More info: https://github.com/konflux-ci/image-controller#general-purpose-image-repository
  */
 
 var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "image-repository-cr-image-pull-remote-secret"), func() {
@@ -206,11 +206,11 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "image-reposi
 		})
 
 		It("checks if image pull secret is correct", func() {
-			IsRobotAccountTokenCorrect(pullTargets[0].SecretName, namespace, "pull", imageRepository, fw)
+			IsRobotAccountTokenCorrect(pullTargets[0].DeployedSecret.Name, namespace, "pull", imageRepository, fw)
 		})
 
 		It("checks if image push secret is correct", func() {
-			IsRobotAccountTokenCorrect(pushTargets[0].SecretName, namespace, "push", imageRepository, fw)
+			IsRobotAccountTokenCorrect(pushTargets[0].DeployedSecret.Name, namespace, "push", imageRepository, fw)
 		})
 
 	})

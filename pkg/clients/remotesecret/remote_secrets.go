@@ -84,7 +84,7 @@ func (s *RemoteSecretController) GetTargetSecretName(targets []rs.TargetStatus, 
 
 	for _, t := range targets {
 		if t.Namespace == targetNamespace {
-			return t.SecretName
+			return t.DeployedSecret.Name
 		}
 	}
 

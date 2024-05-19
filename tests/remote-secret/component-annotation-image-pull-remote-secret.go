@@ -18,7 +18,7 @@ import (
  * Component: remote secret
  * Description: SVPI-574 - Ensure existence of image pull remote secret and image pull secret when component is created
  * Note: This test covers the current approach (component annotation)
- * More info: https://github.com/redhat-appstudio/image-controller#legacy-deprecated-component-image-repository
+ * More info: https://github.com/konflux-ci/image-controller#legacy-deprecated-component-image-repository
  */
 
 var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "component-annotation-image-pull-remote-secret"), func() {
@@ -141,7 +141,7 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "component-an
 		})
 
 		It("checks if image pull secret is correct", func() {
-			IsRobotAccountTokenCorrect(targets[0].SecretName, namespace, "", nil, fw)
+			IsRobotAccountTokenCorrect(targets[0].DeployedSecret.Name, namespace, "", nil, fw)
 		})
 	})
 })

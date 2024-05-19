@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/redhat-appstudio/image-controller/pkg/quay"
+	"github.com/konflux-ci/image-controller/pkg/quay"
 )
 
 type QuayClientMock struct {

@@ -1,16 +1,16 @@
 package remotesecret
 
 import (
+	image "github.com/konflux-ci/image-controller/api/v1alpha1"
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
-	image "github.com/redhat-appstudio/image-controller/api/v1alpha1"
 	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
 )
 
 func IsTargetSecretLinkedToRightSA(ns, imageRemoteSecretName, serviceAccountName string, target rs.TargetStatus) {
 	Expect(target.Namespace).To(Equal(ns))
-	Expect(target.SecretName).To(Equal(imageRemoteSecretName))
+	Expect(target.DeployedSecret.Name).To(Equal(imageRemoteSecretName))
 	Expect(target.ServiceAccountNames).To(HaveLen(1))
 	Expect(target.ServiceAccountNames[0]).To(Equal(serviceAccountName))
 }
