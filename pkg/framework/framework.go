@@ -81,11 +81,13 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 	if err != nil {
 		return nil, err
 	}
+
 	if len(options) == 1 {
 		option = options[0]
 	} else {
 		option = utils.Options{}
 	}
+
 	// https://issues.redhat.com/browse/CRT-1670
 	if len(userName) > 20 {
 		GinkgoWriter.Printf("WARNING: username %q is longer than 20 characters - the tenant namespace prefix will be shortened to %s\n", userName, userName[:20])
