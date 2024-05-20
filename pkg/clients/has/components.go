@@ -316,7 +316,7 @@ func (h *HasController) DeleteComponent(name string, namespace string, reportErr
 func (h *HasController) DeleteAllComponentsInASpecificNamespace(namespace string, timeout time.Duration) error {
 	// temporary logs
 	start := time.Now()
-	GinkgoWriter.Println("Start to delete all components in namespace '%s' at %s", namespace, start.String())
+	GinkgoWriter.Printf("Start to delete all components in namespace '%s' at %s\n", namespace, start.String())
 
 	if err := h.KubeRest().DeleteAllOf(context.Background(), &appservice.Component{}, rclient.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting components from the namespace %s: %+v", namespace, err)
@@ -333,7 +333,7 @@ func (h *HasController) DeleteAllComponentsInASpecificNamespace(namespace string
 
 	// temporary logs
 	deletionTime := time.Since(start).Minutes()
-	GinkgoWriter.Println("Finish to delete all components in namespace '%s' at %s. It took '%f' minutes", namespace, time.Now().Format(time.RFC3339), deletionTime)
+	GinkgoWriter.Printf("Finish to delete all components in namespace '%s' at %s. It took '%f' minutes\n", namespace, time.Now().Format(time.RFC3339), deletionTime)
 
 	return err
 }
