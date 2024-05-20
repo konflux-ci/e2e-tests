@@ -52,6 +52,10 @@ func purgeCi(f *framework.Framework, username string) error {
 }
 
 func Purge() error {
+	if !MainContexts[0].Opts.Purge {
+		return nil
+	}
+
 	errCounter := 0
 
 	for _, ctx := range MainContexts {

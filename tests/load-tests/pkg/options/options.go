@@ -40,5 +40,10 @@ func (o *Opts) ProcessOptions() error {
 	}
 
 	o.JourneyUntil = time.Now().UTC().Add(parsed)
+
+	// Option '--purge-only' implies '--purge'
+	if o.PurgeOnly {
+		o.Purge = true
+	}
 	return nil
 }
