@@ -55,10 +55,22 @@ func NewFramework(userName string, stageConfig ...utils.Options) (*Framework, er
 	return NewFrameworkWithTimeout(userName, time.Second*60, stageConfig...)
 }
 
-func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...utils.Options) (*Framework, error) {
+// This periodically refreshes framework for Stage user because of Keycloak access token expires in 15 minutes
+func refreshFrameworkStage(currentFramework *Framework, userName string, timeout time.Duration, options ...utils.Options) {
+	for {
+		time.Sleep(time.Minute * 10)
+		fw, err := newFrameworkWithTimeout(userName, timeout, options...)
+		if err != nil {
+			fmt.Printf("ERROR: Failed refreshing framework for user %s: %+v\n", userName, err)
+			return
+		}
+		*currentFramework = *fw
+	}
+}
+
+func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...utils.Options) (*Framework, error) {
 	var err error
 	var k *kubeCl.K8SClient
-	var supplyopts utils.Options
 	var clusterAppDomain, openshiftConsoleHost string
 
 	if userName == "" {
@@ -67,10 +79,6 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 	isStage, err := utils.CheckOptions(options)
 	if err != nil {
 		return nil, err
-	}
-	if isStage {
-		options[0].ToolchainApiUrl = fmt.Sprintf("%s/workspaces/%s", options[0].ToolchainApiUrl, userName)
-		supplyopts = options[0]
 	}
 	// https://issues.redhat.com/browse/CRT-1670
 	if len(userName) > 20 {
@@ -82,7 +90,7 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 
 	err = retry.Do(
 		func() error {
-			if k, err = kubeCl.NewDevSandboxProxyClient(userName, isStage, supplyopts); err != nil {
+			if k, err = kubeCl.NewDevSandboxProxyClient(userName, isStage, options[0]); err != nil {
 				GinkgoWriter.Printf("error when creating dev sandbox proxy client: %+v\n", err)
 			}
 			return err
@@ -136,6 +144,25 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 		UserName:             k.UserName,
 		UserToken:            k.UserToken,
 	}, nil
+}
+
+func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...utils.Options) (*Framework, error) {
+	isStage, err := utils.CheckOptions(options)
+	if err != nil {
+		return nil, err
+	}
+
+	if isStage {
+		options[0].ToolchainApiUrl = fmt.Sprintf("%s/workspaces/%s", options[0].ToolchainApiUrl, userName)
+	}
+
+	fw, err := newFrameworkWithTimeout(userName, timeout, options...)
+
+	if isStage {
+		go refreshFrameworkStage(fw, userName, timeout, options...)
+	}
+
+	return fw, err
 }
 
 func InitControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
