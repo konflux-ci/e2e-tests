@@ -697,12 +697,6 @@ func SetupSourceBuild() {
 		return
 	}
 
-	// Update CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE env variable with the new bundle
-	// klog.Infof("SETTING ENV VAR %s to value %s\n", constants.CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE_ENV, newSourceBuildPipeline.String())
-	// err = os.Setenv(constants.CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE_ENV, newSourceBuildPipeline.String())
-	// // if err != nil {
-	// // 	klog.Errorf("error while setting env: %v\n", err)
-	// // }
 	fmt.Printf("custom_source_image_bundle=%s\n", newSourceBuildPipeline.String())
 }
 
