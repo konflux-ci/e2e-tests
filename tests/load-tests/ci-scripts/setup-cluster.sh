@@ -35,7 +35,7 @@ if [ "${TWEAK_INFRA_DEPLOYMENTS:-false}" == "true" ]; then
     INFRA_DEPLOYMENTS_BRANCH="tekton-tuning-$(mktemp -u XXXX)"
     envsubst <tests/load-tests/ci-scripts/tekton-performance/update-tekton-config-performance.yaml >"$infra_deployment_dir/components/pipeline-service/development/update-tekton-config-performance.yaml"
     pushd "$infra_deployment_dir"
-    git checkout -b "$INFRA_DEPLOYMENTS_BRANCH" origin/main
+    git checkout -b "$INFRA_DEPLOYMENTS_BRANCH" upstream/main
     git add "$infra_deployment_dir/components/pipeline-service/development/update-tekton-config-performance.yaml"
     git commit -m "WIP: tekton performance tuning"
     git remote add tekton-tuning "https://${GITHUB_TOKEN}@github.com/$INFRA_DEPLOYMENTS_ORG/infra-deployments.git"
