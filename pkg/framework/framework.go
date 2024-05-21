@@ -72,6 +72,7 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 	var err error
 	var k *kubeCl.K8SClient
 	var clusterAppDomain, openshiftConsoleHost string
+	var option utils.Options
 
 	if userName == "" {
 		return nil, fmt.Errorf("userName cannot be empty when initializing a new framework instance")
@@ -79,6 +80,11 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 	isStage, err := utils.CheckOptions(options)
 	if err != nil {
 		return nil, err
+	}
+	if len(options) == 1 {
+		option = options[0]
+	} else {
+		option = utils.Options{}
 	}
 	// https://issues.redhat.com/browse/CRT-1670
 	if len(userName) > 20 {
@@ -90,7 +96,7 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 
 	err = retry.Do(
 		func() error {
-			if k, err = kubeCl.NewDevSandboxProxyClient(userName, isStage, options[0]); err != nil {
+			if k, err = kubeCl.NewDevSandboxProxyClient(userName, isStage, option); err != nil {
 				GinkgoWriter.Printf("error when creating dev sandbox proxy client: %+v\n", err)
 			}
 			return err
