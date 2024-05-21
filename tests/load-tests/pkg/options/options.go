@@ -2,7 +2,7 @@ package options
 
 import "encoding/json"
 import "fmt"
-import "io/ioutil"
+import "os"
 import "time"
 
 // Struct to hold command line options
@@ -57,7 +57,7 @@ func (o *Opts) ProcessOptions() error {
 	}
 
 	// Dump options to JSON file in putput directory for refference
-	err3 := ioutil.WriteFile(o.OutputDir + "/load-test-options.json", jsonOptions, 0644)
+	err3 := os.WriteFile(o.OutputDir + "/load-test-options.json", jsonOptions, 0644)
 	if err3 != nil {
 		return fmt.Errorf("Error writing to file:", err3)
 	}
