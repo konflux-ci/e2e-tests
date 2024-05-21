@@ -9,7 +9,7 @@ import (
 	//	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 )
 
-// User represents a user in the list
+// Represents a user in the list of precreated users (e.g. Stage 'users.json')
 type User struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -19,6 +19,7 @@ type User struct {
 	Verified bool   `json:"verified"`
 }
 
+// Load 'users.json' into a slice of User structs
 func LoadStageUsers(filePath string) ([]User, error) {
 	jsonData, err := os.ReadFile(filePath)
 	if err != nil {

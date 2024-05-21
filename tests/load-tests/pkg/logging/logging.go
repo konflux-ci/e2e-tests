@@ -14,6 +14,7 @@ var FATAL = 5
 
 var Logger = logger{}
 
+// Logger setup
 type logger struct {
 	Level    int  // 0 = trace, 1 = debug, 2 = info, 3 = warning, 4 = error, 5 = fatal
 	FailFast bool // Should even errors be fatal?
@@ -59,7 +60,7 @@ func (l *logger) Fatal(msg string, params ...interface{}) {
 	}
 }
 
-// Log test failure with error code so we can compile a statistic later
+// Log test failure with error code to CSV file so we can compile a statistic later
 func (l *logger) Fail(errCode int, msg string, params ...interface{}) error {
 	errorMessage := fmt.Sprintf("FAIL(%d): %s", errCode, msg)
 	klog.Infof(errorMessage, params...)

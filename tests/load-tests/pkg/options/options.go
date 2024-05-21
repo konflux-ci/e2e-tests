@@ -36,12 +36,13 @@ type Opts struct {
 	WaitPipelines                 bool
 }
 
+// Pre-process load-test options before running the test
 func (o *Opts) ProcessOptions() error {
+	// Parse --journey-duration and populate JourneyUntil
 	parsed, err := time.ParseDuration(o.JourneyDuration)
 	if err != nil {
 		return err
 	}
-
 	o.JourneyUntil = time.Now().UTC().Add(parsed)
 
 	// Option '--purge-only' implies '--purge'

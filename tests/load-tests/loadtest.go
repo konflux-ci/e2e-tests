@@ -109,6 +109,7 @@ func main() {
 	logging.MeasurementsStop()
 }
 
+// Single user journey
 func userJourneyThread(threadCtx *journey.MainContext) {
 	defer threadCtx.ThreadsWG.Done()
 
@@ -230,6 +231,7 @@ func userJourneyThread(threadCtx *journey.MainContext) {
 
 }
 
+// Single application journey (there can be multiple parallel apps per user)
 func perApplicationThread(perApplicationCtx *journey.PerApplicationContext) {
 	defer perApplicationCtx.PerApplicationWG.Done()
 
@@ -271,6 +273,7 @@ func perApplicationThread(perApplicationCtx *journey.PerApplicationContext) {
 
 }
 
+// Single component journey (there can be multiple parallel comps per app)
 func perComponentThread(perComponentCtx *journey.PerComponentContext) {
 	defer perComponentCtx.PerComponentWG.Done()
 

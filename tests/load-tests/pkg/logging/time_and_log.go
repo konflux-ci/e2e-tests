@@ -8,15 +8,17 @@ import "os"
 import "encoding/csv"
 import "sync"
 
-// Channel to send measurements to
-var measurementsQueue chan MeasurementEntry
-var errorsQueue chan ErrorEntry
-var measurementsOutput string
-var errorsOutput string
-var writerWaitGroup sync.WaitGroup
-var batchSize int
+var measurementsQueue chan MeasurementEntry // channel to send measurements to
+var errorsQueue chan ErrorEntry // chanel to send failures to
 
-// Data struct represents the data about measurement to be stored
+var measurementsOutput string // path to CSV where to save measurements
+var errorsOutput string // path to CSV where to save measurements
+
+var writerWaitGroup sync.WaitGroup
+
+var batchSize int // when we accumulate this many of records, we dump them to CSV (this is to batch writest to the file, possibly make it faster)
+
+// Represents the data about measurement we want to store to CSV
 type MeasurementEntry struct {
 	Timestamp  time.Time
 	Metric     string
@@ -25,21 +27,25 @@ type MeasurementEntry struct {
 	Error      error
 }
 
+// Helper function to convert struct to slice of string which is needed when converting to CSV
 func (e *MeasurementEntry) GetSliceOfStrings() []string {
 	return []string{e.Timestamp.Format(time.RFC3339Nano), e.Metric, fmt.Sprintf("%f", e.Duration.Seconds()), e.Parameters, fmt.Sprintf("%v", e.Error)}
 }
 
-// Data struct represents the data about failure to be stored
+// Represents the data about failure we want to store to CSV
 type ErrorEntry struct {
 	Timestamp time.Time
 	Code      int
 	Message   string
 }
 
+// Helper function to convert struct to slice of string which is needed when converting to CSV
 func (e *ErrorEntry) GetSliceOfStrings() []string {
 	return []string{e.Timestamp.Format(time.RFC3339Nano), fmt.Sprintf("%d", e.Code), e.Message}
 }
 
+
+// Initialize channels and start functions that are processing records
 func MeasurementsStart(directory string) {
 	batchSize = 3
 
@@ -54,12 +60,14 @@ func MeasurementsStart(directory string) {
 	go errorsWriter()
 }
 
+// Close channels and wait to ensure any remaining records are written to CSV
 func MeasurementsStop() {
 	close(measurementsQueue)
 	close(errorsQueue)
 	writerWaitGroup.Wait()
 }
 
+// Append slice to a CSV file
 func writeToCSV(outfile string, batch [][]string) error {
 	file, err := os.OpenFile(outfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -79,6 +87,7 @@ func writeToCSV(outfile string, batch [][]string) error {
 	return nil
 }
 
+// Process measurements comming via channel, batching writes to CSV file
 func measurementsWriter() {
 	defer writerWaitGroup.Done()
 
@@ -113,6 +122,7 @@ func measurementsWriter() {
 	Logger.Debug("Finished measurementsWriter, %d measurements processed", counter)
 }
 
+// Process failures comming via channel, batching writes to CSV file
 // TODO deduplicate this and MeasurementsWriter somehow
 func errorsWriter() {
 	defer writerWaitGroup.Done()
@@ -148,6 +158,9 @@ func errorsWriter() {
 	Logger.Debug("Finished errorsWriter, %d errors processed", counter)
 }
 
+// Measure duration of a given function run with given parameters and return what function returned
+// This only returns first (data) and last (error) returned value. Maybe this
+// can be generalized completely, but it is good enough for our needs.
 func Measure(fn interface{}, params ...interface{}) (interface{}, error) {
 	funcValue := reflect.ValueOf(fn)
 
@@ -195,6 +208,7 @@ func Measure(fn interface{}, params ...interface{}) (interface{}, error) {
 	return nil, errInterValue
 }
 
+// Store given measurement
 func LogMeasurement(metric string, params map[string]string, elapsed time.Duration, result string, err error) {
 	Logger.Trace("Measured function: %s, Duration: %s, Result: %s, Error: %v\n", metric, elapsed, result, err)
 	data := MeasurementEntry{
