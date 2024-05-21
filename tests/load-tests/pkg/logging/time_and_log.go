@@ -171,8 +171,7 @@ func Measure(fn interface{}, params ...interface{}) (interface{}, error) {
 		args[i] = reflect.ValueOf(params[i])
 	}
 
-	var paramsStorable map[string]string
-	paramsStorable = make(map[string]string)
+	paramsStorable := make(map[string]string)
 	for i := 0; i < numParams; i++ {
 		key := fmt.Sprintf("%v", reflect.TypeOf(params[i]))
 		value := fmt.Sprintf("%+v", reflect.ValueOf(params[i]))
