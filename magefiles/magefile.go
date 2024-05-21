@@ -656,7 +656,7 @@ func SetupSourceBuild() {
 		}
 	}
 	// Update the source-build task image reference to SOURCE_IMAGE
-	var currentSourceTaskRef string
+	var currentSourceTaskBundle string
 	for i := range dockerPipelineObject.PipelineSpec().Tasks {
 		t := &dockerPipelineObject.PipelineSpec().Tasks[i]
 		params := t.TaskRef.Params
@@ -667,16 +667,19 @@ func SetupSourceBuild() {
 				lastBundle = &t.TaskRef.Params[i]
 			} else if param.Name == "name" && param.Value.StringVal == "source-build" {
 				sourceTask = true
+				//Change the image in the bundle
 			}
 		}
 		if sourceTask {
-			currentSourceTaskRef = lastBundle.Value.StringVal
-			klog.Infof("found current task ref %s", currentSourceTaskRef)
-			lastBundle.Value = *tektonapi.NewStructuredValues(sourceImage)
+			currentSourceTaskBundle = lastBundle.Value.StringVal
+			klog.Infof("found current source build task bundle: %s", currentSourceTaskBundle)
+			newSourceTaskBundle := createNewTaskBundleAndPush(currentSourceTaskBundle, sourceImage)
+			klog.Infof("created new source build task bundle: %s", newSourceTaskBundle)
+			lastBundle.Value = *tektonapi.NewStructuredValues(newSourceTaskBundle)
 			break
 		}
 	}
-	if currentSourceTaskRef == "" {
+	if currentSourceTaskBundle == "" {
 		klog.Errorf("failed to extract the Tekton Task from bundle: %+v", err)
 		return
 	}
@@ -696,8 +699,38 @@ func SetupSourceBuild() {
 		klog.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
 		return
 	}
-
+	// This output is consumed by the integration pipeline of build-task-dockerfiles repo, not printing it will break the CI
 	fmt.Printf("custom_source_image_bundle=%s\n", newSourceBuildPipeline.String())
+}
+
+func createNewTaskBundleAndPush(currentSourceTaskBundle, sourceImage string) string {
+	var newTaskYaml []byte
+	tektonObj, err := tekton.ExtractTektonObjectFromBundle(currentSourceTaskBundle, "task", "source-build")
+	if err != nil {
+		klog.Errorf("failed to extract the Tekton Task from bundle: %+v", err)
+		return ""
+	}
+	sourceTaskObject := tektonObj.(*tektonapi.Task)
+	klog.Infof("current source build task image: %v", sourceTaskObject.Spec.Steps[0].Image)
+	sourceTaskObject.Spec.Steps[0].Image = sourceImage
+	if newTaskYaml, err = yaml.Marshal(sourceTaskObject); err != nil {
+		klog.Errorf("error when marshalling a new pipeline to YAML: %v", err)
+		return ""
+	}
+
+	keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
+	authOption := remoteimg.WithAuthFromKeychain(keychain)
+
+	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
+	quayOrg := utils.GetEnv(constants.DEFAULT_QUAY_ORG_ENV, constants.DefaultQuayOrg)
+	newSourceBuildTaskImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
+	var newSourceBuildTask, _ = name.ParseReference(fmt.Sprintf("%s:task-bundle-%s", newSourceBuildTaskImg, tag))
+
+	if err = tekton.BuildAndPushTektonBundle(newTaskYaml, newSourceBuildTask, authOption); err != nil {
+		klog.Errorf("error when building/pushing a tekton task bundle: %v", err)
+		return ""
+	}
+	return newSourceBuildTask.String()
 }
 
 func BootstrapCluster() error {
