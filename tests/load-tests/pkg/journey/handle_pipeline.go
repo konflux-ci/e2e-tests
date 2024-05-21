@@ -94,9 +94,6 @@ func ValidatePipelineRunSignature(f *framework.Framework, namespace, appName, co
 			logging.Logger.Debug("PipelineRun for component %s in namespace %s do not have 'chains.tekton.dev/signed' annotation", compName, namespace)
 			return false, nil
 		}
-
-		logging.Logger.Trace("Still waiting for pipeline run annotation for component %s in namespace %s", compName, namespace)
-		return false, nil
 	}, interval, timeout)
 
 	return err
