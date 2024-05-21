@@ -53,13 +53,13 @@ func (o *Opts) ProcessOptions() error {
 	// Convert options struct to pretty JSON
 	jsonOptions, err2 := json.MarshalIndent(o, "", "  ")
 	if err2 != nil {
-		return fmt.Errorf("Error marshalling options:", err2)
+		return fmt.Errorf("Error marshalling options: %v", err2)
 	}
 
 	// Dump options to JSON file in putput directory for refference
 	err3 := os.WriteFile(o.OutputDir + "/load-test-options.json", jsonOptions, 0644)
 	if err3 != nil {
-		return fmt.Errorf("Error writing to file:", err3)
+		return fmt.Errorf("Error writing to file: %v", err3)
 	}
 
 	return nil
