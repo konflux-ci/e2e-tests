@@ -91,6 +91,9 @@ const (
 	// Bundle ref for a buildah-remote build
 	CUSTOM_BUILDAH_REMOTE_PIPELINE_BUILD_BUNDLE_ENV string = "CUSTOM_BUILDAH_REMOTE_PIPELINE_BUILD_BUNDLE"
 
+	//Bundle ref for custom source-build, format example: quay.io/redhat-appstudio-qe/test-images:pipeline-bundle-1715584704-fftb
+	CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE_ENV string = "CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE"
+
 	// QE slack bot token used for delivering messages about critical failures during CI runs
 	SLACK_BOT_TOKEN_ENV = "SLACK_BOT_TOKEN"
 

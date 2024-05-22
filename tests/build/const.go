@@ -17,6 +17,7 @@ const (
 	dummyPipelineBundleRef           = "quay.io/redhat-appstudio-qe/dummy-pipeline-bundle@sha256:9805fc3f309af8f838622e49d3e7705d8364eb5c8287043d5725f3ef12232f24"
 	buildTemplatesTestLabel          = "build-templates-e2e"
 	buildTemplatesKcpTestLabel       = "build-templates-kcp-e2e"
+	sourceBuildTestLabel             = "source-build-e2e"
 
 	helloWorldComponentGitSourceRepoName = "devfile-sample-hello-world"
 	helloWorldComponentDefaultBranch     = "default"

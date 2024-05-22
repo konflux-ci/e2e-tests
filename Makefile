@@ -71,3 +71,6 @@ clean-registered-servers:
 
 setup-multi-platform-tests:
 	./mage -v SetupMultiPlatformTests
+
+setup-source-build:
+	./mage -v SetupSourceBuild
