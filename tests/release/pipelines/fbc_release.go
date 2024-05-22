@@ -100,7 +100,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 
 		var _ = Describe("Post-release verification", func() {
 			It("verifies that a build PipelineRun is created in dev namespace and succeeds", func() {
-				assertBuildPipelineRunCreated(*devFw, devNamespace, managedNamespace, fbcApplicationName, component)
+				assertBuildPipelineRunSucceeded(*devFw, devNamespace, managedNamespace, fbcApplicationName, component)
 			})
 
 			It("verifies the fbc release pipelinerun is running and succeeds", func() {
@@ -142,7 +142,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 
 		var _ = Describe("FBC hotfix post-release verification", func() {
 			It("verifies that a build PipelineRun is created in dev namespace and succeeds", func() {
-				assertBuildPipelineRunCreated(*devFw, devNamespace, managedNamespace, fbcHotfixAppName, component)
+				assertBuildPipelineRunSucceeded(*devFw, devNamespace, managedNamespace, fbcHotfixAppName, component)
 			})
 
 			It("verifies the fbc release pipelinerun is running and succeeds", func() {
@@ -186,7 +186,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 
 		var _ = Describe("FBC pre-GA post-release verification", func() {
 			It("verifies that a build PipelineRun is created in dev namespace and succeeds", func() {
-				assertBuildPipelineRunCreated(*devFw, devNamespace, managedNamespace, fbcPreGAAppName, component)
+				assertBuildPipelineRunSucceeded(*devFw, devNamespace, managedNamespace, fbcPreGAAppName, component)
 			})
 
 			It("verifies the fbc release pipelinerun is running and succeeds", func() {
@@ -200,12 +200,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 	})
 })
 
-func assertBuildPipelineRunCreated(devFw framework.Framework, devNamespace, managedNamespace, fbcAppName string, component *appservice.Component) {
+func assertBuildPipelineRunSucceeded(devFw framework.Framework, devNamespace, managedNamespace, fbcAppName string, component *appservice.Component) {
 	dFw := releasecommon.NewFramework(devWorkspace)
 	devFw = *dFw
 	// Create a ticker that ticks every 3 minutes
 	ticker := time.NewTicker(3 * time.Minute)
-	// Schedule the stop of the ticker after 10 minutes
+	// Schedule the stop of the ticker after 5 minutes
 	time.AfterFunc(5*time.Minute, func() {
 		ticker.Stop()
 		fmt.Println("Stopped executing every 3 minutes.")
