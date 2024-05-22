@@ -69,7 +69,7 @@ func MeasurementsStop() {
 
 // Append slice to a CSV file
 func writeToCSV(outfile string, batch [][]string) error {
-	file, err := os.OpenFile(outfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(outfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
 	}
