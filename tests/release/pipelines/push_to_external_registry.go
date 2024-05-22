@@ -17,7 +17,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/contract"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -139,30 +138,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed())
 		})
 
-		It("verifies that Release PipelineRun is triggered", func() {
-			Eventually(func() error {
-				pr, err := fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
-				if err != nil {
-					GinkgoWriter.Printf("release pipelineRun for release '%s' in namespace '%s' not created yet: %+v\n", releaseCR.GetName(), releaseCR.GetNamespace(), err)
-					return err
-				}
-				if !pr.HasStarted() {
-					return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
-				}
-				return nil
-			}, releasecommon.ReleasePipelineRunCreationTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out waiting for a pipelinerun to start for a release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
-		})
-
 		It("verifies that Release PipelineRun should eventually succeed", func() {
-			Eventually(func() error {
-				pr, err := fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
-				Expect(err).ShouldNot(HaveOccurred())
-				if !pr.IsDone() {
-					return fmt.Errorf("release pipelinerun %s/%s did not finish yet", pr.GetNamespace(), pr.GetName())
-				}
-				Expect(tekton.HasPipelineRunSucceeded(pr)).To(BeTrue(), fmt.Sprintf("release pipelinerun %s/%s did not succeed", pr.GetNamespace(), pr.GetName()))
-				return nil
-			}, releasecommon.ReleasePipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed())
+			Expect(fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
 		})
 
 		It("tests if the image was pushed to quay", func() {

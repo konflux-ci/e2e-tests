@@ -17,7 +17,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils/contract"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
@@ -251,61 +250,20 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed(), "timed out waiting for Release CRs to be created in %s namespace", devNamespace)
 		})
 
-		It("verifies that Release PipelineRun is triggered for each Release CR", func() {
-			Eventually(func() error {
-				releasePR1, err = fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR1.GetName(), releaseCR1.GetNamespace())
-				if err != nil {
-					GinkgoWriter.Printf("release pipelineRun for Release %s/%s not created yet: %+v\n", releaseCR1.GetNamespace(), releaseCR1.GetName(), err)
-					return err
-				}
-				releasePR2, err = fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR2.GetName(), releaseCR2.GetNamespace())
-				if err != nil {
-					GinkgoWriter.Printf("release pipelineRun for Release %s/%s not created yet: %+v\n", releaseCR2.GetNamespace(), releaseCR2.GetName(), err)
-					return err
-				}
-				var errMsg string
-				for _, pr := range []*pipeline.PipelineRun{releasePR1, releasePR2} {
-					Expect(tekton.HasPipelineRunFailed(pr)).ToNot(BeTrue(), fmt.Sprintf("Release PipelineRun %s/%s failed", pr.GetNamespace(), pr.GetName()))
-					if !pr.HasStarted() {
-						errMsg += fmt.Sprintf("Release PipelineRun %s/%s did not started yet\n", pr.GetNamespace(), pr.GetName())
-					}
-				}
-				if len(errMsg) > 1 {
-					return fmt.Errorf(errMsg)
-				}
-				return nil
-			}, releasecommon.ReleasePipelineRunCreationTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out waiting for a PipelineRun to start for each Release CR in %s namespace", managedNamespace))
-		})
+		It("verifies a release PipelineRun for each component started and succeeded in managed namespace", func() {
+			releasePR1, err = fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToGetStarted(releaseCR1, managedNamespace)
+			Expect(err).NotTo(HaveOccurred())
 
-		It("verifies a release PipelineRun for each component succeeded in managed namespace", func() {
-			Eventually(func() error {
-				var errMsg string
-				for _, pr := range []*pipeline.PipelineRun{releasePR1, releasePR2} {
-					pr, err = fw.AsKubeAdmin.TektonController.GetPipelineRun(pr.GetName(), pr.GetNamespace())
-					if err != nil {
-						return err
-					}
-					Expect(tekton.HasPipelineRunFailed(pr)).ToNot(BeTrue(), fmt.Sprintf("Release PipelineRun %s/%s failed", pr.GetNamespace(), pr.GetName()))
-					if pr.IsDone() {
-						Expect(tekton.HasPipelineRunSucceeded(pr)).To(BeTrue(), fmt.Sprintf("Release PipelineRun %s/%s did not succceed", pr.GetNamespace(), pr.GetName()))
-					} else {
-						errMsg += fmt.Sprintf("Release PipelineRun %s/%s did not finish yet\n", pr.GetNamespace(), pr.GetName())
-					}
-				}
-				if len(errMsg) > 1 {
-					return fmt.Errorf(errMsg)
-				}
-				return nil
-			}, releasecommon.ReleasePipelineRunCompletionTimeout, constants.PipelineRunPollingInterval).Should(Succeed())
+			releasePR2, err = fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToGetStarted(releaseCR2, managedNamespace)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR1, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR1.GetNamespace(), releaseCR1.GetName()))
+
+			Expect(fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR2, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR2.GetNamespace(), releaseCR2.GetName()))
 		})
 
 		It("validate the result of task create-pyxis-image contains image ids", func() {
 			Eventually(func() []string {
-				releasePR1, err = fw.AsKubeAdmin.TektonController.GetPipelineRun(releasePR1.GetName(), releasePR1.GetNamespace())
-				Expect(err).NotTo(HaveOccurred())
-				releasePR2, err = fw.AsKubeAdmin.TektonController.GetPipelineRun(releasePR2.GetName(), releasePR2.GetNamespace())
-				Expect(err).NotTo(HaveOccurred())
-
 				trReleaseLogs, err := fw.AsKubeAdmin.TektonController.GetTaskRunLogs(releasePR1.GetName(), "create-pyxis-image", releasePR1.GetNamespace())
 				Expect(err).NotTo(HaveOccurred())
 

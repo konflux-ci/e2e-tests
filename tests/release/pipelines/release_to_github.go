@@ -160,32 +160,24 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 			It("verifies release pipelinerun is running and succeeds", func() {
 				devFw = releasecommon.NewFramework(devWorkspace)
 				managedFw = releasecommon.NewFramework(managedWorkspace)
-
 				releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
-				Eventually(func() error {
-					releasePR, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
-					if err != nil {
-						return err
-					}
-					GinkgoWriter.Println("Release PR: ", releasePR.Name)
-					if !releasePR.IsDone() {
-						return fmt.Errorf("release pipelinerun %s in namespace %s did not finished yet", releasePR.Name, releasePR.Namespace)
-					}
-					return nil
-				}, releasecommon.ReleasePipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for release pipelinerun to succeed")
-				Expect(tekton.HasPipelineRunSucceeded(releasePR)).To(BeTrue(), fmt.Sprintf("release pipelinerun %s/%s did not succeed", releasePR.GetNamespace(), releasePR.GetName()))
+
+				Expect(managedFw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
+
+				releasePR, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("verifies release CR completed and set succeeded.", func() {
 				devFw = releasecommon.NewFramework(devWorkspace)
 				Eventually(func() error {
-					releaseCr, err := devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
+					releaseCR, err := devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 					if err != nil {
 						return err
 					}
-					GinkgoWriter.Println("Release CR: ", releaseCr.Name)
-					if !releaseCr.IsReleased() {
+					GinkgoWriter.Println("Release CR: ", releaseCR.Name)
+					if !releaseCR.IsReleased() {
 						return fmt.Errorf("release %s/%s is not marked as finished yet", releaseCR.GetNamespace(), releaseCR.GetName())
 					}
 					return nil
