@@ -2,12 +2,9 @@ package common
 
 import (
 	"context"
-	"strings"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 func (s *SuiteController) ListRoles(namespace string) (*rbacv1.RoleList, error) {
@@ -26,43 +23,6 @@ func (s *SuiteController) GetRole(roleName, namespace string) (*rbacv1.Role, err
 
 func (s *SuiteController) GetRoleBinding(rolebindingName, namespace string) (*rbacv1.RoleBinding, error) {
 	return s.KubeInterface().RbacV1().RoleBindings(namespace).Get(context.Background(), rolebindingName, metav1.GetOptions{})
-}
-
-// argoCDNamespaceRBACPresent returns a condition which waits for the Argo CD role/rolebindings to be set on the namespace.
-//   - This Role/RoleBinding allows Argo cd to deploy into the namespace (which is referred to as 'managing the namespace'), and
-//     is created by the GitOps Operator.
-func (s *SuiteController) argoCDNamespaceRBACPresent(namespace string) wait.ConditionFunc {
-	return func() (bool, error) {
-		roles, err := s.ListRoles(namespace)
-		if err != nil || roles == nil {
-			return false, nil
-		}
-
-		// The namespace should contain a 'gitops-service-argocd-' Role
-		roleFound := false
-		for _, role := range roles.Items {
-			if strings.HasPrefix(role.Name, constants.ArgoCDLabelValue+"-") {
-				roleFound = true
-			}
-		}
-		if !roleFound {
-			return false, nil
-		}
-
-		// The namespace should contain a 'gitops-service-argocd-' RoleBinding
-		roleBindingFound := false
-		roleBindings, err := s.ListRoleBindings(namespace)
-		if err != nil || roleBindings == nil {
-			return false, nil
-		}
-		for _, roleBinding := range roleBindings.Items {
-			if strings.HasPrefix(roleBinding.Name, constants.ArgoCDLabelValue+"-") {
-				roleBindingFound = true
-			}
-		}
-
-		return roleBindingFound, nil
-	}
 }
 
 // CreateRole creates a role with the provided name and namespace using the given list of rules
