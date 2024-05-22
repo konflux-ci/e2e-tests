@@ -7,7 +7,6 @@ import "time"
 import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/logging"
 
 import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
-import util "github.com/devfile/library/v2/pkg/util"
 import utils "github.com/redhat-appstudio/e2e-tests/pkg/utils"
 import appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 
@@ -58,20 +57,17 @@ func ValidateApplication(f *framework.Framework, name, namespace string) error {
 func HandleApplication(ctx *PerApplicationContext) error {
 	var err error
 
-	name := fmt.Sprintf("%s-app-%s", ctx.ParentContext.Username, util.GenerateRandomString(5))
-	logging.Logger.Debug("Creating application %s in namespace %s", name, ctx.ParentContext.Namespace)
+	logging.Logger.Debug("Creating application %s in namespace %s", ctx.ApplicationName, ctx.ParentContext.Namespace)
 
-	_, err = logging.Measure(CreateApplication, ctx.Framework, ctx.ParentContext.Namespace, time.Minute*60, name)
+	_, err = logging.Measure(CreateApplication, ctx.Framework, ctx.ParentContext.Namespace, time.Minute*60, ctx.ApplicationName)
 	if err != nil {
 		return logging.Logger.Fail(30, "Application failed creation: %v", err)
 	}
 
-	_, err = logging.Measure(ValidateApplication, ctx.Framework, name, ctx.ParentContext.Namespace)
+	_, err = logging.Measure(ValidateApplication, ctx.Framework, ctx.ApplicationName, ctx.ParentContext.Namespace)
 	if err != nil {
 		return logging.Logger.Fail(31, "Application failed validation: %v", err)
 	}
-
-	ctx.ApplicationName = name
 
 	return nil
 }

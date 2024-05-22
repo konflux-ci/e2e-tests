@@ -8,6 +8,7 @@ import loadtestutils "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg
 
 import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
 import appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
+import util "github.com/devfile/library/v2/pkg/util"
 
 // Pointers to all user journey thread contexts
 var MainContexts []*MainContext
@@ -122,6 +123,7 @@ func PerApplicationSetup(fn func(*PerApplicationContext), parentContext *MainCon
 			PerApplicationWG: perApplicationWG,
 			ApplicationIndex: applicationIndex,
 			ParentContext:    parentContext,
+			ApplicationName:  fmt.Sprintf("%s-app-%s", parentContext.Username, util.GenerateRandomString(5)),
 		}
 
 		parentContext.PerApplicationContexts = append(parentContext.PerApplicationContexts, perApplicationCtx)
@@ -156,6 +158,7 @@ func PerComponentSetup(fn func(*PerComponentContext), parentContext *PerApplicat
 			PerComponentWG: perComponentWG,
 			ComponentIndex: componentIndex,
 			ParentContext:  parentContext,
+			ComponentName:  fmt.Sprintf("%s-comp-%d", parentContext.ApplicationName, componentIndex),
 		}
 
 		parentContext.PerComponentContexts = append(parentContext.PerComponentContexts, perComponentCtx)
