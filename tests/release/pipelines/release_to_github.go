@@ -16,7 +16,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
 	releaseapi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
@@ -140,22 +139,11 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 						managedFw = releasecommon.NewFramework(managedWorkspace)
 					}
 				}()
-				Eventually(func() error {
-					buildPR, err = devFw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, sampApplicationName, devNamespace, "")
-					if err != nil {
-						return err
-					}
-					if !buildPR.IsDone() {
-						return fmt.Errorf("build pipelinerun %s in namespace %s did not finish yet", buildPR.Name, buildPR.Namespace)
-					}
-					Expect(tekton.HasPipelineRunSucceeded(buildPR)).To(BeTrue(), fmt.Sprintf("build pipelinerun %s/%s did not succeed", buildPR.GetNamespace(), buildPR.GetName()))
-					snapshot, err = devFw.AsKubeDeveloper.IntegrationController.GetSnapshot("", buildPR.Name, "", devNamespace)
-					if err != nil {
-						return err
-					}
-					return nil
-				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for build pipelinerun to be created")
+				buildPR, err = devFw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, sampApplicationName, devNamespace, "")
+				Expect(err).ShouldNot(HaveOccurred())
 				Expect(devFw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "", devFw.AsKubeDeveloper.TektonController, &has.RetryOptions{Retries: 3, Always: true}, nil)).To(Succeed())
+				snapshot, err = devFw.AsKubeDeveloper.IntegrationController.GetSnapshot("", buildPR.Name, "", devNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
 			})
 			It("verifies release pipelinerun is running and succeeds", func() {
 				devFw = releasecommon.NewFramework(devWorkspace)

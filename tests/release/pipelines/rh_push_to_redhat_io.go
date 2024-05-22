@@ -17,7 +17,6 @@ import (
 	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	releaseapi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
@@ -123,10 +122,11 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 		var _ = Describe("Post-release verification", func() {
 			It("verifies that a build PipelineRun is created in dev namespace and succeeds", func() {
 				devFw = releasecommon.NewFramework(devWorkspace)
+				managedFw = releasecommon.NewFramework(managedWorkspace)
 				// Create a ticker that ticks every 3 minutes
 				ticker := time.NewTicker(3 * time.Minute)
 				// Schedule the stop of the ticker after 15 minutes
-				time.AfterFunc(10*time.Minute, func() {
+				time.AfterFunc(15*time.Minute, func() {
 					ticker.Stop()
 					fmt.Println("Stopped executing every 3 minutes.")
 				})
@@ -134,24 +134,14 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 				go func() {
 					for range ticker.C {
 						devFw = releasecommon.NewFramework(devWorkspace)
+						managedFw = releasecommon.NewFramework(managedWorkspace)
 					}
 				}()
-				Eventually(func() error {
-					buildPR, err = devFw.AsKubeDeveloper.HasController.GetComponentPipelineRun(testComponent.Name, rhioApplicationName, devNamespace, "")
-					if err != nil {
-						return err
-					}
-					if !buildPR.IsDone() {
-						return fmt.Errorf("build pipelinerun %s in namespace %s did not finish yet", buildPR.Name, buildPR.Namespace)
-					}
-					Expect(tekton.HasPipelineRunSucceeded(buildPR)).To(BeTrue(), fmt.Sprintf("build pipelinerun %s/%s did not succeed", buildPR.GetNamespace(), buildPR.GetName()))
-					snapshot, err = devFw.AsKubeDeveloper.IntegrationController.GetSnapshot("", buildPR.Name, "", devNamespace)
-					if err != nil {
-						return err
-					}
-					return nil
-				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for build pipelinerun to be created")
-				Expect(devFw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(testComponent, "", devFw.AsKubeDeveloper.TektonController, &has.RetryOptions{Retries: 3, Always: true}, nil)).To(Succeed())
+				buildPR, err = devFw.AsKubeDeveloper.HasController.GetComponentPipelineRun(testComponent.Name, rhioApplicationName, devNamespace, "")
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(devFw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(testComponent, "", devFw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 3, Always: true}, buildPR)).To(Succeed())
+				snapshot, err = devFw.AsKubeDeveloper.IntegrationController.GetSnapshot("", buildPR.Name, "", devNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
 			})
 			It("verifies the rhio release pipelinerun is running and succeeds", func() {
 				devFw = releasecommon.NewFramework(devWorkspace)
