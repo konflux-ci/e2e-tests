@@ -35,7 +35,7 @@ spec:
           - name: SCRIPT
             value: $(params.build-definitions-update-script)
           - name: TARGET_GH_REPO
-            value: redhat-appstudio/build-definitions
+            value: konflux-ci/build-definitions
           - name: GITHUB_APP_INSTALLATION_ID
             value: "35269675"
         taskRef:
