@@ -218,11 +218,9 @@ func (i *InstallAppStudio) cloneInfraDeployments() error {
 		URL:           url,
 		ReferenceName: plumbing.ReferenceName(refName),
 		Progress:      os.Stdout,
+		RemoteName:    "upstream",
 	})
 
-	if _, err := repo.CreateRemote(&config.RemoteConfig{Name: "upstream", URLs: []string{"https://github.com/redhat-appstudio/infra-deployments.git"}}); err != nil {
-		return err
-	}
 	if _, err := repo.CreateRemote(&config.RemoteConfig{Name: i.LocalForkName, URLs: []string{fmt.Sprintf("https://github.com/%s/infra-deployments.git", i.LocalGithubForkOrganization)}}); err != nil {
 		return err
 	}

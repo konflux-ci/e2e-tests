@@ -421,8 +421,11 @@ func MergePRInRemote(branch string, forkOrganization string, repoPath string) er
 }
 
 func mergeBranch(repoPath string, branchToMerge string) error {
-	_, err := exec.Command("git", "-C", repoPath, "merge", branchToMerge, "-Xtheirs", "-q").Output()
+	cmd := exec.Command("git", "-C", repoPath, "merge", branchToMerge, "-Xtheirs", "-q")
+	klog.Info(cmd.String())
+	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil {
+		klog.Errorf("failed to merge branch %s in path %s: %s", branchToMerge, repoPath, stdoutStderr)
 		klog.Fatal(err)
 	}
 	return nil
