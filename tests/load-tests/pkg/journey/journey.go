@@ -1,5 +1,6 @@
 package journey
 
+import "fmt"
 import "sync"
 
 import options "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/options"

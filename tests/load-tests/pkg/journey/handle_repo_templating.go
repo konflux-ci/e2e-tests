@@ -9,20 +9,53 @@ import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/loggi
 import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
 import github "github.com/google/go-github/v44/github"
 
-func TemplateRepo(f *framework.Framework, repoUrl, repoRevision, username, namespace, quayRepoName string) (string, error) {
-	// For PaC testing, let's template repo and return forked repo name
-	var sourceName string
-	var targetName string
-	var forkRepo *github.Repository
-	var err error
+var fileList = []string{".tekton/multi-platform-test-pull-request.yaml", ".tekton/multi-platform-test-push.yaml"}
 
-	// Parse just repo name out of url
+// Parse repo name out of repo url
+func getRepoNameFromRepoUrl(repoUrl string) (string, error) {
 	regex := regexp.MustCompile(`/([^/]+)/?$`)
 	match := regex.FindStringSubmatch(repoUrl)
 	if match != nil {
-		sourceName = match[1]
+		return match[1], nil
 	} else {
 		return "", fmt.Errorf("Failed to parse repo name out of url %s", repoUrl)
+	}
+}
+
+func templateRepoFile(f *framework.Framework, repoName, repoRevision, fileName string, placeholders *map[string]string) error {
+	fileResponse, err1 := f.AsKubeAdmin.CommonController.Github.GetFile(repoName, fileName, repoRevision)
+	if err1 != nil {
+		return err1
+	}
+
+	fileContent, err2 := fileResponse.GetContent()
+	if err2 != nil {
+		return err2
+	}
+
+	for key, value := range *placeholders {
+		fileContent = strings.ReplaceAll(fileContent, key, value)
+	}
+
+	_, err3 := f.AsKubeAdmin.CommonController.Github.UpdateFile(repoName, fileName, fileContent, repoRevision, *fileResponse.SHA)
+	if err3 != nil {
+		return err3
+	}
+
+	return nil
+}
+
+func TemplateRepo(f *framework.Framework, repoUrl, repoRevision, username, namespace, quayRepoName string) (string, error) {
+	// For PaC testing, let's template repo and return forked repo name
+	var forkRepo *github.Repository
+	var sourceName string
+	var targetName string
+	var err error
+
+	// Parse just repo name out of input repo url and construct target repo name
+	sourceName, err = getRepoNameFromRepoUrl(repoUrl)
+	if err != nil {
+		return "", err
 	}
 	targetName = fmt.Sprintf("%s-%s", sourceName, username)
 
@@ -39,32 +72,43 @@ func TemplateRepo(f *framework.Framework, repoUrl, repoRevision, username, names
 	}
 
 	// Template files we care about
-	fileList := []string{".tekton/multi-platform-test-pull-request.yaml", ".tekton/multi-platform-test-push.yaml"}
+	placeholders := &map[string]string{
+		"NAMESPACE": namespace,
+		"QUAY_REPO": quayRepoName,
+	}
 	for _, file := range fileList {
-		fileResponse, err1 := f.AsKubeAdmin.CommonController.Github.GetFile(targetName, file, repoRevision)
-		if err1 != nil {
-			return "", err1
-		}
-
-		fileContent, err2 := fileResponse.GetContent()
-		if err2 != nil {
-			return "", err2
-		}
-
-		fileContentNew := strings.ReplaceAll(fileContent, "NAMESPACE", namespace)
-		fileContentNew = strings.ReplaceAll(fileContentNew, "QUAY_REPO", quayRepoName)
-
-		_, err3 := f.AsKubeAdmin.CommonController.Github.UpdateFile(targetName, file, fileContentNew, repoRevision, *fileResponse.SHA)
-		if err3 != nil {
-			return "", err3
+		err = templateRepoFile(f, targetName, repoRevision, file, placeholders)
+		if err != nil {
+			return "", err
 		}
 	}
 
 	return forkRepo.GetHTMLURL(), nil
 }
 
-func HandleRepoTemplating(ctx *MainContext) error {
+func TemplateRepoMore(f *framework.Framework, repoUrl, repoRevision, appName, compName string) error {
+	// Get repo name from repo url
+	repoName, err := getRepoNameFromRepoUrl(repoUrl)
+	if err != nil {
+		return err
+	}
 
+	// Template files we care about
+	placeholders := &map[string]string{
+		"APPLICATION": appName,
+		"COMPONENT": compName,
+	}
+	for _, file := range fileList {
+		err = templateRepoFile(f, repoName, repoRevision, file, placeholders)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func HandleRepoTemplating(ctx *MainContext) error {
 	if !ctx.Opts.ComponentRepoTemplate {
 		ctx.ComponentRepoUrl = ctx.Opts.ComponentRepoUrl
 		return nil
@@ -82,6 +126,19 @@ func HandleRepoTemplating(ctx *MainContext) error {
 
 	ctx.TemplatingDoneWG.Done()
 	ctx.TemplatingDoneWG.Wait()
+
+	return nil
+}
+
+func HandleAdditionalTemplating(ctx *PerComponentContext) error {
+	if !ctx.ParentContext.ParentContext.Opts.ComponentRepoTemplate {
+		return nil
+	}
+
+	err := TemplateRepoMore(ctx.Framework, ctx.ParentContext.ParentContext.ComponentRepoUrl, ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision, ctx.ParentContext.ApplicationName, ctx.ComponentName)
+	if err != nil {
+		return logging.Logger.Fail(81, "Additional repo templating failed: %v", err)
+	}
 
 	return nil
 }
