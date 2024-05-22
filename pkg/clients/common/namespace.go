@@ -186,13 +186,6 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 			return nil, fmt.Errorf("error when getting the '%s' roleBinding: %v", constants.DefaultPipelineServiceAccountRoleBinding, err)
 		}
 	}
-
-	// Argo CD role/rolebinding need to be present in the namespace before we create GitOpsDeployments.
-	// - These role bindings are created in namespaces labeled with 'argocd.argoproj.io/managed-by' (see above)
-	if err := utils.WaitUntil(s.argoCDNamespaceRBACPresent(name), time.Second*120); err != nil {
-		return nil, fmt.Errorf("argo CD Namespace RBAC was never present in '%s': %v", name, err)
-	}
-
 	return ns, nil
 }
 
