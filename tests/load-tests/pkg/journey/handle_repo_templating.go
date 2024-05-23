@@ -109,7 +109,7 @@ func TemplateRepoMore(f *framework.Framework, repoUrl, repoRevision, appName, co
 }
 
 func HandleRepoTemplating(ctx *MainContext) error {
-	if !ctx.Opts.ComponentRepoTemplate {
+	if !ctx.Opts.PipelineRequestConfigurePac {
 		ctx.ComponentRepoUrl = ctx.Opts.ComponentRepoUrl
 		return nil
 	}
@@ -131,7 +131,7 @@ func HandleRepoTemplating(ctx *MainContext) error {
 }
 
 func HandleAdditionalTemplating(ctx *PerComponentContext) error {
-	if !ctx.ParentContext.ParentContext.Opts.ComponentRepoTemplate {
+	if !ctx.ParentContext.ParentContext.Opts.PipelineRequestConfigurePac {
 		return nil
 	}
 

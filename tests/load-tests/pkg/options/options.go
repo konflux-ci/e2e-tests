@@ -10,7 +10,6 @@ type Opts struct {
 	ApplicationsCount             int
 	BuildPipelineSelectorBundle   string
 	ComponentRepoRevision         string
-	ComponentRepoTemplate         bool
 	ComponentRepoUrl              string
 	ComponentsCount               int
 	Concurrency                   int
