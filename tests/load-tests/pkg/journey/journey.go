@@ -145,6 +145,7 @@ type PerComponentContext struct {
 	ParentContext  *PerApplicationContext
 	ComponentName  string
 	SnapshotName   string
+	MergeUrl       string
 }
 
 // Start all the threads to process all components per application
