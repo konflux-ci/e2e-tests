@@ -36,8 +36,9 @@ spec:
             value: $(params.build-definitions-update-script)
           - name: TARGET_GH_REPO
             value: konflux-ci/build-definitions
+          # https://github.com/apps/rh-tap-build-team in https://github.com/konflux-ci
           - name: GITHUB_APP_INSTALLATION_ID
-            value: "35269675"
+            value: "51073377"
         taskRef:
           bundle: quay.io/redhat-appstudio-tekton-catalog/task-update-infra-deployments:0.1
           name: update-infra-deployments
