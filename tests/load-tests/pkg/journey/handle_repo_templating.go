@@ -2,6 +2,7 @@ package journey
 
 import "fmt"
 import "strings"
+import "time"
 import "regexp"
 
 import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/logging"
@@ -103,6 +104,38 @@ func TemplateRepoMore(f *framework.Framework, repoUrl, repoRevision, appName, co
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func CommitToRepo(f *framework.Framework, repoUrl, repoRevision string) error {
+	var fileName string = "README.md"
+
+	// Get repo name from repo url
+	repoName, err := getRepoNameFromRepoUrl(repoUrl)
+	if err != nil {
+		return err
+	}
+
+	// Get current content
+	fileResponse, err1 := f.AsKubeAdmin.CommonController.Github.GetFile(repoName, fileName, repoRevision)
+	if err1 != nil {
+		return err1
+	}
+
+	fileContent, err2 := fileResponse.GetContent()
+	if err2 != nil {
+		return err2
+	}
+
+	// Change the file content
+	fileContent = fileContent + fmt.Sprintf("\n\nAutomatic commit at %s\n", time.Now().UTC().Format(time.RFC3339))
+
+	// Commit the file change
+	_, err3 := f.AsKubeAdmin.CommonController.Github.UpdateFile(repoName, fileName, fileContent, repoRevision, *fileResponse.SHA)
+	if err3 != nil {
+		return err3
 	}
 
 	return nil
