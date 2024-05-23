@@ -17,7 +17,6 @@ import (
 	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
 	releaseapi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
-	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -30,7 +29,6 @@ const (
 
 var snapshot *appservice.Snapshot
 var releaseCR *releaseapi.Release
-var buildPr *tektonv1.PipelineRun
 var err error
 var devWorkspace = utils.GetEnv(constants.RELEASE_DEV_WORKSPACE_ENV, constants.DevReleaseTeam)
 var managedWorkspace = utils.GetEnv(constants.RELEASE_MANAGED_WORKSPACE_ENV, constants.ManagedReleaseTeam)
@@ -218,17 +216,13 @@ func assertBuildPipelineRunSucceeded(devFw framework.Framework, devNamespace, ma
 		}
 	}()
 	Expect(devFw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "", devFw.AsKubeDeveloper.TektonController, &has.RetryOptions{Retries: 3, Always: true}, nil)).To(Succeed())
-	buildPr, err = devFw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, fbcAppName, devNamespace, "")
-	Expect(err).ShouldNot(HaveOccurred())
 }
 
 func assertReleasePipelineRunSucceeded(devFw, managedFw framework.Framework, devNamespace, managedNamespace, fbcAppName string, component *appservice.Component) {
+	snapshot, err = devFw.AsKubeDeveloper.IntegrationController.WaitForSnapshotToGetCreated("", "", component.Name, devNamespace)
+	Expect(err).ToNot(HaveOccurred())
+	GinkgoWriter.Println("snapshot: ", snapshot.Name)
 	Eventually(func() error {
-		snapshot, err = devFw.AsKubeDeveloper.IntegrationController.GetSnapshot("", buildPr.Name, "", devNamespace)
-		if err != nil {
-			return err
-		}
-		GinkgoWriter.Println("snapshot: ", snapshot.Name)
 		releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 		if err != nil {
 			return err

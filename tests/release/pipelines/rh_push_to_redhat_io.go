@@ -137,11 +137,22 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 						managedFw = releasecommon.NewFramework(managedWorkspace)
 					}
 				}()
-				buildPR, err = devFw.AsKubeDeveloper.HasController.GetComponentPipelineRun(testComponent.Name, rhioApplicationName, devNamespace, "")
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(devFw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(testComponent, "", devFw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 3, Always: true}, buildPR)).To(Succeed())
-				snapshot, err = devFw.AsKubeDeveloper.IntegrationController.GetSnapshot("", buildPR.Name, "", devNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
+				Eventually(func() error {
+					buildPR, err = devFw.AsKubeDeveloper.HasController.GetComponentPipelineRun(testComponent.Name, rhioApplicationName, devNamespace, "")
+                                        if err != nil {
+                                                GinkgoWriter.Printf("Build PipelineRun has not been created yet for the component %s/%s\n", devNamespace, testComponent.Name)
+                                                return err
+                                        }
+                                        if !buildPR.HasStarted() {
+                                                return fmt.Errorf("build pipelinerun %s/%s hasn't started yet", devNamespace, buildPR.GetName())
+                                        }
+                                        return nil
+                                }, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the component %s/%s", devNamespace, testComponent.Name))
+
+				Expect(devFw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(testComponent, "", devFw.AsKubeDeveloper.TektonController, &has.RetryOptions{Retries: 3, Always: true}, nil)).To(Succeed())
+
+				snapshot, err = devFw.AsKubeDeveloper.IntegrationController.WaitForSnapshotToGetCreated("", "", testComponent.Name, devNamespace)
+                                Expect(err).ToNot(HaveOccurred())
 			})
 			It("verifies the rhio release pipelinerun is running and succeeds", func() {
 				devFw = releasecommon.NewFramework(devWorkspace)
