@@ -108,26 +108,19 @@ func HandlePipelineRun(ctx *PerComponentContext) error {
 
 	logging.Logger.Debug("Creating build pipeline run for component %s in namespace %s", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 
-	if ctx.ParentContext.ParentContext.Opts.ComponentRepoTemplate {
-		err := CommitToRepo(ctx.Framework, ctx.ParentContext.ParentContext.ComponentRepoUrl, ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision)
-		if err != nil {
-			return logging.Logger.Fail(70, "Triggering build Pipeline Run failed: %v", err)
-		}
-	}
-
 	_, err = logging.Measure(ValidatePipelineRunCreation, ctx.Framework, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName)
 	if err != nil {
-		return logging.Logger.Fail(71, "Build Pipeline Run failed creation: %v", err)
+		return logging.Logger.Fail(70, "Build Pipeline Run failed creation: %v", err)
 	}
 
 	_, err = logging.Measure(ValidatePipelineRunCondition, ctx.Framework, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName)
 	if err != nil {
-		return logging.Logger.Fail(72, "Build Pipeline Run failed run: %v", err)
+		return logging.Logger.Fail(71, "Build Pipeline Run failed run: %v", err)
 	}
 
 	_, err = logging.Measure(ValidatePipelineRunSignature, ctx.Framework, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName)
 	if err != nil {
-		return logging.Logger.Fail(73, "Build Pipeline Run failed signing: %v", err)
+		return logging.Logger.Fail(72, "Build Pipeline Run failed signing: %v", err)
 	}
 
 	return nil
