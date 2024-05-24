@@ -219,10 +219,19 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		})
 
 		It("tests that Snapshot is created for each Component", func() {
-				snapshot1, err = fw.AsKubeDeveloper.IntegrationController.WaitForSnapshotToGetCreated("", "", component1.GetName(), devNamespace)
-                                Expect(err).ToNot(HaveOccurred())
-				snapshot2, err = fw.AsKubeDeveloper.IntegrationController.WaitForSnapshotToGetCreated("", "", component2.GetName(), devNamespace)
-                                Expect(err).ToNot(HaveOccurred())
+			Eventually(func() error {
+				snapshot1, err = fw.AsKubeAdmin.IntegrationController.GetSnapshot("", "", component1.GetName(), devNamespace)
+				if err != nil {
+					GinkgoWriter.Printf("cannot get the Snapshot for component %s/%s: %v\n", component1.GetNamespace(), component1.GetName(), err)
+					return err
+				}
+				snapshot2, err = fw.AsKubeAdmin.IntegrationController.GetSnapshot("", "", component2.GetName(), devNamespace)
+				if err != nil {
+					GinkgoWriter.Printf("cannot get the Snapshot for component %s/%s: %v\n", component2.GetNamespace(), component2.GetName(), err)
+					return err
+				}
+				return nil
+			}, 5*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out waiting for Snapshots to be created in %s namespace", devNamespace)
 		})
 
 		It("tests that associated Release CR is created for each Component's Snapshot", func() {
