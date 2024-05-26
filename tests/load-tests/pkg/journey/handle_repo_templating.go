@@ -9,7 +9,7 @@ import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/loggi
 import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
 import github "github.com/google/go-github/v44/github"
 
-var fileList = []string{".tekton/multi-platform-test-pull-request.yaml", ".tekton/multi-platform-test-push.yaml"}
+var fileList = []string{".template/COMPONENT-pull-request.yaml", ".template/COMPONENT-push.yaml"}
 
 // Parse repo name out of repo url
 func getRepoNameFromRepoUrl(repoUrl string) (string, error) {
@@ -45,7 +45,7 @@ func templateRepoFile(f *framework.Framework, repoName, repoRevision, fileName s
 	return nil
 }
 
-func TemplateRepo(f *framework.Framework, repoUrl, repoRevision, username, namespace, quayRepoName string) (string, error) {
+func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username string) (string, error) {
 	// For PaC testing, let's template repo and return forked repo name
 	var forkRepo *github.Repository
 	var sourceName string
@@ -71,22 +71,10 @@ func TemplateRepo(f *framework.Framework, repoUrl, repoRevision, username, names
 		return "", err
 	}
 
-	// Template files we care about
-	placeholders := &map[string]string{
-		"NAMESPACE": namespace,
-		"QUAY_REPO": quayRepoName,
-	}
-	for _, file := range fileList {
-		err = templateRepoFile(f, targetName, repoRevision, file, placeholders)
-		if err != nil {
-			return "", err
-		}
-	}
-
 	return forkRepo.GetHTMLURL(), nil
 }
 
-func TemplateRepoMore(f *framework.Framework, repoUrl, repoRevision, appName, compName string) error {
+func TemplateRepoMore(f *framework.Framework, repoUrl, repoRevision string, placeholders *map[string]string) error {
 	// Get repo name from repo url
 	repoName, err := getRepoNameFromRepoUrl(repoUrl)
 	if err != nil {
@@ -94,10 +82,6 @@ func TemplateRepoMore(f *framework.Framework, repoUrl, repoRevision, appName, co
 	}
 
 	// Template files we care about
-	placeholders := &map[string]string{
-		"APPLICATION": appName,
-		"COMPONENT": compName,
-	}
 	for _, file := range fileList {
 		err = templateRepoFile(f, repoName, repoRevision, file, placeholders)
 		if err != nil {
@@ -108,7 +92,7 @@ func TemplateRepoMore(f *framework.Framework, repoUrl, repoRevision, appName, co
 	return nil
 }
 
-func HandleRepoTemplating(ctx *MainContext) error {
+func HandleRepoForking(ctx *MainContext) error {
 	if !ctx.Opts.PipelineRequestConfigurePac {
 		ctx.ComponentRepoUrl = ctx.Opts.ComponentRepoUrl
 		return nil
@@ -116,7 +100,12 @@ func HandleRepoTemplating(ctx *MainContext) error {
 
 	logging.Logger.Debug("Templating repository %s for user %s", ctx.Opts.ComponentRepoUrl, ctx.Username)
 
-	forkUrl, err := TemplateRepo(ctx.Framework, ctx.Opts.ComponentRepoUrl, ctx.Opts.ComponentRepoRevision, ctx.Username, ctx.Namespace, ctx.Opts.QuayRepo)
+	forkUrl, err := ForkRepo(
+		ctx.Framework,
+		ctx.Opts.ComponentRepoUrl,
+		ctx.Opts.ComponentRepoRevision,
+		ctx.Username,
+	)
 	if err != nil {
 		ctx.TemplatingDoneWG.Done()
 		return logging.Logger.Fail(80, "Repo templating failed: %v", err)
@@ -135,7 +124,18 @@ func HandleAdditionalTemplating(ctx *PerComponentContext) error {
 		return nil
 	}
 
-	err := TemplateRepoMore(ctx.Framework, ctx.ParentContext.ParentContext.ComponentRepoUrl, ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision, ctx.ParentContext.ApplicationName, ctx.ComponentName)
+	placeholders := &map[string]string{
+		"NAMESPACE": ctx.ParentContext.ParentContext.Namespace,
+		"QUAY_REPO": ctx.ParentContext.ParentContext.Opts.QuayRepo,
+		"APPLICATION": ctx.ParentContext.ApplicationName,
+		"COMPONENT": ctx.ComponentName,
+	}
+	err := TemplateRepoMore(
+		ctx.Framework,
+		ctx.ParentContext.ParentContext.ComponentRepoUrl,
+		ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision,
+		placeholders,
+	)
 	if err != nil {
 		return logging.Logger.Fail(81, "Additional repo templating failed: %v", err)
 	}

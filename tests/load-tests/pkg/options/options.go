@@ -20,6 +20,7 @@ type Opts struct {
 	LogDebug                      bool
 	LogTrace                      bool
 	LogVerbose                    bool
+	MultiarchWorkflow             bool
 	OutputDir                     string
 	PipelineRequestConfigurePac   bool
 	PipelineSkipInitialChecks     bool
@@ -37,7 +38,7 @@ type Opts struct {
 
 // Pre-process load-test options before running the test
 func (o *Opts) ProcessOptions() error {
-	// Parse --journey-duration and populate JourneyUntil
+	// Parse '--journey-duration' and populate JourneyUntil
 	parsed, err := time.ParseDuration(o.JourneyDuration)
 	if err != nil {
 		return err
@@ -47,6 +48,16 @@ func (o *Opts) ProcessOptions() error {
 	// Option '--purge-only' implies '--purge'
 	if o.PurgeOnly {
 		o.Purge = true
+	}
+
+	// Option '--multiarch-workflow' implies '--pipeline-request-configure-pac'
+	if o.MultiarchWorkflow {
+		o.PipelineRequestConfigurePac = true
+	}
+
+	// Option '--pipeline-request-configure-pac' implies '--pipeline-skip-initial-checks' is false (not present)
+	if o.PipelineRequestConfigurePac {
+		o.PipelineSkipInitialChecks = false
 	}
 
 	// Convert options struct to pretty JSON

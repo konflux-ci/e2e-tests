@@ -50,6 +50,7 @@ func init() {
 	rootCmd.Flags().StringVar(&opts.JourneyDuration, "journey-duration", "1h", "repeat user journey until this timeout (either this or --journey-repeats)")
 	rootCmd.Flags().BoolVar(&opts.PipelineSkipInitialChecks, "pipeline-skip-initial-checks", true, "if build pipeline runs' initial checks are to be skipped")
 	rootCmd.Flags().BoolVar(&opts.PipelineRequestConfigurePac, "pipeline-request-configure-pac", false, "if build pipeline should be taken from component repository .tekton directory")
+	rootCmd.Flags().BoolVar(&opts.MultiarchWorkflow, "multiarch-workflow", false, "if we should template repo so it is suitable for multi arch test, merge PR and ignore custom pipeline run from PR")
 	rootCmd.Flags().StringVarP(&opts.OutputDir, "output-dir", "o", ".", "directory where output files such as load-tests.log or load-tests.json are stored")
 	rootCmd.Flags().StringVar(&opts.BuildPipelineSelectorBundle, "build-pipeline-selector-bundle", "", "BuildPipelineSelector bundle to use when testing with build-definition PR")
 	rootCmd.Flags().BoolVarP(&opts.LogVerbose, "log-verbose", "v", false, "log messages with info level and above")
@@ -199,7 +200,7 @@ func userJourneyThread(threadCtx *journey.MainContext) {
 	}
 
 	// Template repo if needed
-	_, err = logging.Measure(journey.HandleRepoTemplating, threadCtx)
+	_, err = logging.Measure(journey.HandleRepoForking, threadCtx)
 	if err != nil {
 		logging.Logger.Error("Thread failed: %v", err)
 		return
@@ -285,12 +286,12 @@ func perComponentThread(perComponentCtx *journey.PerComponentContext) {
 		return
 	}
 
-	// Template application/component in the repo if needed
-	_, err = logging.Measure(journey.HandleAdditionalTemplating, perComponentCtx)
-	if err != nil {
-		logging.Logger.Error("Per component thread failed: %v", err)
-		return
-	}
+	//// Template application/component in the repo if needed
+	//_, err = logging.Measure(journey.HandleAdditionalTemplating, perComponentCtx)
+	//if err != nil {
+	//	logging.Logger.Error("Per component thread failed: %v", err)
+	//	return
+	//}
 
 	// Create component
 	_, err = logging.Measure(journey.HandleComponent, perComponentCtx)
