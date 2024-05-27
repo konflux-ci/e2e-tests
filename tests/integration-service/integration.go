@@ -153,7 +153,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 
 		When("An snapshot of push event is created", func() {
-			It("checks if the global candidate is updated after push event", Pending, func() {
+			It("checks if the global candidate is updated after push event", func() {
 				timeout = time.Second * 600
 				interval = time.Second * 10
 				Eventually(func() error {
