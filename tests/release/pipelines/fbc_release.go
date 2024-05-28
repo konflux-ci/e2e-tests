@@ -86,7 +86,21 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			Expect(err).NotTo(HaveOccurred())
 
 			createFBCReleasePlanAdmission(fbcReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, fbcApplicationName, fbcEnterpriseContractPolicyName, relSvcCatalogPathInRepo, "false", "", "", "", "")
-			component = releasecommon.CreateComponentByCDQ(*devFw, devNamespace, managedNamespace, fbcApplicationName, fbcComponentName, fbcSourceGitURL)
+			componentObj := appservice.ComponentSpec{
+				ComponentName: fbcComponentName,
+				Application:   fbcApplicationName,
+				Source: appservice.ComponentSource{
+					ComponentSourceUnion: appservice.ComponentSourceUnion{
+						GitSource: &appservice.GitSource{
+							URL:           fbcSourceGitURL,
+							DockerfileURL: "catalog.Dockerfile",
+						},
+					},
+				},
+			}
+			component, err = devFw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", fbcApplicationName, false, constants.DefaultFbcBuilderPipelineBundle)
+			Expect(err).NotTo(HaveOccurred())
+
 			createFBCEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 
 		})
@@ -129,7 +143,20 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			Expect(err).NotTo(HaveOccurred())
 
 			createFBCReleasePlanAdmission(fbcHotfixRPAName, *managedFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixECPolicyName, relSvcCatalogPathInRepo, "true", issueId, "false", "", "")
-			component = releasecommon.CreateComponentByCDQ(*devFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixCompName, fbcSourceGitURL)
+			componentObj := appservice.ComponentSpec{
+				ComponentName: fbcHotfixCompName,
+				Application:   fbcHotfixAppName,
+				Source: appservice.ComponentSource{
+					ComponentSourceUnion: appservice.ComponentSourceUnion{
+						GitSource: &appservice.GitSource{
+							URL:           fbcSourceGitURL,
+							DockerfileURL: "catalog.Dockerfile",
+						},
+					},
+				},
+			}
+			component, err = devFw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", fbcHotfixAppName, false, constants.DefaultFbcBuilderPipelineBundle)
+			Expect(err).NotTo(HaveOccurred())
 			createFBCEnterpriseContractPolicy(fbcHotfixECPolicyName, *managedFw, devNamespace, managedNamespace)
 		})
 
@@ -171,7 +198,22 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			Expect(err).NotTo(HaveOccurred())
 
 			createFBCReleasePlanAdmission(fbcPreGARPAName, *managedFw, devNamespace, managedNamespace, fbcPreGAAppName, fbcPreGAECPolicyName, relSvcCatalogPathInRepo, "false", issueId, "true", productName, productVersion)
-			component = releasecommon.CreateComponentByCDQ(*devFw, devNamespace, managedNamespace, fbcPreGAAppName, fbcPreGACompName, fbcSourceGitURL)
+
+			componentObj := appservice.ComponentSpec{
+				ComponentName: fbcPreGACompName,
+				Application:   fbcPreGAAppName,
+				Source: appservice.ComponentSource{
+					ComponentSourceUnion: appservice.ComponentSourceUnion{
+						GitSource: &appservice.GitSource{
+							URL:           fbcSourceGitURL,
+							DockerfileURL: "catalog.Dockerfile",
+						},
+					},
+				},
+			}
+			component, err = devFw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", fbcPreGAAppName, false, constants.DefaultFbcBuilderPipelineBundle)
+			Expect(err).NotTo(HaveOccurred())
+
 			createFBCEnterpriseContractPolicy(fbcPreGAECPolicyName, *managedFw, devNamespace, managedNamespace)
 		})
 

@@ -219,6 +219,7 @@ func (u *UserAppsCompsMap) GetIntegrationTestScenarios(userName, appName string)
 
 var (
 	componentRepoUrl              string = "https://github.com/devfile-samples/devfile-sample-code-with-quarkus"
+	componentDockerFilePath       string = "src/main/docker/Dockerfile.jvm.staged"
 	componentsCount               int    = 1
 	usernamePrefix                string = "testuser"
 	numberOfUsers                 int
@@ -292,7 +293,6 @@ var (
 	usersBarMutex                     = &sync.Mutex{}
 	applicationsBarMutex              = &sync.Mutex{}
 	itsBarMutex                       = &sync.Mutex{}
-	cdqsBarMutex                      = &sync.Mutex{}
 	componentsBarMutex                = &sync.Mutex{}
 	pipelinesBarMutex                 = &sync.Mutex{}
 	deploymentsBarMutex               = &sync.Mutex{}
@@ -977,11 +977,6 @@ func StageCleanup(journeyContexts []*JourneyContext) {
 			if err != nil {
 				klog.Errorf("while deleting resources for username: %s, got error: %v\n", username, err)
 			}
-
-			err = framework.AsKubeDeveloper.HasController.DeleteAllComponentDetectionQueriesInASpecificNamespace(framework.UserNamespace, 5*time.Minute)
-			if err != nil {
-				klog.Errorf("while deleting component detection queries for username: %s, got error: %v\n", username, err)
-			}
 		}
 	}
 }
@@ -1178,16 +1173,8 @@ func (h *ConcreteHandlerResources) Handle(ctx *JourneyContext) {
 				continue
 			}
 
-			// Handle Component Detection Query Creation
-			cdqName := fmt.Sprintf("%s-cdq-%s", username, util.GenerateRandomString(5))
-			blnOK, cdq := h.handleCDQCreation(ctx, framework, username, usernamespace, applicationName, cdqName)
-			if !blnOK {
-				// If CDQ creation failed, continue with the next user
-				continue
-			}
-
 			// Handle Component Creation
-			if !h.handleComponentCreation(ctx, framework, username, usernamespace, applicationName, cdq) {
+			if !h.handleComponentCreation(ctx, framework, username, usernamespace, applicationName) {
 				// If Component creation failed, continue with the next user
 				continue
 			}
@@ -1261,11 +1248,11 @@ func (h ItsSuccessHandler) HandleSuccess(ctx *JourneyContext, itsName string, ti
 	handleItsSuccess(ctx, itsName, h.Username, h.Application, timeInSeconds)
 }
 
-type CdqSuccessHandler struct{}
+// type CdqSuccessHandler struct{}
 
-func (h CdqSuccessHandler) HandleSuccess(ctx *JourneyContext, cdqName string, timeInSeconds float64) {
-	handleCdqSuccess(ctx, cdqName, timeInSeconds)
-}
+// func (h CdqSuccessHandler) HandleSuccess(ctx *JourneyContext, cdqName string, timeInSeconds float64) {
+// 	handleCdqSuccess(ctx, cdqName, timeInSeconds)
+// }
 
 type ComponentSuccessHandler struct {
 	Username    string
@@ -1470,145 +1457,41 @@ func handleItsFailure(ctx *JourneyContext, applicationName string, err, conditio
 	increaseBar(ctx.ItsBar, itsBarMutex)
 }
 
-func (h *ConcreteHandlerResources) handleCDQCreation(ctx *JourneyContext, framework *framework.Framework, username, usernamespace, applicationName, cdqName string) (bool, *appstudioApi.ComponentDetectionQuery) {
-	klog.V(5).Infof("handleCDQCreation start username: %s, usernamespace: %s, applicationName: %s", username, usernamespace, applicationName)
-	defer klog.V(5).Infof("handleCDQCreation end username: %s, usernamespace: %s, applicationName: %s", username, usernamespace, applicationName)
-
-	startTimeForCDQ := time.Now()
-	cdq, err := framework.AsKubeDeveloper.HasController.CreateComponentDetectionQueryWithTimeout(cdqName, usernamespace, componentRepoUrl, "", "", "", false, 60*time.Minute)
-	cdqCreationTime := time.Since(startTimeForCDQ)
-
-	if err != nil {
-		logError(9, fmt.Sprintf("Unable to create ComponentDetectionQuery %s: %v", cdqName, err))
-		FailedCDQCreationsPerThread[ctx.ThreadIndex] += 1
-		MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
-		increaseBar(ctx.CDQsBar, cdqsBarMutex)
-		return false, nil
-	}
-	if cdq.Name != cdqName {
-		logError(10, fmt.Sprintf("Actual cdq name (%s) does not match expected (%s): %v", cdq.Name, cdqName, err))
-		FailedCDQCreationsPerThread[ctx.ThreadIndex] += 1
-		MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
-		increaseBar(ctx.CDQsBar, cdqsBarMutex)
-		return false, nil
-	}
-	if len(cdq.Status.ComponentDetected) == 0 {
-		logError(11, fmt.Sprintf("cdq (%s) detected no component", cdq.Name))
-		FailedCDQCreationsPerThread[ctx.ThreadIndex] += 1
-		MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
-		increaseBar(ctx.CDQsBar, cdqsBarMutex)
-		return false, nil
-	}
-
-	CDQCreationTimeSumPerThread[ctx.ThreadIndex] += cdqCreationTime
-	MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeGuage, metricsConstants.MetricCDQCreationTimeGauge, cdqCreationTime.Seconds())
-	if cdqCreationTime > CDQCreationTimeMaxPerThread[ctx.ThreadIndex] {
-		CDQCreationTimeMaxPerThread[ctx.ThreadIndex] = cdqCreationTime
-	}
-
-	return h.validateCDQCreation(ctx, framework, cdqName, applicationName, username, usernamespace, cdqCreationTime)
-}
-
-func (h *ConcreteHandlerResources) validateCDQCreation(ctx *JourneyContext, framework *framework.Framework, cdqName, applicationName, username, usernamespace string, cdqCreationTime time.Duration) (bool, *appstudioApi.ComponentDetectionQuery) {
-	cdqValidationInterval := time.Second * 20
-	cdqValidationTimeout := time.Minute * 30
-	var conditionError error
-	var cdq *appstudioApi.ComponentDetectionQuery
-
-	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
-		cdq, err = framework.AsKubeDeveloper.HasController.GetComponentDetectionQuery(cdqName, usernamespace)
-		if err != nil {
-			// Return an error immediately if we cannot fetch the cdq
-			return false, fmt.Errorf("unable to get created cdq %s in namespace %s: %v", cdqName, usernamespace, err)
-		}
-
-		conditionError = nil // Reset the condition error
-		if len(cdq.Status.Conditions) == 0 {
-			// store the error in conditionError
-			conditionError = fmt.Errorf("cdq %s has 0 status conditions", cdqName)
-			return false, nil // Continue polling
-		}
-		creationTimestamp := cdq.ObjectMeta.CreationTimestamp.Time
-
-		conditionDetails := ConditionDetails{
-			Type:   "Completed",
-			Status: metav1.ConditionStatus("True"),
-		}
-
-		creationDetails := CreationDetails{
-			Timestamp: creationTimestamp,
-			Duration:  cdqCreationTime,
-		}
-
-		for _, condition := range cdq.Status.Conditions {
-			done, err := handleCondition(condition, ctx, cdqName, creationDetails, conditionDetails, CdqSuccessHandler{})
-			if done || err != nil {
-				return done, err
-			}
-		}
-		return false, nil // Indicate to continue polling
-	}, cdqValidationInterval, cdqValidationTimeout)
-
-	if err != nil || conditionError != nil {
-		handleCdqFailure(ctx, applicationName, err, conditionError)
-		return false, nil
-	}
-	return true, cdq
-}
-
-func handleCdqSuccess(ctx *JourneyContext, cdqName string, cdqActualCreationTimeInSeconds float64) {
-	klog.Infof("Successfully created CDQ %s", cdqName)
-	MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeGuage, metricsConstants.MetricActualCDQCreationTimeGauge, cdqActualCreationTimeInSeconds)
-	SuccessfulCDQCreationsPerThread[ctx.ThreadIndex] += 1
-	MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricSuccessfulCDQCreationCounter)
-	increaseBar(ctx.CDQsBar, cdqsBarMutex)
-}
-
-func handleCdqFailure(ctx *JourneyContext, applicationName string, err, conditionError error) {
-	klog.Infof("Failed creating CDQ for Application %s", applicationName)
-	if err != nil {
-		logError(12, fmt.Sprintf("Failed creating CDQ for Application %s due to an error: %v \n", applicationName, err))
-	} else if conditionError != nil {
-		logError(13, fmt.Sprintf("Failed validating CDQ for Application %s due to an error: %v", applicationName, conditionError.Error()))
-	}
-	FailedCDQCreationsPerThread[ctx.ThreadIndex] += 1
-	MetricsWrapper(MetricsController, metricsConstants.CollectorCDQ, metricsConstants.MetricTypeCounter, metricsConstants.MetricFailedCDQCreationCounter)
-	increaseBar(ctx.CDQsBar, cdqsBarMutex)
-}
-
-func (h *ConcreteHandlerResources) handleComponentCreation(ctx *JourneyContext, framework *framework.Framework, username, usernamespace, applicationName string, cdq *appstudioApi.ComponentDetectionQuery) bool {
+func (h *ConcreteHandlerResources) handleComponentCreation(ctx *JourneyContext, framework *framework.Framework, username, usernamespace, applicationName string) bool {
 	klog.V(5).Infof("handleComponentCreation start username: %s, usernamespace: %s, applicationName: %s", username, usernamespace, applicationName)
 	defer klog.V(5).Infof("handleComponentCreation end username: %s, usernamespace: %s, applicationName: %s", username, usernamespace, applicationName)
 
 	var (
 		startTimeForComponent time.Time
 		componentCreationTime time.Duration
-		compStub              appstudioApi.ComponentDetectionDescription
 	)
 
-	compStubs := make([]appstudioApi.ComponentDetectionDescription, 0, len(cdq.Status.ComponentDetected))
-	for _, compStub := range cdq.Status.ComponentDetected {
-		compStubs = append(compStubs, compStub)
-	}
-
 	for i := 0; i < componentsCount; i++ {
-		if i < len(compStubs) {
-			compStub = compStubs[i]
-		} else {
-			compStub = compStubs[len(cdq.Status.ComponentDetected)-1]
-		}
 
 		var annotationsMap map[string]string
 		if pipelineRequestConfigurePac {
-			annotationsMap = constants.ComponentPaCRequestAnnotation
+			annotationsMap = utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.DefaultDockerBuildPipelineBundle)
 		} else {
-			annotationsMap = map[string]string{}
+			annotationsMap = constants.DefaultDockerBuildPipelineBundle
 		}
 
 		innerComponentName := fmt.Sprintf("%s-comp-%d", applicationName, i)
-		compStub.ComponentStub.ComponentName = innerComponentName
+		componentObj := appstudioApi.ComponentSpec{
+			ComponentName: innerComponentName,
+			Application:   applicationName,
+			Source: appstudioApi.ComponentSource{
+				ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
+					GitSource: &appstudioApi.GitSource{
+						URL:           componentRepoUrl,
+						Revision:      "",
+						DockerfileURL: componentDockerFilePath,
+					},
+				},
+			},
+		}
+
 		startTimeForComponent = time.Now()
-		component, err := framework.AsKubeDeveloper.HasController.CreateComponent(compStub.ComponentStub, usernamespace, "", "", applicationName, pipelineSkipInitialChecks, annotationsMap)
+		component, err := framework.AsKubeAdmin.HasController.CreateComponent(componentObj, usernamespace, "", "", applicationName, pipelineSkipInitialChecks, annotationsMap)
 		componentCreationTime = time.Since(startTimeForComponent)
 
 		if err != nil {

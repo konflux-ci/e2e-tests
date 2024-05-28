@@ -72,21 +72,22 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", Labe
 		Expect(err).NotTo(HaveOccurred())
 		policy := contract.PolicySpecWithSourceConfig(defaultECP.Spec, ecp.SourceConfig{Include: []string{"@minimal"}, Exclude: []string{"cve"}})
 
-		// using cdq since git ref is not known
-		var componentDetected appservice.ComponentDetectionDescription
-		cdq, err := fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(releasecommon.ComponentName, devNamespace, releasecommon.GitSourceComponentUrl, "", "", "", false)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
-
-		for _, compDetected := range cdq.Status.ComponentDetected {
-			compName = compDetected.ComponentStub.ComponentName
-			componentDetected = compDetected
-		}
-
 		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentDetected.ComponentStub, devNamespace, "", "", releasecommon.ApplicationNameDefault, false, map[string]string{})
+		componentObj := appservice.ComponentSpec{
+			ComponentName: releasecommon.ComponentName,
+			Application:   releasecommon.ApplicationNameDefault,
+			Source: appservice.ComponentSource{
+				ComponentSourceUnion: appservice.ComponentSourceUnion{
+					GitSource: &appservice.GitSource{
+						URL: releasecommon.GitSourceComponentUrl,
+					},
+				},
+			},
+		}
+
+		component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", releasecommon.ApplicationNameDefault, false, constants.DefaultDockerBuildPipelineBundle)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, managedNamespace, "", nil)

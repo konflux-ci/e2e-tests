@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/openshift/library-go/pkg/image/reference"
 	"github.com/redhat-appstudio/application-api/api/v1alpha1"
+	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 
 	tektonpipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -40,20 +41,22 @@ const pipelineCompletionRetries = 2
 
 // OnboardComponent onboards a component from a test repository URL and returns the component's name
 func OnboardComponent(ctrl *has.HasController, gitUrl, revision, applicationName, componentName, namespace string) string {
-	// Create a component with Git Source URL being defined
-	// using cdq since git ref is not known
-	cdq, err := ctrl.CreateComponentDetectionQuery(
-		componentName, namespace, gitUrl, revision, "", "", false)
-	Expect(err).ShouldNot(HaveOccurred())
-	Expect(cdq.Status.ComponentDetected).To(
-		HaveLen(1), "Expected length of the detected Components was not 1")
 
-	for _, compDetected := range cdq.Status.ComponentDetected {
-		c, err := ctrl.CreateComponent(compDetected.ComponentStub, namespace, "", "", applicationName, false, map[string]string{})
-		Expect(err).ShouldNot(HaveOccurred())
-		return c.Name
+	componentObj := appservice.ComponentSpec{
+		ComponentName: componentName,
+		Source: appservice.ComponentSource{
+			ComponentSourceUnion: appservice.ComponentSourceUnion{
+				GitSource: &appservice.GitSource{
+					URL:           gitUrl,
+					Revision:      revision,
+					DockerfileURL: constants.DockerFilePath,
+				},
+			},
+		},
 	}
-	return ""
+	c, err := ctrl.CreateComponent(componentObj, namespace, "", "", applicationName, false, constants.DefaultDockerBuildPipelineBundle)
+	Expect(err).ShouldNot(HaveOccurred())
+	return c.Name
 }
 
 func WaitForPipelineRunStarts(hub *framework.ControllerHub, applicationName, componentName, namespace string, timeout time.Duration) string {

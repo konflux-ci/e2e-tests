@@ -14,11 +14,9 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
-	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/jvm-build-service/openshift-with-appstudio-test/e2e"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	jvmclientSet "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
@@ -46,6 +44,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 	var testNamespace, applicationName, componentName string
 	var component *appservice.Component
 	var timeout, interval time.Duration
+	var customJavaBuilderPipelineAnnotation map[string]string
 
 	AfterAll(func() {
 		jvmClient := jvmclientSet.New(f.AsKubeAdmin.JvmbuildserviceController.JvmbuildserviceClient().JvmbuildserviceV1alpha1().RESTClient())
@@ -93,20 +92,9 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 		customJavaPipelineBundleRef := os.Getenv(constants.CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV)
 		if len(customJavaPipelineBundleRef) > 0 {
-			ps := &buildservice.BuildPipelineSelector{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "build-pipeline-selector",
-					Namespace: testNamespace,
-				},
-				Spec: buildservice.BuildPipelineSelectorSpec{Selectors: []buildservice.PipelineSelector{
-					{
-						Name:           "custom java selector",
-						PipelineRef:    *tekton.NewBundleResolverPipelineRef("java-builder", customJavaPipelineBundleRef),
-						WhenConditions: buildservice.WhenCondition{Language: "java"},
-					},
-				}},
+			customJavaBuilderPipelineAnnotation = map[string]string{
+				"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"java-builder", "bundle": "%s"}`, customJavaPipelineBundleRef),
 			}
-			Expect(f.AsKubeAdmin.CommonController.KubeRest().Create(context.Background(), ps)).To(Succeed())
 		}
 
 		timeout = time.Minute * 20
@@ -130,7 +118,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				},
 			},
 		}
-		component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, map[string]string{})
+		component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, customJavaBuilderPipelineAnnotation)
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
