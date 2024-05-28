@@ -286,13 +286,6 @@ func perComponentThread(perComponentCtx *journey.PerComponentContext) {
 		return
 	}
 
-	//// Template application/component in the repo if needed
-	//_, err = logging.Measure(journey.HandleAdditionalTemplating, perComponentCtx)
-	//if err != nil {
-	//	logging.Logger.Error("Per component thread failed: %v", err)
-	//	return
-	//}
-
 	// Create component
 	_, err = logging.Measure(journey.HandleComponent, perComponentCtx)
 	if err != nil {

@@ -139,13 +139,13 @@ func PerApplicationSetup(fn func(*PerApplicationContext), parentContext *MainCon
 
 // Struct to hold data for thread to process each component
 type PerComponentContext struct {
-	PerComponentWG *sync.WaitGroup
-	ComponentIndex int
-	Framework      *framework.Framework
-	ParentContext  *PerApplicationContext
-	ComponentName  string
-	SnapshotName   string
-	MergeUrl       string
+	PerComponentWG     *sync.WaitGroup
+	ComponentIndex     int
+	Framework          *framework.Framework
+	ParentContext      *PerApplicationContext
+	ComponentName      string
+	SnapshotName       string
+	MergeRequestNumber int
 }
 
 // Start all the threads to process all components per application

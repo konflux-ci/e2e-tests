@@ -2,6 +2,8 @@ package journey
 
 import "encoding/json"
 import "fmt"
+import "regexp"
+import "strconv"
 import "strings"
 import "time"
 
@@ -11,6 +13,23 @@ import constants "github.com/redhat-appstudio/e2e-tests/pkg/constants"
 import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
 import utils "github.com/redhat-appstudio/e2e-tests/pkg/utils"
 import appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
+import pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+
+// Parse PR number out of PR url
+func getPRNumberFromPRUrl(prUrl string) (int, error) {
+	regex := regexp.MustCompile(`/([0-9]+)/?$`)
+	match := regex.FindStringSubmatch(prUrl)
+	if match == nil {
+		return 0, fmt.Errorf("Failed to parse PR number out of url %s", prUrl)
+	}
+
+	prNumber, err := strconv.Atoi(match[1])
+	if err != nil {
+		return 0, fmt.Errorf("Failed to convert PR number %s to int: %v", match[1], err)
+	}
+
+	return prNumber, nil
+}
 
 // Get PR URL from PaC component annotation "build.appstudio.openshift.io/status"
 func getPaCPull(annotations map[string]string) (string, error) {
@@ -120,12 +139,108 @@ func ValidateComponent(f *framework.Framework, namespace, name string, pac bool)
 		return false, nil
 	}, interval, timeout)
 
-	return "", err
+	return pull, err
+}
+
+func listPipelineRunsWithTimeout(f *framework.Framework, namespace, appName, compName, sha string, expectedCount int) (*[]pipeline.PipelineRun, error) {
+	var prs *[]pipeline.PipelineRun
+	var err error
+
+	interval := time.Second * 20
+	timeout := time.Minute * 60
+
+	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
+		prs, err = f.AsKubeDeveloper.HasController.GetComponentPipelineRunsWithType(compName, appName, namespace, "build", sha)
+		if err != nil {
+			logging.Logger.Debug("Waiting for PipelineRun for component %s in namespace %s", compName, namespace)
+			return false, nil
+		}
+		if len(*prs) < expectedCount {
+			logging.Logger.Debug("Not enough PipelineRuns for component %s in namespace %s: %d/%d", compName, namespace, len(*prs), expectedCount)
+			return false, nil
+		}
+		return true, nil
+	}, interval, timeout)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to list PipelineRuns for component %s in namespace %s: %v", compName, namespace, err)
+	}
+
+	logging.Logger.Debug("Found %d/%d PipelineRuns matching %s/%s/%s/%s", len(*prs), expectedCount, namespace, appName, compName, sha)
+	return prs, nil
+}
+
+func listAndDeletePipelineRunsWithTimeout(f *framework.Framework, namespace, appName, compName, sha string, expectedCount int) error {
+	var prs *[]pipeline.PipelineRun
+	var err error
+
+	prs, err = listPipelineRunsWithTimeout(f, namespace, appName, compName, sha, 1)
+	if err != nil {
+		return err
+	}
+	for _, pr := range *prs {
+		err = f.AsKubeDeveloper.TektonController.DeletePipelineRunIgnoreFinalizers(namespace, pr.Name)
+		if err != nil {
+			return fmt.Errorf("Error when deleting PipelineRun %s in namespace %s: %v", pr.Name, namespace, err)
+		}
+		logging.Logger.Debug("Deleted PipelineRun %s/%s", namespace, pr.Name)
+	}
+
+	return nil
+}
+
+// This handles post-component creation tasks for multi-arch PaC workflow
+func UtilityMultiArchComponentCleanup(f *framework.Framework, namespace, appName, compName, repoUrl, repoRev string, mergeReqNum int, placeholders *map[string]string) error {
+	var repoName string
+	var err error
+
+	// Delete on-pull-request default pipeline run
+	err = listAndDeletePipelineRunsWithTimeout(f, namespace, appName, compName, "", 1)
+	if err != nil {
+		return fmt.Errorf("Error deleting on-pull-request default PipelineRun in namespace %s: %v", namespace, err)
+	}
+	logging.Logger.Debug("Multi-arch workflow: Cleaned up (first clenup) for %s/%s/%s", namespace, appName, compName)
+
+	// Merge default PaC pipelines PR
+	repoName, err = getRepoNameFromRepoUrl(repoUrl)
+	if err != nil {
+		return fmt.Errorf("Failed parsing repo name: %v", err)
+	}
+	_, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(repoName, mergeReqNum)
+	if err != nil {
+		return fmt.Errorf("Merging %d failed: %v", mergeReqNum, err)
+	}
+	logging.Logger.Debug("Multi-arch workflow: Merged PR %d in %s", mergeReqNum, repoName)
+
+	// Delete all pipeline runs as we do not care about these
+	err = listAndDeletePipelineRunsWithTimeout(f, namespace, appName, compName, "", 1)
+	if err != nil {
+		return fmt.Errorf("Error deleting on-push merged PipelineRun in namespace %s: %v", namespace, err)
+	}
+	logging.Logger.Debug("Multi-arch workflow: Cleaned up (second cleanup) for %s/%s/%s", namespace, appName, compName)
+
+	// Template our multi-arch PaC files
+	shaMap, err := TemplateFiles(f, repoUrl, repoRev, placeholders)
+	if err != nil {
+		return fmt.Errorf("Error templating PaC files: %v", err)
+	}
+	logging.Logger.Debug("Multi-arch workflow: Our PaC files templated")
+
+	// Delete pipeline run we do not care about
+	for file, sha := range *shaMap {
+		if ! strings.HasSuffix(file, "-push.yaml") {
+			err = listAndDeletePipelineRunsWithTimeout(f, namespace, appName, compName, sha, 1)
+			if err != nil {
+				return fmt.Errorf("Error deleting on-push merged PipelineRun in namespace %s: %v", namespace, err)
+			}
+		}
+	}
+	logging.Logger.Debug("Multi-arch workflow: Cleaned up (third cleanup) for %s/%s/%s", namespace, appName, compName)
+
+	return nil
 }
 
 func HandleComponent(ctx *PerComponentContext) error {
 	var pullIface interface{}
-	var pull string
 	var err error
 
 	stub := ctx.ParentContext.ComponentStubList[ctx.ComponentIndex]
@@ -143,11 +258,43 @@ func HandleComponent(ctx *PerComponentContext) error {
 		return logging.Logger.Fail(61, "Component failed validation: %v", err)
 	}
 
-	pull, ok := pullIface.(string)
-	if !ok {
-		return logging.Logger.Fail(62, "Type assertion failed on pull: %+v", pullIface)
+	// If this is multi-arch build, we do not care about this build, we just merge it, update pipelines and trigger actual multi-arch build
+	if ctx.ParentContext.ParentContext.Opts.MultiarchWorkflow {
+		// Get merge request number
+		pullUrl, ok := pullIface.(string)
+		if !ok {
+			return logging.Logger.Fail(62, "Type assertion failed on pull: %+v", pullIface)
+		}
+		ctx.MergeRequestNumber, err = getPRNumberFromPRUrl(pullUrl)
+		if err != nil {
+			return logging.Logger.Fail(63, "Parsing merge request number failed: %+v", err)
+		}
+
+		// Placeholders for template multi-arch PaC pipeline files
+		placeholders := &map[string]string{
+			"NAMESPACE": ctx.ParentContext.ParentContext.Namespace,
+			"QUAY_REPO": ctx.ParentContext.ParentContext.Opts.QuayRepo,
+			"APPLICATION": ctx.ParentContext.ApplicationName,
+			"COMPONENT": ctx.ComponentName,
+		}
+
+		// Skip what we do not care about
+		_, err = logging.Measure(
+			UtilityMultiArchComponentCleanup,
+			ctx.Framework,
+			ctx.ParentContext.ParentContext.Namespace,
+			ctx.ParentContext.ApplicationName,
+			ctx.ComponentName,
+			ctx.ParentContext.ParentContext.ComponentRepoUrl,
+			ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision,
+			ctx.MergeRequestNumber,
+			placeholders,
+		)
+		if err != nil {
+			return logging.Logger.Fail(64, "Multi-arch workflow component cleanup failed: %v", err)
+		}
+
 	}
-	ctx.MergeUrl = pull
 
 	return nil
 }

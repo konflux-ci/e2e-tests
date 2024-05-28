@@ -9,7 +9,7 @@ import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/loggi
 import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
 import github "github.com/google/go-github/v44/github"
 
-var fileList = []string{".template/COMPONENT-pull-request.yaml", ".template/COMPONENT-push.yaml"}
+var fileList = []string{"COMPONENT-pull-request.yaml", "COMPONENT-push.yaml"}
 
 // Parse repo name out of repo url
 func getRepoNameFromRepoUrl(repoUrl string) (string, error) {
@@ -22,27 +22,40 @@ func getRepoNameFromRepoUrl(repoUrl string) (string, error) {
 	}
 }
 
-func templateRepoFile(f *framework.Framework, repoName, repoRevision, fileName string, placeholders *map[string]string) error {
-	fileResponse, err1 := f.AsKubeAdmin.CommonController.Github.GetFile(repoName, fileName, repoRevision)
-	if err1 != nil {
-		return err1
+// Template file from '.template/...' to '.tekton/...', expanding placeholders (even in file name)
+// Returns SHA of the commit
+func templateRepoFile(f *framework.Framework, repoName, repoRevision, fileName string, placeholders *map[string]string) (string, error) {
+	var fileResponse *github.RepositoryContent
+	var fileContent string
+	var repoContentResponse *github.RepositoryContentResponse
+	var err error
+
+	fileResponse, err = f.AsKubeAdmin.CommonController.Github.GetFile(repoName, ".template/" + fileName, repoRevision)
+	if err != nil {
+		return "", err
 	}
 
-	fileContent, err2 := fileResponse.GetContent()
-	if err2 != nil {
-		return err2
+	fileContent, err = fileResponse.GetContent()
+	if err != nil {
+		return "", err
 	}
 
 	for key, value := range *placeholders {
 		fileContent = strings.ReplaceAll(fileContent, key, value)
+		fileName = strings.ReplaceAll(fileName, key, value)
 	}
 
-	_, err3 := f.AsKubeAdmin.CommonController.Github.UpdateFile(repoName, fileName, fileContent, repoRevision, *fileResponse.SHA)
-	if err3 != nil {
-		return err3
+	fileResponse, err = f.AsKubeAdmin.CommonController.Github.GetFile(repoName, ".tekton/" + fileName, repoRevision)
+	if err != nil {
+		return "", err
 	}
 
-	return nil
+	repoContentResponse, err = f.AsKubeAdmin.CommonController.Github.UpdateFile(repoName, ".tekton/" + fileName, fileContent, repoRevision, *fileResponse.SHA)
+	if err != nil {
+		return "", err
+	}
+
+	return *repoContentResponse.Commit.SHA, nil
 }
 
 func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username string) (string, error) {
@@ -74,22 +87,26 @@ func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username string) (s
 	return forkRepo.GetHTMLURL(), nil
 }
 
-func TemplateRepoMore(f *framework.Framework, repoUrl, repoRevision string, placeholders *map[string]string) error {
+func TemplateFiles(f *framework.Framework, repoUrl, repoRevision string, placeholders *map[string]string) (*map[string]string, error) {
+	var sha string
+
 	// Get repo name from repo url
 	repoName, err := getRepoNameFromRepoUrl(repoUrl)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Template files we care about
+	shaMap := &map[string]string{}
 	for _, file := range fileList {
-		err = templateRepoFile(f, repoName, repoRevision, file, placeholders)
+		sha, err = templateRepoFile(f, repoName, repoRevision, file, placeholders)
 		if err != nil {
-			return err
+			return nil, err
 		}
+		(*shaMap)[file] = sha
 	}
 
-	return nil
+	return shaMap, nil
 }
 
 func HandleRepoForking(ctx *MainContext) error {
@@ -115,30 +132,6 @@ func HandleRepoForking(ctx *MainContext) error {
 
 	ctx.TemplatingDoneWG.Done()
 	ctx.TemplatingDoneWG.Wait()
-
-	return nil
-}
-
-func HandleAdditionalTemplating(ctx *PerComponentContext) error {
-	if !ctx.ParentContext.ParentContext.Opts.PipelineRequestConfigurePac {
-		return nil
-	}
-
-	placeholders := &map[string]string{
-		"NAMESPACE": ctx.ParentContext.ParentContext.Namespace,
-		"QUAY_REPO": ctx.ParentContext.ParentContext.Opts.QuayRepo,
-		"APPLICATION": ctx.ParentContext.ApplicationName,
-		"COMPONENT": ctx.ComponentName,
-	}
-	err := TemplateRepoMore(
-		ctx.Framework,
-		ctx.ParentContext.ParentContext.ComponentRepoUrl,
-		ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision,
-		placeholders,
-	)
-	if err != nil {
-		return logging.Logger.Fail(81, "Additional repo templating failed: %v", err)
-	}
 
 	return nil
 }
