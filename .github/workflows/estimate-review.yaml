@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Download qe-tools release
-        run: gh release download $QE_TOOLS_VERSION -R redhat-appstudio/qe-tools
+        run: gh release download $QE_TOOLS_VERSION -R konflux-ci/qe-tools
         env:
           GH_TOKEN: ${{ github.token }}
 
