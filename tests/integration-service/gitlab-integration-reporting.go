@@ -99,9 +99,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				// Cleanup test, close MR if opned delete created brnach , delete usersignup  and namespace.
+				// Cleanup test: close MR if opened, delete created branch, delete associated Webhooks and delete usersignup
 				Expect(f.AsKubeAdmin.CommonController.Gitlab.CloseMergeRequest(projectID, mrID)).NotTo(HaveOccurred())
 				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteBranch(projectID, componentBaseBranchName)).NotTo(HaveOccurred())
+				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteWebhooks(projectID, f.ClusterAppDomain)).NotTo(HaveOccurred())
 				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 
 			}
