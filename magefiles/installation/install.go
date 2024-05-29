@@ -119,30 +119,6 @@ func NewAppStudioInstallController() (*InstallAppStudio, error) {
 	}, nil
 }
 
-func NewAppStudioInstallControllerUpgrade(infraFork string, infraBranch string) (*InstallAppStudio, error) {
-	cwd, _ := os.Getwd()
-	k8sClient, err := kubeCl.NewAdminKubernetesClient()
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &InstallAppStudio{
-		KubernetesClient:                 k8sClient,
-		TmpDirectory:                     DEFAULT_TMP_DIR,
-		InfraDeploymentsCloneDir:         fmt.Sprintf("%s/%s/infra-deployments", cwd, DEFAULT_TMP_DIR),
-		InfraDeploymentsBranch:           infraBranch,
-		InfraDeploymentsOrganizationName: infraFork,
-		LocalForkName:                    DEFAULT_LOCAL_FORK_NAME,
-		LocalGithubForkOrganization:      utils.GetEnv("MY_GITHUB_ORG", DEFAULT_LOCAL_FORK_ORGANIZATION),
-		QuayToken:                        utils.GetEnv("QUAY_TOKEN", ""),
-		DefaultImageQuayOrg:              utils.GetEnv("DEFAULT_QUAY_ORG", ""),
-		DefaultImageQuayOrgOAuth2Token:   utils.GetEnv("DEFAULT_QUAY_ORG_TOKEN", ""),
-		DefaultImageTagExpiration:        utils.GetEnv(constants.IMAGE_TAG_EXPIRATION_ENV, constants.DefaultImageTagExpiration),
-		EnableSchedulingOnMasterNodes:    utils.GetEnv(constants.ENABLE_SCHEDULING_ON_MASTER_NODES_ENV, enableSchedulingOnMasterNodes),
-	}, nil
-}
-
 // Start the appstudio installation in preview mode.
 func (i *InstallAppStudio) InstallAppStudioPreviewMode() error {
 	if err := i.cloneInfraDeployments(); err != nil {
@@ -214,12 +190,23 @@ func (i *InstallAppStudio) cloneInfraDeployments() error {
 	url := fmt.Sprintf("https://github.com/%s/infra-deployments", i.InfraDeploymentsOrganizationName)
 	refName := fmt.Sprintf("refs/heads/%s", i.InfraDeploymentsBranch)
 	klog.Infof("cloning '%s' with git ref '%s'", url, refName)
+
+	remoteName := "fork"
+	if i.InfraDeploymentsOrganizationName == "redhat-appstudio" {
+		remoteName = "upstream"
+	}
 	repo, _ := git.PlainClone(i.InfraDeploymentsCloneDir, false, &git.CloneOptions{
 		URL:           url,
 		ReferenceName: plumbing.ReferenceName(refName),
 		Progress:      os.Stdout,
-		RemoteName:    "upstream",
+		RemoteName:    remoteName,
 	})
+
+	if i.InfraDeploymentsOrganizationName != "redhat-appstudio" {
+		if _, err := repo.CreateRemote(&config.RemoteConfig{Name: "upstream", URLs: []string{"https://github.com/redhat-appstudio/infra-deployments.git"}}); err != nil {
+			return err
+		}
+	}
 
 	if _, err := repo.CreateRemote(&config.RemoteConfig{Name: i.LocalForkName, URLs: []string{fmt.Sprintf("https://github.com/%s/infra-deployments.git", i.LocalGithubForkOrganization)}}); err != nil {
 		return err
