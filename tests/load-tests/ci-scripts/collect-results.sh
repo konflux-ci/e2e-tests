@@ -11,7 +11,8 @@ pushd "${2:-.}"
 
 output_dir="${OUTPUT_DIR:-./tests/load-tests}"
 
-source "./tests/load-tests/ci-scripts/user-prefix.sh"
+source "$( dirname $0 )/utils.sh"
+source "$( dirname $0 )/user-prefix.sh"
 
 echo "Collecting load test results"
 load_test_log=$ARTIFACT_DIR/load-tests.log
@@ -20,16 +21,14 @@ find "$output_dir" -type f -name 'load-tests.json' -exec cp -vf {} "${ARTIFACT_D
 find "$output_dir" -type f -name 'gh-rate-limits-remaining.csv' -exec cp -vf {} "${ARTIFACT_DIR}" \;
 find "$output_dir" -type f -name '*.pprof' -exec cp -vf {} "${ARTIFACT_DIR}" \;
 
-pipelineruns_json=$ARTIFACT_DIR/pipelineruns.json
-taskruns_json=$ARTIFACT_DIR/taskruns.json
-pods_json=$ARTIFACT_DIR/pods.json
+application_stub=$ARTIFACT_DIR/collected-applications.appstudio.redhat.com
+componentdetectionquery_stub=$ARTIFACT_DIR/collected-componentdetectionqueries.appstudio.redhat.com
+component_stub=$ARTIFACT_DIR/collected-components.appstudio.redhat.com
+pipelinerun_stub=$ARTIFACT_DIR/collected-pipelineruns.tekton.dev
+taskrun_stub=$ARTIFACT_DIR/collected-taskruns.tekton.dev
+pod_stub=$ARTIFACT_DIR/collected-pods
+node_stub=$ARTIFACT_DIR/collected-nodes
 
-application_timestamps=$ARTIFACT_DIR/applications.appstudio.redhat.com_timestamps
-application_timestamps_csv=${application_timestamps}.csv
-application_timestamps_txt=${application_timestamps}.txt
-componentdetectionquery_timestamps=$ARTIFACT_DIR/componentdetectionqueries.appstudio.redhat.com_timestamps.csv
-component_timestamps=$ARTIFACT_DIR/components.appstudio.redhat.com_timestamps.csv
-pipelinerun_timestamps=$ARTIFACT_DIR/pipelineruns.tekton.dev_timestamps.csv
 application_service_log=$ARTIFACT_DIR/application-service.log
 application_service_log_segments=$ARTIFACT_DIR/application-service-log-segments
 monitoring_collection_log=$ARTIFACT_DIR/monitoring-collection.log
@@ -40,62 +39,33 @@ csv_delim=";"
 csv_delim_quoted="\"$csv_delim\""
 dt_format='"%Y-%m-%dT%H:%M:%SZ"'
 
-## Application timestamps
+## Application info
 echo "Collecting Application timestamps..."
-echo "Application${csv_delim}StatusSucceeded${csv_delim}StatusMessage${csv_delim}CreatedTimestamp${csv_delim}SucceededTimestamp${csv_delim}Duration" >"$application_timestamps_csv"
-jq_cmd=".items[] | (.metadata.name) \
-+ $csv_delim_quoted + (.status.conditions[0].status) \
-+ $csv_delim_quoted + (.status.conditions[0].message) \
-+ $csv_delim_quoted + (.metadata.creationTimestamp) \
-+ $csv_delim_quoted + (.status.conditions[0].lastTransitionTime) \
-+ $csv_delim_quoted + ((.status.conditions[0].lastTransitionTime | strptime($dt_format) | mktime) - (.metadata.creationTimestamp | strptime($dt_format) | mktime) | tostring)"
-oc get applications.appstudio.redhat.com -A -o json | jq -rc "$jq_cmd" | sed -e 's,Z,,g' >>"$application_timestamps_csv"
-oc get applications.appstudio.redhat.com -A -o 'custom-columns=NAME:.metadata.name,CREATED:.metadata.creationTimestamp,LAST_UPDATED:.status.conditions[0].lastTransitionTime,STATUS:.status.conditions[0].reason,MESSAGE:.status.conditions[0].message' >"$application_timestamps_txt"
+collect_application "-A" "$application_stub"
 
-## ComponentDetectionQuery timestamps
+## ComponentDetectionQuery info
 echo "Collecting ComponentDetectionQuery timestamps..."
-echo "ComponentDetectionQuery${csv_delim}Namespace${csv_delim}CreationTimestamp${csv_delim}Completed${csv_delim}Completed.Reason${csv_delim}Completed.Mesasge${csv_delim}Duration" >"$componentdetectionquery_timestamps"
-jq_cmd=".items[] | (.metadata.name) \
-+ $csv_delim_quoted + (.metadata.namespace) \
-+ $csv_delim_quoted + (.metadata.creationTimestamp) \
-+ $csv_delim_quoted + (if ((.status.conditions[] | select(.type == \"Completed\")) // false) then (.status.conditions[] | select(.type == \"Completed\") | .lastTransitionTime + $csv_delim_quoted + .reason + $csv_delim_quoted + .message) else \"$csv_delim$csv_delim\" end)\
-+ $csv_delim_quoted + (if ((.status.conditions[] | select(.type == \"Completed\")) // false) then ((.status.conditions[] | select(.type == \"Completed\") | .lastTransitionTime | strptime($dt_format) | mktime) - (.metadata.creationTimestamp | strptime($dt_format) | mktime) | tostring) else \"\" end)"
-oc get componentdetectionqueries.appstudio.redhat.com -A -o json | jq -rc "$jq_cmd" | sed -e 's,Z,,g' >>"$componentdetectionquery_timestamps"
+collect_componentdetectionquery "-A" "$componentdetectionquery_stub"
 
-## Component timestamps
+## Component info
 echo "Collecting Component timestamps..."
-echo "Component${csv_delim}Namespace${csv_delim}CreationTimestamp${csv_delim}Created${csv_delim}Created.Reason${csv_delim}Create.Mesasge${csv_delim}GitOpsResourcesGenerated${csv_delim}GitOpsResourcesGenerated.Reason${csv_delim}GitOpsResourcesGenerated.Message${csv_delim}Updated${csv_delim}Updated.Reason${csv_delim}Updated.Message${csv_delim}CreationTimestamp->Created${csv_delim}Created->GitOpsResourcesGenerated${csv_delim}GitOpsResourcesGenerated->Updated${csv_delim}Duration" >"$component_timestamps"
-jq_cmd=".items[] | (.metadata.name) \
-+ $csv_delim_quoted + (.metadata.namespace) \
-+ $csv_delim_quoted + (.metadata.creationTimestamp) \
-+ $csv_delim_quoted + (if ((.status.conditions[] | select(.type == \"Created\")) // false) then (.status.conditions[] | select(.type == \"Created\") | .lastTransitionTime + $csv_delim_quoted + .reason + $csv_delim_quoted + (.message|split($csv_delim_quoted)|join(\"_\"))) else \"$csv_delim$csv_delim\" end) \
-+ $csv_delim_quoted + (if ((.status.conditions[] | select(.type == \"GitOpsResourcesGenerated\")) // false) then (.status.conditions[] | select(.type == \"GitOpsResourcesGenerated\") | .lastTransitionTime + $csv_delim_quoted + .reason + $csv_delim_quoted + (.message|split($csv_delim_quoted)|join(\"_\"))) else \"$csv_delim$csv_delim\" end) \
-+ $csv_delim_quoted + (if ((.status.conditions[] | select(.type == \"Updated\")) // false) then (.status.conditions[] | select(.type == \"Updated\") | .lastTransitionTime + $csv_delim_quoted + .reason + $csv_delim_quoted + (.message|split($csv_delim_quoted)|join(\"_\"))) else \"$csv_delim$csv_delim\" end) \
-+ $csv_delim_quoted + (if ((.status.conditions[] | select(.type == \"Created\")) // false) then ((.status.conditions[] | select(.type == \"Created\") | .lastTransitionTime | strptime($dt_format) | mktime) - (.metadata.creationTimestamp | strptime($dt_format) | mktime) | tostring) else \"\" end)\
-+ $csv_delim_quoted + (if ((.status.conditions[] | select(.type == \"GitOpsResourcesGenerated\")) // false) and ((.status.conditions[] | select(.type == \"Created\")) // false) then ((.status.conditions[] | select(.type == \"GitOpsResourcesGenerated\") | .lastTransitionTime | strptime($dt_format) | mktime) - (.status.conditions[] | select(.type == \"Created\") | .lastTransitionTime | strptime($dt_format) | mktime) | tostring) else \"\" end) \
-+ $csv_delim_quoted + (if ((.status.conditions[] | select(.type == \"Updated\")) // false) and ((.status.conditions[] | select(.type == \"GitOpsResourcesGenerated\")) // false) then ((.status.conditions[] | select(.type == \"Updated\") | .lastTransitionTime | strptime($dt_format) | mktime) - (.status.conditions[] | select(.type == \"GitOpsResourcesGenerated\") | .lastTransitionTime | strptime($dt_format) | mktime) | tostring) else \"\" end) \
-+ $csv_delim_quoted + (if ((.status.conditions[] | select(.type == \"Updated\")) // false) then ((.status.conditions[] | select(.type == \"Updated\") | .lastTransitionTime | strptime($dt_format) | mktime) - (.metadata.creationTimestamp | strptime($dt_format) | mktime) | tostring) else \"\" end)"
-oc get components.appstudio.redhat.com -A -o json | jq -rc "$jq_cmd" | sed -e 's,Z,,g' >>"$component_timestamps"
+collect_component "-A" "$component_stub"
 
-## PipelineRun timestamps
+## PipelineRun info
 echo "Collecting PipelineRun timestamps..."
-echo "PipelineRun${csv_delim}Namespace${csv_delim}Succeeded${csv_delim}Reason${csv_delim}Message${csv_delim}Created${csv_delim}Started${csv_delim}FinallyStarted${csv_delim}Completed${csv_delim}Created->Started${csv_delim}Started->FinallyStarted${csv_delim}FinallyStarted->Completed${csv_delim}SucceededDuration${csv_delim}FailedDuration" >"$pipelinerun_timestamps"
-jq_cmd=".items[] | (.metadata.name) \
-+ $csv_delim_quoted + (.metadata.namespace) \
-+ $csv_delim_quoted + (.status.conditions[0].status) \
-+ $csv_delim_quoted + (.status.conditions[0].reason) \
-+ $csv_delim_quoted + (.status.conditions[0].message|split($csv_delim_quoted)|join(\"_\")) \
-+ $csv_delim_quoted + (.metadata.creationTimestamp) \
-+ $csv_delim_quoted + (.status.startTime) \
-+ $csv_delim_quoted + (.status.finallyStartTime) \
-+ $csv_delim_quoted + (.status.completionTime) \
-+ $csv_delim_quoted + (if .status.startTime != null and .metadata.creationTimestamp != null then ((.status.startTime | strptime($dt_format) | mktime) - (.metadata.creationTimestamp | strptime($dt_format) | mktime) | tostring) else \"\" end) \
-+ $csv_delim_quoted + (if .status.finallyStartTime != null and .status.startTime != null then ((.status.finallyStartTime | strptime($dt_format) | mktime) - (.status.startTime | strptime($dt_format) | mktime) | tostring) else \"\" end) \
-+ $csv_delim_quoted + (if .status.completionTime != null and .status.finallyStartTime != null then ((.status.completionTime | strptime($dt_format) | mktime) - (.status.finallyStartTime | strptime($dt_format) | mktime) | tostring) else \"\" end) \
-+ $csv_delim_quoted + (if .status.conditions[0].status == \"True\" and .status.completionTime != null and .metadata.creationTimestamp != null then ((.status.completionTime | strptime($dt_format) | mktime) - (.metadata.creationTimestamp | strptime($dt_format) | mktime) | tostring) else \"\" end) \
-+ $csv_delim_quoted + (if .status.conditions[0].status == \"False\" and .status.completionTime != null and .metadata.creationTimestamp != null then ((.status.completionTime | strptime($dt_format) | mktime) - (.metadata.creationTimestamp | strptime($dt_format) | mktime) | tostring) else \"\" end)"
-oc get pipelineruns.tekton.dev -A -o json >"$pipelineruns_json"
-jq "$jq_cmd" "$pipelineruns_json" | sed -e "s/\n//g" -e "s/^\"//g" -e "s/\"$//g" -e "s/Z;/;/g" | sort -t ";" -k 13 -r -n >>"$pipelinerun_timestamps"
+collect_pipelinerun "-A" "$pipelinerun_stub"
+
+## TaskRun info
+echo "Collecting TaskRun timestamps..."
+collect_taskrun "-A" "$taskrun_stub"
+
+## Pods info
+echo "Collecting pod distribution over nodes"
+collect_pods "-A" "$pod_stub"
+
+## Nodes info
+echo "Collecting node specs"
+collect_nodes "$node_stub"
 
 ## Application service log segments per user app
 echo "Collecting application service log segments per user app..."
@@ -153,35 +123,6 @@ if [ "${TEKTON_PERF_ENABLE_CPU_PROFILING:-}" == "true" ] || [ "${TEKTON_PERF_ENA
     done
 fi
 
-## Pods on Nodes distribution
-node_info_csv=$ARTIFACT_DIR/node-info.csv
-echo "Collecting node specs"
-echo "Node;CPUs;Memory;InstanceType;NodeType;Zone" >"$node_info_csv"
-jq_cmd=".items[] | .metadata.name \
-+ $csv_delim_quoted + .status.capacity.cpu \
-+ $csv_delim_quoted + .status.capacity.memory \
-+ $csv_delim_quoted + .metadata.labels.\"node.kubernetes.io/instance-type\" \
-+ $csv_delim_quoted + (if .metadata.labels.\"node-role.kubernetes.io/worker\" != null then \"worker\" else \"master\" end) \
-+ $csv_delim_quoted + .metadata.labels.\"topology.kubernetes.io/zone\""
-oc get nodes -o json | jq -r "$jq_cmd" >>"$node_info_csv"
-
-oc get pods -A -o json >"$pods_json"
-pods_on_nodes_csv=$ARTIFACT_DIR/pods-on-nodes.csv
-all_pods_distribution_csv=$ARTIFACT_DIR/all-pods-distribution.csv
-task_pods_distribution_csv=$ARTIFACT_DIR/task-pods-distribution.csv
-echo "Collecting pod distribution over nodes"
-echo "Node;Namespace;Pod" >"$pods_on_nodes_csv"
-jq_cmd=".items[] | select(.metadata.labels.\"appstudio.openshift.io/application\" != null) \
-| select(.metadata.labels.\"appstudio.openshift.io/application\" | startswith(\"$USER_PREFIX\")) \
-| .spec.nodeName \
-+ $csv_delim_quoted + .metadata.namespace \
-+ $csv_delim_quoted + .metadata.name"
-jq -r "$jq_cmd" "$pods_json" | sort -V >>"$pods_on_nodes_csv"
-echo "Node;Pods" >"$all_pods_distribution_csv"
-jq -r ".items[] | .spec.nodeName" "$pods_json" | sort | uniq -c | sed -e 's,\s\+\([0-9]\+\)\s\+\(.*\),\2;\1,g' >>"$all_pods_distribution_csv"
-echo "Node;Pods" >"$task_pods_distribution_csv"
-jq -r '.items[] | select(.metadata.labels."appstudio.openshift.io/application" != null).spec.nodeName' "$pods_json" | sort | uniq -c | sed -e 's,\s\+\([0-9]\+\)\s\+\(.*\),\2;\1,g' >>"$task_pods_distribution_csv"
-
 ## Tekton Artifact Performance Analysis
 tapa_dir=./tapa.git
 
@@ -198,7 +139,6 @@ export PATH="$PATH:$tapa_dir"
 tapa="tapa -t csv"
 
 echo "Running Tekton Artifact Performance Analysis"
-oc get taskruns.tekton.dev -A -o json >"$taskruns_json"
 tapa_prlist_csv=$ARTIFACT_DIR/tapa.prlist.csv
 tapa_trlist_csv=$ARTIFACT_DIR/tapa.trlist.csv
 tapa_podlist_csv=$ARTIFACT_DIR/tapa.podlist.csv
@@ -215,19 +155,19 @@ sort_csv() {
     fi
 }
 
-$tapa prlist "$pipelineruns_json" >"$tapa_tmp"
+$tapa prlist "${pipelinerun_stub}.json" >"$tapa_tmp"
 sort_csv "$tapa_tmp" "$tapa_prlist_csv"
 
-$tapa trlist "$taskruns_json" >"$tapa_tmp"
+$tapa trlist "${taskrun_stub}.json" >"$tapa_tmp"
 sort_csv "$tapa_tmp" "$tapa_trlist_csv"
 
-$tapa podlist "$pods_json" >"$tapa_tmp"
+$tapa podlist "${pod_stub}.json" >"$tapa_tmp"
 sort_csv "$tapa_tmp" "$tapa_podlist_csv"
 
-$tapa podlist --containers-only "$pods_json" >"$tapa_tmp"
+$tapa podlist --containers-only "${pod_stub}.json" >"$tapa_tmp"
 sort_csv "$tapa_tmp" "$tapa_podlist_containers_csv"
 
-$tapa all "$pipelineruns_json" "$taskruns_json" "$pods_json" >"$tapa_tmp"
+$tapa all "${pipelinerun_stub}.json" "${taskrun_stub}.json" "${pod_stub}.json" >"$tapa_tmp"
 sort_csv "$tapa_tmp" "$tapa_all_csv"
 
 popd
