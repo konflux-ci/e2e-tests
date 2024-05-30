@@ -19,25 +19,25 @@ import (
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	"github.com/google/go-github/v44/github"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
-	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
+	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
-	e2eConfig "github.com/redhat-appstudio/e2e-tests/tests/rhtap-demo/config"
+	e2eConfig "github.com/konflux-ci/e2e-tests/tests/rhtap-demo/config"
 )
 
 const (

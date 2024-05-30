@@ -7,9 +7,9 @@ import (
 	"github.com/konflux-ci/operator-toolkit/metadata"
 
 	"github.com/devfile/library/v2/pkg/util"
-	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 

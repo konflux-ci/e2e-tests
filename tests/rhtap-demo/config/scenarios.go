@@ -3,8 +3,8 @@ package config
 import (
 	"fmt"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 )
 
 // All multiple components scenarios are supported in the next jira: https://issues.redhat.com/browse/DEVHAS-305

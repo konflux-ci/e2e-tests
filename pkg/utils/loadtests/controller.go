@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 )
 
 // User represents a user in the list

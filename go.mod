@@ -1,4 +1,4 @@
-module github.com/redhat-appstudio/e2e-tests
+module github.com/konflux-ci/e2e-tests
 
 go 1.21
 

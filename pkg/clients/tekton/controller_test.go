@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/h2non/gock"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	"github.com/stretchr/testify/assert"
 )
 

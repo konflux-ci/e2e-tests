@@ -42,10 +42,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	//framework imports edit as required
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 )
 
 var _ = framework.BookSuiteDescribe("Book service E2E tests", func() {

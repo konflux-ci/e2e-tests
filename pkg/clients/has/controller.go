@@ -1,11 +1,11 @@
 package has
 
 import (
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/clients/github"
-	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
+	kubeCl "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 )
 
 // Factory to initialize the comunication against different API like github or kubernetes.

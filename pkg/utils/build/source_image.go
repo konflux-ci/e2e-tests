@@ -20,10 +20,10 @@ import (
 	"github.com/openshift/library-go/pkg/image/reference"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/clients/github"
-	"github.com/redhat-appstudio/e2e-tests/pkg/clients/tekton"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/tekton"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 

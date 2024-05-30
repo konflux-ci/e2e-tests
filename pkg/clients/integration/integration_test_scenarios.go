@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/devfile/library/v2/pkg/util"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"

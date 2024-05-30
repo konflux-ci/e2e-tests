@@ -1,10 +1,10 @@
 package upgrade
 
 import (
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
+	"github.com/konflux-ci/e2e-tests/tests/upgrade/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	"github.com/redhat-appstudio/e2e-tests/tests/upgrade/utils"
 )
 
 var _ = framework.UpgradeSuiteDescribe("Create users and check their state", Label("upgrade-cleanup"), func() {

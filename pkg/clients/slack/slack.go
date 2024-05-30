@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/slack-go/slack"
 	v1 "k8s.io/test-infra/prow/apis/prowjobs/v1"
 	"sigs.k8s.io/yaml"

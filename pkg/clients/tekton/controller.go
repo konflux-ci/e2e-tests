@@ -1,7 +1,7 @@
 package tekton
 
 import (
-	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
+	kubeCl "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 )
 
 // Create the struct for kubernetes clients

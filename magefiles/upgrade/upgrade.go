@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/openshift/oc/pkg/cli/admin/upgrade"
 	"github.com/openshift/oc/pkg/cli/admin/upgrade/channel"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/klog"
 

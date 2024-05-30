@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	g "github.com/onsi/ginkgo/v2"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/pod"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"

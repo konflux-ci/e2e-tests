@@ -3,8 +3,8 @@ package tekton
 import (
 	"context"
 
+	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	"k8s.io/apimachinery/pkg/types"
 )
 

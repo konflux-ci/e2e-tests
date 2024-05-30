@@ -6,11 +6,11 @@ import (
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/api/meta"
 
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

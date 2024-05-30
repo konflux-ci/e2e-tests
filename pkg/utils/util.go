@@ -25,8 +25,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/devfile/library/v2/pkg/util"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/mitchellh/go-homedir"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
 	"k8s.io/klog/v2"
 
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"

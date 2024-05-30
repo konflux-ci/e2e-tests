@@ -5,11 +5,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 )
 

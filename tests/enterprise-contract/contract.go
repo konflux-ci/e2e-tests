@@ -7,15 +7,15 @@ import (
 
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/common"
+	kubeapi "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/contract"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/redhat-appstudio/e2e-tests/pkg/clients/common"
-	kubeapi "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/contract"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -400,9 +400,9 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(tr.Status.TaskRunStatusFields.Results).Should(Or(
-					// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
-					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
-					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
+						// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
+						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
+						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
 					))
 				})
 				It("verifies the release policy: Task bundles are in acceptable bundle list", func() {

@@ -6,8 +6,8 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/common"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/common"
 
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

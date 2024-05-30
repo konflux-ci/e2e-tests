@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
+	. "github.com/konflux-ci/e2e-tests/pkg/utils"
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	"sigs.k8s.io/yaml"
 )
 

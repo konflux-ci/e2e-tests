@@ -5,17 +5,17 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	. "github.com/onsi/ginkgo/v2"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
-	"knative.dev/pkg/apis"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"knative.dev/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

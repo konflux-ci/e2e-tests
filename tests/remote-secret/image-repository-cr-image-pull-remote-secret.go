@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	image "github.com/konflux-ci/image-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
-	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 )

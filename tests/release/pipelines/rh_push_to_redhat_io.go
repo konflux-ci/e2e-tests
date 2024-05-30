@@ -10,27 +10,27 @@ import (
 
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
+	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
-	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	releaseapi "github.com/redhat-appstudio/release-service/api/v1alpha1"
-	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	rhioServiceAccountName   = "release-service-account"
-	rhioCatalogPathInRepo    = "pipelines/rh-push-to-registry-redhat-io/rh-push-to-registry-redhat-io.yaml"
+	rhioServiceAccountName = "release-service-account"
+	rhioCatalogPathInRepo  = "pipelines/rh-push-to-registry-redhat-io/rh-push-to-registry-redhat-io.yaml"
 )
 
 var testComponent *appservice.Component
@@ -80,7 +80,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 			Expect(err).ToNot(HaveOccurred())
 
 			_, err = managedFw.AsKubeAdmin.CommonController.GetSecret(managedNamespace, releasecommon.RedhatAppstudioQESecret)
-                        if errors.IsNotFound(err) {
+			if errors.IsNotFound(err) {
 				secret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "pyxis",
@@ -103,7 +103,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(rhioApplicationName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			 _, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(rhioReleasePlanName, devNamespace, rhioApplicationName, managedNamespace, "true", nil)
+			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(rhioReleasePlanName, devNamespace, rhioApplicationName, managedNamespace, "true", nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			testComponent = releasecommon.CreateComponentByCDQ(*devFw, devNamespace, managedNamespace, rhioApplicationName, rhioComponentName, releasecommon.AdditionalGitSourceComponentUrl)
@@ -146,7 +146,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 					}
 					GinkgoWriter.Printf("PipelineRun %s reason: %s\n", buildPR.Name, buildPR.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
 					if !buildPR.IsDone() {
-                                                return fmt.Errorf("build pipelinerun %s in namespace %s did not finish yet", buildPR.Name, buildPR.Namespace)
+						return fmt.Errorf("build pipelinerun %s in namespace %s did not finish yet", buildPR.Name, buildPR.Namespace)
 					}
 					if buildPR.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
 						snapshot, err = devFw.AsKubeDeveloper.IntegrationController.GetSnapshot("", buildPR.Name, "", devNamespace)
@@ -181,7 +181,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 						return fmt.Errorf("release %s/%s is not marked as finished yet", releaseCR.GetNamespace(), releaseCR.GetName())
 					}
 					return nil
-				}, 10 * time.Minute, releasecommon.DefaultInterval).Should(Succeed())
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
 			})
 
 			It("verifies if the MR URL is valid", func() {
@@ -236,8 +236,8 @@ func createRHIOReleasePlanAdmission(rhioRPAName string, managedFw framework.Fram
 		"mapping": map[string]interface{}{
 			"components": []map[string]interface{}{
 				{
-					"name"       : testComponent.GetName(),
-					"repository" : "quay.io/redhat-pending/rhtap----konflux-release-e2e",
+					"name":       testComponent.GetName(),
+					"repository": "quay.io/redhat-pending/rhtap----konflux-release-e2e",
 				},
 			},
 		},
@@ -252,18 +252,18 @@ func createRHIOReleasePlanAdmission(rhioRPAName string, managedFw framework.Fram
 			"addSourceShaTag": false,
 			"floatingTags":    []string{"testtag", "testtag2"},
 		},
-		"fileUpdates":  []map[string]interface{}{
+		"fileUpdates": []map[string]interface{}{
 			{
-				"repo": releasecommon.GitLabRunFileUpdatesTestRepo,
+				"repo":          releasecommon.GitLabRunFileUpdatesTestRepo,
 				"upstream_repo": releasecommon.GitLabRunFileUpdatesTestRepo,
-				"ref": "master",
+				"ref":           "master",
 				"paths": []map[string]interface{}{
 					{
 						"path": "data/app-interface/app-interface-settings.yml",
 						"replacements": []map[string]interface{}{
 							{
 								"key": ".description",
-								// description: App Interface settings 
+								// description: App Interface settings
 								"replacement": "|description:.*|description: {{ .components[0].containerImage }}|",
 							},
 						},

@@ -1,11 +1,11 @@
 package upgrade
 
 import (
-	"github.com/redhat-appstudio/e2e-tests/tests/upgrade/utils"
-	"github.com/redhat-appstudio/e2e-tests/tests/upgrade/verify"
+	"github.com/konflux-ci/e2e-tests/tests/upgrade/utils"
+	"github.com/konflux-ci/e2e-tests/tests/upgrade/verify"
 
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	. "github.com/onsi/ginkgo/v2"
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 )
 
 var _ = framework.UpgradeSuiteDescribe("Create users and check their state", Label("upgrade-verify"), func() {

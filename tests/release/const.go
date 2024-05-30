@@ -3,7 +3,7 @@ package common
 import (
 	"time"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 )
 

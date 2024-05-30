@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/redhat-appstudio/service-provider-integration-operator/api/v1beta1"
 	v1 "k8s.io/api/core/v1"
 
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
