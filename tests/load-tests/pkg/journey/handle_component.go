@@ -247,13 +247,28 @@ func HandleComponent(ctx *PerComponentContext) error {
 	logging.Logger.Debug("Creating component %s in namespace %s", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 
 	// Create component
-	_, err = logging.Measure(CreateComponent, ctx.Framework, ctx.ParentContext.ParentContext.Namespace, ctx.ComponentName, ctx.ParentContext.ApplicationName, stub, ctx.ParentContext.ParentContext.Opts.PipelineSkipInitialChecks, ctx.ParentContext.ParentContext.Opts.PipelineRequestConfigurePac)
+	_, err = logging.Measure(
+		CreateComponent,
+		ctx.Framework,
+		ctx.ParentContext.ParentContext.Namespace,
+		ctx.ComponentName,
+		ctx.ParentContext.ApplicationName,
+		stub,
+		ctx.ParentContext.ParentContext.Opts.PipelineSkipInitialChecks,
+		ctx.ParentContext.ParentContext.Opts.PipelineRequestConfigurePac,
+	)
 	if err != nil {
 		return logging.Logger.Fail(60, "Component failed creation: %v", err)
 	}
 
 	// Validate component and if this is PaC component, get pull request link
-	pullIface, err = logging.Measure(ValidateComponent, ctx.Framework, ctx.ParentContext.ParentContext.Namespace, ctx.ComponentName, ctx.ParentContext.ParentContext.Opts.PipelineRequestConfigurePac)
+	pullIface, err = logging.Measure(
+		ValidateComponent,
+		ctx.Framework,
+		ctx.ParentContext.ParentContext.Namespace,
+		ctx.ComponentName,
+		ctx.ParentContext.ParentContext.Opts.PipelineRequestConfigurePac,
+	)
 	if err != nil {
 		return logging.Logger.Fail(61, "Component failed validation: %v", err)
 	}
