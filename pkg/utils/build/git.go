@@ -5,9 +5,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/clients/github"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 )
 
 // resolve the git url and revision from a pull request. If not found, return a default

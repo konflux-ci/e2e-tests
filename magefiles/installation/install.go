@@ -19,9 +19,9 @@ import (
 	configv1client "github.com/openshift/client-go/config/clientset/versioned"
 
 	appclientset "github.com/argoproj/argo-cd/v2/pkg/client/clientset/versioned"
-	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	kubeCl "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

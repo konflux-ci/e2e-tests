@@ -21,10 +21,10 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	plumbingHttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	sprig "github.com/go-task/slim-sprig"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/slack"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/konflux-ci/image-controller/pkg/quay"
 	"github.com/magefile/mage/sh"
-	"github.com/redhat-appstudio/e2e-tests/pkg/clients/slack"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 )
 
 const quayPrefixesToDeleteRegexp = "e2e-demos|has-e2e|multi-comp|build-e2e"

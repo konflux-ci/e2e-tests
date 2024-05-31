@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	quay "github.com/konflux-ci/image-controller/pkg/quay"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 )
 
 var (

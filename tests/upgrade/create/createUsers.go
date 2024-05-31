@@ -1,9 +1,9 @@
 package create
 
 import (
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
+	utils "github.com/konflux-ci/e2e-tests/tests/upgrade/utils"
 	. "github.com/onsi/gomega"
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	utils "github.com/redhat-appstudio/e2e-tests/tests/upgrade/utils"
 )
 
 func CreateAppStudioProvisionedUser(fw *framework.Framework) {

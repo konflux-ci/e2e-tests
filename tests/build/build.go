@@ -14,25 +14,25 @@ import (
 	pointer "k8s.io/utils/ptr"
 
 	"github.com/google/go-github/v44/github"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
-	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 
 	"github.com/devfile/library/v2/pkg/util"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
+	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	imagecontollers "github.com/konflux-ci/image-controller/controllers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/build-service/controllers"
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
 	v1 "k8s.io/api/core/v1"
 )
 

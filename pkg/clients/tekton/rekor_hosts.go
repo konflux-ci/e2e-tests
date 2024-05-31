@@ -3,7 +3,7 @@ package tekton
 import (
 	"context"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

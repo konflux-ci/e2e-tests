@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/konflux-ci/e2e-tests/pkg/clients/tekton"
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/openshift/library-go/pkg/image/reference"
-	"github.com/redhat-appstudio/e2e-tests/pkg/clients/tekton"
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

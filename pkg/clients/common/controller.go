@@ -3,11 +3,11 @@ package common
 import (
 	"fmt"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/clients/github"
-	"github.com/redhat-appstudio/e2e-tests/pkg/clients/gitlab"
-	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/gitlab"
+	kubeCl "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 )
 
 // Create the struct for kubernetes and github clients.

@@ -1,6 +1,6 @@
 package release
 
-import kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
+import kubeCl "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 
 // Factory to initialize the comunication against different API like github or kubernetes.
 type ReleaseController struct {

@@ -7,7 +7,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/clients/common"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/common"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 
 	v1 "k8s.io/api/apps/v1"

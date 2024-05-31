@@ -1,7 +1,7 @@
 package jvmbuildservice
 
 import (
-	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
+	kubeCl "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 )
 
 type JvmbuildserviceController struct {

@@ -1,10 +1,10 @@
 package remotesecret
 
 import (
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	image "github.com/konflux-ci/image-controller/api/v1alpha1"
 	. "github.com/onsi/gomega"
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/build"
 	rs "github.com/redhat-appstudio/remote-secret/api/v1beta1"
 )
 

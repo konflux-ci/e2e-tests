@@ -51,7 +51,7 @@ $ go mod tidy
 <p>
 
    Some tests could require you have a Github App created in order to test Component builds via Pipelines as Code.
-Such tests are [rhtap-demo](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/rhtap-demo/rhtap-demo.go), [build](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/build/build.go), and [status-reporting-to-pullrequest](https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/integration-service/status-reporting-to-pullrequest.go).
+Such tests are [rhtap-demo](https://github.com/konflux-ci/e2e-tests/blob/main/tests/rhtap-demo/rhtap-demo.go), [build](https://github.com/konflux-ci/e2e-tests/blob/main/tests/build/build.go), and [status-reporting-to-pullrequest](https://github.com/konflux-ci/e2e-tests/blob/main/tests/integration-service/status-reporting-to-pullrequest.go).
 
 In this case, before you bootstrap a cluster, make sure you [created a Github App for your GitHub account](https://github.com/settings/apps). Fill in following details:
 </p>
@@ -72,7 +72,7 @@ export E2E_PAC_GITHUB_APP_PRIVATE_KEY=$(base64 < /PATH/TO/YOUR/DOWNLOADED/PRIVAT
 ```
 
 <p>
-Navigate back to <a href="https://github.com/settings/apps">your GitHub App</a>, select Install App and select your GitHub org (the one that you're using in `MY_GITHUB_ORG` env var). Feel free to install it to all repositories of that organization or the forked repositories currently used by <a href="(https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/rhtap-demo/rhtap-demo.go)">rhtap-demo</a> and <a href="(https://github.com/redhat-appstudio/e2e-tests/blob/main/tests/build/build.go">build tests</a>
+Navigate back to <a href="https://github.com/settings/apps">your GitHub App</a>, select Install App and select your GitHub org (the one that you're using in `MY_GITHUB_ORG` env var). Feel free to install it to all repositories of that organization or the forked repositories currently used by <a href="(https://github.com/konflux-ci/e2e-tests/blob/main/tests/rhtap-demo/rhtap-demo.go)">rhtap-demo</a> and <a href="(https://github.com/konflux-ci/e2e-tests/blob/main/tests/build/build.go">build tests</a>
 </p>
 
 </details>

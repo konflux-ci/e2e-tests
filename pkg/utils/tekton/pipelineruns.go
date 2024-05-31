@@ -9,7 +9,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/apis"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"

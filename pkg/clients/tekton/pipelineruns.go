@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/logs"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

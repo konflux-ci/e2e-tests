@@ -8,10 +8,10 @@ import (
 
 	"github.com/devfile/library/v2/pkg/util"
 	"github.com/google/go-github/v44/github"
-	"github.com/redhat-appstudio/e2e-tests/pkg/clients/has"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 
 	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
 	. "github.com/onsi/ginkgo/v2"

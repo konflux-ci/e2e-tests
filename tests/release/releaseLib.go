@@ -3,12 +3,13 @@ package common
 import (
 	"os"
 	"time"
+
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 )
 
 func CreateComponentByCDQ(devFw framework.Framework, devNamespace, managedNamespace, appName, compName string, sourceGitURL string) *appservice.Component {
@@ -36,9 +37,9 @@ func NewFramework(workspace string) *framework.Framework {
 		OfflineToken:    os.Getenv(constants.OFFLINE_TOKEN_ENV),
 	}
 	fw, err := framework.NewFrameworkWithTimeout(
-			workspace,
-			time.Minute*60,
-			stageOptions,
+		workspace,
+		time.Minute*60,
+		stageOptions,
 	)
 	Expect(err).NotTo(HaveOccurred())
 	return fw

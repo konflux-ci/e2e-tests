@@ -1,9 +1,10 @@
 package tekton
 
 import (
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPipelineExtraction(t *testing.T) {

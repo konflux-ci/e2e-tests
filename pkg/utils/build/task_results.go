@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/types"
 

@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"strings"
 
+	kubeCl "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 	routev1 "github.com/openshift/api/route/v1"
-	kubeCl "github.com/redhat-appstudio/e2e-tests/pkg/clients/kubernetes"
 	"k8s.io/apimachinery/pkg/types"
 )
 

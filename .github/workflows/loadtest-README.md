@@ -2,7 +2,7 @@
 # How to upload offline tokens to GitHub secrets for loadtest workflow
 
 Staging users are splitted and stored as base64 encoded secrets - STAGING_USERS_1, STAGING_USERS_2, STAGING_USERS_3, STAGING_USERS_4
-The GITHUB secrets link is <https://github.com/redhat-appstudio/e2e-tests/settings/secrets/actions>
+The GITHUB secrets link is <https://github.com/konflux-ci/e2e-tests/settings/secrets/actions>
 or for any fork (like: naftalysh) in <https://github.com/naftalysh/e2e-tests/settings/secrets/actions>
 
 # The users secrets creation process

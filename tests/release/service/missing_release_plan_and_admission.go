@@ -6,13 +6,13 @@ import (
 	"github.com/redhat-appstudio/application-api/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 
-	releasecommon "github.com/redhat-appstudio/e2e-tests/tests/release"
+	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/redhat-appstudio/e2e-tests/pkg/constants"
-	"github.com/redhat-appstudio/e2e-tests/pkg/framework"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 )
 

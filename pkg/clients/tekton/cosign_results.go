@@ -6,8 +6,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	g "github.com/onsi/ginkgo/v2"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
 )
 
 // AwaitAttestationAndSignature awaits attestation and signature.

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/redhat-appstudio/e2e-tests/pkg/logs"
+	"github.com/konflux-ci/e2e-tests/pkg/logs"
 
 	. "github.com/onsi/ginkgo/v2"
 )
