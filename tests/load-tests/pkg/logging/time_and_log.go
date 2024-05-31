@@ -3,6 +3,7 @@ package logging
 import "fmt"
 import "reflect"
 import "runtime"
+import "strings"
 import "time"
 import "os"
 import "encoding/csv"
@@ -209,12 +210,23 @@ func Measure(fn interface{}, params ...interface{}) (interface{}, error) {
 
 // Store given measurement
 func LogMeasurement(metric string, params map[string]string, elapsed time.Duration, result string, err error) {
-	Logger.Trace("Measured function: %s, Duration: %s, Result: %s, Error: %v\n", metric, elapsed, result, err)
+	// Construct string showing parameters except for framework that contains token, so we hide it
+	var params_string string = ""
+	for k, v := range params {
+		if k == "*framework.Framework" {
+			params_string = params_string + fmt.Sprintf(" %s:redacted", k)
+		} else {
+			params_string = params_string + fmt.Sprintf(" %s:%s", k, v)
+		}
+	}
+	params_string = strings.TrimLeft(params_string, " ")
+
+	Logger.Trace("Measured function: %s, Duration: %s, Params: %s, Result: %s, Error: %v\n", metric, elapsed, params_string, result, err)
 	data := MeasurementEntry{
 		Timestamp:  time.Now(),
 		Metric:     metric,
 		Duration:   elapsed,
-		Parameters: fmt.Sprintf("%+v", params),
+		Parameters: params_string,
 		Error:      err,
 	}
 	measurementsQueue <- data
