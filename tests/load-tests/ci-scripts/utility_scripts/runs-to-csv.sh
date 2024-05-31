@@ -9,65 +9,21 @@ headers="BUILD_ID,\
 Started,\
 Ended,\
 \
-users_per_thread,\
-threads,\
-total_users,\
-component_repo,\
-build_pipeline_selector_bundle,\
-user_prefix,\
-scenario,\
-job_name,\
-openshift_api,\
+Concurrency,\
+ApplicationsCount,\
+ComponentsCount,\
+ComponentRepoUrl,\
+BuildPipelineSelectorBundle,\
+OutputDir,\
+PipelineSkipInitialChecks,\
+PipelineRequestConfigurePac,\
+MultiarchWorkflow,\
+Stage,\
+WaitIntegrationTestsPipelines,\
+WaitPipelines,\
 \
-control_plane_count,\
-control_plane_flavor,\
-compute_plane_count,\
-compute_plane_flavor,\
-\
-createUserSuccesses,\
-createUserFailures,\
-createUserFailureRate,\
-createUserTimeAvg,\
-createUserTimeMax,\
-\
-createApplicationsSuccesses,\
-createApplicationsFailures,\
-createApplicationsFailureRate,\
-createApplicationsTimeAvg,\
-createApplicationsTimeMax,\
-\
-createCDQsSuccesses,\
-createCDQsFailures,\
-createCDQsFailureRate,\
-createCDQsTimeAvg,\
-createCDQsTimeMax,\
-\
-createComponentsSuccesses,\
-createComponentsFailures,\
-createComponentsFailureRate,\
-createComponentsTimeAvg,\
-createComponentsTimeMax,\
-\
-runPipelineSuccesses,\
-runPipelineFailures,\
-runPipelineFailureRate,\
-runPipelineSucceededTimeAvg,\
-runPipelineSucceededTimeMax,\
-\
-integrationTestsRunPipelineSuccesses,\
-integrationTestsRunPipelineFailures,\
-integrationTestsRunPipelineFailureRate,\
-integrationTestsRunPipelineSucceededTimeAvg,\
-integrationTestsRunPipelineSucceededTimeMax,\
-\
-deploymentSuccesses,\
-deploymentFailures,\
-deploymentFailureRate,\
-deploymentSucceededTimeAvg,\
-deploymentSucceededTimeMax,\
-\
-TOTAL_AVG,\
-WORKLOAD_KPI,\
+KPI mean,\
+KPI errors,\
 \
 .measurements.cluster_cpu_usage_seconds_total_rate.mean,\
 .measurements.cluster_disk_throughput_total.mean,\
@@ -97,73 +53,29 @@ WORKLOAD_KPI,\
 "
 echo "$headers"
 
-find "${1:-.}" -name load-tests.json -print0 | while IFS= read -r -d '' filename; do
+find "${1:-.}" -name load-test.json -print0 | sort | while IFS= read -r -d '' filename; do
     grep --quiet "XXXXX" "${filename}" && echo "WARNING placeholders found in ${filename}, removing"
     sed -Ee 's/: ([0-9]+\.[0-9]*[X]+[0-9e\+-]*|[0-9]*X+[0-9]*\.[0-9e\+-]*|[0-9]*X+[0-9]*\.[0-9]*X+[0-9e\+-]+)/: "\1"/g' "${filename}" \
         | jq --raw-output '[
         .metadata.env.BUILD_ID,
-        .timestamp,
-        .endTimestamp,
+        .started,
+        .ended,
 
-        .metadata.scenario.USERS_PER_THREAD,
-        .metadata.scenario.THREADS,
-        (.metadata.scenario.USERS_PER_THREAD|tonumber) * (.metadata.scenario.THREADS|tonumber),
-        .metadata.scenario.COMPONENT_REPO,
-        .metadata.scenario.BUILD_PIPELINE_SELECTOR_BUNDLE,
-        .metadata.scenario.USER_PREFIX,
-        .metadata.env.SCENARIO,
-        .metadata.env.JOB_NAME,
-        .metadata.env.OPENSHIFT_API,
+        .parameters.options.Concurrency,
+        .parameters.options.ApplicationsCount,
+        .parameters.options.ComponentsCount,
+        .parameters.options.ComponentRepoUrl,
+        .parameters.options.BuildPipelineSelectorBundle,
+        .parameters.options.OutputDir,
+        .parameters.options.PipelineSkipInitialChecks,
+        .parameters.options.PipelineRequestConfigurePac,
+        .parameters.options.MultiarchWorkflow,
+        .parameters.options.Stage,
+        .parameters.options.WaitIntegrationTestsPipelines,
+        .parameters.options.WaitPipelines,
 
-        .metadata.cluster."control-plane".count,
-        .metadata.cluster."control-plane".flavor,
-        .metadata.cluster."compute-nodes".count,
-        .metadata.cluster."compute-nodes".flavor,
-
-        .createUserSuccesses,
-        .createUserFailures,
-        .createUserFailureRate,
-        .createUserTimeAvg,
-        .createUserTimeMax,
-
-        .createApplicationsSuccesses,
-        .createApplicationsFailures,
-        .createApplicationsFailureRate,
-        .createApplicationsTimeAvg,
-        .createApplicationsTimeMax,
-
-        .createCDQsSuccesses,
-        .createCDQsFailures,
-        .createCDQsFailureRate,
-        .createCDQsTimeAvg,
-        .createCDQsTimeMax,
-
-        .createComponentsSuccesses,
-        .createComponentsFailures,
-        .createComponentsFailureRate,
-        .createComponentsTimeAvg,
-        .createComponentsTimeMax,
-
-        .runPipelineSuccesses,
-        .runPipelineFailures,
-        .runPipelineFailureRate,
-        .runPipelineSucceededTimeAvg,
-        .runPipelineSucceededTimeMax,
-
-        .integrationTestsRunPipelineSuccesses,
-        .integrationTestsRunPipelineFailures,
-        .integrationTestsRunPipelineFailureRate,
-        .integrationTestsRunPipelineSucceededTimeAvg,
-        .integrationTestsRunPipelineSucceededTimeMax,
-
-        .deploymentSuccesses,
-        .deploymentFailures,
-        .deploymentFailureRate,
-        .deploymentSucceededTimeAvg,
-        .deploymentSucceededTimeMax,
-
-        .createApplicationsTimeAvg + .createCDQsTimeAvg + .createComponentsTimeAvg + .integrationTestsRunPipelineSucceededTimeAvg + .runPipelineSucceededTimeAvg + .deploymentSucceededTimeAvg,
-        .workloadKPI,
+        .results.measurements.KPI.mean,
+        .results.measurements.KPI.errors,
 
         .measurements.cluster_cpu_usage_seconds_total_rate.mean,
         .measurements.cluster_disk_throughput_total.mean,
