@@ -1,6 +1,6 @@
 package tekton
 
-import app "github.com/redhat-appstudio/application-api/api/v1alpha1"
+import app "github.com/konflux-ci/application-api/api/v1alpha1"
 
 type VerifyEnterpriseContract struct {
 	Snapshot            app.SnapshotSpec

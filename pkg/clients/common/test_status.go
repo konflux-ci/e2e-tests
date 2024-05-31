@@ -3,7 +3,7 @@ package common
 import (
 	"context"
 
-	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
+	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
