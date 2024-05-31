@@ -7,6 +7,7 @@ set -o pipefail
 source "$( dirname $0 )/utils.sh"
 
 ARTIFACT_DIR="${1:-.}"
+CONCURRENCY="${2:-1}"
 
 login_log_stub=$ARTIFACT_DIR/collected-oc_login
 
@@ -22,7 +23,7 @@ if ! [ -r users.json ]; then
     echo "ERROR: Missing file with user creds"
 fi
 
-for uid in 1; do
+for uid in $( seq 1 $CONCURRENCY ); do
     username="test-rhtap-$uid"
     offline_token=$( cat users.json | jq --raw-output '.[] | select(.username == "'$username'").token' )
     api_server=$( cat users.json | jq --raw-output '.[] | select(.username == "'$username'").apiurl' )
