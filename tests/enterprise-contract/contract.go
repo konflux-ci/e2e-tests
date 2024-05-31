@@ -343,7 +343,15 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 					Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(goldenImagePublicKey, secretName, namespace)).To(Succeed())
 					generator.PublicKey = fmt.Sprintf("k8s://%s/%s", namespace, secretName)
 
-					policy := defaultECP.Spec
+					policy := contract.PolicySpecWithSourceConfig(
+						defaultECP.Spec,
+						ecp.SourceConfig{
+							Include: []string{"@slsa3"},
+							// This test validates an image via a floating tag (as designed). This makes
+							// it hard to provide the expected git commit. Here we just ignore that
+							// particular check.
+							Exclude: []string{"slsa_source_correlated.source_code_reference_provided"},
+						})
 					Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
 					generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:latest")
