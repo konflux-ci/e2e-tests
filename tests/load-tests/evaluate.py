@@ -107,7 +107,7 @@ def main():
 
     stats = {}
     kpi_sum = 0.0
-    kpi_error_rates = []
+    kpi_errors = 0
 
     for m in METRICS:
         stats[m] = {"pass": {}, "fail": {}}
@@ -124,12 +124,11 @@ def main():
             stats[m]["error_rate"] = None
         else:
             stats[m]["error_rate"] = stats[m]["fail"]["duration"]["samples"] / s
-
-        kpi_error_rates.append(stats[m]["error_rate"])
+            kpi_errors += stats[m]["fail"]["duration"]["samples"]
 
     stats["KPI"] = {}
     stats["KPI"]["mean"] = kpi_sum
-    stats["KPI"]["error_rate"] = statistics.mean(kpi_error_rates) if None not in kpi_error_rates else None
+    stats["KPI"]["errors"] = kpi_errors
 
     print(f"Stats:\n{json.dumps(stats, indent=4)}")
 
