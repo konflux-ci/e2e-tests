@@ -3,6 +3,7 @@ package logging
 import "fmt"
 import "reflect"
 import "runtime"
+import "sort"
 import "strings"
 import "time"
 import "os"
@@ -210,13 +211,22 @@ func Measure(fn interface{}, params ...interface{}) (interface{}, error) {
 
 // Store given measurement
 func LogMeasurement(metric string, params map[string]string, elapsed time.Duration, result string, err error) {
+	// Extract parameter keys into a slice so we can sort them
+	var paramsKeys []string
+	for k := range params {
+		paramsKeys = append(paramsKeys, k)
+	}
+
+	// Sort parameter keys alphabetically
+	sort.Strings(paramsKeys)
+
 	// Construct string showing parameters except for framework that contains token, so we hide it
 	var params_string string = ""
-	for k, v := range params {
+	for _, k := range paramsKeys {
 		if k == "*framework.Framework" {
 			params_string = params_string + fmt.Sprintf(" %s:redacted", k)
 		} else {
-			params_string = params_string + fmt.Sprintf(" %s:%s", k, v)
+			params_string = params_string + fmt.Sprintf(" %s:%s", k, params[k])
 		}
 	}
 	params_string = strings.TrimLeft(params_string, " ")
