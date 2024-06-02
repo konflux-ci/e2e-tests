@@ -173,11 +173,23 @@ func Measure(fn interface{}, params ...interface{}) (interface{}, error) {
 		args[i] = reflect.ValueOf(params[i])
 	}
 
+	// Create map of parameters with key being parameter type (I do not
+	// know how to access parameter name) and value parameter value
+	// Because of that we are adding index to key to ensure we capture
+	// all params even when multiple of params have same type.
 	paramsStorable := make(map[string]string)
 	for i := 0; i < numParams; i++ {
+		x := 1
 		key := fmt.Sprintf("%v", reflect.TypeOf(params[i]))
 		value := fmt.Sprintf("%+v", reflect.ValueOf(params[i]))
-		paramsStorable[key] = value
+		for {
+			keyFull := key + fmt.Sprint(x)
+			if _, ok := paramsStorable[keyFull]; !ok {
+				paramsStorable[keyFull] = value
+				break
+			}
+			x++
+		}
 	}
 
 	var errInterValue error
@@ -223,7 +235,7 @@ func LogMeasurement(metric string, params map[string]string, elapsed time.Durati
 	// Construct string showing parameters except for framework that contains token, so we hide it
 	var params_string string = ""
 	for _, k := range paramsKeys {
-		if k == "*framework.Framework" {
+		if strings.HasPrefix(k, "*framework.Framework") {
 			params_string = params_string + fmt.Sprintf(" %s:redacted", k)
 		} else {
 			params_string = params_string + fmt.Sprintf(" %s:%s", k, params[k])
