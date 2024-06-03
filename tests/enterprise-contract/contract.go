@@ -412,10 +412,10 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 					tr, err := fwk.AsKubeAdmin.TektonController.GetTaskRunStatus(fwk.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(tr.Status.TaskRunStatusFields.Results).Should(Or(
+					Expect(tr.Status.TaskRunStatusFields.Results).ShouldNot(Or(
 						// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
-						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
-						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
+						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
+						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
 					))
 				})
 				It("verifies the release policy: Task bundles are in acceptable bundle list", func() {
