@@ -288,7 +288,7 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 
 							// PaC related variables
 							var prNumber int
-							var headSHA, pacBranchName, pacPurgeBranchName string
+							var headSHA, pacBranchName, pacPurgeBranchName1, pacPurgeBranchName2 string
 							var mergeResult *github.PullRequestMergeResult
 
 							BeforeAll(func() {
@@ -307,7 +307,8 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 								Expect(err).ShouldNot(HaveOccurred())
 
 								pacBranchName = fmt.Sprintf("appstudio-%s", component.GetName())
-								pacPurgeBranchName = fmt.Sprintf("appstudio-purge-%s", component.GetName())
+								pacPurgeBranchName1 = fmt.Sprintf("appstudio-purge-%s", component.GetName())
+								pacPurgeBranchName2 = fmt.Sprintf("konflux-purge-%s", component.GetName())
 
 								// JBS related config
 								_, err = fw.AsKubeAdmin.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, fw.UserNamespace)
@@ -588,7 +589,11 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 								})
 								AfterAll(func() {
 									// Delete the new branch created by sending purge PR while moving to simple build
-									err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, pacPurgeBranchName)
+									err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, pacPurgeBranchName1)
+									if err != nil {
+										Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+									}
+									err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, pacPurgeBranchName2)
 									if err != nil {
 										Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 									}
@@ -598,11 +603,11 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 										prs, err := fw.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepositoryName)
 										Expect(err).ShouldNot(HaveOccurred())
 										for _, pr := range prs {
-											if pr.Head.GetRef() == pacPurgeBranchName {
+											if pr.Head.GetRef() == pacPurgeBranchName1 || pr.Head.GetRef() == pacPurgeBranchName2 {
 												return nil
 											}
 										}
-										return fmt.Errorf("could not get the expected PaC purge PR branch %s", pacPurgeBranchName)
+										return fmt.Errorf("could not get the expected PaC purge PR branch %s or %s", pacPurgeBranchName1, pacPurgeBranchName2)
 									}, time.Minute*1, defaultPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for PaC purge PR to be created against the %q repo", componentRepositoryName))
 								})
 								It("component status annotation is set correctly", func() {
