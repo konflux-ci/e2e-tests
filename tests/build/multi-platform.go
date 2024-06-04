@@ -101,7 +101,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			err = createSecretForHostPool(f)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace, "ARM64")
+			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace, "ARM64", "", "")
 		})
 
 		When("the Component with multi-platform-build is created", func() {
@@ -175,6 +175,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			})
 		})
 	})
+
 	Describe("aws dynamic allocation", Label("aws-dynamic"), func() {
 		var testNamespace, applicationName, componentName, multiPlatformSecretName, multiPlatformTaskName, dynamicInstanceTag, instanceId string
 		var component *appservice.Component
@@ -221,7 +222,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			err = createSecretsForDynamicInstance(f)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace, "ARM64")
+			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace, "ARM64", "", "")
 		})
 
 		When("the Component with multi-platform-build is created", func() {
@@ -300,7 +301,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			err = createSecretsForIbmDynamicInstance(f)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace, "S390X")
+			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace, "S390X", "", "")
 		})
 
 		When("the Component with multi-platform-build is created", func() {
@@ -380,7 +381,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			err = createSecretsForIbmDynamicInstance(f)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace, "PPC64LE")
+			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace, "PPC64LE", "", "")
 		})
 
 		When("the Component with multi-platform-build is created", func() {
@@ -417,12 +418,24 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 	})
 })
 
-func createApplicationAndComponent(f *framework.Framework, testNamespace, platform string) (component *appservice.Component, applicationName, componentName string) {
-	applicationName = fmt.Sprintf("multi-platform-suite-application-%s", util.GenerateRandomString(4))
+// createApplicationAndComponent creates Applicaiton and Component CR from given Git URL and revision.
+// createApplicationAndComponent returns a tuple with three values in order, the created Component CR, application name and component name.
+func createApplicationAndComponent(f *framework.Framework, testNamespace, platform, gitUrl, gitRevision string) (*appservice.Component, string, string) {
+    applicationName := fmt.Sprintf("multi-platform-suite-application-%s", util.GenerateRandomString(4))
 	_, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 	Expect(err).NotTo(HaveOccurred())
 
-	componentName = fmt.Sprintf("multi-platform-suite-component-%s", util.GenerateRandomString(4))
+    componentName := fmt.Sprintf("multi-platform-suite-component-%s", util.GenerateRandomString(4))
+
+    gitSourceUrl := gitUrl
+    if gitSourceUrl == "" {
+        gitSourceUrl = multiPlatformProjectGitUrl
+    }
+
+    gitSourceRevision := gitRevision
+    if gitSourceRevision == "" {
+        gitSourceRevision = multiPlatformProjectRevision
+    }
 
 	customBuildahRemotePipeline := os.Getenv(constants.CUSTOM_BUILDAH_REMOTE_PIPELINE_BUILD_BUNDLE_ENV + "_" + platform)
 	Expect(customBuildahRemotePipeline).ShouldNot(BeEmpty())
@@ -436,16 +449,16 @@ func createApplicationAndComponent(f *framework.Framework, testNamespace, platfo
 		Source: appservice.ComponentSource{
 			ComponentSourceUnion: appservice.ComponentSourceUnion{
 				GitSource: &appservice.GitSource{
-					URL:           multiPlatformProjectGitUrl,
-					Revision:      multiPlatformProjectRevision,
+					URL:      gitSourceUrl,
+					Revision: gitSourceRevision,
 					DockerfileURL: constants.DockerFilePath,
 				},
 			},
 		},
 	}
-	component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, buildPipelineAnnotation)
+    component, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, buildPipelineAnnotation)
 	Expect(err).ShouldNot(HaveOccurred())
-	return
+	return component, applicationName, componentName
 }
 
 func validateMultiPlatformSecretIsPopulated(f *framework.Framework, testNamespace, multiPlatformTaskName, multiPlatformSecretName string) (instanceId string) {
