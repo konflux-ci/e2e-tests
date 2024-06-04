@@ -206,7 +206,7 @@ func userJourneyThread(threadCtx *journey.MainContext) {
 		return
 	}
 
-	for i := 1; i <= threadCtx.Opts.JourneyRepeats; i++ {
+	for threadCtx.JourneyRepeatsCounter = 1; threadCtx.JourneyRepeatsCounter <= threadCtx.Opts.JourneyRepeats; threadCtx.JourneyRepeatsCounter++ {
 
 		// Start given number of `perApplicationThread()` threads using `journey.PerApplicationSetup()` and wait for them to finish
 		_, err = logging.Measure(journey.PerApplicationSetup, perApplicationThread, threadCtx)
@@ -302,6 +302,13 @@ func perComponentThread(perComponentCtx *journey.PerComponentContext) {
 
 	// Wait for test pipiline run
 	_, err = logging.Measure(journey.HandleTest, perComponentCtx)
+	if err != nil {
+		logging.Logger.Error("Per component thread failed: %v", err)
+		return
+	}
+
+	// Collect whatever needs to be collected
+	_, err = logging.Measure(journey.HandlePerComponentCollection, perComponentCtx)
 	if err != nil {
 		logging.Logger.Error("Per component thread failed: %v", err)
 		return

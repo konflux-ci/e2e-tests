@@ -18,6 +18,7 @@ var MainContexts []*MainContext
 type MainContext struct {
 	ThreadsWG              *sync.WaitGroup
 	ThreadIndex            int
+	JourneyRepeatsCounter  int
 	Opts                   *options.Opts
 	StageUsers             *[]loadtestutils.User
 	TemplatingDoneWG       *sync.WaitGroup
