@@ -893,11 +893,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Expect(err).NotTo(HaveOccurred())
 
 			firstComponentBaseBranchName = fmt.Sprintf("component-one-base-%s", util.GenerateRandomString(6))
-			err = f.AsKubeAdmin.CommonController.Github.CreateRef(secretLookupGitSourceRepoOneName, secretLookupDefaultBranchOne, secretLookupGitRevisionOne, firstComponentBaseBranchName)
+			err = f.AsKubeAdmin.CommonController.Github.CreateRefInOrg(noAppOrgName, secretLookupGitSourceRepoOneName, secretLookupDefaultBranchOne, secretLookupGitRevisionOne, firstComponentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			secondComponentBaseBranchName = fmt.Sprintf("component-two-base-%s", util.GenerateRandomString(6))
-			err = f.AsKubeAdmin.CommonController.Github.CreateRef(secretLookupGitSourceRepoTwoName, secretLookupDefaultBranchTwo, secretLookupGitRevisionTwo, secondComponentBaseBranchName)
+			err = f.AsKubeAdmin.CommonController.Github.CreateRefInOrg(noAppOrgName, secretLookupGitSourceRepoTwoName, secretLookupDefaultBranchTwo, secretLookupGitRevisionTwo, secondComponentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
 
 		})
@@ -909,22 +909,22 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			}
 
 			// Delete new branches created by PaC
-			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(secretLookupGitSourceRepoOneName, firstPacBranchName)
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRefFromOrg(noAppOrgName, secretLookupGitSourceRepoOneName, firstPacBranchName)
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 			}
-			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(secretLookupGitSourceRepoTwoName, secondPacBranchName)
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRefFromOrg(noAppOrgName, secretLookupGitSourceRepoTwoName, secondPacBranchName)
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 			}
 
 			// Delete the created first component base branch
-			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(secretLookupGitSourceRepoOneName, firstComponentBaseBranchName)
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRefFromOrg(noAppOrgName, secretLookupGitSourceRepoOneName, firstComponentBaseBranchName)
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 			}
 			// Delete the created second component base branch
-			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(secretLookupGitSourceRepoTwoName, secondComponentBaseBranchName)
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRefFromOrg(noAppOrgName, secretLookupGitSourceRepoTwoName, secondComponentBaseBranchName)
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 			}
@@ -938,7 +938,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				// create the correct build secret for second component
 				secretName1 := "build-secret-1"
 				secretAnnotations := map[string]string{
-					"appstudio.redhat.com/scm.repository": os.Getenv("MY_GITHUB_ORG") + "/" + secretLookupGitSourceRepoTwoName,
+					"appstudio.redhat.com/scm.repository": noAppOrgName + "/" + secretLookupGitSourceRepoTwoName,
 				}
 				token := os.Getenv("GITHUB_TOKEN")
 				err = createBuildSecret(f, secretName1, secretAnnotations, token)
