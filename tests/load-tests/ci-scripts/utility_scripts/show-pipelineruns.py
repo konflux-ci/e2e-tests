@@ -702,7 +702,7 @@ class Something:
                             facecolors=names_to_colors[tr["name"]],
                         )
                         txt = ax.text(
-                            x=tr_coords[0] + 2,
+                            x=tr_coords[0] + tr_coords[1] / 2,
                             y=fig_tr_y_pos + tr_height / 2,
                             s=tr["name"],
                             fontsize=6,
@@ -746,7 +746,14 @@ def main():
     )
     parser.add_argument(
         "--data-dir",
+        required=True,
         help="Directory from where to load YAML data and where to put output SVG",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show verbose output",
     )
     parser.add_argument(
         "-d",
@@ -757,7 +764,9 @@ def main():
     args = parser.parse_args()
 
     fmt = "%(asctime)s %(name)s %(levelname)s %(message)s"
-    if args.debug:
+    if args.verbose:
+        logging.basicConfig(format=fmt, level=logging.INFO)
+    elif args.debug:
         logging.basicConfig(format=fmt, level=logging.DEBUG)
     else:
         logging.basicConfig(format=fmt)
