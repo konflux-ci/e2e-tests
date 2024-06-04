@@ -105,6 +105,7 @@ function collect_pods() {
     local oc_opts="${1:--A}"
     local file_stub="${2:-$ARTIFACT_DIR/collected-pods}"
     local file_json="${file_stub}.json"
+    local file_logs="${file_stub}.log"
 
     oc get pod $oc_opts -o json >"$file_json"
 
@@ -123,6 +124,13 @@ function collect_pods() {
     task_pods_distribution_csv="${file_stub}-task-distribution.csv"
     echo "Node;Pods" >"$task_pods_distribution_csv"
     cat "$file_json" | jq -r '.items[] | select(.metadata.labels."appstudio.openshift.io/application" != null).spec.nodeName' | sort | uniq -c | sed -e 's,\s\+\([0-9]\+\)\s\+\(.*\),\2;\1,g' >>"$task_pods_distribution_csv"
+
+    oc get pod $oc_opts -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name --no-headers=true | while IFS=$'\n' read row; do
+        ns=$( echo "$row" | sed 's/\s\+.*$//' )
+        name=$( echo "$row" | sed 's/^.*\s\+//' )
+        echo -e "\n\n##### $ns - $name #####\n\n" >>"$file_logs"
+        oc -n "$ns" logs --prefix=true --all-containers=true --timestamps=true "$name" >>"$file_logs"
+    done
 }
 
 function collect_nodes() {
