@@ -219,8 +219,8 @@ func createRHIOEnterpriseContractPolicy(rhioECPName string, managedFw framework.
 			Data:   []string{releasecommon.EcPolicyDataBundle, releasecommon.EcPolicyDataPath},
 		}},
 		Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-			Exclude: []string{"cve", "step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
-			Include: []string{"minimal"},
+			Exclude: []string{"step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
+			Include: []string{"@slsa3"},
 		},
 	}
 
