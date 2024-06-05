@@ -3,6 +3,9 @@ package journey
 import "fmt"
 import "os"
 import "path/filepath"
+import "encoding/json"
+
+import "time"
 
 import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/logging"
 
@@ -56,7 +59,67 @@ func collectPodLogs(f *framework.Framework, dirPath, namespace, component string
 		for file, log := range podLogs {
 			err = writeToFile(dirPath, file, log)
 			if err != nil {
-				return fmt.Errorf("Failed to write log: %v", err)
+				return fmt.Errorf("Failed to write Pod log: %v", err)
+			}
+		}
+
+		if pod.Kind == "" {
+			logging.Logger.Warning("Missing kind for Pod %s", pod.Name)
+			pod.Kind = "Pod"
+		}
+
+		podJSON, err := json.Marshal(pod)
+		if err != nil {
+			return fmt.Errorf("Failed to dump Pod JSON: %v", err)
+		}
+
+		err = writeToFile(dirPath, "collected-pod-" + pod.Name + ".json", podJSON)
+		if err != nil {
+			return fmt.Errorf("Failed to write Pod: %v", err)
+		}
+
+	}
+
+	return nil
+}
+
+func collectPipelineRunJSONs(f *framework.Framework, dirPath, namespace, application, component string) error {
+	prs, err := f.AsKubeDeveloper.HasController.GetComponentPipelineRunsWithType(component, application, namespace, "", "")
+	if err != nil {
+		return fmt.Errorf("Failed to list PipelineRuns %s/%s/%s: %v", namespace, application, component, err)
+	}
+
+	for _, pr := range *prs {
+		prJSON, err := json.Marshal(pr)
+		if err != nil {
+			return fmt.Errorf("Failed to dump PipelineRun JSON: %v", err)
+		}
+
+		err = writeToFile(dirPath, "collected-pipelinerun-" + pr.Name + ".json", prJSON)
+		if err != nil {
+			return fmt.Errorf("Failed to write PipelineRun: %v", err)
+		}
+
+		for _, chr := range pr.Status.ChildReferences {
+			tr, err := f.AsKubeDeveloper.TektonController.GetTaskRun(chr.Name, namespace)
+			if err != nil {
+				return fmt.Errorf("Failed to list TaskRuns %s/%s: %v", namespace, pr.Name, err)
+			}
+
+			if tr.Kind == "" {
+				logging.Logger.Warning("Missing kind for TaskRun %s", tr.Name)
+				tr.Kind = "TaskRun"
+			}
+
+			var trJSON []byte
+			trJSON, err = json.Marshal(tr)
+			if err != nil {
+				return fmt.Errorf("Failed to dump TaskRun JSON: %v", err)
+			}
+
+			err = writeToFile(dirPath, "collected-taskrun-" + tr.Name + ".json", trJSON)
+			if err != nil {
+				return fmt.Errorf("Failed to write TaskRun: %v", err)
 			}
 		}
 	}
@@ -79,9 +142,16 @@ func HandlePerComponentCollection(ctx *PerComponentContext) error {
 		return logging.Logger.Fail(100, "Failed to create dir: %v", err)
 	}
 
+	time.Sleep(time.Second * 10)
+
 	err = collectPodLogs(ctx.Framework, dirPath, ctx.ParentContext.ParentContext.Namespace, ctx.ComponentName)
 	if err != nil {
 		return logging.Logger.Fail(101, "Failed to collect pod logs: %v", err)
+	}
+
+	err = collectPipelineRunJSONs(ctx.Framework, dirPath, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName)
+	if err != nil {
+		return logging.Logger.Fail(102, "Failed to collect pipeline run JSONs: %v", err)
 	}
 
 	return nil
