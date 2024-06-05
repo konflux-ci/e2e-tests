@@ -224,7 +224,6 @@ func assertBuildPipelineRunSucceeded(devFw framework.Framework, devNamespace, ma
 			GinkgoWriter.Printf("Build PipelineRun has not been created yet for the component %s/%s\n", devNamespace, component.Name)
 			return err
 		}
-		GinkgoWriter.Printf("PipelineRun %s reason: %s\n", buildPR.Name, buildPR.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
 		if !buildPR.IsDone() {
 			return fmt.Errorf("build pipelinerun %s in namespace %s did not finish yet", buildPR.Name, buildPR.Namespace)
 		}
@@ -304,8 +303,8 @@ func createFBCEnterpriseContractPolicy(fbcECPName string, managedFw framework.Fr
 			Data:   []string{releasecommon.EcPolicyDataBundle, releasecommon.EcPolicyDataPath},
 		}},
 		Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-			Exclude: []string{"cve", "step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
-			Include: []string{"minimal", "slsa3"},
+			Exclude: []string{"step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
+			Include: []string{"@slsa3"},
 		},
 	}
 
