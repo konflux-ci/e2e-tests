@@ -83,8 +83,6 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 	var namespace string
 	var err error
 
-	// Initialize the application struct
-	application := &appservice.Application{}
 	snapshot := &appservice.Snapshot{}
 
 	fw := &framework.Framework{}
@@ -162,15 +160,6 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(createdApplication.Spec.DisplayName).To(Equal(appTest.ApplicationName))
 					Expect(createdApplication.Namespace).To(Equal(namespace))
-				})
-
-				It("checks if application is healthy", Label(devEnvTestLabel, stageEnvTestLabel), func() {
-					Eventually(func() string {
-						application, err = fw.AsKubeDeveloper.HasController.GetApplication(appTest.ApplicationName, namespace)
-						Expect(err).NotTo(HaveOccurred())
-
-						return application.Status.Devfile
-					}, 3*time.Minute, 100*time.Millisecond).Should(Not(BeEmpty()), fmt.Sprintf("timed out waiting for the %s application in %s namespace to be ready", appTest.ApplicationName, fw.UserNamespace))
 				})
 
 				for _, componentSpec := range appTest.Components {

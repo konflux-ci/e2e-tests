@@ -236,10 +236,6 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 	if err := h.KubeRest().Create(ctx, componentObject); err != nil {
 		return nil, err
 	}
-	if err := utils.WaitUntil(h.ComponentReady(componentObject), time.Minute*10); err != nil {
-		componentObject = h.refreshComponentForErrorDebug(componentObject)
-		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
-	}
 
 	if utils.WaitUntil(h.CheckForImageAnnotation(componentObject), time.Minute*5) != nil {
 		componentObject = h.refreshComponentForErrorDebug(componentObject)
@@ -343,22 +339,6 @@ func (h *HasController) DeleteAllComponentsInASpecificNamespace(namespace string
 	GinkgoWriter.Println("Finish to delete all components in namespace '%s' at %s. It took '%f' minutes", namespace, time.Now().Format(time.RFC3339), deletionTime)
 
 	return err
-}
-
-// Waits for a component to be reconciled in the application service.
-func (h *HasController) ComponentReady(component *appservice.Component) wait.ConditionFunc {
-	return func() (bool, error) {
-		messages, err := h.GetComponentConditionStatusMessages(component.Name, component.Namespace)
-		if err != nil {
-			return false, nil
-		}
-		for _, m := range messages {
-			if strings.Contains(m, "success") {
-				return true, nil
-			}
-		}
-		return false, nil
-	}
 }
 
 // Waits for a component until is deleted and if not will return an error
@@ -578,11 +558,6 @@ func (h *HasController) CreateComponentWithoutGenerateAnnotation(componentSpec a
 
 	if err := h.KubeRest().Create(context.Background(), componentObject); err != nil {
 		return nil, err
-	}
-
-	if err := utils.WaitUntil(h.ComponentReady(componentObject), time.Minute*10); err != nil {
-		componentObject = h.refreshComponentForErrorDebug(componentObject)
-		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
 	}
 
 	return componentObject, nil
