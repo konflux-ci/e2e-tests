@@ -587,3 +587,13 @@ func (h *HasController) CreateComponentWithoutGenerateAnnotation(componentSpec a
 
 	return componentObject, nil
 }
+
+// UpdateComponent updates a component
+func (h *HasController) UpdateComponent(component *appservice.Component) error {
+	err := h.KubeRest().Update(context.Background(), component, &rclient.UpdateOptions{})
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
