@@ -445,13 +445,14 @@ func createApplicationAndComponent(f *framework.Framework, testNamespace string)
 		Source: appservice.ComponentSource{
 			ComponentSourceUnion: appservice.ComponentSourceUnion{
 				GitSource: &appservice.GitSource{
-					URL:      multiPlatformProjectGitUrl,
-					Revision: multiPlatformProjectRevision,
+					URL:           multiPlatformProjectGitUrl,
+					Revision:      multiPlatformProjectRevision,
+					DockerfileURL: constants.DockerFilePath,
 				},
 			},
 		},
 	}
-	component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, map[string]string{})
+	component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, constants.DefaultDockerBuildPipelineBundle)
 	Expect(err).ShouldNot(HaveOccurred())
 	return
 }

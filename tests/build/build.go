@@ -1,7 +1,6 @@
 package build
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -10,8 +9,6 @@ import (
 
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/runtime"
-
-	pointer "k8s.io/utils/ptr"
 
 	"github.com/google/go-github/v44/github"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
@@ -31,7 +28,6 @@ import (
 	imagecontollers "github.com/konflux-ci/image-controller/controllers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/redhat-appstudio/build-service/controllers"
 	v1 "k8s.io/api/core/v1"
 )
@@ -151,13 +147,14 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Source: appservice.ComponentSource{
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
 							GitSource: &appservice.GitSource{
-								URL:      helloWorldComponentGitSourceURL,
-								Revision: "",
+								URL:           helloWorldComponentGitSourceURL,
+								Revision:      "",
+								DockerfileURL: constants.DockerFilePath,
 							},
 						},
 					},
 				}
-				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPrivateRepo))
+				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPrivateRepo), constants.DefaultDockerBuildPipelineBundle))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -321,14 +318,15 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Source: appservice.ComponentSource{
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
 							GitSource: &appservice.GitSource{
-								URL:      helloWorldComponentGitSourceURL,
-								Revision: componentBaseBranchName,
+								URL:           helloWorldComponentGitSourceURL,
+								Revision:      componentBaseBranchName,
+								DockerfileURL: constants.DockerFilePath,
 							},
 						},
 					},
 				}
 				// Create a component with Git Source URL, a specified git branch and marking delete-repo=true
-				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
+				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 			It("triggers a PipelineRun", func() {
@@ -605,13 +603,14 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Source: appservice.ComponentSource{
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
 							GitSource: &appservice.GitSource{
-								URL:      helloWorldComponentGitSourceURL,
-								Revision: componentBaseBranchName,
+								URL:           helloWorldComponentGitSourceURL,
+								Revision:      componentBaseBranchName,
+								DockerfileURL: constants.DockerFilePath,
 							},
 						},
 					},
 				}
-				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
+				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -706,14 +705,15 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 						Source: appservice.ComponentSource{
 							ComponentSourceUnion: appservice.ComponentSourceUnion{
 								GitSource: &appservice.GitSource{
-									URL:      multiComponentGitSourceURL,
-									Revision: multiComponentBaseBranchName,
-									Context:  contextDir,
+									URL:           multiComponentGitSourceURL,
+									Revision:      multiComponentBaseBranchName,
+									Context:       contextDir,
+									DockerfileURL: constants.DockerFilePath,
 								},
 							},
 						},
 					}
-					component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
+					component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
 					Expect(err).ShouldNot(HaveOccurred())
 				})
 
@@ -829,14 +829,15 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Source: appservice.ComponentSource{
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
 							GitSource: &appservice.GitSource{
-								URL:      multiComponentGitSourceURL,
-								Revision: multiComponentBaseBranchName,
-								Context:  multiComponentContextDirs[0],
+								URL:           multiComponentGitSourceURL,
+								Revision:      multiComponentBaseBranchName,
+								Context:       multiComponentContextDirs[0],
+								DockerfileURL: constants.DockerFilePath,
 							},
 						},
 					},
 				}
-				_, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj, namespace, "", "", appName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
+				_, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj, namespace, "", "", appName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
 				Expect(err).ShouldNot(HaveOccurred())
 
 			})
@@ -964,13 +965,14 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Source: appservice.ComponentSource{
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
 							GitSource: &appservice.GitSource{
-								URL:      secretLookupComponentOneGitSourceURL,
-								Revision: firstComponentBaseBranchName,
+								URL:           secretLookupComponentOneGitSourceURL,
+								Revision:      firstComponentBaseBranchName,
+								DockerfileURL: constants.DockerFilePath,
 							},
 						},
 					},
 				}
-				_, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj1, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
+				_, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj1, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 			It("creates second component", func() {
@@ -980,13 +982,14 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Source: appservice.ComponentSource{
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
 							GitSource: &appservice.GitSource{
-								URL:      secretLookupComponentTwoGitSourceURL,
-								Revision: secondComponentBaseBranchName,
+								URL:           secretLookupComponentTwoGitSourceURL,
+								Revision:      secondComponentBaseBranchName,
+								DockerfileURL: constants.DockerFilePath,
 							},
 						},
 					},
 				}
-				_, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj2, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
+				_, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj2, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -1081,14 +1084,15 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					Source: appservice.ComponentSource{
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
 							GitSource: &appservice.GitSource{
-								URL:      annotationsTestGitSourceURL,
-								Revision: annotationsTestRevision,
+								URL:           annotationsTestGitSourceURL,
+								Revision:      annotationsTestRevision,
+								DockerfileURL: constants.DockerFilePath,
 							},
 						},
 					},
 				}
 
-				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, nil)
+				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, constants.DefaultDockerBuildPipelineBundle)
 				Expect(component).ToNot(BeNil())
 				Expect(err).ShouldNot(HaveOccurred())
 			})
@@ -1266,7 +1270,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				ComponentName:  fmt.Sprintf("build-suite-test-component-image-source-%s", util.GenerateRandomString(6)),
 				ContainerImage: containerImageSource,
 			}
-			_, err = f.AsKubeAdmin.HasController.CreateComponent(component, testNamespace, outputContainerImage, "", applicationName, true, map[string]string{})
+			_, err = f.AsKubeAdmin.HasController.CreateComponent(component, testNamespace, outputContainerImage, "", applicationName, true, constants.DefaultDockerBuildPipelineBundle)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// collect Build ResourceQuota metrics (temporary)
@@ -1296,147 +1300,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(err).To(HaveOccurred())
 				return strings.Contains(err.Error(), "no pipelinerun found")
 			}, timeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("expected no PipelineRun to be triggered for the component %s in %s namespace", componentName, testNamespace))
-		})
-	})
-
-	Describe("PLNSRVCE-799 - test pipeline selector", Label("pipeline-selector"), Ordered, func() {
-		var timeout time.Duration
-		var componentName, applicationName, testNamespace string
-		var expectedAdditionalPipelineParam buildservice.PipelineParam
-		var pr *pipeline.PipelineRun
-
-		BeforeAll(func() {
-			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
-			Expect(err).NotTo(HaveOccurred())
-			testNamespace = f.UserNamespace
-			applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
-
-			_, err = f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
-			Expect(err).NotTo(HaveOccurred())
-
-			componentName = "build-suite-test-bundle-overriding"
-
-			expectedAdditionalPipelineParam = buildservice.PipelineParam{
-				Name:  "test-custom-param-name",
-				Value: "test-custom-param-value",
-			}
-
-			timeout = time.Second * 600
-
-			// collect Build ResourceQuota metrics (temporary)
-			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, appstudioCrdsBuild)
-			Expect(err).NotTo(HaveOccurred())
-			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, computeBuild)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		AfterAll(func() {
-			// collect Build ResourceQuota metrics (temporary)
-			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, appstudioCrdsBuild)
-			Expect(err).NotTo(HaveOccurred())
-			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, computeBuild)
-			Expect(err).NotTo(HaveOccurred())
-
-			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
-				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
-			}
-		})
-
-		It("a specific Pipeline bundle should be used and additional pipeline params should be added to the PipelineRun if all WhenConditions match", func() {
-			// using cdq since git ref is not known
-			cdq, err := f.AsKubeAdmin.HasController.CreateComponentDetectionQuery(componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", "", false)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
-
-			for _, compDetected := range cdq.Status.ComponentDetected {
-				// Since we only know the component name after cdq creation,
-				// BuildPipelineSelector should be created before component creation and after cdq creation
-				ps := &buildservice.BuildPipelineSelector{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "build-pipeline-selector",
-						Namespace: testNamespace,
-					},
-					Spec: buildservice.BuildPipelineSelectorSpec{Selectors: []buildservice.PipelineSelector{
-						{
-							Name:           "user-custom-selector",
-							PipelineRef:    *tekton.NewBundleResolverPipelineRef("docker-build", dummyPipelineBundleRef),
-							PipelineParams: []buildservice.PipelineParam{expectedAdditionalPipelineParam},
-							WhenConditions: buildservice.WhenCondition{
-								ProjectType:        "hello-world",
-								DockerfileRequired: pointer.To[bool](true),
-								ComponentName:      compDetected.ComponentStub.ComponentName,
-								Annotations:        map[string]string{"skip-initial-checks": "true"},
-								Labels:             constants.ComponentDefaultLabel,
-							},
-						},
-					}},
-				}
-
-				Expect(f.AsKubeAdmin.CommonController.KubeRest().Create(context.Background(), ps)).To(Succeed())
-				c, err := f.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, true, map[string]string{})
-				Expect(err).NotTo(HaveOccurred())
-				componentName = c.Name
-			}
-
-			Eventually(func() error {
-				pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-				if err != nil {
-					GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
-					return err
-				}
-				if !pr.HasStarted() {
-					return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
-				}
-				return nil
-			}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
-
-			pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(pr.Spec.PipelineRef.Params).To(ContainElement(pipeline.Param{
-				Name:  "bundle",
-				Value: pipeline.ParamValue{StringVal: dummyPipelineBundleRef, Type: "string"}},
-			))
-			Expect(pr.Spec.Params).To(ContainElement(pipeline.Param{
-				Name:  expectedAdditionalPipelineParam.Name,
-				Value: pipeline.ParamValue{StringVal: expectedAdditionalPipelineParam.Value, Type: "string"}},
-			))
-		})
-
-		It("default Pipeline bundle should be used and no additional Pipeline params should be added to the PipelineRun if one of the WhenConditions does not match", func() {
-			notMatchingComponentName := componentName + util.GenerateRandomString(6)
-			// using cdq since git ref is not known
-			cdq, err := f.AsKubeAdmin.HasController.CreateComponentDetectionQuery(notMatchingComponentName, testNamespace, helloWorldComponentGitSourceURL, "", "", "", false)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
-
-			for _, compDetected := range cdq.Status.ComponentDetected {
-				c, err := f.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, true, map[string]string{})
-				Expect(err).NotTo(HaveOccurred())
-				notMatchingComponentName = c.Name
-			}
-
-			Eventually(func() error {
-				pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(notMatchingComponentName, applicationName, testNamespace, "")
-				if err != nil {
-					GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, notMatchingComponentName)
-					return err
-				}
-				if !pr.HasStarted() {
-					return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
-				}
-				return err
-			}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, notMatchingComponentName))
-
-			pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(notMatchingComponentName, applicationName, testNamespace, "")
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(tekton.GetBundleRef(pr.Spec.PipelineRef)).ToNot(Equal(dummyPipelineBundleRef)) //nolint:all
-			Expect(pr.Spec.Params).ToNot(ContainElement(pipeline.Param{
-				Name:  expectedAdditionalPipelineParam.Name,
-				Value: pipeline.ParamValue{StringVal: expectedAdditionalPipelineParam.Value, Type: "string"}},
-			))
 		})
 	})
 
@@ -1488,16 +1351,20 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			Expect(err).ToNot(HaveOccurred())
 
 			componentName = "build-suite-test-secret-overriding"
-			// using cdq since git ref is not known
-			cdq, err := f.AsKubeAdmin.HasController.CreateComponentDetectionQuery(componentName, testNamespace, helloWorldComponentGitSourceURL, "", "", "", false)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
-
-			for _, compDetected := range cdq.Status.ComponentDetected {
-				c, err := f.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, true, map[string]string{})
-				Expect(err).NotTo(HaveOccurred())
-				componentName = c.Name
+			componentObj := appservice.ComponentSpec{
+				ComponentName: componentName,
+				Application:   applicationName,
+				Source: appservice.ComponentSource{
+					ComponentSourceUnion: appservice.ComponentSourceUnion{
+						GitSource: &appservice.GitSource{
+							URL:           helloWorldComponentGitSourceURL,
+							DockerfileURL: constants.DockerFilePath,
+						},
+					},
+				},
 			}
+			_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, constants.DefaultDockerBuildPipelineBundle)
+			Expect(err).NotTo(HaveOccurred())
 
 			// collect Build ResourceQuota metrics (temporary)
 			err = f.AsKubeAdmin.CommonController.GetResourceQuotaInfo("build", testNamespace, appstudioCrdsBuild)
@@ -1674,9 +1541,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					//make the parent repo nudge the child repo
 					if comp.repoName == componentDependenciesParentRepoName {
 						componentObj.BuildNudgesRef = []string{ChildComponentDef.componentName}
-						comp.component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
+						comp.component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
 					} else {
-						comp.component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, constants.ImageControllerAnnotationRequestPublicRepo)
+						comp.component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(constants.ImageControllerAnnotationRequestPublicRepo, constants.DefaultDockerBuildPipelineBundle))
 					}
 					Expect(err).ShouldNot(HaveOccurred())
 				}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/devfile/library/v2/pkg/util"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -343,21 +344,23 @@ func createApp(f framework.Framework, testNamespace string) string {
 }
 
 func createComponent(f framework.Framework, testNamespace, applicationName string) (string, *appstudioApi.Component) {
-	var originalComponent *appstudioApi.Component
 
 	componentName := fmt.Sprintf("integration-suite-test-component-git-source-%s", util.GenerateRandomString(6))
-	// Create a component with Git Source URL being defined
-	// using cdq since git ref is not known
-	cdq, err := f.AsKubeAdmin.HasController.CreateComponentDetectionQuery(componentName, testNamespace, componentRepoURL, "", "", "", false)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
 
-	for _, compDetected := range cdq.Status.ComponentDetected {
-		originalComponent, err = f.AsKubeAdmin.HasController.CreateComponent(compDetected.ComponentStub, testNamespace, "", "", applicationName, true, map[string]string{})
-		Expect(err).NotTo(HaveOccurred())
-		Expect(originalComponent).NotTo(BeNil())
-		componentName = originalComponent.Name
+	componentObj := appstudioApi.ComponentSpec{
+		ComponentName: componentName,
+		Application:   applicationName,
+		Source: appstudioApi.ComponentSource{
+			ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
+				GitSource: &appstudioApi.GitSource{
+					URL: componentRepoURL,
+				},
+			},
+		},
 	}
+
+	originalComponent, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, constants.DefaultDockerBuildPipelineBundle)
+	Expect(err).NotTo(HaveOccurred())
 
 	return componentName, originalComponent
 }

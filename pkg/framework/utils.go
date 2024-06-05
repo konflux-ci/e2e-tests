@@ -6,7 +6,6 @@ func (c *ControllerHub) StoreAllArtifactsForNamespace(namespace string) error {
 	var finalError string
 	finalError = appendErrorToString(finalError, c.HasController.StoreAllApplications(namespace))
 	finalError = appendErrorToString(finalError, c.HasController.StoreAllComponents(namespace))
-	finalError = appendErrorToString(finalError, c.HasController.StoreAllComponentDetectionQueries(namespace))
 	finalError = appendErrorToString(finalError, c.IntegrationController.StoreAllSnapshots(namespace))
 	finalError = appendErrorToString(finalError, c.TektonController.StoreAllPipelineRuns(namespace))
 	finalError = appendErrorToString(finalError, c.CommonController.StoreAllPods(namespace))

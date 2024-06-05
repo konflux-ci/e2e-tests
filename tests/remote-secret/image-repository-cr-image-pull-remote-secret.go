@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	image "github.com/konflux-ci/image-controller/api/v1alpha1"
@@ -33,7 +34,6 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "image-reposi
 	var timeout, interval time.Duration
 
 	application := &appservice.Application{}
-	cdq := &appservice.ComponentDetectionQuery{}
 	componentList := []*appservice.Component{}
 	component := &appservice.Component{}
 	imagePullRemoteSecret := &rs.RemoteSecret{}
@@ -81,20 +81,25 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "image-reposi
 			}, 3*time.Minute, 100*time.Millisecond).Should(Not(BeEmpty()), fmt.Sprintf("timed out waiting for the %s application in %s namespace to be ready", applicationName, fw.UserNamespace))
 		})
 
-		It("creates component detection query", func() {
-			cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(applicationName, namespace, gitSourceUrl, "", "", secret, false)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
 		It("creates component", func() {
-			for _, compDetected := range cdq.Status.ComponentDetected {
-				c, err := fw.AsKubeDeveloper.HasController.CreateComponentWithoutGenerateAnnotation(compDetected.ComponentStub, namespace, secret, applicationName, true)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(c.Name).To(Equal(compDetected.ComponentStub.ComponentName))
 
-				componentList = append(componentList, c)
+			componentName := "remote-secret-comp"
+			componentObj := appservice.ComponentSpec{
+				ComponentName: componentName,
+				Application:   applicationName,
+				Source: appservice.ComponentSource{
+					ComponentSourceUnion: appservice.ComponentSourceUnion{
+						GitSource: &appservice.GitSource{
+							URL:           gitSourceUrl,
+							DockerfileURL: constants.DockerFilePath,
+						},
+					},
+				},
 			}
 
+			c, err := fw.AsKubeAdmin.HasController.CreateComponentWithoutGenerateAnnotation(componentObj, namespace, secret, applicationName, true)
+			Expect(err).NotTo(HaveOccurred())
+			componentList = append(componentList, c)
 			Expect(componentList).To(HaveLen(1))
 			component = componentList[0]
 

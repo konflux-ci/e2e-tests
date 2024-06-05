@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	. "github.com/onsi/ginkgo/v2"
@@ -31,7 +32,6 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "component-an
 	var timeout, interval time.Duration
 
 	application := &appservice.Application{}
-	cdq := &appservice.ComponentDetectionQuery{}
 	componentList := []*appservice.Component{}
 	imagePullRemoteSecret := &rs.RemoteSecret{}
 	component := &appservice.Component{}
@@ -76,23 +76,27 @@ var _ = framework.RemoteSecretSuiteDescribe(Label("remote-secret", "component-an
 			}, 3*time.Minute, 100*time.Millisecond).Should(Not(BeEmpty()), fmt.Sprintf("timed out waiting for the %s application in %s namespace to be ready", applicationName, fw.UserNamespace))
 		})
 
-		It("creates component detection query", func() {
-			cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(applicationName, namespace, gitSourceUrl, "", "", secret, false)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
 		It("creates component", func() {
-			for _, compDetected := range cdq.Status.ComponentDetected {
-				c, err := fw.AsKubeDeveloper.HasController.CreateComponent(compDetected.ComponentStub, namespace, "", secret, applicationName, true, map[string]string{})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(c.Name).To(Equal(compDetected.ComponentStub.ComponentName))
 
-				componentList = append(componentList, c)
+			componentName := "remote-secret-comp"
+			componentObj := appservice.ComponentSpec{
+				ComponentName: componentName,
+				Application:   applicationName,
+				Source: appservice.ComponentSource{
+					ComponentSourceUnion: appservice.ComponentSourceUnion{
+						GitSource: &appservice.GitSource{
+							URL:           gitSourceUrl,
+							DockerfileURL: constants.DockerFilePath,
+						},
+					},
+				},
 			}
 
+			c, err := fw.AsKubeAdmin.HasController.CreateComponent(componentObj, namespace, "", secret, applicationName, true, constants.DefaultDockerBuildPipelineBundle)
+			Expect(err).NotTo(HaveOccurred())
+			componentList = append(componentList, c)
 			Expect(componentList).To(HaveLen(1))
 			component = componentList[0]
-
 			Expect(component.Annotations["image.redhat.com/generate"]).To(Equal("{\"visibility\": \"public\"}"))
 		})
 

@@ -72,7 +72,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		component = releasecommon.CreateComponentByCDQ(*fw, devNamespace, managedNamespace, releasecommon.ApplicationNameDefault, releasecommon.ComponentName, releasecommon.GitSourceComponentUrl)
+		component = releasecommon.CreateComponent(*devFw, devNamespace, releasecommon.ApplicationNameDefault, releasecommon.ComponentName, releasecommon.GitSourceComponentUrl, "", "Dockerfile", constants.DefaultDockerBuildPipelineBundle)
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, managedNamespace, "", nil)
 		Expect(err).NotTo(HaveOccurred())

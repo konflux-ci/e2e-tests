@@ -46,7 +46,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 	var snapshot1, snapshot2 *appservice.Snapshot
 	var releaseCR1, releaseCR2 *releaseApi.Release
 
-	var componentDetected, additionalComponentDetected appservice.ComponentDetectionDescription
+	var componentObj1, componentObj2 appservice.ComponentSpec
 
 	BeforeAll(func() {
 		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("push-pyxis"))
@@ -115,27 +115,31 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
 		Expect(err).ToNot(HaveOccurred())
 
-		// using cdq since git ref is not known
-		cdq, err := fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(releasecommon.ComponentName, devNamespace, releasecommon.GitSourceComponentUrl, "", "", "", false)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
-
-		for _, compDetected := range cdq.Status.ComponentDetected {
-			compName = compDetected.ComponentStub.ComponentName
-			componentDetected = compDetected
-		}
-
-		// using cdq since git ref is not known
 		additionalCompName = releasecommon.AdditionalComponentName
-		cdq, err = fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(additionalCompName, devNamespace, releasecommon.AdditionalGitSourceComponentUrl, "", "", "", false)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
 
-		for _, compDetected := range cdq.Status.ComponentDetected {
-			additionalCompName = compDetected.ComponentStub.ComponentName
-			additionalComponentDetected = compDetected
+		componentObj1 = appservice.ComponentSpec{
+			ComponentName: releasecommon.ComponentName,
+			Application:   releasecommon.ApplicationNameDefault,
+			Source: appservice.ComponentSource{
+				ComponentSourceUnion: appservice.ComponentSourceUnion{
+					GitSource: &appservice.GitSource{
+						URL: releasecommon.GitSourceComponentUrl,
+					},
+				},
+			},
 		}
-
+		componentObj2 = appservice.ComponentSpec{
+			ComponentName: additionalCompName,
+			Application:   releasecommon.ApplicationNameDefault,
+			Source: appservice.ComponentSource{
+				ComponentSourceUnion: appservice.ComponentSourceUnion{
+					GitSource: &appservice.GitSource{
+						URL:           releasecommon.AdditionalGitSourceComponentUrl,
+						DockerfileURL: constants.DockerFilePath,
+					},
+				},
+			},
+		}
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, managedNamespace, "true", nil)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -205,14 +209,14 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 	var _ = Describe("Post-release verification", func() {
 
 		It("verifies that Component 1 can be created and build PipelineRun is created for it in dev namespace and succeeds", func() {
-			component1, err = fw.AsKubeAdmin.HasController.CreateComponent(componentDetected.ComponentStub, devNamespace, "", "", releasecommon.ApplicationNameDefault, true, map[string]string{})
+			component1, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj1, devNamespace, "", "", releasecommon.ApplicationNameDefault, true, constants.DefaultDockerBuildPipelineBundle)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component1, "",
 				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
 		})
 
 		It("verifies that Component 2 can be created and build PipelineRun is created for it in dev namespace and succeeds", func() {
-			component2, err = fw.AsKubeAdmin.HasController.CreateComponent(additionalComponentDetected.ComponentStub, devNamespace, "", "", releasecommon.ApplicationNameDefault, true, map[string]string{})
+			component2, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj2, devNamespace, "", "", releasecommon.ApplicationNameDefault, true, constants.DefaultDockerBuildPipelineBundle)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component2, "",
 				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())

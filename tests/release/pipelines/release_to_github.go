@@ -110,7 +110,9 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 			Expect(err).NotTo(HaveOccurred())
 
 			createGHReleasePlanAdmission(sampReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, sampApplicationName, sampEnterpriseContractPolicyName, sampCatalogPathInRepo, "false", "", "", "", "")
-			component = releasecommon.CreateComponentByCDQ(*devFw, devNamespace, managedNamespace, sampApplicationName, sampComponentName, sampSourceGitURL)
+
+			component = releasecommon.CreateComponent(*devFw, devNamespace, sampApplicationName, sampComponentName, sampSourceGitURL, "", "Dockerfile", constants.DefaultDockerBuildPipelineBundle)
+
 			createGHEnterpriseContractPolicy(sampEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 		})
 

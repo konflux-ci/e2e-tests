@@ -53,6 +53,9 @@ type ComponentSpec struct {
 
 	GitSourceDefaultBranchName string `yaml:"gitSourceDefaultBranchName,omitempty"`
 
+	// Relative path of the docker file in the repository
+	DockerFilePath string `yaml:"dockerFilePath,omitempty"`
+
 	// An endpoint where the framework can ping to see if a component was deployed successfully
 	HealthEndpoint string `yaml:"healthz"`
 

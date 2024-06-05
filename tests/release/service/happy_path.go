@@ -72,22 +72,10 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", Labe
 		Expect(err).NotTo(HaveOccurred())
 		policy := contract.PolicySpecWithSourceConfig(defaultECP.Spec, ecp.SourceConfig{Include: []string{"@slsa3"}, Exclude: []string{"step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"}})
 
-		// using cdq since git ref is not known
-		var componentDetected appservice.ComponentDetectionDescription
-		cdq, err := fw.AsKubeAdmin.HasController.CreateComponentDetectionQuery(releasecommon.ComponentName, devNamespace, releasecommon.GitSourceComponentUrl, "", "", "", false)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "Expected length of the detected Components was not 1")
-
-		for _, compDetected := range cdq.Status.ComponentDetected {
-			compName = compDetected.ComponentStub.ComponentName
-			componentDetected = compDetected
-		}
-
 		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentDetected.ComponentStub, devNamespace, "", "", releasecommon.ApplicationNameDefault, false, map[string]string{})
-		Expect(err).NotTo(HaveOccurred())
+		component = releasecommon.CreateComponent(*fw, devNamespace, releasecommon.ApplicationNameDefault, releasecommon.ComponentName, releasecommon.GitSourceComponentUrl, "", "Dockerfile", constants.DefaultDockerBuildPipelineBundle)
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, managedNamespace, "", nil)
 		Expect(err).NotTo(HaveOccurred())

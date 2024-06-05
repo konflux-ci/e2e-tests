@@ -102,7 +102,9 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 			Expect(err).NotTo(HaveOccurred())
 
 			createADVSReleasePlan(advsReleasePlanName, *devFw, devNamespace, advsApplicationName, managedNamespace, "true")
-			component = releasecommon.CreateComponentByCDQ(*devFw, devNamespace, managedNamespace, advsApplicationName, advsComponentName, releasecommon.AdditionalGitSourceComponentUrl)
+
+			component = releasecommon.CreateComponent(*devFw, devNamespace, advsApplicationName, advsComponentName, releasecommon.AdditionalGitSourceComponentUrl, "", constants.DockerFilePath, constants.DefaultDockerBuildPipelineBundle)
+
 			createADVSReleasePlanAdmission(advsReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, advsApplicationName, advsEnterpriseContractPolicyName, advsCatalogPathInRepo)
 
 			createADVSEnterpriseContractPolicy(advsEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
