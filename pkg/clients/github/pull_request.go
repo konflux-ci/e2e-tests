@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/go-github/v44/github"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	ginkgo "github.com/onsi/ginkgo/v2"
 )
@@ -92,7 +93,6 @@ func (g *Github) GetPRDetails(ghRepo string, prID int) (string, string, error) {
 // by matching the CheckRun's name with the given checkRunName, and
 // then returns the CheckRun conclusion
 func (g *Github) GetCheckRunConclusion(checkRunName, repoName, prHeadSha string, prNumber int) (string, error) {
-	const checkrunStatusCompleted = "completed"
 	var errMsgSuffix = fmt.Sprintf("repository: %s, PR number: %d, PR head SHA: %s, checkRun name: %s\n", repoName, prNumber, prHeadSha, checkRunName)
 
 	var checkRun *github.CheckRun
@@ -125,14 +125,14 @@ func (g *Github) GetCheckRunConclusion(checkRunName, repoName, prHeadSha string,
 			return false, nil
 		}
 		currentCheckRunStatus := checkRun.GetStatus()
-		if currentCheckRunStatus != checkrunStatusCompleted {
-			ginkgo.GinkgoWriter.Printf("expecting CheckRun status %s, got: %s", checkrunStatusCompleted, currentCheckRunStatus)
+		if currentCheckRunStatus != constants.CheckrunStatusCompleted {
+			ginkgo.GinkgoWriter.Printf("expecting CheckRun status %s, got: %s", constants.CheckrunStatusCompleted, currentCheckRunStatus)
 			return false, nil
 		}
 		return true, nil
 	}, timeout)
 	if err != nil {
-		return "", fmt.Errorf("timed out when waiting for the PaC CheckRun status to be '%s' for %s", checkrunStatusCompleted, errMsgSuffix)
+		return "", fmt.Errorf("timed out when waiting for the PaC CheckRun status to be '%s' for %s", constants.CheckrunStatusCompleted, errMsgSuffix)
 	}
 	return checkRun.GetConclusion(), nil
 }

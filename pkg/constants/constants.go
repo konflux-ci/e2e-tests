@@ -211,6 +211,7 @@ const (
 
 	CheckrunConclusionSuccess = "success"
 	CheckrunConclusionFailure = "failure"
+	CheckrunStatusCompleted   = "completed"
 )
 
 var (
