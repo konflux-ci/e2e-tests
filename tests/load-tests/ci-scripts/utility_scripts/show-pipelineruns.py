@@ -156,28 +156,30 @@ class Something:
                 end = time.time()
                 print(f"Loaded {datafile} in {(end - start):.2f} seconds")
 
-                if "kind" not in data or data["kind"] != "List":
-                    logging.info(f"Skipping {datafile} as it is not a list")
-                    continue
-
-                if "items" not in data:
-                    logging.info(f"Skipping {datafile} as it does not contain items")
-                    continue
-
-                for i in data["items"]:
-                    if "kind" not in i:
-                        logging.info("Skipping item because it does not have kind")
+                if "kind" in data and data["kind"] == "List":
+                    if "items" not in data:
+                        logging.info(f"Skipping {datafile} as it does not contain items")
                         continue
 
-                    if i["kind"] == "PipelineRun":
-                        self._populate_pipelinerun(i)
-                    elif i["kind"] == "TaskRun":
-                        self._populate_taskrun(i)
-                    elif i["kind"] == "Pod":
-                        self._populate_pod(i)
-                    else:
-                        logging.info("Skipping item because it has unexpeted kind")
-                        continue
+                    for i in data["items"]:
+                        self._populate_add_one(i)
+                else:
+                    self._populate_add_one(data)
+
+    def _populate_add_one(self, something):
+        if "kind" not in something:
+            logging.info("Skipping item because it does not have kind")
+            return
+
+        if something["kind"] == "PipelineRun":
+            self._populate_pipelinerun(something)
+        elif something["kind"] == "TaskRun":
+            self._populate_taskrun(something)
+        elif something["kind"] == "Pod":
+            self._populate_pod(something)
+        else:
+            logging.info(f"Skipping item because it has unexpeted kind {something['kind']}")
+            return
 
     def _populate_pipelinerun(self, pr):
         """Load PipelineRun."""
