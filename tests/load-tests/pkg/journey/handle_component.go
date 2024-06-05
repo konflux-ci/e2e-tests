@@ -173,7 +173,7 @@ func listAndDeletePipelineRunsWithTimeout(f *framework.Framework, namespace, app
 	var prs *[]pipeline.PipelineRun
 	var err error
 
-	prs, err = listPipelineRunsWithTimeout(f, namespace, appName, compName, sha, 1)
+	prs, err = listPipelineRunsWithTimeout(f, namespace, appName, compName, sha, expectedCount)
 	if err != nil {
 		return err
 	}
