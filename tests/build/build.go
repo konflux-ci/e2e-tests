@@ -38,7 +38,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	AfterEach(framework.ReportFailure(&f))
 
 	var err error
-	var osConsoleHost string
 	defer GinkgoRecover()
 
 	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), func() {
@@ -113,31 +112,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			cleanupWebhooks(f, helloWorldComponentGitSourceRepoName)
 
 		})
-
-		validateChecks := func() {
-			var checkRun *github.CheckRun
-			timeout = time.Minute * 15
-			interval = time.Second * 10
-
-			Eventually(func() *github.CheckRun {
-				checkRuns, err := f.AsKubeAdmin.CommonController.Github.ListCheckRuns(helloWorldComponentGitSourceRepoName, prHeadSha)
-				Expect(err).ShouldNot(HaveOccurred())
-				for _, cr := range checkRuns {
-					if strings.Contains(cr.GetDetailsURL(), osConsoleHost) {
-						checkRun = cr
-						return cr
-					}
-				}
-				return nil
-			}, timeout, interval).ShouldNot(BeNil(), fmt.Sprintf("timed out when waiting for the PaC Check run with `Details URL` field containing %s to appear in the Component repo %s in PR #%d", osConsoleHost, helloWorldComponentGitSourceRepoName, prNumber))
-
-			Eventually(func() string {
-				checkRun, err = f.AsKubeAdmin.CommonController.Github.GetCheckRun(helloWorldComponentGitSourceRepoName, checkRun.GetID())
-				Expect(err).ShouldNot(HaveOccurred())
-				return checkRun.GetStatus()
-			}, timeout, interval).Should(Equal("completed"), fmt.Sprintf("timed out when waiting for the PaC Check suite status to be 'completed' in the Component repo %s in PR #%d", helloWorldComponentGitSourceRepoName, prNumber))
-			Expect(checkRun.GetConclusion()).To(Equal("success"), fmt.Sprintf("the initial PR %d in %s repo doesn't contain the info about successful pipelinerun", prNumber, helloWorldComponentGitSourceRepoName))
-		}
 
 		When("a new component without specified branch is created and with visibility private", Label("pac-custom-default-branch"), func() {
 			BeforeAll(func() {
@@ -421,7 +395,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(expiration).To(Equal(utils.GetEnv(constants.IMAGE_TAG_EXPIRATION_ENV, constants.DefaultImageTagExpiration)))
 			})
 			It("eventually leads to the PipelineRun status report at Checks tab", func() {
-				validateChecks()
+				expectedCheckRunName := fmt.Sprintf("%s-%s", componentName, "on-pull-request")
+				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, helloWorldComponentGitSourceRepoName, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 			})
 		})
 
@@ -478,7 +453,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				createdFileSHA = pr.Labels["pipelinesascode.tekton.dev/sha"]
 			})
 			It("eventually leads to another update of a PR about the PipelineRun status report at Checks tab", func() {
-				validateChecks()
+				expectedCheckRunName := fmt.Sprintf("%s-%s", componentName, "on-pull-request")
+				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, helloWorldComponentGitSourceRepoName, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 			})
 		})
 

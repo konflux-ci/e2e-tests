@@ -208,6 +208,9 @@ const (
 	PaCControllerRouteName = "pipelines-as-code-controller"
 
 	DockerFilePath = "docker/Dockerfile"
+
+	CheckrunConclusionSuccess = "success"
+	CheckrunConclusionFailure = "failure"
 )
 
 var (
