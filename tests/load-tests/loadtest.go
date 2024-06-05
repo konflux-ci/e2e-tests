@@ -276,6 +276,7 @@ func perApplicationThread(perApplicationCtx *journey.PerApplicationContext) {
 // Single component journey (there can be multiple parallel comps per app)
 func perComponentThread(perComponentCtx *journey.PerComponentContext) {
 	defer perComponentCtx.PerComponentWG.Done()
+	defer logging.Measure(journey.HandlePerComponentCollection, perComponentCtx)
 
 	var err error
 
@@ -302,13 +303,6 @@ func perComponentThread(perComponentCtx *journey.PerComponentContext) {
 
 	// Wait for test pipiline run
 	_, err = logging.Measure(journey.HandleTest, perComponentCtx)
-	if err != nil {
-		logging.Logger.Error("Per component thread failed: %v", err)
-		return
-	}
-
-	// Collect whatever needs to be collected
-	_, err = logging.Measure(journey.HandlePerComponentCollection, perComponentCtx)
 	if err != nil {
 		logging.Logger.Error("Per component thread failed: %v", err)
 		return
