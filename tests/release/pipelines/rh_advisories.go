@@ -102,20 +102,9 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 			Expect(err).NotTo(HaveOccurred())
 
 			createADVSReleasePlan(advsReleasePlanName, *devFw, devNamespace, advsApplicationName, managedNamespace, "true")
-			componentObj := appservice.ComponentSpec{
-				ComponentName: advsComponentName,
-				Application:   advsApplicationName,
-				Source: appservice.ComponentSource{
-					ComponentSourceUnion: appservice.ComponentSourceUnion{
-						GitSource: &appservice.GitSource{
-							URL:           releasecommon.AdditionalGitSourceComponentUrl,
-							DockerfileURL: constants.DockerFilePath,
-						},
-					},
-				},
-			}
-			component, err = devFw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", advsApplicationName, false, constants.DefaultDockerBuildPipelineBundle)
-			Expect(err).NotTo(HaveOccurred())
+
+			component = releasecommon.CreateComponent(*devFw, devNamespace, advsApplicationName, advsComponentName, releasecommon.AdditionalGitSourceComponentUrl, "", constants.DockerFilePath, constants.DefaultDockerBuildPipelineBundle)
+
 			createADVSReleasePlanAdmission(advsReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, advsApplicationName, advsEnterpriseContractPolicyName, advsCatalogPathInRepo)
 
 			createADVSEnterpriseContractPolicy(advsEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)

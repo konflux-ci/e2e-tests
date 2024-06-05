@@ -106,20 +106,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(rhioReleasePlanName, devNamespace, rhioApplicationName, managedNamespace, "true", nil)
 			Expect(err).NotTo(HaveOccurred())
 
-			componentObj := appservice.ComponentSpec{
-				ComponentName: rhioComponentName,
-				Application:   rhioApplicationName,
-				Source: appservice.ComponentSource{
-					ComponentSourceUnion: appservice.ComponentSourceUnion{
-						GitSource: &appservice.GitSource{
-							URL:           releasecommon.AdditionalGitSourceComponentUrl,
-							DockerfileURL: constants.DockerFilePath,
-						},
-					},
-				},
-			}
-			testComponent, err = devFw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", rhioApplicationName, false, constants.DefaultDockerBuildPipelineBundle)
-			Expect(err).NotTo(HaveOccurred())
+			component = releasecommon.CreateComponent(*devFw, devNamespace, rhioApplicationName, rhioComponentName, releasecommon.AdditionalGitSourceComponentUrl, "", constants.DockerFilePath, constants.DefaultDockerBuildPipelineBundle)
+
 			createRHIOReleasePlanAdmission(rhioReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, rhioApplicationName, rhioEnterpriseContractPolicyName, rhioCatalogPathInRepo)
 
 			createRHIOEnterpriseContractPolicy(rhioEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)

@@ -39,8 +39,8 @@ var (
 
 const pipelineCompletionRetries = 2
 
-// OnboardComponent onboards a component from a test repository URL and returns the component's name
-func OnboardComponent(ctrl *has.HasController, gitUrl, revision, applicationName, componentName, namespace string) string {
+// CreateComponent creates a component from a test repository URL and returns the component's name
+func CreateComponent(ctrl *has.HasController, gitUrl, revision, applicationName, componentName, namespace string) string {
 
 	componentObj := appservice.ComponentSpec{
 		ComponentName: componentName,
@@ -140,14 +140,14 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			for _, gitUrl := range componentUrls {
 				gitUrl := gitUrl
 				componentName = fmt.Sprintf("%s-%s", "test-comp", util.GenerateRandomString(4))
-				name := OnboardComponent(kubeadminClient.HasController, gitUrl, "", applicationName, componentName, testNamespace)
+				name := CreateComponent(kubeadminClient.HasController, gitUrl, "", applicationName, componentName, testNamespace)
 				Expect(name).ShouldNot(BeEmpty())
 				componentNames = append(componentNames, name)
 			}
 
 			// Create component for the repo containing symlink
 			symlinkComponentName = fmt.Sprintf("%s-%s", "test-symlink-comp", util.GenerateRandomString(4))
-			symlinkComponentName = OnboardComponent(
+			symlinkComponentName = CreateComponent(
 				kubeadminClient.HasController, pythonComponentGitSourceURL, gitRepoContainsSymlinkBranchName,
 				applicationName, symlinkComponentName, testNamespace)
 		})

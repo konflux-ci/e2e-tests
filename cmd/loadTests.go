@@ -1248,12 +1248,6 @@ func (h ItsSuccessHandler) HandleSuccess(ctx *JourneyContext, itsName string, ti
 	handleItsSuccess(ctx, itsName, h.Username, h.Application, timeInSeconds)
 }
 
-// type CdqSuccessHandler struct{}
-
-// func (h CdqSuccessHandler) HandleSuccess(ctx *JourneyContext, cdqName string, timeInSeconds float64) {
-// 	handleCdqSuccess(ctx, cdqName, timeInSeconds)
-// }
-
 type ComponentSuccessHandler struct {
 	Username    string
 	Application string

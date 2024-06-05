@@ -75,20 +75,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", Labe
 		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		componentObj := appservice.ComponentSpec{
-			ComponentName: releasecommon.ComponentName,
-			Application:   releasecommon.ApplicationNameDefault,
-			Source: appservice.ComponentSource{
-				ComponentSourceUnion: appservice.ComponentSourceUnion{
-					GitSource: &appservice.GitSource{
-						URL: releasecommon.GitSourceComponentUrl,
-					},
-				},
-			},
-		}
-
-		component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", releasecommon.ApplicationNameDefault, false, constants.DefaultDockerBuildPipelineBundle)
-		Expect(err).NotTo(HaveOccurred())
+		component = releasecommon.CreateComponent(*fw, devNamespace, releasecommon.ApplicationNameDefault, releasecommon.ComponentName, releasecommon.GitSourceComponentUrl, "", "Dockerfile", constants.DefaultDockerBuildPipelineBundle)
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, managedNamespace, "", nil)
 		Expect(err).NotTo(HaveOccurred())

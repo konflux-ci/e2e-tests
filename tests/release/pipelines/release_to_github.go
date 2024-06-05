@@ -110,19 +110,9 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 			Expect(err).NotTo(HaveOccurred())
 
 			createGHReleasePlanAdmission(sampReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, sampApplicationName, sampEnterpriseContractPolicyName, sampCatalogPathInRepo, "false", "", "", "", "")
-			componentObj := appservice.ComponentSpec{
-				ComponentName: sampComponentName,
-				Application:   sampApplicationName,
-				Source: appservice.ComponentSource{
-					ComponentSourceUnion: appservice.ComponentSourceUnion{
-						GitSource: &appservice.GitSource{
-							URL: sampSourceGitURL,
-						},
-					},
-				},
-			}
-			component, err = devFw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", sampApplicationName, false, constants.DefaultDockerBuildPipelineBundle)
-			Expect(err).NotTo(HaveOccurred())
+
+			component = releasecommon.CreateComponent(*devFw, devNamespace, sampApplicationName, sampComponentName, sampSourceGitURL, "", "Dockerfile", constants.DefaultDockerBuildPipelineBundle)
+
 			createGHEnterpriseContractPolicy(sampEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 		})
 

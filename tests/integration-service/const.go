@@ -39,5 +39,4 @@ const (
 var (
 	componentGitSourceURLForStatusReporting       = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), componentRepoNameForStatusReporting)
 	gitlabComponentGitSourceURLForStatusReporting = fmt.Sprintf("https://gitlab.com/konflux-qe/%s", componentRepoNameForStatusReporting)
-	//gitlabComponentSourceForGitlabReportingDevFile = "https://gitlab.com/konflux-qe/hacbs-test-project-integration/-/blob/main/devfile.yaml?ref_type=heads"
 )

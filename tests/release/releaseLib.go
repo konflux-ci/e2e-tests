@@ -8,6 +8,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	. "github.com/onsi/gomega"
+	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 )
 
 func NewFramework(workspace string) *framework.Framework {
@@ -23,4 +24,23 @@ func NewFramework(workspace string) *framework.Framework {
 	)
 	Expect(err).NotTo(HaveOccurred())
 	return fw
+}
+
+func CreateComponent(devFw framework.Framework, devNamespace, appName, compName, gitURL, gitRevision, dockerFilePath string, buildPipelineBundle map[string]string) *appservice.Component {
+	componentObj := appservice.ComponentSpec{
+		ComponentName: compName,
+		Application:   appName,
+		Source: appservice.ComponentSource{
+			ComponentSourceUnion: appservice.ComponentSourceUnion{
+				GitSource: &appservice.GitSource{
+					URL:           gitURL,
+					Revision:      gitRevision,
+					DockerfileURL: dockerFilePath,
+				},
+			},
+		},
+	}
+	component, err := devFw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", appName, false, buildPipelineBundle)
+	Expect(err).NotTo(HaveOccurred())
+	return component
 }
