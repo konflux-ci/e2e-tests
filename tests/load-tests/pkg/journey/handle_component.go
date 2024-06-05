@@ -198,7 +198,7 @@ func UtilityMultiArchComponentCleanup(f *framework.Framework, namespace, appName
 	if err != nil {
 		return fmt.Errorf("Error deleting on-pull-request default PipelineRun in namespace %s: %v", namespace, err)
 	}
-	logging.Logger.Debug("Multi-arch workflow: Cleaned up (first clenup) for %s/%s/%s", namespace, appName, compName)
+	logging.Logger.Debug("Multi-arch workflow: Cleaned up (first cleanup) for %s/%s/%s", namespace, appName, compName)
 
 	// Merge default PaC pipelines PR
 	repoName, err = getRepoNameFromRepoUrl(repoUrl)
@@ -223,7 +223,7 @@ func UtilityMultiArchComponentCleanup(f *framework.Framework, namespace, appName
 	if err != nil {
 		return fmt.Errorf("Error templating PaC files: %v", err)
 	}
-	logging.Logger.Debug("Multi-arch workflow: Our PaC files templated")
+	logging.Logger.Debug("Multi-arch workflow: Our PaC files templated in %s", repoUrl)
 
 	// Delete pipeline run we do not care about
 	for file, sha := range *shaMap {
