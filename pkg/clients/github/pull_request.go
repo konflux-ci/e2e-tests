@@ -3,9 +3,13 @@ package github
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/go-github/v44/github"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	ginkgo "github.com/onsi/ginkgo/v2"
 )
 
 func (g *Github) GetPullRequest(repository string, id int) (*github.PullRequest, error) {
@@ -83,4 +87,52 @@ func (g *Github) GetPRDetails(ghRepo string, prID int) (string, string, error) {
 		return "", "", err
 	}
 	return *pullRequest.Head.Repo.CloneURL, *pullRequest.Head.Ref, nil
+}
+
+// GetCheckRunConclusion fetches a specific CheckRun within a given repo
+// by matching the CheckRun's name with the given checkRunName, and
+// then returns the CheckRun conclusion
+func (g *Github) GetCheckRunConclusion(checkRunName, repoName, prHeadSha string, prNumber int) (string, error) {
+	var errMsgSuffix = fmt.Sprintf("repository: %s, PR number: %d, PR head SHA: %s, checkRun name: %s\n", repoName, prNumber, prHeadSha, checkRunName)
+
+	var checkRun *github.CheckRun
+	var timeout time.Duration
+	var err error
+
+	timeout = time.Minute * 5
+
+	err = utils.WaitUntil(func() (done bool, err error) {
+		checkRuns, err := g.ListCheckRuns(repoName, prHeadSha)
+		if err != nil {
+			ginkgo.GinkgoWriter.Printf("got error when listing CheckRuns: %+v\n", err)
+			return false, nil
+		}
+		for _, cr := range checkRuns {
+			if strings.Contains(cr.GetName(), checkRunName) {
+				checkRun = cr
+				return true, nil
+			}
+		}
+		return false, nil
+	}, timeout)
+	if err != nil {
+		return "", fmt.Errorf("timed out when waiting for the PaC CheckRun to appear for %s", errMsgSuffix)
+	}
+	err = utils.WaitUntil(func() (done bool, err error) {
+		checkRun, err = g.GetCheckRun(repoName, checkRun.GetID())
+		if err != nil {
+			ginkgo.GinkgoWriter.Printf("got error when listing CheckRuns: %+v\n", errMsgSuffix, err)
+			return false, nil
+		}
+		currentCheckRunStatus := checkRun.GetStatus()
+		if currentCheckRunStatus != constants.CheckrunStatusCompleted {
+			ginkgo.GinkgoWriter.Printf("expecting CheckRun status %s, got: %s", constants.CheckrunStatusCompleted, currentCheckRunStatus)
+			return false, nil
+		}
+		return true, nil
+	}, timeout)
+	if err != nil {
+		return "", fmt.Errorf("timed out when waiting for the PaC CheckRun status to be '%s' for %s", constants.CheckrunStatusCompleted, errMsgSuffix)
+	}
+	return checkRun.GetConclusion(), nil
 }
