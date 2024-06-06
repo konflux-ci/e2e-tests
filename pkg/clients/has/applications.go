@@ -27,18 +27,6 @@ func (h *HasController) GetApplication(name string, namespace string) (*appservi
 	return &application, nil
 }
 
-// ApplicationDevfilePresent check if devfile exists in the application status.
-func (h *HasController) ApplicationDevfilePresent(application *appservice.Application) wait.ConditionFunc {
-	return func() (bool, error) {
-		app, err := h.GetApplication(application.Name, application.Namespace)
-		if err != nil {
-			return false, nil
-		}
-		application.Status = app.Status
-		return application.Status.Devfile != "", nil
-	}
-}
-
 // CreateApplication creates an application in the kubernetes cluster with 10 minutes default time for creation.
 func (h *HasController) CreateApplication(name string, namespace string) (*appservice.Application, error) {
 	return h.CreateApplicationWithTimeout(name, namespace, time.Minute*10)
@@ -60,11 +48,6 @@ func (h *HasController) CreateApplicationWithTimeout(name string, namespace stri
 	defer cancel()
 	if err := h.KubeRest().Create(ctx, application); err != nil {
 		return nil, err
-	}
-
-	if err := utils.WaitUntil(h.ApplicationDevfilePresent(application), timeout); err != nil {
-		application = h.refreshApplicationForErrorDebug(application)
-		return nil, fmt.Errorf("timed out when waiting for devfile content creation for application %s in %s namespace: %+v. applicattion: %s", name, namespace, err, utils.ToPrettyJSONString(application))
 	}
 
 	return application, nil
@@ -109,17 +92,6 @@ func (h *HasController) DeleteAllApplicationsInASpecificNamespace(namespace stri
 		}
 		return len(applicationList.Items) == 0, nil
 	}, timeout)
-}
-
-// refreshApplicationForErrorDebug return the latest application object from the kubernetes cluster.
-func (h *HasController) refreshApplicationForErrorDebug(application *appservice.Application) *appservice.Application {
-	retApp := &appservice.Application{}
-
-	if err := h.KubeRest().Get(context.Background(), rclient.ObjectKeyFromObject(application), retApp); err != nil {
-		return application
-	}
-
-	return retApp
 }
 
 // ListAllApplications returns a list of all Applications in a given namespace.
