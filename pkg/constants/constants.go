@@ -85,13 +85,13 @@ const (
 	// Managed workspace for release pipelines tests
 	RELEASE_MANAGED_WORKSPACE_ENV = "RELEASE_MANAGED_WORKSPACE"
 
-	// Bundle ref for overriding the default Java build bundle specified in BuildPipelineSelectorYamlURL
+	// Bundle ref for overriding the default Java build bundle specified in BuildPipelineConfigConfigMapYamlURL
 	CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV string = "CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE"
 
 	// Bundle ref for a buildah-remote build
 	CUSTOM_BUILDAH_REMOTE_PIPELINE_BUILD_BUNDLE_ENV string = "CUSTOM_BUILDAH_REMOTE_PIPELINE_BUILD_BUNDLE"
 
-	//Bundle ref for custom source-build, format example: quay.io/redhat-appstudio-qe/test-images:pipeline-bundle-1715584704-fftb
+	// Bundle ref for custom source-build, format example: quay.io/redhat-appstudio-qe/test-images:pipeline-bundle-1715584704-fftb
 	CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE_ENV string = "CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE"
 
 	// QE slack bot token used for delivering messages about critical failures during CI runs
@@ -140,7 +140,7 @@ const (
 	JVMBuildImageSecretName = "jvm-build-image-secrets"
 	JBSConfigName           = "jvm-build-config"
 
-	BuildPipelineSelectorYamlURL = "https://raw.githubusercontent.com/redhat-appstudio/infra-deployments/main/components/build-service/base/build-pipeline-selectors/build-pipeline-selector.yaml"
+	BuildPipelineConfigConfigMapYamlURL = "https://raw.githubusercontent.com/redhat-appstudio/infra-deployments/main/components/build-service/base/build-pipeline-config/build-pipeline-config.yaml"
 
 	DefaultImagePushRepo         = "quay.io/" + DefaultQuayOrg + "/test-images"
 	DefaultReleasedImagePushRepo = "quay.io/" + DefaultQuayOrg + "/test-release-images"
@@ -215,7 +215,6 @@ const (
 )
 
 var (
-	ComponentDefaultLabel                       = map[string]string{"e2e-test": "true"}
 	ComponentPaCRequestAnnotation               = map[string]string{"build.appstudio.openshift.io/request": "configure-pac"}
 	ComponentTriggerSimpleBuildAnnotation       = map[string]string{"build.appstudio.openshift.io/request": "trigger-simple-build"}
 	ImageControllerAnnotationRequestPublicRepo  = map[string]string{"image.redhat.com/generate": `{"visibility": "public"}`}

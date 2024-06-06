@@ -200,11 +200,8 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 
 // Universal method to create a component in the kubernetes clusters.
 func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string) (*appservice.Component, error) {
-
 	componentObject := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
-			// adding default label because of the BuildPipelineSelector in build test
-			Labels:    constants.ComponentDefaultLabel,
 			Name:      componentSpec.ComponentName,
 			Namespace: namespace,
 			Annotations: map[string]string{
@@ -531,36 +528,6 @@ func (h *HasController) StoreAllComponents(namespace string) error {
 		}
 	}
 	return nil
-}
-
-// specific for tests/remote-secret/image-repository-cr-image-pull-remote-secret.go
-func (h *HasController) CreateComponentWithoutGenerateAnnotation(componentSpec appservice.ComponentSpec, namespace string, secret string, applicationName string, skipInitialChecks bool) (*appservice.Component, error) {
-	componentObject := &appservice.Component{
-		ObjectMeta: metav1.ObjectMeta{
-			// adding default label because of the BuildPipelineSelector in build test
-			Labels:    constants.ComponentDefaultLabel,
-			Name:      componentSpec.ComponentName,
-			Namespace: namespace,
-			Annotations: map[string]string{
-				"skip-initial-checks": strconv.FormatBool(skipInitialChecks),
-			},
-		},
-		Spec: componentSpec,
-	}
-	componentObject.Spec.Secret = secret
-	componentObject.Spec.Application = applicationName
-
-	componentObject.Annotations = utils.MergeMaps(componentObject.Annotations, constants.DefaultDockerBuildPipelineBundle)
-
-	if componentObject.Spec.TargetPort == 0 {
-		componentObject.Spec.TargetPort = 8081
-	}
-
-	if err := h.KubeRest().Create(context.Background(), componentObject); err != nil {
-		return nil, err
-	}
-
-	return componentObject, nil
 }
 
 // UpdateComponent updates a component
