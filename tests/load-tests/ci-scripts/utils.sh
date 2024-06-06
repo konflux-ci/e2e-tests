@@ -28,23 +28,6 @@ function collect_application() {
     cat "$file_json" | jq -rc "$jq_cmd" | sed -e 's,Z,,g' >>"$file_csv"
 }
 
-function collect_componentdetectionquery() {
-    local oc_opts="${1:--A}"
-    local file_stub="${2:-$ARTIFACT_DIR/collected-componentdetectionqueries.appstudio.redhat.com}"
-    local file_csv="${file_stub}.csv"
-    local file_json="${file_stub}.json"
-
-    oc get componentdetectionqueries.appstudio.redhat.com $oc_opts -o json >"$file_json"
-
-    echo "ComponentDetectionQuery${csv_delim}Namespace${csv_delim}CreationTimestamp${csv_delim}Completed${csv_delim}Completed.Reason${csv_delim}Completed.Mesasge${csv_delim}Duration" >"$file_csv"
-    jq_cmd=".items[] | (.metadata.name) \
-    + $csv_delim_quoted + (.metadata.namespace) \
-    + $csv_delim_quoted + (.metadata.creationTimestamp) \
-    + $csv_delim_quoted + (if ((.status.conditions[] | select(.type == \"Completed\")) // false) then (.status.conditions[] | select(.type == \"Completed\") | .lastTransitionTime + $csv_delim_quoted + .reason + $csv_delim_quoted + .message) else \"$csv_delim$csv_delim\" end)\
-    + $csv_delim_quoted + (if ((.status.conditions[] | select(.type == \"Completed\")) // false) then ((.status.conditions[] | select(.type == \"Completed\") | .lastTransitionTime | strptime($dt_format) | mktime) - (.metadata.creationTimestamp | strptime($dt_format) | mktime) | tostring) else \"\" end)"
-    cat "$file_json" | jq -rc "$jq_cmd" | sed -e 's,Z,,g' >>"$file_csv"
-}
-
 function collect_component() {
     local oc_opts="${1:--A}"
     local file_stub="${2:-$ARTIFACT_DIR/collected-components.appstudio.redhat.com}"

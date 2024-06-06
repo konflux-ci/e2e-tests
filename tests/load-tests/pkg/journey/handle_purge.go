@@ -20,16 +20,6 @@ func purgeStage(f *framework.Framework, namespace string) error {
 		return fmt.Errorf("Error when deleting components in namespace %s: %v", namespace, err)
 	}
 
-	err = f.AsKubeDeveloper.HasController.DeleteAllComponentDetectionQueriesInASpecificNamespace(namespace, time.Minute*5)
-	if err != nil {
-		return fmt.Errorf("Error when deleting component detection queries in namespace %s: %v", namespace, err)
-	}
-
-	err = DeleteAllBuildPipelineSelectors(f, namespace, time.Minute*5)
-	if err != nil {
-		return fmt.Errorf("Error when deleting build pipeline selectors in namespace %s: %v", namespace, err)
-	}
-
 	err = f.AsKubeDeveloper.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)
 	if err != nil {
 		return fmt.Errorf("Error when deleting pipeline runs in namespace %s: %v", namespace, err)

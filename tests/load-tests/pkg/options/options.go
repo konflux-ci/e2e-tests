@@ -9,14 +9,16 @@ import "time"
 type Opts struct {
 	ApplicationsCount             int
 	BuildPipelineSelectorBundle   string
+	ComponentContainerContext     string
+	ComponentContainerFile        string
 	ComponentRepoRevision         string
 	ComponentRepoUrl              string
 	ComponentsCount               int
 	Concurrency                   int
 	FailFast                      bool
 	JourneyDuration               string
-	JourneyUntil                  time.Time
 	JourneyRepeats                int
+	JourneyUntil                  time.Time
 	LogDebug                      bool
 	LogTrace                      bool
 	LogVerbose                    bool

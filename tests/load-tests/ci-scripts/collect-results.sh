@@ -22,7 +22,6 @@ find "$output_dir" -type f -name 'gh-rate-limits-remaining.csv' -exec cp -vf {} 
 find "$output_dir" -type f -name '*.pprof' -exec cp -vf {} "${ARTIFACT_DIR}" \;
 
 application_stub=$ARTIFACT_DIR/collected-applications.appstudio.redhat.com
-componentdetectionquery_stub=$ARTIFACT_DIR/collected-componentdetectionqueries.appstudio.redhat.com
 component_stub=$ARTIFACT_DIR/collected-components.appstudio.redhat.com
 pipelinerun_stub=$ARTIFACT_DIR/collected-pipelineruns.tekton.dev
 taskrun_stub=$ARTIFACT_DIR/collected-taskruns.tekton.dev
@@ -42,10 +41,6 @@ dt_format='"%Y-%m-%dT%H:%M:%SZ"'
 ## Application info
 echo "Collecting Application timestamps..."
 collect_application "-A" "$application_stub"
-
-## ComponentDetectionQuery info
-echo "Collecting ComponentDetectionQuery timestamps..."
-collect_componentdetectionquery "-A" "$componentdetectionquery_stub"
 
 ## Component info
 echo "Collecting Component timestamps..."

@@ -8,7 +8,6 @@ import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 import loadtestutils "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/loadtestutils"
 
 import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
-import appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 import util "github.com/devfile/library/v2/pkg/util"
 
 // Pointers to all user journey thread contexts
@@ -108,8 +107,6 @@ type PerApplicationContext struct {
 	ParentContext               *MainContext
 	ApplicationName             string
 	IntegrationTestScenarioName string
-	ComponentDetectionQueryName string
-	ComponentStubList           []appstudioApi.ComponentDetectionDescription
 	PerComponentContexts        []*PerComponentContext
 }
 

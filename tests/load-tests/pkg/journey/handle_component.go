@@ -76,17 +76,36 @@ func getPaCPull(annotations map[string]string) (string, error) {
 	}
 }
 
-func CreateComponent(f *framework.Framework, namespace, name, appName string, stub appstudioApi.ComponentDetectionDescription, skipInitialChecks, requestConfigurePac bool) error {
-	// Prepare annotations to add
+func CreateComponent(f *framework.Framework, namespace, name, repoUrl, repoRevision, containerContext, containerFile, buildPipelineSelector, appName string, skipInitialChecks, requestConfigurePac bool) error {
+	// Prepare annotations to add to component
 	var annotationsMap map[string]string
+	annotationsMap = constants.DefaultDockerBuildPipelineBundle
+	if buildPipelineSelector != "" {
+		// Custom build pipeline selector
+		annotationsMap["build.appstudio.openshift.io/pipeline"] = fmt.Sprintf(`{"name": "docker-build", "bundle": "%s"}`, buildPipelineSelector)
+	}
 	if requestConfigurePac {
-		annotationsMap = constants.ComponentPaCRequestAnnotation
-	} else {
-		annotationsMap = map[string]string{}
+		// This is PaC build
+		for key, value := range constants.ComponentPaCRequestAnnotation {
+			annotationsMap[key] = value
+		}
 	}
 
-	stub.ComponentStub.ComponentName = name
-	_, err := f.AsKubeDeveloper.HasController.CreateComponent(stub.ComponentStub, namespace, "", "", appName, skipInitialChecks, annotationsMap)
+	componentObj := appstudioApi.ComponentSpec{
+		ComponentName: name,
+		Source: appstudioApi.ComponentSource{
+			ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
+				GitSource: &appstudioApi.GitSource{
+					URL:           repoUrl,
+					Revision:      repoRevision,
+					Context:       containerContext,
+					DockerfileURL: containerFile,
+				},
+			},
+		},
+	}
+
+	_, err := f.AsKubeDeveloper.HasController.CreateComponent(componentObj, namespace, "", "", appName, skipInitialChecks, annotationsMap)
 	if err != nil {
 		return fmt.Errorf("Unable to create the Component %s: %v", name, err)
 	}
@@ -243,7 +262,6 @@ func HandleComponent(ctx *PerComponentContext) error {
 	var pullIface interface{}
 	var err error
 
-	stub := ctx.ParentContext.ComponentStubList[ctx.ComponentIndex]
 	logging.Logger.Debug("Creating component %s in namespace %s", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 
 	// Create component
@@ -252,8 +270,12 @@ func HandleComponent(ctx *PerComponentContext) error {
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,
 		ctx.ComponentName,
+		ctx.ParentContext.ParentContext.ComponentRepoUrl,
+		ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision,
+		ctx.ParentContext.ParentContext.Opts.ComponentContainerContext,
+		ctx.ParentContext.ParentContext.Opts.ComponentContainerFile,
+		ctx.ParentContext.ParentContext.Opts.BuildPipelineSelectorBundle,
 		ctx.ParentContext.ApplicationName,
-		stub,
 		ctx.ParentContext.ParentContext.Opts.PipelineSkipInitialChecks,
 		ctx.ParentContext.ParentContext.Opts.PipelineRequestConfigurePac,
 	)

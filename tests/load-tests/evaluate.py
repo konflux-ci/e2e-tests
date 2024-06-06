@@ -21,8 +21,6 @@ METRICS = [
     "ValidateApplication",
     "CreateIntegrationTestScenario",
     "ValidateIntegrationTestScenario",
-    "CreateComponentDetectionQuery",
-    "ValidateComponentDetectionQuery",
     "CreateComponent",
     "ValidateComponent",
     "ValidatePipelineRunCreation",

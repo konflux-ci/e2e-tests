@@ -12,7 +12,6 @@ CONCURRENCY="${2:-1}"
 login_log_stub=$ARTIFACT_DIR/collected-oc_login
 
 application_stub=$ARTIFACT_DIR/collected-applications.appstudio.redhat.com
-componentdetectionquery_stub=$ARTIFACT_DIR/collected-componentdetectionqueries.appstudio.redhat.com
 component_stub=$ARTIFACT_DIR/collected-components.appstudio.redhat.com
 pipelinerun_stub=$ARTIFACT_DIR/collected-pipelineruns.tekton.dev
 taskrun_stub=$ARTIFACT_DIR/collected-taskruns.tekton.dev
@@ -49,10 +48,6 @@ for uid in $( seq 1 $CONCURRENCY ); do
     ## Application info
     echo "Collecting Application timestamps..."
     collect_application "-n ${tenant}" "$application_stub-$tenant"
-
-    ## ComponentDetectionQuery info
-    echo "Collecting ComponentDetectionQuery timestamps..."
-    collect_componentdetectionquery "-n ${tenant}" "$componentdetectionquery_stub-$tenant"
 
     ## Component info
     echo "Collecting Component timestamps..."
