@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/logs"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"

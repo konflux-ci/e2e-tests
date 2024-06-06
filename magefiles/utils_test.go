@@ -94,6 +94,14 @@ func (m *QuayClientMock) ChangeRepositoryVisibility(organization, imageRepositor
 	return nil
 }
 
+func (m *QuayClientMock) GetNotifications(organization, repository string) ([]quay.Notification, error) {
+	return nil, nil
+}
+
+func (m *QuayClientMock) CreateNotification(organization, repository string, notification quay.Notification) (*quay.Notification, error) {
+	return nil, nil
+}
+
 func TestCleanupQuayReposAndRobots(t *testing.T) {
 	timeFormat := "Mon, 02 Jan 2006 15:04:05 -0700"
 

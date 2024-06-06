@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
@@ -17,7 +18,6 @@ import (
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )

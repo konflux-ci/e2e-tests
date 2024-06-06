@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
+	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/logs"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	intgteststat "github.com/konflux-ci/integration-service/pkg/integrationteststatus"
 	. "github.com/onsi/ginkgo/v2"
-	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
