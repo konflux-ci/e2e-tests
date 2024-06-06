@@ -4,11 +4,11 @@ import "fmt"
 import "strings"
 import "time"
 
-import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/logging"
+import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
-import appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
-import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
-import utils "github.com/redhat-appstudio/e2e-tests/pkg/utils"
+import appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
+import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
+import utils "github.com/konflux-ci/e2e-tests/pkg/utils"
 import pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 func ValidateSnapshotCreation(f *framework.Framework, namespace, compName string) (string, error) {

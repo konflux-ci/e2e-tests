@@ -3,10 +3,10 @@ package journey
 import "fmt"
 import "time"
 
-import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/logging"
+import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
-import "github.com/redhat-appstudio/e2e-tests/pkg/framework"
-import "github.com/redhat-appstudio/e2e-tests/pkg/utils"
+import "github.com/konflux-ci/e2e-tests/pkg/framework"
+import "github.com/konflux-ci/e2e-tests/pkg/utils"
 
 func HandleUser(ctx *MainContext) error {
 	var err error

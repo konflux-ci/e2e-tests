@@ -3,12 +3,12 @@ package journey
 import "fmt"
 import "sync"
 
-import options "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/options"
-import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/logging"
-import loadtestutils "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/loadtestutils"
+import options "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/options"
+import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+import loadtestutils "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/loadtestutils"
 
-import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
-import appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
+import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
+import appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 import util "github.com/devfile/library/v2/pkg/util"
 
 // Pointers to all user journey thread contexts

@@ -3,9 +3,9 @@ package journey
 import "fmt"
 import "time"
 
-import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/logging"
+import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
-import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
+import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 
 func purgeStage(f *framework.Framework, namespace string) error {
 	var err error

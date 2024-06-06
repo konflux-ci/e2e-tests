@@ -3,9 +3,9 @@ package main
 import "fmt"
 import "time"
 
-import journey "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/journey"
-import options "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/options"
-import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/logging"
+import journey "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/journey"
+import options "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/options"
+import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
 import cobra "github.com/spf13/cobra"
 import klog "k8s.io/klog/v2"
@@ -17,7 +17,7 @@ import klog "k8s.io/klog/v2"
 //import watch "k8s.io/apimachinery/pkg/watch"
 ////import fields "k8s.io/apimachinery/pkg/fields"
 ////import runtime "k8s.io/apimachinery/pkg/runtime"
-//import appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
+//import appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 /////import eventsv1 "k8s.io/api/events/v1"
 //import unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 

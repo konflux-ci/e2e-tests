@@ -3,9 +3,9 @@ package journey
 import "context"
 import "fmt"
 
-import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/logging"
+import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
-import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
+import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 func CollectPersistentVolumeClaims(f *framework.Framework, namespace string) error {

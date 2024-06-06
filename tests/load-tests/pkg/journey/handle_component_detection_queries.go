@@ -4,11 +4,11 @@ import "fmt"
 import "strings"
 import "time"
 
-import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/logging"
+import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
-import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
-import utils "github.com/redhat-appstudio/e2e-tests/pkg/utils"
-import appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
+import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
+import utils "github.com/konflux-ci/e2e-tests/pkg/utils"
+import appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 
 func CreateComponentDetectionQuery(f *framework.Framework, namespace string, timeout time.Duration, name, repoUrl, repoRevision string) error {
 	_, err := f.AsKubeDeveloper.HasController.CreateComponentDetectionQueryWithTimeout(name, namespace, repoUrl, repoRevision, "", "", false, timeout)

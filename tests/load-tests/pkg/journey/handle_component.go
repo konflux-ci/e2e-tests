@@ -7,12 +7,12 @@ import "strconv"
 import "strings"
 import "time"
 
-import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/logging"
+import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
-import constants "github.com/redhat-appstudio/e2e-tests/pkg/constants"
-import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
-import utils "github.com/redhat-appstudio/e2e-tests/pkg/utils"
-import appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
+import constants "github.com/konflux-ci/e2e-tests/pkg/constants"
+import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
+import utils "github.com/konflux-ci/e2e-tests/pkg/utils"
+import appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 import pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 // Parse PR number out of PR url

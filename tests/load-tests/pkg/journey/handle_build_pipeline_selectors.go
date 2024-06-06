@@ -4,14 +4,14 @@ import "context"
 import "fmt"
 import "time"
 
-import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/logging"
+import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
 import buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
-import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
+import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 import rclient "sigs.k8s.io/controller-runtime/pkg/client"
-import tekton "github.com/redhat-appstudio/e2e-tests/pkg/utils/tekton"
-import utils "github.com/redhat-appstudio/e2e-tests/pkg/utils"
+import tekton "github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
+import utils "github.com/konflux-ci/e2e-tests/pkg/utils"
 
 func ListAllBuildPipelineSelectors(f *framework.Framework, namespace string) (*buildservice.BuildPipelineSelectorList, error) {
 	list := &buildservice.BuildPipelineSelectorList{}

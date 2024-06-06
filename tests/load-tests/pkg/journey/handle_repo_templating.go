@@ -4,9 +4,9 @@ import "fmt"
 import "strings"
 import "regexp"
 
-import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/logging"
+import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
-import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
+import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 import github "github.com/google/go-github/v44/github"
 
 var fileList = []string{"COMPONENT-pull-request.yaml", "COMPONENT-push.yaml"}

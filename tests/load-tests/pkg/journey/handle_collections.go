@@ -7,9 +7,9 @@ import "encoding/json"
 
 import "time"
 
-import logging "github.com/redhat-appstudio/e2e-tests/tests/load-tests/pkg/logging"
+import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
-import framework "github.com/redhat-appstudio/e2e-tests/pkg/framework"
+import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 
 func getDirName(baseDir, namespace, iteration string) string {
 	return filepath.Join(baseDir, "collected-data", namespace, iteration) + "/"

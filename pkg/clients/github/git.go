@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/go-github/v44/github"
-	"github.com/redhat-appstudio/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 )
 
 func (g *Github) DeleteRef(repository, branchName string) error {
