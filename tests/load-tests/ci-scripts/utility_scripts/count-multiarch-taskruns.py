@@ -126,10 +126,10 @@ class Something:
                 if c["status"] == "True":
                     tr_condition_ok = True
                 break
-        if not tr_condition_ok:
-            logging.info(f"TaskRun {tr_name} in wrong condition, skipping: {c}")
-            self.tr_skips += 1
-            return
+        ###if not tr_condition_ok:
+        ###    logging.info(f"TaskRun {tr_name} in wrong condition, skipping: {c}")
+        ###    self.tr_skips += 1
+        ###    return
 
         try:
             tr_creationTimestamp = str2date(tr["metadata"]["creationTimestamp"])
@@ -146,6 +146,7 @@ class Something:
                 "namespace": tr_namespace,
                 "name": tr_name,
                 "task": tr_task,
+                "condition": tr_condition_ok,
                 "pending_duration": (tr_startTime - tr_creationTimestamp).total_seconds(),
                 "running_duration": (tr_completionTime - tr_startTime).total_seconds(),
                 "duration": (tr_completionTime - tr_creationTimestamp).total_seconds(),
@@ -159,6 +160,7 @@ class Something:
             "name",
             "task",
             "duration",
+            "condition",
         ]
         table = []
         for tr in self.data_taskruns:
@@ -167,6 +169,7 @@ class Something:
                 tr["name"],
                 tr["task"],
                 tr["duration"],
+                tr["condition"],
             ])
         table.sort(key=operator.itemgetter(3))
         print("\nTaskRuns breakdown:\n")
@@ -176,6 +179,8 @@ class Something:
         # Per task average
         data = {}
         for tr in self.data_taskruns:
+            if not tr["condition"]:
+                continue   # skip failed tasks
             if tr["task"] not in data:
                 data[tr["task"]] = {
                     "count": 0,
@@ -198,7 +203,7 @@ class Something:
                 v["count"],
             ])
         table.sort(key=operator.itemgetter(1))
-        print("\nTaskRuns breakdown averages by task:\n")
+        print("\nTaskRuns breakdown averages by task (only successfull):\n")
         print(tabulate.tabulate(table, headers=table_header, floatfmt=".0f"))
         self._dump_as_csv("taskruns-breakdown-averages.csv", table, table_header)
 
