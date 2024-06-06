@@ -88,7 +88,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 
 			createFBCReleasePlanAdmission(fbcReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, fbcApplicationName, fbcEnterpriseContractPolicyName, relSvcCatalogPathInRepo, "false", "", "", "", "")
 
-			component = releasecommon.CreateComponent(*devFw, devNamespace, fbcApplicationName, fbcComponentName, fbcSourceGitURL, "", fbcDockerFilePath, constants.DefaultDockerBuildPipelineBundle)
+			component = releasecommon.CreateComponent(*devFw, devNamespace, fbcApplicationName, fbcComponentName, fbcSourceGitURL, "", fbcDockerFilePath, constants.DefaultFbcBuilderPipelineBundle)
 
 			createFBCEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 
@@ -133,7 +133,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 
 			createFBCReleasePlanAdmission(fbcHotfixRPAName, *managedFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixECPolicyName, relSvcCatalogPathInRepo, "true", issueId, "false", "", "")
 
-			component = releasecommon.CreateComponent(*devFw, devNamespace, fbcHotfixAppName, fbcHotfixCompName, fbcSourceGitURL, "", fbcDockerFilePath, constants.DefaultDockerBuildPipelineBundle)
+			component = releasecommon.CreateComponent(*devFw, devNamespace, fbcHotfixAppName, fbcHotfixCompName, fbcSourceGitURL, "", fbcDockerFilePath, constants.DefaultFbcBuilderPipelineBundle)
 
 			createFBCEnterpriseContractPolicy(fbcHotfixECPolicyName, *managedFw, devNamespace, managedNamespace)
 		})
