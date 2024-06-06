@@ -11,10 +11,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/google/go-github/v44/github"
+	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
-	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 
 	"github.com/devfile/library/v2/pkg/util"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"

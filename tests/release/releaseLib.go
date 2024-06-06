@@ -4,11 +4,11 @@ import (
 	"os"
 	"time"
 
+	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	. "github.com/onsi/gomega"
-	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 )
 
 func NewFramework(workspace string) *framework.Framework {
