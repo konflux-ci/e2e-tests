@@ -206,6 +206,12 @@ const (
 
 	PaCControllerNamespace = "openshift-pipelines"
 	PaCControllerRouteName = "pipelines-as-code-controller"
+
+	DockerFilePath = "docker/Dockerfile"
+
+	CheckrunConclusionSuccess = "success"
+	CheckrunConclusionFailure = "failure"
+	CheckrunStatusCompleted   = "completed"
 )
 
 var (
@@ -215,4 +221,6 @@ var (
 	ImageControllerAnnotationRequestPublicRepo  = map[string]string{"image.redhat.com/generate": `{"visibility": "public"}`}
 	ImageControllerAnnotationRequestPrivateRepo = map[string]string{"image.redhat.com/generate": `{"visibility": "private"}`}
 	IntegrationTestScenarioDefaultLabels        = map[string]string{"test.appstudio.openshift.io/optional": "false"}
+	DefaultDockerBuildPipelineBundle            = map[string]string{"build.appstudio.openshift.io/pipeline": `{"name": "docker-build", "bundle": "latest"}`}
+	DefaultFbcBuilderPipelineBundle             = map[string]string{"build.appstudio.openshift.io/pipeline": `{"name": "fbc-builder", "bundle": "latest"}`}
 )

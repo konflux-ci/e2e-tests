@@ -3,11 +3,9 @@ package integration
 import (
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
-	"github.com/google/go-github/v44/github"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
@@ -98,7 +96,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 					},
 				}
 				// Create a component with Git Source URL, a specified git branch
-				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
+				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 			It("triggers a Build PipelineRun", func() {
@@ -148,7 +146,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 
 			It("eventually leads to the build PipelineRun's status reported at Checks tab", func() {
 				expectedCheckRunName := fmt.Sprintf("%s-%s", componentName, "on-pull-request")
-				validateCheckRun(*f, expectedCheckRunName, checkrunConclusionSuccess, componentRepoNameForStatusReporting, prHeadSha, prNumber)
+				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 			})
 		})
 
@@ -197,42 +195,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 				}, time.Minute*3, time.Second*5).Should(BeTrue(), fmt.Sprintf("Timed out waiting for Snapshot to be marked as failed %s/%s", snapshot.GetNamespace(), snapshot.GetName()))
 			})
 			It("eventually leads to the status reported at Checks tab for the successful Integration PipelineRun", func() {
-				validateCheckRun(*f, integrationTestScenarioPass.Name, checkrunConclusionSuccess, componentRepoNameForStatusReporting, prHeadSha, prNumber)
+				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(integrationTestScenarioPass.Name, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 			})
 			It("eventually leads to the status reported at Checks tab for the failed Integration PipelineRun", func() {
-				validateCheckRun(*f, integrationTestScenarioFail.Name, checkrunConclusionFailure, componentRepoNameForStatusReporting, prHeadSha, prNumber)
+				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(integrationTestScenarioFail.Name, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionFailure))
 			})
 		})
 	})
 })
-
-// validateCheckRun fetches a specific CheckRun within a given repo
-// by matching the CheckRun's name with the given checkRunName, and
-// then validates that it got completed and its conclusion is as expected
-func validateCheckRun(f framework.Framework, checkRunName, conclusion, repoName, prHeadSha string, prNumber int) {
-	var checkRun *github.CheckRun
-	var timeout, interval time.Duration
-	var err error
-
-	timeout = time.Minute * 10
-	interval = time.Second * 2
-
-	Eventually(func() *github.CheckRun {
-		checkRuns, err := f.AsKubeAdmin.CommonController.Github.ListCheckRuns(repoName, prHeadSha)
-		Expect(err).ShouldNot(HaveOccurred())
-		for _, cr := range checkRuns {
-			if strings.Contains(cr.GetName(), checkRunName) {
-				checkRun = cr
-				return cr
-			}
-		}
-		return nil
-	}, timeout, interval).ShouldNot(BeNil(), fmt.Sprintf("timed out when waiting for the PaC CheckRun, with `Name` field containing the substring %s, to appear in the PR #%d of the Component repo %s", checkRunName, prNumber, repoName))
-
-	Eventually(func() string {
-		checkRun, err = f.AsKubeAdmin.CommonController.Github.GetCheckRun(repoName, checkRun.GetID())
-		Expect(err).ShouldNot(HaveOccurred())
-		return checkRun.GetStatus()
-	}, timeout, interval).Should(Equal(checkrunStatusCompleted), fmt.Sprintf("timed out when waiting for the PaC Check suite status to be 'completed' in the Component repo %s in PR #%d", repoName, prNumber))
-	Expect(checkRun.GetConclusion()).To(Equal(conclusion), fmt.Sprintf("the PR %d in %s repo doesn't contain the expected conclusion (%s) of the CheckRun", prNumber, repoName, conclusion))
-}

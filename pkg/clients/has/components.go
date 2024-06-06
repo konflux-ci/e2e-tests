@@ -200,6 +200,7 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 
 // Universal method to create a component in the kubernetes clusters.
 func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string) (*appservice.Component, error) {
+
 	componentObject := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			// adding default label because of the BuildPipelineSelector in build test
@@ -569,6 +570,8 @@ func (h *HasController) CreateComponentWithoutGenerateAnnotation(componentSpec a
 	componentObject.Spec.Secret = secret
 	componentObject.Spec.Application = applicationName
 
+	componentObject.Annotations = utils.MergeMaps(componentObject.Annotations, constants.DefaultDockerBuildPipelineBundle)
+
 	if componentObject.Spec.TargetPort == 0 {
 		componentObject.Spec.TargetPort = 8081
 	}
@@ -583,4 +586,14 @@ func (h *HasController) CreateComponentWithoutGenerateAnnotation(componentSpec a
 	}
 
 	return componentObject, nil
+}
+
+// UpdateComponent updates a component
+func (h *HasController) UpdateComponent(component *appservice.Component) error {
+	err := h.KubeRest().Update(context.Background(), component, &rclient.UpdateOptions{})
+
+	if err != nil {
+		return err
+	}
+	return nil
 }

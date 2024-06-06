@@ -106,7 +106,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(rhioReleasePlanName, devNamespace, rhioApplicationName, managedNamespace, "true", nil)
 			Expect(err).NotTo(HaveOccurred())
 
-			testComponent = releasecommon.CreateComponentByCDQ(*devFw, devNamespace, managedNamespace, rhioApplicationName, rhioComponentName, releasecommon.AdditionalGitSourceComponentUrl)
+			component = releasecommon.CreateComponent(*devFw, devNamespace, rhioApplicationName, rhioComponentName, releasecommon.AdditionalGitSourceComponentUrl, "", constants.DockerFilePath, constants.DefaultDockerBuildPipelineBundle)
+
 			createRHIOReleasePlanAdmission(rhioReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, rhioApplicationName, rhioEnterpriseContractPolicyName, rhioCatalogPathInRepo)
 
 			createRHIOEnterpriseContractPolicy(rhioEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
@@ -219,8 +220,8 @@ func createRHIOEnterpriseContractPolicy(rhioECPName string, managedFw framework.
 			Data:   []string{releasecommon.EcPolicyDataBundle, releasecommon.EcPolicyDataPath},
 		}},
 		Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-			Exclude: []string{"cve", "step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
-			Include: []string{"minimal"},
+			Exclude: []string{"step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
+			Include: []string{"@slsa3"},
 		},
 	}
 

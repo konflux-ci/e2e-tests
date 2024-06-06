@@ -76,8 +76,6 @@ const (
 	stageEnvTestLabel = "verify-stage"
 )
 
-var supportedRuntimes = []string{"Dockerfile", "Node.js", "Go", "Quarkus", "Python", "JavaScript", "springboot", "dotnet", "maven"}
-
 var _ = framework.RhtapDemoSuiteDescribe(func() {
 	defer GinkgoRecover()
 
@@ -154,11 +152,6 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 							GinkgoWriter.Println("Error while deleting resources for user, got error: %v\n", err)
 						}
 						Expect(err).NotTo(HaveOccurred())
-						err = fw.AsKubeDeveloper.HasController.DeleteAllComponentDetectionQueriesInASpecificNamespace(fw.UserNamespace, stageTimeout)
-						if err != nil {
-							GinkgoWriter.Println("while deleting component detection queries for user, got error: %v\n", err)
-						}
-						Expect(err).NotTo(HaveOccurred())
 					}
 				})
 
@@ -182,9 +175,8 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 
 				for _, componentSpec := range appTest.Components {
 					componentSpec := componentSpec
-					var componentNewBaseBranch string
+					var componentNewBaseBranch, gitRevision string
 					componentRepositoryName := utils.ExtractGitRepositoryNameFromURL(componentSpec.GitSourceUrl)
-					cdq := &appservice.ComponentDetectionQuery{}
 					componentList := []*appservice.Component{}
 					var secret string
 
@@ -204,7 +196,7 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 					}
 
 					It(fmt.Sprintf("creates componentdetectionquery for component %s", componentSpec.Name), Label(devEnvTestLabel, stageEnvTestLabel), func() {
-						gitRevision := componentSpec.GitSourceRevision
+						gitRevision = componentSpec.GitSourceRevision
 						// In case the advanced build (PaC) is enabled for this component,
 						// we need to create a new branch that we will target
 						// and that will contain the PaC configuration, so we can avoid polluting the default (main) branch
@@ -213,31 +205,29 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 							gitRevision = componentNewBaseBranch
 							Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef(componentRepositoryName, componentSpec.GitSourceDefaultBranchName, componentSpec.GitSourceRevision, componentNewBaseBranch)).To(Succeed())
 						}
-						cdq, err = fw.AsKubeDeveloper.HasController.CreateComponentDetectionQuery(componentSpec.Name, namespace, componentSpec.GitSourceUrl, gitRevision, componentSpec.GitSourceContext, secret, false)
-						Expect(err).NotTo(HaveOccurred())
-					})
-
-					It("checks if components have supported languages by AppStudio", Label(devEnvTestLabel, stageEnvTestLabel), func() {
-						if appTest.Name == e2eConfig.MultiComponentWithUnsupportedRuntime {
-							// Validate that the completed CDQ only has detected 1 component and not also the unsupported component
-							Expect(cdq.Status.ComponentDetected).To(HaveLen(1), "cdq also detect unsupported component")
-						}
-						for _, component := range cdq.Status.ComponentDetected {
-							Expect(supportedRuntimes).To(ContainElement(component.ProjectType), "unsupported runtime used for multi component tests")
-						}
 					})
 
 					// Components for now can be imported from gitUrl, container image or a devfile
 					if componentSpec.GitSourceUrl != "" {
 						It(fmt.Sprintf("creates component %s (private: %t) from git source %s", componentSpec.Name, componentSpec.Private, componentSpec.GitSourceUrl), Label(devEnvTestLabel, stageEnvTestLabel), func() {
-							for _, compDetected := range cdq.Status.ComponentDetected {
-								c, err := fw.AsKubeDeveloper.HasController.CreateComponent(compDetected.ComponentStub, namespace, "", secret, appTest.ApplicationName, true, map[string]string{})
-								Expect(err).NotTo(HaveOccurred())
-								Expect(c.Name).To(Equal(compDetected.ComponentStub.ComponentName))
-								Expect(supportedRuntimes).To(ContainElement(compDetected.ProjectType), "unsupported runtime used for multi component tests")
 
-								componentList = append(componentList, c)
+							componentObj := appservice.ComponentSpec{
+								ComponentName: componentSpec.Name,
+								Application:   appTest.ApplicationName,
+								Source: appservice.ComponentSource{
+									ComponentSourceUnion: appservice.ComponentSourceUnion{
+										GitSource: &appservice.GitSource{
+											URL:           componentSpec.GitSourceUrl,
+											Revision:      gitRevision,
+											Context:       componentSpec.GitSourceContext,
+											DockerfileURL: componentSpec.DockerFilePath,
+										},
+									},
+								},
 							}
+							c, err := fw.AsKubeAdmin.HasController.CreateComponent(componentObj, namespace, "", secret, appTest.ApplicationName, false, constants.DefaultDockerBuildPipelineBundle)
+							Expect(err).ShouldNot(HaveOccurred())
+							componentList = append(componentList, c)
 						})
 					} else {
 						defer GinkgoRecover()
@@ -288,7 +278,7 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 
 							// PaC related variables
 							var prNumber int
-							var headSHA, pacBranchName, pacPurgeBranchName string
+							var headSHA, pacBranchName, pacPurgeBranchName1, pacPurgeBranchName2 string
 							var mergeResult *github.PullRequestMergeResult
 
 							BeforeAll(func() {
@@ -307,7 +297,8 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 								Expect(err).ShouldNot(HaveOccurred())
 
 								pacBranchName = fmt.Sprintf("appstudio-%s", component.GetName())
-								pacPurgeBranchName = fmt.Sprintf("appstudio-purge-%s", component.GetName())
+								pacPurgeBranchName1 = fmt.Sprintf("appstudio-purge-%s", component.GetName())
+								pacPurgeBranchName2 = fmt.Sprintf("konflux-purge-%s", component.GetName())
 
 								// JBS related config
 								_, err = fw.AsKubeAdmin.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, fw.UserNamespace)
@@ -588,7 +579,11 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 								})
 								AfterAll(func() {
 									// Delete the new branch created by sending purge PR while moving to simple build
-									err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, pacPurgeBranchName)
+									err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, pacPurgeBranchName1)
+									if err != nil {
+										Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+									}
+									err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, pacPurgeBranchName2)
 									if err != nil {
 										Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 									}
@@ -598,11 +593,11 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 										prs, err := fw.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepositoryName)
 										Expect(err).ShouldNot(HaveOccurred())
 										for _, pr := range prs {
-											if pr.Head.GetRef() == pacPurgeBranchName {
+											if pr.Head.GetRef() == pacPurgeBranchName1 || pr.Head.GetRef() == pacPurgeBranchName2 {
 												return nil
 											}
 										}
-										return fmt.Errorf("could not get the expected PaC purge PR branch %s", pacPurgeBranchName)
+										return fmt.Errorf("could not get the expected PaC purge PR branch %s or %s", pacPurgeBranchName1, pacPurgeBranchName2)
 									}, time.Minute*1, defaultPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for PaC purge PR to be created against the %q repo", componentRepositoryName))
 								})
 								It("component status annotation is set correctly", func() {

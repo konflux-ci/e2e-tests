@@ -110,7 +110,9 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 			Expect(err).NotTo(HaveOccurred())
 
 			createGHReleasePlanAdmission(sampReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, sampApplicationName, sampEnterpriseContractPolicyName, sampCatalogPathInRepo, "false", "", "", "", "")
-			component = releasecommon.CreateComponentByCDQ(*devFw, devNamespace, managedNamespace, sampApplicationName, sampComponentName, sampSourceGitURL)
+
+			component = releasecommon.CreateComponent(*devFw, devNamespace, sampApplicationName, sampComponentName, sampSourceGitURL, "", "Dockerfile", constants.DefaultDockerBuildPipelineBundle)
+
 			createGHEnterpriseContractPolicy(sampEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 		})
 
@@ -210,8 +212,8 @@ func createGHEnterpriseContractPolicy(sampECPName string, managedFw framework.Fr
 			Data:   []string{releasecommon.EcPolicyDataBundle, releasecommon.EcPolicyDataPath},
 		}},
 		Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-			Exclude: []string{"cve", "step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
-			Include: []string{"minimal", "slsa3"},
+			Exclude: []string{"step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
+			Include: []string{"@slsa3"},
 		},
 	}
 

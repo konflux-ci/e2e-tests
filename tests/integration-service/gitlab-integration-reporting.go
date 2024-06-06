@@ -116,15 +116,15 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 					Source: appstudioApi.ComponentSource{
 						ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
 							GitSource: &appstudioApi.GitSource{
-								URL:        gitlabComponentGitSourceURLForStatusReporting,
-								Revision:   componentBaseBranchName,
-								DevfileURL: gitlabComponentSourceForGitlabReportingDevFile,
+								URL:           gitlabComponentGitSourceURLForStatusReporting,
+								Revision:      componentBaseBranchName,
+								DockerfileURL: "Dockerfile",
 							},
 						},
 					},
 				}
 				// Create a component with Git Source URL, a specified git branch
-				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo))
+				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 

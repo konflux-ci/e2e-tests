@@ -25,6 +25,7 @@ import (
 const (
 	fbcServiceAccountName   = "release-service-account"
 	fbcSourceGitURL         = "https://github.com/redhat-appstudio-qe/fbc-sample-repo"
+	fbcDockerFilePath       = "catalog.Dockerfile"
 	targetPort              = 50051
 	relSvcCatalogPathInRepo = "pipelines/fbc-release/fbc-release.yaml"
 )
@@ -86,7 +87,9 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			Expect(err).NotTo(HaveOccurred())
 
 			createFBCReleasePlanAdmission(fbcReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, fbcApplicationName, fbcEnterpriseContractPolicyName, relSvcCatalogPathInRepo, "false", "", "", "", "")
-			component = releasecommon.CreateComponentByCDQ(*devFw, devNamespace, managedNamespace, fbcApplicationName, fbcComponentName, fbcSourceGitURL)
+
+			component = releasecommon.CreateComponent(*devFw, devNamespace, fbcApplicationName, fbcComponentName, fbcSourceGitURL, "", fbcDockerFilePath, constants.DefaultDockerBuildPipelineBundle)
+
 			createFBCEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 
 		})
@@ -129,7 +132,9 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			Expect(err).NotTo(HaveOccurred())
 
 			createFBCReleasePlanAdmission(fbcHotfixRPAName, *managedFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixECPolicyName, relSvcCatalogPathInRepo, "true", issueId, "false", "", "")
-			component = releasecommon.CreateComponentByCDQ(*devFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixCompName, fbcSourceGitURL)
+
+			component = releasecommon.CreateComponent(*devFw, devNamespace, fbcHotfixAppName, fbcHotfixCompName, fbcSourceGitURL, "", fbcDockerFilePath, constants.DefaultDockerBuildPipelineBundle)
+
 			createFBCEnterpriseContractPolicy(fbcHotfixECPolicyName, *managedFw, devNamespace, managedNamespace)
 		})
 
@@ -171,7 +176,9 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			Expect(err).NotTo(HaveOccurred())
 
 			createFBCReleasePlanAdmission(fbcPreGARPAName, *managedFw, devNamespace, managedNamespace, fbcPreGAAppName, fbcPreGAECPolicyName, relSvcCatalogPathInRepo, "false", issueId, "true", productName, productVersion)
-			component = releasecommon.CreateComponentByCDQ(*devFw, devNamespace, managedNamespace, fbcPreGAAppName, fbcPreGACompName, fbcSourceGitURL)
+
+			component = releasecommon.CreateComponent(*devFw, devNamespace, fbcPreGAAppName, fbcPreGACompName, fbcSourceGitURL, "", fbcDockerFilePath, constants.DefaultFbcBuilderPipelineBundle)
+
 			createFBCEnterpriseContractPolicy(fbcPreGAECPolicyName, *managedFw, devNamespace, managedNamespace)
 		})
 
@@ -224,7 +231,6 @@ func assertBuildPipelineRunSucceeded(devFw framework.Framework, devNamespace, ma
 			GinkgoWriter.Printf("Build PipelineRun has not been created yet for the component %s/%s\n", devNamespace, component.Name)
 			return err
 		}
-		GinkgoWriter.Printf("PipelineRun %s reason: %s\n", buildPR.Name, buildPR.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
 		if !buildPR.IsDone() {
 			return fmt.Errorf("build pipelinerun %s in namespace %s did not finish yet", buildPR.Name, buildPR.Namespace)
 		}
@@ -304,8 +310,8 @@ func createFBCEnterpriseContractPolicy(fbcECPName string, managedFw framework.Fr
 			Data:   []string{releasecommon.EcPolicyDataBundle, releasecommon.EcPolicyDataPath},
 		}},
 		Configuration: &ecp.EnterpriseContractPolicyConfiguration{
-			Exclude: []string{"cve", "step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
-			Include: []string{"minimal", "slsa3"},
+			Exclude: []string{"step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
+			Include: []string{"@slsa3"},
 		},
 	}
 

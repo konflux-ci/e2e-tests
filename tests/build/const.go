@@ -51,6 +51,8 @@ const (
 
 	//Logging related
 	buildStatusAnnotationValueLoggingFormat = "build status annotation value: %s\n"
+
+	noAppOrgName = "redhat-appstudio-qe-no-app"
 )
 
 var (
@@ -62,6 +64,6 @@ var (
 	multiComponentGitSourceURL      = fmt.Sprintf(githubUrlFormat, gihubOrg, multiComponentGitSourceRepoName)
 	multiComponentContextDirs       = []string{"go-component", "python-component"}
 
-	secretLookupComponentOneGitSourceURL = fmt.Sprintf(githubUrlFormat, gihubOrg, secretLookupGitSourceRepoOneName)
-	secretLookupComponentTwoGitSourceURL = fmt.Sprintf(githubUrlFormat, gihubOrg, secretLookupGitSourceRepoTwoName)
+	secretLookupComponentOneGitSourceURL = fmt.Sprintf(githubUrlFormat, noAppOrgName, secretLookupGitSourceRepoOneName)
+	secretLookupComponentTwoGitSourceURL = fmt.Sprintf(githubUrlFormat, noAppOrgName, secretLookupGitSourceRepoTwoName)
 )
