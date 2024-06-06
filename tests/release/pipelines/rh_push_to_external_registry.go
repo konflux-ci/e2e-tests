@@ -115,6 +115,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
 		Expect(err).ToNot(HaveOccurred())
 
+		compName = releasecommon.ComponentName
 		additionalCompName = releasecommon.AdditionalComponentName
 
 		componentObj1 = appservice.ComponentSpec{
