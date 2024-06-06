@@ -58,15 +58,15 @@ for uid in $( seq 1 $CONCURRENCY ); do
     echo "Collecting Component timestamps..."
     collect_component "-n ${tenant}" "$component_stub-$tenant"
 
-    ## PipelineRun info
-    echo "Collecting PipelineRun timestamps..."
-    collect_pipelinerun "-n ${tenant}" "$pipelinerun_stub-$tenant"
+    ### PipelineRun info
+    #echo "Collecting PipelineRun timestamps..."
+    #collect_pipelinerun "-n ${tenant}" "$pipelinerun_stub-$tenant"
 
-    ## TaskRun info
-    echo "Collecting TaskRun timestamps..."
-    collect_taskrun "-n ${tenant}" "$taskrun_stub-$tenant"
+    ### TaskRun info
+    #echo "Collecting TaskRun timestamps..."
+    #collect_taskrun "-n ${tenant}" "$taskrun_stub-$tenant"
 
-    ## Pods info
-    echo "Collecting node specs..."
-    collect_pods "-n ${tenant}" "$pod_stub-$tenant"
+    ### Pods info
+    #echo "Collecting node specs..."
+    #collect_pods "-n ${tenant}" "$pod_stub-$tenant"
 done
