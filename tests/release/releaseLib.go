@@ -26,7 +26,7 @@ func NewFramework(workspace string) *framework.Framework {
 	return fw
 }
 
-func CreateComponent(devFw framework.Framework, devNamespace, appName, compName, gitURL, gitRevision, dockerFilePath string, buildPipelineBundle map[string]string) *appservice.Component {
+func CreateComponent(devFw framework.Framework, devNamespace, appName, compName, gitURL, gitRevision, contextDir, dockerFilePath string, buildPipelineBundle map[string]string) *appservice.Component {
 	componentObj := appservice.ComponentSpec{
 		ComponentName: compName,
 		Application:   appName,
@@ -35,6 +35,7 @@ func CreateComponent(devFw framework.Framework, devNamespace, appName, compName,
 				GitSource: &appservice.GitSource{
 					URL:           gitURL,
 					Revision:      gitRevision,
+					Context:       contextDir,
 					DockerfileURL: dockerFilePath,
 				},
 			},
