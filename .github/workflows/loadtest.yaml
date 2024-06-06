@@ -3,12 +3,12 @@ name: CI Stage Load Test
 on:
   workflow_dispatch:
     inputs:
-      users:
+      concurrency:
         type: string
-        description: Number of Users
-      threads:
+        description: Number of concurrent user journey threads
+      journey_repeats:
         type: string
-        description: Number of threads
+        description: Number of sequential user journey repetitions
 
 jobs:
   load_test:
@@ -37,10 +37,8 @@ jobs:
     - name: Run Load Test
       working-directory: ./tests/load-tests
       env:
-        USERS_PER_THREAD: ${{ github.event.inputs.users }}
-        THREADS: ${{ github.event.inputs.threads }}
-        PUSHGATEWAY_URL: ${{ secrets.PUSHGATEWAY_URL }}
-        DISABLE_METRICS: ${{ secrets.DISABLE_METRICS }}
+        CONCURRENCY: ${{ github.event.inputs.concurrency }}
+        JOURNEY_REPEATS: ${{ github.event.inputs.journey_repeats }}
       run: ./run-stage.sh
 
     - name: Collect results
