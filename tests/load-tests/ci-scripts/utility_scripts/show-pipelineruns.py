@@ -275,7 +275,7 @@ class Something:
         else:
             self.tr_conditions["Missing type"] += 1
         if not tr_condition_ok:
-            logging.info(f"TaskRun {tr_name} is not in right condition, skipping")
+            logging.info(f"TaskRun {tr_name} in wrong condition, skipping: {c}")
             self.tr_skips += 1
             return
 
