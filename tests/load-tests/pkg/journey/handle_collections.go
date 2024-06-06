@@ -5,8 +5,6 @@ import "os"
 import "path/filepath"
 import "encoding/json"
 
-import "time"
-
 import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
 import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
@@ -141,8 +139,6 @@ func HandlePerComponentCollection(ctx *PerComponentContext) error {
 	if err != nil {
 		return logging.Logger.Fail(100, "Failed to create dir: %v", err)
 	}
-
-	time.Sleep(time.Second * 10)
 
 	err = collectPodLogs(ctx.Framework, dirPath, ctx.ParentContext.ParentContext.Namespace, ctx.ComponentName)
 	if err != nil {
