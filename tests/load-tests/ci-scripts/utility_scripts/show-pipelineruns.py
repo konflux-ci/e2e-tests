@@ -53,7 +53,7 @@ class DateTimeDecoder(json.JSONDecoder):
 
 class Something:
     def __init__(self, data_dir):
-        self.data = {}
+        self.data_pipelineruns = {}
         self.data_taskruns = []
         self.data_pods = []
         self.data_taskruns = []
@@ -83,17 +83,17 @@ class Something:
 
     def _merge_taskruns(self):
         for tr in self.data_taskruns:
-            if tr["pipelinerun"] not in self.data:
+            if tr["pipelinerun"] not in self.data_pipelineruns:
                 logging.info(
                     f"TaskRun {tr['name']} pipelinerun {tr['pipelinerun']} unknown, skipping."
                 )
                 self.tr_skips += 1
                 continue
 
-            if "taskRuns" not in self.data[tr["pipelinerun"]]:
-                self.data[tr["pipelinerun"]]["taskRuns"] = {}
+            if "taskRuns" not in self.data_pipelineruns[tr["pipelinerun"]]:
+                self.data_pipelineruns[tr["pipelinerun"]]["taskRuns"] = {}
 
-            if tr["task"] in self.data[tr["pipelinerun"]]["taskRuns"]:
+            if tr["task"] in self.data_pipelineruns[tr["pipelinerun"]]["taskRuns"]:
                 logging.info(
                     f"TaskRun {tr['name']} task {tr['task']} already in PipelineRun, strange, skipping."
                 )
@@ -106,27 +106,27 @@ class Something:
             del tr["task"]
             del tr["pipelinerun"]
 
-            self.data[tr_pipelinerun]["taskRuns"][tr_task] = tr
+            self.data_pipelineruns[tr_pipelinerun]["taskRuns"][tr_task] = tr
 
         self.data_taskruns = []
 
     def _merge_pods(self):
         for pod in self.data_pods:
-            if pod["pipelinerun"] not in self.data:
+            if pod["pipelinerun"] not in self.data_pipelineruns:
                 logging.info(
                     f"Pod {pod['name']} pipelinerun {pod['pipelinerun']} unknown, skipping."
                 )
                 self.pod_skips += 1
                 continue
 
-            if pod["task"] not in self.data[pod["pipelinerun"]]["taskRuns"]:
+            if pod["task"] not in self.data_pipelineruns[pod["pipelinerun"]]["taskRuns"]:
                 logging.info(f"Pod {pod['name']} task {pod['task']} unknown, skipping.")
                 self.pod_skips += 1
                 continue
 
             if (
                 pod["name"]
-                != self.data[pod["pipelinerun"]]["taskRuns"][pod["task"]]["podName"]
+                != self.data_pipelineruns[pod["pipelinerun"]]["taskRuns"][pod["task"]]["podName"]
             ):
                 logging.info(
                     f"Pod {pod['name']} task labels does not match TaskRun podName, skipping."
@@ -134,7 +134,7 @@ class Something:
                 self.pod_skips += 1
                 continue
 
-            self.data[pod["pipelinerun"]]["taskRuns"][pod["task"]]["node_name"] = pod[
+            self.data_pipelineruns[pod["pipelinerun"]]["taskRuns"][pod["task"]]["node_name"] = pod[
                 "node_name"
             ]
 
@@ -213,12 +213,12 @@ class Something:
                 break
         else:
             self.pr_conditions["Missing type"] += 1
-        if not pr_condition_ok:
-            logging.info(
-                f"PipelineRun {pr_name} is not in right condition, skipping: {pr_conditions}"
-            )
-            self.pr_skips += 1
-            return
+        ###if not pr_condition_ok:
+        ###    logging.info(
+        ###        f"PipelineRun {pr_name} is not in right condition, skipping: {pr_conditions}"
+        ###    )
+        ###    self.pr_skips += 1
+        ###    return
 
         try:
             pr_creationTimestamp = str2date(pr["metadata"]["creationTimestamp"])
@@ -229,10 +229,11 @@ class Something:
             self.pr_skips += 1
             return
 
-        self.data[pr_name] = {
+        self.data_pipelineruns[pr_name] = {
             "creationTimestamp": pr_creationTimestamp,
             "completionTime": pr_completionTime,
-            "start_time": pr_startTime,
+            "startTime": pr_startTime,
+            "condition": pr_condition_ok,
         }
 
     def _populate_taskrun(self, tr):
@@ -274,10 +275,10 @@ class Something:
                 break
         else:
             self.tr_conditions["Missing type"] += 1
-        if not tr_condition_ok:
-            logging.info(f"TaskRun {tr_name} in wrong condition, skipping: {c}")
-            self.tr_skips += 1
-            return
+        ###if not tr_condition_ok:
+        ###    logging.info(f"TaskRun {tr_name} in wrong condition, skipping: {c}")
+        ###    self.tr_skips += 1
+        ###    return
 
         try:
             self.tr_statuses[tr["spec"]["statusMessage"]] += 1
@@ -302,9 +303,10 @@ class Something:
                 "pipelinerun": tr_pipelinerun,
                 "creationTimestamp": tr_creationTimestamp,
                 "completionTime": tr_completionTime,
-                "start_time": tr_startTime,
+                "startTime": tr_startTime,
                 "podName": tr_podName,
                 "namespace": tr_namespace,
+                "condition": tr_condition_ok,
             }
         )
 
@@ -376,7 +378,7 @@ class Something:
             logging.debug(f"Entity ({entity[start]} - {entity[end]}) fits")
             return True
 
-        for pr_name, pr_times in self.data.items():
+        for pr_name, pr_times in self.data_pipelineruns.items():
             pr = copy.deepcopy(pr_times)
             pr["name"] = pr_name
 
@@ -451,16 +453,16 @@ class Something:
         start = "creationTimestamp"
         end = "completionTime"
 
-        self.pr_count = len(self.data)
-        self.tr_count = sum([len(i["taskRuns"]) for i in self.data.values()])
+        self.pr_count = len(self.data_pipelineruns)
+        self.tr_count = sum([len(i["taskRuns"]) for i in self.data_pipelineruns.values()])
         self.pod_count = sum(
             [
                 len([ii for ii in i["taskRuns"].values() if "node_name" in ii])
-                for i in self.data.values()
+                for i in self.data_pipelineruns.values()
             ]
         )
 
-        for pr_name, pr_times in self.data.items():
+        for pr_name, pr_times in self.data_pipelineruns.items():
             pr_duration = pr_times[end] - pr_times[start]
             self.pr_duration += pr_duration
 
@@ -515,7 +517,7 @@ class Something:
         Based on loaded data, compute how many TaskRuns run on what nodes.
         """
         nodes = {}
-        for pr_name, pr_data in self.data.items():
+        for pr_name, pr_data in self.data_pipelineruns.items():
             for tr_name, tr_data in pr_data["taskRuns"].items():
                 try:
                     node_name = tr_data["node_name"]
@@ -539,7 +541,7 @@ class Something:
         """
         table = []
         stats = {}
-        for pr_name, pr_data in self.data.items():
+        for pr_name, pr_data in self.data_pipelineruns.items():
             pr_tr_nodes = {}
             for tr_name, tr_data in pr_data["taskRuns"].items():
                 try:
