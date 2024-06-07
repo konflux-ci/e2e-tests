@@ -1,7 +1,6 @@
 package build
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -25,12 +24,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/openshift/library-go/pkg/image/reference"
-	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 
 	tektonpipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
 )
 
@@ -42,7 +39,6 @@ const pipelineCompletionRetries = 2
 
 // CreateComponent creates a component from a test repository URL and returns the component's name
 func CreateComponent(ctrl *has.HasController, gitUrl, revision, applicationName, componentName, namespace string) string {
-
 	componentObj := appservice.ComponentSpec{
 		ComponentName: componentName,
 		Source: appservice.ComponentSource{
@@ -55,7 +51,19 @@ func CreateComponent(ctrl *has.HasController, gitUrl, revision, applicationName,
 			},
 		},
 	}
-	c, err := ctrl.CreateComponent(componentObj, namespace, "", "", applicationName, false, constants.DefaultDockerBuildPipelineBundle)
+
+	var buildPipelineAnnotation map[string]string
+	if os.Getenv(constants.CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE_ENV) != "" {
+		customSourceBuildBundle := os.Getenv(constants.CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE_ENV)
+		Expect(customSourceBuildBundle).ShouldNot(BeEmpty())
+		buildPipelineAnnotation = map[string]string{
+			"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"docker-build", "bundle": "%s"}`, customSourceBuildBundle),
+		}
+	} else {
+		buildPipelineAnnotation = constants.DefaultDockerBuildPipelineBundle
+	}
+
+	c, err := ctrl.CreateComponent(componentObj, namespace, "", "", applicationName, false, buildPipelineAnnotation)
 	Expect(err).ShouldNot(HaveOccurred())
 	return c.Name
 }
@@ -117,13 +125,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				testNamespace = f.UserNamespace
 				Expect(f.UserNamespace).NotTo(BeNil())
 				kubeadminClient = f.AsKubeAdmin
-			}
-
-			// Update the build-pipeline-selector to use custom bundle if CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE_ENV is set
-			if os.Getenv(constants.CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE_ENV) != "" {
-				//support added for running the tests in build-templates-e2e namespace for now
-				err = updateBuildPipelineSelector(kubeadminClient, testNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
 			}
 
 			_, err = kubeadminClient.HasController.GetApplication(applicationName, testNamespace)
@@ -612,48 +613,4 @@ func getImageWithDigest(c *framework.ControllerHub, componentName, applicationNa
 		return "", fmt.Errorf("IMAGE_DIGEST for component %q could not be found", componentName)
 	}
 	return fmt.Sprintf("%s@%s", url, digest), nil
-}
-
-func updateBuildPipelineSelector(kubeadminClient *framework.ControllerHub, testNamespace string) error {
-	//trueBool := true
-	customSourceBuildBundle := os.Getenv(constants.CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE_ENV)
-	Expect(customSourceBuildBundle).ShouldNot(BeEmpty())
-	if customSourceBuildBundle == "" {
-		return fmt.Errorf("source build bundle is empty")
-	}
-	bpsObj := &buildservice.BuildPipelineSelector{}
-	err := kubeadminClient.CommonController.KubeRest().Get(context.Background(), types.NamespacedName{Name: "build-pipeline-selector", Namespace: testNamespace}, bpsObj)
-	if err != nil {
-		return fmt.Errorf("error while getting build-pipeline-selector: %v", err)
-	}
-	found := false
-	selectorIndex := -1
-	paramIndex := -1
-	for i := range bpsObj.Spec.Selectors {
-		selector := &bpsObj.Spec.Selectors[i]
-		if selector.Name == "Docker build" {
-			selectorIndex = i
-			params := bpsObj.Spec.Selectors[i].PipelineRef.Params
-			for k, param := range params {
-				if param.Name == "bundle" {
-					paramIndex = k
-					found = true
-					break
-				}
-			}
-		}
-		if found {
-			selector.PipelineRef.Params[paramIndex].Value = *tektonpipeline.NewStructuredValues(customSourceBuildBundle)
-			break
-		}
-	}
-	if selectorIndex == -1 {
-		return fmt.Errorf("docker-build selector not found in build-pipeline-selector")
-	}
-
-	err = kubeadminClient.CommonController.KubeRest().Update(context.Background(), bpsObj)
-	if err != nil {
-		return fmt.Errorf("error while updating build pipeline selector: %v", err)
-	}
-	return nil
 }

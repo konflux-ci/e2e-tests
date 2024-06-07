@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
-	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	"golang.org/x/crypto/ssh"
 	v1 "k8s.io/api/core/v1"
 
@@ -21,9 +20,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -104,10 +101,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			err = createSecretForHostPool(f)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			err = createBuildPipelineSelector(f, testNamespace, "ARM64")
-			Expect(err).ShouldNot(HaveOccurred())
-
-			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace)
+			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace, "ARM64")
 		})
 
 		When("the Component with multi-platform-build is created", func() {
@@ -227,10 +221,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			err = createSecretsForDynamicInstance(f)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			err = createBuildPipelineSelector(f, testNamespace, "ARM64")
-			Expect(err).ShouldNot(HaveOccurred())
-
-			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace)
+			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace, "ARM64")
 		})
 
 		When("the Component with multi-platform-build is created", func() {
@@ -309,10 +300,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			err = createSecretsForIbmDynamicInstance(f)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			err = createBuildPipelineSelector(f, testNamespace, "S390X")
-			Expect(err).ShouldNot(HaveOccurred())
-
-			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace)
+			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace, "S390X")
 		})
 
 		When("the Component with multi-platform-build is created", func() {
@@ -392,10 +380,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			err = createSecretsForIbmDynamicInstance(f)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			err = createBuildPipelineSelector(f, testNamespace, "PPC64LE")
-			Expect(err).ShouldNot(HaveOccurred())
-
-			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace)
+			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace, "PPC64LE")
 		})
 
 		When("the Component with multi-platform-build is created", func() {
@@ -432,12 +417,18 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 	})
 })
 
-func createApplicationAndComponent(f *framework.Framework, testNamespace string) (component *appservice.Component, applicationName, componentName string) {
+func createApplicationAndComponent(f *framework.Framework, testNamespace, platform string) (component *appservice.Component, applicationName, componentName string) {
 	applicationName = fmt.Sprintf("multi-platform-suite-application-%s", util.GenerateRandomString(4))
 	_, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 	Expect(err).NotTo(HaveOccurred())
 
 	componentName = fmt.Sprintf("multi-platform-suite-component-%s", util.GenerateRandomString(4))
+
+	customBuildahRemotePipeline := os.Getenv(constants.CUSTOM_BUILDAH_REMOTE_PIPELINE_BUILD_BUNDLE_ENV + "_" + platform)
+	Expect(customBuildahRemotePipeline).ShouldNot(BeEmpty())
+	buildPipelineAnnotation := map[string]string{
+		"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"buildah-remote-pipeline", "bundle": "%s"}`, customBuildahRemotePipeline),
+	}
 
 	// Create a component with Git Source URL being defined
 	componentObj := appservice.ComponentSpec{
@@ -452,7 +443,7 @@ func createApplicationAndComponent(f *framework.Framework, testNamespace string)
 			},
 		},
 	}
-	component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, constants.DefaultDockerBuildPipelineBundle)
+	component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, buildPipelineAnnotation)
 	Expect(err).ShouldNot(HaveOccurred())
 	return
 }
@@ -946,33 +937,6 @@ func createSecretsForDynamicInstance(f *framework.Framework) error {
 	_, err = f.AsKubeAdmin.CommonController.CreateSecret(ControllerNamespace, &sshKeys)
 	if err != nil {
 		return fmt.Errorf("error creating secret with ssh private key: %v", err)
-	}
-	return nil
-}
-
-func createBuildPipelineSelector(f *framework.Framework, namespace string, platform string) error {
-	trueBool := true
-	customBuildahRemotePipeline := os.Getenv(constants.CUSTOM_BUILDAH_REMOTE_PIPELINE_BUILD_BUNDLE_ENV + "_" + platform)
-	Expect(customBuildahRemotePipeline).ShouldNot(BeEmpty())
-	if customBuildahRemotePipeline == "" {
-		return fmt.Errorf("remote build pipeline bundle is empty")
-	}
-	ps := &buildservice.BuildPipelineSelector{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "build-pipeline-selector",
-			Namespace: namespace,
-		},
-		Spec: buildservice.BuildPipelineSelectorSpec{Selectors: []buildservice.PipelineSelector{
-			{
-				Name:           "custom remote-buildah selector",
-				PipelineRef:    *tekton.NewBundleResolverPipelineRef("buildah-remote-pipeline", customBuildahRemotePipeline),
-				WhenConditions: buildservice.WhenCondition{DockerfileRequired: &trueBool},
-			},
-		}},
-	}
-	err := f.AsKubeAdmin.CommonController.KubeRest().Create(context.TODO(), ps)
-	if err != nil {
-		return fmt.Errorf("error creating build pipeline selector: %v", err)
 	}
 	return nil
 }
