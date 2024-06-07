@@ -57,7 +57,7 @@ func CreateComponent(ctrl *has.HasController, gitUrl, revision, applicationName,
 		customSourceBuildBundle := os.Getenv(constants.CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE_ENV)
 		Expect(customSourceBuildBundle).ShouldNot(BeEmpty())
 		buildPipelineAnnotation = map[string]string{
-			"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"java-builder", "bundle": "%s"}`, customSourceBuildBundle),
+			"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"docker-build", "bundle": "%s"}`, customSourceBuildBundle),
 		}
 	} else {
 		buildPipelineAnnotation = constants.DefaultDockerBuildPipelineBundle
