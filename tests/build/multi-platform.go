@@ -427,7 +427,7 @@ func createApplicationAndComponent(f *framework.Framework, testNamespace, platfo
 	customBuildahRemotePipeline := os.Getenv(constants.CUSTOM_BUILDAH_REMOTE_PIPELINE_BUILD_BUNDLE_ENV + "_" + platform)
 	Expect(customBuildahRemotePipeline).ShouldNot(BeEmpty())
 	buildPipelineAnnotation := map[string]string{
-		"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"java-builder", "bundle": "%s"}`, customBuildahRemotePipeline),
+		"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"buildah-remote-pipeline", "bundle": "%s"}`, customBuildahRemotePipeline),
 	}
 
 	// Create a component with Git Source URL being defined
