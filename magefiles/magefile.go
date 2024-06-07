@@ -495,6 +495,11 @@ func setRequiredEnvVars() error {
 				os.Setenv(fmt.Sprintf("%s_PR_OWNER", envVarPrefix), pr.RemoteName)
 				os.Setenv(fmt.Sprintf("%s_PR_SHA", envVarPrefix), pr.CommitSHA)
 			}
+			// Allow pairing component repo PR + e2e-tests PR + infra-deployments PR
+			if isPRPairingRequired("infra-deployments") {
+				os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
+				os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
+			}
 
 			os.Setenv("E2E_TEST_SUITE_LABEL", testSuiteLabel)
 

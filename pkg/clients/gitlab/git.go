@@ -3,6 +3,7 @@ package gitlab
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	. "github.com/onsi/gomega"
@@ -116,6 +117,34 @@ func (gc *GitlabClient) CloseMergeRequest(projectID string, mergeRequestIID int)
 	})
 	if err != nil {
 		return fmt.Errorf("failed to close MR of IID %d in projectID %s, %v", mergeRequestIID, projectID, err)
+	}
+
+	return nil
+}
+
+// DeleteWebhooks deletes webhooks in Gitlab repo by given project ID,
+// and if the webhook URL contains the cluster's domain name.
+func (gc *GitlabClient) DeleteWebhooks(projectID, clusterAppDomain string) error {
+
+	// Check if clusterAppDomain is empty returns error, else continue
+	if clusterAppDomain == "" {
+		return fmt.Errorf("Framework.ClusterAppDomain is empty")
+	}
+
+	// List project hooks
+	webhooks, _, err := gc.client.Projects.ListProjectHooks(projectID, nil)
+	if err != nil {
+		return fmt.Errorf("failed to list project hooks: %v", err)
+	}
+
+	// Delete matching webhooks
+	for _, webhook := range webhooks {
+		if strings.Contains(webhook.URL, clusterAppDomain) {
+			if _, err := gc.client.Projects.DeleteProjectHook(projectID, webhook.ID); err != nil {
+				return fmt.Errorf("failed to delete webhook (ID: %d): %v", webhook.ID, err)
+			}
+			break
+		}
 	}
 
 	return nil
