@@ -26,6 +26,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/magefiles/installation"
 	"github.com/konflux-ci/e2e-tests/magefiles/upgrade"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/gitlab"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/slack"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/sprayproxy"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
@@ -847,6 +848,38 @@ func CleanWebHooks() error {
 				if err := gh.DeleteWebhook(repo, wh.GetID()); err != nil {
 					return fmt.Errorf("failed to delete webhook: %v, repo: %s", wh.Name, repo)
 				}
+			}
+		}
+	}
+	return nil
+}
+
+// Remove all webhooks which with 1 day lifetime from Gitlab rpo.
+func GitlabCleanWebHooks() error {
+	gcToken := utils.GetEnv(constants.GITLAB_TOKEN_ENV, "")
+	if gcToken == "" {
+		return fmt.Errorf("empty PAC_GITLAB_TOKEN env")
+	}
+	projectID := utils.GetEnv(constants.GITLAB_PROJECT_ID, "")
+	if projectID == "" {
+		return fmt.Errorf("empty PAC_PROJECT_ID env. Please provide a valid GitLab Project ID")
+	}
+	gitlabURL := utils.GetEnv(constants.GITLAB_URL_ENV, "https://gitlab.com/api/v4")
+	gc, err := gitlab.NewGitlabClient(gcToken, gitlabURL)
+	if err != nil {
+		return err
+	}
+	webhooks, _, err := gc.GetClient().Projects.ListProjectHooks(projectID, nil)
+	if err != nil {
+		return fmt.Errorf("failed to list project hooks: %v", err)
+	}
+	// Delete webhooks were created older than 1 day
+	for _, webhook := range webhooks {
+		dayDuration, _ := time.ParseDuration("24h")
+		if time.Since(*webhook.CreatedAt) > dayDuration {
+			klog.Infof("removing webhookURL: %s", webhook.URL)
+			if _, err := gc.GetClient().Projects.DeleteProjectHook(projectID, webhook.ID); err != nil {
+				return fmt.Errorf("failed to delete webhook (URL: %s): %v", webhook.URL, err)
 			}
 		}
 	}

@@ -60,6 +60,9 @@ clean-gitops-repositories:
 clean-github-webhooks:
 	./mage -v cleanWebHooks
 
+clean-gitlab-webhooks:
+	./mage -v gitlabcleanWebHooks
+
 clean-quay-repos-and-robots:
 	./mage -v local:cleanupQuayReposAndRobots
 
