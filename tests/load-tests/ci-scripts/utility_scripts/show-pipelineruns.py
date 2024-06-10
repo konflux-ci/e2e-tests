@@ -667,26 +667,33 @@ class Something:
             "tab:red",
         ]
 
+        # Get graph x range
+        for pr_lane in self.pr_lanes:
+            for pr in pr_lane:
+                fig_x_min = get_min(pr, fig_x_min)
+                fig_x_max = get_max(pr, fig_x_max)
+        fig_x_repair = -1 * fig_x_min   # Repair all x coords by this value
+
         for pr_lane in self.pr_lanes:
             for pr in pr_lane:
                 pr_coords = entity_to_coords(pr)
                 if pr["condition"]:
                     ax.broken_barh(
-                        [[pr_coords[0] - 1, pr_coords[1] + 2]],
+                        [[pr_coords[0] - 1 + fig_x_repair, pr_coords[1] + 2]],
                         (fig_pr_y_pos + 1, tr_height * len(pr["tr_lanes"]) - 2),
                         facecolors="#eeeeee",
                         edgecolor="black",
                     )
                 else:
                     ax.broken_barh(
-                        [[pr_coords[0] - 1, pr_coords[1] + 2]],
+                        [[pr_coords[0] - 1 + fig_x_repair, pr_coords[1] + 2]],
                         (fig_pr_y_pos + 1, tr_height * len(pr["tr_lanes"]) - 2),
                         facecolors="#eeeeee",
                         edgecolor="black",
                         hatch="\\",
                     )
                 txt = ax.text(
-                    x=pr_coords[0] + 4,
+                    x=pr_coords[0] + 4 + fig_x_repair,
                     y=fig_pr_y_pos + tr_height * len(pr["tr_lanes"]) - tr_height * 0.5,
                     s=pr["name"],
                     fontsize=8,
@@ -706,24 +713,22 @@ class Something:
                 fig_tr_y_pos = fig_pr_y_pos
                 for tr_lane in pr["tr_lanes"]:
                     for tr in tr_lane:
-                        fig_x_min = get_min(tr, fig_x_min)
-                        fig_x_max = get_max(tr, fig_x_max)
                         tr_coords = entity_to_coords(tr)
                         if tr["condition"]:
                             ax.broken_barh(
-                                [tr_coords],
+                                [[tr_coords[0] + fig_x_repair, tr_coords[1]]],
                                 (fig_tr_y_pos + 2, tr_height - 4),
                                 facecolors=names_to_colors[tr["name"]],
                             )
                         else:
                             ax.broken_barh(
-                                [tr_coords],
+                                [[tr_coords[0] + fig_x_repair, tr_coords[1]]],
                                 (fig_tr_y_pos + 2, tr_height - 4),
                                 facecolors=names_to_colors[tr["name"]],
                                 hatch="///",
                             )
                         txt = ax.text(
-                            x=tr_coords[0] + tr_coords[1] / 2,
+                            x=tr_coords[0] + tr_coords[1] / 2 + fig_x_repair,
                             y=fig_tr_y_pos + tr_height / 2,
                             s=tr["name"],
                             fontsize=6,
@@ -737,7 +742,7 @@ class Something:
                     fig_tr_y_pos += tr_height
             fig_pr_y_pos += tr_height * max([len(pr["tr_lanes"]) for pr in pr_lane])
         ax.set_ylim(0, fig_pr_y_pos)
-        ax.set_xlim(fig_x_min - 10, fig_x_max + 10)
+        ax.set_xlim(0, fig_x_max + fig_x_repair + 60)
         ax.set_xlabel("timestamps [s]")
         ax.grid(True)
 
