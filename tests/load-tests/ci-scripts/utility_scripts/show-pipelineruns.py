@@ -670,12 +670,21 @@ class Something:
         for pr_lane in self.pr_lanes:
             for pr in pr_lane:
                 pr_coords = entity_to_coords(pr)
-                ax.broken_barh(
-                    [[pr_coords[0] - 1, pr_coords[1] + 2]],
-                    (fig_pr_y_pos + 1, tr_height * len(pr["tr_lanes"]) - 2),
-                    facecolors="#eeeeee",
-                    edgecolor="black",
-                )
+                if pr["condition"]:
+                    ax.broken_barh(
+                        [[pr_coords[0] - 1, pr_coords[1] + 2]],
+                        (fig_pr_y_pos + 1, tr_height * len(pr["tr_lanes"]) - 2),
+                        facecolors="#eeeeee",
+                        edgecolor="black",
+                    )
+                else:
+                    ax.broken_barh(
+                        [[pr_coords[0] - 1, pr_coords[1] + 2]],
+                        (fig_pr_y_pos + 1, tr_height * len(pr["tr_lanes"]) - 2),
+                        facecolors="#eeeeee",
+                        edgecolor="black",
+                        hatch="\\",
+                    )
                 txt = ax.text(
                     x=pr_coords[0] + 4,
                     y=fig_pr_y_pos + tr_height * len(pr["tr_lanes"]) - tr_height * 0.5,
@@ -700,11 +709,19 @@ class Something:
                         fig_x_min = get_min(tr, fig_x_min)
                         fig_x_max = get_max(tr, fig_x_max)
                         tr_coords = entity_to_coords(tr)
-                        ax.broken_barh(
-                            [tr_coords],
-                            (fig_tr_y_pos + 2, tr_height - 4),
-                            facecolors=names_to_colors[tr["name"]],
-                        )
+                        if tr["condition"]:
+                            ax.broken_barh(
+                                [tr_coords],
+                                (fig_tr_y_pos + 2, tr_height - 4),
+                                facecolors=names_to_colors[tr["name"]],
+                            )
+                        else:
+                            ax.broken_barh(
+                                [tr_coords],
+                                (fig_tr_y_pos + 2, tr_height - 4),
+                                facecolors=names_to_colors[tr["name"]],
+                                hatch="///",
+                            )
                         txt = ax.text(
                             x=tr_coords[0] + tr_coords[1] / 2,
                             y=fig_tr_y_pos + tr_height / 2,
