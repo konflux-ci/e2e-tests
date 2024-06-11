@@ -61,10 +61,22 @@ var (
 
 	sprayProxyConfig       *sprayproxy.SprayProxyConfig
 	quayTokenNotFoundError = "DEFAULT_QUAY_ORG_TOKEN env var was not found"
+
+	konfluxCiSpec = &KonfluxCISpec{}
 )
 
 func (CI) parseJobSpec() error {
 	jobSpecEnvVarData := os.Getenv("JOB_SPEC")
+	konfluxCI := os.Getenv("KONFLUX_CI")
+
+	fmt.Println(konfluxCI)
+	if konfluxCI == "true" {
+		if err := json.Unmarshal([]byte(jobSpecEnvVarData), konfluxCiSpec); err != nil {
+			return fmt.Errorf("error when parsing openshift job spec data: %v", err)
+		}
+		fmt.Println(konfluxCiSpec.KonfluxGitRefs.PullRequestAuthor)
+		return nil
+	}
 
 	if err := json.Unmarshal([]byte(jobSpecEnvVarData), openshiftJobSpec); err != nil {
 		return fmt.Errorf("error when parsing openshift job spec data: %v", err)
@@ -82,6 +94,8 @@ func (ci CI) init() error {
 	if err = ci.parseJobSpec(); err != nil {
 		return err
 	}
+
+	os.Exit(0)
 
 	pr.Organization = openshiftJobSpec.Refs.Organization
 	pr.RepoName = openshiftJobSpec.Refs.Repo

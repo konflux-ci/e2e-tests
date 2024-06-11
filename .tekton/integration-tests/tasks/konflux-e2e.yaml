@@ -1,0 +1,55 @@
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: konflux-e2e-runner
+spec:
+  params:
+    - name: test-name
+      type: string
+      description: The name of the test being executed.
+    - name: git-repo
+      type: string
+      default: "rhtap-e2e"
+      description: The name of the Git repository containing the E2E tests.
+    - name: git-url
+      type: string
+      default: "https://github.com/redhat-appstudio/rhtap-e2e.git"
+      description: The URL of the Git repository containing the E2E tests.
+    - name: git-revision
+      type: string
+      default: "main"
+      description: The revision (branch or tag) of the Git repository to checkout.
+    - name: oras-container
+      type: string
+      description: The URI of the OCI container registry to store test artifacts.
+      default: "quay.io/flacatus/rhtap-e2e-artifacts"
+    - name: job-spec
+      type: string
+      description: The name of the test being executed.
+  steps:
+    - name: e2e-test
+      image: registry.access.redhat.com/ubi8/go-toolset:1.21.9-3.1716505664
+      workingDir: /workspace
+      env:
+        - name: JOB_NAME
+          value: $(params.test-name)
+        - name: GIT_REPO
+          value: $(params.git-repo)
+        - name: GIT_URL
+          value: $(params.git-url)
+        - name: GIT_REVISION
+          value: $(params.git-revision)
+        - name: KONFLUX_CI
+          value: "true"
+        - name: JOB_SPEC
+          value: $(params.job-spec)
+      script: |
+        #!/bin/sh
+        export ARTIFACT_DIR="/workspace/test-artifacts"
+        mkdir -p $ARTIFACT_DIR
+
+        cd "$(mktemp -d)"
+        
+        git clone --origin upstream --branch ocp-kfx "https://github.com/flacatus/e2e-tests.git" .
+        make ci/prepare/e2e-branch

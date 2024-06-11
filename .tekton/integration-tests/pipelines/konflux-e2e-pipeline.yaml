@@ -1,0 +1,63 @@
+---
+    apiVersion: tekton.dev/v1beta1
+    kind: Pipeline
+    metadata:
+      name: rhtap-e2e-linter
+    spec:
+      description: |
+        This pipeline is designed to facilitate linting for the RHTAP e2e repository.
+        It fetches test metadata and executes the ShellCheck tool to lint shell scripts as part of the testing process.
+      params:
+        - name: SNAPSHOT
+          description: 'The JSON string representing the snapshot of the application under test.'
+          default: '{"components": [{"name":"test-app", "containerImage": "quay.io/example/repo:latest"}]}'
+          type: string
+        - name: test-name
+          description: 'The name of the test corresponding to a defined Konflux integration test.'
+          default: ''
+        - name: oras-container
+          default: 'quay.io/konflux-qe-incubator/konflux-qe-oci-storage'
+          description: The ORAS container used to store all test artifacts.
+      tasks:
+        - name: test-metadata
+          taskRef:
+            resolver: git
+            params:
+              - name: url
+                value: https://github.com/konflux-qe-incubator/konflux-qe-definitions
+              - name: revision
+                value: test-metadata_v2
+              - name: pathInRepo
+                value: common/tasks/test-metadata/test-metadata.yaml
+          params:
+            - name: SNAPSHOT
+              value: $(params.SNAPSHOT)
+            - name: oras-container
+              value: $(params.oras-container)
+            - name: test-name
+              value: $(context.pipelineRun.name)
+        - name: konflux-e2e
+          runAfter:
+            - test-metadata
+          taskRef:
+            resolver: git
+            params:
+              - name: url
+                value: https://github.com/flacatus/e2e-tests.git
+              - name: revision
+                value: ocp-kfx
+              - name: pathInRepo
+                value: .tekton/integration-tests/tasks/konflux-e2e.yaml
+          params:
+            - name: test-name
+              value: $(context.pipelineRun.name)
+            - name: git-repo
+              value: "$(tasks.test-metadata.results.git-repo)"
+            - name: git-url
+              value: "$(tasks.test-metadata.results.git-url)"
+            - name: git-revision
+              value: "$(tasks.test-metadata.results.git-revision)"
+            - name: oras-container
+              value: "$(tasks.test-metadata.results.oras-container)"
+            - name: job-spec
+              value: "$(tasks.test-metadata.results.job-spec)"
