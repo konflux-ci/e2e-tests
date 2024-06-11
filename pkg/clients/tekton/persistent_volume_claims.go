@@ -19,7 +19,7 @@ func (t *TektonController) CreatePVCInAccessMode(name, namespace string, accessM
 			AccessModes: []corev1.PersistentVolumeAccessMode{
 				accessMode,
 			},
-			Resources: corev1.ResourceRequirements{
+			Resources: corev1.VolumeResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceStorage: resource.MustParse("1Gi"),
 				},

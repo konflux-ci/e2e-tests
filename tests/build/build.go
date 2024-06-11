@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
+	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/google/go-github/v44/github"
@@ -23,12 +23,12 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/konflux-ci/build-service/controllers"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	imagecontollers "github.com/konflux-ci/image-controller/controllers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/redhat-appstudio/build-service/controllers"
 	v1 "k8s.io/api/core/v1"
 )
 
