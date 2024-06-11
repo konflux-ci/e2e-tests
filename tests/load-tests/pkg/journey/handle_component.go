@@ -112,11 +112,12 @@ func CreateComponent(f *framework.Framework, namespace, name, repoUrl, repoRevis
 	return nil
 }
 
-func ValidateComponent(f *framework.Framework, namespace, name string, pac bool) (string, error) {
+func getPaCPullNumber(f *framework.Framework, namespace, name string) (int, error) {
 	interval := time.Second * 20
 	timeout := time.Minute * 15
 	var comp *appstudioApi.Component
 	var pull string
+	var pullNumber int
 
 	// TODO It would be much better to watch this resource for a condition
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
@@ -126,39 +127,26 @@ func ValidateComponent(f *framework.Framework, namespace, name string, pac bool)
 			return false, nil
 		}
 
-		// Check if there are some conditions
-		if len(comp.Status.Conditions) == 0 {
-			logging.Logger.Debug("Component %s in namespace %s lacks status conditions", name, namespace)
+		// Check for right annotation
+		pull, err = getPaCPull(comp.Annotations)
+		if err != nil {
+			return false, fmt.Errorf("PaC component %s in namespace %s failed on PR annotation: %v", name, namespace, err)
+		}
+		if pull == "" {
+			logging.Logger.Debug("PaC component %s in namespace %s do not have PR yet", name, namespace)
 			return false, nil
 		}
 
-		// Check for right annotation
-		if pac {
-			pull, err = getPaCPull(comp.Annotations)
-			if err != nil {
-				return false, fmt.Errorf("PaC component %s in namespace %s failed on PR annotation: %v", name, namespace, err)
-			}
-			if pull == "" {
-				logging.Logger.Debug("PaC component %s in namespace %s do not have PR yet", name, namespace)
-				return false, nil
-			}
-		}
-
-		// Check right condition status
-		for _, condition := range comp.Status.Conditions {
-			if (strings.HasPrefix(condition.Type, "Error") || strings.HasSuffix(condition.Type, "Error")) && condition.Status == "True" {
-				return false, fmt.Errorf("Component Detection Query %s in namespace %s is in error state: %+v", name, namespace, condition)
-			}
-			if condition.Type == "Created" && condition.Status == "True" {
-				return true, nil
-			}
-		}
-
-		logging.Logger.Trace("Still waiting for condition in component %s in namespace %s", name, namespace)
-		return false, nil
+		return true, nil
 	}, interval, timeout)
 
-	return pull, err
+	// Get merge request number
+	pullNumber, err = getPRNumberFromPRUrl(pull)
+	if err != nil {
+		return -1, fmt.Errorf("Parsing merge request number failed: %+v", err)
+	}
+
+	return pullNumber, err
 }
 
 func listPipelineRunsWithTimeout(f *framework.Framework, namespace, appName, compName, sha string, expectedCount int) (*[]pipeline.PipelineRun, error) {
@@ -259,7 +247,6 @@ func UtilityMultiArchComponentCleanup(f *framework.Framework, namespace, appName
 }
 
 func HandleComponent(ctx *PerComponentContext) error {
-	var pullIface interface{}
 	var err error
 
 	logging.Logger.Debug("Creating component %s in namespace %s", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
@@ -284,29 +271,28 @@ func HandleComponent(ctx *PerComponentContext) error {
 	}
 
 	// Validate component and if this is PaC component, get pull request link
-	pullIface, err = logging.Measure(
-		ValidateComponent,
-		ctx.Framework,
-		ctx.ParentContext.ParentContext.Namespace,
-		ctx.ComponentName,
-		ctx.ParentContext.ParentContext.Opts.PipelineRequestConfigurePac,
-	)
-	if err != nil {
-		return logging.Logger.Fail(61, "Component failed validation: %v", err)
+	if ctx.ParentContext.ParentContext.Opts.PipelineRequestConfigurePac {
+		var pullIface interface{}
+		pullIface, err = logging.Measure(
+			getPaCPullNumber,
+			ctx.Framework,
+			ctx.ParentContext.ParentContext.Namespace,
+			ctx.ComponentName,
+		)
+		if err != nil {
+			return logging.Logger.Fail(61, "Component failed validation: %v", err)
+		}
+
+		// Get merge request number
+		var ok bool
+		ctx.MergeRequestNumber, ok = pullIface.(int)
+		if !ok {
+			return logging.Logger.Fail(62, "Type assertion failed on pull: %+v", pullIface)
+		}
 	}
 
 	// If this is multi-arch build, we do not care about this build, we just merge it, update pipelines and trigger actual multi-arch build
 	if ctx.ParentContext.ParentContext.Opts.MultiarchWorkflow {
-		// Get merge request number
-		pullUrl, ok := pullIface.(string)
-		if !ok {
-			return logging.Logger.Fail(62, "Type assertion failed on pull: %+v", pullIface)
-		}
-		ctx.MergeRequestNumber, err = getPRNumberFromPRUrl(pullUrl)
-		if err != nil {
-			return logging.Logger.Fail(63, "Parsing merge request number failed: %+v", err)
-		}
-
 		// Placeholders for template multi-arch PaC pipeline files
 		placeholders := &map[string]string{
 			"NAMESPACE": ctx.ParentContext.ParentContext.Namespace,
@@ -328,7 +314,7 @@ func HandleComponent(ctx *PerComponentContext) error {
 			placeholders,
 		)
 		if err != nil {
-			return logging.Logger.Fail(64, "Multi-arch workflow component cleanup failed: %v", err)
+			return logging.Logger.Fail(63, "Multi-arch workflow component cleanup failed: %v", err)
 		}
 
 	}
