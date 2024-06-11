@@ -246,6 +246,8 @@ func createADVSReleasePlanAdmission(advsRPAName string, managedFw framework.Fram
 				{
 					"name":       component.GetName(),
 					"repository": "quay.io/redhat-pending/rhtap----konflux-release-e2e",
+					"tags": []string{"latest", "latest-{{ timestamp }}", "testtag",
+						"testtag-{{ timestamp }}", "testtag2", "testtag2-{{ timestamp }}"},
 				},
 			},
 		},
@@ -260,13 +262,6 @@ func createADVSReleasePlanAdmission(advsRPAName string, managedFw framework.Fram
 			"product_stream":  "rhtas-tp1",
 			"product_version": "v1.0",
 			"type":            "RHSA",
-		},
-		"images": map[string]interface{}{
-			"defaultTag":      "latest",
-			"addGitShaTag":    false,
-			"addTimestampTag": false,
-			"addSourceShaTag": false,
-			"floatingTags":    []string{"testtag", "testtag2"},
 		},
 		"sign": map[string]interface{}{
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",

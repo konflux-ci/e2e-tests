@@ -239,19 +239,14 @@ func createRHIOReleasePlanAdmission(rhioRPAName string, managedFw framework.Fram
 				{
 					"name":       testComponent.GetName(),
 					"repository": "quay.io/redhat-pending/rhtap----konflux-release-e2e",
+					"tags": []string{"latest", "latest-{{ timestamp }}", "testtag",
+						"testtag-{{ timestamp }}", "testtag2", "testtag2-{{ timestamp }}"},
 				},
 			},
 		},
 		"pyxis": map[string]interface{}{
 			"server": "stage",
 			"secret": "pyxis",
-		},
-		"images": map[string]interface{}{
-			"defaultTag":      "latest",
-			"addGitShaTag":    false,
-			"addTimestampTag": false,
-			"addSourceShaTag": false,
-			"floatingTags":    []string{"testtag", "testtag2"},
 		},
 		"fileUpdates": []map[string]interface{}{
 			{
