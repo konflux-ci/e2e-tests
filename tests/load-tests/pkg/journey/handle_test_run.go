@@ -11,7 +11,7 @@ import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 import utils "github.com/konflux-ci/e2e-tests/pkg/utils"
 import pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
-func ValidateSnapshotCreation(f *framework.Framework, namespace, compName string) (string, error) {
+func validateSnapshotCreation(f *framework.Framework, namespace, compName string) (string, error) {
 	interval := time.Second * 20
 	timeout := time.Minute * 30
 	var snap *appstudioApi.Snapshot
@@ -29,7 +29,7 @@ func ValidateSnapshotCreation(f *framework.Framework, namespace, compName string
 	return snap.Name, err
 }
 
-func ValidateTestPipelineRunCreation(f *framework.Framework, namespace, itsName, snapName string) error {
+func validateTestPipelineRunCreation(f *framework.Framework, namespace, itsName, snapName string) error {
 	interval := time.Second * 20
 	timeout := time.Minute * 30
 
@@ -46,7 +46,7 @@ func ValidateTestPipelineRunCreation(f *framework.Framework, namespace, itsName,
 	return err
 }
 
-func ValidateTestPipelineRunCondition(f *framework.Framework, namespace, itsName, snapName string) error {
+func validateTestPipelineRunCondition(f *framework.Framework, namespace, itsName, snapName string) error {
 	interval := time.Second * 20
 	timeout := time.Minute * 60
 	var pr *pipeline.PipelineRun
@@ -92,7 +92,12 @@ func HandleTest(ctx *PerComponentContext) error {
 
 	logging.Logger.Debug("Creating test pipeline run for component %s in namespace %s", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 
-	result1, err1 := logging.Measure(ValidateSnapshotCreation, ctx.Framework, ctx.ParentContext.ParentContext.Namespace, ctx.ComponentName)
+	result1, err1 := logging.Measure(
+		validateSnapshotCreation,
+		ctx.Framework,
+		ctx.ParentContext.ParentContext.Namespace,
+		ctx.ComponentName,
+	)
 	if err1 != nil {
 		return logging.Logger.Fail(80, "Snapshot failed creation: %v", err1)
 	}
@@ -101,12 +106,24 @@ func HandleTest(ctx *PerComponentContext) error {
 		return logging.Logger.Fail(81, "Snapshot name type assertion failed")
 	}
 
-	_, err = logging.Measure(ValidateTestPipelineRunCreation, ctx.Framework, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.IntegrationTestScenarioName, ctx.SnapshotName)
+	_, err = logging.Measure(
+		validateTestPipelineRunCreation,
+		ctx.Framework,
+		ctx.ParentContext.ParentContext.Namespace,
+		ctx.ParentContext.IntegrationTestScenarioName,
+		ctx.SnapshotName,
+	)
 	if err != nil {
 		return logging.Logger.Fail(82, "Test Pipeline Run failed creation: %v", err)
 	}
 
-	_, err = logging.Measure(ValidateTestPipelineRunCondition, ctx.Framework, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.IntegrationTestScenarioName, ctx.SnapshotName)
+	_, err = logging.Measure(
+		validateTestPipelineRunCondition,
+		ctx.Framework,
+		ctx.ParentContext.ParentContext.Namespace,
+		ctx.ParentContext.IntegrationTestScenarioName,
+		ctx.SnapshotName,
+	)
 	if err != nil {
 		return logging.Logger.Fail(83, "Test Pipeline Run failed run: %v", err)
 	}

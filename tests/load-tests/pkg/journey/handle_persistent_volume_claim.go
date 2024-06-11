@@ -8,7 +8,7 @@ import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-func CollectPersistentVolumeClaims(f *framework.Framework, namespace string) error {
+func collectPersistentVolumeClaims(f *framework.Framework, namespace string) error {
 	pvcs, err := f.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumeClaims(namespace).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("Error getting PVC: %v\n", err)
@@ -38,7 +38,10 @@ func HandlePersistentVolumeClaim(ctx *MainContext) error {
 
 	logging.Logger.Debug("Collecting persistent volume claim wait times in namespace %s", ctx.Namespace)
 
-	err = CollectPersistentVolumeClaims(ctx.Framework, ctx.Namespace)
+	err = collectPersistentVolumeClaims(
+		ctx.Framework,
+		ctx.Namespace,
+	)
 	if err != nil {
 		return logging.Logger.Fail(75, "Collecting persistent volume claim failed: %v", err)
 	}

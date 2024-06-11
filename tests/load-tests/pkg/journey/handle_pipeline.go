@@ -10,7 +10,7 @@ import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 import utils "github.com/konflux-ci/e2e-tests/pkg/utils"
 import pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
-func ValidatePipelineRunCreation(f *framework.Framework, namespace, appName, compName string) error {
+func validatePipelineRunCreation(f *framework.Framework, namespace, appName, compName string) error {
 	interval := time.Second * 20
 	timeout := time.Minute * 30
 
@@ -27,7 +27,7 @@ func ValidatePipelineRunCreation(f *framework.Framework, namespace, appName, com
 	return err
 }
 
-func ValidatePipelineRunCondition(f *framework.Framework, namespace, appName, compName string) error {
+func validatePipelineRunCondition(f *framework.Framework, namespace, appName, compName string) error {
 	interval := time.Second * 20
 	timeout := time.Minute * 60
 	var pr *pipeline.PipelineRun
@@ -63,7 +63,7 @@ func ValidatePipelineRunCondition(f *framework.Framework, namespace, appName, co
 	return err
 }
 
-func ValidatePipelineRunSignature(f *framework.Framework, namespace, appName, compName string) error {
+func validatePipelineRunSignature(f *framework.Framework, namespace, appName, compName string) error {
 	interval := time.Second * 20
 	timeout := time.Minute * 60
 	var pr *pipeline.PipelineRun
@@ -108,17 +108,35 @@ func HandlePipelineRun(ctx *PerComponentContext) error {
 
 	logging.Logger.Debug("Creating build pipeline run for component %s in namespace %s", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 
-	_, err = logging.Measure(ValidatePipelineRunCreation, ctx.Framework, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName)
+	_, err = logging.Measure(
+		validatePipelineRunCreation,
+		ctx.Framework,
+		ctx.ParentContext.ParentContext.Namespace,
+		ctx.ParentContext.ApplicationName,
+		ctx.ComponentName,
+	)
 	if err != nil {
 		return logging.Logger.Fail(70, "Build Pipeline Run failed creation: %v", err)
 	}
 
-	_, err = logging.Measure(ValidatePipelineRunCondition, ctx.Framework, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName)
+	_, err = logging.Measure(
+		validatePipelineRunCondition,
+		ctx.Framework,
+		ctx.ParentContext.ParentContext.Namespace,
+		ctx.ParentContext.ApplicationName,
+		ctx.ComponentName,
+	)
 	if err != nil {
 		return logging.Logger.Fail(71, "Build Pipeline Run failed run: %v", err)
 	}
 
-	_, err = logging.Measure(ValidatePipelineRunSignature, ctx.Framework, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName)
+	_, err = logging.Measure(
+		validatePipelineRunSignature,
+		ctx.Framework,
+		ctx.ParentContext.ParentContext.Namespace,
+		ctx.ParentContext.ApplicationName,
+		ctx.ComponentName,
+	)
 	if err != nil {
 		return logging.Logger.Fail(72, "Build Pipeline Run failed signing: %v", err)
 	}

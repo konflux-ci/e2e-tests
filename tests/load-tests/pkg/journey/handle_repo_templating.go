@@ -87,7 +87,7 @@ func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username string) (s
 	return forkRepo.GetHTMLURL(), nil
 }
 
-func TemplateFiles(f *framework.Framework, repoUrl, repoRevision string, placeholders *map[string]string) (*map[string]string, error) {
+func templateFiles(f *framework.Framework, repoUrl, repoRevision string, placeholders *map[string]string) (*map[string]string, error) {
 	var sha string
 
 	// Get repo name from repo url

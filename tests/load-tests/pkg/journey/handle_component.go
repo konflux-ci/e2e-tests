@@ -76,7 +76,7 @@ func getPaCPull(annotations map[string]string) (string, error) {
 	}
 }
 
-func CreateComponent(f *framework.Framework, namespace, name, repoUrl, repoRevision, containerContext, containerFile, buildPipelineSelector, appName string, skipInitialChecks, requestConfigurePac bool) error {
+func createComponent(f *framework.Framework, namespace, name, repoUrl, repoRevision, containerContext, containerFile, buildPipelineSelector, appName string, skipInitialChecks, requestConfigurePac bool) error {
 	// Prepare annotations to add to component
 	var annotationsMap map[string]string
 	annotationsMap = constants.DefaultDockerBuildPipelineBundle
@@ -196,7 +196,7 @@ func listAndDeletePipelineRunsWithTimeout(f *framework.Framework, namespace, app
 }
 
 // This handles post-component creation tasks for multi-arch PaC workflow
-func UtilityMultiArchComponentCleanup(f *framework.Framework, namespace, appName, compName, repoUrl, repoRev string, mergeReqNum int, placeholders *map[string]string) error {
+func utilityMultiArchComponentCleanup(f *framework.Framework, namespace, appName, compName, repoUrl, repoRev string, mergeReqNum int, placeholders *map[string]string) error {
 	var repoName string
 	var err error
 
@@ -226,7 +226,7 @@ func UtilityMultiArchComponentCleanup(f *framework.Framework, namespace, appName
 	logging.Logger.Debug("Multi-arch workflow: Cleaned up (second cleanup) for %s/%s/%s", namespace, appName, compName)
 
 	// Template our multi-arch PaC files
-	shaMap, err := TemplateFiles(f, repoUrl, repoRev, placeholders)
+	shaMap, err := templateFiles(f, repoUrl, repoRev, placeholders)
 	if err != nil {
 		return fmt.Errorf("Error templating PaC files: %v", err)
 	}
@@ -253,7 +253,7 @@ func HandleComponent(ctx *PerComponentContext) error {
 
 	// Create component
 	_, err = logging.Measure(
-		CreateComponent,
+		createComponent,
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,
 		ctx.ComponentName,
@@ -303,7 +303,7 @@ func HandleComponent(ctx *PerComponentContext) error {
 
 		// Skip what we do not care about
 		_, err = logging.Measure(
-			UtilityMultiArchComponentCleanup,
+			utilityMultiArchComponentCleanup,
 			ctx.Framework,
 			ctx.ParentContext.ParentContext.Namespace,
 			ctx.ParentContext.ApplicationName,
