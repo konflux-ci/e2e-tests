@@ -208,7 +208,8 @@ class Something:
         self._dump_as_csv("taskruns-breakdown-averages.csv", table, table_header)
 
     def _dump_as_csv(self, name, table, table_header):
-        with open(name, "w") as fd:
+        name_full = os.path.join(self.data_dir, name)
+        with open(name_full, "w") as fd:
             writer = csv.writer(fd)
             writer.writerow(table_header)
             for row in table:
