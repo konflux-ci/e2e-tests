@@ -47,6 +47,7 @@ var (
 	artifactDir      = utils.GetEnv("ARTIFACT_DIR", ".")
 	openshiftJobSpec = &OpenshiftJobSpec{}
 	pr               = &PullRequestMetadata{}
+	konfluxCI        = os.Getenv("KONFLUX_CI")
 	jobName          = utils.GetEnv("JOB_NAME", "")
 	// can be periodic, presubmit or postsubmit
 	jobType                    = utils.GetEnv("JOB_TYPE", "")
@@ -67,14 +68,11 @@ var (
 
 func (CI) parseJobSpec() error {
 	jobSpecEnvVarData := os.Getenv("JOB_SPEC")
-	konfluxCI := os.Getenv("KONFLUX_CI")
 
-	fmt.Println(konfluxCI)
 	if konfluxCI == "true" {
 		if err := json.Unmarshal([]byte(jobSpecEnvVarData), konfluxCiSpec); err != nil {
 			return fmt.Errorf("error when parsing openshift job spec data: %v", err)
 		}
-		fmt.Println(konfluxCiSpec.KonfluxGitRefs.PullRequestAuthor)
 		return nil
 	}
 
@@ -95,19 +93,24 @@ func (ci CI) init() error {
 		return err
 	}
 
-	os.Exit(0)
-
-	pr.Organization = openshiftJobSpec.Refs.Organization
-	pr.RepoName = openshiftJobSpec.Refs.Repo
-	pr.CommitSHA = openshiftJobSpec.Refs.Pulls[0].SHA
-	pr.Number = openshiftJobSpec.Refs.Pulls[0].Number
+	if konfluxCI == "true" {
+		pr.Organization = konfluxCiSpec.KonfluxGitRefs.GitOrg
+		pr.RepoName = konfluxCiSpec.KonfluxGitRefs.GitRepo
+		pr.CommitSHA = konfluxCiSpec.KonfluxGitRefs.CommitSha
+		pr.Number = konfluxCiSpec.KonfluxGitRefs.PullRequestNumber
+	} else {
+		pr.Organization = openshiftJobSpec.Refs.Organization
+		pr.RepoName = openshiftJobSpec.Refs.Repo
+		pr.CommitSHA = openshiftJobSpec.Refs.Pulls[0].SHA
+		pr.Number = openshiftJobSpec.Refs.Pulls[0].Number
+	}
 
 	prUrl := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls/%d", pr.Organization, pr.RepoName, pr.Number)
 	pr.RemoteName, pr.BranchName, err = getRemoteAndBranchNameFromPRLink(prUrl)
 	if err != nil {
 		return err
 	}
-
+	fmt.Println(pr.RemoteName, pr.BranchName)
 	return nil
 }
 

@@ -60,7 +60,7 @@ type KonfluxCISpec struct {
 // KonfluxGitRefs holds references to Git-related data for a Konflux job.
 type KonfluxGitRefs struct {
 	// PullRequestNumber represents the number associated with a pull request.
-	PullRequestNumber string `json:"pull_request_number,omitempty"`
+	PullRequestNumber int `json:"pull_request_number,omitempty"`
 
 	// PullRequestAuthor represents the author of the pull request.
 	PullRequestAuthor string `json:"pull_request_author,omitempty"`
