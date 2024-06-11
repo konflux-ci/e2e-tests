@@ -11,10 +11,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/google/go-github/v44/github"
+	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
-	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 
 	"github.com/devfile/library/v2/pkg/util"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
@@ -38,12 +38,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	AfterEach(framework.ReportFailure(&f))
 
 	var err error
-	var osConsoleHost string
 	defer GinkgoRecover()
 
 	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), func() {
 		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, defaultBranchTestComponentName, imageRepoName, robotAccountName string
 		var component *appservice.Component
+		var plr *pipeline.PipelineRun
 
 		var timeout, interval time.Duration
 
@@ -114,31 +114,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 		})
 
-		validateChecks := func() {
-			var checkRun *github.CheckRun
-			timeout = time.Minute * 15
-			interval = time.Second * 10
-
-			Eventually(func() *github.CheckRun {
-				checkRuns, err := f.AsKubeAdmin.CommonController.Github.ListCheckRuns(helloWorldComponentGitSourceRepoName, prHeadSha)
-				Expect(err).ShouldNot(HaveOccurred())
-				for _, cr := range checkRuns {
-					if strings.Contains(cr.GetDetailsURL(), osConsoleHost) {
-						checkRun = cr
-						return cr
-					}
-				}
-				return nil
-			}, timeout, interval).ShouldNot(BeNil(), fmt.Sprintf("timed out when waiting for the PaC Check run with `Details URL` field containing %s to appear in the Component repo %s in PR #%d", osConsoleHost, helloWorldComponentGitSourceRepoName, prNumber))
-
-			Eventually(func() string {
-				checkRun, err = f.AsKubeAdmin.CommonController.Github.GetCheckRun(helloWorldComponentGitSourceRepoName, checkRun.GetID())
-				Expect(err).ShouldNot(HaveOccurred())
-				return checkRun.GetStatus()
-			}, timeout, interval).Should(Equal("completed"), fmt.Sprintf("timed out when waiting for the PaC Check suite status to be 'completed' in the Component repo %s in PR #%d", helloWorldComponentGitSourceRepoName, prNumber))
-			Expect(checkRun.GetConclusion()).To(Equal("success"), fmt.Sprintf("the initial PR %d in %s repo doesn't contain the info about successful pipelinerun", prNumber, helloWorldComponentGitSourceRepoName))
-		}
-
 		When("a new component without specified branch is created and with visibility private", Label("pac-custom-default-branch"), func() {
 			BeforeAll(func() {
 				componentObj := appservice.ComponentSpec{
@@ -193,13 +168,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			It("triggers a PipelineRun", func() {
 				timeout = time.Minute * 5
 				Eventually(func() error {
-					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(defaultBranchTestComponentName, applicationName, testNamespace, "")
+					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(defaultBranchTestComponentName, applicationName, testNamespace, "")
 					if err != nil {
 						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, defaultBranchTestComponentName)
 						return err
 					}
-					if !pr.HasStarted() {
-						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
+					if !plr.HasStarted() {
+						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", plr.GetNamespace(), plr.GetName())
 					}
 					return nil
 				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", defaultBranchTestComponentName, testNamespace))
@@ -262,11 +237,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				interval = time.Second * 1
 				Expect(f.AsKubeAdmin.HasController.DeleteComponent(defaultBranchTestComponentName, testNamespace, true)).To(Succeed())
 				// Test removal of PipelineRun
-				var pr *pipeline.PipelineRun
 				Eventually(func() error {
-					pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(defaultBranchTestComponentName, applicationName, testNamespace, "")
+					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(defaultBranchTestComponentName, applicationName, testNamespace, "")
 					if err == nil {
-						return fmt.Errorf("pipelinerun %s/%s is not removed yet", pr.GetNamespace(), pr.GetName())
+						return fmt.Errorf("pipelinerun %s/%s is not removed yet", plr.GetNamespace(), plr.GetName())
 					}
 					return err
 				}, timeout, constants.PipelineRunPollingInterval).Should(MatchError(ContainSubstring("no pipelinerun found")), fmt.Sprintf("timed out when waiting for the PipelineRun to be removed for Component %s/%s", testNamespace, defaultBranchTestComponentName))
@@ -333,13 +307,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				timeout = time.Second * 600
 				interval = time.Second * 1
 				Eventually(func() error {
-					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 					if err != nil {
 						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
 						return err
 					}
-					if !pr.HasStarted() {
-						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
+					if !plr.HasStarted() {
+						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", plr.GetNamespace(), plr.GetName())
 					}
 					return nil
 				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
@@ -364,7 +338,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 			It("the PipelineRun should eventually finish successfully", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
-					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
+					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, plr)).To(Succeed())
+				// in case the first pipelineRun attempt has failed and was retried, we need to update the git branch head ref
+				prHeadSha = plr.Labels["pipelinesascode.tekton.dev/sha"]
 			})
 			It("image repo and robot account created successfully", func() {
 
@@ -392,10 +368,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 			It("image tag is updated successfully", func() {
 				// check if the image tag exists in quay
-				pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+				plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
 
-				for _, p := range pipelineRun.Spec.Params {
+				for _, p := range plr.Spec.Params {
 					if p.Name == "output-image" {
 						outputImage = p.Value.StringVal
 					}
@@ -407,10 +383,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			})
 
 			It("should ensure pruning labels are set", func() {
-				pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+				plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
 
-				image, err := build.ImageFromPipelineRun(pipelineRun)
+				image, err := build.ImageFromPipelineRun(plr)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				labels := image.Config.Config.Labels
@@ -421,7 +397,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(expiration).To(Equal(utils.GetEnv(constants.IMAGE_TAG_EXPIRATION_ENV, constants.DefaultImageTagExpiration)))
 			})
 			It("eventually leads to the PipelineRun status report at Checks tab", func() {
-				validateChecks()
+				expectedCheckRunName := fmt.Sprintf("%s-%s", componentName, "on-pull-request")
+				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, helloWorldComponentGitSourceRepoName, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 			})
 		})
 
@@ -441,13 +418,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				timeout = time.Minute * 5
 
 				Eventually(func() error {
-					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, createdFileSHA)
+					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, createdFileSHA)
 					if err != nil {
 						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
 						return err
 					}
-					if !pr.HasStarted() {
-						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
+					if !plr.HasStarted() {
+						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", plr.GetNamespace(), plr.GetName())
 					}
 					return nil
 				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
@@ -472,20 +449,20 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldComponentGitSourceRepoName))
 			})
 			It("PipelineRun should eventually finish", func() {
-				pr := &pipeline.PipelineRun{}
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, createdFileSHA,
-					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pr)).To(Succeed())
-				createdFileSHA = pr.Labels["pipelinesascode.tekton.dev/sha"]
+					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, plr)).To(Succeed())
+				// in case the first pipelineRun attempt has failed and was retried, we need to update the git branch head ref
+				createdFileSHA = plr.Labels["pipelinesascode.tekton.dev/sha"]
 			})
 			It("eventually leads to another update of a PR about the PipelineRun status report at Checks tab", func() {
-				validateChecks()
+				expectedCheckRunName := fmt.Sprintf("%s-%s", componentName, "on-pull-request")
+				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, helloWorldComponentGitSourceRepoName, createdFileSHA, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 			})
 		})
 
 		When("the PaC init branch is merged", Label("build-custom-branch"), func() {
 			var mergeResult *github.PullRequestMergeResult
 			var mergeResultSha string
-			var pipelineRun *pipeline.PipelineRun
 
 			BeforeAll(func() {
 				Eventually(func() error {
@@ -501,13 +478,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				timeout = time.Minute * 10
 
 				Eventually(func() error {
-					pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, mergeResultSha)
+					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, mergeResultSha)
 					if err != nil {
 						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
 						return err
 					}
-					if !pipelineRun.HasStarted() {
-						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
+					if !plr.HasStarted() {
+						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", plr.GetNamespace(), plr.GetName())
 					}
 					return nil
 				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
@@ -515,12 +492,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 
 			It("pipelineRun should eventually finish", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component,
-					mergeResultSha, f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
-				mergeResultSha = pipelineRun.Labels["pipelinesascode.tekton.dev/sha"]
+					mergeResultSha, f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, plr)).To(Succeed())
+				mergeResultSha = plr.Labels["pipelinesascode.tekton.dev/sha"]
 			})
 
 			It("does not have expiration set", func() {
-				image, err := build.ImageFromPipelineRun(pipelineRun)
+				image, err := build.ImageFromPipelineRun(plr)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				labels := image.Config.Config.Labels

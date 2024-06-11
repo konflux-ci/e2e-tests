@@ -16,10 +16,10 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	appstudioApi "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
@@ -99,9 +99,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				// Cleanup test, close MR if opned delete created brnach , delete usersignup  and namespace.
+				// Cleanup test: close MR if opened, delete created branch, delete associated Webhooks and delete usersignup
 				Expect(f.AsKubeAdmin.CommonController.Gitlab.CloseMergeRequest(projectID, mrID)).NotTo(HaveOccurred())
 				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteBranch(projectID, componentBaseBranchName)).NotTo(HaveOccurred())
+				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteWebhooks(projectID, f.ClusterAppDomain)).NotTo(HaveOccurred())
 				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 
 			}

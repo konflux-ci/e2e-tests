@@ -406,7 +406,6 @@ func setRequiredEnvVars() error {
 
 				klog.Infof("going to override default Tekton bundle s2i-java task for the purpose of testing jvm-build-service PR")
 				var err error
-				var defaultBundleRef string
 				var tektonObj runtime.Object
 
 				tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
@@ -421,9 +420,10 @@ func setRequiredEnvVars() error {
 				if err = utils.CreateDockerConfigFile(os.Getenv("QUAY_TOKEN")); err != nil {
 					return fmt.Errorf("failed to create docker config file: %+v", err)
 				}
-				if defaultBundleRef, err = tekton.GetDefaultPipelineBundleRef(constants.BuildPipelineSelectorYamlURL, "Java"); err != nil {
-					return fmt.Errorf("failed to get the pipeline bundle ref: %+v", err)
-				}
+				// Since we do not include java builder in the default pipelines list, it's not possible
+				// to use GetDefaultPipelineBundleRef and get it from build pipeline config Config Map.
+				// Fallback to the latest dev version for now.
+				defaultBundleRef := "quay.io/konflux-ci/tekton-catalog/pipeline-java-builder:devel"
 				if tektonObj, err = tekton.ExtractTektonObjectFromBundle(defaultBundleRef, "pipeline", "java-builder"); err != nil {
 					return fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
 				}
@@ -512,6 +512,11 @@ func setRequiredEnvVars() error {
 				os.Setenv(fmt.Sprintf("%s_PR_OWNER", envVarPrefix), pr.RemoteName)
 				os.Setenv(fmt.Sprintf("%s_PR_SHA", envVarPrefix), pr.CommitSHA)
 			}
+			// Allow pairing component repo PR + e2e-tests PR + infra-deployments PR
+			if isPRPairingRequired("infra-deployments") {
+				os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
+				os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
+			}
 
 			os.Setenv("E2E_TEST_SUITE_LABEL", testSuiteLabel)
 
@@ -583,7 +588,7 @@ func SetupMultiPlatformTests() error {
 		if err = utils.CreateDockerConfigFile(os.Getenv("QUAY_TOKEN")); err != nil {
 			return fmt.Errorf("failed to create docker config file: %+v", err)
 		}
-		if defaultBundleRef, err = tekton.GetDefaultPipelineBundleRef(constants.BuildPipelineSelectorYamlURL, "Docker build"); err != nil {
+		if defaultBundleRef, err = tekton.GetDefaultPipelineBundleRef(constants.BuildPipelineConfigConfigMapYamlURL, "docker-build"); err != nil {
 			return fmt.Errorf("failed to get the pipeline bundle ref: %+v", err)
 		}
 		if tektonObj, err = tekton.ExtractTektonObjectFromBundle(defaultBundleRef, "pipeline", "docker-build"); err != nil {
@@ -655,7 +660,7 @@ func SetupSourceBuild() {
 	// 	klog.Errorf("failed to create docker config file: %+v", err)
 	// 	return
 	// }
-	if defaultBundleRef, err = tekton.GetDefaultPipelineBundleRef(constants.BuildPipelineSelectorYamlURL, "Docker build"); err != nil {
+	if defaultBundleRef, err = tekton.GetDefaultPipelineBundleRef(constants.BuildPipelineConfigConfigMapYamlURL, "docker-build"); err != nil {
 		klog.Errorf("failed to get the pipeline bundle ref: %+v", err)
 		return
 	}

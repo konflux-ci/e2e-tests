@@ -10,14 +10,24 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
-	buildservice "github.com/redhat-appstudio/build-service/api/v1alpha1"
 	"github.com/tektoncd/cli/pkg/bundle"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"github.com/tektoncd/pipeline/pkg/remote/oci"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog"
 	"sigs.k8s.io/yaml"
 )
+
+type BuildPipelineConfig struct {
+	DefaultPipelineName string        `json:"default-pipeline-name"`
+	Pipelines           []PipelineRef `json:"pipelines"`
+}
+
+type PipelineRef struct {
+	Name   string `json:"name"`
+	Bundle string `json:"bundle"`
+}
 
 // ExtractTektonObjectFromBundle extracts specified Tekton object from specified bundle reference
 func ExtractTektonObjectFromBundle(bundleRef, kind, name string) (runtime.Object, error) {
@@ -53,10 +63,10 @@ func GetBundleRef(pipelineRef *pipeline.PipelineRef) string {
 	return bundleRef
 }
 
-// GetDefaultPipelineBundleRef gets the specific Tekton pipeline bundle reference from a Build pipeline selector
-// (in a YAML format) from a URL specified in the parameter
-func GetDefaultPipelineBundleRef(buildPipelineSelectorYamlURL, selectorName string) (string, error) {
-	request, err := http.NewRequest("GET", buildPipelineSelectorYamlURL, nil)
+// GetDefaultPipelineBundleRef gets the specific Tekton pipeline bundle reference from a Build pipeline config
+// ConfigMap (in a YAML format) from a URL specified in the parameter
+func GetDefaultPipelineBundleRef(buildPipelineConfigConfigMapYamlURL, name string) (string, error) {
+	request, err := http.NewRequest("GET", buildPipelineConfigConfigMapYamlURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("error creating GET request: %s", err)
 	}
@@ -64,7 +74,7 @@ func GetDefaultPipelineBundleRef(buildPipelineSelectorYamlURL, selectorName stri
 	client := &http.Client{}
 	res, err := client.Do(request)
 	if err != nil {
-		return "", fmt.Errorf("failed to get a build pipeline selector from url %s: %v", buildPipelineSelectorYamlURL, err)
+		return "", fmt.Errorf("failed to get a build pipeline selector from url %s: %v", buildPipelineConfigConfigMapYamlURL, err)
 	}
 
 	defer res.Body.Close()
@@ -72,16 +82,22 @@ func GetDefaultPipelineBundleRef(buildPipelineSelectorYamlURL, selectorName stri
 	if err != nil {
 		return "", fmt.Errorf("failed to read the body response of a build pipeline selector: %v", err)
 	}
-	ps := &buildservice.BuildPipelineSelector{}
-	if err = yaml.Unmarshal(body, ps); err != nil {
-		return "", fmt.Errorf("failed to unmarshal build pipeline selector: %v", err)
+
+	configMap := &corev1.ConfigMap{}
+	if err = yaml.Unmarshal(body, configMap); err != nil {
+		return "", fmt.Errorf("failed to unmarshal build pipeline config config map: %v", err)
 	}
-	for i := range ps.Spec.Selectors {
-		s := &ps.Spec.Selectors[i]
-		if s.Name == selectorName {
-			return GetBundleRef(&s.PipelineRef), nil
+	bpc := &BuildPipelineConfig{}
+	if err = yaml.Unmarshal([]byte(configMap.Data["config.yaml"]), bpc); err != nil {
+		return "", fmt.Errorf("failed to unmarshal build pipeline config: %v", err)
+	}
+
+	for i := range bpc.Pipelines {
+		pipeline := bpc.Pipelines[i]
+		if pipeline.Name == name {
+			return pipeline.Bundle, nil
 		}
 	}
 
-	return "", fmt.Errorf("could not find %s pipeline bundle in build pipeline selector fetched from %s", selectorName, buildPipelineSelectorYamlURL)
+	return "", fmt.Errorf("could not find %s pipeline bundle in build pipeline config fetched from %s", name, buildPipelineConfigConfigMapYamlURL)
 }

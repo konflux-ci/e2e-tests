@@ -8,6 +8,7 @@ import (
 
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
@@ -16,7 +17,6 @@ import (
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	releaseapi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -30,7 +30,6 @@ import (
 const (
 	sampServiceAccountName = "release-service-account"
 	sampSourceGitURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic"
-	sampReleaseURL         = "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic/releases/tag/v2.1"
 	sampRepoOwner          = "redhat-appstudio-qe"
 	sampRepo               = "devfile-sample-go-basic"
 	sampCatalogPathInRepo  = "pipelines/release-to-github/release-to-github.yaml"
@@ -58,6 +57,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 	var releaseCR *releaseapi.Release
 	var releasePR, buildPR *tektonv1.PipelineRun
 	var gh *github.Github
+	var sampReleaseURL string
 
 	AfterEach(framework.ReportFailure(&devFw))
 
@@ -77,11 +77,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 			githubToken := utils.GetEnv(constants.GITHUB_TOKEN_ENV, "")
 			gh, err = github.NewGithubClient(githubToken, githubUser)
 			Expect(githubToken).ToNot(BeEmpty())
-
-			// Remove the release if the release exists
-			if gh.CheckIfReleaseExist(sampRepoOwner, sampRepo, sampReleaseURL) {
-				gh.DeleteRelease(sampRepoOwner, sampRepo, sampReleaseURL)
-			}
 
 			_, err = managedFw.AsKubeAdmin.CommonController.GetSecret(managedNamespace, releasecommon.RedhatAppstudioQESecret)
 			if errors.IsNotFound(err) {
@@ -111,7 +106,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 
 			createGHReleasePlanAdmission(sampReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, sampApplicationName, sampEnterpriseContractPolicyName, sampCatalogPathInRepo, "false", "", "", "", "")
 
-			component = releasecommon.CreateComponent(*devFw, devNamespace, sampApplicationName, sampComponentName, sampSourceGitURL, "", "Dockerfile", constants.DefaultDockerBuildPipelineBundle)
+			component = releasecommon.CreateComponent(*devFw, devNamespace, sampApplicationName, sampComponentName, sampSourceGitURL, "", ".", "Dockerfile", constants.DefaultDockerBuildPipelineBundle)
 
 			createGHEnterpriseContractPolicy(sampEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 		})
@@ -122,6 +117,10 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(sampApplicationName, devNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(sampEnterpriseContractPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(sampReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
+
+			if gh.CheckIfReleaseExist(sampRepoOwner, sampRepo, sampReleaseURL) {
+				gh.DeleteRelease(sampRepoOwner, sampRepo, sampReleaseURL)
+			}
 		})
 
 		var _ = Describe("Post-release verification", func() {
@@ -197,6 +196,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 				trReleaseURL := trReleasePr.Status.TaskRunStatusFields.Results[0].Value.StringVal
 				releaseURL := strings.Replace(trReleaseURL, "\n", "", -1)
 				Expect(gh.CheckIfReleaseExist(sampRepoOwner, sampRepo, releaseURL)).To(BeTrue(), fmt.Sprintf("release %s doesn't exist", releaseURL))
+				sampReleaseURL = releaseURL
 			})
 		})
 	})

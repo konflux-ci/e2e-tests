@@ -19,6 +19,7 @@ import (
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	"github.com/google/go-github/v44/github"
+	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
@@ -27,7 +28,6 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -83,8 +83,6 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 	var namespace string
 	var err error
 
-	// Initialize the application struct
-	application := &appservice.Application{}
 	snapshot := &appservice.Snapshot{}
 
 	fw := &framework.Framework{}
@@ -162,15 +160,6 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(createdApplication.Spec.DisplayName).To(Equal(appTest.ApplicationName))
 					Expect(createdApplication.Namespace).To(Equal(namespace))
-				})
-
-				It("checks if application is healthy", Label(devEnvTestLabel, stageEnvTestLabel), func() {
-					Eventually(func() string {
-						application, err = fw.AsKubeDeveloper.HasController.GetApplication(appTest.ApplicationName, namespace)
-						Expect(err).NotTo(HaveOccurred())
-
-						return application.Status.Devfile
-					}, 3*time.Minute, 100*time.Millisecond).Should(Not(BeEmpty()), fmt.Sprintf("timed out waiting for the %s application in %s namespace to be ready", appTest.ApplicationName, fw.UserNamespace))
 				})
 
 				for _, componentSpec := range appTest.Components {

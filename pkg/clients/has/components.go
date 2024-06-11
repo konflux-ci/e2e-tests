@@ -8,13 +8,13 @@ import (
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
+	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/tekton"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/logs"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	. "github.com/onsi/ginkgo/v2"
-	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -200,11 +200,8 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 
 // Universal method to create a component in the kubernetes clusters.
 func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string) (*appservice.Component, error) {
-
 	componentObject := &appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
-			// adding default label because of the BuildPipelineSelector in build test
-			Labels:    constants.ComponentDefaultLabel,
 			Name:      componentSpec.ComponentName,
 			Namespace: namespace,
 			Annotations: map[string]string{
@@ -235,10 +232,6 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 	defer cancel()
 	if err := h.KubeRest().Create(ctx, componentObject); err != nil {
 		return nil, err
-	}
-	if err := utils.WaitUntil(h.ComponentReady(componentObject), time.Minute*10); err != nil {
-		componentObject = h.refreshComponentForErrorDebug(componentObject)
-		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
 	}
 
 	if utils.WaitUntil(h.CheckForImageAnnotation(componentObject), time.Minute*5) != nil {
@@ -343,22 +336,6 @@ func (h *HasController) DeleteAllComponentsInASpecificNamespace(namespace string
 	GinkgoWriter.Println("Finish to delete all components in namespace '%s' at %s. It took '%f' minutes", namespace, time.Now().Format(time.RFC3339), deletionTime)
 
 	return err
-}
-
-// Waits for a component to be reconciled in the application service.
-func (h *HasController) ComponentReady(component *appservice.Component) wait.ConditionFunc {
-	return func() (bool, error) {
-		messages, err := h.GetComponentConditionStatusMessages(component.Name, component.Namespace)
-		if err != nil {
-			return false, nil
-		}
-		for _, m := range messages {
-			if strings.Contains(m, "success") {
-				return true, nil
-			}
-		}
-		return false, nil
-	}
 }
 
 // Waits for a component until is deleted and if not will return an error
@@ -551,41 +528,6 @@ func (h *HasController) StoreAllComponents(namespace string) error {
 		}
 	}
 	return nil
-}
-
-// specific for tests/remote-secret/image-repository-cr-image-pull-remote-secret.go
-func (h *HasController) CreateComponentWithoutGenerateAnnotation(componentSpec appservice.ComponentSpec, namespace string, secret string, applicationName string, skipInitialChecks bool) (*appservice.Component, error) {
-	componentObject := &appservice.Component{
-		ObjectMeta: metav1.ObjectMeta{
-			// adding default label because of the BuildPipelineSelector in build test
-			Labels:    constants.ComponentDefaultLabel,
-			Name:      componentSpec.ComponentName,
-			Namespace: namespace,
-			Annotations: map[string]string{
-				"skip-initial-checks": strconv.FormatBool(skipInitialChecks),
-			},
-		},
-		Spec: componentSpec,
-	}
-	componentObject.Spec.Secret = secret
-	componentObject.Spec.Application = applicationName
-
-	componentObject.Annotations = utils.MergeMaps(componentObject.Annotations, constants.DefaultDockerBuildPipelineBundle)
-
-	if componentObject.Spec.TargetPort == 0 {
-		componentObject.Spec.TargetPort = 8081
-	}
-
-	if err := h.KubeRest().Create(context.Background(), componentObject); err != nil {
-		return nil, err
-	}
-
-	if err := utils.WaitUntil(h.ComponentReady(componentObject), time.Minute*10); err != nil {
-		componentObject = h.refreshComponentForErrorDebug(componentObject)
-		return nil, fmt.Errorf("timed out when waiting for component %s to be ready in %s namespace. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
-	}
-
-	return componentObject, nil
 }
 
 // UpdateComponent updates a component

@@ -10,6 +10,7 @@ import (
 
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
@@ -17,7 +18,6 @@ import (
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	appservice "github.com/redhat-appstudio/application-api/api/v1alpha1"
 	releaseapi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -103,7 +103,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 
 			createADVSReleasePlan(advsReleasePlanName, *devFw, devNamespace, advsApplicationName, managedNamespace, "true")
 
-			component = releasecommon.CreateComponent(*devFw, devNamespace, advsApplicationName, advsComponentName, releasecommon.AdditionalGitSourceComponentUrl, "", constants.DockerFilePath, constants.DefaultDockerBuildPipelineBundle)
+			component = releasecommon.CreateComponent(*devFw, devNamespace, advsApplicationName, advsComponentName, releasecommon.AdditionalGitSourceComponentUrl, "", ".", constants.DockerFilePath, constants.DefaultDockerBuildPipelineBundle)
 
 			createADVSReleasePlanAdmission(advsReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, advsApplicationName, advsEnterpriseContractPolicyName, advsCatalogPathInRepo)
 
@@ -246,6 +246,8 @@ func createADVSReleasePlanAdmission(advsRPAName string, managedFw framework.Fram
 				{
 					"name":       component.GetName(),
 					"repository": "quay.io/redhat-pending/rhtap----konflux-release-e2e",
+					"tags": []string{"latest", "latest-{{ timestamp }}", "testtag",
+						"testtag-{{ timestamp }}", "testtag2", "testtag2-{{ timestamp }}"},
 				},
 			},
 		},
@@ -260,13 +262,6 @@ func createADVSReleasePlanAdmission(advsRPAName string, managedFw framework.Fram
 			"product_stream":  "rhtas-tp1",
 			"product_version": "v1.0",
 			"type":            "RHSA",
-		},
-		"images": map[string]interface{}{
-			"defaultTag":      "latest",
-			"addGitShaTag":    false,
-			"addTimestampTag": false,
-			"addSourceShaTag": false,
-			"floatingTags":    []string{"testtag", "testtag2"},
 		},
 		"sign": map[string]interface{}{
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",
