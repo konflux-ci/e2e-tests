@@ -753,14 +753,14 @@ func createNewTaskBundleAndPush(currentSourceTaskBundle, sourceImage string) str
 func BootstrapCluster() error {
 	envVars := map[string]string{}
 
-	if os.Getenv("CI") == "true" {
+	if os.Getenv("CI") == "true" || konfluxCI == "true" {
 		if err := setRequiredEnvVars(); err != nil {
 			return fmt.Errorf("error when setting up required env vars: %v", err)
 		}
 		if os.Getenv("REPO_NAME") == "e2e-tests" {
 			// Some scripts in infra-deployments repo are referencing scripts/utils in e2e-tests repo
 			// This env var allows to test changes introduced in "e2e-tests" repo PRs in CI
-			envVars["E2E_TESTS_COMMIT_SHA"] = os.Getenv("PULL_PULL_SHA")
+			envVars["E2E_TESTS_COMMIT_SHA"] = pr.CommitSHA
 		}
 	}
 
