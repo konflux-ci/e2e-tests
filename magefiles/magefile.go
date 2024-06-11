@@ -123,7 +123,7 @@ func (ci CI) PrepareE2EBranch() error {
 		return err
 	}
 
-	if openshiftJobSpec.Refs.Repo == "e2e-tests" {
+	if pr.RepoName == "e2e-tests" {
 		if err := gitCheckoutRemoteBranch(pr.RemoteName, pr.CommitSHA); err != nil {
 			return err
 		}

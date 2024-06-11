@@ -19,26 +19,66 @@
           default: 'quay.io/konflux-qe-incubator/konflux-qe-oci-storage'
           description: The ORAS container used to store all test artifacts.
       tasks:
-        - name: test-metadata
-          taskRef:
-            resolver: git
-            params:
-              - name: url
-                value: https://github.com/konflux-qe-incubator/konflux-qe-definitions
-              - name: revision
-                value: test-metadata_v2
-              - name: pathInRepo
-                value: common/tasks/test-metadata/test-metadata.yaml
+        - name: rosa-hcp-metadata
+        taskRef:
+          resolver: git
           params:
-            - name: SNAPSHOT
-              value: $(params.SNAPSHOT)
-            - name: oras-container
-              value: $(params.oras-container)
-            - name: test-name
-              value: $(context.pipelineRun.name)
+            - name: url
+              value: https://github.com/konflux-qe-incubator/konflux-qe-definitions.git
+            - name: revision
+              value: main
+            - name: pathInRepo
+              value: common/tasks/rosa/hosted-cp/rosa-hcp-metadata/rosa-hcp-metadata.yaml
+      - name: test-metadata
+        taskRef:
+          resolver: git
+          params:
+            - name: url
+              value: https://github.com/konflux-qe-incubator/konflux-qe-definitions.git
+            - name: revision
+              value: main
+            - name: pathInRepo
+              value: common/tasks/test-metadata/test-metadata.yaml
+        params:
+          - name: SNAPSHOT
+            value: $(params.SNAPSHOT)
+          - name: oras-container
+            value: $(params.oras-container)
+          - name: test-name
+            value: $(context.pipelineRun.name)
+      - name: provision-rosa
+        when:
+          - input: "$(tasks.test-metadata.results.test-event-type)"
+            operator: in
+            values: ["pull_request"]
+        runAfter:
+          - rosa-hcp-metadata
+          - test-metadata
+        taskRef:
+          resolver: git
+          params:
+            - name: url
+              value: https://github.com/konflux-qe-incubator/konflux-qe-definitions.git
+            - name: revision
+              value: main
+            - name: pathInRepo
+              value: common/tasks/rosa/hosted-cp/rosa-hcp-provision/rosa-hcp-provision.yaml
+        params:
+          - name: cluster-name
+            value: "$(tasks.rosa-hcp-metadata.results.cluster-name)"
+          - name: ocp-version
+            value: "$(params.ocp-version)"
+          - name: region
+            value: "$(params.region)"
+          - name: replicas
+            value: "$(params.replicas)"
+          - name: machine-type
+            value: "$(params.machine-type)"
+          - name: aws-secrets
+            value: "$(params.aws-secrets)"
         - name: konflux-e2e
           runAfter:
-            - test-metadata
+            - provision-rosa
           taskRef:
             resolver: git
             params:
@@ -61,3 +101,44 @@
               value: "$(tasks.test-metadata.results.oras-container)"
             - name: job-spec
               value: "$(tasks.test-metadata.results.job-spec)"
+            - name: ocp-login-command
+              value: "$(tasks.provision-rosa.results.ocp-login-command)"
+    
+  finally:
+    - name: deprovision-rosa-collect-artifacts
+      when:
+        - input: "$(tasks.test-metadata.results.test-event-type)"
+          operator: in
+          values: ["pull_request"]
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-qe-incubator/konflux-qe-definitions.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: common/tasks/rosa/hosted-cp/rosa-hcp-deprovision/rosa-hcp-deprovision.yaml
+      params:
+        - name: test-name
+          value: $(context.pipelineRun.name)
+        - name: ocp-login-command
+          value: "$(tasks.provision-rosa.results.ocp-login-command)"
+        - name: oras-container
+          value: "$(tasks.test-metadata.results.oras-container)"
+        - name: pull-request-author
+          value: "$(tasks.test-metadata.results.pull-request-author)"
+        - name: git-revision
+          value: "$(tasks.test-metadata.results.git-revision)"
+        - name: pull-request-number
+          value: "$(tasks.test-metadata.results.pull-request-number)"
+        - name: git-repo
+          value: "$(tasks.test-metadata.results.git-repo)"
+        - name: git-org
+          value: "$(tasks.test-metadata.results.git-org)"
+        - name: cluster-name
+          value: "$(tasks.rosa-hcp-metadata.results.cluster-name)"
+        - name: region
+          value: "$(params.region)"
+        - name: aws-secrets
+          value: "$(params.aws-secrets)"
