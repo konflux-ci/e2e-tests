@@ -4,16 +4,16 @@ import (
 	"strings"
 
 	"github.com/konflux-ci/application-api/api/v1alpha1"
-	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
+	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 )
 
 var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails when missing ReleasePlan and ReleasePlanAdmission.", Label("release-service", "release-neg", "negMissingReleasePlan", "HACBS"), func() {
