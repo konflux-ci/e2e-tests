@@ -36,13 +36,13 @@ spec:
         secretName: konflux-secrets
   steps:
     - name: e2e-test
-      resources:
+      computeResources:
         requests:
-          memory: "4Gi"
-          cpu: "1"
-        limits:
-          memory: "6Gi"
           cpu: "2"
+          memory: "4Gi"
+        limits:
+          cpu: "3"
+          memory: "6Gi"
       image: quay.io/konflux-qe-incubator/konflux-e2e:latest
       volumeMounts:
         - name: konflux-secret-volume
