@@ -109,6 +109,9 @@ spec:
         MULTI_PLATFORM_AWS_SECRET_ACCESS_KEY=$(cat /usr/local/konflux-ci-secrets/multi-platform-aws-secret-access-key)
         MULTI_PLATFORM_AWS_SSH_KEY=$(cat /usr/local/konflux-ci-secrets/multi-platform-aws-ssh-key)
         MULTI_PLATFORM_IBM_API_KEY=$(cat /usr/local/konflux-ci-secrets/multi-platform-ibm-api-key)
+        PAC_GITLAB_TOKEN=$(cat /usr/local/konflux-ci-secrets/pac-gitlab-token)
+        PAC_GITLAB_URL=$(cat /usr/local/konflux-ci-secrets/pac-gitlab-url)
+        PAC_PROJECT_ID=$(cat /usr/local/konflux-ci-secrets/pac-project-id)
 
         ENABLE_SCHEDULING_ON_MASTER_NODES=false
 
@@ -148,3 +151,4 @@ spec:
         make ci/prepare/e2e-branch
 
         make ci/test/e2e
+####
