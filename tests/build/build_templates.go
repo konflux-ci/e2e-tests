@@ -27,7 +27,12 @@ import (
 
 	tektonpipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
+
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 )
 
@@ -39,6 +44,36 @@ const pipelineCompletionRetries = 2
 
 // CreateComponent creates a component from a test repository URL and returns the component's name
 func CreateComponent(ctrl *has.HasController, gitUrl, revision, applicationName, componentName, namespace string) string {
+	var err error
+	var buildPipelineAnnotation map[string]string
+	contextDir, dockerfilePath, pipelineBundleName, enableHermetic, prefetchInput := GetComponentScenarioDetailsFromGitUrl(gitUrl)
+	Expect(pipelineBundleName).ShouldNot(BeEmpty())
+	if pipelineBundleName == "docker-build" {
+		customDockerBuildBundle := os.Getenv(constants.CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE_ENV)
+		if enableHermetic {
+			//Update the docker-build pipeline bundle with param hermetic=true
+			customDockerBuildBundle, err = enableHermeticBuildInPipelineBundle(customDockerBuildBundle, prefetchInput)
+			if err != nil {
+				GinkgoWriter.Printf("failed to enable hermetic build in the pipeline bundle with: %v\n", err)
+				return ""
+			}
+		}
+		if customDockerBuildBundle == "" {
+			customDockerBuildBundle = "latest"
+		}
+		buildPipelineAnnotation = map[string]string{
+			"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"docker-build", "bundle": "%s"}`, customDockerBuildBundle),
+		}
+	} else if pipelineBundleName == "fbc-builder" {
+		customFbcBuilderBundle := os.Getenv(constants.CUSTOM_FBC_BUILDER_PIPELINE_BUNDLE_ENV)
+		if customFbcBuilderBundle == "" {
+			customFbcBuilderBundle = "latest"
+		}
+		buildPipelineAnnotation = map[string]string{
+			"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"fbc-builder", "bundle": "%s"}`, customFbcBuilderBundle),
+		}
+	}
+
 	componentObj := appservice.ComponentSpec{
 		ComponentName: componentName,
 		Source: appservice.ComponentSource{
@@ -46,23 +81,20 @@ func CreateComponent(ctrl *has.HasController, gitUrl, revision, applicationName,
 				GitSource: &appservice.GitSource{
 					URL:           gitUrl,
 					Revision:      revision,
-					DockerfileURL: constants.DockerFilePath,
+					Context:       contextDir,
+					DockerfileURL: dockerfilePath,
 				},
 			},
 		},
 	}
 
-	var buildPipelineAnnotation map[string]string
 	if os.Getenv(constants.CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE_ENV) != "" {
 		customSourceBuildBundle := os.Getenv(constants.CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE_ENV)
 		Expect(customSourceBuildBundle).ShouldNot(BeEmpty())
 		buildPipelineAnnotation = map[string]string{
 			"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"docker-build", "bundle": "%s"}`, customSourceBuildBundle),
 		}
-	} else {
-		buildPipelineAnnotation = constants.DefaultDockerBuildPipelineBundle
 	}
-
 	c, err := ctrl.CreateComponent(componentObj, namespace, "", "", applicationName, false, buildPipelineAnnotation)
 	Expect(err).ShouldNot(HaveOccurred())
 	return c.Name
@@ -613,4 +645,40 @@ func getImageWithDigest(c *framework.ControllerHub, componentName, applicationNa
 		return "", fmt.Errorf("IMAGE_DIGEST for component %q could not be found", componentName)
 	}
 	return fmt.Sprintf("%s@%s", url, digest), nil
+}
+
+// this function takes a bundle and prefetchInput value as inputs and creates a bundle with param hermetic=true
+// and then push the bundle to quay using format: quay.io/<QUAY_E2E_ORGANIZATION>/test-images:<generated_tag>
+func enableHermeticBuildInPipelineBundle(customDockerBuildBundle, prefetchInput string) (string, error) {
+	var tektonObj runtime.Object
+	var err error
+	var newPipelineYaml []byte
+	// Extract docker-build pipeline as tekton object from the bundle
+	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(customDockerBuildBundle, "pipeline", "docker-build"); err != nil {
+		return "", fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
+	}
+	dockerPipelineObject := tektonObj.(*tektonpipeline.Pipeline)
+	// Update hermetic params value to true and also update prefetch-input param value
+	for i := range dockerPipelineObject.PipelineSpec().Params {
+		if dockerPipelineObject.PipelineSpec().Params[i].Name == "hermetic" {
+			dockerPipelineObject.PipelineSpec().Params[i].Default.StringVal = "true"
+		}
+		if dockerPipelineObject.PipelineSpec().Params[i].Name == "prefetch-input" {
+			dockerPipelineObject.PipelineSpec().Params[i].Default.StringVal = prefetchInput
+		}
+	}
+	if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
+		return "", fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
+	}
+	keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
+	authOption := remoteimg.WithAuthFromKeychain(keychain)
+	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
+	quayOrg := utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, constants.DefaultQuayOrg)
+	newDockerBuildPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
+	var newDockerBuildPipeline, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newDockerBuildPipelineImg, tag))
+	// Build and Push the tekton bundle
+	if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newDockerBuildPipeline, authOption); err != nil {
+		return "", fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
+	}
+	return newDockerBuildPipeline.String(), nil
 }
