@@ -66,6 +66,9 @@ func CreateComponent(ctrl *has.HasController, gitUrl, revision, applicationName,
 		}
 	} else if pipelineBundleName == "fbc-builder" {
 		customFbcBuilderBundle := os.Getenv(constants.CUSTOM_FBC_BUILDER_PIPELINE_BUNDLE_ENV)
+		if customFbcBuilderBundle == "" {
+			customFbcBuilderBundle = "latest"
+		}
 		buildPipelineAnnotation = map[string]string{
 			"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"fbc-builder", "bundle": "%s"}`, customFbcBuilderBundle),
 		}
@@ -644,15 +647,18 @@ func getImageWithDigest(c *framework.ControllerHub, componentName, applicationNa
 	return fmt.Sprintf("%s@%s", url, digest), nil
 }
 
+// this function takes a bundle and prefetchInput value as inputs and creates a bundle with param hermetic=true
+// and then push the bundle to quay using format: quay.io/<QUAY_E2E_ORGANIZATION>/test-images:<generated_tag>
 func enableHermeticBuildInPipelineBundle(customDockerBuildBundle, prefetchInput string) (string, error) {
 	var tektonObj runtime.Object
 	var err error
 	var newPipelineYaml []byte
+	// Extract docker-build pipeline as tekton object from the bundle
 	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(customDockerBuildBundle, "pipeline", "docker-build"); err != nil {
 		return "", fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
 	}
 	dockerPipelineObject := tektonObj.(*tektonpipeline.Pipeline)
-	// Update hermetic params value to true
+	// Update hermetic params value to true and also update prefetch-input param value
 	for i := range dockerPipelineObject.PipelineSpec().Params {
 		if dockerPipelineObject.PipelineSpec().Params[i].Name == "hermetic" {
 			dockerPipelineObject.PipelineSpec().Params[i].Default.StringVal = "true"
@@ -670,7 +676,7 @@ func enableHermeticBuildInPipelineBundle(customDockerBuildBundle, prefetchInput 
 	quayOrg := utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, constants.DefaultQuayOrg)
 	newDockerBuildPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
 	var newDockerBuildPipeline, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newDockerBuildPipelineImg, tag))
-
+	// Build and Push the tekton bundle
 	if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newDockerBuildPipeline, authOption); err != nil {
 		return "", fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
 	}
