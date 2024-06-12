@@ -7,3 +7,4 @@ COPY --from=builder /usr/local/bin/kubectl /usr/local/bin/kubectl
 COPY --from=builder /usr/local/bin/jq /usr/local/bin/jq
 COPY --from=builder /usr/local/bin/yq /usr/local/bin/yq
 
+ENV GOBIN=$GOPATH/bin
