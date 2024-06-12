@@ -16,10 +16,10 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/contract"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
+	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
+	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
-	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 

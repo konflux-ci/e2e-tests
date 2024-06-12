@@ -12,7 +12,7 @@ const (
 	COMPONENT_REPO_URLS_ENV string = "COMPONENT_REPO_URLS"
 
 	containerImageSource             = "quay.io/redhat-appstudio-qe/busybox-loop@sha256:f698f1f2cf641fe9176d2a277c9052d872f6b1c39e56248a1dd259b96281dda9"
-	pythonComponentGitSourceURL      = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic.git"
+	pythonComponentGitSourceURL      = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic"
 	gitRepoContainsSymlinkBranchName = "symlink"
 	dummyPipelineBundleRef           = "quay.io/redhat-appstudio-qe/dummy-pipeline-bundle@sha256:9805fc3f309af8f838622e49d3e7705d8364eb5c8287043d5725f3ef12232f24"
 	buildTemplatesTestLabel          = "build-templates-e2e"

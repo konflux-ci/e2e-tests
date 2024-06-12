@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	buildcontrollers "github.com/redhat-appstudio/build-service/controllers"
-	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
+	buildcontrollers "github.com/konflux-ci/build-service/controllers"
+	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 
 	"github.com/redhat-appstudio/jvm-build-service/openshift-with-appstudio-test/e2e"
 	jvmclientSet "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
@@ -34,7 +34,7 @@ import (
 
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
-	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
+	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 	e2eConfig "github.com/konflux-ci/e2e-tests/tests/rhtap-demo/config"

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	tektonutils "github.com/redhat-appstudio/release-service/tekton/utils"
+	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
@@ -16,9 +16,9 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/utils/contract"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
+	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	releaseApi "github.com/redhat-appstudio/release-service/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
 
