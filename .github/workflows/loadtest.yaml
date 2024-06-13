@@ -39,15 +39,17 @@ jobs:
       env:
         CONCURRENCY: ${{ github.event.inputs.concurrency }}
         JOURNEY_REPEATS: ${{ github.event.inputs.journey_repeats }}
-      run: ./run-stage.sh
+      run: |
+        ./run-stage.sh
 
     - name: Collect results
       working-directory: ./tests/load-tests
       env:
+        CONCURRENCY: ${{ github.event.inputs.concurrency }}
         STAGE_MEMBER_CLUSTER: ${{ secrets.STAGE_MEMBER_CLUSTER }}
         OCP_PROMETHEUS_TOKEN: ${{ secrets.OCP_PROMETHEUS_TOKEN }}
       run: |
-        ./ci-scripts/stage/collect-results.sh .
+        ./ci-scripts/stage/collect-results.sh . $CONCURRENCY
 
     - name: Archive artifacts
       uses: actions/upload-artifact@v3
