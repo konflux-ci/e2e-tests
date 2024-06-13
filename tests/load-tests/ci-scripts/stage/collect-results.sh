@@ -25,6 +25,18 @@ find . -maxdepth 1 -type f -name '*.csv' -exec cp -vf {} "${ARTIFACT_DIR}" \;
 find . -maxdepth 1 -type f -name 'load-test-options.json' -exec cp -vf {} "${ARTIFACT_DIR}" \;
 find . -maxdepth 1 -type d -name 'collected-data' -exec cp -r {} "${ARTIFACT_DIR}" \;
 
+echo "[$(date --utc -Ins)] Setting up Python venv"
+{
+python3 -m venv venv
+set +u
+source venv/bin/activate
+set -u
+python3 -m pip install -U pip
+python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team-core&subdirectory=core"
+python3 -m pip install tabulate
+python3 -m pip install matplotlib
+} &>"${ARTIFACT_DIR}/monitoring-setup.log"
+
 echo "[$(date --utc -Ins)] Create summary JSON with timings"
 ./evaluate.py "${ARTIFACT_DIR}/load-test-timings.csv" "${ARTIFACT_DIR}/load-test-timings.json"
 
@@ -34,16 +46,6 @@ ci-scripts/utility_scripts/count-multiarch-taskruns.py --data-dir "${ARTIFACT_DI
 echo "[$(date --utc -Ins)] Graphing PRs and TRs"
 ci-scripts/utility_scripts/show-pipelineruns.py --data-dir "${ARTIFACT_DIR}" >"${ARTIFACT_DIR}/show-pipelineruns.log" || true
 mv "${ARTIFACT_DIR}/output.svg" "${ARTIFACT_DIR}/show-pipelines.svg" || true
-
-echo "[$(date --utc -Ins)] Setting up OPL"
-{
-python3 -m venv venv
-set +u
-source venv/bin/activate
-set -u
-python3 -m pip install -U pip
-python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team-core&subdirectory=core"
-} &>"${ARTIFACT_DIR}/monitoring-setup.log"
 
 echo "[$(date --utc -Ins)] Creating main status data file"
 STATUS_DATA_FILE="${ARTIFACT_DIR}/load-test.json"
