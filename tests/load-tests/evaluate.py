@@ -4,6 +4,7 @@
 import csv
 import datetime
 import json
+import re
 import statistics
 import sys
 
@@ -31,6 +32,20 @@ METRICS = [
     "validateTestPipelineRunCondition",
 ]
 
+
+def str2date(date_str):
+    if isinstance(date_str, datetime.datetime):
+        return date_str
+    else:
+        try:
+            return datetime.datetime.fromisoformat(date_str)
+        except ValueError:   # Python before 3.11
+            # Convert "...Z" to "...+00:00"
+            date_str = date_str.replace("Z", "+00:00")
+            # Remove microseconds part
+            date_str = re.sub(r"(.*)(\.\d+)(\+.*)", r"\1\3", date_str)
+            # Convert simplified date
+            return datetime.datetime.fromisoformat(date_str)
 
 def count_stats(data):
     if len(data) == 0:
@@ -83,7 +98,7 @@ def main():
             if row == []:
                 continue
 
-            when = datetime.datetime.fromisoformat(row[COLUMN_WHEN])
+            when = str2date(row[COLUMN_WHEN])
             metric = row[COLUMN_METRIC]
             duration = float(row[COLUMN_DURATION])
             error = row[COLUMN_ERROR] != "<nil>"

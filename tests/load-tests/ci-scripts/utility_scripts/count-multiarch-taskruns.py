@@ -13,6 +13,7 @@ import yaml
 import time
 import operator
 import statistics
+import re
 
 import tabulate
 
@@ -21,7 +22,15 @@ def str2date(date_str):
     if isinstance(date_str, datetime.datetime):
         return date_str
     else:
-        return datetime.datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+        try:
+            return datetime.datetime.fromisoformat(date_str)
+        except ValueError:   # Python before 3.11
+            # Convert "...Z" to "...+00:00"
+            date_str = date_str.replace("Z", "+00:00")
+            # Remove microseconds part
+            date_str = re.sub(r"(.*)(\.\d+)(\+.*)", r"\1\3", date_str)
+            # Convert simplified date
+            return datetime.datetime.fromisoformat(date_str)
 
 class DateTimeDecoder(json.JSONDecoder):
     def __init__(self, *args, **kwargs):
@@ -32,7 +41,7 @@ class DateTimeDecoder(json.JSONDecoder):
         for key, value in o.items():
             if isinstance(value, str):
                 try:
-                    ret[key] = datetime.datetime.fromisoformat(value)
+                    ret[key] = str2date(value)
                 except ValueError:
                     ret[key] = value
             else:
