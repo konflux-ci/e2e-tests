@@ -49,7 +49,7 @@ jobs:
         STAGE_MEMBER_CLUSTER: ${{ secrets.STAGE_MEMBER_CLUSTER }}
         OCP_PROMETHEUS_TOKEN: ${{ secrets.OCP_PROMETHEUS_TOKEN }}
       run: |
-        ./ci-scripts/stage/collect-results.sh . $CONCURRENCY
+        ./ci-scripts/stage/collect-results.sh $CONCURRENCY .
 
     - name: Archive artifacts
       uses: actions/upload-artifact@v3

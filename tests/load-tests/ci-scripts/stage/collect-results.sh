@@ -10,9 +10,9 @@ echo "[$(date --utc -Ins)] Collecting load test results"
 
 # Setup directories
 ARTIFACT_DIR=${ARTIFACT_DIR:-.artifacts}
-CONCURRENCY="${2:-1}"
+CONCURRENCY="${1:-1}"
 mkdir -p ${ARTIFACT_DIR}
-pushd "${1:-./tests/load-tests}"
+pushd "${2:-./tests/load-tests}"
 
 # Construct $PROMETHEUS_HOST by extracting BASE_URL from $STAGE_MEMBER_CLUSTER
 BASE_URL=$(echo $STAGE_MEMBER_CLUSTER | grep -oP 'https://api\.\K[^:]+')

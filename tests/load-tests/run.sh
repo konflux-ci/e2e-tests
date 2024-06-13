@@ -84,7 +84,8 @@ go run loadtest.go \
     --test-scenario-revision "${TEST_SCENARIO_REVISION:-main}" \
     --username "$USER_PREFIX" \
     --waitintegrationtestspipelines="${WAIT_INTEGRATION_TESTS:-true}" \
-    --waitpipelines="${WAIT_PIPELINES:-true}"
+    --waitpipelines="${WAIT_PIPELINES:-true}" \
+    2>&1 | tee loadtest.log
 date -Ins --utc >ended
 
 ## Finish Tekton profiling

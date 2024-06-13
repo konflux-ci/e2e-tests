@@ -71,7 +71,11 @@ class Something:
                     with open(datafile, "r") as fd:
                         data = yaml.safe_load(fd)
                 elif datafile.endswith(".json"):
-                    data = self._load_json(datafile)
+                    try:
+                        data = self._load_json(datafile)
+                    except json.decoder.JSONDecodeError:
+                        logging.warning(f"File {datafile} is malfrmed, skipping it")
+                        continue
                 else:
                     continue
                 end = time.time()
