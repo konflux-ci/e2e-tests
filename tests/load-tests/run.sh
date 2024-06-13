@@ -64,7 +64,9 @@ date -Ins --utc >started
 go run loadtest.go \
     --applications-count "${APPLICATIONS_COUNT:-1}" \
     --build-pipeline-selector-bundle "${BUILD_PIPELINE_SELECTOR_BUNDLE:-}" \
-    --component-repo "${COMPONENT_REPO:-https://github.com/devfile-samples/devfile-sample-code-with-quarkus}" \
+    --component-repo "${COMPONENT_REPO:-https://github.com/nodeshift-starters/devfile-sample}" \
+    --component-repo-container-context "${COMPONENT_REPO_CONTAINER_CONTEXT:-/}" \
+    --component-repo-container-file "${COMPONENT_REPO_CONTAINER_FILE:-Dockerfile}" \
     --component-repo-revision "${COMPONENT_REPO_REVISION:-main}" \
     --components-count "${COMPONENTS_COUNT:-1}" \
     --concurrency "${CONCURRENCY:-1}" \
@@ -76,7 +78,7 @@ go run loadtest.go \
     --pipeline-request-configure-pac="${PIPELINE_REQUEST_CONFIGURE_PAC:-false}" \
     --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}" \
     --purge="${PURGE:-true}" \
-    --quay-repo "${QUAY_REPO:-redhat-user-workloads-stage}" \
+    --quay-repo "${QUAY_REPO:-stonesoup_perfscale}" \
     --test-scenario-git-url "${TEST_SCENARIO_GIT_URL:-https://github.com/konflux-ci/integration-examples.git}" \
     --test-scenario-path-in-repo "${TEST_SCENARIO_PATH_IN_REPO:-pipelines/integration_resolver_pipeline_pass.yaml}" \
     --test-scenario-revision "${TEST_SCENARIO_REVISION:-main}" \
