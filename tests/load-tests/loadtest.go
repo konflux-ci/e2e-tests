@@ -264,7 +264,12 @@ func perApplicationThread(perApplicationCtx *journey.PerApplicationContext) {
 // Single component journey (there can be multiple parallel comps per app)
 func perComponentThread(perComponentCtx *journey.PerComponentContext) {
 	defer perComponentCtx.PerComponentWG.Done()
-	defer logging.Measure(journey.HandlePerComponentCollection, perComponentCtx)
+	defer func() {
+		_, err := logging.Measure(journey.HandlePerComponentCollection, perComponentCtx)
+		if err != nil {
+			logging.Logger.Error("Per component thread failed: %v", err)
+		}
+	}()
 
 	var err error
 

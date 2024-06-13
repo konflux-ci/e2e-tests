@@ -2,6 +2,7 @@ package loadtestutils
 
 import "encoding/json"
 import "os"
+import "path/filepath"
 
 // Represents a user in the list of precreated users (e.g. Stage 'users.json')
 type User struct {
@@ -15,6 +16,7 @@ type User struct {
 
 // Load 'users.json' into a slice of User structs
 func LoadStageUsers(filePath string) ([]User, error) {
+	filePath = filepath.Clean(filePath)
 	jsonData, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err

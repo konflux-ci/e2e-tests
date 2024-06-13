@@ -1,6 +1,7 @@
 package logging
 
 import "fmt"
+import "path/filepath"
 import "reflect"
 import "runtime"
 import "sort"
@@ -71,6 +72,7 @@ func MeasurementsStop() {
 
 // Append slice to a CSV file
 func writeToCSV(outfile string, batch [][]string) error {
+	outfile = filepath.Clean(outfile)
 	file, err := os.OpenFile(outfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		return err

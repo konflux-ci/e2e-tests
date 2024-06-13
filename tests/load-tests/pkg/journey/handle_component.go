@@ -46,7 +46,7 @@ func getPaCPull(annotations map[string]string) (string, error) {
 	// Parse JSON
 	err := json.Unmarshal([]byte(buildStatusValue), &buildStatusMap)
 	if err != nil {
-		return "", fmt.Errorf("Error unmarshalling JSON:", err)
+		return "", fmt.Errorf("Error unmarshalling JSON: %v", err)
 	}
 
 	// Access the nested value using type assertion
@@ -78,8 +78,7 @@ func getPaCPull(annotations map[string]string) (string, error) {
 
 func createComponent(f *framework.Framework, namespace, name, repoUrl, repoRevision, containerContext, containerFile, buildPipelineSelector, appName string, skipInitialChecks, requestConfigurePac bool) error {
 	// Prepare annotations to add to component
-	var annotationsMap map[string]string
-	annotationsMap = constants.DefaultDockerBuildPipelineBundle
+	annotationsMap := constants.DefaultDockerBuildPipelineBundle
 	if buildPipelineSelector != "" {
 		// Custom build pipeline selector
 		annotationsMap["build.appstudio.openshift.io/pipeline"] = fmt.Sprintf(`{"name": "docker-build", "bundle": "%s"}`, buildPipelineSelector)
@@ -139,6 +138,9 @@ func getPaCPullNumber(f *framework.Framework, namespace, name string) (int, erro
 
 		return true, nil
 	}, interval, timeout)
+	if err != nil {
+		return -1, fmt.Errorf("Unable to get PaC pull number for component %s in namespace %s: %v", name, namespace, err)
+	}
 
 	// Get merge request number
 	pullNumber, err = getPRNumberFromPRUrl(pull)
