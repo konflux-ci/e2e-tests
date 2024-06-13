@@ -113,6 +113,9 @@ spec:
         PAC_GITLAB_URL=$(cat /usr/local/konflux-ci-secrets/pac-gitlab-url)
         PAC_PROJECT_ID=$(cat /usr/local/konflux-ci-secrets/pac-project-id)
 
+        echo $PAC_PROJECT_ID
+        echo $PAC_GITLAB_URL
+
         ENABLE_SCHEDULING_ON_MASTER_NODES=false
 
         # user stored: username:token,username:token
@@ -151,4 +154,3 @@ spec:
         make ci/prepare/e2e-branch
 
         make ci/test/e2e
-####
