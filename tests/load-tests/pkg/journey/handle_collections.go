@@ -14,7 +14,7 @@ func getDirName(baseDir, namespace, iteration string) string {
 }
 
 func createDir(dirPath string) error {
-	err := os.MkdirAll(dirPath, os.ModePerm)
+	err := os.MkdirAll(dirPath, 0750)
 	if err != nil {
 		return fmt.Errorf("Failed to create directory %s: %v", dirPath, err)
 	}
@@ -24,6 +24,7 @@ func createDir(dirPath string) error {
 
 func writeToFile(dirPath, file string, contents []byte) error {
 	fileName := filepath.Join(dirPath, file)
+	fileName = filepath.Clean(fileName)
 
 	fd, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
@@ -52,6 +53,7 @@ func collectPodLogs(f *framework.Framework, dirPath, namespace, component string
 	}
 
 	for _, pod := range podList.Items {
+		pod := pod
 		podLogs := f.AsKubeAdmin.CommonController.GetPodLogs(&pod)
 
 		for file, log := range podLogs {
