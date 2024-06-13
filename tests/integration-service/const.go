@@ -10,13 +10,14 @@ import (
 const (
 	componentRepoURL = "https://github.com/redhat-appstudio-qe/hacbs-test-project"
 
-	EnvironmentName        = "development"
-	gitURL                 = "https://github.com/konflux-ci/integration-examples.git"
-	revision               = "843f455fe87a6d7f68c238f95a8f3eb304e65ac5"
-	pathInRepoPass         = "pipelines/integration_resolver_pipeline_pass.yaml"
-	pathInRepoFail         = "pipelines/integration_resolver_pipeline_fail.yaml"
-	autoReleasePlan        = "auto-releaseplan"
-	targetReleaseNamespace = "default"
+	EnvironmentName                = "development"
+	gitURL                         = "https://github.com/konflux-ci/integration-examples.git"
+	revision                       = "843f455fe87a6d7f68c238f95a8f3eb304e65ac5"
+	pathInRepoPass                 = "pipelines/integration_resolver_pipeline_pass.yaml"
+	pathIntegrationPipelineWithEnv = "pipelines/integration_resolver_pipeline_environment_pass.yaml"
+	pathInRepoFail                 = "pipelines/integration_resolver_pipeline_fail.yaml"
+	autoReleasePlan                = "auto-releaseplan"
+	targetReleaseNamespace         = "default"
 
 	componentRepoNameForStatusReporting       = "hacbs-test-project-integration"
 	componentDefaultBranch                    = "main"
@@ -27,6 +28,10 @@ const (
 	checkrunConclusionFailure                 = "failure"
 	integrationPipelineRunCommitStatusSuccess = "success"
 	integrationPipelineRunCommitStatusFail    = "failed"
+	spaceRequestCronJobNamespace              = "spacerequest-cleaner"
+	spaceRequestCronJobName                   = "spacerequest-cleaner"
+	spaceRequestNamePrefix                    = "task-spacerequest-"
+	itsRevision                               = "main"
 
 	snapshotAnnotation                       = "appstudio.openshift.io/snapshot"
 	scenarioAnnotation                       = "test.appstudio.openshift.io/scenario"
