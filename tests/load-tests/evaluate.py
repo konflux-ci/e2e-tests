@@ -12,23 +12,23 @@ import sys
 COLUMN_WHEN = 0
 COLUMN_METRIC = 1
 COLUMN_DURATION = 2
+COLUMN_PARAMS = 3
 COLUMN_ERROR = 4
 
 # Metrics we care about that together form KPI metric duration
 METRICS = [
     "HandleUser",
-    "CreateApplication",
-    "ValidateApplication",
-    "CreateIntegrationTestScenario",
-    "ValidateIntegrationTestScenario",
-    "CreateComponent",
-    "ValidateComponent",
-    "ValidatePipelineRunCreation",
-    "ValidatePipelineRunCondition",
-    "ValidatePipelineRunSignature",
-    "ValidateSnapshotCreation",
-    "ValidateTestPipelineRunCreation",
-    "ValidateTestPipelineRunCondition",
+    "createApplication",
+    "validateApplication",
+    "createIntegrationTestScenario",
+    "validateIntegrationTestScenario",
+    "createComponent",
+    "validatePipelineRunCreation",
+    "validatePipelineRunCondition",
+    "validatePipelineRunSignature",
+    "validateSnapshotCreation",
+    "validateTestPipelineRunCreation",
+    "validateTestPipelineRunCondition",
 ]
 
 
@@ -84,11 +84,9 @@ def main():
                 continue
 
             when = datetime.datetime.fromisoformat(row[COLUMN_WHEN])
-            print(f"DEBUG {row[COLUMN_WHEN]} -> {when}")
             metric = row[COLUMN_METRIC]
             duration = float(row[COLUMN_DURATION])
-            error = False if row[COLUMN_ERROR] == "<nil>" else True
-            # print(f"Metric: {metric}, duration: {duration}, error: {error}")
+            error = row[COLUMN_ERROR] != "<nil>"
 
             for m in METRICS:
                 if m not in stats_raw:
@@ -128,7 +126,8 @@ def main():
     stats["KPI"]["mean"] = kpi_sum
     stats["KPI"]["errors"] = kpi_errors
 
-    print(f"Stats:\n{json.dumps(stats, indent=4)}")
+    print(f"KPI mean: {stats['KPI']['mean']}")
+    print(f"KPI errors: {stats['KPI']['errors']}")
 
     with open(output_file, "w") as fp:
         json.dump(stats, fp, indent=4)
