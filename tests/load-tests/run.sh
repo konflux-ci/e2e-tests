@@ -85,7 +85,7 @@ go run loadtest.go \
     --username "$USER_PREFIX" \
     --waitintegrationtestspipelines="${WAIT_INTEGRATION_TESTS:-true}" \
     --waitpipelines="${WAIT_PIPELINES:-true}" \
-    2>&1 | tee loadtest.log
+    2>&1 | tee load-test.log
 date -Ins --utc >ended
 
 ## Finish Tekton profiling
