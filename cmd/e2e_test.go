@@ -6,7 +6,12 @@ import (
 	"strconv"
 	"testing"
 
+	//"path/filepath"
+
 	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/v2/types"
+
+	//greports "github.com/onsi/ginkgo/v2/reporters"
 	"github.com/onsi/gomega"
 
 	_ "github.com/konflux-ci/e2e-tests/tests/build"
@@ -41,5 +46,19 @@ func init() {
 func TestE2E(t *testing.T) {
 	klog.Info("Starting Red Hat App Studio e2e tests...")
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Red Hat App Studio E2E tests")
+	config, _ := ginkgo.GinkgoConfiguration()
+	if config.DryRun {
+		reports := ginkgo.PreviewSpecs("Red Hat App Studio E2E tests")
+
+		for _, spec := range reports.SpecReports {
+			if spec.State.Is(types.SpecStatePassed) {
+
+				klog.Info(spec.FullText())
+			}
+
+		}
+
+	} else {
+		ginkgo.RunSpecs(t, "Red Hat App Studio E2E tests")
+	}
 }
