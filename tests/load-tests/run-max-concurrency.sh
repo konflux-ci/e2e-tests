@@ -209,7 +209,7 @@ max_concurrency() {
                 echo "[$(date --utc -Ins)] The average time a workload took to succeed (${workloadKPI}s) or error rate (${workloadKPIerrors}/${t}) has exceeded a threshold of ${threshold_sec}s or ${threshold_err} error rate with $t threads."
                 workloadKPIOld=$(jq '.workloadKPI' "$output")
                 threadsOld=$(jq '.maxConcurrencyReached' "$output")
-                computedConcurrency=$(python3 -c "import sys; t = float(sys.argv[1]); a = float(sys.argv[2]); b = float(sys.argv[3]); c = float(sys.argv[4]); d = float(sys.argv[5]); print((t - b) / ((d - b) / (c - a)) + a)" "$threshold" "$threadsOld" "$workloadKPIOld" "$t" "$workloadKPI")
+                computedConcurrency=$(python3 -c "import sys; t = float(sys.argv[1]); a = float(sys.argv[2]); b = float(sys.argv[3]); c = float(sys.argv[4]); d = float(sys.argv[5]); print((t - b) / ((d - b) / (c - a)) + a)" "$threshold_sec" "$threadsOld" "$workloadKPIOld" "$t" "$workloadKPI")
                 jq ".computedConcurrency = $computedConcurrency" "$output" >"$OUTPUT_DIR/$$.json" && mv -f "$OUTPUT_DIR/$$.json" "$output"
                 break
             else
