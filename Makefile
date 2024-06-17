@@ -36,6 +36,9 @@ ci/test/upgrade:
 ci/prepare/e2e-branch:
 	./mage -v ci:prepareE2Ebranch
 
+ci/sprayproxy/unregister:
+	./mage -v ci:unregisterSprayproxy
+
 local/cluster/prepare:
 	./mage -v local:prepareCluster
 
