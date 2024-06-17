@@ -166,3 +166,5 @@
             value: "$(params.region)"
           - name: aws-secrets
             value: "$(params.aws-secrets)"
+          - name: pipeline-aggregate-status
+            value: "$(tasks.status)"
