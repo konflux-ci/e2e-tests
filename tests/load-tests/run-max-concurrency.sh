@@ -94,32 +94,15 @@ load_test() {
         --set "name=Konflux loadtest" "started=$( cat started )" "ended=$( cat ended )" \
         --set-subtree-json "parameters.options=$OUTPUT_DIR/load-test-options.json" "results.measurements=$OUTPUT_DIR/load-test-timings.json"
 
-    echo "[$(date --utc -Ins)] Adding monitoring data"
-    mstarted="$( date -d "$( cat started )" --utc -Iseconds )"
-    mended="$( date -d "$( cat ended )" --utc -Iseconds )"
-    mhost="https://$(oc -n openshift-monitoring get route -l app.kubernetes.io/name=thanos-query -o json | jq --raw-output '.items[0].spec.host')"
-    mrawdir="monitoring-raw-data-dir/"
-    mkdir -p "$mrawdir"
-    status_data.py \
-        --status-data-file "${STATUS_DATA_FILE}" \
-        --additional cluster_read_config.yaml \
-        --monitoring-start "$mstarted" \
-        --monitoring-end "$mended" \
-        --prometheus-host "$mhost" \
-        --prometheus-port 443 \
-        --prometheus-token "$( oc whoami -t )" \
-        --monitoring-raw-data-dir "$mrawdir" \
-        &>"monitoring-collection.log"
-
     deactivate
 
     if [ "${TEKTON_PERF_ENABLE_CPU_PROFILING:-}" == "true" ] || [ "${TEKTON_PERF_ENABLE_MEMORY_PROFILING:-}" == "true" ]; then
-        echo "Waiting for the Tekton profiling to finish up to ${TEKTON_PERF_PROFILE_CPU_PERIOD}s"
+        echo "[$(date --utc -Ins)] Waiting for the Tekton profiling to finish up to ${TEKTON_PERF_PROFILE_CPU_PERIOD}s"
         for pid_file in $(find "$OUTPUT_DIR" -name 'tekton*.pid'); do
             wait "$(cat "$pid_file")"
             rm -rvf "$pid_file"
         done
-        echo "Getting Tekton controller goroutine dump"
+        echo "[$(date --utc -Ins)] Getting Tekton controller goroutine dump"
         for p in $(oc get pods -n openshift-pipelines -l app=tekton-pipelines-controller -o name); do
             pod="${p##*/}"
             for i in 0 1 2; do
@@ -127,7 +110,7 @@ load_test() {
                 oc exec -n tekton-results "$p" -- bash -c "curl -SsL localhost:8008/debug/pprof/goroutine?debug=$i | base64" | base64 -d >"$OUTPUT_DIR/$file.pprof"
             done
         done
-        echo "Getting Tekton results watcher goroutine dump"
+        echo "[$(date --utc -Ins)] Getting Tekton results watcher goroutine dump"
         for p in $(oc get pods -n tekton-results -l app.kubernetes.io/name=tekton-results-watcher -o name); do
             pod="${p##*/}"
             for i in 0 1 2; do
@@ -136,6 +119,8 @@ load_test() {
             done
         done
     fi
+
+    echo "[$(date --utc -Ins)] Finished processing results"
 }
 
 remove_finalizers() {
@@ -208,6 +193,7 @@ max_concurrency() {
             if (("$t" > "$maxThreads")); then
                 break
             fi
+            echo "[$(date --utc -Ins)] Starting iteration ${iteration} with concurrency ${t}"
             oc login "$OPENSHIFT_API" -u "$OPENSHIFT_USERNAME" -p "$OPENSHIFT_PASSWORD"
             clean_namespaces
             load_test "$t" "$iteration"
