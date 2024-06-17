@@ -301,6 +301,7 @@ func HandleComponent(ctx *PerComponentContext) error {
 			"QUAY_REPO": ctx.ParentContext.ParentContext.Opts.QuayRepo,
 			"APPLICATION": ctx.ParentContext.ApplicationName,
 			"COMPONENT": ctx.ComponentName,
+			"BRANCH": ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision,
 		}
 
 		// Skip what we do not care about
