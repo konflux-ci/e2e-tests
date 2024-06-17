@@ -221,7 +221,6 @@ max_concurrency() {
                 jq ".errorsTotal = $workloadKPIerrors" "$output" >"$OUTPUT_DIR/$$.json" && mv -f "$OUTPUT_DIR/$$.json" "$output"
             fi
         done
-        DRY_RUN=false ./clear.sh "$USER_PREFIX"
     fi
 }
 
