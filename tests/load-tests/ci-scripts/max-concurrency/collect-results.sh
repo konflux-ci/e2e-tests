@@ -17,9 +17,9 @@ dt_format='"%Y-%m-%dT%H:%M:%SZ"'
 
 collect_artifacts() {
     echo "Collecting load test artifacts.."
-    mkdir -p "${ARTIFACT_DIR}/logs"
-    find "$output_dir" -type f -name 'load-tests.max-concurrency.*.log' -exec cp -vf {} "${ARTIFACT_DIR}/logs" \;
     find "$output_dir" -type f -name 'load-tests.max-concurrency.json' -exec cp -vf {} "${ARTIFACT_DIR}" \;
+    mkdir -p "${ARTIFACT_DIR}/iterations"
+    find "$output_dir" -maxdepth 1 -type d -name 'iteration-*' -exec cp -vfr {} "${ARTIFACT_DIR}/iterations" \;
     mkdir -p "${ARTIFACT_DIR}/pprof"
     find "$output_dir" -type f -name '*.pprof' -exec cp -vf {} "${ARTIFACT_DIR}/pprof" \;
 }

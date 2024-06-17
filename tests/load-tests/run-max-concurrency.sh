@@ -199,7 +199,7 @@ max_concurrency() {
             oc login "$OPENSHIFT_API" -u "$OPENSHIFT_USERNAME" -p "$OPENSHIFT_PASSWORD"
             clean_namespaces
             iteration_index="$(printf "%04d" "$iteration")-$(printf "%04d" "$t")"
-            workdir="${OUTPUT_DIR}/${iteration_index}"
+            workdir="${OUTPUT_DIR}/iteration-${iteration_index}"
             mkdir "${workdir}"
             load_test "$workdir" "$t" "$iteration"
             jq ".metadata.\"max-concurrency\".iteration = \"$(printf "%04d" "$iteration")\"" "$workdir/load-test.json" >"$OUTPUT_DIR/$$.json" && mv -f "$OUTPUT_DIR/$$.json" "$workdir/load-test.json"
