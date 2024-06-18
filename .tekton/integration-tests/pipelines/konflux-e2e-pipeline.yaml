@@ -97,6 +97,37 @@
             value: "$(params.machine-type)"
           - name: aws-secrets
             value: "$(params.aws-secrets)"
+      - name: konflux-e2e-tests
+        when:
+          - input: "$(tasks.test-metadata.results.test-event-type)"
+            operator: in
+            values: ["pull_request"]
+        runAfter:
+          - provision-rosa
+        taskRef:
+          resolver: git
+          params:
+            - name: url
+              value: https://github.com/flacatus/e2e-tests.git
+            - name: revision
+              value: ocp-kfx
+            - name: pathInRepo
+              value: .tekton/integration-tests/tasks/konflux-e2e.yaml
+        params:
+          - name: test-name
+            value: $(context.pipelineRun.name
+          - name: git-repo
+            value: "$(tasks.test-metadata.results.git-repo)"
+          - name: git-url
+            value: "$(tasks.test-metadata.results.git-url)"
+          - name: git-revision
+            value: "$(tasks.test-metadata.results.git-revision)"
+          - name: oras-container
+            value: "$(tasks.test-metadata.results.oras-container)"
+          - name: job-spec
+            value: "$(tasks.test-metadata.results.job-spec)"
+          - name: ocp-login-command
+            value: "$(tasks.provision-rosa.results.ocp-login-command)"
     finally:
       - name: deprovision-rosa-collect-artifacts
         when:
