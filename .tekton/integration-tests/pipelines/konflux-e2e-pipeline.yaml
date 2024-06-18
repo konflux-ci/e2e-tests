@@ -67,6 +67,36 @@
             value: $(params.oras-container)
           - name: test-name
             value: $(context.pipelineRun.name)
+      - name: provision-rosa
+        when:
+          - input: "$(tasks.test-metadata.results.test-event-type)"
+            operator: in
+            values: ["pull_request"]
+        runAfter:
+          - rosa-hcp-metadata
+          - test-metadata
+        taskRef:
+          resolver: git
+          params:
+            - name: url
+              value: https://github.com/konflux-qe-incubator/konflux-qe-definitions.git
+            - name: revision
+              value: main
+            - name: pathInRepo
+              value: common/tasks/rosa/hosted-cp/rosa-hcp-provision/rosa-hcp-provision.yaml
+        params:
+          - name: cluster-name
+            value: "$(tasks.rosa-hcp-metadata.results.cluster-name)"
+          - name: ocp-version
+            value: "$(params.ocp-version)"
+          - name: region
+            value: "$(params.region)"
+          - name: replicas
+            value: "$(params.replicas)"
+          - name: machine-type
+            value: "$(params.machine-type)"
+          - name: aws-secrets
+            value: "$(params.aws-secrets)"
     finally:
       - name: deprovision-rosa-collect-artifacts
         when:
