@@ -21,7 +21,7 @@ type Opts struct {
 	JourneyUntil                  time.Time
 	LogDebug                      bool
 	LogTrace                      bool
-	LogVerbose                    bool
+	LogInfo                       bool
 	MultiarchWorkflow             bool
 	OutputDir                     string
 	PipelineRequestConfigurePac   bool

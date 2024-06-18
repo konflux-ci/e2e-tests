@@ -55,7 +55,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&opts.MultiarchWorkflow, "multiarch-workflow", false, "if we should template repo so it is suitable for multi arch test, merge PR and ignore custom pipeline run from PR")
 	rootCmd.Flags().StringVarP(&opts.OutputDir, "output-dir", "o", ".", "directory where output files such as load-tests.log or load-tests.json are stored")
 	rootCmd.Flags().StringVar(&opts.BuildPipelineSelectorBundle, "build-pipeline-selector-bundle", "", "BuildPipelineSelector bundle to use when testing with build-definition PR")
-	rootCmd.Flags().BoolVarP(&opts.LogVerbose, "log-verbose", "v", false, "log messages with info level and above")
+	rootCmd.Flags().BoolVarP(&opts.LogInfo, "log-info", "v", false, "log messages with info level and above")
 	rootCmd.Flags().BoolVarP(&opts.LogDebug, "log-debug", "d", false, "log messages with debug level and above")
 	rootCmd.Flags().BoolVarP(&opts.LogTrace, "log-trace", "t", false, "log messages with trace level and above (i.e. everything)")
 }
@@ -79,7 +79,7 @@ func main() {
 
 	// Setup logging
 	logging.Logger.Level = logging.WARNING
-	if opts.LogVerbose {
+	if opts.LogInfo {
 		logging.Logger.Level = logging.INFO
 	}
 	if opts.LogDebug {
