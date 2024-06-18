@@ -128,10 +128,6 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 				// Remove all resources created by the tests
 				AfterAll(func() {
 					if !appTest.Stage {
-						// collect SPI ResourceQuota metrics (temporary)
-						err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo(devEnvTestLabel, namespace, "appstudio-crds-spi")
-						Expect(err).NotTo(HaveOccurred())
-
 						if !(strings.EqualFold(os.Getenv("E2E_SKIP_CLEANUP"), "true")) && !CurrentSpecReport().Failed() { // RHTAPBUGS-978: temporary timeout to 15min
 							if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 15*time.Minute); err != nil {
 								if err := fw.AsKubeAdmin.StoreAllArtifactsForNamespace(namespace); err != nil {
