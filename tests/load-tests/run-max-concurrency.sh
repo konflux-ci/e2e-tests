@@ -65,7 +65,7 @@ load_test() {
         --concurrency "$threads" \
         --journey-duration "${JOURNEY_DURATION:-1h}" \
         --journey-repeats "${JOURNEY_REPEATS:-1}" \
-        --log-trace \
+        --log-info \
         --multiarch-workflow="${MULTIARCH_WORKFLOW:-false}" \
         --output-dir "${workdir:-/tmp}" \
         --pipeline-request-configure-pac="${PIPELINE_REQUEST_CONFIGURE_PAC:-false}" \

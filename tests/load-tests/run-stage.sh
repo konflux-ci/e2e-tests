@@ -8,7 +8,7 @@ go run loadtest.go \
     --concurrency "${CONCURRENCY:-1}" \
     --journey-duration "${JOURNEY_DURATION:-1h}" \
     --journey-repeats "${JOURNEY_REPEATS:-1}" \
-    --log-trace \
+    --log-info \
     --multiarch-workflow="${MULTIARCH_WORKFLOW:-false}" \
     --output-dir "${OUTPUT_DIR:-.}" \
     --pipeline-request-configure-pac="${PIPELINE_REQUEST_CONFIGURE_PAC:-false}" \
