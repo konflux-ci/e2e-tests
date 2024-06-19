@@ -36,9 +36,9 @@ RUN curl -L "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq
     chmod +x /usr/local/bin/yq && \
     yq --version
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+FROM registry.access.redhat.com/ubi8/go-toolset:1.21.9-3.1716505664
 
-RUN microdnf install -y findutils gcc make git 
+ENV GOBIN=$GOPATH/bin
 
 WORKDIR /root/
 COPY --from=builder /go/bin/ginkgo /usr/local/bin
