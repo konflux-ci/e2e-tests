@@ -176,6 +176,46 @@ func (t *TektonController) DeletePipelineRun(name, ns string) error {
 	return t.PipelineClient().TektonV1().PipelineRuns(ns).Delete(context.Background(), name, metav1.DeleteOptions{})
 }
 
+// DeletePipelineRunIgnoreFinalizers deletes PipelineRun (removing the finalizers field, first)
+func (t *TektonController) DeletePipelineRunIgnoreFinalizers(ns, name string) error {
+	err := wait.PollUntilContextTimeout(context.Background(), time.Second, 30*time.Second, true, func(ctx context.Context) (done bool, err error) {
+		pipelineRunCR := pipeline.PipelineRun{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: ns,
+			},
+		}
+		if err := t.KubeRest().Get(context.Background(), crclient.ObjectKeyFromObject(&pipelineRunCR), &pipelineRunCR); err != nil {
+			if errors.IsNotFound(err) {
+				// PipelinerRun CR is already removed
+				return true, nil
+			}
+			g.GinkgoWriter.Printf("unable to retrieve PipelineRun '%s' in '%s': %v\n", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
+			return false, nil
+
+		}
+
+		// Remove the finalizer, so that it can be deleted.
+		pipelineRunCR.Finalizers = []string{}
+		if err := t.KubeRest().Update(context.Background(), &pipelineRunCR); err != nil {
+			g.GinkgoWriter.Printf("unable to remove finalizers from PipelineRun '%s' in '%s': %v\n", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
+			return false, nil
+		}
+
+		if err := t.KubeRest().Delete(context.Background(), &pipelineRunCR); err != nil {
+			g.GinkgoWriter.Printf("unable to delete PipelineRun '%s' in '%s': %v\n", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
+			return false, nil
+		}
+		return true, nil
+	})
+	if err != nil {
+		return fmt.Errorf("deletion of PipelineRun '%s' in '%s' timed out", name, ns)
+	}
+
+	return nil
+}
+
+
 // DeleteAllPipelineRunsInASpecificNamespace deletes all PipelineRuns in a given namespace (removing the finalizers field, first)
 func (t *TektonController) DeleteAllPipelineRunsInASpecificNamespace(ns string) error {
 
@@ -185,40 +225,10 @@ func (t *TektonController) DeleteAllPipelineRunsInASpecificNamespace(ns string) 
 	}
 
 	for _, pipelineRun := range pipelineRunList.Items {
-		err := wait.PollUntilContextTimeout(context.Background(), time.Second, 30*time.Second, true, func(ctx context.Context) (done bool, err error) {
-			pipelineRunCR := pipeline.PipelineRun{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      pipelineRun.Name,
-					Namespace: ns,
-				},
-			}
-			if err := t.KubeRest().Get(context.Background(), crclient.ObjectKeyFromObject(&pipelineRunCR), &pipelineRunCR); err != nil {
-				if errors.IsNotFound(err) {
-					// PipelinerRun CR is already removed
-					return true, nil
-				}
-				g.GinkgoWriter.Printf("unable to retrieve PipelineRun '%s' in '%s': %v\n", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
-				return false, nil
-
-			}
-
-			// Remove the finalizer, so that it can be deleted.
-			pipelineRunCR.Finalizers = []string{}
-			if err := t.KubeRest().Update(context.Background(), &pipelineRunCR); err != nil {
-				g.GinkgoWriter.Printf("unable to remove finalizers from PipelineRun '%s' in '%s': %v\n", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
-				return false, nil
-			}
-
-			if err := t.KubeRest().Delete(context.Background(), &pipelineRunCR); err != nil {
-				g.GinkgoWriter.Printf("unable to delete PipelineRun '%s' in '%s': %v\n", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
-				return false, nil
-			}
-			return true, nil
-		})
+		err := t.DeletePipelineRunIgnoreFinalizers(ns, pipelineRun.Name)
 		if err != nil {
-			return fmt.Errorf("deletion of PipelineRun '%s' in '%s' timed out", pipelineRun.Name, ns)
+			return err
 		}
-
 	}
 
 	return nil
