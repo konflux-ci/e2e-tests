@@ -128,6 +128,8 @@
             value: "$(tasks.test-metadata.results.job-spec)"
           - name: ocp-login-command
             value: "$(tasks.provision-rosa.results.ocp-login-command)"
+          - name: container-image
+            value: "$(tasks.test-metadata.results.container-image)"
     finally:
       - name: deprovision-rosa-collect-artifacts
         when:

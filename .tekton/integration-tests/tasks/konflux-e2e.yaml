@@ -35,6 +35,10 @@ spec:
     - name: job-spec
       type: string
       description: "The job specification containing details of the test execution."
+    - name: container-image
+      type: string
+      description: "Contain the container name from Konflux Snapshot."
+      default: "quay.io/redhat-user-workloads/rhtap-qe-shared-tenant/konflux-e2e/konflux-e2e-tests:latest"
   volumes:
     - name: konflux-secret-volume
       secret:
@@ -48,7 +52,7 @@ spec:
         limits:
           cpu: "3"
           memory: "6Gi"
-      image: quay.io/konflux-qe-incubator/konflux-e2e:latest
+      image: $(params.container-image)
       volumeMounts:
         - name: konflux-secret-volume
           mountPath: /usr/local/konflux-ci-secrets
