@@ -38,9 +38,7 @@ RUN curl -L "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 
-RUN microdnf install -y git gcc gcc-c++ kernel-devel \
-    make --version \
-    git --version
+RUN microdnf install -y git gcc gcc-c++ kernel-devel
 
 WORKDIR /root/
 COPY --from=builder /go/bin/ginkgo /usr/local/bin
