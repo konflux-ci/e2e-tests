@@ -824,8 +824,9 @@ func GenerateTestSuiteFile(packageName string) error {
 	return nil
 }
 
-// Remove all webhooks which with 1 day lifetime. By default will delete webooks from redhat-appstudio-qe
-func CleanWebHooks() error {
+// Remove all webhooks older than 1 day from GitHub repo.
+// By default will delete webhooks from redhat-appstudio-qe
+func CleanGitHubWebHooks() error {
 	token := utils.GetEnv(constants.GITHUB_TOKEN_ENV, "")
 	if token == "" {
 		return fmt.Errorf("empty GITHUB_TOKEN env. Please provide a valid github token")
@@ -854,8 +855,8 @@ func CleanWebHooks() error {
 	return nil
 }
 
-// Remove all webhooks which with 1 day lifetime from Gitlab rpo.
-func GitlabCleanWebHooks() error {
+// Remove all webhooks older than 1 day from GitLab repo.
+func CleanGitLabWebHooks() error {
 	gcToken := utils.GetEnv(constants.GITLAB_TOKEN_ENV, "")
 	if gcToken == "" {
 		return fmt.Errorf("empty PAC_GITLAB_TOKEN env")
@@ -873,7 +874,7 @@ func GitlabCleanWebHooks() error {
 	if err != nil {
 		return fmt.Errorf("failed to list project hooks: %v", err)
 	}
-	// Delete webhooks were created older than 1 day
+	// Delete webhooks that are older than 1 day
 	for _, webhook := range webhooks {
 		dayDuration, _ := time.ParseDuration("24h")
 		if time.Since(*webhook.CreatedAt) > dayDuration {
