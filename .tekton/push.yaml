@@ -13,7 +13,7 @@ spec:
     - name: revision
       value: "{{revision}}"
     - name: output-image
-      value: 'quay.io/redhat-appstudio/e2e-tests:{{revision}}'
+      value: 'quay.io/konflux-ci/e2e-tests:{{revision}}'
   pipelineRef:
     params:
       - name: bundle
