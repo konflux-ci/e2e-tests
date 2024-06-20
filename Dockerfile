@@ -10,18 +10,6 @@ ARG YQ_VERSION=4.43.1
 WORKDIR /github.com/redhat-appstudio/e2e-tests
 USER root
 
-COPY go.mod .
-COPY go.sum .
-RUN go mod download -x
-COPY cmd/ cmd/
-COPY magefiles/ magefiles/
-COPY pkg/ pkg/
-COPY tests/ tests/
-COPY Makefile .
-
-RUN go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo
-RUN ginkgo build ./cmd
-
 RUN curl -L "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${OC_VERSION}/openshift-client-linux.tar.gz" -o /tmp/openshift-client-linux.tar.gz && \
     tar --no-same-owner -xzf /tmp/openshift-client-linux.tar.gz && \
     mv oc kubectl /usr/local/bin && \
@@ -40,9 +28,6 @@ FROM registry.access.redhat.com/ubi8/go-toolset:1.21.9-3.1718100004
 
 ENV GOBIN=$GOPATH/bin
 
-WORKDIR /konflux-e2e/
-COPY --from=builder /go/bin/ginkgo /usr/local/bin
-COPY --from=builder /github.com/redhat-appstudio/e2e-tests/cmd/cmd.test .
 COPY --from=builder /usr/local/bin/jq /usr/local/bin/jq
 COPY --from=builder /usr/local/bin/yq /usr/local/bin/yq
 COPY --from=builder /usr/local/bin/oc /usr/local/bin/oc
