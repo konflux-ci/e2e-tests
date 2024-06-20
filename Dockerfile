@@ -36,11 +36,11 @@ RUN curl -L "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq
     chmod +x /usr/local/bin/yq && \
     yq --version
 
-FROM registry.access.redhat.com/ubi8/go-toolset:1.21.9-3.1716505664
+FROM registry.access.redhat.com/ubi8/go-toolset:1.21.9-3.1718100004
 
 ENV GOBIN=$GOPATH/bin
 
-WORKDIR /root/
+WORKDIR /konflux-e2e/
 COPY --from=builder /go/bin/ginkgo /usr/local/bin
 COPY --from=builder /github.com/redhat-appstudio/e2e-tests/cmd/cmd.test .
 COPY --from=builder /usr/local/bin/jq /usr/local/bin/jq
