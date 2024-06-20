@@ -29,13 +29,13 @@ collect_artifacts() {
 collect_monitoring_data() {
     echo "[$(date --utc -Ins)] Setting up tool to collect monitoring data"
     {
-    python3 -m venv venv
-    set +u
-    # shellcheck disable=SC1091
-    source venv/bin/activate
-    set -u
-    python3 -m pip install -U pip
-    python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team-core&subdirectory=core"
+        python3 -m venv venv
+        set +u
+        # shellcheck disable=SC1091
+        source venv/bin/activate
+        set -u
+        python3 -m pip install -U pip
+        python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team-core&subdirectory=core"
     } &>"${ARTIFACT_DIR}/monitoring-setup.log"
 
     ## Monitoring data for entire test
@@ -121,18 +121,26 @@ ${csv_delim}WorkloadKPI\
 ${csv_delim}Errors\
 ${csv_delim}UserAvgTime\
 ${csv_delim}UserMaxTime\
-${csv_delim}ApplicationAvgTime\
-${csv_delim}ApplicationMaxTime\
-${csv_delim}CDQAvgTime\
-${csv_delim}CDQMaxTime\
-${csv_delim}ComponentsAvgTime\
-${csv_delim}ComponentsMaxTime\
-${csv_delim}PipelineRunAvgTime\
-${csv_delim}PipelineRunMaxTime\
-${csv_delim}IntegrationTestsRunPipelineSucceededTimeAvg\
-${csv_delim}IntegrationTestsRunPipelineSucceededTimeMax\
-${csv_delim}DeploymentSucceededTimeAvg\
-${csv_delim}DeploymentSucceededTimeMax\
+${csv_delim}CreateApplicationAvgTime\
+${csv_delim}CreateApplicationMaxTime\
+${csv_delim}ValidateApplicationAvgTime\
+${csv_delim}ValidateApplicationMaxTime\
+${csv_delim}CreateComponentAvgTime\
+${csv_delim}CreateComponentMaxTime\
+${csv_delim}ValidatePipelineRunConditionAvgTime\
+${csv_delim}ValidatePipelineRunConditionMaxTime\
+${csv_delim}ValidatePipelineRunCreationAvgTime\
+${csv_delim}ValidatePipelineRunCreationMaxTime\
+${csv_delim}ValidatePipelineRunSignatureAvgTime\
+${csv_delim}ValidatePipelineRunSignatureMaxTime\
+${csv_delim}CreateIntegrationTestScenarioAvgTime\
+${csv_delim}CreateIntegrationTestScenarioMaxTime\
+${csv_delim}ValidateIntegrationTestScenarioAvgTime\
+${csv_delim}ValidateIntegrationTestScenarioMaxTime\
+${csv_delim}ValidateTestPipelineRunConditionAvgTime\
+${csv_delim}ValidateTestPipelineRunConditionMaxTime\
+${csv_delim}ValidateTestPipelineRunCreationAvgTime\
+${csv_delim}ValidateTestPipelineRunCreationMaxTime\
 ${csv_delim}ClusterCPUUsageAvg\
 ${csv_delim}ClusterDiskUsageAvg\
 ${csv_delim}ClusterMemoryUsageAvg\
@@ -158,12 +166,10 @@ ${csv_delim}ClusterNetworkReceiveBytesTotalAvg\
 ${csv_delim}ClusterNetworkTransmitBytesTotalAvg\
 ${csv_delim}NodeDiskIoTimeSecondsTotalAvg" \
         >"$max_concurrency_csv"
-    mc_files=$(find "$output_dir" -type f -name 'load-test.max-concurrency.*.json')
-    if [ -n "$mc_files" ]; then
-        for i in $mc_files; do
-            iteration_index=$(echo "$i" | sed -e 's,'"$output_dir"'/load-test.max-concurrency.\([0-9-]\+\).*,\1,g')
-
-            parked_go_routines=$(get_parked_go_routines "$iteration_index")
+    iteration_dirs=$(find "$ARTIFACT_DIR/iterations" -type d -name 'iteration-*')
+    if [ -n "$iteration_dirs" ]; then
+        for iteration_dir in $iteration_dirs; do
+            parked_go_routines=$(get_parked_go_routines "$iteration_dir")
             parked_go_routines_columns=""
             if [ -n "$parked_go_routines" ]; then
                 for g in $parked_go_routines; do
@@ -174,24 +180,33 @@ ${csv_delim}NodeDiskIoTimeSecondsTotalAvg" \
                     parked_go_routines_columns="$parked_go_routines_columns + $csv_delim_quoted"
                 done
             fi
+            echo "[$(date --utc -Ins)] Processing $iteration_dir/load-test.json"
             jq -rc "(.metadata.\"max-concurrency\".iteration | tostring) \
-                + $csv_delim_quoted + (.threads | tostring) \
-                + $csv_delim_quoted + (.workloadKPI | tostring) \
-                + $csv_delim_quoted + (.errorsTotal | tostring) \
-                + $csv_delim_quoted + (.createUserTimeAvg | tostring) \
-                + $csv_delim_quoted + (.createUserTimeMax | tostring) \
-                + $csv_delim_quoted + (.createApplicationsTimeAvg | tostring) \
-                + $csv_delim_quoted + (.createApplicationsTimeMax | tostring) \
-                + $csv_delim_quoted + (.createCDQsTimeAvg | tostring) \
-                + $csv_delim_quoted + (.createCDQsTimeMax | tostring) \
-                + $csv_delim_quoted + (.createComponentsTimeAvg | tostring) \
-                + $csv_delim_quoted + (.createComponentsTimeMax | tostring) \
-                + $csv_delim_quoted + (.runPipelineSucceededTimeAvg | tostring) \
-                + $csv_delim_quoted + (.runPipelineSucceededTimeMax | tostring) \
-                + $csv_delim_quoted + (.integrationTestsRunPipelineSucceededTimeAvg | tostring) \
-                + $csv_delim_quoted + (.integrationTestsRunPipelineSucceededTimeMax | tostring) \
-                + $csv_delim_quoted + (.deploymentSucceededTimeAvg | tostring) \
-                + $csv_delim_quoted + (.deploymentSucceededTimeMax | tostring) \
+                + $csv_delim_quoted + (.parameters.options.Concurrency | tostring) \
+                + $csv_delim_quoted + (.results.measurements.KPI.mean | tostring) \
+                + $csv_delim_quoted + (.results.measurements.KPI.errors | tostring) \
+                + $csv_delim_quoted + (.results.measurements.HandleUser.pass.duration.mean | tostring) \
+                + $csv_delim_quoted + (.results.measurements.HandleUser.pass.duration.max | tostring) \
+                + $csv_delim_quoted + (.results.measurements.createApplication.pass.duration.mean | tostring) \
+                + $csv_delim_quoted + (.results.measurements.createApplication.pass.duration.max | tostring) \
+                + $csv_delim_quoted + (.results.measurements.validateApplication.pass.duration.mean | tostring) \
+                + $csv_delim_quoted + (.results.measurements.validateApplication.pass.duration.max | tostring) \
+                + $csv_delim_quoted + (.results.measurements.createComponent.pass.duration.mean | tostring) \
+                + $csv_delim_quoted + (.results.measurements.createComponent.pass.duration.max | tostring) \
+                + $csv_delim_quoted + (.results.measurements.validatePipelineRunCondition.pass.duration.mean | tostring) \
+                + $csv_delim_quoted + (.results.measurements.validatePipelineRunCondition.pass.duration.max | tostring) \
+                + $csv_delim_quoted + (.results.measurements.validatePipelineRunCreation.pass.duration.mean | tostring) \
+                + $csv_delim_quoted + (.results.measurements.validatePipelineRunCreation.pass.duration.max | tostring) \
+                + $csv_delim_quoted + (.results.measurements.validatePipelineRunSignature.pass.duration.mean | tostring) \
+                + $csv_delim_quoted + (.results.measurements.validatePipelineRunSignature.pass.duration.max | tostring) \
+                + $csv_delim_quoted + (.results.measurements.createIntegrationTestScenario.pass.duration.mean | tostring) \
+                + $csv_delim_quoted + (.results.measurements.createIntegrationTestScenario.pass.duration.max | tostring) \
+                + $csv_delim_quoted + (.results.measurements.validateIntegrationTestScenario.pass.duration.mean | tostring) \
+                + $csv_delim_quoted + (.results.measurements.validateIntegrationTestScenario.pass.duration.max | tostring) \
+                + $csv_delim_quoted + (.results.measurements.validateTestPipelineRunCondition.pass.duration.mean | tostring) \
+                + $csv_delim_quoted + (.results.measurements.validateTestPipelineRunCondition.pass.duration.max | tostring) \
+                + $csv_delim_quoted + (.results.measurements.validateTestPipelineRunCreation.pass.duration.mean | tostring) \
+                + $csv_delim_quoted + (.results.measurements.validateTestPipelineRunCreation.pass.duration.max | tostring) \
                 + $csv_delim_quoted + (.measurements.cluster_cpu_usage_seconds_total_rate.mean | tostring) \
                 + $csv_delim_quoted + (.measurements.cluster_disk_throughput_total.mean | tostring) \
                 + $csv_delim_quoted + (.measurements.cluster_memory_usage_rss_total.mean | tostring) \
@@ -216,7 +231,7 @@ ${csv_delim}NodeDiskIoTimeSecondsTotalAvg" \
                 + $csv_delim_quoted + (.measurements.cluster_network_receive_bytes_total.mean | tostring) \
                 + $csv_delim_quoted + (.measurements.cluster_network_transmit_bytes_total.mean | tostring) \
                 + $csv_delim_quoted + (.measurements.node_disk_io_time_seconds_total.mean | tostring)" \
-                "$i" >>"$max_concurrency_csv"
+                "$iteration_dir/load-test.json" >>"$max_concurrency_csv"
         done
     else
         echo "[$(date --utc -Ins)] WARNING: No file matching '$output_dir/load-test.max-concurrency.*.json' found!"
@@ -224,7 +239,7 @@ ${csv_delim}NodeDiskIoTimeSecondsTotalAvg" \
 }
 
 get_parked_go_routines() {
-    goroutines_pprof=$(find "$output_dir" -name "tekton-results-watcher.tekton-results-watcher-*.goroutine-dump-0.$1.pprof")
+    goroutines_pprof=$(find "$1" -name "tekton-results-watcher.tekton-results-watcher-*.goroutine-dump-0.pprof")
     count=0
     for i in $goroutines_pprof; do
         if [ $count -gt 0 ]; then
