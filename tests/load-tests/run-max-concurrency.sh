@@ -1,35 +1,34 @@
 #!/bin/bash
 export MY_GITHUB_ORG GITHUB_TOKEN
 
-output_dir="${OUTPUT_DIR:-.}"
+OUTPUT_DIR="${OUTPUT_DIR:-.}"
+USER_PREFIX=${USER_PREFIX:-testuser}
 
 export TEKTON_PERF_PROFILE_CPU_PERIOD=${TEKTON_PERF_PROFILE_CPU_PERIOD:-${THRESHOLD:-300}}
-USER_PREFIX=${USER_PREFIX:-testuser}
 
 OPENSHIFT_API="${OPENSHIFT_API:-$(yq '.clusters[0].cluster.server' "$KUBECONFIG")}"
 OPENSHIFT_USERNAME="${OPENSHIFT_USERNAME:-kubeadmin}"
 OPENSHIFT_PASSWORD="${OPENSHIFT_PASSWORD:-$(cat "$KUBEADMIN_PASSWORD_FILE")}"
 
 load_test() {
-    local threads iteration index iteration_index
-    threads=${1:-1}
-    iteration=$(printf "%04d" "${2:-1}")
+    local workdir threads index
+    workdir=${1:-/tmp}
+    threads=${2:-1}
     index=$(printf "%04d" "$threads")
-    iteration_index="${iteration}-${index}"
     ## Enable CPU profiling in Tekton
     if [ "${TEKTON_PERF_ENABLE_CPU_PROFILING:-}" == "true" ]; then
         echo "Starting CPU profiling with pprof"
         for p in $(oc get pods -n openshift-pipelines -l app=tekton-pipelines-controller -o name); do
             pod="${p##*/}"
-            file="tekton-pipelines-controller.$pod.cpu-profile.$iteration_index"
-            oc exec -n openshift-pipelines "$p" -- bash -c "curl -SsL --max-time $((TEKTON_PERF_PROFILE_CPU_PERIOD + 10)) localhost:8008/debug/pprof/profile?seconds=${TEKTON_PERF_PROFILE_CPU_PERIOD} | base64" | base64 -d >"$output_dir/$file.pprof" &
-            echo $! >"$output_dir/$file.pid"
+            file="tekton-pipelines-controller.$pod.cpu-profile"
+            oc exec -n openshift-pipelines "$p" -- bash -c "curl -SsL --max-time $((TEKTON_PERF_PROFILE_CPU_PERIOD + 10)) localhost:8008/debug/pprof/profile?seconds=${TEKTON_PERF_PROFILE_CPU_PERIOD} | base64" | base64 -d >"$workdir/$file.pprof" &
+            echo $! >"$workdir/$file.pid"
         done
         for p in $(oc get pods -n tekton-results -l app.kubernetes.io/name=tekton-results-watcher -o name); do
             pod="${p##*/}"
-            file=tekton-results-watcher.$pod.cpu-profile.$iteration_index
-            oc exec -n tekton-results "$p" -c watcher -- bash -c "curl -SsL --max-time $((TEKTON_PERF_PROFILE_CPU_PERIOD + 10)) localhost:8008/debug/pprof/profile?seconds=${TEKTON_PERF_PROFILE_CPU_PERIOD} | base64" | base64 -d >"$output_dir/$file.pprof" &
-            echo $! >"$output_dir/$file.pid"
+            file="tekton-results-watcher.$pod.cpu-profile"
+            oc exec -n tekton-results "$p" -c watcher -- bash -c "curl -SsL --max-time $((TEKTON_PERF_PROFILE_CPU_PERIOD + 10)) localhost:8008/debug/pprof/profile?seconds=${TEKTON_PERF_PROFILE_CPU_PERIOD} | base64" | base64 -d >"$workdir/$file.pprof" &
+            echo $! >"$workdir/$file.pid"
         done
     fi
     ## Enable memory profiling in Tekton
@@ -37,57 +36,90 @@ load_test() {
         echo "Starting memory profiling of Tekton controller with pprof"
         for p in $(oc get pods -n openshift-pipelines -l app=tekton-pipelines-controller -o name); do
             pod="${p##*/}"
-            file="tekton-pipelines-controller.$pod.memory-profile.$iteration_index"
-            oc exec -n openshift-pipelines "$p" -- bash -c "curl -SsL --max-time $((TEKTON_PERF_PROFILE_CPU_PERIOD + 10)) localhost:8008/debug/pprof/heap?seconds=${TEKTON_PERF_PROFILE_CPU_PERIOD} | base64" | base64 -d >"$output_dir/$file.pprof" &
-            echo $! >"$output_dir/$file.pid"
+            file="tekton-pipelines-controller.$pod.memory-profile"
+            oc exec -n openshift-pipelines "$p" -- bash -c "curl -SsL --max-time $((TEKTON_PERF_PROFILE_CPU_PERIOD + 10)) localhost:8008/debug/pprof/heap?seconds=${TEKTON_PERF_PROFILE_CPU_PERIOD} | base64" | base64 -d >"$workdir/$file.pprof" &
+            echo $! >"$workdir/$file.pid"
         done
         echo "Starting memory profiling of Tekton results watcher with pprof"
         for p in $(oc get pods -n tekton-results -l app.kubernetes.io/name=tekton-results-watcher -o name); do
             pod="${p##*/}"
-            file=tekton-results-watcher.$pod.memory-profile.$iteration_index
-            oc exec -n tekton-results "$p" -c watcher -- bash -c "curl -SsL --max-time $((TEKTON_PERF_PROFILE_CPU_PERIOD + 10)) localhost:8008/debug/pprof/heap?seconds=${TEKTON_PERF_PROFILE_CPU_PERIOD} | base64" | base64 -d >"$output_dir/$file.pprof" &
-            echo $! >"$output_dir/$file.pid"
+            file="tekton-results-watcher.$pod.memory-profile"
+            oc exec -n tekton-results "$p" -c watcher -- bash -c "curl -SsL --max-time $((TEKTON_PERF_PROFILE_CPU_PERIOD + 10)) localhost:8008/debug/pprof/heap?seconds=${TEKTON_PERF_PROFILE_CPU_PERIOD} | base64" | base64 -d >"$workdir/$file.pprof" &
+            echo $! >"$workdir/$file.pid"
         done
     fi
-    rm -rvf "$output_dir/load-test.json"
-    rm -rvf "$output_dir/load-test.log"
+    rm -rvf "$workdir/load-test.json"
+    rm -rvf "$workdir/load-test.log"
+
+    date -Ins --utc >started
     go run loadtest.go \
-        --component-repo "${COMPONENT_REPO:-https://github.com/nodeshift-starters/devfile-sample.git}" \
+        --applications-count "${APPLICATIONS_COUNT:-1}" \
+        --build-pipeline-selector-bundle "${BUILD_PIPELINE_SELECTOR_BUNDLE:-}" \
+        --component-repo "${COMPONENT_REPO:-https://github.com/nodeshift-starters/devfile-sample}" \
+        --component-repo-container-context "${COMPONENT_REPO_CONTAINER_CONTEXT:-/}" \
+        --component-repo-container-file "${COMPONENT_REPO_CONTAINER_FILE:-Dockerfile}" \
+        --component-repo-revision "${COMPONENT_REPO_REVISION:-main}" \
+        --components-count "${COMPONENTS_COUNT:-1}" \
+        --concurrency "$threads" \
+        --journey-duration "${JOURNEY_DURATION:-1h}" \
+        --journey-repeats "${JOURNEY_REPEATS:-1}" \
+        --log-info \
+        --multiarch-workflow="${MULTIARCH_WORKFLOW:-false}" \
+        --output-dir "${workdir:-/tmp}" \
+        --pipeline-request-configure-pac="${PIPELINE_REQUEST_CONFIGURE_PAC:-false}" \
+        --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}" \
+        --purge="${PURGE:-true}" \
+        --quay-repo "${QUAY_REPO:-stonesoup_perfscale}" \
+        --test-scenario-git-url "${TEST_SCENARIO_GIT_URL:-https://github.com/konflux-ci/integration-examples.git}" \
+        --test-scenario-path-in-repo "${TEST_SCENARIO_PATH_IN_REPO:-pipelines/integration_resolver_pipeline_pass.yaml}" \
+        --test-scenario-revision "${TEST_SCENARIO_REVISION:-main}" \
         --username "$USER_PREFIX-$index" \
-        --users 1 \
-        -w="${WAIT_PIPELINES:-true}" \
-        -i="${WAIT_INTEGRATION_TESTS:-false}" \
-        -d="${WAIT_DEPLOYMENTS:-false}" \
-        -l \
-        -o "$output_dir" \
-        -t "$threads" \
-        --disable-metrics="${DISABLE_METRICS:-false}" \
-        --pushgateway-url "${PUSHGATEWAY_URL:-rhtapqe.com}" \
-        --enable-progress-bars="${ENABLE_PROGRESS_BARS:-false}" \
-        --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}"
+        --waitintegrationtestspipelines="${WAIT_INTEGRATION_TESTS:-true}" \
+        --waitpipelines="${WAIT_PIPELINES:-true}" \
+        2>&1 | tee "$workdir/load-test.log"
+    date -Ins --utc >ended
+
+    set +u
+    source venv/bin/activate
+    set -u
+
+    echo "[$(date --utc -Ins)] Create summary JSON with timings"
+    ./evaluate.py "$workdir/load-test-timings.csv" "$workdir/load-test-timings.json"
+
+    echo "[$(date --utc -Ins)] Creating main status data file"
+    STATUS_DATA_FILE="$workdir/load-test.json"
+    status_data.py \
+        --status-data-file "${STATUS_DATA_FILE}" \
+        --set "name=Konflux loadtest" "started=$(cat started)" "ended=$(cat ended)" \
+        --set-subtree-json "parameters.options=$workdir/load-test-options.json" "results.measurements=$workdir/load-test-timings.json"
+
+    deactivate
+
     if [ "${TEKTON_PERF_ENABLE_CPU_PROFILING:-}" == "true" ] || [ "${TEKTON_PERF_ENABLE_MEMORY_PROFILING:-}" == "true" ]; then
-        echo "Waiting for the Tekton profiling to finish up to ${TEKTON_PERF_PROFILE_CPU_PERIOD}s"
-        for pid_file in $(find "$output_dir" -name 'tekton*.pid'); do
+        echo "[$(date --utc -Ins)] Waiting for the Tekton profiling to finish up to ${TEKTON_PERF_PROFILE_CPU_PERIOD}s"
+        for pid_file in $(find "$workdir" -name 'tekton*.pid'); do
             wait "$(cat "$pid_file")"
             rm -rvf "$pid_file"
         done
-        echo "Getting Tekton controller goroutine dump"
+        echo "[$(date --utc -Ins)] Getting Tekton controller goroutine dump"
         for p in $(oc get pods -n openshift-pipelines -l app=tekton-pipelines-controller -o name); do
             pod="${p##*/}"
             for i in 0 1 2; do
-                file="tekton-pipelines-controller.$pod.goroutine-dump-$i.$iteration_index"
-                oc exec -n tekton-results "$p" -- bash -c "curl -SsL localhost:8008/debug/pprof/goroutine?debug=$i | base64" | base64 -d >"$output_dir/$file.pprof"
+                file="tekton-pipelines-controller.$pod.goroutine-dump-$i"
+                oc exec -n tekton-results "$p" -- bash -c "curl -SsL localhost:8008/debug/pprof/goroutine?debug=$i | base64" | base64 -d >"$workdir/$file.pprof"
             done
         done
-        echo "Getting Tekton results watcher goroutine dump"
+        echo "[$(date --utc -Ins)] Getting Tekton results watcher goroutine dump"
         for p in $(oc get pods -n tekton-results -l app.kubernetes.io/name=tekton-results-watcher -o name); do
             pod="${p##*/}"
             for i in 0 1 2; do
-                file="tekton-results-watcher.$pod.goroutine-dump-$i.$iteration_index"
-                oc exec -n tekton-results "$p" -c watcher -- bash -c "curl -SsL localhost:8008/debug/pprof/goroutine?debug=$i | base64" | base64 -d >"$output_dir/$file.pprof"
+                file="tekton-results-watcher.$pod.goroutine-dump-$i"
+                oc exec -n tekton-results "$p" -c watcher -- bash -c "curl -SsL localhost:8008/debug/pprof/goroutine?debug=$i | base64" | base64 -d >"$workdir/$file.pprof"
             done
         done
     fi
+
+    echo "[$(date --utc -Ins)] Finished processing results"
 }
 
 remove_finalizers() {
@@ -136,42 +168,60 @@ max_concurrency() {
         echo "Maximal allowed length of user prefix is 10 characters. The '$USER_PREFIX' length of ${#USER_PREFIX} exceeds the limit."
         exit 1
     else
-        output="$output_dir/load-tests.max-concurrency.json"
+        output="$OUTPUT_DIR/load-test.max-concurrency.json"
         IFS="," read -r -a maxConcurrencySteps <<<"$(echo "${MAX_CONCURRENCY_STEPS:-1\ 5\ 10\ 25\ 50\ 100\ 150\ 200}" | sed 's/ /,/g')"
-        maxThreads=${MAX_THREADS:-10}
-        threshold=${THRESHOLD:-300}
-        echo '{"startTimestamp":"'"$(date +%FT%T%:z)"'", "maxThreads": '"$maxThreads"', "maxConcurrencySteps": "'"${maxConcurrencySteps[*]}"'", "threshold": '"$threshold"', "maxConcurrencyReached": 0, "computedConcurrency": 0, "workloadKPI": 0, "endTimestamp": "", "errorsTotal": -1}' | jq >"$output"
+        maxThreads=${MAX_THREADS:-10}      # Do not go above this concurrency.
+        threshold_sec=${THRESHOLD:-300}    # In seconds. If KPI crosses this duration, stop.
+        threshold_err=${THRESHOLD_ERR:-10} # Failure ratio. When crossed, stop.
+        echo '{"started":"'"$(date +%FT%T%:z)"'", "maxThreads": '"$maxThreads"', "maxConcurrencySteps": "'"${maxConcurrencySteps[*]}"'", "threshold": '"$threshold_sec"', "thresholdErrors": '"$threshold_err"', "maxConcurrencyReached": 0, "computedConcurrency": 0, "workloadKPI": 0, "ended": "", "errorsTotal": -1}' | jq >"$output"
         iteration=0
+
+        {
+            python3 -m venv venv
+            set +u
+            source venv/bin/activate
+            set -u
+            python3 -m pip install -U pip
+            python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team-core&subdirectory=core"
+            python3 -m pip install tabulate
+            python3 -m pip install matplotlib
+            deactivate
+        } &>"$OUTPUT_DIR/monitoring-setup.log"
+
         for t in "${maxConcurrencySteps[@]}"; do
             iteration="$((iteration + 1))"
             if (("$t" > "$maxThreads")); then
                 break
             fi
+            echo "[$(date --utc -Ins)] Starting iteration ${iteration} with concurrency ${t}"
             oc login "$OPENSHIFT_API" -u "$OPENSHIFT_USERNAME" -p "$OPENSHIFT_PASSWORD"
             clean_namespaces
-            load_test "$t" "$iteration"
             iteration_index="$(printf "%04d" "$iteration")-$(printf "%04d" "$t")"
-            jq ".metadata.\"max-concurrency\".iteration = \"$(printf "%04d" "$iteration")\"" "$output_dir/load-tests.json" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output_dir/load-tests.json"
-            cp -vf "$output_dir/load-tests.json" "$output_dir/load-tests.max-concurrency.$iteration_index.json"
-            cp -vf "$output_dir/load-tests.log" "$output_dir/load-tests.max-concurrency.$iteration_index.log"
-            workloadKPI=$(jq '.workloadKPI' "$output_dir/load-tests.json")
-            if awk "BEGIN { exit !($workloadKPI > $threshold)}"; then
-                echo "The average time a workload took to succeed (${workloadKPI}s) has exceeded a threshold of ${threshold}s with $t threads."
+            workdir="${OUTPUT_DIR}/iteration-${iteration_index}"
+            mkdir "${workdir}"
+            load_test "$workdir" "$t"
+            jq ".metadata.\"max-concurrency\".iteration = \"$(printf "%04d" "$iteration")\"" "$workdir/load-test.json" >"$OUTPUT_DIR/$$.json" && mv -f "$OUTPUT_DIR/$$.json" "$workdir/load-test.json"
+            workloadKPI=$(jq '.results.measurements.KPI.mean' "$workdir/load-test.json")
+            workloadKPIerrors=$(jq '.results.measurements.KPI.errors' "$workdir/load-test.json")
+            if [ -z "$workloadKPI" ] || [ -z "$workloadKPIerrors" ] || [ "$workloadKPI" = "null" ] || [ "$workloadKPIerrors" = "null" ]; then
+                echo "[$(date --utc -Ins)] Error getting test iteration results: $workloadKPI/$workloadKPIerrors"
+                exit 1
+            elif awk "BEGIN { exit !($workloadKPI > $threshold_sec || $workloadKPIerrors / $t * 100 > $threshold_err)}"; then
+                echo "[$(date --utc -Ins)] The average time a workload took to succeed (${workloadKPI}s) or error rate (${workloadKPIerrors}/${t}) has exceeded a threshold of ${threshold_sec}s or ${threshold_err} error rate with $t threads."
                 workloadKPIOld=$(jq '.workloadKPI' "$output")
                 threadsOld=$(jq '.maxConcurrencyReached' "$output")
-                computedConcurrency=$(python3 -c "import sys; t = float(sys.argv[1]); a = float(sys.argv[2]); b = float(sys.argv[3]); c = float(sys.argv[4]); d = float(sys.argv[5]); print((t - b) / ((d - b) / (c - a)) + a)" "$threshold" "$threadsOld" "$workloadKPIOld" "$t" "$workloadKPI")
-                jq ".computedConcurrency = $computedConcurrency" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
+                computedConcurrency=$(python3 -c "import sys; t = float(sys.argv[1]); a = float(sys.argv[2]); b = float(sys.argv[3]); c = float(sys.argv[4]); d = float(sys.argv[5]); print((t - b) / ((d - b) / (c - a)) + a)" "$threshold_sec" "$threadsOld" "$workloadKPIOld" "$t" "$workloadKPI")
+                jq ".computedConcurrency = $computedConcurrency" "$output" >"$OUTPUT_DIR/$$.json" && mv -f "$OUTPUT_DIR/$$.json" "$output"
                 break
             else
-                jq ".maxConcurrencyReached = $t" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
-                jq ".workloadKPI = $workloadKPI" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
-                jq ".computedConcurrency = $t" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
-                jq '.endTimestamp = "'"$(date +%FT%T%:z)"'"' "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
-                errorsTotal=$(jq '.errorsTotal' "$output_dir/load-tests.json")
-                jq ".errorsTotal = $errorsTotal" "$output" >"$output_dir/$$.json" && mv -f "$output_dir/$$.json" "$output"
+                echo "[$(date --utc -Ins)] The average time a workload took to succeed (${workloadKPI}s) and error rate (${workloadKPIerrors}/${t}) looks good with $t threads."
+                jq ".maxConcurrencyReached = $t" "$output" >"$OUTPUT_DIR/$$.json" && mv -f "$OUTPUT_DIR/$$.json" "$output"
+                jq ".workloadKPI = $workloadKPI" "$output" >"$OUTPUT_DIR/$$.json" && mv -f "$OUTPUT_DIR/$$.json" "$output"
+                jq ".computedConcurrency = $t" "$output" >"$OUTPUT_DIR/$$.json" && mv -f "$OUTPUT_DIR/$$.json" "$output"
+                jq '.ended = "'"$(date +%FT%T%:z)"'"' "$output" >"$OUTPUT_DIR/$$.json" && mv -f "$OUTPUT_DIR/$$.json" "$output"
+                jq ".errorsTotal = $workloadKPIerrors" "$output" >"$OUTPUT_DIR/$$.json" && mv -f "$OUTPUT_DIR/$$.json" "$output"
             fi
         done
-        DRY_RUN=false ./clear.sh "$USER_PREFIX"
     fi
 }
 

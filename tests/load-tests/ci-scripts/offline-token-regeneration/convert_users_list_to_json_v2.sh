@@ -15,11 +15,8 @@ while read -r username password token ssourl apiurl verified; do
     echo "{\"username\":\"$username\", \"password\":\"$password\", \"token\":\"$token\", \"ssourl\":\"$ssourl\", \"apiurl\":\"$apiurl\", \"verified\":$verified}"
 done < "$input_file" > temp.json
 
-# Use jq to wrap the objects into an array within a "creds" object and output to the final file
-jq '{ "creds": . }' -s temp.json > "$output_file"
-
-# Use jq to wrap the objects into an array within a "creds" object, update ssourl and username fields, and output to the final file
-jq --arg ssourlVal "$ssourl_actual_value" '{ "creds": [ .[] | .ssourl = $ssourlVal | .username |= gsub("_"; "-") ] }' -s temp.json > "$output_file"
+# Use jq to wrap the objects into an array, update ssourl and output to the final file
+jq --arg ssourlVal "$ssourl_actual_value" '[ .[] | .ssourl = $ssourlVal ]' -s temp.json > "$output_file"
 
 # Clean up the temporary file
 rm temp.json

@@ -27,17 +27,6 @@ jobs:
           # Path to SARIF file relative to the root of the repository
           sarif_file: results.sarif
 
-  image_build:
-    name: Check docker build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Check if dockerimage build is working
-        run: docker build -f ./Dockerfile .
-
   unit_tests:
     name: Unit tests
     runs-on: ubuntu-latest

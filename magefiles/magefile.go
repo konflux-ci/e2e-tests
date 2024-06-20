@@ -270,7 +270,6 @@ func (ci CI) PerformOpenShiftUpgrade() error {
 }
 
 func (ci CI) TestE2E() error {
-	var testFailure bool
 
 	if err := ci.init(); err != nil {
 		return fmt.Errorf("error when running ci init: %v", err)
@@ -296,34 +295,20 @@ func (ci CI) TestE2E() error {
 		}
 	}
 
-	if requiresSprayProxyRegistering {
-		err := registerPacServer()
-		if err != nil {
-			os.Setenv(constants.SKIP_PAC_TESTS_ENV, "true")
-			if alertErr := HandleErrorWithAlert(fmt.Errorf("failed to register SprayProxy: %+v", err), slack.ErrorSeverityLevelError); alertErr != nil {
-				return alertErr
-			}
-		}
-	}
-
 	if err := RunE2ETests(); err != nil {
-		testFailure = true
-	}
-
-	if requiresSprayProxyRegistering && sprayProxyConfig != nil {
-		err := unregisterPacServer()
-		if err != nil {
-			if alertErr := HandleErrorWithAlert(fmt.Errorf("failed to unregister SprayProxy: %+v", err), slack.ErrorSeverityLevelInfo); alertErr != nil {
-				klog.Warning(alertErr)
-			}
-		}
-	}
-
-	if testFailure {
-		return fmt.Errorf("error when running e2e tests - see the log above for more details")
+		return fmt.Errorf("error when running e2e tests: %+v", err)
 	}
 
 	return nil
+}
+
+func (ci CI) UnregisterSprayproxy() {
+	err := unregisterPacServer()
+	if err != nil {
+		if alertErr := HandleErrorWithAlert(fmt.Errorf("failed to unregister SprayProxy: %+v", err), slack.ErrorSeverityLevelInfo); alertErr != nil {
+			klog.Warning(alertErr)
+		}
+	}
 }
 
 func RunE2ETests() error {
@@ -774,7 +759,20 @@ func BootstrapCluster() error {
 		return fmt.Errorf("failed to initialize installation controller: %+v", err)
 	}
 
-	return ic.InstallAppStudioPreviewMode()
+	if err := ic.InstallAppStudioPreviewMode(); err != nil {
+		return err
+	}
+
+	if os.Getenv("CI") == "true" && requiresSprayProxyRegistering {
+		err := registerPacServer()
+		if err != nil {
+			os.Setenv(constants.SKIP_PAC_TESTS_ENV, "true")
+			if alertErr := HandleErrorWithAlert(fmt.Errorf("failed to register SprayProxy: %+v", err), slack.ErrorSeverityLevelError); alertErr != nil {
+				return alertErr
+			}
+		}
+	}
+	return nil
 }
 
 func isPRPairingRequired(repoForPairing string) bool {
@@ -1049,17 +1047,20 @@ func registerPacServer() error {
 }
 
 func unregisterPacServer() error {
-	if sprayProxyConfig == nil {
-		return fmt.Errorf("SprayProxy config is empty")
+	var err error
+	var pacHost string
+	sprayProxyConfig, err = newSprayProxy()
+	if err != nil {
+		return fmt.Errorf("failed to set up SprayProxy credentials: %+v", err)
 	}
 	// for debugging purposes
 	klog.Infof("Before unregistering pac server...")
-	err := printRegisteredPacServers()
+	err = printRegisteredPacServers()
 	if err != nil {
 		klog.Error(err)
 	}
 
-	pacHost, err := sprayproxy.GetPaCHost()
+	pacHost, err = sprayproxy.GetPaCHost()
 	if err != nil {
 		return fmt.Errorf("failed to get PaC host: %+v", err)
 	}

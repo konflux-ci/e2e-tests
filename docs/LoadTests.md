@@ -1,31 +1,22 @@
-# Red Hat AppStudio Load Test Scripts
-
-This Test Section Provides Load Testing Scripts for Red Hat AppStudio 
-
-## Requirements 
-
-- Install AppStudio in Preview Mode refer [infra-deployments](https://github.com/redhat-appstudio/infra-deployments) for installation details 
-- Install sandbox operators in e2e mode
-- Encode your docker config json to a base64 encoded string 
+# Konflux Load Test
 
 ## Running the script
-1. Change your directory to `tests/load-tests` 
-2. Environment variables are required to set for the e2e framework that the load test uses. Refer to [Running the tests](https://github.com/redhat-appstudio/e2e-tests#running-the-tests).
+1. Change your directory to `tests/load-tests`
+2. Environment variables are required to set for the e2e framework that the load test uses. Refer to [Installation](Installation.md).
 3. Run the bash script
 ```
-./run.sh 
+./run.sh
 ```
-For help run `go run main.go --help`.
-You can configure the parameters by editing `run.sh` and add/change parameters(e.g. number of users, number of batches...).
 
-## How does this work 
-The Script works in Steps
-- Starts by creating `n` number of UserSignup CRD's which will create `n` number of NameSpaces , number of users can be changed by the flag `--users`
-- Then it proceeds by creating AppStudio Applications for each user followed by Appstudio Component, i.e Creates users on a 1:1 basis 
-- Creating the Component will start the pipelines, if the `-w` flag is given it will wait for the pipelines to finish,
-- if the '-i' flag is given it will wait till integration tests have finished  
-- if the '-d' flag is given it will wait until deployments have finished rolling out changes, then print results,
-- Then after the tests are completed it will dump the results / stats, on error the stats will still get dumped along with the trace
+For help run `go run loadtest.go --help`.
 
-## How to contribute
-Just edit the file `cmd/loadTests.go` 
+## How does this work
+1. Start a thread for each user journey (here, Concurrency = 1)
+  1. Start a thread for each per-application journey (here, ApplicationsCount = 4)
+    1. Create Application
+    2. Create IntegrationTestScenario
+    3. Create ComponentDetectionQuery
+    4. Start a thread for each per-component journey (here, ComponentsCount = 1)
+      1. Create Component with annotation “skip-initial-checks” set to true/false (here, PipelineSkipInitialChecks = true/false)
+      2. Wait for build PipelineRun to finish
+      3. Wait for test PipelineRun to finish

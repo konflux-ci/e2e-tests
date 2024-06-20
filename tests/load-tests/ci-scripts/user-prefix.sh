@@ -1,10 +1,6 @@
-#!/bin/bash
+# This is supposed to be sourced
 
-set -o nounset
-set -o errexit
-set -o pipefail
-
-export USER_PREFIX
+export USER_PREFIX="${USER_PREFIX:-testuser}"
 
 if [ -n "${PULL_NUMBER:-}" ]; then
     new_prefix="${USER_PREFIX}-${PULL_NUMBER}"
