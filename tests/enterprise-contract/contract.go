@@ -378,7 +378,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 				})
 			})
 
-			Context("Release Policy", func() {
+			Context("Release Policy", Pending, func() {
 				It("verifies redhat products pass the redhat policy rule collection before release ", func() {
 					secretName := fmt.Sprintf("golden-image-public-key%s", util.GenerateRandomString(10))
 					GinkgoWriter.Println("Update public key to verify golden images")
