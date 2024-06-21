@@ -146,7 +146,6 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 
 				// Create an application in a specific namespace
 				It("creates an application", Label(devEnvTestLabel, stageEnvTestLabel), func() {
-					GinkgoWriter.Printf("Parallel process %d\n", GinkgoParallelProcess())
 					createdApplication, err := fw.AsKubeDeveloper.HasController.CreateApplication(appTest.ApplicationName, namespace)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(createdApplication.Spec.DisplayName).To(Equal(appTest.ApplicationName))
