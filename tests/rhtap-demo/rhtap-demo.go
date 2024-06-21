@@ -129,12 +129,7 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 				AfterAll(func() {
 					if !appTest.Stage {
 						if !(strings.EqualFold(os.Getenv("E2E_SKIP_CLEANUP"), "true")) && !CurrentSpecReport().Failed() { // RHTAPBUGS-978: temporary timeout to 15min
-							if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 15*time.Minute); err != nil {
-								if err := fw.AsKubeAdmin.StoreAllArtifactsForNamespace(namespace); err != nil {
-									Fail(fmt.Sprintf("error archiving artifacts:\n%s", err))
-								}
-								Fail(fmt.Sprintf("error deleting all componentns in namespace:\n%s", err))
-							}
+							Expect(fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 15*time.Minute)).To(Succeed())
 							Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 							Expect(fw.AsKubeAdmin.IntegrationController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 							Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)).To(Succeed())
