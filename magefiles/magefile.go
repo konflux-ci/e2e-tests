@@ -35,6 +35,7 @@ import (
 	"github.com/konflux-ci/image-controller/pkg/quay"
 	"github.com/magefile/mage/sh"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	"k8s.io/apimachinery/pkg/selection"
 )
 
 const (
@@ -536,6 +537,206 @@ func setRequiredEnvVars() error {
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
 		}
 	}
+
+	return nil
+}
+
+func SetupMultiArchTests() error {
+	klog.Infof("going to create new Tekton bundle remote-build for the purpose of testing multi-arch PR")
+	var err error
+	var defaultBundleRef string
+	var tektonObj runtime.Object
+	//as a example for now
+	platformType := "linux/amd64"
+
+	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
+	quayOrg := utils.GetEnv(constants.DEFAULT_QUAY_ORG_ENV, constants.DefaultQuayOrg)
+	newMultiPlatformBuilderPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
+	var newRemotePipeline, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newMultiPlatformBuilderPipelineImg, tag))
+	var newPipelineYaml []byte
+
+	if err = utils.CreateDockerConfigFile(os.Getenv("QUAY_TOKEN")); err != nil {
+		return fmt.Errorf("failed to create docker config file: %+v", err)
+	}
+	if defaultBundleRef, err = tekton.GetDefaultPipelineBundleRef(constants.BuildPipelineConfigConfigMapYamlURL, "docker-build"); err != nil {
+		return fmt.Errorf("failed to get the pipeline bundle ref: %+v", err)
+	}
+	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(defaultBundleRef, "pipeline", "docker-build"); err != nil {
+		return fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
+	}
+	dockerPipelineObject := tektonObj.(*tektonapi.Pipeline)
+
+	var currentBuildahTaskRef string
+	for i := range dockerPipelineObject.PipelineSpec().Tasks {
+		t := &dockerPipelineObject.PipelineSpec().Tasks[i]
+		if t.Name == "build-source-image" {
+			t.RunAfter = []string{"build-container"}
+			for i, p := range t.Params {
+				tmpParam := &t.Params[i]
+				if p.Name == "BASE_IMAGES" {
+					tmpParam.Value = *tektonapi.NewStructuredValues("$(tasks.build-container-amd64.results.BASE_IMAGES_DIGESTS)")
+				}
+			}
+		}
+		if t.Name == "ecosystem-cert-preflight-checks" {
+			t.RunAfter = []string{"build-container"}
+			for i, p := range t.Params {
+				tmpParam := &t.Params[i]
+				if p.Name == "image-url" {
+					tmpParam.Value = *tektonapi.NewStructuredValues("$(tasks.build-container-amd64.results.IMAGE_URL)")
+				}
+			}
+		}
+		if t.Name == "clair-scan" || t.Name == "clamav-scan" {
+			t.RunAfter = []string{"build-container"}
+			for i, p := range t.Params {
+				tmpParam := &t.Params[i]
+				if p.Name == "image-digest" {
+					tmpParam.Value = *tektonapi.NewStructuredValues("$(tasks.build-container-amd64.results.IMAGE_DIGEST)")
+				}
+				if p.Name == "image-url" {
+					tmpParam.Value = *tektonapi.NewStructuredValues("$(tasks.build-container-amd64.results.IMAGE_URL)")
+				}
+			}
+		}
+		if t.Name == "deprecated-base-image-check" {
+			t.RunAfter = []string{"build-container"}
+			for i, p := range t.Params {
+				tmpParam := &t.Params[i]
+				if p.Name == "IMAGE_URL" {
+					tmpParam.Value = *tektonapi.NewStructuredValues("$(tasks.build-container-amd64.results.IMAGE_URL)")
+				}
+				if p.Name == "IMAGES_DIGESTS" {
+					tmpParam.Value = *tektonapi.NewStructuredValues("$(tasks.build-container-amd64.results.IMAGES_DIGESTS)")
+				}
+				if p.Name == "BASE_IMAGES_DIGESTS" {
+					tmpParam.Value = *tektonapi.NewStructuredValues("$(tasks.build-container-amd64.results.BASE_IMAGES_DIGESTS)")
+				}
+			}
+		}
+		if t.Name == "sbom-json-check" {
+			t.RunAfter = []string{"build-container"}
+			for i, p := range t.Params {
+				tmpParam := &t.Params[i]
+				if p.Name == "IMAGE_URL" {
+					tmpParam.Value = *tektonapi.NewStructuredValues("$(tasks.build-container-amd64.results.IMAGE_URL)")
+				}
+				if p.Name == "IMAGES_DIGESTS" {
+					tmpParam.Value = *tektonapi.NewStructuredValues("$(tasks.build-container-amd64.results.IMAGES_DIGESTS)")
+				}
+			}
+		}
+	}
+	for i := range dockerPipelineObject.PipelineSpec().Finally {
+		t := &dockerPipelineObject.PipelineSpec().Finally[i]
+		if t.Name == "show-sbom" {
+			for i, p := range t.Params {
+				tmpParam := &t.Params[i]
+				if p.Name == "IMAGE_URL" {
+					tmpParam.Value = *tektonapi.NewStructuredValues("$(tasks.build-container-amd64.results.IMAGE_URL)")
+				}
+			}
+		}
+	}
+	for i := range dockerPipelineObject.PipelineSpec().Tasks {
+		t := &dockerPipelineObject.PipelineSpec().Tasks[i]
+		params := t.TaskRef.Params
+		var lastBundle *tektonapi.Param
+		var lastName *tektonapi.Param
+		buildahTask := false
+		for i, param := range params {
+			if param.Name == "bundle" {
+				lastBundle = &t.TaskRef.Params[i]
+				} else if param.Name == "name" && param.Value.StringVal == "buildah" {
+					lastName = &t.TaskRef.Params[i]
+					buildahTask = true
+				}
+			}
+			if buildahTask {
+				t.Name = "build-container-amd64"
+				currentBuildahTaskRef = lastBundle.Value.StringVal
+				klog.Infof("Found current task ref %s", currentBuildahTaskRef)
+				//TODO: current use pinned sha?
+				lastBundle.Value = *tektonapi.NewStructuredValues("quay.io/redhat-appstudio-tekton-catalog/task-buildah-remote:0.1-ac185e95bbd7a25c1c4acf86995cbaf30eebedc4")
+				lastName.Value = *tektonapi.NewStructuredValues("buildah-remote")
+				t.Params = append(t.Params, tektonapi.Param{Name: "PLATFORM", Value: *tektonapi.NewStructuredValues("$(params.PLATFORM)")})
+				dockerPipelineObject.Spec.Params = append(dockerPipelineObject.PipelineSpec().Params, tektonapi.ParamSpec{Name: "PLATFORM", Default: tektonapi.NewStructuredValues(platformType)})
+				for i, result := range dockerPipelineObject.Spec.Results {
+					if result.Name == "JAVA_COMMUNITY_DEPENDENCIES" {
+						javaResult := &dockerPipelineObject.Spec.Results[i]
+						javaResult.Value = *tektonapi.NewStructuredValues("$(tasks.build-container-amd64.results.JAVA_COMMUNITY_DEPENDENCIES)")
+					}
+				}
+				dockerPipelineObject.Name = "multi-arch-pipeline"
+				//dockerPipelineObject.Name = "buildah-remote-pipeline"
+				break
+			}
+		}
+		newTaskRef := &tektonapi.TaskRef{
+			ResolverRef: tektonapi.ResolverRef{
+				Params:	[]tektonapi.Param{
+					{
+						Name: "name",
+						Value: *tektonapi.NewStructuredValues("build-image-manifest"),
+					},
+					{
+						Name: "bundle",
+						//?use the fixed sha
+						Value: *tektonapi.NewStructuredValues("quay.io/redhat-appstudio-tekton-catalog/task-build-image-manifest:0.1@sha256:e064b63b2311d23d6bf6538347cb4eb18c980d61883f48149bc9c728f76b276c"),
+					},
+					{
+						Name: "kind",
+						Value: *tektonapi.NewStructuredValues("task"),
+					},
+				},
+				Resolver: "bundles",
+			},
+		}
+
+		newTask := &tektonapi.PipelineTask{
+			Name: "build-container",
+			RunAfter: []string{"build-container-amd64"},
+			TaskRef: newTaskRef,
+			Params: []tektonapi.Param{
+				{
+					Name: "IMAGE",
+					Value: *tektonapi.NewStructuredValues("$(params.output-image)"),
+				},
+				{
+					Name: "COMMIT_SHA",
+					Value: *tektonapi.NewStructuredValues("$(tasks.clone-repository.results.commit)"),
+				},
+				{
+					Name: "IMAGES",
+					Value: tektonapi.ParamValue{
+						Type: tektonapi.ParamTypeArray,
+						ArrayVal: []string{
+							"$(tasks.build-container-amd64.results.IMAGE_URL)@$(tasks.build-container-amd64.results.IMAGE_DIGEST)",
+						},
+					},
+				},
+			},
+			When: tektonapi.WhenExpressions{{
+				Input: "$(tasks.init.results.build)",
+				Operator: selection.In,
+				Values:   []string{"true"},
+			}},
+		}
+
+		dockerPipelineObject.Spec.Tasks = append(dockerPipelineObject.PipelineSpec().Tasks, *newTask)
+		if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
+			return fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
+		}
+
+		keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
+		authOption := remoteimg.WithAuthFromKeychain(keychain)
+
+		if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newRemotePipeline, authOption); err != nil {
+			return fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
+		}
+		platform := strings.ToUpper(strings.Split(platformType, "/")[1])
+		klog.Infof("SETTING ENV VAR %s to value %s in platform %s\n", "MULTI_ARCH_PIPELINE", newRemotePipeline.String(), platform)
+		os.Setenv("MULTI_ARCH_PIPELINE", newRemotePipeline.String())
 
 	return nil
 }
