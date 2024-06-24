@@ -58,7 +58,10 @@ clean-gitops-repositories:
 	DRY_RUN=false ./mage -v local:cleanupGithubOrg
 
 clean-github-webhooks:
-	./mage -v cleanWebHooks
+	./mage -v cleanGitHubWebHooks
+
+clean-gitlab-webhooks:
+	./mage -v cleanGitLabWebHooks
 
 clean-quay-repos-and-robots:
 	./mage -v local:cleanupQuayReposAndRobots
