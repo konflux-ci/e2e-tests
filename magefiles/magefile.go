@@ -36,6 +36,7 @@ import (
 	"github.com/konflux-ci/image-controller/pkg/quay"
 	"github.com/magefile/mage/sh"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	gl "github.com/xanzy/go-gitlab"
 )
 
 const (
@@ -870,7 +871,7 @@ func CleanGitLabWebHooks() error {
 	if err != nil {
 		return err
 	}
-	webhooks, _, err := gc.GetClient().Projects.ListProjectHooks(projectID, nil)
+	webhooks, _, err := gc.GetClient().Projects.ListProjectHooks(projectID, &gl.ListProjectHooksOptions{PerPage: 100})
 	if err != nil {
 		return fmt.Errorf("failed to list project hooks: %v", err)
 	}
