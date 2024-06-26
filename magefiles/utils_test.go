@@ -106,22 +106,22 @@ func TestCleanupQuayReposAndRobots(t *testing.T) {
 	timeFormat := "Mon, 02 Jan 2006 15:04:05 -0700"
 
 	deletedRepos := []quay.Repository{
-		{Name: "e2e-demos/test-old"},
-		{Name: "has-e2e/test-old"},
+		{Name: "rhtap-demo/test-old"},
+		{Name: "multi-platform/test-old"},
 	}
 	preservedRepos := []quay.Repository{
-		{Name: "e2e-demos/test-new"},
-		{Name: "has-e2e/test-new"},
+		{Name: "rhtap-demo/test-new"},
+		{Name: "multi-platform/test-new"},
 		{Name: "other/test-new"},
 		{Name: "other/test-old"},
 	}
 	deletedRobots := []quay.RobotAccount{
-		{Name: "test-org+e2e-demostest-old", Created: time.Now().Add(-25 * time.Hour).Format(timeFormat)},
-		{Name: "test-org+has-e2etest-old", Created: time.Now().Add(-25 * time.Hour).Format(timeFormat)},
+		{Name: "test-org+rhtap-demotest-old", Created: time.Now().Add(-25 * time.Hour).Format(timeFormat)},
+		{Name: "test-org+multi-platformtest-old", Created: time.Now().Add(-25 * time.Hour).Format(timeFormat)},
 	}
 	preservedRobots := []quay.RobotAccount{
-		{Name: "test-org+e2e-demostest-new", Created: time.Now().Format(timeFormat)},
-		{Name: "test-org+has-e2etest-new", Created: time.Now().Format(timeFormat)},
+		{Name: "test-org+rhtap-demotest-new", Created: time.Now().Format(timeFormat)},
+		{Name: "test-org+multi-platformtest-new", Created: time.Now().Format(timeFormat)},
 		{Name: "test-org+othertest-old", Created: time.Now().Add(-25 * time.Hour).Format(timeFormat)},
 		{Name: "test-org+othertest-new", Created: time.Now().Format(timeFormat)},
 	}
