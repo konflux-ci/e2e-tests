@@ -85,6 +85,11 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 						"repository": releasecommon.ReleasedImagePushRepo,
 					},
 				},
+				"defaults": map[string]interface{}{
+					"tags": []string{
+						"latest",
+					},
+				},
 			},
 		})
 		Expect(err).NotTo(HaveOccurred())
