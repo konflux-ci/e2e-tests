@@ -156,6 +156,11 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 						"repository": "quay.io/" + utils.GetQuayIOOrganization() + "/simplepython",
 					},
 				},
+				"defaults": map[string]interface{}{
+					"tags": []string{
+						"latest",
+					},
+				},
 			},
 			"pyxis": map[string]interface{}{
 				"server": "stage",
