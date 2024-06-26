@@ -27,7 +27,7 @@ import (
 	"github.com/magefile/mage/sh"
 )
 
-const quayPrefixesToDeleteRegexp = "e2e-demos|has-e2e|multi-comp|build-e2e"
+const quayPrefixesToDeleteRegexp = "rhtap[-_]demo|happy-path|multi-platform|ex-registry|gitlab|build-e2e|build-templates|byoc|user1|spi|release-|integration|jvm|stat-rep|nbe|stack|rs[-_]demos|push-pyxis"
 
 func getRemoteAndBranchNameFromPRLink(url string) (remote, branchName string, err error) {
 	ghRes := &GithubPRInfo{}
