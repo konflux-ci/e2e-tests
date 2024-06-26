@@ -36,7 +36,7 @@ RUN curl -L "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq
     chmod +x /usr/local/bin/yq && \
     yq --version
 
-FROM registry.ci.openshift.org/openshift/release:golang-1.21
+FROM registry.redhat.io/rhel8/go-toolset:1.21.9-3.1718100004
 
 WORKDIR /konflux-e2e
 
