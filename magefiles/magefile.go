@@ -332,7 +332,10 @@ func PreflightChecks() error {
 }
 
 func setRequiredEnvVars() error {
-
+	// Load test jobs require no additional setup
+	if strings.Contains(jobName, "-load-test") {
+		return nil
+	}
 	// Konflux Nightly E2E job
 	if strings.Contains(jobName, "-periodic") {
 		requiresMultiPlatformTests = true
