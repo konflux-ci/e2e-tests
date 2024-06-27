@@ -48,10 +48,10 @@ spec:
       computeResources:
         requests:
           cpu: "2"
-          memory: "4Gi"
+          memory: "8Gi"
         limits:
-          cpu: "3"
-          memory: "6Gi"
+          cpu: "4"
+          memory: "12Gi"
       image: $(params.container-image)
       volumeMounts:
         - name: konflux-secret-volume
