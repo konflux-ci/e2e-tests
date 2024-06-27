@@ -1,4 +1,8 @@
-FROM registry.ci.openshift.org/openshift/release:golang-1.21 AS builder
+FROM registry.access.redhat.com/ubi9/go-toolset:1.21.10-1 AS builder
+
+ENV GOBIN=$GOPATH/bin
+
+USER root
 
 # renovate: datasource=repology depName=homebrew/openshift-cli
 ARG OC_VERSION=4.14.8
@@ -8,7 +12,6 @@ ARG JQ_VERSION=1.6
 ARG YQ_VERSION=4.43.1
 
 WORKDIR /konflux-e2e
-USER root
 
 COPY go.mod .
 COPY go.sum .
@@ -17,7 +20,6 @@ COPY cmd/ cmd/
 COPY magefiles/ magefiles/
 COPY pkg/ pkg/
 COPY tests/ tests/
-COPY Makefile .
 
 RUN go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo
 RUN ginkgo build ./cmd
@@ -47,5 +49,5 @@ COPY --from=builder /usr/local/bin/jq /usr/local/bin/jq
 COPY --from=builder /usr/local/bin/yq /usr/local/bin/yq
 COPY --from=builder /usr/local/bin/oc /usr/local/bin/oc
 COPY --from=builder /usr/local/bin/kubectl /usr/local/bin/kubectl
-COPY --from=builder /go/bin/ginkgo /usr/local/bin
+COPY --from=builder $GOBIN/ginkgo /usr/local/bin
 COPY --from=builder /konflux-e2e/cmd/cmd.test konflux-e2e.test
