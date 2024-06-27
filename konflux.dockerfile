@@ -41,11 +41,11 @@ FROM registry.access.redhat.com/ubi9/go-toolset:1.21.10-1
 WORKDIR /konflux-e2e
 
 ENV GOBIN=$GOPATH/bin
-ENV E2E_BIN_PATH=/konflux-e2e/konflux-e2e
+ENV E2E_BIN_PATH=/konflux-e2e/konflux-e2e.test
 
 COPY --from=builder /usr/local/bin/jq /usr/local/bin/jq
 COPY --from=builder /usr/local/bin/yq /usr/local/bin/yq
 COPY --from=builder /usr/local/bin/oc /usr/local/bin/oc
 COPY --from=builder /usr/local/bin/kubectl /usr/local/bin/kubectl
 COPY --from=builder /go/bin/ginkgo /usr/local/bin
-COPY --from=builder /konflux-e2e/cmd/cmd.test konflux-e2e
+COPY --from=builder /konflux-e2e/cmd/cmd.test konflux-e2e.test
