@@ -33,22 +33,23 @@ import (
 )
 
 const (
-	Ec2ArmTag              = "multi-platform-e2e-arm64"
-	HostConfig             = "host-config"
-	ControllerNamespace    = "multi-platform-controller"
-	AwsSecretName          = "awskeys"
-	IbmSecretName          = "ibmkey"
-	IbmKey                 = "multi-platform-tests"
-	SshSecretName          = "sshkeys"
-	Ec2User                = "ec2-user"
-	AwsRegion              = "us-east-1"
-	AwsPlatform            = "linux/arm64"
-	DynamicMaxInstances    = "1"
-	IbmZUrl                = "https://us-east.iaas.cloud.ibm.com/v1"
-	IbmPUrl                = "https://us-south.power-iaas.cloud.ibm.com"
-	CRN                    = "crn:v1:bluemix:public:power-iaas:dal10:a/934e118c399b4a28a70afdf2210d708f:8c9ef568-16a5-4aa2-bfd5-946349c9aeac::"
-	MultiPlatformSecretKey = "build.appstudio.redhat.com/multi-platform-secret"
-	MultiPlatformConfigKey = "build.appstudio.redhat.com/multi-platform-config"
+	Ec2ArmTag                 = "multi-platform-e2e-arm64"
+	HostConfig                = "host-config"
+	ControllerNamespace       = "multi-platform-controller"
+	AwsSecretName             = "awskeys"
+	IbmSecretName             = "ibmkey"
+	IbmKey                    = "multi-platform-tests"
+	SshSecretName             = "sshkeys"
+	Ec2User                   = "ec2-user"
+	AwsRegion                 = "us-east-1"
+	AwsPlatform               = "linux/arm64"
+	DynamicMaxInstances       = "1"
+	IbmZUrl                   = "https://us-east.iaas.cloud.ibm.com/v1"
+	IbmPUrl                   = "https://us-south.power-iaas.cloud.ibm.com"
+	CRN                       = "crn:v1:bluemix:public:power-iaas:dal10:a/934e118c399b4a28a70afdf2210d708f:8c9ef568-16a5-4aa2-bfd5-946349c9aeac::"
+	MultiPlatformSecretKey    = "build.appstudio.redhat.com/multi-platform-secret"
+	MultiPlatformConfigKey    = "build.appstudio.redhat.com/multi-platform-config"
+	MultiPlatformDynamicLabel = "multi-platform-dynamic"
 )
 
 var (
@@ -59,7 +60,7 @@ var (
 	interval                     = 10 * time.Second
 )
 
-var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E tests", Pending, Label("multi-platform"), func() {
+var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E tests", Label("multi-platform"), func() {
 	var f *framework.Framework
 	AfterEach(framework.ReportFailure(&f))
 	var err error
@@ -175,7 +176,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			})
 		})
 	})
-	Describe("aws dynamic allocation", Label("aws-dynamic"), func() {
+	Describe("aws dynamic allocation", Label("aws-dynamic"), Label(MultiPlatformDynamicLabel), func() {
 		var testNamespace, applicationName, componentName, multiPlatformSecretName, multiPlatformTaskName, dynamicInstanceTag, instanceId string
 		var component *appservice.Component
 
@@ -257,7 +258,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 		})
 	})
 	// TODO: Enable the test after https://issues.redhat.com/browse/KFLUXBUGS-1179 is fixed
-	Describe("ibm system z dynamic allocation", Label("ibmz-dynamic"), Pending, func() {
+	Describe("ibm system z dynamic allocation", Label("ibmz-dynamic"), Label(MultiPlatformDynamicLabel), Pending, func() {
 		var testNamespace, applicationName, componentName, multiPlatformSecretName, multiPlatformTaskName, dynamicInstanceTag, instanceId string
 		var component *appservice.Component
 
@@ -336,7 +337,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 		})
 	})
 	// TODO: Enable the test after https://issues.redhat.com/browse/KFLUXBUGS-1179 is fixed
-	Describe("ibm power pc dynamic allocation", Label("ibmp-dynamic"), Pending, func() {
+	Describe("ibm power pc dynamic allocation", Label("ibmp-dynamic"), Label(MultiPlatformDynamicLabel), Pending, func() {
 		var testNamespace, applicationName, componentName, multiPlatformSecretName, multiPlatformTaskName, dynamicInstanceTag, instanceId string
 		var component *appservice.Component
 
@@ -889,7 +890,7 @@ func createConfigMapForDynamicInstance(f *framework.Framework, instanceTag strin
 	hostConfig.Data["dynamic.linux-arm64.region"] = AwsRegion
 	hostConfig.Data["dynamic.linux-arm64.ami"] = "ami-09d5d0912f52f9514"
 	hostConfig.Data["dynamic.linux-arm64.instance-type"] = "t4g.micro"
-	hostConfig.Data["dynamic.linux-arm64.key-name"] = "multi-platform-e2e"
+	hostConfig.Data["dynamic.linux-arm64.key-name"] = "multi-platform-e2e-tests"
 	hostConfig.Data["dynamic.linux-arm64.aws-secret"] = AwsSecretName
 	hostConfig.Data["dynamic.linux-arm64.ssh-secret"] = SshSecretName
 	hostConfig.Data["dynamic.linux-arm64.security-group"] = "launch-wizard-7"
