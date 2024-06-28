@@ -233,7 +233,7 @@ func createADVSReleasePlan(advsReleasePlanName string, devFw framework.Framework
 	_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(advsReleasePlanName, devNamespace, advsAppName,
 		managedNamespace, autoRelease, &runtime.RawExtension{
 			Raw: data,
-		})
+		}, nil)
 	Expect(err).NotTo(HaveOccurred())
 }
 
