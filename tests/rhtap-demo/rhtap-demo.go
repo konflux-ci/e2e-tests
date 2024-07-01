@@ -41,13 +41,6 @@ import (
 )
 
 const (
-
-	// Secret Name created by spi to interact with github
-	SPIGithubSecretName string = "e2e-github-secret"
-
-	// Environment name used for e2e-tests demos
-	SPIQuaySecretName string = "e2e-quay-secret"
-
 	// Timeouts
 	appDeployTimeout            = time.Minute * 20
 	appRouteAvailableTimeout    = time.Minute * 5
@@ -128,17 +121,8 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 				// Remove all resources created by the tests
 				AfterAll(func() {
 					if !appTest.Stage {
-						// collect SPI ResourceQuota metrics (temporary)
-						err := fw.AsKubeAdmin.CommonController.GetResourceQuotaInfo(devEnvTestLabel, namespace, "appstudio-crds-spi")
-						Expect(err).NotTo(HaveOccurred())
-
 						if !(strings.EqualFold(os.Getenv("E2E_SKIP_CLEANUP"), "true")) && !CurrentSpecReport().Failed() { // RHTAPBUGS-978: temporary timeout to 15min
-							if err := fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 15*time.Minute); err != nil {
-								if err := fw.AsKubeAdmin.StoreAllArtifactsForNamespace(namespace); err != nil {
-									Fail(fmt.Sprintf("error archiving artifacts:\n%s", err))
-								}
-								Fail(fmt.Sprintf("error deleting all componentns in namespace:\n%s", err))
-							}
+							Expect(fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, 15*time.Minute)).To(Succeed())
 							Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 							Expect(fw.AsKubeAdmin.IntegrationController.DeleteAllSnapshotsInASpecificNamespace(namespace, 30*time.Second)).To(Succeed())
 							Expect(fw.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)).To(Succeed())
@@ -155,7 +139,6 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 
 				// Create an application in a specific namespace
 				It("creates an application", Label(devEnvTestLabel, stageEnvTestLabel), func() {
-					GinkgoWriter.Printf("Parallel process %d\n", GinkgoParallelProcess())
 					createdApplication, err := fw.AsKubeDeveloper.HasController.CreateApplication(appTest.ApplicationName, namespace)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(createdApplication.Spec.DisplayName).To(Equal(appTest.ApplicationName))
@@ -169,22 +152,7 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 					componentList := []*appservice.Component{}
 					var secret string
 
-					if componentSpec.Private {
-						secret = SPIGithubSecretName
-						It(fmt.Sprintf("injects manually SPI token for component %s", componentSpec.Name), Label(devEnvTestLabel, stageEnvTestLabel), func() {
-							// Inject spi tokens to work with private components
-							if componentSpec.ContainerSource != "" {
-								// More info about manual token upload for quay.io here: https://github.com/redhat-appstudio/service-provider-integration-operator/pull/115
-								oauthCredentials := `{"access_token":"` + utils.GetEnv(constants.QUAY_OAUTH_TOKEN_ENV, "") + `", "username":"` + utils.GetEnv(constants.QUAY_OAUTH_USER_ENV, "") + `"}`
-
-								_ = fw.AsKubeAdmin.SPIController.InjectManualSPIToken(namespace, componentSpec.ContainerSource, oauthCredentials, corev1.SecretTypeDockerConfigJson, SPIQuaySecretName)
-							}
-							githubCredentials := `{"access_token":"` + utils.GetEnv(constants.GITHUB_TOKEN_ENV, "") + `"}`
-							_ = fw.AsKubeDeveloper.SPIController.InjectManualSPIToken(namespace, componentSpec.GitSourceUrl, githubCredentials, corev1.SecretTypeBasicAuth, SPIGithubSecretName)
-						})
-					}
-
-					It(fmt.Sprintf("creates componentdetectionquery for component %s", componentSpec.Name), Label(devEnvTestLabel, stageEnvTestLabel), func() {
+					It("creates new branch for advanced build", Label(devEnvTestLabel, stageEnvTestLabel), func() {
 						gitRevision = componentSpec.GitSourceRevision
 						// In case the advanced build (PaC) is enabled for this component,
 						// we need to create a new branch that we will target

@@ -20,7 +20,6 @@ require (
 	github.com/gofri/go-github-ratelimit v1.0.3-0.20230428184158-a500e14de53f
 	github.com/google/go-containerregistry v0.19.1
 	github.com/google/go-github/v44 v44.1.0
-	github.com/google/uuid v1.6.0
 	github.com/gosuri/uiprogress v0.0.1
 	github.com/gosuri/uitable v0.0.4
 	github.com/h2non/gock v1.2.0
@@ -40,10 +39,8 @@ require (
 	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
-	github.com/redhat-appstudio-qe/perf-monitoring/api v0.0.0-20231003074147-a076f9e620da
+	github.com/redhat-appstudio-qe/perf-monitoring/api v0.0.0-20231109095506-db2dbe52ea5e
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20240126122210-0e2ee7e2e5b0
-	github.com/redhat-appstudio/remote-secret v0.0.0-20240103070316-c146261dd544
-	github.com/redhat-appstudio/service-provider-integration-operator v0.2023.22-0.20230713080056-eae17aa8c172
 	github.com/slack-go/slack v0.12.3
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
@@ -60,7 +57,6 @@ require (
 	k8s.io/client-go v1.5.2
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.120.1
-	k8s.io/kubectl v0.29.2
 	k8s.io/test-infra v0.0.0-20231004164548-dee1fe445410
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	knative.dev/pkg v0.0.0-20240219120257-9227ebb57a4e
@@ -204,6 +200,7 @@ require (
 	github.com/google/gofuzz v1.2.1-0.20210504230335-f78f29fc09ea // indirect
 	github.com/google/pprof v0.0.0-20240424215950-a892ee059fd6 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/gosuri/uilive v0.0.4 // indirect
@@ -261,6 +258,7 @@ require (
 	github.com/prometheus/statsd_exporter v0.23.1 // indirect
 	github.com/redhat-appstudio/application-api v0.0.0-20240106104232-18f545e48a03 // indirect
 	github.com/redhat-appstudio/image-controller v0.0.0-20231003082540-48893226ba8b // indirect
+	github.com/redhat-appstudio/remote-secret v0.0.0-20240103070316-c146261dd544 // indirect
 	github.com/redis/go-redis/v9 v9.0.5 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
@@ -309,6 +307,7 @@ require (
 	k8s.io/component-helpers v0.29.4 // indirect
 	k8s.io/kube-aggregator v0.29.2 // indirect
 	k8s.io/kube-openapi v0.0.0-20240221221325-2ac9dc51f3f1 // indirect
+	k8s.io/kubectl v0.29.2 // indirect
 	k8s.io/kubernetes v1.29.2 // indirect
 	oras.land/oras-go/v2 v2.3.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
