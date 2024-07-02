@@ -4,7 +4,7 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/konflux-ci/release-service/tekton/utils"
+	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
@@ -15,7 +15,7 @@ import (
 )
 
 // CreateReleasePlan creates a new ReleasePlan using the given parameters.
-func (r *ReleaseController) CreateReleasePlan(name, namespace, application, targetNamespace, autoReleaseLabel string, data *runtime.RawExtension) (*releaseApi.ReleasePlan, error) {
+func (r *ReleaseController) CreateReleasePlan(name, namespace, application, targetNamespace, autoReleaseLabel string, data *runtime.RawExtension, tenantPipeline *tektonutils.ParameterizedPipeline) (*releaseApi.ReleasePlan, error) {
 	var releasePlan *releaseApi.ReleasePlan = &releaseApi.ReleasePlan{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: name,
@@ -29,6 +29,7 @@ func (r *ReleaseController) CreateReleasePlan(name, namespace, application, targ
 		Spec: releaseApi.ReleasePlanSpec{
 			Application: application,
 			Data:        data,
+			Pipeline:    tenantPipeline,
 			Target:      targetNamespace,
 		},
 	}
@@ -42,7 +43,7 @@ func (r *ReleaseController) CreateReleasePlan(name, namespace, application, targ
 }
 
 // CreateReleasePlanAdmission creates a new ReleasePlanAdmission using the given parameters.
-func (r *ReleaseController) CreateReleasePlanAdmission(name, namespace, environment, origin, policy, serviceAccount string, applications []string, autoRelease bool, pipelineRef *utils.PipelineRef, data *runtime.RawExtension) (*releaseApi.ReleasePlanAdmission, error) {
+func (r *ReleaseController) CreateReleasePlanAdmission(name, namespace, environment, origin, policy, serviceAccountName string, applications []string, autoRelease bool, pipelineRef *tektonutils.PipelineRef, data *runtime.RawExtension) (*releaseApi.ReleasePlanAdmission, error) {
 	releasePlanAdmission := &releaseApi.ReleasePlanAdmission{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -56,9 +57,9 @@ func (r *ReleaseController) CreateReleasePlanAdmission(name, namespace, environm
 			Data:         data,
 			Environment:  environment,
 			Origin:       origin,
-			Pipeline: &utils.Pipeline{
+			Pipeline: &tektonutils.Pipeline{
 				PipelineRef:    *pipelineRef,
-				ServiceAccount: serviceAccount,
+				ServiceAccountName: serviceAccountName,
 			},
 			Policy: policy,
 		},

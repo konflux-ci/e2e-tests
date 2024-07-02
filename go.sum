@@ -1505,6 +1505,8 @@ github.com/konflux-ci/operator-toolkit v0.0.0-20240402130556-ef6dcbeca69d h1:z7j
 github.com/konflux-ci/operator-toolkit v0.0.0-20240402130556-ef6dcbeca69d/go.mod h1:AcChx7FjpYSIkDvQgaUKyauuF0PXm3ivB5MqZSC9Eis=
 github.com/konflux-ci/release-service v0.0.0-20240610124538-758a1d48d002 h1:BHUMLu2XlyxfsdIzI9ru3SGUYtBrFOQIl6zmMNnJYes=
 github.com/konflux-ci/release-service v0.0.0-20240610124538-758a1d48d002/go.mod h1:p+6Ua4y2VUJRW2BrwSXtVoV7b4PwL8PwbjJb2LaPu44=
+github.com/konflux-ci/release-service v0.0.0-20240624130704-c6133cc0b908 h1:fVFlyCIB4eniA708isOgzCKYOeAXAsg8WFEZp1QQ3A4=
+github.com/konflux-ci/release-service v0.0.0-20240624130704-c6133cc0b908/go.mod h1:p+6Ua4y2VUJRW2BrwSXtVoV7b4PwL8PwbjJb2LaPu44=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.3/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/kr/fs v0.1.0/go.mod h1:FFnZGqtBN9Gxj7eW1uZ42v5BccTP0vu6NEaFoC2HwRg=
@@ -1795,8 +1797,12 @@ github.com/redhat-appstudio/application-api v0.0.0-20240106104232-18f545e48a03 h
 github.com/redhat-appstudio/application-api v0.0.0-20240106104232-18f545e48a03/go.mod h1:YvckuKHe82eWloGk0/BpSw4YYG2owrGZAanztbOj3pQ=
 github.com/redhat-appstudio/image-controller v0.0.0-20231003082540-48893226ba8b h1:kM+t/FZSMVUydXIbii+bduAJov7pcADCybP9u1WSBcw=
 github.com/redhat-appstudio/image-controller v0.0.0-20231003082540-48893226ba8b/go.mod h1:fNP2oUEejlHZUkAz2f0ViKNl0D8w4cD8QVoGy1pri9c=
+github.com/redhat-appstudio/integration-service v0.0.0-20231025084434-b3f521c408d1 h1:Qo5VBBhi8ihz3mPaCQq0lGZAiCRAqhbv1XZkzyBTfGA=
+github.com/redhat-appstudio/integration-service v0.0.0-20231025084434-b3f521c408d1/go.mod h1:bh8uJ4whJ92ef5PXH6Rfm4F8tRXkDAlSYR7Pqp1LLT4=
 github.com/redhat-appstudio/jvm-build-service v0.0.0-20240126122210-0e2ee7e2e5b0 h1:wqP4/99Lg68zRpzt9zSc5OGf3zigaBlvflDuDLmDLdM=
 github.com/redhat-appstudio/jvm-build-service v0.0.0-20240126122210-0e2ee7e2e5b0/go.mod h1:awZP3qi/GpBhQ50N3rRjFPsGbFperwWYSTN+OVG1Gb8=
+github.com/redhat-appstudio/operator-toolkit v0.0.0-20231201124606-2087182322ae h1:98thWrMrr9YUNCVNGqkZxKfZkaWUmMC5dmkgAI7p3uY=
+github.com/redhat-appstudio/operator-toolkit v0.0.0-20231201124606-2087182322ae/go.mod h1:7cX2+4KGZLJ4Yoj+1v0iV5hkCGBzbSd9wkNJQjCdDJs=
 github.com/redhat-appstudio/remote-secret v0.0.0-20240103070316-c146261dd544 h1:QOyNP7ZEP9Q+7H6r7kCOtREhRgnpk7gz3AsqF6iHlVg=
 github.com/redhat-appstudio/remote-secret v0.0.0-20240103070316-c146261dd544/go.mod h1:kK35B2x2Q0pfVzR85L5gMG0lwhsUsrRkSNa0s4qaufQ=
 github.com/redhat-appstudio/service-provider-integration-operator v0.2023.22-0.20230713080056-eae17aa8c172 h1:Zibq2RBTzcoDgZcTfM5k2o1qrKuix3YPtYQ/NuP039Y=
