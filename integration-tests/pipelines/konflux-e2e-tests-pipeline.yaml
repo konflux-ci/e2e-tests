@@ -2,10 +2,10 @@
   apiVersion: tekton.dev/v1beta1
   kind: Pipeline
   metadata:
-    name: rhtap-installer-e2e
+    name: konflux-e2e-tests
   spec:
     description: |-
-      This pipeline automates the process of running end-to-end tests for RHTAP
+      This pipeline automates the process of running end-to-end tests for Konflux
       using a ROSA (Red Hat OpenShift Service on AWS) cluster. The pipeline provisions
       the ROSA cluster, installs RHTAP using the installer, runs the tests, collects artifacts,
       and finally deprovisions the ROSA cluster.
@@ -108,9 +108,9 @@
           resolver: git
           params:
             - name: url
-              value: https://github.com/flacatus/e2e-tests.git
+              value: https://github.com/konflux-ci/e2e-tests.git
             - name: revision
-              value: konflux_ci
+              value: main
             - name: pathInRepo
               value: .tekton/integration-tests/tasks/konflux-e2e.yaml
         params:

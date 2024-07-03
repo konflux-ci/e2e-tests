@@ -114,7 +114,7 @@ func (ci CI) init() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(pr.RemoteName, pr.BranchName)
+
 	return nil
 }
 
