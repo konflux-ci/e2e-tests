@@ -443,7 +443,7 @@ spec:
         - name: SCRIPT
           value: $(params.update-build-tasks-dockerfiles-script)
         - name: TARGET_GH_REPO
-          value: konflux-ci/build-definitions
+          value: konflux-ci/build-tasks-dockerfiles
         # https://github.com/apps/rh-tap-build-team in https://github.com/konflux-ci
         - name: GITHUB_APP_INSTALLATION_ID
           value: "51073377"
