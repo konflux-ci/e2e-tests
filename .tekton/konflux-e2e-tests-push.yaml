@@ -25,6 +25,12 @@ spec:
     value: quay.io/redhat-user-workloads/rhtap-qe-shared-tenant/konflux-e2e/konflux-e2e-tests:{{revision}}
   - name: dockerfile
     value: Dockerfile
+  - name: build-definitions-update-script
+    value: |
+      sed -i -E 's/[0-9a-f]{40}/{{ revision }}/g' .tekton/tasks/e2e-test.yaml
+  - name: update-build-tasks-dockerfiles-script
+    value: |
+      sed -i -E 's/[0-9a-f]{40}/{{ revision }}/g' integration-tests/tasks/e2e-test.yaml
   pipelineSpec:
     finally:
     - name: show-sbom
@@ -119,6 +125,10 @@ spec:
       description: Path to a file with build arguments for buildah, see https://www.mankier.com/1/buildah-build#--build-arg-file
       name: build-args-file
       type: string
+    - default: ""
+      name: build-definitions-update-script
+    - default: ""
+      name: update-build-tasks-dockerfiles-script
     results:
     - description: ""
       name: IMAGE_URL
@@ -365,28 +375,6 @@ spec:
       workspaces:
       - name: workspace
         workspace: workspace
-    - name: clamav-scan
-      params:
-      - name: image-digest
-        value: $(tasks.build-container.results.IMAGE_DIGEST)
-      - name: image-url
-        value: $(tasks.build-container.results.IMAGE_URL)
-      runAfter:
-      - build-container
-      taskRef:
-        params:
-        - name: name
-          value: clamav-scan
-        - name: bundle
-          value: quay.io/konflux-ci/tekton-catalog/task-clamav-scan:0.1@sha256:46fcff23fd21772572c5fd62f6bbaf8fa2913d3d464c685bf7a2d0da05a448c0
-        - name: kind
-          value: task
-        resolver: bundles
-      when:
-      - input: $(params.skip-checks)
-        operator: in
-        values:
-        - "false"
     - name: sbom-json-check
       params:
       - name: IMAGE_URL
@@ -413,6 +401,8 @@ spec:
       params:
       - name: IMAGE
         value: $(tasks.build-container.results.IMAGE_URL)
+      - name: ADDITIONAL_TAGS
+        value: ["latest"]
       runAfter:
       - build-container
       taskRef:
@@ -424,6 +414,42 @@ spec:
         - name: kind
           value: task
         resolver: bundles
+    - name: update-build-definitions-repo
+      runAfter:
+      - build-container
+      params:
+        - name: ORIGIN_REPO
+          value: $(params.git-url)
+        - name: REVISION
+          value: $(params.revision)
+        - name: SCRIPT
+          value: $(params.build-definitions-update-script)
+        - name: TARGET_GH_REPO
+          value: konflux-ci/build-definitions
+        # https://github.com/apps/rh-tap-build-team in https://github.com/konflux-ci
+        - name: GITHUB_APP_INSTALLATION_ID
+          value: "51073377"
+      taskRef:
+        bundle: quay.io/redhat-appstudio-tekton-catalog/task-update-infra-deployments:0.1
+        name: update-infra-deployments
+    - name: update-build-tasks-dockerfiles-repo
+      runAfter:
+      - build-container
+      params:
+        - name: ORIGIN_REPO
+          value: $(params.git-url)
+        - name: REVISION
+          value: $(params.revision)
+        - name: SCRIPT
+          value: $(params.update-build-tasks-dockerfiles-script)
+        - name: TARGET_GH_REPO
+          value: konflux-ci/build-definitions
+        # https://github.com/apps/rh-tap-build-team in https://github.com/konflux-ci
+        - name: GITHUB_APP_INSTALLATION_ID
+          value: "51073377"
+      taskRef:
+        bundle: quay.io/redhat-appstudio-tekton-catalog/task-update-infra-deployments:0.1
+        name: update-infra-deployments
     workspaces:
     - name: workspace
     - name: git-auth
