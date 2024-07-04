@@ -1018,6 +1018,16 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return true, nil
 				}, time.Minute*2, constants.PipelineRunPollingInterval).Should(BeTrue(), "timeout while checking if any more pipelinerun is triggered")
 			})
+			It("when second component is deleted, pac pr branch should not exist in the repo", Pending, func() {
+				timeout = time.Second * 60
+				interval = time.Second * 1
+				Expect(f.AsKubeAdmin.HasController.DeleteComponent(secondComponentName, testNamespace, true)).To(Succeed())
+				Eventually(func() bool {
+					exists, err := f.AsKubeAdmin.CommonController.Github.ExistsRef(secretLookupGitSourceRepoTwoName, secondPacBranchName)
+					Expect(err).ShouldNot(HaveOccurred())
+					return exists
+				}, timeout, interval).Should(BeFalse(), fmt.Sprintf("timed out when waiting for the branch %s to be deleted from %s repository", secondPacBranchName, secretLookupGitSourceRepoTwoName))
+			})
 		})
 	})
 	Describe("test build annotations", Label("annotations"), Ordered, func() {
