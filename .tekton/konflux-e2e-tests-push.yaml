@@ -430,8 +430,14 @@ spec:
         - name: GITHUB_APP_INSTALLATION_ID
           value: "51073377"
       taskRef:
-        bundle: quay.io/redhat-appstudio-tekton-catalog/task-update-infra-deployments:0.1
-        name: update-infra-deployments
+        params:
+        - name: name
+          value: update-infra-deployments
+        - name: bundle
+          value: quay.io/redhat-appstudio-tekton-catalog/task-update-infra-deployments:0.1
+        - name: kind
+          value: task
+        resolver: bundles
     - name: update-build-tasks-dockerfiles-repo
       runAfter:
       - build-container
@@ -448,8 +454,14 @@ spec:
         - name: GITHUB_APP_INSTALLATION_ID
           value: "51073377"
       taskRef:
-        bundle: quay.io/redhat-appstudio-tekton-catalog/task-update-infra-deployments:0.1
-        name: update-infra-deployments
+        params:
+        - name: name
+          value: update-infra-deployments
+        - name: bundle
+          value: quay.io/redhat-appstudio-tekton-catalog/task-update-infra-deployments:0.1
+        - name: kind
+          value: task
+        resolver: bundles
     workspaces:
     - name: workspace
     - name: git-auth
