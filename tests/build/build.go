@@ -27,7 +27,6 @@ import (
 	"github.com/konflux-ci/build-service/controllers"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
-	imagecontollers "github.com/konflux-ci/image-controller/controllers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
@@ -42,7 +41,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 	defer GinkgoRecover()
 
 	Describe("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), func() {
-		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, defaultBranchTestComponentName, imageRepoName, robotAccountName string
+		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, defaultBranchTestComponentName, imageRepoName, pullRobotAccountName, pushRobotAccountName string
 		var component *appservice.Component
 		var plr *pipeline.PipelineRun
 
@@ -211,21 +210,22 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				}, timeout, interval).Should(BeTrue(), "component build status has unexpected content")
 			})
 			It("image repo and robot account created successfully", func() {
-				component, err := f.AsKubeAdmin.HasController.GetComponent(defaultBranchTestComponentName, testNamespace)
-				Expect(err).ShouldNot(HaveOccurred(), "could not get component %s in the %s namespace", defaultBranchTestComponentName, testNamespace)
-
-				annotations := component.GetAnnotations()
-				imageRepoName, err = build.GetQuayImageName(annotations)
-				Expect(err).ShouldNot(HaveOccurred(), "failed to read image repo name from %+v", annotations)
+				imageRepoName, err = f.AsKubeAdmin.ImageController.GetImageName(testNamespace, defaultBranchTestComponentName)
+				Expect(err).ShouldNot(HaveOccurred(), "failed to read image repo for component %s", defaultBranchTestComponentName)
+				Expect(imageRepoName).ShouldNot(BeEmpty(), "image repo name is empty")
 
 				imageExist, err := build.DoesImageRepoExistInQuay(imageRepoName)
 				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if image repo exists in quay with error: %+v", err)
 				Expect(imageExist).To(BeTrue(), "quay image does not exists")
 
-				robotAccountName = build.GetRobotAccountName(imageRepoName)
-				robotAccountExist, err := build.DoesRobotAccountExistInQuay(robotAccountName)
-				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if robot account exists in quay with error: %+v", err)
-				Expect(robotAccountExist).To(BeTrue(), "quay robot account does not exists")
+				pullRobotAccountName, pushRobotAccountName, err := f.AsKubeAdmin.ImageController.GetRobotAccounts(testNamespace, defaultBranchTestComponentName)
+				Expect(err).ShouldNot(HaveOccurred(), "failed to get robot account names")
+				pullRobotAccountExist, err := build.DoesRobotAccountExistInQuay(pullRobotAccountName)
+				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if pull robot account exists in quay with error: %+v", err)
+				Expect(pullRobotAccountExist).To(BeTrue(), "pull robot account does not exists in quay")
+				pushRobotAccountExist, err := build.DoesRobotAccountExistInQuay(pushRobotAccountName)
+				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if push robot account exists in quay with error: %+v", err)
+				Expect(pushRobotAccountExist).To(BeTrue(), "push robot account does not exists in quay")
 			})
 			It("created image repo is private", func() {
 				isPublic, err := build.IsImageRepoPublic(imageRepoName)
@@ -268,8 +268,16 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				// Check robot account should be deleted
 				timeout = time.Second * 60
 				Eventually(func() (bool, error) {
-					return build.DoesRobotAccountExistInQuay(robotAccountName)
-				}, timeout, interval).Should(BeFalse(), fmt.Sprintf("timed out when checking if robot account %s got deleted", robotAccountName))
+					pullRobotAccountExists, err := build.DoesRobotAccountExistInQuay(pullRobotAccountName)
+					if err != nil {
+						return false, err
+					}
+					pushRobotAccountExists, err := build.DoesRobotAccountExistInQuay(pushRobotAccountName)
+					if err != nil {
+						return false, err
+					}
+					return pullRobotAccountExists || pushRobotAccountExists, nil
+				}, timeout, interval).Should(BeFalse(), fmt.Sprintf("timed out when checking if robot accounts %s and %s got deleted", pullRobotAccountName, pushRobotAccountName))
 
 			})
 		})
@@ -344,22 +352,22 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				prHeadSha = plr.Labels["pipelinesascode.tekton.dev/sha"]
 			})
 			It("image repo and robot account created successfully", func() {
-
-				component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
-				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("could not get component %s in the %s namespace", componentName, testNamespace))
-
-				annotations := component.GetAnnotations()
-				imageRepoName, err = build.GetQuayImageName(annotations)
-				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed to read image repo name from %+v", annotations))
+				imageRepoName, err = f.AsKubeAdmin.ImageController.GetImageName(testNamespace, componentName)
+				Expect(err).ShouldNot(HaveOccurred(), "failed to read image repo for component %s", componentName)
+				Expect(imageRepoName).ShouldNot(BeEmpty(), "image repo name is empty")
 
 				imageExist, err := build.DoesImageRepoExistInQuay(imageRepoName)
-				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while checking if image repo exists in quay with error: %+v", err))
-				Expect(imageExist).To(BeTrue(), fmt.Sprintf("quay image for repo %s does not exists", imageRepoName))
+				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if image repo exists in quay with error: %+v", err)
+				Expect(imageExist).To(BeTrue(), "quay image does not exists")
 
-				robotAccountName = build.GetRobotAccountName(imageRepoName)
-				robotAccountExist, err := build.DoesRobotAccountExistInQuay(robotAccountName)
-				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while checking if robot account exists in quay with error: %+v", err))
-				Expect(robotAccountExist).To(BeTrue(), fmt.Sprintf("quay robot account %s does not exists", robotAccountName))
+				pullRobotAccountName, pushRobotAccountName, err := f.AsKubeAdmin.ImageController.GetRobotAccounts(testNamespace, componentName)
+				Expect(err).ShouldNot(HaveOccurred(), "failed to get robot account names")
+				pullRobotAccountExist, err := build.DoesRobotAccountExistInQuay(pullRobotAccountName)
+				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if pull robot account exists in quay with error: %+v", err)
+				Expect(pullRobotAccountExist).To(BeTrue(), "pull robot account does not exists in quay")
+				pushRobotAccountExist, err := build.DoesRobotAccountExistInQuay(pushRobotAccountName)
+				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if push robot account exists in quay with error: %+v", err)
+				Expect(pushRobotAccountExist).To(BeTrue(), "push robot account does not exists in quay")
 
 			})
 			It("floating tags are created successfully", func() {
@@ -525,49 +533,24 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			It("After updating image visibility to private, it should not trigger another PipelineRun", func() {
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 				Eventually(func() error {
-					err := f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.ImageRepoGenerateAnnotationName, constants.ImageControllerAnnotationRequestPrivateRepo[controllers.ImageRepoGenerateAnnotationName], testNamespace)
+					_, err := f.AsKubeAdmin.ImageController.ChangeVisibilityToPrivate(testNamespace, applicationName, componentName)
 					if err != nil {
-						GinkgoWriter.Printf("failed to update the component %s with error %v\n", componentName, err)
+						GinkgoWriter.Printf("failed to change visibility to private with error %v\n", err)
 						return err
 					}
 					return nil
-				}, time.Second*20, time.Second*1).Should(Succeed(), fmt.Sprintf("timed out when trying to update the component %s/%s", testNamespace, componentName))
+				}, time.Second*20, time.Second*1).Should(Succeed(), fmt.Sprintf("timed out when trying to change visibility of the image repos to private in %s/%s", testNamespace, componentName))
 
 				Consistently(func() bool {
 					componentPipelineRun, _ := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 					return componentPipelineRun == nil
 				}, time.Minute, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("expected no PipelineRun to be triggered for the component %s in %s namespace", componentName, testNamespace))
 			})
-			It("check image repo status after switching to private", func() {
-				var imageStatus imagecontollers.ImageRepositoryStatus
-				Eventually(func() (bool, error) {
-					component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
-					if err != nil {
-						GinkgoWriter.Printf("error while getting component: %v\n", err)
-						return false, err
-					}
-
-					imageAnnotationValue := component.Annotations[controllers.ImageRepoAnnotationName]
-					GinkgoWriter.Printf("image annotation value: %s\n", imageAnnotationValue)
-					statusBytes := []byte(imageAnnotationValue)
-
-					err = json.Unmarshal(statusBytes, &imageStatus)
-					if err != nil {
-						GinkgoWriter.Printf("cannot unmarshal image status: %v\n", err)
-						return false, err
-					}
-					if imageStatus.Message != "" && strings.Contains(imageStatus.Message, "Quay organization plan doesn't allow private image repositories") {
-						return false, fmt.Errorf("failed to switch to private image")
-					}
-					return true, nil
-				}, time.Second*20, time.Second*2).Should(BeTrue(), "component image status annotation has unexpected content")
-			})
 			It("image repo is updated to private", func() {
 				isPublic, err := build.IsImageRepoPublic(imageRepoName)
 				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while checking if the image repo %s is private", imageRepoName))
 				Expect(isPublic).To(BeFalse(), "Expected image repo to changed to private, but it is public")
 			})
-
 		})
 
 		When("the component is removed and recreated (with the same name in the same namespace)", Label("build-custom-branch"), func() {
@@ -584,10 +567,18 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Eventually(func() (bool, error) {
 					return build.DoesImageRepoExistInQuay(imageRepoName)
 				}, timeout, interval).Should(BeFalse(), fmt.Sprintf("timed out when waiting for image repo %s to be deleted", imageRepoName))
-				// Check removal of robot account
+				// Check removal of robot accounts
 				Eventually(func() (bool, error) {
-					return build.DoesRobotAccountExistInQuay(robotAccountName)
-				}, timeout, interval).Should(BeFalse(), fmt.Sprintf("timed out when waiting for robot account %s to be deleted", robotAccountName))
+					pullRobotAccountExists, err := build.DoesRobotAccountExistInQuay(pullRobotAccountName)
+					if err != nil {
+						return false, err
+					}
+					pushRobotAccountExists, err := build.DoesRobotAccountExistInQuay(pushRobotAccountName)
+					if err != nil {
+						return false, err
+					}
+					return pullRobotAccountExists || pushRobotAccountExists, nil
+				}, timeout, interval).Should(BeFalse(), fmt.Sprintf("timed out when checking if robot accounts %s and %s got deleted", pullRobotAccountName, pushRobotAccountName))
 
 				componentObj := appservice.ComponentSpec{
 					ComponentName: componentName,
@@ -1411,7 +1402,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 		ChildComponentDef := multiComponent{repoName: componentDependenciesChildRepoName, baseRevision: componentDependenciesChildGitRevision, baseBranch: componentDependenciesChildDefaultBranch}
 		ParentComponentDef := multiComponent{repoName: componentDependenciesParentRepoName, baseRevision: componentDependenciesParentGitRevision, baseBranch: componentDependenciesParentDefaultBranch}
 		components := []*multiComponent{&ChildComponentDef, &ParentComponentDef}
-		var applicationName, testNamespace, mergeResultSha string
+		var applicationName, testNamespace, mergeResultSha, imageRepoName string
 		var prNumber int
 		var mergeResult *github.PullRequestMergeResult
 		var timeout time.Duration
@@ -1557,12 +1548,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			// This is the file that will be updated by the nudge
 			It("create dockerfile and yaml manifest that references build and distribution repositorys", func() {
 
-				component, err := f.AsKubeAdmin.HasController.GetComponent(ParentComponentDef.componentName, testNamespace)
-				Expect(err).ShouldNot(HaveOccurred(), "could not get component %s in the %s namespace", ParentComponentDef.componentName, testNamespace)
+				imageRepoName, err = f.AsKubeAdmin.ImageController.GetImageName(testNamespace, ParentComponentDef.componentName)
+				Expect(err).ShouldNot(HaveOccurred(), "failed to read image repo for component %s", ParentComponentDef.componentName)
+				Expect(imageRepoName).ShouldNot(BeEmpty(), "image repo name is empty")
 
-				annotations := component.GetAnnotations()
-				imageRepoName, err := build.GetQuayImageName(annotations)
-				Expect(err).ShouldNot(HaveOccurred())
 				err = f.AsKubeAdmin.CommonController.Github.CreateRef(ChildComponentDef.repoName, ChildComponentDef.baseBranch, ChildComponentDef.baseRevision, ChildComponentDef.pacBranchName)
 				Expect(err).ShouldNot(HaveOccurred())
 				parentImageNameWithNoDigest = "quay.io/" + quayOrg + "/" + imageRepoName
@@ -1675,12 +1664,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			It("Verify the nudge updated the contents", func() {
 
 				GinkgoWriter.Printf("Verifying Dockerfile.tmp updated to sha %s", parentPostPacMergeDigest)
-				component, err := f.AsKubeAdmin.HasController.GetComponent(ParentComponentDef.componentName, testNamespace)
-				Expect(err).ShouldNot(HaveOccurred(), "could not get component %s in the %s namespace", ParentComponentDef.componentName, testNamespace)
-
-				annotations := component.GetAnnotations()
-				imageRepoName, err := build.GetQuayImageName(annotations)
-				Expect(err).ShouldNot(HaveOccurred())
 				contents, err := f.AsKubeAdmin.CommonController.Github.GetFile(ChildComponentDef.repoName, "Dockerfile.tmp", ChildComponentDef.componentBranch)
 				Expect(err).ShouldNot(HaveOccurred())
 				content, err := contents.GetContent()

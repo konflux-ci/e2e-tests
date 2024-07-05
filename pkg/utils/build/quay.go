@@ -23,36 +23,6 @@ var (
 	quayClient = quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayToken, quayApiUrl)
 )
 
-func GetQuayImageName(annotations map[string]string) (string, error) {
-	type imageAnnotation struct {
-		Image  string `json:"Image"`
-		Secret string `json:"Secret"`
-	}
-	image_annotation_str := annotations["image.redhat.com/image"]
-	var ia imageAnnotation
-	err := json.Unmarshal([]byte(image_annotation_str), &ia)
-	if err != nil {
-		return "", err
-	}
-	tokens := strings.Split(ia.Image, "/")
-	return strings.Join(tokens[2:], "/"), nil
-}
-
-func IsImageAnnotationPresent(annotations map[string]string) bool {
-	image_annotation_str := annotations["image.redhat.com/image"]
-	return image_annotation_str != ""
-}
-
-func ImageRepoCreationSucceeded(annotations map[string]string) bool {
-	imageAnnotationValue := annotations["image.redhat.com/image"]
-	return !strings.Contains(imageAnnotationValue, "failed to generete image repository")
-}
-
-func GetRobotAccountName(imageName string) string {
-	tokens := strings.Split(imageName, "/")
-	return strings.Join(tokens, "")
-}
-
 func DoesImageRepoExistInQuay(quayImageRepoName string) (bool, error) {
 	exists, err := quayClient.DoesRepositoryExist(quayOrg, quayImageRepoName)
 	if exists {

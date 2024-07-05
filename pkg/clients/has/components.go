@@ -13,7 +13,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/logs"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
+	imagecontroller "github.com/konflux-ci/image-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/klog"
 	pointer "k8s.io/utils/ptr"
 	"knative.dev/pkg/apis"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -69,13 +68,13 @@ func (h *HasController) GetComponentPipelineRun(componentName string, applicatio
 
 // GetComponentPipelineRunWithType returns first pipeline run for a given component labels with pipeline type within label "pipelines.appstudio.openshift.io/type" ("build", "test")
 func (h *HasController) GetComponentPipelineRunWithType(componentName string, applicationName string, namespace, pipelineType string, sha string) (*pipeline.PipelineRun, error) {
-    prs, err := h.GetComponentPipelineRunsWithType(componentName, applicationName, namespace, "", sha)
-    if err != nil {
-        return nil, err
-    } else {
-        prsVal := *prs
-        return &prsVal[0], nil
-    }
+	prs, err := h.GetComponentPipelineRunsWithType(componentName, applicationName, namespace, "", sha)
+	if err != nil {
+		return nil, err
+	} else {
+		prsVal := *prs
+		return &prsVal[0], nil
+	}
 }
 
 // GetComponentPipelineRunsWithType returns all pipeline runs for a given component labels with pipeline type within label "pipelines.appstudio.openshift.io/type" ("build", "test")
@@ -248,8 +247,7 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 		return nil, err
 	}
 
-	if utils.WaitUntil(h.CheckForImageAnnotation(componentObject), time.Minute*5) != nil {
-		componentObject = h.refreshComponentForErrorDebug(componentObject)
+	if utils.WaitUntil(h.CheckImageRepositoryExists(namespace, componentSpec.ComponentName), time.Minute*5) != nil {
 		return nil, fmt.Errorf("timed out when waiting for image-controller annotations to be updated on component %s in namespace %s. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
 	}
 	return componentObject, nil
@@ -457,27 +455,15 @@ func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Comp
 	return sha, nil
 }
 
-// refreshComponentForErrorDebug returns the latest component object from the kubernetes cluster.
-func (h *HasController) refreshComponentForErrorDebug(component *appservice.Component) *appservice.Component {
-	retComp := &appservice.Component{}
-	key := rclient.ObjectKeyFromObject(component)
-	err := h.KubeRest().Get(context.Background(), key, retComp)
-	if err != nil {
-		//TODO let's log this somehow, but return the original component obj, as that is better than nothing
-		return component
-	}
-	return retComp
-}
-
-func (h *HasController) CheckForImageAnnotation(component *appservice.Component) wait.ConditionFunc {
+func (h *HasController) CheckImageRepositoryExists(namespace, componentName string) wait.ConditionFunc {
 	return func() (bool, error) {
-		componentCR, err := h.GetComponent(component.Name, component.Namespace)
+		imageRepositoryList := &imagecontroller.ImageRepositoryList{}
+		imageRepoLabels := map[string]string{"appstudio.redhat.com/component": componentName}
+		err := h.KubeRest().List(context.Background(), imageRepositoryList, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(imageRepoLabels), Namespace: namespace})
 		if err != nil {
-			klog.Errorf("failed to get component %s with error: %+v", component.Name, err)
-			return false, nil
+			return false, err
 		}
-		annotations := componentCR.GetAnnotations()
-		return build.IsImageAnnotationPresent(annotations) && build.ImageRepoCreationSucceeded(annotations), nil
+		return len(imageRepositoryList.Items) == 1 && imageRepositoryList.Items[0].Status.State == "ready", nil
 	}
 }
 
