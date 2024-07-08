@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/clients/common"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	kubeapi "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/oras"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
@@ -687,6 +689,10 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					})
 				}
 			})
+
+			It("should push Dockerfile to registry", Label(buildTemplatesTestLabel), func() {
+				ensureOriginalDockerfileIsPushed(kubeadminClient, pr)
+			})
 		}
 
 		It(fmt.Sprintf("pipelineRun should fail for symlink component with Git source URL %s", pythonComponentGitSourceURL), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
@@ -796,4 +802,47 @@ func applyAdditionalTagsInPipelineBundle(customDockerBuildBundle string, additio
 		return "", fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
 	}
 	return newDockerBuildPipeline.String(), nil
+}
+
+func ensureOriginalDockerfileIsPushed(hub *framework.ControllerHub, pr *tektonpipeline.PipelineRun) {
+	binaryImage := build.GetBinaryImage(pr)
+	Expect(binaryImage).ShouldNot(BeEmpty())
+
+	binaryImageRef, err := reference.Parse(binaryImage)
+	Expect(err).Should(Succeed())
+
+	tagInfo, err := build.GetImageTag(binaryImageRef.Namespace, binaryImageRef.Name, binaryImageRef.Tag)
+	Expect(err).Should(Succeed())
+
+	dockerfileImageTag := fmt.Sprintf("%s.dockerfile", strings.Replace(tagInfo.ManifestDigest, ":", "-", 1))
+
+	dockerfileImage := reference.DockerImageReference{
+		Registry:  binaryImageRef.Registry,
+		Namespace: binaryImageRef.Namespace,
+		Name:      binaryImageRef.Name,
+		Tag:       dockerfileImageTag,
+	}.String()
+	exists, err := build.DoesTagExistsInQuay(dockerfileImage)
+	Expect(err).Should(Succeed())
+	Expect(exists).Should(BeTrue())
+
+	// Ensure the original Dockerfile used for build was pushed
+	c := hub.CommonController.KubeRest()
+	originDockerfileContent, err := build.ReadDockerfileUsedForBuild(c, hub.TektonController, pr)
+	Expect(err).Should(Succeed())
+
+	storePath, err := oras.PullArtifacts(dockerfileImage)
+	Expect(err).Should(Succeed())
+	entries, err := os.ReadDir(storePath)
+	Expect(err).Should(Succeed())
+	for _, entry := range entries {
+		if entry.Type().IsRegular() && entry.Name() == "Dockerfile" {
+			content, err := os.ReadFile(filepath.Join(storePath, entry.Name()))
+			Expect(err).Should(Succeed())
+			Expect(content).Should(Equal(originDockerfileContent))
+			return
+		}
+	}
+
+	Fail(fmt.Sprintf("Dockerfile is not found from the pulled artifacts for %s", dockerfileImage))
 }
