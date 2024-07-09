@@ -1,4 +1,4 @@
-# RHTAP demo test
+# KONFLUX demo test
 
 ### Prerequisites for running the advanced build scenario against your own cluster
 1. Fork https://github.com/redhat-appstudio-qe/hacbs-test-project and https://github.com/redhat-appstudio-qe/strategy-configs to your GitHub org (specified in `MY_GITHUB_ORG` env var)
@@ -56,14 +56,14 @@ ginkgo --label-filter='verify-stage' ./cmd/
    6. The release pipeline should succeed and the release should be marked as successful
    7. Make sure JVM build service is used for rebuilding java component's dependencies and that all related dependency builds complete successfully
 
-Steps to run 'rhtap-demos':
+Steps to run 'konflux-demos':
 
 1) Follow the instructions from the [Readme](../../docs/Installation.md) scripts to install AppStudio in e2e mode
-2) Run the e2e suite: `./bin/e2e-appstudio --ginkgo.label-filter="rhtap-demo"`
+2) Run the e2e suite: `./bin/e2e-appstudio --ginkgo.label-filter="konflux"`
 
 ## Test Generator
 
-The test specs in rhtap-demo-suite are generated dynamically using ginkgo specs.
+The test specs in konflux-demo-suite are generated dynamically using ginkgo specs.
 
 If you want to test your own Component (repository), all you need to do is to update the `TestScenarios` variable in [scenarios.go](./config/scenarios.go)
 

@@ -14,9 +14,9 @@ import (
 	_ "github.com/konflux-ci/e2e-tests/tests/build"
 	_ "github.com/konflux-ci/e2e-tests/tests/enterprise-contract"
 	_ "github.com/konflux-ci/e2e-tests/tests/integration-service"
+	_ "github.com/konflux-ci/e2e-tests/tests/konflux-demo"
 	_ "github.com/konflux-ci/e2e-tests/tests/release/pipelines"
 	_ "github.com/konflux-ci/e2e-tests/tests/release/service"
-	_ "github.com/konflux-ci/e2e-tests/tests/rhtap-demo"
 	_ "github.com/konflux-ci/e2e-tests/tests/upgrade"
 
 	"flag"

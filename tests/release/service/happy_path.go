@@ -22,7 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", Label("release-service", "happy-path", "HACBS"), func() {
+var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", Label("release-service", "happy-path"), func() {
 	defer GinkgoRecover()
 
 	var fw *framework.Framework

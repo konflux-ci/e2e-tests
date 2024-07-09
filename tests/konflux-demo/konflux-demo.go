@@ -1,4 +1,4 @@
-package rhtap_demo
+package konflux_demo
 
 import (
 	"context"
@@ -37,7 +37,7 @@ import (
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
-	e2eConfig "github.com/konflux-ci/e2e-tests/tests/rhtap-demo/config"
+	e2eConfig "github.com/konflux-ci/e2e-tests/tests/konflux-demo/config"
 )
 
 const (
@@ -62,14 +62,14 @@ const (
 	releasePollingInterval    = time.Second * 1
 
 	// test metadata
-	devEnvTestLabel = "rhtap-demo"
+	devEnvTestLabel = "konflux"
 
 	// stage env test related env vars
 	stageTimeout      = time.Minute * 5
 	stageEnvTestLabel = "verify-stage"
 )
 
-var _ = framework.RhtapDemoSuiteDescribe(func() {
+var _ = framework.KonfluxDemoSuiteDescribe(func() {
 	defer GinkgoRecover()
 
 	var timeout, interval time.Duration
@@ -249,7 +249,7 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 					})
 
 					if componentSpec.AdvancedBuildSpec != nil {
-						Describe(fmt.Sprintf("RHTAP Advanced build test for %s", componentSpec.Name), Label(devEnvTestLabel), Ordered, func() {
+						Describe(fmt.Sprintf("KONFLUX Advanced build test for %s", componentSpec.Name), Label(devEnvTestLabel), Ordered, func() {
 							var managedNamespace string
 
 							var component *appservice.Component

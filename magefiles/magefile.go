@@ -225,9 +225,9 @@ func (Local) CleanupQuayTags() error {
 	return cleanupQuayTags(quayClient, quayOrg, "test-images")
 }
 
-// Deletes the private repos with prefix "build-e2e" or "rhtap-demo"
+// Deletes the private repos whose names match prefixes as stored in `repoNamePrefixes` array
 func (Local) CleanupPrivateRepos() error {
-	repoNamePrefixes := []string{"build-e2e", "rhtap-demo", "multi-platform", "jvm-build"}
+	repoNamePrefixes := []string{"build-e2e", "konflux", "multi-platform", "jvm-build-service"}
 	quayOrgToken := os.Getenv("DEFAULT_QUAY_ORG_TOKEN")
 	if quayOrgToken == "" {
 		return fmt.Errorf(quayTokenNotFoundError)
@@ -408,7 +408,7 @@ func setRequiredEnvVars() error {
 				requiresSprayProxyRegistering = true
 				envVarPrefix = "HAS"
 				imageTagSuffix = "has-image"
-				testSuiteLabel = "rhtap-demo"
+				testSuiteLabel = "konflux"
 			case strings.Contains(jobName, "release-service"):
 				envVarPrefix = "RELEASE_SERVICE"
 				imageTagSuffix = "release-service-image"
@@ -422,7 +422,7 @@ func setRequiredEnvVars() error {
 			case strings.Contains(jobName, "jvm-build-service"):
 				envVarPrefix = "JVM_BUILD_SERVICE"
 				imageTagSuffix = "jvm-build-service-image"
-				testSuiteLabel = "jvm-build"
+				testSuiteLabel = "jvm-build-service"
 				// Since CI requires to have default values for dependency images
 				// (https://github.com/openshift/release/blob/master/ci-operator/step-registry/redhat-appstudio/e2e/redhat-appstudio-e2e-ref.yaml#L15)
 				// we cannot let these env vars to have identical names in CI as those env vars used in tests
@@ -507,7 +507,7 @@ func setRequiredEnvVars() error {
 				requiresSprayProxyRegistering = true
 				envVarPrefix = "BUILD_SERVICE"
 				imageTagSuffix = "build-service-image"
-				testSuiteLabel = "build"
+				testSuiteLabel = "build-service"
 			case strings.Contains(jobName, "image-controller"):
 				requiresSprayProxyRegistering = true
 				envVarPrefix = "IMAGE_CONTROLLER"
@@ -545,7 +545,7 @@ func setRequiredEnvVars() error {
 			https://issues.redhat.com/browse/RHTAPBUGS-992, https://issues.redhat.com/browse/RHTAPBUGS-991, https://issues.redhat.com/browse/RHTAPBUGS-989,
 			https://issues.redhat.com/browse/RHTAPBUGS-978,https://issues.redhat.com/browse/RHTAPBUGS-956
 			*/
-			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,rhtap-demo,integration-service,ec,build-templates,multi-platform")
+			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,konflux,integration-service,ec,build-templates,multi-platform")
 		} else if strings.Contains(jobName, "release-service-catalog") { // release-service-catalog jobs (pull, rehearsal)
 			envVarPrefix := "RELEASE_SERVICE"
 			os.Setenv("E2E_TEST_SUITE_LABEL", "release-pipelines")
