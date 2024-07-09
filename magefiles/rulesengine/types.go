@@ -94,31 +94,7 @@ func (e *RuleEngine) RunRules(rctx *RuleCtx, args ...string) error {
 		return fmt.Errorf("%s is not a catalog registered in the engine", args[1])
 	}
 
-	var matched RuleCatalog
-	for _, rule := range fullCatalogs {
-
-		// In most cases, a rule chain has no action to execute
-		// since a majority of the actions are ecanpuslated
-		// within the rules that compose the chain.
-		if len(rule.Actions) == 0 {
-			return e.runChained(rule, rctx)
-
-		}
-		if rule.Eval(rctx) {
-
-			matched = append(matched, rule)
-		}
-
-	}
-
-	klog.Infof("The following rules have matched %s.", matched.String())
-	if rctx.DryRun {
-
-		return e.dryRun(matched, rctx)
-
-	}
-
-	return e.run(matched, rctx)
+	return e.runLoadedCatalog(fullCatalogs, rctx)
 
 }
 
@@ -141,8 +117,14 @@ func (e *RuleEngine) RunRulesOfCategory(cat string, rctx *RuleCtx) error {
 		return fmt.Errorf("%s is not a category registered in the engine", cat)
 	}
 
+	return e.runLoadedCatalog(fullCatalogs, rctx)
+
+}
+
+func (e *RuleEngine) runLoadedCatalog(loaded RuleCatalog, rctx *RuleCtx) error {
+
 	var matched RuleCatalog
-	for _, rule := range fullCatalogs {
+	for _, rule := range loaded {
 
 		// In most cases, a rule chain has no action to execute
 		// since a majority of the actions are ecanpuslated
@@ -174,7 +156,7 @@ func (e *RuleEngine) dryRun(matched RuleCatalog, rctx *RuleCtx) error {
 	klog.Info("DryRun has been enabled will apply them in dry run mode")
 	for _, rule := range matched {
 
-		rule.DryRun(rctx)
+		return rule.DryRun(rctx)
 
 	}
 
@@ -334,18 +316,16 @@ func (r *Rule) String() string {
 type IRule interface {
 	Eval(rctx *RuleCtx) bool
 	Apply(rctx *RuleCtx) error
-	DryRun(rctx *RuleCtx)
+	DryRun(rctx *RuleCtx) error
 }
 
 func (r *Rule) Eval(rctx *RuleCtx) bool {
 
-	//val, _ := rctx.(*RuleCtx)
 	return r.Condtion.Check(rctx)
 }
 
 func (r *Rule) Apply(rctx *RuleCtx) error {
 
-	//val, _ := rctx.(*RuleCtx)
 	for _, action := range r.Actions {
 
 		err := action.Execute(rctx)
@@ -359,8 +339,7 @@ func (r *Rule) Apply(rctx *RuleCtx) error {
 
 func (r *Rule) DryRun(rctx *RuleCtx) error {
 
-	rctx.SetDryRun()
-	//val, _ := rctx.(*RuleCtx)
+	rctx.DryRun = true
 	for _, action := range r.Actions {
 
 		err := action.Execute(rctx)
@@ -376,14 +355,11 @@ func (r *Rule) Check(rctx *RuleCtx) bool {
 
 	if r.Eval(rctx) {
 		if rctx.DryRun {
-			r.DryRun(rctx)
-			return true
+			err := r.DryRun(rctx)
+			return err == nil
 		} else {
 			err := r.Apply(rctx)
-			if err != nil {
-				return false
-			}
-			return true
+			return err == nil
 		}
 	}
 
@@ -445,18 +421,8 @@ func (cfs *Files) String() string {
 }
 
 type IRuleCtx interface {
-	AddEnvData(key string, obj any) error
-	GetEnvData(key string) any
-	GetGinkgoReportData() types.ReporterConfig
-	GetGinkgoSuiteData() types.SuiteConfig
-	GetGinkgoGoFlagsData() types.GoFlagsConfig
-	GetGinkgoCLIData() types.CLIConfig
-	SetDryRun() error
-	SetRepoName(name string)
-	SetJobName(name string)
-	SetJobType(name string)
-	SetDiffFiles(files Files)
-	SetRequiredBinaries(bins []string)
+	AddRuleData(key string, obj any) error
+	GetRuleData(key string) any
 }
 
 type RuleCtx struct {
@@ -464,7 +430,7 @@ type RuleCtx struct {
 	types.SuiteConfig
 	types.ReporterConfig
 	types.GoFlagsConfig
-	EnvData          map[string]any
+	RuleData         map[string]any
 	RepoName         string
 	JobName          string
 	JobType          string
@@ -495,74 +461,21 @@ func NewRuleCtx() *RuleCtx {
 
 }
 
-func (gca *RuleCtx) AddEnvData(key string, obj any) error {
+func (gca *RuleCtx) AddRuleData(key string, obj any) error {
 
-	gca.EnvData[key] = obj
-
-	klog.Info(gca.EnvData)
-
-	klog.Info(gca.EnvData[key])
+	gca.RuleData[key] = obj
 
 	return nil
 }
-func (gca *RuleCtx) GetEnvData(key string) any {
+func (gca *RuleCtx) GetRuleData(key string) any {
 
-	v, ok := gca.EnvData[key]
+	//When retrieving data the implementing function that needs
+	//it will have to cast it to the appropriate type
+	if v, ok := gca.RuleData[key]; ok {
 
-	klog.Infof("%T", v)
-	klog.Info(ok)
+		return v
+	}
 
-	return v
-
-}
-
-func (gca *RuleCtx) SetDryRun() error {
-
-	gca.DryRun = true
 	return nil
-}
 
-func (gca *RuleCtx) GetGinkgoCLIData() types.CLIConfig {
-
-	return gca.CLIConfig
-}
-
-func (gca *RuleCtx) GetGinkgoGoFlagsData() types.GoFlagsConfig {
-
-	return gca.GoFlagsConfig
-}
-
-func (gca *RuleCtx) GetGinkgoReportData() types.ReporterConfig {
-
-	return gca.ReporterConfig
-}
-
-func (gca *RuleCtx) GetGinkgoSuiteData() types.SuiteConfig {
-
-	return gca.SuiteConfig
-}
-
-func (gca *RuleCtx) SetRepoName(name string) {
-
-	gca.RepoName = name
-}
-
-func (gca *RuleCtx) SetJobName(name string) {
-
-	gca.JobName = name
-}
-
-func (gca *RuleCtx) SetJobType(name string) {
-
-	gca.JobType = name
-}
-
-func (gca *RuleCtx) SetDiffFiles(files Files) {
-
-	gca.DiffFiles = files
-}
-
-func (gca *RuleCtx) SetRequiredBinaries(bins []string) {
-
-	gca.RequiredBinaries = bins
 }

@@ -46,6 +46,9 @@ func init() {
 func TestE2E(t *testing.T) {
 	klog.Info("Starting Red Hat App Studio e2e tests...")
 	gomega.RegisterFailHandler(ginkgo.Fail)
+
+	//GinkgoConfiguration returns a SuiteConfig and ReportConfig.
+	//We don't need the ReportConfig object so I'm ignoring it.
 	config, _ := ginkgo.GinkgoConfiguration()
 	if config.DryRun {
 		reports := ginkgo.PreviewSpecs("Red Hat App Studio E2E tests")

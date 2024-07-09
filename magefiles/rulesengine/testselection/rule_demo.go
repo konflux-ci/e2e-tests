@@ -33,14 +33,12 @@ var isPrelightCheck = func(rctx *rulesengine.RuleCtx) bool {
 		if len(missingEnv) != 0 {
 			klog.Errorf("required env vars containing secrets (%s) not defined or empty", strings.Join(missingEnv, ","))
 			return false
-			//return fmt.Errorf("required env vars containing secrets (%s) not defined or empty", strings.Join(missingEnv, ","))
 		}
 
 		for _, binaryName := range rctx.RequiredBinaries {
 			if err := sh.Run("which", binaryName); err != nil {
 				klog.Errorf("binary %s not found in PATH - please install it first", binaryName)
 				return false
-				//return fmt.Errorf("binary %s not found in PATH - please install it first", binaryName)
 			}
 		}
 	}

@@ -10,17 +10,24 @@ var NonTestFilesFule = rulesengine.Rule{Name: "E2E Default Test Exectuion",
 	Description: "Runs all suites when any non test files are modified in the e2e-repo",
 	Condtion: rulesengine.Any{rulesengine.ConditionFunc(CheckPkgFilesChanged),
 		rulesengine.ConditionFunc(CheckMageFilesChanged),
-		rulesengine.ConditionFunc(CheckCmdFilesChanged)},
+		rulesengine.ConditionFunc(CheckCmdFilesChanged),
+		rulesengine.ConditionFunc(CheckNoFilesChanged)},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteDefaultTestAction)}}
 
 var TestFilesOnlyRule = rulesengine.Rule{Name: "E2E Test File Diff Execution",
 	Description: "Runs test specific to test files when those are the only changes in the e2e-repo",
 	Condtion: rulesengine.None{rulesengine.ConditionFunc(CheckPkgFilesChanged),
 		rulesengine.ConditionFunc(CheckMageFilesChanged),
-		rulesengine.ConditionFunc(CheckCmdFilesChanged)},
+		rulesengine.ConditionFunc(CheckCmdFilesChanged),
+		rulesengine.ConditionFunc(CheckNoFilesChanged)},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteFocusedFileAction)}}
 
 var E2ETestRulesCatalog = rulesengine.RuleCatalog{NonTestFilesFule, TestFilesOnlyRule}
+
+func CheckNoFilesChanged(rctx *rulesengine.RuleCtx) bool {
+
+	return len(rctx.DiffFiles) == 0
+}
 
 func CheckPkgFilesChanged(rctx *rulesengine.RuleCtx) bool {
 

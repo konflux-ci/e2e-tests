@@ -14,10 +14,10 @@ func ExecuteTestAction(rctx *rulesengine.RuleCtx, args ...any) error {
 	we let ginkgo handle that when we actually run the ginkgo cmd.
 	We just want the user ginkgo CLI flags we can pass to ginkgo command */
 
-	var suiteConfig = rctx.GetGinkgoSuiteData()
-	var reporterConfig = rctx.GetGinkgoReportData()
-	var cliConfig = rctx.GetGinkgoCLIData()
-	var goFlagsConfig = rctx.GetGinkgoGoFlagsData()
+	var suiteConfig = rctx.SuiteConfig
+	var reporterConfig = rctx.ReporterConfig
+	var cliConfig = rctx.CLIConfig
+	var goFlagsConfig = rctx.GoFlagsConfig
 
 	var flagSet, err = gtypes.BuildRunCommandFlagSet(&suiteConfig, &reporterConfig, &cliConfig, &goFlagsConfig)
 

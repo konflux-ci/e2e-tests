@@ -306,13 +306,13 @@ func RunE2ETests() error {
 	rctx.OutputDir = artifactDir
 	rctx.JUnitReport = "e2e-report.xml"
 	//This conditional could be moved into a rule but keeping the change small
-	if reflect.DeepEqual(openshiftJobSpec, OpenshiftJobSpec{}) && openshiftJobSpec.Refs.Repo == "e2e-test" {
+	if reflect.DeepEqual(openshiftJobSpec, OpenshiftJobSpec{}) && openshiftJobSpec.Refs.Repo == "e2e-tests" {
 
 		rctx.RepoName = openshiftJobSpec.Refs.Repo
 		rctx.JobName = jobName
 		rctx.JobType = jobType
 
-		files, err := getChangeFiles()
+		files, err := getChangedFiles()
 		if err != nil {
 			return err
 		}
@@ -331,7 +331,7 @@ func RunE2ETests() error {
 
 	if !reflect.DeepEqual(openshiftJobSpec, OpenshiftJobSpec{}) {
 
-		files, err := getChangeFiles()
+		files, err := getChangedFiles()
 		if err != nil {
 			return err
 		}
@@ -1324,7 +1324,7 @@ func isValidPacHost(server string) bool {
 func (Local) PreviewTestSelection() error {
 
 	rctx := rulesengine.NewRuleCtx()
-	files, err := getChangeFiles()
+	files, err := getChangedFiles()
 	if err != nil {
 		klog.Error(err)
 		return err
@@ -1344,7 +1344,7 @@ func (Local) PreviewTestSelection() error {
 func (Local) RunRuleDemo() error {
 
 	rctx := rulesengine.NewRuleCtx()
-	files, err := getChangeFiles()
+	files, err := getChangedFiles()
 	if err != nil {
 		klog.Error(err)
 		return err

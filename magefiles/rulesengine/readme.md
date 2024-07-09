@@ -1,25 +1,27 @@
 # Mage Engine
 
-Mage Engine is a rules engine framework with the intent to take the existing businesss 
-logic that dictates configuring the environment and test exection we have 
-accumlated over time in our magefile and organize them better.
+Mage Engine is a rules engine framework with the intent to take the existing business 
+logic that dictates configuring the environment and test execution we have 
+accumulated over time in our magefile and organize them better.
 
 The core of what drives the rules will still be the functions we write that check for 
 specific conditions to be met and actions to take on said conditions. The framework 
 just allows us to take those higher order functions and compose them together into
 more descriptive rules.
 
-There is NO INTENT to be a full fledged rules engine to be able to evaluate very complex expressions!
+There is NO INTENT to be a full fledged rules engine to be able to evaluate very complex expressions
+or assign priority to rules if multiple rules evaluate to true. As of right now it wasn't obvious
+if we had such complex requirements based on the data we use.
 
 ## Architecture
 
-The following Architecure of MageEngine. 
+The following Architecture of MageEngine. 
 
 ### Rule
 
 The core of the engine is a `Rule`. A Rule describes and executes the business logic. It is composed 
 of a `Conditional` which implements the checking of data that should be evaluated to `true`. 
-Once a condtional of a `Rule` evaulates true, the `Rule` can take an `Action`. The action implement 
+Once a conditional of a `Rule` evaulates true, the `Rule` can take an `Action`. The action implements 
 the execution of the task the rule should take.
 
 A `Rule` implements the `IRule` interface: 
@@ -29,21 +31,24 @@ A `Rule` implements the `IRule` interface:
    for the framework to make this call.)
 
 ### Rule Context
-a `RuleCtx` is the context object insert data into and gets passed around so that rules can evaluate and take action.
-In our use case we have very specific key pieces of data that triggers our business logic executes on so 
-this isn't generalized at the moment to accomodate more generalized use cases. 
+a `RuleCtx` is the context object to insert data into and gets passed around so that rules can evaluate and take action. In our use case we have very specific key pieces of data that triggers our business logic so 
+this isn't meant for generalized use cases.
+
+That said, the `RuleCtx` implements a `AddRuleData(key string, obj any)` and `GetRuleData(key string)`
+functions that would allow a developer to store other types of data. It is important to note that
+the writer of a conditional or action that depends on data stored in this manner will have to make 
+sure they type cast the returned object appropriately in their implementation.
 
 ### Conditionals
 
 `Conditional` is an interface that is meant to perform a check of the passed in data. A conditional can 
 be:
  * a full fledged object/struct that implements the `Check()` function 
- * any anonymous or higher order function as long as it is regisered in the Rule as a `ConditionalFunc`
+ * any anonymous or higher order function as long as it is registered in the Rule as a `ConditionalFunc`
 
 #### Filters
 
-To make constructing `Rules` with some complex conditionals easier the framework implementated a couple of filters which implment
-the `Conditional` interface:
+To make constructing `Rules` with some complex conditionals easier the framework implements a couple of filters which implement the `Conditional` interface:
 
  * All: `Conditional|ConditionalFunc` registered will evaluate that all evaluated to `true`
  * Any: `Conditional|ConditionalFunc` registered will evaluate that one evaluated to `true`
@@ -51,7 +56,7 @@ the `Conditional` interface:
 
 ### Actions
 
-`Action` is an interface that is meant to execute on the passed in data. Like a condtional, an action can 
+`Action` is an interface that is meant to execute on the passed in data. Like a conditional, an action can 
 be:
  * a full fledged object/struct that implements the `Execute()` function
  * any anonymous or higher order function as long as it is regisered in the Rule as a `ActionFunc`
@@ -64,7 +69,7 @@ As of now most of the Business Logic really is tied by repo. So catalogs are cre
 ### Engine 
 
 It is a map of a map. The idea was that each repo would create a catalog of Rules. Those Catalogs could be registered 
-as map to a `category`. For exmaple, using the example of test execution, a category could be `tests`. 
+as map to a `category`. Using the example of test execution, a category could be `tests`. 
 Then under `tests` we regsiter a map, where a key is the repo/domain, i.e. `e2e-repo` and its test catalog is assigned to it.  
 
 ### RuleChain
@@ -85,10 +90,10 @@ This will help reuse existing rules to create broader flows.
  ### Creating a basic rule using anonymous functions and its rule catalog
 
  In this example, we create a rule for infra-deployments test execution using anonymous condition and action functions. Some 
- conditions and actions maybe so simple that it is easier to implement as anonymous functions. I then define this Rule within
+ conditions and actions may be so simple that it is easier to implement as anonymous functions. I then define this Rule within
  a Rule Catalog. 
 
- The logic is simple WHEN the RepoName is infra-deployments, THEN execute ginkgo with the specific lable filter.
+ The logic in this rule is straightforward: WHEN the RepoName is infra-deployments, THEN execute ginkgo with the specific label filter.
 
  ```go
  // Example rule for infra-deployments using anonymous functions embedded in the rule
@@ -137,14 +142,14 @@ var InfraDeploymentsTestRulesCatalog = rulesengine.RuleCatalog{
 
  ### Creating a complex rule using a mixture of conditional filters
 
- In this example, the release-catalog-repo has a slightly more complex set of rules where depending on certain conditons
+ In this example, the release-catalog-repo has a slightly more complex set of rules where depending on certain conditions
  met by the CI job the test should execute with a different set of ginkgo label filters. So you will see a mixture of the 
  Any/All/None conditional filters
 
- The first rule's logic is WHEN EITHER RepoName equals release-service-catalog AND NOT pr paired OR RepoName equals release-service-catalog
+ The first rule's logic is: WHEN EITHER RepoName equals release-service-catalog AND NOT pr paired OR RepoName equals release-service-catalog
  AND is a rehearse job AND NOT pr paired THEN run ginkgo with release-pipelines label filter
 
- The second rule WHEN RepoName equals release-service-catalog AND pr is paired AND NOT a rehearse job THEN run ginkgo with 
+ The second rule's logic is: WHEN RepoName equals release-service-catalog AND pr is paired AND NOT a rehearse job THEN run ginkgo with 
  release-pipelines && !fbc-tests label filters
 
 

@@ -441,7 +441,7 @@ func HandleErrorWithAlert(err error, errLevel slack.ErrorSeverityLevel) error {
 	return nil
 }
 
-func getChangeFiles() (rulesengine.Files, error) {
+func getChangedFiles() (rulesengine.Files, error) {
 	var gitDiff = sh.OutCmd("git", "diff")
 	output, err := gitDiff("--name-status", "main..HEAD")
 
@@ -449,24 +449,22 @@ func getChangeFiles() (rulesengine.Files, error) {
 		klog.Error("Failed to run git status locally")
 		return nil, err
 	}
+
+	if output == "" {
+		klog.Info("Found no changed files.")
+		return rulesengine.Files{}, nil
+	}
 	var changes rulesengine.Files
 	var file rulesengine.File
 	for _, line := range strings.Split(output, "\n") {
 
 		fileAttr := strings.Split(line, "\t")
-		if string(fileAttr[0]) == "??" {
-			continue
-		}
 		file = rulesengine.File{Status: fileAttr[0], Name: fileAttr[1]}
 
 		changes = append(changes, file)
 	}
 
-	if len(changes) == 0 {
-		klog.Info("Found no changed files.")
-	} else {
-		klog.Infof("The following files, %s, were changed!", changes.String())
-	}
+	klog.Infof("The following files, %s, were changed!", changes.String())
 
 	return changes, nil
 
