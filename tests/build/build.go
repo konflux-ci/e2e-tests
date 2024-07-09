@@ -218,7 +218,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if image repo exists in quay with error: %+v", err)
 				Expect(imageExist).To(BeTrue(), "quay image does not exists")
 
-				pullRobotAccountName, pushRobotAccountName, err := f.AsKubeAdmin.ImageController.GetRobotAccounts(testNamespace, defaultBranchTestComponentName)
+				pullRobotAccountName, pushRobotAccountName, err = f.AsKubeAdmin.ImageController.GetRobotAccounts(testNamespace, defaultBranchTestComponentName)
 				Expect(err).ShouldNot(HaveOccurred(), "failed to get robot account names")
 				pullRobotAccountExist, err := build.DoesRobotAccountExistInQuay(pullRobotAccountName)
 				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if pull robot account exists in quay with error: %+v", err)
@@ -232,8 +232,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while checking if the image repo %s is private", imageRepoName))
 				Expect(isPublic).To(BeFalse(), "Expected image repo to be private, but it is public")
 			})
-			// skipped due to RHTAPBUGS-978
-			It("a related PipelineRun should be deleted after deleting the component", Pending, func() {
+
+			It("a related PipelineRun should be deleted after deleting the component", func() {
 				timeout = time.Second * 60
 				interval = time.Second * 1
 				Expect(f.AsKubeAdmin.HasController.DeleteComponent(defaultBranchTestComponentName, testNamespace, true)).To(Succeed())
@@ -246,8 +246,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return err
 				}, timeout, constants.PipelineRunPollingInterval).Should(MatchError(ContainSubstring("no pipelinerun found")), fmt.Sprintf("timed out when waiting for the PipelineRun to be removed for Component %s/%s", testNamespace, defaultBranchTestComponentName))
 			})
-			// skipped due to RHTAPBUGS-978
-			It("PR branch should not exist in the repo", Pending, func() {
+
+			It("PR branch should not exist in the repo", func() {
 				timeout = time.Second * 60
 				interval = time.Second * 1
 				branchName := constants.PaCPullRequestBranchPrefix + defaultBranchTestComponentName
@@ -257,16 +257,16 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 					return exists
 				}, timeout, interval).Should(BeFalse(), fmt.Sprintf("timed out when waiting for the branch %s to be deleted from %s repository", branchName, helloWorldComponentGitSourceRepoName))
 			})
-			// skipped due to RHTAPBUGS-978
-			It("related image repo and the robot account should be deleted after deleting the component", Pending, func() {
-				timeout = time.Second * 10
-				interval = time.Second * 1
-				// Check image repo should not be deleted
-				Consistently(func() (bool, error) {
-					return build.DoesImageRepoExistInQuay(imageRepoName)
-				}, timeout, interval).Should(BeFalse(), fmt.Sprintf("image repo %s got deleted while it should not have", imageRepoName))
-				// Check robot account should be deleted
+
+			It("related image repo and the robot account should be deleted after deleting the component", func() {
 				timeout = time.Second * 60
+				interval = time.Second * 1
+				// Check image repo should be deleted
+				Eventually(func() (bool, error) {
+					return build.DoesImageRepoExistInQuay(imageRepoName)
+				}, timeout, interval).Should(BeFalse(), fmt.Sprintf("timed out when waiting for image repo %s to be deleted", imageRepoName))
+
+				// Check robot account should be deleted
 				Eventually(func() (bool, error) {
 					pullRobotAccountExists, err := build.DoesRobotAccountExistInQuay(pullRobotAccountName)
 					if err != nil {
@@ -360,7 +360,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if image repo exists in quay with error: %+v", err)
 				Expect(imageExist).To(BeTrue(), "quay image does not exists")
 
-				pullRobotAccountName, pushRobotAccountName, err := f.AsKubeAdmin.ImageController.GetRobotAccounts(testNamespace, componentName)
+				pullRobotAccountName, pushRobotAccountName, err = f.AsKubeAdmin.ImageController.GetRobotAccounts(testNamespace, componentName)
 				Expect(err).ShouldNot(HaveOccurred(), "failed to get robot account names")
 				pullRobotAccountExist, err := build.DoesRobotAccountExistInQuay(pullRobotAccountName)
 				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if pull robot account exists in quay with error: %+v", err)
