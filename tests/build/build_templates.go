@@ -12,6 +12,7 @@ import (
 
 	"github.com/konflux-ci/application-api/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/common"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	kubeapi "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
@@ -42,10 +43,20 @@ var (
 
 const pipelineCompletionRetries = 2
 
+type TestBranches struct {
+	RepoName       string
+	BranchName     string
+	PacBranchName  string
+	BaseBranchName string
+}
+
+var pacAndBaseBranches []TestBranches
+
 // CreateComponent creates a component from a test repository URL and returns the component's name
-func CreateComponent(ctrl *has.HasController, gitUrl, revision, applicationName, componentName, namespace string) string {
+func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController, gitUrl, revision, applicationName, componentName, namespace string) string {
 	var err error
 	var buildPipelineAnnotation map[string]string
+	var baseBranchName, pacBranchName string
 	contextDir, dockerfilePath, pipelineBundleName, enableHermetic, prefetchInput, checkAdditionalTags := GetComponentScenarioDetailsFromGitUrl(gitUrl)
 	Expect(pipelineBundleName).ShouldNot(BeEmpty())
 	if pipelineBundleName == "docker-build" {
@@ -82,13 +93,38 @@ func CreateComponent(ctrl *has.HasController, gitUrl, revision, applicationName,
 		}
 	}
 
+	baseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
+	pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
+
+	if revision == gitRepoContainsSymlinkBranchName {
+		revision = symlinkBranchRevision
+		err = commonCtrl.Github.CreateRef(utils.GetRepoName(gitUrl), gitRepoContainsSymlinkBranchName, revision, baseBranchName)
+		Expect(err).ShouldNot(HaveOccurred())
+		pacAndBaseBranches = append(pacAndBaseBranches, TestBranches{
+			RepoName:       utils.GetRepoName(gitUrl),
+			BranchName:     gitRepoContainsSymlinkBranchName,
+			PacBranchName:  pacBranchName,
+			BaseBranchName: baseBranchName,
+		})
+	} else {
+		revision = GetGitRevision(gitUrl)
+		err = commonCtrl.Github.CreateRef(utils.GetRepoName(gitUrl), "main", revision, baseBranchName)
+		Expect(err).ShouldNot(HaveOccurred())
+		pacAndBaseBranches = append(pacAndBaseBranches, TestBranches{
+			RepoName:       utils.GetRepoName(gitUrl),
+			BranchName:     "main",
+			PacBranchName:  pacBranchName,
+			BaseBranchName: baseBranchName,
+		})
+	}
+
 	componentObj := appservice.ComponentSpec{
 		ComponentName: componentName,
 		Source: appservice.ComponentSource{
 			ComponentSourceUnion: appservice.ComponentSourceUnion{
 				GitSource: &appservice.GitSource{
 					URL:           gitUrl,
-					Revision:      revision,
+					Revision:      baseBranchName,
 					Context:       contextDir,
 					DockerfileURL: dockerfilePath,
 				},
@@ -103,7 +139,7 @@ func CreateComponent(ctrl *has.HasController, gitUrl, revision, applicationName,
 			"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"docker-build", "bundle": "%s"}`, customSourceBuildBundle),
 		}
 	}
-	c, err := ctrl.CreateComponent(componentObj, namespace, "", "", applicationName, false, buildPipelineAnnotation)
+	c, err := ctrl.CreateComponent(componentObj, namespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, buildPipelineAnnotation))
 	Expect(err).ShouldNot(HaveOccurred())
 	return c.Name
 }
@@ -141,7 +177,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 	defer GinkgoRecover()
 	Describe("HACBS pipelines", Ordered, Label("pipeline"), func() {
 
-		var applicationName, componentName, symlinkComponentName, testNamespace string
+		var applicationName, componentName, symlinkComponentName, symlinkPRunName, testNamespace string
 		var kubeadminClient *framework.ControllerHub
 		var pipelineRunsWithE2eFinalizer []string
 
@@ -182,7 +218,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			for _, gitUrl := range componentUrls {
 				gitUrl := gitUrl
 				componentName = fmt.Sprintf("%s-%s", "test-comp", util.GenerateRandomString(4))
-				name := CreateComponent(kubeadminClient.HasController, gitUrl, "", applicationName, componentName, testNamespace)
+				name := CreateComponent(kubeadminClient.CommonController, kubeadminClient.HasController, gitUrl, "", applicationName, componentName, testNamespace)
 				Expect(name).ShouldNot(BeEmpty())
 				componentNames = append(componentNames, name)
 			}
@@ -190,7 +226,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			// Create component for the repo containing symlink
 			symlinkComponentName = fmt.Sprintf("%s-%s", "test-symlink-comp", util.GenerateRandomString(4))
 			symlinkComponentName = CreateComponent(
-				kubeadminClient.HasController, pythonComponentGitSourceURL, gitRepoContainsSymlinkBranchName,
+				kubeadminClient.CommonController, kubeadminClient.HasController, pythonComponentGitSourceURL, gitRepoContainsSymlinkBranchName,
 				applicationName, symlinkComponentName, testNamespace)
 		})
 
@@ -224,13 +260,30 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 				}
 			}
+			//Cleanup pac and base branches
+			for _, branches := range pacAndBaseBranches {
+				err = kubeadminClient.CommonController.Github.DeleteRef(branches.RepoName, branches.PacBranchName)
+				if err != nil {
+					Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+				}
+				err = kubeadminClient.CommonController.Github.DeleteRef(branches.RepoName, branches.BaseBranchName)
+				if err != nil {
+					Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+				}
+			}
+			//Cleanup webhook when not running for build-definitions CI
+			if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) == "" {
+				for _, branches := range pacAndBaseBranches {
+					Expect(build.CleanupWebhooks(f, branches.RepoName)).ShouldNot(HaveOccurred(), fmt.Sprintf("failed to cleanup webhooks for repo: %s", branches.RepoName))
+				}
+			}
 		})
 
 		It(fmt.Sprintf("triggers PipelineRun for symlink component with source URL %s", pythonComponentGitSourceURL), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
 			timeout := time.Minute * 5
-			prName := WaitForPipelineRunStarts(kubeadminClient, applicationName, symlinkComponentName, testNamespace, timeout)
-			Expect(prName).ShouldNot(BeEmpty())
-			pipelineRunsWithE2eFinalizer = append(pipelineRunsWithE2eFinalizer, prName)
+			symlinkPRunName = WaitForPipelineRunStarts(kubeadminClient, applicationName, symlinkComponentName, testNamespace, timeout)
+			Expect(symlinkPRunName).ShouldNot(BeEmpty())
+			pipelineRunsWithE2eFinalizer = append(pipelineRunsWithE2eFinalizer, symlinkPRunName)
 		})
 
 		for i, gitUrl := range componentUrls {
@@ -313,7 +366,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(pr).ToNot(BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentNames[i]))
 
-				if build.IsFBCBuild(pr) {
+				if IsFBCBuild(gitUrl) {
 					GinkgoWriter.Println("This is FBC build, which does not require source container build.")
 					Skip(fmt.Sprintf("Skiping FBC build %s", pr.GetName()))
 					return
@@ -420,7 +473,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			It(fmt.Sprintf("should validate tekton taskrun test results for component with Git source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
 				pr, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(build.ValidateBuildPipelineTestResults(pr, kubeadminClient.CommonController.KubeRest())).To(Succeed())
+				Expect(build.ValidateBuildPipelineTestResults(pr, kubeadminClient.CommonController.KubeRest(), IsFBCBuild(gitUrl))).To(Succeed())
 			})
 
 			When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", gitUrl), Label("sbom", "slow"), func() {
@@ -601,16 +654,16 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						pr, err = kubeadminClient.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
 						Expect(err).NotTo(HaveOccurred())
 						GinkgoWriter.Printf("The PipelineRun %s in namespace %s has status.conditions: \n%#v\n", pr.Name, pr.Namespace, pr.Status.Conditions)
-						
+
 						// The UI uses this label to display additional information.
 						Expect(pr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
 
 						// The UI uses this label to display additional information.
-						tr, err := kubeadminClient.TektonController.GetTaskRunFromPipelineRun(kubeadminClient.CommonController.KubeRest(), pr, "verify")			
+						tr, err := kubeadminClient.TektonController.GetTaskRunFromPipelineRun(kubeadminClient.CommonController.KubeRest(), pr, "verify")
 						Expect(err).NotTo(HaveOccurred())
-						GinkgoWriter.Printf("The TaskRun %s of PipelineRun %s  has status.conditions: \n%#v\n", tr.Name, pr.Name, tr.Status.Conditions)	
+						GinkgoWriter.Printf("The TaskRun %s of PipelineRun %s  has status.conditions: \n%#v\n", tr.Name, pr.Name, tr.Status.Conditions)
 						Expect(tr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
-						
+
 						logs, err := kubeadminClient.TektonController.GetTaskRunLogs(pr.Name, "verify", pr.Namespace)
 						Expect(err).NotTo(HaveOccurred())
 
@@ -640,7 +693,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			component, err := kubeadminClient.HasController.GetComponent(symlinkComponentName, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "",
-				kubeadminClient.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries}, nil)).Should(MatchError(ContainSubstring("cloned repository contains symlink pointing outside of the cloned repository")))
+				kubeadminClient.TektonController, &has.RetryOptions{Retries: 0}, nil)).Should(MatchError(ContainSubstring("cloned repository contains symlink pointing outside of the cloned repository")))
 		})
 	})
 })

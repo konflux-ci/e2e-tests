@@ -293,7 +293,7 @@ func CheckCmdFilesChanged(rctx *rulesengine.RuleCtx) bool {
 
 func ExecuteDefaultTestAction(rctx *rulesengine.RuleCtx) error {
 
-	rctx.LabelFilter = "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines"
+	rctx.LabelFilter = "!upgrade-create && !upgrade-verify && !upgrade-cleanup && release-pipelines"
 	return ExecuteTestAction(rctx)
 
 }

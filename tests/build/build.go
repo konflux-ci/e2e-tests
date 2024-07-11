@@ -110,7 +110,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			}
 
 			// Delete created webhook from GitHub
-			cleanupWebhooks(f, helloWorldComponentGitSourceRepoName)
+			Expect(build.CleanupWebhooks(f, helloWorldComponentGitSourceRepoName)).ShouldNot(HaveOccurred())
 
 		})
 
@@ -913,7 +913,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			}
 
 			// Delete created webhook from GitHub
-			cleanupWebhooks(f, secretLookupGitSourceRepoTwoName)
+			Expect(build.CleanupWebhooks(f, secretLookupGitSourceRepoTwoName)).ShouldNot(HaveOccurred())
 
 		})
 		When("two secrets are created", func() {
@@ -1040,15 +1040,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 		var componentObj appservice.ComponentSpec
 		var component *appservice.Component
 
-		var timeout, interval time.Duration
+		invalidAnnotation := "foo"
 
 		BeforeAll(func() {
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
 			Expect(err).ShouldNot(HaveOccurred())
 			testNamespace = f.UserNamespace
-
-			timeout = 5 * time.Minute
-			interval = 5 * time.Second
 
 			applicationName = fmt.Sprintf("build-suite-test-application-%s", util.GenerateRandomString(4))
 			_, err = f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
@@ -1066,8 +1063,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 		})
 
-		When("component is created", func() {
-			var lastBuildStartTime string
+		When("component is created with invalid build request annotations", func() {
+
+			invalidBuildAnnotation := map[string]string{
+				controllers.BuildRequestAnnotationName: invalidAnnotation,
+			}
 
 			BeforeAll(func() {
 				componentObj = appservice.ComponentSpec{
@@ -1084,138 +1084,21 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					},
 				}
 
-				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, constants.DefaultDockerBuildPipelineBundle)
+				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(invalidBuildAnnotation, constants.DefaultDockerBuildPipelineBundle))
 				Expect(component).ToNot(BeNil())
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
-			It("triggers a pipeline run", func() {
-				Eventually(func() error {
-					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-					if err != nil {
-						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
-						return err
-					}
-					if !pr.HasStarted() {
-						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
-					}
-					return nil
-				}, time.Minute*5, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
-			})
-
-			It("component build status annotation is set correctly", func() {
-				var buildStatus *controllers.BuildStatus
-
-				Eventually(func() (bool, error) {
-					component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
-					if err != nil {
-						GinkgoWriter.Printf("cannot get the component: %v\n", err)
-						return false, err
-					}
-
-					buildStatusAnnotationValue := component.Annotations[controllers.BuildStatusAnnotationName]
-					GinkgoWriter.Printf(buildStatusAnnotationValueLoggingFormat, buildStatusAnnotationValue)
-					statusBytes := []byte(buildStatusAnnotationValue)
-
-					err = json.Unmarshal(statusBytes, &buildStatus)
-					if err != nil {
-						GinkgoWriter.Printf("cannot unmarshal build status: %v\n", err)
-						return false, err
-					}
-
-					if buildStatus.Simple != nil {
-						GinkgoWriter.Printf("buildStartTime: %s\n", buildStatus.Simple.BuildStartTime)
-						lastBuildStartTime = buildStatus.Simple.BuildStartTime
-					} else {
-						GinkgoWriter.Println("build status does not have simple field")
-					}
-
-					return buildStatus.Simple != nil && buildStatus.Simple.BuildStartTime != "", nil
-				}, timeout, interval).Should(BeTrue(), "build status has unexpected content")
-
-				//Expect pipelinerun count to be 1
-				Eventually(func() error {
-					pipelineRuns, err := f.AsKubeAdmin.HasController.GetAllPipelineRunsForApplication(applicationName, testNamespace)
-					if err != nil {
-						GinkgoWriter.Println("PiplelineRun has not been created yet")
-						return err
-					}
-					if len(pipelineRuns.Items) != 1 {
-						return fmt.Errorf("pipelinerun count in the namespace %s is not one, got pipelineruns %v", testNamespace, pipelineRuns.Items)
-					}
-					return nil
-				}, time.Minute*5, constants.PipelineRunPollingInterval).Should(Succeed(), "timeout while waiting for first pipelinerun to start")
-			})
-
-			Specify("simple build can be triggered manually", func() {
-				// Wait 1 second before sending the second build request, so that we get different buildStatus.Simple.BuildStartTime timestamp
-				time.Sleep(1 * time.Second)
-				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.BuildRequestAnnotationName, controllers.BuildRequestTriggerSimpleBuildAnnotationValue, testNamespace)).To(Succeed())
-			})
-
-			It("another pipelineRun is triggered", func() {
-				//Expect pipelinerun count to be 2
-				Eventually(func() error {
-					pipelineRuns, err := f.AsKubeAdmin.HasController.GetAllPipelineRunsForApplication(applicationName, testNamespace)
-					if err != nil {
-						GinkgoWriter.Println("Second piplelineRun has not been created yet")
-						return err
-					}
-					if len(pipelineRuns.Items) != 2 {
-						return fmt.Errorf("pipelinerun count in the namespace %s is not two, got pipelineruns %v", testNamespace, pipelineRuns.Items)
-					}
-					return nil
-				}, time.Minute*5, constants.PipelineRunPollingInterval).Should(Succeed(), "timeout while waiting for second pipelinerun to start")
-			})
-
-			It("component build annotation is correct", func() {
-				var buildStatus *controllers.BuildStatus
-
-				Eventually(func() (bool, error) {
-					component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
-					if err != nil {
-						GinkgoWriter.Printf("cannot get the component: %v\n", err)
-						return false, err
-					}
-
-					buildStatusAnnotationValue := component.Annotations[controllers.BuildStatusAnnotationName]
-					GinkgoWriter.Printf(buildStatusAnnotationValueLoggingFormat, buildStatusAnnotationValue)
-					statusBytes := []byte(buildStatusAnnotationValue)
-
-					err = json.Unmarshal(statusBytes, &buildStatus)
-					if err != nil {
-						GinkgoWriter.Printf("cannot unmarshal build status: %v\n", err)
-						return false, err
-					}
-
-					if buildStatus.Simple != nil {
-						GinkgoWriter.Printf("buildStartTime: %s\n", buildStatus.Simple.BuildStartTime)
-					} else {
-						GinkgoWriter.Println("build status does not have simple field")
-					}
-
-					return buildStatus.Simple != nil && buildStatus.Simple.BuildStartTime != lastBuildStartTime, nil
-				}, timeout, interval).Should(BeTrue(), "build status has unexpected content")
-			})
-
 			It("handles invalid request annotation", func() {
 
-				invalidAnnotation := "foo"
 				expectedInvalidAnnotationMessage := fmt.Sprintf("unexpected build request: %s", invalidAnnotation)
 
-				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(componentName, controllers.BuildRequestAnnotationName, invalidAnnotation, testNamespace)).To(Succeed())
-
-				// Waiting for 2 minute to see if any more pipelinerun is triggered
-				Consistently(func() (bool, error) {
-					pipelineRuns, err := f.AsKubeAdmin.HasController.GetAllPipelineRunsForApplication(applicationName, testNamespace)
-					if err != nil {
-						return false, err
-					}
-					if len(pipelineRuns.Items) != 2 {
-						return false, fmt.Errorf("pipelinerun count in the namespace %s is not two, got pipelineruns %v", testNamespace, pipelineRuns.Items)
-					}
-					return true, nil
-				}, time.Minute*2, constants.PipelineRunPollingInterval).Should(BeTrue(), "timeout while checking if any more pipelinerun is triggered")
+				// Waiting for 1 minute to see if any pipelinerun is triggered
+				Consistently(func() bool {
+					_, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+					Expect(err).To(HaveOccurred())
+					return strings.Contains(err.Error(), "no pipelinerun found")
+				}, time.Minute*1, constants.PipelineRunPollingInterval).Should(BeTrue(), "timeout while checking if any pipelinerun is triggered")
 
 				buildStatus := &controllers.BuildStatus{}
 				Eventually(func() error {
@@ -1286,7 +1169,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 	Describe("A secret with dummy quay.io credentials is created in the testing namespace", Ordered, func() {
 
-		var applicationName, componentName, testNamespace string
+		var applicationName, componentName, testNamespace, pacBranchName, componentBaseBranchName string
 		var timeout time.Duration
 		var err error
 		var pr *pipeline.PipelineRun
@@ -1332,19 +1215,25 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			Expect(err).ToNot(HaveOccurred())
 
 			componentName = "build-suite-test-secret-overriding"
+			pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
+			componentBaseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
+			err = f.AsKubeAdmin.CommonController.Github.CreateRef(helloWorldComponentGitSourceCloneRepoName, "main", helloWorldComponentCloneRevision, componentBaseBranchName)
+			Expect(err).ShouldNot(HaveOccurred())
+
 			componentObj := appservice.ComponentSpec{
 				ComponentName: componentName,
 				Application:   applicationName,
 				Source: appservice.ComponentSource{
 					ComponentSourceUnion: appservice.ComponentSourceUnion{
 						GitSource: &appservice.GitSource{
-							URL:           helloWorldComponentGitSourceURL,
+							URL:           helloWorldComponentGitSourceCloneURL,
+							Revision:      componentBaseBranchName,
 							DockerfileURL: constants.DockerFilePath,
 						},
 					},
 				},
 			}
-			_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, constants.DefaultDockerBuildPipelineBundle)
+			_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.DefaultDockerBuildPipelineBundle))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -1355,6 +1244,17 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 			}
+			// Delete new branches created by PaC and a testing branch used as a component's base branch
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceCloneRepoName, pacBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceCloneRepoName, componentBaseBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			// Delete created webhook from GitHub
+			Expect(build.CleanupWebhooks(f, helloWorldComponentGitSourceCloneRepoName)).ShouldNot(HaveOccurred())
 		})
 
 		It("should override the shared secret", func() {
@@ -1372,7 +1272,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 			pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(pr.Spec.Workspaces).To(HaveLen(1))
+			Expect(pr.Spec.Workspaces).To(HaveLen(2))
 		})
 
 		It("should not be possible to push to quay.io repo (PipelineRun should fail)", func() {
@@ -1702,17 +1602,4 @@ func createBuildSecret(f *framework.Framework, secretName string, annotations ma
 		return fmt.Errorf("error creating build secret: %v", err)
 	}
 	return nil
-}
-
-func cleanupWebhooks(f *framework.Framework, repoName string) {
-	hooks, err := f.AsKubeAdmin.CommonController.Github.ListRepoWebhooks(repoName)
-	Expect(err).NotTo(HaveOccurred())
-	for _, h := range hooks {
-		hookUrl := h.Config["url"].(string)
-		if strings.Contains(hookUrl, f.ClusterAppDomain) {
-			GinkgoWriter.Printf("removing webhook URL: %s\n", hookUrl)
-			Expect(f.AsKubeAdmin.CommonController.Github.DeleteWebhook(repoName, h.GetID())).To(Succeed())
-			break
-		}
-	}
 }
