@@ -6,23 +6,23 @@ import (
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
 )
 
-var NonTestFilesFule = rulesengine.Rule{Name: "E2E Default Test Exectuion",
-	Description: "Runs all suites when any non test files are modified in the e2e-repo",
-	Condtion: rulesengine.Any{rulesengine.ConditionFunc(CheckPkgFilesChanged),
+var NonTestFilesRule = rulesengine.Rule{Name: "E2E Default PR Test Exectuion",
+	Description: "Runs all suites when any non test files are modified in the e2e-repo PR",
+	Condition: rulesengine.Any{rulesengine.ConditionFunc(CheckPkgFilesChanged),
 		rulesengine.ConditionFunc(CheckMageFilesChanged),
 		rulesengine.ConditionFunc(CheckCmdFilesChanged),
 		rulesengine.ConditionFunc(CheckNoFilesChanged)},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteDefaultTestAction)}}
 
-var TestFilesOnlyRule = rulesengine.Rule{Name: "E2E Test File Diff Execution",
-	Description: "Runs test specific to test files when those are the only changes in the e2e-repo",
-	Condtion: rulesengine.None{rulesengine.ConditionFunc(CheckPkgFilesChanged),
+var TestFilesOnlyRule = rulesengine.Rule{Name: "E2E PR Test File Diff Execution",
+	Description: "Runs specific tests when test files are the only changes in the e2e-repo PR",
+	Condition: rulesengine.None{rulesengine.ConditionFunc(CheckPkgFilesChanged),
 		rulesengine.ConditionFunc(CheckMageFilesChanged),
 		rulesengine.ConditionFunc(CheckCmdFilesChanged),
 		rulesengine.ConditionFunc(CheckNoFilesChanged)},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteFocusedFileAction)}}
 
-var E2ETestRulesCatalog = rulesengine.RuleCatalog{NonTestFilesFule, TestFilesOnlyRule}
+var E2ETestRulesCatalog = rulesengine.RuleCatalog{NonTestFilesRule, TestFilesOnlyRule}
 
 func CheckNoFilesChanged(rctx *rulesengine.RuleCtx) bool {
 

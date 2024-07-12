@@ -6,12 +6,9 @@ import (
 	"strconv"
 	"testing"
 
-	//"path/filepath"
-
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/ginkgo/v2/types"
 
-	//greports "github.com/onsi/ginkgo/v2/reporters"
 	"github.com/onsi/gomega"
 
 	_ "github.com/konflux-ci/e2e-tests/tests/build"

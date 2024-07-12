@@ -100,7 +100,7 @@ This will help reuse existing rules to create broader flows.
 var InfraDeploymentsTestRulesCatalog = rulesengine.RuleCatalog{
 	rulesengine.Rule{Name: "Infra Deployments Default Test Execution",
 		Description: "Run the default test suites which include the demo and components suites.",
-		Condtion:    rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
+		Condition:    rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
 			if rctx.RepoName == "infra-deployments" {
 				return true
 			}
@@ -146,8 +146,8 @@ var InfraDeploymentsTestRulesCatalog = rulesengine.RuleCatalog{
  met by the CI job the test should execute with a different set of ginkgo label filters. So you will see a mixture of the 
  Any/All/None conditional filters
 
- The first rule's logic is: WHEN EITHER RepoName equals release-service-catalog AND NOT pr paired OR RepoName equals release-service-catalog
- AND is a rehearse job AND NOT pr paired THEN run ginkgo with release-pipelines label filter
+ The first rule's logic is: WHEN RepoName equals release-service-catalog AND EITHER NOT pr paired OR is a rehearse job THEN run ginkgo 
+ with release-pipelines label filter
 
  The second rule's logic is: WHEN RepoName equals release-service-catalog AND pr is paired AND NOT a rehearse job THEN run ginkgo with 
  release-pipelines && !fbc-tests label filters
@@ -156,15 +156,15 @@ var InfraDeploymentsTestRulesCatalog = rulesengine.RuleCatalog{
  ```go
 
  rulesengine.Rule{Name: "Release Catalog Test Execution",
-		Description: "Runs release catalog tests on release-service-catalog repo on pull/rehearsal jobs.",
-		Condtion:    rulesengine.Any{rulesengine.All{rulesengine.ConditionFunc(releaseCatalogRepoCondition), rulesengine.None{rulesengine.ConditionFunc(isPaired)}}, rulesengine.All{rulesengine.ConditionFunc(releaseCatalogRepoCondition), rulesengine.ConditionFunc(isRehearse)}, rulesengine.None{rulesengine.ConditionFunc(isPaired)}},
+		Description: "Runs all release catalog tests on release-service-catalog repo on PR/rehearsal jobs.",
+		Condition:    rulesengine.All{rulesengine.ConditionFunc(releaseCatalogRepoCondition), rulesengine.Any{rulesengine.None{rulesengine.ConditionFunc(isPaired)},rulesengine.ConditionFunc(isRehearse)},},
 		Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 			rctx.LabelFilter = "release-pipelines"
 			return ExecuteTestAction(rctx)
 		})}},
 rulesengine.Rule{Name: "Release Catalog PR paired Test Execution",
 		Description: "Runs release catalog tests except for the fbc tests on release-service-catalog repo when PR paired and not a rehearsal job.",
-		Condtion:    rulesengine.All{rulesengine.ConditionFunc(releaseCatalogRepoCondition), rulesengine.ConditionFunc(isPaired), rulesengine.None{rulesengine.ConditionFunc(isRehearse)}},
+		Condition:    rulesengine.All{rulesengine.ConditionFunc(releaseCatalogRepoCondition), rulesengine.ConditionFunc(isPaired), rulesengine.None{rulesengine.ConditionFunc(isRehearse)}},
 		Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 			rctx.LabelFilter = "release-pipelines && !fbc-tests"
 			return ExecuteTestAction(rctx)

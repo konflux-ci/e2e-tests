@@ -74,7 +74,7 @@ var installGinkgo = func(rctx *rulesengine.RuleCtx) error {
 // WHEN environment has required prereqs THEN install ginkgo, boostrap cluster
 var preflight_check_rule = rulesengine.Rule{Name: "Bootstrap a Cluster",
 	Description: "Boostrap the cluster when the envroniment has all the pre-req environment variables/tools installed.",
-	Condtion:    rulesengine.ConditionFunc(isPrelightCheck),
+	Condition:    rulesengine.ConditionFunc(isPrelightCheck),
 	Actions:     []rulesengine.Action{rulesengine.ActionFunc(installGinkgo), rulesengine.ActionFunc(bootstrapCluster)},
 }
 
@@ -86,7 +86,7 @@ var preflight_check_rule = rulesengine.Rule{Name: "Bootstrap a Cluster",
 
 var LocalE2EDemoRuleChain = rulesengine.Rule{Name: "Local Install and Test Run of e2e-repo",
 	Description: "Install Konflux to a cluster and run tests based on file changes within the e2e-repo when executed from local system.",
-	Condtion:    rulesengine.All{&preflight_check_rule, rulesengine.Any{&NonTestFilesFule, &TestFilesOnlyRule}},
+	Condition:    rulesengine.All{&preflight_check_rule, rulesengine.Any{&NonTestFilesRule, &TestFilesOnlyRule}},
 }
 
 var DemoCatalog = rulesengine.RuleCatalog{LocalE2EDemoRuleChain}

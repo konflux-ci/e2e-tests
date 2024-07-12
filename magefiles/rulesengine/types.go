@@ -304,7 +304,7 @@ func (cf ConditionFunc) Check(rctx *RuleCtx) bool {
 type Rule struct {
 	Name        string
 	Description string
-	Condtion    Conditional
+	Condition    Conditional
 	Actions     []Action
 }
 
@@ -321,7 +321,7 @@ type IRule interface {
 
 func (r *Rule) Eval(rctx *RuleCtx) bool {
 
-	return r.Condtion.Check(rctx)
+	return r.Condition.Check(rctx)
 }
 
 func (r *Rule) Apply(rctx *RuleCtx) error {
