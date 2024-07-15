@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	. "github.com/onsi/gomega"
 	gitlab "github.com/xanzy/go-gitlab"
 )
@@ -148,4 +150,19 @@ func (gc *GitlabClient) DeleteWebhooks(projectID, clusterAppDomain string) error
 	}
 
 	return nil
+}
+
+func (gc *GitlabClient) CreateFile(pathToFile, fileContent, branchName string) (*gitlab.FileInfo, error) {
+	opts := &gitlab.CreateFileOptions{
+		Branch:   gitlab.Ptr(branchName),
+		Content:  &fileContent,
+		CommitMessage: gitlab.Ptr("e2e test commit message"),
+	}
+
+	file, resp, err := gc.client.RepositoryFiles.CreateFile(utils.GetEnv(constants.GITLAB_PROJECT_ID, ""), pathToFile, opts)
+	if resp.StatusCode != 201 || err != nil {
+		return nil, fmt.Errorf("error when creating file contents: response (%v) and error: %v", resp, err)
+	}
+
+	return file, nil
 }

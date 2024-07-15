@@ -5,13 +5,17 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/gitlab"
 	kubeCl "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 )
 
-// Factory to initialize the comunication against different API like github or kubernetes.
+// Factory to initialize the comunication against different API like github, gitlab or kubernetes.
 type HasController struct {
 	// A Client manages communication with the GitHub API in a specific Organization.
 	Github *github.Github
+
+	// A Client manages communication with the GitLab API in a specific Organization.
+	GitLab *gitlab.GitlabClient
 
 	// Generates a kubernetes client to interact with clusters.
 	*kubeCl.CustomClient
@@ -25,8 +29,15 @@ func NewSuiteController(kube *kubeCl.CustomClient) (*HasController, error) {
 		return nil, err
 	}
 
+	gl, err := gitlab.NewGitlabClient(utils.GetEnv(constants.GITLAB_TOKEN_ENV, ""),
+		utils.GetEnv(constants.GITLAB_URL_ENV, "https://gitlab.com/api/v4"))
+	if err != nil {
+		return nil, err
+	}
+
 	return &HasController{
 		gh,
+		gl,
 		kube,
 	}, nil
 }
