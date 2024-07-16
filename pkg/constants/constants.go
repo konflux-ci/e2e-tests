@@ -112,6 +112,9 @@ const (
 	// A gitlab token is required to run tests against gitlab.com. The token need to have permissions to the given github organization.
 	GITLAB_TOKEN_ENV string = "PAC_GITLAB_TOKEN" // #nosec
 
+	// GitLab org where the repositories used for testing are
+	GITLAB_ORG_ENV = "PAC_GITLAB_ORG"
+
 	// The gitlab URL used to run integration reporting e2e tests against
 	GITLAB_URL_ENV string = "PAC_GITLAB_URL" // #nosec
 
