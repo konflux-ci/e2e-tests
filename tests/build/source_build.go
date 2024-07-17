@@ -40,7 +40,7 @@ func CheckParentSources(c client.Client, tektonController *tekton.TektonControll
 			Expect(buildResult.BaseImageSourceIncluded).Should(BeFalse())
 			return
 		}
-		baseImagesDigests, err = parsedDockerfile.ConvertParentImagesToBaseImagesDigestsForm()
+		baseImagesDigests, err = parsedDockerfile.ConvertParentImagesToBuildahOutputForm()
 		Expect(err).ShouldNot(HaveOccurred())
 	} else {
 		Fail("CheckParentSources only works for docker-build pipelines")

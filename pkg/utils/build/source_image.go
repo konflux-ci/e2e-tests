@@ -431,8 +431,8 @@ func (d *Dockerfile) IsBuildFromScratch() bool {
 	return parentImages[len(parentImages)-1] == "scratch"
 }
 
-// convertImageToBuildahOutputForm converts an image pullspec to the corresponding form within
-// BASE_IMAGES_DIGESTS output by buildah task.
+// convertImageToBuildahOutputForm converts an image pullspec to a
+// format corresponding to `buildah images --format '{{ .Name }}:{{ .Tag }}@{{ .Digest }}'`
 func convertImageToBuildahOutputForm(imagePullspec string) (string, error) {
 	ref, err := reference.Parse(imagePullspec)
 	if err != nil {
@@ -460,10 +460,10 @@ func convertImageToBuildahOutputForm(imagePullspec string) (string, error) {
 	return fmt.Sprintf("%s/%s:%s@sha256:%s", converted, ref.Name, tag, digest), nil
 }
 
-// ConvertParentImagesToBaseImagesDigestsForm is a helper function for testing the order is matched
-// between BASE_IMAGES_DIGESTS and parent images within Dockerfile.
-// ConvertParentImagesToBaseImagesDigestsForm de-duplicates the images what buildah task does for BASE_IMAGES_DIGESTS.
-func (d *Dockerfile) ConvertParentImagesToBaseImagesDigestsForm() ([]string, error) {
+// ConvertParentImagesToBuildahOutputForm converts the image pullspecs found in the Dockerfile
+// to a format corresponding to `buildah images --format '{{ .Name }}:{{ .Tag }}@{{ .Digest }}'`.
+// ConvertParentImagesToBuildahOutputForm de-duplicates the images.
+func (d *Dockerfile) ConvertParentImagesToBuildahOutputForm() ([]string, error) {
 	convertedImagePullspecs := make([]string, 0, 5)
 	seen := make(map[string]int)
 	parentImages := d.ParentImages()
