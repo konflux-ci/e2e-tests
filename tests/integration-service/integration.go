@@ -14,7 +14,7 @@ import (
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
+	integrationv1beta2 "github.com/konflux-ci/integration-service/api/v1beta2"
 	intgteststat "github.com/konflux-ci/integration-service/pkg/integrationteststatus"
 
 	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
@@ -30,8 +30,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	var err error
 
 	var applicationName, componentName, testNamespace string
-	var integrationTestScenario *integrationv1beta1.IntegrationTestScenario
-	var newIntegrationTestScenario *integrationv1beta1.IntegrationTestScenario
+	var integrationTestScenario *integrationv1beta2.IntegrationTestScenario
+	var newIntegrationTestScenario *integrationv1beta2.IntegrationTestScenario
 	var timeout, interval time.Duration
 	var originalComponent *appstudioApi.Component
 	var pipelineRun *pipeline.PipelineRun

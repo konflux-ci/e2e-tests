@@ -10,7 +10,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
-	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
+	integrationv1beta2 "github.com/konflux-ci/integration-service/api/v1beta2"
 	. "github.com/onsi/ginkgo/v2"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -146,7 +146,7 @@ func (i *IntegrationController) WaitForIntegrationPipelineToGetStarted(testScena
 
 // WaitForIntegrationPipelineToBeFinished wait for given integration pipeline to finish.
 // In case of failure, this function retries till it gets timed out.
-func (i *IntegrationController) WaitForIntegrationPipelineToBeFinished(testScenario *integrationv1beta1.IntegrationTestScenario, snapshot *appstudioApi.Snapshot, appNamespace string) error {
+func (i *IntegrationController) WaitForIntegrationPipelineToBeFinished(testScenario *integrationv1beta2.IntegrationTestScenario, snapshot *appstudioApi.Snapshot, appNamespace string) error {
 	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 20*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 		pipelineRun, err := i.GetIntegrationPipelineRun(testScenario.Name, snapshot.Name, appNamespace)
 		if err != nil {
@@ -211,7 +211,7 @@ func (i *IntegrationController) WaitForFinalizerToGetRemovedFromAllIntegrationPi
 
 // WaitForFinalizerToGetRemovedFromIntegrationPipeline waits for the
 // given finalizer to get removed from the given integration pipelinerun
-func (i *IntegrationController) WaitForFinalizerToGetRemovedFromIntegrationPipeline(testScenario *integrationv1beta1.IntegrationTestScenario, snapshot *appstudioApi.Snapshot, appNamespace string) error {
+func (i *IntegrationController) WaitForFinalizerToGetRemovedFromIntegrationPipeline(testScenario *integrationv1beta2.IntegrationTestScenario, snapshot *appstudioApi.Snapshot, appNamespace string) error {
 	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 10*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 		pipelineRun, err := i.GetIntegrationPipelineRun(testScenario.Name, snapshot.Name, appNamespace)
 		if err != nil {

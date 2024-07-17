@@ -33,7 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
-	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
+	integrationv1beta2 "github.com/konflux-ci/integration-service/api/v1beta2"
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
@@ -156,15 +156,15 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 						It(fmt.Sprintf("creates a secret for private component %s", componentSpec.Name), Label(devEnvTestLabel, stageEnvTestLabel), func() {
 							privateCompSecret := &corev1.Secret{
 								ObjectMeta: metav1.ObjectMeta{
-									Name: constants.PrivateComponentSecretName,
+									Name:      constants.PrivateComponentSecretName,
 									Namespace: namespace,
-									Labels: map[string]string {
+									Labels: map[string]string{
 										"appstudio.redhat.com/credentials": "scm",
-										"appstudio.redhat.com/scm.host": "github.com",
+										"appstudio.redhat.com/scm.host":    "github.com",
 									},
 								},
 								Type: corev1.SecretTypeBasicAuth,
-								StringData: map[string]string {
+								StringData: map[string]string{
 									"username": "git",
 									"password": os.Getenv("GITHUB_TOKEN"),
 								},
@@ -256,7 +256,7 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 							var release *releaseApi.Release
 							var snapshot *appservice.Snapshot
 							var pipelineRun, testPipelinerun *tektonapi.PipelineRun
-							var integrationTestScenario *integrationv1beta1.IntegrationTestScenario
+							var integrationTestScenario *integrationv1beta2.IntegrationTestScenario
 
 							// PaC related variables
 							var prNumber int

@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
-	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
+	integrationv1beta2 "github.com/konflux-ci/integration-service/api/v1beta2"
 	intgteststat "github.com/konflux-ci/integration-service/pkg/integrationteststatus"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 
@@ -28,7 +28,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	var err error
 
 	var applicationName, componentName, testNamespace string
-	var integrationTestScenario *integrationv1beta1.IntegrationTestScenario
+	var integrationTestScenario *integrationv1beta2.IntegrationTestScenario
 	var timeout, interval time.Duration
 	var originalComponent *appstudioApi.Component
 	var pipelineRun, integrationPipelineRun *pipeline.PipelineRun
