@@ -64,7 +64,8 @@ func collectPodLogs(f *framework.Framework, dirPath, namespace, component string
 		}
 
 		if pod.Kind == "" {
-			logging.Logger.Warning("Missing kind for Pod %s", pod.Name)
+			// This is known issue:
+			// https://github.com/kubernetes/client-go/issues/861#issuecomment-686766515
 			pod.Kind = "Pod"
 		}
 
@@ -106,6 +107,9 @@ func collectPipelineRunJSONs(f *framework.Framework, dirPath, namespace, applica
 				return fmt.Errorf("Failed to list TaskRuns %s/%s: %v", namespace, pr.Name, err)
 			}
 
+			if tr.Kind == "" {
+				tr.Kind = tr.GetGroupVersionKind().Kind
+			}
 			if tr.Kind == "" {
 				logging.Logger.Warning("Missing kind for TaskRun %s", tr.Name)
 				tr.Kind = "TaskRun"
