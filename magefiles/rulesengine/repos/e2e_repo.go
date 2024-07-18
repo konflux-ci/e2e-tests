@@ -1,4 +1,4 @@
-package testselection
+package repos
 
 import (
 	"strings"
@@ -26,7 +26,7 @@ var E2ETestRulesCatalog = rulesengine.RuleCatalog{NonTestFilesRule, TestFilesOnl
 
 func CheckNoFilesChanged(rctx *rulesengine.RuleCtx) bool {
 
-	return len(rctx.DiffFiles) == 0
+	return len(rctx.DiffFiles) == 0 || len(rctx.DiffFiles.FilterByStatus("D")) == 0
 }
 
 func CheckPkgFilesChanged(rctx *rulesengine.RuleCtx) bool {

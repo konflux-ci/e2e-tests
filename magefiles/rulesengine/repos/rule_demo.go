@@ -1,4 +1,4 @@
-package testselection
+package repos
 
 import (
 	"os"
@@ -11,7 +11,7 @@ import (
 
 // Demo of the magefile, PreflightChecks(), as a ConditionalFunc within the rule framework.
 // But really we would actually register the real function with minor tweaks if we opt into framework
-var isPrelightCheck = func(rctx *rulesengine.RuleCtx) bool {
+var isPreflightCheck = func(rctx *rulesengine.RuleCtx) bool {
 
 	if rctx.DryRun {
 
@@ -74,7 +74,7 @@ var installGinkgo = func(rctx *rulesengine.RuleCtx) error {
 // WHEN environment has required prereqs THEN install ginkgo, boostrap cluster
 var preflight_check_rule = rulesengine.Rule{Name: "Bootstrap a Cluster",
 	Description: "Boostrap the cluster when the envroniment has all the pre-req environment variables/tools installed.",
-	Condition:    rulesengine.ConditionFunc(isPrelightCheck),
+	Condition:    rulesengine.ConditionFunc(isPreflightCheck),
 	Actions:     []rulesengine.Action{rulesengine.ActionFunc(installGinkgo), rulesengine.ActionFunc(bootstrapCluster)},
 }
 

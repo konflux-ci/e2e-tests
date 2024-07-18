@@ -21,7 +21,7 @@ The following Architecture of MageEngine.
 
 The core of the engine is a `Rule`. A Rule describes and executes the business logic. It is composed 
 of a `Conditional` which implements the checking of data that should be evaluated to `true`. 
-Once a conditional of a `Rule` evaulates true, the `Rule` can take an `Action`. The action implements 
+Once a conditional of a `Rule` evaluates true, the `Rule` can take an `Action`. The action implements 
 the execution of the task the rule should take.
 
 A `Rule` implements the `IRule` interface: 
@@ -52,14 +52,14 @@ To make constructing `Rules` with some complex conditionals easier the framework
 
  * All: `Conditional|ConditionalFunc` registered will evaluate that all evaluated to `true`
  * Any: `Conditional|ConditionalFunc` registered will evaluate that one evaluated to `true`
- * None: `Conditional|ConditionalFunc` registered will evaluate that all have NOT evaluated to `true`. The absensce of `true`
+ * None: `Conditional|ConditionalFunc` registered will evaluate that all have NOT evaluated to `true`. The absence of `true`
 
 ### Actions
 
 `Action` is an interface that is meant to execute on the passed in data. Like a conditional, an action can 
 be:
  * a full fledged object/struct that implements the `Execute()` function
- * any anonymous or higher order function as long as it is regisered in the Rule as a `ActionFunc`
+ * any anonymous or higher order function as long as it is registered in the Rule as a `ActionFunc`
 
 ### RuleCatalog
 
@@ -68,7 +68,7 @@ As of now most of the Business Logic really is tied by repo. So catalogs are cre
 
 ### Engine 
 
-It is a map of a map. The idea was that each repo would create a catalog of Rules. Those Catalogs could be registered 
+It is a map of a map. The idea was that each repo would create a catalog of Rules. Those catalogs could be registered 
 as map to a `category`. Using the example of test execution, a category could be `tests`. 
 Then under `tests` we regsiter a map, where a key is the repo/domain, i.e. `e2e-repo` and its test catalog is assigned to it.  
 

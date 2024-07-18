@@ -1,4 +1,4 @@
-package testselection
+package repos
 
 import (
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"

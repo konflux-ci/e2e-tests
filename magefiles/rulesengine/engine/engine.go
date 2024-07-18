@@ -2,15 +2,15 @@ package engine
 
 import (
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
-	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine/testselection"
+	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine/repos"
 )
 
 var MageEngine = rulesengine.RuleEngine{
 	"tests": {
-		"e2e-repo":          testselection.E2ETestRulesCatalog,
-		"infra-deployments": testselection.InfraDeploymentsTestRulesCatalog,
+		"e2e-repo":          repos.E2ETestRulesCatalog,
+		"infra-deployments": repos.InfraDeploymentsTestRulesCatalog,
 	},
 	"demo": {
-		"local-workflow": testselection.DemoCatalog,
+		"local-workflow": repos.DemoCatalog,
 	},
 }
