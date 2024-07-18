@@ -14,25 +14,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func ensureBaseImagesDigestsOrder(
-	c client.Client, tektonController *tekton.TektonController, pr *pipeline.PipelineRun, baseImagesDigests []string,
+func parseDockerfileUsedForBuild(
+	c client.Client, tektonController *tekton.TektonController, pr *pipeline.PipelineRun,
 ) *build.Dockerfile {
 	dockerfileContent, err := build.ReadDockerfileUsedForBuild(c, tektonController, pr)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	parsedDockerfile, err := build.ParseDockerfile(dockerfileContent)
 	Expect(err).ShouldNot(HaveOccurred())
-
-	// Check the order of BASE_IMAGES_DIGESTS in order to get the correct parent image used in the last build stage.
-	convertedBaseImages, err := parsedDockerfile.ConvertParentImagesToBaseImagesDigestsForm()
-	Expect(err).ShouldNot(HaveOccurred())
-	GinkgoWriter.Println("converted base images:", convertedBaseImages)
-	GinkgoWriter.Println("base_images_digests:", baseImagesDigests)
-	n := len(convertedBaseImages)
-	Expect(n).Should(Equal(len(baseImagesDigests)))
-	for i := 0; i < n; i++ {
-		Expect(convertedBaseImages[i]).Should(Equal(baseImagesDigests[i]))
-	}
 
 	return parsedDockerfile
 }
@@ -41,22 +30,20 @@ func ensureBaseImagesDigestsOrder(
 // This check is applied to every build for which source build is enabled, then the several prerequisites
 // for including parent sources are handled as well.
 func CheckParentSources(c client.Client, tektonController *tekton.TektonController, pr *pipeline.PipelineRun) {
-	value, err := tektonController.GetTaskRunResult(c, pr, "build-container", "BASE_IMAGES_DIGESTS")
-	Expect(err).ShouldNot(HaveOccurred())
-	baseImagesDigests := strings.Split(strings.TrimSpace(value), "\n")
-	Expect(baseImagesDigests).ShouldNot(BeEmpty(),
-		"checkParentSources: no parent image presents in result BASE_IMAGES_DIGESTS")
-	GinkgoWriter.Println("BASE_IMAGES_DIGESTS used to build:", baseImagesDigests)
-
 	buildResult, err := build.ReadSourceBuildResult(c, tektonController, pr)
 	Expect(err).ShouldNot(HaveOccurred())
 
+	var baseImagesDigests []string
 	if build.IsDockerBuild(pr) {
-		parsedDockerfile := ensureBaseImagesDigestsOrder(c, tektonController, pr, baseImagesDigests)
+		parsedDockerfile := parseDockerfileUsedForBuild(c, tektonController, pr)
 		if parsedDockerfile.IsBuildFromScratch() {
 			Expect(buildResult.BaseImageSourceIncluded).Should(BeFalse())
 			return
 		}
+		baseImagesDigests, err = parsedDockerfile.ConvertParentImagesToBuildahOutputForm()
+		Expect(err).ShouldNot(HaveOccurred())
+	} else {
+		Fail("CheckParentSources only works for docker-build pipelines")
 	}
 
 	lastBaseImage := baseImagesDigests[len(baseImagesDigests)-1]
