@@ -95,8 +95,8 @@ func main() {
 	// Tier up measurements logger
 	logging.MeasurementsStart(opts.OutputDir)
 
-	// Start given number of `userJourneyThread()` threads using `journey.Setup()` and wait for them to finish
-	_, err = logging.Measure(journey.Setup, userJourneyThread, &opts)
+	// Start given number of `perUserThread()` threads using `journey.Setup()` and wait for them to finish
+	_, err = logging.Measure(journey.Setup, perUserThread, &opts)
 	if err != nil {
 		logging.Logger.Fatal("Threads setup failed: %v", err)
 	}
@@ -112,7 +112,7 @@ func main() {
 }
 
 // Single user journey
-func userJourneyThread(threadCtx *journey.MainContext) {
+func perUserThread(threadCtx *journey.MainContext) {
 	defer threadCtx.ThreadsWG.Done()
 
 	var err error
@@ -193,13 +193,6 @@ func userJourneyThread(threadCtx *journey.MainContext) {
 	//// Close the watcher when finished
 	//watcher.Stop()
 	//os.Exit(10)
-
-	// Template repo if needed
-	_, err = logging.Measure(journey.HandleRepoForking, threadCtx)
-	if err != nil {
-		logging.Logger.Error("Thread failed: %v", err)
-		return
-	}
 
 	for threadCtx.JourneyRepeatsCounter = 1; threadCtx.JourneyRepeatsCounter <= threadCtx.Opts.JourneyRepeats; threadCtx.JourneyRepeatsCounter++ {
 
