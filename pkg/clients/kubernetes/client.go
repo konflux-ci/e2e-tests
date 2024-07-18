@@ -13,7 +13,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/sandbox"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	imagecontroller "github.com/konflux-ci/image-controller/api/v1alpha1"
-	integrationservicev1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
+	integrationservicev1beta2 "github.com/konflux-ci/integration-service/api/v1beta2"
 	pacv1alpha1 "github.com/openshift-pipelines/pipelines-as-code/pkg/apis/pipelinesascode/v1alpha1"
 	ocpOauth "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
@@ -72,7 +72,7 @@ func init() {
 	utilruntime.Must(routev1.AddToScheme(scheme))
 	utilruntime.Must(toolchainv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(release.AddToScheme(scheme))
-	utilruntime.Must(integrationservicev1beta1.AddToScheme(scheme))
+	utilruntime.Must(integrationservicev1beta2.AddToScheme(scheme))
 	utilruntime.Must(jvmbuildservice.AddToScheme(scheme))
 	utilruntime.Must(ecp.AddToScheme(scheme))
 	utilruntime.Must(userv1.AddToScheme(scheme))

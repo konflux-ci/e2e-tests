@@ -180,6 +180,7 @@ require (
 	github.com/go-playground/validator/v10 v10.17.0 // indirect
 	github.com/go-redis/cache/v9 v9.0.0 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
+	github.com/go-test/deep v1.1.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
@@ -205,6 +206,7 @@ require (
 	github.com/h2non/parth v0.0.0-20190131123155-b4df798d6542 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
+	github.com/hashicorp/go-hclog v1.6.2 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.5 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
@@ -251,9 +253,7 @@ require (
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/prometheus/statsd_exporter v0.23.1 // indirect
-	github.com/redhat-appstudio/application-api v0.0.0-20240106104232-18f545e48a03 // indirect
 	github.com/redhat-appstudio/image-controller v0.0.0-20231003082540-48893226ba8b // indirect
-	github.com/redhat-appstudio/remote-secret v0.0.0-20240103070316-c146261dd544 // indirect
 	github.com/redis/go-redis/v9 v9.0.5 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect

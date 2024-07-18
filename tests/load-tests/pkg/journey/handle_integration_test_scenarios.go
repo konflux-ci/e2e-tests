@@ -1,17 +1,23 @@
 package journey
 
-import "fmt"
-import "strings"
-import "time"
-import "context"
+import (
+	"context"
+	"fmt"
+	"strings"
+	"time"
 
-import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+	logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
-import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
-import util "github.com/devfile/library/v2/pkg/util"
-import utils "github.com/konflux-ci/e2e-tests/pkg/utils"
-import integrationApi "github.com/konflux-ci/integration-service/api/v1beta1"
-import types "k8s.io/apimachinery/pkg/types"
+	framework "github.com/konflux-ci/e2e-tests/pkg/framework"
+
+	util "github.com/devfile/library/v2/pkg/util"
+
+	utils "github.com/konflux-ci/e2e-tests/pkg/utils"
+
+	integrationApi "github.com/konflux-ci/integration-service/api/v1beta2"
+
+	types "k8s.io/apimachinery/pkg/types"
+)
 
 func createIntegrationTestScenario(f *framework.Framework, namespace, name, appName, scenarioGitURL, scenarioRevision, scenarioPathInRepo string) error {
 	_, err := f.AsKubeDeveloper.IntegrationController.CreateIntegrationTestScenario(name, appName, namespace, scenarioGitURL, scenarioRevision, scenarioPathInRepo)

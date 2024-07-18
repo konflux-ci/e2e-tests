@@ -12,7 +12,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 
 	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
-	integrationv1beta1 "github.com/konflux-ci/integration-service/api/v1beta1"
+	integrationv1beta2 "github.com/konflux-ci/integration-service/api/v1beta2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -30,7 +30,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 	var snapshot *appstudioApi.Snapshot
 	var component *appstudioApi.Component
 	var pipelineRun, testPipelinerun *pipeline.PipelineRun
-	var integrationTestScenarioPass, integrationTestScenarioFail *integrationv1beta1.IntegrationTestScenario
+	var integrationTestScenarioPass, integrationTestScenarioFail *integrationv1beta2.IntegrationTestScenario
 	var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace string
 
 	AfterEach(framework.ReportFailure(&f))
