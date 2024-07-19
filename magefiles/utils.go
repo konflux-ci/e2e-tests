@@ -21,6 +21,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	plumbingHttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	sprig "github.com/go-task/slim-sprig"
+	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/slack"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/konflux-ci/image-controller/pkg/quay"
@@ -438,4 +439,33 @@ func HandleErrorWithAlert(err error, errLevel slack.ErrorSeverityLevel) error {
 		return fmt.Errorf("failed report an error (%s) to a Slack channel: %s", err, slackErr)
 	}
 	return nil
+}
+
+func getChangedFiles() (rulesengine.Files, error) {
+	var gitDiff = sh.OutCmd("git", "diff")
+	output, err := gitDiff("--name-status", "main..HEAD")
+
+	if err != nil {
+		klog.Error("Failed to run git status locally")
+		return nil, err
+	}
+
+	if output == "" {
+		klog.Info("Found no changed files.")
+		return rulesengine.Files{}, nil
+	}
+	var changes rulesengine.Files
+	var file rulesengine.File
+	for _, line := range strings.Split(output, "\n") {
+
+		fileAttr := strings.Split(line, "\t")
+		file = rulesengine.File{Status: fileAttr[0], Name: fileAttr[1]}
+
+		changes = append(changes, file)
+	}
+
+	klog.Infof("The following files, %s, were changed!", changes.String())
+
+	return changes, nil
+
 }

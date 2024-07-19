@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
-	"k8s.io/apimachinery/pkg/runtime"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 
 	"k8s.io/klog/v2"
 
@@ -24,6 +24,8 @@ import (
 	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
 	gh "github.com/google/go-github/v44/github"
 	"github.com/konflux-ci/e2e-tests/magefiles/installation"
+	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
+	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine/engine"
 	"github.com/konflux-ci/e2e-tests/magefiles/upgrade"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/gitlab"
@@ -298,6 +300,54 @@ func (ci CI) UnregisterSprayproxy() {
 
 func RunE2ETests() error {
 	labelFilter := utils.GetEnv("E2E_TEST_SUITE_LABEL", "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines")
+
+	rctx := rulesengine.NewRuleCtx()
+	rctx.Parallel = true
+	rctx.OutputDir = artifactDir
+	rctx.JUnitReport = "e2e-report.xml"
+	//This conditional could be moved into a rule but keeping the change small
+	if reflect.DeepEqual(openshiftJobSpec, OpenshiftJobSpec{}) && openshiftJobSpec.Refs.Repo == "e2e-tests" {
+
+		rctx.RepoName = openshiftJobSpec.Refs.Repo
+		rctx.JobName = jobName
+		rctx.JobType = jobType
+
+		files, err := getChangedFiles()
+		if err != nil {
+			return err
+		}
+		rctx.DiffFiles = files
+
+		// filtering the rule engine to load only e2e-repo rule catalog within the test category
+		err = engine.MageEngine.RunRules(rctx, "tests", "e2e-repo")
+
+		if err != nil {
+			return err
+		}
+
+		return nil
+
+	}
+
+	if !reflect.DeepEqual(openshiftJobSpec, OpenshiftJobSpec{}) {
+
+		files, err := getChangedFiles()
+		if err != nil {
+			return err
+		}
+		rctx.DiffFiles = files
+
+		// filtering the rule engine to load only e2e-repo rule catalog within the test category
+		err = engine.MageEngine.RunRules(rctx, "tests", "e2e-repo")
+
+		if err != nil {
+			return err
+		}
+
+		return nil
+
+	}
+
 	return runTests(labelFilter, "e2e-report.xml")
 }
 
@@ -528,6 +578,7 @@ func setRequiredEnvVars() error {
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
 		}
+
 	}
 
 	return nil
@@ -1268,4 +1319,44 @@ func isValidPacHost(server string) bool {
 	httpClient := http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
 	_, err := httpClient.Get(strings.TrimSpace(server))
 	return err == nil
+}
+
+func (Local) PreviewTestSelection() error {
+
+	rctx := rulesengine.NewRuleCtx()
+	files, err := getChangedFiles()
+	if err != nil {
+		klog.Error(err)
+		return err
+	}
+	rctx.DiffFiles = files
+	rctx.DryRun = true
+
+	err = engine.MageEngine.RunRules(rctx, "tests", "e2e-repo")
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (Local) RunRuleDemo() error {
+
+	rctx := rulesengine.NewRuleCtx()
+	files, err := getChangedFiles()
+	if err != nil {
+		klog.Error(err)
+		return err
+	}
+	rctx.DiffFiles = files
+	rctx.DryRun = true
+
+	err = engine.MageEngine.RunRulesOfCategory("demo", rctx)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
