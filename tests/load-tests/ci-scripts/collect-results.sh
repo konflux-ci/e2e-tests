@@ -71,9 +71,10 @@ status_data.py \
 deactivate
 
 echo "[$(date --utc -Ins)] Collecting additional info"
-application_stub=$ARTIFACT_DIR/collected-applications.appstudio.redhat.com
-component_stub=$ARTIFACT_DIR/collected-components.appstudio.redhat.com
-node_stub=$ARTIFACT_DIR/collected-nodes
+mkdir -p $ARTIFACT_DIR/collected-data
+application_stub=$ARTIFACT_DIR/collected-data/collected-applications.appstudio.redhat.com
+component_stub=$ARTIFACT_DIR/collected-data/collected-components.appstudio.redhat.com
+node_stub=$ARTIFACT_DIR/collected-data/collected-nodes
 
 ## Application info
 echo "Collecting Application timestamps..."
