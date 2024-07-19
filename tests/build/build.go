@@ -287,13 +287,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build", "
 			BeforeAll(func() {
 
 				// create the build secret in the user namespace
-				secretName := "build-secret"
-				token := os.Getenv("GITHUB_TOKEN")
-				secretAnnotations := map[string]string{
-					"appstudio.redhat.com/scm.repository": os.Getenv("MY_GITHUB_ORG") + "/*",
-				}
-				err = createBuildSecret(f, secretName, secretAnnotations, token)
-				Expect(err).ShouldNot(HaveOccurred())
+				// secretName := "build-secret"
+				// token := os.Getenv("GITHUB_TOKEN")
+				// secretAnnotations := map[string]string{
+				// 	"appstudio.redhat.com/scm.repository": os.Getenv("MY_GITHUB_ORG") + "/*",
+				// }
+				// err = createBuildSecret(f, secretName, secretAnnotations, token)
+				// Expect(err).ShouldNot(HaveOccurred())
 
 				componentObj := appservice.ComponentSpec{
 					ComponentName: componentName,
