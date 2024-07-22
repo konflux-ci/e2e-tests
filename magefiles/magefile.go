@@ -304,6 +304,8 @@ func RunE2ETests() error {
 	rctx := rulesengine.NewRuleCtx()
 	rctx.Parallel = true
 	rctx.OutputDir = artifactDir
+	// used by ReleaseServiceCatalogRule
+	rctx.IsPaired = fmt.Sprintf("%t", isPRPairingRequired("release-service"))
 	rctx.JUnitReport = "e2e-report.xml"
 	//This conditional could be moved into a rule but keeping the change small
 	if reflect.DeepEqual(openshiftJobSpec, OpenshiftJobSpec{}) && openshiftJobSpec.Refs.Repo == "e2e-tests" {
