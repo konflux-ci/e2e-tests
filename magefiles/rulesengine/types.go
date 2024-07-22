@@ -435,6 +435,7 @@ type RuleCtx struct {
 	JobName          string
 	JobType          string
 	DiffFiles        Files
+	IsPaired         string
 	RequiredBinaries []string
 }
 
@@ -450,12 +451,13 @@ func NewRuleCtx() *RuleCtx {
 		suiteConfig,
 		reporterConfig,
 		goFlagsConfig,
-		envData, "", "", "", Files{}, make([]string, 0)}
+		envData, "", "", "", Files{}, "", make([]string, 0)}
 
 	//init defaults we've used so far
 	t, _ := time.ParseDuration("90m")
 	r.Timeout = t
 	r.OutputInterceptorMode = "none"
+	r.IsPaired = "false"
 
 	return r
 
