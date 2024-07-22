@@ -308,30 +308,7 @@ func RunE2ETests() error {
 	rctx.IsPaired = fmt.Sprintf("%t", isPRPairingRequired("release-service"))
 	rctx.JUnitReport = "e2e-report.xml"
 	//This conditional could be moved into a rule but keeping the change small
-	if reflect.DeepEqual(openshiftJobSpec, OpenshiftJobSpec{}) && openshiftJobSpec.Refs.Repo == "e2e-tests" {
-
-		rctx.RepoName = openshiftJobSpec.Refs.Repo
-		rctx.JobName = jobName
-		rctx.JobType = jobType
-
-		files, err := getChangedFiles()
-		if err != nil {
-			return err
-		}
-		rctx.DiffFiles = files
-
-		// filtering the rule engine to load only e2e-repo rule catalog within the test category
-		err = engine.MageEngine.RunRules(rctx, "tests", "e2e-repo")
-
-		if err != nil {
-			return err
-		}
-
-		return nil
-
-	}
-
-	if reflect.DeepEqual(openshiftJobSpec, OpenshiftJobSpec{}) && openshiftJobSpec.Refs.Repo == "release-service-catalog" {
+	if  openshiftJobSpec.Refs.Repo == "release-service-catalog" {
 
 		rctx.RepoName = openshiftJobSpec.Refs.Repo
 		rctx.JobName = jobName
@@ -353,7 +330,11 @@ func RunE2ETests() error {
 		return nil
 	}
 
-	if !reflect.DeepEqual(openshiftJobSpec, OpenshiftJobSpec{}) {
+	if openshiftJobSpec.Refs.Repo == "e2e-tests" {
+
+		rctx.RepoName = openshiftJobSpec.Refs.Repo
+		rctx.JobName = jobName
+		rctx.JobType = jobType
 
 		files, err := getChangedFiles()
 		if err != nil {
@@ -369,7 +350,6 @@ func RunE2ETests() error {
 		}
 
 		return nil
-
 	}
 
 	return runTests(labelFilter, "e2e-report.xml")
