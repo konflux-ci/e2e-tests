@@ -331,6 +331,28 @@ func RunE2ETests() error {
 
 	}
 
+	if reflect.DeepEqual(openshiftJobSpec, OpenshiftJobSpec{}) && openshiftJobSpec.Refs.Repo == "release-service-catalog" {
+
+		rctx.RepoName = openshiftJobSpec.Refs.Repo
+		rctx.JobName = jobName
+		rctx.JobType = jobType
+
+		files, err := getChangedFiles()
+		if err != nil {
+			return err
+		}
+		rctx.DiffFiles = files
+
+		// filtering the rule engine to load only release-catalog rule catalog within the test category
+		err = engine.MageEngine.RunRules(rctx, "tests", "release-catalog")
+
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	if !reflect.DeepEqual(openshiftJobSpec, OpenshiftJobSpec{}) {
 
 		files, err := getChangedFiles()
