@@ -134,20 +134,23 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 
 				// Remove all resources created by the tests
 				AfterAll(func() {
-					if !appTest.Stage && !strings.Contains(GinkgoLabelFilter(), upstreamKonfluxTestLabel) {
-						if !(strings.EqualFold(os.Getenv("E2E_SKIP_CLEANUP"), "true")) && !CurrentSpecReport().Failed() { // RHTAPBUGS-978: temporary timeout to 15min
-							Expect(kubeadminClient.HasController.DeleteAllComponentsInASpecificNamespace(userNamespace, 15*time.Minute)).To(Succeed())
-							Expect(kubeadminClient.HasController.DeleteAllApplicationsInASpecificNamespace(userNamespace, 30*time.Second)).To(Succeed())
-							Expect(kubeadminClient.IntegrationController.DeleteAllSnapshotsInASpecificNamespace(userNamespace, 30*time.Second)).To(Succeed())
-							Expect(kubeadminClient.TektonController.DeleteAllPipelineRunsInASpecificNamespace(userNamespace)).To(Succeed())
-							Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
+					// Skip deletion of resources for the upstream-konflux test completely
+					if !strings.Contains(GinkgoLabelFilter(), upstreamKonfluxTestLabel) {
+						if !appTest.Stage {
+							if !(strings.EqualFold(os.Getenv("E2E_SKIP_CLEANUP"), "true")) && !CurrentSpecReport().Failed() { // RHTAPBUGS-978: temporary timeout to 15min
+								Expect(kubeadminClient.HasController.DeleteAllComponentsInASpecificNamespace(userNamespace, 15*time.Minute)).To(Succeed())
+								Expect(kubeadminClient.HasController.DeleteAllApplicationsInASpecificNamespace(userNamespace, 30*time.Second)).To(Succeed())
+								Expect(kubeadminClient.IntegrationController.DeleteAllSnapshotsInASpecificNamespace(userNamespace, 30*time.Second)).To(Succeed())
+								Expect(kubeadminClient.TektonController.DeleteAllPipelineRunsInASpecificNamespace(userNamespace)).To(Succeed())
+								Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
+							}
+						} else {
+							err := kubeadminClient.HasController.DeleteAllApplicationsInASpecificNamespace(userNamespace, stageTimeout)
+							if err != nil {
+								GinkgoWriter.Println("Error while deleting resources for user, got error: %v\n", err)
+							}
+							Expect(err).NotTo(HaveOccurred())
 						}
-					} else {
-						err := kubeadminClient.HasController.DeleteAllApplicationsInASpecificNamespace(userNamespace, stageTimeout)
-						if err != nil {
-							GinkgoWriter.Println("Error while deleting resources for user, got error: %v\n", err)
-						}
-						Expect(err).NotTo(HaveOccurred())
 					}
 				})
 

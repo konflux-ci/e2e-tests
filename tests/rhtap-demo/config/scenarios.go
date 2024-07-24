@@ -48,16 +48,16 @@ var TestScenarios = []TestSpec{
 		Components: []ComponentSpec{
 			{
 				Name:                       "konflux-ci-upstream",
-				GitSourceUrl:               fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), "konflux-ci-sample"),
+				GitSourceUrl:               fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), "testrepo"),
 				GitSourceRevision:          "ba3f8828d061a539ef774229d2f5c8651d854d7e",
 				GitSourceDefaultBranchName: "main",
 				DockerFilePath:             "Dockerfile",
 				SkipDeploymentCheck:        true,
 				AdvancedBuildSpec: &AdvancedBuildSpec{
 					TestScenario: TestScenarioSpec{
-						GitURL:      "https://github.com/konflux-ci/integration-examples.git",
-						GitRevision: "843f455fe87a6d7f68c238f95a8f3eb304e65ac5",
-						TestPath:    "pipelines/integration_resolver_pipeline_pass.yaml",
+						GitURL:      fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), "testrepo"),
+						GitRevision: "ba3f8828d061a539ef774229d2f5c8651d854d7e",
+						TestPath:    "integration-tests/testrepo-integration.yaml",
 					},
 				},
 			},
