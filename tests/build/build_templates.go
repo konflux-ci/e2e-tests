@@ -270,8 +270,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				}
 
 				sbom := &build.SbomCyclonedx{}
-				GinkgoWriter.Printf("sbom task log: %s\n", sbomTaskLog)
-
 				err = json.Unmarshal([]byte(sbomTaskLog), sbom)
 				Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("failed to parse SBOM from show-sbom task output from %s/%s PipelineRun", pr.GetNamespace(), pr.GetName()))
 				Expect(sbom.BomFormat).ToNot(BeEmpty())
