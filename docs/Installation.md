@@ -51,7 +51,7 @@ $ go mod tidy
 <p>
 
    Some tests could require you have a Github App created in order to test Component builds via Pipelines as Code.
-Such tests are [rhtap-demo](https://github.com/konflux-ci/e2e-tests/blob/main/tests/rhtap-demo/rhtap-demo.go), [build](https://github.com/konflux-ci/e2e-tests/blob/main/tests/build/build.go), and [status-reporting-to-pullrequest](https://github.com/konflux-ci/e2e-tests/blob/main/tests/integration-service/status-reporting-to-pullrequest.go).
+Such tests are [konflux-demo](https://github.com/konflux-ci/e2e-tests/blob/main/tests/konflux-demo/konflux-demo.go), [build](https://github.com/konflux-ci/e2e-tests/blob/main/tests/build/build.go), and [status-reporting-to-pullrequest](https://github.com/konflux-ci/e2e-tests/blob/main/tests/integration-service/status-reporting-to-pullrequest.go).
 
 In this case, before you bootstrap a cluster, make sure you [created a Github App for your GitHub account](https://github.com/settings/apps). Fill in following details:
 </p>
@@ -72,7 +72,7 @@ export E2E_PAC_GITHUB_APP_PRIVATE_KEY=$(base64 < /PATH/TO/YOUR/DOWNLOADED/PRIVAT
 ```
 
 <p>
-Navigate back to <a href="https://github.com/settings/apps">your GitHub App</a>, select Install App and select your GitHub org (the one that you're using in `MY_GITHUB_ORG` env var). Feel free to install it to all repositories of that organization or the forked repositories currently used by <a href="(https://github.com/konflux-ci/e2e-tests/blob/main/tests/rhtap-demo/rhtap-demo.go)">rhtap-demo</a> and <a href="(https://github.com/konflux-ci/e2e-tests/blob/main/tests/build/build.go">build tests</a>
+Navigate back to <a href="https://github.com/settings/apps">your GitHub App</a>, select Install App and select your GitHub org (the one that you're using in `MY_GITHUB_ORG` env var). Feel free to install it to all repositories of that organization or the forked repositories currently used by <a href="(https://github.com/konflux-ci/e2e-tests/blob/main/tests/konflux-demo/konflux-demo.go)">konflux-demo</a> and <a href="(https://github.com/konflux-ci/e2e-tests/blob/main/tests/build/build.go">build tests</a>
 </p>
 
 </details>
@@ -83,7 +83,7 @@ For bootstrapping a cluster, run the following command:
       make local/cluster/prepare
    ```
 
-More information about how to deploy RHTAP
+More information about how to deploy KONFLUX
 are in the [infra-deployments](https://github.com/redhat-appstudio/infra-deployments) repository.
 
 ### Building and running the e2e tests
@@ -94,8 +94,8 @@ In that case, before you run the test, make sure you have created
   * also make sure that the docker config, that is encoded in the value of `QUAY_TOKEN` environment variable, contains a correct credentials required to push to `test-images` repo. And make sure the robot account or user account has the **write** permissions set for `test-images` repo which is required by the tests to push the generated artifacts.
 * fork following GitHub repositories to your org (specified in `MY_GITHUB_ORG` env var)
   * https://github.com/redhat-appstudio-qe/devfile-sample-hello-world (for running build-service tests)
-  * https://github.com/redhat-appstudio-qe/hacbs-test-project (for rhtap-demo test)
-  * https://github.com/redhat-appstudio-qe/strategy-configs (for rhtap-demo test)
+  * https://github.com/redhat-appstudio-qe/hacbs-test-project (for konflux-demo test)
+  * https://github.com/redhat-appstudio-qe/strategy-configs (for konflux-demo test)
   * https://github.com/redhat-appstudio-qe/hacbs-test-project-integration (for status-reporting-to-pullrequest test)
 
 Note: All Environments used in all e2e-tests are in [default.env](../default.env) file. In case you need to run a specific tests, not all environments are necessary to be defined.
@@ -124,11 +124,11 @@ The `e2e-appstudio` command is the root command that executes all test functiona
    ```
 Note: The binary must be updated by running `make build` every time there are new changes in the tests.
 
-The instructions for every test suite can be found in the [tests folder](tests), e.g. [has Readme.md](tests/rhtap-demo/README.md).
+The instructions for every test suite can be found in the [tests folder](tests), e.g. [has Readme.md](tests/konflux-demo/README.md).
 You can also specify which tests you want to run using [labels](docs/LabelsNaming.md) or [Ginkgo Focus](docs/DeveloperFocus.md).
 
 
-## RHTAP in Openshift CI and branch pairing
+## KONFLUX in Openshift CI and branch pairing
 
 The e2e tests are executed against almost all AppStudio repositories.
 

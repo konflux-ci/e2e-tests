@@ -23,7 +23,7 @@ import (
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
-var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of Integration tests", Label("integration-service", "HACBS", "gitlab-status-reporting"), func() {
+var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of Integration tests", Label("integration-service", "gitlab-status-reporting"), func() {
 	defer GinkgoRecover()
 
 	var f *framework.Framework

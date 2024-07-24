@@ -23,7 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests", Label("integration-service", "HACBS"), func() {
+var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests", Label("integration-service"), func() {
 	defer GinkgoRecover()
 
 	var f *framework.Framework

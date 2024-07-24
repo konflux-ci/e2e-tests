@@ -25,8 +25,8 @@ func IntegrationServiceSuiteDescribe(text string, args ...interface{}) bool {
 	return Describe("[integration-service-suite "+text+"]", args, Ordered)
 }
 
-func RhtapDemoSuiteDescribe(args ...interface{}) bool {
-	return Describe("[rhtap-demo-suite]", args)
+func KonfluxDemoSuiteDescribe(args ...interface{}) bool {
+	return Describe("[konflux-demo-suite]", args)
 }
 
 func EnterpriseContractSuiteDescribe(text string, args ...interface{}) bool {

@@ -18,11 +18,11 @@ const (
 var TestScenarios = []TestSpec{
 	{
 		Name:            "Maven project - Simple and Advanced build",
-		ApplicationName: "rhtap-demo-app",
+		ApplicationName: "konflux-demo-app",
 		Skip:            false,
 		Components: []ComponentSpec{
 			{
-				Name:                       "rhtap-demo-component",
+				Name:                       "konflux-demo-component",
 				Language:                   "Java",
 				GitSourceUrl:               fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), "hacbs-test-project"),
 				GitSourceRevision:          "34da5a8f51fba6a8b7ec75a727d3c72ebb5e1274",
@@ -42,7 +42,7 @@ var TestScenarios = []TestSpec{
 		},
 	},
 	{
-		Name:            "DEVHAS-234: creates an application with springboot component from RHTAP samples",
+		Name:            "DEVHAS-234: creates an application with springboot component from KONFLUX samples",
 		ApplicationName: "e2e-springboot",
 		Components: []ComponentSpec{
 			{
@@ -58,7 +58,7 @@ var TestScenarios = []TestSpec{
 		},
 	},
 	{
-		Name:            "DEVHAS-234: creates an application with python component from RHTAP samples",
+		Name:            "DEVHAS-234: creates an application with python component from KONFLUX samples",
 		ApplicationName: "e2e-python-personal",
 		Components: []ComponentSpec{
 			{
@@ -75,10 +75,10 @@ var TestScenarios = []TestSpec{
 		},
 	},
 	{
-		Name:            "DEVHAS-234: creates an application with dotnet component from RHTAP samples",
+		Name:            "DEVHAS-234: creates an application with dotnet component from KONFLUX samples",
 		ApplicationName: "e2e-dotnet",
 		// https://redhat-appstudio.github.io/docs.appstudio.io/Documentation/main/getting-started/get-started/#choosing-a-bundled-sample
-		// Seems like RHTAP dont support yet a dotnet sample. Disabling for not this tests.
+		// Seems like KONFLUX dont support yet a dotnet sample. Disabling for not this tests.
 		Skip: true,
 		Components: []ComponentSpec{
 			{
@@ -206,12 +206,12 @@ var TestScenarios = []TestSpec{
 	},
 	{
 		Name:            "Stage Test - Simple Stage Test With SpringBoot Basic",
-		ApplicationName: "rhtap-stage-demo-app",
+		ApplicationName: "konflux-stage-demo-app",
 		Skip:            false,
 		Stage:           true,
 		Components: []ComponentSpec{
 			{
-				Name:                "rhtap-stage-demo-component",
+				Name:                "konflux-stage-demo-component",
 				ContainerSource:     "",
 				Language:            "Java",
 				GitSourceUrl:        "https://github.com/devfile-samples/devfile-sample-java-springboot-basic",

@@ -110,7 +110,7 @@ func TestCleanupQuayReposAndRobots(t *testing.T) {
 		{Name: "multi-platform/test-old"},
 	}
 	preservedRepos := []quay.Repository{
-		{Name: "rhtap-demo/test-new"},
+		{Name: "konflux-demo/test-new"},
 		{Name: "multi-platform/test-new"},
 		{Name: "other/test-new"},
 		{Name: "other/test-old"},
@@ -120,7 +120,7 @@ func TestCleanupQuayReposAndRobots(t *testing.T) {
 		{Name: "test-org+multi-platformtest-old", Created: time.Now().Add(-25 * time.Hour).Format(timeFormat)},
 	}
 	preservedRobots := []quay.RobotAccount{
-		{Name: "test-org+rhtap-demotest-new", Created: time.Now().Format(timeFormat)},
+		{Name: "test-org+konflux-demotest-new", Created: time.Now().Format(timeFormat)},
 		{Name: "test-org+multi-platformtest-new", Created: time.Now().Format(timeFormat)},
 		{Name: "test-org+othertest-old", Created: time.Now().Add(-25 * time.Hour).Format(timeFormat)},
 		{Name: "test-org+othertest-new", Created: time.Now().Format(timeFormat)},

@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmission match", Label("release-service", "release_plan_and_admission", "HACBS"), func() {
+var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmission match", Label("release-service", "release_plan_and_admission"), func() {
 	defer GinkgoRecover()
 
 	var fw *framework.Framework

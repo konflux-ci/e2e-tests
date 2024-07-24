@@ -107,7 +107,7 @@ var InfraDeploymentsTestRulesCatalog = rulesengine.RuleCatalog{
 			return false
 		}),
 		Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
-			rctx.LabelFilter = "e2e-demo,rhtap-demo,spi-suite,remote-secret,integration-service,ec,build-templates,multi-platform"
+			rctx.LabelFilter = "e2e-demo,konflux-demo,spi-suite,remote-secret,integration-service,ec,build-templates,multi-platform"
 			return ExecuteTestAction(rctx)
 		})}},
 
