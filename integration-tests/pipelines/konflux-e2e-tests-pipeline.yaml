@@ -37,15 +37,18 @@
         description: 'The type of machine to use for the cluster nodes.'
         default: 'm5.2xlarge'
       - name: oras-container
-        default: 'quay.io/konflux-qe-incubator/konflux-qe-oci-storage'
+        default: 'quay.io/konflux-ci/konflux-qe-oci-storage'
         description: The ORAS container used to store all test artifacts.
+      - name: quality-dashboard-api
+        default: 'none'
+        description: WIP.
     tasks:
       - name: rosa-hcp-metadata
         taskRef:
           resolver: git
           params:
             - name: url
-              value: https://github.com/konflux-qe-incubator/konflux-qe-definitions.git
+              value: https://github.com/konflux-ci/konflux-qe-definitions.git
             - name: revision
               value: main
             - name: pathInRepo
@@ -55,11 +58,11 @@
           resolver: git
           params:
             - name: url
-              value: https://github.com/konflux-qe-incubator/konflux-qe-definitions.git
+              value: https://github.com/konflux-ci/konflux-qe-definitions.git
             - name: revision
               value: main
             - name: pathInRepo
-              value: common/tasks/test-metadata/test-metadata.yaml
+              value: common/tasks/test-metadata/0.1/test-metadata.yaml
         params:
           - name: SNAPSHOT
             value: $(params.SNAPSHOT)
@@ -79,7 +82,7 @@
           resolver: git
           params:
             - name: url
-              value: https://github.com/konflux-qe-incubator/konflux-qe-definitions.git
+              value: https://github.com/konflux-ci/konflux-qe-definitions.git
             - name: revision
               value: main
             - name: pathInRepo
@@ -110,9 +113,9 @@
             - name: url
               value: https://github.com/konflux-ci/e2e-tests.git
             - name: revision
-              value: main
+              value: konflux_ci
             - name: pathInRepo
-              value: .tekton/integration-tests/tasks/konflux-e2e.yaml
+              value: integration-tests/tasks/konflux-e2e-tests-task.yaml
         params:
           - name: test-name
             value: $(context.pipelineRun.name
@@ -140,7 +143,7 @@
           resolver: git
           params:
             - name: url
-              value: https://github.com/konflux-qe-incubator/konflux-qe-definitions.git
+              value: https://github.com/konflux-ci/konflux-qe-definitions.git
             - name: revision
               value: test
             - name: pathInRepo
@@ -168,5 +171,32 @@
             value: "$(params.region)"
           - name: aws-secrets
             value: "$(params.aws-secrets)"
+          - name: pipeline-aggregate-status
+            value: "$(tasks.status)"
+      - name: quality-dashboard-upload
+        when:
+          - input: "$(tasks.test-metadata.results.test-event-type)"
+            operator: in
+            values: ["pull_request"]
+        taskRef:
+          resolver: git
+          params:
+            - name: url
+              value: https://github.com/flacatus/konflux-qe-definitions.git
+            - name: revision
+              value: qd
+            - name: pathInRepo
+              value: common/tasks/quality-dashboard/0.1/quality-dashboard-upload.yaml
+        params:
+          - name: test-name
+            value: $(context.pipelineRun.name)
+          - name: oras-container
+            value: "$(tasks.test-metadata.results.oras-container)"
+          - name: quality-dashboard-api
+            value: $(params.quality-dashboard-api)
+          - name: pipeline-aggregate-status
+            value: "$(tasks.status)"
+          - name: test-event-type
+            value: "$(tasks.test-metadata.results.test-event-type)"
           - name: pipeline-aggregate-status
             value: "$(tasks.status)"
