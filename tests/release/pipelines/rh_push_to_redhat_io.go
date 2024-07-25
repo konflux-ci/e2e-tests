@@ -128,7 +128,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 				// Create a ticker that ticks every 3 minutes
 				ticker := time.NewTicker(3 * time.Minute)
 				// Schedule the stop of the ticker after 15 minutes
-				time.AfterFunc(15*time.Minute, func() {
+				time.AfterFunc(30*time.Minute, func() {
 					ticker.Stop()
 					fmt.Println("Stopped executing every 3 minutes.")
 				})
@@ -164,8 +164,13 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 				devFw = releasecommon.NewFramework(devWorkspace)
 				managedFw = releasecommon.NewFramework(managedWorkspace)
 
-				releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
+				Eventually(func() error {
+					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
+					if err != nil {
+						return err
+					}
+					return nil
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
 
 				Expect(managedFw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
 			})
@@ -269,6 +274,7 @@ func createRHIOReleasePlanAdmission(rhioRPAName string, managedFw framework.Fram
 		},
 		"sign": map[string]interface{}{
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",
+			"cosignSecretName": "test-cosign-secret",
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
