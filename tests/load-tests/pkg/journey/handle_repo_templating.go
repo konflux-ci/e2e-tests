@@ -115,7 +115,7 @@ func HandleRepoForking(ctx *MainContext) error {
 		return nil
 	}
 
-	logging.Logger.Debug("Templating repository %s for user %s", ctx.Opts.ComponentRepoUrl, ctx.Username)
+	logging.Logger.Debug("Forking repository %s for user %s", ctx.Opts.ComponentRepoUrl, ctx.Username)
 
 	forkUrl, err := ForkRepo(
 		ctx.Framework,
@@ -124,14 +124,10 @@ func HandleRepoForking(ctx *MainContext) error {
 		ctx.Username,
 	)
 	if err != nil {
-		ctx.TemplatingDoneWG.Done()
-		return logging.Logger.Fail(80, "Repo templating failed: %v", err)
+		return logging.Logger.Fail(80, "Repo forking failed: %v", err)
 	}
 
 	ctx.ComponentRepoUrl = forkUrl
-
-	ctx.TemplatingDoneWG.Done()
-	ctx.TemplatingDoneWG.Wait()
 
 	return nil
 }

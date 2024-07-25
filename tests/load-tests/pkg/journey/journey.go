@@ -20,7 +20,6 @@ type MainContext struct {
 	JourneyRepeatsCounter  int
 	Opts                   *options.Opts
 	StageUsers             *[]loadtestutils.User
-	TemplatingDoneWG       *sync.WaitGroup
 	Framework              *framework.Framework
 	Username               string
 	Namespace              string
@@ -48,9 +47,6 @@ func Setup(fn func(*MainContext), opts *options.Opts) (string, error) {
 	threadsWG := &sync.WaitGroup{}
 	threadsWG.Add(opts.Concurrency)
 
-	templatingDoneWG := &sync.WaitGroup{}
-	templatingDoneWG.Add(opts.Concurrency)
-
 	var stageUsers []loadtestutils.User
 	var err error
 	if opts.Stage {
@@ -60,7 +56,7 @@ func Setup(fn func(*MainContext), opts *options.Opts) (string, error) {
 		}
 	}
 
-	// Initialize all user thread contexts and users
+	// Initialize all user thread contexts
 	for threadIndex := 0; threadIndex < opts.Concurrency; threadIndex++ {
 		logging.Logger.Info("Initiating thread %d", threadIndex)
 
@@ -69,17 +65,27 @@ func Setup(fn func(*MainContext), opts *options.Opts) (string, error) {
 			ThreadIndex:      threadIndex,
 			Opts:             opts,
 			StageUsers:       &stageUsers,
-			TemplatingDoneWG: templatingDoneWG,
 			Username:         "",
 			Namespace:        "",
 		}
 
 		MainContexts = append(MainContexts, threadCtx)
+	}
 
+	// Create all users (if necessary) and initialize their frameworks
+	for _, threadCtx := range MainContexts {
 		go initUserThread(threadCtx)
 	}
 
 	threadsWG.Wait()
+
+	// Fork repositories sequentially as GitHub do not allow more than 3 running forks in parallel anyway
+	for _, threadCtx := range MainContexts {
+		_, err = logging.Measure(HandleRepoForking, threadCtx)
+		if err != nil {
+			return "", err
+		}
+	}
 
 	// If we are supposed to only purge resources, now when frameworks are initialized, we are done
 	if opts.PurgeOnly {
