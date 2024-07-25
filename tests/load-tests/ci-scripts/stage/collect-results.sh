@@ -77,9 +77,10 @@ echo "[$(date --utc -Ins)] Collecting additional info"
 if ! [ -r users.json ]; then
     echo "ERROR: Missing file with user creds"
 else
-    login_log_stub="${ARTIFACT_DIR}/collected-oc_login"
-    application_stub="${ARTIFACT_DIR}/collected-applications.appstudio.redhat.com"
-    component_stub="${ARTIFACT_DIR}/collected-components.appstudio.redhat.com"
+    mkdir -p $ARTIFACT_DIR/collected-data
+    login_log_stub="${ARTIFACT_DIR}/collected-data/collected-oc_login"
+    application_stub="${ARTIFACT_DIR}/collected-data/collected-applications.appstudio.redhat.com"
+    component_stub="${ARTIFACT_DIR}/collected-data/collected-components.appstudio.redhat.com"
 
     for uid in $( seq 1 $CONCURRENCY ); do
         username="test-rhtap-$uid"
