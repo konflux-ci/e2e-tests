@@ -52,6 +52,7 @@ func init() {
 	rootCmd.Flags().StringVar(&opts.JourneyDuration, "journey-duration", "1h", "repeat user journey until this timeout (either this or --journey-repeats)")
 	rootCmd.Flags().BoolVar(&opts.PipelineSkipInitialChecks, "pipeline-skip-initial-checks", true, "if build pipeline runs' initial checks are to be skipped")
 	rootCmd.Flags().BoolVar(&opts.PipelineRequestConfigurePac, "pipeline-request-configure-pac", false, "if build pipeline should be taken from component repository .tekton directory")
+	rootCmd.Flags().BoolVar(&opts.PipelineMintmakerDisabled, "pipeline-mintmaker-disabled", true, "if you want to stop Mintmaker to be creating update PRs for your component (default in loadtest different from Konflux default)")
 	rootCmd.Flags().BoolVar(&opts.MultiarchWorkflow, "multiarch-workflow", false, "if we should template repo so it is suitable for multi arch test, merge PR and ignore custom pipeline run from PR")
 	rootCmd.Flags().StringVarP(&opts.OutputDir, "output-dir", "o", ".", "directory where output files such as load-tests.log or load-tests.json are stored")
 	rootCmd.Flags().StringVar(&opts.BuildPipelineSelectorBundle, "build-pipeline-selector-bundle", "", "BuildPipelineSelector bundle to use when testing with build-definition PR")

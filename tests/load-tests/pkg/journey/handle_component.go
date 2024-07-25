@@ -76,7 +76,7 @@ func getPaCPull(annotations map[string]string) (string, error) {
 	}
 }
 
-func createComponent(f *framework.Framework, namespace, name, repoUrl, repoRevision, containerContext, containerFile, buildPipelineSelector, appName string, skipInitialChecks, requestConfigurePac bool) error {
+func createComponent(f *framework.Framework, namespace, name, repoUrl, repoRevision, containerContext, containerFile, buildPipelineSelector, appName string, skipInitialChecks, requestConfigurePac, mintmakerDisabled bool) error {
 	// Prepare annotations to add to component
 	annotationsMap := constants.DefaultDockerBuildPipelineBundle
 	if buildPipelineSelector != "" {
@@ -86,6 +86,12 @@ func createComponent(f *framework.Framework, namespace, name, repoUrl, repoRevis
 	if requestConfigurePac {
 		// This is PaC build
 		for key, value := range constants.ComponentPaCRequestAnnotation {
+			annotationsMap[key] = value
+		}
+	}
+	if mintmakerDisabled {
+		// Stop Mintmaker creating update PRs for your component
+		for key, value := range constants.ComponentMintmakerDisabledAnnotation {
 			annotationsMap[key] = value
 		}
 	}
@@ -267,6 +273,7 @@ func HandleComponent(ctx *PerComponentContext) error {
 		ctx.ParentContext.ApplicationName,
 		ctx.ParentContext.ParentContext.Opts.PipelineSkipInitialChecks,
 		ctx.ParentContext.ParentContext.Opts.PipelineRequestConfigurePac,
+		ctx.ParentContext.ParentContext.Opts.PipelineMintmakerDisabled,
 	)
 	if err != nil {
 		return logging.Logger.Fail(60, "Component failed creation: %v", err)
