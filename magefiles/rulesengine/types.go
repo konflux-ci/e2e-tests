@@ -2,6 +2,7 @@ package rulesengine
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -390,6 +391,9 @@ func (cfs *Files) FilterByDirString(filter string) Files {
 		}
 
 		subfiles = append(subfiles, file)
+	}
+
+	return subfiles
 
 }
 
