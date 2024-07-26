@@ -62,8 +62,11 @@ var (
 	componentUrls                        = strings.Split(utils.GetEnv(COMPONENT_REPO_URLS_ENV, pythonComponentGitSourceURL), ",") //multiple urls
 	componentNames                       []string
 	gihubOrg                             = utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
+	gitlabOrg                            = utils.GetEnv(constants.GITLAB_QE_ORG_ENV, "konflux-qe")
 	helloWorldComponentGitSourceURL      = fmt.Sprintf(githubUrlFormat, gihubOrg, helloWorldComponentGitSourceRepoName)
 	annotationsTestGitSourceURL          = fmt.Sprintf(githubUrlFormat, gihubOrg, annotationsTestGitSourceRepoName)
+	helloWorldComponentGitlabProjectID   = fmt.Sprintf("%s/%s", gitlabOrg, helloWorldComponentGitSourceRepoName)
+	helloWorldComponentGitlabURL         = fmt.Sprintf(gitlabUrlFormat, helloWorldComponentGitlabProjectID)
 	multiComponentGitSourceURL           = fmt.Sprintf(githubUrlFormat, gihubOrg, multiComponentGitSourceRepoName)
 	multiComponentContextDirs            = []string{"go-component", "python-component"}
 	pythonComponentGitSourceURL          = fmt.Sprintf(githubUrlFormat, gihubOrg, pythonComponentRepoName)
