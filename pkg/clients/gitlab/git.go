@@ -2,12 +2,12 @@ package gitlab
 
 import (
 	"fmt"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/konflux-ci/e2e-tests/pkg/constants"
-	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	. "github.com/onsi/gomega"
 	gitlab "github.com/xanzy/go-gitlab"
 )
@@ -96,7 +96,7 @@ func (gc *GitlabClient) CreateGitlabNewBranch(projectID, branchName, sha, baseBr
 func (gc *GitlabClient) GetMergeRequests() ([]*gitlab.MergeRequest, error) {
 
 	// Get merge requests using Gitlab client
-	mergeRequests, _, err := gc.client.MergeRequests.ListMergeRequests(&gitlab.ListMergeRequestsOptions{})
+	mergeRequests, _, err := gc.client.MergeRequests.ListMergeRequests(&gitlab.ListMergeRequestsOptions{State: gitlab.Ptr("opened")})
 	if err != nil {
 		// Handle error
 		return nil, err
@@ -154,8 +154,8 @@ func (gc *GitlabClient) DeleteWebhooks(projectID, clusterAppDomain string) error
 
 func (gc *GitlabClient) CreateFile(pathToFile, fileContent, branchName string) (*gitlab.FileInfo, error) {
 	opts := &gitlab.CreateFileOptions{
-		Branch:   gitlab.Ptr(branchName),
-		Content:  &fileContent,
+		Branch:        gitlab.Ptr(branchName),
+		Content:       &fileContent,
 		CommitMessage: gitlab.Ptr("e2e test commit message"),
 	}
 
@@ -165,4 +165,14 @@ func (gc *GitlabClient) CreateFile(pathToFile, fileContent, branchName string) (
 	}
 
 	return file, nil
+}
+
+func (gc *GitlabClient) GetFileMetaData(projectID, pathToFile, branchName string) (*gitlab.File, error) {
+	metadata, _, err := gc.client.RepositoryFiles.GetFileMetaData(projectID, pathToFile, gitlab.Ptr(gitlab.GetFileMetaDataOptions{Ref: gitlab.Ptr(branchName)}))
+	return metadata, err
+}
+
+func (gc *GitlabClient) AcceptMergeRequest(projectID string, mrID int) (*gitlab.MergeRequest, error) {
+	mr, _, err := gc.client.MergeRequests.AcceptMergeRequest(projectID, mrID, nil)
+	return mr, err
 }
