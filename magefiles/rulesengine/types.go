@@ -385,6 +385,23 @@ func (cfs *Files) FilterByDirString(filter string) Files {
 
 	for _, file := range *cfs {
 
+		if !strings.Contains(file.Name, filter) {
+			continue
+		}
+
+		subfiles = append(subfiles, file)
+	}
+
+	return subfiles
+
+}
+
+func (cfs *Files) FilterByDirGlob(filter string) Files {
+
+	var subfiles Files
+
+	for _, file := range *cfs {
+
 		if matched, _ := filepath.Match(filter, file.Name); !matched {
 
 			continue

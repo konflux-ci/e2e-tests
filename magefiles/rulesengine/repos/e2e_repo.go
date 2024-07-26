@@ -44,7 +44,7 @@ var BuildTestFileChangeOnlyRule = rulesengine.Rule{Name: "E2E PR Build Test File
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 
-		for _, file := range rctx.DiffFiles.FilterByDirString("tests/build/*.go") {
+		for _, file := range rctx.DiffFiles.FilterByDirGlob("tests/build/*.go") {
 
 			rctx.FocusFiles = dedupeAppendFiles(rctx.FocusFiles, file.Name)
 
@@ -83,11 +83,11 @@ var BuildNonTestFileChangeRule = rulesengine.Rule{Name: "E2E PR Build Test Helpe
 	Description: "Map build tests files when const.go or source_build.go file is changed in the e2e-repo PR",
 	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
 
-		return len(rctx.DiffFiles.FilterByDirString("tests/build/const.go")) != 0 || len(rctx.DiffFiles.FilterByDirString("tests/build/source_build.go")) != 0
+		return len(rctx.DiffFiles.FilterByDirGlob("tests/build/const.go")) != 0 || len(rctx.DiffFiles.FilterByDirGlob("tests/build/source_build.go")) != 0
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 
-		for _, file := range rctx.DiffFiles.FilterByDirString("tests/build/*.go") {
+		for _, file := range rctx.DiffFiles.FilterByDirGlob("tests/build/*.go") {
 
 			if strings.Contains(file.Name, "source_build.go") || strings.Contains(file.Name, "const.go") || strings.Contains(file.Name, "scenarios.go") {
 
@@ -106,11 +106,11 @@ var ReleaseTestTestFilesChangeRule = rulesengine.Rule{Name: "E2E PR Release Test
 	Description: "Map release test files if they are changed in the e2e-repo PR",
 	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
 
-		return len(rctx.DiffFiles.FilterByDirString("tests/release/*/*.go")) != 0
+		return len(rctx.DiffFiles.FilterByDirGlob("tests/release/*/*.go")) != 0
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 
-		for _, file := range rctx.DiffFiles.FilterByDirString("tests/release/*/*.go") {
+		for _, file := range rctx.DiffFiles.FilterByDirGlob("tests/release/*/*.go") {
 
 			rctx.FocusFiles = dedupeAppendFiles(rctx.FocusFiles, file.Name)
 
@@ -124,7 +124,7 @@ var ReleaseTestHelperFilesChangeOnlyRule = rulesengine.Rule{Name: "E2E PR Releas
 	Description: "Map release tests files when only the release helper go files in root of release directory are changed in the e2e-repo PR",
 	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
 
-		return len(rctx.DiffFiles.FilterByDirString("tests/release/*.go")) != 0 && len(rctx.DiffFiles.FilterByDirString("tests/release/*/*.go")) == 0
+		return len(rctx.DiffFiles.FilterByDirGlob("tests/release/*.go")) != 0 && len(rctx.DiffFiles.FilterByDirGlob("tests/release/*/*.go")) == 0
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 
@@ -160,11 +160,11 @@ var KonfluxDemoTestFileChangedRule = rulesengine.Rule{Name: "E2E PR Konflux-Demo
 	Description: "Map demo tests files when konflux-demo test files are changed in the e2e-repo PR",
 	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
 
-		return len(rctx.DiffFiles.FilterByDirString("tests/*-demo/*.go")) != 0
+		return len(rctx.DiffFiles.FilterByDirGlob("tests/*-demo/*.go")) != 0
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 
-		for _, file := range rctx.DiffFiles.FilterByDirString("tests/*-demo/*-demo.go") {
+		for _, file := range rctx.DiffFiles.FilterByDirGlob("tests/*-demo/*-demo.go") {
 
 			rctx.FocusFiles = dedupeAppendFiles(rctx.FocusFiles, file.Name)
 
@@ -177,7 +177,7 @@ var KonfluxDemoConfigsFileOnlyChangeRule = rulesengine.Rule{Name: "E2E PR Konflu
 	Description: "Map demo tests files when konflux-demo config.go|type.go test files are changed in the e2e-repo PR",
 	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
 
-		return len(rctx.DiffFiles.FilterByDirString("tests/*-demo/*.go")) == 0 && len(rctx.DiffFiles.FilterByDirString("tests/*-demo/*/*")) != 0
+		return len(rctx.DiffFiles.FilterByDirGlob("tests/*-demo/*.go")) == 0 && len(rctx.DiffFiles.FilterByDirGlob("tests/*-demo/*/*")) != 0
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 
@@ -199,11 +199,11 @@ var IntegrationTestsFileChangeRule = rulesengine.Rule{Name: "E2E PR Integration 
 	Description: "Map integration tests files when integration test files are changed in the e2e-repo PR",
 	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
 
-		return len(rctx.DiffFiles.FilterByDirString("tests/integration-*/*.go")) != 0
+		return len(rctx.DiffFiles.FilterByDirGlob("tests/integration-*/*.go")) != 0
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 
-		for _, file := range rctx.DiffFiles.FilterByDirString("tests/integration-*/*.go") {
+		for _, file := range rctx.DiffFiles.FilterByDirGlob("tests/integration-*/*.go") {
 
 			if strings.Contains(file.Name, "const.go") {
 
@@ -223,7 +223,7 @@ var IntegrationTestsConstFileChangeRule = rulesengine.Rule{Name: "E2E PR Integra
 	Description: "Map integration tests files when integration const files are changed in the e2e-repo PR",
 	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
 
-		return len(rctx.DiffFiles.FilterByDirString("tests/integration-*/const.go")) != 0 && len(rctx.DiffFiles.FilterByDirString("tests/integration-*/*.go")) == 0
+		return len(rctx.DiffFiles.FilterByDirGlob("tests/integration-*/const.go")) != 0 && len(rctx.DiffFiles.FilterByDirGlob("tests/integration-*/*.go")) == 0
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 
@@ -252,11 +252,11 @@ var EcTestFileChangeRule = rulesengine.Rule{Name: "E2E PR EC Test File Change Ru
 	Description: "Map EC tests files when EC test files are changed in the e2e-repo PR",
 	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
 
-		return len(rctx.DiffFiles.FilterByDirString("tests/enterprise-*/*.go")) != 0
+		return len(rctx.DiffFiles.FilterByDirGlob("tests/enterprise-*/*.go")) != 0
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 
-		for _, file := range rctx.DiffFiles.FilterByDirString("tests/enterprise-*/*.go") {
+		for _, file := range rctx.DiffFiles.FilterByDirGlob("tests/enterprise-*/*.go") {
 
 			rctx.FocusFiles = dedupeAppendFiles(rctx.FocusFiles, file.Name)
 
@@ -275,19 +275,19 @@ func CheckNoFilesChanged(rctx *rulesengine.RuleCtx) bool {
 
 func CheckPkgFilesChanged(rctx *rulesengine.RuleCtx) bool {
 
-	return len(rctx.DiffFiles.FilterByDirString("pkg/*")) != 0
+	return len(rctx.DiffFiles.FilterByDirString("pkg/")) != 0
 
 }
 
 func CheckMageFilesChanged(rctx *rulesengine.RuleCtx) bool {
 
-	return len(rctx.DiffFiles.FilterByDirString("magefiles/*")) != 0
+	return len(rctx.DiffFiles.FilterByDirString("magefiles/")) != 0
 
 }
 
 func CheckCmdFilesChanged(rctx *rulesengine.RuleCtx) bool {
 
-	return len(rctx.DiffFiles.FilterByDirString("cmd/*")) != 0
+	return len(rctx.DiffFiles.FilterByDirString("cmd/")) != 0
 
 }
 
