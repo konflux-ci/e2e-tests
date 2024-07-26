@@ -39,8 +39,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 	var err error
 	defer GinkgoRecover()
 
-	DescribeTableSubtree("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), func(gitProvider, entryComponentName string) {
-		var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace, imageRepoName, pullRobotAccountName, pushRobotAccountName string
+	DescribeTableSubtree("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), func(gitProvider, gitPrefix string) {
+		var applicationName, customDefaultComponentName, customBranchComponentName, componentBaseBranchName, pacBranchName, testNamespace, imageRepoName, pullRobotAccountName, pushRobotAccountName string
 		var component *appservice.Component
 		var plr *pipeline.PipelineRun
 
@@ -51,7 +51,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 		// GitLab
 		var projectID string
-		var mergeRequestID int
 
 		BeforeAll(func() {
 
@@ -83,14 +82,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			_, err = f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			componentName = fmt.Sprintf("%s-%s", "test-component-pac", util.GenerateRandomString(6))
-			pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
+			customDefaultComponentName = fmt.Sprintf("%s-%s-%s", gitPrefix, "test-custom-default", util.GenerateRandomString(6))
+			customBranchComponentName = fmt.Sprintf("%s-%s-%s", gitPrefix, "test-custom-branch", util.GenerateRandomString(6))
+			pacBranchName = constants.PaCPullRequestBranchPrefix + customBranchComponentName
 			componentBaseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
 
 			err = f.AsKubeAdmin.CommonController.Github.CreateRef(helloWorldComponentGitSourceRepoName, helloWorldComponentDefaultBranch, helloWorldComponentRevision, componentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
-
-			entryComponentName = fmt.Sprintf("test-custom-default-branch-%s", util.GenerateRandomString(6))
 
 		})
 
@@ -111,15 +109,15 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				if err != nil {
 					Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 				}
-				err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, constants.PaCPullRequestBranchPrefix+entryComponentName)
+				err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, constants.PaCPullRequestBranchPrefix+customBranchComponentName)
 				if err != nil {
 					Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 				}
 				// Delete created webhook from GitHub
 				Expect(build.CleanupWebhooks(f, helloWorldComponentGitSourceRepoName)).ShouldNot(HaveOccurred())
 			case "gitlab":
-				Expect(f.AsKubeAdmin.CommonController.Gitlab.CloseMergeRequest(projectID, mergeRequestID)).NotTo(HaveOccurred())
-				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteWebhooks(projectID, f.ClusterAppDomain)).NotTo(HaveOccurred())
+				Expect(f.AsKubeAdmin.CommonController.Gitlab.CloseMergeRequest(projectID, prNumber)).NotTo(HaveOccurred())
+				//Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteWebhooks(projectID, f.ClusterAppDomain)).NotTo(HaveOccurred())
 			}
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, pacBranchName)
@@ -144,7 +142,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				}
 
 				componentObj := appservice.ComponentSpec{
-					ComponentName: entryComponentName,
+					ComponentName: customDefaultComponentName,
 					Application:   applicationName,
 					Source: appservice.ComponentSource{
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
@@ -190,7 +188,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Expect(err).NotTo(HaveOccurred())
 
 				componentObj := appservice.ComponentSpec{
-					ComponentName: entryComponentName,
+					ComponentName: customDefaultComponentName,
 					Application:   applicationName,
 					Source: appservice.ComponentSource{
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
@@ -216,7 +214,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						Expect(err).ShouldNot(HaveOccurred())
 
 						for _, pr := range prs {
-							if pr.Head.GetRef() == constants.PaCPullRequestBranchPrefix+entryComponentName {
+							if pr.Head.GetRef() == constants.PaCPullRequestBranchPrefix+customDefaultComponentName {
 								Expect(pr.GetBase().GetRef()).To(Equal(helloWorldComponentDefaultBranch))
 								return true
 							}
@@ -227,9 +225,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						Expect(err).ShouldNot(HaveOccurred())
 
 						for _, mr := range mrs {
-							if mr.SourceBranch == constants.PaCPullRequestBranchPrefix+entryComponentName {
+							if mr.SourceBranch == constants.PaCPullRequestBranchPrefix+customDefaultComponentName {
 								Expect(mr.TargetBranch).To(Equal(helloWorldComponentDefaultBranch))
-								mergeRequestID = mr.IID
 								return true
 							}
 						}
@@ -243,7 +240,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				nsObj, err := f.AsKubeAdmin.CommonController.GetNamespace(testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 				wsName := nsObj.Labels["appstudio.redhat.com/workspace_name"]
-				repositoryParams, err := f.AsKubeAdmin.TektonController.GetRepositoryParams(entryComponentName, testNamespace)
+				repositoryParams, err := f.AsKubeAdmin.TektonController.GetRepositoryParams(customDefaultComponentName, testNamespace)
 				Expect(err).ShouldNot(HaveOccurred(), "error while trying to get repository params")
 				paramExists := false
 				for _, param := range repositoryParams {
@@ -258,21 +255,21 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			It("triggers a PipelineRun", func() {
 				timeout = time.Minute * 5
 				Eventually(func() error {
-					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(entryComponentName, applicationName, testNamespace, "")
+					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(customDefaultComponentName, applicationName, testNamespace, "")
 					if err != nil {
-						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, entryComponentName)
+						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, customBranchComponentName)
 						return err
 					}
 					if !plr.HasStarted() {
 						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", plr.GetNamespace(), plr.GetName())
 					}
 					return nil
-				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", entryComponentName, testNamespace))
+				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", customBranchComponentName, testNamespace))
 			})
 			It("component build status is set correctly", func() {
 				var buildStatus *controllers.BuildStatus
 				Eventually(func() (bool, error) {
-					component, err := f.AsKubeAdmin.HasController.GetComponent(entryComponentName, testNamespace)
+					component, err := f.AsKubeAdmin.HasController.GetComponent(customDefaultComponentName, testNamespace)
 					if err != nil {
 						return false, err
 					}
@@ -300,15 +297,15 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				}, timeout, interval).Should(BeTrue(), "component build status has unexpected content")
 			})
 			It("image repo and robot account created successfully", func() {
-				imageRepoName, err = f.AsKubeAdmin.ImageController.GetImageName(testNamespace, entryComponentName)
-				Expect(err).ShouldNot(HaveOccurred(), "failed to read image repo for component %s", entryComponentName)
+				imageRepoName, err = f.AsKubeAdmin.ImageController.GetImageName(testNamespace, customDefaultComponentName)
+				Expect(err).ShouldNot(HaveOccurred(), "failed to read image repo for component %s", customDefaultComponentName)
 				Expect(imageRepoName).ShouldNot(BeEmpty(), "image repo name is empty")
 
 				imageExist, err := build.DoesImageRepoExistInQuay(imageRepoName)
 				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if image repo exists in quay with error: %+v", err)
 				Expect(imageExist).To(BeTrue(), "quay image does not exists")
 
-				pullRobotAccountName, pushRobotAccountName, err = f.AsKubeAdmin.ImageController.GetRobotAccounts(testNamespace, entryComponentName)
+				pullRobotAccountName, pushRobotAccountName, err = f.AsKubeAdmin.ImageController.GetRobotAccounts(testNamespace, customDefaultComponentName)
 				Expect(err).ShouldNot(HaveOccurred(), "failed to get robot account names")
 				pullRobotAccountExist, err := build.DoesRobotAccountExistInQuay(pullRobotAccountName)
 				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if pull robot account exists in quay with error: %+v", err)
@@ -326,28 +323,28 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			It("a related PipelineRun should be deleted after deleting the component", func() {
 				timeout = time.Second * 60
 				interval = time.Second * 1
-				Expect(f.AsKubeAdmin.HasController.DeleteComponent(entryComponentName, testNamespace, true)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteComponent(customDefaultComponentName, testNamespace, true)).To(Succeed())
 				// Test removal of PipelineRun
 				Eventually(func() error {
-					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(entryComponentName, applicationName, testNamespace, "")
+					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(customDefaultComponentName, applicationName, testNamespace, "")
 					if err == nil {
 						return fmt.Errorf("pipelinerun %s/%s is not removed yet", plr.GetNamespace(), plr.GetName())
 					}
 					return err
-				}, timeout, constants.PipelineRunPollingInterval).Should(MatchError(ContainSubstring("no pipelinerun found")), fmt.Sprintf("timed out when waiting for the PipelineRun to be removed for Component %s/%s", testNamespace, entryComponentName))
+				}, timeout, constants.PipelineRunPollingInterval).Should(MatchError(ContainSubstring("no pipelinerun found")), fmt.Sprintf("timed out when waiting for the PipelineRun to be removed for Component %s/%s", testNamespace, customBranchComponentName))
 			})
 
 			It("PR branch should not exist in the repo", func() {
 				timeout = time.Second * 60
 				interval = time.Second * 1
-				branchName := constants.PaCPullRequestBranchPrefix + entryComponentName
+				branchName := constants.PaCPullRequestBranchPrefix + customDefaultComponentName
 				Eventually(func() bool {
 					var exists bool
 					switch gitProvider {
 					case "github":
-						exists, err = f.AsKubeAdmin.CommonController.Github.ExistsRef(helloWorldComponentGitSourceRepoName, constants.PaCPullRequestBranchPrefix+entryComponentName)
+						exists, err = f.AsKubeAdmin.CommonController.Github.ExistsRef(helloWorldComponentGitSourceRepoName, constants.PaCPullRequestBranchPrefix+customDefaultComponentName)
 					case "gitlab":
-						exists, err = f.AsKubeAdmin.CommonController.Gitlab.ExistsBranch(projectID, constants.PaCPullRequestBranchPrefix+componentName)
+						exists, err = f.AsKubeAdmin.CommonController.Gitlab.ExistsBranch(projectID, constants.PaCPullRequestBranchPrefix+customDefaultComponentName)
 					}
 					Expect(err).ShouldNot(HaveOccurred())
 					return exists
@@ -381,6 +378,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 		When("a new Component with specified custom branch is created", Label("build-custom-branch"), func() {
 			var outputImage string
 			BeforeAll(func() {
+				if gitProvider != "github" {
+					return
+				}
 
 				// create the build secret in the user namespace
 				// secretName := "build-secret"
@@ -392,7 +392,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				// Expect(err).ShouldNot(HaveOccurred())
 
 				componentObj := appservice.ComponentSpec{
-					ComponentName: componentName,
+					ComponentName: customBranchComponentName,
 					Application:   applicationName,
 					Source: appservice.ComponentSource{
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
@@ -408,34 +408,95 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
+			// Create GitLab component
+			BeforeAll(func() {
+				if gitProvider != "gitlab" {
+					return
+				}
+
+				gitlabToken := utils.GetEnv(constants.GITLAB_TOKEN_ENV, "")
+				Expect(gitlabToken).ShouldNot(BeEmpty())
+
+				secretAnnotations := map[string]string{}
+
+				projectID = "60038001"
+
+				err = createGitlabBuildSecret(f, "gitlab-build-secret", secretAnnotations, gitlabToken)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				secret := &v1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pipelines-as-code-secret",
+						Namespace: testNamespace,
+					},
+					Type: v1.SecretTypeOpaque,
+					StringData: map[string]string{
+						"password": gitlabToken,
+					},
+				}
+				_, err = f.AsKubeAdmin.CommonController.CreateSecret(f.UserNamespace, secret)
+				Expect(err).NotTo(HaveOccurred())
+
+				componentObj := appservice.ComponentSpec{
+					ComponentName: customBranchComponentName,
+					Application:   applicationName,
+					Source: appservice.ComponentSource{
+						ComponentSourceUnion: appservice.ComponentSourceUnion{
+							GitSource: &appservice.GitSource{
+								URL:           "https://gitlab.com/konflux-qe/devfile-sample-hello-world",
+								Revision:      "",
+								DockerfileURL: constants.DockerFilePath,
+							},
+						},
+					},
+				}
+				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+
 			It("triggers a PipelineRun", func() {
 				timeout = time.Second * 600
 				interval = time.Second * 1
 				Eventually(func() error {
-					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(customBranchComponentName, applicationName, testNamespace, "")
 					if err != nil {
-						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
+						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, customBranchComponentName)
 						return err
 					}
 					if !plr.HasStarted() {
 						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", plr.GetNamespace(), plr.GetName())
 					}
 					return nil
-				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
+				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, customBranchComponentName))
 			})
 			It("should lead to a PaC init PR creation", func() {
 				timeout = time.Second * 300
 				interval = time.Second * 1
 
 				Eventually(func() bool {
-					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(helloWorldComponentGitSourceRepoName)
-					Expect(err).ShouldNot(HaveOccurred())
+					switch gitProvider {
+					case "github":
+						prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(helloWorldComponentGitSourceRepoName)
+						Expect(err).ShouldNot(HaveOccurred())
 
-					for _, pr := range prs {
-						if pr.Head.GetRef() == pacBranchName {
-							prNumber = pr.GetNumber()
-							prHeadSha = pr.Head.GetSHA()
-							return true
+						for _, pr := range prs {
+							if pr.Head.GetRef() == pacBranchName {
+								prNumber = pr.GetNumber()
+								prHeadSha = pr.Head.GetSHA()
+								return true
+							}
+						}
+						return false
+					case "gitlab":
+						mrs, err := f.AsKubeAdmin.CommonController.Gitlab.GetMergeRequests()
+						Expect(err).ShouldNot(HaveOccurred())
+
+						for _, mr := range mrs {
+							if mr.SourceBranch == pacBranchName {
+								prNumber = mr.IID
+								prHeadSha = mr.DiffRefs.HeadSha
+								return true
+							}
 						}
 					}
 					return false
@@ -448,15 +509,15 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				prHeadSha = plr.Labels["pipelinesascode.tekton.dev/sha"]
 			})
 			It("image repo and robot account created successfully", func() {
-				imageRepoName, err = f.AsKubeAdmin.ImageController.GetImageName(testNamespace, componentName)
-				Expect(err).ShouldNot(HaveOccurred(), "failed to read image repo for component %s", componentName)
+				imageRepoName, err = f.AsKubeAdmin.ImageController.GetImageName(testNamespace, customBranchComponentName)
+				Expect(err).ShouldNot(HaveOccurred(), "failed to read image repo for component %s", customBranchComponentName)
 				Expect(imageRepoName).ShouldNot(BeEmpty(), "image repo name is empty")
 
 				imageExist, err := build.DoesImageRepoExistInQuay(imageRepoName)
 				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if image repo exists in quay with error: %+v", err)
 				Expect(imageExist).To(BeTrue(), "quay image does not exists")
 
-				pullRobotAccountName, pushRobotAccountName, err = f.AsKubeAdmin.ImageController.GetRobotAccounts(testNamespace, componentName)
+				pullRobotAccountName, pushRobotAccountName, err = f.AsKubeAdmin.ImageController.GetRobotAccounts(testNamespace, customBranchComponentName)
 				Expect(err).ShouldNot(HaveOccurred(), "failed to get robot account names")
 				pullRobotAccountExist, err := build.DoesRobotAccountExistInQuay(pullRobotAccountName)
 				Expect(err).ShouldNot(HaveOccurred(), "failed while checking if pull robot account exists in quay with error: %+v", err)
@@ -482,11 +543,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			It("created image repo is public", func() {
 				isPublic, err := build.IsImageRepoPublic(imageRepoName)
 				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while checking if the image repo %s is public", imageRepoName))
-				Expect(isPublic).To(BeTrue(), "Expected image repo to changed to public, but it is private")
+				Expect(isPublic).To(BeTrue(), fmt.Sprintf("Expected image repo '%s' to be changed to public, but it is private", imageRepoName))
 			})
 			It("image tag is updated successfully", func() {
 				// check if the image tag exists in quay
-				plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+				plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(customBranchComponentName, applicationName, testNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
 
 				for _, p := range plr.Spec.Params {
@@ -501,7 +562,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 
 			It("should ensure pruning labels are set", func() {
-				plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+				plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(customBranchComponentName, applicationName, testNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
 
 				image, err := build.ImageFromPipelineRun(plr)
@@ -518,7 +579,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				if gitProvider != "github" {
 					return
 				}
-				expectedCheckRunName := fmt.Sprintf("%s-%s", componentName, "on-pull-request")
+				expectedCheckRunName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
 				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, helloWorldComponentGitSourceRepoName, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 			})
 		})
@@ -527,7 +588,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			var createdFileSHA string
 
 			BeforeAll(func() {
-				fileToCreatePath := fmt.Sprintf(".tekton/%s-readme.md", componentName)
+				fileToCreatePath := fmt.Sprintf(".tekton/%s-readme.md", customBranchComponentName)
 				createdFile, err := f.AsKubeAdmin.CommonController.Github.CreateFile(helloWorldComponentGitSourceRepoName, fileToCreatePath, fmt.Sprintf("test PaC branch %s update", pacBranchName), pacBranchName)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -539,16 +600,16 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				timeout = time.Minute * 5
 
 				Eventually(func() error {
-					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, createdFileSHA)
+					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(customBranchComponentName, applicationName, testNamespace, createdFileSHA)
 					if err != nil {
-						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
+						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, customBranchComponentName)
 						return err
 					}
 					if !plr.HasStarted() {
 						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", plr.GetNamespace(), plr.GetName())
 					}
 					return nil
-				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
+				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, customBranchComponentName))
 			})
 			It("should lead to a PaC init PR update", func() {
 				timeout = time.Second * 300
@@ -576,7 +637,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				createdFileSHA = plr.Labels["pipelinesascode.tekton.dev/sha"]
 			})
 			It("eventually leads to another update of a PR about the PipelineRun status report at Checks tab", func() {
-				expectedCheckRunName := fmt.Sprintf("%s-%s", componentName, "on-pull-request")
+				if gitProvider != "github" {
+					return
+				}
+				expectedCheckRunName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
 				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, helloWorldComponentGitSourceRepoName, createdFileSHA, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 			})
 		})
@@ -599,16 +663,16 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				timeout = time.Minute * 10
 
 				Eventually(func() error {
-					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, mergeResultSha)
+					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(customBranchComponentName, applicationName, testNamespace, mergeResultSha)
 					if err != nil {
-						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
+						GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, customBranchComponentName)
 						return err
 					}
 					if !plr.HasStarted() {
 						return fmt.Errorf("pipelinerun %s/%s hasn't started yet", plr.GetNamespace(), plr.GetName())
 					}
 					return nil
-				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
+				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, customBranchComponentName))
 			})
 
 			It("pipelineRun should eventually finish", func() {
@@ -632,18 +696,18 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			It("After updating image visibility to private, it should not trigger another PipelineRun", func() {
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
 				Eventually(func() error {
-					_, err := f.AsKubeAdmin.ImageController.ChangeVisibilityToPrivate(testNamespace, applicationName, componentName)
+					_, err := f.AsKubeAdmin.ImageController.ChangeVisibilityToPrivate(testNamespace, applicationName, customBranchComponentName)
 					if err != nil {
 						GinkgoWriter.Printf("failed to change visibility to private with error %v\n", err)
 						return err
 					}
 					return nil
-				}, time.Second*20, time.Second*1).Should(Succeed(), fmt.Sprintf("timed out when trying to change visibility of the image repos to private in %s/%s", testNamespace, componentName))
+				}, time.Second*20, time.Second*1).Should(Succeed(), fmt.Sprintf("timed out when trying to change visibility of the image repos to private in %s/%s", testNamespace, customBranchComponentName))
 
 				Consistently(func() bool {
-					componentPipelineRun, _ := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+					componentPipelineRun, _ := f.AsKubeAdmin.HasController.GetComponentPipelineRun(customBranchComponentName, applicationName, testNamespace, "")
 					return componentPipelineRun == nil
-				}, time.Minute, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("expected no PipelineRun to be triggered for the component %s in %s namespace", componentName, testNamespace))
+				}, time.Minute, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("expected no PipelineRun to be triggered for the component %s in %s namespace", customBranchComponentName, testNamespace))
 			})
 			It("image repo is updated to private", func() {
 				isPublic, err := build.IsImageRepoPublic(imageRepoName)
@@ -654,12 +718,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 		When("the component is removed and recreated (with the same name in the same namespace)", Label("build-custom-branch"), func() {
 			BeforeAll(func() {
-				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, true)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteComponent(customBranchComponentName, testNamespace, true)).To(Succeed())
 
 				timeout = 1 * time.Minute
 				interval = 1 * time.Second
 				Eventually(func() bool {
-					_, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
+					_, err := f.AsKubeAdmin.HasController.GetComponent(customBranchComponentName, testNamespace)
 					return k8sErrors.IsNotFound(err)
 				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for the app %s/%s to be deleted", testNamespace, applicationName))
 				// Check removal of image repo
@@ -679,20 +743,66 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					return pullRobotAccountExists || pushRobotAccountExists, nil
 				}, timeout, interval).Should(BeFalse(), fmt.Sprintf("timed out when checking if robot accounts %s and %s got deleted", pullRobotAccountName, pushRobotAccountName))
 
-				componentObj := appservice.ComponentSpec{
-					ComponentName: componentName,
-					Source: appservice.ComponentSource{
-						ComponentSourceUnion: appservice.ComponentSourceUnion{
-							GitSource: &appservice.GitSource{
-								URL:           helloWorldComponentGitSourceURL,
-								Revision:      componentBaseBranchName,
-								DockerfileURL: constants.DockerFilePath,
+				switch gitProvider {
+				case "github":
+					componentObj := appservice.ComponentSpec{
+						ComponentName: customBranchComponentName,
+						Source: appservice.ComponentSource{
+							ComponentSourceUnion: appservice.ComponentSourceUnion{
+								GitSource: &appservice.GitSource{
+									URL:           helloWorldComponentGitSourceURL,
+									Revision:      componentBaseBranchName,
+									DockerfileURL: constants.DockerFilePath,
+								},
 							},
 						},
-					},
+					}
+					_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
+					Expect(err).ShouldNot(HaveOccurred())
+				case "gitlab":
+					if gitProvider != "gitlab" {
+						return
+					}
+
+					gitlabToken := utils.GetEnv(constants.GITLAB_TOKEN_ENV, "")
+					Expect(gitlabToken).ShouldNot(BeEmpty())
+
+					secretAnnotations := map[string]string{}
+
+					projectID = "60038001"
+
+					err = createGitlabBuildSecret(f, "gitlab-build-secret", secretAnnotations, gitlabToken)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					secret := &v1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "pipelines-as-code-secret",
+							Namespace: testNamespace,
+						},
+						Type: v1.SecretTypeOpaque,
+						StringData: map[string]string{
+							"password": gitlabToken,
+						},
+					}
+					_, err = f.AsKubeAdmin.CommonController.CreateSecret(f.UserNamespace, secret)
+					Expect(err).NotTo(HaveOccurred())
+
+					componentObj := appservice.ComponentSpec{
+						ComponentName: customBranchComponentName,
+						Application:   applicationName,
+						Source: appservice.ComponentSource{
+							ComponentSourceUnion: appservice.ComponentSourceUnion{
+								GitSource: &appservice.GitSource{
+									URL:           "https://gitlab.com/konflux-qe/devfile-sample-hello-world",
+									Revision:      "",
+									DockerfileURL: constants.DockerFilePath,
+								},
+							},
+						},
+					}
+					component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPrivateRepo), constants.DefaultDockerBuildPipelineBundle))
+					Expect(err).ShouldNot(HaveOccurred())
 				}
-				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
-				Expect(err).ShouldNot(HaveOccurred())
 			})
 
 			It("should no longer lead to a creation of a PaC PR", func() {
