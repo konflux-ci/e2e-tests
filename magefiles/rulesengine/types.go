@@ -217,14 +217,19 @@ type Any []Conditional
 
 func (a Any) Check(rctx *RuleCtx) bool {
 
+	// Initial logic was to pass on the first
+	// evail to true but that might not be the
+	// case. So not eval all and as long as any
+	// eval true then filter is satisfied
+	isAny := false
 	for _, c := range a {
 
 		if c.Check(rctx) {
-			return true
+			isAny = true
 		}
 	}
 
-	return false
+	return isAny
 }
 
 type All []Conditional
@@ -304,7 +309,7 @@ func (cf ConditionFunc) Check(rctx *RuleCtx) bool {
 type Rule struct {
 	Name        string
 	Description string
-	Condition    Conditional
+	Condition   Conditional
 	Actions     []Action
 }
 
@@ -379,15 +384,12 @@ func (cfs *Files) FilterByDirString(filter string) Files {
 
 	for _, file := range *cfs {
 
-		if !strings.Contains(file.Name, filter) {
+		if matched, _ := filepath.Match(filter, file.Name); !matched {
+
 			continue
 		}
 
 		subfiles = append(subfiles, file)
-
-	}
-
-	return subfiles
 
 }
 
