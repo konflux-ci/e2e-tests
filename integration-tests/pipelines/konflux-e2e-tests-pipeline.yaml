@@ -7,7 +7,7 @@
     description: |-
       This pipeline automates the process of running end-to-end tests for Konflux
       using a ROSA (Red Hat OpenShift Service on AWS) cluster. The pipeline provisions
-      the ROSA cluster, installs RHTAP using the installer, runs the tests, collects artifacts,
+      the ROSA cluster, installs Konflux using the infra-deployments, runs the tests, collects artifacts,
       and finally deprovisions the ROSA cluster.
     params:
       - name: SNAPSHOT
@@ -41,7 +41,7 @@
         description: The ORAS container used to store all test artifacts.
       - name: quality-dashboard-api
         default: 'none'
-        description: WIP.
+        description: 'Contains the url of the backend to send metrics for quality purposes.'
     tasks:
       - name: rosa-hcp-metadata
         taskRef:
@@ -111,9 +111,9 @@
           resolver: git
           params:
             - name: url
-              value: https://github.com/flacatus/e2e-tests.git
+              value: https://github.com/konflux-ci/e2e-tests.git
             - name: revision
-              value: konflux_ci
+              value: main
             - name: pathInRepo
               value: integration-tests/tasks/konflux-e2e-tests-task.yaml
         params:
@@ -182,9 +182,9 @@
           resolver: git
           params:
             - name: url
-              value: https://github.com/flacatus/konflux-qe-definitions.git
+              value: https://github.com/konflux-ci/konflux-qe-definitions.git
             - name: revision
-              value: qd
+              value: main
             - name: pathInRepo
               value: common/tasks/quality-dashboard/0.1/quality-dashboard-upload.yaml
         params:

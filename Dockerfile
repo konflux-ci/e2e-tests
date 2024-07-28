@@ -14,9 +14,13 @@ ARG JQ_VERSION=1.6
 ARG YQ_VERSION=4.43.1
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 # renovate: datasource=github-releases depName=oras-project/oras
 =======
 >>>>>>> 431e2b2 (Add oras to konflux container to push artifacts)
+=======
+# renovate: datasource=github-releases depName=oras-project/oras
+>>>>>>> 1a6ed4b (fixes)
 ARG ORAS_VERSION=1.2.0
 
 WORKDIR /konflux-e2e

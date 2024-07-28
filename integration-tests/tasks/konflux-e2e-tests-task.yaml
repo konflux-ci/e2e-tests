@@ -181,5 +181,4 @@ spec:
 
         git clone --origin upstream --branch main "https://${GITHUB_TOKEN}@github.com/konflux-ci/e2e-tests.git" .
         make ci/prepare/e2e-branch
-
         make ci/test/e2e
