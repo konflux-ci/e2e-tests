@@ -52,12 +52,7 @@ def workload(user):
 
         playwright_lib.goto_login_and_accept_cookies(page)
 
-        # Accept cookies
-        cookies_iframe = page.frame_locator('iframe[name="trustarc_cm"]')
-        cookies_button = cookies_iframe.get_by_role(
-            "button", name="Agree and proceed with standard settings"
-        )
-        cookies_button.click()
+        playwright_lib.form_login(page, username, password)
 
         # Go to OpenShift Token page
         page.goto("https://console.dev.redhat.com/openshift/token")
