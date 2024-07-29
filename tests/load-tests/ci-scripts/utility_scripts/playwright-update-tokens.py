@@ -19,19 +19,20 @@
 #     To sort final file I have used:
 #     cat users-new.json | jq '. | sort_by(.username[11:] | tonumber)'
 #
-#     Note I was not able to run with more threads as I was getting
-#     "Access Denied" errors. I guess it was some rate limiting.
+#     Note I was not able to run with more threads/processes as I was
+#     getting "Access Denied" errors. I guess it was some rate limiting.
 
 import playwright.sync_api
 import os
 import time
 import json
-import concurrent.futures
+import multiprocessing
+import queue
 
 PLAYWRIGHT_HEADLESS = False
 PLAYWRIGHT_VIDEO_DIR = "videos/"
 
-def thread(user):
+def workload(user):
     username = user["username"].replace("-", "_")
     password = user["password"]
 
@@ -76,6 +77,8 @@ def thread(user):
         button_token = page.locator('//button[text()="Load token"]')
         if button_token.is_visible():
             button_token.click()
+        attempt = 1
+        attempt_max = 100
         while True:
             input_token = page.locator('//input[@aria-label="Copyable token" and not(contains(@value, "ocm login "))]')
             input_token_value = input_token.get_attribute("value")
@@ -83,6 +86,11 @@ def thread(user):
             # it is longer than string "" or "null"
             if len(input_token_value) > 10:
                 break
+            if attempt > attempt_max:
+                input_token_value = "Failed"
+                break
+            attempt += 1
+            time.sleep(1)
         print(f"Token for user {username}: {input_token_value}")
 
         page.close()
@@ -91,6 +99,14 @@ def thread(user):
         user["token"] = input_token_value
         return user
 
+
+def process_it(output_queue, user):
+    try:
+        output_queue.put({"result": workload(user)})
+    except Exception as e:
+        output_queue.put({"exception": e})
+
+
 def main():
 
     with open("users.json", "r") as fd:
@@ -98,17 +114,26 @@ def main():
 
     users_new = []
     users_allowlist = []   # keep empty to allow all
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        futures = {executor.submit(thread, user): user["username"] for user in users if users_allowlist != [] and user["username"] in users_allowlist}
-        for future in concurrent.futures.as_completed(futures):
-            username = futures[future]
-            try:
-                user = future.result()
-            except Exception as exc:
-                print(f"Failed processing {username}: {exc}")
+
+    for user in users:
+        if users_allowlist is not [] and user["username"] not in users_allowlist:
+            continue
+        result_queue = multiprocessing.Queue()
+        process = multiprocessing.Process(target=process_it, args=(result_queue, user))
+        process.start()
+        try:
+            output = result_queue.get(timeout=100)
+        except queue.Empty:
+            process.terminate()
+            print(f"Timeout processing {user['username']}")
+        else:
+            if "result" in output:
+                users_new.append(output["result"])
+                print(f"Completed processing {user['username']}")
+            elif "exception" in output:
+                print(f"Failed processing {user['username']}: {output['exception']}")
             else:
-                print(f"Finished processing {username}")
-                users_new.append(user)
+                print("Some crazy error")
 
     with open("users-new.json", "w") as fd:
         print(f"Dumping {len(users_new)} users")
