@@ -26,6 +26,7 @@ type Opts struct {
 	OutputDir                     string
 	PipelineRequestConfigurePac   bool
 	PipelineSkipInitialChecks     bool
+	PipelineMintmakerDisabled     bool
 	Purge                         bool
 	PurgeOnly                     bool
 	QuayRepo                      string

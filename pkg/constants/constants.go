@@ -229,4 +229,5 @@ var (
 	IntegrationTestScenarioDefaultLabels        = map[string]string{"test.appstudio.openshift.io/optional": "false"}
 	DefaultDockerBuildPipelineBundle            = map[string]string{"build.appstudio.openshift.io/pipeline": `{"name": "docker-build", "bundle": "latest"}`}
 	DefaultFbcBuilderPipelineBundle             = map[string]string{"build.appstudio.openshift.io/pipeline": `{"name": "fbc-builder", "bundle": "latest"}`}
+	ComponentMintmakerDisabledAnnotation        = map[string]string{"mintmaker.appstudio.redhat.com/disabled": "true"}
 )
