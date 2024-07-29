@@ -49,6 +49,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 
 	component := &appservice.Component{}
 	snapshot := &appservice.Snapshot{}
+	secret := &corev1.Secret{}
 
 	fw := &framework.Framework{}
 	AfterEach(framework.ReportFailure(&fw))
@@ -85,6 +86,9 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 				Expect(err).NotTo(HaveOccurred())
 				namespace = fw.UserNamespace
 				Expect(err).NotTo(HaveOccurred())
+
+				secretDefinition := build.GetSecretDefForGitHub(namespace)
+				secret, err = fw.AsKubeAdmin.CommonController.CreateSecret(namespace, secretDefinition)
 
 				suiteConfig, _ := GinkgoConfiguration()
 				GinkgoWriter.Printf("Parallel processes: %d\n", suiteConfig.ParallelTotal)
@@ -123,31 +127,6 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 				componentSpec := componentSpec
 				var componentNewBaseBranch, gitRevision string
 				componentRepositoryName := utils.ExtractGitRepositoryNameFromURL(componentSpec.GitSourceUrl)
-				var secretName string
-
-				if componentSpec.Private {
-					It(fmt.Sprintf("creates a secret for private component %s", componentSpec.Name), Label(devEnvTestLabel, stageEnvTestLabel), func() {
-						privateCompSecret := &corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      constants.PrivateComponentSecretName,
-								Namespace: namespace,
-								Labels: map[string]string{
-									"appstudio.redhat.com/credentials": "scm",
-									"appstudio.redhat.com/scm.host":    "github.com",
-								},
-							},
-							Type: corev1.SecretTypeBasicAuth,
-							StringData: map[string]string{
-								"username": "git",
-								"password": os.Getenv("GITHUB_TOKEN"),
-							},
-						}
-						_, err = fw.AsKubeAdmin.CommonController.CreateSecret(namespace, privateCompSecret)
-						Expect(err).ToNot(HaveOccurred())
-
-						secretName = privateCompSecret.Name
-					})
-				}
 
 				It("creates new branch for the build", Label(devEnvTestLabel, stageEnvTestLabel), func() {
 					gitRevision = componentSpec.GitSourceRevision
@@ -179,7 +158,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 						},
 					}
 
-					component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj, namespace, "", secretName, appTest.ApplicationName, false, constants.DefaultDockerBuildPipelineBundle)
+					component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj, namespace, "", secret.Name, appTest.ApplicationName, false, constants.DefaultDockerBuildPipelineBundle)
 					Expect(err).ShouldNot(HaveOccurred())
 				})
 
