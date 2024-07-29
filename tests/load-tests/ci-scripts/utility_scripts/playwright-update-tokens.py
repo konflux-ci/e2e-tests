@@ -23,7 +23,6 @@
 #     getting "Access Denied" errors. I guess it was some rate limiting.
 
 import playwright.sync_api
-import os
 import time
 import json
 import multiprocessing
@@ -31,6 +30,7 @@ import queue
 
 PLAYWRIGHT_HEADLESS = False
 PLAYWRIGHT_VIDEO_DIR = "videos/"
+
 
 def workload(user):
     username = user["username"].replace("-", "_")
@@ -50,7 +50,9 @@ def workload(user):
 
         # Accept cookies
         cookies_iframe = page.frame_locator('iframe[name="trustarc_cm"]')
-        cookies_button = cookies_iframe.get_by_role("button", name="Agree and proceed with standard settings")
+        cookies_button = cookies_iframe.get_by_role(
+            "button", name="Agree and proceed with standard settings"
+        )
         cookies_button.click()
 
         # Wait for login form and use it
@@ -80,7 +82,9 @@ def workload(user):
         attempt = 1
         attempt_max = 100
         while True:
-            input_token = page.locator('//input[@aria-label="Copyable token" and not(contains(@value, "ocm login "))]')
+            input_token = page.locator(
+                '//input[@aria-label="Copyable token" and not(contains(@value, "ocm login "))]'
+            )
             input_token_value = input_token.get_attribute("value")
             # Token value is populated assynchronously, so call it ready once
             # it is longer than string "" or "null"
@@ -113,7 +117,7 @@ def main():
         users = json.load(fd)
 
     users_new = []
-    users_allowlist = []   # keep empty to allow all
+    users_allowlist = []  # keep empty to allow all
 
     for user in users:
         if users_allowlist is not [] and user["username"] not in users_allowlist:
@@ -138,6 +142,7 @@ def main():
     with open("users-new.json", "w") as fd:
         print(f"Dumping {len(users_new)} users")
         users = json.dump(users_new, fd)
+
 
 if __name__ == "__main__":
     main()
