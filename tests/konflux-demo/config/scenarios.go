@@ -7,14 +7,6 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 )
 
-// All multiple components scenarios are supported in the next jira: https://issues.redhat.com/browse/DEVHAS-305
-const (
-	MultiComponentWithoutDockerFileAndDevfile     = "multi-component scenario with components without devfile or dockerfile"
-	MultiComponentWithAllSupportedImportScenarios = "multi-component scenario with all supported import components"
-	MultiComponentWithDevfileAndDockerfile        = "multi-component scenario with components with devfile or dockerfile or both"
-	MultiComponentWithUnsupportedRuntime          = "multi-component scenario with a component with a supported runtime and another unsuported"
-)
-
 var TestScenarios = []TestSpec{
 	{
 		Name:            "Maven project - Default build",

@@ -47,6 +47,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 	var namespace string
 	var err error
 
+	component := &appservice.Component{}
 	snapshot := &appservice.Snapshot{}
 
 	fw := &framework.Framework{}
@@ -122,7 +123,6 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 				componentSpec := componentSpec
 				var componentNewBaseBranch, gitRevision string
 				componentRepositoryName := utils.ExtractGitRepositoryNameFromURL(componentSpec.GitSourceUrl)
-				componentList := []*appservice.Component{}
 				var secretName string
 
 				if componentSpec.Private {
@@ -179,9 +179,8 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 						},
 					}
 
-					c, err := fw.AsKubeAdmin.HasController.CreateComponent(componentObj, namespace, "", secretName, appTest.ApplicationName, false, constants.DefaultDockerBuildPipelineBundle)
+					component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj, namespace, "", secretName, appTest.ApplicationName, false, constants.DefaultDockerBuildPipelineBundle)
 					Expect(err).ShouldNot(HaveOccurred())
-					componentList = append(componentList, c)
 				})
 
 				// Start to watch the pipeline until is finished
@@ -189,31 +188,27 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 					if componentSpec.ContainerSource != "" {
 						Skip(fmt.Sprintf("component %s was imported from quay.io/docker.io source. Skipping pipelinerun check.", componentSpec.Name))
 					}
-					for _, component := range componentList {
-						component, err = fw.AsKubeDeveloper.HasController.GetComponent(component.GetName(), namespace)
-						Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
+					component, err = fw.AsKubeDeveloper.HasController.GetComponent(componentSpec.Name, namespace)
+					Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
 
-						Expect(fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "",
-							fw.AsKubeDeveloper.TektonController, &has.RetryOptions{Retries: 3, Always: true}, nil)).To(Succeed())
-					}
+					Expect(fw.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "",
+						fw.AsKubeDeveloper.TektonController, &has.RetryOptions{Retries: 3, Always: true}, nil)).To(Succeed())
 				})
 
 				It("finds the snapshot and checks if it is marked as successful", Label(devEnvTestLabel), func() {
 					timeout = time.Second * 600
 					interval = time.Second * 10
-					for _, component := range componentList {
-						Eventually(func() error {
-							snapshot, err = fw.AsKubeAdmin.IntegrationController.GetSnapshot("", "", component.Name, namespace)
-							if err != nil {
-								GinkgoWriter.Println("snapshot has not been found yet")
-								return err
-							}
-							if !fw.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot) {
-								return fmt.Errorf("tests haven't succeeded for snapshot %s/%s. snapshot status: %+v", snapshot.GetNamespace(), snapshot.GetName(), snapshot.Status)
-							}
-							return nil
-						}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the snapshot for the component %s/%s to be marked as successful", component.GetNamespace(), component.GetName()))
-					}
+					Eventually(func() error {
+						snapshot, err = fw.AsKubeAdmin.IntegrationController.GetSnapshot("", "", componentSpec.Name, namespace)
+						if err != nil {
+							GinkgoWriter.Println("snapshot has not been found yet")
+							return err
+						}
+						if !fw.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot) {
+							return fmt.Errorf("tests haven't succeeded for snapshot %s/%s. snapshot status: %+v", snapshot.GetNamespace(), snapshot.GetName(), snapshot.Status)
+						}
+						return nil
+					}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the snapshot for the component %s/%s to be marked as successful", snapshot.GetNamespace(), componentSpec.Name))
 				})
 
 				if componentSpec.BuildSpec != nil {
@@ -236,17 +231,16 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 								Skip("Skipping this test due to configuration issue with Spray proxy")
 							}
 							managedNamespace = fw.UserNamespace + "-managed"
-							component = componentList[0]
 
 							sharedSecret, err := fw.AsKubeAdmin.CommonController.GetSecret(constants.QuayRepositorySecretNamespace, constants.QuayRepositorySecretName)
 							Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error when getting shared secret - make sure the secret %s in %s userNamespace is created", constants.QuayRepositorySecretName, constants.QuayRepositorySecretNamespace))
-							createReleaseConfig(*fw, managedNamespace, component.GetName(), appTest.ApplicationName, sharedSecret.Data[".dockerconfigjson"])
+							createReleaseConfig(*fw, managedNamespace, componentSpec.Name, appTest.ApplicationName, sharedSecret.Data[".dockerconfigjson"])
 
 							its := componentSpec.BuildSpec.TestScenario
 							integrationTestScenario, err = fw.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", appTest.ApplicationName, fw.UserNamespace, its.GitURL, its.GitRevision, its.TestPath)
 							Expect(err).ShouldNot(HaveOccurred())
 
-							pacBranchName = fmt.Sprintf("appstudio-%s", component.GetName())
+							pacBranchName = fmt.Sprintf("appstudio-%s", componentSpec.Name)
 
 							// JBS related config
 							_, err = fw.AsKubeAdmin.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, fw.UserNamespace)
@@ -269,7 +263,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 						When("Component is switched to Default Build mode", func() {
 
 							BeforeAll(func() {
-								component, err = fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), fw.UserNamespace)
+								component, err = fw.AsKubeAdmin.HasController.GetComponent(componentSpec.Name, fw.UserNamespace)
 								Expect(err).ShouldNot(HaveOccurred(), "failed to get component: %v", err)
 
 								component.Annotations["skip-initial-checks"] = "false"
