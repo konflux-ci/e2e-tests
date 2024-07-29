@@ -25,6 +25,11 @@ func purgeStage(f *framework.Framework, namespace string) error {
 		return fmt.Errorf("Error when deleting pipeline runs in namespace %s: %v", namespace, err)
 	}
 
+	err = f.AsKubeDeveloper.CommonController.DeleteSecretsByLabel(namespace, "build.appstudio.redhat.com/multi-platform-secret", "true")
+	if err != nil {
+		return fmt.Errorf("Error when deleting MPC secrets in namespace %s: %v", namespace, err)
+	}
+
 	logging.Logger.Debug("Finished purging namespace %s", namespace)
 	return nil
 }
