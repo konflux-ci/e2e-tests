@@ -161,33 +161,28 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 					}
 				})
 
-				// Components for now can be imported from gitUrl, container image or a devfile
-				if componentSpec.GitSourceUrl != "" {
-					It(fmt.Sprintf("creates component %s (private: %t) from git source %s", componentSpec.Name, componentSpec.Private, componentSpec.GitSourceUrl), Label(devEnvTestLabel, stageEnvTestLabel), func() {
+				// Component are imported from gitUrl
+				It(fmt.Sprintf("creates component %s (private: %t) from git source %s", componentSpec.Name, componentSpec.Private, componentSpec.GitSourceUrl), Label(devEnvTestLabel, stageEnvTestLabel), func() {
 
-						componentObj := appservice.ComponentSpec{
-							ComponentName: componentSpec.Name,
-							Application:   appTest.ApplicationName,
-							Source: appservice.ComponentSource{
-								ComponentSourceUnion: appservice.ComponentSourceUnion{
-									GitSource: &appservice.GitSource{
-										URL:           componentSpec.GitSourceUrl,
-										Revision:      gitRevision,
-										Context:       componentSpec.GitSourceContext,
-										DockerfileURL: componentSpec.DockerFilePath,
-									},
+					componentObj := appservice.ComponentSpec{
+						ComponentName: componentSpec.Name,
+						Application:   appTest.ApplicationName,
+						Source: appservice.ComponentSource{
+							ComponentSourceUnion: appservice.ComponentSourceUnion{
+								GitSource: &appservice.GitSource{
+									URL:           componentSpec.GitSourceUrl,
+									Revision:      gitRevision,
+									Context:       componentSpec.GitSourceContext,
+									DockerfileURL: componentSpec.DockerFilePath,
 								},
 							},
-						}
+						},
+					}
 
-						c, err := fw.AsKubeAdmin.HasController.CreateComponent(componentObj, namespace, "", secretName, appTest.ApplicationName, false, constants.DefaultDockerBuildPipelineBundle)
-						Expect(err).ShouldNot(HaveOccurred())
-						componentList = append(componentList, c)
-					})
-				} else {
-					defer GinkgoRecover()
-					Fail("Please Provide a valid test sample")
-				}
+					c, err := fw.AsKubeAdmin.HasController.CreateComponent(componentObj, namespace, "", secretName, appTest.ApplicationName, false, constants.DefaultDockerBuildPipelineBundle)
+					Expect(err).ShouldNot(HaveOccurred())
+					componentList = append(componentList, c)
+				})
 
 				// Start to watch the pipeline until is finished
 				It(fmt.Sprintf("waits for %s component (private: %t) pipeline to be finished", componentSpec.Name, componentSpec.Private), Label(devEnvTestLabel, stageEnvTestLabel), func() {
