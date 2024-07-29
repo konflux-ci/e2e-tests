@@ -385,7 +385,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 								Expect(build.ValidateBuildPipelineTestResults(pipelineRun, fw.AsKubeAdmin.CommonController.KubeRest())).To(Succeed())
 							})
 
-							It("should validate pipelineRun is signed", func() {
+							It("should validate that the build pipelineRun is signed", func() {
 								pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appTest.ApplicationName, fw.UserNamespace, headSHA)
 								Expect(err).ShouldNot(HaveOccurred())
 								Expect(pipelineRun.Annotations["chains.tekton.dev/signed"]).To(Equal("true"), fmt.Sprintf("pipelinerun %s/%s does not have the expected value of annotation 'chains.tekton.dev/signed'", pipelineRun.GetNamespace(), pipelineRun.GetName()))
@@ -398,7 +398,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 								}, snapshotTimeout, snapshotPollingInterval).Should(Succeed(), "timed out when trying to check if the Snapshot exists for PipelineRun %s/%s", fw.UserNamespace, pipelineRun.GetName())
 							})
 
-							It("should validate the pipelineRun is annotated with the name of the Snapshot", func() {
+							It("should validate that the build pipelineRun is annotated with the name of the Snapshot", func() {
 								pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appTest.ApplicationName, fw.UserNamespace, headSHA)
 								Expect(err).ShouldNot(HaveOccurred())
 								Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(snapshot.GetName()))
