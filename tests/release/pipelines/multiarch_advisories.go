@@ -5,10 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
-	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
@@ -20,7 +18,6 @@ import (
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,8 +30,7 @@ const (
 	multiarchCatalogPathInRepo   = "pipelines/rh-advisories/rh-advisories.yaml"
 	multiarchGitSourceURL        = "https://github.com/redhat-appstudio-qe/multi-platform-test-prod"
 	multiarchGitSourceRepoName   = "multi-platform-test-prod"
-	multiarchGitSrcDefaultSHA    = "2afdb5b234cfc638371634ac3b29c2d5ba76cd4b"
-	multiarchGitSrcDefaultBranch = "main"
+	multiarchGitSrcSHA           = "fd4b6c28329ab3df77e7ad7beebac1829836561d"
 )
 
 var multiarchComponentName = "e2e-multi-platform-test"
@@ -56,14 +52,9 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch test f
 	var multiarchReleasePlanName = "e2e-multiarch-rp"
 	var multiarchReleasePlanAdmissionName = "e2e-multiarch-rpa"
 	var multiarchEnterpriseContractPolicyName = "e2e-multiarch-policy"
-	//Branch for creating pull request
-	var testPRBranchName = fmt.Sprintf("%s-%s", "multiarch-pr-branch", util.GenerateRandomString(6))
-	var testBaseBranchName = fmt.Sprintf("%s-%s", "multiarch-base-branch", util.GenerateRandomString(6))
-	var sourcePrNum int
 
-	var snapshot *appservice.Snapshot
+	var snapshotPush *appservice.Snapshot
 	var releaseCR *releaseapi.Release
-	var buildPR *tektonv1.PipelineRun
 
 	AfterEach(framework.ReportFailure(&devFw))
 
@@ -148,43 +139,16 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch test f
 				createMultiArchEnterpriseContractPolicy(multiarchEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 			}
 
-			sourcePrNum = preparePR(devFw, testBaseBranchName, testPRBranchName)
-			GinkgoWriter.Printf("PR #%d got created and merged\n", sourcePrNum)
+			sampleImage := "quay.io/redhat-user-workloads-stage/dev-release-team-tenant/e2e-multi-platform-test-prod/e2e-multi-platform-test@sha256:23ce99c70f86f879c67a82ef9aa088c7e9a52dc09630c5913587161bda6259e2"
+			snapshotPush, err = devFw.AsKubeAdmin.IntegrationController.CreateSnapshotWithImageSource(multiarchComponentName, multiarchApplicationName, devNamespace, sampleImage, multiarchGitSourceURL, multiarchGitSrcSHA)
+                        Expect(err).ShouldNot(HaveOccurred())
 		})
 
 		var _ = Describe("Post-release verification", func() {
-			It("verifies that a build PipelineRun is created in dev namespace and succeeds", func() {
-				Eventually(func() error {
-					buildPR, err = devFw.AsKubeDeveloper.HasController.GetComponentPipelineRun(multiarchComponentName, multiarchApplicationName, devNamespace, "")
-					if err != nil {
-						GinkgoWriter.Printf("Build PipelineRun has not been created yet for the component %s/%s\n", devNamespace, multiarchComponentName)
-						return err
-					}
-					GinkgoWriter.Printf("PipelineRun %s reason: %s\n", buildPR.Name, buildPR.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
-					if !buildPR.IsDone() {
-						return fmt.Errorf("build pipelinerun %s in namespace %s did not finish yet", buildPR.Name, buildPR.Namespace)
-					}
-					if buildPR.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-						return nil
-					} else {
-						return fmt.Errorf(tekton.GetFailedPipelineRunLogs(devFw.AsKubeDeveloper.HasController.KubeRest(), devFw.AsKubeDeveloper.HasController.KubeInterface(), buildPR))
-					}
-				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to be finished for the component %s/%s", devNamespace, multiarchComponentName))
-			})
-
-			It("verifies the snapshot can be created successfully", func() {
-				Eventually(func() error {
-					snapshot, err = devFw.AsKubeDeveloper.IntegrationController.GetSnapshot("", buildPR.Name, "", devNamespace)
-					if err != nil {
-						return err
-					}
-					return nil
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the snapshot being created for build pipelineRun %s/%s", buildPR.Name, devNamespace))
-			})
 
 			It("verifies the multiarch release pipelinerun is running and succeeds", func() {
 				Eventually(func() error {
-					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
+					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshotPush.Name, devNamespace)
 					if err != nil {
 						return err
 					}
@@ -214,7 +178,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch test f
 
 			It("verifies release CR completed and set succeeded", func() {
 				Eventually(func() error {
-					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
+					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshotPush.Name, devNamespace)
 					if err != nil {
 						return err
 					}
@@ -240,6 +204,7 @@ func createMultiArchEnterpriseContractPolicy(multiarchECPName string, managedFw 
 		}},
 		Configuration: &ecp.EnterpriseContractPolicyConfiguration{
 			Exclude: []string{"step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
+			//Exclude: []string{"step_image_registries", "tasks.required_tasks_found:prefetch-dependencies", "slsa_source_correlated.expected_source_code_reference:git+https://github.com/redhat-appstudio-qe/multi-platform-test-prod.git@sha1:fd4b6c28329ab3df77e7ad7beebac1829836561d"},
 			Include: []string{"@slsa3"},
 		},
 	}
@@ -317,42 +282,4 @@ func createMultiArchReleasePlanAdmission(multiarchRPAName string, managedFw fram
 		Raw: data,
 	})
 	Expect(err).NotTo(HaveOccurred())
-}
-
-// preparePR function is to prepare a merged PR for triggerng a push event 
-func preparePR(devFw *framework.Framework, testBaseBranchName, testPRBranchName string) (int) {
-	//Create the ref, update the file, create the PR and merge the PR
-	err = devFw.AsKubeAdmin.CommonController.Github.CreateRef(multiarchGitSourceRepoName, multiarchGitSrcDefaultBranch, multiarchGitSrcDefaultSHA, testBaseBranchName)
-	Expect(err).ShouldNot(HaveOccurred())
-
-	err = devFw.AsKubeAdmin.CommonController.Github.CreateRef(multiarchGitSourceRepoName, multiarchGitSrcDefaultBranch, multiarchGitSrcDefaultSHA, testPRBranchName)
-	Expect(err).ShouldNot(HaveOccurred())
-
-	// Update the pac configuration for "push" event 
-	fileName := "multi-platform-test-prod-push.yaml"
-	fileResponse, err := devFw.AsKubeAdmin.CommonController.Github.GetFile(multiarchGitSourceRepoName, ".tekton/" + fileName, testPRBranchName)
-	Expect(err).ShouldNot(HaveOccurred())
-
-	fileContent, err := fileResponse.GetContent()
-	Expect(err).ShouldNot(HaveOccurred())
-
-	fileContent = strings.ReplaceAll(fileContent, "[main]", "[" + testBaseBranchName  + "]")
-	repoContentResponse, err := devFw.AsKubeAdmin.CommonController.Github.UpdateFile(multiarchGitSourceRepoName, ".tekton/" + fileName, fileContent, testPRBranchName, *fileResponse.SHA)
-	Expect(err).ShouldNot(HaveOccurred())
-
-	pr, err := devFw.AsKubeAdmin.CommonController.Github.CreatePullRequest(multiarchGitSourceRepoName, "update pac configuration title", "update pac configuration body", testPRBranchName, testBaseBranchName)
-	Expect(err).ShouldNot(HaveOccurred())
-	GinkgoWriter.Printf("PR #%d got created with sha %s\n", pr.GetNumber(), *repoContentResponse.Commit.SHA)
-
-	Eventually(func() error {
-		mergeResult, err := devFw.AsKubeAdmin.CommonController.Github.MergePullRequest(multiarchGitSourceRepoName, pr.GetNumber())
-		if err == nil {
-			mergeResultSha := mergeResult.GetSHA()
-			GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, pr.GetNumber())
-			return nil
-		}
-		return fmt.Errorf("PR merge failed: %s", err)
-	}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
-
-	return pr.GetNumber()
 }

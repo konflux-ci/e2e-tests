@@ -55,6 +55,28 @@ func (i *IntegrationController) CreateSnapshotWithImage(componentName, applicati
 	return i.CreateSnapshotWithComponents(snapshotName, componentName, applicationName, namespace, snapshotComponents)
 }
 
+// CreateSnapshotWithImageSource creates a snapshot using an image.
+func (i *IntegrationController) CreateSnapshotWithImageSource(componentName, applicationName, namespace, containerImage, gitSourceURL, gitSourceRevision string) (*appstudioApi.Snapshot, error) {
+	snapshotComponents := []appstudioApi.SnapshotComponent{
+		{
+			Name:           componentName,
+			ContainerImage: containerImage,
+			Source:         appstudioApi.ComponentSource{
+				appstudioApi.ComponentSourceUnion{
+					GitSource: &appstudioApi.GitSource{
+						Revision: gitSourceRevision,
+						URL: gitSourceURL,
+					},
+				},
+			},
+		},
+	}
+
+	snapshotName := "snapshot-sample-" + util.GenerateRandomString(4)
+
+	return i.CreateSnapshotWithComponents(snapshotName, componentName, applicationName, namespace, snapshotComponents)
+}
+
 // GetSnapshotByComponent returns the first snapshot in namespace if exist, else will return nil
 func (i *IntegrationController) GetSnapshotByComponent(namespace string) (*appstudioApi.Snapshot, error) {
 	snapshot := &appstudioApi.SnapshotList{}
