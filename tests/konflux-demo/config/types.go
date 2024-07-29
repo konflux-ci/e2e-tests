@@ -27,8 +27,8 @@ type K8sSpec struct {
 
 // Specs for a specific component to create in AppStudio
 type ComponentSpec struct {
-	// Test Advanced build (using PaC)
-	AdvancedBuildSpec *AdvancedBuildSpec `yaml:"advancedBuild"`
+	// Test Default build (using PaC)
+	BuildSpec *BuildSpec `yaml:"build"`
 
 	// The component name which will be created
 	Name string `yaml:"name"`
@@ -72,7 +72,7 @@ type TestScenarioSpec struct {
 	TestPath    string
 }
 
-type AdvancedBuildSpec struct {
+type BuildSpec struct {
 	// Integration test config
 	TestScenario TestScenarioSpec `yaml:"testScenario,omitempty"`
 }

@@ -149,12 +149,12 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 					})
 				}
 
-				It("creates new branch for advanced build", Label(devEnvTestLabel, stageEnvTestLabel), func() {
+				It("creates new branch for the build", Label(devEnvTestLabel, stageEnvTestLabel), func() {
 					gitRevision = componentSpec.GitSourceRevision
-					// In case the advanced build (PaC) is enabled for this component,
-					// we need to create a new branch that we will target
-					// and that will contain the PaC configuration, so we can avoid polluting the default (main) branch
-					if componentSpec.AdvancedBuildSpec != nil {
+					// We need to create a new branch that we will target
+					// and that will contain the PaC configuration, so we
+					// can avoid polluting the default (main) branch
+					if componentSpec.BuildSpec != nil {
 						componentNewBaseBranch = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
 						gitRevision = componentNewBaseBranch
 						Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef(componentRepositoryName, componentSpec.GitSourceDefaultBranchName, componentSpec.GitSourceRevision, componentNewBaseBranch)).To(Succeed())
@@ -216,8 +216,8 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 					}
 				})
 
-				if componentSpec.AdvancedBuildSpec != nil {
-					Describe(fmt.Sprintf("KONFLUX Advanced build test for %s", componentSpec.Name), Label(devEnvTestLabel), Ordered, func() {
+				if componentSpec.BuildSpec != nil {
+					Describe(fmt.Sprintf("KONFLUX default build test for %s", componentSpec.Name), Label(devEnvTestLabel), Ordered, func() {
 						var managedNamespace string
 
 						var component *appservice.Component
@@ -228,7 +228,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 
 						// PaC related variables
 						var prNumber int
-						var headSHA, pacBranchName, pacPurgeBranchName1, pacPurgeBranchName2 string
+						var headSHA, pacBranchName string
 						var mergeResult *github.PullRequestMergeResult
 
 						BeforeAll(func() {
@@ -242,13 +242,11 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 							Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error when getting shared secret - make sure the secret %s in %s userNamespace is created", constants.QuayRepositorySecretName, constants.QuayRepositorySecretNamespace))
 							createReleaseConfig(*fw, managedNamespace, component.GetName(), appTest.ApplicationName, sharedSecret.Data[".dockerconfigjson"])
 
-							its := componentSpec.AdvancedBuildSpec.TestScenario
+							its := componentSpec.BuildSpec.TestScenario
 							integrationTestScenario, err = fw.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", appTest.ApplicationName, fw.UserNamespace, its.GitURL, its.GitRevision, its.TestPath)
 							Expect(err).ShouldNot(HaveOccurred())
 
 							pacBranchName = fmt.Sprintf("appstudio-%s", component.GetName())
-							pacPurgeBranchName1 = fmt.Sprintf("appstudio-purge-%s", component.GetName())
-							pacPurgeBranchName2 = fmt.Sprintf("konflux-purge-%s", component.GetName())
 
 							// JBS related config
 							_, err = fw.AsKubeAdmin.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, fw.UserNamespace)
@@ -268,7 +266,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 							}
 							Expect(fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, componentNewBaseBranch)).To(Succeed())
 						})
-						When("Component is switched to Advanced Build mode", func() {
+						When("Component is switched to Default Build mode", func() {
 
 							BeforeAll(func() {
 								component, err = fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), fw.UserNamespace)
@@ -360,7 +358,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 							})
 						})
 
-						When("SLSA level 3 customizable PipelineRun is created", func() {
+						When("Build PipelineRun is created", func() {
 							It("does not contain an annotation with a Snapshot Name", func() {
 								Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(""))
 							})
@@ -373,7 +371,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 							})
 						})
 
-						When("SLSA level 3 customizable PipelineRun completes successfully", func() {
+						When("Build PipelineRun completes successfully", func() {
 							It("should be possible to download the SBOM file", func() {
 								var outputImage string
 								for _, p := range pipelineRun.Spec.Params {
@@ -520,58 +518,6 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 									}
 									return nil
 								}, jvmRebuildTimeout, jvmRebuildPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for all artifactbuilds and dependencybuilds to complete in namespace %q", fw.UserNamespace))
-							})
-						})
-
-						When("User switches to simple build", func() {
-							BeforeAll(func() {
-								Expect(fw.AsKubeAdmin.HasController.SetComponentAnnotation(component.GetName(), buildcontrollers.BuildRequestAnnotationName, buildcontrollers.BuildRequestUnconfigurePaCAnnotationValue, fw.UserNamespace)).To(Succeed())
-							})
-							AfterAll(func() {
-								// Delete the new branch created by sending purge PR while moving to simple build
-								err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, pacPurgeBranchName1)
-								if err != nil {
-									Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
-								}
-								err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, pacPurgeBranchName2)
-								if err != nil {
-									Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
-								}
-							})
-							It("creates a pull request for removing PAC configuration", func() {
-								Eventually(func() error {
-									prs, err := fw.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepositoryName)
-									Expect(err).ShouldNot(HaveOccurred())
-									for _, pr := range prs {
-										if pr.Head.GetRef() == pacPurgeBranchName1 || pr.Head.GetRef() == pacPurgeBranchName2 {
-											return nil
-										}
-									}
-									return fmt.Errorf("could not get the expected PaC purge PR branch %s or %s", pacPurgeBranchName1, pacPurgeBranchName2)
-								}, time.Minute*1, defaultPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for PaC purge PR to be created against the %q repo", componentRepositoryName))
-							})
-							It("component status annotation is set correctly", func() {
-								var buildStatus *buildcontrollers.BuildStatus
-
-								Eventually(func() (bool, error) {
-									component, err := fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), fw.UserNamespace)
-									status := component.Annotations[buildcontrollers.BuildStatusAnnotationName]
-
-									if err != nil {
-										GinkgoWriter.Printf("cannot get the build status annotation: %v\n", err)
-										return false, err
-									}
-
-									statusBytes := []byte(status)
-
-									err = json.Unmarshal(statusBytes, &buildStatus)
-									if err != nil {
-										GinkgoWriter.Printf("cannot unmarshal build status: %v\n", err)
-										return false, err
-									}
-
-									return buildStatus.PaC.State != "enabled", nil
-								}, timeout, interval).Should(BeTrue(), "PaC is still enabled, even after unprovisioning")
 							})
 						})
 					})

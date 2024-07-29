@@ -17,7 +17,7 @@ const (
 
 var TestScenarios = []TestSpec{
 	{
-		Name:            "Maven project - Simple and Advanced build",
+		Name:            "Maven project - Default build",
 		ApplicationName: "konflux-demo-app",
 		Skip:            false,
 		Components: []ComponentSpec{
@@ -31,7 +31,7 @@ var TestScenarios = []TestSpec{
 				DockerFilePath:             "Dockerfile",
 				HealthEndpoint:             "/",
 				SkipDeploymentCheck:        true,
-				AdvancedBuildSpec: &AdvancedBuildSpec{
+				BuildSpec: &BuildSpec{
 					TestScenario: TestScenarioSpec{
 						GitURL:      "https://github.com/konflux-ci/integration-examples.git",
 						GitRevision: "843f455fe87a6d7f68c238f95a8f3eb304e65ac5",
