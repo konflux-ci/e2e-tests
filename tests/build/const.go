@@ -48,6 +48,7 @@ const (
 	componentDependenciesChildGitRevision    = "56c13d17b1a8f801f2c41091e6f4e62cf16ee5f2"
 
 	githubUrlFormat = "https://github.com/%s/%s"
+	gitlabUrlFormat = "https://gitlab.com/%s"
 
 	//Logging related
 	buildStatusAnnotationValueLoggingFormat = "build status annotation value: %s\n"
@@ -57,6 +58,17 @@ const (
 )
 
 var (
+	additionalTags                     = []string{"test-tag1", "test-tag2"}
+	componentUrls                      = strings.Split(utils.GetEnv(COMPONENT_REPO_URLS_ENV, pythonComponentGitSourceURL), ",") //multiple urls
+	componentNames                     []string
+	gihubOrg                           = utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
+	gitlabOrg                          = utils.GetEnv(constants.GITLAB_ORG_ENV, "redhat-appstudio-qe")
+	helloWorldComponentGitSourceURL    = fmt.Sprintf(githubUrlFormat, gihubOrg, helloWorldComponentGitSourceRepoName)
+	helloWorldComponentGitlabProjectID = fmt.Sprintf("%s/%s", gitlabOrg, helloWorldComponentGitSourceRepoName)
+	helloWorldComponentGitlabURL       = fmt.Sprintf(gitlabUrlFormat, helloWorldComponentGitlabProjectID)
+	annotationsTestGitSourceURL        = fmt.Sprintf(githubUrlFormat, gihubOrg, annotationsTestGitSourceRepoName)
+	multiComponentGitSourceURL         = fmt.Sprintf(githubUrlFormat, gihubOrg, multiComponentGitSourceRepoName)
+	multiComponentContextDirs          = []string{"go-component", "python-component"}
 	additionalTags                       = []string{"test-tag1", "test-tag2"}
 	pythonComponentGitSourceURL          = fmt.Sprintf(githubUrlFormat, gihubOrg, pythonComponentRepoName)
 	componentUrls                        = strings.Split(utils.GetEnv(COMPONENT_REPO_URLS_ENV, pythonComponentGitSourceURL), ",") //multiple urls

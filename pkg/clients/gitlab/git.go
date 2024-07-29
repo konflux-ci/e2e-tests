@@ -167,6 +167,21 @@ func (gc *GitlabClient) CreateFile(pathToFile, fileContent, branchName string) (
 	return file, nil
 }
 
+func (gc *GitlabClient) CreateFileInProject(projectID, pathToFile, fileContent, branchName string) (*gitlab.FileInfo, error) {
+	opts := &gitlab.CreateFileOptions{
+		Branch:        gitlab.Ptr(branchName),
+		Content:       &fileContent,
+		CommitMessage: gitlab.Ptr("e2e test commit message"),
+	}
+
+	file, resp, err := gc.client.RepositoryFiles.CreateFile(projectID, pathToFile, opts)
+	if resp.StatusCode != 201 || err != nil {
+		return nil, fmt.Errorf("error when creating file contents: response (%v) and error: %v", resp, err)
+	}
+
+	return file, nil
+}
+
 func (gc *GitlabClient) GetFileMetaData(projectID, pathToFile, branchName string) (*gitlab.File, error) {
 	metadata, _, err := gc.client.RepositoryFiles.GetFileMetaData(projectID, pathToFile, gitlab.Ptr(gitlab.GetFileMetaDataOptions{Ref: gitlab.Ptr(branchName)}))
 	return metadata, err
