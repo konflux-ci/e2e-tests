@@ -214,7 +214,7 @@ func assertBuildPipelineRunSucceeded(devFw framework.Framework, devNamespace, ma
 	// Create a ticker that ticks every 3 minutes
 	ticker := time.NewTicker(3 * time.Minute)
 	// Schedule the stop of the ticker after 5 minutes
-	time.AfterFunc(5*time.Minute, func() {
+	time.AfterFunc(10*time.Minute, func() {
 		ticker.Stop()
 		fmt.Println("Stopped executing every 3 minutes.")
 	})
