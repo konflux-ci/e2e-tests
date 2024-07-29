@@ -25,13 +25,16 @@ import playwright.sync_api
 import email.parser
 import email.policy
 import json
-import os
-import os.path
 import subprocess
 import time
 import uuid
 import multiprocessing
 import queue
+import os.path
+import sys
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import playwright_lib
 
 PLAYWRIGHT_HEADLESS = False
 PLAYWRIGHT_VIDEO_DIR = "videos/"
@@ -127,18 +130,23 @@ def click_and_wait_hard(
             break  # success
 
 
+def generate_password():
+    """
+    Keep generating password until it contains both digit and letter.
+    Given special char ("-") is granted, this will meet password requirements.
+    """
+    while True:
+        password = str(uuid.uuid4())
+        contains_digit = any(char.isdigit() for char in password)
+        contains_alpha = any(char.isalpha() for char in password)
+        if contains_digit and contains_alpha:
+            return password
+
+
 def workload(user):
     username = user["username"]
     email = f"jhutar+{username}@redhat.com"
-
-    # Keep generating password until it contains both digit and letter.
-    # Given special char ("-") is granted, this will meet password requirements.
-    while True:
-        password = str(uuid.uuid4())
-        if any(char.isdigit() for char in password) and any(
-            char.isalpha() for char in password
-        ):
-            break
+    password = generate_password()
 
     with playwright.sync_api.sync_playwright() as p:
         browser = p.chromium.launch(
@@ -149,15 +157,7 @@ def workload(user):
         )
         page = context.new_page()
 
-        page.goto("https://console.dev.redhat.com")
-        page.wait_for_url("https://sso.redhat.com/**")
-
-        # Accept cookies
-        cookies_iframe = page.frame_locator('iframe[name="trustarc_cm"]')
-        cookies_button = cookies_iframe.get_by_role(
-            "button", name="Agree and proceed with standard settings"
-        )
-        cookies_button.click()
+        playwright_lib.goto_login_and_accept_cookies(page)
 
         # Go to registration form
         click_and_wait_hard(
