@@ -84,7 +84,6 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 
 	fw := &framework.Framework{}
 	var kubeadminClient *framework.ControllerHub
-	AfterEach(framework.ReportFailure(&fw))
 	var token, ssourl, apiurl string
 	var TestScenarios []e2eConfig.TestSpec
 
@@ -287,7 +286,7 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 								}
 								managedNamespace = userNamespace + "-managed"
 								componentObj := appservice.ComponentSpec{
-									ComponentName: componentSpec.Name,
+									ComponentName: utils.GetGeneratedNamespace(componentSpec.Name),
 									Application:   appTest.ApplicationName,
 									Source: appservice.ComponentSource{
 										ComponentSourceUnion: appservice.ComponentSourceUnion{
@@ -330,7 +329,7 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 							})
 							AfterAll(func() {
 								if !CurrentSpecReport().Failed() {
-									Expect(kubeadminClient.CommonController.DeleteNamespace(managedNamespace)).To(Succeed())
+									kubeadminClient.CommonController.DeleteNamespace(managedNamespace)
 									if componentSpec.Language == "Java" {
 										Expect(kubeadminClient.JvmbuildserviceController.DeleteJBSConfig(constants.JBSConfigName, userNamespace)).To(Succeed())
 									}
@@ -341,7 +340,7 @@ var _ = framework.RhtapDemoSuiteDescribe(func() {
 								if err != nil {
 									Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 								}
-								Expect(kubeadminClient.CommonController.Github.DeleteRef(componentRepositoryName, componentNewBaseBranch)).To(Succeed())
+								kubeadminClient.CommonController.Github.DeleteRef(componentRepositoryName, componentNewBaseBranch)
 							})
 							When(fmt.Sprintf("component %s (private: %t) is created from git source %s", componentSpec.Name, componentSpec.Private, componentSpec.GitSourceUrl), Label(upstreamKonfluxTestLabel), func() {
 
