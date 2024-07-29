@@ -76,20 +76,25 @@ spec:
         #!/bin/sh
         function saveArtifacts() {
           cd /workspace
+<<<<<<< HEAD
           oras login -u $QUAY_USERNAME -p $QUAY_PASSWORD quay.io
 
+=======
+
+          oras login -u "$QUAY_USERNAME" -p "$QUAY_PASSWORD" quay.io
+>>>>>>> dc9d8c5 (fixes)
           echo '{"doc": "README.md"}' > config.json
 
           oras push "$(params.oras-container)" --config config.json:application/vnd.acme.rocket.config.v1+json \
             ./test-artifacts/:application/vnd.acme.rocket.docs.layer.v1+tar
 
-          exit $EXIT_CODE
+          exit "$EXIT_CODE"
         }
 
         trap saveArtifacts EXIT
 
         export ARTIFACT_DIR="/workspace/test-artifacts"
-        mkdir -p $ARTIFACT_DIR
+        mkdir -p "$ARTIFACT_DIR"
 
         $(params.ocp-login-command)
 
@@ -101,7 +106,7 @@ spec:
           mkdir -p $ARTIFACT_DIR
         fi
 
-        export PATH=$PATH:/tmp/bin
+        export PATH="$PATH":/tmp/bin
         mkdir -p /tmp/bin
 
         export DEFAULT_QUAY_ORG DEFAULT_QUAY_ORG_TOKEN GITHUB_USER GITHUB_TOKEN QUAY_TOKEN QUAY_OAUTH_USER QUAY_OAUTH_TOKEN OPENSHIFT_API OPENSHIFT_USERNAME OPENSHIFT_PASSWORD \
