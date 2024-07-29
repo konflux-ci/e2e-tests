@@ -48,10 +48,10 @@ spec:
       computeResources:
         requests:
           cpu: "1"
-          memory: "4Gi"
+          memory: "2Gi"
         limits:
-          cpu: "2"
-          memory: "6Gi"
+          cpu: "1"
+          memory: "4Gi"
       image: $(params.container-image)
       volumeMounts:
         - name: konflux-secret-volume
@@ -122,10 +122,10 @@ spec:
         OFFLINE_TOKEN=$(cat /usr/local/konflux-ci-secrets/stage_offline_token)
         TOOLCHAIN_API_URL=$(cat /usr/local/konflux-ci-secrets/stage_toolchain_api_url)
         KEYLOAK_URL=$(cat /usr/local/konflux-ci-secrets/stage_keyloak_url)
-        EXODUS_PROD_KEY="none"
-        EXODUS_PROD_CERT="none"
-        CGW_USERNAME="none"
-        CGW_TOKEN="none"
+        EXODUS_PROD_KEY=$(cat /usr/local/konflux-ci-secrets/exodus_prod_key)
+        EXODUS_PROD_CERT=$(cat /usr/local/konflux-ci-secrets/exodus_prod_cert)
+        CGW_USERNAME=$(cat /usr/local/konflux-ci-secrets/cgw_username)
+        CGW_TOKEN=$(cat /usr/local/konflux-ci-secrets/cgw_token)
         REL_IMAGE_CONTROLLER_QUAY_ORG=$(cat /usr/local/konflux-ci-secrets/release_image_controller_quay_org)
         REL_IMAGE_CONTROLLER_QUAY_TOKEN=$(cat /usr/local/konflux-ci-secrets/release_image_controller_quay_token)
         OPENSHIFT_API="$(yq e '.clusters[0].cluster.server' $KUBECONFIG)"
