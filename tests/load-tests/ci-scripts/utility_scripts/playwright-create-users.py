@@ -51,18 +51,40 @@ def get_verification_link(user_email):
             raise Exception(f"Out of tries to get verification email for {user_email}")
 
         try:
-            fetchmail = subprocess.run(["fetchmail"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            if fetchmail.returncode not in (0, 1):   # 0 = emails downloaded, 1 = no new emails
-                raise Exception(f"Running 'fetchmail' failed with {fetchmail.returncode}: {fetchmail.stdout}")
+            fetchmail = subprocess.run(
+                ["fetchmail"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+            )
+            if fetchmail.returncode not in (
+                0,
+                1,
+            ):  # 0 = emails downloaded, 1 = no new emails
+                raise Exception(
+                    f"Running 'fetchmail' failed with {fetchmail.returncode}: {fetchmail.stdout}"
+                )
 
-            notmuch_search = subprocess.run(["notmuch", "search", "--output=files", "--format=json", "--sort=newest-first", f"to:'{user_email}' AND subject:'Verify email for Red Hat account' AND date:'1hour..now'"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            notmuch_search = subprocess.run(
+                [
+                    "notmuch",
+                    "search",
+                    "--output=files",
+                    "--format=json",
+                    "--sort=newest-first",
+                    f"to:'{user_email}' AND subject:'Verify email for Red Hat account' AND date:'1hour..now'",
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
             if notmuch_search.returncode != 0:
-                raise Exception(f"Running 'notmuch search ...' failed with {notmuch_search.returncode}: {notmuch_search.stderr}")
+                raise Exception(
+                    f"Running 'notmuch search ...' failed with {notmuch_search.returncode}: {notmuch_search.stderr}"
+                )
 
             message_files_json = notmuch_search.stdout
             message_files = json.loads(message_files_json)
             if len(message_files) != 1:
-                raise Exception(f"Command 'notmuch search ...' returned unexpected number of files: {message_files}")
+                raise Exception(
+                    f"Command 'notmuch search ...' returned unexpected number of files: {message_files}"
+                )
 
             if not os.path.isfile(message_files[0]):
                 raise Exception("File {message_files[0]} is missing")
@@ -78,11 +100,15 @@ def get_verification_link(user_email):
     simplest = msg.get_body(preferencelist=("plain"))
     for line in simplest.get_content().splitlines():
         line = line.strip()
-        if line.startswith("https://sso.redhat.com/auth/realms/redhat-external/login-actions/action-token?key="):
+        if line.startswith(
+            "https://sso.redhat.com/auth/realms/redhat-external/login-actions/action-token?key="
+        ):
             return line
 
 
-def click_and_wait_hard(page, clickable, verifier, timeout_ms_start=1000, timeout_ms_max=30000):
+def click_and_wait_hard(
+    page, clickable, verifier, timeout_ms_start=1000, timeout_ms_max=30000
+):
     """
     Try to click at given thingy (probably link) and wait for another
     thingy to appear, try it multiple times untill it works
@@ -95,10 +121,10 @@ def click_and_wait_hard(page, clickable, verifier, timeout_ms_start=1000, timeou
             page.wait_for_selector(verifier, timeout=timeout)
         except playwright.sync_api.TimeoutError as e:
             if timeout >= timeout_ms_max:
-                raise   # giving up
+                raise  # giving up
             timeout *= 2
         else:
-            break   # success
+            break  # success
 
 
 def workload(user):
@@ -109,7 +135,9 @@ def workload(user):
     # Given special char ("-") is granted, this will meet password requirements.
     while True:
         password = str(uuid.uuid4())
-        if any(char.isdigit() for char in password) and any(char.isalpha() for char in password):
+        if any(char.isdigit() for char in password) and any(
+            char.isalpha() for char in password
+        ):
             break
 
     with playwright.sync_api.sync_playwright() as p:
@@ -126,11 +154,17 @@ def workload(user):
 
         # Accept cookies
         cookies_iframe = page.frame_locator('iframe[name="trustarc_cm"]')
-        cookies_button = cookies_iframe.get_by_role("button", name="Agree and proceed with standard settings")
+        cookies_button = cookies_iframe.get_by_role(
+            "button", name="Agree and proceed with standard settings"
+        )
         cookies_button.click()
 
         # Go to registration form
-        click_and_wait_hard(page, '//a[@id="rh-login-registration-link"]', '//h1[text()="Register for a Red Hat account"]')
+        click_and_wait_hard(
+            page,
+            '//a[@id="rh-login-registration-link"]',
+            '//h1[text()="Register for a Red Hat account"]',
+        )
 
         # Fill the form
         user_input = page.locator('//input[@id="username"]')
@@ -143,7 +177,9 @@ def workload(user):
         last_input.fill("Testing")
         email_input = page.locator('//input[@id="email"]')
         email_input.fill(email)
-        terms_checkbox = page.locator('//input[contains(@id, "user.attributes.tcacc-SSO/ssoSignIn/")]')
+        terms_checkbox = page.locator(
+            '//input[contains(@id, "user.attributes.tcacc-SSO/ssoSignIn/")]'
+        )
         terms_checkbox.click()
         submit_button = page.locator('//input[@id="regform-submit"]')
         submit_button.click()
@@ -152,7 +188,9 @@ def workload(user):
         # Verify account
         verification_link = get_verification_link(email)
         page.goto(verification_link)
-        page.wait_for_selector(f'//h1[text()="Confirm validity of e-mail address {email}."]')
+        page.wait_for_selector(
+            f'//h1[text()="Confirm validity of e-mail address {email}."]'
+        )
         finish_button = page.locator('//a[text()="Finish"]')
         finish_button.click()
         page.wait_for_selector('//h1[text()="Your email address has been verified"]')
@@ -206,7 +244,7 @@ def main():
     print(users_new)
     with open("users-new.json", "w") as fd:
         print(f"Dumping {len(users_new)} users")
-        users = json.dump(users_new, fd)
+        json.dump(users_new, fd)
 
 
 if __name__ == "__main__":

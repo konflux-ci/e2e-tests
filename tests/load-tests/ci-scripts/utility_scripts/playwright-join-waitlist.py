@@ -19,7 +19,6 @@
 #     getting "Access Denied" errors. I guess it was some rate limiting.
 
 import playwright.sync_api
-import os
 import time
 import json
 import multiprocessing
@@ -27,6 +26,7 @@ import queue
 
 PLAYWRIGHT_HEADLESS = False
 PLAYWRIGHT_VIDEO_DIR = "videos/"
+
 
 def workload(user):
     username = user["username"].replace("-", "_")
@@ -46,7 +46,9 @@ def workload(user):
 
         # Accept cookies
         cookies_iframe = page.frame_locator('iframe[name="trustarc_cm"]')
-        cookies_button = cookies_iframe.get_by_role("button", name="Agree and proceed with standard settings")
+        cookies_button = cookies_iframe.get_by_role(
+            "button", name="Agree and proceed with standard settings"
+        )
         cookies_button.click()
 
         # Wait for login form and use it
@@ -69,11 +71,15 @@ def workload(user):
 
         # Accept terms and conditions if this appears
         try:
-            page.wait_for_selector('//h1[text()="We need a little more information"]', timeout=15)
+            page.wait_for_selector(
+                '//h1[text()="We need a little more information"]', timeout=15
+            )
         except playwright.sync_api.TimeoutError as e:
             pass
         else:
-            terms_checkbox = page.locator('//input[contains(@id, "user.attributes.tcacc-SSO/developersPortalSubscriptionCreation/")]')
+            terms_checkbox = page.locator(
+                '//input[contains(@id, "user.attributes.tcacc-SSO/developersPortalSubscriptionCreation/")]'
+            )
             terms_checkbox.click()
             submit_button = page.locator('//button[@id="regform-submit"]')
             submit_button.click()
@@ -82,7 +88,9 @@ def workload(user):
         page.wait_for_selector('//h1[contains(text(), "Get started with")]')
         join_button = page.locator('//button[text()="Join the waitlist"]')
         join_button.click()
-        page.wait_for_selector('//h4[contains(text(), "We have received your request")]')
+        page.wait_for_selector(
+            '//h4[contains(text(), "We have received your request")]'
+        )
 
 
 def process_it(output_queue, user):
@@ -97,7 +105,7 @@ def main():
     with open("users.json", "r") as fd:
         users = json.load(fd)
 
-    users_allowlist = []   # keep empty to allow all
+    users_allowlist = []  # keep empty to allow all
 
     for user in users:
         if users_allowlist is [] or user["username"] in users_allowlist:
