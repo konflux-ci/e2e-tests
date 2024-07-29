@@ -3,11 +3,13 @@ package journey
 import "fmt"
 import "strings"
 import "regexp"
+import "time"
 
 import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
 import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 import github "github.com/google/go-github/v44/github"
+import utils "github.com/konflux-ci/e2e-tests/pkg/utils"
 
 var fileList = []string{"COMPONENT-pull-request.yaml", "COMPONENT-push.yaml"}
 
@@ -123,7 +125,14 @@ func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username string) (s
 		}
 
 		// Create fork and make sure it appears
-		forkRepo, err = f.AsKubeAdmin.CommonController.Github.ForkRepository(sourceName, targetName)
+		err = utils.WaitUntilWithInterval(func() (done bool, err error) {
+			forkRepo, err = f.AsKubeAdmin.CommonController.Github.ForkRepository(sourceName, targetName)
+			if err != nil {
+				logging.Logger.Debug("Repo forking failed, trying again: %v", err)
+				return false, nil
+			}
+			return true, nil
+		}, time.Second * 20, time.Minute * 60)
 		if err != nil {
 			return "", err
 		}
