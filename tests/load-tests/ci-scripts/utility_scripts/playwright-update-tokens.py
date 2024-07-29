@@ -101,7 +101,7 @@ def main():
         users = json.load(fd)
 
     users_new = []
-    users_allowlist = []  # keep empty to allow all
+    users_allowlist = []   # keep empty to allow all
 
     for user in users:
         if users_allowlist is not [] and user["username"] not in users_allowlist:
