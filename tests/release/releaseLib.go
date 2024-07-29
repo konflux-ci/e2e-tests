@@ -41,7 +41,7 @@ func CreateComponent(devFw framework.Framework, devNamespace, appName, compName,
 			},
 		},
 	}
-	component, err := devFw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", appName, false, buildPipelineBundle)
+	component, err := devFw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", appName, true, buildPipelineBundle)
 	Expect(err).NotTo(HaveOccurred())
 	return component
 }
