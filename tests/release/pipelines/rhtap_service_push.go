@@ -139,7 +139,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 				},
 			}
 			// Create a component with Git Source URL, a specified git branch
-			rhtapComponent, err = devFw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", rhtapApplicationName, false, constants.DefaultDockerBuildPipelineBundle)
+			rhtapComponent, err = devFw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", rhtapApplicationName, true, constants.DefaultDockerBuildPipelineBundle)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			createRHTAPReleasePlanAdmission(rhtapReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, rhtapApplicationName, rhtapEnterpriseContractPolicyName, rhtapCatalogPathInRepo)
