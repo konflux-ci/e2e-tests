@@ -88,9 +88,6 @@ spec:
 
         trap saveArtifacts EXIT
 
-        export ARTIFACT_DIR="/workspace/test-artifacts"
-        mkdir -p "$ARTIFACT_DIR"
-
         $(params.ocp-login-command)
 
         oc config view --minify --raw > /workspace/kubeconfig
@@ -100,9 +97,6 @@ spec:
         if [ ! -d "$ARTIFACT_DIR" ]; then
           mkdir -p $ARTIFACT_DIR
         fi
-
-        export PATH="$PATH":/tmp/bin
-        mkdir -p /tmp/bin
 
         export DEFAULT_QUAY_ORG DEFAULT_QUAY_ORG_TOKEN GITHUB_USER GITHUB_TOKEN QUAY_TOKEN QUAY_OAUTH_USER QUAY_OAUTH_TOKEN OPENSHIFT_API OPENSHIFT_USERNAME OPENSHIFT_PASSWORD \
             GITHUB_ACCOUNTS_ARRAY PREVIOUS_RATE_REMAINING GITHUB_USERNAME_ARRAY GH_RATE_REMAINING PYXIS_STAGE_KEY PYXIS_STAGE_CERT OFFLINE_TOKEN TOOLCHAIN_API_URL KEYLOAK_URL REL_IMAGE_CONTROLLER_QUAY_ORG REL_IMAGE_CONTROLLER_QUAY_TOKEN BYOC_KUBECONFIG GITHUB_TOKENS_LIST OAUTH_REDIRECT_PROXY_URL \
