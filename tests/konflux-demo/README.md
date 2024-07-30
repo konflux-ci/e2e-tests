@@ -25,7 +25,7 @@ ginkgo --label-filter='verify-stage' ./cmd/
    1. Create a user namespace
 
 2. Test Scenario
-   1. The application was created successfully and is healthy
+   1. The application was created successfully
    2. The Component (default) Build finished successfully
    3. Snapshot was created and integration test finished successfully
 
@@ -92,7 +92,6 @@ var TestScenarios = []TestSpec{
                 Private:           true,
                 Language:          "JavaScript",
                 GitSourceUrl:      "https://github.com/redhat-appstudio-qe-bot/nodejs-health-check.git",
-                HealthEndpoint:    "/live",
             },
         },
     },

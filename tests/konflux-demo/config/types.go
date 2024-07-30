@@ -53,14 +53,8 @@ type ComponentSpec struct {
 	// Relative path of the docker file in the repository
 	DockerFilePath string `yaml:"dockerFilePath,omitempty"`
 
-	// An endpoint where the framework can ping to see if a component was deployed successfully
-	HealthEndpoint string `yaml:"healthz"`
-
 	// Set k8s resource specific properties
 	K8sSpec *K8sSpec `yaml:"spec,omitempty"`
-
-	// Skip the deployment of a component in case not needed to deploy
-	SkipDeploymentCheck bool `yaml:"skipDeploy,omitempty"`
 
 	IntegrationTestScenario *IntegrationTestScenario `yaml:"testScenario,omitempty"`
 }
