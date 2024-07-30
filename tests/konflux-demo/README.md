@@ -29,7 +29,7 @@ ginkgo --label-filter='verify-stage' ./cmd/
    2. The Component (default) Build finished successfully
    3. Snapshot was created and integration test finished successfully
 
-### Default build with Integration test (enabled only if BuildSpec is set)
+### Default build with Integration test
 1. Setup
    1. Create a managed namespace used by release service for validating and releasing the built image
    2. Create required resources in managed-namespace

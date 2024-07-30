@@ -133,7 +133,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 					// We need to create a new branch that we will target
 					// and that will contain the PaC configuration, so we
 					// can avoid polluting the default (main) branch
-					if componentSpec.BuildSpec != nil {
+					if componentSpec.IntegrationTestScenario != nil {
 						componentNewBaseBranch = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
 						gitRevision = componentNewBaseBranch
 						Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef(componentRepositoryName, componentSpec.GitSourceDefaultBranchName, componentSpec.GitSourceRevision, componentNewBaseBranch)).To(Succeed())
@@ -190,7 +190,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 					}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out waiting for the snapshot for the component %s/%s to be marked as successful", snapshot.GetNamespace(), componentSpec.Name))
 				})
 
-				if componentSpec.BuildSpec != nil {
+				if componentSpec.IntegrationTestScenario != nil {
 					Describe(fmt.Sprintf("KONFLUX default build test for %s", componentSpec.Name), Label(devEnvTestLabel), Ordered, func() {
 						var managedNamespace string
 
@@ -215,7 +215,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(func() {
 							Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error when getting shared secret - make sure the secret %s in %s userNamespace is created", constants.QuayRepositorySecretName, constants.QuayRepositorySecretNamespace))
 							createReleaseConfig(*fw, managedNamespace, componentSpec.Name, appTest.ApplicationName, sharedSecret.Data[".dockerconfigjson"])
 
-							its := componentSpec.BuildSpec.TestScenario
+							its := componentSpec.IntegrationTestScenario
 							integrationTestScenario, err = fw.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", appTest.ApplicationName, fw.UserNamespace, its.GitURL, its.GitRevision, its.TestPath)
 							Expect(err).ShouldNot(HaveOccurred())
 

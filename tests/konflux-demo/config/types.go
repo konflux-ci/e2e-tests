@@ -27,9 +27,6 @@ type K8sSpec struct {
 
 // Specs for a specific component to create in AppStudio
 type ComponentSpec struct {
-	// Test Default build (using PaC)
-	BuildSpec *BuildSpec `yaml:"build"`
-
 	// The component name which will be created
 	Name string `yaml:"name"`
 
@@ -64,15 +61,12 @@ type ComponentSpec struct {
 
 	// Skip the deployment of a component in case not needed to deploy
 	SkipDeploymentCheck bool `yaml:"skipDeploy,omitempty"`
+
+	IntegrationTestScenario *IntegrationTestScenario `yaml:"testScenario,omitempty"`
 }
 
-type TestScenarioSpec struct {
+type IntegrationTestScenario struct {
 	GitURL      string
 	GitRevision string
 	TestPath    string
-}
-
-type BuildSpec struct {
-	// Integration test config
-	TestScenario TestScenarioSpec `yaml:"testScenario,omitempty"`
 }

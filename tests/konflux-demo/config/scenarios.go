@@ -23,12 +23,10 @@ var TestScenarios = []TestSpec{
 				DockerFilePath:             "Dockerfile",
 				HealthEndpoint:             "/",
 				SkipDeploymentCheck:        true,
-				BuildSpec: &BuildSpec{
-					TestScenario: TestScenarioSpec{
-						GitURL:      "https://github.com/konflux-ci/integration-examples.git",
-						GitRevision: "843f455fe87a6d7f68c238f95a8f3eb304e65ac5",
-						TestPath:    "pipelines/integration_resolver_pipeline_pass.yaml",
-					},
+				IntegrationTestScenario: &IntegrationTestScenario{
+					GitURL:      "https://github.com/konflux-ci/integration-examples.git",
+					GitRevision: "843f455fe87a6d7f68c238f95a8f3eb304e65ac5",
+					TestPath:    "pipelines/integration_resolver_pipeline_pass.yaml",
 				},
 			},
 		},
