@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	"os"
 
 	"strings"
@@ -78,7 +79,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 
 			secretAnnotations := map[string]string{}
 
-			err = createBuildSecret(f, "gitlab-build-secret", secretAnnotations, gitlabToken)
+			err = build.CreateGitlabBuildSecret(f, "gitlab-build-secret", secretAnnotations, gitlabToken)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			secret := &v1.Secret{
@@ -269,28 +270,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 
 	})
 })
-
-// createBuildSecret creates a secret of gitlab build
-func createBuildSecret(f *framework.Framework, secretName string, annotations map[string]string, token string) error {
-	buildSecret := v1.Secret{}
-	buildSecret.Name = secretName
-	buildSecret.Labels = map[string]string{
-		"appstudio.redhat.com/credentials": "scm",
-		"appstudio.redhat.com/scm.host":    "gitlab.com",
-	}
-	if annotations != nil {
-		buildSecret.Annotations = annotations
-	}
-	buildSecret.Type = "kubernetes.io/basic-auth"
-	buildSecret.StringData = map[string]string{
-		"password": token,
-	}
-	_, err := f.AsKubeAdmin.CommonController.CreateSecret(f.UserNamespace, &buildSecret)
-	if err != nil {
-		return fmt.Errorf("error creating build secret: %v", err)
-	}
-	return nil
-}
 
 // validateNoteInMergeRequestComment verify expected note is commented in MR comment
 func validateNoteInMergeRequestComment(f *framework.Framework, projectID, expectedNote string, mergeRequestID int) {

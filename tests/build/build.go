@@ -93,22 +93,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 			secretAnnotations := map[string]string{}
 
-			err = createGitlabBuildSecret(f, "gitlab-build-secret", secretAnnotations, gitlabToken)
+			err = build.CreateGitlabBuildSecret(f, "gitlab-build-secret", secretAnnotations, gitlabToken)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			secret := &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pipelines-as-code-secret",
-					Namespace: testNamespace,
-				},
-				Type: v1.SecretTypeOpaque,
-				StringData: map[string]string{
-					"password": gitlabToken,
-				},
-			}
-			_, err = f.AsKubeAdmin.CommonController.CreateSecret(f.UserNamespace, secret)
-			Expect(err).NotTo(HaveOccurred())
-
+			err = build.CreateGitlabBuildSecret(f, "pipelines-as-code-secret", secretAnnotations, gitlabToken)
+			Expect(err).ShouldNot(HaveOccurred())
 		})
 
 		AfterAll(func() {
@@ -1853,6 +1842,41 @@ func createBuildSecret(f *framework.Framework, secretName string, annotations ma
 	buildSecret.Labels = map[string]string{
 		"appstudio.redhat.com/credentials": "scm",
 		"appstudio.redhat.com/scm.host":    "github.com",
+	}
+	if annotations != nil {
+		buildSecret.Annotations = annotations
+	}
+	buildSecret.Type = "kubernetes.io/basic-auth"
+	buildSecret.StringData = map[string]string{
+		"password": token,
+	}
+	_, err := f.AsKubeAdmin.CommonController.CreateSecret(f.UserNamespace, &buildSecret)
+	if err != nil {
+		return fmt.Errorf("error creating build secret: %v", err)
+	}
+	return nil
+}
+
+func cleanupWebhooks(f *framework.Framework, repoName string) {
+	hooks, err := f.AsKubeAdmin.CommonController.Github.ListRepoWebhooks(repoName)
+	Expect(err).NotTo(HaveOccurred())
+	for _, h := range hooks {
+		hookUrl := h.Config["url"].(string)
+		if strings.Contains(hookUrl, f.ClusterAppDomain) {
+			GinkgoWriter.Printf("removing webhook URL: %s\n", hookUrl)
+			Expect(f.AsKubeAdmin.CommonController.Github.DeleteWebhook(repoName, h.GetID())).To(Succeed())
+			break
+		}
+	}
+}
+
+// createGitlabBuildSecret creates a secret of gitlab build
+func createGitlabBuildSecret(f *framework.Framework, secretName string, annotations map[string]string, token string) error {
+	buildSecret := v1.Secret{}
+	buildSecret.Name = secretName
+	buildSecret.Labels = map[string]string{
+		"appstudio.redhat.com/credentials": "scm",
+		"appstudio.redhat.com/scm.host":    "gitlab.com",
 	}
 	if annotations != nil {
 		buildSecret.Annotations = annotations
