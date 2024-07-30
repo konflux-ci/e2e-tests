@@ -25,6 +25,12 @@ spec:
     value: quay.io/redhat-user-workloads/konflux-qe-team-tenant/konflux-e2e/konflux-e2e-tests:{{revision}}
   - name: dockerfile
     value: Dockerfile
+  - name: build-definitions-update-script
+    value: |
+      sed -i -E 's/[0-9a-f]{40}/{{ revision }}/g' .tekton/tasks/e2e-test.yaml
+  - name: update-build-tasks-dockerfiles-script
+    value: |
+      sed -i -E 's/[0-9a-f]{40}/{{ revision }}/g' integration-tests/tasks/e2e-test.yaml
   pipelineSpec:
     finally:
     - name: show-sbom
@@ -119,6 +125,10 @@ spec:
       description: Path to a file with build arguments for buildah, see https://www.mankier.com/1/buildah-build#--build-arg-file
       name: build-args-file
       type: string
+    - default: ""
+      name: build-definitions-update-script
+    - default: ""
+      name: update-build-tasks-dockerfiles-script
     results:
     - description: ""
       name: IMAGE_URL
