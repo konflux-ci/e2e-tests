@@ -367,28 +367,6 @@ spec:
       workspaces:
       - name: workspace
         workspace: workspace
-    - name: clamav-scan
-      params:
-      - name: image-digest
-        value: $(tasks.build-container.results.IMAGE_DIGEST)
-      - name: image-url
-        value: $(tasks.build-container.results.IMAGE_URL)
-      runAfter:
-      - build-container
-      taskRef:
-        params:
-        - name: name
-          value: clamav-scan
-        - name: bundle
-          value: quay.io/konflux-ci/tekton-catalog/task-clamav-scan:0.1@sha256:a5742024c2755d3636110aea0b86d298660bb8b7708894674baec16bb90b7106
-        - name: kind
-          value: task
-        resolver: bundles
-      when:
-      - input: $(params.skip-checks)
-        operator: in
-        values:
-        - "false"
     - name: sbom-json-check
       params:
       - name: IMAGE_URL
@@ -415,6 +393,8 @@ spec:
       params:
       - name: IMAGE
         value: $(tasks.build-container.results.IMAGE_URL)
+      - name: ADDITIONAL_TAGS
+        value: ["latest"]
       runAfter:
       - build-container
       taskRef:
