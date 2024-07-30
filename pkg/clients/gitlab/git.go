@@ -2,8 +2,6 @@ package gitlab
 
 import (
 	"fmt"
-	"github.com/konflux-ci/e2e-tests/pkg/constants"
-	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"net/http"
 	"strings"
 	"time"
@@ -152,22 +150,7 @@ func (gc *GitlabClient) DeleteWebhooks(projectID, clusterAppDomain string) error
 	return nil
 }
 
-func (gc *GitlabClient) CreateFile(pathToFile, fileContent, branchName string) (*gitlab.FileInfo, error) {
-	opts := &gitlab.CreateFileOptions{
-		Branch:        gitlab.Ptr(branchName),
-		Content:       &fileContent,
-		CommitMessage: gitlab.Ptr("e2e test commit message"),
-	}
-
-	file, resp, err := gc.client.RepositoryFiles.CreateFile(utils.GetEnv(constants.GITLAB_PROJECT_ID, ""), pathToFile, opts)
-	if resp.StatusCode != 201 || err != nil {
-		return nil, fmt.Errorf("error when creating file contents: response (%v) and error: %v", resp, err)
-	}
-
-	return file, nil
-}
-
-func (gc *GitlabClient) CreateFileInProject(projectID, pathToFile, fileContent, branchName string) (*gitlab.FileInfo, error) {
+func (gc *GitlabClient) CreateFile(projectID, pathToFile, fileContent, branchName string) (*gitlab.FileInfo, error) {
 	opts := &gitlab.CreateFileOptions{
 		Branch:        gitlab.Ptr(branchName),
 		Content:       &fileContent,

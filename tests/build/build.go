@@ -576,7 +576,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					createdFileSHA = createdFile.GetSHA()
 					GinkgoWriter.Println("created file sha:", createdFileSHA)
 				case "gitlab":
-					_, err = f.AsKubeAdmin.CommonController.Gitlab.CreateFileInProject(helloWorldComponentGitlabProjectID, fileToCreatePath, fmt.Sprintf("test PaC branch %s update", pacBranchName), pacBranchName)
+					_, err = f.AsKubeAdmin.CommonController.Gitlab.CreateFile(helloWorldComponentGitlabProjectID, fileToCreatePath, fmt.Sprintf("test PaC branch %s update", pacBranchName), pacBranchName)
 					Expect(err).NotTo(HaveOccurred())
 
 					metadata, err := f.AsKubeAdmin.CommonController.Gitlab.GetFileMetaData(helloWorldComponentGitlabProjectID, fileToCreatePath, pacBranchName)
