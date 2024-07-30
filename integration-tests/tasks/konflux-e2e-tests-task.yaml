@@ -76,13 +76,8 @@ spec:
         #!/bin/sh
         function saveArtifacts() {
           cd /workspace
-<<<<<<< HEAD
-          oras login -u $QUAY_USERNAME -p $QUAY_PASSWORD quay.io
-
-=======
 
           oras login -u "$QUAY_USERNAME" -p "$QUAY_PASSWORD" quay.io
->>>>>>> dc9d8c5 (fixes)
           echo '{"doc": "README.md"}' > config.json
 
           oras push "$(params.oras-container)" --config config.json:application/vnd.acme.rocket.config.v1+json \
