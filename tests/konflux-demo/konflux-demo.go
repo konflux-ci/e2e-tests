@@ -222,7 +222,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 					}, timeout, interval).Should(BeTrue(), "component build status has unexpected content")
 				})
 
-				It("should eventually lead to triggering another PipelineRun after merging the PaC init branch ", func() {
+				It("should eventually lead to triggering a 'push' event type PipelineRun after merging the PaC init branch ", func() {
 					Eventually(func() error {
 						mergeResult, err = fw.AsKubeAdmin.CommonController.Github.MergePullRequest(componentRepositoryName, prNumber)
 						return err
