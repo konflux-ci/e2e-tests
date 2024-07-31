@@ -7,22 +7,9 @@
 ### Description
 This test simulates typical user scenario.
 
-#### Note
-
-In order to run this test against **staging** cluster, export following environment variables (after updating their values with valid data) and run the test suite:
-```bash
-export STAGEUSER_TOKEN=<Offline token used for getting Keycloak token in order to authenticate against stage> \
-STAGE_SSOURL=<Keycloak URL used for authentication against stage cluster> \
-STAGE_APIURL=<Toolchain API URL used for authentication against stage cluster> \
-STAGE_USERNAME=<Your stage cluster username>
-# Run the test suite
-ginkgo --label-filter='verify-stage' ./cmd/
-```
-
-
 #### Test Steps
 1. Setup
-   1. Create a user namespace
+   
 
 2. Test Scenario
    1. The application was created successfully
@@ -31,28 +18,27 @@ ginkgo --label-filter='verify-stage' ./cmd/
 
 ### Default build with Integration test
 1. Setup
+   1. Create a user namespace
    1. Create a managed namespace used by release service for validating and releasing the built image
-   2. Create required resources in managed-namespace
+   1. Create required resources in managed-namespace
       1. Secret with container image registry credentials (used for pushing the image to container registry)
-      2. Service account that mounts the secret, including required roles and rolebindings
-      3. PVC for the release pipeline
-      4. Secret with cosign-public-key (used for validating the built image by EC)
-      5. Release plan for the targeted application and (user) namespace
-      6. Release strategy, Release plan admission
-      7. Enterprise contract policy
-   3. Create a new branch in a java project on GitHub (that is used as a git source of a component) that will be used as a base branch for PaC pull request (so we don't pollute default branch - `main`)
-   4. Create a new application, test environment
-   5. Create a new component that will trigger the default build pipelinerun
-   6. Create JBSConfig and related secret in user's (dev) namespace that will trigger jvm-build-service to deploy a jvm-cache to the dev namespace, which will be used for caching java dependencies during build
-
-2. Test scenario
+      1. Service account that mounts the secret, including required roles and rolebindings
+      1. PVC for the release pipeline
+      1. Secret with cosign-public-key (used for validating the built image by EC)
+      1. Release plan for the targeted application and (user) namespace
+      1. Release strategy, Release plan admission
+      1. Enterprise contract policy
+   1. Create a new branch in a java project on GitHub (that is used as a git source of a component) that will be used as a base branch for PaC pull request (so we don't pollute default branch - `main`)
+   1. Create JBSConfig and related secret in user's (dev) namespace that will trigger jvm-build-service to deploy a jvm-cache to the dev namespace, which will be used for caching java dependencies during build
+1. Test scenario
+   1. The application and component were created successfully
    1. Verify that the initial PaC pull request was created in the component's repo (this will also trigger the default build pipelinerun)
-   2. After merging the PR, there should be another build pipelinerun triggered in user namespace
-   3. Make sure the pipelinerun completes successfully
-   4. Make sure that the resulting SBOM file can be pulled from the container registry (where also the image was pushed) and it is saved in expected format
-   5. Make sure that integration test pipelinerun is created and completes successfully
-   6. The release pipeline should succeed and the release should be marked as successful
-   7. Make sure JVM build service is used for rebuilding java component's dependencies and that all related dependency builds complete successfully
+   1. After merging the PR, there should be another build pipelinerun triggered in user namespace
+   1. Make sure the pipelinerun completes successfully
+   1. Make sure that the resulting SBOM file can be pulled from the container registry (where also the image was pushed) and it is saved in expected format
+   1. Make sure that integration test pipelinerun is created and completes successfully
+   1. The release pipeline should succeed and the release should be marked as successful
+   1. Make sure JVM build service is used for rebuilding java component's dependencies and that all related dependency builds complete successfully
 
 Steps to run 'konflux-demos':
 
@@ -82,11 +68,11 @@ Red Hat AppStudio E2E framework now supports creating components from private qu
 Example of a test scenario for GitHub private repository:
 
 ```go
-var TestScenarios = []TestSpec{
+var ApplicationSpecs = []ApplicationSpec{
     {
         Name:            "nodejs private component test",
         ApplicationName: "nodejs-private-app",
-        Components: []ComponentSpec{
+        ComponentSpec: ComponentSpec{
             {
                 Name:              "nodejs-private-comp",
                 Private:           true,
