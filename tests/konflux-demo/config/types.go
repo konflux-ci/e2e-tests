@@ -1,6 +1,6 @@
 package config
 
-// Set of tests to run in appstudio
+// Set of Applications to create and test in Konflux
 type ApplicationSpec struct {
 	// The test name corresponding to an application
 	Name string `yaml:"name"`
@@ -14,7 +14,7 @@ type ApplicationSpec struct {
 	// Name of the application created in the cluster
 	ApplicationName string `yaml:"applicationName"`
 
-	// Component spec
+	// Specification of the Component associated with the Application
 	ComponentSpec ComponentSpec `yaml:"spec"`
 }
 

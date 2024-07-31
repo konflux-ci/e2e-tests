@@ -43,7 +43,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 	defer GinkgoRecover()
 
 	var timeout, interval time.Duration
-	var namespace string
+	var userNamespace string
 	var err error
 
 	var managedNamespace string
@@ -79,9 +79,8 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 				// Namespace config
 				fw, err = framework.NewFramework(utils.GetGeneratedNamespace(devEnvTestLabel))
 				Expect(err).NotTo(HaveOccurred())
-				namespace = fw.UserNamespace
-				Expect(err).NotTo(HaveOccurred())
-				managedNamespace = fw.UserNamespace + "-managed"
+				userNamespace = fw.UserNamespace
+				managedNamespace = userNamespace + "-managed"
 
 				// Component config
 				componentName = fmt.Sprintf("%s-%s", appSpec.ComponentSpec.Name, util.GenerateRandomString(4))
@@ -106,7 +105,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 
 			// Remove all resources created by the tests
 			AfterAll(func() {
-				if !(strings.EqualFold(os.Getenv("E2E_SKIP_CLEANUP"), "true")) && !CurrentSpecReport().Failed() { // RHTAPBUGS-978: temporary timeout to 15min
+				if !(strings.EqualFold(os.Getenv("E2E_SKIP_CLEANUP"), "true")) && !CurrentSpecReport().Failed() {
 					Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 					Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).To(Succeed())
 
@@ -124,13 +123,13 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 
 			// Create an application in a specific namespace
 			It("creates an application", Label(devEnvTestLabel), func() {
-				createdApplication, err := fw.AsKubeDeveloper.HasController.CreateApplication(appSpec.ApplicationName, namespace)
+				createdApplication, err := fw.AsKubeDeveloper.HasController.CreateApplication(appSpec.ApplicationName, userNamespace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(createdApplication.Spec.DisplayName).To(Equal(appSpec.ApplicationName))
-				Expect(createdApplication.Namespace).To(Equal(namespace))
+				Expect(createdApplication.Namespace).To(Equal(userNamespace))
 			})
 
-			// Create an Integration test scenario for the app
+			// Create an IntegrationTestScenario for the App
 			It("creates an IntegrationTestScenario for the app", Label(devEnvTestLabel), func() {
 				its := appSpec.ComponentSpec.IntegrationTestScenario
 				integrationTestScenario, err = fw.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", appSpec.ApplicationName, fw.UserNamespace, its.GitURL, its.GitRevision, its.TestPath)
@@ -163,14 +162,12 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 					},
 				}
 
-				component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj, namespace, "", "", appSpec.ApplicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.DefaultDockerBuildPipelineBundle))
+				component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj, userNamespace, "", "", appSpec.ApplicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.DefaultDockerBuildPipelineBundle))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
 			When("Component is created", func() {
-
 				It("triggers creation of a PR in the sample repo", func() {
-
 					var prSHA string
 					Eventually(func() error {
 						prs, err := fw.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepositoryName)
@@ -194,10 +191,9 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 						}
 						return err
 					}, pipelineRunStartedTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for init PaC PipelineRun to be present in the user namespace %q for component %q with a label pointing to %q", fw.UserNamespace, component.GetName(), appSpec.ApplicationName))
-
 				})
 
-				It("component build status is set correctly", func() {
+				It("verifies component build status", func() {
 					var buildStatus *buildcontrollers.BuildStatus
 					Eventually(func() (bool, error) {
 						component, err := fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), fw.UserNamespace)
@@ -225,6 +221,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 						return buildStatus.PaC != nil && buildStatus.PaC.State == "enabled" && buildStatus.PaC.MergeUrl != "" && buildStatus.PaC.ErrId == 0 && buildStatus.PaC.ConfigurationTime != "", nil
 					}, timeout, interval).Should(BeTrue(), "component build status has unexpected content")
 				})
+
 				It("should eventually lead to triggering another PipelineRun after merging the PaC init branch ", func() {
 					Eventually(func() error {
 						mergeResult, err = fw.AsKubeAdmin.CommonController.Github.MergePullRequest(componentRepositoryName, prNumber)
@@ -323,7 +320,6 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 			})
 
 			When("Integration Test PipelineRun completes successfully", func() {
-
 				It("should lead to Snapshot CR being marked as passed", func() {
 					snapshot, err = fw.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", fw.UserNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -370,6 +366,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 					}, releasePipelineTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("failed to see pipelinerun %q in namespace %q with a label pointing to release %q in namespace %q to complete successfully", pipelineRun.Name, managedNamespace, release.Name, release.Namespace))
 				})
 			})
+
 			When("Release PipelineRun is completed", func() {
 				It("should lead to Release CR being marked as succeeded", func() {
 					Eventually(func() error {
@@ -411,7 +408,6 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 			})
 		})
 	}
-
 })
 
 func createReleaseConfig(fw framework.Framework, managedNamespace, componentName, appName string, secretData []byte) {
