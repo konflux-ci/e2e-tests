@@ -59,7 +59,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 	var headSHA, pacBranchName string
 	var mergeResult *github.PullRequestMergeResult
 
-	secret := &corev1.Secret{}
+	//secret := &corev1.Secret{}
 
 	fw := &framework.Framework{}
 
@@ -89,8 +89,10 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 				componentRepositoryName = utils.ExtractGitRepositoryNameFromURL(appSpec.ComponentSpec.GitSourceUrl)
 
 				// Secrets config
-				secretDefinition := build.GetSecretDefForGitHub(namespace)
-				secret, err = fw.AsKubeAdmin.CommonController.CreateSecret(namespace, secretDefinition)
+				// https://issues.redhat.com/browse/KFLUXBUGS-1462 - creating SCM secret alongside with PaC
+				// leads to PLRs being duplicated
+				// secretDefinition := build.GetSecretDefForGitHub(namespace)
+				// secret, err = fw.AsKubeAdmin.CommonController.CreateSecret(namespace, secretDefinition)
 				sharedSecret, err := fw.AsKubeAdmin.CommonController.GetSecret(constants.QuayRepositorySecretNamespace, constants.QuayRepositorySecretName)
 				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error when getting shared secret - make sure the secret %s in %s userNamespace is created", constants.QuayRepositorySecretName, constants.QuayRepositorySecretNamespace))
 
@@ -136,7 +138,6 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 			})
 
 			It("creates new branch for the build", Label(devEnvTestLabel), func() {
-				gitRevision = appSpec.ComponentSpec.GitSourceRevision
 				// We need to create a new branch that we will target
 				// and that will contain the PaC configuration, so we
 				// can avoid polluting the default (main) branch
@@ -162,7 +163,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 					},
 				}
 
-				component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj, namespace, "", secret.Name, appSpec.ApplicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.DefaultDockerBuildPipelineBundle))
+				component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj, namespace, "", "", appSpec.ApplicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.DefaultDockerBuildPipelineBundle))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
