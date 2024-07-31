@@ -182,7 +182,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 						return fmt.Errorf("could not get the expected PaC branch name %s", pacBranchName)
 					}, pullRequestCreationTimeout, defaultPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for init PaC PR (branch %q) to be created against the %q repo", pacBranchName, componentRepositoryName))
 
-					// We actually don't need the "on-pull-request" PipelineRun to complete, so we can delete it
+					// We don't need the PipelineRun from a PaC 'pull-request' event to finish, so we can delete it
 					Eventually(func() error {
 						pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appSpec.ApplicationName, fw.UserNamespace, prSHA)
 						if err == nil {
