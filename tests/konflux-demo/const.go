@@ -25,8 +25,4 @@ const (
 
 	// test metadata
 	devEnvTestLabel = "konflux"
-
-	// stage env test related env vars
-	stageTimeout      = time.Minute * 5
-	stageEnvTestLabel = "verify-stage"
 )

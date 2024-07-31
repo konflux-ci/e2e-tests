@@ -1,7 +1,7 @@
 package config
 
 // Set of tests to run in appstudio
-type TestSpec struct {
+type ApplicationSpec struct {
 	// The test name corresponding to an application
 	Name string `yaml:"name"`
 
@@ -14,8 +14,8 @@ type TestSpec struct {
 	// Name of the application created in the cluster
 	ApplicationName string `yaml:"applicationName"`
 
-	// Set of components with own specs
-	Components []ComponentSpec `yaml:"components"`
+	// Component spec
+	ComponentSpec ComponentSpec `yaml:"spec"`
 }
 
 // Set k8s resource specific properties
@@ -56,10 +56,11 @@ type ComponentSpec struct {
 	// Set k8s resource specific properties
 	K8sSpec *K8sSpec `yaml:"spec,omitempty"`
 
-	IntegrationTestScenario *IntegrationTestScenario `yaml:"testScenario,omitempty"`
+	// Integration test config
+	IntegrationTestScenario IntegrationTestScenarioSpec `yaml:"testScenario,omitempty"`
 }
 
-type IntegrationTestScenario struct {
+type IntegrationTestScenarioSpec struct {
 	GitURL      string
 	GitRevision string
 	TestPath    string
