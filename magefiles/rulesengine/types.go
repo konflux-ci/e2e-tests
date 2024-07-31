@@ -163,6 +163,8 @@ func (e *RuleEngine) dryRun(matched RuleCatalog, rctx *RuleCtx) error {
 	return nil
 }
 
+/* fake
+ */
 func (e *RuleEngine) run(matched RuleCatalog, rctx *RuleCtx) error {
 
 	klog.Info("Will apply rules")
@@ -304,7 +306,7 @@ func (cf ConditionFunc) Check(rctx *RuleCtx) bool {
 type Rule struct {
 	Name        string
 	Description string
-	Condition    Conditional
+	Condition   Conditional
 	Actions     []Action
 }
 
