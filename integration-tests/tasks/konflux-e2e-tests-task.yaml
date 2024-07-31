@@ -47,11 +47,11 @@ spec:
     - name: e2e-test
       computeResources:
         requests:
-          cpu: "1"
-          memory: "2Gi"
+          cpu: "500m"
+          memory: "1Gi"
         limits:
-          cpu: "1"
-          memory: "4Gi"
+          cpu: "2"
+          memory: "6Gi"
       image: $(params.container-image)
       volumeMounts:
         - name: konflux-secret-volume
@@ -75,6 +75,8 @@ spec:
       script: |
         #!/bin/sh
         function saveArtifacts() {
+          EXIT_CODE=$?
+
           cd /workspace
 
           oras login -u "$ORAS_USERNAME" -p "$ORAS_PASSWORD" quay.io
