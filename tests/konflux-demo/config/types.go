@@ -1,7 +1,7 @@
 package config
 
-// Set of tests to run in appstudio
-type TestSpec struct {
+// Set of Applications to create and test in Konflux
+type ApplicationSpec struct {
 	// The test name corresponding to an application
 	Name string `yaml:"name"`
 
@@ -14,8 +14,8 @@ type TestSpec struct {
 	// Name of the application created in the cluster
 	ApplicationName string `yaml:"applicationName"`
 
-	// Set of components with own specs
-	Components []ComponentSpec `yaml:"components"`
+	// Specification of the Component associated with the Application
+	ComponentSpec ComponentSpec `yaml:"spec"`
 }
 
 // Set k8s resource specific properties
@@ -27,9 +27,6 @@ type K8sSpec struct {
 
 // Specs for a specific component to create in AppStudio
 type ComponentSpec struct {
-	// Test Advanced build (using PaC)
-	AdvancedBuildSpec *AdvancedBuildSpec `yaml:"advancedBuild"`
-
 	// The component name which will be created
 	Name string `yaml:"name"`
 
@@ -56,23 +53,15 @@ type ComponentSpec struct {
 	// Relative path of the docker file in the repository
 	DockerFilePath string `yaml:"dockerFilePath,omitempty"`
 
-	// An endpoint where the framework can ping to see if a component was deployed successfully
-	HealthEndpoint string `yaml:"healthz"`
-
 	// Set k8s resource specific properties
 	K8sSpec *K8sSpec `yaml:"spec,omitempty"`
 
-	// Skip the deployment of a component in case not needed to deploy
-	SkipDeploymentCheck bool `yaml:"skipDeploy,omitempty"`
+	// Integration test config
+	IntegrationTestScenario IntegrationTestScenarioSpec `yaml:"testScenario,omitempty"`
 }
 
-type TestScenarioSpec struct {
+type IntegrationTestScenarioSpec struct {
 	GitURL      string
 	GitRevision string
 	TestPath    string
-}
-
-type AdvancedBuildSpec struct {
-	// Integration test config
-	TestScenario TestScenarioSpec `yaml:"testScenario,omitempty"`
 }
