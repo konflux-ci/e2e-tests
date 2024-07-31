@@ -7,7 +7,7 @@ import (
 	"k8s.io/klog"
 )
 
-func ExecuteTestAction(rctx *rulesengine.RuleCtx, args ...any) error {
+func ExecuteTestAction(rctx *rulesengine.RuleCtx) error {
 
 	/* This is so that we don't have ginkgo add the prefixes to
 	the command args i.e. '--ginkgo.xx' || '--test.xx' || '--go.xx'
