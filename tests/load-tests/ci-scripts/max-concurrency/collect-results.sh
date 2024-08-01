@@ -9,6 +9,10 @@ source "/usr/local/ci-secrets/redhat-appstudio-load-test/load-test-scenario.${1:
 
 pushd "${2:-.}"
 
+# Setup directories
+ARTIFACT_DIR=${ARTIFACT_DIR:-artifacts}
+mkdir -p ${ARTIFACT_DIR}
+
 output_dir="${OUTPUT_DIR:-./tests/load-tests}"
 
 csv_delim=";"
