@@ -239,7 +239,7 @@ spec:
           value: buildah
         - name: bundle
           ###value: quay.io/konflux-ci/tekton-catalog/task-buildah:0.2@sha256:f93024e3dbcd41dcf1d7e30b3151032808211c39ad0a5ea03ea9c4d5274fa8dd
-          value: quay.io/rhcloudperfscale/jhutar-tekton-bundle-buildah:0.2-1
+          value: quay.io/rhcloudperfscale/jhutar-tekton-bundle-buildah:0.2-2
         - name: kind
           value: task
         resolver: bundles
