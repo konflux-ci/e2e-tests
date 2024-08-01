@@ -1382,8 +1382,14 @@ func (Local) RunRuleDemo() error {
 	}
 	rctx.DiffFiles = files
 	rctx.DryRun = true
+	rctx.JobType = "presubmit"
+	rctx.RepoName = "e2e-tests"
+	rctx.JobName = "e2e-tests-main-e2e"
+	rctx.PrRemoteName = "Dannyb48"
+	rctx.PrCommitSha = "123456789abcdefg"
+	rctx.PrBranchName = "testing-rules-chain"
 
-	err = engine.MageEngine.RunRulesOfCategory("demo", rctx)
+	err = engine.MageEngine.RunRulesOfCategory("ci", rctx)
 
 	if err != nil {
 		return err

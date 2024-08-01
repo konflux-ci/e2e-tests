@@ -127,18 +127,25 @@ func (e *RuleEngine) runLoadedCatalog(loaded RuleCatalog, rctx *RuleCtx) error {
 	var matched RuleCatalog
 	for _, rule := range loaded {
 
-		// In most cases, a rule chain has no action to execute
-		// since a majority of the actions are ecanpuslated
-		// within the rules that compose the chain.
-		if len(rule.Actions) == 0 {
-			return e.runChained(rule, rctx)
-
-		}
 		if rule.Eval(rctx) {
+
+			// In most cases, a rule chain has no action to execute
+			// since a majority of the actions are ecanpuslated
+			// within the rules that compose the chain.
+			if len(rule.Actions) == 0 {
+				//return e.runChained(rule, rctx)
+				continue
+
+			}
 
 			matched = append(matched, rule)
 		}
 
+	}
+
+	if len(matched) == 0 {
+
+		return nil
 	}
 
 	klog.Infof("The following rules have matched %s.", matched.String())
@@ -191,6 +198,20 @@ func (e *RuleEngine) runChained(rule Rule, rctx *RuleCtx) error {
 
 	return fmt.Errorf("Failed to apply RuleChain %s", rule.String())
 
+}
+
+func (e *RuleEngine) isACatalogOfChains(catalog RuleCatalog) bool {
+
+	isCatalog := false
+	for _, rule := range catalog {
+
+		if len(rule.Actions) == 0 {
+			isCatalog = true
+
+		}
+	}
+
+	return isCatalog
 }
 
 type RuleCatalog []Rule
@@ -453,13 +474,18 @@ type RuleCtx struct {
 	types.SuiteConfig
 	types.ReporterConfig
 	types.GoFlagsConfig
-	RuleData         map[string]any
-	RepoName         string
-	JobName          string
-	JobType          string
-	DiffFiles        Files
-	IsPaired         string
-	RequiredBinaries []string
+	RuleData                      map[string]any
+	RepoName                      string
+	JobName                       string
+	JobType                       string
+	DiffFiles                     Files
+	IsPaired                      string
+	RequiredBinaries              []string
+	PrRemoteName                  string
+	PrCommitSha                   string
+	PrBranchName                  string
+	RequiresMultiPlatformTests    bool
+	RequiresSprayProxyRegistering bool
 }
 
 func NewRuleCtx() *RuleCtx {
@@ -474,7 +500,18 @@ func NewRuleCtx() *RuleCtx {
 		suiteConfig,
 		reporterConfig,
 		goFlagsConfig,
-		envData, "", "", "", Files{}, "", make([]string, 0)}
+		envData,
+		"",
+		"",
+		"",
+		Files{},
+		"",
+		make([]string, 0),
+		"",
+		"",
+		"",
+		false,
+		false}
 
 	//init defaults we've used so far
 	t, _ := time.ParseDuration("90m")
