@@ -39,6 +39,9 @@ spec:
       type: string
       description: "Contain the container name from Konflux Snapshot."
       default: "quay.io/redhat-user-workloads/rhtap-qe-shared-tenant/konflux-e2e/konflux-e2e-tests:latest"
+    - name: ginkgo-procs
+      description: "Number of processes to run in parallel in ginkgo"
+      default: 20
   volumes:
     - name: konflux-secret-volume
       secret:
@@ -103,7 +106,7 @@ spec:
         export DEFAULT_QUAY_ORG DEFAULT_QUAY_ORG_TOKEN GITHUB_USER GITHUB_TOKEN QUAY_TOKEN QUAY_OAUTH_USER QUAY_OAUTH_TOKEN OPENSHIFT_API OPENSHIFT_USERNAME OPENSHIFT_PASSWORD \
             GITHUB_ACCOUNTS_ARRAY PREVIOUS_RATE_REMAINING GITHUB_USERNAME_ARRAY GH_RATE_REMAINING PYXIS_STAGE_KEY PYXIS_STAGE_CERT OFFLINE_TOKEN TOOLCHAIN_API_URL KEYLOAK_URL REL_IMAGE_CONTROLLER_QUAY_ORG REL_IMAGE_CONTROLLER_QUAY_TOKEN BYOC_KUBECONFIG GITHUB_TOKENS_LIST OAUTH_REDIRECT_PROXY_URL \
             QE_SPRAYPROXY_HOST QE_SPRAYPROXY_TOKEN E2E_PAC_GITHUB_APP_ID E2E_PAC_GITHUB_APP_PRIVATE_KEY PAC_GITHUB_APP_WEBHOOK_SECRET SLACK_BOT_TOKEN MULTI_PLATFORM_AWS_ACCESS_KEY MULTI_PLATFORM_AWS_SECRET_ACCESS_KEY MULTI_PLATFORM_AWS_SSH_KEY MULTI_PLATFORM_IBM_API_KEY ENABLE_SCHEDULING_ON_MASTER_NODES \
-            PAC_GITLAB_TOKEN PAC_GITLAB_URL PAC_PROJECT_ID EXODUS_PROD_KEY EXODUS_PROD_CERT CGW_USERNAME CGW_TOKEN ORAS_USERNAME ORAS_PASSWORD
+            PAC_GITLAB_TOKEN PAC_GITLAB_URL PAC_PROJECT_ID EXODUS_PROD_KEY EXODUS_PROD_CERT CGW_USERNAME CGW_TOKEN ORAS_USERNAME ORAS_PASSWORD GINKGO_PROCS
 
         DEFAULT_QUAY_ORG=redhat-appstudio-qe
         DEFAULT_QUAY_ORG_TOKEN=$(cat /usr/local/konflux-ci-secrets/default-quay-org-token)
@@ -144,6 +147,7 @@ spec:
         ORAS_PASSWORD=$(cat /usr/local/konflux-ci-secrets/oras-password)
 
         ENABLE_SCHEDULING_ON_MASTER_NODES=false
+        GINKGO_PROCS=$(params.ginkgo-procs)
 
         # user stored: username:token,username:token
         IFS=',' read -r -a GITHUB_ACCOUNTS_ARRAY <<< "$(cat /usr/local/konflux-ci-secrets/github_accounts)"
