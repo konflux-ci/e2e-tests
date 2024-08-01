@@ -1307,7 +1307,7 @@ func runTests(labelsToRun string, junitReportFile string) error {
 	}
 
 	// added --output-interceptor-mode=none to mitigate RHTAPBUGS-34
-	return sh.RunV("ginkgo", "-p", "--output-interceptor-mode=none", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report="+junitReportFile, "--label-filter="+labelsToRun, pathToSuite, "--")
+	return sh.RunV("ginkgo", "-p", "--procs=20", "--output-interceptor-mode=none", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report="+junitReportFile, "--label-filter="+labelsToRun, pathToSuite, "--")
 }
 
 func CleanupRegisteredPacServers() error {
