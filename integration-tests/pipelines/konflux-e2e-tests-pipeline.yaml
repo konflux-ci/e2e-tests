@@ -19,23 +19,22 @@
         default: ''
       - name: ocp-version
         description: 'The OpenShift version to use for the ephemeral cluster deployment.'
-        default: '4.15.9'
         type: string
       - name: test-event-type
         description: 'Indicates if the test is triggered by a Pull Request or Push event.'
-        default: 'none'
-      - name: region
-        description: 'The AWS region to provision the ROSA cluster. Default is us-west-2.'
-        default: 'us-west-2'
-      - name: aws-secrets
-        description: 'The AWS secrets used for provisioning the ROSA cluster.'
-        default: 'aws-secrets'
+        default: 'none'    
+      - name: aws-credential-secret
+        description: The AWS credential used for provisioning the ROSA cluster.
+        type: string
+      - name: hcp-config-secret
+        type: string
+        description: The AWS resouces used for provisioning the ROSA cluster.
       - name: replicas
         description: 'The number of replicas for the cluster nodes.'
-        default: '3'
+        type: string
       - name: machine-type
         description: 'The type of machine to use for the cluster nodes.'
-        default: 'm5.2xlarge'
+        type: string
       - name: oras-container
         default: 'quay.io/konflux-ci/konflux-qe-oci-storage'
         description: The ORAS container used to store all test artifacts.
@@ -92,14 +91,14 @@
             value: "$(tasks.rosa-hcp-metadata.results.cluster-name)"
           - name: ocp-version
             value: "$(params.ocp-version)"
-          - name: region
-            value: "$(params.region)"
           - name: replicas
             value: "$(params.replicas)"
           - name: machine-type
             value: "$(params.machine-type)"
-          - name: aws-secrets
-            value: "$(params.aws-secrets)"
+          - name: aws-credential-secret
+            value: "$(params.aws-credential-secret)"
+          - name: hcp-config-secret
+            value: "$(params.hcp-config-secret)"
       - name: konflux-e2e-tests
         when:
           - input: "$(tasks.test-metadata.results.test-event-type)"
@@ -167,12 +166,10 @@
             value: "$(tasks.test-metadata.results.git-org)"
           - name: cluster-name
             value: "$(tasks.rosa-hcp-metadata.results.cluster-name)"
-          - name: region
-            value: "$(params.region)"
-          - name: aws-secrets
-            value: "$(params.aws-secrets)"
-          - name: pipeline-aggregate-status
-            value: "$(tasks.status)"
+          - name: aws-credential-secret
+            value: "$(params.aws-credential-secret)"
+          - name: hcp-config-secret
+            value: "$(params.hcp-config-secret)"
       - name: quality-dashboard-upload
         when:
           - input: "$(tasks.test-metadata.results.test-event-type)"

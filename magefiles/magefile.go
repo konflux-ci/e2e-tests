@@ -1301,18 +1301,25 @@ func CleanWorkload() error {
 }
 
 func runTests(labelsToRun string, junitReportFile string) error {
-	pathToSuite := "./cmd"
-	testProcesses := ""
+
+	ginkgoArgs := []string{"-p", "--output-interceptor-mode=none", 
+	"--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), 
+	"--junit-report="+junitReportFile, "--label-filter="+labelsToRun}
+
 	if os.Getenv("GINKGO_PROCS") != "" {
-		testProcesses = fmt.Sprintf("--procs=%s", os.Getenv("GINKGO_PROCS"))
+		ginkgoArgs = append(ginkgoArgs, fmt.Sprintf("--procs=%s", os.Getenv("GINKGO_PROCS")))
 	}
 
 	if os.Getenv("E2E_BIN_PATH") != "" {
-		pathToSuite = os.Getenv("E2E_BIN_PATH")
+		ginkgoArgs = append(ginkgoArgs, os.Getenv("E2E_BIN_PATH"))
+	} else {
+		ginkgoArgs = append(ginkgoArgs, "./cmd")
 	}
 
+	ginkgoArgs = append(ginkgoArgs, "--")
+
 	// added --output-interceptor-mode=none to mitigate RHTAPBUGS-34
-	return sh.RunV("ginkgo", "-p", testProcesses, "--output-interceptor-mode=none", "--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), "--junit-report="+junitReportFile, "--label-filter="+labelsToRun, pathToSuite, "--")
+	return sh.RunV("ginkgo", ginkgoArgs...)
 }
 
 func CleanupRegisteredPacServers() error {
