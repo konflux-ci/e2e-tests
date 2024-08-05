@@ -381,7 +381,8 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 			})
 
 			When("JVM Build Service is used for rebuilding dependencies", func() {
-				It("should eventually rebuild of all artifacts and dependencies successfully", func() {
+				// Marking the step as pending since jvm-build-service will be reworked
+				It("should eventually rebuild of all artifacts and dependencies successfully", Pending, func() {
 					jvmClient := jvmclientSet.New(fw.AsKubeAdmin.JvmbuildserviceController.JvmbuildserviceClient().JvmbuildserviceV1alpha1().RESTClient())
 					tektonClient := pipelineclientset.New(fw.AsKubeAdmin.TektonController.PipelineClient().TektonV1beta1().RESTClient())
 					kubeClient := kubernetes.New(fw.AsKubeAdmin.CommonController.KubeInterface().CoreV1().RESTClient())
