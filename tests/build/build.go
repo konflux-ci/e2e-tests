@@ -407,7 +407,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
 							GitSource: &appservice.GitSource{
 								URL:           helloWorldComponentGitlabURL,
-								Revision:      "",
+								Revision:      componentBaseBranchName,
 								DockerfileURL: constants.DockerFilePath,
 							},
 						},
@@ -795,7 +795,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
 							GitSource: &appservice.GitSource{
 								URL:           helloWorldComponentGitlabURL,
-								Revision:      "",
+								Revision:      componentBaseBranchName,
 								DockerfileURL: constants.DockerFilePath,
 							},
 						},
