@@ -7,7 +7,7 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
-	gitlab "github.com/xanzy/go-gitlab"
+	"github.com/xanzy/go-gitlab"
 )
 
 // CreateBranch creates a new branch in a GitLab project with the given projectID and newBranchName
@@ -173,4 +173,25 @@ func (gc *GitlabClient) GetFileMetaData(projectID, pathToFile, branchName string
 func (gc *GitlabClient) AcceptMergeRequest(projectID string, mrID int) (*gitlab.MergeRequest, error) {
 	mr, _, err := gc.client.MergeRequests.AcceptMergeRequest(projectID, mrID, nil)
 	return mr, err
+}
+
+// ValidateNoteInMergeRequestComment verify expected note is commented in MR comment
+func (gc *GitlabClient) ValidateNoteInMergeRequestComment(projectID, expectedNote string, mergeRequestID int) {
+
+	var timeout, interval time.Duration
+
+	timeout = time.Minute * 10
+	interval = time.Second * 2
+
+	Eventually(func() bool {
+		// Continue here, get as argument MR ID so use in ListMergeRequestNotes
+		allNotes, _, err := gc.client.Notes.ListMergeRequestNotes(projectID, mergeRequestID, nil)
+		Expect(err).ShouldNot(HaveOccurred())
+		for _, note := range allNotes {
+			if strings.Contains(note.Body, expectedNote) {
+				return true
+			}
+		}
+		return false
+	}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out waiting to validate merge request note ('%s') be reported in mergerequest %d's notes", expectedNote, mergeRequestID))
 }

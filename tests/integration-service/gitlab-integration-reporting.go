@@ -179,7 +179,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 
 			It("eventually leads to the build PipelineRun's status reported at MR notes", func() {
 				expectedNote := fmt.Sprintf("**Pipelines as Code CI/%s-on-pull-request** has successfully validated your commit", componentName)
-				validateNoteInMergeRequestComment(f, projectID, expectedNote, mrID)
+				f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(projectID, expectedNote, mrID)
 			})
 		})
 
@@ -238,7 +238,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 
 			It("eventually leads to the integration test PipelineRun's Pass status reported at MR notes", func() {
 				expectedNote := fmt.Sprintf("Integration test for snapshot %s and scenario %s has passed", snapshot.Name, integrationTestScenarioPass.Name)
-				validateNoteInMergeRequestComment(f, projectID, expectedNote, mrID)
+				f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(projectID, expectedNote, mrID)
 			})
 
 			It("validates the Integration test scenario PipelineRun is reported to merge request CommitStatus, and it fails", func() {
@@ -263,30 +263,9 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 
 			It("eventually leads to the integration test PipelineRun's Fail status reported at MR notes", func() {
 				expectedNote := fmt.Sprintf("Integration test for snapshot %s and scenario %s has failed", snapshot.Name, integrationTestScenarioFail.Name)
-				validateNoteInMergeRequestComment(f, projectID, expectedNote, mrID)
+				f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(projectID, expectedNote, mrID)
 			})
 		})
 
 	})
 })
-
-// validateNoteInMergeRequestComment verify expected note is commented in MR comment
-func validateNoteInMergeRequestComment(f *framework.Framework, projectID, expectedNote string, mergeRequestID int) {
-
-	var timeout, interval time.Duration
-
-	timeout = time.Minute * 10
-	interval = time.Second * 2
-
-	Eventually(func() bool {
-		// Continue here, get as argument MR ID so use in ListMergeRequestNotes
-		allNotes, _, err := f.AsKubeAdmin.CommonController.Gitlab.GetClient().Notes.ListMergeRequestNotes(projectID, mergeRequestID, nil)
-		Expect(err).ShouldNot(HaveOccurred())
-		for _, note := range allNotes {
-			if strings.Contains(note.Body, expectedNote) {
-				return true
-			}
-		}
-		return false
-	}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out waiting to validate merge request note ('%s') be reported in mergerequest %d's notes", expectedNote, mergeRequestID))
-}
