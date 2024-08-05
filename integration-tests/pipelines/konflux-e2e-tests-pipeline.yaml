@@ -110,9 +110,9 @@
           resolver: git
           params:
             - name: url
-              value: https://github.com/konflux-ci/e2e-tests.git
+              value: https://github.com/flacatus/e2e-tests.git
             - name: revision
-              value: main
+              value: check_to
             - name: pathInRepo
               value: integration-tests/tasks/konflux-e2e-tests-task.yaml
         params:

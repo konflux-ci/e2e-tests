@@ -45,7 +45,7 @@ spec:
   volumes:
     - name: konflux-secret-volume
       secret:
-        secretName: konflux-secrets
+        secretName: konflux-e2e-secrets
   steps:
     - name: e2e-test
       computeResources:
