@@ -34,7 +34,8 @@ var (
 	testProjectRevision = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_REVISION", "34da5a8f51fba6a8b7ec75a727d3c72ebb5e1274")
 )
 
-var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jvm-build-service"), func() {
+// Marking the test as pending since jvm-build-service will be reworked
+var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jvm-build-service"), Pending, func() {
 	var f *framework.Framework
 	AfterEach(framework.ReportFailure(&f))
 	var err error
