@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 )
 
@@ -32,4 +34,23 @@ func ResolveGitDetails(repoUrlENV, repoRevisionENV string) (string, string, erro
 
 	}
 	return utils.GetEnv(repoUrlENV, defaultGitURL), utils.GetEnv(repoRevisionENV, defaultGitRevision), nil
+}
+
+func CleanupWebhooks(f *framework.Framework, repoName string) error {
+	hooks, err := f.AsKubeAdmin.CommonController.Github.ListRepoWebhooks(repoName)
+	if err != nil {
+		return err
+	}
+	for _, h := range hooks {
+		hookUrl := h.Config["url"].(string)
+		if strings.Contains(hookUrl, f.ClusterAppDomain) {
+			fmt.Printf("removing webhook URL: %s\n", hookUrl)
+			err = f.AsKubeAdmin.CommonController.Github.DeleteWebhook(repoName, h.GetID())
+			if err != nil {
+				return err
+			}
+			break
+		}
+	}
+	return nil
 }

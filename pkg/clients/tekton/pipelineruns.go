@@ -70,7 +70,7 @@ func (t *TektonController) GetPipelineRun(pipelineRunName, namespace string) (*p
 }
 
 // GetPipelineRunLogs returns logs of a given pipelineRun.
-func (t *TektonController) GetPipelineRunLogs(pipelineRunName, namespace string) (string, error) {
+func (t *TektonController) GetPipelineRunLogs(prefix, pipelineRunName, namespace string) (string, error) {
 	podClient := t.KubeInterface().CoreV1().Pods(namespace)
 	podList, err := podClient.List(context.Background(), metav1.ListOptions{})
 	if err != nil {
@@ -78,14 +78,14 @@ func (t *TektonController) GetPipelineRunLogs(pipelineRunName, namespace string)
 	}
 	podLog := ""
 	for _, pod := range podList.Items {
-		if !strings.HasPrefix(pod.Name, pipelineRunName) {
+		if !strings.HasPrefix(pod.Name, prefix) {
 			continue
 		}
 		for _, c := range pod.Spec.InitContainers {
 			var err error
 			var cLog string
 			cLog, err = t.fetchContainerLog(pod.Name, c.Name, namespace)
-			podLog = podLog + fmt.Sprintf("\ninit container %s: \n", c.Name) + cLog
+			podLog = podLog + fmt.Sprintf("\n pod: %s | init container: %s\n", pod.Name, c.Name) + cLog
 			if err != nil {
 				return podLog, err
 			}
@@ -94,7 +94,7 @@ func (t *TektonController) GetPipelineRunLogs(pipelineRunName, namespace string)
 			var err error
 			var cLog string
 			cLog, err = t.fetchContainerLog(pod.Name, c.Name, namespace)
-			podLog = podLog + fmt.Sprintf("\ncontainer %s: \n", c.Name) + cLog
+			podLog = podLog + fmt.Sprintf("\npod: %s | container %s: \n", pod.Name, c.Name) + cLog
 			if err != nil {
 				return podLog, err
 			}
@@ -215,7 +215,6 @@ func (t *TektonController) DeletePipelineRunIgnoreFinalizers(ns, name string) er
 	return nil
 }
 
-
 // DeleteAllPipelineRunsInASpecificNamespace deletes all PipelineRuns in a given namespace (removing the finalizers field, first)
 func (t *TektonController) DeleteAllPipelineRunsInASpecificNamespace(ns string) error {
 
@@ -235,9 +234,9 @@ func (t *TektonController) DeleteAllPipelineRunsInASpecificNamespace(ns string) 
 }
 
 // StorePipelineRun stores a given PipelineRun as an artifact.
-func (t *TektonController) StorePipelineRun(pipelineRun *pipeline.PipelineRun) error {
+func (t *TektonController) StorePipelineRun(prefix string, pipelineRun *pipeline.PipelineRun) error {
 	artifacts := make(map[string][]byte)
-	pipelineRunLog, err := t.GetPipelineRunLogs(pipelineRun.Name, pipelineRun.Namespace)
+	pipelineRunLog, err := t.GetPipelineRunLogs(prefix, pipelineRun.Name, pipelineRun.Namespace)
 	if err != nil {
 		return err
 	}
@@ -265,7 +264,7 @@ func (t *TektonController) StoreAllPipelineRuns(namespace string) error {
 
 	for _, pipelineRun := range pipelineRuns.Items {
 		pipelineRun := pipelineRun
-		if err := t.StorePipelineRun(&pipelineRun); err != nil {
+		if err := t.StorePipelineRun(pipelineRun.GetName(), &pipelineRun); err != nil {
 			return fmt.Errorf("got error storing PR: %v\n", err.Error())
 		}
 	}

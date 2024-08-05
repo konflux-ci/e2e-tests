@@ -15,6 +15,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/redhat-appstudio/jvm-build-service/openshift-with-appstudio-test/e2e"
@@ -30,7 +31,7 @@ import (
 )
 
 var (
-	testProjectGitUrl   = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_URL", "https://github.com/redhat-appstudio-qe/hacbs-test-project")
+	testProjectGitUrl   = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_URL", fmt.Sprintf("https://github.com/%s/hacbs-test-project", gihubOrg))
 	testProjectRevision = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_REVISION", "34da5a8f51fba6a8b7ec75a727d3c72ebb5e1274")
 )
 
@@ -42,7 +43,7 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 	defer GinkgoRecover()
 
-	var testNamespace, applicationName, componentName string
+	var testNamespace, applicationName, componentName, pacBranchName, baseBranchName string
 	var component *appservice.Component
 	var timeout, interval time.Duration
 	var customJavaBuilderPipelineAnnotation map[string]string
@@ -63,6 +64,17 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 			Expect(f.AsKubeAdmin.CommonController.StoreAllPods(testNamespace)).To(Succeed())
 			Expect(f.AsKubeAdmin.TektonController.StoreAllPipelineRuns(testNamespace)).To(Succeed())
 		}
+
+		// Delete new branches created by PaC and a testing branch used as a component's base branch
+		err = f.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(testProjectGitUrl), pacBranchName)
+		if err != nil {
+			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+		}
+		err = f.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(testProjectGitUrl), baseBranchName)
+		if err != nil {
+			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+		}
+		Expect(build.CleanupWebhooks(f, utils.GetRepoName(testProjectGitUrl))).ShouldNot(HaveOccurred())
 	})
 
 	BeforeAll(func() {
@@ -94,6 +106,12 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 
 		componentName = fmt.Sprintf("jvm-build-suite-component-%s", util.GenerateRandomString(6))
 
+		pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
+		baseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
+
+		err = f.AsKubeAdmin.CommonController.Github.CreateRef(utils.GetRepoName(testProjectGitUrl), "main", testProjectRevision, baseBranchName)
+		Expect(err).ShouldNot(HaveOccurred())
+
 		// Create a component with Git Source URL being defined
 		componentObj := appservice.ComponentSpec{
 			ComponentName: componentName,
@@ -101,12 +119,12 @@ var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jv
 				ComponentSourceUnion: appservice.ComponentSourceUnion{
 					GitSource: &appservice.GitSource{
 						URL:      testProjectGitUrl,
-						Revision: testProjectRevision,
+						Revision: baseBranchName,
 					},
 				},
 			},
 		}
-		component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, customJavaBuilderPipelineAnnotation)
+		component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, customJavaBuilderPipelineAnnotation))
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 

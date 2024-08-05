@@ -8,8 +8,6 @@ import (
 )
 
 const (
-	componentRepoURL = "https://github.com/redhat-appstudio-qe/hacbs-test-project"
-
 	EnvironmentName                = "development"
 	gitURL                         = "https://github.com/konflux-ci/integration-examples.git"
 	revision                       = "ab868616ab02be79b6abdf85dcd2a3aef321ff14"
