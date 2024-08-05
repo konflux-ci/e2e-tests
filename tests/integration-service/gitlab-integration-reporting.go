@@ -68,10 +68,9 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 			pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
 			componentBaseBranchName = fmt.Sprintf("base-gitlab-%s", util.GenerateRandomString(6))
 
-			projectID = utils.GetEnv(constants.GITLAB_PROJECT_ID, "")
-			Expect(projectID).ShouldNot(BeEmpty())
+			projectID = gitlabProjectIDForStatusReporting
 
-			gitlabToken = utils.GetEnv(constants.GITLAB_TOKEN_ENV, "")
+			gitlabToken = utils.GetEnv(constants.GITLAB_BOT_TOKEN_ENV, "")
 			Expect(gitlabToken).ShouldNot(BeEmpty())
 
 			err = f.AsKubeAdmin.CommonController.Gitlab.CreateGitlabNewBranch(projectID, componentBaseBranchName, componentRevision, componentDefaultBranch)

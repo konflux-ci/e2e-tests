@@ -88,7 +88,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			err = f.AsKubeAdmin.CommonController.Github.CreateRef(helloWorldComponentGitSourceRepoName, helloWorldComponentDefaultBranch, helloWorldComponentRevision, componentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			gitlabToken := utils.GetEnv(constants.GITLAB_TOKEN_ENV, "")
+			gitlabToken := utils.GetEnv(constants.GITLAB_BOT_TOKEN_ENV, "")
 			Expect(gitlabToken).ShouldNot(BeEmpty())
 
 			secretAnnotations := map[string]string{}
