@@ -15,7 +15,7 @@ var ApplicationSpecs = []ApplicationSpec{
 		ComponentSpec: ComponentSpec{
 			Name:                       "konflux-demo-component",
 			Language:                   "Java",
-			GitSourceUrl:               fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), "hacbs-test-project"),
+			GitSourceUrl:               fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), "hacbs-test-project-konflux-demo"),
 			GitSourceRevision:          "4df701406d34012034dd490fd38d779717582df7",
 			GitSourceContext:           "",
 			GitSourceDefaultBranchName: "main",
