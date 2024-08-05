@@ -59,12 +59,10 @@ export MULTI_PLATFORM_AWS_ACCESS_KEY=$(cat /usr/local/konflux-ci-secrets/multi-p
 export MULTI_PLATFORM_AWS_SECRET_ACCESS_KEY=$(cat /usr/local/konflux-ci-secrets/multi-platform-aws-secret-access-key)
 export MULTI_PLATFORM_AWS_SSH_KEY=$(cat /usr/local/konflux-ci-secrets/multi-platform-aws-ssh-key)
 export MULTI_PLATFORM_IBM_API_KEY=$(cat /usr/local/konflux-ci-secrets/multi-platform-ibm-api-key)
-export PAC_GITLAB_TOKEN=$(cat /usr/local/konflux-ci-secrets/pac-gitlab-token)
-export PAC_GITLAB_URL=$(cat /usr/local/konflux-ci-secrets/pac-gitlab-url)
-export PAC_PROJECT_ID=$(cat /usr/local/konflux-ci-secrets/pac-project-id)
 export ORAS_USERNAME=$(cat /usr/local/konflux-ci-secrets/oras-username)
 export ORAS_PASSWORD=$(cat /usr/local/konflux-ci-secrets/oras-password)
 export DOCKER_IO_AUTH=$(cat /usr/local/konflux-ci-secrets/docker_io)
+export GITLAB_BOT_TOKEN=$(cat /usr/local/konflux-ci-secrets/gitlab-bot-token)
 
 export ENABLE_SCHEDULING_ON_MASTER_NODES=false
 
