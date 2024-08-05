@@ -34,7 +34,7 @@ import (
 const (
 	rhtapServiceAccountName  = "release-service-account"
 	rhtapCatalogPathInRepo   = "pipelines/rhtap-service-push/rhtap-service-push.yaml"
-	rhtapGitSourceURL        = "https://github.com/konflux-qe-stage/devfile-sample-python-basic-test2"
+	rhtapGitSourceURL        = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic-test2"
 	rhtapGitSourceRepoName   = "devfile-sample-python-basic-test2"
 	rhtapGitSrcDefaultSHA    = "47fc22092005aabebce233a9b6eab994a8152bbd"
 	rhtapGitSrcDefaultBranch = "main"

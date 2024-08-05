@@ -25,7 +25,7 @@ import (
 
 const (
 	fbcServiceAccountName   = "release-service-account"
-	fbcSourceGitURL         = "https://github.com/konflux-qe-stage/fbc-sample-repo-release"
+	fbcSourceGitURL         = "https://github.com/redhat-appstudio-qe/fbc-sample-repo-release"
 	fbcGitRevision          = "8e374e107fecf03f3c64c528bb53798039661414"
 	fbcDockerFilePath       = "catalog.Dockerfile"
 	targetPort              = 50051

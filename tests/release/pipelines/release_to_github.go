@@ -30,10 +30,10 @@ import (
 
 const (
 	sampServiceAccountName = "release-service-account"
-	sampSourceGitURL       = "https://github.com/konflux-qe-stage/devfile-sample-go-basic"
+	sampSourceGitURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic-release"
 	sampGitRevision        = "508445a786e84c01e84c8c46d9d2407642d02762"
-	sampRepoOwner          = "konflux-qe-stage"
-	sampRepo               = "devfile-sample-go-basic"
+	sampRepoOwner          = "redhat-appstudio-qe"
+	sampRepo               = "devfile-sample-go-basic-release"
 	sampCatalogPathInRepo  = "pipelines/release-to-github/release-to-github.yaml"
 )
 
