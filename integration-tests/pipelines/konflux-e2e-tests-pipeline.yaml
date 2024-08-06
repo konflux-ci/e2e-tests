@@ -23,12 +23,14 @@
       - name: test-event-type
         description: 'Indicates if the test is triggered by a Pull Request or Push event.'
         default: 'none'    
-      - name: aws-credential-secret
-        description: The AWS credential used for provisioning the ROSA cluster.
+      - name: konflux-test-infra-secret
+        description: The name of secret where testing infrastructures credentials are stored.
         type: string
-      - name: hcp-config-secret
+        default: 'konflux-test-infra'
+      - name: cloud-credential-key
         type: string
-        description: The AWS resouces used for provisioning the ROSA cluster.
+        description: The key secret from konflux-test-infra-secret where all AWS ROSA configurations are stored.
+        default: 'cloud-credentials-us-east-2'
       - name: replicas
         description: 'The number of replicas for the cluster nodes.'
         type: string
@@ -81,9 +83,9 @@
           resolver: git
           params:
             - name: url
-              value: https://github.com/konflux-ci/konflux-qe-definitions.git
+              value: https://github.com/flacatus/konflux-qe-definitions.git
             - name: revision
-              value: main
+              value: vault_creds
             - name: pathInRepo
               value: common/tasks/rosa/hosted-cp/rosa-hcp-provision/rosa-hcp-provision.yaml
         params:
@@ -95,10 +97,10 @@
             value: "$(params.replicas)"
           - name: machine-type
             value: "$(params.machine-type)"
-          - name: aws-credential-secret
-            value: "$(params.aws-credential-secret)"
-          - name: hcp-config-secret
-            value: "$(params.hcp-config-secret)"
+          - name: konflux-test-infra-secret
+            value: "$(params.konflux-test-infra-secret)"
+          - name: cloud-credential-key
+            value: "$(params.cloud-credential-key)"
       - name: konflux-e2e-tests
         timeout: 2h
         when:
@@ -143,9 +145,9 @@
           resolver: git
           params:
             - name: url
-              value: https://github.com/konflux-ci/konflux-qe-definitions.git
+              value: https://github.com/flacatus/konflux-qe-definitions.git
             - name: revision
-              value: main
+              value: vault_creds
             - name: pathInRepo
               value: common/tasks/rosa/hosted-cp/rosa-hcp-deprovision/rosa-hcp-deprovision.yaml
         params:
@@ -167,10 +169,10 @@
             value: "$(tasks.test-metadata.results.git-org)"
           - name: cluster-name
             value: "$(tasks.rosa-hcp-metadata.results.cluster-name)"
-          - name: aws-credential-secret
-            value: "$(params.aws-credential-secret)"
-          - name: hcp-config-secret
-            value: "$(params.hcp-config-secret)"
+          - name: konflux-test-infra-secret
+            value: "$(params.konflux-test-infra-secret)"
+          - name: cloud-credential-key
+            value: "$(params.cloud-credential-key)"
       - name: quality-dashboard-upload
         when:
           - input: "$(tasks.test-metadata.results.test-event-type)"
