@@ -146,7 +146,8 @@ spec:
         PAC_PROJECT_ID=$(cat /usr/local/konflux-ci-secrets/pac-project-id)
         ORAS_USERNAME=$(cat /usr/local/konflux-ci-secrets/oras-username)
         ORAS_PASSWORD=$(cat /usr/local/konflux-ci-secrets/oras-password)
-        DOCKER_IO_AUTH=$(cat /usr/local/konflux-ci-secrets/docker_io)
+        DOCKER_IO_AUTH_USERNAME=$(cat /usr/local/konflux-ci-secrets/docker_io_username)
+        DOCKER_IO_AUTH_PASSWORD=$(cat /usr/local/konflux-ci-secrets/docker_io_password)
 
         ENABLE_SCHEDULING_ON_MASTER_NODES=false
         GINKGO_PROCS=$(params.ginkgo-procs)
@@ -182,6 +183,17 @@ spec:
         git config --global credential.helper "store --file ${GIT_CREDS_PATH}"
 
         echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > "${GIT_CREDS_PATH}"
+
+
+        open-telemetry-opentelemetry-collector
+
+        # Temporary workaround until we discover how to add globally docker.io in ROSA-HCP
+        oc create -n konflux-otel secret docker-registry docker \                                                                                                                                                                               ─╯
+          --docker-server=docker.io \
+          --docker-username=$DOCKER_IO_AUTH_USERNAME \    
+          --docker-password=$DOCKER_IO_AUTH_PASSWORD
+
+        oc secrets link open-telemetry-opentelemetry-collector pull-secret --for=pull -n konflux-otel
 
         git clone --origin upstream --branch main "https://${GITHUB_TOKEN}@github.com/konflux-ci/e2e-tests.git" .
         make ci/prepare/e2e-branch
