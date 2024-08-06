@@ -347,9 +347,9 @@ func RunE2ETests() error {
 		return nil
 	}
 
-	if openshiftJobSpec.Refs.Repo == "e2e-tests" {
+	if pr.RepoName == "e2e-tests" {
 
-		rctx.RepoName = openshiftJobSpec.Refs.Repo
+		rctx.RepoName = pr.RepoName
 		rctx.JobName = jobName
 		rctx.JobType = jobType
 
@@ -1302,9 +1302,9 @@ func CleanWorkload() error {
 
 func runTests(labelsToRun string, junitReportFile string) error {
 
-	ginkgoArgs := []string{"-p", "--output-interceptor-mode=none", 
-	"--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir), 
-	"--junit-report="+junitReportFile, "--label-filter="+labelsToRun}
+	ginkgoArgs := []string{"-p", "--output-interceptor-mode=none",
+		"--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir),
+		"--junit-report=" + junitReportFile, "--label-filter=" + labelsToRun}
 
 	if os.Getenv("GINKGO_PROCS") != "" {
 		ginkgoArgs = append(ginkgoArgs, fmt.Sprintf("--procs=%s", os.Getenv("GINKGO_PROCS")))
