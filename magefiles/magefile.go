@@ -359,6 +359,9 @@ func RunE2ETests() error {
 		}
 		rctx.DiffFiles = files
 
+		// Set the number of parallel test processes
+		rctx.CLIConfig.Procs = 20
+
 		// filtering the rule engine to load only e2e-repo rule catalog within the test category
 		err = engine.MageEngine.RunRules(rctx, "tests", "e2e-repo")
 

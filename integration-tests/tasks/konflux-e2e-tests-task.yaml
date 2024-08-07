@@ -172,6 +172,20 @@ spec:
 
         echo -e "[INFO] Start tests with user: ${GITHUB_USER}"
 
+        # Workaround for ROSA HCP to avoid docker limits in konflux-otel
+        oc create namespace konflux-otel
+        oc create sa open-telemetry-opentelemetry-collector -n konflux-otel
+
+        oc get secret/pull-secret -n openshift-config --template='{{index .data ".dockerconfigjson" | base64decode}}' >./global-pull-secret.json
+        oc get secret -n openshift-config -o yaml pull-secret > global-pull-secret.yaml
+
+        yq -i '.metadata.namespace = "konflux-otel"' global-pull-secret.yaml
+
+        oc registry login --registry=docker.io --auth-basic="$DOCKER_IO_AUTH" --to=./global-pull-secret.json
+        oc apply -f global-pull-secret.yaml -n konflux-otel
+        oc set data secret/pull-secret -n konflux-otel --from-file=.dockerconfigjson=./global-pull-secret.json
+        oc secrets link open-telemetry-opentelemetry-collector pull-secret --for=pull -n konflux-otel
+
         cd "$(mktemp -d)"
 
         git config --global user.name "redhat-appstudio-qe-bot"

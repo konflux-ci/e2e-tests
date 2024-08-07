@@ -9,30 +9,45 @@ import (
 
 var NonTestFilesRule = rulesengine.Rule{Name: "E2E Default PR Test Exectuion",
 	Description: "Runs all suites when any non test files are modified in the e2e-repo PR",
-	Condition: rulesengine.Any{rulesengine.ConditionFunc(CheckPkgFilesChanged),
+	Condition: rulesengine.Any{
+		rulesengine.ConditionFunc(CheckPkgFilesChanged),
 		rulesengine.ConditionFunc(CheckMageFilesChanged),
 		rulesengine.ConditionFunc(CheckCmdFilesChanged),
-		rulesengine.ConditionFunc(CheckNoFilesChanged)},
+		rulesengine.ConditionFunc(CheckNoFilesChanged),
+		rulesengine.ConditionFunc(CheckTektonFilesChanged),
+	},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteDefaultTestAction)}}
 
 var TestFilesOnlyRule = rulesengine.Rule{Name: "E2E PR Test File Diff Execution",
 	Description: "Runs specific tests when test files are the only changes in the e2e-repo PR",
-	Condition: rulesengine.All{rulesengine.None{rulesengine.ConditionFunc(CheckPkgFilesChanged),
-		rulesengine.ConditionFunc(CheckMageFilesChanged),
-		rulesengine.ConditionFunc(CheckCmdFilesChanged),
-		rulesengine.ConditionFunc(CheckNoFilesChanged)}, rulesengine.Any{
-		&BuildTestFileChangeOnlyRule,
-		&BuildTemplateScenarioFileChangeRule,
-		&BuildNonTestFileChangeRule,
-		&KonfluxDemoConfigsFileOnlyChangeRule,
-		&KonfluxDemoTestFileChangedRule,
-		&ReleaseTestHelperFilesChangeOnlyRule,
-		&ReleaseTestTestFilesChangeRule,
-		&ReleaseConstFileChangeBuildTestRule,
-		&IntegrationTestsConstFileChangeRule,
-		&IntegrationTestsFileChangeRule,
-		&EcTestFileChangeRule}},
+	Condition: rulesengine.All{
+		rulesengine.None{
+			rulesengine.ConditionFunc(CheckPkgFilesChanged),
+			rulesengine.ConditionFunc(CheckMageFilesChanged),
+			rulesengine.ConditionFunc(CheckCmdFilesChanged),
+			rulesengine.ConditionFunc(CheckNoFilesChanged),
+		},
+		rulesengine.Any{
+			&BuildTestFileChangeOnlyRule,
+			&BuildTemplateScenarioFileChangeRule,
+			&BuildNonTestFileChangeRule,
+			&KonfluxDemoConfigsFileOnlyChangeRule,
+			&KonfluxDemoTestFileChangedRule,
+			&ReleaseTestHelperFilesChangeOnlyRule,
+			&ReleaseTestTestFilesChangeRule,
+			&ReleaseConstFileChangeBuildTestRule,
+			&IntegrationTestsConstFileChangeRule,
+			&IntegrationTestsFileChangeRule,
+			&EcTestFileChangeRule,
+		},
+	},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteTestAction)}}
+
+func CheckTektonFilesChanged(rctx *rulesengine.RuleCtx) bool {
+
+	return len(rctx.DiffFiles.FilterByDirString("integration-tests/")) != 0
+
+}
 
 var BuildTestFileChangeOnlyRule = rulesengine.Rule{Name: "E2E PR Build Test File Change Only Rule",
 	Description: "Map build tests files when build test file are only changed in the e2e-repo PR",
