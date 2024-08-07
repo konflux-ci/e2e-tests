@@ -23,7 +23,7 @@ const (
 	helloWorldComponentDefaultBranch     = "default"
 	helloWorldComponentRevision          = "d2d03e69de912e3827c29b4c5b71ffe8bcb5dad8"
 
-	helloWorldComponentGitSourceCloneRepoName = "devfile-sample-hello-world"
+	helloWorldComponentGitSourceCloneRepoName = "devfile-sample-hello-world-clone"
 	helloWorldComponentCloneRevision          = "bb1d243a9c030e715ac2a7829973d226816446c3"
 
 	multiComponentGitSourceRepoName = "sample-multi-component"
