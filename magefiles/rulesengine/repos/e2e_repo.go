@@ -26,6 +26,7 @@ var TestFilesOnlyRule = rulesengine.Rule{Name: "E2E PR Test File Diff Execution"
 			rulesengine.ConditionFunc(CheckMageFilesChanged),
 			rulesengine.ConditionFunc(CheckCmdFilesChanged),
 			rulesengine.ConditionFunc(CheckNoFilesChanged),
+			rulesengine.ConditionFunc(CheckTektonFilesChanged),
 		},
 		rulesengine.Any{
 			&BuildTestFileChangeOnlyRule,
