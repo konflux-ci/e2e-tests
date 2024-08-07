@@ -29,12 +29,12 @@ func parseDockerfileUsedForBuild(
 // CheckParentSources checks the sources coming from parent image are all included in the built source image.
 // This check is applied to every build for which source build is enabled, then the several prerequisites
 // for including parent sources are handled as well.
-func CheckParentSources(c client.Client, tektonController *tekton.TektonController, pr *pipeline.PipelineRun) {
+func CheckParentSources(c client.Client, tektonController *tekton.TektonController, pr *pipeline.PipelineRun, gitUrl string) {
 	buildResult, err := build.ReadSourceBuildResult(c, tektonController, pr)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	var baseImagesDigests []string
-	if build.IsDockerBuild(pr) {
+	if IsDockerBuild(gitUrl) {
 		parsedDockerfile := parseDockerfileUsedForBuild(c, tektonController, pr)
 		if parsedDockerfile.IsBuildFromScratch() {
 			Expect(buildResult.BaseImageSourceIncluded).Should(BeFalse())
@@ -95,5 +95,5 @@ func CheckSourceImage(srcImage, gitUrl string, hub *framework.ControllerHub, pr 
 	Expect(filesExists).To(BeTrue())
 
 	c := hub.CommonController.KubeRest()
-	CheckParentSources(c, hub.TektonController, pr)
+	CheckParentSources(c, hub.TektonController, pr, gitUrl)
 }

@@ -168,10 +168,10 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 			}
 
 			var prLogs string
-			if err = t.StorePipelineRun(pr); err != nil {
+			if err = t.StorePipelineRun(component.GetName(), pr); err != nil {
 				GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
 			}
-			if prLogs, err = t.GetPipelineRunLogs(pr.Name, pr.Namespace); err != nil {
+			if prLogs, err = t.GetPipelineRunLogs(component.GetName(), pr.Name, pr.Namespace); err != nil {
 				GinkgoWriter.Printf("failed to get logs for PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
 			}
 
