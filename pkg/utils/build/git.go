@@ -2,7 +2,6 @@ package build
 
 import (
 	"fmt"
-	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"k8s.io/api/core/v1"
 	"os"
 	"strconv"

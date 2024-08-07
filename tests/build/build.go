@@ -93,10 +93,23 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 			secretAnnotations := map[string]string{}
 
-			err = build.CreateGitlabBuildSecret(f, "gitlab-build-secret", secretAnnotations, gitlabToken)
+			err = build.CreateGitlabBuildSecret(f, "pipelines-as-code-secret", secretAnnotations, gitlabToken)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			err = build.CreateGitlabBuildSecret(f, "pipelines-as-code-secret", secretAnnotations, gitlabToken)
+			//secret := &v1.Secret{
+			//	ObjectMeta: metav1.ObjectMeta{
+			//		Name:      "pipelines-as-code-secret",
+			//		Namespace: testNamespace,
+			//	},
+			//	Type: v1.SecretTypeOpaque,
+			//	StringData: map[string]string{
+			//		"password": gitlabToken,
+			//	},
+			//}
+			//_, err = f.AsKubeAdmin.CommonController.CreateSecret(f.UserNamespace, secret)
+			//Expect(err).NotTo(HaveOccurred())
+
+			err = f.AsKubeAdmin.CommonController.Gitlab.CreateBranch(helloWorldComponentGitlabProjectID, componentBaseBranchName, helloWorldComponentDefaultBranch)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
@@ -126,19 +139,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			case "gitlab":
 				Expect(f.AsKubeAdmin.CommonController.Gitlab.CloseMergeRequest(helloWorldComponentGitlabProjectID, prNumber)).NotTo(HaveOccurred())
 				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteWebhooks(helloWorldComponentGitlabProjectID, f.ClusterAppDomain)).NotTo(HaveOccurred())
-			}
-			// Delete new branches created by PaC and a testing branch used as a component's base branch
-			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, pacBranchName)
-			if err != nil {
-				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
-			}
-			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, componentBaseBranchName)
-			if err != nil {
-				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
-			}
-			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceRepoName, constants.PaCPullRequestBranchPrefix+defaultBranchTestComponentName)
-			if err != nil {
-				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 			}
 		})
 
@@ -465,7 +465,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 								prHeadSha = mr.DiffRefs.HeadSha
 								return true
 							}
+							return false
 						}
+						return false
 					}
 					return false
 				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldComponentGitSourceRepoName))
@@ -637,11 +639,14 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				createdFileSHA = plr.Labels["pipelinesascode.tekton.dev/sha"]
 			})
 			It("eventually leads to another update of a PR about the PipelineRun status report at Checks tab", func() {
-				if gitProvider != "github" {
-					return
+				switch gitProvider {
+				case "github":
+					expectedCheckRunName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
+					Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, helloWorldComponentGitSourceRepoName, createdFileSHA, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
+				case "gitlab":
+					expectedNote := fmt.Sprintf("**Pipelines as Code CI/%s-on-pull-request** has successfully validated your commit", customBranchComponentName)
+					f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(helloWorldComponentGitlabProjectID, expectedNote, prNumber)
 				}
-				expectedCheckRunName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
-				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, helloWorldComponentGitSourceRepoName, createdFileSHA, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 			})
 		})
 
@@ -661,6 +666,20 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, helloWorldComponentGitSourceRepoName))
 
 				mergeResultSha = mergeResult.GetSHA()
+				GinkgoWriter.Println("merged result sha:", mergeResultSha)
+			})
+
+			BeforeAll(func() {
+				if gitProvider != "gitlab" {
+					return
+				}
+
+				Eventually(func() error {
+					mergeRequest, err = f.AsKubeAdmin.CommonController.Gitlab.AcceptMergeRequest(helloWorldComponentGitlabProjectID, prNumber)
+					return err
+				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, helloWorldComponentGitSourceRepoName))
+
+				mergeResultSha = mergeRequest.MergeCommitSHA
 				GinkgoWriter.Println("merged result sha:", mergeResultSha)
 			})
 
@@ -839,8 +858,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 		})
 	},
-		Entry("github", "github", "gh-comp"),
-		Entry("gitlab", "gitlab", "gl-comp"),
+		Entry("github", "github", "gh"),
+		Entry("gitlab", "gitlab", "gl"),
 	)
 
 	Describe("test pac with multiple components using same repository", Ordered, Label("pac-build", "multi-component"), func() {
@@ -1845,41 +1864,6 @@ func createBuildSecret(f *framework.Framework, secretName string, annotations ma
 	buildSecret.Labels = map[string]string{
 		"appstudio.redhat.com/credentials": "scm",
 		"appstudio.redhat.com/scm.host":    "github.com",
-	}
-	if annotations != nil {
-		buildSecret.Annotations = annotations
-	}
-	buildSecret.Type = "kubernetes.io/basic-auth"
-	buildSecret.StringData = map[string]string{
-		"password": token,
-	}
-	_, err := f.AsKubeAdmin.CommonController.CreateSecret(f.UserNamespace, &buildSecret)
-	if err != nil {
-		return fmt.Errorf("error creating build secret: %v", err)
-	}
-	return nil
-}
-
-func cleanupWebhooks(f *framework.Framework, repoName string) {
-	hooks, err := f.AsKubeAdmin.CommonController.Github.ListRepoWebhooks(repoName)
-	Expect(err).NotTo(HaveOccurred())
-	for _, h := range hooks {
-		hookUrl := h.Config["url"].(string)
-		if strings.Contains(hookUrl, f.ClusterAppDomain) {
-			GinkgoWriter.Printf("removing webhook URL: %s\n", hookUrl)
-			Expect(f.AsKubeAdmin.CommonController.Github.DeleteWebhook(repoName, h.GetID())).To(Succeed())
-			break
-		}
-	}
-}
-
-// createGitlabBuildSecret creates a secret of gitlab build
-func createGitlabBuildSecret(f *framework.Framework, secretName string, annotations map[string]string, token string) error {
-	buildSecret := v1.Secret{}
-	buildSecret.Name = secretName
-	buildSecret.Labels = map[string]string{
-		"appstudio.redhat.com/credentials": "scm",
-		"appstudio.redhat.com/scm.host":    "gitlab.com",
 	}
 	if annotations != nil {
 		buildSecret.Annotations = annotations
