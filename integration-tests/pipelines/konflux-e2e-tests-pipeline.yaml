@@ -26,11 +26,9 @@
       - name: konflux-test-infra-secret
         description: The name of secret where testing infrastructures credentials are stored.
         type: string
-        default: 'konflux-test-infra'
       - name: cloud-credential-key
         type: string
         description: The key secret from konflux-test-infra-secret where all AWS ROSA configurations are stored.
-        default: 'cloud-credentials-us-east-2'
       - name: replicas
         description: 'The number of replicas for the cluster nodes.'
         type: string
@@ -83,9 +81,9 @@
           resolver: git
           params:
             - name: url
-              value: https://github.com/flacatus/konflux-qe-definitions.git
+              value: https://github.com/konflux-ci/konflux-qe-definitions.git
             - name: revision
-              value: vault_creds
+              value: main
             - name: pathInRepo
               value: common/tasks/rosa/hosted-cp/rosa-hcp-provision/rosa-hcp-provision.yaml
         params:
@@ -145,9 +143,9 @@
           resolver: git
           params:
             - name: url
-              value: https://github.com/flacatus/konflux-qe-definitions.git
+              value: https://github.com/konflux-ci/konflux-qe-definitions.git
             - name: revision
-              value: vault_creds
+              value: main
             - name: pathInRepo
               value: common/tasks/rosa/hosted-cp/rosa-hcp-deprovision/rosa-hcp-deprovision.yaml
         params:
