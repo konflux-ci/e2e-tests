@@ -1,0 +1,1 @@
+echo "A new workaround for konflux"

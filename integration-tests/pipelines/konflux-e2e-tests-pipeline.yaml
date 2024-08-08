@@ -57,9 +57,9 @@
           resolver: git
           params:
             - name: url
-              value: https://github.com/konflux-ci/konflux-qe-definitions.git
+              value: https://github.com/flacatus/konflux-qe-definitions.git
             - name: revision
-              value: main
+              value: workaround
             - name: pathInRepo
               value: common/tasks/test-metadata/0.1/test-metadata.yaml
         params:
@@ -111,9 +111,9 @@
           resolver: git
           params:
             - name: url
-              value: https://github.com/konflux-ci/e2e-tests.git
+              value: https://github.com/flacatus/e2e-tests.git
             - name: revision
-              value: main
+              value: prv
             - name: pathInRepo
               value: integration-tests/tasks/konflux-e2e-tests-task.yaml
         params:
