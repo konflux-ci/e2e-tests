@@ -78,10 +78,20 @@ spec:
       script: |
         #!/bin/bash
 
+        # Params related with tekton task
+        export GINKGO_PROCS=$(params.ginkgo-procs)
+        export ORAS_CONTAINER=$(params.oras-container)
+        
+        # Log into OpenShift
+        $(params.ocp-login-command)
 
         if [ "$GIT_REPO" = "e2e-tests" ]; then
           export SOURCE_REPO_URL=$(echo "$JOB_SPEC" | jq -r '.git.source_repo_url' | sed 's#https://github.com/##')
           export SOURCE_REPO_BRANCH=$(echo "$JOB_SPEC" | jq -r '.git.source_repo_branch')
-          curl -o hello.sh https://raw.githubusercontent.com/$SOURCE_REPO_URL/$SOURCE_REPO_BRANCH/integration-tests/scripts/konflux-e2e-runner.sh
-          /bin/bash hello.sh
+
+          echo -e "[INFO] Running e2e tests from source: $SOURCE_REPO_URL and branch $SOURCE_REPO_BRANCH"
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/$SOURCE_REPO_URL/$SOURCE_REPO_BRANCH/integration-tests/scripts/konflux-e2e-runner.sh)"
+        else
+          echo -e "[INFO] Running e2e tests from source: konflux-ci/e2e-tests and branch main"
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/konflux-ci/e2e-tests/main/integration-tests/scripts/konflux-e2e-runner.sh)"
         fi
