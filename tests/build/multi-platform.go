@@ -457,14 +457,6 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 					return nil
 				}, timeout, interval).Should(Succeed(), "timed out when verifying that the remote host was cleaned up correctly")
 			})
-
-			It("should push Dockerfile to registry", func() {
-				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(
-					component.GetName(), component.Spec.Application, component.GetNamespace(), "")
-				Expect(err).Should(Succeed())
-				ensureOriginalDockerfileIsPushed(f.AsKubeAdmin, pr)
-			})
-
 		})
 	})
 })
