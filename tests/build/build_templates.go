@@ -345,6 +345,10 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				Expect(buildSummaryLog).To(ContainSubstring(binaryImage))
 			})
 
+			It("should push Dockerfile to registry", Label(buildTemplatesTestLabel), func() {
+				ensureOriginalDockerfileIsPushed(kubeadminClient, pr)
+			})
+
 			It("floating tags are created successfully", func() {
 				_, _, _, _, _, checkAdditionalTags := GetComponentScenarioDetailsFromGitUrl(gitUrl)
 				if !checkAdditionalTags {
@@ -688,10 +692,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						Expect(summary).NotTo(Equal(build.TestOutput{}))
 					})
 				}
-			})
-
-			It("should push Dockerfile to registry", Label(buildTemplatesTestLabel), func() {
-				ensureOriginalDockerfileIsPushed(kubeadminClient, pr)
 			})
 		}
 
