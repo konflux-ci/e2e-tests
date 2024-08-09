@@ -58,6 +58,7 @@ require (
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	knative.dev/pkg v0.0.0-20240219120257-9227ebb57a4e
 	sigs.k8s.io/controller-runtime v0.17.5
+	oras.land/oras-go/v2 v2.3.0
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -303,7 +304,6 @@ require (
 	k8s.io/kube-openapi v0.0.0-20240221221325-2ac9dc51f3f1 // indirect
 	k8s.io/kubectl v0.29.2 // indirect
 	k8s.io/kubernetes v1.29.2 // indirect
-	oras.land/oras-go/v2 v2.3.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kustomize/api v0.13.5-0.20230601165947-6ce0bf390ce3 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.14.3-0.20230601165947-6ce0bf390ce3 // indirect

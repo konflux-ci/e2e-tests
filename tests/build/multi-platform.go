@@ -457,7 +457,6 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 					return nil
 				}, timeout, interval).Should(Succeed(), "timed out when verifying that the remote host was cleaned up correctly")
 			})
-
 		})
 	})
 })
