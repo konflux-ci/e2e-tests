@@ -5,7 +5,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/devfile/library/v2/pkg/util"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
@@ -50,18 +49,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			}
 
 			applicationName = createApp(*f, testNamespace)
+			component, componentName, pacBranchName, componentBaseBranchName = createComponent(*f, testNamespace, applicationName, componentRepoNameForStatusReporting, componentGitSourceURLForStatusReporting)
 
 			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass)
 			Expect(err).ShouldNot(HaveOccurred())
-
 			integrationTestScenarioFail, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			componentName = fmt.Sprintf("%s-%s", "test-component-pac", util.GenerateRandomString(6))
-			pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
-			componentBaseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
-
-			err = f.AsKubeAdmin.CommonController.Github.CreateRef(componentRepoNameForStatusReporting, componentDefaultBranch, componentRevision, componentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
@@ -82,23 +74,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 		})
 
 		When("a new Component with specified custom branch is created", Label("custom-branch"), func() {
-			BeforeAll(func() {
-				componentObj := appstudioApi.ComponentSpec{
-					ComponentName: componentName,
-					Application:   applicationName,
-					Source: appstudioApi.ComponentSource{
-						ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
-							GitSource: &appstudioApi.GitSource{
-								URL:      componentGitSourceURLForStatusReporting,
-								Revision: componentBaseBranchName,
-							},
-						},
-					},
-				}
-				// Create a component with Git Source URL, a specified git branch
-				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
-				Expect(err).ShouldNot(HaveOccurred())
-			})
 			It("triggers a Build PipelineRun", func() {
 				timeout = time.Second * 600
 				interval = time.Second * 1
