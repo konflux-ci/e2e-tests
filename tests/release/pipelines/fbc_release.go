@@ -330,7 +330,7 @@ func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framew
 			"publishingCredentials":           "fbc-preview-publishing-credentials",
 			"iibServiceConfigSecret":          "iib-preview-services-config",
 			"iibOverwriteFromIndexCredential": "iib-overwrite-fromimage-credentials",
-			"requestUpdateTimeout":            "1500",
+			"requestTimeoutSeconds":           "1500",
 			"buildTimeoutSeconds":             "1500",
 			"hotfix":                          hotfix,
 			"issueId":                         issueId,
