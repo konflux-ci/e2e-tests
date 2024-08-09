@@ -265,6 +265,7 @@ func createADVSReleasePlanAdmission(advsRPAName string, managedFw framework.Fram
 		},
 		"sign": map[string]interface{}{
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",
+			"cosignSecretName": "test-cosign-secret",
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
