@@ -14,4 +14,9 @@ var MageEngine = rulesengine.RuleEngine{
 	"demo": {
 		"local-workflow": repos.DemoCatalog,
 	},
+
+	"ci": {
+		"e2e-repo":          testselection.E2ECIChainCatalog,
+		"infra-deployments": testselection.InfraDeploymentsCIChainCatalog,
+	},
 }
