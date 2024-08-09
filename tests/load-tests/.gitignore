@@ -4,4 +4,7 @@
 *.csv
 load-tests.json
 load-tests.*.json
+load-test.max-concurrency.json
 output.json
+started
+ended
