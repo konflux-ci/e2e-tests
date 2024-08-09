@@ -5,7 +5,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/devfile/library/v2/pkg/util"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
@@ -50,18 +49,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			}
 
 			applicationName = createApp(*f, testNamespace)
+			component, componentName, pacBranchName, componentBaseBranchName = createComponent(*f, testNamespace, applicationName, componentRepoNameForStatusReporting, componentGitSourceURLForStatusReporting)
 
 			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass)
 			Expect(err).ShouldNot(HaveOccurred())
-
 			integrationTestScenarioFail, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			componentName = fmt.Sprintf("%s-%s", "test-component-pac", util.GenerateRandomString(6))
-			pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
-			componentBaseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
-
-			err = f.AsKubeAdmin.CommonController.Github.CreateRef(componentRepoNameForStatusReporting, componentDefaultBranch, componentRevision, componentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
@@ -82,23 +74,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 		})
 
 		When("a new Component with specified custom branch is created", Label("custom-branch"), func() {
-			BeforeAll(func() {
-				componentObj := appstudioApi.ComponentSpec{
-					ComponentName: componentName,
-					Application:   applicationName,
-					Source: appstudioApi.ComponentSource{
-						ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
-							GitSource: &appstudioApi.GitSource{
-								URL:      componentGitSourceURLForStatusReporting,
-								Revision: componentBaseBranchName,
-							},
-						},
-					},
-				}
-				// Create a component with Git Source URL, a specified git branch
-				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
-				Expect(err).ShouldNot(HaveOccurred())
-			})
 			It("triggers a Build PipelineRun", func() {
 				timeout = time.Second * 600
 				interval = time.Second * 1
@@ -114,13 +89,16 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 					return nil
 				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the component %s/%s", testNamespace, componentName))
 			})
+
 			It("does not contain an annotation with a Snapshot Name", func() {
 				Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
 			})
+
 			It("should lead to build PipelineRun finishing successfully", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component,
 					"", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
 			})
+
 			It("should have a related PaC init PR created", func() {
 				timeout = time.Second * 300
 				interval = time.Second * 1
@@ -194,9 +172,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 					return err == nil && !f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)
 				}, time.Minute*3, time.Second*5).Should(BeTrue(), fmt.Sprintf("Timed out waiting for Snapshot to be marked as failed %s/%s", snapshot.GetNamespace(), snapshot.GetName()))
 			})
+
 			It("eventually leads to the status reported at Checks tab for the successful Integration PipelineRun", func() {
 				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(integrationTestScenarioPass.Name, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 			})
+
 			It("eventually leads to the status reported at Checks tab for the failed Integration PipelineRun", func() {
 				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(integrationTestScenarioFail.Name, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionFailure))
 			})
