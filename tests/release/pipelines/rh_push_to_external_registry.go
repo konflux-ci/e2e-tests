@@ -14,6 +14,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/contract"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
@@ -47,6 +48,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 	var releaseCR1, releaseCR2 *releaseApi.Release
 
 	var componentObj1, componentObj2 appservice.ComponentSpec
+	var baseBranchNameComp1, pacBranchNameComp1, baseBranchNameComp2, pacBranchNameComp2 string
 
 	BeforeAll(func() {
 		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("push-pyxis"))
@@ -118,13 +120,26 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		compName = releasecommon.ComponentName
 		additionalCompName = releasecommon.AdditionalComponentName
 
+		pacBranchNameComp1 = constants.PaCPullRequestBranchPrefix + compName
+		pacBranchNameComp2 = constants.PaCPullRequestBranchPrefix + additionalCompName
+
+		baseBranchNameComp1 = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
+		baseBranchNameComp2 = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
+
+		err = devFw.AsKubeAdmin.CommonController.Github.CreateRef(releasecommon.DcMetroMapGitRepoName, "main", releasecommon.DcMetroMapGitRevision, baseBranchNameComp1)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		err = devFw.AsKubeAdmin.CommonController.Github.CreateRef(utils.GetRepoName(releasecommon.AdditionalGitSourceComponentUrl), "main", releasecommon.AdditionalGitRevision, baseBranchNameComp2)
+		Expect(err).ShouldNot(HaveOccurred())
+
 		componentObj1 = appservice.ComponentSpec{
 			ComponentName: releasecommon.ComponentName,
 			Application:   releasecommon.ApplicationNameDefault,
 			Source: appservice.ComponentSource{
 				ComponentSourceUnion: appservice.ComponentSourceUnion{
 					GitSource: &appservice.GitSource{
-						URL: releasecommon.GitSourceComponentUrl,
+						URL:      releasecommon.DcMetroMapGitSourceURL,
+						Revision: baseBranchNameComp1,
 					},
 				},
 			},
@@ -136,6 +151,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 				ComponentSourceUnion: appservice.ComponentSourceUnion{
 					GitSource: &appservice.GitSource{
 						URL:           releasecommon.AdditionalGitSourceComponentUrl,
+						Revision:      baseBranchNameComp2,
 						DockerfileURL: constants.DockerFilePath,
 					},
 				},
@@ -210,19 +226,41 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
 			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 		}
+		// Delete new branches created by PaC and a testing branch used as a component's base branch
+		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(releasecommon.DcMetroMapGitRepoName, pacBranchNameComp1)
+		if err != nil {
+			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+		}
+		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(releasecommon.DcMetroMapGitRepoName, baseBranchNameComp1)
+		if err != nil {
+			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+		}
+		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(releasecommon.AdditionalGitSourceComponentUrl), pacBranchNameComp2)
+		if err != nil {
+			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+		}
+		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(releasecommon.AdditionalGitSourceComponentUrl), baseBranchNameComp2)
+		if err != nil {
+			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+		}
+
+		// Delete created webhook from GitHub
+		Expect(build.CleanupWebhooks(fw, releasecommon.DcMetroMapGitRepoName)).ShouldNot(HaveOccurred())
+		Expect(build.CleanupWebhooks(fw, utils.GetRepoName(releasecommon.AdditionalGitSourceComponentUrl))).ShouldNot(HaveOccurred())
+
 	})
 
 	var _ = Describe("Post-release verification", func() {
 
 		It("verifies that Component 1 can be created and build PipelineRun is created for it in dev namespace and succeeds", func() {
-			component1, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj1, devNamespace, "", "", releasecommon.ApplicationNameDefault, true, constants.DefaultDockerBuildPipelineBundle)
+			component1, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj1, devNamespace, "", "", releasecommon.ApplicationNameDefault, true, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.DefaultDockerBuildPipelineBundle))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component1, "",
 				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
 		})
 
 		It("verifies that Component 2 can be created and build PipelineRun is created for it in dev namespace and succeeds", func() {
-			component2, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj2, devNamespace, "", "", releasecommon.ApplicationNameDefault, true, constants.DefaultDockerBuildPipelineBundle)
+			component2, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj2, devNamespace, "", "", releasecommon.ApplicationNameDefault, true, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.DefaultDockerBuildPipelineBundle))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component2, "",
 				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())

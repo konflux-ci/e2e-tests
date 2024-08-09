@@ -8,18 +8,19 @@ import (
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline", Label("release-pipelines", "tenant"), func() {
@@ -34,6 +35,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 
 	var component *appservice.Component
 	var releaseCR *releaseApi.Release
+	var baseBranchName, pacBranchName string
 
 	BeforeAll(func() {
 		// Initialize the tests controllers
@@ -51,7 +53,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		component = releasecommon.CreateComponent(*fw, devNamespace, releasecommon.ApplicationNameDefault, releasecommon.ComponentName, releasecommon.GitSourceComponentUrl, "", ".", "Dockerfile", constants.DefaultDockerBuildPipelineBundle)
+		component, baseBranchName, pacBranchName = releasecommon.CreateComponent(*fw, devNamespace, releasecommon.ApplicationNameDefault, releasecommon.ComponentName, releasecommon.DcMetroMapGitSourceURL, releasecommon.DcMetroMapGitRevision, ".", "Dockerfile", constants.DefaultDockerBuildPipelineBundle)
 
 		data, err := json.Marshal(map[string]interface{}{
 			"mapping": map[string]interface{}{
@@ -68,8 +70,8 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 		tenantPipeline := &tektonutils.ParameterizedPipeline{}
 		tenantPipeline.ServiceAccountName = constants.DefaultPipelineServiceAccount
 		tenantPipeline.Timeouts = tektonv1.TimeoutFields{
-                                Pipeline: &metav1.Duration{Duration: 1 * time.Hour},
-                        }
+			Pipeline: &metav1.Duration{Duration: 1 * time.Hour},
+		}
 
 		tenantPipeline.PipelineRef = tektonutils.PipelineRef{
 			Resolver: "git",
@@ -81,8 +83,8 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 		}
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, "", "", &runtime.RawExtension{
-                        Raw: data,
-                }, tenantPipeline)
+			Raw: data,
+		}, tenantPipeline)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasecommon.ReleasePvcName, devNamespace, corev1.ReadWriteOnce)
@@ -93,6 +95,18 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 		if !CurrentSpecReport().Failed() {
 			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 		}
+		// Delete new branches created by PaC and a testing branch used as a component's base branch
+		err = devFw.AsKubeAdmin.CommonController.Github.DeleteRef(releasecommon.DcMetroMapGitRepoName, pacBranchName)
+		if err != nil {
+			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+		}
+		err = devFw.AsKubeAdmin.CommonController.Github.DeleteRef(releasecommon.DcMetroMapGitRepoName, baseBranchName)
+		if err != nil {
+			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+		}
+
+		// Delete created webhook from GitHub
+		Expect(build.CleanupWebhooks(devFw, releasecommon.DcMetroMapGitRepoName)).ShouldNot(HaveOccurred())
 	})
 
 	var _ = Describe("Post-release verification", func() {

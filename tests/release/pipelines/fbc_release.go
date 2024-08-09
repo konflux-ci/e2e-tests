@@ -11,6 +11,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
@@ -24,7 +25,8 @@ import (
 
 const (
 	fbcServiceAccountName   = "release-service-account"
-	fbcSourceGitURL         = "https://github.com/redhat-appstudio-qe/fbc-sample-repo"
+	fbcSourceGitURL         = "https://github.com/redhat-appstudio-qe/fbc-sample-repo-release"
+	fbcGitRevision          = "8e374e107fecf03f3c64c528bb53798039661414"
 	fbcDockerFilePath       = "catalog.Dockerfile"
 	targetPort              = 50051
 	relSvcCatalogPathInRepo = "pipelines/fbc-release/fbc-release.yaml"
@@ -33,7 +35,6 @@ const (
 var snapshot *appservice.Snapshot
 var releaseCR *releaseapi.Release
 var buildPR *tektonv1.PipelineRun
-var err error
 var devWorkspace = utils.GetEnv(constants.RELEASE_DEV_WORKSPACE_ENV, constants.DevReleaseTeam)
 var managedWorkspace = utils.GetEnv(constants.RELEASE_MANAGED_WORKSPACE_ENV, constants.ManagedReleaseTeam)
 var devFw *framework.Framework
@@ -45,7 +46,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 
 	var devNamespace = devWorkspace + "-tenant"
 	var managedNamespace = managedWorkspace + "-tenant"
-
+	var err error
 	var issueId = "bz12345"
 	var productName = "preGA-product"
 	var productVersion = "v2"
@@ -69,6 +70,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 
 	Describe("with FBC happy path", Label("fbcHappyPath"), func() {
 		var component *appservice.Component
+		var baseBranchName, pacBranchName string
+
 		BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
@@ -88,7 +91,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 
 			createFBCReleasePlanAdmission(fbcReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, fbcApplicationName, fbcEnterpriseContractPolicyName, relSvcCatalogPathInRepo, "false", "", "", "", "")
 
-			component = releasecommon.CreateComponent(*devFw, devNamespace, fbcApplicationName, fbcComponentName, fbcSourceGitURL, "", "4.13", fbcDockerFilePath, constants.DefaultFbcBuilderPipelineBundle)
+			component, baseBranchName, pacBranchName = releasecommon.CreateComponent(*devFw, devNamespace, fbcApplicationName, fbcComponentName, fbcSourceGitURL, fbcGitRevision, "4.13", fbcDockerFilePath, constants.DefaultFbcBuilderPipelineBundle)
 
 			createFBCEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 
@@ -100,6 +103,16 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(fbcApplicationName, devNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
+			// Delete new branches created by PaC and a testing branch used as a component's base branch
+			err = devFw.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(fbcSourceGitURL), pacBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			err = devFw.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(fbcSourceGitURL), baseBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			Expect(build.CleanupWebhooks(devFw, utils.GetRepoName(fbcSourceGitURL))).ShouldNot(HaveOccurred())
 		})
 
 		var _ = Describe("Post-release verification", func() {
@@ -119,6 +132,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 
 	Describe("with FBC hotfix process", Label("fbcHotfix"), func() {
 		var component *appservice.Component
+		var baseBranchName, pacBranchName string
 
 		BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
@@ -133,7 +147,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 
 			createFBCReleasePlanAdmission(fbcHotfixRPAName, *managedFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixECPolicyName, relSvcCatalogPathInRepo, "true", issueId, "false", "", "")
 
-			component = releasecommon.CreateComponent(*devFw, devNamespace, fbcHotfixAppName, fbcHotfixCompName, fbcSourceGitURL, "", "4.13", fbcDockerFilePath, constants.DefaultFbcBuilderPipelineBundle)
+			component, baseBranchName, pacBranchName = releasecommon.CreateComponent(*devFw, devNamespace, fbcHotfixAppName, fbcHotfixCompName, fbcSourceGitURL, fbcGitRevision, "4.13", fbcDockerFilePath, constants.DefaultFbcBuilderPipelineBundle)
 
 			createFBCEnterpriseContractPolicy(fbcHotfixECPolicyName, *managedFw, devNamespace, managedNamespace)
 		})
@@ -144,6 +158,16 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(fbcHotfixAppName, devNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcHotfixECPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcHotfixRPAName, managedNamespace, false)).NotTo(HaveOccurred())
+			// Delete new branches created by PaC and a testing branch used as a component's base branch
+			err = devFw.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(fbcSourceGitURL), pacBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			err = devFw.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(fbcSourceGitURL), baseBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			Expect(build.CleanupWebhooks(devFw, utils.GetRepoName(fbcSourceGitURL))).ShouldNot(HaveOccurred())
 		})
 
 		var _ = Describe("FBC hotfix post-release verification", func() {
@@ -163,6 +187,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 
 	Describe("with FBC pre-GA process", Label("fbcPreGA"), func() {
 		var component *appservice.Component
+		var baseBranchName, pacBranchName string
 
 		BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
@@ -177,7 +202,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 
 			createFBCReleasePlanAdmission(fbcPreGARPAName, *managedFw, devNamespace, managedNamespace, fbcPreGAAppName, fbcPreGAECPolicyName, relSvcCatalogPathInRepo, "false", issueId, "true", productName, productVersion)
 
-			component = releasecommon.CreateComponent(*devFw, devNamespace, fbcPreGAAppName, fbcPreGACompName, fbcSourceGitURL, "", "4.13", fbcDockerFilePath, constants.DefaultFbcBuilderPipelineBundle)
+			component, baseBranchName, pacBranchName = releasecommon.CreateComponent(*devFw, devNamespace, fbcPreGAAppName, fbcPreGACompName, fbcSourceGitURL, fbcGitRevision, "4.13", fbcDockerFilePath, constants.DefaultFbcBuilderPipelineBundle)
 
 			createFBCEnterpriseContractPolicy(fbcPreGAECPolicyName, *managedFw, devNamespace, managedNamespace)
 		})
@@ -190,6 +215,17 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 				Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcPreGAECPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
 				Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcPreGARPAName, managedNamespace, false)).NotTo(HaveOccurred())
 			}
+			// Delete new branches created by PaC and a testing branch used as a component's base branch
+			err = devFw.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(fbcSourceGitURL), pacBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			err = devFw.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(fbcSourceGitURL), baseBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			// Delete created webhook from GitHub
+			Expect(build.CleanupWebhooks(devFw, utils.GetRepoName(fbcSourceGitURL))).ShouldNot(HaveOccurred())
 		})
 
 		var _ = Describe("FBC pre-GA post-release verification", func() {
@@ -209,6 +245,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 })
 
 func assertBuildPipelineRunSucceeded(devFw framework.Framework, devNamespace, managedNamespace, fbcAppName string, component *appservice.Component) {
+	var err error
 	dFw := releasecommon.NewFramework(devWorkspace)
 	devFw = *dFw
 	// Create a ticker that ticks every 3 minutes
@@ -247,6 +284,7 @@ func assertBuildPipelineRunSucceeded(devFw framework.Framework, devNamespace, ma
 }
 
 func assertReleasePipelineRunSucceeded(devFw, managedFw framework.Framework, devNamespace, managedNamespace, fbcAppName string, component *appservice.Component) {
+	var err error
 	snapshot, err = devFw.AsKubeDeveloper.IntegrationController.WaitForSnapshotToGetCreated("", "", component.Name, devNamespace)
 	Expect(err).ToNot(HaveOccurred())
 	GinkgoWriter.Println("snapshot: ", snapshot.Name)
@@ -278,6 +316,7 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw framework.Framework, dev
 }
 
 func assertReleaseCRSucceeded(devFw framework.Framework, devNamespace, managedNamespace, fbcAppName string, component *appservice.Component) {
+	var err error
 	dFw := releasecommon.NewFramework(devWorkspace)
 	Eventually(func() error {
 		releaseCR, err = dFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)

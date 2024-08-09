@@ -13,6 +13,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
@@ -29,9 +30,10 @@ import (
 
 const (
 	sampServiceAccountName = "release-service-account"
-	sampSourceGitURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic"
+	sampSourceGitURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic-release"
+	sampGitRevision        = "508445a786e84c01e84c8c46d9d2407642d02762"
 	sampRepoOwner          = "redhat-appstudio-qe"
-	sampRepo               = "devfile-sample-go-basic"
+	sampRepo               = "devfile-sample-go-basic-release"
 	sampCatalogPathInRepo  = "pipelines/release-to-github/release-to-github.yaml"
 )
 
@@ -58,6 +60,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 	var releasePR, buildPR *tektonv1.PipelineRun
 	var gh *github.Github
 	var sampReleaseURL string
+	var baseBranchName, pacBranchName string
 
 	AfterEach(framework.ReportFailure(&devFw))
 
@@ -106,7 +109,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 
 			createGHReleasePlanAdmission(sampReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, sampApplicationName, sampEnterpriseContractPolicyName, sampCatalogPathInRepo, "false", "", "", "", "")
 
-			component = releasecommon.CreateComponent(*devFw, devNamespace, sampApplicationName, sampComponentName, sampSourceGitURL, "", ".", "Dockerfile", constants.DefaultDockerBuildPipelineBundle)
+			component, baseBranchName, pacBranchName = releasecommon.CreateComponent(*devFw, devNamespace, sampApplicationName, sampComponentName, sampSourceGitURL, sampGitRevision, ".", "Dockerfile", constants.DefaultDockerBuildPipelineBundle)
 
 			createGHEnterpriseContractPolicy(sampEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 		})
@@ -121,6 +124,19 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 			if gh.CheckIfReleaseExist(sampRepoOwner, sampRepo, sampReleaseURL) {
 				gh.DeleteRelease(sampRepoOwner, sampRepo, sampReleaseURL)
 			}
+			// Delete new branches created by PaC and a testing branch used as a component's base branch
+			err = devFw.AsKubeAdmin.CommonController.Github.DeleteRef(sampRepo, pacBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			err = devFw.AsKubeAdmin.CommonController.Github.DeleteRef(sampRepo, baseBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+
+			// Delete created webhook from GitHub
+			Expect(build.CleanupWebhooks(devFw, sampRepo)).ShouldNot(HaveOccurred())
+
 		})
 
 		var _ = Describe("Post-release verification", func() {

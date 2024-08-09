@@ -14,6 +14,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/contract"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
@@ -28,7 +29,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 	var fw *framework.Framework
 	AfterEach(framework.ReportFailure(&fw))
 	var err error
-	var devNamespace, managedNamespace string
+	var devNamespace, managedNamespace, baseBranchName, pacBranchName string
 
 	var component *appservice.Component
 	var releaseCR *releaseApi.Release
@@ -72,7 +73,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		component = releasecommon.CreateComponent(*fw, devNamespace, releasecommon.ApplicationNameDefault, releasecommon.ComponentName, releasecommon.GitSourceComponentUrl, "", ".", "Dockerfile", constants.DefaultDockerBuildPipelineBundle)
+		component, baseBranchName, pacBranchName = releasecommon.CreateComponent(*fw, devNamespace, releasecommon.ApplicationNameDefault, releasecommon.ComponentName, releasecommon.DcMetroMapGitSourceURL, releasecommon.DcMetroMapGitRevision, ".", "Dockerfile", constants.DefaultDockerBuildPipelineBundle)
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, managedNamespace, "", nil, nil)
 		Expect(err).NotTo(HaveOccurred())
@@ -128,6 +129,18 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
 			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 		}
+		// Delete new branches created by PaC and a testing branch used as a component's base branch
+		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(releasecommon.DcMetroMapGitRepoName, pacBranchName)
+		if err != nil {
+			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+		}
+		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(releasecommon.DcMetroMapGitRepoName, baseBranchName)
+		if err != nil {
+			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+		}
+
+		// Delete created webhook from GitHub
+		Expect(build.CleanupWebhooks(fw, releasecommon.DcMetroMapGitRepoName)).ShouldNot(HaveOccurred())
 	})
 
 	var _ = Describe("Post-release verification", func() {

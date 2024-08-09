@@ -5,17 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
-	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
@@ -69,6 +70,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 	var snapshot *appservice.Snapshot
 	var releaseCR *releaseapi.Release
 	var buildPR *tektonv1.PipelineRun
+
+	var baseBranchName, pacBranchName string
 
 	AfterEach(framework.ReportFailure(&devFw))
 
@@ -124,22 +127,28 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(rhtapReleasePlanName, devNamespace, rhtapApplicationName, managedNamespace, "true", nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 
+			pacBranchName = constants.PaCPullRequestBranchPrefix + rhtapComponentName
+			baseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
+
+			err = devFw.AsKubeAdmin.CommonController.Github.CreateRef(rhtapGitSourceRepoName, rhtapGitSrcDefaultBranch, rhtapGitSrcDefaultSHA, baseBranchName)
+			Expect(err).ShouldNot(HaveOccurred())
+
 			componentObj := appstudioApi.ComponentSpec{
 				ComponentName: rhtapComponentName,
 				Application:   rhtapApplicationName,
 				Source: appstudioApi.ComponentSource{
 					ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
 						GitSource: &appstudioApi.GitSource{
-							URL:      rhtapGitSourceURL,
-							Revision: testBaseBranchName,
-							Context:  ".",
+							URL:           rhtapGitSourceURL,
+							Revision:      baseBranchName,
+							Context:       ".",
 							DockerfileURL: constants.DockerFilePath,
 						},
 					},
 				},
 			}
 			// Create a component with Git Source URL, a specified git branch
-			rhtapComponent, err = devFw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", rhtapApplicationName, true, constants.DefaultDockerBuildPipelineBundle)
+			rhtapComponent, err = devFw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", rhtapApplicationName, true, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.DefaultDockerBuildPipelineBundle))
 			Expect(err).ShouldNot(HaveOccurred())
 
 			createRHTAPReleasePlanAdmission(rhtapReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, rhtapApplicationName, rhtapEnterpriseContractPolicyName, rhtapCatalogPathInRepo)
@@ -153,6 +162,18 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(rhtapApplicationName, devNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(rhtapEnterpriseContractPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(rhtapReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
+			// Delete new branches created by PaC and a testing branch used as a component's base branch
+			err = devFw.AsKubeAdmin.CommonController.Github.DeleteRef(rhtapGitSourceRepoName, pacBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			err = devFw.AsKubeAdmin.CommonController.Github.DeleteRef(rhtapGitSourceRepoName, baseBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+
+			// Delete created webhook from GitHub
+			Expect(build.CleanupWebhooks(devFw, rhtapGitSourceRepoName)).ShouldNot(HaveOccurred())
 		})
 
 		var _ = Describe("Post-release verification", func() {
@@ -237,7 +258,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 
 							body := pr.Body
 							GinkgoWriter.Printf("Body of PR #%d: %s \n", pr.GetNumber(), *body)
-							prLink := fmt.Sprintf(rhtapGitSourceURL + "/pull/%d", sourcePrNum)
+							prLink := fmt.Sprintf(rhtapGitSourceURL+"/pull/%d", sourcePrNum)
 							GinkgoWriter.Printf("The source PR link: %s", prLink)
 							if strings.Contains(*body, prLink) {
 								GinkgoWriter.Printf("The source PR#%d is added to the PR of infra-deployments", sourcePrNum)
@@ -295,9 +316,9 @@ func createRHTAPReleasePlanAdmission(rhtapRPAName string, managedFw framework.Fr
 			"server": "stage",
 			"secret": "pyxis",
 		},
-		"targetGHRepo": "hacbs-release/infra-deployments",
-		"githubAppID": "932323",
-		"githubAppInstallationID": "52284535",
+		"targetGHRepo":                   "hacbs-release/infra-deployments",
+		"githubAppID":                    "932323",
+		"githubAppInstallationID":        "52284535",
 		"infra-deployment-update-script": "sed -i -e 's|\\(https://github.com/hacbs-release/release-service/config/default?ref=\\)\\(.*\\)|\\1{{ revision }}|' -e 's/\\(newTag: \\).*/\\1{{ revision }}/' components/release/development/kustomization.yaml",
 		"sign": map[string]interface{}{
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",
@@ -321,6 +342,7 @@ func createRHTAPReleasePlanAdmission(rhtapRPAName string, managedFw framework.Fr
 // prepareMergedPR function is to prepare a merged PR in source repo for testing update-infra-deployments task
 func prepareMergedPR(devFw *framework.Framework, testBaseBranchName, testPRBranchName string) (int, string) {
 	//Create the ref, add the file,  create the PR and merge the PR
+	var err error
 	err = devFw.AsKubeAdmin.CommonController.Github.CreateRef(rhtapGitSourceRepoName, rhtapGitSrcDefaultBranch, rhtapGitSrcDefaultSHA, testBaseBranchName)
 	Expect(err).ShouldNot(HaveOccurred())
 
@@ -348,4 +370,3 @@ func prepareMergedPR(devFw *framework.Framework, testBaseBranchName, testPRBranc
 
 	return pr.GetNumber(), mergeResultSha
 }
-

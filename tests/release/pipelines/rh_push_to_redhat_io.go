@@ -14,6 +14,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
@@ -57,6 +58,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 	var snapshot *appservice.Snapshot
 	var releaseCR *releaseapi.Release
 	var releasePR, buildPR *tektonv1.PipelineRun
+	var baseBranchName, pacBranchName string
 
 	AfterEach(framework.ReportFailure(&devFw))
 
@@ -106,7 +108,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(rhioReleasePlanName, devNamespace, rhioApplicationName, managedNamespace, "true", nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 
-			testComponent = releasecommon.CreateComponent(*devFw, devNamespace, rhioApplicationName, rhioComponentName, releasecommon.AdditionalGitSourceComponentUrl, "", ".", constants.DockerFilePath, constants.DefaultDockerBuildPipelineBundle)
+			testComponent, baseBranchName, pacBranchName = releasecommon.CreateComponent(*devFw, devNamespace, rhioApplicationName, rhioComponentName, releasecommon.AdditionalGitSourceComponentUrl, releasecommon.AdditionalGitRevision, ".", constants.DockerFilePath, constants.DefaultDockerBuildPipelineBundle)
 
 			createRHIOReleasePlanAdmission(rhioReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, rhioApplicationName, rhioEnterpriseContractPolicyName, rhioCatalogPathInRepo)
 
@@ -119,6 +121,18 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(rhioApplicationName, devNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(rhioEnterpriseContractPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(rhioReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
+			// Delete new branches created by PaC and a testing branch used as a component's base branch
+			err = devFw.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(releasecommon.AdditionalGitSourceComponentUrl), pacBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			err = devFw.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(releasecommon.AdditionalGitSourceComponentUrl), baseBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+
+			// Delete created webhook from GitHub
+			Expect(build.CleanupWebhooks(devFw, utils.GetRepoName(releasecommon.AdditionalGitSourceComponentUrl))).ShouldNot(HaveOccurred())
 		})
 
 		var _ = Describe("Post-release verification", func() {
