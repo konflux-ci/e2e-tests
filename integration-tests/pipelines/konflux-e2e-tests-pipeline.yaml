@@ -23,12 +23,12 @@
       - name: test-event-type
         description: 'Indicates if the test is triggered by a Pull Request or Push event.'
         default: 'none'    
-      - name: aws-credential-secret
-        description: The AWS credential used for provisioning the ROSA cluster.
+      - name: konflux-test-infra-secret
+        description: The name of secret where testing infrastructures credentials are stored.
         type: string
-      - name: hcp-config-secret
+      - name: cloud-credential-key
         type: string
-        description: The AWS resouces used for provisioning the ROSA cluster.
+        description: The key secret from konflux-test-infra-secret where all AWS ROSA configurations are stored.
       - name: replicas
         description: 'The number of replicas for the cluster nodes.'
         type: string
@@ -95,10 +95,10 @@
             value: "$(params.replicas)"
           - name: machine-type
             value: "$(params.machine-type)"
-          - name: aws-credential-secret
-            value: "$(params.aws-credential-secret)"
-          - name: hcp-config-secret
-            value: "$(params.hcp-config-secret)"
+          - name: konflux-test-infra-secret
+            value: "$(params.konflux-test-infra-secret)"
+          - name: cloud-credential-key
+            value: "$(params.cloud-credential-key)"
       - name: konflux-e2e-tests
         timeout: 2h
         when:
@@ -167,10 +167,10 @@
             value: "$(tasks.test-metadata.results.git-org)"
           - name: cluster-name
             value: "$(tasks.rosa-hcp-metadata.results.cluster-name)"
-          - name: aws-credential-secret
-            value: "$(params.aws-credential-secret)"
-          - name: hcp-config-secret
-            value: "$(params.hcp-config-secret)"
+          - name: konflux-test-infra-secret
+            value: "$(params.konflux-test-infra-secret)"
+          - name: cloud-credential-key
+            value: "$(params.cloud-credential-key)"
       - name: quality-dashboard-upload
         when:
           - input: "$(tasks.test-metadata.results.test-event-type)"
