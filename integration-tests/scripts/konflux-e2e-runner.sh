@@ -2,20 +2,19 @@
 
 function postActions() {
     local EXIT_CODE=$?
-    
-    cd /workspace || exit 1
-
-    # Save artifacts
-    oras login -u "$ORAS_USERNAME" -p "$ORAS_PASSWORD" quay.io
-    echo '{"doc": "README.md"}' > config.json
-    
-    oras push "$ORAS_CONTAINER" --config config.json:application/vnd.acme.rocket.config.v1+json \
-        ./test-artifacts/:application/vnd.acme.rocket.docs.layer.v1+tar
 
     # Unregister PaC Server from SprayProxy
     if [ "$UNREGISTER_PAC" == "true" ]; then
         make ci/sprayproxy/unregister || true
     fi
+
+    # Save artifacts
+    cd /workspace || exit 1
+    oras login -u "$ORAS_USERNAME" -p "$ORAS_PASSWORD" quay.io
+    echo '{"doc": "README.md"}' > config.json
+    
+    oras push "$ORAS_CONTAINER" --config config.json:application/vnd.acme.rocket.config.v1+json \
+        ./test-artifacts/:application/vnd.acme.rocket.docs.layer.v1+tar
     
     exit "$EXIT_CODE"
 }
