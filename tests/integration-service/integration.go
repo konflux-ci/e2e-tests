@@ -29,7 +29,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	var f *framework.Framework
 	var err error
 
-	var applicationName, componentName, testNamespace string
+	var prHeadSha string
 	var integrationTestScenario *integrationv1beta2.IntegrationTestScenario
 	var newIntegrationTestScenario *integrationv1beta2.IntegrationTestScenario
 	var timeout, interval time.Duration
@@ -37,6 +37,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	var pipelineRun *pipeline.PipelineRun
 	var snapshot *appstudioApi.Snapshot
 	var snapshotPush *appstudioApi.Snapshot
+	var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace string
+
 	AfterEach(framework.ReportFailure(&f))
 
 	Describe("with happy path for general flow of Integration service", Ordered, func() {
@@ -47,7 +49,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			testNamespace = f.UserNamespace
 
 			applicationName = createApp(*f, testNamespace)
-			componentName, originalComponent = createComponent(*f, testNamespace, applicationName)
+			originalComponent, componentName, pacBranchName, componentBaseBranchName = createComponent(*f, testNamespace, applicationName, componentRepoNameForGeneralIntegration, componentGitSourceURLForGeneralIntegration)
+
 			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
@@ -57,6 +60,16 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				cleanup(*f, testNamespace, applicationName, componentName)
 
 				Expect(f.AsKubeAdmin.IntegrationController.DeleteSnapshot(snapshotPush, testNamespace)).To(Succeed())
+			}
+
+			// Delete new branches created by PaC and a testing branch used as a component's base branch
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepoNameForGeneralIntegration, pacBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring(referenceDoesntExist))
+			}
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepoNameForGeneralIntegration, componentBaseBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring(referenceDoesntExist))
 			}
 		})
 
@@ -81,6 +94,28 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
 				Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "",
 					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
+			})
+
+			It("should have a related PaC init PR created", func() {
+				timeout = time.Second * 300
+				interval = time.Second * 1
+
+				Eventually(func() bool {
+					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepoNameForGeneralIntegration)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					for _, pr := range prs {
+						if pr.Head.GetRef() == pacBranchName {
+							prHeadSha = pr.Head.GetSHA()
+							return true
+						}
+					}
+					return false
+				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
+
+				// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
+				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, prHeadSha)
+				Expect(err).ShouldNot(HaveOccurred())
 			})
 		})
 
@@ -192,7 +227,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			testNamespace = f.UserNamespace
 
 			applicationName = createApp(*f, testNamespace)
-			componentName, originalComponent = createComponent(*f, testNamespace, applicationName)
+			originalComponent, componentName, pacBranchName, componentBaseBranchName = createComponent(*f, testNamespace, applicationName, componentRepoNameForGeneralIntegration, componentGitSourceURLForGeneralIntegration)
 
 			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail)
 			Expect(err).ShouldNot(HaveOccurred())
@@ -201,7 +236,16 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
 				cleanup(*f, testNamespace, applicationName, componentName)
+			}
 
+			// Delete new branches created by PaC and a testing branch used as a component's base branch
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepoNameForGeneralIntegration, pacBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring(referenceDoesntExist))
+			}
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepoNameForGeneralIntegration, componentBaseBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring(referenceDoesntExist))
 			}
 		})
 
@@ -210,7 +254,28 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
 			Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", f.AsKubeAdmin.TektonController,
 				&has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
+		})
 
+		It("should have a related PaC init PR created", func() {
+			timeout = time.Second * 300
+			interval = time.Second * 1
+
+			Eventually(func() bool {
+				prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepoNameForGeneralIntegration)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				for _, pr := range prs {
+					if pr.Head.GetRef() == pacBranchName {
+						prHeadSha = pr.Head.GetSHA()
+						return true
+					}
+				}
+				return false
+			}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
+
+			// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
+			pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, prHeadSha)
+			Expect(err).ShouldNot(HaveOccurred())
 		})
 
 		It("checks if the BuildPipelineRun have the annotation of chains signed", func() {
@@ -315,7 +380,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(f.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)).To(BeFalse(), "expected tests to fail for snapshot %s/%s", snapshot.GetNamespace(), snapshot.GetName())
 			})
-
 		})
 
 		It("creates an snapshot of push event", func() {
@@ -343,9 +407,13 @@ func createApp(f framework.Framework, testNamespace string) string {
 	return applicationName
 }
 
-func createComponent(f framework.Framework, testNamespace, applicationName string) (string, *appstudioApi.Component) {
+func createComponent(f framework.Framework, testNamespace, applicationName, componentRepoName, componentRepoURL string) (*appstudioApi.Component, string, string, string) {
+	componentName := fmt.Sprintf("%s-%s", "test-component-pac", util.GenerateRandomString(6))
+	pacBranchName := constants.PaCPullRequestBranchPrefix + componentName
+	componentBaseBranchName := fmt.Sprintf("base-%s", util.GenerateRandomString(6))
 
-	componentName := fmt.Sprintf("integration-suite-test-component-git-source-%s", util.GenerateRandomString(6))
+	err := f.AsKubeAdmin.CommonController.Github.CreateRef(componentRepoName, componentDefaultBranch, componentRevision, componentBaseBranchName)
+	Expect(err).ShouldNot(HaveOccurred())
 
 	componentObj := appstudioApi.ComponentSpec{
 		ComponentName: componentName,
@@ -354,15 +422,16 @@ func createComponent(f framework.Framework, testNamespace, applicationName strin
 			ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
 				GitSource: &appstudioApi.GitSource{
 					URL: componentRepoURL,
+					Revision: componentBaseBranchName,
 				},
 			},
 		},
 	}
 
-	originalComponent, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, constants.DefaultDockerBuildPipelineBundle)
+	originalComponent, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
 	Expect(err).NotTo(HaveOccurred())
 
-	return componentName, originalComponent
+	return originalComponent, componentName, pacBranchName, componentBaseBranchName
 }
 
 func cleanup(f framework.Framework, testNamespace, applicationName, componentName string) {

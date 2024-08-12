@@ -118,6 +118,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 					if err != nil {
 						Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 					}
+					Expect(build.CleanupWebhooks(fw, componentRepositoryName)).ShouldNot(HaveOccurred())
 				}
 			})
 
@@ -274,7 +275,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 				It("should validate Tekton TaskRun test results successfully", func() {
 					pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appSpec.ApplicationName, fw.UserNamespace, headSHA)
 					Expect(err).ShouldNot(HaveOccurred())
-					Expect(build.ValidateBuildPipelineTestResults(pipelineRun, fw.AsKubeAdmin.CommonController.KubeRest())).To(Succeed())
+					Expect(build.ValidateBuildPipelineTestResults(pipelineRun, fw.AsKubeAdmin.CommonController.KubeRest(), false)).To(Succeed())
 				})
 
 				It("should validate that the build pipelineRun is signed", func() {

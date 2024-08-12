@@ -12,8 +12,8 @@ const (
 	COMPONENT_REPO_URLS_ENV string = "COMPONENT_REPO_URLS"
 
 	containerImageSource             = "quay.io/redhat-appstudio-qe/busybox-loop@sha256:f698f1f2cf641fe9176d2a277c9052d872f6b1c39e56248a1dd259b96281dda9"
-	pythonComponentGitSourceURL      = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic"
 	gitRepoContainsSymlinkBranchName = "symlink"
+	symlinkBranchRevision            = "27ecfca9c9dad35e4f07ebbcd706f31cb7ce849f"
 	dummyPipelineBundleRef           = "quay.io/redhat-appstudio-qe/dummy-pipeline-bundle@sha256:9805fc3f309af8f838622e49d3e7705d8364eb5c8287043d5725f3ef12232f24"
 	buildTemplatesTestLabel          = "build-templates-e2e"
 	buildTemplatesKcpTestLabel       = "build-templates-kcp-e2e"
@@ -22,6 +22,9 @@ const (
 	helloWorldComponentGitSourceRepoName = "devfile-sample-hello-world"
 	helloWorldComponentDefaultBranch     = "default"
 	helloWorldComponentRevision          = "d2d03e69de912e3827c29b4c5b71ffe8bcb5dad8"
+
+	helloWorldComponentGitSourceCloneRepoName = "devfile-sample-hello-world-clone"
+	helloWorldComponentCloneRevision          = "bb1d243a9c030e715ac2a7829973d226816446c3"
 
 	multiComponentGitSourceRepoName = "sample-multi-component"
 	multiComponentDefaultBranch     = "main"
@@ -45,22 +48,26 @@ const (
 	componentDependenciesChildGitRevision    = "56c13d17b1a8f801f2c41091e6f4e62cf16ee5f2"
 
 	githubUrlFormat = "https://github.com/%s/%s"
+	gitlabUrlFormat = "https://gitlab.com/%s"
 
 	//Logging related
 	buildStatusAnnotationValueLoggingFormat = "build status annotation value: %s\n"
 
-	noAppOrgName = "redhat-appstudio-qe-no-app"
+	noAppOrgName            = "redhat-appstudio-qe-no-app"
+	pythonComponentRepoName = "devfile-sample-python-basic"
 )
 
 var (
-	additionalTags                  = []string{"test-tag1", "test-tag2"}
-	componentUrls                   = strings.Split(utils.GetEnv(COMPONENT_REPO_URLS_ENV, pythonComponentGitSourceURL), ",") //multiple urls
-	componentNames                  []string
-	gihubOrg                        = utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
-	helloWorldComponentGitSourceURL = fmt.Sprintf(githubUrlFormat, gihubOrg, helloWorldComponentGitSourceRepoName)
-	annotationsTestGitSourceURL     = fmt.Sprintf(githubUrlFormat, gihubOrg, annotationsTestGitSourceRepoName)
-	multiComponentGitSourceURL      = fmt.Sprintf(githubUrlFormat, gihubOrg, multiComponentGitSourceRepoName)
-	multiComponentContextDirs       = []string{"go-component", "python-component"}
+	additionalTags                       = []string{"test-tag1", "test-tag2"}
+	componentUrls                        = strings.Split(utils.GetEnv(COMPONENT_REPO_URLS_ENV, pythonComponentGitSourceURL), ",") //multiple urls
+	componentNames                       []string
+	gihubOrg                             = utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
+	helloWorldComponentGitSourceURL      = fmt.Sprintf(githubUrlFormat, gihubOrg, helloWorldComponentGitSourceRepoName)
+	annotationsTestGitSourceURL          = fmt.Sprintf(githubUrlFormat, gihubOrg, annotationsTestGitSourceRepoName)
+	multiComponentGitSourceURL           = fmt.Sprintf(githubUrlFormat, gihubOrg, multiComponentGitSourceRepoName)
+	multiComponentContextDirs            = []string{"go-component", "python-component"}
+	pythonComponentGitSourceURL          = fmt.Sprintf(githubUrlFormat, gihubOrg, pythonComponentRepoName)
+	helloWorldComponentGitSourceCloneURL = fmt.Sprintf(githubUrlFormat, gihubOrg, helloWorldComponentGitSourceCloneRepoName)
 
 	secretLookupComponentOneGitSourceURL = fmt.Sprintf(githubUrlFormat, noAppOrgName, secretLookupGitSourceRepoOneName)
 	secretLookupComponentTwoGitSourceURL = fmt.Sprintf(githubUrlFormat, noAppOrgName, secretLookupGitSourceRepoTwoName)

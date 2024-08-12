@@ -8,8 +8,6 @@ import (
 )
 
 const (
-	componentRepoURL = "https://github.com/redhat-appstudio-qe/hacbs-test-project"
-
 	EnvironmentName                = "development"
 	gitURL                         = "https://github.com/konflux-ci/integration-examples.git"
 	revision                       = "ab868616ab02be79b6abdf85dcd2a3aef321ff14"
@@ -19,7 +17,9 @@ const (
 	autoReleasePlan                = "auto-releaseplan"
 	targetReleaseNamespace         = "default"
 
-	componentRepoNameForStatusReporting       = "hacbs-test-project-integration"
+	componentRepoNameForGeneralIntegration    = "hacbs-test-project-integration"
+	componentRepoNameForIntegrationWithEnv    = "test-integration-with-env"
+	componentRepoNameForStatusReporting       = "test-integration-status-report"
 	componentDefaultBranch                    = "main"
 	componentRevision                         = "34da5a8f51fba6a8b7ec75a727d3c72ebb5e1274"
 	referenceDoesntExist                      = "Reference does not exist"
@@ -41,6 +41,10 @@ const (
 )
 
 var (
+	componentGitSourceURLForGeneralIntegration    = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), componentRepoNameForGeneralIntegration)
+	componentGitSourceURLForIntegrationWithEnv    = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), componentRepoNameForIntegrationWithEnv)
 	componentGitSourceURLForStatusReporting       = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), componentRepoNameForStatusReporting)
-	gitlabComponentGitSourceURLForStatusReporting = fmt.Sprintf("https://gitlab.com/konflux-qe/%s", componentRepoNameForStatusReporting)
+	gitlabOrg                                     = utils.GetEnv(constants.GITLAB_QE_ORG_ENV, constants.DefaultGitLabQEOrg)
+	gitlabProjectIDForStatusReporting             = fmt.Sprintf("%s/%s", gitlabOrg, componentRepoNameForStatusReporting)
+	gitlabComponentGitSourceURLForStatusReporting = fmt.Sprintf("https://gitlab.com/%s/%s", gitlabOrg, componentRepoNameForStatusReporting)
 )

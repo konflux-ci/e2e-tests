@@ -35,35 +35,9 @@ type Vulnerabilities struct {
 	Low      int `json:"low"`
 }
 
-type PipelineBuildInfo struct {
-	runtime  string
-	strategy string
-}
-
-func GetPipelineBuildInfo(pr *pipeline.PipelineRun) PipelineBuildInfo {
-	labels := pr.GetLabels()
-	runtime := labels["pipelines.openshift.io/runtime"]
-	strategy := labels["pipelines.openshift.io/strategy"]
-	return PipelineBuildInfo{
-		runtime:  runtime,
-		strategy: strategy,
-	}
-}
-
-func IsDockerBuild(pr *pipeline.PipelineRun) bool {
-	info := GetPipelineBuildInfo(pr)
-	return info.runtime == "generic" && info.strategy == "docker"
-}
-
-func IsFBCBuild(pr *pipeline.PipelineRun) bool {
-	info := GetPipelineBuildInfo(pr)
-	return info.runtime == "fbc" && info.strategy == "fbc"
-}
-
-func ValidateBuildPipelineTestResults(pipelineRun *pipeline.PipelineRun, c crclient.Client) error {
+func ValidateBuildPipelineTestResults(pipelineRun *pipeline.PipelineRun, c crclient.Client, isFBCBuild bool) error {
 	for _, taskName := range taskNames {
 		// The inspect-image task is only required for FBC pipelines which we can infer by the component name
-		isFBCBuild := IsFBCBuild(pipelineRun)
 
 		if !isFBCBuild && taskName == "inspect-image" {
 			continue

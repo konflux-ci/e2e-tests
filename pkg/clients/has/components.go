@@ -168,10 +168,10 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 			}
 
 			var prLogs string
-			if err = t.StorePipelineRun(pr); err != nil {
+			if err = t.StorePipelineRun(component.GetName(), pr); err != nil {
 				GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
 			}
-			if prLogs, err = t.GetPipelineRunLogs(pr.Name, pr.Namespace); err != nil {
+			if prLogs, err = t.GetPipelineRunLogs(component.GetName(), pr.Name, pr.Namespace); err != nil {
 				GinkgoWriter.Printf("failed to get logs for PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
 			}
 
@@ -408,7 +408,8 @@ func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Comp
 		}
 
 		if gitProvider == "gitlab" {
-			_, err := h.GitLab.CreateFile(util.GenerateRandomString(5), "test", branchName)
+			projectID := utils.GetEnv(constants.GITLAB_PROJECT_ID_ENV, "")
+			_, err := h.GitLab.CreateFile(projectID, util.GenerateRandomString(5), "test", branchName)
 			if err != nil {
 				return "", fmt.Errorf("failed to retrigger PipelineRun %s in %s namespace: %+v", pr.GetName(), pr.GetNamespace(), err)
 			}

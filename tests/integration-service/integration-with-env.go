@@ -27,13 +27,14 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	var f *framework.Framework
 	var err error
 
-	var applicationName, componentName, testNamespace string
+	var prHeadSha string
 	var integrationTestScenario *integrationv1beta2.IntegrationTestScenario
 	var timeout, interval time.Duration
 	var originalComponent *appstudioApi.Component
 	var pipelineRun, integrationPipelineRun *pipeline.PipelineRun
 	var snapshot *appstudioApi.Snapshot
 	var spaceRequest *v1alpha1.SpaceRequest
+	var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace string
 
 	AfterEach(framework.ReportFailure(&f))
 
@@ -45,7 +46,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			testNamespace = f.UserNamespace
 
 			applicationName = createApp(*f, testNamespace)
-			componentName, originalComponent = createComponent(*f, testNamespace, applicationName)
+			originalComponent, componentName, pacBranchName, componentBaseBranchName = createComponent(*f, testNamespace, applicationName, componentRepoNameForIntegrationWithEnv, componentGitSourceURLForIntegrationWithEnv)
 			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathIntegrationPipelineWithEnv)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
@@ -53,6 +54,16 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
 				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
+			}
+
+			// Delete new branches created by PaC and a testing branch used as a component's base branch
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepoNameForIntegrationWithEnv, pacBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring(referenceDoesntExist))
+			}
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepoNameForIntegrationWithEnv, componentBaseBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring(referenceDoesntExist))
 			}
 		})
 
@@ -78,6 +89,28 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "",
 					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
 			})
+
+			It("should have a related PaC init PR created", func() {
+				timeout = time.Second * 300
+				interval = time.Second * 1
+
+				Eventually(func() bool {
+					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepoNameForIntegrationWithEnv)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					for _, pr := range prs {
+						if pr.Head.GetRef() == pacBranchName {
+							prHeadSha = pr.Head.GetSHA()
+							return true
+						}
+					}
+					return false
+				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
+
+				// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
+				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, prHeadSha)
+				Expect(err).ShouldNot(HaveOccurred())
+			})
 		})
 
 		When("the build pipelineRun run succeeded", func() {
@@ -87,7 +120,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			It("checks if the Snapshot is created", func() {
 				snapshot, err = f.AsKubeDeveloper.IntegrationController.WaitForSnapshotToGetCreated("", "", componentName, testNamespace)
-
 			})
 
 			It("checks if the Build PipelineRun got annotated with Snapshot name", func() {
@@ -172,7 +204,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					}
 					return fmt.Errorf("spaceRequest %s/%s still exists", currentSpaceRequest.Namespace, currentSpaceRequest.Name)
 				}, timeout, interval).Should(Succeed())
-
 			})
 		})
 	})

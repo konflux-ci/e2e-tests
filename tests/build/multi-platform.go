@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	"golang.org/x/crypto/ssh"
 	v1 "k8s.io/api/core/v1"
 
@@ -53,7 +54,7 @@ const (
 
 var (
 	IbmVpc                       = "us-east-default-vpc"
-	multiPlatformProjectGitUrl   = utils.GetEnv("MULTI_PLATFORM_TEST_REPO_URL", "https://github.com/devfile-samples/devfile-sample-go-basic")
+	multiPlatformProjectGitUrl   = utils.GetEnv("MULTI_PLATFORM_TEST_REPO_URL", fmt.Sprintf("https://github.com/%s/devfile-sample-go-basic", gihubOrg))
 	multiPlatformProjectRevision = utils.GetEnv("MULTI_PLATFORM_TEST_REPO_REVISION", "c713067b0e65fb3de50d1f7c457eb51c2ab0dbb0")
 	timeout                      = 20 * time.Minute
 	interval                     = 10 * time.Second
@@ -68,7 +69,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 
 	Describe("aws host-pool allocation", Label("aws-host-pool"), func() {
 
-		var testNamespace, applicationName, componentName, multiPlatformSecretName, host, userDir string
+		var testNamespace, applicationName, componentName, pacBranchName, baseBranchName, multiPlatformSecretName, host, userDir string
 		var component *appservice.Component
 
 		AfterAll(func() {
@@ -84,6 +85,17 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 				Expect(f.AsKubeAdmin.CommonController.StoreAllPods(testNamespace)).To(Succeed())
 				Expect(f.AsKubeAdmin.TektonController.StoreAllPipelineRuns(testNamespace)).To(Succeed())
 			}
+
+			// Delete new branches created by PaC and a testing branch used as a component's base branch
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(multiPlatformProjectGitUrl), pacBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(multiPlatformProjectGitUrl), baseBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			Expect(build.CleanupWebhooks(f, utils.GetRepoName(multiPlatformProjectGitUrl))).ShouldNot(HaveOccurred())
 		})
 
 		BeforeAll(func() {
@@ -101,7 +113,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			err = createSecretForHostPool(f)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace, "ARM64")
+			component, applicationName, componentName, pacBranchName, baseBranchName = createApplicationAndComponent(f, testNamespace, "ARM64")
 		})
 
 		When("the Component with multi-platform-build is created", func() {
@@ -176,7 +188,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 		})
 	})
 	Describe("aws dynamic allocation", Label("aws-dynamic"), func() {
-		var testNamespace, applicationName, componentName, multiPlatformSecretName, multiPlatformTaskName, dynamicInstanceTag, instanceId string
+		var testNamespace, applicationName, componentName, pacBranchName, baseBranchName, multiPlatformSecretName, multiPlatformTaskName, dynamicInstanceTag, instanceId string
 		var component *appservice.Component
 
 		AfterAll(func() {
@@ -199,6 +211,17 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 				Expect(f.AsKubeAdmin.CommonController.StoreAllPods(testNamespace)).To(Succeed())
 				Expect(f.AsKubeAdmin.TektonController.StoreAllPipelineRuns(testNamespace)).To(Succeed())
 			}
+
+			// Delete new branches created by PaC and a testing branch used as a component's base branch
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(multiPlatformProjectGitUrl), pacBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(multiPlatformProjectGitUrl), baseBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			Expect(build.CleanupWebhooks(f, utils.GetRepoName(multiPlatformProjectGitUrl))).ShouldNot(HaveOccurred())
 		})
 
 		BeforeAll(func() {
@@ -221,7 +244,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			err = createSecretsForDynamicInstance(f)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace, "ARM64")
+			component, applicationName, componentName, pacBranchName, baseBranchName = createApplicationAndComponent(f, testNamespace, "ARM64")
 		})
 
 		When("the Component with multi-platform-build is created", func() {
@@ -258,7 +281,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 	})
 	// TODO: Enable the test after https://issues.redhat.com/browse/KFLUXBUGS-1179 is fixed
 	Describe("ibm system z dynamic allocation", Label("ibmz-dynamic"), Pending, func() {
-		var testNamespace, applicationName, componentName, multiPlatformSecretName, multiPlatformTaskName, dynamicInstanceTag, instanceId string
+		var testNamespace, applicationName, componentName, pacBranchName, baseBranchName, multiPlatformSecretName, multiPlatformTaskName, dynamicInstanceTag, instanceId string
 		var component *appservice.Component
 
 		AfterAll(func() {
@@ -281,6 +304,17 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 				Expect(f.AsKubeAdmin.CommonController.StoreAllPods(testNamespace)).To(Succeed())
 				Expect(f.AsKubeAdmin.TektonController.StoreAllPipelineRuns(testNamespace)).To(Succeed())
 			}
+
+			// Delete new branches created by PaC and a testing branch used as a component's base branch
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(multiPlatformProjectGitUrl), pacBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(multiPlatformProjectGitUrl), baseBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			Expect(build.CleanupWebhooks(f, utils.GetRepoName(multiPlatformProjectGitUrl))).ShouldNot(HaveOccurred())
 		})
 
 		BeforeAll(func() {
@@ -300,7 +334,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			err = createSecretsForIbmDynamicInstance(f)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace, "S390X")
+			component, applicationName, componentName, pacBranchName, baseBranchName = createApplicationAndComponent(f, testNamespace, "S390X")
 		})
 
 		When("the Component with multi-platform-build is created", func() {
@@ -337,7 +371,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 	})
 	// TODO: Enable the test after https://issues.redhat.com/browse/KFLUXBUGS-1179 is fixed
 	Describe("ibm power pc dynamic allocation", Label("ibmp-dynamic"), Pending, func() {
-		var testNamespace, applicationName, componentName, multiPlatformSecretName, multiPlatformTaskName, dynamicInstanceTag, instanceId string
+		var testNamespace, applicationName, componentName, pacBranchName, baseBranchName, multiPlatformSecretName, multiPlatformTaskName, dynamicInstanceTag, instanceId string
 		var component *appservice.Component
 
 		AfterAll(func() {
@@ -360,6 +394,17 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 				Expect(f.AsKubeAdmin.CommonController.StoreAllPods(testNamespace)).To(Succeed())
 				Expect(f.AsKubeAdmin.TektonController.StoreAllPipelineRuns(testNamespace)).To(Succeed())
 			}
+
+			// Delete new branches created by PaC and a testing branch used as a component's base branch
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(multiPlatformProjectGitUrl), pacBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(multiPlatformProjectGitUrl), baseBranchName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			}
+			Expect(build.CleanupWebhooks(f, utils.GetRepoName(multiPlatformProjectGitUrl))).ShouldNot(HaveOccurred())
 		})
 
 		BeforeAll(func() {
@@ -380,7 +425,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 			err = createSecretsForIbmDynamicInstance(f)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			component, applicationName, componentName = createApplicationAndComponent(f, testNamespace, "PPC64LE")
+			component, applicationName, componentName, pacBranchName, baseBranchName = createApplicationAndComponent(f, testNamespace, "PPC64LE")
 		})
 
 		When("the Component with multi-platform-build is created", func() {
@@ -417,7 +462,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 	})
 })
 
-func createApplicationAndComponent(f *framework.Framework, testNamespace, platform string) (component *appservice.Component, applicationName, componentName string) {
+func createApplicationAndComponent(f *framework.Framework, testNamespace, platform string) (component *appservice.Component, applicationName, componentName, pacBranchName, baseBranchName string) {
 	applicationName = fmt.Sprintf("multi-platform-suite-application-%s", util.GenerateRandomString(4))
 	_, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 	Expect(err).NotTo(HaveOccurred())
@@ -430,6 +475,12 @@ func createApplicationAndComponent(f *framework.Framework, testNamespace, platfo
 		"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"buildah-remote-pipeline", "bundle": "%s"}`, customBuildahRemotePipeline),
 	}
 
+	pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
+	baseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
+
+	err = f.AsKubeAdmin.CommonController.Github.CreateRef(utils.GetRepoName(multiPlatformProjectGitUrl), "main", multiPlatformProjectRevision, baseBranchName)
+	Expect(err).ShouldNot(HaveOccurred())
+
 	// Create a component with Git Source URL being defined
 	componentObj := appservice.ComponentSpec{
 		ComponentName: componentName,
@@ -437,13 +488,13 @@ func createApplicationAndComponent(f *framework.Framework, testNamespace, platfo
 			ComponentSourceUnion: appservice.ComponentSourceUnion{
 				GitSource: &appservice.GitSource{
 					URL:           multiPlatformProjectGitUrl,
-					Revision:      multiPlatformProjectRevision,
+					Revision:      baseBranchName,
 					DockerfileURL: constants.DockerFilePath,
 				},
 			},
 		},
 	}
-	component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, buildPipelineAnnotation)
+	component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, buildPipelineAnnotation))
 	Expect(err).ShouldNot(HaveOccurred())
 	return
 }
