@@ -46,7 +46,7 @@ var TestFilesOnlyRule = rulesengine.Rule{Name: "E2E PR Test File Diff Execution"
 
 func CheckTektonFilesChanged(rctx *rulesengine.RuleCtx) bool {
 
-	return len(rctx.DiffFiles.FilterByDirString("integration-tests/")) != 0
+	return len(rctx.DiffFiles.FilterByDirString("integration-tests/")) != 0 || len(rctx.DiffFiles.FilterByDirString(".tekton/")) != 0
 
 }
 
