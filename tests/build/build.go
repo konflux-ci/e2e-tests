@@ -95,19 +95,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			err = build.CreateGitlabBuildSecret(f, "pipelines-as-code-secret", secretAnnotations, gitlabToken)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			//secret := &v1.Secret{
-			//	ObjectMeta: metav1.ObjectMeta{
-			//		Name:      "pipelines-as-code-secret",
-			//		Namespace: testNamespace,
-			//	},
-			//	Type: v1.SecretTypeOpaque,
-			//	StringData: map[string]string{
-			//		"password": gitlabToken,
-			//	},
-			//}
-			//_, err = f.AsKubeAdmin.CommonController.CreateSecret(f.UserNamespace, secret)
-			//Expect(err).NotTo(HaveOccurred())
-
 			err = f.AsKubeAdmin.CommonController.Gitlab.CreateBranch(helloWorldComponentGitlabProjectID, componentBaseBranchName, helloWorldComponentDefaultBranch)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
@@ -136,8 +123,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				// Delete created webhook from GitHub
 				Expect(build.CleanupWebhooks(f, helloWorldComponentGitSourceRepoName)).ShouldNot(HaveOccurred())
 			case "gitlab":
-				Expect(f.AsKubeAdmin.CommonController.Gitlab.CloseMergeRequest(helloWorldComponentGitlabProjectID, prNumber)).NotTo(HaveOccurred())
-				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteWebhooks(helloWorldComponentGitlabProjectID, f.ClusterAppDomain)).NotTo(HaveOccurred())
+				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteBranch(helloWorldComponentGitlabProjectID, componentBaseBranchName)).To(Succeed())
+				Expect(f.AsKubeAdmin.CommonController.Gitlab.CloseMergeRequest(helloWorldComponentGitlabProjectID, prNumber)).To(Succeed())
+				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteWebhooks(helloWorldComponentGitlabProjectID, f.ClusterAppDomain)).To(Succeed())
 			}
 		})
 
@@ -664,20 +652,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, helloWorldComponentGitSourceRepoName))
 
 				mergeResultSha = mergeResult.GetSHA()
-				GinkgoWriter.Println("merged result sha:", mergeResultSha)
-			})
-
-			BeforeAll(func() {
-				if gitProvider != "gitlab" {
-					return
-				}
-
-				Eventually(func() error {
-					mergeRequest, err = f.AsKubeAdmin.CommonController.Gitlab.AcceptMergeRequest(helloWorldComponentGitlabProjectID, prNumber)
-					return err
-				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, helloWorldComponentGitSourceRepoName))
-
-				mergeResultSha = mergeRequest.MergeCommitSHA
 				GinkgoWriter.Println("merged result sha:", mergeResultSha)
 			})
 

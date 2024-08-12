@@ -38,7 +38,6 @@ func (gc *GitlabClient) CreateBranch(projectID, newBranchName, defaultBranch str
 // ExistsBranch checks if a branch exists in a specified GitLab repository.
 func (gc *GitlabClient) ExistsBranch(projectID, branchName string) (bool, error) {
 
-	fmt.Println("ExistRdf dddd")
 	_, _, err := gc.client.Branches.GetBranch(projectID, branchName)
 	if err == nil {
 		return true, nil

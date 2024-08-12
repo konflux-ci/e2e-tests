@@ -37,7 +37,7 @@ func ResolveGitDetails(repoUrlENV, repoRevisionENV string) (string, string, erro
 	return utils.GetEnv(repoUrlENV, defaultGitURL), utils.GetEnv(repoRevisionENV, defaultGitRevision), nil
 }
 
-// CreateGitlabBuildSecret creates a secret of gitlab build
+// CreateGitlabBuildSecret creates a Kubernetes secret for GitLab build credentials
 func CreateGitlabBuildSecret(f *framework.Framework, secretName string, annotations map[string]string, token string) error {
 	buildSecret := v1.Secret{}
 	buildSecret.Name = secretName
