@@ -39,6 +39,12 @@ spec:
       type: string
       description: "Contain the container name from Konflux Snapshot."
       default: "quay.io/redhat-user-workloads/rhtap-qe-shared-tenant/konflux-e2e/konflux-e2e-tests:latest"
+    - name: component-image
+      type: string
+      description: |
+      "Contains a specific container image from Konflux Snapshot. Only used when this task is not running in
+        e2e-tests or infra-deployments"
+      default: "none"
     - name: ginkgo-procs
       description: "Number of processes to run in parallel in ginkgo"
       default: 20
@@ -75,6 +81,8 @@ spec:
           value: $(params.job-spec)
         - name: ARTIFACT_DIR
           value: "/workspace/test-artifacts"
+        - name: COMPONENT_IMAGE
+          value: $(params.component-image)
       script: |
         #!/bin/bash
 
