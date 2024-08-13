@@ -45,6 +45,6 @@ var (
 	componentGitSourceURLForIntegrationWithEnv    = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), componentRepoNameForIntegrationWithEnv)
 	componentGitSourceURLForStatusReporting       = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), componentRepoNameForStatusReporting)
 	gitlabOrg                                     = utils.GetEnv(constants.GITLAB_QE_ORG_ENV, constants.DefaultGitLabQEOrg)
-	gitlabProjectIDForStatusReporting             = fmt.Sprintf("%s/%s", gitlabOrg, componentRepoNameForStatusReporting)
-	gitlabComponentGitSourceURLForStatusReporting = fmt.Sprintf("https://gitlab.com/%s/%s", gitlabOrg, componentRepoNameForStatusReporting)
+	gitlabProjectIDForStatusReporting             = fmt.Sprintf("%s/%s", gitlabOrg, componentRepoNameForGeneralIntegration)
+	gitlabComponentGitSourceURLForStatusReporting = fmt.Sprintf("https://gitlab.com/%s/%s", gitlabOrg, componentRepoNameForGeneralIntegration)
 )
