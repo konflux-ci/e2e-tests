@@ -441,9 +441,15 @@ func HandleErrorWithAlert(err error, errLevel slack.ErrorSeverityLevel) error {
 	return nil
 }
 
-func getChangedFiles() (rulesengine.Files, error) {
+func getChangedFiles(repo string) (rulesengine.Files, error) {
 	var gitDiff = sh.OutCmd("git", "diff")
-	output, err := gitDiff("--name-status", "main..HEAD")
+	// If the repo is infra-deployments then we check changed files in path tmp/infra-deployments
+	// else it will run locally which is from e2e-tests directory
+	if repo == "infra-deployments" {
+		wd, _ := os.Getwd()
+		gitDiff = sh.OutCmd("git", "-C", fmt.Sprintf("%s/tmp/%s", wd, repo), "diff")
+	}
+	output, err := gitDiff("--name-status", "upstream/main")
 
 	if err != nil {
 		klog.Error("Failed to run git status locally")
