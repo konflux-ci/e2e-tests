@@ -9,7 +9,7 @@ metadata:
     pipelinesascode.tekton.dev/on-cel-expression: |
       event == "push"
       && target_branch == "main"
-      && files.all.exists(x, !x.matches('^(?:docs|examples|enhancements|contrib)/|\\.md$|^(?:.*/)?(?:\\.gitignore|OWNERS|PROJECT|LICENSE|.golangci.yml|.sonarcloud.properties)$'))
+      && files.all.exists(x, !x.matches('^(?:docs|.github|.vscode|pipelines|templates)/|\\.md$|^(?:.*/)?(?:\\.gitignore|OWNERS|PROJECT|LICENSE|.golangci.yml|.sonarcloud.properties|OWNERS_ALIASES|.dockerignore)$'))
   creationTimestamp: null
   labels:
     appstudio.openshift.io/application: konflux-e2e
