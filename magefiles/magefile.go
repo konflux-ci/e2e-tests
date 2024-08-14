@@ -126,7 +126,8 @@ func (ci CI) PrepareE2EBranch() error {
 	if err := ci.init(); err != nil {
 		return err
 	}
-
+	klog.Info(pr.RepoName)
+	klog.Info(konfluxCI)
 	if pr.RepoName == "e2e-tests" {
 		if err := gitCheckoutRemoteBranch(pr.RemoteName, pr.CommitSHA); err != nil {
 			return err

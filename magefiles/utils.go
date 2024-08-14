@@ -47,6 +47,8 @@ func getRemoteAndBranchNameFromPRLink(url string) (remote, branchName string, er
 }
 
 func gitCheckoutRemoteBranch(remoteName, branchName string) error {
+	klog.Info(branchName)
+	klog.Info(remoteName)
 	var git = sh.RunCmd("git")
 	for _, arg := range [][]string{
 		{"remote", "add", remoteName, fmt.Sprintf("https://github.com/%s/e2e-tests.git", remoteName)},
