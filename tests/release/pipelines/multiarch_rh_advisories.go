@@ -166,9 +166,13 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch test f
 					}
 					if buildPR.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
 						return nil
-					} else {
-						return fmt.Errorf(tekton.GetFailedPipelineRunLogs(devFw.AsKubeDeveloper.HasController.KubeRest(), devFw.AsKubeDeveloper.HasController.KubeInterface(), buildPR))
 					}
+					var prLogs string
+					if prLogs, err = tekton.GetFailedPipelineRunLogs(devFw.AsKubeDeveloper.HasController.KubeRest(), devFw.AsKubeDeveloper.HasController.KubeInterface(), buildPR); err != nil {
+						return fmt.Errorf("failed to get PLR logs: %+v", err)
+					}
+					return fmt.Errorf("%s", prLogs)
+
 				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to be finished for the component %s/%s", devNamespace, multiarchComponentName))
 			})
 
@@ -206,9 +210,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch test f
 
 					if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
 						return nil
-					} else {
-						return fmt.Errorf(tekton.GetFailedPipelineRunLogs(managedFw.AsKubeAdmin.ReleaseController.KubeRest(), managedFw.AsKubeAdmin.ReleaseController.KubeInterface(), pipelineRun))
 					}
+					var prLogs string
+					if prLogs, err = tekton.GetFailedPipelineRunLogs(devFw.AsKubeDeveloper.HasController.KubeRest(), devFw.AsKubeDeveloper.HasController.KubeInterface(), buildPR); err != nil {
+						return fmt.Errorf("failed to get PLR logs: %+v", err)
+					}
+					return fmt.Errorf("%s", prLogs)
 				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
 			})
 
@@ -269,7 +276,6 @@ func createMultiArchReleasePlan(multiarchReleasePlanName string, devFw framework
 	Expect(err).NotTo(HaveOccurred())
 }
 
-
 func createMultiArchReleasePlanAdmission(multiarchRPAName string, managedFw framework.Framework, devNamespace, managedNamespace, multiarchAppName, multiarchECPName, pathInRepoValue string) {
 	var err error
 
@@ -277,9 +283,9 @@ func createMultiArchReleasePlanAdmission(multiarchRPAName string, managedFw fram
 		"mapping": map[string]interface{}{
 			"components": []map[string]interface{}{
 				{
-					"name": multiarchComponentName,
+					"name":       multiarchComponentName,
 					"repository": "quay.io/redhat-pending/rhtap----konflux-release-e2e",
-					"tags": []string{"latest"},
+					"tags":       []string{"latest"},
 					"source": map[string]interface{}{
 						"git": map[string]interface{}{
 							"url": multiarchGitSourceURL,
@@ -319,8 +325,8 @@ func createMultiArchReleasePlanAdmission(multiarchRPAName string, managedFw fram
 	Expect(err).NotTo(HaveOccurred())
 }
 
-// preparePR function is to prepare a merged PR for triggerng a push event 
-func preparePR(devFw *framework.Framework, testBaseBranchName, testPRBranchName string) (int) {
+// preparePR function is to prepare a merged PR for triggerng a push event
+func preparePR(devFw *framework.Framework, testBaseBranchName, testPRBranchName string) int {
 	//Create the ref, update the file, create the PR and merge the PR
 	err = devFw.AsKubeAdmin.CommonController.Github.CreateRef(multiarchGitSourceRepoName, multiarchGitSrcDefaultBranch, multiarchGitSrcDefaultSHA, testBaseBranchName)
 	Expect(err).ShouldNot(HaveOccurred())
@@ -328,16 +334,16 @@ func preparePR(devFw *framework.Framework, testBaseBranchName, testPRBranchName 
 	err = devFw.AsKubeAdmin.CommonController.Github.CreateRef(multiarchGitSourceRepoName, multiarchGitSrcDefaultBranch, multiarchGitSrcDefaultSHA, testPRBranchName)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	// Update the pac configuration for "push" event 
+	// Update the pac configuration for "push" event
 	fileName := "multi-platform-test-prod-push.yaml"
-	fileResponse, err := devFw.AsKubeAdmin.CommonController.Github.GetFile(multiarchGitSourceRepoName, ".tekton/" + fileName, testPRBranchName)
+	fileResponse, err := devFw.AsKubeAdmin.CommonController.Github.GetFile(multiarchGitSourceRepoName, ".tekton/"+fileName, testPRBranchName)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	fileContent, err := fileResponse.GetContent()
 	Expect(err).ShouldNot(HaveOccurred())
 
-	fileContent = strings.ReplaceAll(fileContent, "[main]", "[" + testBaseBranchName  + "]")
-	repoContentResponse, err := devFw.AsKubeAdmin.CommonController.Github.UpdateFile(multiarchGitSourceRepoName, ".tekton/" + fileName, fileContent, testPRBranchName, *fileResponse.SHA)
+	fileContent = strings.ReplaceAll(fileContent, "[main]", "["+testBaseBranchName+"]")
+	repoContentResponse, err := devFw.AsKubeAdmin.CommonController.Github.UpdateFile(multiarchGitSourceRepoName, ".tekton/"+fileName, fileContent, testPRBranchName, *fileResponse.SHA)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	pr, err := devFw.AsKubeAdmin.CommonController.Github.CreatePullRequest(multiarchGitSourceRepoName, "update pac configuration title", "update pac configuration body", testPRBranchName, testBaseBranchName)

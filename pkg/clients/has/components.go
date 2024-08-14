@@ -174,8 +174,7 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 			if prLogs, err = t.GetPipelineRunLogs(component.GetName(), pr.Name, pr.Namespace); err != nil {
 				GinkgoWriter.Printf("failed to get logs for PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
 			}
-
-			return false, fmt.Errorf(prLogs)
+			return false, fmt.Errorf("%s", prLogs)
 		})
 
 		if err != nil {

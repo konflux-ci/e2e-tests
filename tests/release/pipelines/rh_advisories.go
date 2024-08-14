@@ -152,9 +152,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 							return err
 						}
 						return nil
-					} else {
-						return fmt.Errorf(tekton.GetFailedPipelineRunLogs(devFw.AsKubeDeveloper.HasController.KubeRest(), devFw.AsKubeDeveloper.HasController.KubeInterface(), buildPR))
 					}
+					var prLogs string
+					if prLogs, err = tekton.GetFailedPipelineRunLogs(devFw.AsKubeDeveloper.HasController.KubeRest(), devFw.AsKubeDeveloper.HasController.KubeInterface(), buildPR); err != nil {
+						return fmt.Errorf("failed to get PLR logs: %+v", err)
+					}
+					return fmt.Errorf("%s", prLogs)
 				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to be finished for the component %s/%s", devNamespace, component.Name))
 			})
 			It("verifies the advs release pipelinerun is running and succeeds", func() {

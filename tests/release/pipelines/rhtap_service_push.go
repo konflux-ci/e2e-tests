@@ -5,16 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
-	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
@@ -130,9 +130,9 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 				Source: appstudioApi.ComponentSource{
 					ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
 						GitSource: &appstudioApi.GitSource{
-							URL:      rhtapGitSourceURL,
-							Revision: testBaseBranchName,
-							Context:  ".",
+							URL:           rhtapGitSourceURL,
+							Revision:      testBaseBranchName,
+							Context:       ".",
 							DockerfileURL: constants.DockerFilePath,
 						},
 					},
@@ -189,9 +189,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 							return err
 						}
 						return nil
-					} else {
-						return fmt.Errorf(tekton.GetFailedPipelineRunLogs(devFw.AsKubeDeveloper.HasController.KubeRest(), devFw.AsKubeDeveloper.HasController.KubeInterface(), buildPR))
 					}
+					var prLogs string
+					if prLogs, err = tekton.GetFailedPipelineRunLogs(devFw.AsKubeDeveloper.HasController.KubeRest(), devFw.AsKubeDeveloper.HasController.KubeInterface(), buildPR); err != nil {
+						return fmt.Errorf("failed to get PLR logs: %+v", err)
+					}
+					return fmt.Errorf("%s", prLogs)
 				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to be finished for the component %s/%s", devNamespace, rhtapComponent.Name))
 			})
 			It("verifies the rhtap release pipelinerun is running and succeeds", func() {
@@ -237,7 +240,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 
 							body := pr.Body
 							GinkgoWriter.Printf("Body of PR #%d: %s \n", pr.GetNumber(), *body)
-							prLink := fmt.Sprintf(rhtapGitSourceURL + "/pull/%d", sourcePrNum)
+							prLink := fmt.Sprintf(rhtapGitSourceURL+"/pull/%d", sourcePrNum)
 							GinkgoWriter.Printf("The source PR link: %s", prLink)
 							if strings.Contains(*body, prLink) {
 								GinkgoWriter.Printf("The source PR#%d is added to the PR of infra-deployments", sourcePrNum)
@@ -295,9 +298,9 @@ func createRHTAPReleasePlanAdmission(rhtapRPAName string, managedFw framework.Fr
 			"server": "stage",
 			"secret": "pyxis",
 		},
-		"targetGHRepo": "hacbs-release/infra-deployments",
-		"githubAppID": "932323",
-		"githubAppInstallationID": "52284535",
+		"targetGHRepo":                   "hacbs-release/infra-deployments",
+		"githubAppID":                    "932323",
+		"githubAppInstallationID":        "52284535",
 		"infra-deployment-update-script": "sed -i -e 's|\\(https://github.com/hacbs-release/release-service/config/default?ref=\\)\\(.*\\)|\\1{{ revision }}|' -e 's/\\(newTag: \\).*/\\1{{ revision }}/' components/release/development/kustomization.yaml",
 		"sign": map[string]interface{}{
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",
@@ -348,4 +351,3 @@ func prepareMergedPR(devFw *framework.Framework, testBaseBranchName, testPRBranc
 
 	return pr.GetNumber(), mergeResultSha
 }
-

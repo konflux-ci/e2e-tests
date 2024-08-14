@@ -153,20 +153,20 @@ func (i *IntegrationController) WaitForIntegrationPipelineToBeFinished(testScena
 			GinkgoWriter.Println("PipelineRun has not been created yet for test scenario %s and snapshot %s/%s", testScenario.GetName(), snapshot.GetNamespace(), snapshot.GetName())
 			return false, nil
 		}
-		for _, condition := range pipelineRun.Status.Conditions {
-			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
+		GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
 
-			if !pipelineRun.IsDone() {
-				return false, nil
-			}
-
-			if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-				return true, nil
-			} else {
-				return false, fmt.Errorf(tekton.GetFailedPipelineRunLogs(i.KubeRest(), i.KubeInterface(), pipelineRun))
-			}
+		if !pipelineRun.IsDone() {
+			return false, nil
 		}
-		return false, nil
+
+		if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+			return true, nil
+		}
+		var prLogs string
+		if prLogs, err = tekton.GetFailedPipelineRunLogs(i.KubeRest(), i.KubeInterface(), pipelineRun); err != nil {
+			return false, fmt.Errorf("failed to get PLR logs: %+v", err)
+		}
+		return false, fmt.Errorf("%s", prLogs)
 	})
 }
 
