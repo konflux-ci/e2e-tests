@@ -17,9 +17,9 @@ const (
 	autoReleasePlan                = "auto-releaseplan"
 	targetReleaseNamespace         = "default"
 
-	componentRepoNameForGeneralIntegration    = "hacbs-test-project-integration"
-	componentRepoNameForIntegrationWithEnv    = "test-integration-with-env"
-	componentRepoNameForStatusReporting       = "test-integration-status-report"
+	componentRepoNameForGeneralIntegration    = "konflux-test-integration"
+	componentRepoNameForIntegrationWithEnv    = "konflux-test-integration-with-env"
+	componentRepoNameForStatusReporting       = "konflux-test-integration-status-report"
 	componentDefaultBranch                    = "main"
 	componentRevision                         = "34da5a8f51fba6a8b7ec75a727d3c72ebb5e1274"
 	referenceDoesntExist                      = "Reference does not exist"
