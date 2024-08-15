@@ -171,7 +171,8 @@ func (r *ReleaseController) WaitForReleasePipelineToBeFinished(release *releaseA
 			if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
 				return true, nil
 			} else {
-				return false, fmt.Errorf(tekton.GetFailedPipelineRunLogs(r.KubeRest(), r.KubeInterface(), pipelineRun))
+				logs, _ := tekton.GetFailedPipelineRunLogs(r.KubeRest(), r.KubeInterface(), pipelineRun)
+				return false, fmt.Errorf("%s", logs)
 			}
 		}
 		return false, nil

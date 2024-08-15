@@ -222,7 +222,7 @@ func (Local) CleanupGithubOrg() error {
 func (Local) CleanupQuayReposAndRobots() error {
 	quayOrgToken := os.Getenv("DEFAULT_QUAY_ORG_TOKEN")
 	if quayOrgToken == "" {
-		return fmt.Errorf(quayTokenNotFoundError)
+		return fmt.Errorf("%s", quayTokenNotFoundError)
 	}
 	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
 
@@ -234,7 +234,7 @@ func (Local) CleanupQuayReposAndRobots() error {
 func (Local) CleanupQuayTags() error {
 	quayOrgToken := os.Getenv("DEFAULT_QUAY_ORG_TOKEN")
 	if quayOrgToken == "" {
-		return fmt.Errorf(quayTokenNotFoundError)
+		return fmt.Errorf("%s", quayTokenNotFoundError)
 	}
 	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
 
@@ -247,7 +247,7 @@ func (Local) CleanupPrivateRepos() error {
 	repoNamePrefixes := []string{"build-e2e", "konflux", "multi-platform", "jvm-build-service"}
 	quayOrgToken := os.Getenv("DEFAULT_QUAY_ORG_TOKEN")
 	if quayOrgToken == "" {
-		return fmt.Errorf(quayTokenNotFoundError)
+		return fmt.Errorf("%s", quayTokenNotFoundError)
 	}
 	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
 

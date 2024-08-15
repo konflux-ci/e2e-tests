@@ -213,7 +213,7 @@ func (s *SandboxController) KeycloakUserExists(realm string, token string, usern
 	}
 	defer response.Body.Close()
 
-	body, _ := io.ReadAll(response.Body)
+	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		GinkgoWriter.Printf("failed to read a response body from keycloak server: %+v\n", err)
 		return false

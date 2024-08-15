@@ -3,7 +3,6 @@ package sandbox
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -210,7 +209,7 @@ func (s *SandboxController) ReconcileUserCreation(userName string) (*SandboxUser
 	if !s.KeycloakUserExists(DEFAULT_KEYCLOAK_TESTING_REALM, adminToken.AccessToken, userName) {
 		registerUser, err := s.RegisterKeycloakUser(userName, adminToken.AccessToken, DEFAULT_KEYCLOAK_TESTING_REALM)
 		if err != nil && registerUser.Username == "" {
-			return nil, errors.New("failed to register user in keycloak: " + err.Error())
+			return nil, fmt.Errorf("%s", "failed to register user in keycloak: "+err.Error())
 		}
 	}
 
