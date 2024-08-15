@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
-	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
@@ -31,9 +30,12 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 	var compName string
 	var devNamespace string
 	var releasedImagePushRepo = "quay.io/redhat-appstudio-qe/dcmetromap"
+	var sampleImage = "quay.io/redhat-appstudio-qe/dcmetromap@sha256:544259be8bcd9e6a2066224b805d854d863064c9b64fa3a87bfcd03f5b0f28e6"
+	var gitSourceURL = "https://github.com/redhat-appstudio-qe/dc-metro-map-release"
+	var gitSourceRevision = "d49914874789147eb2de9bb6a12cd5d150bfff92"
 
-	var component *appservice.Component
 	var releaseCR *releaseApi.Release
+	var snapshotPush *appservice.Snapshot
 
 	BeforeAll(func() {
 		// Initialize the tests controllers
@@ -50,8 +52,6 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 
 		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
-
-		component = releasecommon.CreateComponent(*fw, devNamespace, releasecommon.ApplicationNameDefault, releasecommon.ComponentName, releasecommon.GitSourceComponentUrl, "", ".", "Dockerfile", constants.DefaultDockerBuildPipelineBundle)
 
 		data, err := json.Marshal(map[string]interface{}{
 			"mapping": map[string]interface{}{
@@ -87,6 +87,10 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 
 		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasecommon.ReleasePvcName, devNamespace, corev1.ReadWriteOnce)
 		Expect(err).NotTo(HaveOccurred())
+
+		snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(*fw, releasecommon.ComponentName, releasecommon.ApplicationNameDefault, devNamespace, sampleImage, gitSourceURL, gitSourceRevision, "", "", "", "")
+		GinkgoWriter.Println("snapshotPush.Name: %s", snapshotPush.GetName())
+		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterAll(func() {
@@ -96,10 +100,6 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 	})
 
 	var _ = Describe("Post-release verification", func() {
-		It("verifies that a build PipelineRun is created in dev namespace and succeeds", func() {
-			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
-				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
-		})
 
 		It("verifies that a Release CR should have been created in the dev namespace", func() {
 			Eventually(func() error {
