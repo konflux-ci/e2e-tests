@@ -342,10 +342,7 @@ func readDockerfile(pathContext, dockerfile, repoURL, repoRevision string) ([]by
 			return nil, err
 		}
 	}
-	return nil, fmt.Errorf(
-		fmt.Sprintf("resolveDockerfile: can't resolve Dockerfile from path context %s and dockerfile %s",
-			pathContext, dockerfile),
-	)
+	return nil, fmt.Errorf("resolveDockerfile: can't resolve Dockerfile from path context %s and dockerfile %s", pathContext, dockerfile)
 }
 
 // ReadDockerfileUsedForBuild reads the Dockerfile and return its content.
