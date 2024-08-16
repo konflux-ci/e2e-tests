@@ -109,14 +109,17 @@ const (
 	// If set to "true", e2e-tests installer will configure master/control plane nodes as schedulable
 	ENABLE_SCHEDULING_ON_MASTER_NODES_ENV = "ENABLE_SCHEDULING_ON_MASTER_NODES"
 
-	// A gitlab token is required to run tests against gitlab.com. The token need to have permissions to the given github organization.
-	GITLAB_TOKEN_ENV string = "PAC_GITLAB_TOKEN" // #nosec
+	// A gitlab bot token is required to run tests against gitlab.com. The token need to have permissions to the given github organization.
+	GITLAB_BOT_TOKEN_ENV string = "GITLAB_BOT_TOKEN" // #nosec
 
-	// The gitlab URL used to run integration reporting e2e tests against
-	GITLAB_URL_ENV string = "PAC_GITLAB_URL" // #nosec
+	// The GitLab org which owns the test repositories
+	GITLAB_QE_ORG_ENV string = "GITLAB_QE_ORG"
 
-	// For PaC Gitlab tests required project ID
-	GITLAB_PROJECT_ID string = "PAC_PROJECT_ID"
+	// The gitlab API URL used to run e2e tests against
+	GITLAB_API_URL_ENV string = "GITLAB_API_URL" // #nosec
+
+	// GitLab Project ID used for helper functions in magefiles
+	GITLAB_PROJECT_ID_ENV string = "GITLAB_PROJECT_ID"
 
 	// Test namespace's required labels
 	ArgoCDLabelKey   string = "argocd.argoproj.io/managed-by"
@@ -138,8 +141,11 @@ const (
 
 	DefaultQuayOrg = "redhat-appstudio-qe"
 
+	DefaultGitLabAPIURL = "https://gitlab.com/api/v4"
+	DefaultGitLabQEOrg  = "konflux-qe"
+
 	RegistryAuthSecretName = "redhat-appstudio-registry-pull-secret"
-	ComponentSecretName = "comp-secret"
+	ComponentSecretName    = "comp-secret"
 
 	QuayRepositorySecretName      = "quay-repository"
 	QuayRepositorySecretNamespace = "e2e-secrets"

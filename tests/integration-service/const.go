@@ -17,7 +17,10 @@ const (
 	autoReleasePlan                = "auto-releaseplan"
 	targetReleaseNamespace         = "default"
 
-	componentRepoNameForStatusReporting       = "hacbs-test-project-integration"
+	componentRepoNameForGeneralIntegration    = "konflux-test-integration"
+	componentRepoNameForIntegrationWithEnv    = "konflux-test-integration-with-env"
+	componentRepoNameForStatusReporting       = "konflux-test-integration-status-report"
+	gitlabComponentRepoName                   = "hacbs-test-project-integration"
 	componentDefaultBranch                    = "main"
 	componentRevision                         = "34da5a8f51fba6a8b7ec75a727d3c72ebb5e1274"
 	referenceDoesntExist                      = "Reference does not exist"
@@ -39,6 +42,10 @@ const (
 )
 
 var (
+	componentGitSourceURLForGeneralIntegration    = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), componentRepoNameForGeneralIntegration)
+	componentGitSourceURLForIntegrationWithEnv    = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), componentRepoNameForIntegrationWithEnv)
 	componentGitSourceURLForStatusReporting       = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), componentRepoNameForStatusReporting)
-	gitlabComponentGitSourceURLForStatusReporting = fmt.Sprintf("https://gitlab.com/konflux-qe/%s", componentRepoNameForStatusReporting)
+	gitlabOrg                                     = utils.GetEnv(constants.GITLAB_QE_ORG_ENV, constants.DefaultGitLabQEOrg)
+	gitlabProjectIDForStatusReporting             = fmt.Sprintf("%s/%s", gitlabOrg, gitlabComponentRepoName)
+	gitlabComponentGitSourceURLForStatusReporting = fmt.Sprintf("https://gitlab.com/%s/%s", gitlabOrg, gitlabComponentRepoName)
 )

@@ -29,8 +29,8 @@ func NewSuiteController(kube *kubeCl.CustomClient) (*HasController, error) {
 		return nil, err
 	}
 
-	gl, err := gitlab.NewGitlabClient(utils.GetEnv(constants.GITLAB_TOKEN_ENV, ""),
-		utils.GetEnv(constants.GITLAB_URL_ENV, "https://gitlab.com/api/v4"))
+	gl, err := gitlab.NewGitlabClient(utils.GetEnv(constants.GITLAB_BOT_TOKEN_ENV, ""),
+		utils.GetEnv(constants.GITLAB_API_URL_ENV, constants.DefaultGitLabAPIURL))
 	if err != nil {
 		return nil, err
 	}

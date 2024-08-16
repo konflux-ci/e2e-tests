@@ -3,7 +3,6 @@ package common
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"time"
 
@@ -127,7 +126,7 @@ func (s *SuiteController) CreateRegistryJsonSecret(name, namespace, authKey, key
 func (s *SuiteController) AddRegistryAuthSecretToSA(registryAuth, namespace string) error {
 	quayToken := utils.GetEnv(registryAuth, "")
 	if quayToken == "" {
-		return errors.New("failed to get registry auth secret")
+		return fmt.Errorf("%s", "failed to get registry auth secret")
 	}
 
 	_, err := s.CreateRegistryAuthSecret(RegistryAuthSecretName, namespace, quayToken)

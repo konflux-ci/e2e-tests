@@ -311,7 +311,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 					}
 				}
 				if len(errMsg) > 1 {
-					return fmt.Errorf(errMsg)
+					return fmt.Errorf("%s", errMsg)
 				}
 				return nil
 			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed(), "timed out waiting for Release CRs to be created in %s namespace", devNamespace)

@@ -67,11 +67,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 			pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
 			componentBaseBranchName = fmt.Sprintf("base-gitlab-%s", util.GenerateRandomString(6))
 
-			projectID = utils.GetEnv(constants.GITLAB_PROJECT_ID, "")
-			Expect(projectID).ShouldNot(BeEmpty())
+			projectID = gitlabProjectIDForStatusReporting
 
-			gitlabToken = utils.GetEnv(constants.GITLAB_TOKEN_ENV, "")
-			Expect(gitlabToken).ShouldNot(BeEmpty())
+			gitlabToken = utils.GetEnv(constants.GITLAB_BOT_TOKEN_ENV, "")
+			Expect(gitlabToken).ShouldNot(BeEmpty(), fmt.Sprintf("'%s' env var is not set", constants.GITLAB_BOT_TOKEN_ENV))
 
 			err = f.AsKubeAdmin.CommonController.Gitlab.CreateGitlabNewBranch(projectID, componentBaseBranchName, componentRevision, componentDefaultBranch)
 			Expect(err).ShouldNot(HaveOccurred())
@@ -104,9 +103,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteBranch(projectID, componentBaseBranchName)).NotTo(HaveOccurred())
 				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteWebhooks(projectID, f.ClusterAppDomain)).NotTo(HaveOccurred())
 				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
-
 			}
-
 		})
 
 		When("a new Component with specified custom branch is created", Label("custom-branch"), func() {

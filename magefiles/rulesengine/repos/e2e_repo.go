@@ -46,7 +46,7 @@ var TestFilesOnlyRule = rulesengine.Rule{Name: "E2E PR Test File Diff Execution"
 
 func CheckTektonFilesChanged(rctx *rulesengine.RuleCtx) bool {
 
-	return len(rctx.DiffFiles.FilterByDirString("integration-tests/")) != 0
+	return len(rctx.DiffFiles.FilterByDirString("integration-tests/")) != 0 || len(rctx.DiffFiles.FilterByDirString(".tekton/")) != 0
 
 }
 
@@ -236,10 +236,10 @@ var IntegrationTestsFileChangeRule = rulesengine.Rule{Name: "E2E PR Integration 
 	})}}
 
 var IntegrationTestsConstFileChangeRule = rulesengine.Rule{Name: "E2E PR Integration TestFile Change Rule",
-	Description: "Map integration tests files when integration const files are changed in the e2e-repo PR",
+	Description: "Map all integration tests files when integration const files are changed in the e2e-repo PR",
 	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
 
-		return len(rctx.DiffFiles.FilterByDirGlob("tests/integration-*/const.go")) != 0 && len(rctx.DiffFiles.FilterByDirGlob("tests/integration-*/*.go")) == 0
+		return len(rctx.DiffFiles.FilterByDirGlob("tests/integration-*/const.go")) != 0
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 
