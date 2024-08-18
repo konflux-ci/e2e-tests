@@ -5,6 +5,8 @@ import (
 	"time"
 
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
+	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
+	"github.com/devfile/library/v2/pkg/util"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
@@ -44,4 +46,42 @@ func CreateComponent(devFw framework.Framework, devNamespace, appName, compName,
 	component, err := devFw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", appName, true, buildPipelineBundle)
 	Expect(err).NotTo(HaveOccurred())
 	return component
+}
+
+// CreateSnapshotWithImageSource creates a snapshot having two images and sources.
+func CreateSnapshotWithImageSource(fw framework.Framework, componentName, applicationName, namespace, containerImage, gitSourceURL, gitSourceRevision, componentName2, containerImage2, gitSourceURL2, gitSourceRevision2 string) (*appstudioApi.Snapshot, error) {
+	snapshotComponents := []appstudioApi.SnapshotComponent{
+		{
+			Name:           componentName,
+			ContainerImage: containerImage,
+			Source:         appstudioApi.ComponentSource{
+				appstudioApi.ComponentSourceUnion{
+					GitSource: &appstudioApi.GitSource{
+						Revision: gitSourceRevision,
+						URL: gitSourceURL,
+					},
+				},
+			},
+		},
+	}
+
+	if componentName2 != "" && containerImage2 != "" {
+		newSnapshotComponent := appstudioApi.SnapshotComponent{
+			Name:           componentName2,
+			ContainerImage: containerImage2,
+			Source:         appstudioApi.ComponentSource{
+				appstudioApi.ComponentSourceUnion{
+					GitSource: &appstudioApi.GitSource{
+						Revision: gitSourceRevision2,
+						URL: gitSourceURL2,
+					},
+				},
+			},
+		}
+		snapshotComponents = append(snapshotComponents, newSnapshotComponent)
+	}
+
+	snapshotName := "snapshot-sample-" + util.GenerateRandomString(4)
+
+	return fw.AsKubeAdmin.IntegrationController.CreateSnapshotWithComponents(snapshotName, componentName, applicationName, namespace, snapshotComponents)
 }
