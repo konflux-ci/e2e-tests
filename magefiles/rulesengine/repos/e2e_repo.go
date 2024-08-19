@@ -36,7 +36,6 @@ var TestFilesOnlyRule = rulesengine.Rule{Name: "E2E PR Test File Diff Execution"
 			&KonfluxDemoTestFileChangedRule,
 			&ReleaseTestHelperFilesChangeOnlyRule,
 			&ReleaseTestTestFilesChangeRule,
-			&ReleaseConstFileChangeBuildTestRule,
 			&IntegrationTestsConstFileChangeRule,
 			&IntegrationTestsFileChangeRule,
 			&EcTestFileChangeRule,
@@ -153,20 +152,6 @@ var ReleaseTestHelperFilesChangeOnlyRule = rulesengine.Rule{Name: "E2E PR Releas
 
 			rctx.FocusFiles = dedupeAppendFiles(rctx.FocusFiles, matched)
 		}
-
-		return nil
-
-	})}}
-
-var ReleaseConstFileChangeBuildTestRule = rulesengine.Rule{Name: "E2E PR Release Test Const File Dependency Change Rule",
-	Description: "Map build tests files when release const.go file is changed in the e2e-repo PR",
-	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
-
-		return len(rctx.DiffFiles.FilterByDirString("tests/release/const.go")) != 0
-	}),
-	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
-
-		rctx.FocusFiles = dedupeAppendFiles(rctx.FocusFiles, "tests/build/build.go")
 
 		return nil
 

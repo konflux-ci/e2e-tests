@@ -26,7 +26,6 @@ import (
 
 	"github.com/konflux-ci/build-service/controllers"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
-	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
@@ -1361,8 +1360,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission("demo", managedNamespace, "", f.UserNamespace, "demo", constants.DefaultPipelineServiceAccount, []string{applicationName}, false, &tektonutils.PipelineRef{
 				Resolver: "git",
 				Params: []tektonutils.Param{
-					{Name: "url", Value: releasecommon.RelSvcCatalogURL},
-					{Name: "revision", Value: releasecommon.RelSvcCatalogRevision},
+					{Name: "url", Value: constants.RELEASE_CATALOG_DEFAULT_URL},
+					{Name: "revision", Value: constants.RELEASE_CATALOG_DEFAULT_REVISION},
 					{Name: "pathInRepo", Value: "pipelines/e2e/e2e.yaml"},
 				}}, &runtime.RawExtension{Raw: rawData})
 			Expect(err).NotTo(HaveOccurred())
