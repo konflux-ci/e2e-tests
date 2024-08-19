@@ -170,18 +170,30 @@ func (i *IntegrationController) WaitForIntegrationPipelineToBeFinished(testScena
 	})
 }
 
+func (i *IntegrationController) isScenarioInExpectedScenarios(testScenario *integrationv1beta2.IntegrationTestScenario, expectedTestScenarios []string) bool {
+	for _, expectedScenario := range expectedTestScenarios {
+		if expectedScenario == testScenario.Name {
+			return true
+		}
+	}
+	return false
+}
+
 // WaitForAllIntegrationPipelinesToBeFinished wait for all integration pipelines to finish.
-func (i *IntegrationController) WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName string, snapshot *appstudioApi.Snapshot) error {
+func (i *IntegrationController) WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName string, snapshot *appstudioApi.Snapshot, expectedTestScenarios []string) error {
 	integrationTestScenarios, err := i.GetIntegrationTestScenarios(applicationName, testNamespace)
 	if err != nil {
 		return fmt.Errorf("unable to get IntegrationTestScenarios for Application %s/%s. Error: %v", testNamespace, applicationName, err)
 	}
 
 	for _, testScenario := range *integrationTestScenarios {
-		GinkgoWriter.Printf("Integration test scenario %s is found\n", testScenario.Name)
-		err = i.WaitForIntegrationPipelineToBeFinished(&testScenario, snapshot, testNamespace)
-		if err != nil {
-			return fmt.Errorf("error occurred while waiting for Integration PLR (associated with IntegrationTestScenario: %s) to get finished in %s namespace. Error: %v", testScenario.Name, testNamespace, err)
+		testScenario := testScenario
+		if len(expectedTestScenarios) == 0 || i.isScenarioInExpectedScenarios(&testScenario, expectedTestScenarios) {
+			GinkgoWriter.Printf("Integration test scenario %s is found\n", testScenario.Name)
+			err = i.WaitForIntegrationPipelineToBeFinished(&testScenario, snapshot, testNamespace)
+			if err != nil {
+				return fmt.Errorf("error occurred while waiting for Integration PLR (associated with IntegrationTestScenario: %s) to get finished in %s namespace. Error: %v", testScenario.Name, testNamespace, err)
+			}
 		}
 	}
 
@@ -191,7 +203,7 @@ func (i *IntegrationController) WaitForAllIntegrationPipelinesToBeFinished(testN
 // WaitForFinalizerToGetRemovedFromAllIntegrationPipelineRuns waits for
 // the given finalizer to get removed from all integration pipelinesruns
 // that are related to the given application and namespace.
-func (i *IntegrationController) WaitForFinalizerToGetRemovedFromAllIntegrationPipelineRuns(testNamespace, applicationName string, snapshot *appstudioApi.Snapshot) error {
+func (i *IntegrationController) WaitForFinalizerToGetRemovedFromAllIntegrationPipelineRuns(testNamespace, applicationName string, snapshot *appstudioApi.Snapshot, expectedTestScenarios []string) error {
 	integrationTestScenarios, err := i.GetIntegrationTestScenarios(applicationName, testNamespace)
 	if err != nil {
 		return fmt.Errorf("unable to get IntegrationTestScenarios for Application %s/%s. Error: %v", testNamespace, applicationName, err)
@@ -199,13 +211,14 @@ func (i *IntegrationController) WaitForFinalizerToGetRemovedFromAllIntegrationPi
 
 	for _, testScenario := range *integrationTestScenarios {
 		testScenario := testScenario
-		GinkgoWriter.Printf("Integration test scenario %s is found\n", testScenario.Name)
-		err = i.WaitForFinalizerToGetRemovedFromIntegrationPipeline(&testScenario, snapshot, testNamespace)
-		if err != nil {
-			return fmt.Errorf("error occurred while waiting for Integration PLR (associated with IntegrationTestScenario: %s) to NOT have the finalizer. Error: %v", testScenario.Name, err)
+		if len(expectedTestScenarios) == 0 || i.isScenarioInExpectedScenarios(&testScenario, expectedTestScenarios) {
+			GinkgoWriter.Printf("Integration test scenario %s is found\n", testScenario.Name)
+			err = i.WaitForFinalizerToGetRemovedFromIntegrationPipeline(&testScenario, snapshot, testNamespace)
+			if err != nil {
+				return fmt.Errorf("error occurred while waiting for Integration PLR (associated with IntegrationTestScenario: %s) to NOT have the finalizer. Error: %v", testScenario.Name, err)
+			}
 		}
 	}
-
 	return nil
 }
 

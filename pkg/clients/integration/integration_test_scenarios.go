@@ -11,7 +11,7 @@ import (
 )
 
 // CreateIntegrationTestScenario creates beta1 version integrationTestScenario.
-func (i *IntegrationController) CreateIntegrationTestScenario(itsName, applicationName, namespace, gitURL, revision, pathInRepo string) (*integrationv1beta2.IntegrationTestScenario, error) {
+func (i *IntegrationController) CreateIntegrationTestScenario(itsName, applicationName, namespace, gitURL, revision, pathInRepo string, contexts []string) (*integrationv1beta2.IntegrationTestScenario, error) {
 	if itsName == "" {
 		itsName = "my-integration-test-" + util.GenerateRandomString(4)
 	}
@@ -41,7 +41,15 @@ func (i *IntegrationController) CreateIntegrationTestScenario(itsName, applicati
 					},
 				},
 			},
+			Contexts: []integrationv1beta2.TestContext{},
 		},
+	}
+
+	if len(contexts) > 0 {
+		for _, testContext := range contexts {
+			integrationTestScenario.Spec.Contexts = append(integrationTestScenario.Spec.Contexts,
+				integrationv1beta2.TestContext{Name: testContext, Description: testContext})
+		}
 	}
 
 	err := i.KubeRest().Create(context.Background(), integrationTestScenario)
