@@ -8,9 +8,9 @@ import (
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
-	"github.com/devfile/library/v2/pkg/util"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
@@ -61,12 +61,9 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 
 		//temporarily usage
 		releasePublicKeyDecoded := []byte("-----BEGIN PUBLIC KEY-----\n" +
-                                        "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEocSG/SnE0vQ20wRfPltlXrY4Ib9B\n" +
-                                        "CRnFUCg/fndZsXdz0IX5sfzIyspizaTbu4rapV85KirmSBU6XUaLY347xg==\n" +
-                                        "-----END PUBLIC KEY-----")
-
-		Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
-			releasePublicKeyDecoded, "public-key", constants.TEKTON_CHAINS_NS)).To(Succeed())
+			"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEocSG/SnE0vQ20wRfPltlXrY4Ib9B\n" +
+			"CRnFUCg/fndZsXdz0IX5sfzIyspizaTbu4rapV85KirmSBU6XUaLY347xg==\n" +
+			"-----END PUBLIC KEY-----")
 
 		Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
 			releasePublicKeyDecoded, releasecommon.PublicSecretNameAuth, managedNamespace)).To(Succeed())
@@ -75,14 +72,14 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 		Expect(err).NotTo(HaveOccurred())
 		defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
 			Description: "Red Hat's enterprise requirements",
-			PublicKey:   "k8s://openshift-pipelines/public-key",
+			PublicKey:   fmt.Sprintf("k8s://%s/%s", managedNamespace, releasecommon.PublicSecretNameAuth),
 			Sources:     defaultEcPolicy.Spec.Sources,
 			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
 				Collections: []string{"@slsa3"},
 				Exclude:     []string{"step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
 			},
 		}
-	        _, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(ecPolicyName, managedNamespace, defaultEcPolicySpec)
+		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(ecPolicyName, managedNamespace, defaultEcPolicySpec)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
