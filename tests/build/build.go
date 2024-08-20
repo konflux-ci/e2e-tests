@@ -41,7 +41,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 	defer GinkgoRecover()
 
 	DescribeTableSubtree("test PaC component build", Ordered, Label("github-webhook", "pac-build", "pipeline", "image-controller"), func(gitProvider, gitPrefix string) {
-		var applicationName, customDefaultComponentName, customBranchComponentName, componentBaseBranchName, pacBranchName, testNamespace, imageRepoName, pullRobotAccountName, pushRobotAccountName string
+		var applicationName, customDefaultComponentName, customBranchComponentName, componentBaseBranchName, pacBranchName, testNamespace, imageRepoName, pullRobotAccountName, pushRobotAccountName, helloWorldComponentGitSourceURL string
 		var component *appservice.Component
 		var plr *pipeline.PipelineRun
 
@@ -84,19 +84,26 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			pacBranchName = constants.PaCPullRequestBranchPrefix + customBranchComponentName
 			componentBaseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
 
-			err = f.AsKubeAdmin.CommonController.Github.CreateRef(helloWorldComponentGitSourceRepoName, helloWorldComponentDefaultBranch, helloWorldComponentRevision, componentBaseBranchName)
-			Expect(err).ShouldNot(HaveOccurred())
+			switch gitProvider {
+			case "github":
+				err = f.AsKubeAdmin.CommonController.Github.CreateRef(helloWorldComponentGitSourceRepoName, helloWorldComponentDefaultBranch, helloWorldComponentRevision, componentBaseBranchName)
+				Expect(err).ShouldNot(HaveOccurred())
 
-			gitlabToken := utils.GetEnv(constants.GITLAB_BOT_TOKEN_ENV, "")
-			Expect(gitlabToken).ShouldNot(BeEmpty())
+				helloWorldComponentGitSourceURL = helloWorldComponentGitHubURL
+			case "gitlab":
+				gitlabToken := utils.GetEnv(constants.GITLAB_BOT_TOKEN_ENV, "")
+				Expect(gitlabToken).ShouldNot(BeEmpty())
 
-			secretAnnotations := map[string]string{}
+				secretAnnotations := map[string]string{}
 
-			err = build.CreateGitlabBuildSecret(f, "pipelines-as-code-secret", secretAnnotations, gitlabToken)
-			Expect(err).ShouldNot(HaveOccurred())
+				err = build.CreateGitlabBuildSecret(f, "pipelines-as-code-secret", secretAnnotations, gitlabToken)
+				Expect(err).ShouldNot(HaveOccurred())
 
-			err = f.AsKubeAdmin.CommonController.Gitlab.CreateBranch(helloWorldComponentGitlabProjectID, componentBaseBranchName, helloWorldComponentDefaultBranch)
-			Expect(err).ShouldNot(HaveOccurred())
+				err = f.AsKubeAdmin.CommonController.Gitlab.CreateBranch(helloWorldComponentGitLabProjectID, componentBaseBranchName, helloWorldComponentDefaultBranch)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				helloWorldComponentGitSourceURL = helloWorldComponentGitLabURL
+			}
 		})
 
 		AfterAll(func() {
@@ -123,20 +130,16 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				// Delete created webhook from GitHub
 				Expect(build.CleanupWebhooks(f, helloWorldComponentGitSourceRepoName)).ShouldNot(HaveOccurred())
 			case "gitlab":
-				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteBranch(helloWorldComponentGitlabProjectID, componentBaseBranchName)).To(Succeed())
-				Expect(f.AsKubeAdmin.CommonController.Gitlab.CloseMergeRequest(helloWorldComponentGitlabProjectID, prNumber)).To(Succeed())
-				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteWebhooks(helloWorldComponentGitlabProjectID, f.ClusterAppDomain)).To(Succeed())
+				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteBranch(helloWorldComponentGitLabProjectID, componentBaseBranchName)).To(Succeed())
+				Expect(f.AsKubeAdmin.CommonController.Gitlab.CloseMergeRequest(helloWorldComponentGitLabProjectID, prNumber)).To(Succeed())
+				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteWebhooks(helloWorldComponentGitLabProjectID, f.ClusterAppDomain)).To(Succeed())
 			}
 		})
 
 		When("a new component without specified branch is created and with visibility private", Label("pac-custom-default-branch"), func() {
 			var componentObj appservice.ComponentSpec
-			// Create GitHub component
-			BeforeAll(func() {
-				if gitProvider != "github" {
-					return
-				}
 
+			BeforeAll(func() {
 				componentObj = appservice.ComponentSpec{
 					ComponentName: customDefaultComponentName,
 					Application:   applicationName,
@@ -150,30 +153,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						},
 					},
 				}
-			})
 
-			// Create GitLab component
-			BeforeAll(func() {
-				if gitProvider != "gitlab" {
-					return
-				}
-
-				componentObj = appservice.ComponentSpec{
-					ComponentName: customDefaultComponentName,
-					Application:   applicationName,
-					Source: appservice.ComponentSource{
-						ComponentSourceUnion: appservice.ComponentSourceUnion{
-							GitSource: &appservice.GitSource{
-								URL:           helloWorldComponentGitlabURL,
-								Revision:      "",
-								DockerfileURL: constants.DockerFilePath,
-							},
-						},
-					},
-				}
-			})
-
-			BeforeAll(func() {
 				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPrivateRepo), constants.DefaultDockerBuildPipelineBundle))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
@@ -318,7 +298,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					case "github":
 						exists, err = f.AsKubeAdmin.CommonController.Github.ExistsRef(helloWorldComponentGitSourceRepoName, constants.PaCPullRequestBranchPrefix+customDefaultComponentName)
 					case "gitlab":
-						exists, err = f.AsKubeAdmin.CommonController.Gitlab.ExistsBranch(helloWorldComponentGitlabProjectID, constants.PaCPullRequestBranchPrefix+customDefaultComponentName)
+						exists, err = f.AsKubeAdmin.CommonController.Gitlab.ExistsBranch(helloWorldComponentGitLabProjectID, constants.PaCPullRequestBranchPrefix+customDefaultComponentName)
 					}
 					Expect(err).ShouldNot(HaveOccurred())
 					return exists
@@ -354,19 +334,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			var componentObj appservice.ComponentSpec
 
 			BeforeAll(func() {
-				if gitProvider != "github" {
-					return
-				}
-
-				// create the build secret in the user namespace
-				// secretName := "build-secret"
-				// token := os.Getenv("GITHUB_TOKEN")
-				// secretAnnotations := map[string]string{
-				// 	"appstudio.redhat.com/scm.repository": os.Getenv("MY_GITHUB_ORG") + "/*",
-				// }
-				// err = createBuildSecret(f, secretName, secretAnnotations, token)
-				// Expect(err).ShouldNot(HaveOccurred())
-
 				componentObj = appservice.ComponentSpec{
 					ComponentName: customBranchComponentName,
 					Application:   applicationName,
@@ -380,33 +347,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						},
 					},
 				}
-			})
-
-			// Create GitLab component
-			BeforeAll(func() {
-				if gitProvider != "gitlab" {
-					return
-				}
-				componentObj = appservice.ComponentSpec{
-					ComponentName: customBranchComponentName,
-					Application:   applicationName,
-					Source: appservice.ComponentSource{
-						ComponentSourceUnion: appservice.ComponentSourceUnion{
-							GitSource: &appservice.GitSource{
-								URL:           helloWorldComponentGitlabURL,
-								Revision:      componentBaseBranchName,
-								DockerfileURL: constants.DockerFilePath,
-							},
-						},
-					},
-				}
-			})
-
-			BeforeAll(func() {
 				// Create a component with Git Source URL, a specified git branch and marking delete-repo=true
 				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
 				Expect(err).ShouldNot(HaveOccurred())
-
 			})
 
 			It("triggers a PipelineRun", func() {
@@ -538,7 +481,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, helloWorldComponentGitSourceRepoName, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 				case "gitlab":
 					expectedNote := fmt.Sprintf("**Pipelines as Code CI/%s-on-pull-request** has successfully validated your commit", customBranchComponentName)
-					f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(helloWorldComponentGitlabProjectID, expectedNote, prNumber)
+					f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(helloWorldComponentGitLabProjectID, expectedNote, prNumber)
 				}
 			})
 		})
@@ -556,10 +499,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					createdFileSHA = createdFile.GetSHA()
 					GinkgoWriter.Println("created file sha:", createdFileSHA)
 				case "gitlab":
-					_, err = f.AsKubeAdmin.CommonController.Gitlab.CreateFile(helloWorldComponentGitlabProjectID, fileToCreatePath, fmt.Sprintf("test PaC branch %s update", pacBranchName), pacBranchName)
+					_, err = f.AsKubeAdmin.CommonController.Gitlab.CreateFile(helloWorldComponentGitLabProjectID, fileToCreatePath, fmt.Sprintf("test PaC branch %s update", pacBranchName), pacBranchName)
 					Expect(err).NotTo(HaveOccurred())
 
-					metadata, err := f.AsKubeAdmin.CommonController.Gitlab.GetFileMetaData(helloWorldComponentGitlabProjectID, fileToCreatePath, pacBranchName)
+					metadata, err := f.AsKubeAdmin.CommonController.Gitlab.GetFileMetaData(helloWorldComponentGitLabProjectID, fileToCreatePath, pacBranchName)
 					Expect(err).NotTo(HaveOccurred())
 
 					createdFileSHA = metadata.CommitID
@@ -631,7 +574,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, helloWorldComponentGitSourceRepoName, createdFileSHA, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 				case "gitlab":
 					expectedNote := fmt.Sprintf("**Pipelines as Code CI/%s-on-pull-request** has successfully validated your commit", customBranchComponentName)
-					f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(helloWorldComponentGitlabProjectID, expectedNote, prNumber)
+					f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(helloWorldComponentGitLabProjectID, expectedNote, prNumber)
 				}
 			})
 		})
@@ -661,7 +604,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				}
 
 				Eventually(func() error {
-					mergeRequest, err = f.AsKubeAdmin.CommonController.Gitlab.AcceptMergeRequest(helloWorldComponentGitlabProjectID, prNumber)
+					mergeRequest, err = f.AsKubeAdmin.CommonController.Gitlab.AcceptMergeRequest(helloWorldComponentGitLabProjectID, prNumber)
 					return err
 				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, helloWorldComponentGitSourceRepoName))
 
@@ -757,10 +700,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 
 			BeforeAll(func() {
-				if gitProvider != "github" {
-					return
-				}
-
 				componentObj = appservice.ComponentSpec{
 					ComponentName: customBranchComponentName,
 					Source: appservice.ComponentSource{
@@ -773,28 +712,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						},
 					},
 				}
-			})
-			BeforeAll(func() {
-				if gitProvider != "gitlab" {
-					return
-				}
 
-				componentObj = appservice.ComponentSpec{
-					ComponentName: customBranchComponentName,
-					Application:   applicationName,
-					Source: appservice.ComponentSource{
-						ComponentSourceUnion: appservice.ComponentSourceUnion{
-							GitSource: &appservice.GitSource{
-								URL:           helloWorldComponentGitlabURL,
-								Revision:      componentBaseBranchName,
-								DockerfileURL: constants.DockerFilePath,
-							},
-						},
-					},
-				}
-			})
-
-			BeforeAll(func() {
 				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
@@ -907,7 +825,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						Source: appservice.ComponentSource{
 							ComponentSourceUnion: appservice.ComponentSourceUnion{
 								GitSource: &appservice.GitSource{
-									URL:           multiComponentGitSourceURL,
+									URL:           multiComponentGitHubURL,
 									Revision:      multiComponentBaseBranchName,
 									Context:       contextDir,
 									DockerfileURL: constants.DockerFilePath,
@@ -1031,7 +949,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					Source: appservice.ComponentSource{
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
 							GitSource: &appservice.GitSource{
-								URL:           multiComponentGitSourceURL,
+								URL:           multiComponentGitHubURL,
 								Revision:      multiComponentBaseBranchName,
 								Context:       multiComponentContextDirs[0],
 								DockerfileURL: constants.DockerFilePath,
@@ -1296,7 +1214,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					Source: appservice.ComponentSource{
 						ComponentSourceUnion: appservice.ComponentSourceUnion{
 							GitSource: &appservice.GitSource{
-								URL:           annotationsTestGitSourceURL,
+								URL:           annotationsTestGitHubURL,
 								Revision:      annotationsTestRevision,
 								DockerfileURL: constants.DockerFilePath,
 							},
@@ -1446,7 +1364,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Source: appservice.ComponentSource{
 					ComponentSourceUnion: appservice.ComponentSourceUnion{
 						GitSource: &appservice.GitSource{
-							URL:           helloWorldComponentGitSourceCloneURL,
+							URL:           helloWorldComponentGitHubCloneURL,
 							Revision:      componentBaseBranchName,
 							DockerfileURL: constants.DockerFilePath,
 						},
@@ -1544,8 +1462,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			branchString := util.GenerateRandomString(4)
 			ParentComponentDef.componentBranch = fmt.Sprintf("multi-component-parent-base-%s", branchString)
 			ChildComponentDef.componentBranch = fmt.Sprintf("multi-component-child-base-%s", branchString)
-			ParentComponentDef.gitRepo = fmt.Sprintf(githubUrlFormat, gihubOrg, ParentComponentDef.repoName)
-			ChildComponentDef.gitRepo = fmt.Sprintf(githubUrlFormat, gihubOrg, ChildComponentDef.repoName)
+			ParentComponentDef.gitRepo = fmt.Sprintf(githubUrlFormat, githubOrg, ParentComponentDef.repoName)
+			ChildComponentDef.gitRepo = fmt.Sprintf(githubUrlFormat, githubOrg, ChildComponentDef.repoName)
 			ParentComponentDef.componentName = fmt.Sprintf("multi-component-parent-%s", branchString)
 			ChildComponentDef.componentName = fmt.Sprintf("multi-component-child-%s", branchString)
 			ParentComponentDef.pacBranchName = constants.PaCPullRequestBranchPrefix + ParentComponentDef.componentName
