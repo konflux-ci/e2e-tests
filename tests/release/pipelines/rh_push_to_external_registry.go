@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 
-	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
-	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	"github.com/devfile/library/v2/pkg/util"
+	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/release"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
@@ -37,7 +37,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 
 	var imageIDs []string
 	var pyxisKeyDecoded, pyxisCertDecoded []byte
-//	var releasePR, releasePR2 *pipeline.PipelineRun
+	//	var releasePR, releasePR2 *pipeline.PipelineRun
 	var releasePR *pipeline.PipelineRun
 	var scGitRevision = fmt.Sprintf("test-pyxis-%s", util.GenerateRandomString(4))
 	var sampleImage = "quay.io/redhat-appstudio-qe/dcmetromap@sha256:544259be8bcd9e6a2066224b805d854d863064c9b64fa3a87bfcd03f5b0f28e6"
@@ -63,7 +63,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
 		Expect(sourceAuthJson).ToNot(BeEmpty())
 
-
 		keyPyxisStage := os.Getenv(constants.PYXIS_STAGE_KEY_ENV)
 		Expect(keyPyxisStage).ToNot(BeEmpty())
 
@@ -73,7 +72,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		// Create secret for the release registry repo "hacbs-release-tests".
 		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(releasecommon.RedhatAppstudioUserSecret, managedNamespace, sourceAuthJson)
 		Expect(err).ToNot(HaveOccurred())
-
 
 		// Creating k8s secret to access Pyxis stage based on base64 decoded of key and cert
 		pyxisKeyDecoded, err = base64.StdEncoding.DecodeString(string(keyPyxisStage))
@@ -99,26 +97,24 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 
 		//temporarily usage
 		releasePublicKeyDecoded := []byte("-----BEGIN PUBLIC KEY-----\n" +
-                                        "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEocSG/SnE0vQ20wRfPltlXrY4Ib9B\n" +
-                                        "CRnFUCg/fndZsXdz0IX5sfzIyspizaTbu4rapV85KirmSBU6XUaLY347xg==\n" +
-                                        "-----END PUBLIC KEY-----")
+			"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEocSG/SnE0vQ20wRfPltlXrY4Ib9B\n" +
+			"CRnFUCg/fndZsXdz0IX5sfzIyspizaTbu4rapV85KirmSBU6XUaLY347xg==\n" +
+			"-----END PUBLIC KEY-----")
 
-		Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
-			releasePublicKeyDecoded, "public-key", constants.TEKTON_CHAINS_NS)).To(Succeed())
 		Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
 			releasePublicKeyDecoded, releasecommon.PublicSecretNameAuth, managedNamespace)).To(Succeed())
 		defaultEcPolicy, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 		Expect(err).NotTo(HaveOccurred())
 		defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
 			Description: "Red Hat's enterprise requirements",
-			PublicKey:   "k8s://openshift-pipelines/public-key",
+			PublicKey:   fmt.Sprintf("k8s://%s/%s", managedNamespace, releasecommon.PublicSecretNameAuth),
 			Sources:     defaultEcPolicy.Spec.Sources,
 			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
 				Collections: []string{"@slsa3"},
 				Exclude:     []string{"tests/release/pipelines/push_to_external_registry.go"},
 			},
 		}
-	        _, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(ecPolicyName, managedNamespace, defaultEcPolicySpec)
+		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(ecPolicyName, managedNamespace, defaultEcPolicySpec)
 		Expect(err).NotTo(HaveOccurred())
 
 		managedServiceAccount, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(releasecommon.ReleasePipelineServiceAccountDefault, managedNamespace, releasecommon.ManagednamespaceSecret, nil)
