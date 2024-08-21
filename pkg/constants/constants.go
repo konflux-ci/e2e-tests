@@ -141,8 +141,9 @@ const (
 
 	DefaultQuayOrg = "redhat-appstudio-qe"
 
-	DefaultGitLabAPIURL = "https://gitlab.com/api/v4"
-	DefaultGitLabQEOrg  = "konflux-qe"
+	DefaultGitLabAPIURL   = "https://gitlab.com/api/v4"
+	DefaultGitLabQEOrg    = "konflux-qe"
+	DefaultGitLabRepoName = "hacbs-test-project-integration"
 
 	RegistryAuthSecretName = "redhat-appstudio-registry-pull-secret"
 	ComponentSecretName    = "comp-secret"
