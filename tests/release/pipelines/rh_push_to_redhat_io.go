@@ -52,7 +52,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 	var rhioReleasePlanName = "rhio-rp-" + util.GenerateRandomString(4)
 	var rhioReleasePlanAdmissionName = "rhio-rpa-" + util.GenerateRandomString(4)
 	var rhioEnterpriseContractPolicyName = "rhio-policy-" + util.GenerateRandomString(4)
-	var sampleImage = "quay.io/redhat-user-workloads-stage/dev-release-team-tenant/e2e-rhio-ap/e2e-rhio-comp@sha256:bf2fb2c7d63c924ff9170c27f0f15558f6a59bdfb5ad9613eb61d3e4bc1cff0a"
+	var sampleImage = "quay.io/hacbs-release-tests/e2e-rhio-comp@sha256:bf2fb2c7d63c924ff9170c27f0f15558f6a59bdfb5ad9613eb61d3e4bc1cff0a"
 
 	var snapshotPush *appservice.Snapshot
 	var releaseCR *releaseapi.Release

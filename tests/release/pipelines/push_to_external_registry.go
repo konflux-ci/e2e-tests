@@ -31,8 +31,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 
 	var releaseCR *releaseApi.Release
 	var snapshotPush *appservice.Snapshot
-	var sampleImage = "quay.io/redhat-appstudio-qe/dcmetromap@sha256:544259be8bcd9e6a2066224b805d854d863064c9b64fa3a87bfcd03f5b0f28e6"
-	var gitSourceURL = "https://github.com/redhat-appstudio-qe/dc-metro-map-release"
+	var sampleImage = "quay.io/hacbs-release-tests/dcmetromap@sha256:544259be8bcd9e6a2066224b805d854d863064c9b64fa3a87bfcd03f5b0f28e6"
+	var gitSourceURL = releasecommon.GitSourceComponentUrl
 	var gitSourceRevision = "d49914874789147eb2de9bb6a12cd5d150bfff92"
 	var ecPolicyName = "ex-registry-policy-" + util.GenerateRandomString(4)
 
@@ -59,7 +59,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
 		Expect(err).ToNot(HaveOccurred())
 
-		//temporarily usage
 		releasePublicKeyDecoded := []byte("-----BEGIN PUBLIC KEY-----\n" +
 			"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEocSG/SnE0vQ20wRfPltlXrY4Ib9B\n" +
 			"CRnFUCg/fndZsXdz0IX5sfzIyspizaTbu4rapV85KirmSBU6XUaLY347xg==\n" +

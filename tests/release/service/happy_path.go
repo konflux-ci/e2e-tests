@@ -32,8 +32,8 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", Labe
 	var snapshotPush *appservice.Snapshot
 	var verifyEnterpriseContractTaskName = "verify-enterprise-contract"
 	var releasedImagePushRepo = "quay.io/redhat-appstudio-qe/dcmetromap"
-	var sampleImage = "quay.io/redhat-appstudio-qe/dcmetromap@sha256:544259be8bcd9e6a2066224b805d854d863064c9b64fa3a87bfcd03f5b0f28e6"
-	var gitSourceURL = "https://github.com/redhat-appstudio-qe/dc-metro-map-release"
+	var sampleImage = "quay.io/hacbs-release-tests/dcmetromap@sha256:544259be8bcd9e6a2066224b805d854d863064c9b64fa3a87bfcd03f5b0f28e6"
+	var gitSourceURL = releasecommon.GitSourceComponentUrl
 	var gitSourceRevision = "d49914874789147eb2de9bb6a12cd5d150bfff92"
 	var ecPolicyName = "hpath-policy-" + util.GenerateRandomString(4)
 

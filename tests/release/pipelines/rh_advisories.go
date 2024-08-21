@@ -52,7 +52,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 	var advsReleasePlanName = "advs-rp-" + util.GenerateRandomString(4)
 	var advsReleasePlanAdmissionName = "advs-rpa-" + util.GenerateRandomString(4)
 	var advsEnterpriseContractPolicyName = "advs-policy-" + util.GenerateRandomString(4)
-	var sampleImage = "quay.io/redhat-user-workloads-stage/dev-release-team-tenant/e2e-rhio-ap/e2e-rhio-comp@sha256:bf2fb2c7d63c924ff9170c27f0f15558f6a59bdfb5ad9613eb61d3e4bc1cff0a"
+	var sampleImage = "quay.io/hacbs-release-tests/e2e-rhio-comp@sha256:bf2fb2c7d63c924ff9170c27f0f15558f6a59bdfb5ad9613eb61d3e4bc1cff0a"
 
 	var snapshotPush *appservice.Snapshot
 	var releaseCR *releaseapi.Release
@@ -67,7 +67,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 			// Create a ticker that ticks every 3 minutes
 			ticker := time.NewTicker(3 * time.Minute)
 			// Schedule the stop of the ticker after 15 minutes
-			time.AfterFunc(15*time.Minute, func() {
+			time.AfterFunc(30*time.Minute, func() {
 				ticker.Stop()
 				fmt.Println("Stopped executing every 3 minutes.")
 			})
