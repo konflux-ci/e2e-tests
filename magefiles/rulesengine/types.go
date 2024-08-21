@@ -2,10 +2,10 @@ package rulesengine
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/onsi/ginkgo/v2/types"
 	"k8s.io/klog"
 )
@@ -402,7 +402,7 @@ func (cfs *Files) FilterByDirGlob(filter string) Files {
 
 	for _, file := range *cfs {
 
-		if matched, _ := filepath.Match(filter, file.Name); !matched {
+		if matched, _ := doublestar.PathMatch(filter, file.Name); !matched {
 
 			continue
 		}
