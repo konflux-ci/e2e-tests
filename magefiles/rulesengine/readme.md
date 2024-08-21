@@ -100,7 +100,7 @@ This will help reuse existing rules to create broader flows.
 var InfraDeploymentsTestRulesCatalog = rulesengine.RuleCatalog{
 	rulesengine.Rule{Name: "Infra Deployments Default Test Execution",
 		Description: "Run the default test suites which include the demo and components suites.",
-		Condition:    rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
+		Condition:    rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
 			if rctx.RepoName == "infra-deployments" {
 				return true
 			}
@@ -117,7 +117,7 @@ var InfraDeploymentsTestRulesCatalog = rulesengine.RuleCatalog{
 
  ### Registering a rule catalog to the engine
 
- Here I've created a catagory called tests within the MageEngine and I've assigned infra-deployments catalog to the infra-deployments key
+ Here I've created a category called tests within the MageEngine and I've assigned infra-deployments catalog to the infra-deployments key
  under the tests category
 
  ```go
@@ -172,7 +172,7 @@ rulesengine.Rule{Name: "Release Catalog PR paired Test Execution",
 
 ...
 
-var isRehearse = func(rctx *rulesengine.RuleCtx) bool {
+var isRehearse = func(rctx *rulesengine.RuleCtx) (bool, error) {
 	if strings.Contains(rctx.JobName, "rehearse") {
 		return true
 	}
@@ -181,7 +181,7 @@ var isRehearse = func(rctx *rulesengine.RuleCtx) bool {
 }
 
 // Demo of func isPRPairingRequired() for testing purposes
-var isPaired = func(rctx *rulesengine.RuleCtx) bool {
+var isPaired = func(rctx *rulesengine.RuleCtx) (bool, error) {
 	if true {
 		return true
 	}
@@ -190,7 +190,7 @@ var isPaired = func(rctx *rulesengine.RuleCtx) bool {
 }
 
 
-func releaseCatalogRepoCondition(rctx *rulesengine.RuleCtx) bool {
+func releaseCatalogRepoCondition(rctx *rulesengine.RuleCtx) (bool, error) {
 
 	if rctx.RepoName == "release-service-catalog" {
 		return true

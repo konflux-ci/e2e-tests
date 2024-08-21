@@ -52,9 +52,9 @@ var InfraDeploymentsComponentsRule = rulesengine.Rule{Name: "Infra-deployments P
 
 var InfraDeploymentsIntegrationComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Integration component File Change Rule",
 	Description: "Map Integration tests files when Integration component files are changed in the infra-deployments PR",
-	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
+	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
 
-		return len(rctx.DiffFiles.FilterByDirGlob("components/integration/**/*")) != 0
+		return len(rctx.DiffFiles.FilterByDirGlob("components/integration/**/*")) != 0, nil
 
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
@@ -64,9 +64,9 @@ var InfraDeploymentsIntegrationComponentChangeRule = rulesengine.Rule{Name: "Inf
 
 var InfraDeploymentsEnterpriseControllerComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Enterprise Controller component File Change Rule",
 	Description: "Map Enterprise Controller tests files when EC component files are changed in the infra-deployments PR",
-	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
+	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
 
-		return len(rctx.DiffFiles.FilterByDirGlob("components/enterprise-contract/**/*")) != 0
+		return len(rctx.DiffFiles.FilterByDirGlob("components/enterprise-contract/**/*")) != 0, nil
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 		AddLabelToLabelFilter(rctx, "ec")
@@ -75,9 +75,9 @@ var InfraDeploymentsEnterpriseControllerComponentChangeRule = rulesengine.Rule{N
 
 var InfraDeploymentsJVMComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Jvm-build-service component File Change Rule",
 	Description: "Map jvm-build-service tests files when Jvm-build-service component files are changed in the infra-deployments PR",
-	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
+	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
 
-		return len(rctx.DiffFiles.FilterByDirGlob("components/jvm-build-service/**/*")) != 0
+		return len(rctx.DiffFiles.FilterByDirGlob("components/jvm-build-service/**/*")) != 0, nil
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 		AddLabelToLabelFilter(rctx, "jvm-build-service")
@@ -86,9 +86,9 @@ var InfraDeploymentsJVMComponentChangeRule = rulesengine.Rule{Name: "Infra-deplo
 
 var InfraDeploymentsImageControllerComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Image Controller component File Change Rule",
 	Description: "Map image-controller tests files when Image Controller component files are changed in the infra-deployments PR",
-	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
+	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
 
-		return len(rctx.DiffFiles.FilterByDirGlob("components/image-controller/**/*")) != 0
+		return len(rctx.DiffFiles.FilterByDirGlob("components/image-controller/**/*")) != 0, nil
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 		AddLabelToLabelFilter(rctx, "image-controller")
@@ -97,9 +97,9 @@ var InfraDeploymentsImageControllerComponentChangeRule = rulesengine.Rule{Name: 
 
 var InfraDeploymentsMultiPlatformComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Multi Controller component File Change Rule",
 	Description: "Map multi platform tests files when Multi Controller component files are changed in the infra-deployments PR",
-	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
+	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
 
-		return len(rctx.DiffFiles.FilterByDirGlob("components/multi-platform-controller/**/*")) != 0
+		return len(rctx.DiffFiles.FilterByDirGlob("components/multi-platform-controller/**/*")) != 0, nil
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 		AddLabelToLabelFilter(rctx, "multi-platform")
@@ -108,9 +108,9 @@ var InfraDeploymentsMultiPlatformComponentChangeRule = rulesengine.Rule{Name: "I
 
 var InfraDeploymentsBuildTemplatesComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Build-templates component File Change Rule",
 	Description: "Map build-templates tests files when Build-templates component files are changed in the infra-deployments PR",
-	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
+	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
 
-		return len(rctx.DiffFiles.FilterByDirGlob("components/build-service/base/build-pipeline-config/*")) != 0
+		return len(rctx.DiffFiles.FilterByDirGlob("components/build-service/base/build-pipeline-config/*")) != 0, nil
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 		AddLabelToLabelFilter(rctx, "build-templates")
@@ -119,10 +119,10 @@ var InfraDeploymentsBuildTemplatesComponentChangeRule = rulesengine.Rule{Name: "
 
 var InfraDeploymentsBuildServiceComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Build service component File Change Rule",
 	Description: "Map build service tests files when Build service component files are changed in the infra-deployments PR",
-	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
+	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
 
 		return len(rctx.DiffFiles.FilterByDirGlob("components/build-service/**/*")) != 0 &&
-			len(rctx.DiffFiles.FilterByDirGlob("components/build-service/base/build-pipeline-config/*")) == 0
+			len(rctx.DiffFiles.FilterByDirGlob("components/build-service/base/build-pipeline-config/*")) == 0, nil
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 		AddLabelToLabelFilter(rctx, "build-service")
@@ -131,10 +131,10 @@ var InfraDeploymentsBuildServiceComponentChangeRule = rulesengine.Rule{Name: "In
 
 var InfraDeploymentsBuildServiceTemplatesComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Build service component and templates File Change Rule",
 	Description: "Map build service tests files when Build service component and templates files are changed in the infra-deployments PR",
-	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
+	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
 
 		return len(rctx.DiffFiles.FilterByDirGlob("components/build-service/**/*")) != 0 &&
-			len(rctx.DiffFiles.FilterByDirGlob("components/build-service/base/build-pipeline-config/*")) != 0
+			len(rctx.DiffFiles.FilterByDirGlob("components/build-service/base/build-pipeline-config/*")) != 0, nil
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 		AddLabelToLabelFilter(rctx, "build-service")
@@ -143,9 +143,9 @@ var InfraDeploymentsBuildServiceTemplatesComponentChangeRule = rulesengine.Rule{
 
 var InfraDeploymentsReleaseServiceComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Release service component File Change Rule",
 	Description: "Map release service tests files when Release service component files are changed in the infra-deployments PR",
-	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) bool {
+	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
 
-		return len(rctx.DiffFiles.FilterByDirGlob("components/release/**/*")) != 0
+		return len(rctx.DiffFiles.FilterByDirGlob("components/release/**/*")) != 0, nil
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 		AddLabelToLabelFilter(rctx, "release-service")
