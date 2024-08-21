@@ -67,23 +67,14 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", Labe
                                         "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEocSG/SnE0vQ20wRfPltlXrY4Ib9B\n" +
                                         "CRnFUCg/fndZsXdz0IX5sfzIyspizaTbu4rapV85KirmSBU6XUaLY347xg==\n" +
                                         "-----END PUBLIC KEY-----")
-/*
-		releasePublicKey := []byte(os.Getenv("RELEASE_PUBLIC_KEY"))
-		Expect(releasePublicKey).ToNot(BeEmpty())
-
-		releasePublicKeyDecoded, err := base64.StdEncoding.DecodeString(string(releasePublicKey))
-		Expect(err).ToNot(HaveOccurred())
-*/
 		Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
 			releasePublicKeyDecoded, releasecommon.PublicSecretNameAuth, managedNamespace)).To(Succeed())
-		Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
-			releasePublicKeyDecoded, "public-key", constants.TEKTON_CHAINS_NS)).To(Succeed())
 
 		defaultEcPolicy, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 		Expect(err).NotTo(HaveOccurred())
 		defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
 			Description: "Red Hat's enterprise requirements",
-			PublicKey:   "k8s://openshift-pipelines/public-key",
+			PublicKey:   fmt.Sprintf("k8s://%s/%s", managedNamespace, releasecommon.PublicSecretNameAuth),
 			Sources:     defaultEcPolicy.Spec.Sources,
 			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
 				Collections: []string{"@slsa3"},
