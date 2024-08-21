@@ -8,13 +8,12 @@ import (
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
-	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	"github.com/konflux-ci/e2e-tests/pkg/utils/contract"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
@@ -30,8 +29,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 	var err error
 	var devNamespace, managedNamespace string
 
-	var component *appservice.Component
 	var releaseCR *releaseApi.Release
+	var snapshotPush *appservice.Snapshot
+	var sampleImage = "quay.io/redhat-appstudio-qe/dcmetromap@sha256:544259be8bcd9e6a2066224b805d854d863064c9b64fa3a87bfcd03f5b0f28e6"
+	var gitSourceURL = "https://github.com/redhat-appstudio-qe/dc-metro-map-release"
+	var gitSourceRevision = "d49914874789147eb2de9bb6a12cd5d150bfff92"
+	var ecPolicyName = "ex-registry-policy-" + util.GenerateRandomString(4)
 
 	BeforeAll(func() {
 		// Initialize the tests controllers
@@ -41,7 +44,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 		managedNamespace = utils.GetGeneratedNamespace("ex-registry-managed")
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating managedNamespace: %v", err)
-
 		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
 		Expect(sourceAuthJson).ToNot(BeEmpty())
 
@@ -54,25 +56,34 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(releasecommon.RedhatAppstudioUserSecret, managedNamespace, sourceAuthJson)
 		Expect(err).ToNot(HaveOccurred())
 
-		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, releasecommon.HacbsReleaseTestsTokenSecret, constants.DefaultPipelineServiceAccount, true)
-		Expect(err).ToNot(HaveOccurred())
-
 		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
 		Expect(err).ToNot(HaveOccurred())
 
-		publicKey, err := fw.AsKubeAdmin.TektonController.GetTektonChainsPublicKey()
-		Expect(err).ToNot(HaveOccurred())
-		Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
-			publicKey, releasecommon.PublicSecretNameAuth, managedNamespace)).To(Succeed())
+		//temporarily usage
+		releasePublicKeyDecoded := []byte("-----BEGIN PUBLIC KEY-----\n" +
+			"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEocSG/SnE0vQ20wRfPltlXrY4Ib9B\n" +
+			"CRnFUCg/fndZsXdz0IX5sfzIyspizaTbu4rapV85KirmSBU6XUaLY347xg==\n" +
+			"-----END PUBLIC KEY-----")
 
-		defaultECP, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+		Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
+			releasePublicKeyDecoded, releasecommon.PublicSecretNameAuth, managedNamespace)).To(Succeed())
+
+		defaultEcPolicy, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 		Expect(err).NotTo(HaveOccurred())
-		policy := contract.PolicySpecWithSourceConfig(defaultECP.Spec, ecp.SourceConfig{Include: []string{"@slsa3"}, Exclude: []string{"step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"}})
+		defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
+			Description: "Red Hat's enterprise requirements",
+			PublicKey:   fmt.Sprintf("k8s://%s/%s", managedNamespace, releasecommon.PublicSecretNameAuth),
+			Sources:     defaultEcPolicy.Spec.Sources,
+			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
+				Collections: []string{"@slsa3"},
+				Exclude:     []string{"step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
+			},
+		}
+		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(ecPolicyName, managedNamespace, defaultEcPolicySpec)
+		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
-
-		component = releasecommon.CreateComponent(*fw, devNamespace, releasecommon.ApplicationNameDefault, releasecommon.ComponentName, releasecommon.GitSourceComponentUrl, "", ".", "Dockerfile", constants.DefaultDockerBuildPipelineBundle)
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, managedNamespace, "", nil, nil)
 		Expect(err).NotTo(HaveOccurred())
@@ -81,7 +92,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 			"mapping": map[string]interface{}{
 				"components": []map[string]interface{}{
 					{
-						"name":       component.GetName(),
+						"name":       releasecommon.ComponentName,
 						"repository": releasecommon.ReleasedImagePushRepo,
 					},
 				},
@@ -94,7 +105,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, "", devNamespace, releasecommon.ReleaseStrategyPolicyDefault, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationNameDefault}, true, &tektonutils.PipelineRef{
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, "", devNamespace, ecPolicyName, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationNameDefault}, true, &tektonutils.PipelineRef{
 			Resolver: "git",
 			Params: []tektonutils.Param{
 				{Name: "url", Value: releasecommon.RelSvcCatalogURL},
@@ -104,9 +115,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 		}, &runtime.RawExtension{
 			Raw: data,
 		})
-		Expect(err).NotTo(HaveOccurred())
-
-		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releasecommon.ReleaseStrategyPolicyDefault, managedNamespace, policy)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasecommon.ReleasePvcName, managedNamespace, corev1.ReadWriteOnce)
@@ -121,6 +129,10 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateRoleBinding("role-release-service-account-binding", managedNamespace, "ServiceAccount", releasecommon.ReleasePipelineServiceAccountDefault, managedNamespace, "Role", "role-release-service-account", "rbac.authorization.k8s.io")
 		Expect(err).NotTo(HaveOccurred())
+
+		snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(*fw, releasecommon.ComponentName, releasecommon.ApplicationNameDefault, devNamespace, sampleImage, gitSourceURL, gitSourceRevision, "", "", "", "")
+		GinkgoWriter.Println("snapshotPush.Name: %s", snapshotPush.GetName())
+		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterAll(func() {
@@ -131,10 +143,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 	})
 
 	var _ = Describe("Post-release verification", func() {
-		It("verifies that a build PipelineRun is created in dev namespace and succeeds", func() {
-			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
-				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
-		})
 
 		It("verifies that a Release CR should have been created in the dev namespace", func() {
 			Eventually(func() error {
@@ -148,10 +156,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 		})
 
 		It("tests if the image was pushed to quay", func() {
-			// retrieve the component to get the latest data
-			component, err := fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), devNamespace)
-			Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("could not get component %s in the %s namespace", component.GetName(), devNamespace))
-			containerImageDigest := strings.Split(component.Spec.ContainerImage, "@")[1]
+			containerImageDigest := strings.Split(sampleImage, "@")[1]
 			digestExist, err := releasecommon.DoesDigestExistInQuay(releasecommon.ReleasedImagePushRepo, containerImageDigest)
 			Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while getting Digest for quay image %s with error: %+v", releasecommon.ReleasedImagePushRepo+"@"+containerImageDigest, err))
 			Expect(digestExist).To(BeTrue())

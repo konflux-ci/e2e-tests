@@ -32,6 +32,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	var prHeadSha string
 	var integrationTestScenario *integrationv1beta2.IntegrationTestScenario
 	var newIntegrationTestScenario *integrationv1beta2.IntegrationTestScenario
+	var skippedIntegrationTestScenario *integrationv1beta2.IntegrationTestScenario
 	var timeout, interval time.Duration
 	var originalComponent *appstudioApi.Component
 	var pipelineRun *pipeline.PipelineRun
@@ -51,7 +52,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			applicationName = createApp(*f, testNamespace)
 			originalComponent, componentName, pacBranchName, componentBaseBranchName = createComponent(*f, testNamespace, applicationName, componentRepoNameForGeneralIntegration, componentGitSourceURLForGeneralIntegration)
 
-			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass)
+			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, []string{"application"})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			skippedIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("skipped-its", applicationName, testNamespace, gitURL, revision, pathInRepoPass, []string{"push"})
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
@@ -147,7 +151,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("checks if all of the integrationPipelineRuns passed", Label("slow"), func() {
-				Expect(f.AsKubeDeveloper.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshot)).To(Succeed())
+				Expect(f.AsKubeDeveloper.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshot, []string{integrationTestScenario.Name})).To(Succeed())
 			})
 
 			It("checks if the passed status of integration test is reported in the Snapshot", func() {
@@ -167,8 +171,18 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				}, timeout, interval).Should(Succeed())
 			})
 
+			It("checks if the skipped integration test is absent from the Snapshot's status annotation", func() {
+				snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				statusDetail, err := f.AsKubeDeveloper.IntegrationController.GetIntegrationTestStatusDetailFromSnapshot(snapshot, skippedIntegrationTestScenario.Name)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(skippedIntegrationTestScenario.Name))
+				Expect(statusDetail).To(BeNil())
+			})
+
 			It("checks if the finalizer was removed from all of the related Integration pipelineRuns", func() {
-				Expect(f.AsKubeDeveloper.IntegrationController.WaitForFinalizerToGetRemovedFromAllIntegrationPipelineRuns(testNamespace, applicationName, snapshot)).To(Succeed())
+				Expect(f.AsKubeDeveloper.IntegrationController.WaitForFinalizerToGetRemovedFromAllIntegrationPipelineRuns(testNamespace, applicationName, snapshot, []string{integrationTestScenario.Name})).To(Succeed())
 			})
 		})
 
@@ -205,7 +219,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("checks if all of the integrationPipelineRuns created by push event passed", Label("slow"), func() {
-				Expect(f.AsKubeAdmin.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshotPush)).To(Succeed(), "Error when waiting for one of the integration pipelines to finish in %s namespace", testNamespace)
+				Expect(f.AsKubeAdmin.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshotPush, []string{integrationTestScenario.Name})).To(Succeed(), "Error when waiting for one of the integration pipelines to finish in %s namespace", testNamespace)
 			})
 
 			It("checks if a Release is created successfully", func() {
@@ -229,7 +243,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			applicationName = createApp(*f, testNamespace)
 			originalComponent, componentName, pacBranchName, componentBaseBranchName = createComponent(*f, testNamespace, applicationName, componentRepoNameForGeneralIntegration, componentGitSourceURLForGeneralIntegration)
 
-			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail)
+			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail, []string{"pull_request"})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			skippedIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("skipped-its-fail", applicationName, testNamespace, gitURL, revision, pathInRepoFail, []string{"group"})
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
@@ -292,7 +309,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 
 		It("checks if all of the integrationPipelineRuns finished", Label("slow"), func() {
-			Expect(f.AsKubeDeveloper.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshot)).To(Succeed())
+			Expect(f.AsKubeDeveloper.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshot, []string{integrationTestScenario.Name})).To(Succeed())
 		})
 
 		It("checks if the failed status of integration test is reported in the Snapshot", func() {
@@ -310,6 +327,16 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			}, timeout, interval).Should(Succeed())
 		})
 
+		It("checks if the skipped integration test is absent from the Snapshot's status annotation", func() {
+			snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			statusDetail, err := f.AsKubeDeveloper.IntegrationController.GetIntegrationTestStatusDetailFromSnapshot(snapshot, skippedIntegrationTestScenario.Name)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring(skippedIntegrationTestScenario.Name))
+			Expect(statusDetail).To(BeNil())
+		})
+
 		It("checks if snapshot is marked as failed", FlakeAttempts(3), func() {
 			snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
@@ -317,11 +344,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 
 		It("checks if the finalizer was removed from all of the related Integration pipelineRuns", func() {
-			Expect(f.AsKubeDeveloper.IntegrationController.WaitForFinalizerToGetRemovedFromAllIntegrationPipelineRuns(testNamespace, applicationName, snapshot)).To(Succeed())
+			Expect(f.AsKubeDeveloper.IntegrationController.WaitForFinalizerToGetRemovedFromAllIntegrationPipelineRuns(testNamespace, applicationName, snapshot, []string{integrationTestScenario.Name})).To(Succeed())
 		})
 
 		It("creates a new IntegrationTestScenario", func() {
-			newIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass)
+			newIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
@@ -355,7 +382,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("checks if all integration pipelineRuns finished successfully", Label("slow"), func() {
-				Expect(f.AsKubeDeveloper.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshot)).To(Succeed())
+				Expect(f.AsKubeDeveloper.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshot, []string{integrationTestScenario.Name, newIntegrationTestScenario.Name})).To(Succeed())
 			})
 
 			It("checks if the name of the re-triggered pipelinerun is reported in the Snapshot", FlakeAttempts(3), func() {
@@ -421,7 +448,7 @@ func createComponent(f framework.Framework, testNamespace, applicationName, comp
 		Source: appstudioApi.ComponentSource{
 			ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
 				GitSource: &appstudioApi.GitSource{
-					URL: componentRepoURL,
+					URL:      componentRepoURL,
 					Revision: componentBaseBranchName,
 				},
 			},

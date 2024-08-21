@@ -5,41 +5,38 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
-	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
-	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"knative.dev/pkg/apis"
 )
 
 const (
 	rhtapServiceAccountName  = "release-service-account"
 	rhtapCatalogPathInRepo   = "pipelines/rhtap-service-push/rhtap-service-push.yaml"
 	rhtapGitSourceURL        = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic-test2"
+	rhtapGitSrcSHA           = "f8ce9d92bfe65df108ac51c3d7429e5df08fe24d"
 	rhtapGitSourceRepoName   = "devfile-sample-python-basic-test2"
 	rhtapGitSrcDefaultSHA    = "47fc22092005aabebce233a9b6eab994a8152bbd"
 	rhtapGitSrcDefaultBranch = "main"
 )
 
-var rhtapComponent *appservice.Component
+var rhtapComponentName = "rhtap-comp-" + util.GenerateRandomString(4)
 var gh *github.Github
 
 var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-push pipeline", Label("release-pipelines", "rhtap-service-push"), func() {
@@ -56,19 +53,18 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 	var devFw *framework.Framework
 	var managedFw *framework.Framework
 	var rhtapApplicationName = "rhtap-app-" + util.GenerateRandomString(4)
-	var rhtapComponentName = "rhtap-comp-" + util.GenerateRandomString(4)
 	var rhtapReleasePlanName = "rhtap-rp-" + util.GenerateRandomString(4)
 	var rhtapReleasePlanAdmissionName = "rhtap-rpa-" + util.GenerateRandomString(4)
 	var rhtapEnterpriseContractPolicyName = "rhtap-policy-" + util.GenerateRandomString(4)
 	//Branch for creating pull request
 	var testPRBranchName = fmt.Sprintf("%s-%s", "e2e-pr-branch", util.GenerateRandomString(6))
 	var testBaseBranchName = fmt.Sprintf("%s-%s", "e2e-base-branch", util.GenerateRandomString(6))
+	var sampleImage = "quay.io/redhat-user-workloads-stage/dev-release-team-tenant/e2e-rhtap-app/e2e-rhtap-comp@sha256:c7cd12d46c8edc8b859738e09f3fdfd0f19718dadf8bd4efd30b3eecd1465681"
 	var mergeResultSha string
 	var sourcePrNum int
 
 	var snapshot *appservice.Snapshot
 	var releaseCR *releaseapi.Release
-	var buildPR *tektonv1.PipelineRun
 
 	AfterEach(framework.ReportFailure(&devFw))
 
@@ -76,11 +72,27 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 		BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
+			// Create a ticker that ticks every 3 minutes
+			ticker := time.NewTicker(3 * time.Minute)
+			// Schedule the stop of the ticker after 15 minutes
+			time.AfterFunc(15*time.Minute, func() {
+				ticker.Stop()
+				fmt.Println("Stopped executing every 3 minutes.")
+			})
+			// Run a goroutine to handle the ticker ticks
+			go func() {
+				for range ticker.C {
+					devFw = releasecommon.NewFramework(devWorkspace)
+					managedFw = releasecommon.NewFramework(managedWorkspace)
+				}
+			}()
+
 			managedNamespace = managedFw.UserNamespace
 
 			githubToken := utils.GetEnv(constants.GITHUB_TOKEN_ENV, "")
 			gh, err = github.NewGithubClient(githubToken, "hacbs-release")
 			Expect(githubToken).ToNot(BeEmpty())
+			Expect(err).ToNot(HaveOccurred())
 
 			sourcePrNum, mergeResultSha = prepareMergedPR(devFw, testBaseBranchName, testPRBranchName)
 
@@ -97,8 +109,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 			pyxisCertDecoded, err = base64.StdEncoding.DecodeString(string(certPyxisStage))
 			Expect(err).ToNot(HaveOccurred())
 
-			_, err = managedFw.AsKubeAdmin.CommonController.GetSecret(managedNamespace, releasecommon.RedhatAppstudioQESecret)
-			if errors.IsNotFound(err) {
+			pyxisSecret, err := managedFw.AsKubeAdmin.CommonController.GetSecret(managedNamespace, "pyxis")
+			if pyxisSecret == nil || errors.IsNotFound(err) {
 				secret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "pyxis",
@@ -115,97 +127,40 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 				Expect(err).ToNot(HaveOccurred())
 			}
 
-			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
-			Expect(err).ToNot(HaveOccurred())
-
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(rhtapApplicationName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(rhtapReleasePlanName, devNamespace, rhtapApplicationName, managedNamespace, "true", nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 
-			componentObj := appstudioApi.ComponentSpec{
-				ComponentName: rhtapComponentName,
-				Application:   rhtapApplicationName,
-				Source: appstudioApi.ComponentSource{
-					ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
-						GitSource: &appstudioApi.GitSource{
-							URL:      rhtapGitSourceURL,
-							Revision: testBaseBranchName,
-							Context:  ".",
-							DockerfileURL: constants.DockerFilePath,
-						},
-					},
-				},
-			}
-			// Create a component with Git Source URL, a specified git branch
-			rhtapComponent, err = devFw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", rhtapApplicationName, true, constants.DefaultDockerBuildPipelineBundle)
-			Expect(err).ShouldNot(HaveOccurred())
-
 			createRHTAPReleasePlanAdmission(rhtapReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, rhtapApplicationName, rhtapEnterpriseContractPolicyName, rhtapCatalogPathInRepo)
 
 			createRHTAPEnterpriseContractPolicy(rhtapEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
+
+			snapshot, err = releasecommon.CreateSnapshotWithImageSource(*devFw, rhtapComponentName, rhtapApplicationName, devNamespace, sampleImage, rhtapGitSourceURL, rhtapGitSrcSHA, "", "", "", "")
+                        Expect(err).ShouldNot(HaveOccurred())
 		})
 
 		AfterAll(func() {
-			devFw = releasecommon.NewFramework(devWorkspace)
-			managedFw = releasecommon.NewFramework(managedWorkspace)
 			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(rhtapApplicationName, devNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(rhtapEnterpriseContractPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(rhtapReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
 		})
 
 		var _ = Describe("Post-release verification", func() {
-			It("verifies that a build PipelineRun is created in dev namespace and succeeds", func() {
-				devFw = releasecommon.NewFramework(devWorkspace)
-				managedFw = releasecommon.NewFramework(managedWorkspace)
-				// Create a ticker that ticks every 3 minutes
-				ticker := time.NewTicker(3 * time.Minute)
-				// Schedule the stop of the ticker after 15 minutes
-				time.AfterFunc(15*time.Minute, func() {
-					ticker.Stop()
-					fmt.Println("Stopped executing every 3 minutes.")
-				})
-				// Run a goroutine to handle the ticker ticks
-				go func() {
-					for range ticker.C {
-						devFw = releasecommon.NewFramework(devWorkspace)
-						managedFw = releasecommon.NewFramework(managedWorkspace)
-					}
-				}()
+			It("verifies the rhtap release pipelinerun is running and succeeds", func() {
 				Eventually(func() error {
-					buildPR, err = devFw.AsKubeDeveloper.HasController.GetComponentPipelineRun(rhtapComponent.Name, rhtapApplicationName, devNamespace, "")
+					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 					if err != nil {
-						GinkgoWriter.Printf("Build PipelineRun has not been created yet for the component %s/%s\n", devNamespace, rhtapComponent.Name)
 						return err
 					}
-					GinkgoWriter.Printf("PipelineRun %s reason: %s\n", buildPR.Name, buildPR.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
-					if !buildPR.IsDone() {
-						return fmt.Errorf("build pipelinerun %s in namespace %s did not finish yet", buildPR.Name, buildPR.Namespace)
-					}
-					if buildPR.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-						snapshot, err = devFw.AsKubeDeveloper.IntegrationController.GetSnapshot("", buildPR.Name, "", devNamespace)
-						if err != nil {
-							return err
-						}
-						return nil
-					} else {
-						return fmt.Errorf(tekton.GetFailedPipelineRunLogs(devFw.AsKubeDeveloper.HasController.KubeRest(), devFw.AsKubeDeveloper.HasController.KubeInterface(), buildPR))
-					}
-				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to be finished for the component %s/%s", devNamespace, rhtapComponent.Name))
-			})
-			It("verifies the rhtap release pipelinerun is running and succeeds", func() {
-				devFw = releasecommon.NewFramework(devWorkspace)
-				managedFw = releasecommon.NewFramework(managedWorkspace)
-
-				releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
+					return nil
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
 
 				Expect(managedFw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
 			})
 
 			It("verifies release CR completed and set succeeded.", func() {
-				devFw = releasecommon.NewFramework(devWorkspace)
 				Eventually(func() error {
 					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 					if err != nil {
@@ -237,7 +192,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 
 							body := pr.Body
 							GinkgoWriter.Printf("Body of PR #%d: %s \n", pr.GetNumber(), *body)
-							prLink := fmt.Sprintf(rhtapGitSourceURL + "/pull/%d", sourcePrNum)
+							prLink := fmt.Sprintf(rhtapGitSourceURL+"/pull/%d", sourcePrNum)
 							GinkgoWriter.Printf("The source PR link: %s", prLink)
 							if strings.Contains(*body, prLink) {
 								GinkgoWriter.Printf("The source PR#%d is added to the PR of infra-deployments", sourcePrNum)
@@ -279,7 +234,7 @@ func createRHTAPReleasePlanAdmission(rhtapRPAName string, managedFw framework.Fr
 		"mapping": map[string]interface{}{
 			"components": []map[string]interface{}{
 				{
-					"name":       rhtapComponent.GetName(),
+					"name":       rhtapComponentName,
 					"repository": "quay.io/redhat-pending/rhtap----konflux-release-e2e",
 					"tags": []string{"latest", "latest-{{ timestamp }}", "testtag",
 						"testtag-{{ timestamp }}", "testtag2", "testtag2-{{ timestamp }}"},
@@ -295,9 +250,9 @@ func createRHTAPReleasePlanAdmission(rhtapRPAName string, managedFw framework.Fr
 			"server": "stage",
 			"secret": "pyxis",
 		},
-		"targetGHRepo": "hacbs-release/infra-deployments",
-		"githubAppID": "932323",
-		"githubAppInstallationID": "52284535",
+		"targetGHRepo":                   "hacbs-release/infra-deployments",
+		"githubAppID":                    "932323",
+		"githubAppInstallationID":        "52284535",
 		"infra-deployment-update-script": "sed -i -e 's|\\(https://github.com/hacbs-release/release-service/config/default?ref=\\)\\(.*\\)|\\1{{ revision }}|' -e 's/\\(newTag: \\).*/\\1{{ revision }}/' components/release/development/kustomization.yaml",
 		"sign": map[string]interface{}{
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",
@@ -343,9 +298,8 @@ func prepareMergedPR(devFw *framework.Framework, testBaseBranchName, testPRBranc
 			GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, pr.GetNumber())
 			return nil
 		}
-		return fmt.Errorf("PR merge failed")
+		return fmt.Errorf("PR #%d merge failed", pr.GetNumber())
 	}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
 
 	return pr.GetNumber(), mergeResultSha
 }
-

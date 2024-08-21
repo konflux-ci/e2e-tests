@@ -153,35 +153,47 @@ func (i *IntegrationController) WaitForIntegrationPipelineToBeFinished(testScena
 			GinkgoWriter.Println("PipelineRun has not been created yet for test scenario %s and snapshot %s/%s", testScenario.GetName(), snapshot.GetNamespace(), snapshot.GetName())
 			return false, nil
 		}
-		for _, condition := range pipelineRun.Status.Conditions {
-			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
+		GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
 
-			if !pipelineRun.IsDone() {
-				return false, nil
-			}
-
-			if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-				return true, nil
-			} else {
-				return false, fmt.Errorf(tekton.GetFailedPipelineRunLogs(i.KubeRest(), i.KubeInterface(), pipelineRun))
-			}
+		if !pipelineRun.IsDone() {
+			return false, nil
 		}
-		return false, nil
+
+		if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+			return true, nil
+		}
+		var prLogs string
+		if prLogs, err = tekton.GetFailedPipelineRunLogs(i.KubeRest(), i.KubeInterface(), pipelineRun); err != nil {
+			return false, fmt.Errorf("failed to get PLR logs: %+v", err)
+		}
+		return false, fmt.Errorf("%s", prLogs)
 	})
 }
 
+func (i *IntegrationController) isScenarioInExpectedScenarios(testScenario *integrationv1beta2.IntegrationTestScenario, expectedTestScenarios []string) bool {
+	for _, expectedScenario := range expectedTestScenarios {
+		if expectedScenario == testScenario.Name {
+			return true
+		}
+	}
+	return false
+}
+
 // WaitForAllIntegrationPipelinesToBeFinished wait for all integration pipelines to finish.
-func (i *IntegrationController) WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName string, snapshot *appstudioApi.Snapshot) error {
+func (i *IntegrationController) WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName string, snapshot *appstudioApi.Snapshot, expectedTestScenarios []string) error {
 	integrationTestScenarios, err := i.GetIntegrationTestScenarios(applicationName, testNamespace)
 	if err != nil {
 		return fmt.Errorf("unable to get IntegrationTestScenarios for Application %s/%s. Error: %v", testNamespace, applicationName, err)
 	}
 
 	for _, testScenario := range *integrationTestScenarios {
-		GinkgoWriter.Printf("Integration test scenario %s is found\n", testScenario.Name)
-		err = i.WaitForIntegrationPipelineToBeFinished(&testScenario, snapshot, testNamespace)
-		if err != nil {
-			return fmt.Errorf("error occurred while waiting for Integration PLR (associated with IntegrationTestScenario: %s) to get finished in %s namespace. Error: %v", testScenario.Name, testNamespace, err)
+		testScenario := testScenario
+		if len(expectedTestScenarios) == 0 || i.isScenarioInExpectedScenarios(&testScenario, expectedTestScenarios) {
+			GinkgoWriter.Printf("Integration test scenario %s is found\n", testScenario.Name)
+			err = i.WaitForIntegrationPipelineToBeFinished(&testScenario, snapshot, testNamespace)
+			if err != nil {
+				return fmt.Errorf("error occurred while waiting for Integration PLR (associated with IntegrationTestScenario: %s) to get finished in %s namespace. Error: %v", testScenario.Name, testNamespace, err)
+			}
 		}
 	}
 
@@ -191,7 +203,7 @@ func (i *IntegrationController) WaitForAllIntegrationPipelinesToBeFinished(testN
 // WaitForFinalizerToGetRemovedFromAllIntegrationPipelineRuns waits for
 // the given finalizer to get removed from all integration pipelinesruns
 // that are related to the given application and namespace.
-func (i *IntegrationController) WaitForFinalizerToGetRemovedFromAllIntegrationPipelineRuns(testNamespace, applicationName string, snapshot *appstudioApi.Snapshot) error {
+func (i *IntegrationController) WaitForFinalizerToGetRemovedFromAllIntegrationPipelineRuns(testNamespace, applicationName string, snapshot *appstudioApi.Snapshot, expectedTestScenarios []string) error {
 	integrationTestScenarios, err := i.GetIntegrationTestScenarios(applicationName, testNamespace)
 	if err != nil {
 		return fmt.Errorf("unable to get IntegrationTestScenarios for Application %s/%s. Error: %v", testNamespace, applicationName, err)
@@ -199,13 +211,14 @@ func (i *IntegrationController) WaitForFinalizerToGetRemovedFromAllIntegrationPi
 
 	for _, testScenario := range *integrationTestScenarios {
 		testScenario := testScenario
-		GinkgoWriter.Printf("Integration test scenario %s is found\n", testScenario.Name)
-		err = i.WaitForFinalizerToGetRemovedFromIntegrationPipeline(&testScenario, snapshot, testNamespace)
-		if err != nil {
-			return fmt.Errorf("error occurred while waiting for Integration PLR (associated with IntegrationTestScenario: %s) to NOT have the finalizer. Error: %v", testScenario.Name, err)
+		if len(expectedTestScenarios) == 0 || i.isScenarioInExpectedScenarios(&testScenario, expectedTestScenarios) {
+			GinkgoWriter.Printf("Integration test scenario %s is found\n", testScenario.Name)
+			err = i.WaitForFinalizerToGetRemovedFromIntegrationPipeline(&testScenario, snapshot, testNamespace)
+			if err != nil {
+				return fmt.Errorf("error occurred while waiting for Integration PLR (associated with IntegrationTestScenario: %s) to NOT have the finalizer. Error: %v", testScenario.Name, err)
+			}
 		}
 	}
-
 	return nil
 }
 
