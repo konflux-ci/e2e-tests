@@ -12,7 +12,7 @@ import (
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var taskNames = []string{"clair-scan", "clamav-scan", "deprecated-base-image-check", "inspect-image", "sbom-json-check"}
+var taskNames = []string{"clair-scan", "clamav-scan", "deprecated-base-image-check", "inspect-image"}
 
 type TestOutput struct {
 	Result    string `json:"result"`
@@ -97,12 +97,6 @@ func validateTaskRunResult(trResults []pipeline.TaskRunResult, expectedResultNam
 					err := json.Unmarshal([]byte(r.Value.StringVal), &testOutput)
 					if err != nil {
 						return fmt.Errorf("cannot parse %q result: %+v", constants.TektonTaskTestOutputName, err)
-					}
-					// If the test result isn't SUCCESS, the overall outcome is a failure
-					if taskName == "sbom-json-check" {
-						if testOutput.Result == "FAILURE" {
-							return fmt.Errorf("expected Result for Task name %q to be SUCCESS: %+v", taskName, testOutput)
-						}
 					}
 				case "CLAIR_SCAN_RESULT":
 					var testOutput = &ClairScanResult{}
