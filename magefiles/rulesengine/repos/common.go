@@ -508,3 +508,16 @@ func SetupMultiPlatformTests() error {
 
 	return nil
 }
+
+func SetEnvVarsForComponentImageDeployment(rctx *rulesengine.RuleCtx) error {
+	componentImage := os.Getenv("COMPONENT_IMAGE")
+	sp := strings.Split(componentImage, "@")
+	if len(sp) != 2 {
+		return fmt.Errorf("component image ref expected in format 'quay.io/<org>/<repository>@sha256:<sha256-value>', got %s", componentImage)
+	}
+	os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", rctx.ComponentEnvVarPrefix), sp[0])
+	os.Setenv(fmt.Sprintf("%s_IMAGE_TAG", rctx.ComponentEnvVarPrefix), rctx.ComponentImageTag)
+	os.Setenv(fmt.Sprintf("%s_PR_OWNER", rctx.ComponentEnvVarPrefix), rctx.PrRemoteName)
+	os.Setenv(fmt.Sprintf("%s_PR_SHA", rctx.ComponentEnvVarPrefix), rctx.PrCommitSha)
+	return nil
+}
