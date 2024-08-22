@@ -1,10 +1,15 @@
 #!/bin/bash
 
-function saveArtifacts() {
+function postActions() {
     local EXIT_CODE=$?
-    
+
+    # Unregister PaC Server from SprayProxy
+    if [ "$UNREGISTER_PAC" == "true" ]; then
+        make ci/sprayproxy/unregister || true
+    fi
+
+    # Save artifacts
     cd /workspace || exit 1
-    
     oras login -u "$ORAS_USERNAME" -p "$ORAS_PASSWORD" quay.io
     echo '{"doc": "README.md"}' > config.json
     
@@ -14,7 +19,7 @@ function saveArtifacts() {
     exit "$EXIT_CODE"
 }
 
-trap saveArtifacts EXIT
+trap postActions EXIT
 
 # Save the current kubeconfig and unset the default
 oc config view --minify --raw > /workspace/kubeconfig
@@ -114,4 +119,6 @@ echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > "${GIT_CREDS_PATH}"
 
 git clone --origin upstream --branch main "https://${GITHUB_TOKEN}@github.com/konflux-ci/e2e-tests.git" .
 make ci/prepare/e2e-branch
+
+UNREGISTER_PAC=true
 make ci/test/e2e

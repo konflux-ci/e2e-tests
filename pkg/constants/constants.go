@@ -121,6 +121,10 @@ const (
 	// GitLab Project ID used for helper functions in magefiles
 	GITLAB_PROJECT_ID_ENV string = "GITLAB_PROJECT_ID"
 
+	// Release service catalog default URL and revision for e2e tests
+	RELEASE_CATALOG_DEFAULT_URL = "https://github.com/konflux-ci/release-service-catalog"
+	RELEASE_CATALOG_DEFAULT_REVISION = "staging"
+
 	// Test namespace's required labels
 	ArgoCDLabelKey   string = "argocd.argoproj.io/managed-by"
 	ArgoCDLabelValue string = "gitops-service-argocd"
@@ -141,8 +145,9 @@ const (
 
 	DefaultQuayOrg = "redhat-appstudio-qe"
 
-	DefaultGitLabAPIURL = "https://gitlab.com/api/v4"
-	DefaultGitLabQEOrg  = "konflux-qe"
+	DefaultGitLabAPIURL   = "https://gitlab.com/api/v4"
+	DefaultGitLabQEOrg    = "konflux-qe"
+	DefaultGitLabRepoName = "hacbs-test-project-integration"
 
 	RegistryAuthSecretName = "redhat-appstudio-registry-pull-secret"
 	ComponentSecretName    = "comp-secret"

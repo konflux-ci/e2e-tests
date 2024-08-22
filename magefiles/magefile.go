@@ -331,7 +331,7 @@ func RunE2ETests() error {
 		rctx.JobName = jobName
 		rctx.JobType = jobType
 
-		files, err := getChangedFiles()
+		files, err := getChangedFiles("e2e-tests")
 		if err != nil {
 			return err
 		}
@@ -347,13 +347,29 @@ func RunE2ETests() error {
 		return nil
 	}
 
+	if openshiftJobSpec.Refs.Repo == "infra-deployments" {
+
+		rctx.RepoName = openshiftJobSpec.Refs.Repo
+		rctx.JobName = jobName
+		rctx.JobType = jobType
+
+		files, err := getChangedFiles(openshiftJobSpec.Refs.Repo)
+		if err != nil {
+			return err
+		}
+		rctx.DiffFiles = files
+
+		// filtering the rule engine to load only infra-deployments rule catalog within the test category
+		return engine.MageEngine.RunRules(rctx, "tests", "infra-deployments")
+	}
+
 	if pr.RepoName == "e2e-tests" {
 
 		rctx.RepoName = pr.RepoName
 		rctx.JobName = jobName
 		rctx.JobType = jobType
 
-		files, err := getChangedFiles()
+		files, err := getChangedFiles(pr.RepoName)
 		if err != nil {
 			return err
 		}
@@ -1365,7 +1381,7 @@ func isValidPacHost(server string) bool {
 func (Local) PreviewTestSelection() error {
 
 	rctx := rulesengine.NewRuleCtx()
-	files, err := getChangedFiles()
+	files, err := getChangedFiles("e2e-tests")
 	if err != nil {
 		klog.Error(err)
 		return err
@@ -1385,7 +1401,7 @@ func (Local) PreviewTestSelection() error {
 func (Local) RunRuleDemo() error {
 
 	rctx := rulesengine.NewRuleCtx()
-	files, err := getChangedFiles()
+	files, err := getChangedFiles("e2e-tests")
 	if err != nil {
 		klog.Error(err)
 		return err
@@ -1400,4 +1416,25 @@ func (Local) RunRuleDemo() error {
 	}
 
 	return nil
+}
+
+func (Local) RunInfraDeploymentsRuleDemo() error {
+
+	rctx := rulesengine.NewRuleCtx()
+	rctx.Parallel = true
+	rctx.OutputDir = artifactDir
+
+	rctx.RepoName = "infra-deployments"
+	rctx.JobName = ""
+	rctx.JobType = ""
+	rctx.DryRun = true
+
+	files, err := getChangedFiles("infra-deployments")
+	if err != nil {
+		return err
+	}
+	rctx.DiffFiles = files
+
+	// filtering the rule engine to load only infra-deployments rule catalog within the test category
+	return engine.MageEngine.RunRules(rctx, "tests", "infra-deployments")
 }
