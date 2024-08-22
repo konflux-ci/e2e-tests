@@ -62,7 +62,7 @@ var (
 	componentUrls                      = strings.Split(utils.GetEnv(COMPONENT_REPO_URLS_ENV, pythonComponentGitHubURL), ",") //multiple urls
 	componentNames                     []string
 	githubOrg                          = utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
-	gitlabOrg                          = utils.GetEnv(constants.GITLAB_QE_ORG_ENV, "konflux-qe")
+	gitlabOrg                          = utils.GetEnv(constants.GITLAB_QE_ORG_ENV, constants.DefaultGitLabQEOrg)
 	helloWorldComponentGitHubURL       = fmt.Sprintf(githubUrlFormat, githubOrg, helloWorldComponentGitSourceRepoName)
 	annotationsTestGitHubURL           = fmt.Sprintf(githubUrlFormat, githubOrg, annotationsTestGitSourceRepoName)
 	helloWorldComponentGitLabProjectID = fmt.Sprintf("%s/%s", gitlabOrg, helloWorldComponentGitSourceRepoName)
