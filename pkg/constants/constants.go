@@ -121,6 +121,10 @@ const (
 	// GitLab Project ID used for helper functions in magefiles
 	GITLAB_PROJECT_ID_ENV string = "GITLAB_PROJECT_ID"
 
+	// Release service catalog default URL and revision for e2e tests
+	RELEASE_CATALOG_DEFAULT_URL = "https://github.com/konflux-ci/release-service-catalog"
+	RELEASE_CATALOG_DEFAULT_REVISION = "staging"
+
 	// Test namespace's required labels
 	ArgoCDLabelKey   string = "argocd.argoproj.io/managed-by"
 	ArgoCDLabelValue string = "gitops-service-argocd"
