@@ -55,6 +55,15 @@ var componentScenarios = []ComponentScenarioSpec{
 		PrefetchInput:      "",
 	},
 	{
+		GitURL:             "https://github.com/konflux-qe-bd/docker-file-from-scratch",
+		Revision:           "34de8caa4952b6214700699e6df4bb53d6f799e6",
+		ContextDir:         ".",
+		DockerFilePath:     "Dockerfile",
+		PipelineBundleName: "docker-build",
+		EnableHermetic:     false,
+		PrefetchInput:      "",
+	},
+	{
 		GitURL:             "https://github.com/konflux-qe-bd/source-build-parent-image-with-digest-only",
 		Revision:           "a4f744581c0768eb84a4345f11d04090bb14bdff",
 		ContextDir:         ".",
