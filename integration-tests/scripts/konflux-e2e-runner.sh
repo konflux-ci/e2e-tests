@@ -118,7 +118,9 @@ git config --global credential.helper "store --file ${GIT_CREDS_PATH}"
 echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > "${GIT_CREDS_PATH}"
 
 git clone --origin upstream --branch main "https://${GITHUB_TOKEN}@github.com/konflux-ci/e2e-tests.git" .
-make ci/prepare/e2e-branch
+
+make ci/prepare/e2e-branch 2>&1 | tee /workspace/test-artifacts/e2e-branch.log
+make ci/test/e2e 2>&1 | tee /workspace/test-artifacts/e2e-tests.log
 
 UNREGISTER_PAC=true
 make ci/test/e2e
