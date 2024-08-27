@@ -327,7 +327,9 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("failed to parse SBOM from show-sbom task output from %s/%s PipelineRun", pr.GetNamespace(), pr.GetName()))
 				Expect(sbom.BomFormat).ToNot(BeEmpty())
 				Expect(sbom.SpecVersion).ToNot(BeEmpty())
-				Expect(sbom.Components).ToNot(BeEmpty())
+				if !strings.Contains(gitUrl, "from-scratch") {
+					Expect(sbom.Components).ToNot(BeEmpty())
+				}
 			})
 
 			It(fmt.Sprintf("should ensure show-summary task ran for component with Git source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
@@ -580,24 +582,26 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					Expect(cyclonedx.BomFormat).To(Equal("CycloneDX"))
 					Expect(cyclonedx.SpecVersion).ToNot(BeEmpty())
 					Expect(cyclonedx.Version).ToNot(BeZero())
-					Expect(cyclonedx.Components).ToNot(BeEmpty())
+					if !strings.Contains(gitUrl, "from-scratch") {
+						Expect(cyclonedx.Components).ToNot(BeEmpty())
 
-					numberOfLibraryComponents := 0
-					for _, component := range cyclonedx.Components {
-						Expect(component.Name).ToNot(BeEmpty())
-						Expect(component.Type).ToNot(BeEmpty())
+						numberOfLibraryComponents := 0
+						for _, component := range cyclonedx.Components {
+							Expect(component.Name).ToNot(BeEmpty())
+							Expect(component.Type).ToNot(BeEmpty())
 
-						if component.Type == "library" || component.Type == "application" {
-							Expect(component.Purl).ToNot(BeEmpty())
-							numberOfLibraryComponents++
+							if component.Type == "library" || component.Type == "application" {
+								Expect(component.Purl).ToNot(BeEmpty())
+								numberOfLibraryComponents++
+							}
 						}
-					}
 
-					Expect(purl.ImageContents.Dependencies).ToNot(BeEmpty())
-					Expect(purl.ImageContents.Dependencies).To(HaveLen(numberOfLibraryComponents))
+						Expect(purl.ImageContents.Dependencies).ToNot(BeEmpty())
+						Expect(purl.ImageContents.Dependencies).To(HaveLen(numberOfLibraryComponents))
 
-					for _, dependency := range purl.ImageContents.Dependencies {
-						Expect(dependency.Purl).ToNot(BeEmpty())
+						for _, dependency := range purl.ImageContents.Dependencies {
+							Expect(dependency.Purl).ToNot(BeEmpty())
+						}
 					}
 				})
 			})

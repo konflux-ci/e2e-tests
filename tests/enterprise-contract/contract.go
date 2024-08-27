@@ -310,7 +310,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 
 			Context("ec-cli command", func() {
 				It("verifies ec cli has error handling", func() {
-					generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:latest")
+					generator.WithComponentImage("quay.io/konflux-ci/ec-golden-image:latest")
 					pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
@@ -354,8 +354,8 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 						})
 					Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
-					generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:latest")
-					generator.AppendComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-unacceptable-task")
+					generator.WithComponentImage("quay.io/konflux-ci/ec-golden-image:latest")
+					generator.AppendComponentImage("quay.io/konflux-ci/ec-golden-image:e2e-test-unacceptable-task")
 					pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
@@ -401,7 +401,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 						})
 					Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
-					generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:latest")
+					generator.WithComponentImage("quay.io/konflux-ci/ec-golden-image:latest")
 					pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
@@ -437,7 +437,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 					)
 					Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
-					generator.WithComponentImage("quay.io/redhat-appstudio/ec-golden-image:e2e-test-unacceptable-task")
+					generator.WithComponentImage("quay.io/konflux-ci/ec-golden-image:e2e-test-unacceptable-task")
 					pr, err := fwk.AsKubeAdmin.TektonController.RunPipeline(generator, namespace, pipelineRunTimeout)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fwk.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, namespace, pipelineRunTimeout)).To(Succeed())
