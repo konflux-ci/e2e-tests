@@ -381,6 +381,11 @@ var BootstrapClusterRuleChain = rulesengine.Rule{Name: "BoostrapCluster RuleChai
 	Condition:   rulesengine.All{&InstallKonfluxRule, &RegisterKonfluxToSprayProxyRule, &SetupMultiPlatformTestsRule},
 }
 
+var BootstrapClusterWithSprayProxyRuleChain = rulesengine.Rule{Name: "BoostrapCluster with SprayProxy RuleChain",
+	Description: "Rule Chain that installs Konflux in preview mode and registers it with SprayProxy",
+	Condition:   rulesengine.All{&InstallKonfluxRule, &RegisterKonfluxToSprayProxyRule},
+}
+
 func registerPacServer() error {
 	var err error
 	var pacHost string

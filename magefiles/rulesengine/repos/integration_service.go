@@ -22,11 +22,6 @@ var IntegrationServiceCIRule = rulesengine.Rule{Name: "Integration-service repo 
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteTestAction)},
 }
 
-var BootstrapClusterWithSprayProxyRuleChain = rulesengine.Rule{Name: "BoostrapCluster with SprayProxy RuleChain",
-	Description: "Rule Chain that installs Konflux in preview mode and registers it with SprayProxy",
-	Condition:   rulesengine.All{&InstallKonfluxRule, &RegisterKonfluxToSprayProxyRule},
-}
-
 var IntegrationServiceRepoSetDefaultSettingsRule = rulesengine.Rule{Name: "General Required Settings for integration-service repository jobs",
 	Description: "Set SprayProxy settings to true for integration-service jobs before bootstrap",
 	Condition: rulesengine.Any{
