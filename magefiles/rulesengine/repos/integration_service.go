@@ -17,7 +17,6 @@ var IntegrationServiceCIRule = rulesengine.Rule{Name: "Integration-service repo 
 		rulesengine.Any{&InfraDeploymentsPRPairingRule, rulesengine.None{&InfraDeploymentsPRPairingRule}},
 		&PreflightInstallGinkgoRule,
 		&BootstrapClusterWithSprayProxyRuleChain,
-		&IntegrationServiceRepoRunTestsRule,
 	},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteTestAction)},
 }
@@ -47,14 +46,6 @@ var IntegrationServiceRepoSetDefaultSettingsRule = rulesengine.Rule{Name: "Gener
 		}
 		return SetEnvVarsForComponentImageDeployment(rctx)
 	})},
-}
-
-var IntegrationServiceRepoRunTestsRule = rulesengine.Rule{Name: "Run integration-service specific tests",
-	Description: "Run integration-service specific tests if the repository is integration-service",
-	Condition: rulesengine.Any{
-		IsIntegrationServiceRepoPR,
-	},
-	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteTestAction)},
 }
 
 var IsIntegrationServiceRepoPR = rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
