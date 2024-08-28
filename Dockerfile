@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/go-toolset:1.21.11-7 AS builder
+FROM registry.access.redhat.com/ubi9/go-toolset:1.21.11-7.1724661022 AS builder
 
 ENV GOBIN=$GOPATH/bin
 
@@ -50,7 +50,7 @@ RUN curl -LO "https://github.com/oras-project/oras/releases/download/v${ORAS_VER
     rm -rf oras_${ORAS_VERSION}_*.tar.gz oras-install/ && \
     oras version
 
-FROM registry.access.redhat.com/ubi9/go-toolset:1.21.11-7
+FROM registry.access.redhat.com/ubi9/go-toolset:1.21.11-7.1724661022
 
 WORKDIR /konflux-e2e
 
