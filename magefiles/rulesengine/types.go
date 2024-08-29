@@ -126,17 +126,21 @@ func (e *RuleEngine) runLoadedCatalog(loaded RuleCatalog, rctx *RuleCtx) error {
 
 	var matched RuleCatalog
 	for _, rule := range loaded {
-
+		ok, err := rule.Eval(rctx)
+		if err != nil {
+			return err
+		}
 		// In most cases, a rule chain has no action to execute
 		// since a majority of the actions are encapsulated
 		// within the rules that compose the chain.
 		if len(rule.Actions) == 0 {
-			return e.runChained(rule, rctx)
-
-		}
-		ok, err := rule.Eval(rctx)
-		if err != nil {
-			return err
+			// In case the rule chain condition was evaluated to true,
+			// it means that the rule was applied, so stop iterating over next catalog rules.
+			// Otherwise continue
+			if ok {
+				return nil
+			}
+			continue
 		}
 		if ok {
 			matched = append(matched, rule)
@@ -186,21 +190,6 @@ func (e *RuleEngine) run(matched RuleCatalog, rctx *RuleCtx) error {
 	}
 
 	return nil
-}
-
-func (e *RuleEngine) runChained(rule Rule, rctx *RuleCtx) error {
-
-	klog.Infof("The following rule, %s, is a RuleChain", rule.String())
-	ok, err := rule.Eval(rctx)
-	if err != nil {
-		return fmt.Errorf("failed to apply RuleChain %s: %s", rule.String(), err)
-	}
-	if ok {
-		return nil
-	}
-
-	return fmt.Errorf("failed to run RuleChain %s", rule.String())
-
 }
 
 type RuleCatalog []Rule
@@ -448,6 +437,8 @@ type RuleCtx struct {
 	types.GoFlagsConfig
 	RuleData                      map[string]any
 	RepoName                      string
+	ComponentImageTag             string
+	ComponentEnvVarPrefix         string
 	JobName                       string
 	JobType                       string
 	DiffFiles                     Files
@@ -473,6 +464,8 @@ func NewRuleCtx() *RuleCtx {
 		reporterConfig,
 		goFlagsConfig,
 		envData,
+		"",
+		"",
 		"",
 		"",
 		"",
