@@ -1,5 +1,8 @@
 #!/bin/bash
 
+set -e
+set -o pipefail
+
 function postActions() {
     local EXIT_CODE=$?
 
@@ -12,10 +15,12 @@ function postActions() {
     cd /workspace || exit 1
     oras login -u "$ORAS_USERNAME" -p "$ORAS_PASSWORD" quay.io
     echo '{"doc": "README.md"}' > config.json
-    
+
     oras push "$ORAS_CONTAINER" --config config.json:application/vnd.acme.rocket.config.v1+json \
         ./test-artifacts/:application/vnd.acme.rocket.docs.layer.v1+tar
-    
+
+    [[ "${EXIT_CODE}" != "0" ]] && echo "[ERROR] Job failed." || echo "[INFO] Job completed successfully."
+
     exit "$EXIT_CODE"
 }
 

@@ -271,38 +271,7 @@ var EcTestFileChangeRule = rulesengine.Rule{Name: "E2E PR EC Test File Change Ru
 
 	})}}
 
-var E2ERepoPrepareBranchRule = rulesengine.Rule{Name: "E2E prepare branch for CI",
-	Description: "Checkout the e2e-tests repo using commit SHA in CI",
-	Condition: rulesengine.All{
-		rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
-			return rctx.RepoName == "e2e-tests", nil
-		}),
-		rulesengine.None{
-			rulesengine.ConditionFunc(IsPeriodicJob),
-			rulesengine.ConditionFunc(IsRehearseJob),
-		},
-	},
-	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
-
-		if rctx.DryRun {
-
-			for _, arg := range [][]string{
-				{"remote", "add", rctx.PrRemoteName, fmt.Sprintf("https://github.com/%s/e2e-tests.git", rctx.PrRemoteName)},
-				{"fetch", rctx.PrRemoteName},
-				{"checkout", rctx.PrCommitSha},
-				{"pull", "--rebase", "upstream", "main"},
-			} {
-				klog.Infof("git %s", arg)
-			}
-
-			return nil
-		}
-
-		return GitCheckoutRemoteBranch(rctx.PrRemoteName, rctx.PrCommitSha)
-	})},
-}
-
-var E2ERepoSetRequiredSettingsForPRRule = rulesengine.Rule{Name: "Set Required Settings for E2E Repo PR Paired Job",
+var InfraDeploymentsPRPairingRule = rulesengine.Rule{Name: "Set Required Settings for E2E Repo PR Paired Job",
 	Description: "Set up required infra-deployments variables for e2e-tests repo PR paired job before bootstrap ",
 	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
 		if rctx.DryRun {
@@ -337,7 +306,7 @@ var E2ERepoCIRuleChain = rulesengine.Rule{Name: "E2E Repo CI Workflow Rule Chain
 	Description: "Execute the full workflow for e2e-tests repo in CI",
 	Condition: rulesengine.All{
 		&E2ERepoSetDefaultSettingsRule,
-		rulesengine.Any{&E2ERepoSetRequiredSettingsForPRRule, rulesengine.None{&E2ERepoSetRequiredSettingsForPRRule}},
+		rulesengine.Any{&InfraDeploymentsPRPairingRule, rulesengine.None{&InfraDeploymentsPRPairingRule}},
 		&PreflightInstallGinkgoRule,
 		&BootstrapClusterRuleChain,
 		rulesengine.Any{&NonTestFilesRule, &TestFilesOnlyRule}},
