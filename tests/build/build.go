@@ -130,8 +130,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				// Delete created webhook from GitHub
 				Expect(build.CleanupWebhooks(f, helloWorldComponentGitSourceRepoName)).ShouldNot(HaveOccurred())
 			case "gitlab":
+				err = f.AsKubeAdmin.CommonController.Gitlab.CloseMergeRequest(helloWorldComponentGitLabProjectID, prNumber)
+				if err != nil {
+					Expect(err).To(MatchError(ContainSubstring("404")))
+				}
+
 				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteBranch(helloWorldComponentGitLabProjectID, componentBaseBranchName)).To(Succeed())
-				Expect(f.AsKubeAdmin.CommonController.Gitlab.CloseMergeRequest(helloWorldComponentGitLabProjectID, prNumber)).To(Succeed())
 				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteWebhooks(helloWorldComponentGitLabProjectID, f.ClusterAppDomain)).To(Succeed())
 			}
 		})
