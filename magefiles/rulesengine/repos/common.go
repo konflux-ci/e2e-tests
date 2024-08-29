@@ -381,6 +381,11 @@ var BootstrapClusterRuleChain = rulesengine.Rule{Name: "BoostrapCluster RuleChai
 	Condition:   rulesengine.All{&InstallKonfluxRule, &RegisterKonfluxToSprayProxyRule, &SetupMultiPlatformTestsRule},
 }
 
+var BootstrapClusterWithSprayProxyRuleChain = rulesengine.Rule{Name: "BoostrapCluster with SprayProxy RuleChain",
+	Description: "Rule Chain that installs Konflux in preview mode and registers it with SprayProxy",
+	Condition:   rulesengine.All{&InstallKonfluxRule, &RegisterKonfluxToSprayProxyRule},
+}
+
 func registerPacServer() error {
 	var err error
 	var pacHost string
@@ -506,5 +511,18 @@ func SetupMultiPlatformTests() error {
 		os.Setenv(constants.CUSTOM_BUILDAH_REMOTE_PIPELINE_BUILD_BUNDLE_ENV+"_"+platform, newRemotePipeline.String())
 	}
 
+	return nil
+}
+
+func SetEnvVarsForComponentImageDeployment(rctx *rulesengine.RuleCtx) error {
+	componentImage := os.Getenv("COMPONENT_IMAGE")
+	sp := strings.Split(componentImage, "@")
+	if len(sp) != 2 {
+		return fmt.Errorf("component image ref expected in format 'quay.io/<org>/<repository>@sha256:<sha256-value>', got %s", componentImage)
+	}
+	os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", rctx.ComponentEnvVarPrefix), sp[0])
+	os.Setenv(fmt.Sprintf("%s_IMAGE_TAG", rctx.ComponentEnvVarPrefix), rctx.ComponentImageTag)
+	os.Setenv(fmt.Sprintf("%s_PR_OWNER", rctx.ComponentEnvVarPrefix), rctx.PrRemoteName)
+	os.Setenv(fmt.Sprintf("%s_PR_SHA", rctx.ComponentEnvVarPrefix), rctx.PrCommitSha)
 	return nil
 }
