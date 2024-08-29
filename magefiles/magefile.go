@@ -128,6 +128,7 @@ func (ci CI) init() error {
 	rctx.JobType = jobType
 	rctx.PrRemoteName = pr.RemoteName
 	rctx.PrBranchName = pr.BranchName
+	rctx.PrCommitSha = pr.CommitSHA
 	return nil
 }
 
@@ -292,7 +293,7 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when running ci init: %v", err)
 	}
 	// Eventually we'll introduce mage rules for all repositories, so this condition won't be needed anymore
-	if pr.RepoName == "e2e-tests" {
+	if pr.RepoName == "e2e-tests" || pr.RepoName == "integration-service" {
 		return engine.MageEngine.RunRulesOfCategory("ci", rctx)
 	}
 
