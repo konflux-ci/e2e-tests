@@ -13,7 +13,7 @@ function postActions() {
 
     # Save artifacts
     cd /workspace || exit 1
-    oras login -u "$ORAS_USERNAME" -p "$ORAS_PASSWORD" quay.io
+    oras login -u "$OCI_STORAGE_USERNAME" -p "$OCI_STORAGE_TOKEN" quay.io
     echo '{"doc": "README.md"}' > config.json
 
     oras push "$ORAS_CONTAINER" --config config.json:application/vnd.acme.rocket.config.v1+json \
@@ -69,10 +69,12 @@ export MULTI_PLATFORM_AWS_ACCESS_KEY=$(cat /usr/local/konflux-ci-secrets/multi-p
 export MULTI_PLATFORM_AWS_SECRET_ACCESS_KEY=$(cat /usr/local/konflux-ci-secrets/multi-platform-aws-secret-access-key)
 export MULTI_PLATFORM_AWS_SSH_KEY=$(cat /usr/local/konflux-ci-secrets/multi-platform-aws-ssh-key)
 export MULTI_PLATFORM_IBM_API_KEY=$(cat /usr/local/konflux-ci-secrets/multi-platform-ibm-api-key)
-export ORAS_USERNAME=$(cat /usr/local/konflux-ci-secrets/oras-username)
-export ORAS_PASSWORD=$(cat /usr/local/konflux-ci-secrets/oras-password)
 export DOCKER_IO_AUTH=$(cat /usr/local/konflux-ci-secrets/docker_io)
 export GITLAB_BOT_TOKEN=$(cat /usr/local/konflux-ci-secrets/gitlab-bot-token)
+
+# export konflux infra specific environments
+export OCI_STORAGE_USERNAME=$(jq -r '."quay-username"' /usr/local/konflux-test-infra/oci-storage)
+export OCI_STORAGE_TOKEN=$(jq -r '."quay-token"' /usr/local/konflux-test-infra/oci-storage)
 
 export ENABLE_SCHEDULING_ON_MASTER_NODES=false
 
