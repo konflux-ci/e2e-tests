@@ -50,6 +50,9 @@ spec:
     - name: konflux-secret-volume
       secret:
         secretName: konflux-e2e-secrets
+    - name: konflux-test-infra-volume
+      secret:
+        secretName: konflux-test-infra
   steps:
     - name: e2e-test
       computeResources:
@@ -63,6 +66,8 @@ spec:
       volumeMounts:
         - name: konflux-secret-volume
           mountPath: /usr/local/konflux-ci-secrets
+        - name:  konflux-test-infra-volume
+          mountPath: /usr/local/konflux-test-infra
       workingDir: /workspace
       env:
         - name: JOB_NAME
