@@ -28,7 +28,7 @@ import (
 const (
 	sampServiceAccountName = "release-service-account"
 	sampSourceGitURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic"
-	sampGitSrcSHA          = "2c2f068d7371fb174c3396dc213cb2f223ee3bc4"
+	sampGitSrcSHA          = "6b56d05ac8abb4c24d153e9689209a1018402aad"
 	sampRepoOwner          = "redhat-appstudio-qe"
 	sampRepo               = "devfile-sample-go-basic"
 	sampCatalogPathInRepo  = "pipelines/release-to-github/release-to-github.yaml"
@@ -51,7 +51,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 	var sampReleasePlanName = "samp-rp-" + util.GenerateRandomString(4)
 	var sampReleasePlanAdmissionName = "samp-rpa-" + util.GenerateRandomString(4)
 	var sampEnterpriseContractPolicyName = "samp-policy-" + util.GenerateRandomString(4)
-	var sampleImage = "quay.io/redhat-user-workloads-stage/dev-release-team-tenant/e2e-release-to-github-app/devfile-sample-go-basic@sha256:06f89e951b144e033596b71a60569607f47f51fe685ead48f74bf13ea16d63aa"
+	var sampleImage = "quay.io/hacbs-release-tests/e2e-rel-to-github-comp@sha256:3a354e86ff26bbd4870ce8d62e180159094ebc2761db9572976b8f67c53add16"
 
 	var snapshot *appservice.Snapshot
 	var releaseCR *releaseapi.Release
@@ -106,6 +106,9 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 			Expect(err).ToNot(HaveOccurred())
 
 			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioQESecret, constants.DefaultPipelineServiceAccount, true)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(sampApplicationName, devNamespace)

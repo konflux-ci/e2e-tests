@@ -52,7 +52,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch test f
 	var multiarchReleasePlanName = "e2e-multiarch-rp"
 	var multiarchReleasePlanAdmissionName = "e2e-multiarch-rpa"
 	var multiarchEnterpriseContractPolicyName = "e2e-multiarch-policy"
-	var sampleImage = "quay.io/redhat-user-workloads-stage/dev-release-team-tenant/e2e-multi-platform-test-prod/e2e-multi-platform-test@sha256:23ce99c70f86f879c67a82ef9aa088c7e9a52dc09630c5913587161bda6259e2"
+	var sampleImage = "quay.io/hacbs-release-tests/e2e-multi-platform-test@sha256:23ce99c70f86f879c67a82ef9aa088c7e9a52dc09630c5913587161bda6259e2"
 
 	var snapshotPush *appservice.Snapshot
 	var releaseCR *releaseapi.Release
@@ -65,7 +65,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch test f
 			managedFw = releasecommon.NewFramework(managedWorkspace)
 			// Create a ticker that ticks every 3 minutes
 			ticker := time.NewTicker(3 * time.Minute)
-			// Schedule the stop of the ticker after 15 minutes
+			// Schedule the stop of the ticker after 30 minutes
 			time.AfterFunc(30*time.Minute, func() {
 				ticker.Stop()
 				fmt.Println("Stopped executing every 3 minutes.")

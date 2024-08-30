@@ -40,11 +40,11 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 	//	var releasePR, releasePR2 *pipeline.PipelineRun
 	var releasePR *pipeline.PipelineRun
 	var scGitRevision = fmt.Sprintf("test-pyxis-%s", util.GenerateRandomString(4))
-	var sampleImage = "quay.io/redhat-appstudio-qe/dcmetromap@sha256:544259be8bcd9e6a2066224b805d854d863064c9b64fa3a87bfcd03f5b0f28e6"
-	var additionalImage = "quay.io/redhat-appstudio-qe/simplepython@sha256:87ebb63d7b7ba0196093195592c03f5f6e23db9b889c7325e5e081feb16755a1"
-	var gitSourceURL = "https://github.com/redhat-appstudio-qe/dc-metro-map-release"
+	var sampleImage = "quay.io/hacbs-release-tests/dcmetromap@sha256:544259be8bcd9e6a2066224b805d854d863064c9b64fa3a87bfcd03f5b0f28e6"
+	var additionalImage = "quay.io/hacbs-release-tests/simplepython@sha256:87ebb63d7b7ba0196093195592c03f5f6e23db9b889c7325e5e081feb16755a1"
+	var gitSourceURL = releasecommon.GitSourceComponentUrl
 	var gitSourceRevision = "d49914874789147eb2de9bb6a12cd5d150bfff92"
-	var gitAdditionSrcURL = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic-test2"
+	var gitAdditionSrcURL = releasecommon.AdditionalGitSourceComponentUrl
 	var gitAdditionSrcRevision = "47fc22092005aabebce233a9b6eab994a8152bbd"
 	var ecPolicyName = "pushpyxis-policy-" + util.GenerateRandomString(4)
 

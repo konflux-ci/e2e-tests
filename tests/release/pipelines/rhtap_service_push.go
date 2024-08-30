@@ -59,7 +59,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 	//Branch for creating pull request
 	var testPRBranchName = fmt.Sprintf("%s-%s", "e2e-pr-branch", util.GenerateRandomString(6))
 	var testBaseBranchName = fmt.Sprintf("%s-%s", "e2e-base-branch", util.GenerateRandomString(6))
-	var sampleImage = "quay.io/redhat-user-workloads-stage/dev-release-team-tenant/e2e-rhtap-app/e2e-rhtap-comp@sha256:c7cd12d46c8edc8b859738e09f3fdfd0f19718dadf8bd4efd30b3eecd1465681"
+	var sampleImage = "quay.io/hacbs-release-tests/e2e-rhtap-comp@sha256:c7cd12d46c8edc8b859738e09f3fdfd0f19718dadf8bd4efd30b3eecd1465681"
 	var mergeResultSha string
 	var sourcePrNum int
 
