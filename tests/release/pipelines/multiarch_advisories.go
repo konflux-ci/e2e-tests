@@ -63,20 +63,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch test f
 		BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
-			// Create a ticker that ticks every 3 minutes
-			ticker := time.NewTicker(3 * time.Minute)
-			// Schedule the stop of the ticker after 45 minutes
-			time.AfterFunc(45*time.Minute, func() {
-				ticker.Stop()
-				fmt.Println("Stopped executing every 3 minutes.")
-			})
-			// Run a goroutine to handle the ticker ticks
-			go func() {
-				for range ticker.C {
-					devFw = releasecommon.NewFramework(devWorkspace)
-					managedFw = releasecommon.NewFramework(managedWorkspace)
-				}
-			}()
 
 			managedNamespace = managedFw.UserNamespace
 
