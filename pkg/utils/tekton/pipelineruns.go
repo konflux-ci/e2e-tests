@@ -212,7 +212,8 @@ func GetFailedPipelineRunLogs(c crclient.Client, ki kubernetes.Interface, pipeli
 	}
 	if d.FailedContainerName != "" {
 		logs, _ := utils.GetContainerLogs(ki, d.PodName, d.FailedContainerName, pipelineRun.Namespace)
-		failMessage += fmt.Sprintf("Logs from failed container '%s': \n%s", d.FailedContainerName, logs)
+		// Adding the FailedTaskRunName can help to know which task the container belongs to 
+		failMessage += fmt.Sprintf("Logs from failed container '%s/%s': \n%s", d.FailedTaskRunName, d.FailedContainerName, logs)
 	}
 	return failMessage, nil
 }
