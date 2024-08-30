@@ -34,6 +34,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/testspecs"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	"github.com/konflux-ci/image-controller/pkg/quay"
 	"github.com/magefile/mage/sh"
@@ -162,6 +163,9 @@ func (Local) PrepareCluster() error {
 	}
 	if err := BootstrapCluster(); err != nil {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
+	}
+	if err := SetupCustomBundle(); err != nil {
+		return fmt.Errorf("error while setting up custom bundle: %v", err)
 	}
 	return nil
 }
@@ -292,6 +296,12 @@ func (ci CI) TestE2E() error {
 	if err := ci.init(); err != nil {
 		return fmt.Errorf("error when running ci init: %v", err)
 	}
+
+	// Eventually, when mage rules will be in place for all the repos, this functionality will be moved to individual repos where it is needed
+	if err := SetupCustomBundle(); err != nil {
+		return err
+	}
+
 	// Eventually we'll introduce mage rules for all repositories, so this condition won't be needed anymore
 	if pr.RepoName == "e2e-tests" || pr.RepoName == "integration-service" {
 		return engine.MageEngine.RunRulesOfCategory("ci", rctx)
@@ -573,6 +583,22 @@ func setRequiredEnvVars() error {
 		}
 	}
 
+	return nil
+}
+
+func SetupCustomBundle() error {
+	klog.Infof("setting up new custom bundle for testing...")
+	customDockerBuildBundle, err := build.CreateCustomBuildBundle("docker-build")
+	if err != nil {
+		return err
+	}
+	// For running locally
+	klog.Infof("To use the custom docker bundle locally, run below cmd:\n\n export CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE=%s\n\n", customDockerBuildBundle)
+	// will be used in CI
+	err = os.Setenv(constants.CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE_ENV, customDockerBuildBundle)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

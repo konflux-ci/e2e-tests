@@ -11,6 +11,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -442,6 +443,9 @@ func createComponent(f framework.Framework, testNamespace, applicationName, comp
 	err := f.AsKubeAdmin.CommonController.Github.CreateRef(componentRepoName, componentDefaultBranch, componentRevision, componentBaseBranchName)
 	Expect(err).ShouldNot(HaveOccurred())
 
+	// get the build pipeline bundle annotation
+	buildPipelineAnnotation := build.GetDockerBuildPipelineBundle()
+
 	componentObj := appstudioApi.ComponentSpec{
 		ComponentName: componentName,
 		Application:   applicationName,
@@ -455,7 +459,7 @@ func createComponent(f framework.Framework, testNamespace, applicationName, comp
 		},
 	}
 
-	originalComponent, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
+	originalComponent, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 	Expect(err).NotTo(HaveOccurred())
 
 	return originalComponent, componentName, pacBranchName, componentBaseBranchName

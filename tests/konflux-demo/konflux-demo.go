@@ -63,6 +63,8 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 
 	fw := &framework.Framework{}
 
+	var buildPipelineAnnotation map[string]string
+
 	var componentNewBaseBranch, gitRevision, componentRepositoryName, componentName string
 
 	for _, appSpec := range e2eConfig.ApplicationSpecs {
@@ -101,6 +103,15 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 				_, err = fw.AsKubeAdmin.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, fw.UserNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(fw.AsKubeAdmin.JvmbuildserviceController.WaitForCache(fw.AsKubeAdmin.CommonController, fw.UserNamespace)).Should(Succeed())
+
+				customDockerBuildBundle := os.Getenv(constants.CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE_ENV)
+				if customDockerBuildBundle != "" {
+					buildPipelineAnnotation = map[string]string{
+						"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"docker-build", "bundle": "%s"}`, customDockerBuildBundle),
+					}
+				} else {
+					buildPipelineAnnotation = constants.DefaultDockerBuildPipelineBundle
+				}
 			})
 
 			// Remove all resources created by the tests
@@ -163,7 +174,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 					},
 				}
 
-				component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj, userNamespace, "", "", appSpec.ApplicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.DefaultDockerBuildPipelineBundle))
+				component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj, userNamespace, "", "", appSpec.ApplicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
