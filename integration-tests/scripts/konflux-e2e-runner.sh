@@ -11,12 +11,22 @@ function postActions() {
         make ci/sprayproxy/unregister || true
     fi
 
-    # Save artifacts
     cd /workspace || exit 1
-    oras login -u "$ORAS_USERNAME" -p "$ORAS_PASSWORD" quay.io
-    echo '{"doc": "README.md"}' > config.json
+    TEMP_ANNOTATION_FILE="$(mktemp)"
 
-    oras push "$ORAS_CONTAINER" --config config.json:application/vnd.acme.rocket.config.v1+json \
+    # Fetch the manifest annotations for the container
+    MANIFESTS=$(oras manifest fetch "${OCI_STORAGE_CONTAINER}" | jq .annotations) || {
+        echo "[Error] Failed to fetch manifest from ${OCI_STORAGE_CONTAINER}" >&2
+        exit 1
+    }
+
+    # Create and save the JSON object
+    jq -n --argjson manifest "$MANIFESTS" '{ "$manifest": $manifest }' > "${TEMP_ANNOTATION_FILE}"
+
+    oras pull "${OCI_STORAGE_CONTAINER}"
+
+    oras push "$ORAS_CONTAINER" \
+        --username="${OCI_STORAGE_USERNAME}" --password="${OCI_STORAGE_TOKEN}" \
         ./test-artifacts/:application/vnd.acme.rocket.docs.layer.v1+tar
 
     [[ "${EXIT_CODE}" != "0" ]] && echo "[ERROR] Job failed." || echo "[INFO] Job completed successfully."
@@ -36,7 +46,11 @@ if [ ! -d "$ARTIFACT_DIR" ]; then
     mkdir -p "$ARTIFACT_DIR"
 fi
 
-# Export environment variables from secrets
+# export konflux infra specific environments
+export OCI_STORAGE_USERNAME=$(jq -r '."quay-username"' /usr/local/konflux-test-infra/oci-storage)
+export OCI_STORAGE_TOKEN=$(jq -r '."quay-token"' /usr/local/konflux-test-infra/oci-storage)
+
+# Export e2e tests environment variables from secrets
 export DEFAULT_QUAY_ORG=redhat-appstudio-qe
 export DEFAULT_QUAY_ORG_TOKEN=$(cat /usr/local/konflux-ci-secrets/default-quay-org-token)
 export GITHUB_USER=""
@@ -69,8 +83,6 @@ export MULTI_PLATFORM_AWS_ACCESS_KEY=$(cat /usr/local/konflux-ci-secrets/multi-p
 export MULTI_PLATFORM_AWS_SECRET_ACCESS_KEY=$(cat /usr/local/konflux-ci-secrets/multi-platform-aws-secret-access-key)
 export MULTI_PLATFORM_AWS_SSH_KEY=$(cat /usr/local/konflux-ci-secrets/multi-platform-aws-ssh-key)
 export MULTI_PLATFORM_IBM_API_KEY=$(cat /usr/local/konflux-ci-secrets/multi-platform-ibm-api-key)
-export ORAS_USERNAME=$(cat /usr/local/konflux-ci-secrets/oras-username)
-export ORAS_PASSWORD=$(cat /usr/local/konflux-ci-secrets/oras-password)
 export DOCKER_IO_AUTH=$(cat /usr/local/konflux-ci-secrets/docker_io)
 export GITLAB_BOT_TOKEN=$(cat /usr/local/konflux-ci-secrets/gitlab-bot-token)
 

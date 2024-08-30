@@ -91,7 +91,7 @@ spec:
 
         # Params related with tekton task
         export GINKGO_PROCS=$(params.ginkgo-procs)
-        export ORAS_CONTAINER=$(params.oras-container)
+        export OCI_STORAGE_CONTAINER=$(params.oras-container)
         
         # Log into OpenShift
         $(params.ocp-login-command)
