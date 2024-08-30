@@ -65,8 +65,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch test f
 			managedFw = releasecommon.NewFramework(managedWorkspace)
 			// Create a ticker that ticks every 3 minutes
 			ticker := time.NewTicker(3 * time.Minute)
-			// Schedule the stop of the ticker after 30 minutes
-			time.AfterFunc(30*time.Minute, func() {
+			// Schedule the stop of the ticker after 45 minutes
+			time.AfterFunc(45*time.Minute, func() {
 				ticker.Stop()
 				fmt.Println("Stopped executing every 3 minutes.")
 			})

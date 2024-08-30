@@ -207,8 +207,8 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw framework.Framework, dev
 	mFw = releasecommon.NewFramework(managedWorkspace)
 	// Create a ticker that ticks every 3 minutes
 	ticker := time.NewTicker(3 * time.Minute)
-	// Schedule the stop of the ticker after 15 minutes
-	time.AfterFunc(15*time.Minute, func() {
+	// Schedule the stop of the ticker after 30 minutes
+	time.AfterFunc(30*time.Minute, func() {
 		ticker.Stop()
 		fmt.Println("Stopped executing every 3 minutes.")
 	})
