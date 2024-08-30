@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/konflux-ci/operator-toolkit/metadata"
@@ -442,6 +443,16 @@ func createComponent(f framework.Framework, testNamespace, applicationName, comp
 	err := f.AsKubeAdmin.CommonController.Github.CreateRef(componentRepoName, componentDefaultBranch, componentRevision, componentBaseBranchName)
 	Expect(err).ShouldNot(HaveOccurred())
 
+	var buildPipelineAnnotation map[string]string
+	customDockerBuildBundle := os.Getenv(constants.CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE_ENV)
+	if customDockerBuildBundle != "" {
+		buildPipelineAnnotation = map[string]string{
+			"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"docker-build", "bundle": "%s"}`, customDockerBuildBundle),
+		}
+	} else {
+		buildPipelineAnnotation = constants.DefaultDockerBuildPipelineBundle
+	}
+
 	componentObj := appstudioApi.ComponentSpec{
 		ComponentName: componentName,
 		Application:   applicationName,
@@ -455,7 +466,7 @@ func createComponent(f framework.Framework, testNamespace, applicationName, comp
 		},
 	}
 
-	originalComponent, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultDockerBuildPipelineBundle))
+	originalComponent, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 	Expect(err).NotTo(HaveOccurred())
 
 	return originalComponent, componentName, pacBranchName, componentBaseBranchName
