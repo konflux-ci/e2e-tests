@@ -86,11 +86,9 @@ spec:
           - name: pathInRepo
             value: common/tasks/create-oci-artifact/0.1/create-oci-artifact.yaml
       params:
-        - name: SNAPSHOT
-          value: $(params.SNAPSHOT)
-        - name: oci-container
+        - name: oci-container-repo
           value: $(params.oras-container)
-        - name: test-name
+        - name: oci-container-tag
           value: $(context.pipelineRun.name)
     - name: provision-rosa
       when:
@@ -105,9 +103,9 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/konflux-ci/konflux-qe-definitions.git
+            value: https://github.com/flacatus/konflux-qe-definitions.git
           - name: revision
-            value: main
+            value: create_oci_artifact
           - name: pathInRepo
             value: common/tasks/rosa/hosted-cp/rosa-hcp-provision/rosa-hcp-provision.yaml
       params:
