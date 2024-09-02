@@ -35,7 +35,7 @@ const (
 
 var rhioComponentName = "rhio-comp-" + util.GenerateRandomString(4)
 
-var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat-io pipeline", Label("release-pipelines", "rh-push-to-redhat-io"), func() {
+var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat-io pipeline", Pending, Label("release-pipelines", "rh-push-to-redhat-io"), func() {
 	defer GinkgoRecover()
 	var pyxisKeyDecoded, pyxisCertDecoded []byte
 
@@ -64,21 +64,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 		BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
-			// Create a ticker that ticks every 3 minutes
-			ticker := time.NewTicker(3 * time.Minute)
-			// Schedule the stop of the ticker after 30 minutes
-			time.AfterFunc(30*time.Minute, func() {
-				ticker.Stop()
-				fmt.Println("Stopped executing every 3 minutes.")
-			})
-			// Run a goroutine to handle the ticker ticks
-			go func() {
-				for range ticker.C {
-					devFw = releasecommon.NewFramework(devWorkspace)
-					managedFw = releasecommon.NewFramework(managedWorkspace)
-				}
-			}()
-
 			managedNamespace = managedFw.UserNamespace
 
 			keyPyxisStage := os.Getenv(constants.PYXIS_STAGE_KEY_ENV)

@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -14,17 +15,38 @@ import (
 )
 
 func NewFramework(workspace string) *framework.Framework {
+	var fw  *framework.Framework
+	var err error
 	stageOptions := utils.Options{
 		ToolchainApiUrl: os.Getenv(constants.TOOLCHAIN_API_URL_ENV),
 		KeycloakUrl:     os.Getenv(constants.KEYLOAK_URL_ENV),
 		OfflineToken:    os.Getenv(constants.OFFLINE_TOKEN_ENV),
 	}
-	fw, err := framework.NewFrameworkWithTimeout(
+	fw, err = framework.NewFrameworkWithTimeout(
 		workspace,
 		time.Minute*60,
 		stageOptions,
 	)
 	Expect(err).NotTo(HaveOccurred())
+
+	// Create a ticker that ticks every 3 minutes
+	ticker := time.NewTicker(3 * time.Minute)
+	// Schedule the stop of the ticker after 30 minutes
+	time.AfterFunc(30*time.Minute, func() {
+		ticker.Stop()
+		fmt.Println("Stopped executing every 3 minutes.")
+	})
+	// Run a goroutine to handle the ticker ticks
+	go func() {
+		for range ticker.C {
+			fw, err = framework.NewFrameworkWithTimeout(
+				workspace,
+				time.Minute*60,
+				stageOptions,
+			)
+			Expect(err).NotTo(HaveOccurred())
+		}
+	}()
 	return fw
 }
 
