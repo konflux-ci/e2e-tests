@@ -110,6 +110,29 @@ oc apply -f global-pull-secret.yaml -n konflux-otel
 oc set data secret/pull-secret -n konflux-otel --from-file=.dockerconfigjson=./global-pull-secret.json
 oc secrets link open-telemetry-opentelemetry-collector pull-secret --for=pull -n konflux-otel
 
+# After changes introduced in https://github.com/redhat-appstudio/infra-deployments/pull/4415/files the nodes need to be labeled
+nodes=$(kubectl get nodes -o name)
+node_count=$(echo "$nodes" | wc -l)
+
+for node in $nodes; do
+    echo "labeling $node..."
+    if kubectl label $node konflux-ci.dev/workload=konflux-tenants --overwrite; then
+        echo "successfully labeled $node"
+    else
+        echo "failed to label $node"
+    fi
+done
+
+echo "verifying labels..."
+labeled_count=$(kubectl get nodes --show-labels | grep -c "konflux-ci.dev/workload=konflux-tenants")
+
+if [ "$node_count" -eq "$labeled_count" ]; then
+    echo "all nodes labeled successfully."
+else
+    echo "label verification failed. Labeled $labeled_count out of $node_count nodes."
+    exit 1
+fi
+
 # Prepare and run tests
 cd "$(mktemp -d)" || exit 1
 
