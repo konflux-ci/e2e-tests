@@ -11,12 +11,14 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/runtime"
+	"knative.dev/pkg/apis"
 )
 
 const (
@@ -34,7 +36,6 @@ var err error
 var devWorkspace = utils.GetEnv(constants.RELEASE_DEV_WORKSPACE_ENV, constants.DevReleaseTeam)
 var managedWorkspace = utils.GetEnv(constants.RELEASE_MANAGED_WORKSPACE_ENV, constants.ManagedReleaseTeam)
 var devFw *framework.Framework
-var mFw *framework.Framework
 var managedFw *framework.Framework
 
 var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-pipelines", "fbc-tests"), func() {
@@ -98,11 +99,11 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		var _ = Describe("Post-release verification", func() {
 
 			It("verifies the fbc release pipelinerun is running and succeeds", func() {
-				assertReleasePipelineRunSucceeded(*devFw, *managedFw, devNamespace, managedNamespace, fbcApplicationName, fbcComponentName)
+				assertReleasePipelineRunSucceeded(devFw, managedFw, devNamespace, managedNamespace, fbcApplicationName, fbcComponentName)
 			})
 
 			It("verifies release CR completed and set succeeded.", func() {
-				assertReleaseCRSucceeded(*devFw, devNamespace, managedNamespace, fbcApplicationName, fbcComponentName)
+				assertReleaseCRSucceeded(devFw, devNamespace, managedNamespace, fbcApplicationName, fbcComponentName)
 			})
 		})
 	})
@@ -139,11 +140,11 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		var _ = Describe("FBC hotfix post-release verification", func() {
 
 			It("verifies the fbc release pipelinerun is running and succeeds", func() {
-				assertReleasePipelineRunSucceeded(*devFw, *managedFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixCompName)
+				assertReleasePipelineRunSucceeded(devFw, managedFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixCompName)
 			})
 
 			It("verifies release CR completed and set succeeded.", func() {
-				assertReleaseCRSucceeded(*devFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixCompName)
+				assertReleaseCRSucceeded(devFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixCompName)
 			})
 		})
 	})
@@ -181,17 +182,17 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		var _ = Describe("FBC pre-GA post-release verification", func() {
 
 			It("verifies the fbc release pipelinerun is running and succeeds", func() {
-				assertReleasePipelineRunSucceeded(*devFw, *managedFw, devNamespace, managedNamespace, fbcPreGAAppName, fbcPreGACompName)
+				assertReleasePipelineRunSucceeded(devFw, managedFw, devNamespace, managedNamespace, fbcPreGAAppName, fbcPreGACompName)
 			})
 
 			It("verifies release CR completed and set succeeded.", func() {
-				assertReleaseCRSucceeded(*devFw, devNamespace, managedNamespace, fbcPreGAAppName, fbcPreGACompName)
+				assertReleaseCRSucceeded(devFw, devNamespace, managedNamespace, fbcPreGAAppName, fbcPreGACompName)
 			})
 		})
 	})
 })
 
-func assertReleasePipelineRunSucceeded(devFw, managedFw framework.Framework, devNamespace, managedNamespace, fbcAppName string, componentName string) {
+func assertReleasePipelineRunSucceeded(devFw, managedFw *framework.Framework, devNamespace, managedNamespace, fbcAppName string, componentName string) {
 	snapshot, err = devFw.AsKubeDeveloper.IntegrationController.WaitForSnapshotToGetCreated("", "", componentName, devNamespace)
 	Expect(err).ToNot(HaveOccurred())
 	GinkgoWriter.Println("snapshot: ", snapshot.Name)
@@ -202,9 +203,9 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw framework.Framework, dev
 		}
 		GinkgoWriter.Println("Release CR: ", releaseCR.Name)
 		return nil
-	}, 5*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for Snapshot and Release being created")
+	}, 5*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for Release being created")
 
-	mFw = releasecommon.NewFramework(managedWorkspace)
+	managedFw = releasecommon.NewFramework(managedWorkspace)
 	// Create a ticker that ticks every 3 minutes
 	ticker := time.NewTicker(3 * time.Minute)
 	// Schedule the stop of the ticker after 30 minutes
@@ -215,17 +216,39 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw framework.Framework, dev
 	// Run a goroutine to handle the ticker ticks
 	go func() {
 		for range ticker.C {
-			mFw = releasecommon.NewFramework(managedWorkspace)
+			managedFw = releasecommon.NewFramework(managedWorkspace)
 		}
 	}()
 
-	Expect(mFw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
+	Eventually(func() error {
+		pipelineRun, err := managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
+		if err != nil {
+			return fmt.Errorf("PipelineRun has not been created yet for release %s/%s", releaseCR.GetNamespace(), releaseCR.GetName())
+		}
+		for _, condition := range pipelineRun.Status.Conditions {
+			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
+		}
+
+		if !pipelineRun.IsDone() {
+			return fmt.Errorf("PipelineRun %s has still not finished yet", pipelineRun.Name)
+		}
+
+		if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+			return nil
+		} else {
+			var prLogs string
+			if prLogs, err = tekton.GetFailedPipelineRunLogs(managedFw.AsKubeAdmin.ReleaseController.KubeRest(), managedFw.AsKubeAdmin.ReleaseController.KubeInterface(), pipelineRun); err != nil {
+				return fmt.Errorf("failed to get PLR logs: %+v", err)
+			}
+			return fmt.Errorf("%s", prLogs)
+		}
+	}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
 }
 
-func assertReleaseCRSucceeded(devFw framework.Framework, devNamespace, managedNamespace, fbcAppName string, componentName string) {
-	dFw := releasecommon.NewFramework(devWorkspace)
+func assertReleaseCRSucceeded(devFw *framework.Framework, devNamespace, managedNamespace, fbcAppName string, componentName string) {
+	devFw = releasecommon.NewFramework(devWorkspace)
 	Eventually(func() error {
-		releaseCR, err = dFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
+		releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 		if err != nil {
 			return err
 		}
