@@ -226,7 +226,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			// Create component for the repo containing symlink
 			symlinkComponentName = fmt.Sprintf("%s-%s", "test-symlink-comp", util.GenerateRandomString(4))
 			symlinkComponentName = CreateComponent(
-				kubeadminClient.CommonController, kubeadminClient.HasController, pythonComponentGitSourceURL, gitRepoContainsSymlinkBranchName,
+				kubeadminClient.CommonController, kubeadminClient.HasController, pythonComponentGitHubURL, gitRepoContainsSymlinkBranchName,
 				applicationName, symlinkComponentName, testNamespace)
 		})
 
@@ -279,7 +279,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			}
 		})
 
-		It(fmt.Sprintf("triggers PipelineRun for symlink component with source URL %s", pythonComponentGitSourceURL), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
+		It(fmt.Sprintf("triggers PipelineRun for symlink component with source URL %s", pythonComponentGitHubURL), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
 			timeout := time.Minute * 5
 			symlinkPRunName = WaitForPipelineRunStarts(kubeadminClient, applicationName, symlinkComponentName, testNamespace, timeout)
 			Expect(symlinkPRunName).ShouldNot(BeEmpty())
@@ -693,7 +693,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			})
 		}
 
-		It(fmt.Sprintf("pipelineRun should fail for symlink component with Git source URL %s", pythonComponentGitSourceURL), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
+		It(fmt.Sprintf("pipelineRun should fail for symlink component with Git source URL %s", pythonComponentGitHubURL), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
 			component, err := kubeadminClient.HasController.GetComponent(symlinkComponentName, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "",

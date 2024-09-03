@@ -54,7 +54,7 @@ const (
 
 var (
 	IbmVpc                       = "us-east-default-vpc"
-	multiPlatformProjectGitUrl   = utils.GetEnv("MULTI_PLATFORM_TEST_REPO_URL", fmt.Sprintf("https://github.com/%s/devfile-sample-go-basic", gihubOrg))
+	multiPlatformProjectGitUrl   = utils.GetEnv("MULTI_PLATFORM_TEST_REPO_URL", fmt.Sprintf("https://github.com/%s/devfile-sample-go-basic", githubOrg))
 	multiPlatformProjectRevision = utils.GetEnv("MULTI_PLATFORM_TEST_REPO_REVISION", "c713067b0e65fb3de50d1f7c457eb51c2ab0dbb0")
 	timeout                      = 20 * time.Minute
 	interval                     = 10 * time.Second
