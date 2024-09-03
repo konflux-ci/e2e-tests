@@ -102,13 +102,13 @@ collect_tekton_profiling_data() {
 }
 
 _get_tekton_results_watcher_pod_count() {
-    find "$output_dir" -type f -name 'tekton-results-watcher.tekton-results-watcher-*.goroutine-dump-0.0001-*.pprof' | wc -l
+    find "$1" -type f -name 'tekton-results-watcher.tekton-results-watcher-*.goroutine-dump-0.pprof' | wc -l
 }
 
 collect_scalability_data() {
     echo "[$(date --utc -Ins)] Collecting scalability data"
 
-    tekton_results_watcher_pod_count=$(_get_tekton_results_watcher_pod_count)
+    tekton_results_watcher_pod_count=$(_get_tekton_results_watcher_pod_count "$(find "$ARTIFACT_DIR/iterations" -type d -name 'iteration-*' | sort -V | head -n1)")
     tekton_results_watcher_pod_headers=""
     for i in $(seq -w 1 "$tekton_results_watcher_pod_count"); do
         tekton_results_watcher_pod_headers="${tekton_results_watcher_pod_headers}${csv_delim}ParkedGoRoutinesPod$i"
@@ -176,7 +176,7 @@ ${csv_delim}NodeDiskIoTimeSecondsTotalAvg" \
                     parked_go_routines_columns="$parked_go_routines_columns + $csv_delim_quoted + \"$g\""
                 done
             else
-                for _ in $(seq 1 "$(_get_tekton_results_watcher_pod_count)"); do
+                for _ in $(seq 1 "$(_get_tekton_results_watcher_pod_count "$iteration_dir")"); do
                     parked_go_routines_columns="$parked_go_routines_columns + $csv_delim_quoted"
                 done
             fi

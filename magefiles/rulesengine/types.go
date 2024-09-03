@@ -2,10 +2,10 @@ package rulesengine
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/onsi/ginkgo/v2/types"
 	"k8s.io/klog"
 )
@@ -126,19 +126,30 @@ func (e *RuleEngine) runLoadedCatalog(loaded RuleCatalog, rctx *RuleCtx) error {
 
 	var matched RuleCatalog
 	for _, rule := range loaded {
-
+		ok, err := rule.Eval(rctx)
+		if err != nil {
+			return err
+		}
 		// In most cases, a rule chain has no action to execute
-		// since a majority of the actions are ecanpuslated
+		// since a majority of the actions are encapsulated
 		// within the rules that compose the chain.
 		if len(rule.Actions) == 0 {
-			return e.runChained(rule, rctx)
-
+			// In case the rule chain condition was evaluated to true,
+			// it means that the rule was applied, so stop iterating over next catalog rules.
+			// Otherwise continue
+			if ok {
+				return nil
+			}
+			continue
 		}
-		if rule.Eval(rctx) {
-
+		if ok {
 			matched = append(matched, rule)
 		}
+	}
 
+	if len(matched) == 0 {
+
+		return nil
 	}
 
 	klog.Infof("The following rules have matched %s.", matched.String())
@@ -181,18 +192,6 @@ func (e *RuleEngine) run(matched RuleCatalog, rctx *RuleCtx) error {
 	return nil
 }
 
-func (e *RuleEngine) runChained(rule Rule, rctx *RuleCtx) error {
-
-	klog.Infof("The following fule, %s, is a RuleChain", rule.String())
-	if rule.Eval(rctx) {
-
-		return nil
-	}
-
-	return fmt.Errorf("Failed to apply RuleChain %s", rule.String())
-
-}
-
 type RuleCatalog []Rule
 
 func (rc *RuleCatalog) String() string {
@@ -211,86 +210,66 @@ type Action interface {
 }
 
 type Conditional interface {
-	Check(rctx *RuleCtx) bool
+	Check(rctx *RuleCtx) (bool, error)
 }
 
 type Any []Conditional
 
-func (a Any) Check(rctx *RuleCtx) bool {
+func (a Any) Check(rctx *RuleCtx) (bool, error) {
 
 	// Initial logic was to pass on the first
-	// evail to true but that might not be the
+	// eval to true but that might not be the
 	// case. So not eval all and as long as any
 	// eval true then filter is satisfied
 	isAny := false
-	for _, c := range a {
 
-		if c.Check(rctx) {
+	for _, c := range a {
+		ok, err := c.Check(rctx)
+		if err != nil {
+			return false, err
+		}
+		if ok {
 			isAny = true
 		}
 	}
 
-	return isAny
+	return isAny, nil
 }
 
 type All []Conditional
 
-func (a All) Check(rctx *RuleCtx) bool {
-
-	isFalse := false
+func (a All) Check(rctx *RuleCtx) (bool, error) {
 
 	for _, c := range a {
 
-		if !c.Check(rctx) {
-			isFalse = true
+		ok, err := c.Check(rctx)
+		if err != nil {
+			return ok, err
 		}
-
-		if isFalse {
-			return false
+		if !ok {
+			return ok, nil
 		}
 	}
 
-	return true
+	return true, nil
 }
 
 type None []Conditional
 
-func (a None) Check(rctx *RuleCtx) bool {
-
-	isTrue := false
+func (a None) Check(rctx *RuleCtx) (bool, error) {
 
 	for _, c := range a {
 
-		if c.Check(rctx) {
-			isTrue = true
+		ok, err := c.Check(rctx)
+		if err != nil {
+			return ok, err
 		}
-
-		if isTrue {
-			return false
-		}
-	}
-
-	return true
-}
-
-type And []Conditional
-
-func (a And) Check(rctx *RuleCtx) bool {
-
-	isTrue := false
-
-	for _, c := range a {
-
-		if c.Check(rctx) {
-			isTrue = true
-		}
-
-		if isTrue {
-			return false
+		if ok {
+			return !ok, nil
 		}
 	}
 
-	return true
+	return true, nil
 }
 
 type ActionFunc func(rctx *RuleCtx) error
@@ -300,10 +279,9 @@ func (af ActionFunc) Execute(rctx *RuleCtx) error {
 	return af(rctx)
 }
 
-type ConditionFunc func(rctx *RuleCtx) bool
+type ConditionFunc func(rctx *RuleCtx) (bool, error)
 
-func (cf ConditionFunc) Check(rctx *RuleCtx) bool {
-
+func (cf ConditionFunc) Check(rctx *RuleCtx) (bool, error) {
 	return cf(rctx)
 }
 
@@ -320,12 +298,12 @@ func (r *Rule) String() string {
 }
 
 type IRule interface {
-	Eval(rctx *RuleCtx) bool
+	Eval(rctx *RuleCtx) (bool, error)
 	Apply(rctx *RuleCtx) error
 	DryRun(rctx *RuleCtx) error
 }
 
-func (r *Rule) Eval(rctx *RuleCtx) bool {
+func (r *Rule) Eval(rctx *RuleCtx) (bool, error) {
 
 	return r.Condition.Check(rctx)
 }
@@ -357,19 +335,23 @@ func (r *Rule) DryRun(rctx *RuleCtx) error {
 	return nil
 }
 
-func (r *Rule) Check(rctx *RuleCtx) bool {
+func (r *Rule) Check(rctx *RuleCtx) (bool, error) {
 
-	if r.Eval(rctx) {
+	ok, err := r.Eval(rctx)
+	if err != nil {
+		return false, err
+	}
+	if ok {
 		if rctx.DryRun {
-			err := r.DryRun(rctx)
-			return err == nil
-		} else {
-			err := r.Apply(rctx)
-			return err == nil
+			return true, r.DryRun(rctx)
 		}
+		if err := r.Apply(rctx); err != nil {
+			return false, err
+		}
+		return true, nil
 	}
 
-	return false
+	return false, nil
 }
 
 type File struct {
@@ -402,7 +384,7 @@ func (cfs *Files) FilterByDirGlob(filter string) Files {
 
 	for _, file := range *cfs {
 
-		if matched, _ := filepath.Match(filter, file.Name); !matched {
+		if matched, _ := doublestar.PathMatch(filter, file.Name); !matched {
 
 			continue
 		}
@@ -453,13 +435,20 @@ type RuleCtx struct {
 	types.SuiteConfig
 	types.ReporterConfig
 	types.GoFlagsConfig
-	RuleData         map[string]any
-	RepoName         string
-	JobName          string
-	JobType          string
-	DiffFiles        Files
-	IsPaired         string
-	RequiredBinaries []string
+	RuleData                      map[string]any
+	RepoName                      string
+	ComponentImageTag             string
+	ComponentEnvVarPrefix         string
+	JobName                       string
+	JobType                       string
+	DiffFiles                     Files
+	IsPaired                      bool
+	RequiredBinaries              []string
+	PrRemoteName                  string
+	PrCommitSha                   string
+	PrBranchName                  string
+	RequiresMultiPlatformTests    bool
+	RequiresSprayProxyRegistering bool
 }
 
 func NewRuleCtx() *RuleCtx {
@@ -474,13 +463,25 @@ func NewRuleCtx() *RuleCtx {
 		suiteConfig,
 		reporterConfig,
 		goFlagsConfig,
-		envData, "", "", "", Files{}, "", make([]string, 0)}
+		envData,
+		"",
+		"",
+		"",
+		"",
+		"",
+		Files{},
+		false,
+		make([]string, 0),
+		"",
+		"",
+		"",
+		false,
+		false}
 
 	//init defaults we've used so far
 	t, _ := time.ParseDuration("90m")
 	r.Timeout = t
 	r.OutputInterceptorMode = "none"
-	r.IsPaired = "false"
 
 	return r
 
@@ -494,8 +495,8 @@ func (gca *RuleCtx) AddRuleData(key string, obj any) error {
 }
 func (gca *RuleCtx) GetRuleData(key string) any {
 
-	//When retrieving data the implementing function that needs
-	//it will have to cast it to the appropriate type
+	// When retrieving data the implementing function that needs
+	// it will have to cast it to the appropriate type
 	if v, ok := gca.RuleData[key]; ok {
 
 		return v

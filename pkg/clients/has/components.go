@@ -174,8 +174,7 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 			if prLogs, err = t.GetPipelineRunLogs(component.GetName(), pr.Name, pr.Namespace); err != nil {
 				GinkgoWriter.Printf("failed to get logs for PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
 			}
-
-			return false, fmt.Errorf(prLogs)
+			return false, fmt.Errorf("%s", prLogs)
 		})
 
 		if err != nil {
@@ -408,7 +407,12 @@ func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Comp
 		}
 
 		if gitProvider == "gitlab" {
-			_, err := h.GitLab.CreateFile(util.GenerateRandomString(5), "test", branchName)
+			gitlabOrg := utils.GetEnv(constants.GITLAB_QE_ORG_ENV, constants.DefaultGitLabQEOrg)
+			projectID, ok := prLabels["pipelinesascode.tekton.dev/source-project-id"]
+			if !ok {
+				projectID = fmt.Sprintf("%s/%s", gitlabOrg, constants.DefaultGitLabRepoName)
+			}
+			_, err := h.GitLab.CreateFile(projectID, util.GenerateRandomString(5), "test", branchName)
 			if err != nil {
 				return "", fmt.Errorf("failed to retrigger PipelineRun %s in %s namespace: %+v", pr.GetName(), pr.GetNamespace(), err)
 			}

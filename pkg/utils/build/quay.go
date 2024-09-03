@@ -154,7 +154,7 @@ func GetImageTag(organization, repository, tagName string) (quay.Tag, error) {
 			}
 		}
 		if !hasAdditional {
-			return quay.Tag{}, fmt.Errorf(fmt.Sprintf("cannot find tag %s", tagName))
+			return quay.Tag{}, fmt.Errorf("%s", fmt.Sprintf("cannot find tag %s", tagName))
 		}
 	}
 }

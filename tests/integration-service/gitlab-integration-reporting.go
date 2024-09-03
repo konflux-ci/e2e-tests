@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	"os"
 
 	"strings"
@@ -57,28 +58,27 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 
 			applicationName = createApp(*f, testNamespace)
 
-			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass)
+			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			integrationTestScenarioFail, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail)
+			integrationTestScenarioFail, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 
 			componentName = fmt.Sprintf("%s-%s", "test-comp-pac-gitlab", util.GenerateRandomString(6))
 			pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
 			componentBaseBranchName = fmt.Sprintf("base-gitlab-%s", util.GenerateRandomString(6))
 
-			projectID = utils.GetEnv(constants.GITLAB_PROJECT_ID, "")
-			Expect(projectID).ShouldNot(BeEmpty())
+			projectID = gitlabProjectIDForStatusReporting
 
-			gitlabToken = utils.GetEnv(constants.GITLAB_TOKEN_ENV, "")
-			Expect(gitlabToken).ShouldNot(BeEmpty())
+			gitlabToken = utils.GetEnv(constants.GITLAB_BOT_TOKEN_ENV, "")
+			Expect(gitlabToken).ShouldNot(BeEmpty(), fmt.Sprintf("'%s' env var is not set", constants.GITLAB_BOT_TOKEN_ENV))
 
 			err = f.AsKubeAdmin.CommonController.Gitlab.CreateGitlabNewBranch(projectID, componentBaseBranchName, componentRevision, componentDefaultBranch)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			secretAnnotations := map[string]string{}
 
-			err = createBuildSecret(f, "gitlab-build-secret", secretAnnotations, gitlabToken)
+			err = build.CreateGitlabBuildSecret(f, "gitlab-build-secret", secretAnnotations, gitlabToken)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			secret := &v1.Secret{
@@ -104,9 +104,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteBranch(projectID, componentBaseBranchName)).NotTo(HaveOccurred())
 				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteWebhooks(projectID, f.ClusterAppDomain)).NotTo(HaveOccurred())
 				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
-
 			}
-
 		})
 
 		When("a new Component with specified custom branch is created", Label("custom-branch"), func() {
@@ -179,7 +177,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 
 			It("eventually leads to the build PipelineRun's status reported at MR notes", func() {
 				expectedNote := fmt.Sprintf("**Pipelines as Code CI/%s-on-pull-request** has successfully validated your commit", componentName)
-				validateNoteInMergeRequestComment(f, projectID, expectedNote, mrID)
+				f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(projectID, expectedNote, mrID)
 			})
 		})
 
@@ -238,7 +236,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 
 			It("eventually leads to the integration test PipelineRun's Pass status reported at MR notes", func() {
 				expectedNote := fmt.Sprintf("Integration test for snapshot %s and scenario %s has passed", snapshot.Name, integrationTestScenarioPass.Name)
-				validateNoteInMergeRequestComment(f, projectID, expectedNote, mrID)
+				f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(projectID, expectedNote, mrID)
 			})
 
 			It("validates the Integration test scenario PipelineRun is reported to merge request CommitStatus, and it fails", func() {
@@ -263,52 +261,9 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 
 			It("eventually leads to the integration test PipelineRun's Fail status reported at MR notes", func() {
 				expectedNote := fmt.Sprintf("Integration test for snapshot %s and scenario %s has failed", snapshot.Name, integrationTestScenarioFail.Name)
-				validateNoteInMergeRequestComment(f, projectID, expectedNote, mrID)
+				f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(projectID, expectedNote, mrID)
 			})
 		})
 
 	})
 })
-
-// createBuildSecret creates a secret of gitlab build
-func createBuildSecret(f *framework.Framework, secretName string, annotations map[string]string, token string) error {
-	buildSecret := v1.Secret{}
-	buildSecret.Name = secretName
-	buildSecret.Labels = map[string]string{
-		"appstudio.redhat.com/credentials": "scm",
-		"appstudio.redhat.com/scm.host":    "gitlab.com",
-	}
-	if annotations != nil {
-		buildSecret.Annotations = annotations
-	}
-	buildSecret.Type = "kubernetes.io/basic-auth"
-	buildSecret.StringData = map[string]string{
-		"password": token,
-	}
-	_, err := f.AsKubeAdmin.CommonController.CreateSecret(f.UserNamespace, &buildSecret)
-	if err != nil {
-		return fmt.Errorf("error creating build secret: %v", err)
-	}
-	return nil
-}
-
-// validateNoteInMergeRequestComment verify expected note is commented in MR comment
-func validateNoteInMergeRequestComment(f *framework.Framework, projectID, expectedNote string, mergeRequestID int) {
-
-	var timeout, interval time.Duration
-
-	timeout = time.Minute * 10
-	interval = time.Second * 2
-
-	Eventually(func() bool {
-		// Continue here, get as argument MR ID so use in ListMergeRequestNotes
-		allNotes, _, err := f.AsKubeAdmin.CommonController.Gitlab.GetClient().Notes.ListMergeRequestNotes(projectID, mergeRequestID, nil)
-		Expect(err).ShouldNot(HaveOccurred())
-		for _, note := range allNotes {
-			if strings.Contains(note.Body, expectedNote) {
-				return true
-			}
-		}
-		return false
-	}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out waiting to validate merge request note ('%s') be reported in mergerequest %d's notes", expectedNote, mergeRequestID))
-}

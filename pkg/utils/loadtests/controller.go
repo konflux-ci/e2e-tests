@@ -2,7 +2,7 @@ package loadtests
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"time"
@@ -37,7 +37,7 @@ func LoadStageUsers(filePath string) ([]User, error) {
 func SelectUsers(userList []User, numberOfUsers, threadCount, maxUsers int) ([]User, error) {
 	// Check if the requested number of users exceeds the maximum
 	if numberOfUsers*threadCount > maxUsers {
-		return nil, errors.New("requested number of users exceeds maximum")
+		return nil, fmt.Errorf("%s", "requested number of users exceeds maximum")
 	}
 
 	// Create a new list to store the selected users

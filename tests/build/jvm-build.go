@@ -31,11 +31,11 @@ import (
 )
 
 var (
-	testProjectGitUrl   = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_URL", fmt.Sprintf("https://github.com/%s/hacbs-test-project", gihubOrg))
+	testProjectGitUrl   = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_URL", fmt.Sprintf("https://github.com/%s/hacbs-test-project", githubOrg))
 	testProjectRevision = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_REVISION", "34da5a8f51fba6a8b7ec75a727d3c72ebb5e1274")
 )
 
-// Marking the test as pending since jvm-build-service will be reworked
+// Marking the test as pending since jvm-build-service will be reworked with STONEBLD-2711
 var _ = framework.JVMBuildSuiteDescribe("JVM Build Service E2E tests", Label("jvm-build-service"), Pending, func() {
 	var f *framework.Framework
 	AfterEach(framework.ReportFailure(&f))

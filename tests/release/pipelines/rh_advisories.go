@@ -8,31 +8,36 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/devfile/library/v2/pkg/util"
-	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
+	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
+	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+
+	"github.com/devfile/library/v2/pkg/util"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
-	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
-	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
-	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
+	"knative.dev/pkg/apis"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"knative.dev/pkg/apis"
 )
 
 const (
 	advsServiceAccountName = "release-service-account"
 	advsCatalogPathInRepo  = "pipelines/rh-advisories/rh-advisories.yaml"
+	advsGitSourceURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic-release"
+	advsGitSrcSHA          = "33ff89edf85fb01a37d3d652d317080223069fc7"
 )
 
-var component *appservice.Component
+var advsComponentName = "advs-comp-" + util.GenerateRandomString(4)
 
 var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pipeline", Label("release-pipelines", "rh-advisories"), func() {
 	defer GinkgoRecover()
@@ -48,14 +53,14 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 	var devFw *framework.Framework
 	var managedFw *framework.Framework
 	var advsApplicationName = "advs-app-" + util.GenerateRandomString(4)
-	var advsComponentName = "advs-comp-" + util.GenerateRandomString(4)
 	var advsReleasePlanName = "advs-rp-" + util.GenerateRandomString(4)
 	var advsReleasePlanAdmissionName = "advs-rpa-" + util.GenerateRandomString(4)
 	var advsEnterpriseContractPolicyName = "advs-policy-" + util.GenerateRandomString(4)
+	var sampleImage = "quay.io/hacbs-release-tests/e2e-rhio-comp@sha256:bf2fb2c7d63c924ff9170c27f0f15558f6a59bdfb5ad9613eb61d3e4bc1cff0a"
 
-	var snapshot *appservice.Snapshot
+	var snapshotPush *appservice.Snapshot
 	var releaseCR *releaseapi.Release
-	var releasePR, buildPR *tektonv1.PipelineRun
+	var releasePR *tektonv1.PipelineRun
 
 	AfterEach(framework.ReportFailure(&devFw))
 
@@ -78,22 +83,23 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 			pyxisCertDecoded, err = base64.StdEncoding.DecodeString(string(certPyxisStage))
 			Expect(err).ToNot(HaveOccurred())
 
-			secret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pyxis",
-					Namespace: managedNamespace,
-				},
-				Type: corev1.SecretTypeOpaque,
-				Data: map[string][]byte{
-					"cert": pyxisCertDecoded,
-					"key":  pyxisKeyDecoded,
-				},
-			}
+			pyxisSecret, err := managedFw.AsKubeAdmin.CommonController.GetSecret(managedNamespace, "pyxis")
+			if pyxisSecret == nil || errors.IsNotFound(err){
+				secret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pyxis",
+						Namespace: managedNamespace,
+					},
+					Type: corev1.SecretTypeOpaque,
+					Data: map[string][]byte{
+						"cert": pyxisCertDecoded,
+						"key":  pyxisKeyDecoded,
+					},
+				}
 
-			// Delete the secret if it exists in case it is not correct
-			_ = managedFw.AsKubeAdmin.CommonController.DeleteSecret(managedNamespace, "pyxis")
-			_, err = managedFw.AsKubeAdmin.CommonController.CreateSecret(managedNamespace, secret)
-			Expect(err).ToNot(HaveOccurred())
+				_, err = managedFw.AsKubeAdmin.CommonController.CreateSecret(managedNamespace, secret)
+				Expect(err).ToNot(HaveOccurred())
+			}
 
 			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
 			Expect(err).ToNot(HaveOccurred())
@@ -103,11 +109,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 
 			createADVSReleasePlan(advsReleasePlanName, *devFw, devNamespace, advsApplicationName, managedNamespace, "true")
 
-			component = releasecommon.CreateComponent(*devFw, devNamespace, advsApplicationName, advsComponentName, releasecommon.AdditionalGitSourceComponentUrl, "", ".", constants.DockerFilePath, constants.DefaultDockerBuildPipelineBundle)
-
 			createADVSReleasePlanAdmission(advsReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, advsApplicationName, advsEnterpriseContractPolicyName, advsCatalogPathInRepo)
 
 			createADVSEnterpriseContractPolicy(advsEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
+
+			snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(*devFw, advsComponentName, advsApplicationName, devNamespace, sampleImage, advsGitSourceURL, advsGitSrcSHA, "", "", "", "")
+                        Expect(err).ShouldNot(HaveOccurred())
 		})
 
 		AfterAll(func() {
@@ -119,58 +126,44 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 		})
 
 		var _ = Describe("Post-release verification", func() {
-			It("verifies that a build PipelineRun is created in dev namespace and succeeds", func() {
-				devFw = releasecommon.NewFramework(devWorkspace)
-				managedFw = releasecommon.NewFramework(managedWorkspace)
-				// Create a ticker that ticks every 3 minutes
-				ticker := time.NewTicker(3 * time.Minute)
-				// Schedule the stop of the ticker after 15 minutes
-				time.AfterFunc(15*time.Minute, func() {
-					ticker.Stop()
-					fmt.Println("Stopped executing every 3 minutes.")
-				})
-				// Run a goroutine to handle the ticker ticks
-				go func() {
-					for range ticker.C {
-						devFw = releasecommon.NewFramework(devWorkspace)
-						managedFw = releasecommon.NewFramework(managedWorkspace)
-					}
-				}()
+
+			It("verifies the advs release pipelinerun is running and succeeds", func() {
 				Eventually(func() error {
-					buildPR, err = devFw.AsKubeDeveloper.HasController.GetComponentPipelineRun(component.Name, advsApplicationName, devNamespace, "")
+					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshotPush.Name, devNamespace)
 					if err != nil {
-						GinkgoWriter.Printf("Build PipelineRun has not been created yet for the component %s/%s\n", devNamespace, component.Name)
 						return err
 					}
-					GinkgoWriter.Printf("PipelineRun %s reason: %s\n", buildPR.Name, buildPR.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
-					if !buildPR.IsDone() {
-						return fmt.Errorf("build pipelinerun %s in namespace %s did not finish yet", buildPR.Name, buildPR.Namespace)
+					return nil
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
+
+				Eventually(func() error {
+					pipelineRun, err := managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
+					if err != nil {
+						return fmt.Errorf("PipelineRun has not been created yet for release %s/%s", releaseCR.GetNamespace(), releaseCR.GetName())
 					}
-					if buildPR.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-						snapshot, err = devFw.AsKubeDeveloper.IntegrationController.GetSnapshot("", buildPR.Name, "", devNamespace)
-						if err != nil {
-							return err
-						}
+					for _, condition := range pipelineRun.Status.Conditions {
+						GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
+					}
+
+					if !pipelineRun.IsDone() {
+						return fmt.Errorf("PipelineRun %s has still not finished yet", pipelineRun.Name)
+					}
+
+					if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
 						return nil
 					} else {
-						return fmt.Errorf(tekton.GetFailedPipelineRunLogs(devFw.AsKubeDeveloper.HasController.KubeRest(), devFw.AsKubeDeveloper.HasController.KubeInterface(), buildPR))
+						var prLogs string
+						if prLogs, err = tekton.GetFailedPipelineRunLogs(managedFw.AsKubeAdmin.ReleaseController.KubeRest(), managedFw.AsKubeAdmin.ReleaseController.KubeInterface(), pipelineRun); err != nil {
+							return fmt.Errorf("failed to get PLR logs: %+v", err)
+						}
+						return fmt.Errorf("%s", prLogs)
 					}
-				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to be finished for the component %s/%s", devNamespace, component.Name))
-			})
-			It("verifies the advs release pipelinerun is running and succeeds", func() {
-				devFw = releasecommon.NewFramework(devWorkspace)
-				managedFw = releasecommon.NewFramework(managedWorkspace)
-
-				releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-
-				Expect(managedFw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
+				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
 			})
 
 			It("verifies release CR completed and set succeeded.", func() {
-				devFw = releasecommon.NewFramework(devWorkspace)
 				Eventually(func() error {
-					releaseCr, err := devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
+					releaseCr, err := devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshotPush.Name, devNamespace)
 					if err != nil {
 						return err
 					}
@@ -183,7 +176,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 			})
 
 			It("verifies if the repository URL is valid", func() {
-				managedFw = releasecommon.NewFramework(managedWorkspace)
 				releasePR, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 				Expect(err).NotTo(HaveOccurred())
 				advisoryURL := releasePR.Status.PipelineRunStatusFields.Results[0].Value.StringVal
@@ -244,7 +236,7 @@ func createADVSReleasePlanAdmission(advsRPAName string, managedFw framework.Fram
 		"mapping": map[string]interface{}{
 			"components": []map[string]interface{}{
 				{
-					"name":       component.GetName(),
+					"name":       advsComponentName,
 					"repository": "quay.io/redhat-pending/rhtap----konflux-release-e2e",
 					"tags": []string{"latest", "latest-{{ timestamp }}", "testtag",
 						"testtag-{{ timestamp }}", "testtag2", "testtag2-{{ timestamp }}"},
@@ -265,6 +257,7 @@ func createADVSReleasePlanAdmission(advsRPAName string, managedFw framework.Fram
 		},
 		"sign": map[string]interface{}{
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",
+			"cosignSecretName": "test-cosign-secret",
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())

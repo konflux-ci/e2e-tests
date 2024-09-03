@@ -133,7 +133,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 			// Create an IntegrationTestScenario for the App
 			It("creates an IntegrationTestScenario for the app", Label(devEnvTestLabel), func() {
 				its := appSpec.ComponentSpec.IntegrationTestScenario
-				integrationTestScenario, err = fw.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", appSpec.ApplicationName, fw.UserNamespace, its.GitURL, its.GitRevision, its.TestPath)
+				integrationTestScenario, err = fw.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", appSpec.ApplicationName, fw.UserNamespace, its.GitURL, its.GitRevision, its.TestPath, []string{})
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -382,7 +382,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 			})
 
 			When("JVM Build Service is used for rebuilding dependencies", func() {
-				// Marking the step as pending since jvm-build-service will be reworked
+				// Marking the step as pending since jvm-build-service will be reworked with STONEBLD-2711
 				It("should eventually rebuild of all artifacts and dependencies successfully", Pending, func() {
 					jvmClient := jvmclientSet.New(fw.AsKubeAdmin.JvmbuildserviceController.JvmbuildserviceClient().JvmbuildserviceV1alpha1().RESTClient())
 					tektonClient := pipelineclientset.New(fw.AsKubeAdmin.TektonController.PipelineClient().TektonV1beta1().RESTClient())

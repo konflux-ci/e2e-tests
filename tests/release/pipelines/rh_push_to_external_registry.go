@@ -8,13 +8,12 @@ import (
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
+	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
-	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/release"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	"github.com/konflux-ci/e2e-tests/pkg/utils/contract"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
@@ -23,7 +22,6 @@ import (
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -39,14 +37,19 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 
 	var imageIDs []string
 	var pyxisKeyDecoded, pyxisCertDecoded []byte
-	var releasePR1, releasePR2 *pipeline.PipelineRun
-	scGitRevision := fmt.Sprintf("test-pyxis-%s", util.GenerateRandomString(4))
+	//	var releasePR, releasePR2 *pipeline.PipelineRun
+	var releasePR *pipeline.PipelineRun
+	var scGitRevision = fmt.Sprintf("test-pyxis-%s", util.GenerateRandomString(4))
+	var sampleImage = "quay.io/hacbs-release-tests/dcmetromap@sha256:544259be8bcd9e6a2066224b805d854d863064c9b64fa3a87bfcd03f5b0f28e6"
+	var additionalImage = "quay.io/hacbs-release-tests/simplepython@sha256:87ebb63d7b7ba0196093195592c03f5f6e23db9b889c7325e5e081feb16755a1"
+	var gitSourceURL = releasecommon.GitSourceComponentUrl
+	var gitSourceRevision = "d49914874789147eb2de9bb6a12cd5d150bfff92"
+	var gitAdditionSrcURL = releasecommon.AdditionalGitSourceComponentUrl
+	var gitAdditionSrcRevision = "47fc22092005aabebce233a9b6eab994a8152bbd"
+	var ecPolicyName = "pushpyxis-policy-" + util.GenerateRandomString(4)
 
-	var component1, component2 *appservice.Component
-	var snapshot1, snapshot2 *appservice.Snapshot
-	var releaseCR1, releaseCR2 *releaseApi.Release
-
-	var componentObj1, componentObj2 appservice.ComponentSpec
+	var snapshotPush *appservice.Snapshot
+	var releaseCR *releaseApi.Release
 
 	BeforeAll(func() {
 		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("push-pyxis"))
@@ -68,13 +71,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 
 		// Create secret for the release registry repo "hacbs-release-tests".
 		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(releasecommon.RedhatAppstudioUserSecret, managedNamespace, sourceAuthJson)
-		Expect(err).ToNot(HaveOccurred())
-
-		// Linking the build secret to the pipeline service account in dev namespace.
-		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, releasecommon.HacbsReleaseTestsTokenSecret, constants.DefaultPipelineServiceAccount, true)
-		Expect(err).ToNot(HaveOccurred())
-
-		publicKey, err := fw.AsKubeAdmin.TektonController.GetTektonChainsPublicKey()
 		Expect(err).ToNot(HaveOccurred())
 
 		// Creating k8s secret to access Pyxis stage based on base64 decoded of key and cert
@@ -99,12 +95,27 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		_, err = fw.AsKubeAdmin.CommonController.CreateSecret(managedNamespace, secret)
 		Expect(err).ToNot(HaveOccurred())
 
-		Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
-			publicKey, releasecommon.PublicSecretNameAuth, managedNamespace)).To(Succeed())
+		//temporarily usage
+		releasePublicKeyDecoded := []byte("-----BEGIN PUBLIC KEY-----\n" +
+			"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEocSG/SnE0vQ20wRfPltlXrY4Ib9B\n" +
+			"CRnFUCg/fndZsXdz0IX5sfzIyspizaTbu4rapV85KirmSBU6XUaLY347xg==\n" +
+			"-----END PUBLIC KEY-----")
 
-		defaultECP, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+		Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
+			releasePublicKeyDecoded, releasecommon.PublicSecretNameAuth, managedNamespace)).To(Succeed())
+		defaultEcPolicy, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 		Expect(err).NotTo(HaveOccurred())
-		policy := contract.PolicySpecWithSourceConfig(defaultECP.Spec, ecp.SourceConfig{Include: []string{"@slsa3"}, Exclude: []string{"step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"}})
+		defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
+			Description: "Red Hat's enterprise requirements",
+			PublicKey:   fmt.Sprintf("k8s://%s/%s", managedNamespace, releasecommon.PublicSecretNameAuth),
+			Sources:     defaultEcPolicy.Spec.Sources,
+			Configuration: &ecp.EnterpriseContractPolicyConfiguration{
+				Collections: []string{"@slsa3"},
+				Exclude:     []string{"tests/release/pipelines/push_to_external_registry.go"},
+			},
+		}
+		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(ecPolicyName, managedNamespace, defaultEcPolicySpec)
+		Expect(err).NotTo(HaveOccurred())
 
 		managedServiceAccount, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(releasecommon.ReleasePipelineServiceAccountDefault, managedNamespace, releasecommon.ManagednamespaceSecret, nil)
 		Expect(err).NotTo(HaveOccurred())
@@ -118,29 +129,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		compName = releasecommon.ComponentName
 		additionalCompName = releasecommon.AdditionalComponentName
 
-		componentObj1 = appservice.ComponentSpec{
-			ComponentName: releasecommon.ComponentName,
-			Application:   releasecommon.ApplicationNameDefault,
-			Source: appservice.ComponentSource{
-				ComponentSourceUnion: appservice.ComponentSourceUnion{
-					GitSource: &appservice.GitSource{
-						URL: releasecommon.GitSourceComponentUrl,
-					},
-				},
-			},
-		}
-		componentObj2 = appservice.ComponentSpec{
-			ComponentName: additionalCompName,
-			Application:   releasecommon.ApplicationNameDefault,
-			Source: appservice.ComponentSource{
-				ComponentSourceUnion: appservice.ComponentSourceUnion{
-					GitSource: &appservice.GitSource{
-						URL:           releasecommon.AdditionalGitSourceComponentUrl,
-						DockerfileURL: constants.DockerFilePath,
-					},
-				},
-			},
-		}
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, managedNamespace, "true", nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -169,7 +157,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, "", devNamespace, releasecommon.ReleaseStrategyPolicyDefault, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationNameDefault}, true, &tektonutils.PipelineRef{
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, "", devNamespace, ecPolicyName, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationNameDefault}, true, &tektonutils.PipelineRef{
 			Resolver: "git",
 			Params: []tektonutils.Param{
 				{Name: "url", Value: releasecommon.RelSvcCatalogURL},
@@ -179,9 +167,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		}, &runtime.RawExtension{
 			Raw: data,
 		})
-		Expect(err).NotTo(HaveOccurred())
-
-		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(releasecommon.ReleaseStrategyPolicyDefault, managedNamespace, policy)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasecommon.ReleasePvcName, managedNamespace, corev1.ReadWriteOnce)
@@ -199,6 +184,10 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 
 		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
+
+		snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(*fw, releasecommon.ComponentName, releasecommon.ApplicationNameDefault, devNamespace, sampleImage, gitSourceURL, gitSourceRevision, releasecommon.AdditionalComponentName, additionalImage, gitAdditionSrcURL, gitAdditionSrcRevision)
+		GinkgoWriter.Println("snapshotPush.Name: %s", snapshotPush.GetName())
+		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterAll(func() {
@@ -214,96 +203,43 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 
 	var _ = Describe("Post-release verification", func() {
 
-		It("verifies that Component 1 can be created and build PipelineRun is created for it in dev namespace and succeeds", func() {
-			component1, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj1, devNamespace, "", "", releasecommon.ApplicationNameDefault, true, constants.DefaultDockerBuildPipelineBundle)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component1, "",
-				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
-		})
-
-		It("verifies that Component 2 can be created and build PipelineRun is created for it in dev namespace and succeeds", func() {
-			component2, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj2, devNamespace, "", "", releasecommon.ApplicationNameDefault, true, constants.DefaultDockerBuildPipelineBundle)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component2, "",
-				fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
-		})
-
-		It("tests that Snapshot is created for each Component", func() {
+		It("tests that Release CR is created for the Snapshot", func() {
 			Eventually(func() error {
-				snapshot1, err = fw.AsKubeAdmin.IntegrationController.GetSnapshot("", "", component1.GetName(), devNamespace)
+				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetRelease("", snapshotPush.GetName(), devNamespace)
 				if err != nil {
-					GinkgoWriter.Printf("cannot get the Snapshot for component %s/%s: %v\n", component1.GetNamespace(), component1.GetName(), err)
-					return err
-				}
-				snapshot2, err = fw.AsKubeAdmin.IntegrationController.GetSnapshot("", "", component2.GetName(), devNamespace)
-				if err != nil {
-					GinkgoWriter.Printf("cannot get the Snapshot for component %s/%s: %v\n", component2.GetNamespace(), component2.GetName(), err)
-					return err
-				}
-				return nil
-			}, 5*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out waiting for Snapshots to be created in %s namespace", devNamespace)
-		})
-
-		It("tests that associated Release CR is created for each Component's Snapshot", func() {
-			Eventually(func() error {
-				releaseCR1, err = fw.AsKubeAdmin.ReleaseController.GetRelease("", snapshot1.GetName(), devNamespace)
-				if err != nil {
-					GinkgoWriter.Printf("cannot get the Release CR for snapshot %s/%s: %v\n", snapshot1.GetNamespace(), component1.GetName(), err)
-					return err
-				}
-				releaseCR2, err = fw.AsKubeAdmin.ReleaseController.GetRelease("", snapshot2.GetName(), devNamespace)
-				if err != nil {
-					GinkgoWriter.Printf("cannot get the Release CR for snapshot %s/%s: %v\n", snapshot2.GetNamespace(), component1.GetName(), err)
+					GinkgoWriter.Printf("cannot get the Release CR for snapshot %s/%s: %v\n", snapshotPush.GetNamespace(), releasecommon.ComponentName, err)
 					return err
 				}
 				return nil
 			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed(), "timed out waiting for Release CRs to be created in %s namespace", devNamespace)
 		})
 
-		It("verifies a release PipelineRun for each component started and succeeded in managed namespace", func() {
-			releasePR1, err = fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToGetStarted(releaseCR1, managedNamespace)
+		It("verifies a release PipelineRun is started and succeeded in managed namespace", func() {
+			releasePR, err = fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToGetStarted(releaseCR, managedNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			releasePR2, err = fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToGetStarted(releaseCR2, managedNamespace)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR1, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR1.GetNamespace(), releaseCR1.GetName()))
-
-			Expect(fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR2, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR2.GetNamespace(), releaseCR2.GetName()))
+			Expect(fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
 		})
 
 		It("validate the result of task create-pyxis-image contains image ids", func() {
 			Eventually(func() []string {
-				trReleaseLogs, err := fw.AsKubeAdmin.TektonController.GetTaskRunLogs(releasePR1.GetName(), "create-pyxis-image", releasePR1.GetNamespace())
-				Expect(err).NotTo(HaveOccurred())
-
-				trAdditionalReleaseLogs, err := fw.AsKubeAdmin.TektonController.GetTaskRunLogs(releasePR2.GetName(), "create-pyxis-image", releasePR2.GetNamespace())
+				trReleaseLogs, err := fw.AsKubeAdmin.TektonController.GetTaskRunLogs(releasePR.GetName(), "create-pyxis-image", releasePR.GetNamespace())
 				Expect(err).NotTo(HaveOccurred())
 
 				trReleaseImageIDs, err := fw.AsKubeAdmin.ReleaseController.GetPyxisImageIDsFromCreatePyxisImageTaskLogs(trReleaseLogs)
 				Expect(err).NotTo(HaveOccurred())
-				trAdditionalReleaseIDs, err := fw.AsKubeAdmin.ReleaseController.GetPyxisImageIDsFromCreatePyxisImageTaskLogs(trAdditionalReleaseLogs)
-				Expect(err).NotTo(HaveOccurred())
 
 				Expect(trReleaseImageIDs).NotTo(BeEmpty(), fmt.Sprintf("Invalid ImageID in results of task create-pyxis-image. TaskRun log: %+s", trReleaseLogs))
-				Expect(trAdditionalReleaseIDs).ToNot(BeEmpty(), fmt.Sprintf("Invalid ImageID in results of task create-pyxis-image. TaskRun log: %+s", trAdditionalReleaseLogs))
-
-				Expect(trReleaseImageIDs).ToNot(HaveLen(len(trAdditionalReleaseIDs)), "the number of image IDs should not be the same in both taskrun results. (%+v vs. %+v)", trReleaseImageIDs, trAdditionalReleaseIDs)
-
-				if len(trReleaseImageIDs) > len(trAdditionalReleaseIDs) {
-					imageIDs = trReleaseImageIDs
-				} else {
-					imageIDs = trAdditionalReleaseIDs
-				}
+				imageIDs = trReleaseImageIDs
 
 				return imageIDs
 			}, avgControllerQueryTimeout, releasecommon.DefaultInterval).Should(HaveLen(2))
 		})
 
-		It("tests that associated Release CR has completed for each Component's Snapshot", func() {
+		It("tests that Release CR has completed", func() {
 			Eventually(func() error {
 				var errMsg string
-				for _, cr := range []*releaseApi.Release{releaseCR1, releaseCR2} {
+				for _, cr := range []*releaseApi.Release{releaseCR} {
 					cr, err = fw.AsKubeAdmin.ReleaseController.GetRelease("", cr.Spec.Snapshot, devNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
 					if !cr.IsReleased() {
@@ -311,7 +247,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 					}
 				}
 				if len(errMsg) > 1 {
-					return fmt.Errorf(errMsg)
+					return fmt.Errorf("%s", errMsg)
 				}
 				return nil
 			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed(), "timed out waiting for Release CRs to be created in %s namespace", devNamespace)

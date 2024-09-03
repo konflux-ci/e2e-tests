@@ -1,6 +1,7 @@
 package repos
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -11,7 +12,7 @@ import (
 
 // Demo of the magefile, PreflightChecks(), as a ConditionalFunc within the rule framework.
 // But really we would actually register the real function with minor tweaks if we opt into framework
-var isPreflightCheck = func(rctx *rulesengine.RuleCtx) bool {
+var isPreflightCheck = func(rctx *rulesengine.RuleCtx) (bool, error) {
 
 	if rctx.DryRun {
 
@@ -31,19 +32,17 @@ var isPreflightCheck = func(rctx *rulesengine.RuleCtx) bool {
 			}
 		}
 		if len(missingEnv) != 0 {
-			klog.Errorf("required env vars containing secrets (%s) not defined or empty", strings.Join(missingEnv, ","))
-			return false
+			return false, fmt.Errorf("required env vars containing secrets (%s) not defined or empty", strings.Join(missingEnv, ","))
 		}
 
 		for _, binaryName := range rctx.RequiredBinaries {
 			if err := sh.Run("which", binaryName); err != nil {
-				klog.Errorf("binary %s not found in PATH - please install it first", binaryName)
-				return false
+				return false, fmt.Errorf("binary %s not found in PATH - please install it first", binaryName)
 			}
 		}
 	}
 
-	return true
+	return true, nil
 }
 
 // Demo of magefile, func BootstrapCluster(), as an ActionFunc within the rule framework
@@ -74,7 +73,7 @@ var installGinkgo = func(rctx *rulesengine.RuleCtx) error {
 // WHEN environment has required prereqs THEN install ginkgo, boostrap cluster
 var preflight_check_rule = rulesengine.Rule{Name: "Bootstrap a Cluster",
 	Description: "Boostrap the cluster when the envroniment has all the pre-req environment variables/tools installed.",
-	Condition:    rulesengine.ConditionFunc(isPreflightCheck),
+	Condition:   rulesengine.ConditionFunc(isPreflightCheck),
 	Actions:     []rulesengine.Action{rulesengine.ActionFunc(installGinkgo), rulesengine.ActionFunc(bootstrapCluster)},
 }
 
@@ -86,7 +85,7 @@ var preflight_check_rule = rulesengine.Rule{Name: "Bootstrap a Cluster",
 
 var LocalE2EDemoRuleChain = rulesengine.Rule{Name: "Local Install and Test Run of e2e-repo",
 	Description: "Install Konflux to a cluster and run tests based on file changes within the e2e-repo when executed from local system.",
-	Condition:    rulesengine.All{&preflight_check_rule, rulesengine.Any{&NonTestFilesRule, &TestFilesOnlyRule}},
+	Condition:   rulesengine.All{&preflight_check_rule, rulesengine.Any{&NonTestFilesRule, &TestFilesOnlyRule}},
 }
 
 var DemoCatalog = rulesengine.RuleCatalog{LocalE2EDemoRuleChain}

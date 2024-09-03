@@ -68,6 +68,8 @@ var (
 	quayTokenNotFoundError = "DEFAULT_QUAY_ORG_TOKEN env var was not found"
 
 	konfluxCiSpec = &KonfluxCISpec{}
+
+	rctx = &rulesengine.RuleCtx{}
 )
 
 func (CI) parseJobSpec() error {
@@ -115,6 +117,18 @@ func (ci CI) init() error {
 		return err
 	}
 
+	rctx = rulesengine.NewRuleCtx()
+
+	rctx.Parallel = true
+	rctx.OutputDir = artifactDir
+	rctx.JUnitReport = "e2e-report.xml"
+
+	rctx.RepoName = pr.RepoName
+	rctx.JobName = jobName
+	rctx.JobType = jobType
+	rctx.PrRemoteName = pr.RemoteName
+	rctx.PrBranchName = pr.BranchName
+	rctx.PrCommitSha = pr.CommitSHA
 	return nil
 }
 
@@ -222,7 +236,7 @@ func (Local) CleanupGithubOrg() error {
 func (Local) CleanupQuayReposAndRobots() error {
 	quayOrgToken := os.Getenv("DEFAULT_QUAY_ORG_TOKEN")
 	if quayOrgToken == "" {
-		return fmt.Errorf(quayTokenNotFoundError)
+		return fmt.Errorf("%s", quayTokenNotFoundError)
 	}
 	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
 
@@ -234,7 +248,7 @@ func (Local) CleanupQuayReposAndRobots() error {
 func (Local) CleanupQuayTags() error {
 	quayOrgToken := os.Getenv("DEFAULT_QUAY_ORG_TOKEN")
 	if quayOrgToken == "" {
-		return fmt.Errorf(quayTokenNotFoundError)
+		return fmt.Errorf("%s", quayTokenNotFoundError)
 	}
 	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
 
@@ -247,7 +261,7 @@ func (Local) CleanupPrivateRepos() error {
 	repoNamePrefixes := []string{"build-e2e", "konflux", "multi-platform", "jvm-build-service"}
 	quayOrgToken := os.Getenv("DEFAULT_QUAY_ORG_TOKEN")
 	if quayOrgToken == "" {
-		return fmt.Errorf(quayTokenNotFoundError)
+		return fmt.Errorf("%s", quayTokenNotFoundError)
 	}
 	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
 
@@ -277,6 +291,10 @@ func (ci CI) TestE2E() error {
 
 	if err := ci.init(); err != nil {
 		return fmt.Errorf("error when running ci init: %v", err)
+	}
+	// Eventually we'll introduce mage rules for all repositories, so this condition won't be needed anymore
+	if pr.RepoName == "e2e-tests" || pr.RepoName == "integration-service" {
+		return engine.MageEngine.RunRulesOfCategory("ci", rctx)
 	}
 
 	if err := PreflightChecks(); err != nil {
@@ -316,63 +334,21 @@ func (ci CI) UnregisterSprayproxy() {
 }
 
 func RunE2ETests() error {
-	labelFilter := utils.GetEnv("E2E_TEST_SUITE_LABEL", "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines")
-
-	rctx := rulesengine.NewRuleCtx()
-	rctx.Parallel = true
-	rctx.OutputDir = artifactDir
-	// used by ReleaseServiceCatalogRule
-	rctx.IsPaired = fmt.Sprintf("%t", isPRPairingRequired("release-service"))
-	rctx.JUnitReport = "e2e-report.xml"
-	//This conditional could be moved into a rule but keeping the change small
-	if openshiftJobSpec.Refs.Repo == "release-service-catalog" {
-
-		rctx.RepoName = openshiftJobSpec.Refs.Repo
-		rctx.JobName = jobName
-		rctx.JobType = jobType
-
-		files, err := getChangedFiles()
-		if err != nil {
-			return err
-		}
-		rctx.DiffFiles = files
-
-		// filtering the rule engine to load only release-catalog rule catalog within the test category
-		err = engine.MageEngine.RunRules(rctx, "tests", "release-catalog")
-
-		if err != nil {
-			return err
-		}
-
-		return nil
+	var err error
+	rctx.DiffFiles, err = utils.GetChangedFiles(rctx.RepoName)
+	if err != nil {
+		return err
 	}
-
-	if pr.RepoName == "e2e-tests" {
-
-		rctx.RepoName = pr.RepoName
-		rctx.JobName = jobName
-		rctx.JobType = jobType
-
-		files, err := getChangedFiles()
-		if err != nil {
-			return err
-		}
-		rctx.DiffFiles = files
-
-		// Set the number of parallel test processes
-		rctx.CLIConfig.Procs = 20
-
-		// filtering the rule engine to load only e2e-repo rule catalog within the test category
-		err = engine.MageEngine.RunRules(rctx, "tests", "e2e-repo")
-
-		if err != nil {
-			return err
-		}
-
-		return nil
+	switch rctx.RepoName {
+	case "release-service-catalog":
+		rctx.IsPaired = isPRPairingRequired("release-service")
+		return engine.MageEngine.RunRules(rctx, "tests", "release-service-catalog")
+	case "infra-deployments":
+		return engine.MageEngine.RunRules(rctx, "tests", "infra-deployments")
+	default:
+		labelFilter := utils.GetEnv("E2E_TEST_SUITE_LABEL", "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines")
+		return runTests(labelFilter, "e2e-report.xml")
 	}
-
-	return runTests(labelFilter, "e2e-report.xml")
 }
 
 func PreflightChecks() error {
@@ -595,14 +571,6 @@ func setRequiredEnvVars() error {
 			requiresMultiPlatformTests = true
 			requiresSprayProxyRegistering = true
 		}
-	} else { // e2e-tests repository PR
-		requiresMultiPlatformTests = true
-		requiresSprayProxyRegistering = true
-		if isPRPairingRequired("infra-deployments") {
-			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
-			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
-		}
-
 	}
 
 	return nil
@@ -792,16 +760,10 @@ func createNewTaskBundleAndPush(currentSourceTaskBundle, sourceImage string) str
 }
 
 func BootstrapCluster() error {
-	envVars := map[string]string{}
 
 	if os.Getenv("CI") == "true" || konfluxCI == "true" {
 		if err := setRequiredEnvVars(); err != nil {
 			return fmt.Errorf("error when setting up required env vars: %v", err)
-		}
-		if os.Getenv("REPO_NAME") == "e2e-tests" {
-			// Some scripts in infra-deployments repo are referencing scripts/utils in e2e-tests repo
-			// This env var allows to test changes introduced in "e2e-tests" repo PRs in CI
-			envVars["E2E_TESTS_COMMIT_SHA"] = pr.CommitSHA
 		}
 	}
 
@@ -924,15 +886,15 @@ func CleanGitHubWebHooks() error {
 
 // Remove all webhooks older than 1 day from GitLab repo.
 func CleanGitLabWebHooks() error {
-	gcToken := utils.GetEnv(constants.GITLAB_TOKEN_ENV, "")
+	gcToken := utils.GetEnv(constants.GITLAB_BOT_TOKEN_ENV, "")
 	if gcToken == "" {
 		return fmt.Errorf("empty PAC_GITLAB_TOKEN env")
 	}
-	projectID := utils.GetEnv(constants.GITLAB_PROJECT_ID, "")
+	projectID := utils.GetEnv(constants.GITLAB_PROJECT_ID_ENV, "")
 	if projectID == "" {
 		return fmt.Errorf("empty PAC_PROJECT_ID env. Please provide a valid GitLab Project ID")
 	}
-	gitlabURL := utils.GetEnv(constants.GITLAB_URL_ENV, "https://gitlab.com/api/v4")
+	gitlabURL := utils.GetEnv(constants.GITLAB_API_URL_ENV, constants.DefaultGitLabAPIURL)
 	gc, err := gitlab.NewGitlabClient(gcToken, gitlabURL)
 	if err != nil {
 		return err
@@ -1365,7 +1327,7 @@ func isValidPacHost(server string) bool {
 func (Local) PreviewTestSelection() error {
 
 	rctx := rulesengine.NewRuleCtx()
-	files, err := getChangedFiles()
+	files, err := utils.GetChangedFiles("e2e-tests")
 	if err != nil {
 		klog.Error(err)
 		return err
@@ -1385,7 +1347,7 @@ func (Local) PreviewTestSelection() error {
 func (Local) RunRuleDemo() error {
 
 	rctx := rulesengine.NewRuleCtx()
-	files, err := getChangedFiles()
+	files, err := utils.GetChangedFiles("e2e-tests")
 	if err != nil {
 		klog.Error(err)
 		return err
@@ -1400,4 +1362,25 @@ func (Local) RunRuleDemo() error {
 	}
 
 	return nil
+}
+
+func (Local) RunInfraDeploymentsRuleDemo() error {
+
+	rctx := rulesengine.NewRuleCtx()
+	rctx.Parallel = true
+	rctx.OutputDir = artifactDir
+
+	rctx.RepoName = "infra-deployments"
+	rctx.JobName = ""
+	rctx.JobType = ""
+	rctx.DryRun = true
+
+	files, err := utils.GetChangedFiles("infra-deployments")
+	if err != nil {
+		return err
+	}
+	rctx.DiffFiles = files
+
+	// filtering the rule engine to load only infra-deployments rule catalog within the test category
+	return engine.MageEngine.RunRules(rctx, "tests", "infra-deployments")
 }
