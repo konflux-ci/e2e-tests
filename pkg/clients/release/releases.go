@@ -155,7 +155,7 @@ func (r *ReleaseController) WaitForReleasePipelineToGetStarted(release *releaseA
 // WaitForReleasePipelineToBeFinished wait for given release pipeline to finish.
 // It exposes the error message from the failed task to the end user when the pipelineRun failed.
 func (r *ReleaseController) WaitForReleasePipelineToBeFinished(release *releaseApi.Release, managedNamespace string) error {
-	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 30*time.Minute, true, func(ctx context.Context) (done bool, err error) {
+	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 60*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 		pipelineRun, err := r.GetPipelineRunInNamespace(managedNamespace, release.GetName(), release.GetNamespace())
 		if err != nil {
 			GinkgoWriter.Println("PipelineRun has not been created yet for release %s/%s", release.GetNamespace(), release.GetName())

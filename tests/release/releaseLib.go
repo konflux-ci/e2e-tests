@@ -22,7 +22,7 @@ func NewFramework(workspace string) *framework.Framework {
 		KeycloakUrl:     os.Getenv(constants.KEYLOAK_URL_ENV),
 		OfflineToken:    os.Getenv(constants.OFFLINE_TOKEN_ENV),
 	}
-	fw, err = framework.NewFrameworkWithTimeout(
+	newfw, err := framework.NewFrameworkWithTimeout(
 		workspace,
 		time.Minute*60,
 		stageOptions,
@@ -32,7 +32,7 @@ func NewFramework(workspace string) *framework.Framework {
 	// Create a ticker that ticks every 3 minutes
 	ticker := time.NewTicker(3 * time.Minute)
 	// Schedule the stop of the ticker after 30 minutes
-	time.AfterFunc(30*time.Minute, func() {
+	time.AfterFunc(60*time.Minute, func() {
 		ticker.Stop()
 		fmt.Println("Stopped executing every 3 minutes.")
 	})
@@ -45,9 +45,10 @@ func NewFramework(workspace string) *framework.Framework {
 				stageOptions,
 			)
 			Expect(err).NotTo(HaveOccurred())
+			*newfw = *fw
 		}
 	}()
-	return fw
+	return newfw
 }
 
 func CreateComponent(devFw framework.Framework, devNamespace, appName, compName, gitURL, gitRevision, contextDir, dockerFilePath string, buildPipelineBundle map[string]string) *appservice.Component {

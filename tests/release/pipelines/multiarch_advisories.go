@@ -12,7 +12,6 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
@@ -22,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"knative.dev/pkg/apis"
 )
 
 const (
@@ -134,6 +132,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch test f
 		var _ = Describe("Post-release verification", func() {
 
 			It("verifies the multiarch release pipelinerun is running and succeeds", func() {
+
+
 				Eventually(func() error {
 					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshotPush.Name, devNamespace)
 					if err != nil {
@@ -142,29 +142,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch test f
 					return nil
 				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
 
-				Eventually(func() error {
-					pipelineRun, err := managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
-					if err != nil {
-						return fmt.Errorf("PipelineRun has not been created yet for release %s/%s", releaseCR.GetNamespace(), releaseCR.GetName())
-					}
-					for _, condition := range pipelineRun.Status.Conditions {
-						GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
-					}
-
-					if !pipelineRun.IsDone() {
-						return fmt.Errorf("PipelineRun %s has still not finished yet", pipelineRun.Name)
-					}
-
-					if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-						return nil
-					} else {
-						var prLogs string
-						if prLogs, err = tekton.GetFailedPipelineRunLogs(managedFw.AsKubeAdmin.ReleaseController.KubeRest(), managedFw.AsKubeAdmin.ReleaseController.KubeInterface(), pipelineRun); err != nil {
-							return fmt.Errorf("failed to get PLR logs: %+v", err)
-						}
-						return fmt.Errorf("%s", prLogs)
-					}
-				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
+				Expect(managedFw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
 			})
 
 			It("verifies release CR completed and set succeeded", func() {
@@ -195,7 +173,6 @@ func createMultiArchEnterpriseContractPolicy(multiarchECPName string, managedFw 
 		}},
 		Configuration: &ecp.EnterpriseContractPolicyConfiguration{
 			Exclude: []string{"step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
-			//Exclude: []string{"step_image_registries", "tasks.required_tasks_found:prefetch-dependencies", "slsa_source_correlated.expected_source_code_reference:git+https://github.com/redhat-appstudio-qe/multi-platform-test-prod.git@sha1:fd4b6c28329ab3df77e7ad7beebac1829836561d"},
 			Include: []string{"@slsa3"},
 		},
 	}

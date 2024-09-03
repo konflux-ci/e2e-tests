@@ -11,14 +11,12 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/runtime"
-	"knative.dev/pkg/apis"
 )
 
 const (
@@ -205,44 +203,7 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw *framework.Framework, de
 		return nil
 	}, 5*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for Release being created")
 
-	managedFw = releasecommon.NewFramework(managedWorkspace)
-	// Create a ticker that ticks every 3 minutes
-	ticker := time.NewTicker(3 * time.Minute)
-	// Schedule the stop of the ticker after 30 minutes
-	time.AfterFunc(30*time.Minute, func() {
-		ticker.Stop()
-		fmt.Println("Stopped executing every 3 minutes.")
-	})
-	// Run a goroutine to handle the ticker ticks
-	go func() {
-		for range ticker.C {
-			managedFw = releasecommon.NewFramework(managedWorkspace)
-		}
-	}()
-
-	Eventually(func() error {
-		pipelineRun, err := managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
-		if err != nil {
-			return fmt.Errorf("PipelineRun has not been created yet for release %s/%s", releaseCR.GetNamespace(), releaseCR.GetName())
-		}
-		for _, condition := range pipelineRun.Status.Conditions {
-			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
-		}
-
-		if !pipelineRun.IsDone() {
-			return fmt.Errorf("PipelineRun %s has still not finished yet", pipelineRun.Name)
-		}
-
-		if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
-			return nil
-		} else {
-			var prLogs string
-			if prLogs, err = tekton.GetFailedPipelineRunLogs(managedFw.AsKubeAdmin.ReleaseController.KubeRest(), managedFw.AsKubeAdmin.ReleaseController.KubeInterface(), pipelineRun); err != nil {
-				return fmt.Errorf("failed to get PLR logs: %+v", err)
-			}
-			return fmt.Errorf("%s", prLogs)
-		}
-	}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
+	Expect(managedFw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
 }
 
 func assertReleaseCRSucceeded(devFw *framework.Framework, devNamespace, managedNamespace, fbcAppName string, componentName string) {
