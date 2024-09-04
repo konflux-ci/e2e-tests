@@ -205,42 +205,32 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw *framework.Framework, de
 		return nil
 	}, 5*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for Release being created")
 
-	managedFw = releasecommon.NewFramework(managedWorkspace)
-	// Create a ticker that ticks every 3 minutes
-	ticker := time.NewTicker(3 * time.Minute)
-	// Schedule the stop of the ticker after 30 minutes
-	time.AfterFunc(30*time.Minute, func() {
-		ticker.Stop()
-		fmt.Println("Stopped executing every 3 minutes.")
-	})
-	// Run a goroutine to handle the ticker ticks
-	go func() {
-		for range ticker.C {
-			managedFw = releasecommon.NewFramework(managedWorkspace)
-		}
-	}()
-
 	Eventually(func() error {
 		pipelineRun, err := managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 		if err != nil {
 			return fmt.Errorf("PipelineRun has not been created yet for release %s/%s", releaseCR.GetNamespace(), releaseCR.GetName())
 		}
+
 		for _, condition := range pipelineRun.Status.Conditions {
 			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
 		}
 
-		if !pipelineRun.IsDone() {
+		if !pipelineRun.IsDone(){
 			return fmt.Errorf("PipelineRun %s has still not finished yet", pipelineRun.Name)
 		}
 
 		if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
 			return nil
 		} else {
-			var prLogs string
+			prLogs := ""
 			if prLogs, err = tekton.GetFailedPipelineRunLogs(managedFw.AsKubeAdmin.ReleaseController.KubeRest(), managedFw.AsKubeAdmin.ReleaseController.KubeInterface(), pipelineRun); err != nil {
-				return fmt.Errorf("failed to get PLR logs: %+v", err)
+				GinkgoWriter.Printf("failed to get PLR logs: %+v", err)
+				Expect(err).ShouldNot(HaveOccurred())
+				return nil
 			}
-			return fmt.Errorf("%s", prLogs)
+			GinkgoWriter.Printf("logs: %s", prLogs)
+			Expect(prLogs).To(Equal(""), fmt.Sprintf("PipelineRun %s failed", pipelineRun.Name))
+			return nil
 		}
 	}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
 }
@@ -252,17 +242,23 @@ func assertReleaseCRSucceeded(devFw *framework.Framework, devNamespace, managedN
 		if err != nil {
 			return err
 		}
+		GinkgoWriter.Printf("releaseCR: %s", releaseCR.Name)
 		conditions := releaseCR.Status.Conditions
+		GinkgoWriter.Printf("len of conditions: %d", len(conditions))
 		if len(conditions) > 0 {
 			for _, c := range conditions {
-				if c.Type == "Released" && c.Status == "True" {
-					GinkgoWriter.Println("Release CR is released")
+				if c.Type == "Released" {
+					if c.Status == "True" {
+						GinkgoWriter.Println("Release CR is released")
+						return nil
+					} else if c.Status == "False" {
+						GinkgoWriter.Println("Release CR failed")
+						Expect(string(c.Status)).To(Equal("True"), fmt.Sprintf("Release %s failed", releaseCR.Name))
+					} else {
+						return fmt.Errorf("release %s/%s is not marked as finished yet", releaseCR.GetNamespace(), releaseCR.GetName())
+					}
 				}
 			}
-		}
-
-		if !releaseCR.IsReleased() {
-			return fmt.Errorf("release %s/%s is not marked as finished yet", releaseCR.GetNamespace(), releaseCR.GetName())
 		}
 		return nil
 	}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed())
