@@ -63,9 +63,9 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/flacatus/konflux-qe-definitions.git
+            value: https://github.com/konflux-ci/konflux-qe-definitions.git
           - name: revision
-            value: create_oci_artifact
+            value: main
           - name: pathInRepo
             value: common/tasks/test-metadata/0.1/test-metadata.yaml
       params:
@@ -165,9 +165,9 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/flacatus/konflux-qe-definitions.git
+            value: https://github.com/konflux-ci/konflux-qe-definitions.git
           - name: revision
-            value: create_oci_artifact
+            value: main
           - name: pathInRepo
             value: common/tasks/rosa/hosted-cp/rosa-hcp-deprovision/rosa-hcp-deprovision.yaml
       params:
@@ -204,9 +204,9 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/flacatus/konflux-qe-definitions.git
+            value: https://github.com/konflux-ci/konflux-qe-definitions.git
           - name: revision
-            value: create_oci_artifact
+            value: main
           - name: pathInRepo
             value: common/tasks/quality-dashboard/0.1/quality-dashboard-upload.yaml
       params:
@@ -229,9 +229,9 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/flacatus/konflux-qe-definitions.git
+            value: https://github.com/konflux-ci/konflux-qe-definitions.git
           - name: revision
-            value: create_oci_artifact
+            value: main
           - name: pathInRepo
             value: common/tasks/pull-request-comment/0.1/pull-request-comment.yaml
       params:
