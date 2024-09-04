@@ -31,7 +31,7 @@ import (
 )
 
 var (
-	testProjectGitUrl   = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_URL", fmt.Sprintf("https://github.com/%s/hacbs-test-project", gihubOrg))
+	testProjectGitUrl   = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_URL", fmt.Sprintf("https://github.com/%s/hacbs-test-project", githubOrg))
 	testProjectRevision = utils.GetEnv("JVM_BUILD_SERVICE_TEST_REPO_REVISION", "34da5a8f51fba6a8b7ec75a727d3c72ebb5e1274")
 )
 
