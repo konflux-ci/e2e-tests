@@ -75,6 +75,21 @@ spec:
           value: $(params.oras-container)
         - name: test-name
           value: $(context.pipelineRun.name)
+    - name: create-oci-container
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-ci/konflux-qe-definitions.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: common/tasks/create-oci-artifact/0.1/create-oci-artifact.yaml
+      params:
+        - name: oci-container-repo
+          value: $(params.oras-container)
+        - name: oci-container-tag
+          value: $(context.pipelineRun.name)
     - name: provision-rosa
       when:
         - input: "$(tasks.test-metadata.results.test-event-type)"
@@ -82,6 +97,7 @@ spec:
           values: ["pull_request"]
       runAfter:
         - rosa-hcp-metadata
+        - create-oci-container
         - test-metadata
       taskRef:
         resolver: git
@@ -132,7 +148,7 @@ spec:
         - name: git-revision
           value: "$(tasks.test-metadata.results.git-revision)"
         - name: oras-container
-          value: "$(tasks.test-metadata.results.oras-container)"
+          value: "$(tasks.create-oci-container.results.oci-container)"
         - name: job-spec
           value: "$(tasks.test-metadata.results.job-spec)"
         - name: ocp-login-command
@@ -162,7 +178,7 @@ spec:
         - name: ocp-login-command
           value: "$(tasks.provision-rosa.results.ocp-login-command)"
         - name: oras-container
-          value: "$(tasks.test-metadata.results.oras-container)"
+          value: "$(tasks.create-oci-container.results.oci-container)"
         - name: pull-request-author
           value: "$(tasks.test-metadata.results.pull-request-author)"
         - name: git-revision
@@ -224,7 +240,7 @@ spec:
         - name: test-name
           value: "$(context.pipelineRun.name)"
         - name: oras-container
-          value: "$(tasks.test-metadata.results.oras-container)"
+          value: "$(tasks.create-oci-container.results.oci-container)"
         - name: pipeline-aggregate-status
           value: "$(tasks.status)"
         - name: pull-request-author
