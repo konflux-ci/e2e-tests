@@ -84,7 +84,7 @@ load_test() {
     set -u
 
     echo "[$(date --utc -Ins)] Create summary JSON with timings"
-    ./evaluate.py "$workdir/load-test-timings.csv" "$workdir/load-test-timings.json"
+    ./evaluate.py "$workdir/load-test-timings.csv" "$workdir/load-test-timings.json" "$threads"
 
     echo "[$(date --utc -Ins)] Creating main status data file"
     STATUS_DATA_FILE="$workdir/load-test.json"

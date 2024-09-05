@@ -89,6 +89,7 @@ def count_stats_when(data):
 def main():
     input_file = sys.argv[1]
     output_file = sys.argv[2]
+    concurrency = int(sys.argv[3])
 
     stats_raw = {}
 
@@ -137,12 +138,16 @@ def main():
             stats[m]["error_rate"] = stats[m]["fail"]["duration"]["samples"] / s
             kpi_errors += stats[m]["fail"]["duration"]["samples"]
 
-    stats["KPI"] = {}
-    stats["KPI"]["mean"] = kpi_sum
-    stats["KPI"]["errors"] = kpi_errors
+    if concurrency != kpi_errors:
+        stats["KPI"] = {}
+        stats["KPI"]["mean"] = kpi_sum
+        stats["KPI"]["errors"] = kpi_errors
 
-    print(f"KPI mean: {stats['KPI']['mean']}")
-    print(f"KPI errors: {stats['KPI']['errors']}")
+        print(f"KPI mean: {stats['KPI']['mean']}")
+        print(f"KPI errors: {stats['KPI']['errors']}")
+    else:
+        print("Skipping KPI metric calculation.")
+        print(f"100% of {concurrency} concurrent run(s) failed.")
 
     with open(output_file, "w") as fp:
         json.dump(stats, fp, indent=4)
