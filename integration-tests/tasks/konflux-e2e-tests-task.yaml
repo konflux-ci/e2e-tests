@@ -82,8 +82,6 @@ spec:
           value: "true"
         - name: JOB_SPEC
           value: $(params.job-spec)
-        - name: ARTIFACT_DIR
-          value: "/workspace/test-artifacts"
         - name: COMPONENT_IMAGE
           value: $(params.component-image)
       script: |
@@ -92,7 +90,7 @@ spec:
         # Params related with tekton task
         export GINKGO_PROCS=$(params.ginkgo-procs)
         export ORAS_CONTAINER=$(params.oras-container)
-        
+
         # Log into OpenShift
         $(params.ocp-login-command)
 

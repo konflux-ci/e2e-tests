@@ -109,7 +109,7 @@ const (
 	// If set to "true", e2e-tests installer will configure master/control plane nodes as schedulable
 	ENABLE_SCHEDULING_ON_MASTER_NODES_ENV = "ENABLE_SCHEDULING_ON_MASTER_NODES"
 
-	// A gitlab bot token is required to run tests against gitlab.com. The token need to have permissions to the given github organization.
+	// A gitlab bot token is required to run tests against gitlab.com. The token need to have permissions to the Gitlab repository.
 	GITLAB_BOT_TOKEN_ENV string = "GITLAB_BOT_TOKEN" // #nosec
 
 	// The GitLab org which owns the test repositories
@@ -167,9 +167,9 @@ const (
 
 	ReleasePipelineImageRef = "quay.io/hacbs-release/pipeline-release:0.20"
 
-	FromIndex   = "registry-proxy.engineering.redhat.com/rh-osbs/iib-preview-rhtap:v4.13"
-	TargetIndex = "quay.io/redhat/redhat----preview-operator-index:v4.13"
-	BinaryImage = "registry.redhat.io/openshift4/ose-operator-registry:v4.13"
+	FromIndex   = "registry-proxy.engineering.redhat.com/rh-osbs/iib-preview-rhtap:{{ OCP_VERSION }}"
+	TargetIndex = "quay.io/redhat/redhat----preview-operator-index:{{ OCP_VERSION }}"
+	BinaryImage = "registry.redhat.io/openshift4/ose-operator-registry:{{ OCP_VERSION }}"
 
 	StrategyConfigsRepo          = "strategy-configs"
 	StrategyConfigsDefaultBranch = "main"

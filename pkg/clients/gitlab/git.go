@@ -38,7 +38,6 @@ func (gc *GitlabClient) CreateBranch(projectID, newBranchName, defaultBranch str
 // ExistsBranch checks if a branch exists in a specified GitLab repository.
 func (gc *GitlabClient) ExistsBranch(projectID, branchName string) (bool, error) {
 
-	fmt.Println("ExistRdf dddd")
 	_, _, err := gc.client.Branches.GetBranch(projectID, branchName)
 	if err == nil {
 		return true, nil
@@ -94,7 +93,7 @@ func (gc *GitlabClient) CreateGitlabNewBranch(projectID, branchName, sha, baseBr
 func (gc *GitlabClient) GetMergeRequests() ([]*gitlab.MergeRequest, error) {
 
 	// Get merge requests using Gitlab client
-	mergeRequests, _, err := gc.client.MergeRequests.ListMergeRequests(&gitlab.ListMergeRequestsOptions{})
+	mergeRequests, _, err := gc.client.MergeRequests.ListMergeRequests(&gitlab.ListMergeRequestsOptions{State: gitlab.Ptr("opened")})
 	if err != nil {
 		// Handle error
 		return nil, err
@@ -163,4 +162,35 @@ func (gc *GitlabClient) CreateFile(projectId, pathToFile, fileContent, branchNam
 	}
 
 	return file, nil
+}
+
+func (gc *GitlabClient) GetFileMetaData(projectID, pathToFile, branchName string) (*gitlab.File, error) {
+	metadata, _, err := gc.client.RepositoryFiles.GetFileMetaData(projectID, pathToFile, gitlab.Ptr(gitlab.GetFileMetaDataOptions{Ref: gitlab.Ptr(branchName)}))
+	return metadata, err
+}
+
+func (gc *GitlabClient) AcceptMergeRequest(projectID string, mrID int) (*gitlab.MergeRequest, error) {
+	mr, _, err := gc.client.MergeRequests.AcceptMergeRequest(projectID, mrID, nil)
+	return mr, err
+}
+
+// ValidateNoteInMergeRequestComment verify expected note is commented in MR comment
+func (gc *GitlabClient) ValidateNoteInMergeRequestComment(projectID, expectedNote string, mergeRequestID int) {
+
+	var timeout, interval time.Duration
+
+	timeout = time.Minute * 10
+	interval = time.Second * 2
+
+	Eventually(func() bool {
+		// Continue here, get as argument MR ID so use in ListMergeRequestNotes
+		allNotes, _, err := gc.client.Notes.ListMergeRequestNotes(projectID, mergeRequestID, nil)
+		Expect(err).ShouldNot(HaveOccurred())
+		for _, note := range allNotes {
+			if strings.Contains(note.Body, expectedNote) {
+				return true
+			}
+		}
+		return false
+	}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out waiting to validate merge request note ('%s') be reported in mergerequest %d's notes", expectedNote, mergeRequestID))
 }

@@ -2,6 +2,7 @@ package build
 
 import (
 	"fmt"
+	"k8s.io/api/core/v1"
 	"os"
 	"strconv"
 	"strings"
@@ -34,6 +35,28 @@ func ResolveGitDetails(repoUrlENV, repoRevisionENV string) (string, string, erro
 
 	}
 	return utils.GetEnv(repoUrlENV, defaultGitURL), utils.GetEnv(repoRevisionENV, defaultGitRevision), nil
+}
+
+// CreateGitlabBuildSecret creates a Kubernetes secret for GitLab build credentials
+func CreateGitlabBuildSecret(f *framework.Framework, secretName string, annotations map[string]string, token string) error {
+	buildSecret := v1.Secret{}
+	buildSecret.Name = secretName
+	buildSecret.Labels = map[string]string{
+		"appstudio.redhat.com/credentials": "scm",
+		"appstudio.redhat.com/scm.host":    "gitlab.com",
+	}
+	if annotations != nil {
+		buildSecret.Annotations = annotations
+	}
+	buildSecret.Type = "kubernetes.io/basic-auth"
+	buildSecret.StringData = map[string]string{
+		"password": token,
+	}
+	_, err := f.AsKubeAdmin.CommonController.CreateSecret(f.UserNamespace, &buildSecret)
+	if err != nil {
+		return fmt.Errorf("error creating build secret: %v", err)
+	}
+	return nil
 }
 
 func CleanupWebhooks(f *framework.Framework, repoName string) error {
