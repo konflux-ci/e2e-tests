@@ -35,8 +35,8 @@ spec:
     - name: machine-type
       description: 'The type of machine to use for the cluster nodes.'
       type: string
-    - name: oras-container
-      default: 'quay.io/konflux-ci/konflux-qe-oci-storage'
+    - name: oci-container-repo
+      default: 'quay.io/konflux-test-storage/konflux-team/e2e-tests'
       description: The ORAS container used to store all test artifacts.
     - name: quality-dashboard-api
       default: 'none'
@@ -63,16 +63,14 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/konflux-ci/konflux-qe-definitions.git
+            value: https://github.com/flacatus/konflux-qe-definitions.git
           - name: revision
-            value: main
+            value: create_oci_artifact
           - name: pathInRepo
             value: common/tasks/test-metadata/0.1/test-metadata.yaml
       params:
         - name: SNAPSHOT
           value: $(params.SNAPSHOT)
-        - name: oras-container
-          value: $(params.oras-container)
         - name: test-name
           value: $(context.pipelineRun.name)
     - name: create-oci-container
@@ -87,7 +85,7 @@ spec:
             value: common/tasks/create-oci-artifact/0.1/create-oci-artifact.yaml
       params:
         - name: oci-container-repo
-          value: $(params.oras-container)
+          value: $(params.oci-container-repo)
         - name: oci-container-tag
           value: $(context.pipelineRun.name)
     - name: provision-rosa
@@ -167,9 +165,9 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/konflux-ci/konflux-qe-definitions.git
+            value: https://github.com/flacatus/konflux-qe-definitions.git
           - name: revision
-            value: main
+            value: create_oci_artifact
           - name: pathInRepo
             value: common/tasks/rosa/hosted-cp/rosa-hcp-deprovision/rosa-hcp-deprovision.yaml
       params:
@@ -177,7 +175,7 @@ spec:
           value: "$(context.pipelineRun.name)"
         - name: ocp-login-command
           value: "$(tasks.provision-rosa.results.ocp-login-command)"
-        - name: oras-container
+        - name: oci-container
           value: "$(tasks.create-oci-container.results.oci-container)"
         - name: pull-request-author
           value: "$(tasks.test-metadata.results.pull-request-author)"
@@ -206,16 +204,16 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/konflux-ci/konflux-qe-definitions.git
+            value: https://github.com/flacatus/konflux-qe-definitions.git
           - name: revision
-            value: main
+            value: create_oci_artifact
           - name: pathInRepo
             value: common/tasks/quality-dashboard/0.1/quality-dashboard-upload.yaml
       params:
         - name: test-name
           value: "$(context.pipelineRun.name)"
-        - name: oras-container
-          value: "$(tasks.test-metadata.results.oras-container)"
+        - name: oci-container
+          value: "$(tasks.create-oci-container.results.oci-container)"
         - name: quality-dashboard-api
           value: $(params.quality-dashboard-api)
         - name: pipeline-aggregate-status
@@ -231,15 +229,15 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/konflux-ci/konflux-qe-definitions.git
+            value: https://github.com/flacatus/konflux-qe-definitions.git
           - name: revision
-            value: main
+            value: create_oci_artifact
           - name: pathInRepo
             value: common/tasks/pull-request-comment/0.1/pull-request-comment.yaml
       params:
         - name: test-name
           value: "$(context.pipelineRun.name)"
-        - name: oras-container
+        - name: oci-container
           value: "$(tasks.create-oci-container.results.oci-container)"
         - name: pipeline-aggregate-status
           value: "$(tasks.status)"
