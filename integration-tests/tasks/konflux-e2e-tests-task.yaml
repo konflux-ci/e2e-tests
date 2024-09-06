@@ -38,7 +38,7 @@ spec:
     - name: container-image
       type: string
       description: "Contain the container name from Konflux Snapshot."
-      default: "quay.io/redhat-user-workloads/rhtap-qe-shared-tenant/konflux-e2e/konflux-e2e-tests:latest"
+      default: "quay.io/redhat-user-workloads/konflux-qe-team-tenant/konflux-e2e/konflux-e2e-tests:latest"
     - name: component-image
       type: string
       description: 'Container image built from any konflux git repo.'
