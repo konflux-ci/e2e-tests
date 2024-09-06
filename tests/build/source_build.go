@@ -34,7 +34,7 @@ func CheckParentSources(c client.Client, tektonController *tekton.TektonControll
 	Expect(err).ShouldNot(HaveOccurred())
 
 	var baseImagesDigests []string
-	if IsDockerBuild(gitUrl) {
+	if IsDockerBuildGitURL(gitUrl) {
 		parsedDockerfile := parseDockerfileUsedForBuild(c, tektonController, pr)
 		if parsedDockerfile.IsBuildFromScratch() {
 			Expect(buildResult.BaseImageSourceIncluded).Should(BeFalse())

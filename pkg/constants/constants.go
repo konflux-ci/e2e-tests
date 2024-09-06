@@ -97,6 +97,12 @@ const (
 	// Bundle ref for custom docker-build, format example: quay.io/redhat-appstudio-qe/test-images:pipeline-bundle-1715584704-fftb
 	CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE_ENV string = "CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE"
 
+	// Bundle ref for custom docker-build-oci-ta, format example: quay.io/redhat-appstudio-qe/test-images:pipeline-bundle-1715584704-fftb
+	CUSTOM_DOCKER_BUILD_OCI_TA_PIPELINE_BUNDLE_ENV string = "CUSTOM_DOCKER_BUILD_OCI_TA_PIPELINE_BUNDLE"
+
+	// Bundle ref for custom docker-build-multi-platform-oci-ta, format example: quay.io/redhat-appstudio-qe/test-images:pipeline-bundle-1715584704-fftb
+	CUSTOM_DOCKER_BUILD_OCI_MULTI_PLATFORM_TA_PIPELINE_BUNDLE_ENV string = "CUSTOM_DOCKER_BUILD_OCI_MULTI_PLATFORM_TA_PIPELINE_BUNDLE"
+
 	// Bundle ref for custom fbc-builder, format example: quay.io/redhat-appstudio-qe/test-images:pipeline-bundle-1715584704-fftb
 	CUSTOM_FBC_BUILDER_PIPELINE_BUNDLE_ENV string = "CUSTOM_FBC_BUILDER_PIPELINE_BUNDLE"
 
@@ -122,7 +128,7 @@ const (
 	GITLAB_PROJECT_ID_ENV string = "GITLAB_PROJECT_ID"
 
 	// Release service catalog default URL and revision for e2e tests
-	RELEASE_CATALOG_DEFAULT_URL = "https://github.com/konflux-ci/release-service-catalog"
+	RELEASE_CATALOG_DEFAULT_URL      = "https://github.com/konflux-ci/release-service-catalog"
 	RELEASE_CATALOG_DEFAULT_REVISION = "staging"
 
 	// Test namespace's required labels
