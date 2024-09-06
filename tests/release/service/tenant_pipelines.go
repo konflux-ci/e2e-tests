@@ -74,9 +74,9 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 		tenantPipeline.PipelineRef = tektonutils.PipelineRef{
 			Resolver: "git",
 			Params: []tektonutils.Param{
-				{Name: "url", Value: "https://github.com/jinqi7/integration-examples"},
+				{Name: "url", Value: "https://github.com/redhat-appstudio-qe/pipeline_examples"},
 				{Name: "revision", Value: "main"},
-				{Name: "pathInRepo", Value: "pipelines/integration_pipeline_pass.yaml"},
+				{Name: "pathInRepo", Value: "pipelines/simple_pipeline.yaml"},
 			},
 		}
 
