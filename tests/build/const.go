@@ -60,7 +60,6 @@ const (
 var (
 	additionalTags                     = []string{"test-tag1", "test-tag2"}
 	componentUrls                      = strings.Split(utils.GetEnv(COMPONENT_REPO_URLS_ENV, pythonComponentGitHubURL), ",") //multiple urls
-	componentNames                     []string
 	githubOrg                          = utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
 	gitlabOrg                          = utils.GetEnv(constants.GITLAB_QE_ORG_ENV, constants.DefaultGitLabQEOrg)
 	helloWorldComponentGitHubURL       = fmt.Sprintf(githubUrlFormat, githubOrg, helloWorldComponentGitSourceRepoName)
