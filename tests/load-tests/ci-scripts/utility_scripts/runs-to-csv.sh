@@ -15,9 +15,7 @@ ComponentsCount,\
 ComponentRepoUrl,\
 BuildPipelineSelectorBundle,\
 OutputDir,\
-PipelineSkipInitialChecks,\
-PipelineRequestConfigurePac,\
-MultiarchWorkflow,\
+PipelineRepoTemplating,\
 Stage,\
 WaitIntegrationTestsPipelines,\
 WaitPipelines,\
@@ -67,9 +65,7 @@ find "${1:-.}" -name load-test.json -print0 | sort | while IFS= read -r -d '' fi
         .parameters.options.ComponentRepoUrl,
         .parameters.options.BuildPipelineSelectorBundle,
         .parameters.options.OutputDir,
-        .parameters.options.PipelineSkipInitialChecks,
-        .parameters.options.PipelineRequestConfigurePac,
-        .parameters.options.MultiarchWorkflow,
+        .parameters.options.PipelineRepoTemplating,
         .parameters.options.Stage,
         .parameters.options.WaitIntegrationTestsPipelines,
         .parameters.options.WaitPipelines,
