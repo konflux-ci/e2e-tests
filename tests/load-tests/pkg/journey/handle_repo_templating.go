@@ -110,11 +110,6 @@ func templateFiles(f *framework.Framework, repoUrl, repoRevision string, placeho
 }
 
 func HandleRepoForking(ctx *MainContext) error {
-	if !ctx.Opts.PipelineRequestConfigurePac {
-		ctx.ComponentRepoUrl = ctx.Opts.ComponentRepoUrl
-		return nil
-	}
-
 	logging.Logger.Debug("Forking repository %s for user %s", ctx.Opts.ComponentRepoUrl, ctx.Username)
 
 	forkUrl, err := ForkRepo(

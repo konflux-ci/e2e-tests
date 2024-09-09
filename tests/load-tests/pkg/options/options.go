@@ -22,11 +22,9 @@ type Opts struct {
 	LogDebug                      bool
 	LogTrace                      bool
 	LogInfo                       bool
-	MultiarchWorkflow             bool
 	OutputDir                     string
-	PipelineRequestConfigurePac   bool
-	PipelineSkipInitialChecks     bool
 	PipelineMintmakerDisabled     bool
+	PipelineRepoTemplating        bool
 	Purge                         bool
 	PurgeOnly                     bool
 	QuayRepo                      string
@@ -51,16 +49,6 @@ func (o *Opts) ProcessOptions() error {
 	// Option '--purge-only' implies '--purge'
 	if o.PurgeOnly {
 		o.Purge = true
-	}
-
-	// Option '--multiarch-workflow' implies '--pipeline-request-configure-pac'
-	if o.MultiarchWorkflow {
-		o.PipelineRequestConfigurePac = true
-	}
-
-	// Option '--pipeline-request-configure-pac' implies '--pipeline-skip-initial-checks' is false (not present)
-	if o.PipelineRequestConfigurePac {
-		o.PipelineSkipInitialChecks = false
 	}
 
 	// Convert options struct to pretty JSON

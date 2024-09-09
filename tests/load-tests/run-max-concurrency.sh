@@ -64,10 +64,8 @@ load_test() {
         --journey-duration "${JOURNEY_DURATION:-1h}" \
         --journey-repeats "${JOURNEY_REPEATS:-1}" \
         --log-info \
-        --multiarch-workflow="${MULTIARCH_WORKFLOW:-false}" \
+        --pipeline-repo-templating="${PIPELINE_REPO_TEMPLATING:-false}" \
         --output-dir "${workdir:-/tmp}" \
-        --pipeline-request-configure-pac="${PIPELINE_REQUEST_CONFIGURE_PAC:-false}" \
-        --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}" \
         --purge="${PURGE:-true}" \
         --quay-repo "${QUAY_REPO:-stonesoup_perfscale}" \
         --test-scenario-git-url "${TEST_SCENARIO_GIT_URL:-https://github.com/konflux-ci/integration-examples.git}" \
