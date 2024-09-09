@@ -206,7 +206,7 @@ max_concurrency() {
             if [ -z "$workloadKPI" ] || [ -z "$workloadKPIerrors" ] || [ "$workloadKPI" = "null" ] || [ "$workloadKPIerrors" = "null" ]; then
                 echo "[$(date --utc -Ins)] Error getting test iteration results: $workloadKPI/$workloadKPIerrors"
                 exit 1
-            elif awk "BEGIN { exit !($workloadKPI > $threshold_sec || $workloadKPIerrors / $t * 100 > $threshold_err)}"; then
+            elif awk "BEGIN { exit !($workloadKPI == -1 || $workloadKPI > $threshold_sec || $workloadKPIerrors / $t * 100 > $threshold_err)}"; then
                 echo "[$(date --utc -Ins)] The average time a workload took to succeed (${workloadKPI}s) or error rate (${workloadKPIerrors}/${t}) has exceeded a threshold of ${threshold_sec}s or ${threshold_err} error rate with $t threads."
                 workloadKPIOld=$(jq '.workloadKPI' "$output")
                 threadsOld=$(jq '.maxConcurrencyReached' "$output")
