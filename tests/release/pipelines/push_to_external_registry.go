@@ -113,7 +113,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 			},
 		}, &runtime.RawExtension{
 			Raw: data,
-		})
+		}, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasecommon.ReleasePvcName, managedNamespace, corev1.ReadWriteOnce)

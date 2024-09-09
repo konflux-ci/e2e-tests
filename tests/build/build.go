@@ -1532,7 +1532,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					{Name: "url", Value: constants.RELEASE_CATALOG_DEFAULT_URL},
 					{Name: "revision", Value: constants.RELEASE_CATALOG_DEFAULT_REVISION},
 					{Name: "pathInRepo", Value: "pipelines/e2e/e2e.yaml"},
-				}}, &runtime.RawExtension{Raw: rawData})
+				}}, &runtime.RawExtension{Raw: rawData}, nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			// get the build pipeline bundle annotation

@@ -321,6 +321,6 @@ func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framew
 		},
 	}, &runtime.RawExtension{
 		Raw: data,
-	})
+	}, nil)
 	Expect(err).NotTo(HaveOccurred())
 }
