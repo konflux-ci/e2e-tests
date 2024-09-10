@@ -13,6 +13,7 @@ import (
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -185,21 +186,15 @@ func (t *TektonController) DeletePipelineRunIgnoreFinalizers(ns, name string) er
 				Namespace: ns,
 			},
 		}
-		if err := t.KubeRest().Get(context.Background(), crclient.ObjectKeyFromObject(&pipelineRunCR), &pipelineRunCR); err != nil {
+		patch := crclient.RawPatch(types.JSONPatchType, []byte(`[{"op":"remove","path":"/metadata/finalizers"}]`))
+		if err := t.KubeRest().Patch(context.Background(), &pipelineRunCR, patch); err != nil {
 			if errors.IsNotFound(err) {
 				// PipelinerRun CR is already removed
 				return true, nil
 			}
-			g.GinkgoWriter.Printf("unable to retrieve PipelineRun '%s' in '%s': %v\n", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
+			g.GinkgoWriter.Printf("unable to patch PipelineRun '%s' in '%s': %v\n", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
 			return false, nil
 
-		}
-
-		// Remove the finalizer, so that it can be deleted.
-		pipelineRunCR.Finalizers = []string{}
-		if err := t.KubeRest().Update(context.Background(), &pipelineRunCR); err != nil {
-			g.GinkgoWriter.Printf("unable to remove finalizers from PipelineRun '%s' in '%s': %v\n", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
-			return false, nil
 		}
 
 		if err := t.KubeRest().Delete(context.Background(), &pipelineRunCR); err != nil {
