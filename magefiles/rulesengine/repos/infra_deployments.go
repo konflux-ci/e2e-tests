@@ -40,7 +40,6 @@ var InfraDeploymentsComponentsRule = rulesengine.Rule{Name: "Infra-deployments P
 		&InfraDeploymentsBuildServiceComponentChangeRule,
 		&InfraDeploymentsReleaseServiceComponentChangeRule,
 		&InfraDeploymentsEnterpriseControllerComponentChangeRule,
-		&InfraDeploymentsBuildServiceTemplatesComponentChangeRule,
 		&InfraDeploymentsJVMComponentChangeRule},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 		// Adding "konflux" to the label filter when component is updated
@@ -107,39 +106,31 @@ var InfraDeploymentsMultiPlatformComponentChangeRule = rulesengine.Rule{Name: "I
 	})}}
 
 var InfraDeploymentsBuildTemplatesComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Build-templates component File Change Rule",
-	Description: "Map build-templates tests files when Build-templates component files are changed in the infra-deployments PR",
+	Description: "Map build-templates tests files when build-pipeline-config.yaml is changed",
+	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
+		return len(rctx.DiffFiles.FilterByDirGlob("components/build-service/base/build-pipeline-config/build-pipeline-config.yaml")) != 0, nil
+	}),
+	Actions: []rulesengine.Action{
+		rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
+			AddLabelToLabelFilter(rctx, "build-templates")
+			return nil
+		}),
+	},
+}
+
+var InfraDeploymentsBuildServiceComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Build Service component File Change Rule (excluding build-pipeline-config)",
+	Description: "Map build service tests files when files in build-service are changed except build-pipeline-config.yaml",
 	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
 
-		return len(rctx.DiffFiles.FilterByDirGlob("components/build-service/base/build-pipeline-config/*")) != 0, nil
+		return len(rctx.DiffFiles.FilterByDirGlob("components/build-service/**/*")) > len(rctx.DiffFiles.FilterByDirGlob("components/build-service/base/build-pipeline-config/*")), nil
 	}),
-	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
-		AddLabelToLabelFilter(rctx, "build-templates")
-		return nil
-	})}}
-
-var InfraDeploymentsBuildServiceComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Build service component File Change Rule",
-	Description: "Map build service tests files when Build service component files are changed in the infra-deployments PR",
-	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
-
-		return len(rctx.DiffFiles.FilterByDirGlob("components/build-service/**/*")) != 0 &&
-			len(rctx.DiffFiles.FilterByDirGlob("components/build-service/base/build-pipeline-config/*")) == 0, nil
-	}),
-	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
-		AddLabelToLabelFilter(rctx, "build-service")
-		return nil
-	})}}
-
-var InfraDeploymentsBuildServiceTemplatesComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Build service component and templates File Change Rule",
-	Description: "Map build service tests files when Build service component and templates files are changed in the infra-deployments PR",
-	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
-
-		return len(rctx.DiffFiles.FilterByDirGlob("components/build-service/**/*")) != 0 &&
-			len(rctx.DiffFiles.FilterByDirGlob("components/build-service/base/build-pipeline-config/*")) != 0, nil
-	}),
-	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
-		AddLabelToLabelFilter(rctx, "build-service")
-		return nil
-	})}}
+	Actions: []rulesengine.Action{
+		rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
+			AddLabelToLabelFilter(rctx, "build-service")
+			return nil
+		}),
+	},
+}
 
 var InfraDeploymentsReleaseServiceComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Release service component File Change Rule",
 	Description: "Map release service tests files when Release service component files are changed in the infra-deployments PR",
