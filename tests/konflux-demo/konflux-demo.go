@@ -104,14 +104,9 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(fw.AsKubeAdmin.JvmbuildserviceController.WaitForCache(fw.AsKubeAdmin.CommonController, fw.UserNamespace)).Should(Succeed())
 
-				customDockerBuildBundle := os.Getenv(constants.CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE_ENV)
-				if customDockerBuildBundle != "" {
-					buildPipelineAnnotation = map[string]string{
-						"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"docker-build", "bundle": "%s"}`, customDockerBuildBundle),
-					}
-				} else {
-					buildPipelineAnnotation = constants.DefaultDockerBuildPipelineBundle
-				}
+				// get the build pipeline bundle annotation
+				buildPipelineAnnotation = build.GetDockerBuildPipelineBundle()
+
 			})
 
 			// Remove all resources created by the tests
