@@ -129,6 +129,15 @@ func IsFBCBuild(gitUrl string) bool {
 	return false
 }
 
+func IsHermeticScenario(gitUrl string) bool {
+	for _, componentScenario := range componentScenarios {
+		if utils.GetRepoName(componentScenario.GitURL) == utils.GetRepoName(gitUrl) && componentScenario.EnableHermetic {
+			return true
+		}
+	}
+	return false
+}
+
 func GetComponentScenarioDetailsFromGitUrl(gitUrl string) (string, string, string, bool, string, bool) {
 	for _, componentScenario := range componentScenarios {
 		//check repo name for both the giturls is same
