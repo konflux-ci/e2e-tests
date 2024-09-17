@@ -13,14 +13,31 @@ import (
 
 var NonTestFilesRule = rulesengine.Rule{Name: "E2E Default PR Test Exectuion",
 	Description: "Runs all suites when any non test files are modified in the e2e-repo PR",
-	Condition: rulesengine.Any{
-		rulesengine.ConditionFunc(CheckPkgFilesChanged),
-		rulesengine.ConditionFunc(CheckMageFilesChanged),
-		rulesengine.ConditionFunc(CheckCmdFilesChanged),
-		rulesengine.ConditionFunc(CheckNoFilesChanged),
-		rulesengine.ConditionFunc(CheckTektonFilesChanged),
+	Condition: rulesengine.All{
+		rulesengine.Any{
+			rulesengine.ConditionFunc(CheckPkgFilesChanged),
+			rulesengine.ConditionFunc(CheckMageFilesChanged),
+			rulesengine.ConditionFunc(CheckCmdFilesChanged),
+			rulesengine.ConditionFunc(CheckNoFilesChanged),
+			rulesengine.ConditionFunc(CheckTektonFilesChanged),
+		},
+		rulesengine.None{rulesengine.ConditionFunc(CheckReleasePipelinesTestsChanged)},
 	},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteDefaultTestAction)},
+}
+
+var NonTestFilesRuleWithReleasePipelines = rulesengine.Rule{Name: "E2E PR Test Execution including release-pipelines test suite",
+	Description: "Runs all test suites including release-pipelines test suite which is usually excluded on PRs",
+	Condition: rulesengine.All{
+		rulesengine.Any{
+			rulesengine.ConditionFunc(CheckPkgFilesChanged),
+			rulesengine.ConditionFunc(CheckMageFilesChanged),
+			rulesengine.ConditionFunc(CheckCmdFilesChanged),
+			rulesengine.ConditionFunc(CheckTektonFilesChanged),
+		},
+		rulesengine.ConditionFunc(CheckReleasePipelinesTestsChanged),
+	},
+	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteAllTestsExceptUpgradeTestSuite)},
 }
 
 var TestFilesOnlyRule = rulesengine.Rule{Name: "E2E PR Test File Diff Execution",
@@ -47,6 +64,12 @@ var TestFilesOnlyRule = rulesengine.Rule{Name: "E2E PR Test File Diff Execution"
 		},
 	},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteTestAction)}}
+
+func CheckReleasePipelinesTestsChanged(rctx *rulesengine.RuleCtx) (bool, error) {
+
+	return len(rctx.DiffFiles.FilterByDirGlob("tests/release/pipelines/**/*.go")) != 0, nil
+
+}
 
 func CheckTektonFilesChanged(rctx *rulesengine.RuleCtx) (bool, error) {
 
@@ -309,7 +332,7 @@ var E2ERepoCIRuleChain = rulesengine.Rule{Name: "E2E Repo CI Workflow Rule Chain
 		rulesengine.Any{&InfraDeploymentsPRPairingRule, rulesengine.None{&InfraDeploymentsPRPairingRule}},
 		&PreflightInstallGinkgoRule,
 		&BootstrapClusterRuleChain,
-		rulesengine.Any{&NonTestFilesRule, &TestFilesOnlyRule}},
+		rulesengine.Any{&NonTestFilesRule, &NonTestFilesRuleWithReleasePipelines, &TestFilesOnlyRule}},
 }
 
 var E2ERepoSetDefaultSettingsRule = rulesengine.Rule{Name: "General Required Settings for E2E Repo Jobs",
@@ -331,7 +354,7 @@ var E2ERepoSetDefaultSettingsRule = rulesengine.Rule{Name: "General Required Set
 
 var E2ECIChainCatalog = rulesengine.RuleCatalog{E2ERepoCIRuleChain}
 
-var E2ETestRulesCatalog = rulesengine.RuleCatalog{NonTestFilesRule, TestFilesOnlyRule}
+var E2ETestRulesCatalog = rulesengine.RuleCatalog{NonTestFilesRule, NonTestFilesRuleWithReleasePipelines, TestFilesOnlyRule}
 
 var IsE2ETestsRepoPR = rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
 	klog.Info("checking if repository is e2e-tests")
@@ -363,6 +386,12 @@ func CheckCmdFilesChanged(rctx *rulesengine.RuleCtx) (bool, error) {
 
 func ExecuteDefaultTestAction(rctx *rulesengine.RuleCtx) error {
 	rctx.LabelFilter = "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines"
+	return ExecuteTestAction(rctx)
+
+}
+
+func ExecuteAllTestsExceptUpgradeTestSuite(rctx *rulesengine.RuleCtx) error {
+	rctx.LabelFilter = "!upgrade-create && !upgrade-verify && !upgrade-cleanup"
 	return ExecuteTestAction(rctx)
 
 }
