@@ -11,7 +11,6 @@ import (
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 
-	"github.com/konflux-ci/application-api/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/common"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
@@ -54,66 +53,60 @@ type TestBranches struct {
 
 var pacAndBaseBranches []TestBranches
 
-// CreateComponent creates a component from a test repository URL and returns the component's name
-func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController, gitUrl, revision, applicationName, componentName, namespace string) string {
+func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController, applicationName, componentName, namespace string, scenario ComponentScenarioSpec) {
 	var err error
 	var buildPipelineAnnotation map[string]string
 	var baseBranchName, pacBranchName string
-	contextDir, dockerfilePath, pipelineBundleName, enableHermetic, prefetchInput, checkAdditionalTags := GetComponentScenarioDetailsFromGitUrl(gitUrl)
+	Expect(scenario.PipelineBundleNames).Should(HaveLen(1))
+	pipelineBundleName := scenario.PipelineBundleNames[0]
 	Expect(pipelineBundleName).ShouldNot(BeEmpty())
-	if pipelineBundleName == "docker-build" {
-		customDockerBuildBundle := os.Getenv(constants.CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE_ENV)
-		if enableHermetic {
-			//Update the docker-build pipeline bundle with param hermetic=true
-			customDockerBuildBundle, err = enableHermeticBuildInPipelineBundle(customDockerBuildBundle, prefetchInput)
-			if err != nil {
-				GinkgoWriter.Printf("failed to enable hermetic build in the pipeline bundle with: %v\n", err)
-				return ""
-			}
+	customBuildBundle := getDefaultPipeline(pipelineBundleName)
+
+	if scenario.EnableHermetic {
+		//Update the docker-build pipeline bundle with param hermetic=true
+		customBuildBundle, err = enableHermeticBuildInPipelineBundle(customBuildBundle, pipelineBundleName, scenario.PrefetchInput)
+		if err != nil {
+			GinkgoWriter.Printf("failed to enable hermetic build in the pipeline bundle with: %v\n", err)
+			return
 		}
-		if checkAdditionalTags {
-			//Update the pipeline bundle to apply additional tags
-			customDockerBuildBundle, err = applyAdditionalTagsInPipelineBundle(customDockerBuildBundle, additionalTags)
-			if err != nil {
-				GinkgoWriter.Printf("failed to apply additinal tags in the pipeline bundle with: %v\n", err)
-				return ""
-			}
+	}
+
+	if scenario.CheckAdditionalTags {
+		//Update the pipeline bundle to apply additional tags
+		customBuildBundle, err = applyAdditionalTagsInPipelineBundle(customBuildBundle, pipelineBundleName, additionalTags)
+		if err != nil {
+			GinkgoWriter.Printf("failed to apply additinal tags in the pipeline bundle with: %v\n", err)
+			return
 		}
-		if customDockerBuildBundle == "" {
-			customDockerBuildBundle = "latest"
-		}
-		buildPipelineAnnotation = map[string]string{
-			"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"docker-build", "bundle": "%s"}`, customDockerBuildBundle),
-		}
-	} else if pipelineBundleName == "fbc-builder" {
-		customFbcBuilderBundle := os.Getenv(constants.CUSTOM_FBC_BUILDER_PIPELINE_BUNDLE_ENV)
-		if customFbcBuilderBundle == "" {
-			customFbcBuilderBundle = "latest"
-		}
-		buildPipelineAnnotation = map[string]string{
-			"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"fbc-builder", "bundle": "%s"}`, customFbcBuilderBundle),
-		}
+	}
+
+	if customBuildBundle == "" {
+		// "latest" is a special value that causes the build service to consult the use one of the
+		// bundles specified in the build-pipeline-config ConfigMap in the build-service Namespace.
+		customBuildBundle = "latest"
+	}
+	buildPipelineAnnotation = map[string]string{
+		"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"%s", "bundle": "%s"}`, pipelineBundleName, customBuildBundle),
 	}
 
 	baseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
 	pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
 
-	if revision == gitRepoContainsSymlinkBranchName {
-		revision = symlinkBranchRevision
-		err = commonCtrl.Github.CreateRef(utils.GetRepoName(gitUrl), gitRepoContainsSymlinkBranchName, revision, baseBranchName)
+	if scenario.Revision == gitRepoContainsSymlinkBranchName {
+		revision := symlinkBranchRevision
+		err = commonCtrl.Github.CreateRef(utils.GetRepoName(scenario.GitURL), gitRepoContainsSymlinkBranchName, revision, baseBranchName)
 		Expect(err).ShouldNot(HaveOccurred())
 		pacAndBaseBranches = append(pacAndBaseBranches, TestBranches{
-			RepoName:       utils.GetRepoName(gitUrl),
+			RepoName:       utils.GetRepoName(scenario.GitURL),
 			BranchName:     gitRepoContainsSymlinkBranchName,
 			PacBranchName:  pacBranchName,
 			BaseBranchName: baseBranchName,
 		})
 	} else {
-		revision = GetGitRevision(gitUrl)
-		err = commonCtrl.Github.CreateRef(utils.GetRepoName(gitUrl), "main", revision, baseBranchName)
+		err = commonCtrl.Github.CreateRef(utils.GetRepoName(scenario.GitURL), "main", scenario.Revision, baseBranchName)
 		Expect(err).ShouldNot(HaveOccurred())
 		pacAndBaseBranches = append(pacAndBaseBranches, TestBranches{
-			RepoName:       utils.GetRepoName(gitUrl),
+			RepoName:       utils.GetRepoName(scenario.GitURL),
 			BranchName:     "main",
 			PacBranchName:  pacBranchName,
 			BaseBranchName: baseBranchName,
@@ -125,10 +118,10 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 		Source: appservice.ComponentSource{
 			ComponentSourceUnion: appservice.ComponentSourceUnion{
 				GitSource: &appservice.GitSource{
-					URL:           gitUrl,
+					URL:           scenario.GitURL,
 					Revision:      baseBranchName,
-					Context:       contextDir,
-					DockerfileURL: dockerfilePath,
+					Context:       scenario.ContextDir,
+					DockerfileURL: scenario.DockerFilePath,
 				},
 			},
 		},
@@ -138,12 +131,27 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 		customSourceBuildBundle := os.Getenv(constants.CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE_ENV)
 		Expect(customSourceBuildBundle).ShouldNot(BeEmpty())
 		buildPipelineAnnotation = map[string]string{
-			"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"docker-build", "bundle": "%s"}`, customSourceBuildBundle),
+			"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"%s", "bundle": "%s"}`, pipelineBundleName, customSourceBuildBundle),
 		}
 	}
 	c, err := ctrl.CreateComponent(componentObj, namespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, buildPipelineAnnotation))
 	Expect(err).ShouldNot(HaveOccurred())
-	return c.Name
+	Expect(c.Name).Should(Equal(componentName))
+}
+
+func getDefaultPipeline(pipelineBundleName string) string {
+	switch pipelineBundleName {
+	case "docker-build":
+		return os.Getenv(constants.CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE_ENV)
+	case "docker-build-oci-ta":
+		return os.Getenv(constants.CUSTOM_DOCKER_BUILD_OCI_TA_PIPELINE_BUNDLE_ENV)
+	case "docker-build-multi-platform-oci-ta":
+		return os.Getenv(constants.CUSTOM_DOCKER_BUILD_OCI_MULTI_PLATFORM_TA_PIPELINE_BUNDLE_ENV)
+	case "fbc-builder":
+		return os.Getenv(constants.CUSTOM_FBC_BUILDER_PIPELINE_BUNDLE_ENV)
+	default:
+		return ""
+	}
 }
 
 func WaitForPipelineRunStarts(hub *framework.ControllerHub, applicationName, componentName, namespace string, timeout time.Duration) string {
@@ -179,9 +187,36 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 	defer GinkgoRecover()
 	Describe("HACBS pipelines", Ordered, Label("pipeline"), func() {
 
-		var applicationName, componentName, symlinkComponentName, symlinkPRunName, testNamespace string
+		var applicationName, symlinkPRunName, testNamespace string
+		symlinkComponents := make(map[string]ComponentScenarioSpec)
+		components := make(map[string]ComponentScenarioSpec)
 		var kubeadminClient *framework.ControllerHub
 		var pipelineRunsWithE2eFinalizer []string
+
+		for _, gitUrl := range componentUrls {
+			scenario := GetComponentScenarioDetailsFromGitUrl(gitUrl)
+			Expect(scenario.PipelineBundleNames).ShouldNot(BeEmpty())
+			for _, pipelineBundleName := range scenario.PipelineBundleNames {
+				componentName := fmt.Sprintf("test-comp-%s", util.GenerateRandomString(4))
+
+				s := scenario.DeepCopy()
+				s.PipelineBundleNames = []string{pipelineBundleName}
+
+				components[componentName] = s
+			}
+		}
+
+		symlinkScenario := GetComponentScenarioDetailsFromGitUrl(pythonComponentGitHubURL)
+		Expect(symlinkScenario.PipelineBundleNames).ShouldNot(BeEmpty())
+		for _, pipelineBundleName := range symlinkScenario.PipelineBundleNames {
+			componentName := fmt.Sprintf("test-symlink-comp-%s", util.GenerateRandomString(4))
+
+			s := symlinkScenario.DeepCopy()
+			s.Revision = gitRepoContainsSymlinkBranchName
+			s.PipelineBundleNames = []string{pipelineBundleName}
+
+			symlinkComponents[componentName] = s
+		}
 
 		BeforeAll(func() {
 			if os.Getenv("APP_SUFFIX") != "" {
@@ -217,19 +252,13 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			_, err = kubeadminClient.HasController.CreateApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			for _, gitUrl := range componentUrls {
-				gitUrl := gitUrl
-				componentName = fmt.Sprintf("%s-%s", "test-comp", util.GenerateRandomString(4))
-				name := CreateComponent(kubeadminClient.CommonController, kubeadminClient.HasController, gitUrl, "", applicationName, componentName, testNamespace)
-				Expect(name).ShouldNot(BeEmpty())
-				componentNames = append(componentNames, name)
+			for componentName, scenario := range components {
+				CreateComponent(kubeadminClient.CommonController, kubeadminClient.HasController, applicationName, componentName, testNamespace, scenario)
 			}
 
-			// Create component for the repo containing symlink
-			symlinkComponentName = fmt.Sprintf("%s-%s", "test-symlink-comp", util.GenerateRandomString(4))
-			symlinkComponentName = CreateComponent(
-				kubeadminClient.CommonController, kubeadminClient.HasController, pythonComponentGitHubURL, gitRepoContainsSymlinkBranchName,
-				applicationName, symlinkComponentName, testNamespace)
+			for componentName, scenario := range symlinkComponents {
+				CreateComponent(kubeadminClient.CommonController, kubeadminClient.HasController, applicationName, componentName, testNamespace, scenario)
+			}
 		})
 
 		AfterAll(func() {
@@ -281,40 +310,46 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			}
 		})
 
-		It(fmt.Sprintf("triggers PipelineRun for symlink component with source URL %s", pythonComponentGitHubURL), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
-			timeout := time.Minute * 5
-			symlinkPRunName = WaitForPipelineRunStarts(kubeadminClient, applicationName, symlinkComponentName, testNamespace, timeout)
-			Expect(symlinkPRunName).ShouldNot(BeEmpty())
-			pipelineRunsWithE2eFinalizer = append(pipelineRunsWithE2eFinalizer, symlinkPRunName)
-		})
-
-		for i, gitUrl := range componentUrls {
-			i := i
-			gitUrl := gitUrl
-			It(fmt.Sprintf("triggers PipelineRun for component with source URL %s", gitUrl), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
+		for symlinkComponentName := range symlinkComponents {
+			It(fmt.Sprintf("triggers PipelineRun for symlink component with source URL %s with component name %s", pythonComponentGitHubURL, symlinkComponentName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
 				timeout := time.Minute * 5
-				prName := WaitForPipelineRunStarts(kubeadminClient, applicationName, componentNames[i], testNamespace, timeout)
+				symlinkPRunName = WaitForPipelineRunStarts(kubeadminClient, applicationName, symlinkComponentName, testNamespace, timeout)
+				Expect(symlinkPRunName).ShouldNot(BeEmpty())
+				pipelineRunsWithE2eFinalizer = append(pipelineRunsWithE2eFinalizer, symlinkPRunName)
+			})
+		}
+
+		for componentName, scenario := range components {
+			componentName := componentName
+			scenario := scenario
+			Expect(scenario.PipelineBundleNames).Should(HaveLen(1))
+			pipelineBundleName := scenario.PipelineBundleNames[0]
+			It(fmt.Sprintf("triggers PipelineRun for component with source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
+				timeout := time.Minute * 5
+				prName := WaitForPipelineRunStarts(kubeadminClient, applicationName, componentName, testNamespace, timeout)
 				Expect(prName).ShouldNot(BeEmpty())
 				pipelineRunsWithE2eFinalizer = append(pipelineRunsWithE2eFinalizer, prName)
 			})
 		}
 
-		for i, gitUrl := range componentUrls {
-			i := i
-			gitUrl := gitUrl
+		for componentName, scenario := range components {
+			componentName := componentName
+			scenario := scenario
+			Expect(scenario.PipelineBundleNames).Should(HaveLen(1))
+			pipelineBundleName := scenario.PipelineBundleNames[0]
 			var pr *tektonpipeline.PipelineRun
 
-			It(fmt.Sprintf("should eventually finish successfully for component with Git source URL %s", gitUrl), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
-				component, err := kubeadminClient.HasController.GetComponent(componentNames[i], testNamespace)
+			It(fmt.Sprintf("should eventually finish successfully for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
+				component, err := kubeadminClient.HasController.GetComponent(componentName, testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "",
 					kubeadminClient.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(Succeed())
 			})
 
-			It(fmt.Sprintf("should ensure SBOM is shown for component with Git source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
-				pr, err = kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
+			It(fmt.Sprintf("should ensure SBOM is shown for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel), func() {
+				pr, err = kubeadminClient.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(pr).ToNot(BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentNames[i]))
+				Expect(pr).ToNot(BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentName))
 
 				logs, err := kubeadminClient.TektonController.GetTaskRunLogs(pr.GetName(), "show-sbom", testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -329,35 +364,21 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("failed to parse SBOM from show-sbom task output from %s/%s PipelineRun", pr.GetNamespace(), pr.GetName()))
 				Expect(sbom.BomFormat).ToNot(BeEmpty())
 				Expect(sbom.SpecVersion).ToNot(BeEmpty())
-				if !strings.Contains(gitUrl, "from-scratch") {
+				if !strings.Contains(scenario.GitURL, "from-scratch") {
 					Expect(sbom.Components).ToNot(BeEmpty())
 				}
 			})
 
-			It(fmt.Sprintf("should ensure show-summary task ran for component with Git source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
-				pr, err = kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(pr).ToNot(BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentNames[i]))
-
-				logs, err := kubeadminClient.TektonController.GetTaskRunLogs(pr.GetName(), "show-summary", testNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(logs).To(HaveLen(1))
-				buildSummaryLog := logs["step-appstudio-summary"]
-				binaryImage := build.GetBinaryImage(pr)
-				Expect(buildSummaryLog).To(ContainSubstring(binaryImage))
-			})
-
 			It("should push Dockerfile to registry", Label(buildTemplatesTestLabel), func() {
 				// Once https://issues.redhat.com/browse/STONEBLD-2795 is resolved, apply this check for hermetic scenario as well
-				if !IsHermeticScenario(gitUrl) && !IsFBCBuild(gitUrl) {
+				if !scenario.EnableHermetic && !IsFBCBuildPipeline(pipelineBundleName) {
 					ensureOriginalDockerfileIsPushed(kubeadminClient, pr)
 				}
 			})
 
 			It("floating tags are created successfully", func() {
-				_, _, _, _, _, checkAdditionalTags := GetComponentScenarioDetailsFromGitUrl(gitUrl)
-				if !checkAdditionalTags {
-					Skip(fmt.Sprintf("floating tag validation is not needed for: %s", gitUrl))
+				if !scenario.CheckAdditionalTags {
+					Skip(fmt.Sprintf("floating tag validation is not needed for: %s", scenario.GitURL))
 				}
 				builtImage := build.GetBinaryImage(pr)
 				Expect(builtImage).ToNot(BeEmpty(), "built image url is empty")
@@ -373,11 +394,11 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			})
 
 			It("check for source images if enabled in pipeline", Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
-				pr, err = kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
+				pr, err = kubeadminClient.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(pr).ToNot(BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentNames[i]))
+				Expect(pr).ToNot(BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentName))
 
-				if IsFBCBuild(gitUrl) {
+				if IsFBCBuildPipeline(pipelineBundleName) {
 					GinkgoWriter.Println("This is FBC build, which does not require source container build.")
 					Skip(fmt.Sprintf("Skiping FBC build %s", pr.GetName()))
 					return
@@ -416,10 +437,10 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				Expect(tagExists).To(BeTrue(),
 					fmt.Sprintf("cannot find source container image %s", srcImage))
 
-				CheckSourceImage(srcImage, gitUrl, kubeadminClient, pr)
+				CheckSourceImage(srcImage, scenario.GitURL, kubeadminClient, pr)
 			})
 
-			When(fmt.Sprintf("Pipeline Results are stored for component with Git source URL %s", gitUrl), Label("pipeline"), func() {
+			When(fmt.Sprintf("Pipeline Results are stored for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label("pipeline"), func() {
 				var resultClient *pipeline.ResultClient
 				var pr *tektonpipeline.PipelineRun
 
@@ -431,7 +452,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					regProxyUrl := fmt.Sprintf("%s/plugins/tekton-results", f.ProxyUrl)
 					resultClient = pipeline.NewClient(regProxyUrl, f.UserToken)
 
-					pr, err = kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
+					pr, err = kubeadminClient.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 					Expect(err).ShouldNot(HaveOccurred())
 				})
 
@@ -481,19 +502,19 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				})
 			})
 
-			It(fmt.Sprintf("should validate tekton taskrun test results for component with Git source URL %s", gitUrl), Label(buildTemplatesTestLabel), func() {
-				pr, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
+			It(fmt.Sprintf("should validate tekton taskrun test results for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel), func() {
+				pr, err := kubeadminClient.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(build.ValidateBuildPipelineTestResults(pr, kubeadminClient.CommonController.KubeRest(), IsFBCBuild(gitUrl))).To(Succeed())
+				Expect(build.ValidateBuildPipelineTestResults(pr, kubeadminClient.CommonController.KubeRest(), IsFBCBuildPipeline(pipelineBundleName))).To(Succeed())
 			})
 
-			When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", gitUrl), Label("sbom", "slow"), func() {
+			When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", scenario.GitURL), Label("sbom", "slow"), func() {
 				var imageWithDigest string
 				var pr *tektonpipeline.PipelineRun
 
 				BeforeAll(func() {
 					var err error
-					imageWithDigest, err = getImageWithDigest(kubeadminClient, componentNames[i], applicationName, testNamespace)
+					imageWithDigest, err = getImageWithDigest(kubeadminClient, componentName, applicationName, testNamespace)
 					Expect(err).NotTo(HaveOccurred())
 				})
 				AfterAll(func() {
@@ -533,23 +554,23 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					)
 					Expect(kubeadminClient.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
 
-					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentNames[i], applicationName, testNamespace, "")
+					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 					Expect(err).ToNot(HaveOccurred())
 
 					revision := pipelineRun.Annotations["build.appstudio.redhat.com/commit_sha"]
 					Expect(revision).ToNot(BeEmpty())
 
 					generator := tekton.VerifyEnterpriseContract{
-						Snapshot: v1alpha1.SnapshotSpec{
+						Snapshot: appservice.SnapshotSpec{
 							Application: applicationName,
-							Components: []v1alpha1.SnapshotComponent{
+							Components: []appservice.SnapshotComponent{
 								{
-									Name:           componentNames[i],
+									Name:           componentName,
 									ContainerImage: imageWithDigest,
-									Source: v1alpha1.ComponentSource{
-										ComponentSourceUnion: v1alpha1.ComponentSourceUnion{
-											GitSource: &v1alpha1.GitSource{
-												URL:      gitUrl,
+									Source: appservice.ComponentSource{
+										ComponentSourceUnion: appservice.ComponentSourceUnion{
+											GitSource: &appservice.GitSource{
+												URL:      scenario.GitURL,
 												Revision: revision,
 											},
 										},
@@ -591,7 +612,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					Expect(cyclonedx.BomFormat).To(Equal("CycloneDX"))
 					Expect(cyclonedx.SpecVersion).ToNot(BeEmpty())
 					Expect(cyclonedx.Version).ToNot(BeZero())
-					if !strings.Contains(gitUrl, "from-scratch") {
+					if !strings.Contains(scenario.GitURL, "from-scratch") {
 						Expect(cyclonedx.Components).ToNot(BeEmpty())
 
 						numberOfLibraryComponents := 0
@@ -631,12 +652,12 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					// Double check that the component has finished. There's an earlier test that
 					// verifies this so this should be a no-op. It is added here in order to avoid
 					// unnecessary coupling of unrelated tests.
-					component, err := kubeadminClient.HasController.GetComponent(componentNames[i], testNamespace)
+					component, err := kubeadminClient.HasController.GetComponent(componentName, testNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
 					Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(
 						component, "", kubeadminClient.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(Succeed())
 
-					imageWithDigest, err = getImageWithDigest(kubeadminClient, componentNames[i], applicationName, testNamespace)
+					imageWithDigest, err = getImageWithDigest(kubeadminClient, componentName, applicationName, testNamespace)
 					Expect(err).NotTo(HaveOccurred())
 
 					err = kubeadminClient.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)
@@ -702,12 +723,14 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			})
 		}
 
-		It(fmt.Sprintf("pipelineRun should fail for symlink component with Git source URL %s", pythonComponentGitHubURL), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
-			component, err := kubeadminClient.HasController.GetComponent(symlinkComponentName, testNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "",
-				kubeadminClient.TektonController, &has.RetryOptions{Retries: 0}, nil)).Should(MatchError(ContainSubstring("cloned repository contains symlink pointing outside of the cloned repository")))
-		})
+		for symlinkComponentName := range symlinkComponents {
+			It(fmt.Sprintf("pipelineRun should fail for symlink component with Git source URL %s with component name %s", pythonComponentGitHubURL, symlinkComponentName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
+				component, err := kubeadminClient.HasController.GetComponent(symlinkComponentName, testNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "",
+					kubeadminClient.TektonController, &has.RetryOptions{Retries: 0}, nil)).Should(MatchError(ContainSubstring("cloned repository contains symlink pointing outside of the cloned repository")))
+			})
+		}
 	})
 })
 
@@ -741,12 +764,12 @@ func getImageWithDigest(c *framework.ControllerHub, componentName, applicationNa
 
 // this function takes a bundle and prefetchInput value as inputs and creates a bundle with param hermetic=true
 // and then push the bundle to quay using format: quay.io/<QUAY_E2E_ORGANIZATION>/test-images:<generated_tag>
-func enableHermeticBuildInPipelineBundle(customDockerBuildBundle, prefetchInput string) (string, error) {
+func enableHermeticBuildInPipelineBundle(customDockerBuildBundle, pipelineBundleName, prefetchInput string) (string, error) {
 	var tektonObj runtime.Object
 	var err error
 	var newPipelineYaml []byte
 	// Extract docker-build pipeline as tekton object from the bundle
-	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(customDockerBuildBundle, "pipeline", "docker-build"); err != nil {
+	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(customDockerBuildBundle, "pipeline", pipelineBundleName); err != nil {
 		return "", fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
 	}
 	dockerPipelineObject := tektonObj.(*tektonpipeline.Pipeline)
@@ -778,12 +801,12 @@ func enableHermeticBuildInPipelineBundle(customDockerBuildBundle, prefetchInput 
 // this function takes a bundle and additonalTags string slice as inputs
 // and creates a bundle with adding ADDITIONAL_TAGS params in the apply-tags task
 // and then push the bundle to quay using format: quay.io/<QUAY_E2E_ORGANIZATION>/test-images:<generated_tag>
-func applyAdditionalTagsInPipelineBundle(customDockerBuildBundle string, additionalTags []string) (string, error) {
+func applyAdditionalTagsInPipelineBundle(customDockerBuildBundle string, pipelineBundleName string, additionalTags []string) (string, error) {
 	var tektonObj runtime.Object
 	var err error
 	var newPipelineYaml []byte
 	// Extract docker-build pipeline as tekton object from the bundle
-	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(customDockerBuildBundle, "pipeline", "docker-build"); err != nil {
+	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(customDockerBuildBundle, "pipeline", pipelineBundleName); err != nil {
 		return "", fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
 	}
 	dockerPipelineObject := tektonObj.(*tektonpipeline.Pipeline)
