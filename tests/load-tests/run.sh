@@ -61,6 +61,7 @@ fi
 
 ## Run the actual load test
 date -Ins --utc >started
+env | sort
 go run loadtest.go \
     --applications-count "${APPLICATIONS_COUNT:-1}" \
     --build-pipeline-selector-bundle "${BUILD_PIPELINE_SELECTOR_BUNDLE:-}" \

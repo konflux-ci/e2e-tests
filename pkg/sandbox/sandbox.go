@@ -344,7 +344,7 @@ func (s *SandboxController) CheckUserCreatedWithSignUp(userName string, userSign
 				return true, nil
 			}
 		}
-		GinkgoWriter.Printf("Waiting for UserSignup %s to have condition Complete:True\n", userSignup.GetName())
+		GinkgoWriter.Printf("Waiting for UserSignup %s to have condition Complete:True - %+v\n", userSignup.GetName(), userSignup.Status.Conditions)
 		return false, nil
 	}, 4*time.Second, 4*time.Minute)
 
