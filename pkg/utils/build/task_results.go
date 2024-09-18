@@ -54,7 +54,7 @@ func ValidateBuildPipelineTestResults(pipelineRun *pipeline.PipelineRun, c crcli
 
 		switch taskName {
 		case "clair-scan":
-			resultsToValidate = append(resultsToValidate, "CLAIR_SCAN_RESULT")
+			resultsToValidate = append(resultsToValidate, "SCAN_OUTPUT")
 		case "deprecated-image-check":
 			resultsToValidate = append(resultsToValidate, "PYXIS_HTTP_CODE")
 		case "inspect-image":
@@ -98,11 +98,11 @@ func validateTaskRunResult(trResults []pipeline.TaskRunResult, expectedResultNam
 					if err != nil {
 						return fmt.Errorf("cannot parse %q result: %+v", constants.TektonTaskTestOutputName, err)
 					}
-				case "CLAIR_SCAN_RESULT":
+				case "SCAN_OUTPUT":
 					var testOutput = &ClairScanResult{}
 					err := json.Unmarshal([]byte(r.Value.StringVal), &testOutput)
 					if err != nil {
-						return fmt.Errorf("cannot parse CLAIR_SCAN_RESULT result: %+v", err)
+						return fmt.Errorf("cannot parse SCAN_OUTPUT result: %+v", err)
 					}
 				case "PYXIS_HTTP_CODE", "BASE_IMAGE", "BASE_IMAGE_REPOSITORY":
 					if len(r.Value.StringVal) < 1 {

@@ -127,8 +127,14 @@ def main():
         stats[m]["pass"]["when"] = count_stats_when(stats_raw[m]["pass"]["when"])
         stats[m]["fail"]["when"] = count_stats_when(stats_raw[m]["fail"]["when"])
 
-        if "mean" in stats[m]["pass"]["duration"]:
-            kpi_sum += stats[m]["pass"]["duration"]["mean"]
+        if stats[m]["pass"]["duration"]["samples"] == 0:
+            # If we had 0 measurements in some metric, that means not a single
+            # build made it through all steps, so kpi_sum metric does not make
+            # sense as it would only cover part of the journey
+            kpi_sum = -1
+        else:
+            if kpi_sum != -1:
+                kpi_sum += stats[m]["pass"]["duration"]["mean"]
 
         s = stats[m]["pass"]["duration"]["samples"] + stats[m]["fail"]["duration"]["samples"]
         if s == 0:

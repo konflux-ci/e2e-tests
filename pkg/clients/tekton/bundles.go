@@ -13,8 +13,10 @@ import (
 )
 
 type Bundles struct {
-	DockerBuildBundle string
-	FBCBuilderBundle  string
+	DockerBuildBundle                   string
+	DockerBuildMultiPlatformOCITABundle string
+	DockerBuildOCITABundle              string
+	FBCBuilderBundle                    string
 }
 
 // NewBundles returns new Bundles.
@@ -40,6 +42,10 @@ func (t *TektonController) NewBundles() (*Bundles, error) {
 		switch pipeline.Name {
 		case "docker-build":
 			bundles.DockerBuildBundle = pipeline.Bundle
+		case "docker-build-multi-platform-oci-ta":
+			bundles.DockerBuildMultiPlatformOCITABundle = pipeline.Bundle
+		case "docker-build-oci-ta":
+			bundles.DockerBuildOCITABundle = pipeline.Bundle
 		case "fbc-builder":
 			bundles.FBCBuilderBundle = pipeline.Bundle
 		}
