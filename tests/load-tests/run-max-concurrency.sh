@@ -77,6 +77,14 @@ load_test() {
         --waitintegrationtestspipelines="${WAIT_INTEGRATION_TESTS:-true}" \
         --waitpipelines="${WAIT_PIPELINES:-true}" \
         2>&1 | tee "$workdir/load-test.log"
+    
+    # Capture and exit if there are unexpected errors in loadtest.go
+    LOADTEST_EXIT_STATUS=${PIPESTATUS[0]}
+    if [ ${LOADTEST_EXIT_STATUS} -ne 0 ]; then
+        echo "[$(date --utc -Ins)] loadtest.go exited with non-zero (${LOADTEST_EXIT_STATUS}) status code."
+        exit 1
+    fi
+
     date -Ins --utc >ended
 
     set +u
