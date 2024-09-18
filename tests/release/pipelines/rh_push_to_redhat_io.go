@@ -80,7 +80,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 			Expect(err).ToNot(HaveOccurred())
 
 			pyxisSecret, err := managedFw.AsKubeAdmin.CommonController.GetSecret(managedNamespace, "pyxis")
-			if pyxisSecret == nil || errors.IsNotFound(err){
+			if pyxisSecret == nil || errors.IsNotFound(err) {
 				secret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "pyxis",
@@ -112,7 +112,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 
 			snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(*devFw, rhioComponentName, rhioApplicationName, devNamespace, sampleImage, rhioGitSourceURL, rhioGitSrcSHA, "", "", "", "")
 			GinkgoWriter.Println("snapshotPush.Name: %s", snapshotPush.GetName())
-                        Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).ShouldNot(HaveOccurred())
 		})
 
 		AfterAll(func() {
@@ -202,7 +202,7 @@ func createRHIOReleasePlanAdmission(rhioRPAName string, managedFw framework.Fram
 			"components": []map[string]interface{}{
 				{
 					"name":       rhioComponentName,
-					"repository": "quay.io/redhat-pending/rhtap----konflux-release-e2e",
+					"repository": "registry.stage.redhat.io/rhtap/konflux-release-e2e",
 					"tags": []string{"latest", "latest-{{ timestamp }}", "testtag",
 						"testtag-{{ timestamp }}", "testtag2", "testtag2-{{ timestamp }}"},
 				},
@@ -232,7 +232,7 @@ func createRHIOReleasePlanAdmission(rhioRPAName string, managedFw framework.Fram
 			},
 		},
 		"sign": map[string]interface{}{
-			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",
+			"configMapName":    "hacbs-signing-pipeline-config-redhatbeta2",
 			"cosignSecretName": "test-cosign-secret",
 		},
 	})
