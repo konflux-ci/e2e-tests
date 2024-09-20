@@ -57,6 +57,13 @@ mended="$( date -d "$( cat ended )" --utc -Iseconds )"
 mhost="https://$(oc -n openshift-monitoring get route -l app.kubernetes.io/name=thanos-query -o json | jq --raw-output '.items[0].spec.host')"
 mrawdir="${ARTIFACT_DIR}/monitoring-raw-data-dir/"
 mkdir -p "$mrawdir"
+
+# Caputure pods which comsume more memory than requests
+prompod=$(oc get pods -l app.kubernetes.io/component=prometheus -o jsonpath='{.items[0].metadata.name}' -n openshift-monitoring)
+QUERY_EXPRESSION='sum by (namespace,pod) (avg_over_time(container_memory_working_set_bytes{namespace!~"openshift-.*|kube-.*|.*-tenant",container!="POD",container!=""}[1d]))- sum by (namespace,pod)(kube_pod_container_resource_requests{resource="memory",namespace!~"openshift-.*|kube-.*|.*-tenant"}) >0'
+oc exec -n openshift-monitoring $prompod -c prometheus -- curl --data-urlencode "query=$QUERY_EXPRESSION" --data-urlencode "start=$mstarted" --data-urlencode "end=$mended" --data-urlencode "step=60s" http://127.0.0.1:9090/api/v1/query_range | python -m json.tool > $mrawdir/pods_use_more_than_requests.json
+export pods_use_requests=$(jq -r '.data.result[] | "\(.metric.namespace),\(.metric.pod)"' $mrawdir/pods_use_more_than_requests.json|awk 'BEGIN{s=""}{s=s$1";"}END{s=substr(s,1,length(s)-1);print s}')
+
 status_data.py \
     --status-data-file "${STATUS_DATA_FILE}" \
     --additional cluster_read_config.yaml \

@@ -200,3 +200,22 @@
 {{ monitor_pod('openshift-pipelines', 'tekton-pipelines-controller', 15) }}
 {{ monitor_pod('tekton-results', 'tekton-results-watcher', 1, '-.*') }}
 {{ monitor_pod_container('tekton-results', 'tekton-results-watcher', 'watcher', 1, '-.*') }}
+
+# Gathering pods used memory and requests if used > requests
+{% macro monitor_pod_memory(namespace, pod, step=15) -%}
+# Gather monitoring data about the pod's memory used
+- name: measurements.{{ namespace }}.pod[{{ pod }}].memory.used
+  monitoring_query: sum(container_memory_working_set_bytes{namespace='{{namespace}}',pod='{{pod}}'})
+  monitoring_step: {{ step }}
+# Gather monitoring data about the pod's memory requests
+- name: measurements.{{ namespace }}.pod[{{ pod }}].memory.requests
+  monitoring_query: sum(kube_pod_container_resource_requests{namespace='{{namespace}}',pod='{{pod}}'})
+  monitoring_step: {{ step }}
+{%- endmacro %}
+
+{% if pods_use_requests is defined and pods_use_requests|length %}
+  {% for row in pods_use_requests.split(';') %}
+    {% set fields = row.split(',') %}
+    {{ monitor_pod_memory(fields[0], fields[1]) }}
+  {% endfor %}
+{% endif %}
