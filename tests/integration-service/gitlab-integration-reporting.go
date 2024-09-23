@@ -15,9 +15,6 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 	integrationv1beta2 "github.com/konflux-ci/integration-service/api/v1beta2"
 	. "github.com/onsi/ginkgo/v2"
@@ -81,21 +78,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 
 			err = build.CreateGitlabBuildSecret(f, "gitlab-build-secret", secretAnnotations, gitlabToken)
 			Expect(err).ShouldNot(HaveOccurred())
-
-			secret := &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pipelines-as-code-secret",
-					Namespace: testNamespace,
-				},
-				Type: v1.SecretTypeOpaque,
-				StringData: map[string]string{
-					"password": gitlabToken,
-				},
-			}
-
-			// create a pipeline-as-code-secret in testNamespace
-			_, err = f.AsKubeAdmin.CommonController.CreateSecret(f.UserNamespace, secret)
-			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterAll(func() {
