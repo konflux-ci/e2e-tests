@@ -10,11 +10,16 @@ source "$( dirname $0 )/../user-prefix.sh"
 
 pushd "${2:-./tests/load-tests}"
 
-export QUAY_E2E_ORGANIZATION MY_GITHUB_ORG GITHUB_TOKEN TEKTON_PERF_ENABLE_CPU_PROFILING TEKTON_PERF_ENABLE_MEMORY_PROFILING TEKTON_PERF_PROFILE_CPU_PERIOD KUBE_SCHEDULER_LOG_LEVEL
+export QUAY_E2E_ORGANIZATION MY_GITHUB_ORG GITHUB_TOKEN TEKTON_PERF_ENABLE_CPU_PROFILING TEKTON_PERF_ENABLE_MEMORY_PROFILING TEKTON_PERF_PROFILE_CPU_PERIOD KUBE_SCHEDULER_LOG_LEVEL RUN_ON_STAGE
 export THRESHOLD
 QUAY_E2E_ORGANIZATION=$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/quay-org)
 MY_GITHUB_ORG=$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/github-org)
 
-./run-max-concurrency.sh
+
+if [ "${RUN_ON_STAGE:-}" == "true" ]; then
+    ./run-stage-max-concurrency.sh
+else
+    ./run-max-concurrency.sh
+fi
 
 popd
