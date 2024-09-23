@@ -914,11 +914,11 @@ func CleanGitHubWebHooks() error {
 func CleanGitLabWebHooks() error {
 	gcToken := utils.GetEnv(constants.GITLAB_BOT_TOKEN_ENV, "")
 	if gcToken == "" {
-		return fmt.Errorf("empty PAC_GITLAB_TOKEN env")
+		return fmt.Errorf("empty GITLAB_BOT_TOKEN env variable")
 	}
 	projectID := utils.GetEnv(constants.GITLAB_PROJECT_ID_ENV, "")
 	if projectID == "" {
-		return fmt.Errorf("empty PAC_PROJECT_ID env. Please provide a valid GitLab Project ID")
+		return fmt.Errorf("empty GITLAB_PROJECT_ID env variable. Please provide a valid GitLab Project ID")
 	}
 	gitlabURL := utils.GetEnv(constants.GITLAB_API_URL_ENV, constants.DefaultGitLabAPIURL)
 	gc, err := gitlab.NewGitlabClient(gcToken, gitlabURL)
