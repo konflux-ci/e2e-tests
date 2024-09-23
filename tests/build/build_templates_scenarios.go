@@ -35,11 +35,12 @@ func (s ComponentScenarioSpec) DeepCopy() ComponentScenarioSpec {
 
 var componentScenarios = []ComponentScenarioSpec{
 	{
-		GitURL:              "https://github.com/konflux-qe-bd/devfile-sample-python-basic",
-		Revision:            "47fc22092005aabebce233a9b6eab994a8152bbd",
-		ContextDir:          ".",
-		DockerFilePath:      constants.DockerFilePath,
-		PipelineBundleNames: []string{"docker-build", "docker-build-oci-ta", "docker-build-multi-platform-oci-ta"},
+		GitURL:         "https://github.com/konflux-qe-bd/devfile-sample-python-basic",
+		Revision:       "47fc22092005aabebce233a9b6eab994a8152bbd",
+		ContextDir:     ".",
+		DockerFilePath: constants.DockerFilePath,
+		// "docker-build-multi-platform-oci-ta" needs to be enabled, when the issue https://issues.redhat.com/browse/KFLUXBUGS-1646 is fixed
+		PipelineBundleNames: []string{"docker-build", "docker-build-oci-ta"},
 		EnableHermetic:      false,
 		PrefetchInput:       "",
 	},
