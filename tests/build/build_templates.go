@@ -362,8 +362,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			})
 
 			It("should push Dockerfile to registry", Label(buildTemplatesTestLabel), func() {
-				// Once https://issues.redhat.com/browse/STONEBLD-2795 is resolved, apply this check for hermetic scenario as well
-				if !scenario.EnableHermetic && !IsFBCBuildPipeline(pipelineBundleName) {
+				if !IsFBCBuildPipeline(pipelineBundleName) {
 					ensureOriginalDockerfileIsPushed(kubeadminClient, pr)
 				}
 			})
