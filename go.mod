@@ -58,8 +58,8 @@ require (
 	k8s.io/test-infra v0.0.0-20231004164548-dee1fe445410
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	knative.dev/pkg v0.0.0-20240219120257-9227ebb57a4e
-	sigs.k8s.io/controller-runtime v0.17.5
 	oras.land/oras-go/v2 v2.3.0
+	sigs.k8s.io/controller-runtime v0.17.5
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -241,7 +241,7 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
-	github.com/opencontainers/runc v1.1.12 // indirect
+	github.com/opencontainers/runc v1.1.14 // indirect
 	github.com/opencontainers/runtime-spec v1.1.0 // indirect
 	github.com/operator-framework/operator-lib v0.13.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
