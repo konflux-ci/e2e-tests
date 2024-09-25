@@ -8,22 +8,22 @@ import (
 	"strings"
 	"time"
 
-	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
+	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
-	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
-	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
+	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
-	"github.com/devfile/library/v2/pkg/util"
-	"knative.dev/pkg/apis"
+	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
+	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
+	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"knative.dev/pkg/apis"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -126,7 +126,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 			createRHTAPEnterpriseContractPolicy(rhtapEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 
 			snapshot, err = releasecommon.CreateSnapshotWithImageSource(*devFw, rhtapComponentName, rhtapApplicationName, devNamespace, sampleImage, rhtapGitSourceURL, rhtapGitSrcSHA, "", "", "", "")
-                        Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).ShouldNot(HaveOccurred())
 		})
 
 		AfterAll(func() {
@@ -245,7 +245,7 @@ func createRHTAPReleasePlanAdmission(rhtapRPAName string, managedFw framework.Fr
 			"components": []map[string]interface{}{
 				{
 					"name":       rhtapComponentName,
-					"repository": "quay.io/redhat-pending/rhtap----konflux-release-e2e",
+					"repository": "registry.stage.redhat.io/rhtap/konflux-release-e2e",
 					"tags": []string{"latest", "latest-{{ timestamp }}", "testtag",
 						"testtag-{{ timestamp }}", "testtag2", "testtag2-{{ timestamp }}"},
 					"source": map[string]interface{}{
