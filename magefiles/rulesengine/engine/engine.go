@@ -17,6 +17,7 @@ var MageEngine = rulesengine.RuleEngine{
 
 	"ci": {
 		"e2e-repo":            repos.E2ECIChainCatalog,
+		"release-service":     repos.ReleaseServiceCICatalog,
 		"integration-service": repos.IntegrationServiceCICatalog,
 		// TODO: to be implemented in a follow-up PR
 		//"infra-deployments": repos.InfraDeploymentsCIChainCatalog,

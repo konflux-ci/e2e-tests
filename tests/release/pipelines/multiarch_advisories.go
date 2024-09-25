@@ -26,11 +26,11 @@ import (
 )
 
 const (
-	multiarchServiceAccountName  = "release-service-account"
-	multiarchCatalogPathInRepo   = "pipelines/rh-advisories/rh-advisories.yaml"
-	multiarchGitSourceURL        = "https://github.com/redhat-appstudio-qe/multi-platform-test-prod"
-	multiarchGitSourceRepoName   = "multi-platform-test-prod"
-	multiarchGitSrcSHA           = "fd4b6c28329ab3df77e7ad7beebac1829836561d"
+	multiarchServiceAccountName = "release-service-account"
+	multiarchCatalogPathInRepo  = "pipelines/rh-advisories/rh-advisories.yaml"
+	multiarchGitSourceURL       = "https://github.com/redhat-appstudio-qe/multi-platform-test-prod"
+	multiarchGitSourceRepoName  = "multi-platform-test-prod"
+	multiarchGitSrcSHA          = "fd4b6c28329ab3df77e7ad7beebac1829836561d"
 )
 
 var multiarchComponentName = "e2e-multi-platform-test"
@@ -225,7 +225,6 @@ func createMultiArchReleasePlan(multiarchReleasePlanName string, devFw framework
 	Expect(err).NotTo(HaveOccurred())
 }
 
-
 func createMultiArchReleasePlanAdmission(multiarchRPAName string, managedFw framework.Framework, devNamespace, managedNamespace, multiarchAppName, multiarchECPName, pathInRepoValue string) {
 	var err error
 
@@ -233,9 +232,9 @@ func createMultiArchReleasePlanAdmission(multiarchRPAName string, managedFw fram
 		"mapping": map[string]interface{}{
 			"components": []map[string]interface{}{
 				{
-					"name": multiarchComponentName,
-					"repository": "quay.io/redhat-pending/rhtap----konflux-release-e2e",
-					"tags": []string{"latest", "latest-{{ timestamp }}"},
+					"name":       multiarchComponentName,
+					"repository": "registry.stage.redhat.io/rhtap/konflux-release-e2e",
+					"tags":       []string{"latest", "latest-{{ timestamp }}"},
 					"source": map[string]interface{}{
 						"git": map[string]interface{}{
 							"url": multiarchGitSourceURL,

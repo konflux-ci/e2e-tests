@@ -303,7 +303,7 @@ func (ci CI) TestE2E() error {
 	}
 
 	// Eventually we'll introduce mage rules for all repositories, so this condition won't be needed anymore
-	if pr.RepoName == "e2e-tests" || pr.RepoName == "integration-service" {
+	if pr.RepoName == "e2e-tests" || pr.RepoName == "integration-service" || pr.RepoName == "release-service" {
 		return engine.MageEngine.RunRulesOfCategory("ci", rctx)
 	}
 
@@ -914,11 +914,11 @@ func CleanGitHubWebHooks() error {
 func CleanGitLabWebHooks() error {
 	gcToken := utils.GetEnv(constants.GITLAB_BOT_TOKEN_ENV, "")
 	if gcToken == "" {
-		return fmt.Errorf("empty PAC_GITLAB_TOKEN env")
+		return fmt.Errorf("empty GITLAB_BOT_TOKEN env variable")
 	}
 	projectID := utils.GetEnv(constants.GITLAB_PROJECT_ID_ENV, "")
 	if projectID == "" {
-		return fmt.Errorf("empty PAC_PROJECT_ID env. Please provide a valid GitLab Project ID")
+		return fmt.Errorf("empty GITLAB_PROJECT_ID env variable. Please provide a valid GitLab Project ID")
 	}
 	gitlabURL := utils.GetEnv(constants.GITLAB_API_URL_ENV, constants.DefaultGitLabAPIURL)
 	gc, err := gitlab.NewGitlabClient(gcToken, gitlabURL)

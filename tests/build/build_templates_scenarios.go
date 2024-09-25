@@ -39,7 +39,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		Revision:       "47fc22092005aabebce233a9b6eab994a8152bbd",
 		ContextDir:     ".",
 		DockerFilePath: constants.DockerFilePath,
-		// Cannot enable multi-platform builds until https://issues.redhat.com/browse/KFLUXINFRA-836 is resolved.
+		// "docker-build-multi-platform-oci-ta" needs to be enabled, when the issue https://issues.redhat.com/browse/KFLUXBUGS-1646 is fixed
 		PipelineBundleNames: []string{"docker-build", "docker-build-oci-ta"},
 		EnableHermetic:      false,
 		PrefetchInput:       "",
