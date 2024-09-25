@@ -694,11 +694,11 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						Expect(err).NotTo(HaveOccurred())
 
 						// The logs from the report step are used by the UI to display validation
-						// details. Let's make sure it has valid YAML.
-						reportLogs := logs["step-report"]
+						// details. Let's make sure it has valid JSON.
+						reportLogs := logs["step-report-json"]
 						Expect(reportLogs).NotTo(BeEmpty())
-						var reportYAML any
-						err = yaml.Unmarshal([]byte(reportLogs), &reportYAML)
+						var report any
+						err = json.Unmarshal([]byte(reportLogs), &report)
 						Expect(err).NotTo(HaveOccurred())
 
 						// The logs from the summary step are used by the UI to display an overview of
