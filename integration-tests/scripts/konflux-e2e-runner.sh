@@ -129,17 +129,25 @@ done
 log "INFO" "running tests with github user: ${GITHUB_USER}"
 
 # ROSA HCP workaround for Docker limits
-oc create namespace konflux-otel
-oc create sa open-telemetry-opentelemetry-collector -n konflux-otel
-
+# for namespaces 'minio-operator' and 'tekton-results'
 oc get secret/pull-secret -n openshift-config --template='{{index .data ".dockerconfigjson" | base64decode}}' > ./global-pull-secret.json
 oc get secret -n openshift-config -o yaml pull-secret > global-pull-secret.yaml
-yq -i '.metadata.namespace = "konflux-otel"' global-pull-secret.yaml
-
+yq -i e 'del(.metadata.namespace)' global-pull-secret.yaml
 oc registry login --registry=docker.io --auth-basic="$DOCKER_IO_AUTH" --to=./global-pull-secret.json
-oc apply -f global-pull-secret.yaml -n konflux-otel
-oc set data secret/pull-secret -n konflux-otel --from-file=.dockerconfigjson=./global-pull-secret.json
-oc secrets link open-telemetry-opentelemetry-collector pull-secret --for=pull -n konflux-otel
+
+namespace_sa_names=$(cat << 'EOF'
+minio-operator|minio-operator
+tekton-results|storage-sa
+EOF
+)
+while IFS='|' read -r ns sa_name; do
+    oc create namespace "$ns" --dry-run=client -o yaml | oc apply -f -
+    oc create sa "$sa_name" -n "$ns" --dry-run=client -o yaml | oc apply -f -
+    oc apply -f global-pull-secret.yaml -n "$ns"
+    oc set data secret/pull-secret -n "$ns" --from-file=.dockerconfigjson=./global-pull-secret.json
+    oc secrets link "$sa_name" pull-secret --for=pull -n "$ns"
+done <<< "$namespace_sa_names"
+
 
 # Prepare git, pair branch if necessary, Install Konflux and run e2e tests
 cd "$(mktemp -d)"
