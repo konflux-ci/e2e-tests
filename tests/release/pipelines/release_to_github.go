@@ -151,11 +151,15 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 					if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
 						return nil
 					} else {
-						var prLogs string
+						prLogs := ""
 						if prLogs, err = tekton.GetFailedPipelineRunLogs(managedFw.AsKubeAdmin.ReleaseController.KubeRest(), managedFw.AsKubeAdmin.ReleaseController.KubeInterface(), pipelineRun); err != nil {
-							return fmt.Errorf("failed to get PLR logs: %+v", err)
+							GinkgoWriter.Printf("failed to get PLR logs: %+v", err)
+							Expect(err).ShouldNot(HaveOccurred())
+							return nil
 						}
-						return fmt.Errorf("%s", prLogs)
+						GinkgoWriter.Printf("logs: %s", prLogs)
+						Expect(prLogs).To(Equal(""), fmt.Sprintf("PipelineRun %s failed", pipelineRun.Name))
+						return nil
 					}
 				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
 
@@ -169,9 +173,26 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 					if err != nil {
 						return err
 					}
-					GinkgoWriter.Println("Release CR: ", releaseCR.Name)
-					if !releaseCR.IsReleased() {
-						return fmt.Errorf("release %s/%s is not marked as finished yet", releaseCR.GetNamespace(), releaseCR.GetName())
+					GinkgoWriter.Println("releaseCR: %s", releaseCR.Name)
+					conditions := releaseCR.Status.Conditions
+					GinkgoWriter.Println("len of conditions: %d", len(conditions))
+					if len(conditions) > 0 {
+						for _, c := range conditions {
+							GinkgoWriter.Println("type of c: %s", c.Type)
+							if c.Type == "Released" {
+								GinkgoWriter.Println("status of c: %s", c.Status)
+								if c.Status == "True" {
+									GinkgoWriter.Println("Release CR is released")
+									return nil
+								} else if c.Status == "False" {
+									GinkgoWriter.Println("Release CR failed")
+									Expect(string(c.Status)).To(Equal("True"), fmt.Sprintf("Release %s failed", releaseCR.Name))
+									return nil
+								} else {
+									return fmt.Errorf("release %s/%s is not marked as finished yet", releaseCR.GetNamespace(), releaseCR.GetName())
+								}
+							}
+						}
 					}
 					return nil
 				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())

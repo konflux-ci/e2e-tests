@@ -242,14 +242,14 @@ func assertReleaseCRSucceeded(devFw *framework.Framework, devNamespace, managedN
 		if err != nil {
 			return err
 		}
-		GinkgoWriter.Printf("releaseCR: %s", releaseCR.Name)
+		GinkgoWriter.Println("releaseCR: %s", releaseCR.Name)
 		conditions := releaseCR.Status.Conditions
-		GinkgoWriter.Printf("len of conditions: %d", len(conditions))
+		GinkgoWriter.Println("len of conditions: %d", len(conditions))
 		if len(conditions) > 0 {
 			for _, c := range conditions {
-				GinkgoWriter.Printf("type of c: %s", c.Type)
+				GinkgoWriter.Println("type of c: %s", c.Type)
 				if c.Type == "Released" {
-					GinkgoWriter.Printf("status of c: %s", c.Status)
+					GinkgoWriter.Println("status of c: %s", c.Status)
 					if c.Status == "True" {
 						GinkgoWriter.Println("Release CR is released")
 						return nil
