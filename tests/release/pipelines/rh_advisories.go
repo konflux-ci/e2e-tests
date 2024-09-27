@@ -10,6 +10,7 @@ import (
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
@@ -61,8 +62,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 	var snapshotPush *appservice.Snapshot
 	var releaseCR *releaseapi.Release
 	var releasePR *tektonv1.PipelineRun
-
-	AfterEach(framework.ReportFailure(&devFw))
+	var pipelineRun *pipeline.PipelineRun
 
 	Describe("Rh-advisories happy path", Label("rhAdvisories"), func() {
 		BeforeAll(func() {
@@ -118,8 +118,14 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 		})
 
 		AfterAll(func() {
-			devFw = releasecommon.NewFramework(devWorkspace)
-			managedFw = releasecommon.NewFramework(managedWorkspace)
+			// store pipelineRun and Release CR
+			if err = managedFw.AsKubeDeveloper.TektonController.StorePipelineRun(pipelineRun.Name, pipelineRun); err != nil {
+				GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
+			}
+			if err = devFw.AsKubeDeveloper.ReleaseController.StoreRelease(releaseCR); err != nil {
+				GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
+			}
+
 			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(advsApplicationName, devNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(advsEnterpriseContractPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(advsReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
@@ -137,7 +143,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
 
 				Eventually(func() error {
-					pipelineRun, err := managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
+					pipelineRun, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 					if err != nil {
 						return fmt.Errorf("PipelineRun has not been created yet for release %s/%s", releaseCR.GetNamespace(), releaseCR.GetName())
 					}
@@ -152,26 +158,27 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 					if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
 						return nil
 					} else {
-						var prLogs string
+						prLogs := ""
 						if prLogs, err = tekton.GetFailedPipelineRunLogs(managedFw.AsKubeAdmin.ReleaseController.KubeRest(), managedFw.AsKubeAdmin.ReleaseController.KubeInterface(), pipelineRun); err != nil {
-							return fmt.Errorf("failed to get PLR logs: %+v", err)
+							GinkgoWriter.Printf("failed to get PLR logs: %+v", err)
+							Expect(err).ShouldNot(HaveOccurred())
+							return nil
 						}
-						return fmt.Errorf("%s", prLogs)
+						GinkgoWriter.Printf("logs: %s", prLogs)
+						Expect(prLogs).To(Equal(""), fmt.Sprintf("PipelineRun %s failed", pipelineRun.Name))
+						return nil
 					}
 				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
 			})
 
 			It("verifies release CR completed and set succeeded.", func() {
 				Eventually(func() error {
-					releaseCr, err := devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshotPush.Name, devNamespace)
+					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshotPush.Name, devNamespace)
 					if err != nil {
 						return err
 					}
-					GinkgoWriter.Println("Release CR: ", releaseCr.Name)
-					if !releaseCr.IsReleased() {
-						return fmt.Errorf("release %s/%s is not marked as finished yet", releaseCR.GetNamespace(), releaseCR.GetName())
-					}
-					return nil
+					err = releasecommon.CheckReleaseStatus(releaseCR)
+					return err
 				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
 			})
 
