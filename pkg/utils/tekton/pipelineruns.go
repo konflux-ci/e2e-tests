@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/apis"
@@ -239,7 +240,7 @@ func GetFailedPipelineRunDetails(c crclient.Client, pipelineRun *pipeline.Pipeli
 				d.FailedTaskRunName = taskRun.Name
 				d.PodName = taskRun.Status.PodName
 				for _, s := range taskRun.Status.TaskRunStatusFields.Steps {
-					if s.Terminated.Reason == "Error" {
+					if s.Terminated.Reason == "Error" || strings.Contains(s.Terminated.Reason, "Failed"){
 						d.FailedContainerName = s.Container
 						return d, nil
 					}
