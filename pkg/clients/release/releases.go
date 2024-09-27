@@ -3,9 +3,11 @@ package release
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/logs"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
@@ -17,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 )
 
 // CreateRelease creates a new Release using the given parameters.
@@ -99,6 +102,42 @@ func (r *ReleaseController) GetReleases(namespace string) (*releaseApi.ReleaseLi
 	err := r.KubeRest().List(context.Background(), releaseList, opts...)
 
 	return releaseList, err
+}
+
+// StoreRelease stores a given Release as an artifact.
+func (r *ReleaseController) StoreRelease(release *releaseApi.Release) error {
+	artifacts := make(map[string][]byte)
+
+	releaseConditionStatus, err := r.GetReleaseConditionStatusMessages(release.Name, release.Namespace)
+	if err != nil {
+		return err
+	}
+	artifacts["release-condition-status-"+release.Name+".log"] = []byte(strings.Join(releaseConditionStatus, "\n"))
+
+	releaseYaml, err := yaml.Marshal(release)
+	if err != nil {
+		return err
+	}
+	artifacts["component-"+release.Name+".yaml"] = releaseYaml
+
+	if err := logs.StoreArtifacts(artifacts); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Get the message from the status of a release. Useful for debugging purposes.
+func (r *ReleaseController) GetReleaseConditionStatusMessages(name, namespace string) (messages []string, err error) {
+	release, err := r.GetRelease(name, "", namespace)
+	if err != nil {
+		return messages, fmt.Errorf("error getting Release: %v", err)
+	}
+	for _, condition := range release.Status.Conditions {
+		messages = append(messages, fmt.Sprintf("condition.Type: %s, condition.Status: %s, condition.Reason: %s\n",
+			condition.Type, condition.Status, condition.Reason))
+	}
+	return
 }
 
 // GetFirstReleaseInNamespace returns the first Release from  list of releases in the given namespace.
