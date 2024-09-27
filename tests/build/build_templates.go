@@ -362,8 +362,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			})
 
 			It("should push Dockerfile to registry", Label(buildTemplatesTestLabel), func() {
-				// Once https://issues.redhat.com/browse/STONEBLD-2795 is resolved, apply this check for hermetic scenario as well
-				if !scenario.EnableHermetic && !IsFBCBuildPipeline(pipelineBundleName) {
+				if !IsFBCBuildPipeline(pipelineBundleName) {
 					ensureOriginalDockerfileIsPushed(kubeadminClient, pr)
 				}
 			})
@@ -845,7 +844,7 @@ func ensureOriginalDockerfileIsPushed(hub *framework.ControllerHub, pr *tektonpi
 	}.String()
 	exists, err := build.DoesTagExistsInQuay(dockerfileImage)
 	Expect(err).Should(Succeed())
-	Expect(exists).Should(BeTrue())
+	Expect(exists).Should(BeTrue(), fmt.Sprintf("image doesn't exist: %s", dockerfileImage))
 
 	// Ensure the original Dockerfile used for build was pushed
 	c := hub.CommonController.KubeRest()
@@ -860,7 +859,7 @@ func ensureOriginalDockerfileIsPushed(hub *framework.ControllerHub, pr *tektonpi
 		if entry.Type().IsRegular() && entry.Name() == "Dockerfile" {
 			content, err := os.ReadFile(filepath.Join(storePath, entry.Name()))
 			Expect(err).Should(Succeed())
-			Expect(content).Should(Equal(originDockerfileContent))
+			Expect(string(content)).Should(Equal(string(originDockerfileContent)))
 			return
 		}
 	}
