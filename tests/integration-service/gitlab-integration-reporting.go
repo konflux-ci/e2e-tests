@@ -82,12 +82,14 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				// Cleanup test: close MR if opened, delete created branch, delete associated Webhooks and delete usersignup
-				Expect(f.AsKubeAdmin.CommonController.Gitlab.CloseMergeRequest(projectID, mrID)).NotTo(HaveOccurred())
-				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteBranch(projectID, componentBaseBranchName)).NotTo(HaveOccurred())
-				Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteWebhooks(projectID, f.ClusterAppDomain)).NotTo(HaveOccurred())
+				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 			}
+
+			// Cleanup test: close MR if opened, delete created branch, delete associated Webhooks
+			Expect(f.AsKubeAdmin.CommonController.Gitlab.CloseMergeRequest(projectID, mrID)).NotTo(HaveOccurred())
+			Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteBranch(projectID, componentBaseBranchName)).NotTo(HaveOccurred())
+			Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteWebhooks(projectID, f.ClusterAppDomain)).NotTo(HaveOccurred())
 		})
 
 		When("a new Component with specified custom branch is created", Label("custom-branch"), func() {
