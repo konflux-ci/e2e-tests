@@ -303,7 +303,8 @@ func (ci CI) TestE2E() error {
 	}
 
 	// Eventually we'll introduce mage rules for all repositories, so this condition won't be needed anymore
-	if pr.RepoName == "e2e-tests" || pr.RepoName == "integration-service" || pr.RepoName == "release-service" {
+	if pr.RepoName == "e2e-tests" || pr.RepoName == "integration-service" ||
+		pr.RepoName == "release-service" || pr.RepoName == "image-controller" {
 		return engine.MageEngine.RunRulesOfCategory("ci", rctx)
 	}
 
