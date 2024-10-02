@@ -37,7 +37,7 @@ var BuildServiceRepoSetDefaultSettingsRule = rulesengine.Rule{Name: "General Req
 			klog.Info("setting up env vars for deploying component image")
 			return nil
 		}
-		rctx.ComponentEnvVarPrefix = "IMAGE_CONTROLLER"
+		rctx.ComponentEnvVarPrefix = "BUILD_SERVICE"
 		// TODO keep only "KONFLUX_CI" option once we migrate off openshift-ci
 		if os.Getenv("KONFLUX_CI") == "true" {
 			rctx.ComponentImageTag = fmt.Sprintf("on-pr-%s", rctx.PrCommitSha)
