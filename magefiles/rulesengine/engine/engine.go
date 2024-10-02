@@ -20,6 +20,7 @@ var MageEngine = rulesengine.RuleEngine{
 		"release-service":     repos.ReleaseServiceCICatalog,
 		"integration-service": repos.IntegrationServiceCICatalog,
 		"image-controller":    repos.ImageControllerCICatalog,
+		"build-service":       repos.BuildServiceCICatalog,
 		// TODO: to be implemented in a follow-up PR
 		//"infra-deployments": repos.InfraDeploymentsCIChainCatalog,
 	},
