@@ -32,7 +32,11 @@ jobs:
         STAGING_USERS_2: ${{ secrets.STAGING_USERS_2 }}
         STAGING_USERS_3: ${{ secrets.STAGING_USERS_3 }}
         STAGING_USERS_4: ${{ secrets.STAGING_USERS_4 }}
-      run: ./ci-scripts/merge-json.sh $STAGING_USERS_1 $STAGING_USERS_2 $STAGING_USERS_3 $STAGING_USERS_4
+        STAGING_USERS_5: ${{ secrets.STAGING_USERS_5 }}
+        STAGING_USERS_6: ${{ secrets.STAGING_USERS_6 }}
+        STAGING_USERS_7: ${{ secrets.STAGING_USERS_7 }}
+        STAGING_USERS_8: ${{ secrets.STAGING_USERS_8 }}
+      run: ./ci-scripts/merge-json.sh $STAGING_USERS_1 $STAGING_USERS_2 $STAGING_USERS_3 $STAGING_USERS_4 $STAGING_USERS_5 $STAGING_USERS_6 $STAGING_USERS_7 $STAGING_USERS_8
 
     - name: Run Load Test
       working-directory: ./tests/load-tests
