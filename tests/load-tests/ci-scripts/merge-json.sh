@@ -17,6 +17,8 @@ for var in $@; do
     let n++
 done
 
+ls -al
+
 # Merge all the pre_N.json files into users.json
 jq -s '.[]' pre_*.json | jq -s 'add' > users.json
 
