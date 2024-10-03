@@ -69,6 +69,19 @@ const (
 	// Cert auth for accessing Pyxis stage external registry
 	PYXIS_STAGE_CERT_ENV string = "PYXIS_STAGE_CERT"
 
+
+	// Key auth for accessing exodus prod
+	EXODUS_PROD_KEY_ENV string = "EXODUS_PROD_KEY"
+
+	// Cert auth for accessing exodus prod
+	EXODUS_PROD_CERT_ENV string = "EXODUS_PROD_CERT"
+
+	// Content GateWay username
+	CGW_USERNAME_ENV string = "CGW_USERNAME"
+
+	// Content GateWay token
+	CGW_TOKEN_ENV string = "CGW_TOKEN"
+
 	// Offline/refresh token used for getting Keycloak token in order to authenticate against stage/prod cluster
 	// More details: https://access.redhat.com/articles/3626371
 	OFFLINE_TOKEN_ENV = "OFFLINE_TOKEN"
