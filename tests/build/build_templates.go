@@ -669,10 +669,18 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						pr, err := kubeadminClient.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
 						Expect(err).NotTo(HaveOccurred())
 						defer func(pr *tektonpipeline.PipelineRun) {
+							err = kubeadminClient.TektonController.RemoveFinalizerFromPipelineRun(pr, constants.E2ETestFinalizerName)
+							if err != nil {
+								GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pr.GetName(), err)
+							}
 							// Avoid blowing up PipelineRun usage
 							err := kubeadminClient.TektonController.DeletePipelineRun(pr.Name, pr.Namespace)
 							Expect(err).NotTo(HaveOccurred())
 						}(pr)
+
+						err = kubeadminClient.TektonController.AddFinalizerToPipelineRun(pr, constants.E2ETestFinalizerName)
+						Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error while adding finalizer %q to the pipelineRun %q", constants.E2ETestFinalizerName, pr.GetName()))
+
 						Expect(kubeadminClient.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(Succeed())
 
 						// Refresh our copy of the PipelineRun for latest results
