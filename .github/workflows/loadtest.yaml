@@ -68,5 +68,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: rhtap-load-test-stage
-        path: |
-          ${{ env.ARTIFACT_DIR }}
+        path: ${{ env.ARTIFACT_DIR }}
