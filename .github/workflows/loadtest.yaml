@@ -65,7 +65,8 @@ jobs:
       run: ls -la ${{ env.ARTIFACT_DIR }}
 
     - name: Archive artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: rhtap-load-test-stage
         path: ${{ env.ARTIFACT_DIR }}
+        include-hidden-files: true
