@@ -3,6 +3,7 @@ package common
 import (
 	"fmt"
 
+	"github.com/konflux-ci/e2e-tests/pkg/clients/git"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/gitlab"
 	kubeCl "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
@@ -15,6 +16,7 @@ type SuiteController struct {
 	// Wrap K8S client go to interact with Kube cluster
 	*kubeCl.CustomClient
 
+	Git git.Client
 	// Github client to interact with GH apis
 	Github *github.Github
 	Gitlab *gitlab.GitlabClient
@@ -36,8 +38,8 @@ func NewSuiteController(kubeC *kubeCl.CustomClient) (*SuiteController, error) {
 	}
 
 	return &SuiteController{
-		kubeC,
-		gh,
-		gl,
+		CustomClient: kubeC,
+		Github:       gh,
+		Gitlab:       gl,
 	}, nil
 }
