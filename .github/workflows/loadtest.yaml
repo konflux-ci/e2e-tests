@@ -17,7 +17,7 @@ jobs:
   load_test:
     runs-on: ubuntu-latest
     env:
-      ARTIFACT_DIR: ./tests/load-test/.artifacts
+      ARTIFACT_DIR: ${{ github.workspace }}/tests/load-test/.artifacts
 
     steps:
     - name: Checkout code
