@@ -3,12 +3,15 @@ name: CI Stage Load Test
 on:
   workflow_dispatch:
     inputs:
-      concurrency:
+      scenario:
         type: string
-        description: Number of concurrent user journey threads
-      journey_repeats:
-        type: string
-        description: Number of sequential user journey repetitions
+        description: Key=Value-space separated config for the test run.
+      # concurrency:
+      #   type: string
+      #   description: Number of concurrent user journey threads
+      # journey_repeats:
+      #   type: string
+      #   description: Number of sequential user journey repetitions
 
 jobs:
   load_test:
