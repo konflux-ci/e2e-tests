@@ -41,9 +41,12 @@ jobs:
     - name: Run Load Test
       working-directory: ./tests/load-tests
       env:
-        CONCURRENCY: ${{ github.event.inputs.concurrency }}
-        JOURNEY_REPEATS: ${{ github.event.inputs.journey_repeats }}
+        MY_GITHUB_ORG: ${{ env.MY_GITHUB_ORG }}
+        SCENARIO: ${{ github.event.inputs.scenario }}
+        # CONCURRENCY: ${{ github.event.inputs.concurrency }}
+        # JOURNEY_REPEATS: ${{ github.event.inputs.journey_repeats }}
       run: |
+        export $SCENARIO
         ./run-stage.sh
 
     - name: Collect results
