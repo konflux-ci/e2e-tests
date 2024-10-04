@@ -61,6 +61,9 @@ jobs:
         export $SCENARIO
         ./ci-scripts/stage/collect-results.sh ${CONCURRENCY:-1} .
 
+    - name: List files in the directory
+      run: ls -la ${{ env.ARTIFACT_DIR }}
+
     - name: Archive artifacts
       uses: actions/upload-artifact@v3
       with:
