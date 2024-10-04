@@ -6,9 +6,9 @@ on:
       scenario:
         type: string
         description: Key=Value-space separated config for the test run.
-      # concurrency:
-      #   type: string
-      #   description: Number of concurrent user journey threads
+      github_org:
+        type: string
+        description: Github Organization for cloning repository.
       # journey_repeats:
       #   type: string
       #   description: Number of sequential user journey repetitions
@@ -44,10 +44,8 @@ jobs:
     - name: Run Load Test
       working-directory: ./tests/load-tests
       env:
-        MY_GITHUB_ORG: ${{ env.MY_GITHUB_ORG }}
+        MY_GITHUB_ORG: ${{ github.event.inputs.github_org }}
         SCENARIO: ${{ github.event.inputs.scenario }}
-        # CONCURRENCY: ${{ github.event.inputs.concurrency }}
-        # JOURNEY_REPEATS: ${{ github.event.inputs.journey_repeats }}
       run: |
         export $SCENARIO
         ./run-stage.sh
