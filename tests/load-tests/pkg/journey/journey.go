@@ -79,18 +79,18 @@ func Setup(fn func(*MainContext), opts *options.Opts) (string, error) {
 
 	threadsWG.Wait()
 
+	// If we are supposed to only purge resources, now when frameworks are initialized, we are done
+	if opts.PurgeOnly {
+		logging.Logger.Info("Skipping rest of user journey as we were asked to just purge resources")
+		return "", nil
+	}
+
 	// Fork repositories sequentially as GitHub do not allow more than 3 running forks in parallel anyway
 	for _, threadCtx := range MainContexts {
 		_, err = logging.Measure(HandleRepoForking, threadCtx)
 		if err != nil {
 			return "", err
 		}
-	}
-
-	// If we are supposed to only purge resources, now when frameworks are initialized, we are done
-	if opts.PurgeOnly {
-		logging.Logger.Info("Skipping rest of user journey as we were asked to just purge resources")
-		return "", nil
 	}
 
 	threadsWG.Add(opts.Concurrency)
