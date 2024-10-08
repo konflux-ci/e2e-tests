@@ -303,7 +303,9 @@ func (ci CI) TestE2E() error {
 	}
 
 	// Eventually we'll introduce mage rules for all repositories, so this condition won't be needed anymore
-	if pr.RepoName == "e2e-tests" || pr.RepoName == "integration-service" || pr.RepoName == "release-service" {
+	if pr.RepoName == "e2e-tests" || pr.RepoName == "integration-service" ||
+		pr.RepoName == "release-service" || pr.RepoName == "image-controller" ||
+		pr.RepoName == "build-service" {
 		return engine.MageEngine.RunRulesOfCategory("ci", rctx)
 	}
 
@@ -1293,7 +1295,7 @@ func CleanWorkload() error {
 
 func runTests(labelsToRun string, junitReportFile string) error {
 
-	ginkgoArgs := []string{"-p", "--output-interceptor-mode=none",
+	ginkgoArgs := []string{"-p", "--output-interceptor-mode=none", "--no-color",
 		"--timeout=90m", fmt.Sprintf("--output-dir=%s", artifactDir),
 		"--junit-report=" + junitReportFile, "--label-filter=" + labelsToRun}
 

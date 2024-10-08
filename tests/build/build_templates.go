@@ -362,8 +362,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			})
 
 			It("should push Dockerfile to registry", Label(buildTemplatesTestLabel), func() {
-				// Once https://issues.redhat.com/browse/STONEBLD-2795 is resolved, apply this check for hermetic scenario as well
-				if !scenario.EnableHermetic && !IsFBCBuildPipeline(pipelineBundleName) {
+				if !IsFBCBuildPipeline(pipelineBundleName) {
 					ensureOriginalDockerfileIsPushed(kubeadminClient, pr)
 				}
 			})
@@ -670,10 +669,18 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						pr, err := kubeadminClient.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
 						Expect(err).NotTo(HaveOccurred())
 						defer func(pr *tektonpipeline.PipelineRun) {
+							err = kubeadminClient.TektonController.RemoveFinalizerFromPipelineRun(pr, constants.E2ETestFinalizerName)
+							if err != nil {
+								GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pr.GetName(), err)
+							}
 							// Avoid blowing up PipelineRun usage
 							err := kubeadminClient.TektonController.DeletePipelineRun(pr.Name, pr.Namespace)
 							Expect(err).NotTo(HaveOccurred())
 						}(pr)
+
+						err = kubeadminClient.TektonController.AddFinalizerToPipelineRun(pr, constants.E2ETestFinalizerName)
+						Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error while adding finalizer %q to the pipelineRun %q", constants.E2ETestFinalizerName, pr.GetName()))
+
 						Expect(kubeadminClient.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(Succeed())
 
 						// Refresh our copy of the PipelineRun for latest results
@@ -845,7 +852,7 @@ func ensureOriginalDockerfileIsPushed(hub *framework.ControllerHub, pr *tektonpi
 	}.String()
 	exists, err := build.DoesTagExistsInQuay(dockerfileImage)
 	Expect(err).Should(Succeed())
-	Expect(exists).Should(BeTrue())
+	Expect(exists).Should(BeTrue(), fmt.Sprintf("image doesn't exist: %s", dockerfileImage))
 
 	// Ensure the original Dockerfile used for build was pushed
 	c := hub.CommonController.KubeRest()
@@ -860,7 +867,7 @@ func ensureOriginalDockerfileIsPushed(hub *framework.ControllerHub, pr *tektonpi
 		if entry.Type().IsRegular() && entry.Name() == "Dockerfile" {
 			content, err := os.ReadFile(filepath.Join(storePath, entry.Name()))
 			Expect(err).Should(Succeed())
-			Expect(content).Should(Equal(originDockerfileContent))
+			Expect(string(content)).Should(Equal(string(originDockerfileContent)))
 			return
 		}
 	}
