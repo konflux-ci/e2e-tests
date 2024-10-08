@@ -76,18 +76,12 @@ func getPaCPull(annotations map[string]string) (string, error) {
 	}
 }
 
-func createComponent(f *framework.Framework, namespace, name, repoUrl, repoRevision, containerContext, containerFile, buildPipelineSelector, appName string, skipInitialChecks, requestConfigurePac, mintmakerDisabled bool) error {
+func createComponent(f *framework.Framework, namespace, name, repoUrl, repoRevision, containerContext, containerFile, buildPipelineSelector, appName string, mintmakerDisabled bool) error {
 	// Prepare annotations to add to component
 	annotationsMap := constants.DefaultDockerBuildPipelineBundle
 	if buildPipelineSelector != "" {
 		// Custom build pipeline selector
 		annotationsMap["build.appstudio.openshift.io/pipeline"] = fmt.Sprintf(`{"name": "docker-build", "bundle": "%s"}`, buildPipelineSelector)
-	}
-	if requestConfigurePac {
-		// This is PaC build
-		for key, value := range constants.ComponentPaCRequestAnnotation {
-			annotationsMap[key] = value
-		}
 	}
 	if mintmakerDisabled {
 		// Stop Mintmaker creating update PRs for your component
@@ -110,7 +104,7 @@ func createComponent(f *framework.Framework, namespace, name, repoUrl, repoRevis
 		},
 	}
 
-	_, err := f.AsKubeDeveloper.HasController.CreateComponent(componentObj, namespace, "", "", appName, skipInitialChecks, annotationsMap)
+	_, err := f.AsKubeDeveloper.HasController.CreateComponent(componentObj, namespace, "", "", appName, false, annotationsMap)
 	if err != nil {
 		return fmt.Errorf("Unable to create the Component %s: %v", name, err)
 	}
@@ -204,7 +198,7 @@ func listAndDeletePipelineRunsWithTimeout(f *framework.Framework, namespace, app
 }
 
 // This handles post-component creation tasks for multi-arch PaC workflow
-func utilityMultiArchComponentCleanup(f *framework.Framework, namespace, appName, compName, repoUrl, repoRev string, mergeReqNum int, placeholders *map[string]string) error {
+func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, appName, compName, repoUrl, repoRev string, mergeReqNum int, placeholders *map[string]string) error {
 	var repoName string
 	var err error
 
@@ -213,7 +207,7 @@ func utilityMultiArchComponentCleanup(f *framework.Framework, namespace, appName
 	if err != nil {
 		return fmt.Errorf("Error deleting on-pull-request default PipelineRun in namespace %s: %v", namespace, err)
 	}
-	logging.Logger.Debug("Multi-arch workflow: Cleaned up (first cleanup) for %s/%s/%s", namespace, appName, compName)
+	logging.Logger.Debug("Repo-templating workflow: Cleaned up (first cleanup) for %s/%s/%s", namespace, appName, compName)
 
 	// Merge default PaC pipelines PR
 	repoName, err = getRepoNameFromRepoUrl(repoUrl)
@@ -224,21 +218,21 @@ func utilityMultiArchComponentCleanup(f *framework.Framework, namespace, appName
 	if err != nil {
 		return fmt.Errorf("Merging %d failed: %v", mergeReqNum, err)
 	}
-	logging.Logger.Debug("Multi-arch workflow: Merged PR %d in %s", mergeReqNum, repoName)
+	logging.Logger.Debug("Repo-templating workflow: Merged PR %d in %s", mergeReqNum, repoName)
 
 	// Delete all pipeline runs as we do not care about these
 	err = listAndDeletePipelineRunsWithTimeout(f, namespace, appName, compName, "", 1)
 	if err != nil {
 		return fmt.Errorf("Error deleting on-push merged PipelineRun in namespace %s: %v", namespace, err)
 	}
-	logging.Logger.Debug("Multi-arch workflow: Cleaned up (second cleanup) for %s/%s/%s", namespace, appName, compName)
+	logging.Logger.Debug("Repo-templating workflow: Cleaned up (second cleanup) for %s/%s/%s", namespace, appName, compName)
 
 	// Template our multi-arch PaC files
 	shaMap, err := templateFiles(f, repoUrl, repoRev, placeholders)
 	if err != nil {
 		return fmt.Errorf("Error templating PaC files: %v", err)
 	}
-	logging.Logger.Debug("Multi-arch workflow: Our PaC files templated in %s", repoUrl)
+	logging.Logger.Debug("Repo-templating workflow: Our PaC files templated in %s", repoUrl)
 
 	// Delete pipeline run we do not care about
 	for file, sha := range *shaMap {
@@ -249,7 +243,7 @@ func utilityMultiArchComponentCleanup(f *framework.Framework, namespace, appName
 			}
 		}
 	}
-	logging.Logger.Debug("Multi-arch workflow: Cleaned up (third cleanup) for %s/%s/%s", namespace, appName, compName)
+	logging.Logger.Debug("Repo-templating workflow: Cleaned up (third cleanup) for %s/%s/%s", namespace, appName, compName)
 
 	return nil
 }
@@ -271,37 +265,32 @@ func HandleComponent(ctx *PerComponentContext) error {
 		ctx.ParentContext.ParentContext.Opts.ComponentContainerFile,
 		ctx.ParentContext.ParentContext.Opts.BuildPipelineSelectorBundle,
 		ctx.ParentContext.ApplicationName,
-		ctx.ParentContext.ParentContext.Opts.PipelineSkipInitialChecks,
-		ctx.ParentContext.ParentContext.Opts.PipelineRequestConfigurePac,
 		ctx.ParentContext.ParentContext.Opts.PipelineMintmakerDisabled,
 	)
 	if err != nil {
 		return logging.Logger.Fail(60, "Component failed creation: %v", err)
 	}
 
-	// Validate component and if this is PaC component, get pull request link
-	if ctx.ParentContext.ParentContext.Opts.PipelineRequestConfigurePac {
-		var pullIface interface{}
-		pullIface, err = logging.Measure(
-			getPaCPullNumber,
-			ctx.Framework,
-			ctx.ParentContext.ParentContext.Namespace,
-			ctx.ComponentName,
-		)
-		if err != nil {
-			return logging.Logger.Fail(61, "Component failed validation: %v", err)
-		}
+	var pullIface interface{}
+	pullIface, err = logging.Measure(
+		getPaCPullNumber,
+		ctx.Framework,
+		ctx.ParentContext.ParentContext.Namespace,
+		ctx.ComponentName,
+	)
+	if err != nil {
+		return logging.Logger.Fail(61, "Component failed validation: %v", err)
+	}
 
-		// Get merge request number
-		var ok bool
-		ctx.MergeRequestNumber, ok = pullIface.(int)
-		if !ok {
-			return logging.Logger.Fail(62, "Type assertion failed on pull: %+v", pullIface)
-		}
+	// Get merge request number
+	var ok bool
+	ctx.MergeRequestNumber, ok = pullIface.(int)
+	if !ok {
+		return logging.Logger.Fail(62, "Type assertion failed on pull: %+v", pullIface)
 	}
 
 	// If this is multi-arch build, we do not care about this build, we just merge it, update pipelines and trigger actual multi-arch build
-	if ctx.ParentContext.ParentContext.Opts.MultiarchWorkflow {
+	if ctx.ParentContext.ParentContext.Opts.PipelineRepoTemplating {
 		// Placeholders for template multi-arch PaC pipeline files
 		placeholders := &map[string]string{
 			"NAMESPACE": ctx.ParentContext.ParentContext.Namespace,
@@ -313,7 +302,7 @@ func HandleComponent(ctx *PerComponentContext) error {
 
 		// Skip what we do not care about
 		_, err = logging.Measure(
-			utilityMultiArchComponentCleanup,
+			utilityRepoTemplatingComponentCleanup,
 			ctx.Framework,
 			ctx.ParentContext.ParentContext.Namespace,
 			ctx.ParentContext.ApplicationName,
@@ -324,7 +313,7 @@ func HandleComponent(ctx *PerComponentContext) error {
 			placeholders,
 		)
 		if err != nil {
-			return logging.Logger.Fail(63, "Multi-arch workflow component cleanup failed: %v", err)
+			return logging.Logger.Fail(63, "Repo-templating workflow component cleanup failed: %v", err)
 		}
 
 	}

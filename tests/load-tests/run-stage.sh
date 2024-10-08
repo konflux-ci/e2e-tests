@@ -9,10 +9,8 @@ go run loadtest.go \
     --journey-duration "${JOURNEY_DURATION:-1h}" \
     --journey-repeats "${JOURNEY_REPEATS:-1}" \
     --log-info \
-    --multiarch-workflow="${MULTIARCH_WORKFLOW:-false}" \
+    --pipeline-repo-templating="${PIPELINE_REPO_TEMPLATING:-false}" \
     --output-dir "${OUTPUT_DIR:-.}" \
-    --pipeline-request-configure-pac="${PIPELINE_REQUEST_CONFIGURE_PAC:-false}" \
-    --pipeline-skip-initial-checks="${PIPELINE_SKIP_INITIAL_CHECKS:-true}" \
     --purge="${PURGE:-true}" \
     --quay-repo "${QUAY_REPO:-redhat-user-workloads-stage}" \
     --test-scenario-git-url "${TEST_SCENARIO_GIT_URL:-https://github.com/konflux-ci/integration-examples.git}" \

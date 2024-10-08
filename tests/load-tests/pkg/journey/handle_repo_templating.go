@@ -13,7 +13,13 @@ var fileList = []string{"COMPONENT-pull-request.yaml", "COMPONENT-push.yaml"}
 
 // Parse repo name out of repo url
 func getRepoNameFromRepoUrl(repoUrl string) (string, error) {
-	regex := regexp.MustCompile(`/([^/]+)/?$`)
+	// Answer taken from https://stackoverflow.com/questions/7124778/how-can-i-match-anything-up-until-this-sequence-of-characters-in-a-regular-exp
+	// Tested with these input data:
+	//   repoUrl: https://github.com/XXXXXXXXXXXXXXX/nodejs-devfile-sample.git/, match[1]: nodejs-devfile-sample
+	//   repoUrl: https://github.com/XXXXXXXXXXXXXXX/nodejs-devfile-sample.git, match[1]: nodejs-devfile-sample
+	//   repoUrl: https://github.com/XXXXXXXXXXXXXXX/nodejs-devfile-sample/, match[1]: nodejs-devfile-sample
+	//   repoUrl: https://github.com/XXXXXXXXXXXXXXX/nodejs-devfile-sample, match[1]: nodejs-devfile-sample
+	regex := regexp.MustCompile(`/([^/]+?)(.git)?/?$`)
 	match := regex.FindStringSubmatch(repoUrl)
 	if match != nil {
 		return match[1], nil
@@ -110,11 +116,6 @@ func templateFiles(f *framework.Framework, repoUrl, repoRevision string, placeho
 }
 
 func HandleRepoForking(ctx *MainContext) error {
-	if !ctx.Opts.PipelineRequestConfigurePac {
-		ctx.ComponentRepoUrl = ctx.Opts.ComponentRepoUrl
-		return nil
-	}
-
 	logging.Logger.Debug("Forking repository %s for user %s", ctx.Opts.ComponentRepoUrl, ctx.Username)
 
 	forkUrl, err := ForkRepo(

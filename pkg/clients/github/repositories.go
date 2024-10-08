@@ -181,6 +181,15 @@ func (g *Github) ForkRepository(sourceName, targetName string) (*github.Reposito
 		Organization: g.organization,
 	}
 
+	_, resp, err := g.client.Repositories.Get(ctx, g.organization, sourceName)
+	if err != nil {
+		return nil, fmt.Errorf("Can not validate source repo existence %s/%s: %+v, %v\n", g.organization, sourceName, resp, err)
+	}
+	_, _, err = g.client.Repositories.ListCommits(ctx, g.organization, sourceName, &github.CommitsListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("Can not validate source repo commits %s/%s: %v", g.organization, sourceName, err)
+	}
+
 	err1 := utils.WaitUntilWithInterval(func() (done bool, err error) {
 		fork, resp, err = g.client.Repositories.CreateFork(ctx, g.organization, sourceName, forkOptions)
 		if err != nil {
