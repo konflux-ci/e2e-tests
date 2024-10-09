@@ -26,6 +26,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/magefiles/installation"
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine/engine"
+	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine/repos"
 	"github.com/konflux-ci/e2e-tests/magefiles/upgrade"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/gitlab"
@@ -305,7 +306,7 @@ func (ci CI) TestE2E() error {
 	// Eventually we'll introduce mage rules for all repositories, so this condition won't be needed anymore
 	if pr.RepoName == "e2e-tests" || pr.RepoName == "integration-service" ||
 		pr.RepoName == "release-service" || pr.RepoName == "image-controller" ||
-		pr.RepoName == "build-service" {
+		pr.RepoName == "build-service" || pr.RepoName == "release-service-catalog" {
 		return engine.MageEngine.RunRulesOfCategory("ci", rctx)
 	}
 
@@ -564,7 +565,7 @@ func setRequiredEnvVars() error {
 				if isPRPairingRequired("release-service") {
 					os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", envVarPrefix),
 						"quay.io/redhat-user-workloads/rhtap-release-2-tenant/release-service/release-service")
-					pairedSha := getPairedCommitSha("release-service")
+					pairedSha := repos.GetPairedCommitSha("release-service", rctx)
 					if pairedSha != "" {
 						os.Setenv(fmt.Sprintf("%s_IMAGE_TAG", envVarPrefix), fmt.Sprintf("on-pr-%s", pairedSha))
 					}
@@ -832,25 +833,6 @@ func isPRPairingRequired(repoForPairing string) bool {
 	}
 
 	return false
-}
-
-func getPairedCommitSha(repoForPairing string) string {
-	var pullRequests []gh.PullRequest
-
-	url := fmt.Sprintf("https://api.github.com/repos/redhat-appstudio/%s/pulls?per_page=100", repoForPairing)
-	if err := sendHttpRequestAndParseResponse(url, "GET", &pullRequests); err != nil {
-		klog.Infof("cannot determine %s Github branches for author %s: %v. will stick with the redhat-appstudio/%s main branch for running tests", repoForPairing, pr.RemoteName, err, repoForPairing)
-		return ""
-	}
-
-	for _, pull := range pullRequests {
-		if pull.GetHead().GetRef() == pr.BranchName && pull.GetUser().GetLogin() == pr.RemoteName {
-			return pull.GetHead().GetSHA()
-		}
-	}
-
-	klog.Infof("cannot determine %s commit sha for author %s", repoForPairing, pr.RemoteName)
-	return ""
 }
 
 // Generates ginkgo test suite files under the cmd/ directory.
