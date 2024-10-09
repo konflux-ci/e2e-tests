@@ -9,18 +9,18 @@ var MageEngine = rulesengine.RuleEngine{
 	"tests": {
 		"e2e-repo":                repos.E2ETestRulesCatalog,
 		"infra-deployments":       repos.InfraDeploymentsRulesCatalog,
-		"release-service-catalog": repos.ReleaseServiceCatalogTestRulesCatalog,
 	},
 	"demo": {
 		"local-workflow": repos.DemoCatalog,
 	},
 
 	"ci": {
-		"e2e-repo":            repos.E2ECIChainCatalog,
-		"release-service":     repos.ReleaseServiceCICatalog,
-		"integration-service": repos.IntegrationServiceCICatalog,
-		"image-controller":    repos.ImageControllerCICatalog,
-		"build-service":       repos.BuildServiceCICatalog,
+		"e2e-repo":                repos.E2ECIChainCatalog,
+		"release-service":         repos.ReleaseServiceCICatalog,
+		"release-service-catalog": repos.ReleaseServiceCatalogCICatalog,
+		"integration-service":     repos.IntegrationServiceCICatalog,
+		"image-controller":        repos.ImageControllerCICatalog,
+		"build-service":           repos.BuildServiceCICatalog,
 		// TODO: to be implemented in a follow-up PR
 		//"infra-deployments": repos.InfraDeploymentsCIChainCatalog,
 	},
