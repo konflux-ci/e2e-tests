@@ -2,15 +2,14 @@ package build
 
 import (
 	"fmt"
-	"k8s.io/api/core/v1"
-	"os"
-	"strconv"
-	"strings"
-
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"k8s.io/api/core/v1"
+	"os"
+	"strconv"
+	"strings"
 )
 
 // resolve the git url and revision from a pull request. If not found, return a default
