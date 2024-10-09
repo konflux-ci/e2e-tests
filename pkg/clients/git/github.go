@@ -103,3 +103,15 @@ func (g *GitHubClient) CleanupWebhooks(repository, clusterAppDomain string) erro
 	}
 	return nil
 }
+
+func (g *GitHubClient) DeleteBranchAndClosePullRequest(repository string, prNumber int) error {
+	pr, err := g.Github.GetPullRequest(repository, prNumber)
+	if err != nil {
+		return err
+	}
+	err = g.DeleteBranch(repository, pr.Head.GetRef())
+	if err != nil && strings.Contains(err.Error(), "Reference does not exist") {
+		return nil
+	}
+	return err
+}
