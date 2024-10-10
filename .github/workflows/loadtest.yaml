@@ -44,6 +44,7 @@ jobs:
     - name: Run Load Test
       working-directory: ./tests/load-tests
       env:
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         MY_GITHUB_ORG: ${{ github.event.inputs.github_org }}
         SCENARIO: ${{ github.event.inputs.scenario }}
       run: |
