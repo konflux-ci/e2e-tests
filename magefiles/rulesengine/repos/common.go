@@ -88,6 +88,25 @@ func ExecuteTestAction(rctx *rulesengine.RuleCtx) error {
 
 }
 
+func GetPairedCommitSha(repoForPairing string, rctx *rulesengine.RuleCtx) string {
+	var pullRequests []gh.PullRequest
+
+	url := fmt.Sprintf("https://api.github.com/repos/konflux-ci/%s/pulls?per_page=100", repoForPairing)
+	if err := sendHttpRequestAndParseResponse(url, "GET", &pullRequests); err != nil {
+		klog.Infof("cannot determine %s Github branches for author %s: %v. will stick with the konflux-ci/%s main branch for running tests", repoForPairing, rctx.PrRemoteName, err, repoForPairing)
+		return ""
+	}
+
+	for _, pull := range pullRequests {
+		if pull.GetHead().GetRef() == rctx.PrBranchName && pull.GetUser().GetLogin() == rctx.PrRemoteName {
+			return pull.GetHead().GetSHA()
+		}
+	}
+
+	klog.Infof("cannot determine %s commit sha for author %s", repoForPairing, rctx.PrRemoteName)
+	return ""
+}
+
 func IsPeriodicJob(rctx *rulesengine.RuleCtx) (bool, error) {
 
 	return rctx.JobType == "periodic", nil
