@@ -136,6 +136,7 @@ yq -i e 'del(.metadata.namespace)' global-pull-secret.yaml
 oc registry login --registry=docker.io --auth-basic="$DOCKER_IO_AUTH" --to=./global-pull-secret.json
 
 namespace_sa_names=$(cat << 'EOF'
+minio-operator|console-sa
 minio-operator|minio-operator
 tekton-results|storage-sa
 EOF
@@ -143,8 +144,10 @@ EOF
 while IFS='|' read -r ns sa_name; do
     oc create namespace "$ns" --dry-run=client -o yaml | oc apply -f -
     oc create sa "$sa_name" -n "$ns" --dry-run=client -o yaml | oc apply -f -
-    oc apply -f global-pull-secret.yaml -n "$ns"
-    oc set data secret/pull-secret -n "$ns" --from-file=.dockerconfigjson=./global-pull-secret.json
+    if ! oc get secret/pull-secret -n "$ns" &> /dev/null; then
+        oc apply -f global-pull-secret.yaml -n "$ns"
+        oc set data secret/pull-secret -n "$ns" --from-file=.dockerconfigjson=./global-pull-secret.json
+    fi
     oc secrets link "$sa_name" pull-secret --for=pull -n "$ns"
 done <<< "$namespace_sa_names"
 
