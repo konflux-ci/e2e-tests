@@ -43,6 +43,7 @@ func ExecuteTestAction(rctx *rulesengine.RuleCtx) error {
 	} else {
 		// Set the number of parallel test processes
 		rctx.CLIConfig.Procs = 20
+		rctx.NoColor = true
 	}
 
 	var suiteConfig = rctx.SuiteConfig
