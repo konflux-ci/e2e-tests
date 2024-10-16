@@ -2,10 +2,11 @@ package build
 
 import (
 	"fmt"
-	"k8s.io/api/core/v1"
 	"os"
 	"strconv"
 	"strings"
+
+	"k8s.io/api/core/v1"
 
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
