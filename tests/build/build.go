@@ -7,30 +7,28 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xanzy/go-gitlab"
-
-	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
-	"github.com/openshift/library-go/pkg/image/reference"
-	"k8s.io/apimachinery/pkg/runtime"
-
+	"github.com/devfile/library/v2/pkg/util"
 	"github.com/google/go-github/v44/github"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
-	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
-	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
-	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
-
-	"github.com/devfile/library/v2/pkg/util"
-	"github.com/konflux-ci/e2e-tests/pkg/constants"
-	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/konflux-ci/build-service/controllers"
-	"github.com/konflux-ci/e2e-tests/pkg/framework"
+	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/openshift/library-go/pkg/image/reference"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	gitlab "github.com/xanzy/go-gitlab"
 	v1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/konflux-ci/e2e-tests/pkg/clients/git"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 )
 
 var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-service"), func() {
@@ -1453,7 +1451,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 		})
 	})
 
-	Describe("test of component update with renovate", Ordered, Label("renovate", "multi-component"), func() {
+	DescribeTableSubtree("test of component update with renovate", Ordered, Label("renovate", "multi-component"), func(gitProvider git.GitProvider, gitPrefix string) {
 		type multiComponent struct {
 			repoName        string
 			baseBranch      string
@@ -1470,16 +1468,20 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 		components := []*multiComponent{&ChildComponentDef, &ParentComponentDef}
 		var applicationName, testNamespace, mergeResultSha, imageRepoName string
 		var prNumber int
-		var mergeResult *github.PullRequestMergeResult
+		var mergeResult *git.PullRequest
 		var timeout time.Duration
 		var parentFirstDigest string
 		var parentPostPacMergeDigest string
 		var parentImageNameWithNoDigest string
 		const distributionRepository = "quay.io/redhat-appstudio-qe/release-repository"
 		quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "")
+		var parentRepository, childRepository string
 
 		var managedNamespace string
 		var buildPipelineAnnotation map[string]string
+
+		var gitClient git.Client
+		var componentDependenciesChildRepository string
 
 		BeforeAll(func() {
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
@@ -1492,18 +1494,39 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			branchString := util.GenerateRandomString(4)
 			ParentComponentDef.componentBranch = fmt.Sprintf("multi-component-parent-base-%s", branchString)
 			ChildComponentDef.componentBranch = fmt.Sprintf("multi-component-child-base-%s", branchString)
-			ParentComponentDef.gitRepo = fmt.Sprintf(githubUrlFormat, githubOrg, ParentComponentDef.repoName)
-			ChildComponentDef.gitRepo = fmt.Sprintf(githubUrlFormat, githubOrg, ChildComponentDef.repoName)
-			ParentComponentDef.componentName = fmt.Sprintf("multi-component-parent-%s", branchString)
-			ChildComponentDef.componentName = fmt.Sprintf("multi-component-child-%s", branchString)
+			switch gitProvider {
+			case git.GitHubProvider:
+				gitClient = git.NewGitHubClient(f.AsKubeAdmin.CommonController.Github)
+
+				ParentComponentDef.gitRepo = fmt.Sprintf(githubUrlFormat, githubOrg, ParentComponentDef.repoName)
+				parentRepository = ParentComponentDef.repoName
+
+				ChildComponentDef.gitRepo = fmt.Sprintf(githubUrlFormat, githubOrg, ChildComponentDef.repoName)
+				childRepository = ChildComponentDef.repoName
+
+				componentDependenciesChildRepository = componentDependenciesChildRepoName
+			case git.GitLabProvider:
+				gitClient = git.NewGitlabClient(f.AsKubeAdmin.CommonController.Gitlab)
+
+				parentRepository = fmt.Sprintf("%s/%s", gitlabOrg, ParentComponentDef.repoName)
+				ParentComponentDef.gitRepo = fmt.Sprintf(gitlabUrlFormat, parentRepository)
+
+				childRepository = fmt.Sprintf("%s/%s", gitlabOrg, ChildComponentDef.repoName)
+				ChildComponentDef.gitRepo = fmt.Sprintf(gitlabUrlFormat, childRepository)
+
+				componentDependenciesChildRepository = fmt.Sprintf("%s/%s", gitlabOrg, componentDependenciesChildRepoName)
+			}
+			ParentComponentDef.componentName = fmt.Sprintf("%s-multi-component-parent-%s", gitPrefix, branchString)
+			ChildComponentDef.componentName = fmt.Sprintf("%s-multi-component-child-%s", gitPrefix, branchString)
 			ParentComponentDef.pacBranchName = constants.PaCPullRequestBranchPrefix + ParentComponentDef.componentName
 			ChildComponentDef.pacBranchName = constants.PaCPullRequestBranchPrefix + ChildComponentDef.componentName
 
-			for _, i := range components {
-				println("creating branch " + i.componentBranch)
-				err = f.AsKubeAdmin.CommonController.Github.CreateRef(i.repoName, i.baseBranch, i.baseRevision, i.componentBranch)
-				Expect(err).ShouldNot(HaveOccurred())
-			}
+			err = gitClient.CreateBranch(parentRepository, ParentComponentDef.baseBranch, ParentComponentDef.baseRevision, ParentComponentDef.componentBranch)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			err = gitClient.CreateBranch(childRepository, ChildComponentDef.baseBranch, ChildComponentDef.baseRevision, ChildComponentDef.componentBranch)
+			Expect(err).ShouldNot(HaveOccurred())
+
 			// Also setup a release namespace so we can test nudging of distribution repository images
 			managedNamespace = testNamespace + "-managed"
 			_, err = f.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
@@ -1538,6 +1561,15 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			// get the build pipeline bundle annotation
 			buildPipelineAnnotation = build.GetDockerBuildPipelineBundle()
 
+			if gitProvider == git.GitLabProvider {
+				gitlabToken := utils.GetEnv(constants.GITLAB_BOT_TOKEN_ENV, "")
+				Expect(gitlabToken).ShouldNot(BeEmpty())
+
+				secretAnnotations := map[string]string{}
+
+				err = build.CreateGitlabBuildSecret(f, "pipelines-as-code-secret", secretAnnotations, gitlabToken)
+				Expect(err).ShouldNot(HaveOccurred())
+			}
 		})
 
 		AfterAll(func() {
@@ -1547,16 +1579,17 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			}
 			Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).ShouldNot(HaveOccurred())
 
+			repositories := []string{childRepository, parentRepository}
 			// Delete new branches created by renovate and a testing branch used as a component's base branch
-			for _, c := range components {
+			for i, c := range components {
 				println("deleting branch " + c.componentBranch)
-				err = f.AsKubeAdmin.CommonController.Github.DeleteRef(c.repoName, c.componentBranch)
+				err = gitClient.DeleteBranch(repositories[i], c.componentBranch)
 				if err != nil {
-					Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("Branch Not Found")))
 				}
-				err = f.AsKubeAdmin.CommonController.Github.DeleteRef(c.repoName, c.pacBranchName)
+				err = gitClient.DeleteBranch(repositories[i], c.pacBranchName)
 				if err != nil {
-					Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("Branch Not Found")))
 				}
 			}
 		})
@@ -1623,12 +1656,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				interval := time.Second * 1
 
 				Eventually(func() bool {
-					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(ChildComponentDef.repoName)
+					prs, err := gitClient.ListPullRequests(childRepository)
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, pr := range prs {
-						if pr.Head.GetRef() == ChildComponentDef.pacBranchName {
-							prNumber = pr.GetNumber()
+						if pr.SourceBranch == ChildComponentDef.pacBranchName {
+							prNumber = pr.Number
 							return true
 						}
 					}
@@ -1638,42 +1671,47 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 			It(fmt.Sprintf("Merging the PaC PR should be successful for child component %s", ChildComponentDef.componentName), func() {
 				Eventually(func() error {
-					mergeResult, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(ChildComponentDef.repoName, prNumber)
+					mergeResult, err = gitClient.MergePullRequest(childRepository, prNumber)
 					return err
 				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, ChildComponentDef.repoName))
 
-				mergeResultSha = mergeResult.GetSHA()
+				mergeResultSha = mergeResult.MergeCommitSHA
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
 			})
 			// Now we have an initial image we create a dockerfile in the child that references this new image
 			// This is the file that will be updated by the nudge
-			It("create dockerfile and yaml manifest that references build and distribution repositorys", func() {
+			It("create dockerfile and yaml manifest that references build and distribution repositories", func() {
 
 				imageRepoName, err = f.AsKubeAdmin.ImageController.GetImageName(testNamespace, ParentComponentDef.componentName)
 				Expect(err).ShouldNot(HaveOccurred(), "failed to read image repo for component %s", ParentComponentDef.componentName)
 				Expect(imageRepoName).ShouldNot(BeEmpty(), "image repo name is empty")
 
 				parentImageNameWithNoDigest = "quay.io/" + quayOrg + "/" + imageRepoName
-				_, err = f.AsKubeAdmin.CommonController.Github.CreateFile(ChildComponentDef.repoName, "Dockerfile.tmp", "FROM "+parentImageNameWithNoDigest+"@"+parentFirstDigest+"\nRUN echo hello\n", ChildComponentDef.pacBranchName)
+				err = gitClient.CreateFile(childRepository, "Dockerfile.tmp", "FROM "+parentImageNameWithNoDigest+"@"+parentFirstDigest+"\nRUN echo hello\n", ChildComponentDef.pacBranchName)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				_, err = f.AsKubeAdmin.CommonController.Github.CreateFile(ChildComponentDef.repoName, "manifest.yaml", "image: "+distributionRepository+"@"+parentFirstDigest, ChildComponentDef.pacBranchName)
+				err = gitClient.CreateFile(childRepository, "manifest.yaml", "image: "+distributionRepository+"@"+parentFirstDigest, ChildComponentDef.pacBranchName)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				_, err = f.AsKubeAdmin.CommonController.Github.CreatePullRequest(ChildComponentDef.repoName, "update to build repo image", "update to build repo image", ChildComponentDef.pacBranchName, ChildComponentDef.componentBranch)
+				_, err = gitClient.CreatePullRequest(childRepository, "updated to build repo image", "update to build repo image", ChildComponentDef.pacBranchName, ChildComponentDef.componentBranch)
 				Expect(err).ShouldNot(HaveOccurred())
-				prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(ChildComponentDef.repoName)
+
+				prs, err := gitClient.ListPullRequests(childRepository)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				prno := -1
 				for _, pr := range prs {
-					if pr.Head.GetRef() == ChildComponentDef.pacBranchName {
-						prno = pr.GetNumber()
+					if pr.SourceBranch == ChildComponentDef.pacBranchName {
+						prno = pr.Number
 					}
 				}
 				Expect(prno).ShouldNot(Equal(-1))
-				_, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(ChildComponentDef.repoName, prno)
-				Expect(err).ShouldNot(HaveOccurred())
+
+				// GitLab merge fails if the pipeline run has not finished
+				Eventually(func() error {
+					_, err = gitClient.MergePullRequest(childRepository, prno)
+					return err
+				}, 10*time.Minute, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("unable to merge PR #%d in %s", prno, ChildComponentDef.repoName))
 
 			})
 			// This actually happens immediately, but we only need the PR number now
@@ -1682,12 +1720,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				interval := time.Second * 1
 
 				Eventually(func() bool {
-					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(ParentComponentDef.repoName)
+					prs, err := gitClient.ListPullRequests(parentRepository)
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, pr := range prs {
-						if pr.Head.GetRef() == ParentComponentDef.pacBranchName {
-							prNumber = pr.GetNumber()
+						if pr.SourceBranch == ParentComponentDef.pacBranchName {
+							prNumber = pr.Number
 							return true
 						}
 					}
@@ -1696,11 +1734,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 			It(fmt.Sprintf("Merging the PaC PR should be successful for parent component %s", ParentComponentDef.componentName), func() {
 				Eventually(func() error {
-					mergeResult, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(ParentComponentDef.repoName, prNumber)
+					mergeResult, err = gitClient.MergePullRequest(parentRepository, prNumber)
 					return err
 				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, ParentComponentDef.repoName))
 
-				mergeResultSha = mergeResult.GetSHA()
+				mergeResultSha = mergeResult.MergeCommitSHA
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
 			})
 			// Now the PR is merged this will kick off another build. The result of this build is what we want to update in dockerfile we created
@@ -1736,12 +1774,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				interval := time.Second * 1
 
 				Eventually(func() bool {
-					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(componentDependenciesChildRepoName)
+					prs, err := gitClient.ListPullRequests(componentDependenciesChildRepository)
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, pr := range prs {
-						if strings.Contains(pr.Head.GetRef(), ParentComponentDef.componentName) {
-							prNumber = pr.GetNumber()
+						if strings.Contains(pr.SourceBranch, ParentComponentDef.componentName) {
+							prNumber = pr.Number
 							return true
 						}
 					}
@@ -1750,11 +1788,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 			It(fmt.Sprintf("merging the PR should be successful for child component %s", ChildComponentDef.componentName), func() {
 				Eventually(func() error {
-					mergeResult, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(componentDependenciesChildRepoName, prNumber)
+					mergeResult, err = gitClient.MergePullRequest(componentDependenciesChildRepository, prNumber)
 					return err
 				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging nudge pull request #%d in repo %s", prNumber, componentDependenciesChildRepoName))
 
-				mergeResultSha = mergeResult.GetSHA()
+				mergeResultSha = mergeResult.MergeCommitSHA
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
 
 			})
@@ -1762,23 +1800,21 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			It("Verify the nudge updated the contents", func() {
 
 				GinkgoWriter.Printf("Verifying Dockerfile.tmp updated to sha %s", parentPostPacMergeDigest)
-				contents, err := f.AsKubeAdmin.CommonController.Github.GetFile(ChildComponentDef.repoName, "Dockerfile.tmp", ChildComponentDef.componentBranch)
+				content, err := gitClient.GetFileContent(childRepository, "Dockerfile.tmp", ChildComponentDef.componentBranch)
 				Expect(err).ShouldNot(HaveOccurred())
-				content, err := contents.GetContent()
-				Expect(err).ShouldNot(HaveOccurred())
+				GinkgoWriter.Printf("content: %s\n", content)
 				Expect(content).Should(Equal("FROM quay.io/" + quayOrg + "/" + imageRepoName + "@" + parentPostPacMergeDigest + "\nRUN echo hello\n"))
 
-				contents, err = f.AsKubeAdmin.CommonController.Github.GetFile(ChildComponentDef.repoName, "manifest.yaml", ChildComponentDef.componentBranch)
-				Expect(err).ShouldNot(HaveOccurred())
-				content, err = contents.GetContent()
+				content, err = gitClient.GetFileContent(childRepository, "manifest.yaml", ChildComponentDef.componentBranch)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(content).Should(Equal("image: " + distributionRepository + "@" + parentPostPacMergeDigest))
 
 			})
 		})
-
-	})
-
+	},
+		Entry("github", git.GitHubProvider, "gh"),
+		Entry("gitlab", git.GitLabProvider, "gl"),
+	)
 })
 
 func createBuildSecret(f *framework.Framework, secretName string, annotations map[string]string, token string) error {
