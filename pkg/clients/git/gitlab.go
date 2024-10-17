@@ -95,3 +95,15 @@ func (g *GitLabClient) CreatePullRequest(repository, title, body, head, base str
 func (g *GitLabClient) CleanupWebhooks(repository, clusterAppDomain string) error {
 	return g.DeleteWebhooks(repository, clusterAppDomain)
 }
+
+func (g *GitLabClient) DeleteBranchAndClosePullRequest(repository string, prNumber int) error {
+	mr, _, err := g.GitlabClient.GetClient().MergeRequests.GetMergeRequest(repository, prNumber, nil)
+	if err != nil {
+		return err
+	}
+	err = g.DeleteBranch(repository, mr.SourceBranch)
+	if err != nil {
+		return err
+	}
+	return g.CloseMergeRequest(repository, prNumber)
+}
