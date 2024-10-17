@@ -112,7 +112,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", Labe
 			},
 		}, &runtime.RawExtension{
 			Raw: data,
-		})
+		}, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasecommon.ReleasePvcName, managedNamespace, corev1.ReadWriteOnce)
