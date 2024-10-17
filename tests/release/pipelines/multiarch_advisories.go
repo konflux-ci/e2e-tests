@@ -221,7 +221,7 @@ func createMultiArchReleasePlan(multiarchReleasePlanName string, devFw framework
 	_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(multiarchReleasePlanName, devNamespace, multiarchAppName,
 		managedNamespace, autoRelease, &runtime.RawExtension{
 			Raw: data,
-		}, nil)
+		}, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 }
 
