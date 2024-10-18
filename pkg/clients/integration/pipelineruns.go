@@ -267,3 +267,30 @@ func (i *IntegrationController) WaitForBuildPipelineRunToGetAnnotated(testNamesp
 		return true, nil
 	})
 }
+
+// WaitForBuildPipelineToBeFinished wait for given build pipeline to finish.
+// It exposes the error message from the failed task to the end user when the pipelineRun failed.
+func (i *IntegrationController) WaitForBuildPipelineToBeFinished(testNamespace, applicationName, componentName string) error {
+	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 15*time.Minute, true, func(ctx context.Context) (done bool, err error) {
+		pipelineRun, err := i.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
+		if err != nil {
+			GinkgoWriter.Println("Build pipelineRun has not been created yet for app %s/%s", testNamespace, applicationName)
+			return false, nil
+		}
+		for _, condition := range pipelineRun.Status.Conditions {
+			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
+
+			if !pipelineRun.IsDone() {
+				return false, nil
+			}
+
+			if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+				return true, nil
+			} else {
+				logs, _ := tekton.GetFailedPipelineRunLogs(i.KubeRest(), i.KubeInterface(), pipelineRun)
+				return false, fmt.Errorf("%s", logs)
+			}
+		}
+		return false, nil
+	})
+}
