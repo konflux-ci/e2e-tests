@@ -118,7 +118,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(rhtapApplicationName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(rhtapReleasePlanName, devNamespace, rhtapApplicationName, managedNamespace, "true", nil, nil)
+			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(rhtapReleasePlanName, devNamespace, rhtapApplicationName, managedNamespace, "true", nil, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			createRHTAPReleasePlanAdmission(rhtapReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, rhtapApplicationName, rhtapEnterpriseContractPolicyName, rhtapCatalogPathInRepo)

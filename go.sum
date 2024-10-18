@@ -1503,6 +1503,8 @@ github.com/konflux-ci/operator-toolkit v0.0.0-20240402130556-ef6dcbeca69d h1:z7j
 github.com/konflux-ci/operator-toolkit v0.0.0-20240402130556-ef6dcbeca69d/go.mod h1:AcChx7FjpYSIkDvQgaUKyauuF0PXm3ivB5MqZSC9Eis=
 github.com/konflux-ci/release-service v0.0.0-20240624130704-c6133cc0b908 h1:fVFlyCIB4eniA708isOgzCKYOeAXAsg8WFEZp1QQ3A4=
 github.com/konflux-ci/release-service v0.0.0-20240624130704-c6133cc0b908/go.mod h1:p+6Ua4y2VUJRW2BrwSXtVoV7b4PwL8PwbjJb2LaPu44=
+github.com/konflux-ci/release-service v0.0.0-20241016090118-bd730698b9c5 h1:eBQ2yFy/TRGhCGCbZC2KCM9rD/ADWorLxzpSmZ4JyKM=
+github.com/konflux-ci/release-service v0.0.0-20241016090118-bd730698b9c5/go.mod h1:KLuLvi1boDfnFsQL0cXytBLc+TWsRo80YQFTygElRvI=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.3/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/kr/fs v0.1.0/go.mod h1:FFnZGqtBN9Gxj7eW1uZ42v5BccTP0vu6NEaFoC2HwRg=
@@ -1788,10 +1790,16 @@ github.com/prometheus/statsd_exporter v0.22.7/go.mod h1:N/TevpjkIh9ccs6nuzY3jQn9
 github.com/prometheus/statsd_exporter v0.23.1 h1:TiNAE1XevlZZrpSbmf51l/Ryl2Eek9rYh//KlvcNvKw=
 github.com/prometheus/statsd_exporter v0.23.1/go.mod h1:FFmnBRWf+HxX+PR+2fnc0ciBIONVAPJ6k4lqIbdqVxo=
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
+github.com/redhat-appstudio/application-api v0.0.0-20240106104232-18f545e48a03 h1:UUgrEyvQJhEnvghkEaY9YlxeAk+D4cop+Bd3+8jh0eQ=
+github.com/redhat-appstudio/application-api v0.0.0-20240106104232-18f545e48a03/go.mod h1:YvckuKHe82eWloGk0/BpSw4YYG2owrGZAanztbOj3pQ=
 github.com/redhat-appstudio/image-controller v0.0.0-20231003082540-48893226ba8b h1:kM+t/FZSMVUydXIbii+bduAJov7pcADCybP9u1WSBcw=
 github.com/redhat-appstudio/image-controller v0.0.0-20231003082540-48893226ba8b/go.mod h1:fNP2oUEejlHZUkAz2f0ViKNl0D8w4cD8QVoGy1pri9c=
+github.com/redhat-appstudio/integration-service v0.0.0-20231025084434-b3f521c408d1 h1:Qo5VBBhi8ihz3mPaCQq0lGZAiCRAqhbv1XZkzyBTfGA=
+github.com/redhat-appstudio/integration-service v0.0.0-20231025084434-b3f521c408d1/go.mod h1:bh8uJ4whJ92ef5PXH6Rfm4F8tRXkDAlSYR7Pqp1LLT4=
 github.com/redhat-appstudio/jvm-build-service v0.0.0-20240126122210-0e2ee7e2e5b0 h1:wqP4/99Lg68zRpzt9zSc5OGf3zigaBlvflDuDLmDLdM=
 github.com/redhat-appstudio/jvm-build-service v0.0.0-20240126122210-0e2ee7e2e5b0/go.mod h1:awZP3qi/GpBhQ50N3rRjFPsGbFperwWYSTN+OVG1Gb8=
+github.com/redhat-appstudio/operator-toolkit v0.0.0-20231201124606-2087182322ae h1:98thWrMrr9YUNCVNGqkZxKfZkaWUmMC5dmkgAI7p3uY=
+github.com/redhat-appstudio/operator-toolkit v0.0.0-20231201124606-2087182322ae/go.mod h1:7cX2+4KGZLJ4Yoj+1v0iV5hkCGBzbSd9wkNJQjCdDJs=
 github.com/redhat-cop/operator-utils v1.3.3-0.20220121120056-862ef22b8cdf/go.mod h1:FfTyeSCu+e2VLgeMh/1RFG8TSkVjKRPEyR6EmDt0RIw=
 github.com/redis/go-redis/v9 v9.0.0-rc.4/go.mod h1:Vo3EsyWnicKnSKCA7HhgnvnyA74wOA69Cd2Meli5mmA=
 github.com/redis/go-redis/v9 v9.0.5 h1:CuQcn5HIEeK7BgElubPP8CGtE0KakrnbBSTLjathl5o=

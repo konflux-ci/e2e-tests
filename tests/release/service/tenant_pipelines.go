@@ -21,7 +21,7 @@ import (
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
-var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline", Label("release-pipelines", "tenant"), func() {
+var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline", Label("release-service", "tenant"), func() {
 	defer GinkgoRecover()
 
 	var fw *framework.Framework
@@ -82,7 +82,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, "", "", &runtime.RawExtension{
                         Raw: data,
-                }, tenantPipeline)
+                }, tenantPipeline, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasecommon.ReleasePvcName, devNamespace, corev1.ReadWriteOnce)

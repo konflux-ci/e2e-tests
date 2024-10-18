@@ -103,7 +103,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(sampApplicationName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(sampReleasePlanName, devNamespace, sampApplicationName, managedNamespace, "true", nil, nil)
+			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(sampReleasePlanName, devNamespace, sampApplicationName, managedNamespace, "true", nil, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			createGHReleasePlanAdmission(sampReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, sampApplicationName, sampEnterpriseContractPolicyName, sampCatalogPathInRepo, "false", "", "", "", "")
