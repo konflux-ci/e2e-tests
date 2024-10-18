@@ -5,7 +5,7 @@ ENV GOBIN=$GOPATH/bin
 USER root
 
 # renovate: datasource=repology depName=homebrew/openshift-cli
-ARG OC_VERSION=4.14.8
+ARG OC_VERSION=4.15.8
 
 # renovate: datasource=github-releases depName=stedolan/jq
 ARG JQ_VERSION=1.6
