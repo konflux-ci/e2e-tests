@@ -20,9 +20,12 @@ const (
 	componentRepoNameForGeneralIntegration    = "konflux-test-integration"
 	componentRepoNameForIntegrationWithEnv    = "konflux-test-integration-with-env"
 	componentRepoNameForStatusReporting       = "konflux-test-integration-status-report"
+	multiComponentRepoNameForGroupSnapshotA   = "sample-multi-component"
+	multiComponentRepoNameForGroupSnapshotB   = "sample-multi-component"
 	gitlabComponentRepoName                   = "hacbs-test-project-integration"
 	componentDefaultBranch                    = "main"
 	componentRevision                         = "34da5a8f51fba6a8b7ec75a727d3c72ebb5e1274"
+	componentGroupRevision                    = "5eb94a431254e52a4c5841694b44aef351ad55de"
 	referenceDoesntExist                      = "Reference does not exist"
 	checkrunStatusCompleted                   = "completed"
 	checkrunConclusionSuccess                 = "success"
@@ -35,6 +38,7 @@ const (
 
 	snapshotAnnotation                       = "appstudio.openshift.io/snapshot"
 	scenarioAnnotation                       = "test.appstudio.openshift.io/scenario"
+	groupSnapshotAnnotation                  = "test.appstudio.openshift.io/pr-group"
 	pipelinerunFinalizerByIntegrationService = "test.appstudio.openshift.io/pipelinerun"
 	snapshotRerunLabel                       = "test.appstudio.openshift.io/run"
 
@@ -45,6 +49,8 @@ var (
 	componentGitSourceURLForGeneralIntegration    = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), componentRepoNameForGeneralIntegration)
 	componentGitSourceURLForIntegrationWithEnv    = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), componentRepoNameForIntegrationWithEnv)
 	componentGitSourceURLForStatusReporting       = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), componentRepoNameForStatusReporting)
+	multiComponentGitSourceURLForGroupSnapshotA   = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), multiComponentRepoNameForGroupSnapshotA)
+	multiComponentGitSourceURLForGroupSnapshotB   = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), multiComponentRepoNameForGroupSnapshotB)
 	gitlabOrg                                     = utils.GetEnv(constants.GITLAB_QE_ORG_ENV, constants.DefaultGitLabQEOrg)
 	gitlabProjectIDForStatusReporting             = fmt.Sprintf("%s/%s", gitlabOrg, gitlabComponentRepoName)
 	gitlabComponentGitSourceURLForStatusReporting = fmt.Sprintf("https://gitlab.com/%s/%s", gitlabOrg, gitlabComponentRepoName)
