@@ -21,14 +21,23 @@ type PullRequest struct {
 	HeadSHA string
 }
 
+// RepositoryFile represents a generic provider-agnostic file in a repository
+type RepositoryFile struct {
+	// CommitSHA is the SHA of the commit in which the file was created
+	CommitSHA string
+	// Content is a string representation of the content of the file
+	Content string
+}
+
 type Client interface {
 	CreateBranch(repository, baseBranchName, revision, branchName string) error
 	DeleteBranch(repository, branchName string) error
 	BranchExists(repository, branchName string) (bool, error)
 	ListPullRequests(repository string) ([]*PullRequest, error)
-	CreateFile(repository, pathToFile, content, branchName string) error
-	GetFileContent(repository, pathToFile, branchName string) (string, error)
+	CreateFile(repository, pathToFile, content, branchName string) (*RepositoryFile, error)
+	GetFile(repository, pathToFile, branchName string) (*RepositoryFile, error)
 	CreatePullRequest(repository, title, body, head, base string) (*PullRequest, error)
 	MergePullRequest(repository string, prNumber int) (*PullRequest, error)
+	DeleteBranchAndClosePullRequest(repository string, prNumber int) error
 	CleanupWebhooks(repository, clusterAppDomain string) error
 }

@@ -41,22 +41,39 @@ func (g *GitLabClient) ListPullRequests(string) ([]*PullRequest, error) {
 	return pullRequests, nil
 }
 
-func (g *GitLabClient) CreateFile(repository, pathToFile, content, branchName string) error {
+func (g *GitLabClient) CreateFile(repository, pathToFile, content, branchName string) (*RepositoryFile, error) {
 	_, err := g.GitlabClient.CreateFile(repository, pathToFile, content, branchName)
-	return err
-}
+	if err != nil {
+		return nil, err
+	}
 
-func (g *GitLabClient) GetFileContent(repository, pathToFile, branchName string) (string, error) {
 	opts := gitlab2.GetFileOptions{Ref: gitlab2.Ptr(branchName)}
 	file, _, err := g.GitlabClient.GetClient().RepositoryFiles.GetFile(repository, pathToFile, &opts)
 	if err != nil {
-		return "", err
+		return nil, err
+	}
+
+	resultFile := &RepositoryFile{
+		CommitSHA: file.CommitID,
+	}
+	return resultFile, nil
+}
+
+func (g *GitLabClient) GetFile(repository, pathToFile, branchName string) (*RepositoryFile, error) {
+	opts := gitlab2.GetFileOptions{Ref: gitlab2.Ptr(branchName)}
+	file, _, err := g.GitlabClient.GetClient().RepositoryFiles.GetFile(repository, pathToFile, &opts)
+	if err != nil {
+		return nil, err
 	}
 	decoded, err := base64.StdEncoding.DecodeString(file.Content)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return string(decoded), nil
+	resultFile := &RepositoryFile{
+		CommitSHA: file.CommitID,
+		Content:   string(decoded),
+	}
+	return resultFile, nil
 }
 
 func (g *GitLabClient) MergePullRequest(repository string, prNumber int) (*PullRequest, error) {
@@ -94,4 +111,16 @@ func (g *GitLabClient) CreatePullRequest(repository, title, body, head, base str
 
 func (g *GitLabClient) CleanupWebhooks(repository, clusterAppDomain string) error {
 	return g.DeleteWebhooks(repository, clusterAppDomain)
+}
+
+func (g *GitLabClient) DeleteBranchAndClosePullRequest(repository string, prNumber int) error {
+	mr, _, err := g.GitlabClient.GetClient().MergeRequests.GetMergeRequest(repository, prNumber, nil)
+	if err != nil {
+		return err
+	}
+	err = g.DeleteBranch(repository, mr.SourceBranch)
+	if err != nil {
+		return err
+	}
+	return g.CloseMergeRequest(repository, prNumber)
 }
