@@ -235,11 +235,6 @@ func createMultiArchReleasePlanAdmission(multiarchRPAName string, managedFw fram
 					"name":       multiarchComponentName,
 					"repository": "registry.stage.redhat.io/rhtap/konflux-release-e2e",
 					"tags":       []string{"latest", "latest-{{ timestamp }}"},
-					"source": map[string]interface{}{
-						"git": map[string]interface{}{
-							"url": multiarchGitSourceURL,
-						},
-					},
 				},
 			},
 		},
@@ -249,7 +244,7 @@ func createMultiArchReleasePlanAdmission(multiarchRPAName string, managedFw fram
 		},
 		"releaseNotes": map[string]interface{}{
 			"cpe":             "cpe:/a:example.com",
-			"product_id":      "555",
+			"product_id":      555,
 			"product_name":    "test product",
 			"product_stream":  "rhtas-tp1",
 			"product_version": "v1.0",

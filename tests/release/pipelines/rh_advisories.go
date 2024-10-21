@@ -249,7 +249,7 @@ func createADVSReleasePlanAdmission(advsRPAName string, managedFw framework.Fram
 		},
 		"releaseNotes": map[string]interface{}{
 			"cpe":             "cpe:/a:example.com",
-			"product_id":      "555",
+			"product_id":      555,
 			"product_name":    "test product",
 			"product_stream":  "rhtas-tp1",
 			"product_version": "v1.0",
