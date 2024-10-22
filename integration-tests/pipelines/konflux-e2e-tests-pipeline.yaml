@@ -1,78 +1,20 @@
 ---
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: konflux-e2e-tests
+  name: provision-cluster
 spec:
-  description: |-
-    This pipeline automates the process of running end-to-end tests for Konflux
-    using a ROSA (Red Hat OpenShift Service on AWS) cluster. The pipeline provisions
-    the ROSA cluster, installs Konflux using the infra-deployments, runs the tests, collects artifacts,
-    and finally deprovisions the ROSA cluster.
+  description: |
+    An integration test which provisions an ephemeral Hypershift cluster and obtains a kubeconfig.
   params:
-    - name: SNAPSHOT
-      description: 'The JSON string representing the snapshot of the application under test.'
+    - description: Snapshot of the application
+      name: SNAPSHOT
       default: '{"components": [{"name":"test-app", "containerImage": "quay.io/example/repo:latest"}]}'
-      type: string
-    - name: test-name
-      description: 'The name of the test corresponding to a defined Konflux integration test.'
-      default: ''
-    - name: ocp-version
-      description: 'The OpenShift version to use for the ephemeral cluster deployment.'
-      type: string
-    - name: test-event-type
-      description: 'Indicates if the test is triggered by a Pull Request or Push event.'
-      default: 'none'
-    - name: konflux-test-infra-secret
-      description: The name of secret where testing infrastructures credentials are stored.
-      type: string
-    - name: cloud-credential-key
-      type: string
-      description: The key secret from konflux-test-infra-secret where all AWS ROSA configurations are stored.
-    - name: replicas
-      description: 'The number of replicas for the cluster nodes.'
-      type: string
-    - name: machine-type
-      description: 'The type of machine to use for the cluster nodes.'
       type: string
     - name: oci-container-repo
       default: 'quay.io/konflux-test-storage/konflux-team/e2e-tests'
       description: The ORAS container used to store all test artifacts.
-    - name: quality-dashboard-api
-      default: 'none'
-      description: 'Contains the url of the backend to send metrics for quality purposes.'
-    - name: component-image
-      default: 'none'
-      description: 'Container image built from any konflux git repo.'
-    - name: container-image
-      default: 'quay.io/redhat-user-workloads/konflux-qe-team-tenant/konflux-e2e/konflux-e2e-tests:latest'
-      description: 'Konflux e2e tests container. Contain the ginkgo binary to run the e2e tests in any Konflux component.'
   tasks:
-    - name: rosa-hcp-metadata
-      taskRef:
-        resolver: git
-        params:
-          - name: url
-            value: https://github.com/konflux-ci/konflux-qe-definitions.git
-          - name: revision
-            value: main
-          - name: pathInRepo
-            value: common/tasks/rosa/hosted-cp/rosa-hcp-metadata/rosa-hcp-metadata.yaml
-    - name: test-metadata
-      taskRef:
-        resolver: git
-        params:
-          - name: url
-            value: https://github.com/konflux-ci/konflux-qe-definitions.git
-          - name: revision
-            value: main
-          - name: pathInRepo
-            value: common/tasks/test-metadata/0.1/test-metadata.yaml
-      params:
-        - name: SNAPSHOT
-          value: $(params.SNAPSHOT)
-        - name: test-name
-          value: $(context.pipelineRun.name)
     - name: create-oci-container
       taskRef:
         resolver: git
@@ -88,166 +30,234 @@ spec:
           value: $(params.oci-container-repo)
         - name: oci-container-tag
           value: $(context.pipelineRun.name)
-    - name: provision-rosa
-      when:
-        - input: "$(tasks.test-metadata.results.test-event-type)"
-          operator: in
-          values: ["pull_request"]
+    - name: test-metadata
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-ci/konflux-qe-definitions.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: common/tasks/test-metadata/0.1/test-metadata.yaml
+      params:
+        - name: SNAPSHOT
+          value: $(params.SNAPSHOT)
+        - name: test-name
+          value: $(context.pipelineRun.name)
+    - name: provision-eaas-space
       runAfter:
-        - rosa-hcp-metadata
         - create-oci-container
         - test-metadata
       taskRef:
         resolver: git
         params:
           - name: url
-            value: https://github.com/konflux-ci/konflux-qe-definitions.git
+            value: https://github.com/konflux-ci/build-definitions.git
           - name: revision
             value: main
           - name: pathInRepo
-            value: common/tasks/rosa/hosted-cp/rosa-hcp-provision/rosa-hcp-provision.yaml
+            value: task/eaas-provision-space/0.1/eaas-provision-space.yaml
       params:
-        - name: cluster-name
-          value: "$(tasks.rosa-hcp-metadata.results.cluster-name)"
-        - name: ocp-version
-          value: "$(params.ocp-version)"
-        - name: replicas
-          value: "$(params.replicas)"
-        - name: machine-type
-          value: "$(params.machine-type)"
-        - name: konflux-test-infra-secret
-          value: "$(params.konflux-test-infra-secret)"
-        - name: cloud-credential-key
-          value: "$(params.cloud-credential-key)"
-    - name: konflux-e2e-tests
-      timeout: 3h
-      when:
-        - input: "$(tasks.test-metadata.results.test-event-type)"
-          operator: in
-          values: ["pull_request"]
+        - name: ownerName
+          value: $(context.pipelineRun.name)
+        - name: ownerUid
+          value: $(context.pipelineRun.uid)
+    - name: provision-cluster
       runAfter:
-        - provision-rosa
-      taskRef:
-        resolver: git
-        params:
-          - name: url
-            value: https://github.com/konflux-ci/e2e-tests.git
-          - name: revision
-            value: main
-          - name: pathInRepo
-            value: integration-tests/tasks/konflux-e2e-tests-task.yaml
-      params:
-        - name: test-name
-          value: "$(context.pipelineRun.name)"
-        - name: git-repo
-          value: "$(tasks.test-metadata.results.git-repo)"
-        - name: git-url
-          value: "$(tasks.test-metadata.results.git-url)"
-        - name: git-revision
-          value: "$(tasks.test-metadata.results.git-revision)"
-        - name: oras-container
-          value: "$(tasks.create-oci-container.results.oci-container)"
-        - name: job-spec
-          value: "$(tasks.test-metadata.results.job-spec)"
-        - name: ocp-login-command
-          value: "$(tasks.provision-rosa.results.ocp-login-command)"
-        - name: component-image
-          value: "$(tasks.test-metadata.results.container-image)"
-        - name: container-image
-          value: "$(params.container-image)"
+        - provision-eaas-space
+      taskSpec:
+        results:
+          - name: clusterName
+            value: "$(steps.create-cluster.results.clusterName)"
+        volumes:
+          - name: credentials
+            emptyDir: {}
+        steps:
+          - name: get-supported-versions
+            ref:
+              resolver: git
+              params:
+                - name: url
+                  value: https://github.com/konflux-ci/build-definitions.git
+                - name: revision
+                  value: main
+                - name: pathInRepo
+                  value: stepactions/eaas-get-supported-ephemeral-cluster-versions/0.1/eaas-get-supported-ephemeral-cluster-versions.yaml
+            params:
+              - name: eaasSpaceSecretRef
+                value: $(tasks.provision-eaas-space.results.secretRef)
+          - name: pick-version
+            ref:
+              resolver: git
+              params:
+                - name: url
+                  value: https://github.com/konflux-ci/build-definitions.git
+                - name: revision
+                  value: main
+                - name: pathInRepo
+                  value: stepactions/eaas-get-latest-openshift-version-by-prefix/0.1/eaas-get-latest-openshift-version-by-prefix.yaml
+            params:
+              - name: prefix
+                value: "4.15"
+          - name: create-cluster
+            ref:
+              resolver: git
+              params:
+                - name: url
+                  value: https://github.com/konflux-ci/build-definitions.git
+                - name: revision
+                  value: main
+                - name: pathInRepo
+                  value: stepactions/eaas-create-ephemeral-cluster-hypershift-aws/0.1/eaas-create-ephemeral-cluster-hypershift-aws.yaml
+            params:
+              - name: eaasSpaceSecretRef
+                value: $(tasks.provision-eaas-space.results.secretRef)
+              - name: version
+                value: "$(steps.pick-version.results.version)"
+    - name: konflux-e2e
+      runAfter:
+        - provision-cluster
+      taskSpec:
+        volumes:
+          - name: credentials
+            emptyDir: {}
+          - name: konflux-secret-volume
+            secret:
+              secretName: konflux-e2e-secrets
+        steps:
+          - name: get-kubeconfig
+            ref:
+              resolver: git
+              params:
+                - name: url
+                  value: https://github.com/konflux-ci/build-definitions.git
+                - name: revision
+                  value: main
+                - name: pathInRepo
+                  value: stepactions/eaas-get-ephemeral-cluster-credentials/0.1/eaas-get-ephemeral-cluster-credentials.yaml
+            params:
+              - name: eaasSpaceSecretRef
+                value: $(tasks.provision-eaas-space.results.secretRef)
+              - name: clusterName
+                value: "$(tasks.provision-cluster.results.clusterName)"
+              - name: credentials
+                value: credentials
+          - name: e2e-test
+            image: $(tasks.test-metadata.results.container-image)
+            volumeMounts:
+              - name: konflux-secret-volume
+                mountPath: /usr/local/konflux-ci-secrets
+              - name: credentials
+                mountPath: /credentials
+            workingDir: /workspace
+            env:
+              - name: JOB_NAME
+                value: $(context.pipelineRun.name)
+              - name: GIT_REPO
+                value: $(tasks.test-metadata.results.git-repo)
+              - name: GIT_URL
+                value: $(tasks.test-metadata.results.git-url)
+              - name: GIT_REVISION
+                value: $(tasks.test-metadata.results.git-revision)
+              - name: KONFLUX_CI
+                value: "true"
+              - name: JOB_SPEC
+                value: $(tasks.test-metadata.results.job-spec)
+              - name: COMPONENT_IMAGE
+                value: ""
+              - name: KUBECONFIG
+                value: "/credentials/$(steps.get-kubeconfig.results.kubeconfig)"
+            script: |
+              export ORAS_CONTAINER=quay.io/konflux-test-storage/konflux-team/e2e-tests:latest
+              export GINKGO_PROCS=20
+
+              oc get po -A
+
+              if [ "$GIT_REPO" = "e2e-tests" ]; then
+                export SOURCE_REPO_URL=$(echo "$JOB_SPEC" | jq -r '.git.source_repo_url' | sed 's#https://github.com/##')
+                export SOURCE_REPO_BRANCH=$(echo "$JOB_SPEC" | jq -r '.git.source_repo_branch')
+
+                echo -e "[INFO] Running e2e tests from source: $SOURCE_REPO_URL and branch $SOURCE_REPO_BRANCH"
+                /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/$SOURCE_REPO_URL/$SOURCE_REPO_BRANCH/integration-tests/scripts/konflux-e2e-runner.sh)"
+              else
+                echo -e "[INFO] Running e2e tests from source: konflux-ci/e2e-tests and branch main"
+                /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/konflux-ci/e2e-tests/main/integration-tests/scripts/konflux-e2e-runner.sh)"
+              fi
   finally:
-    - name: deprovision-rosa-collect-artifacts
-      when:
-        - input: "$(tasks.test-metadata.results.test-event-type)"
-          operator: in
-          values: ["pull_request"]
-      taskRef:
-        resolver: git
-        params:
-          - name: url
-            value: https://github.com/konflux-ci/konflux-qe-definitions.git
-          - name: revision
-            value: main
-          - name: pathInRepo
-            value: common/tasks/rosa/hosted-cp/rosa-hcp-deprovision/rosa-hcp-deprovision.yaml
-      params:
-        - name: test-name
-          value: "$(context.pipelineRun.name)"
-        - name: ocp-login-command
-          value: "$(tasks.provision-rosa.results.ocp-login-command)"
-        - name: oci-container
-          value: "$(tasks.create-oci-container.results.oci-container)"
-        - name: pull-request-author
-          value: "$(tasks.test-metadata.results.pull-request-author)"
-        - name: git-revision
-          value: "$(tasks.test-metadata.results.git-revision)"
-        - name: pull-request-number
-          value: "$(tasks.test-metadata.results.pull-request-number)"
-        - name: git-repo
-          value: "$(tasks.test-metadata.results.git-repo)"
-        - name: git-org
-          value: "$(tasks.test-metadata.results.git-org)"
-        - name: cluster-name
-          value: "$(tasks.rosa-hcp-metadata.results.cluster-name)"
-        - name: konflux-test-infra-secret
-          value: "$(params.konflux-test-infra-secret)"
-        - name: cloud-credential-key
-          value: "$(params.cloud-credential-key)"
-        - name: pipeline-aggregate-status
-          value: "$(tasks.status)"
-    - name: quality-dashboard-upload
-      when:
-        - input: "$(tasks.test-metadata.results.test-event-type)"
-          operator: in
-          values: ["pull_request"]
-      taskRef:
-        resolver: git
-        params:
-          - name: url
-            value: https://github.com/konflux-ci/konflux-qe-definitions.git
-          - name: revision
-            value: main
-          - name: pathInRepo
-            value: common/tasks/quality-dashboard/0.1/quality-dashboard-upload.yaml
-      params:
-        - name: test-name
-          value: "$(context.pipelineRun.name)"
-        - name: oci-container
-          value: "$(tasks.create-oci-container.results.oci-container)"
-        - name: quality-dashboard-api
-          value: $(params.quality-dashboard-api)
-        - name: pipeline-aggregate-status
-          value: "$(tasks.status)"
-        - name: test-event-type
-          value: "$(tasks.test-metadata.results.test-event-type)"
-    - name: pull-request-status-message
-      when:
-        - input: "$(tasks.test-metadata.results.test-event-type)"
-          operator: in
-          values: ["pull_request"]
-      taskRef:
-        resolver: git
-        params:
-          - name: url
-            value: https://github.com/konflux-ci/konflux-qe-definitions.git
-          - name: revision
-            value: main
-          - name: pathInRepo
-            value: common/tasks/pull-request-comment/0.1/pull-request-comment.yaml
-      params:
-        - name: test-name
-          value: "$(context.pipelineRun.name)"
-        - name: oci-container
-          value: "$(tasks.create-oci-container.results.oci-container)"
-        - name: pipeline-aggregate-status
-          value: "$(tasks.status)"
-        - name: pull-request-author
-          value: "$(tasks.test-metadata.results.pull-request-author)"
-        - name: pull-request-number
-          value: "$(tasks.test-metadata.results.pull-request-number)"
-        - name: git-repo
-          value: "$(tasks.test-metadata.results.git-repo)"
-        - name: git-org
-          value: "$(tasks.test-metadata.results.git-org)"
-        - name: git-revision
-          value: "$(tasks.test-metadata.results.git-revision)"
+    - taskSpec:
+        volumes:
+          - name: credentials
+            emptyDir: {}
+          - name: konflux-secret-volume
+            secret:
+              secretName: konflux-e2e-secrets
+        steps:
+          - name: get-kubeconfig
+            ref:
+              resolver: git
+              params:
+                - name: url
+                  value: https://github.com/konflux-ci/build-definitions.git
+                - name: revision
+                  value: main
+                - name: pathInRepo
+                  value: stepactions/eaas-get-ephemeral-cluster-credentials/0.1/eaas-get-ephemeral-cluster-credentials.yaml
+            params:
+              - name: eaasSpaceSecretRef
+                value: $(tasks.provision-eaas-space.results.secretRef)
+              - name: clusterName
+                value: "$(tasks.provision-cluster.results.clusterName)"
+              - name: credentials
+                value: credentials
+          - name: e2e-test
+            image: quay.io/konflux-qe-incubator/konflux-qe-tools:latest
+            volumeMounts:
+              - name: credentials
+                mountPath: /credentials
+              - name: konflux-test-infra-volume
+                mountPath: /usr/local/konflux-test-infra
+            workingDir: /workspace
+            env:
+              - name: JOB_NAME
+                value: $(context.pipelineRun.name)
+              - name: KUBECONFIG
+                value: "/credentials/$(steps.get-kubeconfig.results.kubeconfig)"
+            script: |
+              curl -sSL https://raw.githubusercontent.com/konflux-ci/konflux-qe-definitions/main/scripts/gather-extra.sh | bash
+
+              trufflehog filesystem /workspace --only-verified --fail
+              EXIT_CODE=$?
+
+              if [ $EXIT_CODE -ne 0 ]; then
+                  echo -e "[ERROR]: Found secrets in artifacts... Container artifacts will not be uploaded to OCI registry due to security reasons."
+                  exit 1
+              fi
+
+              OCI_STORAGE_USERNAME="$(jq -r '."quay-username"' /usr/local/konflux-test-infra/oci-storage)"
+              OCI_STORAGE_TOKEN="$(jq -r '."quay-token"' /usr/local/konflux-test-infra/oci-storage)"
+              OCI_STORAGE_CONTAINER="quay.io/konflux-test-storage/konflux-team/e2e-tests:hypershift-test"
+              TEMP_ANNOTATION_FILE="$(mktemp)"
+
+              # Fetch the manifest annotations for the container
+              MANIFESTS=$(oras manifest fetch "$OCI_STORAGE_CONTAINER" | jq .annotations) || {
+                  echo -e "[ERROR]: Failed to fetch manifest from $OCI_STORAGE_CONTAINER"
+                  exit 1
+              }
+
+              # Create and save the JSON object
+              jq -n --argjson manifest "$MANIFESTS" '{ "$manifest": $manifest }' > "${TEMP_ANNOTATION_FILE}"
+
+              oras pull "$  "
+
+              attempt=1
+              while ! oras push "$OCI_STORAGE_CONTAINER" --username="${OCI_STORAGE_USERNAME}" --password="${OCI_STORAGE_TOKEN}" --annotation-file "${TEMP_ANNOTATION_FILE}" ./:application/vnd.acme.rocket.docs.layer.v1+tar; do
+                  if [[ $attempt -ge 5 ]]; then
+                      echo -e "[ERROR]: oras push failed after $attempt attempts."
+                      rm -f "${TEMP_ANNOTATION_FILE}"
+                      exit 1
+                  fi
+                  echo -e "[WARNING]: oras push failed (attempt $attempt). Retrying in 5 seconds..."
+                  sleep 5
+                  ((attempt++))
+              done
