@@ -11,6 +11,9 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
+
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -107,3 +110,30 @@ func CreateSnapshotWithImageSource(fw framework.Framework, componentName, applic
 
 	return fw.AsKubeAdmin.IntegrationController.CreateSnapshotWithComponents(snapshotName, componentName, applicationName, namespace, snapshotComponents)
 }
+
+func CheckReleaseStatus(releaseCR *releaseApi.Release) (error) {
+	GinkgoWriter.Println("releaseCR: %s", releaseCR.Name)
+	conditions := releaseCR.Status.Conditions
+	GinkgoWriter.Println("len of conditions: %d", len(conditions))
+	if len(conditions) > 0 {
+		for _, c := range conditions {
+			GinkgoWriter.Println("type of c: %s", c.Type)
+			if c.Type == "Released" {
+				GinkgoWriter.Println("status of c: %s", c.Status)
+				if c.Status == "True" {
+					GinkgoWriter.Println("Release CR is released")
+					return nil
+				} else if c.Status == "False" && c.Reason == "Progressing" {
+					return fmt.Errorf("release %s/%s is in progressing", releaseCR.GetNamespace(), releaseCR.GetName())
+				} else {
+					GinkgoWriter.Println("Release CR failed/skipped")
+					Expect(string(c.Status)).To(Equal("True"), fmt.Sprintf("Release %s failed/skipped", releaseCR.Name))
+					return nil
+				}
+			}
+		}
+	}
+	return nil
+}
+
+
