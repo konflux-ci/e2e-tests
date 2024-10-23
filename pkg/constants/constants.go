@@ -175,7 +175,6 @@ const (
 
 	FromIndex   = "registry-proxy.engineering.redhat.com/rh-osbs/iib-preview-rhtap:{{ OCP_VERSION }}"
 	TargetIndex = "quay.io/redhat/redhat----preview-operator-index:{{ OCP_VERSION }}"
-	BinaryImage = "registry.redhat.io/openshift4/ose-operator-registry:{{ OCP_VERSION }}"
 
 	StrategyConfigsRepo          = "strategy-configs"
 	StrategyConfigsDefaultBranch = "main"

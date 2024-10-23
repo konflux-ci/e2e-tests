@@ -292,7 +292,6 @@ func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framew
 		"fbc": map[string]interface{}{
 			"fromIndex":                       constants.FromIndex,
 			"targetIndex":                     constants.TargetIndex,
-			"binaryImage":                     constants.BinaryImage,
 			"publishingCredentials":           "fbc-preview-publishing-credentials",
 			"iibServiceConfigSecret":          "iib-preview-services-config",
 			"iibOverwriteFromIndexCredential": "iib-overwrite-fromimage-credentials",
