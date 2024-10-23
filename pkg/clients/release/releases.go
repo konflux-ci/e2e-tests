@@ -118,7 +118,7 @@ func (r *ReleaseController) StoreRelease(release *releaseApi.Release) error {
 	if err != nil {
 		return err
 	}
-	artifacts["component-"+release.Name+".yaml"] = releaseYaml
+	artifacts["release-"+release.Name+".yaml"] = releaseYaml
 
 	if err := logs.StoreArtifacts(artifacts); err != nil {
 		return err
