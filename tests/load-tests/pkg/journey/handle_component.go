@@ -6,6 +6,7 @@ import "regexp"
 import "strconv"
 import "strings"
 import "time"
+import "github.com/avast/retry-go/v4"
 
 import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
@@ -104,7 +105,18 @@ func createComponent(f *framework.Framework, namespace, name, repoUrl, repoRevis
 		},
 	}
 
-	_, err := f.AsKubeDeveloper.HasController.CreateComponent(componentObj, namespace, "", "", appName, false, annotationsMap)
+        err := retry.Do(
+		func() error {
+			_, err := f.AsKubeDeveloper.HasController.CreateComponent(componentObj, namespace, "", "", appName, false, annotationsMap)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		retry.Attempts(3),
+		retry.MaxJitter(3),
+		retry.DelayType(retry.RandomDelay),
+	)
 	if err != nil {
 		return fmt.Errorf("Unable to create the Component %s: %v", name, err)
 	}
