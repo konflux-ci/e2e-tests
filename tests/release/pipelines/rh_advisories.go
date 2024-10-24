@@ -260,7 +260,7 @@ func createADVSReleasePlanAdmission(advsRPAName string, managedFw framework.Fram
 			"product_name":    "test product",
 			"product_stream":  "rhtas-tp1",
 			"product_version": "v1.0",
-			"type":            "RHSA",
+			"type":            "RHBA",
 		},
 		"sign": map[string]interface{}{
 			"configMapName":    "hacbs-signing-pipeline-config-redhatbeta2",
