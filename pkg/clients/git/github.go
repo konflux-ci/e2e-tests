@@ -44,21 +44,31 @@ func (g *GitHubClient) ListPullRequests(repository string) ([]*PullRequest, erro
 	return pullRequests, nil
 }
 
-func (g *GitHubClient) CreateFile(repository, pathToFile, content, branchName string) error {
-	_, err := g.Github.CreateFile(repository, pathToFile, content, branchName)
-	return err
+func (g *GitHubClient) CreateFile(repository, pathToFile, content, branchName string) (*RepositoryFile, error) {
+	file, err := g.Github.CreateFile(repository, pathToFile, content, branchName)
+	if err != nil {
+		return nil, err
+	}
+	resultFile := &RepositoryFile{
+		CommitSHA: file.GetSHA(),
+	}
+	return resultFile, nil
 }
 
-func (g *GitHubClient) GetFileContent(repository, pathToFile, branchName string) (string, error) {
+func (g *GitHubClient) GetFile(repository, pathToFile, branchName string) (*RepositoryFile, error) {
 	contents, err := g.Github.GetFile(repository, pathToFile, branchName)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	content, err := contents.GetContent()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return content, nil
+	resultFile := &RepositoryFile{
+		CommitSHA: contents.GetSHA(),
+		Content:   content,
+	}
+	return resultFile, nil
 }
 
 func (g *GitHubClient) MergePullRequest(repository string, prNumber int) (*PullRequest, error) {
@@ -102,4 +112,16 @@ func (g *GitHubClient) CleanupWebhooks(repository, clusterAppDomain string) erro
 		}
 	}
 	return nil
+}
+
+func (g *GitHubClient) DeleteBranchAndClosePullRequest(repository string, prNumber int) error {
+	pr, err := g.Github.GetPullRequest(repository, prNumber)
+	if err != nil {
+		return err
+	}
+	err = g.DeleteBranch(repository, pr.Head.GetRef())
+	if err != nil && strings.Contains(err.Error(), "Reference does not exist") {
+		return nil
+	}
+	return err
 }
