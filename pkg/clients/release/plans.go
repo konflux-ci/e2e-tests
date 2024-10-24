@@ -10,6 +10,7 @@ import (
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
 	releaseMetadata "github.com/konflux-ci/release-service/metadata"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -44,7 +45,7 @@ func (r *ReleaseController) CreateReleasePlan(name, namespace, application, targ
 }
 
 // CreateReleasePlanAdmission creates a new ReleasePlanAdmission using the given parameters.
-func (r *ReleaseController) CreateReleasePlanAdmission(name, namespace, environment, origin, policy, serviceAccountName string, applications []string, autoRelease bool, pipelineRef *tektonutils.PipelineRef, data *runtime.RawExtension) (*releaseApi.ReleasePlanAdmission, error) {
+func (r *ReleaseController) CreateReleasePlanAdmission(name, namespace, environment, origin, policy, serviceAccountName string, applications []string, autoRelease bool, pipelineRef *tektonutils.PipelineRef, data *runtime.RawExtension, timeouts *tektonv1.TimeoutFields) (*releaseApi.ReleasePlanAdmission, error) {
 	releasePlanAdmission := &releaseApi.ReleasePlanAdmission{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -64,6 +65,9 @@ func (r *ReleaseController) CreateReleasePlanAdmission(name, namespace, environm
 			},
 			Policy: policy,
 		},
+	}
+	if timeouts != nil {
+		releasePlanAdmission.Spec.Pipeline.Timeouts = *timeouts
 	}
 
 	return releasePlanAdmission, r.KubeRest().Create(context.Background(), releasePlanAdmission)

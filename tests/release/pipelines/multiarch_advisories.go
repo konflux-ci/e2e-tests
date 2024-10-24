@@ -281,6 +281,6 @@ func createMultiArchReleasePlanAdmission(multiarchRPAName string, managedFw fram
 		},
 	}, &runtime.RawExtension{
 		Raw: data,
-	})
+	}, nil)
 	Expect(err).NotTo(HaveOccurred())
 }
