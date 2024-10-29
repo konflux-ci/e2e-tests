@@ -590,11 +590,9 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					tr, err := kubeadminClient.TektonController.GetTaskRunStatus(kubeadminClient.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(tekton.DidTaskRunSucceed(tr)).To(BeTrue())
-					Expect(tr.Status.TaskRunStatusFields.Results).Should(Or(
-						// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
-						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
+					Expect(tr.Status.TaskRunStatusFields.Results).Should(
 						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
-					))
+					)
 				})
 				It("contains non-empty sbom files", Label(buildTemplatesTestLabel), func() {
 					purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(imageWithDigest)
