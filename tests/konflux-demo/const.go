@@ -24,5 +24,6 @@ const (
 	releasePollingInterval    = time.Second * 1
 
 	// test metadata
-	devEnvTestLabel = "konflux"
+	devEnvTestLabel          = "konflux"
+	upstreamKonfluxTestLabel = "upstream-konflux"
 )
