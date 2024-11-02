@@ -114,19 +114,23 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch test f
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = devFw.AsKubeDeveloper.ReleaseController.GetReleasePlan(multiarchReleasePlanName, devNamespace)
-			if errors.IsNotFound(err) {
-				createMultiArchReleasePlan(multiarchReleasePlanName, *devFw, devNamespace, multiarchApplicationName, managedNamespace, "true")
+			if err == nil {
+				Expect(devFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlan(multiarchReleasePlanName, devNamespace, false)).NotTo(HaveOccurred())
 			}
+			createMultiArchReleasePlan(multiarchReleasePlanName, *devFw, devNamespace, multiarchApplicationName, managedNamespace, "true")
 
 			_, err = managedFw.AsKubeAdmin.ReleaseController.GetReleasePlanAdmission(multiarchReleasePlanAdmissionName, managedNamespace)
-			if errors.IsNotFound(err) {
-				createMultiArchReleasePlanAdmission(multiarchReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, multiarchApplicationName, multiarchEnterpriseContractPolicyName, multiarchCatalogPathInRepo)
+			if err == nil {
+				Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(multiarchReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
 			}
+			createMultiArchReleasePlanAdmission(multiarchReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, multiarchApplicationName, multiarchEnterpriseContractPolicyName, multiarchCatalogPathInRepo)
 
 			_, err = managedFw.AsKubeDeveloper.TektonController.GetEnterpriseContractPolicy(multiarchEnterpriseContractPolicyName, managedNamespace)
-			if errors.IsNotFound(err) {
-				createMultiArchEnterpriseContractPolicy(multiarchEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
+			if err == nil {
+				err = managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(multiarchEnterpriseContractPolicyName, managedNamespace, false)
+				Expect(err).ShouldNot(HaveOccurred())
 			}
+			createMultiArchEnterpriseContractPolicy(multiarchEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 
 			snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(*devFw, multiarchComponentName, multiarchApplicationName, devNamespace, sampleImage, multiarchGitSourceURL, multiarchGitSrcSHA, "", "", "", "")
 			Expect(err).ShouldNot(HaveOccurred())
