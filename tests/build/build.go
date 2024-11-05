@@ -938,7 +938,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				}, time.Minute*5, constants.PipelineRunPollingInterval).Should(Succeed(), "timeout while waiting for PR pipeline to start")
 			})
 		})
-		When("a components is created with same git url in different namespace", func() {
+		// Skipping this scenario due to the issue: https://issues.redhat.com/browse/KFLUXBUGS-1820 , reenable this test once issue is fixed
+		When("a components is created with same git url in different namespace", Pending, func() {
 			var namespace, appName, compName string
 			var fw *framework.Framework
 
