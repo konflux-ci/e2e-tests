@@ -40,7 +40,7 @@ const (
 
 var rhioComponentName = "rhio-comp-" + util.GenerateRandomString(4)
 
-var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat-io pipeline", Pending, Label("release-pipelines", "rh-push-to-redhat-io"), func() {
+var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat-io pipeline", Label("release-pipelines", "rh-push-to-redhat-io"), func() {
 	defer GinkgoRecover()
 	var pyxisKeyDecoded, pyxisCertDecoded []byte
 
