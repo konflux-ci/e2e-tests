@@ -132,7 +132,7 @@ func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username string) (s
 				return false, nil
 			}
 			return true, nil
-		}, time.Second * 20, time.Minute * 60)
+		}, time.Second * 20, time.Minute * 10)
 		if err != nil {
 			return "", err
 		}
