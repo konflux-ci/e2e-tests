@@ -69,6 +69,12 @@ const (
 	// Cert auth for accessing Pyxis stage external registry
 	PYXIS_STAGE_CERT_ENV string = "PYXIS_STAGE_CERT"
 
+	// SSO user for accessing the Atlas stage release instance
+	ATLAS_STAGE_ACCOUNT_ENV string = "ATLAS_STAGE_ACCOUNT" // #nosec
+
+	// SSO token for accessing the Atlas stage release instance
+	ATLAS_STAGE_TOKEN_ENV string = "ATLAS_STAGE_TOKEN" // #nosec
+
 	// Offline/refresh token used for getting Keycloak token in order to authenticate against stage/prod cluster
 	// More details: https://access.redhat.com/articles/3626371
 	OFFLINE_TOKEN_ENV = "OFFLINE_TOKEN"
