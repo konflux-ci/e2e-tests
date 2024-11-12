@@ -149,7 +149,8 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 	pr := &pipeline.PipelineRun{}
 
 	for {
-		err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 30*time.Minute, true, func(ctx context.Context) (done bool, err error) {
+		// Bumped timeout from 30 minutes due to https://issues.redhat.com/browse/STONEINTG-1072
+		err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 50*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 			pr, err = h.GetComponentPipelineRun(component.GetName(), app, component.GetNamespace(), sha)
 
 			if err != nil {

@@ -92,17 +92,18 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 	baseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
 	pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
 
-	if scenario.Revision == gitRepoContainsSymlinkBranchName {
-		revision := symlinkBranchRevision
-		err = commonCtrl.Github.CreateRef(utils.GetRepoName(scenario.GitURL), gitRepoContainsSymlinkBranchName, revision, baseBranchName)
-		Expect(err).ShouldNot(HaveOccurred())
-		pacAndBaseBranches = append(pacAndBaseBranches, TestBranches{
-			RepoName:       utils.GetRepoName(scenario.GitURL),
-			BranchName:     gitRepoContainsSymlinkBranchName,
-			PacBranchName:  pacBranchName,
-			BaseBranchName: baseBranchName,
-		})
-	} else {
+	// if scenario.Revision == gitRepoContainsSymlinkBranchName {
+	// 	revision := symlinkBranchRevision
+	// 	err = commonCtrl.Github.CreateRef(utils.GetRepoName(scenario.GitURL), gitRepoContainsSymlinkBranchName, revision, baseBranchName)
+	// 	Expect(err).ShouldNot(HaveOccurred())
+	// 	pacAndBaseBranches = append(pacAndBaseBranches, TestBranches{
+	// 		RepoName:       utils.GetRepoName(scenario.GitURL),
+	// 		BranchName:     gitRepoContainsSymlinkBranchName,
+	// 		PacBranchName:  pacBranchName,
+	// 		BaseBranchName: baseBranchName,
+	// 	})
+	// } else {
+	if scenario.Revision != gitRepoContainsSymlinkBranchName {
 		err = commonCtrl.Github.CreateRef(utils.GetRepoName(scenario.GitURL), "main", scenario.Revision, baseBranchName)
 		Expect(err).ShouldNot(HaveOccurred())
 		pacAndBaseBranches = append(pacAndBaseBranches, TestBranches{
@@ -251,7 +252,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			}
 
 			// Create the symlink component
-			CreateComponent(kubeadminClient.CommonController, kubeadminClient.HasController, applicationName, symlinkComponentName, testNamespace, symlinkScenario)
+			// Temporarily disabled due to https://issues.redhat.com/browse/STONEBLD-2981
+			//CreateComponent(kubeadminClient.CommonController, kubeadminClient.HasController, applicationName, symlinkComponentName, testNamespace, symlinkScenario)
 
 		})
 
@@ -303,8 +305,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				}
 			}
 		})
-
-		It(fmt.Sprintf("triggers PipelineRun for symlink component with source URL %s with component name %s", pythonComponentGitHubURL, symlinkComponentName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
+		// Temporarily disabled due to https://issues.redhat.com/browse/STONEBLD-2981
+		It(fmt.Sprintf("triggers PipelineRun for symlink component with source URL %s with component name %s", pythonComponentGitHubURL, symlinkComponentName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), Pending, func() {
 			timeout := time.Minute * 5
 			symlinkPRunName = WaitForPipelineRunStarts(kubeadminClient, applicationName, symlinkComponentName, testNamespace, timeout)
 			Expect(symlinkPRunName).ShouldNot(BeEmpty())
@@ -719,8 +721,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				}
 			})
 		}
-
-		It(fmt.Sprintf("pipelineRun should fail for symlink component with Git source URL %s with component name %s", pythonComponentGitHubURL, symlinkComponentName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
+		// Temporarily disabled due to https://issues.redhat.com/browse/STONEBLD-2981
+		It(fmt.Sprintf("pipelineRun should fail for symlink component with Git source URL %s with component name %s", pythonComponentGitHubURL, symlinkComponentName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), Pending, func() {
 			component, err := kubeadminClient.HasController.GetComponent(symlinkComponentName, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "",
