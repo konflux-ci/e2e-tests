@@ -285,17 +285,18 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 				}
 			}
+			// Skip removing the branches, to help debug the issue: https://issues.redhat.com/browse/STONEBLD-2981
 			//Cleanup pac and base branches
-			for _, branches := range pacAndBaseBranches {
-				err = kubeadminClient.CommonController.Github.DeleteRef(branches.RepoName, branches.PacBranchName)
-				if err != nil {
-					Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
-				}
-				err = kubeadminClient.CommonController.Github.DeleteRef(branches.RepoName, branches.BaseBranchName)
-				if err != nil {
-					Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
-				}
-			}
+			// for _, branches := range pacAndBaseBranches {
+			// 	err = kubeadminClient.CommonController.Github.DeleteRef(branches.RepoName, branches.PacBranchName)
+			// 	if err != nil {
+			// 		Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			// 	}
+			// 	err = kubeadminClient.CommonController.Github.DeleteRef(branches.RepoName, branches.BaseBranchName)
+			// 	if err != nil {
+			// 		Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			// 	}
+			// }
 			//Cleanup webhook when not running for build-definitions CI
 			if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) == "" {
 				for _, branches := range pacAndBaseBranches {
@@ -305,7 +306,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		})
 
 		It(fmt.Sprintf("triggers PipelineRun for symlink component with source URL %s with component name %s", pythonComponentGitHubURL, symlinkComponentName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
-			timeout := time.Minute * 5
+			// Increase the timeout to 20min to help debug the issue https://issues.redhat.com/browse/STONEBLD-2981, once issue is fixed, revert to 5min
+			timeout := time.Minute * 20
 			symlinkPRunName = WaitForPipelineRunStarts(kubeadminClient, applicationName, symlinkComponentName, testNamespace, timeout)
 			Expect(symlinkPRunName).ShouldNot(BeEmpty())
 			pipelineRunsWithE2eFinalizer = append(pipelineRunsWithE2eFinalizer, symlinkPRunName)
@@ -317,7 +319,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			Expect(scenario.PipelineBundleNames).Should(HaveLen(1))
 			pipelineBundleName := scenario.PipelineBundleNames[0]
 			It(fmt.Sprintf("triggers PipelineRun for component with source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
-				timeout := time.Minute * 5
+				// Increase the timeout to 20min to help debug the issue https://issues.redhat.com/browse/STONEBLD-2981, once issue is fixed, revert to 5min
+				timeout := time.Minute * 20
 				prName := WaitForPipelineRunStarts(kubeadminClient, applicationName, componentName, testNamespace, timeout)
 				Expect(prName).ShouldNot(BeEmpty())
 				pipelineRunsWithE2eFinalizer = append(pipelineRunsWithE2eFinalizer, prName)
