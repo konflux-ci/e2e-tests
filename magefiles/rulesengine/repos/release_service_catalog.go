@@ -85,6 +85,7 @@ var isRehearse = func(rctx *rulesengine.RuleCtx) (bool, error) {
 }
 
 var isPaired = func(rctx *rulesengine.RuleCtx) (bool, error) {
+	rctx.IsPaired = IsPRPairingRequired("release-service", rctx.PrRemoteName, rctx.PrBranchName)
 	return rctx.IsPaired, nil
 }
 
