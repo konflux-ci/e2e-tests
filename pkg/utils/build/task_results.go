@@ -16,7 +16,7 @@ import (
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var taskNames = []string{"clair-scan", "clamav-scan", "deprecated-base-image-check", "inspect-image"}
+var taskNames = []string{"clair-scan", "clamav-scan", "deprecated-base-image-check", "validate-fbc"}
 
 type TestOutput struct {
 	Result    string `json:"result"`
@@ -54,9 +54,9 @@ func ValidateBuildPipelineTestResults(pipelineRun *pipeline.PipelineRun, c crcli
 	}
 
 	for _, taskName := range taskNames {
-		// The inspect-image task is only required for FBC pipelines which we can infer by the component name
+		// The validate-fbc task is only required for FBC pipelines which we can infer by the component name
 
-		if !isFBCBuild && taskName == "inspect-image" {
+		if !isFBCBuild && taskName == "validate-fbc" {
 			continue
 		}
 		if isFBCBuild && (taskName == "clair-scan" || taskName == "clamav-scan") {
@@ -75,8 +75,6 @@ func ValidateBuildPipelineTestResults(pipelineRun *pipeline.PipelineRun, c crcli
 			resultsToValidate = append(resultsToValidate, "REPORTS")
 		case "deprecated-image-check":
 			resultsToValidate = append(resultsToValidate, "PYXIS_HTTP_CODE")
-		case "inspect-image":
-			resultsToValidate = append(resultsToValidate, "BASE_IMAGE", "BASE_IMAGE_REPOSITORY")
 		}
 
 		if err := validateTaskRunResult(imageURL, results, resultsToValidate, taskName); err != nil {
