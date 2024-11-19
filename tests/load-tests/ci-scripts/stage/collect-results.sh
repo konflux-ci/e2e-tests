@@ -105,13 +105,6 @@ else
         fi
         tenant="${username}-tenant"
 
-        # Application info
-        echo "Collecting Application timestamps..."
-        collect_application "-n ${tenant}" "$application_stub-$tenant" || echo "ERROR: Failed collecting applications"
-
-        # Component info
-        echo "Collecting Component timestamps..."
-        collect_component "-n ${tenant}" "$component_stub-$tenant" || echo "ERROR: Failed collecting components"
     done
 fi
 

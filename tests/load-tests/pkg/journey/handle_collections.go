@@ -1,13 +1,16 @@
 package journey
 
-import "fmt"
-import "os"
-import "path/filepath"
-import "encoding/json"
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 
-import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+	logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
-import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
+	framework "github.com/konflux-ci/e2e-tests/pkg/framework"
+)
 
 func getDirName(baseDir, namespace, iteration string) string {
 	return filepath.Join(baseDir, "collected-data", namespace, iteration) + "/"
@@ -131,6 +134,45 @@ func collectPipelineRunJSONs(f *framework.Framework, dirPath, namespace, applica
 	return nil
 }
 
+func collectApplicationComponentJSONs(f *framework.Framework, dirPath, namespace, application, component string) error {
+	// Only save Application JSON if it has not already been collected (as HandlePerComponentCollection method is called for each component)
+	if _, err := os.Stat(filepath.Join(dirPath, "collected-application-" + application + ".json")); errors.Is(err, os.ErrNotExist) {
+		// Get Application JSON
+		app, err := f.AsKubeDeveloper.HasController.GetApplication(application, namespace)
+		if err != nil {
+			return fmt.Errorf("Failed to get Application %s: %v", application, err)
+		}
+
+		appJSON, err := json.Marshal(app)
+		if err != nil {
+			return fmt.Errorf("Failed to dump Application JSON: %v", err)
+		}
+
+		err = writeToFile(dirPath, "collected-application-" + application + ".json", appJSON)
+		if err != nil {
+			return fmt.Errorf("Failed to write Application: %v", err)
+		}
+	}
+
+	// Collect Component JSON
+	comp, err := f.AsKubeDeveloper.HasController.GetComponent(component, namespace)
+	if err != nil {
+		return fmt.Errorf("Failed to get Component %s: %v", component, err)
+	}
+
+	compJSON, err := json.Marshal(comp)
+	if err != nil {
+		return fmt.Errorf("Failed to dump Component JSON: %v", err)
+	}
+
+	err = writeToFile(dirPath, "collected-component-" + component + ".json", compJSON)
+	if err != nil {
+		return fmt.Errorf("Failed to write Component: %v", err)
+	}
+
+	return nil
+}
+
 func HandlePerComponentCollection(ctx *PerComponentContext) error {
 	if ctx.ComponentName == "" {
 		logging.Logger.Debug("Component name not populated, so skipping per-component collections in %s", ctx.ParentContext.ParentContext.Namespace)
@@ -154,6 +196,11 @@ func HandlePerComponentCollection(ctx *PerComponentContext) error {
 	err = collectPipelineRunJSONs(ctx.Framework, dirPath, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName)
 	if err != nil {
 		return logging.Logger.Fail(102, "Failed to collect pipeline run JSONs: %v", err)
+	}
+
+	err = collectApplicationComponentJSONs(ctx.Framework, dirPath, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName)
+	if err != nil {
+		return logging.Logger.Fail(102, "Failed to collect Application and Component JSONs: %v", err)
 	}
 
 	return nil
