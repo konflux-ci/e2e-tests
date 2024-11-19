@@ -1,16 +1,14 @@
 package journey
 
-import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"os"
-	"path/filepath"
+import "fmt"
+import "os"
+import "errors"
+import "path/filepath"
+import "encoding/json"
 
-	logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
-	framework "github.com/konflux-ci/e2e-tests/pkg/framework"
-)
+import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 
 func getDirName(baseDir, namespace, iteration string) string {
 	return filepath.Join(baseDir, "collected-data", namespace, iteration) + "/"
@@ -135,8 +133,9 @@ func collectPipelineRunJSONs(f *framework.Framework, dirPath, namespace, applica
 }
 
 func collectApplicationComponentJSONs(f *framework.Framework, dirPath, namespace, application, component string) error {
+	appJsonFileName := "collected-application-" + application + ".json"
 	// Only save Application JSON if it has not already been collected (as HandlePerComponentCollection method is called for each component)
-	if _, err := os.Stat(filepath.Join(dirPath, "collected-application-" + application + ".json")); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(filepath.Join(dirPath, appJsonFileName)); errors.Is(err, os.ErrNotExist) {
 		// Get Application JSON
 		app, err := f.AsKubeDeveloper.HasController.GetApplication(application, namespace)
 		if err != nil {
@@ -148,7 +147,7 @@ func collectApplicationComponentJSONs(f *framework.Framework, dirPath, namespace
 			return fmt.Errorf("Failed to dump Application JSON: %v", err)
 		}
 
-		err = writeToFile(dirPath, "collected-application-" + application + ".json", appJSON)
+		err = writeToFile(dirPath, appJsonFileName, appJSON)
 		if err != nil {
 			return fmt.Errorf("Failed to write Application: %v", err)
 		}
