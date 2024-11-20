@@ -76,14 +76,6 @@ application_stub=$ARTIFACT_DIR/collected-data/collected-applications.appstudio.r
 component_stub=$ARTIFACT_DIR/collected-data/collected-components.appstudio.redhat.com
 node_stub=$ARTIFACT_DIR/collected-data/collected-nodes
 
-## Application info
-echo "Collecting Application timestamps..."
-collect_application "-A" "$application_stub"
-
-## Component info
-echo "Collecting Component timestamps..."
-collect_component "-A" "$component_stub"
-
 ## Nodes info
 #echo "Collecting node specs"
 #collect_nodes "$node_stub"
