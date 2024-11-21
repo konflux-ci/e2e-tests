@@ -125,6 +125,24 @@ func (h *HasController) GetAllPipelineRunsForApplication(applicationName, namesp
 	return nil, fmt.Errorf("no pipelinerun found for application %s", applicationName)
 }
 
+// GetAllGroupSnapshotsForApplication returns the groupSnapshots for a given application in the namespace
+func (h *HasController) GetAllGroupSnapshotsForApplication(applicationName, namespace string) (*appservice.SnapshotList, error) {
+	snapshotLabels := map[string]string{"appstudio.openshift.io/application": applicationName, "test.appstudio.openshift.io/type": "group"}
+
+	list := &appservice.SnapshotList{}
+	err := h.KubeRest().List(context.Background(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(snapshotLabels), Namespace: namespace})
+
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error listing snapshots in %s namespace: %v", namespace, err)
+	}
+
+	if len(list.Items) > 0 {
+		return list, nil
+	}
+
+	return nil, fmt.Errorf("no snapshot found for application %s", applicationName)
+}
+
 // Set of options to retrigger pipelineRuns in CI to fight against flakynes
 type RetryOptions struct {
 	// Indicate how many times a pipelineRun should be retriggered in case of flakines

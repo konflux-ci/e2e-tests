@@ -465,6 +465,34 @@ func createComponent(f framework.Framework, testNamespace, applicationName, comp
 	return originalComponent, componentName, pacBranchName, componentBaseBranchName
 }
 
+func createComponentWithCustomBranch(f framework.Framework, testNamespace, applicationName, componentName, componentRepoURL string, toBranchName string, contextDir string) *appstudioApi.Component {
+	// get the build pipeline bundle annotation
+	buildPipelineAnnotation := build.GetDockerBuildPipelineBundle()
+	dockerFileURL := constants.DockerFilePath
+	if contextDir == "" {
+		dockerFileURL = "Dockerfile"
+	}
+	componentObj := appstudioApi.ComponentSpec{
+		ComponentName: componentName,
+		Application:   applicationName,
+		Source: appstudioApi.ComponentSource{
+			ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
+				GitSource: &appstudioApi.GitSource{
+					URL:           componentRepoURL,
+					Revision:      toBranchName,
+					Context:       contextDir,
+					DockerfileURL: dockerFileURL,
+				},
+			},
+		},
+	}
+
+	originalComponent, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+	Expect(err).NotTo(HaveOccurred())
+
+	return originalComponent
+}
+
 func cleanup(f framework.Framework, testNamespace, applicationName, componentName string) {
 	if !CurrentSpecReport().Failed() {
 		Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
