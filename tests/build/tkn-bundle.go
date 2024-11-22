@@ -31,7 +31,8 @@ import (
   - kubectl patch serviceaccount appstudio-pipeline -p '{"imagePullSecrets": [{"name": "docker-config"}], "secrets": [{"name": "docker-config"}]}'
 */
 
-var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templates"), func() {
+// Skipping this test due to https://issues.redhat.com/browse/KFLUXBUGS-1899 , reenable it back once it is fixed
+var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templates"), Pending, func() {
 
 	defer GinkgoRecover()
 
