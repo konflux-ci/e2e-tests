@@ -347,26 +347,19 @@ func readDockerfile(pathContext, dockerfile, repoURL, repoRevision string) ([]by
 
 // ReadDockerfileUsedForBuild reads the Dockerfile and return its content.
 func ReadDockerfileUsedForBuild(c client.Client, tektonController *tekton.TektonController, pr *pipeline.PipelineRun) ([]byte, error) {
-	var paramDockerfileValue, paramPathContextValue string
-	var paramUrlValue, paramRevisionValue string
+	var paramDockerfileValue, paramPathContextValue, paramUrlValue, paramRevisionValue string
 	var err error
-	getParam := tektonController.GetTaskRunParam
 
-	if paramDockerfileValue, err = getParam(c, pr, "build-container", "DOCKERFILE"); err != nil {
-		return nil, err
-	}
-
-	if paramPathContextValue, err = getParam(c, pr, "build-container", "CONTEXT"); err != nil {
-		return nil, err
-	}
-
-	// get git-clone param url and revision
-	if paramUrlValue, err = getParam(c, pr, "clone-repository", "url"); err != nil {
-		return nil, err
-	}
-
-	if paramRevisionValue, err = getParam(c, pr, "clone-repository", "revision"); err != nil {
-		return nil, err
+	for _, param := range pr.Spec.Params {
+		if param.Name == "dockerfile" {
+			paramDockerfileValue = param.Value.StringVal
+		} else if param.Name == "path-context" {
+			paramPathContextValue = param.Value.StringVal
+		} else if param.Name == "git-url" {
+			paramUrlValue = param.Value.StringVal
+		} else if param.Name == "revision" {
+			paramRevisionValue = param.Value.StringVal
+		}
 	}
 
 	dockerfileContent, err := readDockerfile(paramPathContextValue, paramDockerfileValue, paramUrlValue, paramRevisionValue)
