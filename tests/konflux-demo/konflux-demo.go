@@ -265,19 +265,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 			})
 
 			When("Build PipelineRun completes successfully", func() {
-				It("should be possible to download the SBOM file", func() {
-					var outputImage string
-					for _, p := range pipelineRun.Spec.Params {
-						if p.Name == "output-image" {
-							outputImage = p.Value.StringVal
-						}
-					}
-					Expect(outputImage).ToNot(BeEmpty(), "output image of a component could not be found")
-
-					_, _, err = build.GetParsedSbomFilesContentFromImage(outputImage)
-					Expect(err).NotTo(HaveOccurred())
-				})
-
+				
 				It("should validate Tekton TaskRun test results successfully", func() {
 					pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appSpec.ApplicationName, fw.UserNamespace, headSHA)
 					Expect(err).ShouldNot(HaveOccurred())

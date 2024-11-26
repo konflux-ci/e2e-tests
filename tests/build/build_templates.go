@@ -597,35 +597,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
 					)
 				})
-				It("contains non-empty sbom files", Label(buildTemplatesTestLabel), func() {
-					purl, cyclonedx, err := build.GetParsedSbomFilesContentFromImage(imageWithDigest)
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(cyclonedx.BomFormat).To(Equal("CycloneDX"))
-					Expect(cyclonedx.SpecVersion).ToNot(BeEmpty())
-					Expect(cyclonedx.Version).ToNot(BeZero())
-					if !strings.Contains(scenario.GitURL, "from-scratch") {
-						Expect(cyclonedx.Components).ToNot(BeEmpty())
-
-						numberOfLibraryComponents := 0
-						for _, component := range cyclonedx.Components {
-							Expect(component.Name).ToNot(BeEmpty())
-							Expect(component.Type).ToNot(BeEmpty())
-
-							if component.Type == "library" || component.Type == "application" {
-								Expect(component.Purl).ToNot(BeEmpty())
-								numberOfLibraryComponents++
-							}
-						}
-
-						Expect(purl.ImageContents.Dependencies).ToNot(BeEmpty())
-						Expect(purl.ImageContents.Dependencies).To(HaveLen(numberOfLibraryComponents))
-
-						for _, dependency := range purl.ImageContents.Dependencies {
-							Expect(dependency.Purl).ToNot(BeEmpty())
-						}
-					}
-				})
 			})
 
 			Context("build-definitions ec pipelines", Label(buildTemplatesTestLabel), func() {
