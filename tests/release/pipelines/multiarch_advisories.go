@@ -250,7 +250,7 @@ func createMultiArchReleasePlanAdmission(multiarchRPAName string, managedFw fram
 				{
 					"name":       multiarchComponentName,
 					"repository": "registry.stage.redhat.io/rhtap/konflux-release-e2e",
-					"tags":       []string{"latest", "latest-{{ timestamp }}"},
+					"tags":       []string{"latest-{{ timestamp }}"},
 				},
 			},
 		},
