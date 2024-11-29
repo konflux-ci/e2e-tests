@@ -17,6 +17,8 @@ const (
 	HacbsReleaseTestsTokenSecret         string = "redhat-appstudio-registry-pull-secret"
 	PublicSecretNameAuth                 string = "cosign-public-key"
 	ReleasePipelineServiceAccountDefault string = "release-service-account"
+	CgwSecretName                        string = "publish-to-cgw-secret"
+	ExodusProdSecretName                 string = "exodus-prod-secret"
 
 	SourceReleasePlanName          string = "source-releaseplan"
 	SecondReleasePlanName          string = "the-second-releaseplan"
