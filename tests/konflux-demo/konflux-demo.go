@@ -265,7 +265,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 			})
 
 			When("Build PipelineRun completes successfully", func() {
-				
+
 				It("should validate Tekton TaskRun test results successfully", func() {
 					pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appSpec.ApplicationName, fw.UserNamespace, headSHA)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -273,9 +273,17 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 				})
 
 				It("should validate that the build pipelineRun is signed", func() {
-					pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appSpec.ApplicationName, fw.UserNamespace, headSHA)
-					Expect(err).ShouldNot(HaveOccurred())
-					Expect(pipelineRun.Annotations["chains.tekton.dev/signed"]).To(Equal("true"), fmt.Sprintf("pipelinerun %s/%s does not have the expected value of annotation 'chains.tekton.dev/signed'", pipelineRun.GetNamespace(), pipelineRun.GetName()))
+					Eventually(func() error {
+						pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appSpec.ApplicationName, fw.UserNamespace, headSHA)
+						if err != nil {
+							return err
+						}
+						if pipelineRun.Annotations["chains.tekton.dev/signed"] != "true" {
+							return fmt.Errorf("pipelinerun %s/%s does not have the expected value of annotation 'chains.tekton.dev/signed'", pipelineRun.GetNamespace(), pipelineRun.GetName())
+						}
+						return nil
+					}, time.Minute*5, time.Second*5).Should(Succeed(), "failed while validating build pipelineRun is signed")
+
 				})
 
 				It("should find the related Snapshot CR", func() {
