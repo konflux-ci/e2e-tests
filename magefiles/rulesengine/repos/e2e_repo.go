@@ -51,8 +51,8 @@ var TestFilesOnlyRule = rulesengine.Rule{Name: "E2E PR Test File Diff Execution"
 			rulesengine.ConditionFunc(CheckTektonFilesChanged),
 		},
 		rulesengine.Any{
-			&BuildTestFileChangeOnlyRule,
-			&BuildTemplateScenarioFileChangeRule,
+			&BuildORBuildTemplatesTestFileChangeOnlyRule,
+			&BuildTemplateDependentFileChangeRule,
 			&BuildNonTestFileChangeRule,
 			&KonfluxDemoConfigsFileOnlyChangeRule,
 			&KonfluxDemoTestFileChangedRule,
@@ -77,11 +77,11 @@ func CheckTektonFilesChanged(rctx *rulesengine.RuleCtx) (bool, error) {
 
 }
 
-var BuildTestFileChangeOnlyRule = rulesengine.Rule{Name: "E2E PR Build Test File Change Only Rule",
-	Description: "Map build tests files when build test file are only changed in the e2e-repo PR",
+var BuildORBuildTemplatesTestFileChangeOnlyRule = rulesengine.Rule{Name: "E2E PR Build Or Build Templates Test File Change Only Rule",
+	Description: "Map build tests files when build.go or build_templates.go test files are only changed in the e2e-repo PR",
 	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
 
-		return len(rctx.DiffFiles.FilterByDirString("tests/build/build_templates_scenario.go")) == 0 &&
+		return len(rctx.DiffFiles.FilterByDirString("tests/build/build_templates_scenarios.go")) == 0 &&
 			len(rctx.DiffFiles.FilterByDirString("tests/build/const.go")) == 0 &&
 			len(rctx.DiffFiles.FilterByDirString("tests/build/source_build.go")) == 0, nil
 	}),
@@ -96,46 +96,32 @@ var BuildTestFileChangeOnlyRule = rulesengine.Rule{Name: "E2E PR Build Test File
 
 	})}}
 
-var BuildTemplateScenarioFileChangeRule = rulesengine.Rule{Name: "E2E PR Build Template Scenario File Changed Rule",
-	Description: "Map build tests files when build template scenario file is changed in the e2e-repo PR",
+var BuildTemplateDependentFileChangeRule = rulesengine.Rule{Name: "E2E PR Build Templates Dependent File Changed Rule",
+	Description: "Map build templates test file when build_templates_scenario.go or source_build.go file is changed in the e2e-repo PR",
 	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
 
-		return len(rctx.DiffFiles.FilterByDirString("tests/build/build_templates_scenario.go")) != 0, nil
+		return len(rctx.DiffFiles.FilterByDirString("tests/build/build_templates_scenarios.go")) != 0 || len(rctx.DiffFiles.FilterByDirString("tests/build/source_build.go")) != 0, nil
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 
-		foundInDiff := false
-		for _, file := range rctx.DiffFiles.FilterByDirString("tests/build/build_templates.go") {
-
-			rctx.FocusFiles = dedupeAppendFiles(rctx.FocusFiles, file.Name)
-			foundInDiff = true
-
-		}
-
-		if !foundInDiff {
-
-			rctx.FocusFiles = dedupeAppendFiles(rctx.FocusFiles, "tests/build/build_templates.go")
-
-		}
+		rctx.FocusFiles = dedupeAppendFiles(rctx.FocusFiles, "tests/build/build_templates.go")
 
 		return nil
 
 	})}}
 
 var BuildNonTestFileChangeRule = rulesengine.Rule{Name: "E2E PR Build Test Helper Files Change Rule",
-	Description: "Map build tests files when const.go or source_build.go file is changed in the e2e-repo PR",
+	Description: "Map build tests files when const.go file is changed in the e2e-repo PR",
 	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
 
-		return len(rctx.DiffFiles.FilterByDirGlob("tests/build/const.go")) != 0 || len(rctx.DiffFiles.FilterByDirGlob("tests/build/source_build.go")) != 0, nil
+		return len(rctx.DiffFiles.FilterByDirGlob("tests/build/const.go")) != 0, nil
 	}),
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 
 		for _, file := range rctx.DiffFiles.FilterByDirGlob("tests/build/*.go") {
 
 			if strings.Contains(file.Name, "source_build.go") || strings.Contains(file.Name, "const.go") || strings.Contains(file.Name, "scenarios.go") {
-
 				continue
-
 			}
 			rctx.FocusFiles = dedupeAppendFiles(rctx.FocusFiles, file.Name)
 
