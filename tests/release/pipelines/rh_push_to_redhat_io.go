@@ -1,10 +1,8 @@
 package pipelines
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"os"
 	"regexp"
 	"time"
 
@@ -15,15 +13,12 @@ import (
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/devfile/library/v2/pkg/util"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
 
@@ -42,7 +37,6 @@ var rhioComponentName = "rhio-comp-" + util.GenerateRandomString(4)
 
 var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat-io pipeline", Label("release-pipelines", "rh-push-to-redhat-io"), func() {
 	defer GinkgoRecover()
-	var pyxisKeyDecoded, pyxisCertDecoded []byte
 
 	var devWorkspace = utils.GetEnv(constants.RELEASE_DEV_WORKSPACE_ENV, constants.DevReleaseTeam)
 	var managedWorkspace = utils.GetEnv(constants.RELEASE_MANAGED_WORKSPACE_ENV, constants.ManagedReleaseTeam)
@@ -70,36 +64,11 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 			managedFw = releasecommon.NewFramework(managedWorkspace)
 			managedNamespace = managedFw.UserNamespace
 
-			keyPyxisStage := os.Getenv(constants.PYXIS_STAGE_KEY_ENV)
-			Expect(keyPyxisStage).ToNot(BeEmpty())
-
-			certPyxisStage := os.Getenv(constants.PYXIS_STAGE_CERT_ENV)
-			Expect(certPyxisStage).ToNot(BeEmpty())
-
-			// Creating k8s secret to access Pyxis stage based on base64 decoded of key and cert
-			pyxisKeyDecoded, err = base64.StdEncoding.DecodeString(string(keyPyxisStage))
-			Expect(err).ToNot(HaveOccurred())
-
-			pyxisCertDecoded, err = base64.StdEncoding.DecodeString(string(certPyxisStage))
-			Expect(err).ToNot(HaveOccurred())
-
-			pyxisSecret, err := managedFw.AsKubeAdmin.CommonController.GetSecret(managedNamespace, "pyxis")
-			if pyxisSecret == nil || errors.IsNotFound(err) {
-				secret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "pyxis",
-						Namespace: managedNamespace,
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: map[string][]byte{
-						"cert": pyxisCertDecoded,
-						"key":  pyxisKeyDecoded,
-					},
-				}
-
-				_, err = managedFw.AsKubeAdmin.CommonController.CreateSecret(managedNamespace, secret)
-				Expect(err).ToNot(HaveOccurred())
+			pyxisFieldEnvMap := map[string]string{
+				"key":  constants.PYXIS_STAGE_KEY_ENV,
+				"cert": constants.PYXIS_STAGE_CERT_ENV,
 			}
+			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
 
 			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
 			Expect(err).ToNot(HaveOccurred())

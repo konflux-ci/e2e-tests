@@ -1,24 +1,28 @@
 package common
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/devfile/library/v2/pkg/util"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
-	"github.com/devfile/library/v2/pkg/util"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 func NewFramework(workspace string) *framework.Framework {
-	var fw  *framework.Framework
+	var fw *framework.Framework
 	var err error
 	stageOptions := utils.Options{
 		ToolchainApiUrl: os.Getenv(constants.TOOLCHAIN_API_URL_ENV),
@@ -79,11 +83,11 @@ func CreateSnapshotWithImageSource(fw framework.Framework, componentName, applic
 		{
 			Name:           componentName,
 			ContainerImage: containerImage,
-			Source:         appstudioApi.ComponentSource{
+			Source: appstudioApi.ComponentSource{
 				appstudioApi.ComponentSourceUnion{
 					GitSource: &appstudioApi.GitSource{
 						Revision: gitSourceRevision,
-						URL: gitSourceURL,
+						URL:      gitSourceURL,
 					},
 				},
 			},
@@ -94,11 +98,11 @@ func CreateSnapshotWithImageSource(fw framework.Framework, componentName, applic
 		newSnapshotComponent := appstudioApi.SnapshotComponent{
 			Name:           componentName2,
 			ContainerImage: containerImage2,
-			Source:         appstudioApi.ComponentSource{
+			Source: appstudioApi.ComponentSource{
 				appstudioApi.ComponentSourceUnion{
 					GitSource: &appstudioApi.GitSource{
 						Revision: gitSourceRevision2,
-						URL: gitSourceURL2,
+						URL:      gitSourceURL2,
 					},
 				},
 			},
@@ -111,7 +115,7 @@ func CreateSnapshotWithImageSource(fw framework.Framework, componentName, applic
 	return fw.AsKubeAdmin.IntegrationController.CreateSnapshotWithComponents(snapshotName, componentName, applicationName, namespace, snapshotComponents)
 }
 
-func CheckReleaseStatus(releaseCR *releaseApi.Release) (error) {
+func CheckReleaseStatus(releaseCR *releaseApi.Release) error {
 	GinkgoWriter.Println("releaseCR: %s", releaseCR.Name)
 	conditions := releaseCR.Status.Conditions
 	GinkgoWriter.Println("len of conditions: %d", len(conditions))
@@ -136,4 +140,38 @@ func CheckReleaseStatus(releaseCR *releaseApi.Release) (error) {
 	return nil
 }
 
+// CreateOpaqueSecret creates a k8s Secret in a workspace if it doesn't exist.
+// It populates the Secret data fields based on the mapping of fields to
+// environment variables containing the base64 encoded field data.
+func CreateOpaqueSecret(
+	fw *framework.Framework,
+	namespace, secretName string,
+	fieldEnvMap map[string]string,
+) {
+	secretData := make(map[string][]byte)
 
+	for field, envVar := range fieldEnvMap {
+		envValue := os.Getenv(envVar)
+		Expect(envValue).ToNot(BeEmpty())
+
+		decodedValue, err := base64.StdEncoding.DecodeString(envValue)
+		Expect(err).ToNot(HaveOccurred())
+
+		secretData[field] = decodedValue
+	}
+
+	secret, err := fw.AsKubeAdmin.CommonController.GetSecret(namespace, secretName)
+	if secret == nil || errors.IsNotFound(err) {
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      secretName,
+				Namespace: namespace,
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: secretData,
+		}
+
+		_, err = fw.AsKubeAdmin.CommonController.CreateSecret(namespace, secret)
+		Expect(err).ToNot(HaveOccurred())
+	}
+}
