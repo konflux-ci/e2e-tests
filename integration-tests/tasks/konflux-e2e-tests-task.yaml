@@ -91,6 +91,16 @@ spec:
         export GINKGO_PROCS=$(params.ginkgo-procs)
         export ORAS_CONTAINER=$(params.oras-container)
 
+        post_actions() {
+            # oras pull with retries
+            # gather new data
+            # security scan new data with infosec tool leaktk
+            # oras push with retries
+            exit "$exit_code"
+        }
+
+        trap post_actions EXIT
+
         # Log into OpenShift
         $(params.ocp-login-command)
 
