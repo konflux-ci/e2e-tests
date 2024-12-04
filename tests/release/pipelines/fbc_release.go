@@ -85,7 +85,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcReleasePlanName, devNamespace, fbcApplicationName, managedNamespace, "true", nil, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 
-			createFBCReleasePlanAdmission(fbcReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, fbcApplicationName, fbcEnterpriseContractPolicyName, relSvcCatalogPathInRepo, "false", "", "", "", "", "false")
+			createFBCReleasePlanAdmission(fbcReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, fbcApplicationName, fbcEnterpriseContractPolicyName, relSvcCatalogPathInRepo, false, "", false, "", "", false)
 
 			createFBCEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 			snapshot, err = releasecommon.CreateSnapshotWithImageSource(*devFw, fbcComponentName, fbcApplicationName, devNamespace, sampleImage, fbcSourceGitURL, fbcGitSrcSHA, "", "", "", "")
@@ -134,7 +134,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcStagedRPName, devNamespace, fbcStagedAppName, managedNamespace, "true", nil, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 
-			createFBCReleasePlanAdmission(fbcStagedRPAName, *managedFw, devNamespace, managedNamespace, fbcStagedAppName, fbcStagedECPolicyName, relSvcCatalogPathInRepo, "false", "", "", "", "", "true")
+			createFBCReleasePlanAdmission(fbcStagedRPAName, *managedFw, devNamespace, managedNamespace, fbcStagedAppName, fbcStagedECPolicyName, relSvcCatalogPathInRepo, false, "", false, "", "", true)
 
 			createFBCEnterpriseContractPolicy(fbcStagedECPolicyName, *managedFw, devNamespace, managedNamespace)
 			snapshot, err = releasecommon.CreateSnapshotWithImageSource(*devFw, fbcStagedCompName, fbcStagedAppName, devNamespace, sampleImage, fbcSourceGitURL, fbcGitSrcSHA, "", "", "", "")
@@ -181,7 +181,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcHotfixRPName, devNamespace, fbcHotfixAppName, managedNamespace, "true", nil, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 
-			createFBCReleasePlanAdmission(fbcHotfixRPAName, *managedFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixECPolicyName, relSvcCatalogPathInRepo, "true", issueId, "false", "", "", "false")
+			createFBCReleasePlanAdmission(fbcHotfixRPAName, *managedFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixECPolicyName, relSvcCatalogPathInRepo, true, issueId, false, "", "", false)
 
 			createFBCEnterpriseContractPolicy(fbcHotfixECPolicyName, *managedFw, devNamespace, managedNamespace)
 
@@ -230,7 +230,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			Expect(err).NotTo(HaveOccurred())
 
 			createFBCEnterpriseContractPolicy(fbcPreGAECPolicyName, *managedFw, devNamespace, managedNamespace)
-			createFBCReleasePlanAdmission(fbcPreGARPAName, *managedFw, devNamespace, managedNamespace, fbcPreGAAppName, fbcPreGAECPolicyName, relSvcCatalogPathInRepo, "false", issueId, "true", productName, productVersion, "false")
+			createFBCReleasePlanAdmission(fbcPreGARPAName, *managedFw, devNamespace, managedNamespace, fbcPreGAAppName, fbcPreGAECPolicyName, relSvcCatalogPathInRepo, false, issueId, true, productName, productVersion, false)
 
 			snapshot, err = releasecommon.CreateSnapshotWithImageSource(*devFw, fbcPreGACompName, fbcPreGAAppName, devNamespace, sampleImage, fbcSourceGitURL, fbcGitSrcSHA, "", "", "", "")
                         Expect(err).ShouldNot(HaveOccurred())
@@ -339,15 +339,27 @@ func createFBCEnterpriseContractPolicy(fbcECPName string, managedFw framework.Fr
 
 }
 
-func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framework, devNamespace, managedNamespace, fbcAppName, fbcECPName, pathInRepoValue, hotfix, issueId, preGA, productName, productVersion, isStagedIndex string) {
+func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framework, devNamespace, managedNamespace, fbcAppName, fbcECPName, pathInRepoValue string, hotfix bool, issueId string, preGA bool, productName, productVersion string, isStagedIndex bool) {
 	var err error
+	var targetIndex string
+
+	if productName == "" {
+		productName = "testProductName"
+	}
+	if isStagedIndex {
+		targetIndex = ""
+        } else {
+		targetIndex = constants.TargetIndex
+	}
+
 	data, err := json.Marshal(map[string]interface{}{
 		"fbc": map[string]interface{}{
 			"fromIndex":                       constants.FromIndex,
 			"stagedIndex":                     isStagedIndex,
+			"targetIndex":                     targetIndex,
 			"publishingCredentials":           "fbc-preview-publishing-credentials",
-			"requestUpdateTimeout":            "1500",
-			"buildTimeoutSeconds":             "1500",
+			"requestTimeoutSeconds":           1500,
+			"buildTimeoutSeconds":             1500,
 			"hotfix":                          hotfix,
 			"issueId":                         issueId,
 			"preGA":                           preGA,
@@ -359,18 +371,6 @@ func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framew
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",
 		},
 	})
-	Expect(err).NotTo(HaveOccurred())
-
-	var structData map[string]interface{}
-	err = json.Unmarshal(data, &structData)
-	Expect(err).NotTo(HaveOccurred())
-
-	if isStagedIndex == "true" {
-		structData["fbc"].(map[string]interface{})["targetIndex"] = ""
-        } else {
-		structData["fbc"].(map[string]interface{})["targetIndex"] = constants.TargetIndex
-	}
-	data, err = json.Marshal(structData)
 	Expect(err).NotTo(HaveOccurred())
 
 	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(fbcRPAName, managedNamespace, "", devNamespace, fbcECPName, fbcServiceAccountName, []string{fbcAppName}, true, &tektonutils.PipelineRef{
