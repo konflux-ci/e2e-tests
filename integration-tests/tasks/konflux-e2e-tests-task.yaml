@@ -18,11 +18,11 @@ spec:
       description: "The name of the test being executed."
     - name: git-repo
       type: string
-      default: "rhtap-e2e"
+      default: "e2e-tests"
       description: "The name of the Git repository containing the E2E tests."
     - name: git-url
       type: string
-      default: "https://github.com/redhat-appstudio/rhtap-e2e.git"
+      default: "https://github.com/konflux-ci/e2e-tests.git"
       description: "The URL of the Git repository containing the E2E tests."
     - name: git-revision
       type: string
@@ -84,23 +84,68 @@ spec:
           value: $(params.job-spec)
         - name: COMPONENT_IMAGE
           value: $(params.component-image)
+        - name: GINKGO_PROCS
+          value: $(params.ginkgo-procs)
+        - name: ORAS_CONTAINER
+          value: $(params.oras-container)
       script: |
         #!/bin/bash
 
-        # Params related with tekton task
-        export GINKGO_PROCS=$(params.ginkgo-procs)
-        export ORAS_CONTAINER=$(params.oras-container)
+        set -euo pipefail
 
-        # Log into OpenShift
-        $(params.ocp-login-command)
+        log() {
+            echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [$1] $2"
+        }
+        export -f log
 
-        if [ "$GIT_REPO" = "e2e-tests" ]; then
-          export SOURCE_REPO_URL=$(echo "$JOB_SPEC" | jq -r '.git.source_repo_url' | sed 's#https://github.com/##')
-          export SOURCE_REPO_BRANCH=$(echo "$JOB_SPEC" | jq -r '.git.source_repo_branch')
+        # Log into OpenShift cluster (the connection is sometimes flaky - give it more time)
+        timeout --foreground "10m" bash -c "
+        until $(params.ocp-login-command)
+        do
+            echo \"Waiting for 'oc login' command to succeed... Trying again in 10 seconds\"
+            sleep 10
+        done
+        "
 
-          echo -e "[INFO] Running e2e tests from source: $SOURCE_REPO_URL and branch $SOURCE_REPO_BRANCH"
-          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/$SOURCE_REPO_URL/$SOURCE_REPO_BRANCH/integration-tests/scripts/konflux-e2e-runner.sh)"
-        else
-          echo -e "[INFO] Running e2e tests from source: konflux-ci/e2e-tests and branch main"
-          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/konflux-ci/e2e-tests/main/integration-tests/scripts/konflux-e2e-runner.sh)"
-        fi
+        export GITHUB_TOKEN
+
+        PREVIOUS_RATE_REMAINING=0
+
+        IFS=',' read -r -a GITHUB_ACCOUNTS_ARRAY <<< "$(cat /usr/local/konflux-ci-secrets/github_accounts)"
+        for account in "${GITHUB_ACCOUNTS_ARRAY[@]}"; do
+            IFS=':' read -r -a GITHUB_USERNAME_ARRAY <<< "$account"
+
+            GH_RATE_REMAINING=$(curl -s \
+                -H "Accept: application/vnd.github+json" \
+                -H "Authorization: Bearer ${GITHUB_USERNAME_ARRAY[1]}" \
+                https://api.github.com/rate_limit | jq ".rate.remaining")
+
+            log "INFO" "user: ${GITHUB_USERNAME_ARRAY[0]} with rate limit remaining $GH_RATE_REMAINING"
+            if [[ "$GH_RATE_REMAINING" -ge "$PREVIOUS_RATE_REMAINING" ]]; then
+                GITHUB_USER="${GITHUB_USERNAME_ARRAY[0]}"
+                GITHUB_TOKEN="${GITHUB_USERNAME_ARRAY[1]}"
+            fi
+            PREVIOUS_RATE_REMAINING="$GH_RATE_REMAINING"
+        done
+
+        log "INFO" "running tests with github user: ${GITHUB_USER}"
+
+        export ARTIFACT_DIR
+        ARTIFACT_DIR="$(mktemp -d)"
+
+        # Prepare git, pair branch if necessary, Install Konflux and run e2e tests
+        cd "$(mktemp -d)"
+
+        git config --global user.name "redhat-appstudio-qe-bot"
+        git config --global user.email redhat-appstudio-qe-bot@redhat.com
+
+        mkdir -p "${HOME}/creds"
+        git_creds_path="${HOME}/creds/file"
+        git config --global credential.helper "store --file $git_creds_path"
+        echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > "$git_creds_path"
+
+        git clone --origin upstream --branch main "https://github.com/konflux-ci/e2e-tests.git" .
+        make ci/prepare/e2e-branch 2>&1 | tee "${ARTIFACT_DIR}"/e2e-branch.log
+
+        /bin/bash -c "integration-tests/scripts/konflux-e2e-runner.sh"
+
