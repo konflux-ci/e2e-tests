@@ -75,7 +75,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 					{Name: "revision", Value: releasecommon.RelSvcCatalogRevision},
 					{Name: "pathInRepo", Value: "pipelines/e2e/e2e.yaml"},
 				},
-			}, nil)
+			}, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
 

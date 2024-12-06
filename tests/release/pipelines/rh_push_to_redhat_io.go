@@ -251,6 +251,6 @@ func createRHIOReleasePlanAdmission(rhioRPAName string, managedFw framework.Fram
 		},
 	}, &runtime.RawExtension{
 		Raw: data,
-	})
+	}, nil)
 	Expect(err).NotTo(HaveOccurred())
 }

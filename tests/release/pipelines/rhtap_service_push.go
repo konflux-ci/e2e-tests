@@ -289,7 +289,7 @@ func createRHTAPReleasePlanAdmission(rhtapRPAName string, managedFw framework.Fr
 		},
 	}, &runtime.RawExtension{
 		Raw: data,
-	})
+	}, nil)
 	Expect(err).NotTo(HaveOccurred())
 }
 

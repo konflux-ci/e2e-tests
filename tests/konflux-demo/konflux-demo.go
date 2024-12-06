@@ -464,7 +464,7 @@ func createReleaseConfig(fw framework.Framework, managedNamespace, componentName
 			{Name: "revision", Value: releasecommon.RelSvcCatalogRevision},
 			{Name: "pathInRepo", Value: "pipelines/e2e/e2e.yaml"},
 		},
-	}, nil)
+	}, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 
 	_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode("release-pvc", managedNamespace, corev1.ReadWriteOnce)

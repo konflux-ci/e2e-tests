@@ -52,7 +52,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails whe
 				{Name: "revision", Value: releasecommon.RelSvcCatalogRevision},
 				{Name: "pathInRepo", Value: "pipelines/e2e/e2e.yaml"},
 			},
-		}, nil)
+		}, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, releasecommon.SourceReleasePlanName)
 		Expect(err).NotTo(HaveOccurred())
