@@ -5,7 +5,7 @@ go 1.21.0
 require (
 	github.com/IBM/go-sdk-core/v5 v5.15.3
 	github.com/IBM/vpc-go-sdk v0.48.0
-	github.com/argoproj/argo-cd/v2 v2.0.0-20240610143855-32519c70a568
+	github.com/argoproj/argo-cd/v2 v2.9.21
 	github.com/avast/retry-go/v4 v4.3.3
 	github.com/aws/aws-sdk-go-v2 v1.25.2
 	github.com/aws/aws-sdk-go-v2/config v1.27.4
@@ -110,7 +110,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/ProtonMail/go-crypto v1.0.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
-	github.com/argoproj/gitops-engine v0.7.1-0.20240514190100-8a3ce6d85caa // indirect
+	github.com/argoproj/gitops-engine v0.7.1-0.20240715141028-c68bce0f979c // indirect
 	github.com/argoproj/pkg v0.13.7-0.20230626144333-d56162821bd1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/aws/aws-sdk-go v1.50.8 // indirect
