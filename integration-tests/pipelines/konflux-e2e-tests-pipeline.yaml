@@ -89,7 +89,7 @@ spec:
           - name: revision
             value: KFLUXDP-6-test
           - name: pathInRepo
-            value: tasks/rosa/hosted-cp/rosa-hcp-provision/0.1/rosa-hcp-provision.yaml
+            value: tasks/rosa/hosted-cp/rosa-hcp-provision/0.2/rosa-hcp-provision.yaml
       params:
         - name: cluster-name
           value: "$(tasks.rosa-hcp-metadata.results.cluster-name)"
@@ -155,7 +155,7 @@ spec:
           - name: revision
             value: KFLUXDP-6-test
           - name: pathInRepo
-            value: tasks/rosa/hosted-cp/rosa-hcp-deprovision/0.1/rosa-hcp-deprovision.yaml
+            value: tasks/rosa/hosted-cp/rosa-hcp-deprovision/0.2/rosa-hcp-deprovision.yaml
       params:
         - name: test-name
           value: "$(context.pipelineRun.name)"
