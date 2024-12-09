@@ -239,7 +239,7 @@ func (t *TektonController) StorePipelineRun(prefix string, pipelineRun *pipeline
 
 	pipelineRunYaml, err := yaml.Marshal(pipelineRun)
 	if err != nil {
-		return err
+		g.GinkgoWriter.Printf("failed to store pipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
 	}
 	artifacts["pipelineRun-"+pipelineRun.Name+".yaml"] = pipelineRunYaml
 
