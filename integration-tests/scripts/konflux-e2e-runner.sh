@@ -63,36 +63,10 @@ load_envs() {
 
 post_actions() {
     local exit_code=$?
-    local temp_annotation_file
-
-    temp_annotation_file="$(mktemp)"
 
     if [[ "${UNREGISTER_PAC}" == "true" ]]; then
-        make ci/sprayproxy/unregister
+        make ci/sprayproxy/unregister | tee "${ARTIFACT_DIR}"/sprayproxy-unregister.log
     fi
-
-    cd "$ARTIFACT_DIR"
-
-    # Fetch the manifest annotations for the container
-    if ! MANIFESTS=$(oras manifest fetch "${ORAS_CONTAINER}" | jq .annotations); then
-        log "ERROR" "Failed to fetch manifest from ${ORAS_CONTAINER}"
-        exit 1
-    fi
-
-    jq -n --argjson manifest "$MANIFESTS" '{ "$manifest": $manifest }' > "${temp_annotation_file}"
-
-    oras pull "${ORAS_CONTAINER}"
-
-    local attempt=1
-    while ! oras push "$ORAS_CONTAINER" --username="${OCI_STORAGE_USERNAME}" --password="${OCI_STORAGE_TOKEN}" --annotation-file "${temp_annotation_file}" ./:application/vnd.acme.rocket.docs.layer.v1+tar; do
-        if [[ $attempt -ge 5 ]]; then
-            log "ERROR" "oras push failed after $attempt attempts."
-            exit 1
-        fi
-        log "WARNING" "oras push failed (attempt $attempt). Retrying in 5 seconds..."
-        sleep 5
-        ((attempt++))
-    done
 
     exit "$exit_code"
 }
