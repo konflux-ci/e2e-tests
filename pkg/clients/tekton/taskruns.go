@@ -6,11 +6,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/konflux-ci/e2e-tests/pkg/logs"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	g "github.com/onsi/ginkgo/v2"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/pod"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/yaml"
 	pointer "k8s.io/utils/ptr"
 
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -89,6 +91,37 @@ func (t *TektonController) GetTaskRun(name, namespace string) (*pipeline.TaskRun
 		return nil, err
 	}
 	return &taskRun, nil
+}
+
+// StoreTaskRun stores a given TaskRun as an artifact.
+func (t *TektonController) StoreTaskRun(prefix string, taskRun *pipeline.TaskRun) error {
+	artifacts := make(map[string][]byte)
+
+	taskRunYaml, err := yaml.Marshal(taskRun)
+	if err != nil {
+		g.GinkgoWriter.Printf("failed to store taskRun %s:%s: %s\n", taskRun.GetNamespace(), taskRun.GetName(), err.Error())
+	}
+	artifacts["taskRun-"+taskRun.Name+".yaml"] = taskRunYaml
+
+	if err := logs.StoreArtifacts(artifacts); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t *TektonController) StoreTaskRunsForPipelineRun(c crclient.Client, pr *pipeline.PipelineRun) error {
+	for _, chr := range pr.Status.ChildReferences {
+		taskRun := &pipeline.TaskRun{}
+		taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
+		if err := c.Get(context.Background(), taskRunKey, taskRun); err != nil {
+			return err
+		}
+		if err := t.StoreTaskRun(taskRun.Name, taskRun); err != nil{
+			g.GinkgoWriter.Printf("an error happened during storing taskRun %s:%s: %s\n", taskRun.GetNamespace(), taskRun.GetName(), err.Error())
+		}
+	}
+	return nil
 }
 
 // GetTaskRunLogs returns logs of a specified taskRun.
