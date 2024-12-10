@@ -134,6 +134,7 @@ spec:
         log "INFO" "running tests with github user: ${GITHUB_USER}"
 
         # Prepare git, pair branch if necessary, Install Konflux and run e2e tests
+        cd "$(mktemp -d)"
 
         git config --global user.name "redhat-appstudio-qe-bot"
         git config --global user.email redhat-appstudio-qe-bot@redhat.com
