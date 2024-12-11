@@ -91,9 +91,6 @@ const (
 	// Managed workspace for release pipelines tests
 	RELEASE_MANAGED_WORKSPACE_ENV = "RELEASE_MANAGED_WORKSPACE"
 
-	// Bundle ref for overriding the default Java build bundle specified in BuildPipelineConfigConfigMapYamlURL
-	CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE_ENV string = "CUSTOM_JAVA_PIPELINE_BUILD_BUNDLE"
-
 	// Bundle ref for a buildah-remote build
 	CUSTOM_BUILDAH_REMOTE_PIPELINE_BUILD_BUNDLE_ENV string = "CUSTOM_BUILDAH_REMOTE_PIPELINE_BUILD_BUNDLE"
 
@@ -166,9 +163,6 @@ const (
 
 	QuayRepositorySecretName      = "quay-repository"
 	QuayRepositorySecretNamespace = "e2e-secrets"
-
-	JVMBuildImageSecretName = "jvm-build-image-secrets"
-	JBSConfigName           = "jvm-build-config"
 
 	BuildPipelineConfigConfigMapYamlURL = "https://raw.githubusercontent.com/redhat-appstudio/infra-deployments/main/components/build-service/base/build-pipeline-config/build-pipeline-config.yaml"
 
