@@ -62,9 +62,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				cleanup(*f, testNamespace, applicationName, componentName)
-
-				Expect(f.AsKubeAdmin.IntegrationController.DeleteSnapshot(snapshotPush, testNamespace)).To(Succeed())
+				cleanup(*f, testNamespace, applicationName, componentName, snapshotPush)
 			}
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
@@ -253,7 +251,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				cleanup(*f, testNamespace, applicationName, componentName)
+				cleanup(*f, testNamespace, applicationName, componentName, snapshotPush)
 			}
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
@@ -493,16 +491,17 @@ func createComponentWithCustomBranch(f framework.Framework, testNamespace, appli
 	return originalComponent
 }
 
-func cleanup(f framework.Framework, testNamespace, applicationName, componentName string) {
+func cleanup(f framework.Framework, testNamespace, applicationName, componentName string, snapshot *appstudioApi.Snapshot) {
 	if !CurrentSpecReport().Failed() {
-		Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-		Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
+		Expect(f.AsKubeAdmin.IntegrationController.DeleteSnapshot(snapshot, testNamespace)).To(Succeed())
 		integrationTestScenarios, err := f.AsKubeAdmin.IntegrationController.GetIntegrationTestScenarios(applicationName, testNamespace)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		for _, testScenario := range *integrationTestScenarios {
 			Expect(f.AsKubeAdmin.IntegrationController.DeleteIntegrationTestScenario(&testScenario, testNamespace)).To(Succeed())
 		}
+		Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
+		Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 		Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 	}
 }
