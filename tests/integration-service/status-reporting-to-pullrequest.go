@@ -59,7 +59,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				cleanup(*f, testNamespace, applicationName, componentName)
+				cleanup(*f, testNamespace, applicationName, componentName, snapshot)
 			}
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch

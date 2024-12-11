@@ -76,7 +76,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				cleanup(*f, testNamespace, applicationName, componentA.Name)
+				cleanup(*f, testNamespace, applicationName, componentA.Name, snapshot)
 			}
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
