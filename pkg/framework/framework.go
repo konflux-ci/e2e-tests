@@ -15,7 +15,6 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/imagecontroller"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/integration"
-	"github.com/konflux-ci/e2e-tests/pkg/clients/jvmbuildservice"
 	kubeCl "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/release"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/tekton"
@@ -25,14 +24,13 @@ import (
 )
 
 type ControllerHub struct {
-	HasController             *has.HasController
-	CommonController          *common.SuiteController
-	TektonController          *tekton.TektonController
-	GitOpsController          *gitops.GitopsController
-	ReleaseController         *release.ReleaseController
-	IntegrationController     *integration.IntegrationController
-	JvmbuildserviceController *jvmbuildservice.JvmbuildserviceController
-	ImageController           *imagecontroller.ImageController
+	HasController         *has.HasController
+	CommonController      *common.SuiteController
+	TektonController      *tekton.TektonController
+	GitOpsController      *gitops.GitopsController
+	ReleaseController     *release.ReleaseController
+	IntegrationController *integration.IntegrationController
+	ImageController       *imagecontroller.ImageController
 }
 
 type Framework struct {
@@ -201,12 +199,6 @@ func InitControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 		return nil, err
 	}
 
-	// Initialize JVM Build Service Controller
-	jvmbuildserviceController, err := jvmbuildservice.NewSuiteController(cc)
-	if err != nil {
-		return nil, err
-	}
-
 	// Initialize Image Controller
 	imageController, err := imagecontroller.NewSuiteController(cc)
 	if err != nil {
@@ -214,13 +206,12 @@ func InitControllerHub(cc *kubeCl.CustomClient) (*ControllerHub, error) {
 	}
 
 	return &ControllerHub{
-		HasController:             hasController,
-		CommonController:          commonCtrl,
-		TektonController:          tektonController,
-		GitOpsController:          gitopsController,
-		ReleaseController:         releaseController,
-		IntegrationController:     integrationController,
-		JvmbuildserviceController: jvmbuildserviceController,
-		ImageController:           imageController,
+		HasController:         hasController,
+		CommonController:      commonCtrl,
+		TektonController:      tektonController,
+		GitOpsController:      gitopsController,
+		ReleaseController:     releaseController,
+		IntegrationController: integrationController,
+		ImageController:       imageController,
 	}, nil
 }
