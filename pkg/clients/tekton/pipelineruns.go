@@ -233,7 +233,7 @@ func (t *TektonController) StorePipelineRun(prefix string, pipelineRun *pipeline
 	artifacts := make(map[string][]byte)
 	pipelineRunLog, err := t.GetPipelineRunLogs(prefix, pipelineRun.Name, pipelineRun.Namespace)
 	if err != nil {
-		return err
+		g.GinkgoWriter.Printf("an error happened during storing pipelineRun log %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
 	}
 	artifacts["pipelineRun-"+pipelineRun.Name+".log"] = []byte(pipelineRunLog)
 
