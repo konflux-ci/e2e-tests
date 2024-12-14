@@ -52,6 +52,8 @@ RUN curl -LO "https://github.com/oras-project/oras/releases/download/v${ORAS_VER
 
 FROM registry.access.redhat.com/ubi9/go-toolset:1.21.11-7
 
+USER root
+
 WORKDIR /konflux-e2e
 
 ENV GOBIN=$GOPATH/bin
