@@ -68,7 +68,7 @@ spec:
           mountPath: /usr/local/konflux-ci-secrets
         - name:  konflux-test-infra-volume
           mountPath: /usr/local/konflux-test-infra
-      workingDir: /workspace
+      workingDir: /workspace/e2e-tests
       env:
         - name: JOB_NAME
           value: $(params.test-name)
@@ -88,6 +88,9 @@ spec:
           value: $(params.ginkgo-procs)
         - name: ORAS_CONTAINER
           value: $(params.oras-container)
+        - name: ARTIFACT_DIR
+          value: /workspace/artifact-dir
+      onError: continue
       script: |
         #!/bin/bash
 
@@ -130,9 +133,6 @@ spec:
 
         log "INFO" "running tests with github user: ${GITHUB_USER}"
 
-        export ARTIFACT_DIR
-        ARTIFACT_DIR="$(mktemp -d)"
-
         # Prepare git, pair branch if necessary, Install Konflux and run e2e tests
         cd "$(mktemp -d)"
 
@@ -148,4 +148,30 @@ spec:
         make ci/prepare/e2e-branch 2>&1 | tee "${ARTIFACT_DIR}"/e2e-branch.log
 
         /bin/bash -c "integration-tests/scripts/konflux-e2e-runner.sh"
-
+    - name: secure-push-oci
+      ref:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-ci/tekton-integration-catalog.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: stepactions/secure-push-oci/0.1/secure-push-oci.yaml
+      params:
+        - name: workdir-path
+          value: /workspace/artifact-dir
+        - name: oci-ref
+          value: $(params.oras-container)
+        - name: credentials-volume-name
+          value: konflux-test-infra-volume
+    - name: fail-if-any-step-failed
+      ref:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-ci/tekton-integration-catalog.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: stepactions/fail-if-any-step-failed/0.1/fail-if-any-step-failed.yaml

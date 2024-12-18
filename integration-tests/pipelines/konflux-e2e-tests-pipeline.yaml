@@ -73,21 +73,6 @@ spec:
           value: $(params.SNAPSHOT)
         - name: test-name
           value: $(context.pipelineRun.name)
-    - name: create-oci-container
-      taskRef:
-        resolver: git
-        params:
-          - name: url
-            value: https://github.com/konflux-ci/konflux-qe-definitions.git
-          - name: revision
-            value: main
-          - name: pathInRepo
-            value: common/tasks/create-oci-artifact/0.1/create-oci-artifact.yaml
-      params:
-        - name: oci-container-repo
-          value: $(params.oci-container-repo)
-        - name: oci-container-tag
-          value: $(context.pipelineRun.name)
     - name: provision-rosa
       when:
         - input: "$(tasks.test-metadata.results.test-event-type)"
@@ -95,17 +80,16 @@ spec:
           values: ["pull_request"]
       runAfter:
         - rosa-hcp-metadata
-        - create-oci-container
         - test-metadata
       taskRef:
         resolver: git
         params:
           - name: url
-            value: https://github.com/konflux-ci/konflux-qe-definitions.git
+            value: https://github.com/konflux-ci/tekton-integration-catalog.git
           - name: revision
             value: main
           - name: pathInRepo
-            value: common/tasks/rosa/hosted-cp/rosa-hcp-provision/rosa-hcp-provision.yaml
+            value: tasks/rosa/hosted-cp/rosa-hcp-provision/0.2/rosa-hcp-provision.yaml
       params:
         - name: cluster-name
           value: "$(tasks.rosa-hcp-metadata.results.cluster-name)"
@@ -119,6 +103,8 @@ spec:
           value: "$(params.konflux-test-infra-secret)"
         - name: cloud-credential-key
           value: "$(params.cloud-credential-key)"
+        - name: oci-container
+          value: "$(params.oci-container-repo):$(context.pipelineRun.name)"
     - name: konflux-e2e-tests
       timeout: 3h
       when:
@@ -146,7 +132,7 @@ spec:
         - name: git-revision
           value: "$(tasks.test-metadata.results.git-revision)"
         - name: oras-container
-          value: "$(tasks.create-oci-container.results.oci-container)"
+          value: "$(params.oci-container-repo):$(context.pipelineRun.name)"
         - name: job-spec
           value: "$(tasks.test-metadata.results.job-spec)"
         - name: ocp-login-command
@@ -165,18 +151,18 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/konflux-ci/konflux-qe-definitions.git
+            value: https://github.com/konflux-ci/tekton-integration-catalog.git
           - name: revision
             value: main
           - name: pathInRepo
-            value: common/tasks/rosa/hosted-cp/rosa-hcp-deprovision/rosa-hcp-deprovision.yaml
+            value: tasks/rosa/hosted-cp/rosa-hcp-deprovision/0.2/rosa-hcp-deprovision.yaml
       params:
         - name: test-name
           value: "$(context.pipelineRun.name)"
         - name: ocp-login-command
           value: "$(tasks.provision-rosa.results.ocp-login-command)"
         - name: oci-container
-          value: "$(tasks.create-oci-container.results.oci-container)"
+          value: "$(params.oci-container-repo):$(context.pipelineRun.name)"
         - name: pull-request-author
           value: "$(tasks.test-metadata.results.pull-request-author)"
         - name: git-revision
@@ -213,7 +199,7 @@ spec:
         - name: test-name
           value: "$(context.pipelineRun.name)"
         - name: oci-container
-          value: "$(tasks.create-oci-container.results.oci-container)"
+          value: "$(params.oci-container-repo):$(context.pipelineRun.name)"
         - name: quality-dashboard-api
           value: $(params.quality-dashboard-api)
         - name: pipeline-aggregate-status
@@ -238,7 +224,7 @@ spec:
         - name: test-name
           value: "$(context.pipelineRun.name)"
         - name: oci-container
-          value: "$(tasks.create-oci-container.results.oci-container)"
+          value: "$(params.oci-container-repo):$(context.pipelineRun.name)"
         - name: pipeline-aggregate-status
           value: "$(tasks.status)"
         - name: pull-request-author
