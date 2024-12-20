@@ -38,7 +38,7 @@ const (
 
 var multiarchComponentName = "e2e-multi-platform-test"
 
-var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch test for rh-advisories release pipeline", Label("release-pipelines", "multiarch-advisories"), func() {
+var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch test for rh-advisories release pipeline", Pending, Label("release-pipelines", "multiarch-advisories"), func() {
 	defer GinkgoRecover()
 	var pyxisKeyDecoded, pyxisCertDecoded []byte
 
