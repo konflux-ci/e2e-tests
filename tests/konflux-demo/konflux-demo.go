@@ -10,11 +10,6 @@ import (
 	buildcontrollers "github.com/konflux-ci/build-service/controllers"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 
-	"github.com/redhat-appstudio/jvm-build-service/openshift-with-appstudio-test/e2e"
-	jvmclientSet "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
-	pipelineclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
-	"k8s.io/client-go/kubernetes"
-
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	"github.com/google/go-github/v44/github"
@@ -27,7 +22,6 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -98,11 +92,6 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error when getting shared secret - make sure the secret %s in %s userNamespace is created", constants.QuayRepositorySecretName, constants.QuayRepositorySecretNamespace))
 
 				createReleaseConfig(*fw, managedNamespace, appSpec.ComponentSpec.Name, appSpec.ApplicationName, sharedSecret.Data[".dockerconfigjson"])
-
-				// JBS related config
-				_, err = fw.AsKubeAdmin.JvmbuildserviceController.CreateJBSConfig(constants.JBSConfigName, fw.UserNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(fw.AsKubeAdmin.JvmbuildserviceController.WaitForCache(fw.AsKubeAdmin.CommonController, fw.UserNamespace)).Should(Succeed())
 
 				// get the build pipeline bundle annotation
 				buildPipelineAnnotation = build.GetDockerBuildPipelineBundle()
@@ -380,34 +369,6 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 						}
 						return nil
 					}, customResourceUpdateTimeout, defaultPollingInterval).Should(Succeed(), fmt.Sprintf("failed to see release %q in namespace %q get marked as released", release.Name, fw.UserNamespace))
-				})
-			})
-
-			When("JVM Build Service is used for rebuilding dependencies", func() {
-				// Marking the step as pending since jvm-build-service will be reworked with STONEBLD-2711
-				It("should eventually rebuild of all artifacts and dependencies successfully", Pending, func() {
-					jvmClient := jvmclientSet.New(fw.AsKubeAdmin.JvmbuildserviceController.JvmbuildserviceClient().JvmbuildserviceV1alpha1().RESTClient())
-					tektonClient := pipelineclientset.New(fw.AsKubeAdmin.TektonController.PipelineClient().TektonV1beta1().RESTClient())
-					kubeClient := kubernetes.New(fw.AsKubeAdmin.CommonController.KubeInterface().CoreV1().RESTClient())
-					//status report ends up in artifacts/redhat-appstudio-e2e/redhat-appstudio-e2e/artifacts/rp_preproc/attachments/xunit
-					defer e2e.GenerateStatusReport(fw.UserNamespace, jvmClient, kubeClient, tektonClient)
-					Eventually(func() error {
-						abList, err := fw.AsKubeAdmin.JvmbuildserviceController.ListArtifactBuilds(fw.UserNamespace)
-						Expect(err).ShouldNot(HaveOccurred())
-						for _, ab := range abList.Items {
-							if ab.Status.State != v1alpha1.ArtifactBuildStateComplete {
-								return fmt.Errorf("artifactbuild %s not complete", ab.Spec.GAV)
-							}
-						}
-						dbList, err := fw.AsKubeAdmin.JvmbuildserviceController.ListDependencyBuilds(fw.UserNamespace)
-						Expect(err).ShouldNot(HaveOccurred())
-						for _, db := range dbList.Items {
-							if db.Status.State != v1alpha1.DependencyBuildStateComplete {
-								return fmt.Errorf("dependencybuild %s not complete", db.Spec.ScmInfo.SCMURL)
-							}
-						}
-						return nil
-					}, jvmRebuildTimeout, jvmRebuildPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for all artifactbuilds and dependencybuilds to complete in namespace %q", fw.UserNamespace))
 				})
 			})
 		})
