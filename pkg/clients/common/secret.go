@@ -13,6 +13,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 // Creates a new secret in a specified namespace
@@ -25,9 +26,35 @@ func (s *SuiteController) GetSecret(ns string, name string) (*corev1.Secret, err
 	return s.KubeInterface().CoreV1().Secrets(ns).Get(context.Background(), name, metav1.GetOptions{})
 }
 
-// Deleted a secret in a specified namespace
+// Delete a secret in a specified namespace
 func (s *SuiteController) DeleteSecret(ns string, name string) error {
 	return s.KubeInterface().CoreV1().Secrets(ns).Delete(context.Background(), name, metav1.DeleteOptions{})
+}
+
+// ListSecrets return a list of secrets from a namespace by label and selection limits
+func (s *SuiteController) ListSecrets(ns string, labelKey string, labelValue string, selectionLimit int64) (*corev1.SecretList, error) {
+	labelSelector := metav1.LabelSelector{MatchLabels: map[string]string{labelKey: labelValue}}
+	listOptions := metav1.ListOptions{
+		LabelSelector: labels.Set(labelSelector.MatchLabels).String(),
+		Limit:         selectionLimit,
+	}
+	return s.KubeInterface().CoreV1().Secrets(ns).List(context.Background(), listOptions)
+}
+
+// Delete all secrets in a specified namespace matching to label
+func (s *SuiteController) DeleteSecretsByLabel(ns string, labelKey string, labelValue string) error {
+	secretList, err := s.ListSecrets(ns, labelKey, labelValue, 1024)
+	if err != nil {
+		return err
+	}
+
+	for _, secret := range secretList.Items {
+		err = s.DeleteSecret(ns, secret.Name)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Links a secret to a specified serviceaccount, if argument addImagePullSecrets is true secret will be added also to ImagePullSecrets of SA.
