@@ -259,6 +259,6 @@ func createADVSReleasePlanAdmission(advsRPAName string, managedFw framework.Fram
 		},
 	}, &runtime.RawExtension{
 		Raw: data,
-	})
+	}, nil)
 	Expect(err).NotTo(HaveOccurred())
 }
