@@ -1,46 +1,41 @@
 package pipelines
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"os"
+	"regexp"
 	"time"
 
-	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
-	"github.com/konflux-ci/e2e-tests/pkg/constants"
-	"github.com/konflux-ci/e2e-tests/pkg/framework"
-	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"knative.dev/pkg/apis"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+
+	"github.com/devfile/library/v2/pkg/util"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
+	"github.com/konflux-ci/e2e-tests/pkg/framework"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
+	"k8s.io/apimachinery/pkg/runtime"
+	"knative.dev/pkg/apis"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 const (
-	multiarchServiceAccountName = "release-service-account"
 	multiarchCatalogPathInRepo  = "pipelines/rh-advisories/rh-advisories.yaml"
 	multiarchGitSourceURL       = "https://github.com/redhat-appstudio-qe/multi-platform-test-prod"
-	multiarchGitSourceRepoName  = "multi-platform-test-prod"
 	multiarchGitSrcSHA          = "fd4b6c28329ab3df77e7ad7beebac1829836561d"
 )
 
-var multiarchComponentName = "e2e-multi-platform-test"
+var multiarchComponentName = "multiarch-comp-" + util.GenerateRandomString(4)
 
-var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch test for rh-advisories release pipeline", Label("release-pipelines", "multiarch-advisories"), func() {
+var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch with rh-advisories pipeline", Label("release-pipelines", "multiarch-advisories"), func() {
 	defer GinkgoRecover()
-	var pyxisKeyDecoded, pyxisCertDecoded []byte
 
 	var devWorkspace = utils.GetEnv(constants.RELEASE_DEV_WORKSPACE_ENV, constants.DevReleaseTeam)
 	var managedWorkspace = utils.GetEnv(constants.RELEASE_MANAGED_WORKSPACE_ENV, constants.ManagedReleaseTeam)
@@ -51,86 +46,49 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch test f
 	var err error
 	var devFw *framework.Framework
 	var managedFw *framework.Framework
-	var multiarchApplicationName = "e2e-multi-platform-test-prod"
-	var multiarchReleasePlanName = "e2e-multiarch-rp"
-	var multiarchReleasePlanAdmissionName = "e2e-multiarch-rpa"
-	var multiarchEnterpriseContractPolicyName = "e2e-multiarch-policy"
+	var multiarchApplicationName = "multiarch-app-" + util.GenerateRandomString(4)
+	var multiarchReleasePlanName = "multiarch-rp-" + util.GenerateRandomString(4)
+	var multiarchReleasePlanAdmissionName = "multiarch-rpa-" + util.GenerateRandomString(4)
+	var multiarchEnterpriseContractPolicyName = "multiarch-policy-" + util.GenerateRandomString(4)
 	var sampleImage = "quay.io/hacbs-release-tests/e2e-multi-platform-test@sha256:23ce99c70f86f879c67a82ef9aa088c7e9a52dc09630c5913587161bda6259e2"
 
 	var snapshotPush *appservice.Snapshot
 	var releaseCR *releaseapi.Release
+	var releasePR *tektonv1.PipelineRun
 	var pipelineRun *pipeline.PipelineRun
 
-	Describe("Multi-arch happy path", Label("MultiArchAdvisories"), func() {
+	Describe("Multi arch test happy path", Label("multiArchAdvisories"), func() {
 		BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
-
 			managedNamespace = managedFw.UserNamespace
 
-			keyPyxisStage := os.Getenv(constants.PYXIS_STAGE_KEY_ENV)
-			Expect(keyPyxisStage).ToNot(BeEmpty())
-
-			certPyxisStage := os.Getenv(constants.PYXIS_STAGE_CERT_ENV)
-			Expect(certPyxisStage).ToNot(BeEmpty())
-
-			// Creating k8s secret to access Pyxis stage based on base64 decoded of key and cert
-			pyxisKeyDecoded, err = base64.StdEncoding.DecodeString(string(keyPyxisStage))
-			Expect(err).ToNot(HaveOccurred())
-
-			pyxisCertDecoded, err = base64.StdEncoding.DecodeString(string(certPyxisStage))
-			Expect(err).ToNot(HaveOccurred())
-
-			_, err = managedFw.AsKubeAdmin.CommonController.GetSecret(managedNamespace, releasecommon.RedhatAppstudioQESecret)
-			if errors.IsNotFound(err) {
-				secret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "pyxis",
-						Namespace: managedNamespace,
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: map[string][]byte{
-						"cert": pyxisCertDecoded,
-						"key":  pyxisKeyDecoded,
-					},
-				}
-				_, err = managedFw.AsKubeAdmin.CommonController.CreateSecret(managedNamespace, secret)
-				Expect(err).ToNot(HaveOccurred())
+			pyxisFieldEnvMap := map[string]string{
+				"key":  constants.PYXIS_STAGE_KEY_ENV,
+				"cert": constants.PYXIS_STAGE_CERT_ENV,
 			}
+			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
+
+			atlasFieldEnvMap := map[string]string{
+				"sso_account": constants.ATLAS_STAGE_ACCOUNT_ENV,
+				"sso_token":   constants.ATLAS_STAGE_TOKEN_ENV,
+			}
+			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "atlas-staging-sso-secret", atlasFieldEnvMap)
 
 			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
 			Expect(err).ToNot(HaveOccurred())
 
-			_, err = devFw.AsKubeDeveloper.HasController.GetApplication(multiarchApplicationName, devNamespace)
-			if errors.IsNotFound(err) {
-				GinkgoWriter.Printf("The Application %s needs to be setup before the test\n", multiarchApplicationName)
-			}
+			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(multiarchApplicationName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = devFw.AsKubeDeveloper.HasController.GetComponent(multiarchComponentName, devNamespace)
-			if errors.IsNotFound(err) {
-				GinkgoWriter.Printf("The component %s tighting to repo %s needs to be setup with PaC configuration before the test\n", multiarchComponentName, multiarchGitSourceURL)
-			}
-			Expect(err).NotTo(HaveOccurred())
+			createMultiArchReleasePlan(multiarchReleasePlanName, *devFw, devNamespace, multiarchApplicationName, managedNamespace, "true")
 
-			_, err = devFw.AsKubeDeveloper.ReleaseController.GetReleasePlan(multiarchReleasePlanName, devNamespace)
-			if errors.IsNotFound(err) {
-				createMultiArchReleasePlan(multiarchReleasePlanName, *devFw, devNamespace, multiarchApplicationName, managedNamespace, "true")
-			}
+			createMultiArchReleasePlanAdmission(multiarchReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, multiarchApplicationName, multiarchEnterpriseContractPolicyName, multiarchCatalogPathInRepo)
 
-			_, err = managedFw.AsKubeAdmin.ReleaseController.GetReleasePlanAdmission(multiarchReleasePlanAdmissionName, managedNamespace)
-			if errors.IsNotFound(err) {
-				createMultiArchReleasePlanAdmission(multiarchReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, multiarchApplicationName, multiarchEnterpriseContractPolicyName, multiarchCatalogPathInRepo)
-			}
-
-			_, err = managedFw.AsKubeDeveloper.TektonController.GetEnterpriseContractPolicy(multiarchEnterpriseContractPolicyName, managedNamespace)
-			if errors.IsNotFound(err) {
-				createMultiArchEnterpriseContractPolicy(multiarchEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
-			}
+			createMultiArchEnterpriseContractPolicy(multiarchEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 
 			snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(*devFw, multiarchComponentName, multiarchApplicationName, devNamespace, sampleImage, multiarchGitSourceURL, multiarchGitSrcSHA, "", "", "", "")
 			Expect(err).ShouldNot(HaveOccurred())
-			GinkgoWriter.Println("snapshotPush.Name: %s", snapshotPush.GetName())
 		})
 
 		AfterAll(func() {
@@ -138,9 +96,16 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch test f
 			if err = managedFw.AsKubeDeveloper.TektonController.StorePipelineRun(pipelineRun.Name, pipelineRun); err != nil {
 				GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
 			}
+			if err = managedFw.AsKubeDeveloper.TektonController.StoreTaskRunsForPipelineRun(managedFw.AsKubeDeveloper.CommonController.KubeRest(), pipelineRun); err != nil {
+				GinkgoWriter.Printf("failed to store TaskRuns for PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
+			}
 			if err = devFw.AsKubeDeveloper.ReleaseController.StoreRelease(releaseCR); err != nil {
 				GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
 			}
+
+			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(multiarchApplicationName, devNamespace, false)).NotTo(HaveOccurred())
+			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(multiarchEnterpriseContractPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
+			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(multiarchReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
 		})
 
 		var _ = Describe("Post-release verification", func() {
@@ -183,7 +148,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch test f
 				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
 			})
 
-			It("verifies release CR completed and set succeeded", func() {
+			It("verifies release CR completed and set succeeded.", func() {
 				Eventually(func() error {
 					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshotPush.Name, devNamespace)
 					if err != nil {
@@ -191,10 +156,17 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch test f
 					}
 					err = releasecommon.CheckReleaseStatus(releaseCR)
 					return err
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the Release CR %s/%s completed", releaseCR.GetName(), releaseCR.GetNamespace()))
-				if err = devFw.AsKubeDeveloper.ReleaseController.StoreRelease(releaseCR); err != nil {
-					GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
-				}
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
+			})
+
+			It("verifies if the repository URL is valid", func() {
+				releasePR, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
+				Expect(err).NotTo(HaveOccurred())
+				advisoryURL := releasePR.Status.PipelineRunStatusFields.Results[0].Value.StringVal
+				pattern := `https?://[^/\s]+/[^/\s]+/[^/\s]+/+\-\/blob\/main\/data\/advisories\/[^\/]+\/[^\/]+\/[^\/]+\/advisory\.yaml`
+				re, err := regexp.Compile(pattern)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(re.MatchString(advisoryURL)).To(BeTrue(), fmt.Sprintf("Advisory_url %s is not valid", advisoryURL))
 			})
 		})
 	})
@@ -211,13 +183,13 @@ func createMultiArchEnterpriseContractPolicy(multiarchECPName string, managedFw 
 		}},
 		Configuration: &ecp.EnterpriseContractPolicyConfiguration{
 			Exclude: []string{"step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
-			//Exclude: []string{"step_image_registries", "tasks.required_tasks_found:prefetch-dependencies", "slsa_source_correlated.expected_source_code_reference:git+https://github.com/redhat-appstudio-qe/multi-platform-test-prod.git@sha1:fd4b6c28329ab3df77e7ad7beebac1829836561d"},
 			Include: []string{"@slsa3"},
 		},
 	}
 
 	_, err := managedFw.AsKubeDeveloper.TektonController.CreateEnterpriseContractPolicy(multiarchECPName, managedNamespace, defaultEcPolicySpec)
 	Expect(err).NotTo(HaveOccurred())
+
 }
 
 func createMultiArchReleasePlan(multiarchReleasePlanName string, devFw framework.Framework, devNamespace, multiarchAppName, managedNamespace string, autoRelease string) {
@@ -250,13 +222,17 @@ func createMultiArchReleasePlanAdmission(multiarchRPAName string, managedFw fram
 				{
 					"name":       multiarchComponentName,
 					"repository": "registry.stage.redhat.io/rhtap/konflux-release-e2e",
-					"tags":       []string{"latest", "latest-{{ timestamp }}"},
+					"tags":       []string{"latest", "latest-{{ timestamp }}", "testtag",
+						"testtag-{{ timestamp }}", "testtag2", "testtag2-{{ timestamp }}"},
 				},
 			},
 		},
 		"pyxis": map[string]interface{}{
 			"server": "stage",
 			"secret": "pyxis",
+		},
+		"atlas": map[string]interface{}{
+			"server": "stage",
 		},
 		"releaseNotes": map[string]interface{}{
 			"cpe":             "cpe:/a:example.com",
@@ -267,12 +243,13 @@ func createMultiArchReleasePlanAdmission(multiarchRPAName string, managedFw fram
 			"type":            "RHBA",
 		},
 		"sign": map[string]interface{}{
-			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",
+			"configMapName":    "hacbs-signing-pipeline-config-redhatbeta2",
+			"cosignSecretName": "test-cosign-secret",
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(multiarchRPAName, managedNamespace, "", devNamespace, multiarchECPName, multiarchServiceAccountName, []string{multiarchAppName}, true, &tektonutils.PipelineRef{
+	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(multiarchRPAName, managedNamespace, "", devNamespace, multiarchECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{multiarchAppName}, true, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
 			{Name: "url", Value: releasecommon.RelSvcCatalogURL},
