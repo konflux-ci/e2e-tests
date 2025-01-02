@@ -766,8 +766,13 @@ func createNewTaskBundleAndPush(currentSourceTaskBundle, sourceImage string) str
 		return ""
 	}
 	sourceTaskObject := tektonObj.(*tektonapi.Task)
-	klog.Infof("current source build task image: %v", sourceTaskObject.Spec.Steps[0].Image)
-	sourceTaskObject.Spec.Steps[0].Image = sourceImage
+	for i := range sourceTaskObject.Spec.Steps {
+		if sourceTaskObject.Spec.Steps[i].Name == "build" {
+			klog.Infof("current source build task image: %v", sourceTaskObject.Spec.Steps[i].Image)
+			sourceTaskObject.Spec.Steps[i].Image = sourceImage
+		}
+	}
+
 	if newTaskYaml, err = yaml.Marshal(sourceTaskObject); err != nil {
 		klog.Errorf("error when marshalling a new pipeline to YAML: %v", err)
 		return ""
