@@ -118,7 +118,7 @@ var componentScenarios = []ComponentScenarioSpec{
 	},
 	{
 		GitURL:              "https://github.com/konflux-qe-bd/source-build-base-on-konflux-image",
-		Revision:            "86c4d160cfafb8976a23030d4bbc1216bfe8e14f",
+		Revision:            "b6960c7602f21c531e3ead4df1dd1827e6f208f6",
 		ContextDir:          ".",
 		DockerFilePath:      "Dockerfile",
 		PipelineBundleNames: []string{"docker-build"},
