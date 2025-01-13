@@ -203,6 +203,12 @@ func createADVSReleasePlan(advsReleasePlanName string, devFw framework.Framework
 			"solution":    "some solution",
 			"synopsis":    "test synopsis",
 			"topic":       "test topic",
+			"cves":        []map[string]interface{}{
+				{
+					"key":  "CVE-2024-8260",
+					"component" : advsComponentName,
+				},
+			},
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -241,7 +247,7 @@ func createADVSReleasePlanAdmission(advsRPAName string, managedFw framework.Fram
 			"product_name":    "test product",
 			"product_stream":  "rhtas-tp1",
 			"product_version": "v1.0",
-			"type":            "RHBA",
+			"type":            "RHSA",
 		},
 		"sign": map[string]interface{}{
 			"configMapName":    "hacbs-signing-pipeline-config-redhatbeta2",
