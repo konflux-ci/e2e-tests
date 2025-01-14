@@ -262,7 +262,7 @@ func HandleComponent(ctx *PerComponentContext) error {
 		ctx.ParentContext.ParentContext.ComponentRepoUrl,
 		ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision,
 		ctx.ParentContext.ParentContext.Opts.ComponentContainerContext,
-		ctx.ParentContext.ParentContext.Opts.ComponentContainerFile,
+		ctx.ParentContext.ParentContext.Opts.ComponentContainerFile[ctx.ComponentIndex%len(ctx.ParentContext.ParentContext.Opts.ComponentContainerFile)],
 		ctx.ParentContext.ParentContext.Opts.BuildPipelineSelectorBundle,
 		ctx.ParentContext.ApplicationName,
 		ctx.ParentContext.ParentContext.Opts.PipelineMintmakerDisabled,

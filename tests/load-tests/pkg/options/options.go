@@ -10,7 +10,7 @@ type Opts struct {
 	ApplicationsCount             int
 	BuildPipelineSelectorBundle   string
 	ComponentContainerContext     string
-	ComponentContainerFile        string
+	ComponentContainerFile        []string
 	ComponentRepoRevision         string
 	ComponentRepoUrl              string
 	ComponentsCount               int

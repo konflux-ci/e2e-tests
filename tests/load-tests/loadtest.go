@@ -34,7 +34,7 @@ func init() {
 	rootCmd.Flags().IntVar(&opts.ApplicationsCount, "applications-count", 1, "number of applications to create per user")
 	rootCmd.Flags().IntVar(&opts.ComponentsCount, "components-count", 1, "number of components to create per application")
 	rootCmd.Flags().StringVar(&opts.ComponentRepoRevision, "component-repo-revision", "main", "the component repo revision, git branch")
-	rootCmd.Flags().StringVar(&opts.ComponentContainerFile, "component-repo-container-file", "Dockerfile", "the component repo container file to build")
+	rootCmd.Flags().StringSliceVar(&opts.ComponentContainerFile, "component-repo-container-file", []string{"Dockerfile"}, "the component repo container file to build")
 	rootCmd.Flags().StringVar(&opts.ComponentContainerContext, "component-repo-container-context", "/", "the context for image build")
 	rootCmd.Flags().StringVar(&opts.QuayRepo, "quay-repo", "redhat-user-workloads-stage", "the target quay repo for PaC templated image pushes")
 	rootCmd.Flags().StringVar(&opts.UsernamePrefix, "username", "testuser", "the prefix used for usersignup names")
