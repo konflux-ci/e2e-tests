@@ -1434,7 +1434,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Params: []tektonutils.Param{
 					{Name: "url", Value: constants.RELEASE_CATALOG_DEFAULT_URL},
 					{Name: "revision", Value: constants.RELEASE_CATALOG_DEFAULT_REVISION},
-					{Name: "pathInRepo", Value: "pipelines/e2e/e2e.yaml"},
+					{Name: "pathInRepo", Value: "pipelines/managed/e2e/e2e.yaml"},
 				}}, &runtime.RawExtension{Raw: rawData})
 			Expect(err).NotTo(HaveOccurred())
 

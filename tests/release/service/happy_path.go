@@ -108,7 +108,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", Labe
 			Params: []tektonutils.Param{
 				{Name: "url", Value: releasecommon.RelSvcCatalogURL},
 				{Name: "revision", Value: releasecommon.RelSvcCatalogRevision},
-				{Name: "pathInRepo", Value: "pipelines/e2e/e2e.yaml"},
+				{Name: "pathInRepo", Value: "pipelines/managed/e2e/e2e.yaml"},
 			},
 		}, &runtime.RawExtension{
 			Raw: data,

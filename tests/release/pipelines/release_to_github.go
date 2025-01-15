@@ -36,7 +36,7 @@ const (
 	sampGitSrcSHA          = "6b56d05ac8abb4c24d153e9689209a1018402aad"
 	sampRepoOwner          = "redhat-appstudio-qe"
 	sampRepo               = "devfile-sample-go-basic"
-	sampCatalogPathInRepo  = "pipelines/release-to-github/release-to-github.yaml"
+	sampCatalogPathInRepo  = "pipelines/managed/release-to-github/release-to-github.yaml"
 )
 
 var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github pipeline", Pending, Label("release-pipelines", "release-to-github"), func() {
