@@ -90,6 +90,7 @@ minio-operator|console-sa
 minio-operator|minio-operator
 tekton-logging|vectors-tekton-logs-collector
 tekton-results|storage-sa
+tekton-results|postgres-postgresql
 EOF
 )
 while IFS='|' read -r ns sa_name; do
