@@ -88,7 +88,8 @@ oc registry login --registry=docker.io --auth-basic="$DOCKER_IO_AUTH" --to=./glo
 namespace_sa_names=$(cat << 'EOF'
 minio-operator|console-sa
 minio-operator|minio-operator
-tekton-logging|vectors-tekton-logs-collector
+product-kubearchive|default
+tekton-logging|vector-tekton-logs-collector
 tekton-results|storage-sa
 tekton-results|postgres-postgresql
 EOF
