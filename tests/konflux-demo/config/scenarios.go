@@ -29,3 +29,22 @@ var ApplicationSpecs = []ApplicationSpec{
 		},
 	},
 }
+var UpstreamAppSpecs = []ApplicationSpec{
+	{
+		Name:            "Test local instance of konflux-ci",
+		ApplicationName: "konflux-ci-upstream",
+		Skip:            false,
+		ComponentSpec: ComponentSpec{
+			Name:                       "konflux-ci-upstream",
+			GitSourceUrl:               fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), "testrepo"),
+			GitSourceRevision:          "ba3f8828d061a539ef774229d2f5c8651d854d7e",
+			GitSourceDefaultBranchName: "main",
+			DockerFilePath:             "Dockerfile",
+			IntegrationTestScenario: IntegrationTestScenarioSpec{
+				GitURL:      fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), "testrepo"),
+				GitRevision: "ba3f8828d061a539ef774229d2f5c8651d854d7e",
+				TestPath:    "integration-tests/testrepo-integration.yaml",
+			},
+		},
+	},
+}
