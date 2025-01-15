@@ -3,6 +3,7 @@ package common
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/konflux-ci/e2e-tests/pkg/logs"
@@ -130,6 +131,29 @@ func (s *SuiteController) StoreAllPods(namespace string) error {
 	for _, pod := range podList.Items {
 		if err := s.StorePod(&pod); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// StorePodsForPipelineRun stores all pods for a specified pipelineRun in a given namespace.
+func (s *SuiteController) StorePodsForPipelineRun(namespace, pipelineRunName string) error {
+	parts := strings.Split(pipelineRunName, "-")
+	if len(parts) < 2 {
+		return fmt.Errorf("The pipelineRun name '%s' is not in a correct format", pipelineRunName)
+	}
+	podList, err := s.ListAllPods(namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, pod := range podList.Items {
+		podCopy := pod
+		//the name of pod contains the same sub string with pipelineRunName
+		if strings.Contains(podCopy.Name, parts[1]) {
+			if err := s.StorePod(&podCopy); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
