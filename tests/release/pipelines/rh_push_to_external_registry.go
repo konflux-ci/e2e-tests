@@ -162,7 +162,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 			Params: []tektonutils.Param{
 				{Name: "url", Value: releasecommon.RelSvcCatalogURL},
 				{Name: "revision", Value: releasecommon.RelSvcCatalogRevision},
-				{Name: "pathInRepo", Value: "pipelines/rh-push-to-external-registry/rh-push-to-external-registry.yaml"},
+				{Name: "pathInRepo", Value: "pipelines/managed/rh-push-to-external-registry/rh-push-to-external-registry.yaml"},
 			},
 		}, &runtime.RawExtension{
 			Raw: data,

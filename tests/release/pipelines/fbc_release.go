@@ -28,7 +28,7 @@ const (
 	fbcGitSrcSHA            = "2b04501c777aa4f7ad80f3e233731f3201e5b21b"
 	fbcDockerFilePath       = "catalog.Dockerfile"
 	targetPort              = 50051
-	relSvcCatalogPathInRepo = "pipelines/fbc-release/fbc-release.yaml"
+	relSvcCatalogPathInRepo = "pipelines/managed/fbc-release/fbc-release.yaml"
 )
 
 var snapshot *appservice.Snapshot

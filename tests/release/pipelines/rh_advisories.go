@@ -28,7 +28,7 @@ import (
 
 const (
 	advsServiceAccountName = "release-service-account"
-	advsCatalogPathInRepo  = "pipelines/rh-advisories/rh-advisories.yaml"
+	advsCatalogPathInRepo  = "pipelines/managed/rh-advisories/rh-advisories.yaml"
 	advsGitSourceURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic-release"
 	advsGitSrcSHA          = "33ff89edf85fb01a37d3d652d317080223069fc7"
 )

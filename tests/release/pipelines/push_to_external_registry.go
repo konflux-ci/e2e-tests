@@ -109,7 +109,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 			Params: []tektonutils.Param{
 				{Name: "url", Value: releasecommon.RelSvcCatalogURL},
 				{Name: "revision", Value: releasecommon.RelSvcCatalogRevision},
-				{Name: "pathInRepo", Value: "pipelines/push-to-external-registry/push-to-external-registry.yaml"},
+				{Name: "pathInRepo", Value: "pipelines/managed/push-to-external-registry/push-to-external-registry.yaml"},
 			},
 		}, &runtime.RawExtension{
 			Raw: data,
