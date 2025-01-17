@@ -73,7 +73,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 				Params: []tektonutils.Param{
 					{Name: "url", Value: releasecommon.RelSvcCatalogURL},
 					{Name: "revision", Value: releasecommon.RelSvcCatalogRevision},
-					{Name: "pathInRepo", Value: "pipelines/e2e/e2e.yaml"},
+					{Name: "pathInRepo", Value: "pipelines/managed/e2e/e2e.yaml"},
 				},
 			}, nil)
 			Expect(err).NotTo(HaveOccurred())

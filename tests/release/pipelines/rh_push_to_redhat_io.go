@@ -28,7 +28,7 @@ import (
 
 const (
 	rhioServiceAccountName = "release-service-account"
-	rhioCatalogPathInRepo  = "pipelines/rh-push-to-registry-redhat-io/rh-push-to-registry-redhat-io.yaml"
+	rhioCatalogPathInRepo  = "pipelines/managed/rh-push-to-registry-redhat-io/rh-push-to-registry-redhat-io.yaml"
 	rhioGitSourceURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic-release"
 	rhioGitSrcSHA          = "33ff89edf85fb01a37d3d652d317080223069fc7"
 )
