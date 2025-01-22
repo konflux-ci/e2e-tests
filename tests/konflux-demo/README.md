@@ -28,8 +28,6 @@ This test simulates typical user scenario.
       1. Release plan for the targeted application and (user) namespace
       1. Release strategy, Release plan admission
       1. Enterprise contract policy
-   1. Create a new branch in a java project on GitHub (that is used as a git source of a component) that will be used as a base branch for PaC pull request (so we don't pollute default branch - `main`)
-   1. Create JBSConfig and related secret in user's (dev) namespace that will trigger jvm-build-service to deploy a jvm-cache to the dev namespace, which will be used for caching java dependencies during build
 1. Test scenario
    1. The application and component were created successfully
    1. Verify that the initial PaC pull request was created in the component's repo (this will also trigger the default build pipelinerun)
@@ -38,7 +36,6 @@ This test simulates typical user scenario.
    1. Make sure that the resulting SBOM file can be pulled from the container registry (where also the image was pushed) and it is saved in expected format
    1. Make sure that integration test pipelinerun is created and completes successfully
    1. The release pipeline should succeed and the release should be marked as successful
-   1. Make sure JVM build service is used for rebuilding java component's dependencies and that all related dependency builds complete successfully
 
 Steps to run 'konflux-demos':
 
