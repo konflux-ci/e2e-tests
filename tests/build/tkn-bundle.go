@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -31,8 +32,7 @@ import (
   - kubectl patch serviceaccount appstudio-pipeline -p '{"imagePullSecrets": [{"name": "docker-config"}], "secrets": [{"name": "docker-config"}]}'
 */
 
-// Skipping this test due to https://issues.redhat.com/browse/KFLUXBUGS-1899 , reenable it back once it is fixed
-var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templates"), Pending, func() {
+var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templates"), func() {
 
 	defer GinkgoRecover()
 
@@ -158,8 +158,15 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templat
 				}
 			}
 			bundle := fmt.Sprintf("%s@%s", imgUrl, imgDigest)
-			GinkgoWriter.Print(bundle)
-			fetchImage(fmt.Sprintf("%s@%s", imgUrl, imgDigest), visitor)
+			GinkgoWriter.Printf("Fetching bundle image: %s\n", bundle)
+
+			Eventually(func() error {
+				err = fetchImage(bundle, visitor)
+				if err != nil {
+					return err
+				}
+				return nil
+			}, time.Minute*2, 2*time.Second).Should(Succeed(), "failed to fetch image %q", bundle)
 
 		},
 		Entry("when context points to a file", map[string]string{"CONTEXT": "task2.yaml"},
@@ -248,12 +255,16 @@ func notMatchOutput(logs []byte, expectedOutput []string) {
 }
 
 // fetch the image
-func fetchImage(image string, visitor func(version, kind, name string, element runtime.Object, raw []byte)) {
+func fetchImage(image string, visitor func(version, kind, name string, element runtime.Object, raw []byte)) error {
 	img, err := crane.Pull(image, crane.WithAuthFromKeychain(authn.DefaultKeychain))
-	Expect(err).ToNot(HaveOccurred())
-
+	if err != nil {
+		return fmt.Errorf("failed to pull the image: %v", err)
+	}
 	err = bundle.List(img, visitor)
-	Expect(err).ToNot(HaveOccurred())
+	if err != nil {
+		return fmt.Errorf("failed to list objects in the image: %v", err)
+	}
+	return nil
 }
 
 // sets the task files on a pvc for use by the task
