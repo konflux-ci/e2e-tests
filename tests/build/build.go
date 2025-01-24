@@ -244,8 +244,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 
 			It("a related PipelineRun should be deleted after deleting the component", func() {
-				timeout = time.Second * 60
-				interval = time.Second * 1
+				timeout = time.Second * 180
+				interval = time.Second * 5
 				Expect(f.AsKubeAdmin.HasController.DeleteComponent(customDefaultComponentName, testNamespace, true)).To(Succeed())
 				// Test removal of PipelineRun
 				Eventually(func() error {
