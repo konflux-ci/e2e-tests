@@ -1,16 +1,24 @@
-# KONFLUX demo test
-
-### Prerequisites for running the build scenario against your own cluster
-1. Fork https://github.com/redhat-appstudio-qe/hacbs-test-project and https://github.com/redhat-appstudio-qe/strategy-configs to your GitHub org (specified in `MY_GITHUB_ORG` env var)
-2. Make sure the cluster you are about to run this test against is public (i.e. hosted on a public cloud provider)
+# KONFLUX Demo test
 
 ### Description
-This test simulates typical user scenario.
+This test simulates typical user scenario (creation of Application, Component, build of a container image, testing it and releasing it).
+
+It is possible to run this test against "downstream" (deployed via scripts in [infra-deployments](https://github.com/redhat-appstudio/infra-deployments)) and "upstream" (deployed via scripts in [konflux-ci repository](https://github.com/konflux-ci/konflux-ci)) version of Konflux.
+
+### Prerequisites for running the build scenario against your own cluster
+
+
+#### For downstream version of Konflux
+1. Fork https://github.com/redhat-appstudio-qe/hacbs-test-project to your GitHub org (specified in `MY_GITHUB_ORG` env var)
+2. Make sure the cluster you are about to run this test against is public (i.e. hosted on a public cloud provider)
+
+#### For upstream version of Konflux
+1. Fork https://github.com/konflux-ci/testrepo to your GitHub org (specified in `MY_GITHUB_ORG` env var)
+2. Make sure the cluster you are about to run this test against is public (i.e. hosted on a public cloud provider)
 
 #### Test Steps
 1. Setup
    
-
 2. Test Scenario
    1. The application was created successfully
    2. The Component (default) Build finished successfully
@@ -37,27 +45,23 @@ This test simulates typical user scenario.
    1. Make sure that integration test pipelinerun is created and completes successfully
    1. The release pipeline should succeed and the release should be marked as successful
 
-Steps to run 'konflux-demos':
+Steps to run Konflux demo test:
 
-1) Follow the instructions from the [Readme](../../docs/Installation.md) scripts to install AppStudio in e2e mode
-2) Run the e2e suite: `./bin/e2e-appstudio --ginkgo.label-filter="konflux"`
+#### For downstream version of Konflux
+1) Follow the instructions from the [Readme](../../docs/Installation.md) scripts to install Konflux in E2E mode
+2) Run the E2E test: `ginkgo -v --label-filter="konflux"`
+
+#### For upstream version of Konflux
+1) Follow the instructions in the [konflux-ci repository](https://github.com/konflux-ci/konflux-ci/blob/main/CONTRIBUTING.md#running-e2e-test) to install Konflux and run tests in your Kubernetes/OpenShift cluster.
+2) To run the E2E test from this repository: `ginkgo -v --label-filter="upstream-konflux"`
+
+**Note** 
 
 ## Test Generator
 
 The test specs in konflux-demo-suite are generated dynamically using ginkgo specs.
 
 If you want to test your own Component (repository), all you need to do is to update the `TestScenarios` variable in [scenarios.go](./config/scenarios.go)
-
-## Run tests with private component
-
-Red Hat AppStudio E2E framework now supports creating components from private quay.io images and GitHub repositories.
-
-#### Environments
-
-| Variable | Required | Explanation | Default Value |
-|---|---|---|---|
-| `QUAY_OAUTH_USER` | yes | A quay.io username used to push/build containers  | ''  |
-| `QUAY_OAUTH_TOKEN` | yes | A quay.io token used to push/build containers. Note: the token and username must be a robot account with access to your repository | '' |
 
 #### Setup configuration for private repositories
 
