@@ -197,6 +197,6 @@
   monitoring_step: {{ step }}
 {%- endmacro %}
 
-{{ monitor_pod('openshift-pipelines', 'tekton-pipelines-controller', 15) }}
+{{ monitor_pod('openshift-pipelines', 'tekton-pipelines-controller', 15, '-[0-9]+') }}
 {{ monitor_pod('tekton-results', 'tekton-results-watcher', 1, '-.*') }}
 {{ monitor_pod_container('tekton-results', 'tekton-results-watcher', 'watcher', 1, '-.*') }}
