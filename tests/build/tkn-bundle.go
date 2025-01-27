@@ -161,11 +161,7 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templat
 			GinkgoWriter.Printf("Fetching bundle image: %s\n", bundle)
 
 			Eventually(func() error {
-				err = fetchImage(bundle, visitor)
-				if err != nil {
-					return err
-				}
-				return nil
+			    return fetchImage(bundle, visitor)
 			}, time.Minute*2, 2*time.Second).Should(Succeed(), "failed to fetch image %q", bundle)
 
 		},
