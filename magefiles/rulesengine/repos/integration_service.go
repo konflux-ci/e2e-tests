@@ -1,7 +1,6 @@
 package repos
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
@@ -39,9 +38,7 @@ var IntegrationServiceRepoSetDefaultSettingsRule = rulesengine.Rule{Name: "Gener
 		}
 		rctx.ComponentEnvVarPrefix = "INTEGRATION_SERVICE"
 		// TODO keep only "KONFLUX_CI" option once we migrate off openshift-ci
-		if os.Getenv("KONFLUX_CI") == "true" {
-			rctx.ComponentImageTag = fmt.Sprintf("on-pr-%s", rctx.PrCommitSha)
-		} else {
+		if os.Getenv("KONFLUX_CI") != "true" {
 			rctx.ComponentImageTag = "redhat-appstudio-integration-service-image"
 		}
 		return SetEnvVarsForComponentImageDeployment(rctx)

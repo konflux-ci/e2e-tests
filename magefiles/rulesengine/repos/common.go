@@ -536,13 +536,31 @@ func SetupMultiPlatformTests() error {
 
 func SetEnvVarsForComponentImageDeployment(rctx *rulesengine.RuleCtx) error {
 	componentImage := os.Getenv("COMPONENT_IMAGE")
-	sp := strings.Split(componentImage, "@")
-	if len(sp) != 2 {
+
+	tag := rctx.ComponentImageTag
+
+	imageData := strings.SplitN(componentImage, "@", 2)
+	if len(imageData) != 2 {
 		return fmt.Errorf("component image ref expected in format 'quay.io/<org>/<repository>@sha256:<sha256-value>', got %s", componentImage)
 	}
-	os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", rctx.ComponentEnvVarPrefix), sp[0])
-	os.Setenv(fmt.Sprintf("%s_IMAGE_TAG", rctx.ComponentEnvVarPrefix), rctx.ComponentImageTag)
+	repository := imageData[0]
+
+	// From Konflux the e2e tests will receive 2 kind of images:
+	// 1. quay.io/test/test@sha:1234: This images ussually comes from the Konflux snapshots
+	// 2. quay.io/test/test:on-pr-1234.sealights@sha:1234 This images ussually comes from a build
+	// that includes the Sealights instrumented code:
+	if tag == "" {
+		if repoParts := strings.SplitN(repository, ":", 2); len(repoParts) == 2 {
+			repository, tag = repoParts[0], repoParts[1]
+		} else {
+			tag = fmt.Sprintf("on-pr-%s", rctx.PrCommitSha)
+		}
+	}
+
+	os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", rctx.ComponentEnvVarPrefix), repository)
+	os.Setenv(fmt.Sprintf("%s_IMAGE_TAG", rctx.ComponentEnvVarPrefix), tag)
 	os.Setenv(fmt.Sprintf("%s_PR_OWNER", rctx.ComponentEnvVarPrefix), rctx.PrRemoteName)
 	os.Setenv(fmt.Sprintf("%s_PR_SHA", rctx.ComponentEnvVarPrefix), rctx.PrCommitSha)
+
 	return nil
 }

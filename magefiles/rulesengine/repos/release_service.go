@@ -36,9 +36,8 @@ var ReleaseServiceRepoSetDefaultSettingsRule = rulesengine.Rule{Name: "General R
 		}
 		rctx.ComponentEnvVarPrefix = "RELEASE_SERVICE"
 		// TODO keep only "KONFLUX_CI" option once we migrate off openshift-ci
-		if os.Getenv("KONFLUX_CI") == "true" {
-			rctx.ComponentImageTag = fmt.Sprintf("on-pr-%s", rctx.PrCommitSha)
-		} else {
+
+		if os.Getenv("KONFLUX_CI") != "true" {
 			rctx.ComponentImageTag = "redhat-appstudio-release-service-image"
 		}
 		//This is env variable is specified for release service
