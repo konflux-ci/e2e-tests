@@ -45,6 +45,7 @@ load_envs() {
         [MULTI_PLATFORM_IBM_API_KEY]="${konflux_ci_secrets_file}/multi-platform-ibm-api-key"
         [DOCKER_IO_AUTH]="${konflux_ci_secrets_file}/docker_io"
         [GITLAB_BOT_TOKEN]="${konflux_ci_secrets_file}/gitlab-bot-token"
+        [SEALIGHTS_TOKEN]="${konflux_ci_secrets_file}/sealights-token"
     )
 
     for var in "${!config_envs[@]}"; do
