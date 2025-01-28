@@ -174,6 +174,7 @@ func (g *Github) DeleteRepositoryIfExists(name string) error {
 func (g *Github) ForkRepository(sourceName, targetName string) (*github.Repository, error) {
 	var fork *github.Repository
 	var resp *github.Response
+	var repo *github.Repository
 
 	ctx := context.Background()
 
@@ -218,9 +219,20 @@ func (g *Github) ForkRepository(sourceName, targetName string) (*github.Reposito
 		Name: github.String(targetName),
 	}
 
-	repo, _, err3 := g.client.Repositories.Edit(ctx, g.organization, fork.GetName(), editedRepo)
+	err3 := utils.WaitUntilWithInterval(func() (done bool, err error) {
+		repo, resp, err = g.client.Repositories.Edit(ctx, g.organization, fork.GetName(), editedRepo)
+		if err != nil {
+			if resp.StatusCode == 422 {
+				// This started to happen recently. Docs says 422 is "Validation failed, or the endpoint has been spammed." so we need to be patient.
+				// Error we are getting: "422 Validation Failed [{Resource:Repository Field:name Code:custom Message:name a repository operation is already in progress}]"
+				return false, nil
+			}
+			return false, fmt.Errorf("Error renaming %s/%s to %s: %v\n", g.organization, fork.GetName(), targetName, err)
+		}
+		return true, nil
+	}, time.Second * 2, time.Minute * 10)
 	if err3 != nil {
-		return nil, fmt.Errorf("Error renaming %s/%s to %s: %v\n", g.organization, fork.GetName(), targetName, err3)
+		return nil, fmt.Errorf("Failed waiting for renaming %s/%s: %v", g.organization, targetName, err3)
 	}
 
 	return repo, nil
