@@ -9,7 +9,7 @@ jobs:
   load_test:
     runs-on: ubuntu-latest
     env:
-      ARTIFACT_DIR: ${{ github.workspace }}/tests/load-test/.artifacts/
+      ARTIFACT_DIR: ${{ github.workspace }}/tests/load-test/artifacts/
 
     steps:
     - name: Checkout code
@@ -44,7 +44,7 @@ jobs:
         OCP_PROMETHEUS_TOKEN: ${{ secrets.PROD_OCP_PROMETHEUS_TOKEN }}
       run: |
         export $SCENARIO
-        ./ci-scripts/stage/collect-results.sh ${CONCURRENCY:-1} .
+        ./ci-scripts/stage/collect-results.sh ${CONCURRENCY:-1} ${PWD}
 
     - name: List files in the artifact directory
       run: ls -la ${{ env.ARTIFACT_DIR }}
