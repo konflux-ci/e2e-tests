@@ -1,0 +1,57 @@
+name: Prod Load Test hourly probe
+
+on:
+  schedule:
+    - cron: "15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  load_test:
+    runs-on: ubuntu-latest
+    env:
+      ARTIFACT_DIR: ${{ github.workspace }}/tests/load-test/.artifacts/
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up jq
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq
+
+    - name: Prepare list of users
+      working-directory: ./tests/load-tests
+      env:
+        PROD_USERS: ${{ secrets.PROD_USERS }}
+      run: echo "$PROD_USERS" > users.json
+
+    - name: Run Load Test
+      working-directory: ./tests/load-tests
+      env:
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        MY_GITHUB_ORG: "rhtap-perf-test"
+        SCENARIO: COMPONENT_REPO=https://github.com/rhtap-perf-test/nodejs-devfile-sample CONCURRENCY=1 COMPONENT_DOCKERFILE_PATH=Dockerfile
+      run: |
+        export $SCENARIO
+        ./run-stage.sh
+
+    - name: Collect results
+      working-directory: ./tests/load-tests
+      env:
+        SCENARIO: COMPONENT_REPO=https://github.com/rhtap-perf-test/nodejs-devfile-sample CONCURRENCY=1 COMPONENT_DOCKERFILE_PATH=Dockerfile
+        STAGE_MEMBER_CLUSTER: ${{ secrets.PROD_MEMBER_CLUSTER }}
+        OCP_PROMETHEUS_TOKEN: ${{ secrets.PROD_OCP_PROMETHEUS_TOKEN }}
+      run: |
+        export $SCENARIO
+        ./ci-scripts/stage/collect-results.sh ${CONCURRENCY:-1} .
+
+    - name: List files in the artifact directory
+      run: ls -la ${{ env.ARTIFACT_DIR }}
+
+    - name: Archive artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: rhtap-load-test-prod
+        path: ${{ env.ARTIFACT_DIR }}
+        include-hidden-files: true
