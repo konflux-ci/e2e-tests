@@ -9,8 +9,7 @@ source "$( dirname $0 )/../utils.sh"
 echo "[$(date --utc -Ins)] Collecting load test results"
 
 # Setup directories
-ARTIFACT_DIR=${ARTIFACT_DIR:-.artifacts}
-CONCURRENCY="${1:-1}"
+ARTIFACT_DIR=${ARTIFACT_DIR:-artifacts}
 mkdir -p ${ARTIFACT_DIR}
 pushd "${2:-./tests/load-tests}"
 
