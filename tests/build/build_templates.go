@@ -354,13 +354,19 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					sbomTaskLog = log
 				}
 
-				sbom := &build.SbomCyclonedx{}
-				err = json.Unmarshal([]byte(sbomTaskLog), sbom)
+				sbom, err := build.UnmarshalSbom([]byte(sbomTaskLog))
 				Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("failed to parse SBOM from show-sbom task output from %s/%s PipelineRun", pr.GetNamespace(), pr.GetName()))
-				Expect(sbom.BomFormat).ToNot(BeEmpty())
-				Expect(sbom.SpecVersion).ToNot(BeEmpty())
+
+				switch s := sbom.(type) {
+				case *build.SbomCyclonedx:
+					Expect(s.BomFormat).ToNot(BeEmpty())
+					Expect(s.SpecVersion).ToNot(BeEmpty())
+				default:
+					Fail(fmt.Sprintf("unknown SBOM type: %T", s))
+				}
+
 				if !strings.Contains(scenario.GitURL, "from-scratch") {
-					Expect(sbom.Components).ToNot(BeEmpty())
+					Expect(sbom.GetPackages()).ToNot(BeEmpty())
 				}
 			})
 
