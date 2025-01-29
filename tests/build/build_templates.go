@@ -361,6 +361,9 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				case *build.SbomCyclonedx:
 					Expect(s.BomFormat).ToNot(BeEmpty())
 					Expect(s.SpecVersion).ToNot(BeEmpty())
+				case *build.SbomSpdx:
+					Expect(s.SPDXID).ToNot(BeEmpty())
+					Expect(s.SpdxVersion).ToNot(BeEmpty())
 				default:
 					Fail(fmt.Sprintf("unknown SBOM type: %T", s))
 				}
