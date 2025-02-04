@@ -179,8 +179,13 @@ func GitCheckoutRemoteBranch(remoteName, branchName string) error {
 
 func IsPRPairingRequired(repoForPairing string, remoteName string, branchName string) bool {
 	var pullRequests []gh.PullRequest
+	var url string
 
-	url := fmt.Sprintf("https://api.github.com/repos/redhat-appstudio/%s/pulls?per_page=100", repoForPairing)
+	if repoForPairing == "infra-deployments" {
+		url = fmt.Sprintf("https://api.github.com/repos/redhat-appstudio/%s/pulls?per_page=100", repoForPairing)
+	} else {
+		url = fmt.Sprintf("https://api.github.com/repos/konflux-ci/%s/pulls?per_page=100", repoForPairing)
+	}
 	if err := sendHttpRequestAndParseResponse(url, "GET", &pullRequests); err != nil {
 		klog.Infof("cannot determine %s Github branches for author %s: %v. will stick with the redhat-appstudio/%s main branch for running tests", repoForPairing, remoteName, err, repoForPairing)
 		return false
