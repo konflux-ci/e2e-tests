@@ -7,8 +7,15 @@ The Integration Service manages the lifecycle, deployment, and integration testi
 ### 1. Basic E2E Tests within `integration.go`
 These tests cover the end-to-end integration service workflow, verifying the successful execution of key processes such as component creation, pipeline runs, snapshot generation, and release management under ideal conditions.
 
-### 2. E2E Tests within `status-reporting-to-pullrequest.go`
-This suite tests the status reporting of integration tests to GitHub Pull Requests (PRs). It ensures that integration test outcomes are reflected accurately in the PR's CheckRuns, including both successful and failed tests.
+### 2. E2E Tests within `group-snapshots-tests.go`
+This suite includes group snapshot tests. It ensures that integration test outcomes are accurately reflected in snapshots and GitHub PR CheckRuns.
+
+It covers:
+
+- Group snapshot creation for monorepo and multiple repositories.
+- Validation of pipeline statuses and PR tracking.
+- Ensuring that integration test statuses are accurately reported in CheckRuns.
+- Ensuring that snapshots are marked as failed when at least one integration test fails.
 
 ### 3. E2E Tests within `gitlab-integration-reporting.go`
 This suite verifies the reporting of integration test statuses to GitLab Merge Requests (MRs). It ensures the proper status updates for both successful and failed tests are reflected in the MR's CommitStatus.
@@ -46,22 +53,17 @@ Checkpoints:
 - Re-running Integration Tests.
 - Finalizer Removal from Integration PipelineRuns.
 
-### 2. Happy Path Tests within `status-reporting-to-pullrequest.go`
+### 2. Happy Path Tests within `group-snapshots-tests.go`
 Checkpoints:
 - Creating two IntegrationTestScenarios: one that should pass.
-- Creating a Pull Request (PR) from a custom branch.
+- Creating Pull Requests for both monorepe and multi-repo setups.
 - Triggering a Build PipelineRun and validating it is completed successfully.
 - Asserting the creation of a PaC (Pipelines as Code) init PR in the component repository.
 - Asserting the correct status reporting for the Build PipelineRun in the PR's CheckRun.
 - Verifying that the successful Integration PipelineRun is reported correctly in the CheckRun.
+- Validating that all group snapshots contain the expected annotations and metadata.
+- Confirming that the final group snapshot includes the last build PipelineRun for each component.
 
-Push Event Tests:
-- Creating a test commit on the main branch.
-- Verifying build pipeline triggers and completes for the push event.
-- Checking integration test results are reported to the commit's status checks:
-  * Success status for passing test scenario
-  * Failure status for failing test scenario
-- Ensuring proper cleanup of test artifacts.
 ### 3. Happy Path Tests within `gitlab-integration-reporting.go`
 Checkpoints:
 - Creating two IntegrationTestScenarios: one expected to pass.
@@ -100,12 +102,15 @@ Checkpoints:
 - Checking that the global candidate does not get updated unexpectedly.
 - Ensuring proper status reporting for failed Integration PipelineRuns and snapshots in PRs (or GitLab MR's CommitStatus).
 
-### 2. Negative Test Cases within `status-reporting-to-pullrequest.go`
+### 2. Negative Test Cases within `group-snapshots-tests.go`
 Checkpoints:
 Checkpoints:
 - Creating two IntegrationTestScenarios: one that should fail.
 - Verifying that failed Integration PipelineRuns are reported correctly in the PR's CheckRun.
 - Checking that snapshots are marked as 'failed' if any test fails.
+- Ensuring that the Snapshot CR is explicitly validated as failed when an Integration PipelineRun does not pass.
+- Confirming that failed snapshots contain the expected failure metadata and annotations.
+- Asserting that no further releases or promotions occur if an integration test fails.
 - For push events:
   * Verifying failed tests are properly reported in commit status checks
   * Ensuring snapshots are marked as failed for failing tests
