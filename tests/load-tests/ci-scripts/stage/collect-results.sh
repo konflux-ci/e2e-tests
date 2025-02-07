@@ -13,8 +13,8 @@ ARTIFACT_DIR=${ARTIFACT_DIR:-artifacts}
 mkdir -p ${ARTIFACT_DIR}
 pushd "${2:-./tests/load-tests}"
 
-# Construct $PROMETHEUS_HOST by extracting BASE_URL from $STAGE_MEMBER_CLUSTER
-BASE_URL=$(echo $STAGE_MEMBER_CLUSTER | grep -oP 'https://api\.\K[^:]+')
+# Construct $PROMETHEUS_HOST by extracting BASE_URL from $MEMBER_CLUSTER
+BASE_URL=$(echo $MEMBER_CLUSTER | grep -oP 'https://api\.\K[^:]+')
 PROMETHEUS_HOST="thanos-querier-openshift-monitoring.apps.$BASE_URL"
 TOKEN=${OCP_PROMETHEUS_TOKEN}
 
