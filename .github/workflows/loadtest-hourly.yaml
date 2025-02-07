@@ -44,6 +44,7 @@ jobs:
         OCP_PROMETHEUS_TOKEN: ${{ secrets.PROD_OCP_PROMETHEUS_TOKEN }}
       run: |
         export $SCENARIO
+        export MEMBER_CLUSTER
         ./ci-scripts/stage/collect-results.sh ${CONCURRENCY:-1} ${PWD}
 
     - name: List files in the artifact directory
