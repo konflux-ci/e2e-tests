@@ -40,7 +40,7 @@ jobs:
       working-directory: ./tests/load-tests
       env:
         SCENARIO: COMPONENT_REPO=https://github.com/rhtap-perf-test/nodejs-devfile-sample CONCURRENCY=1 COMPONENT_DOCKERFILE_PATH=Dockerfile
-        STAGE_MEMBER_CLUSTER: ${{ secrets.PROD_MEMBER_CLUSTER }}
+        MEMBER_CLUSTER: ${{ secrets.PROD_MEMBER_CLUSTER }}
         OCP_PROMETHEUS_TOKEN: ${{ secrets.PROD_OCP_PROMETHEUS_TOKEN }}
       run: |
         export $SCENARIO
