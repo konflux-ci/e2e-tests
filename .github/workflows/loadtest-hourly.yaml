@@ -7,11 +7,38 @@ on:
 
 jobs:
   load_test:
+    strategy:
+      matrix:
+        cluster:
+          - label: stone-prd-rh01
+            repo: https://github.com/rhtap-perf-test/nodejs-devfile-sample1
+            member_cluster_secret: MEMBER_CLUSTER_STONE_PRD_RH01
+            ocp_prometheus_token_secret: OCP_PROMETHEUS_TOKEN_STONE_PRD_RH01
+            users_secret: USERS_STONE_PRD_RH01
+          - label: stone-stg-rh01
+            repo: https://github.com/rhtap-perf-test/nodejs-devfile-sample2
+            member_cluster_secret: MEMBER_CLUSTER_STONE_STG_RH01
+            ocp_prometheus_token_secret: OCP_PROMETHEUS_TOKEN_STONE_STG_RH01
+            users_secret: USERS_STONE_STG_RH01
+          ###- label: stone-prod-p02
+          ###  repo: https://github.com/rhtap-perf-test/nodejs-devfile-sample3
+          ###  member_cluster_secret: MEMBER_CLUSTER_STONE_PROD_P02
+          ###  ocp_prometheus_token_secret: OCP_PROMETHEUS_TOKEN_STONE_PROD_P02
+          ###  users_secret: USERS_STONE_PROD_P02
+          ###- label: stone-stage-p01
+          ###  repo: https://gitlab.cee.redhat.com/jhutar/nodejs-devfile-sample4
+          ###  member_cluster_secret: MEMBER_CLUSTER_STONE_STAGE_P01
+          ###  ocp_prometheus_token_secret: OCP_PROMETHEUS_TOKEN_STONE_STAGE_P01
+          ###  users_secret: USERS_STONE_STAGE_P01
+
     runs-on: ubuntu-latest
+    timeout-minutes: 120
+
     env:
       ARTIFACT_DIR: ${{ github.workspace }}/tests/load-test/artifacts/
 
     steps:
+
     - name: Checkout code
       uses: actions/checkout@v3
 
@@ -23,15 +50,15 @@ jobs:
     - name: Prepare list of users
       working-directory: ./tests/load-tests
       env:
-        PROD_USERS: ${{ secrets.PROD_USERS }}
-      run: echo "$PROD_USERS" > users.json
+        USERS: ${{ secrets[matrix.cluster.users_secret] }}
+      run: echo "$USERS" > users.json
 
     - name: Run Load Test
       working-directory: ./tests/load-tests
       env:
+        SCENARIO: COMPONENT_REPO=${{ matrix.cluster.repo }} CONCURRENCY=1 COMPONENT_DOCKERFILE_PATH=Dockerfile MY_GITHUB_ORG=rhtap-perf-test
         GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         MY_GITHUB_ORG: "rhtap-perf-test"
-        SCENARIO: COMPONENT_REPO=https://github.com/rhtap-perf-test/nodejs-devfile-sample CONCURRENCY=1 COMPONENT_DOCKERFILE_PATH=Dockerfile
       run: |
         export $SCENARIO
         ./run-stage.sh
@@ -39,12 +66,12 @@ jobs:
     - name: Collect results
       working-directory: ./tests/load-tests
       env:
-        SCENARIO: COMPONENT_REPO=https://github.com/rhtap-perf-test/nodejs-devfile-sample CONCURRENCY=1 COMPONENT_DOCKERFILE_PATH=Dockerfile
-        MEMBER_CLUSTER: ${{ secrets.PROD_MEMBER_CLUSTER }}
-        OCP_PROMETHEUS_TOKEN: ${{ secrets.PROD_OCP_PROMETHEUS_TOKEN }}
+        MEMBER_CLUSTER: ${{ secrets[matrix.cluster.member_cluster_secret] }}
+        OCP_PROMETHEUS_TOKEN: ${{ secrets[matrix.cluster.ocp_prometheus_token_secret] }}
       run: |
         export $SCENARIO
         export MEMBER_CLUSTER
+        export OCP_PROMETHEUS_TOKEN
         ./ci-scripts/stage/collect-results.sh ${CONCURRENCY:-1} ${PWD}
 
     - name: List files in the artifact directory
@@ -53,6 +80,6 @@ jobs:
     - name: Archive artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: rhtap-load-test-prod
+        name: rhtap-load-test-${{ matrix.cluster.label }}
         path: ${{ env.ARTIFACT_DIR }}
         include-hidden-files: true
