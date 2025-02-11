@@ -670,13 +670,15 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						GinkgoWriter.Printf("The PipelineRun %s in namespace %s has status.conditions: \n%#v\n", pr.Name, pr.Namespace, pr.Status.Conditions)
 
 						// The UI uses this label to display additional information.
-						Expect(pr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
+						// Enable this check, when the issue is fixed: https://issues.redhat.com/browse/KONFLUX-5787
+						// Expect(pr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
 
 						// The UI uses this label to display additional information.
 						tr, err := kubeadminClient.TektonController.GetTaskRunFromPipelineRun(kubeadminClient.CommonController.KubeRest(), pr, "verify")
 						Expect(err).NotTo(HaveOccurred())
 						GinkgoWriter.Printf("The TaskRun %s of PipelineRun %s  has status.conditions: \n%#v\n", tr.Name, pr.Name, tr.Status.Conditions)
-						Expect(tr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
+						// Enable this check, when the issue is fixed: https://issues.redhat.com/browse/KONFLUX-5787
+						// Expect(tr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
 
 						logs, err := kubeadminClient.TektonController.GetTaskRunLogs(pr.Name, "verify", pr.Namespace)
 						Expect(err).NotTo(HaveOccurred())
