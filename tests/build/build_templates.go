@@ -372,11 +372,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					packages := sbom.GetPackages()
 					Expect(packages).ToNot(BeEmpty())
 					for i := range packages {
-						Expect(packages[i].GetName()).ToNot(BeEmpty())
-						Expect(packages[i].GetVersion()).ToNot(BeEmpty())
-						if packages[i].GetPurl() == "" {
-							GinkgoWriter.Printf("Found pkg with empty purl: %q %q\n", packages[i].GetName(), packages[i].GetVersion())
-						}
+						Expect(packages[i].GetName()).ToNot(BeEmpty(), "expecting package name to be non empty, but got empty value")
+						Expect(packages[i].GetPurl()).ToNot(BeEmpty(), fmt.Sprintf("expecting purl to be non empty, but got empty value for pkg: %s", packages[i].GetName()))
 					}
 				}
 			})
