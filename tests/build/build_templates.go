@@ -369,7 +369,15 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				}
 
 				if !strings.Contains(scenario.GitURL, "from-scratch") {
-					Expect(sbom.GetPackages()).ToNot(BeEmpty())
+					packages := sbom.GetPackages()
+					Expect(packages).ToNot(BeEmpty())
+					for i := range packages {
+						Expect(packages[i].GetName()).ToNot(BeEmpty())
+						Expect(packages[i].GetVersion()).ToNot(BeEmpty())
+						if packages[i].GetPurl() == "" {
+							GinkgoWriter.Printf("Found pkg with empty purl: %q %q\n", packages[i].GetName(), packages[i].GetVersion())
+						}
+					}
 				}
 			})
 
