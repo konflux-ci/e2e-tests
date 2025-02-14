@@ -369,7 +369,12 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				}
 
 				if !strings.Contains(scenario.GitURL, "from-scratch") {
-					Expect(sbom.GetPackages()).ToNot(BeEmpty())
+					packages := sbom.GetPackages()
+					Expect(packages).ToNot(BeEmpty())
+					for i := range packages {
+						Expect(packages[i].GetName()).ToNot(BeEmpty(), "expecting package name to be non empty, but got empty value")
+						Expect(packages[i].GetPurl()).ToNot(BeEmpty(), fmt.Sprintf("expecting purl to be non empty, but got empty value for pkg: %s", packages[i].GetName()))
+					}
 				}
 			})
 
