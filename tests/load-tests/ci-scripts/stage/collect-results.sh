@@ -46,12 +46,15 @@ echo "[$(date --utc -Ins)] Graphing PRs and TRs"
 ci-scripts/utility_scripts/show-pipelineruns.py --data-dir "${ARTIFACT_DIR}" >"${ARTIFACT_DIR}/show-pipelineruns.log" || true
 mv "${ARTIFACT_DIR}/output.svg" "${ARTIFACT_DIR}/show-pipelines.svg" || true
 
+echo "[$(date --utc -Ins)] Computing duration of PRs, TRs and steps"
+ci-scripts/utility_scripts/get-taskruns-durations.py --data-dir "${ARTIFACT_DIR}" --dump-json "${ARTIFACT_DIR}/get-taskruns-durations.json" >"${ARTIFACT_DIR}/get-taskruns-durations.log"
+
 echo "[$(date --utc -Ins)] Creating main status data file"
 STATUS_DATA_FILE="${ARTIFACT_DIR}/load-test.json"
 status_data.py \
     --status-data-file "${STATUS_DATA_FILE}" \
     --set "name=Konflux loadtest" "started=$( cat started )" "ended=$( cat ended )" \
-    --set-subtree-json "parameters.options=${ARTIFACT_DIR}/load-test-options.json" "results.measurements=${ARTIFACT_DIR}/load-test-timings.json"
+    --set-subtree-json "parameters.options=${ARTIFACT_DIR}/load-test-options.json" "results.measurements=${ARTIFACT_DIR}/load-test-timings.json" "results.durations=${ARTIFACT_DIR}/get-taskruns-durations.json"
 
 echo "[$(date --utc -Ins)] Adding monitoring data"
 mstarted="$( date -d "$( cat started )" --utc -Iseconds )"
