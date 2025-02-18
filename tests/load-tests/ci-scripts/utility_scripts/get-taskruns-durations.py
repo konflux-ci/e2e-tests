@@ -193,6 +193,64 @@ class Something:
             for row in table:
                 writer.writerow(row)
 
+    def _format_interval(self, interval):
+        """
+        Return interval (list of two datestamps) formated as a string with ISO formated dates.
+        """
+        return f"({interval[0].isoformat()} - {interval[1].isoformat()})"
+
+    def _merge_time_interval(self, new, existing):
+        """
+        Merge the new interval with first overlaping existing interval or add new one to list.
+
+        Parameters:
+            new ... time interval (lis with start and end time) we want to merge into current list of intervals
+            existing ... iterable of intervals with current non-overlaping time intervals
+
+        Returns:
+            New list of existing intervals
+
+        Example:
+            Say you have list of these intervals:
+              [   <----->  <-->          <---->         ]
+            And you want to add this one:
+                      <--->
+            So you should end up with this list:
+              [   <----------->          <---->         ]
+        """
+        start = 0
+        end = 1
+
+        for t in existing:
+            # If both ends are inside of existing interval, we ignore it
+            if t[start] <= new[start] <= t[end] and t[start] <= new[end] <= t[end]:
+                logging.info(f"Interval {self._format_interval(new)} is inside of member {self._format_interval(t)}, no action needed")
+                return existing   # no more processing needed
+
+            # If start is inside existing interval, but end is outside of it,
+            # we extend existing interval
+            if t[start] <= new[start] <= t[end]:
+                if new[end] > t[end]:
+                    logging.info(f"Interval {self._format_interval(new)} extends member {self._format_interval(t)}, so adding to right of it and need to recompute")
+                    existing.remove(t)
+                    t[end] = new[end]
+                    return self._merge_time_interval(t, existing)
+
+            # If end is inside existing interval, but start is outside of it,
+            # we extend existing interval
+            if t[start] <= new[end] <= t[end]:
+                if new[start] < t[start]:
+                    logging.info(f"Interval {self._format_interval(new)} extends member {self._format_interval(t)}, so adding to left of it and need to recompute")
+                    existing.remove(t)
+                    t[start] = new[start]
+                    return self._merge_time_interval(t, existing)
+
+        # If new interval did not collided with none of existing ones,
+        # just add it to the list
+        logging.info(f"Interval {self._format_interval(new)} does not collide with any member, adding it")
+        return existing + [new]
+
+
     def doit(self):
         # Normalize data into the structure we will use and do some cross checks
         data = {}
@@ -250,6 +308,8 @@ class Something:
         }
         for pr_name, pr_data in data.items():
             pr_id = pr_data["type"]
+            logging.debug(f"Working on PipelineRun {pr_id}")
+
             if pr_id not in result["pipelineruns"]:
                 result["pipelineruns"][pr_id] = {
                     "passed": {
@@ -266,11 +326,16 @@ class Something:
                     },
                 }
 
+            # Composing list of TRs intervals to get idle time later
+            pr_tr_intervals = []
+            for tr_name, tr_data in pr_data["taskruns"].items():
+                pr_tr_intervals = self._merge_time_interval([tr_data["creation"], tr_data["completion"]], pr_tr_intervals)
+
             pr_result = "passed" if pr_data["result"] else "failed"
             pr_duration = pr_data["completion"] - pr_data["creation"]
             pr_running = pr_data["completion"] - pr_data["start"]
             pr_scheduled = pr_data["start"] - pr_data["creation"]
-            pr_idle = 0   # TODO
+            pr_idle = pr_duration - sum([i[1] - i[0] for i in pr_tr_intervals], datetime.timedelta())
 
             result["pipelineruns"][pr_id][pr_result]["duration"].append(pr_duration)
             result["pipelineruns"][pr_id][pr_result]["running"].append(pr_running)
@@ -279,6 +344,8 @@ class Something:
 
             for tr_name, tr_data in pr_data["taskruns"].items():
                 tr_id = f"{pr_id}/{tr_data['task']}"
+                logging.debug(f"Working on TaskRun {tr_id}")
+
                 if tr_id not in result["taskruns"]:
                     result["taskruns"][tr_id] = {
                         "passed": {
@@ -295,11 +362,16 @@ class Something:
                         },
                     }
 
+                # Composing list of TRs intervals to get idle time later
+                tr_s_intervals = []
+                for s_name, s_data in tr_data["steps"].items():
+                    tr_s_intervals = self._merge_time_interval([s_data["started"], s_data["finished"]], tr_s_intervals)
+
                 tr_result = "passed" if tr_data["result"] else "failed"
                 tr_duration = tr_data["completion"] - tr_data["creation"]
                 tr_running = tr_data["completion"] - tr_data["start"]
                 tr_scheduled = tr_data["start"] - tr_data["creation"]
-                tr_idle = 0   # TODO
+                tr_idle = tr_duration - sum([i[1] - i[0] for i in tr_s_intervals], datetime.timedelta())
 
                 result["taskruns"][tr_id][tr_result]["duration"].append(tr_duration)
                 result["taskruns"][tr_id][tr_result]["running"].append(tr_running)
@@ -308,6 +380,8 @@ class Something:
 
                 for s_name, s_data in tr_data["steps"].items():
                     s_id = f"{tr_id}/{s_name}"
+                    logging.debug(f"Working on Step {s_id}")
+
                     if s_id not in result["steps"]:
                         result["steps"][s_id] = {
                             "passed": {
