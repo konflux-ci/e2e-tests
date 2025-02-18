@@ -208,12 +208,17 @@ func GetFailedPipelineRunLogs(c crclient.Client, ki kubernetes.Interface, pipeli
 	var d *FailedPipelineRunDetails
 	var err error
 	failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
+	for _, cond := range pipelineRun.Status.Conditions {
+		if cond.Reason == "CouldntGetPipeline" {
+			failMessage += fmt.Sprintf("CouldntGetPipeline message: %s", cond.Message)
+		}
+	}
 	if d, err = GetFailedPipelineRunDetails(c, pipelineRun); err != nil {
 		return "", err
 	}
 	if d.FailedContainerName != "" {
 		logs, _ := utils.GetContainerLogs(ki, d.PodName, d.FailedContainerName, pipelineRun.Namespace)
-		// Adding the FailedTaskRunName can help to know which task the container belongs to 
+		// Adding the FailedTaskRunName can help to know which task the container belongs to
 		failMessage += fmt.Sprintf("Logs from failed container '%s/%s': \n%s", d.FailedTaskRunName, d.FailedContainerName, logs)
 	}
 	return failMessage, nil
@@ -240,7 +245,7 @@ func GetFailedPipelineRunDetails(c crclient.Client, pipelineRun *pipeline.Pipeli
 				d.FailedTaskRunName = taskRun.Name
 				d.PodName = taskRun.Status.PodName
 				for _, s := range taskRun.Status.TaskRunStatusFields.Steps {
-					if s.Terminated.Reason == "Error" || strings.Contains(s.Terminated.Reason, "Failed"){
+					if s.Terminated.Reason == "Error" || strings.Contains(s.Terminated.Reason, "Failed") {
 						d.FailedContainerName = s.Container
 						return d, nil
 					}

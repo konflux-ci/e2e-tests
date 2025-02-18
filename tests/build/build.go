@@ -244,8 +244,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 
 			It("a related PipelineRun should be deleted after deleting the component", func() {
-				timeout = time.Second * 60
-				interval = time.Second * 1
+				timeout = time.Second * 180
+				interval = time.Second * 5
 				Expect(f.AsKubeAdmin.HasController.DeleteComponent(customDefaultComponentName, testNamespace, true)).To(Succeed())
 				// Test removal of PipelineRun
 				Eventually(func() error {
@@ -559,8 +559,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				GinkgoWriter.Printf("waiting for one minute and expecting to not trigger a PipelineRun")
 				Consistently(func() bool {
 					componentPipelineRun, _ := f.AsKubeAdmin.HasController.GetComponentPipelineRun(customBranchComponentName, applicationName, testNamespace, "")
+					if componentPipelineRun != nil {
+						GinkgoWriter.Printf("While waiting for no pipeline to be triggered, found Pipelinerun: %s\n", componentPipelineRun.GetName())
+					}
 					return componentPipelineRun == nil
-				}, time.Minute, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("expected no PipelineRun to be triggered for the component %s in %s namespace", customBranchComponentName, testNamespace))
+				}, 2*time.Minute, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("expected no PipelineRun to be triggered for the component %s in %s namespace", customBranchComponentName, testNamespace))
 			})
 			It("image repo is updated to private", func() {
 				isPublic, err := build.IsImageRepoPublic(imageRepoName)

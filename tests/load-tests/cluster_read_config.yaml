@@ -62,6 +62,18 @@
   monitoring_query: sum(rate(etcd_request_duration_seconds_sum{}[5m])) / sum(rate(etcd_request_duration_seconds_count[5m]))
   monitoring_step: 15
 
+- name: measurements.etcd_mvcc_db_total_size_in_bytes_average
+  monitoring_query: avg(etcd_mvcc_db_total_size_in_bytes)
+  monitoring_step: 15
+
+- name: measurements.etcd_mvcc_db_total_size_in_use_in_bytes_average
+  monitoring_query: avg(etcd_mvcc_db_total_size_in_use_in_bytes)
+  monitoring_step: 15
+
+- name: measurements.etcd_server_quota_backend_bytes_average
+  monitoring_query: avg(etcd_server_quota_backend_bytes)
+  monitoring_step: 15
+
 - name: measurements.cluster_network_bytes_total
   monitoring_query: sum(irate(container_network_receive_bytes_total{cluster="",namespace=~".*"}[5m])) + sum(irate(container_network_transmit_bytes_total{cluster="",namespace=~".*"}[5m]))
   monitoring_step: 15
@@ -197,6 +209,7 @@
   monitoring_step: {{ step }}
 {%- endmacro %}
 
-{{ monitor_pod('openshift-pipelines', 'tekton-pipelines-controller', 15) }}
+{{ monitor_pod('openshift-pipelines', 'tekton-pipelines-controller', 15, '-[0-9]+') }}
 {{ monitor_pod('tekton-results', 'tekton-results-watcher', 1, '-.*') }}
+{{ monitor_pod('openshift-etcd', 'etcd', 15, pod_suffix_regex='-ip-.+') }}
 {{ monitor_pod_container('tekton-results', 'tekton-results-watcher', 'watcher', 1, '-.*') }}

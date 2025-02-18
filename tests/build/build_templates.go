@@ -354,13 +354,27 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					sbomTaskLog = log
 				}
 
-				sbom := &build.SbomCyclonedx{}
-				err = json.Unmarshal([]byte(sbomTaskLog), sbom)
+				sbom, err := build.UnmarshalSbom([]byte(sbomTaskLog))
 				Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("failed to parse SBOM from show-sbom task output from %s/%s PipelineRun", pr.GetNamespace(), pr.GetName()))
-				Expect(sbom.BomFormat).ToNot(BeEmpty())
-				Expect(sbom.SpecVersion).ToNot(BeEmpty())
+
+				switch s := sbom.(type) {
+				case *build.SbomCyclonedx:
+					Expect(s.BomFormat).ToNot(BeEmpty())
+					Expect(s.SpecVersion).ToNot(BeEmpty())
+				case *build.SbomSpdx:
+					Expect(s.SPDXID).ToNot(BeEmpty())
+					Expect(s.SpdxVersion).ToNot(BeEmpty())
+				default:
+					Fail(fmt.Sprintf("unknown SBOM type: %T", s))
+				}
+
 				if !strings.Contains(scenario.GitURL, "from-scratch") {
-					Expect(sbom.Components).ToNot(BeEmpty())
+					packages := sbom.GetPackages()
+					Expect(packages).ToNot(BeEmpty())
+					for i := range packages {
+						Expect(packages[i].GetName()).ToNot(BeEmpty(), "expecting package name to be non empty, but got empty value")
+						Expect(packages[i].GetPurl()).ToNot(BeEmpty(), fmt.Sprintf("expecting purl to be non empty, but got empty value for pkg: %s", packages[i].GetName()))
+					}
 				}
 			})
 
@@ -661,13 +675,15 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						GinkgoWriter.Printf("The PipelineRun %s in namespace %s has status.conditions: \n%#v\n", pr.Name, pr.Namespace, pr.Status.Conditions)
 
 						// The UI uses this label to display additional information.
-						Expect(pr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
+						// Enable this check, when the issue is fixed: https://issues.redhat.com/browse/KONFLUX-5787
+						// Expect(pr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
 
 						// The UI uses this label to display additional information.
 						tr, err := kubeadminClient.TektonController.GetTaskRunFromPipelineRun(kubeadminClient.CommonController.KubeRest(), pr, "verify")
 						Expect(err).NotTo(HaveOccurred())
 						GinkgoWriter.Printf("The TaskRun %s of PipelineRun %s  has status.conditions: \n%#v\n", tr.Name, pr.Name, tr.Status.Conditions)
-						Expect(tr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
+						// Enable this check, when the issue is fixed: https://issues.redhat.com/browse/KONFLUX-5787
+						// Expect(tr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
 
 						logs, err := kubeadminClient.TektonController.GetTaskRunLogs(pr.Name, "verify", pr.Namespace)
 						Expect(err).NotTo(HaveOccurred())

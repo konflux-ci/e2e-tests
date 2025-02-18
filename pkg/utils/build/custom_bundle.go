@@ -20,7 +20,7 @@ import (
 
 const (
 	testTaskName = "buildah-min"
-	testBundle   = "quay.io/konflux-ci/tekton-catalog/task-buildah-min:0.2"
+	testBundle   = "quay.io/konflux-ci/tekton-catalog/task-buildah-min:0.4"
 )
 
 func GetDockerBuildPipelineBundle() map[string]string {

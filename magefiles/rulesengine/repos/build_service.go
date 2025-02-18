@@ -1,7 +1,6 @@
 package repos
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
@@ -38,10 +37,8 @@ var BuildServiceRepoSetDefaultSettingsRule = rulesengine.Rule{Name: "General Req
 			return nil
 		}
 		rctx.ComponentEnvVarPrefix = "BUILD_SERVICE"
-		// TODO keep only "KONFLUX_CI" option once we migrate off openshift-ci
-		if os.Getenv("KONFLUX_CI") == "true" {
-			rctx.ComponentImageTag = fmt.Sprintf("on-pr-%s", rctx.PrCommitSha)
-		} else {
+		// Option to execute the tests in Openshift CI
+		if os.Getenv("KONFLUX_CI") != "true" {
 			rctx.ComponentImageTag = "redhat-appstudio-build-service-image"
 		}
 		return SetEnvVarsForComponentImageDeployment(rctx)
