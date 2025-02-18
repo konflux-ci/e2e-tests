@@ -79,7 +79,7 @@ func (CI) parseJobSpec() error {
 
 	if konfluxCI == "true" {
 		if err := json.Unmarshal([]byte(jobSpecEnvVarData), konfluxCiSpec); err != nil {
-			return fmt.Errorf("error when parsing openshift job spec data: %v", err)
+			return fmt.Errorf("error when parsing konflux ci spec data: %v", err)
 		}
 		return nil
 	}
@@ -93,7 +93,13 @@ func (CI) parseJobSpec() error {
 func (ci CI) init() error {
 	var err error
 
-	if jobType == "periodic" || strings.Contains(jobName, "rehearse") {
+	/*
+		Do not parse CI jobs data when:
+		 1. Openshift CI periodic jobs
+		 2. When testing in openshift/release repo
+		 3. When a integration test is coming from Konflux with a push event_type
+	*/
+	if jobType == "periodic" || strings.Contains(jobName, "rehearse") || konfluxCiSpec.KonfluxGitRefs.EventType == "push" {
 		return nil
 	}
 
@@ -136,7 +142,7 @@ func (ci CI) init() error {
 }
 
 func (ci CI) PrepareE2EBranch() error {
-	if jobType == "periodic" || strings.Contains(jobName, "rehearse") {
+	if jobType == "periodic" || strings.Contains(jobName, "rehearse") || konfluxCiSpec.KonfluxGitRefs.EventType == "push" {
 		return nil
 	}
 
