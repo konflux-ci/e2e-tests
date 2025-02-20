@@ -447,6 +447,7 @@ type RuleCtx struct {
 	PrRemoteName                  string
 	PrCommitSha                   string
 	PrBranchName                  string
+	TektonEventType               string
 	RequiresMultiPlatformTests    bool
 	RequiresSprayProxyRegistering bool
 }
@@ -472,6 +473,7 @@ func NewRuleCtx() *RuleCtx {
 		Files{},
 		false,
 		make([]string, 0),
+		"",
 		"",
 		"",
 		"",

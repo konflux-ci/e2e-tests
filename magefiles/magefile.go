@@ -113,10 +113,12 @@ func (ci CI) init() error {
 		pr.Number = openshiftJobSpec.Refs.Pulls[0].Number
 	}
 
-	prUrl := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls/%d", pr.Organization, pr.RepoName, pr.Number)
-	pr.RemoteName, pr.BranchName, err = getRemoteAndBranchNameFromPRLink(prUrl)
-	if err != nil {
-		return err
+	if konfluxCiSpec.KonfluxGitRefs.EventType != "push" {
+		prUrl := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls/%d", pr.Organization, pr.RepoName, pr.Number)
+		pr.RemoteName, pr.BranchName, err = getRemoteAndBranchNameFromPRLink(prUrl)
+		if err != nil {
+			return err
+		}
 	}
 
 	rctx = rulesengine.NewRuleCtx()
@@ -132,6 +134,11 @@ func (ci CI) init() error {
 	rctx.PrRemoteName = pr.RemoteName
 	rctx.PrBranchName = pr.BranchName
 	rctx.PrCommitSha = pr.CommitSHA
+
+	if konfluxCI == "true" {
+		rctx.TektonEventType = konfluxCiSpec.KonfluxGitRefs.EventType
+	}
+
 	return nil
 }
 
@@ -1276,7 +1283,6 @@ func (Local) PreviewTestSelection() error {
 }
 
 func (Local) RunRuleDemo() error {
-
 	rctx := rulesengine.NewRuleCtx()
 	files, err := utils.GetChangedFiles("e2e-tests")
 	if err != nil {

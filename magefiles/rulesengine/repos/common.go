@@ -109,8 +109,11 @@ func GetPairedCommitSha(repoForPairing string, rctx *rulesengine.RuleCtx) string
 }
 
 func IsPeriodicJob(rctx *rulesengine.RuleCtx) (bool, error) {
-
 	return rctx.JobType == "periodic", nil
+}
+
+func IsTektonPushEventType(rctx *rulesengine.RuleCtx) (bool, error) {
+	return rctx.TektonEventType == "push", nil
 }
 
 func IsRehearseJob(rctx *rulesengine.RuleCtx) (bool, error) {
