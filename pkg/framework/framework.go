@@ -73,7 +73,7 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 	if userName == "" {
 		return nil, fmt.Errorf("userName cannot be empty when initializing a new framework instance")
 	}
-	isStage, err := utils.CheckOptions(options)
+	isStage, isSA, err := utils.CheckOptions(options)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 
 	err = retry.Do(
 		func() error {
-			if k, err = kubeCl.NewDevSandboxProxyClient(userName, isStage, option); err != nil {
+			if k, err = kubeCl.NewDevSandboxProxyClient(userName, isStage, isSA, option); err != nil {
 				GinkgoWriter.Printf("error when creating dev sandbox proxy client: %+v\n", err)
 			}
 			return err
@@ -167,18 +167,18 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 }
 
 func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...utils.Options) (*Framework, error) {
-	isStage, err := utils.CheckOptions(options)
+	isStage, isSA, err := utils.CheckOptions(options)
 	if err != nil {
 		return nil, err
 	}
 
-	if isStage {
+	if isStage && !isSA {
 		options[0].ToolchainApiUrl = fmt.Sprintf("%s/workspaces/%s", options[0].ToolchainApiUrl, userName)
 	}
 
 	fw, err := newFrameworkWithTimeout(userName, timeout, options...)
 
-	if isStage {
+	if isStage && !isSA {
 		go refreshFrameworkStage(fw, userName, timeout, options...)
 	}
 
