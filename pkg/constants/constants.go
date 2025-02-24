@@ -235,6 +235,9 @@ const (
 	CheckrunConclusionSuccess = "success"
 	CheckrunConclusionFailure = "failure"
 	CheckrunStatusCompleted   = "completed"
+
+	BuildPipelineRunSnapshotAnnotation = "appstudio.openshift.io/snapshot"
+	SnapshotCreationReportAnnotation = "test.appstudio.openshift.io/snapshot-creation-report"
 )
 
 var (

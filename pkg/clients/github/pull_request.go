@@ -92,7 +92,55 @@ func (g *Github) GetPRDetails(ghRepo string, prID int) (string, string, error) {
 // GetCheckRunConclusion fetches a specific CheckRun within a given repo
 // by matching the CheckRun's name with the given checkRunName, and
 // then returns the CheckRun conclusion
-func (g *Github) GetCheckRunConclusion(checkRunName, repoName, prHeadSha string, prNumber int) (string, error) {
+func (g *Github) GetCheckRunConclusion(checkRunName, repoName, prHeadSha string, prNumber int) (string, *string, error) {
+	var errMsgSuffix = fmt.Sprintf("repository: %s, PR number: %d, PR head SHA: %s, checkRun name: %s\n", repoName, prNumber, prHeadSha, checkRunName)
+
+	var checkRun *github.CheckRun
+	var timeout time.Duration
+	var err error
+
+	timeout = time.Minute * 5
+
+	err = utils.WaitUntil(func() (done bool, err error) {
+		checkRuns, err := g.ListCheckRuns(repoName, prHeadSha)
+		if err != nil {
+			ginkgo.GinkgoWriter.Printf("got error when listing CheckRuns: %+v\n", err)
+			return false, nil
+		}
+		for _, cr := range checkRuns {
+			if strings.Contains(cr.GetName(), checkRunName) {
+				checkRun = cr
+				return true, nil
+			}
+		}
+		return false, nil
+	}, timeout)
+	if err != nil {
+		return "", nil, fmt.Errorf("timed out when waiting for the PaC CheckRun to appear for %s", errMsgSuffix)
+	}
+	err = utils.WaitUntil(func() (done bool, err error) {
+		checkRun, err = g.GetCheckRun(repoName, checkRun.GetID())
+		if err != nil {
+			ginkgo.GinkgoWriter.Printf("got error when listing CheckRuns: %+v\n", errMsgSuffix, err)
+			return false, nil
+		}
+		currentCheckRunStatus := checkRun.GetStatus()
+		if currentCheckRunStatus != constants.CheckrunStatusCompleted {
+			ginkgo.GinkgoWriter.Printf("expecting CheckRun status %s, got: %s", constants.CheckrunStatusCompleted, currentCheckRunStatus)
+			return false, nil
+		}
+		return true, nil
+	}, timeout)
+	if err != nil {
+		return "", nil, fmt.Errorf("timed out when waiting for the PaC CheckRun status to be '%s' for %s", constants.CheckrunStatusCompleted, errMsgSuffix)
+	}
+	return checkRun.GetConclusion(), checkRun.Output.Text, nil
+}
+
+// GetCheckRunStatus fetches a specific CheckRun within a given repo
+// by matching the CheckRun's name with the given checkRunName, and
+// then returns the CheckRun status
+func (g *Github) GetCheckRunStatus(checkRunName, repoName, prHeadSha string, prNumber int) (string, error) {
 	var errMsgSuffix = fmt.Sprintf("repository: %s, PR number: %d, PR head SHA: %s, checkRun name: %s\n", repoName, prNumber, prHeadSha, checkRunName)
 
 	var checkRun *github.CheckRun
@@ -118,21 +166,6 @@ func (g *Github) GetCheckRunConclusion(checkRunName, repoName, prHeadSha string,
 	if err != nil {
 		return "", fmt.Errorf("timed out when waiting for the PaC CheckRun to appear for %s", errMsgSuffix)
 	}
-	err = utils.WaitUntil(func() (done bool, err error) {
-		checkRun, err = g.GetCheckRun(repoName, checkRun.GetID())
-		if err != nil {
-			ginkgo.GinkgoWriter.Printf("got error when listing CheckRuns: %+v\n", errMsgSuffix, err)
-			return false, nil
-		}
-		currentCheckRunStatus := checkRun.GetStatus()
-		if currentCheckRunStatus != constants.CheckrunStatusCompleted {
-			ginkgo.GinkgoWriter.Printf("expecting CheckRun status %s, got: %s", constants.CheckrunStatusCompleted, currentCheckRunStatus)
-			return false, nil
-		}
-		return true, nil
-	}, timeout)
-	if err != nil {
-		return "", fmt.Errorf("timed out when waiting for the PaC CheckRun status to be '%s' for %s", constants.CheckrunStatusCompleted, errMsgSuffix)
-	}
-	return checkRun.GetConclusion(), nil
+
+	return checkRun.GetStatus(), nil
 }

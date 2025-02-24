@@ -292,3 +292,18 @@ func (t *TektonController) RemoveFinalizerFromPipelineRun(pipelineRun *pipeline.
 	}
 	return nil
 }
+
+func (t *TektonController) UpdatePipelineRunStatus(pipelineRun *pipeline.PipelineRun, status pipeline.PipelineRunStatus) (*pipeline.PipelineRun, error) {
+	ctx := context.Background()
+	pipelineRun, err := t.PipelineClient().TektonV1().PipelineRuns(pipelineRun.Namespace).Get(ctx, pipelineRun.Name, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get PipelineRun: %v", err)
+	}
+	pipelineRun.Status = status
+
+	pipelineRun, err = t.PipelineClient().TektonV1().PipelineRuns(pipelineRun.Namespace).UpdateStatus(ctx, pipelineRun, metav1.UpdateOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("Failed to update PipelineRun status: %v", err)
+	}
+	return pipelineRun, nil
+}

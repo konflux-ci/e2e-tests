@@ -68,7 +68,7 @@ func (h *HasController) GetComponentPipelineRun(componentName string, applicatio
 
 // GetComponentPipelineRunWithType returns first pipeline run for a given component labels with pipeline type within label "pipelines.appstudio.openshift.io/type" ("build", "test")
 func (h *HasController) GetComponentPipelineRunWithType(componentName string, applicationName string, namespace, pipelineType string, sha string) (*pipeline.PipelineRun, error) {
-	prs, err := h.GetComponentPipelineRunsWithType(componentName, applicationName, namespace, "", sha)
+	prs, err := h.GetComponentPipelineRunsWithType(componentName, applicationName, namespace, pipelineType, sha)
 	if err != nil {
 		return nil, err
 	} else {
