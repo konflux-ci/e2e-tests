@@ -12,6 +12,7 @@ import (
 
 	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 	integrationv1beta2 "github.com/konflux-ci/integration-service/api/v1beta2"
+	"github.com/konflux-ci/operator-toolkit/metadata"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -31,6 +32,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 	var pipelineRun, testPipelinerun *pipeline.PipelineRun
 	var integrationTestScenarioPass, integrationTestScenarioFail *integrationv1beta2.IntegrationTestScenario
 	var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace string
+	// var buildPLRLabels, buildPLRAnnotations map[string]string
 
 	AfterEach(framework.ReportFailure(&f))
 
@@ -50,14 +52,39 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 
 			applicationName = createApp(*f, testNamespace)
 			component, componentName, pacBranchName, componentBaseBranchName = createComponent(*f, testNamespace, applicationName, componentRepoNameForStatusReporting, componentGitSourceURLForStatusReporting)
+			GinkgoWriter.Printf("pacBranchName: %s \n", pacBranchName)
+			GinkgoWriter.Printf("componentBaseBranchName: %s \n", componentBaseBranchName)
 
 			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			integrationTestScenarioFail, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
+
+			timeout = time.Second * 600
+			interval = time.Second * 1
+			Eventually(func() error {
+				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+				if err != nil {
+					GinkgoWriter.Printf("Build PipelineRun has not been created yet for the component %s/%s: %v\n", testNamespace, componentName, err)
+					return err
+				}
+				if !pipelineRun.HasStarted() {
+					return fmt.Errorf("build pipelinerun %s/%s hasn't started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
+				}
+				err = f.AsKubeAdmin.TektonController.AddFinalizerToPipelineRun(pipelineRun, constants.E2ETestFinalizerName)
+				if err != nil {
+					return fmt.Errorf("failed to add finalizer e2e-test to build pipelinerun %v", err)
+				}
+				return nil
+			}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the component %s/%s", testNamespace, componentName))
+			// buildPLRLabels = pipelineRun.GetLabels()
+			// buildPLRAnnotations = pipelineRun.GetAnnotations()
+
 		})
 
 		AfterAll(func() {
+			Expect(f.AsKubeAdmin.TektonController.RemoveFinalizerFromPipelineRun(pipelineRun, constants.E2ETestFinalizerName)).Should(Succeed())
+
 			if !CurrentSpecReport().Failed() {
 				cleanup(*f, testNamespace, applicationName, componentName, snapshot)
 			}
@@ -74,29 +101,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 		})
 
 		When("a new Component with specified custom branch is created", Label("custom-branch"), func() {
-			It("triggers a Build PipelineRun", func() {
-				timeout = time.Second * 600
-				interval = time.Second * 1
-				Eventually(func() error {
-					pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-					if err != nil {
-						GinkgoWriter.Printf("Build PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
-						return err
-					}
-					if !pipelineRun.HasStarted() {
-						return fmt.Errorf("build pipelinerun %s/%s hasn't started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
-					}
-					return nil
-				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the component %s/%s", testNamespace, componentName))
-			})
-
 			It("does not contain an annotation with a Snapshot Name", func() {
 				Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
-			})
-
-			It("should lead to build PipelineRun finishing successfully", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component,
-					"", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
 			})
 
 			It("should have a related PaC init PR created", func() {
@@ -122,9 +128,30 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
+			It("initialized integration test status is reported to github", func() {
+				Eventually(func() error {
+					status, err := f.AsKubeAdmin.CommonController.Github.GetCheckRunStatus(integrationTestScenarioPass.Name, componentRepoNameForStatusReporting, prHeadSha, prNumber)
+					if status != "queued" || err != nil {
+						return fmt.Errorf("error occurred when checking pending integration test checkRun %v", err)
+					}
+					return nil
+				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the pending checkrun for the component  %s/%s and integrationTestScenarioPass %s", testNamespace, componentName, integrationTestScenarioPass.Name))
+			})
+
+			It("should lead to build PipelineRun finishing successfully", func() {
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component,
+					"", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
+			})
+
 			It("eventually leads to the build PipelineRun's status reported at Checks tab", func() {
 				expectedCheckRunName := fmt.Sprintf("%s-%s", componentName, "on-pull-request")
-				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
+				Eventually(func() bool {
+					conclusion, err := f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, componentRepoNameForStatusReporting, prHeadSha, prNumber)
+					if conclusion != constants.CheckrunConclusionSuccess || err != nil {
+						return false
+					}
+					return true
+				}, timeout, constants.PipelineRunPollingInterval).Should(BeTrue(), "timed out when waiting for successful build pipelinrun is reported back to github checkrun")
 			})
 		})
 
@@ -179,6 +206,59 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 
 			It("eventually leads to the status reported at Checks tab for the failed Integration PipelineRun", func() {
 				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(integrationTestScenarioFail.Name, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionFailure))
+			})
+		})
+
+		When("build pipelinerun having invalid image result", func() {
+			It("delete snapshot and update build pipelinerun to make it not have snasphot annotation but have invalid image result", func() {
+				Eventually(func() bool {
+					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, componentName, testNamespace)
+					return err == nil && snapshot != nil
+				}, time.Minute*3, time.Second*5).Should(BeTrue(), fmt.Sprintf("Time out when finding snapshot created for pipelinerun %s/%s", testNamespace, pipelineRun.Name))
+
+				Expect(f.AsKubeAdmin.IntegrationController.DeleteSnapshot(snapshot, testNamespace)).To(Succeed())
+				Eventually(func() bool {
+					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, pipelineRun.Name, "", testNamespace)
+					return snapshot == nil
+				}, time.Minute*5, time.Second*5).Should(BeTrue(), fmt.Sprintf("Snashot %s/%s is still be found", snapshot.GetNamespace(), snapshot.GetName()))
+
+				//make build pipelinerun not have snasphot annotation but have invalid image result
+				invalidDigest := "12234rssagdfs"
+				result := []pipeline.PipelineRunResult{
+					{
+						Name:  "IMAGE_DIGEST",
+						Value: *pipeline.NewStructuredValues(invalidDigest),
+					},
+				}
+				Expect(f.AsKubeAdmin.TektonController.UpdateBuildPipelineRunResult(pipelineRun, result)).To(Succeed())
+				Expect(f.AsKubeAdmin.TektonController.DeletePipelinerunAnnotation(pipelineRun, constants.BuildPipelineRunSnapshotAnnotation)).NotTo(HaveOccurred())
+				Expect(f.AsKubeAdmin.TektonController.DeletePipelinerunAnnotation(pipelineRun, constants.SnapshotCreationReportAnnotation)).NotTo(HaveOccurred())
+				Eventually(func() error {
+					pipelineRun, err = f.AsKubeAdmin.TektonController.GetPipelineRun(pipelineRun.Name, pipelineRun.Namespace)
+
+					if err != nil && pipelineRun.Status.Results[0].Value.StringVal != invalidDigest {
+						return fmt.Errorf("failing to find the invalid digest string %v", err)
+					}
+
+					if metadata.HasAnnotation(pipelineRun, constants.BuildPipelineRunSnapshotAnnotation) {
+						return fmt.Errorf("annotation is still be found in build PLR %s", constants.BuildPipelineRunSnapshotAnnotation)
+					}
+					return nil
+				}, time.Minute*5, time.Second*5).Should(Succeed(), fmt.Sprintf("Build PipelineRun %s/%s annotation is not updated well", pipelineRun.Namespace, pipelineRun.Name))
+
+			})
+
+			It("snapshot creation failure is reported to integration test checkRun", func() {
+				Eventually(func() error {
+					conclusion, err := f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(integrationTestScenarioPass.Name, componentRepoNameForStatusReporting, prHeadSha, prNumber)
+					if conclusion != constants.CheckrunConclusionFailure || err != nil {
+						pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+						GinkgoWriter.Printf("Updated build pipelinerun: %v \n", pipelineRun)
+						GinkgoWriter.Printf("failed to get expected checkRun due to error: %v, actual conclusion is %s: \n", err, conclusion)
+						return fmt.Errorf("error occurred when checking failing integration test checkRun")
+					}
+					return nil
+				}, time.Minute*5, time.Second*5).Should(Succeed(), fmt.Sprintf("timed out when waiting for the failing checkrun for the component  %s/%s and integrationTestScenarioPass %s", testNamespace, componentName, integrationTestScenarioPass.Name))
 			})
 		})
 	})
