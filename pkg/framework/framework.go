@@ -97,20 +97,8 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 		},
 		retry.Attempts(20),
 	)
-
 	if err != nil {
 		return nil, fmt.Errorf("error when initializing kubernetes clients: %v", err)
-	}
-
-	var asAdmin *ControllerHub
-	if !isStage {
-		asAdmin, err = InitControllerHub(k.AsKubeAdmin)
-		if err != nil {
-			return nil, fmt.Errorf("error when initializing appstudio hub controllers for admin user: %v", err)
-		}
-		if err = asAdmin.CommonController.AddRegistryAuthSecretToSA("QUAY_TOKEN", k.UserNamespace); err != nil {
-			GinkgoWriter.Println(fmt.Sprintf("Failed to add registry auth secret to service account: %v\n", err))
-		}
 	}
 
 	asUser, err := InitControllerHub(k.AsKubeDeveloper)
@@ -118,8 +106,17 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 		return nil, fmt.Errorf("error when initializing appstudio hub controllers for sandbox user: %v", err)
 	}
 
+	var asAdmin *ControllerHub
 	if isStage {
 		asAdmin = asUser
+	} else {
+		asAdmin, err = InitControllerHub(k.AsKubeAdmin)
+		if err != nil {
+			return nil, fmt.Errorf("error when initializing appstudio hub controllers for admin user: %v", err)
+		}
+		if err = asAdmin.CommonController.AddRegistryAuthSecretToSA("QUAY_TOKEN", k.UserNamespace); err != nil {
+			GinkgoWriter.Println(fmt.Sprintf("Failed to add registry auth secret to service account: %v\n", err))
+		}
 	}
 
 	if !isStage {
