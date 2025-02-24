@@ -295,7 +295,9 @@ func HandleComponent(ctx *PerComponentContext) error {
 		return logging.Logger.Fail(62, "Type assertion failed on pull: %+v", pullIface)
 	}
 
-	// If this is multi-arch build, we do not care about this build, we just merge it, update pipelines and trigger actual multi-arch build
+	// If this is supposed to be a multi-arch build, we do not care about
+	// current build, we just merge the PR, update pipelines and trigger
+	// actual multi-arch build
 	if ctx.ParentContext.ParentContext.Opts.PipelineRepoTemplating {
 		// Placeholders for template multi-arch PaC pipeline files
 		placeholders := &map[string]string{
@@ -307,7 +309,7 @@ func HandleComponent(ctx *PerComponentContext) error {
 			"REPOURL":     ctx.ParentContext.ParentContext.ComponentRepoUrl,
 		}
 
-		// Skip what we do not care about
+		// Skip what we do not care about, merge PR, graft pipeline yamls
 		_, err = logging.Measure(
 			utilityRepoTemplatingComponentCleanup,
 			ctx.Framework,
