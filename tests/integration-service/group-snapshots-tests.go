@@ -24,6 +24,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 
 	var f *framework.Framework
 	var err error
+	// prNumbers is declared but not used; we'll keep it for later use
 	var prNumbers = make(map[string]int)
 	var mergeResultSha, mergeMultiResultSha string
 	var pacBranchNames []string
@@ -39,6 +40,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 	AfterEach(framework.ReportFailure(&f))
 
 	Describe("with status reporting of Integration tests in CheckRuns", Ordered, func() {
+
 		BeforeAll(func() {
 			prNumbers = make(map[string]int)
 
@@ -58,18 +60,46 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 
 			// Create base branches for multi-component definitions
 			multiComponentBaseBranchName = fmt.Sprintf("multi-repo-%s", util.GenerateRandomString(6))
-			err = f.AsKubeAdmin.CommonController.Github.CreateRef(multiComponentRepoNameForGroupSnapshot, multiComponentDefaultBranch, multiComponentGitRevision, multiComponentBaseBranchName)
+			err = f.AsKubeAdmin.CommonController.Github.CreateRef(
+				multiComponentRepoNameForGroupSnapshot,
+				multiComponentDefaultBranch,
+				multiComponentGitRevision,
+				multiComponentBaseBranchName,
+			)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			err = f.AsKubeAdmin.CommonController.Github.CreateRef(componentRepoNameForGeneralIntegration, multiComponentDefaultBranch, multiRepoComponentGitRevision, multiComponentBaseBranchName)
+			err = f.AsKubeAdmin.CommonController.Github.CreateRef(
+				componentRepoNameForGeneralIntegration,
+				multiComponentDefaultBranch,
+				multiRepoComponentGitRevision,
+				multiComponentBaseBranchName,
+			)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// PR Branch creation
 			multiComponentPRBranchName = fmt.Sprintf("pr-branch-%s", util.GenerateRandomString(6))
 
 			// Create Integration Test Scenario
-			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, []string{})
+			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario(
+				"", applicationName, testNamespace, gitURL, revision, pathInRepoPass, []string{},
+			)
 			Expect(err).ShouldNot(HaveOccurred())
+
+			// Create components (one for each context directory)
+			for _, contextDir := range multiComponentContextDirs {
+				componentName := fmt.Sprintf("%s-%s", contextDir, util.GenerateRandomString(6))
+				fmt.Println("Creating component:", componentName)
+
+				component := createComponentWithCustomBranch(
+					*f, testNamespace, applicationName, componentName,
+					multiComponentGitSourceURLForGroupSnapshot, multiComponentBaseBranchName, contextDir,
+				)
+				Expect(component).NotTo(BeNil(), fmt.Sprintf("Component creation failed for %s", componentName))
+				fmt.Println("Successfully created component:", component.Name)
+				componentNames = append(componentNames, component.Name)
+			}
+
+			fmt.Println("Final list of created components:", componentNames)
 		})
 
 		AfterAll(func() {
@@ -92,30 +122,26 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			_ = f.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepoNameForGeneralIntegration, multiComponentPRBranchName)
 		})
 
+		// Use the componentNames that were created in BeforeAll
 		When("creating and testing multiple components", func() {
-			for _, contextDir := range multiComponentContextDirs {
-				func(contextDir string) { // Anonymous function to prevent variable mutation
-					componentName := fmt.Sprintf("%s-%s", contextDir, util.GenerateRandomString(6))
+			for _, componentName := range componentNames {
+				// For each component, run tests
+				func(componentName string) {
 					pacBranchName := constants.PaCPullRequestBranchPrefix + componentName
 					pacBranchNames = append(pacBranchNames, pacBranchName)
-
-					var component *appstudioApi.Component
 					var prHeadSha string
 					var pipelineRun *pipeline.PipelineRun
 					var err error
 
-					It(fmt.Sprintf("creates component %s", componentName), func() {
-						component = createComponentWithCustomBranch(
-							*f, testNamespace, applicationName, componentName,
-							multiComponentGitSourceURLForGroupSnapshot, multiComponentBaseBranchName, contextDir,
-						)
-						Expect(component).NotTo(BeNil())
-						componentNames = append(componentNames, component.Name)
-					})
-
 					It(fmt.Sprintf("triggers a Build PipelineRun for %s", componentName), func() {
-						timeout := 10 * time.Minute
+						timeout := 5 * time.Minute
 						interval := time.Second
+
+						// Wait for component to be ready before starting pipeline
+						Eventually(func() error {
+							_, err := f.AsKubeAdmin.HasController.GetComponent(componentName, applicationName)
+							return err
+						}, timeout, interval).Should(Succeed(), fmt.Sprintf("Component %s was not found before pipeline run", componentName))
 
 						Eventually(func() error {
 							pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
@@ -129,7 +155,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						}, timeout, interval).Should(Succeed(), fmt.Sprintf("Timed out waiting for build PipelineRun for %s/%s", testNamespace, componentName))
 					})
 
-					// ✅ Corrected PR tracking for each component
 					It(fmt.Sprintf("should lead to a PaC PR creation for %s", componentName), func() {
 						timeout := 5 * time.Minute
 						interval := time.Second
@@ -137,10 +162,9 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						Eventually(func() bool {
 							prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(multiComponentRepoNameForGroupSnapshot)
 							Expect(err).ShouldNot(HaveOccurred())
-
 							for _, pr := range prs {
 								if pr.Head.GetRef() == pacBranchName {
-									prNumbers[componentName] = pr.GetNumber() // ✅ Save PR number for this component
+									prNumbers[componentName] = pr.GetNumber() // Save PR number
 									prHeadSha = pr.Head.GetSHA()
 									return true
 								}
@@ -187,7 +211,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 
 						It(fmt.Sprintf("integration pipeline for %s should end with success", componentName), func() {
 							timeout := 10 * time.Minute
-
 							Eventually(func() error {
 								integrationPipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 								if err != nil {
@@ -207,113 +230,121 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 								mergeResult, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(multiComponentRepoNameForGroupSnapshot, prNumbers[componentName])
 								return err
 							}, time.Minute).Should(BeNil(), fmt.Sprintf("Error merging PaC pull request #%d in repo %s", prNumbers[componentName], multiComponentRepoNameForGroupSnapshot))
-
 							mergeResultSha = mergeResult.GetSHA()
 							GinkgoWriter.Printf("Merged result sha: %s for PR #%d\n", mergeResultSha, prNumbers[componentName])
 						})
 					})
-				}(contextDir)
-			}
-		})
-	})
-
-	When("both the init PaC PRs are merged", func() {
-		// 🔹 Update root folder for monorepo
-		It("should make changes to the root folder", func() {
-			// Use mergeResultSha for monorepo (latest merged PR SHA)
-			err = f.AsKubeAdmin.CommonController.Github.CreateRef(
-				multiComponentRepoNameForGroupSnapshot, multiComponentDefaultBranch, mergeResultSha, multiComponentPRBranchName)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			var lastCreatedFileSha string
-
-			for _, component := range componentNames {
-				fileToCreatePath := fmt.Sprintf("%s/sample-file-for-%s.txt", component, component)
-				createdFile, err := f.AsKubeAdmin.CommonController.Github.CreateFile(
-					multiComponentRepoNameForGroupSnapshot, fileToCreatePath, "Test content for component", multiComponentPRBranchName)
-				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error while creating file: %s", fileToCreatePath))
-
-				if createdFile.SHA != nil { // ✅ Prevents panic if SHA is nil
-					lastCreatedFileSha = *createdFile.SHA
-				}
-			}
-
-			pr, err := f.AsKubeAdmin.CommonController.Github.CreatePullRequest(
-				multiComponentRepoNameForGroupSnapshot, "SingleRepo multi-component PR", "sample PR body",
-				multiComponentPRBranchName, multiComponentBaseBranchName)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			GinkgoWriter.Printf("pr #%d got created with sha %s\n", pr.GetNumber(), lastCreatedFileSha)
-		})
-
-		// 🔹 Update files for multi-repo
-		It("should make changes to the multiple-repo", func() {
-			// Use mergeMultiResultSha for multi-repo (latest merged PR SHA for multi-repo)
-			err = f.AsKubeAdmin.CommonController.Github.CreateRef(
-				componentRepoNameForGeneralIntegration, multiComponentDefaultBranch, mergeMultiResultSha, multiComponentPRBranchName)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			var lastCreatedFileSha string
-
-			for _, component := range componentNames {
-				fileToCreatePath := fmt.Sprintf("%s/sample-file-for-%s.txt", component, component)
-				createdFile, err := f.AsKubeAdmin.CommonController.Github.CreateFile(
-					componentRepoNameForGeneralIntegration, fileToCreatePath, "Sometimes I drink water to surprise my liver", multiComponentPRBranchName)
-				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error while creating file: %s", fileToCreatePath))
-
-				if createdFile.SHA != nil { // ✅ Prevents panic if SHA is nil
-					lastCreatedFileSha = *createdFile.SHA
-				}
-			}
-
-			pr, err := f.AsKubeAdmin.CommonController.Github.CreatePullRequest(
-				componentRepoNameForGeneralIntegration, "Multirepo component PR", "sample pr body",
-				multiComponentPRBranchName, multiComponentBaseBranchName)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			GinkgoWriter.Printf("PR #%d got created with sha %s\n", pr.GetNumber(), lastCreatedFileSha)
-		})
-
-		It("waits for the last components' builds to finish", func() {
-			for _, component := range componentNames {
-				Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineToBeFinished(
-					testNamespace, applicationName, component)).To(Succeed())
+				}(componentName)
 			}
 		})
 
-		It("gets all group snapshots and checks if pr-group annotation contains all components", func() {
-			Eventually(func() error {
-				groupSnapshots, err = f.AsKubeAdmin.HasController.GetAllGroupSnapshotsForApplication(applicationName, testNamespace)
-				if groupSnapshots == nil {
-					GinkgoWriter.Println("No group snapshot exists at the moment: %v", err)
-					return err
-				}
-				if err != nil {
-					GinkgoWriter.Println("Failed to get all group snapshots: %v", err)
-					return err
-				}
-				return nil
-			}, time.Minute*20, constants.PipelineRunPollingInterval).Should(Succeed(), "timeout while waiting for group snapshot")
-
-			annotation := groupSnapshots.Items[0].GetAnnotations()
-			if annotation, ok := annotation[testGroupSnapshotAnnotation]; ok {
-				for _, component := range componentNames {
-					Expect(annotation).To(ContainSubstring(component))
-				}
-			}
-		})
-
-		It("makes sure that the group snapshot contains the last build PipelineRun for each component", func() {
-			for _, component := range componentNames {
-				pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(
-					component, applicationName, testNamespace, false, "")
+		When("both the init PaC PRs are merged", func() {
+			It("should make changes to the root folder", func() {
+				err = f.AsKubeAdmin.CommonController.Github.CreateRef(
+					multiComponentRepoNameForGroupSnapshot,
+					multiComponentDefaultBranch,
+					mergeResultSha,
+					multiComponentPRBranchName,
+				)
 				Expect(err).ShouldNot(HaveOccurred())
+
+				var lastCreatedFileSha string
+				for _, component := range componentNames {
+					fileToCreatePath := fmt.Sprintf("%s/sample-file-for-%s.txt", component, component)
+					createdFile, err := f.AsKubeAdmin.CommonController.Github.CreateFile(
+						multiComponentRepoNameForGroupSnapshot,
+						fileToCreatePath,
+						"Test content for component",
+						multiComponentPRBranchName,
+					)
+					Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error while creating file: %s", fileToCreatePath))
+					if createdFile.SHA != nil {
+						lastCreatedFileSha = *createdFile.SHA
+					}
+				}
+
+				pr, err := f.AsKubeAdmin.CommonController.Github.CreatePullRequest(
+					multiComponentRepoNameForGroupSnapshot,
+					"SingleRepo multi-component PR",
+					"sample PR body",
+					multiComponentPRBranchName,
+					multiComponentBaseBranchName,
+				)
+				Expect(err).ShouldNot(HaveOccurred())
+				GinkgoWriter.Printf("pr #%d got created with sha %s\n", pr.GetNumber(), lastCreatedFileSha)
+			})
+
+			It("should make changes to the multiple-repo", func() {
+				err = f.AsKubeAdmin.CommonController.Github.CreateRef(
+					componentRepoNameForGeneralIntegration,
+					multiComponentDefaultBranch,
+					mergeMultiResultSha,
+					multiComponentPRBranchName,
+				)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				var lastCreatedFileSha string
+				for _, component := range componentNames {
+					fileToCreatePath := fmt.Sprintf("%s/sample-file-for-%s.txt", component, component)
+					createdFile, err := f.AsKubeAdmin.CommonController.Github.CreateFile(
+						componentRepoNameForGeneralIntegration,
+						fileToCreatePath,
+						"Sometimes I drink water to surprise my liver",
+						multiComponentPRBranchName,
+					)
+					Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error while creating file: %s", fileToCreatePath))
+					if createdFile.SHA != nil {
+						lastCreatedFileSha = *createdFile.SHA
+					}
+				}
+
+				pr, err := f.AsKubeAdmin.CommonController.Github.CreatePullRequest(
+					componentRepoNameForGeneralIntegration,
+					"Multirepo component PR",
+					"sample pr body",
+					multiComponentPRBranchName,
+					multiComponentBaseBranchName,
+				)
+				Expect(err).ShouldNot(HaveOccurred())
+				GinkgoWriter.Printf("pr #%d got created with sha %s\n", pr.GetNumber(), lastCreatedFileSha)
+			})
+
+			It("waits for the last components' builds to finish", func() {
+				for _, component := range componentNames {
+					Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineToBeFinished(
+						testNamespace, applicationName, component,
+					)).To(Succeed())
+				}
+			})
+
+			It("gets all group snapshots and checks if pr-group annotation contains all components", func() {
+				Eventually(func() error {
+					groupSnapshots, err = f.AsKubeAdmin.HasController.GetAllGroupSnapshotsForApplication(applicationName, testNamespace)
+					if groupSnapshots == nil {
+						return err
+					}
+					return nil
+				}, time.Minute*20, constants.PipelineRunPollingInterval).Should(Succeed(), "timeout while waiting for group snapshot")
 
 				annotation := groupSnapshots.Items[0].GetAnnotations()
 				if annotation, ok := annotation[testGroupSnapshotAnnotation]; ok {
-					Expect(annotation).To(ContainSubstring(pipelineRun.Name))
+					for _, component := range componentNames {
+						Expect(annotation).To(ContainSubstring(component))
+					}
 				}
-			}
+			})
+
+			It("makes sure that the group snapshot contains the last build PipelineRun for each component", func() {
+				for _, component := range componentNames {
+					pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(
+						component, applicationName, testNamespace, false, "")
+					Expect(err).ShouldNot(HaveOccurred())
+					annotation := groupSnapshots.Items[0].GetAnnotations()
+					if annotation, ok := annotation[testGroupSnapshotAnnotation]; ok {
+						Expect(annotation).To(ContainSubstring(pipelineRun.Name))
+					}
+				}
+			})
 		})
 	})
 })
