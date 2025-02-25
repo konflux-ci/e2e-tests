@@ -33,12 +33,13 @@ type BuildahDemo struct {
 }
 
 type ECIntegrationTestScenario struct {
-	Image                 string
-	Name                  string
-	Namespace             string
-	PipelineGitURL        string
-	PipelineGitRevision   string
-	PipelineGitPathInRepo string
+	Image                       string
+	Name                        string
+	Namespace                   string
+	PipelineGitURL              string
+	PipelineGitRevision         string
+	PipelineGitPathInRepo       string
+	PipelinePolicyConfiguration string
 }
 
 type FailedPipelineRunDetails struct {
@@ -193,11 +194,13 @@ func (p ECIntegrationTestScenario) Generate() (*pipeline.PipelineRun, error) {
 						{Name: "url", Value: *pipeline.NewStructuredValues(p.PipelineGitURL)},
 						{Name: "revision", Value: *pipeline.NewStructuredValues(p.PipelineGitRevision)},
 						{Name: "pathInRepo", Value: *pipeline.NewStructuredValues(p.PipelineGitPathInRepo)},
+						{Name: "policyConfiguration", Value: *pipeline.NewStructuredValues(p.PipelinePolicyConfiguration)},
 					},
 				},
 			},
 			Params: []pipeline.Param{
 				{Name: "SNAPSHOT", Value: *pipeline.NewStructuredValues(snapshot)},
+				{Name: "POLICY_CONFIGURATION", Value: *pipeline.NewStructuredValues(p.PipelinePolicyConfiguration)},
 			},
 		},
 	}, nil

@@ -619,6 +619,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				}
 
 				var gitRevision, gitURL, imageWithDigest string
+				var defaultECP *ecp.EnterpriseContractPolicy
 
 				BeforeAll(func() {
 					// resolve the gitURL and gitRevision
@@ -645,12 +646,24 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					pathInRepo := pathInRepo
 					It(fmt.Sprintf("runs ec pipeline %s", pathInRepo), func() {
 						generator := tekton.ECIntegrationTestScenario{
-							Image:                 imageWithDigest,
-							Namespace:             testNamespace,
-							PipelineGitURL:        gitURL,
-							PipelineGitRevision:   gitRevision,
-							PipelineGitPathInRepo: pathInRepo,
+							Image:                       imageWithDigest,
+							Namespace:                   testNamespace,
+							PipelineGitURL:              gitURL,
+							PipelineGitRevision:         gitRevision,
+							PipelineGitPathInRepo:       pathInRepo,
+							PipelinePolicyConfiguration: "ec-policy",
 						}
+						defaultECP, err = f.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+						Expect(err).NotTo(HaveOccurred())
+						//exclude the slsa_source_correlated.source_code_reference_provided because snapshot doesn't get the info of source
+						policy := contract.PolicySpecWithSourceConfig(
+							defaultECP.Spec,
+							ecp.SourceConfig{
+								Include: []string{"@slsa3"},
+								Exclude: []string{"slsa_source_correlated.source_code_reference_provided"},
+							},
+						)
+						Expect(kubeadminClient.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
 
 						pr, err := kubeadminClient.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
 						Expect(err).NotTo(HaveOccurred())
@@ -675,15 +688,13 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						GinkgoWriter.Printf("The PipelineRun %s in namespace %s has status.conditions: \n%#v\n", pr.Name, pr.Namespace, pr.Status.Conditions)
 
 						// The UI uses this label to display additional information.
-						// Enable this check, when the issue is fixed: https://issues.redhat.com/browse/KONFLUX-5787
-						// Expect(pr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
+						Expect(pr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
 
 						// The UI uses this label to display additional information.
 						tr, err := kubeadminClient.TektonController.GetTaskRunFromPipelineRun(kubeadminClient.CommonController.KubeRest(), pr, "verify")
 						Expect(err).NotTo(HaveOccurred())
 						GinkgoWriter.Printf("The TaskRun %s of PipelineRun %s  has status.conditions: \n%#v\n", tr.Name, pr.Name, tr.Status.Conditions)
-						// Enable this check, when the issue is fixed: https://issues.redhat.com/browse/KONFLUX-5787
-						// Expect(tr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
+						Expect(tr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
 
 						logs, err := kubeadminClient.TektonController.GetTaskRunLogs(pr.Name, "verify", pr.Namespace)
 						Expect(err).NotTo(HaveOccurred())
