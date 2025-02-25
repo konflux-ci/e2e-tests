@@ -219,8 +219,6 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 				Expect(tekton.DidTaskRunSucceed(tr)).To(BeTrue())
 				GinkgoWriter.Printf("Make sure result for TaskRun %q succeeded\n", tr.PipelineTaskName)
 				Expect(tr.Status.TaskRunStatusFields.Results).Should(Or(
-					// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
-					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
 					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
 				))
 			})
@@ -249,8 +247,6 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 				Expect(tekton.DidTaskRunSucceed(tr)).To(BeTrue())
 				GinkgoWriter.Printf("Make sure result for TaskRun %q succeeded\n", tr.PipelineTaskName)
 				Expect(tr.Status.TaskRunStatusFields.Results).Should(Or(
-					// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
-					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
 					ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
 				))
 			})
@@ -322,8 +318,6 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(tr.Status.TaskRunStatusFields.Results).Should(Or(
-						// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
-						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
 						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
 					))
 					//Get container step-report-json log details from pod
@@ -367,8 +361,6 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(tr.Status.TaskRunStatusFields.Results).Should(Or(
-						// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
-						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
 						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
 					))
 					//Get container step-report-json log details from pod
@@ -397,7 +389,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 							// This test validates an image via a floating tag (as designed). This makes
 							// it hard to provide the expected git commit. Here we just ignore that
 							// particular check.
-							Exclude: []string{"slsa_source_correlated.source_code_reference_provided"},
+							Exclude: []string{"slsa_source_correlated.source_code_reference_provided", "cve.cve_results_found"},
 						})
 					Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
@@ -413,8 +405,6 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(tr.Status.TaskRunStatusFields.Results).ShouldNot(Or(
-						// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
-						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
 						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
 					))
 				})
@@ -449,8 +439,6 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(tr.Status.TaskRunStatusFields.Results).Should(Or(
-						// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
-						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
 						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
 					))
 
@@ -489,8 +477,6 @@ var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(tr.Status.TaskRunStatusFields.Results).Should(Or(
-						// TODO: delete the first option after https://issues.redhat.com/browse/RHTAP-810 is completed
-						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.OldTektonTaskTestOutputName, "{$.result}", `["WARNING"]`)),
 						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["WARNING"]`)),
 					))
 

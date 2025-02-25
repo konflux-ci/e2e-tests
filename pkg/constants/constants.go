@@ -180,11 +180,6 @@ const (
 	StrategyConfigsDefaultBranch = "main"
 	StrategyConfigsRevision      = "caeaaae63a816ab42dad6c7be1e4b352ea8aabf4"
 
-	// TODO
-	// delete this constant and all its occurrences in the code base
-	// once https://issues.redhat.com/browse/RHTAP-810 is completed
-	OldTektonTaskTestOutputName = "HACBS_TEST_OUTPUT"
-
 	TektonTaskTestOutputName = "TEST_OUTPUT"
 
 	DefaultPipelineServiceAccount            = "appstudio-pipeline"
