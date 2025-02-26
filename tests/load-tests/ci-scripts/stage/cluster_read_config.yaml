@@ -119,19 +119,19 @@
 # Git info
 {% macro git_info(dir, path) -%}
 - name: metadata.git.{{ path }}.commit.hash
-  command: cd "{{ dir }}" && git log -1 --pretty=format:"%H"
+  command: cd "{{ dir }}" && git log -1 --pretty=format:"%H" 2>/dev/null
 - name: metadata.git.{{ path }}.commit.abbreviated_hash
-  command: cd "{{ dir }}" && git log -1 --pretty=format:"%h"
+  command: cd "{{ dir }}" && git log -1 --pretty=format:"%h" 2>/dev/null
 - name: metadata.git.{{ path }}.commit.author_date
-  command: cd "{{ dir }}" && git log -1 --pretty=format:"%aI"
+  command: cd "{{ dir }}" && git log -1 --pretty=format:"%aI" 2>/dev/null
 - name: metadata.git.{{ path }}.commit.committer_date
-  command: cd "{{ dir }}" && git log -1 --pretty=format:"%cI"
+  command: cd "{{ dir }}" && git log -1 --pretty=format:"%cI" 2>/dev/null
 - name: metadata.git.{{ path }}.commit.subject
-  command: cd "{{ dir }}" && git log -1 --pretty=format:"%s"
+  command: cd "{{ dir }}" && git log -1 --pretty=format:"%s" 2>/dev/null
 - name: metadata.git.{{ path }}.commit.author_name
-  command: cd "{{ dir }}" && git log -1 --pretty=format:"%aN"
+  command: cd "{{ dir }}" && git log -1 --pretty=format:"%aN" 2>/dev/null
 - name: metadata.git.{{ path }}.commit.author_email
-  command: cd "{{ dir }}" && git log -1 --pretty=format:"%aE"
+  command: cd "{{ dir }}" && git log -1 --pretty=format:"%aE" 2>/dev/null
 {%- endmacro %}
 {{ git_info('.', 'redhat_appstudio.e2e_tests') }}
 
