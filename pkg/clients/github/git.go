@@ -66,55 +66,6 @@ func (g *Github) ExistsRef(repository, branchName string) (bool, error) {
 	return true, nil
 }
 
-func (g *Github) DeleteRefFromOrg(githubOrg, repository, branchName string) error {
-	_, err := g.client.Git.DeleteRef(context.Background(), githubOrg, repository, fmt.Sprintf(HEADS, branchName))
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (g *Github) ExistsRefInOrg(githubOrg, repository, branchName string) (bool, error) {
-	_, _, err := g.client.Git.GetRef(context.Background(), githubOrg, repository, fmt.Sprintf(HEADS, branchName))
-	if err != nil {
-		if strings.Contains(err.Error(), "404 Not Found") {
-			return false, nil
-		} else {
-			return false, fmt.Errorf("error when getting the branch '%s' for the repo '%s': %+v", branchName, repository, err)
-		}
-	}
-	return true, nil
-}
-
-func (g *Github) CreateRefInOrg(githubOrg, repository, baseBranchName, sha, newBranchName string) error {
-	ctx := context.Background()
-	ref, _, err := g.client.Git.GetRef(ctx, githubOrg, repository, fmt.Sprintf(HEADS, baseBranchName))
-	if err != nil {
-		return fmt.Errorf("error when getting the base branch name '%s' for the repo '%s': %+v", baseBranchName, repository, err)
-	}
-
-	ref.Ref = github.String(fmt.Sprintf(HEADS, newBranchName))
-
-	if sha != "" {
-		ref.Object.SHA = &sha
-	}
-
-	_, _, err = g.client.Git.CreateRef(ctx, githubOrg, repository, ref)
-	if err != nil {
-		return fmt.Errorf("error when creating a new branch '%s' for the repo '%s': %+v", newBranchName, repository, err)
-	}
-	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
-		exist, err := g.ExistsRefInOrg(githubOrg, repository, newBranchName)
-		if err != nil {
-			return false, err
-		}
-		if exist && err == nil {
-			return exist, err
-		}
-		return false, nil
-	}, 2*time.Second, 2*time.Minute) //Wait for the branch to actually exist
-	if err != nil {
-		return fmt.Errorf("error when waiting for ref: %+v", err)
-	}
-	return nil
+func (g *Github) UpdateGithubOrg(githubOrg string) {
+	g.organization = githubOrg
 }
