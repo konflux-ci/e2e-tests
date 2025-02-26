@@ -254,6 +254,7 @@ class Something:
             "completionTime": pr_completionTime,
             "startTime": pr_startTime,
             "condition": pr_condition_ok,
+            "taskRuns": {},
         }
 
     def _populate_taskrun(self, tr):
