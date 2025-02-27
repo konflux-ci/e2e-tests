@@ -97,6 +97,8 @@
 # Interesting CI environment variables
 {% for var in [
   'BUILD_ID',
+  'BUILD_TAG',
+  'BUILD_URL',
   'HOSTNAME',
   'JOB_NAME',
   'MEMBER_CLUSTER',
