@@ -80,11 +80,8 @@ oc config view --minify --raw > /workspace/kubeconfig
 export KUBECONFIG=/workspace/kubeconfig
 
 # ROSA HCP workaround for Docker limits
-# for namespaces 'minio-operator' and 'tekton-results'
-oc get secret/pull-secret -n openshift-config --template='{{index .data ".dockerconfigjson" | base64decode}}' > ./global-pull-secret.json
-oc get secret -n openshift-config -o yaml pull-secret > global-pull-secret.yaml
-yq -i e 'del(.metadata.namespace)' global-pull-secret.yaml
-oc registry login --registry=docker.io --auth-basic="$DOCKER_IO_AUTH" --to=./global-pull-secret.json
+DOCKER_CONFIG_JSON_FILE=docker-config.json
+oc registry login --registry=docker.io --auth-basic="$DOCKER_IO_AUTH" --to=./$DOCKER_CONFIG_JSON_FILE
 
 namespace_sa_names=$(cat << 'EOF'
 minio-operator|console-sa
@@ -99,8 +96,7 @@ while IFS='|' read -r ns sa_name; do
     oc create namespace "$ns" --dry-run=client -o yaml | oc apply -f -
     oc create sa "$sa_name" -n "$ns" --dry-run=client -o yaml | oc apply -f -
     if ! oc get secret/pull-secret -n "$ns" &> /dev/null; then
-        oc apply -f global-pull-secret.yaml -n "$ns"
-        oc set data secret/pull-secret -n "$ns" --from-file=.dockerconfigjson=./global-pull-secret.json
+        oc create secret docker-registry pull-secret --from-file=.dockerconfigjson=./$DOCKER_CONFIG_JSON_FILE -n "$ns"
     fi
     oc secrets link "$sa_name" pull-secret --for=pull -n "$ns"
 done <<< "$namespace_sa_names"
