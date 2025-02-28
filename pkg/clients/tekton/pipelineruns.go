@@ -292,3 +292,15 @@ func (t *TektonController) RemoveFinalizerFromPipelineRun(pipelineRun *pipeline.
 	}
 	return nil
 }
+
+func (t *TektonController) CancelPipelineRun(pipelineRun *pipeline.PipelineRun) error {
+	ctx := context.Background()
+	kubeClient := t.KubeRest()
+	patch := client.MergeFrom(pipelineRun.DeepCopy())
+	pipelineRun.Spec.Status = pipeline.PipelineRunSpecStatusCancelled
+	err := kubeClient.Patch(ctx, pipelineRun, patch)
+	if err != nil {
+		return fmt.Errorf("error occurred while patching the updated PipelineRun after adding cancelled status: %v", err)
+	}
+	return nil
+}
