@@ -113,7 +113,7 @@ func (ci CI) init() error {
 		pr.Number = openshiftJobSpec.Refs.Pulls[0].Number
 	}
 
-	if konfluxCiSpec.KonfluxGitRefs.EventType != "push" {
+	if konfluxCiSpec.KonfluxGitRefs.EventType == "pull_request" {
 		prUrl := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls/%d", pr.Organization, pr.RepoName, pr.Number)
 		pr.RemoteName, pr.BranchName, err = getRemoteAndBranchNameFromPRLink(prUrl)
 		if err != nil {
