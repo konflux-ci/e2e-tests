@@ -86,6 +86,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 					if !pipelineRun.HasStarted() {
 						return fmt.Errorf("build pipelinerun %s/%s hasn't started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
 					}
+					err = f.AsKubeAdmin.TektonController.CancelPipelineRun(pipelineRun)
+					if err != nil {
+						GinkgoWriter.Printf("Failed to cancel the build PipelineRun %s", pipelineRun.Name)
+						return err
+					}
 					return nil
 				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the component %s/%s", testNamespace, componentName))
 			})
