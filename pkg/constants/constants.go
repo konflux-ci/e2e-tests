@@ -75,6 +75,12 @@ const (
 	// SSO token for accessing the Atlas stage release instance
 	ATLAS_STAGE_TOKEN_ENV string = "ATLAS_STAGE_TOKEN" // #nosec
 
+	// Atlas AWS account key (stage)
+	ATLAS_AWS_ACCESS_KEY_ID_ENV string = "ATLAS_AWS_ACCESS_KEY_ID"
+
+	// Atlas AWS account secret (stage)
+	ATLAS_AWS_ACCESS_SECRET_ENV string = "ATLAS_AWS_ACCESS_SECRET"
+
 	// Offline/refresh token used for getting Keycloak token in order to authenticate against stage/prod cluster
 	// More details: https://access.redhat.com/articles/3626371
 	OFFLINE_TOKEN_ENV = "OFFLINE_TOKEN"
