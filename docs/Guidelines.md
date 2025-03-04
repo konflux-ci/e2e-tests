@@ -1,5 +1,5 @@
 # Overview
-The purpose of *this* document is to serve as a primer for developers/qe who are looking for best practices or adding new tests to RHTAP E2E framework.
+The purpose of *this* document is to serve as a primer for developers/qe who are looking for best practices or adding new tests to Konflux E2E framework.
 
 ## General tips
 
@@ -77,18 +77,18 @@ Good code that waits for something to happen meets the following criteria:
 
 ## E2E directory structure
 
-This is a basic layout for RHTAP E2E framework project. It is a set of common directories for all teams in RHTAP.
+This is a basic layout for Konflux E2E framework project. It is a set of common directories for all teams in Konflux.
 
 * `/cmd`: Is the main for all e2e tests. Don't put a lot of code in the application directory. If you think the code can be imported and used in other projects, then it should live in the `/pkg` directory.
-* `docs`: Documentation about RHTAP e2e world.
+* `docs`: Documentation about Konflux e2e world.
 * `/magefiles`: The code definition about installing and running the e2e tests
 * `/pipelines`: Tekton pipelines utilities for QE team like IC.
 * `/pkg`: All used and imported packages for e2e tests.
-  * `/pkg/clients`: Definition of different clients connection providers (like Slack, GitHub, and Kubernetes Server) and all API interaction with different RHTAP controllers.
+  * `/pkg/clients`: Definition of different clients connection providers (like Slack, GitHub, and Kubernetes Server) and all API interaction with different Konflux controllers.
   * `/pkg/constants`: Global constants of the e2e tests.
   * `/pkg/framework`: In the framework folder are all controllers initialization, tests reports and the interaction with Report Portal.
   * `/pkg/logs`: Tests logging utilities.
   * `/pkg/sandbox`: Initialize Sandbox controller to make authenticated requests to a Kubernetes server.
-  * `/pkg/utils`: Util folders with all auxiliary functions used in the different RHTAP controllers. Futhermore, it also contains some tests utils that can be found in `/pkg/utils/util.go`.
+  * `/pkg/utils`: Util folders with all auxiliary functions used in the different Konflux controllers. Futhermore, it also contains some tests utils that can be found in `/pkg/utils/util.go`.
 * `/scripts`: Scripts to perform operations which cannot be do it at magefiles level.
-* `/tests`: Folder where all RHTAP tests are defined and documented.
+* `/tests`: Folder where all Konflux tests are defined and documented.

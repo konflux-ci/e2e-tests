@@ -50,7 +50,7 @@ You can take a look at the [application-service](https://github.com/openshift/re
 
 ### Cluster Pools
 
-All RHTAP components owns a dedicated cluster pool defined running in AWS. To find more information about how to use cluster pool in your rhtap component in CI testing read our [documentation](https://github.com/openshift/release/blob/master/clusters/hive/pools/rhtap/Readme.md).
+All Konflux components owns a dedicated cluster pool defined running in AWS. To find more information about how to use cluster pool in your Konflux component in CI testing read our [documentation](https://github.com/openshift/release/blob/master/clusters/hive/pools/rhtap/Readme.md).
 
 ### Define your tests
 
