@@ -47,5 +47,5 @@ Please include:
     - **Failure message**
     - **Relevant logs**
     - (+ could be helpful to also include Slack thread conversation link in the ticket)
-2. Post this issue in **#forum-rhtap-qe**(ping **@ic-appstudio-qe**) channel and relevant component channel.
-    - You can also raise this issue on **#forum-rhtap-developer** channel and your lead can raise this issue on SoS call(and PM call and architects call, if this is necessary).
+2. Post this issue in **#forum-konflux-qe**(ping **@ic-appstudio-qe**) channel and relevant component channel.
+    - You can also raise this issue on **#forum-konflux-developer** channel and your lead can raise this issue on SoS call(and PM call and architects call, if this is necessary).
