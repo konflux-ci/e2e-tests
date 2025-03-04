@@ -86,16 +86,19 @@ are in the [infra-deployments](https://github.com/redhat-appstudio/infra-deploym
 ### Building and running the e2e tests
 
 Most of the tests could require you to have specific container image repo's created (if you're using your own container image org/user account (`QUAY_E2E_ORGANIZATION`) or your own GitHub organization (`MY_GITHUB_ORG`).
-In that case, before you run the test, make sure you have created
-* `test-images` repo in quay.io, i.e. `quay.io/<QUAY_E2E_ORGANIZATION>/test-images` and make it **public** (this repo will be used for pushing container images produced by tests)
+In that case, before you run the test, make sure you have
+* created `test-images` repo in quay.io, i.e. `quay.io/<QUAY_E2E_ORGANIZATION>/test-images` and make it **public** (this repo will be used for pushing container images produced by tests)
   * also make sure that the docker config, that is encoded in the value of `QUAY_TOKEN` environment variable, contains a correct credentials required to push to `test-images` repo. And make sure the robot account or user account has the **write** permissions set for `test-images` repo which is required by the tests to push the generated artifacts.
-* fork following GitHub repositories to your org (specified in `MY_GITHUB_ORG` env var)
+* forked following GitHub repositories to your org (specified in `MY_GITHUB_ORG` env var)
   * https://github.com/redhat-appstudio-qe/devfile-sample-hello-world (for running build-service tests)
   * https://github.com/redhat-appstudio-qe/hacbs-test-project (for konflux-demo test)
   * https://github.com/redhat-appstudio-qe/strategy-configs (for konflux-demo test)
   * https://github.com/redhat-appstudio-qe/konflux-test-integration (for integration test)
   * https://github.com/redhat-appstudio-qe/konflux-test-integration-with-env (for integration-with-env test)
   * https://github.com/redhat-appstudio-qe/konflux-test-integration-status-report (for status-reporting-to-pullrequest test)
+* set the `CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE` environment variable
+  * this should point to a bundle that utilizes [buildah-min](https://github.com/konflux-ci/build-definitions/tree/main/task/buildah-min) for building images locally on small-sized clusters.
+  * The bundle is automatically created when you execute the `make local/cluster/prepare` command, and the corresponding command is displayed in the logs at the end.
 
 Note: All Environments used in all e2e-tests are in [default.env](../default.env) file. In case you need to run a specific tests, not all environments are necessary to be defined.
 
@@ -122,8 +125,8 @@ The `e2e-appstudio` command is the root command that executes all test functiona
    ```
 **NOTE**: The binary must be updated by running `make build` every time there are new changes in the tests.
 
-The instructions for every test suite can be found in the [tests folder](tests), e.g. [has Readme.md](tests/konflux-demo/README.md).
-You can also specify which tests you want to run using [labels](docs/LabelsNaming.md) or [Ginkgo Focus](docs/DeveloperFocus.md).
+The instructions for every test suite can be found in the [tests folder](/tests/), e.g. [konflux-demo README.md](/tests/konflux-demo/README.md).
+You can also specify which tests you want to run using [labels](LabelsNaming.md) or [Ginkgo Focus](DeveloperFocus.md).
 
 
 # Konflux in Openshift CI and branch pairing
