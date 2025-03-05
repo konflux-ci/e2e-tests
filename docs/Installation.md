@@ -95,6 +95,8 @@ In that case, before you run the test, make sure you have
   * https://github.com/redhat-appstudio-qe/strategy-configs (for konflux-demo test)
   * https://github.com/redhat-appstudio-qe/konflux-test-integration (for integration test)
   * https://github.com/redhat-appstudio-qe/konflux-test-integration-with-env (for integration-with-env test)
+  * https://github.com/redhat-appstudio-qe/group-snapshot-multi-component (for group-snapshots-tests test)
+  * https://gitlab.com/konflux-qe/hacbs-test-project-integration (for gitlab-integration-reporting test)
   * https://github.com/redhat-appstudio-qe/konflux-test-integration-status-report (for status-reporting-to-pullrequest test)
 * set the `CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE` environment variable
   * this should point to a bundle that utilizes [buildah-min](https://github.com/konflux-ci/build-definitions/tree/main/task/buildah-min) for building images locally on small-sized clusters.
