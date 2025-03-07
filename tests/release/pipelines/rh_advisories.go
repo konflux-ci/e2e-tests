@@ -8,10 +8,10 @@ import (
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
-	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 	"github.com/devfile/library/v2/pkg/util"
@@ -203,10 +203,18 @@ func createADVSReleasePlan(advsReleasePlanName string, devFw framework.Framework
 			"solution":    "some solution",
 			"synopsis":    "test synopsis",
 			"topic":       "test topic",
-			"cves":        []map[string]interface{}{
+			"cves": []map[string]interface{}{
 				{
-					"key":  "CVE-2024-8260",
-					"component" : advsComponentName,
+					"key":       "CVE-2024-8260",
+					"component": advsComponentName,
+				},
+			},
+			"issues": map[string]interface{}{
+				"fixed": []map[string]interface{}{
+					{
+						"id":     "RELEASE-1401",
+						"source": "issues.redhat.com",
+					},
 				},
 			},
 		},
