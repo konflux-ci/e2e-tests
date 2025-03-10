@@ -10,6 +10,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
+	"github.com/konflux-ci/operator-toolkit/metadata"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -289,6 +290,30 @@ func (t *TektonController) RemoveFinalizerFromPipelineRun(pipelineRun *pipeline.
 		if err != nil {
 			return fmt.Errorf("error occurred while patching the updated PipelineRun after finalizer removal: %v", err)
 		}
+	}
+	return nil
+}
+
+func (t *TektonController) UpdateBuildPipelineRunResult(pipelineRun *pipeline.PipelineRun, results []pipeline.PipelineRunResult) error {
+	ctx := context.Background()
+	kubeClient := t.KubeRest()
+	pipelineRun.Status.Results = results
+	if err := kubeClient.Status().Update(ctx, pipelineRun); err != nil {
+		return fmt.Errorf("error occurred while updating build pipelinerun results: %v", err)
+	}
+	return nil
+}
+
+func (t *TektonController) DeletePipelinerunAnnotation(pipelineRun *pipeline.PipelineRun, key string) error {
+	ctx := context.Background()
+	kubeClient := t.KubeRest()
+	patch := client.MergeFrom(pipelineRun.DeepCopy())
+
+	_ = metadata.DeleteAnnotation(&pipelineRun.ObjectMeta, key)
+
+	err := kubeClient.Patch(ctx, pipelineRun, patch)
+	if err != nil {
+		return fmt.Errorf("error occurred while deleting annotation %s from build pipelinerun results: %v", key, err)
 	}
 	return nil
 }
