@@ -74,7 +74,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 				"sso_account": constants.ATLAS_STAGE_ACCOUNT_ENV,
 				"sso_token":   constants.ATLAS_STAGE_TOKEN_ENV,
 			}
+			atlasAWSFieldEnvMap := map[string]string{
+				"atlas-aws-access-key-id": constants.ATLAS_AWS_ACCESS_KEY_ID_ENV,
+				"atlas-aws-secret-access-key": constants.ATLAS_AWS_ACCESS_SECRET_ENV,
+			}
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "atlas-staging-sso-secret", atlasFieldEnvMap)
+			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "atlas-retry-s3-staging-secret", atlasAWSFieldEnvMap)
 
 			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
 			Expect(err).ToNot(HaveOccurred())
