@@ -84,4 +84,4 @@ setup-bundle-for-build-tasks-dockerfiles-group-build:
 	./mage -v SetupBundleForBuildTasksDockerfilesRepo true true true
 
 setup-only-source-build:
-    ./mage -v SetupBundleForBuildTasksDockerfilesRepo true false false
+	./mage -v SetupBundleForBuildTasksDockerfilesRepo true false false
