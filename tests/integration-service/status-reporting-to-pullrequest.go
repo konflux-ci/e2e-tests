@@ -234,7 +234,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 				Expect(f.AsKubeAdmin.TektonController.DeletePipelinerunAnnotation(pipelineRun, constants.BuildPipelineRunSnapshotAnnotation)).NotTo(HaveOccurred())
 				Expect(f.AsKubeAdmin.TektonController.DeletePipelinerunAnnotation(pipelineRun, constants.SnapshotCreationReportAnnotation)).NotTo(HaveOccurred())
 				Eventually(func() error {
-					pipelineRun, err = f.AsKubeAdmin.TektonController.GetPipelineRun(pipelineRun.Name, pipelineRun.Namespace)
+					pipelinerun, err := f.AsKubeDeveloper.HasController.GetComponentPipelineRunWithType(componentName, applicationName, testNamespace, "build", "")
 
 					if err != nil && pipelineRun.Status.Results[0].Value.StringVal != invalidDigest {
 						return fmt.Errorf("failing to find the invalid digest string %v", err)
@@ -243,18 +243,20 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 					if metadata.HasAnnotation(pipelineRun, constants.BuildPipelineRunSnapshotAnnotation) {
 						return fmt.Errorf("annotation is still be found in build PLR %s", constants.BuildPipelineRunSnapshotAnnotation)
 					}
+					GinkgoWriter.Printf("Updated build pipelinerun name: %v \n", pipelinerun.GetName())
+					GinkgoWriter.Printf("Updated build pipelinerun labels: %v \n", pipelinerun.GetLabels())
+					GinkgoWriter.Printf("Updated build pipelinerun annotations: %v \n", pipelinerun.GetAnnotations())
+					GinkgoWriter.Printf("Updated build pipelinerun status: %v \n", pipelinerun.Status)
+
 					return nil
 				}, time.Minute*5, time.Second*5).Should(Succeed(), fmt.Sprintf("Build PipelineRun %s/%s annotation is not updated well", pipelineRun.Namespace, pipelineRun.Name))
-
 			})
 
 			It("snapshot creation failure is reported to integration test checkRun", func() {
 				Eventually(func() error {
 					conclusion, err := f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(integrationTestScenarioPass.Name, componentRepoNameForStatusReporting, prHeadSha, prNumber)
 					if conclusion != constants.CheckrunConclusionFailure || err != nil {
-						pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-						GinkgoWriter.Printf("Updated build pipelinerun: %v \n", pipelineRun)
-						GinkgoWriter.Printf("failed to get expected checkRun due to error: %v, actual conclusion is %s: \n", err, conclusion)
+						GinkgoWriter.Printf("failed to get expected checkRun due to error: %v, actual conclusion is %s: \n", err, conclusion)			
 						return fmt.Errorf("error occurred when checking failing integration test checkRun")
 					}
 					return nil
