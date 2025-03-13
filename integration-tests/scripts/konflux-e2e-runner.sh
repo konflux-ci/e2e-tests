@@ -24,6 +24,8 @@ load_envs() {
         [PYXIS_STAGE_CERT]="${konflux_ci_secrets_file}/pyxis-stage-cert"
         [ATLAS_STAGE_ACCOUNT]="${konflux_ci_secrets_file}/atlas-stage-account"
         [ATLAS_STAGE_TOKEN]="${konflux_ci_secrets_file}/atlas-stage-token"
+        [ATLAS_AWS_ACCESS_KEY_ID]="${konflux_ci_secrets_file}/atlas-aws-access-key-id"
+        [ATLAS_AWS_ACCESS_SECRET]="${konflux_ci_secrets_file}/atlas-aws-secret-access-key"
         [OFFLINE_TOKEN]="${konflux_ci_secrets_file}/stage_offline_token"
         [TOOLCHAIN_API_URL]="${konflux_ci_secrets_file}/stage_toolchain_api_url"
         [KEYLOAK_URL]="${konflux_ci_secrets_file}/stage_keyloak_url"
