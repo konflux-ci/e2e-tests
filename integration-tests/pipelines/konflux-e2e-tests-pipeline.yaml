@@ -141,6 +141,8 @@ spec:
           value: "$(tasks.test-metadata.results.container-image)"
         - name: container-image
           value: "$(params.container-image)"
+        - name: e2e-timeout
+          value: "90m"
   finally:
     - name: deprovision-rosa-collect-artifacts
       when:

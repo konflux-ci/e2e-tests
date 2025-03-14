@@ -67,6 +67,12 @@ load_envs() {
 post_actions() {
     local exit_code=$?
 
+    if [[ "$exit_code" == "124" ]]; then
+        # Separate the error from the test log with new lines so it's more visible
+        printf "\n\n" | tee -a "${ARTIFACT_DIR}/e2e-tests.log"
+        log "ERROR" "The process for bootstrapping the cluster and running tests timed out after $E2E_TIMEOUT" | tee -a "${ARTIFACT_DIR}/e2e-tests.log"
+    fi
+
     if [[ "${UNREGISTER_PAC}" == "true" ]]; then
         make ci/sprayproxy/unregister | tee "${ARTIFACT_DIR}"/sprayproxy-unregister.log
     fi
@@ -103,4 +109,4 @@ while IFS='|' read -r ns sa_name; do
     oc secrets link "$sa_name" pull-secret --for=pull -n "$ns"
 done <<< "$namespace_sa_names"
 
-make ci/test/e2e 2>&1 | tee "${ARTIFACT_DIR}"/e2e-tests.log
+timeout "$E2E_TIMEOUT" bash -c "make ci/test/e2e 2>&1 | tee ${ARTIFACT_DIR}/e2e-tests.log"
