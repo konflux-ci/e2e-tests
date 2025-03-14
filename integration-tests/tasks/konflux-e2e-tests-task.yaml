@@ -55,6 +55,9 @@ spec:
     - name: enable-sealights
       description: "A flag to enable or disable the Sealights integration feature. When set to 'true', test results are sent to Sealights for analysis; otherwise, this feature is skipped."
       default: "false"
+    - name: e2e-timeout
+      description: "Timeout value for running E2E script (cluster bootstrap + E2E tests)"
+      default: "90m"
   volumes:
     - name: konflux-secret-volume
       secret:
@@ -99,6 +102,8 @@ spec:
           value: $(params.oras-container)
         - name: ARTIFACT_DIR
           value: /workspace/artifact-dir
+        - name: E2E_TIMEOUT
+          value: $(params.e2e-timeout)
       onError: continue
       script: |
         #!/bin/bash
