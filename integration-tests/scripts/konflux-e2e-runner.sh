@@ -109,4 +109,4 @@ while IFS='|' read -r ns sa_name; do
     oc secrets link "$sa_name" pull-secret --for=pull -n "$ns"
 done <<< "$namespace_sa_names"
 
-timeout "$E2E_TIMEOUT" bash -c "make ci/test/e2e 2>&1 | tee ${ARTIFACT_DIR}/e2e-tests.log"
+timeout "$E2E_TIMEOUT" make ci/test/e2e 2>&1 | tee "${ARTIFACT_DIR}/e2e-tests.log"
