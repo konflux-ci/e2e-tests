@@ -140,7 +140,7 @@ spec:
         - name: component-image
           value: "$(tasks.test-metadata.results.container-image)"
         - name: container-image
-          value: "$(params.container-image)"
+          value: "$(tasks.test-metadata.results.container-image)"
         - name: e2e-timeout
           value: "90m"
   finally:
