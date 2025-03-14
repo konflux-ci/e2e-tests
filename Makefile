@@ -78,5 +78,10 @@ clean-registered-servers:
 setup-multi-platform-tests:
 	./mage -v SetupMultiPlatformTests
 
-setup-source-build:
-	./mage -v SetupSourceBuild
+setup-bundle-for-build-tasks-dockerfiles-group-build:
+# whether to build bundle with changes for source-container-build, sbom-utility-scripts, icm-injection-scripts components
+# need to pass true/false as mage target arguments respectively
+	./mage -v SetupBundleForBuildTasksDockerfilesRepo true true true
+
+setup-only-source-build:
+	./mage -v SetupBundleForBuildTasksDockerfilesRepo true false false
