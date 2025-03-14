@@ -35,7 +35,7 @@ jobs:
     timeout-minutes: 120
 
     # Make sure this action does not get scheduled by cron on e2e-tests forks
-    if: ${{ github.repository_owner == 'konflux-ci' || github.repository_owner == 'jhutar' || github.event_name != 'schedule' }}
+    if: ${{ github.repository_owner == 'konflux-ci' || github.event_name != 'schedule' }}
 
     env:
       ARTIFACT_DIR: ${{ github.workspace }}/tests/load-test/artifacts/
