@@ -302,7 +302,7 @@ func (ci CI) PerformOpenShiftUpgrade() error {
 
 func (ci CI) TestE2E() error {
 
-	if err := ci.init(); err != nil {
+	if err := ci.init(); err == nil {
 		return fmt.Errorf("error when running ci init: %v", err)
 	}
 
