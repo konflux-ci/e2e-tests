@@ -165,10 +165,11 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 	attempts := 1
 	app := component.Spec.Application
 	pr := &pipeline.PipelineRun{}
+	var shaToUpdate = &sha
 
 	for {
 		err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 30*time.Minute, true, func(ctx context.Context) (done bool, err error) {
-			pr, err = h.GetComponentPipelineRun(component.GetName(), app, component.GetNamespace(), sha)
+			pr, err = h.GetComponentPipelineRun(component.GetName(), app, component.GetNamespace(), *shaToUpdate)
 
 			if err != nil {
 				GinkgoWriter.Printf("PipelineRun has not been created yet for the Component %s/%s\n", component.GetNamespace(), component.GetName())
@@ -211,7 +212,7 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 			if err = h.PipelineClient().TektonV1().PipelineRuns(pr.GetNamespace()).Delete(context.Background(), pr.GetName(), metav1.DeleteOptions{}); err != nil {
 				return fmt.Errorf("failed to delete PipelineRun %q from %q namespace with error: %v", pr.GetName(), pr.GetNamespace(), err)
 			}
-			if sha, err = h.RetriggerComponentPipelineRun(component, pr); err != nil {
+			if *shaToUpdate, err = h.RetriggerComponentPipelineRun(component, pr); err != nil {
 				return fmt.Errorf("unable to retrigger pipelinerun for component %s:%s: %+v", component.GetNamespace(), component.GetName(), err)
 			}
 			attempts++
