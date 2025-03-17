@@ -267,7 +267,10 @@ class Something:
             return
 
         try:
-            tr_task = tr["metadata"]["labels"]["tekton.dev/pipelineTask"]
+            if tr["metadata"]["labels"]["tekton.dev/pipelineTask"] == "build-images" and tr["metadata"]["labels"]["tekton.dev/task"] == "buildah-remote-oci-ta":
+                tr_task = "-".join(tr["metadata"]["name"].split("-")[-3:])   # HACK to get "build-images-1" out of "my-comp-1-on-push-zk7rt-build-images-1"
+            else:
+                tr_task = tr["metadata"]["labels"]["tekton.dev/pipelineTask"]
             tr_pipelinerun = tr["metadata"]["labels"]["tekton.dev/pipelineRun"]
         except KeyError as e:
             logging.info(
@@ -342,7 +345,10 @@ class Something:
 
         try:
             pod_pipelinerun = pod["metadata"]["labels"]["tekton.dev/pipelineRun"]
-            pod_task = pod["metadata"]["labels"]["tekton.dev/pipelineTask"]
+            if pod["metadata"]["labels"]["tekton.dev/pipelineTask"] == "build-images" and pod["metadata"]["labels"]["tekton.dev/task"] == "buildah-remote-oci-ta":
+                pod_task = "-".join(pod["metadata"]["labels"]["tekton.dev/taskRun"].split("-")[-3:])   # HACK to get "build-images-1" out of "my-comp-1-on-push-zk7rt-build-images-1"
+            else:
+                pod_task = pod["metadata"]["labels"]["tekton.dev/pipelineTask"]
         except KeyError as e:
             logging.info(f"Pod {pod_name} missing pipelinerun or task, skipping: {e}")
             self.pod_skips += 1
