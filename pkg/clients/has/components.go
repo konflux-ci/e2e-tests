@@ -165,11 +165,10 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 	attempts := 1
 	app := component.Spec.Application
 	pr := &pipeline.PipelineRun{}
-	var shaToUpdate = &sha
 
 	for {
 		err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 30*time.Minute, true, func(ctx context.Context) (done bool, err error) {
-			pr, err = h.GetComponentPipelineRun(component.GetName(), app, component.GetNamespace(), *shaToUpdate)
+			pr, err = h.GetComponentPipelineRun(component.GetName(), app, component.GetNamespace(), sha)
 
 			if err != nil {
 				GinkgoWriter.Printf("PipelineRun has not been created yet for the Component %s/%s\n", component.GetNamespace(), component.GetName())
@@ -212,7 +211,7 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 			if err = h.PipelineClient().TektonV1().PipelineRuns(pr.GetNamespace()).Delete(context.Background(), pr.GetName(), metav1.DeleteOptions{}); err != nil {
 				return fmt.Errorf("failed to delete PipelineRun %q from %q namespace with error: %v", pr.GetName(), pr.GetNamespace(), err)
 			}
-			if *shaToUpdate, err = h.RetriggerComponentPipelineRun(component, pr); err != nil {
+			if sha, err = h.RetriggerComponentPipelineRun(component, pr); err != nil {
 				return fmt.Errorf("unable to retrigger pipelinerun for component %s:%s: %+v", component.GetNamespace(), component.GetName(), err)
 			}
 			attempts++
@@ -431,10 +430,15 @@ func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Comp
 			if !ok {
 				projectID = fmt.Sprintf("%s/%s", gitlabOrg, repoName)
 			}
-			_, err := h.GitLab.CreateFile(projectID, util.GenerateRandomString(5), "test", branchName)
+			fileInfo, err := h.GitLab.CreateFile(projectID, util.GenerateRandomString(5), "test", branchName)
 			if err != nil {
 				return "", fmt.Errorf("failed to retrigger PipelineRun %s in %s namespace: %+v", pr.GetName(), pr.GetNamespace(), err)
 			}
+			file, err := h.GitLab.GetFileMetaData(projectID, fileInfo.FilePath, fileInfo.Branch)
+			if err != nil {
+				return "", fmt.Errorf("failed to retrigger PipelineRun %s in %s namespace: %+v", pr.GetName(), pr.GetNamespace(), err)
+			}
+			sha = file.CommitID
 		} else {
 			file, err := h.Github.CreateFile(repoName, util.GenerateRandomString(5), "test", branchName)
 			if err != nil {
