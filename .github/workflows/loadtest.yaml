@@ -48,7 +48,7 @@ jobs:
       run: |
         export USER_START_INDEX=${USER_START_INDEX:-0}
         export CONCURRENCY=${CONCURRENCY:-1}
-        export USER_END_INDEX=$((USER_START_INDEX + CONCURRENCY))
+        export USER_END_INDEX=$((USER_START_INDEX + CONCURRENCY + 1))
         jq --argjson start "$USER_START_INDEX" --argjson end "$USER_END_INDEX" '.[$start:$end]' users.json > tmp_users.json && mv tmp_users.json users.json
 
     - name: Run Load Test
