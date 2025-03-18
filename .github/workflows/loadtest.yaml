@@ -44,14 +44,12 @@ jobs:
     - name: Select specific users from users.json
       working-directory: ./tests/load-tests
       env:
-        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-        MY_GITHUB_ORG: ${{ github.event.inputs.github_org }}
         SCENARIO: ${{ github.event.inputs.scenario }}
       run: |
         export USER_START_INDEX=${USER_START_INDEX:-0}
         export CONCURRENCY=${CONCURRENCY:-1}
         export USER_END_INDEX=$((USER_START_INDEX + CONCURRENCY))
-        jq --argjson start "$USER_START_INDEX" --argjson end "$USER_END_INDEX" '.[$start:$end]' users.json > users.json
+        jq --argjson start "$USER_START_INDEX" --argjson end "$USER_END_INDEX" '.[$start:$end]' users.json > tmp_users.json && mv tmp_users.json users.json
 
     - name: Run Load Test
       working-directory: ./tests/load-tests
