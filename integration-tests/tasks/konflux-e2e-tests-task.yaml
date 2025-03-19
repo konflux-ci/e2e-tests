@@ -66,6 +66,25 @@ spec:
       secret:
         secretName: konflux-test-infra
   steps:
+    - name: initialize-sealights-session
+      when:
+        - input: $(params.enable-sealights)
+          operator: in
+          values: ["true"]
+      ref:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-ci/tekton-integration-catalog.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: stepactions/sealights/initialize-session/0.1/initialize-sealights-session.yaml
+      params:
+        - name: sealights-bsid
+          value: $(params.sealights-bsid)
+        - name: test-stage
+          value: $(params.test-stage)
     - name: e2e-test
       computeResources:
         requests:
@@ -184,6 +203,8 @@ spec:
           value: $(params.test-stage)
         - name: sealights-bsid
           value: $(params.sealights-bsid)
+        - name: test-session-id
+          value: $(steps.initialize-sealights-session.results.test-session-id)
     - name: secure-push-oci
       ref:
         resolver: git
