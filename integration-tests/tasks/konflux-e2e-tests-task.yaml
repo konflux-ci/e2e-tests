@@ -79,7 +79,7 @@ spec:
           - name: revision
             value: main
           - name: pathInRepo
-            value: stepactions/sealights/initialize-session/0.1/initialize-sealights-session.yaml
+            value: stepactions/sealights/create-test-session/0.1/create-test-session.yaml
       params:
         - name: sealights-bsid
           value: $(params.sealights-bsid)
