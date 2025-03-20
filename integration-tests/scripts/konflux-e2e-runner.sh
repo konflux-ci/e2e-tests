@@ -51,7 +51,7 @@ load_envs() {
     )
 
     # Ensure SEALIGHTS variables are at least set to an empty value to avoid bash failures
-    for var in ENABLE_SL_PLUGIN SL_BSID SEALIGHTS_TOKEN SEALIGHTS_TEST_STAGE; do
+    for var in ENABLE_SL_PLUGIN SEALIGHTS_BUILD_SESSION_ID SEALIGHTS_TOKEN SEALIGHTS_TEST_STAGE; do
         export "$var"="${!var:-}"
     done
 
@@ -88,16 +88,16 @@ post_actions() {
 sealights_scan() {
     local missing_vars=()
 
-    for var in ENABLE_SL_PLUGIN SL_BSID SEALIGHTS_TOKEN SEALIGHTS_TEST_STAGE; do
+    for var in ENABLE_SL_PLUGIN SEALIGHTS_BUILD_SESSION_ID SEALIGHTS_TOKEN SEALIGHTS_TEST_STAGE; do
         [[ -z "${!var}" ]] && missing_vars+=("$var")
     done
 
     if [[ ${#missing_vars[@]} -gt 0 ]]; then
         echo "[WARN] Sealights integration will not be enabled. Missing env: ${missing_vars[*]}"
     elif [[ "$ENABLE_SL_PLUGIN" == "true" ]]; then
-        echo "[INFO] Starting scanning - bsid ${SL_BSID} test-stage ${SEALIGHTS_TEST_STAGE}"
+        echo "[INFO] Starting scanning - bsid ${SEALIGHTS_BUILD_SESSION_ID} test-stage ${SEALIGHTS_TEST_STAGE}"
         slcli config init --lang go --token "${SEALIGHTS_TOKEN}"
-        slcli scan --tests-runner --enable-ginkgo --workspacepath "./cmd" --path-to-scanner "$(which slgoagent)" --bsid "${SL_BSID}"
+        slcli scan --tests-runner --enable-ginkgo --workspacepath "./cmd" --path-to-scanner "$(which slgoagent)" --bsid "${SEALIGHTS_BUILD_SESSION_ID}"
     else
         echo "[INFO] Sealights scanning is disabled as ENABLE_SL_PLUGIN is not set to 'true'."
     fi

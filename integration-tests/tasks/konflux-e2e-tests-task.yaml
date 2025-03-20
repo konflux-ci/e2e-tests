@@ -128,7 +128,7 @@ spec:
           value: $(params.e2e-timeout)
         - name: ENABLE_SL_PLUGIN
           value: $(params.enable-sl-plugin)
-        - name: SL_BSID
+        - name: SEALIGHTS_BUILD_SESSION_ID
           value: $(params.sealights-bsid)
         - name: SEALIGHTS_TEST_STAGE
           value: $(params.test-stage)
