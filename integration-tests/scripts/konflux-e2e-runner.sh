@@ -94,10 +94,12 @@ sealights_scan() {
 
     if [[ ${#missing_vars[@]} -gt 0 ]]; then
         echo "[WARN] Sealights integration will not be enabled. Missing env: ${missing_vars[*]}"
-    else
+    elif [[ "$ENABLE_SL_PLUGIN" == "true" ]]; then
         echo "[INFO] Starting scanning - bsid ${SL_BSID} test-stage ${SEALIGHTS_TEST_STAGE}"
         slcli config init --lang go --token "${SEALIGHTS_TOKEN}"
         slcli scan --tests-runner --enable-ginkgo --workspacepath "./cmd" --path-to-scanner "$(which slgoagent)" --bsid "${SL_BSID}"
+    else
+        echo "[INFO] Sealights scanning is disabled as ENABLE_SL_PLUGIN is not set to 'true'."
     fi
 }
 
