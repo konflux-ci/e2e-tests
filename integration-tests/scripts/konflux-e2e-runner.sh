@@ -50,6 +50,11 @@ load_envs() {
         [SEALIGHTS_TOKEN]="${konflux_ci_secrets_file}/sealights-token"
     )
 
+    # Ensure SEALIGHTS variables are at least set to an empty value to avoid bash failures
+    for var in ENABLE_SL_PLUGIN SL_BSID SEALIGHTS_TOKEN SEALIGHTS_TEST_STAGE; do
+        export "$var"="${!var:-}"
+    done
+
     for var in "${!config_envs[@]}"; do
         export "$var"="${config_envs[$var]}"
     done
@@ -80,9 +85,26 @@ post_actions() {
     exit "$exit_code"
 }
 
+sealights_scan() {
+    local missing_vars=()
+
+    for var in ENABLE_SL_PLUGIN SL_BSID SEALIGHTS_TOKEN SEALIGHTS_TEST_STAGE; do
+        [[ -z "${!var}" ]] && missing_vars+=("$var")
+    done
+
+    if [[ ${#missing_vars[@]} -gt 0 ]]; then
+        echo "[WARN] Sealights integration will not be enabled. Missing env: ${missing_vars[*]}"
+    else
+        echo "[INFO] Starting scanning - bsid ${SL_BSID} test-stage ${SEALIGHTS_TEST_STAGE}"
+        slcli config init --lang go --token "${SEALIGHTS_TOKEN}"
+        slcli scan --tests-runner --enable-ginkgo --workspacepath "./cmd" --path-to-scanner "$(which slgoagent)" --bsid "${SL_BSID}"
+    fi
+}
+
 trap post_actions EXIT
 
 load_envs
+sealights_scan
 
 oc config view --minify --raw > /workspace/kubeconfig
 export KUBECONFIG=/workspace/kubeconfig

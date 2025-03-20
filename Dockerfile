@@ -1,5 +1,5 @@
+FROM quay.io/konflux-ci/tekton-integration-catalog/sealights-go:latest as sealights-agents
 FROM registry.access.redhat.com/ubi9/go-toolset:1.22.9 AS builder
-
 ENV GOBIN=$GOPATH/bin
 
 USER root
@@ -66,3 +66,5 @@ COPY --from=builder /usr/local/bin/kubectl /usr/local/bin/kubectl
 COPY --from=builder /usr/local/bin/oras /usr/local/bin/oras
 COPY --from=builder $GOBIN/ginkgo /usr/local/bin
 COPY --from=builder /konflux-e2e/cmd/cmd.test konflux-e2e.test
+COPY --from=sealights-agents /usr/local/bin/slgoagent /usr/local/bin/slgoagent
+COPY --from=sealights-agents /usr/local/bin/slcli /usr/local/bin/slcli

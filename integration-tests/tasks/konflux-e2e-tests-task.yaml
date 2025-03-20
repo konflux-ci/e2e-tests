@@ -58,6 +58,9 @@ spec:
     - name: e2e-timeout
       description: "Timeout value for running E2E script (cluster bootstrap + E2E tests)"
       default: "90m"
+    - name: enable-sl-plugin
+      description: "Enable Sealights ginkgo plugin to scan the e2e tests that will report to Sealights."
+      default: "false"
   volumes:
     - name: konflux-secret-volume
       secret:
@@ -123,6 +126,12 @@ spec:
           value: /workspace/artifact-dir
         - name: E2E_TIMEOUT
           value: $(params.e2e-timeout)
+        - name: ENABLE_SL_PLUGIN
+          value: $(params.enable-sl-plugin)
+        - name: SL_BSID
+          value: $(params.sealights-bsid)
+        - name: SEALIGHTS_TEST_STAGE
+          value: $(params.test-stage)
       onError: continue
       script: |
         #!/bin/bash
