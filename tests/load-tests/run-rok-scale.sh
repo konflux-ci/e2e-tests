@@ -1,22 +1,25 @@
 #!/bin/sh
 
-COUNT=100
+COUNT=1000
+CONCURRENCY=10
 
-date -Ins --utc >started
+function create_stuff() {
+    local u_seq="${1}"
 
-for u_seq in $( seq 0 $((COUNT-1)) ); do
+    USERNAME="test${u_seq}"
+    USEREMAIL="jhutar+${USERNAME}@redhat.com"
+    NAMESPACE="${USERNAME}-tenant"
+    APPLICATION="my-app"
+    COMPONENT="my-comp"
+    GIT_URL="https://github.com/rhtap-test-local/testrepo"
+    GIT_CONTEXT="/"
+    GIT_BRANCH="main"
 
-USERNAME="test${u_seq}"
-USEREMAIL="jhutar+${USERNAME}@redhat.com"
-NAMESPACE="${USERNAME}-tenant"
-APPLICATION="my-app"
-COMPONENT="my-comp"
-GIT_URL="https://github.com/rhtap-test-local/testrepo"
-GIT_CONTEXT="/"
-GIT_BRANCH="main"
+    start=$( date +%s )
+    echo "$( date --utc -Ins ) DEBUG Creating user ${USERNAME}"
 
-# Create user
-oc apply -f - <<EOF
+    # Create user
+    oc apply -f - <<EOF
 apiVersion: toolchain.dev.openshift.com/v1alpha1
 kind: UserSignup
 metadata:
@@ -38,8 +41,8 @@ spec:
   ###  - approved
 EOF
 
-# Create some secret
-oc apply -f - <<EOF
+    # Create some secret
+    oc apply -f - <<EOF
 apiVersion: v1
 kind: Secret
 metadata:
@@ -53,8 +56,8 @@ stringData:
   password: ...
 EOF
 
-# Create application
-oc apply -f - <<EOF
+    # Create application
+    oc apply -f - <<EOF
 apiVersion: appstudio.redhat.com/v1alpha1
 kind: Application
 metadata:
@@ -64,8 +67,8 @@ spec:
   displayName: $APPLICATION
 EOF
 
-# Create component
-oc apply -f - <<EOF
+    # Create component
+    oc apply -f - <<EOF
 apiVersion: appstudio.redhat.com/v1alpha1
 kind: Component
 metadata:
@@ -87,8 +90,8 @@ spec:
       context: $GIT_CONTEXT
 EOF
 
-# Create image repository
-oc apply -f - <<EOF
+    # Create image repository
+    oc apply -f - <<EOF
 apiVersion: appstudio.redhat.com/v1alpha1
 kind: ImageRepository
 metadata:
@@ -111,8 +114,8 @@ spec:
       title: SBOM-event-to-Bombino
 EOF
 
-# Create integration test scenario
-oc apply -f - <<EOF
+    # Create integration test scenario
+    oc apply -f - <<EOF
 apiVersion: appstudio.redhat.com/v1beta2
 kind: IntegrationTestScenario
 metadata:
@@ -136,9 +139,9 @@ spec:
     resolver: git
 EOF
 
-# Create 10 release plans
-for rp_seq in $( seq 0 9); do
-    oc apply -f - <<EOF
+    # Create 10 release plans
+    for rp_seq in $( seq 0 9); do
+        oc apply -f - <<EOF
 apiVersion: appstudio.redhat.com/v1alpha1
 kind: ReleasePlan
 metadata:
@@ -166,13 +169,32 @@ spec:
   ###releaseGracePeriodDays: <days>
   target: managed-workspace
 EOF
-done
+    done
 
+    end=$( date +%s )
+    echo "$( date --utc -Ins ) DEBUG Created user ${USERNAME} in $(( $end - $start )) seconds"
+}
+
+
+function pwait() {
+    while [[ $(jobs -p -r | wc -l) -ge $1 ]]; do
+        echo "$( date --utc -Ins ) DEBUG Wating for one job to finish"
+        wait -n
+    done
+}
+
+
+date -Ins --utc >started
+
+for u_seq in $( seq 0 $((COUNT-1)) ); do
+    create_stuff "${u_seq}" &
+    pwait $CONCURRENCY
 done
+wait
 
 date -Ins --utc >ended
 
 
 # Fake files to make collect script to pass
 touch load-test-timings.csv
-echo '{"COUNT":'"$COUNT"'}' >load-test-options.json
+echo '{"COUNT":'"$COUNT"',"CONCURRENCY":'"$CONCURRENCY"'}' >load-test-options.json
