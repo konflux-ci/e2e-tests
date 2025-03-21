@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 COUNT=1000
 CONCURRENCY=10
@@ -45,7 +45,7 @@ EOF
     ns_start=$( date +%s )
     while true; do
         ns_now=$( date +%s )
-        if [ $(( $ns_now - $ns_start )) -ge 100 ]; then
+        if [ $(( ns_now - ns_start )) -ge 100 ]; then
             echo "$( date --utc -Ins ) WARNING Failed to create ${NAMESPACE} namespace in time, giving up"
             return
         fi
@@ -184,7 +184,7 @@ EOF
     done
 
     end=$( date +%s )
-    echo "$( date --utc -Ins ) DEBUG Created user ${USERNAME} in $(( $end - $start )) seconds"
+    echo "$( date --utc -Ins ) DEBUG Created user ${USERNAME} in $(( end - start )) seconds"
 }
 
 
