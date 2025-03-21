@@ -51,7 +51,7 @@ load_envs() {
     )
 
     # Ensure SEALIGHTS variables are at least set to an empty value to avoid bash failures
-    for var in ENABLE_SL_PLUGIN SEALIGHTS_BUILD_SESSION_ID SEALIGHTS_TOKEN SEALIGHTS_TEST_STAGE; do
+    for var in ENABLE_SL_PLUGIN SEALIGHTS_BUILD_SESSION_ID SEALIGHTS_TOKEN SEALIGHTS_TEST_STAGE SEALIGHTS_TEST_SELECTION; do
         export "$var"="${!var:-}"
     done
 
@@ -88,7 +88,7 @@ post_actions() {
 sealights_scan() {
     local missing_vars=()
 
-    for var in ENABLE_SL_PLUGIN SEALIGHTS_BUILD_SESSION_ID SEALIGHTS_TOKEN SEALIGHTS_TEST_STAGE; do
+    for var in ENABLE_SL_PLUGIN SEALIGHTS_BUILD_SESSION_ID SEALIGHTS_TOKEN SEALIGHTS_TEST_STAGE SEALIGHTS_TEST_SELECTION; do
         [[ -z "${!var}" ]] && missing_vars+=("$var")
     done
 
