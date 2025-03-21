@@ -8,10 +8,10 @@ import (
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
-	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 	"github.com/devfile/library/v2/pkg/util"
@@ -27,9 +27,9 @@ import (
 )
 
 const (
-	multiarchCatalogPathInRepo  = "pipelines/managed/rh-advisories/rh-advisories.yaml"
-	multiarchGitSourceURL       = "https://github.com/redhat-appstudio-qe/multi-platform-test-prod"
-	multiarchGitSrcSHA          = "fd4b6c28329ab3df77e7ad7beebac1829836561d"
+	multiarchCatalogPathInRepo = "pipelines/managed/rh-advisories/rh-advisories.yaml"
+	multiarchGitSourceURL      = "https://github.com/redhat-appstudio-qe/multi-platform-test-prod"
+	multiarchGitSrcSHA         = "fd4b6c28329ab3df77e7ad7beebac1829836561d"
 )
 
 var multiarchComponentName = "multiarch-comp-" + util.GenerateRandomString(4)
@@ -222,7 +222,7 @@ func createMultiArchReleasePlanAdmission(multiarchRPAName string, managedFw fram
 				{
 					"name":       multiarchComponentName,
 					"repository": "registry.stage.redhat.io/rhtap/konflux-release-e2e",
-					"tags":       []string{"latest", "latest-{{ timestamp }}", "testtag",
+					"tags": []string{"latest", "latest-{{ timestamp }}", "testtag",
 						"testtag-{{ timestamp }}", "testtag2", "testtag2-{{ timestamp }}"},
 				},
 			},
@@ -236,7 +236,7 @@ func createMultiArchReleasePlanAdmission(multiarchRPAName string, managedFw fram
 		},
 		"releaseNotes": map[string]interface{}{
 			"cpe":             "cpe:/a:example.com",
-			"product_id":      555,
+			"product_id":      []int{555},
 			"product_name":    "test product",
 			"product_stream":  "rhtas-tp1",
 			"product_version": "v1.0",
