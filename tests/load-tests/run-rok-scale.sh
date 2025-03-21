@@ -1,7 +1,7 @@
 #!/bin/bash
 
 COUNT=1000
-CONCURRENCY=10
+CONCURRENCY=20
 
 function create_stuff() {
     local u_seq="${1}"
