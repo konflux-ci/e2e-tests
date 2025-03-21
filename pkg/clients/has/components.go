@@ -36,7 +36,7 @@ const (
 func (h *HasController) GetComponent(name string, namespace string) (*appservice.Component, error) {
 	component := &appservice.Component{}
 	if err := h.KubeRest().Get(context.Background(), types.NamespacedName{Name: name, Namespace: namespace}, component); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error fetching component %s in namespace %s, Error: %v", name, namespace, err)
 	}
 
 	return component, nil
