@@ -61,6 +61,9 @@ spec:
     - name: enable-sl-plugin
       description: "Enable Sealights ginkgo plugin to scan the e2e tests that will report to Sealights."
       default: "false"
+    - name: sealights-test-selection
+      description: "Sealights test selection feature is disabled by default. This feature allow sealights ginkgo plugin to run only tests based on code changes."
+      default: "false"
   volumes:
     - name: konflux-secret-volume
       secret:
@@ -132,6 +135,8 @@ spec:
           value: $(params.sealights-bsid)
         - name: SEALIGHTS_TEST_STAGE
           value: $(params.test-stage)
+        - name: SEALIGHTS_TEST_SELECTION
+          value: $(params.sealights-test-selection)
       onError: continue
       script: |
         #!/bin/bash
