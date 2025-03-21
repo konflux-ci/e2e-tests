@@ -41,6 +41,18 @@ spec:
   ###  - approved
 EOF
 
+    # Wait for namespace to be created
+    ns_start=$( date +%s )
+    while true; do
+        ns_now=$( date +%s )
+        if [ $(( $ns_now - $ns_start )) -ge 100 ]; then
+            echo "$( date --utc -Ins ) WARNING Failed to create ${NAMESPACE} namespace in time, giving up"
+            return
+        fi
+        oc get "namespace/${NAMESPACE}" -o name && break
+        sleep 3
+    done
+
     # Create some secret
     oc apply -f - <<EOF
 apiVersion: v1
