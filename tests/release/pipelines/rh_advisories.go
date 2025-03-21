@@ -8,10 +8,10 @@ import (
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
-	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 	"github.com/devfile/library/v2/pkg/util"
@@ -28,7 +28,7 @@ import (
 
 const (
 	advsServiceAccountName = "release-service-account"
-	advsCatalogPathInRepo  = "pipelines/managed/rh-advisories/rh-advisories.yaml"
+	advsCatalogPathInRepo  = "pipelines/managed/rh-advisories/rh-advisories-oci-ta.yaml"
 	advsGitSourceURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic-release"
 	advsGitSrcSHA          = "33ff89edf85fb01a37d3d652d317080223069fc7"
 )
@@ -75,7 +75,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 				"sso_token":   constants.ATLAS_STAGE_TOKEN_ENV,
 			}
 			atlasAWSFieldEnvMap := map[string]string{
-				"atlas-aws-access-key-id": constants.ATLAS_AWS_ACCESS_KEY_ID_ENV,
+				"atlas-aws-access-key-id":     constants.ATLAS_AWS_ACCESS_KEY_ID_ENV,
 				"atlas-aws-secret-access-key": constants.ATLAS_AWS_ACCESS_SECRET_ENV,
 			}
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "atlas-staging-sso-secret", atlasFieldEnvMap)
@@ -208,10 +208,10 @@ func createADVSReleasePlan(advsReleasePlanName string, devFw framework.Framework
 			"solution":    "some solution",
 			"synopsis":    "test synopsis",
 			"topic":       "test topic",
-			"cves":        []map[string]interface{}{
+			"cves": []map[string]interface{}{
 				{
-					"key":  "CVE-2024-8260",
-					"component" : advsComponentName,
+					"key":       "CVE-2024-8260",
+					"component": advsComponentName,
 				},
 			},
 		},
