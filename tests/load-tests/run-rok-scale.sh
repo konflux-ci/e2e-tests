@@ -1,6 +1,10 @@
 #!/bin/sh
 
-for u_seq in $( seq 0 99 ); do
+COUNT=100
+
+date -Ins --utc >started
+
+for u_seq in $( seq 0 $((COUNT-1)) ); do
 
 USERNAME="test${u_seq}"
 USEREMAIL="jhutar+${USERNAME}@redhat.com"
@@ -165,3 +169,10 @@ EOF
 done
 
 done
+
+date -Ins --utc >ended
+
+
+# Fake files to make collect script to pass
+touch load-test-timings.csv
+echo '{"COUNT":'"$COUNT"'}' >load-test-options.json
