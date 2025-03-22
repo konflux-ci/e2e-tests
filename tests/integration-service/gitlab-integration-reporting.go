@@ -110,7 +110,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 					},
 				}
 				// get the build pipeline bundle annotation
-				buildPipelineAnnotation := build.GetDockerBuildPipelineBundle()
+				buildPipelineAnnotation := build.GetDockerBuildPipelineBundleAnnotation(constants.DockerBuild)
 				// Create a component with Git Source URL, a specified git branch
 				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())

@@ -13,6 +13,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
+
 	tektonpipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
@@ -23,20 +24,29 @@ const (
 	testBundle   = "quay.io/konflux-ci/tekton-catalog/task-buildah-min:0.4"
 )
 
-func GetDockerBuildPipelineBundle() map[string]string {
-	var buildPipelineAnnotation map[string]string
-	customDockerBuildBundle := os.Getenv(constants.CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE_ENV)
-	if customDockerBuildBundle != "" {
-		buildPipelineAnnotation = map[string]string{
-			"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"docker-build", "bundle": "%s"}`, customDockerBuildBundle),
-		}
-	} else {
-		buildPipelineAnnotation = constants.DefaultDockerBuildPipelineBundle
+func GetDockerBuildPipelineBundleAnnotation(buildPipelineName constants.BuildPipelineType) map[string]string {
+	var bundleVersion string
+
+	switch buildPipelineName {
+	case constants.DockerBuild:
+		bundleVersion = os.Getenv(constants.CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE_ENV)
+	case constants.DockerBuildOciTA:
+		bundleVersion = os.Getenv(constants.CUSTOM_DOCKER_BUILD_OCI_TA_PIPELINE_BUNDLE_ENV)
+	case constants.DockerBuildMultiPlatformOciTa:
+		bundleVersion = os.Getenv(constants.CUSTOM_DOCKER_BUILD_OCI_MULTI_PLATFORM_TA_PIPELINE_BUNDLE_ENV)
+	case constants.FbcBuilder:
+		bundleVersion = os.Getenv(constants.CUSTOM_FBC_BUILDER_PIPELINE_BUNDLE_ENV)
 	}
-	return buildPipelineAnnotation
+	if bundleVersion == "" {
+		bundleVersion = "latest"
+	}
+
+	return map[string]string{
+		"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"%s", "bundle": "%s"}`, buildPipelineName, bundleVersion),
+	}
 }
 
-func CreateCustomBuildBundle(pipelineName string) (string, error) {
+func CreateCustomBuildBundle(pipelineName constants.BuildPipelineType) (string, error) {
 	var tektonObj runtime.Object
 	var bundleParam *tektonpipeline.Param
 	var nameParam *tektonpipeline.Param

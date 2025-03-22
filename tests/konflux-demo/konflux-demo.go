@@ -102,6 +102,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 					_, err = kubeadminClient.CommonController.CreateTestNamespace(userNamespace)
 				}
 				managedNamespace = userNamespace + "-managed"
+				_, err = kubeadminClient.CommonController.CreateTestNamespace(managedNamespace)
 
 				// Component config
 				componentName = fmt.Sprintf("%s-%s", appSpec.ComponentSpec.Name, util.GenerateRandomString(4))
@@ -123,7 +124,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 				createReleaseConfig(kubeadminClient, managedNamespace, userNamespace, appSpec.ComponentSpec.Name, appSpec.ApplicationName, sharedSecret.Data[".dockerconfigjson"])
 
 				// get the build pipeline bundle annotation
-				buildPipelineAnnotation = build.GetDockerBuildPipelineBundle()
+				buildPipelineAnnotation = build.GetDockerBuildPipelineBundleAnnotation(appSpec.ComponentSpec.BuildPipelineType)
 
 			})
 
@@ -406,14 +407,16 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 
 func createReleaseConfig(kubeadminClient *framework.ControllerHub, managedNamespace, userNamespace, componentName, appName string, secretData []byte) {
 	var err error
-	_, err = kubeadminClient.CommonController.CreateTestNamespace(managedNamespace)
-	Expect(err).ShouldNot(HaveOccurred())
 
 	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "release-pull-secret", Namespace: managedNamespace},
 		Data: map[string][]byte{".dockerconfigjson": secretData},
 		Type: corev1.SecretTypeDockerConfigJson,
 	}
 	_, err = kubeadminClient.CommonController.CreateSecret(managedNamespace, secret)
+	if k8sErrors.IsAlreadyExists(err) {
+		GinkgoWriter.Printf("the secret '%s' in namespace '%s' already exists - skipping creation of release config\n", secret.GetName(), managedNamespace)
+		return
+	}
 	Expect(err).ShouldNot(HaveOccurred())
 
 	managedServiceAccount, err := kubeadminClient.CommonController.CreateServiceAccount("release-service-account", managedNamespace, []corev1.ObjectReference{{Name: secret.Name}}, nil)
