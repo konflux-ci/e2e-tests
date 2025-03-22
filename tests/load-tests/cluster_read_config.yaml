@@ -209,7 +209,34 @@
   monitoring_step: {{ step }}
 {%- endmacro %}
 
-{{ monitor_pod('openshift-pipelines', 'tekton-pipelines-controller', 15, '-[0-9]+') }}
-{{ monitor_pod('tekton-results', 'tekton-results-watcher', 1, '-.*') }}
+{{ monitor_pod('application-service', 'application-service-controller-manager', 15, pod_suffix_regex='-[0-9a-z-]+') }}
+{{ monitor_pod('build-service', 'build-service-controller-manager', 15, pod_suffix_regex='-[0-9a-z-]+') }}
+{{ monitor_pod('image-controller', 'image-controller-controller-manager', 15, pod_suffix_regex='-[0-9a-z-]+') }}
+{{ monitor_pod('integration-service', 'integration-service-controller-manager', 15, pod_suffix_regex='-[0-9a-z-]+') }}
+{{ monitor_pod('jvm-build-service', 'hacbs-jvm-operator', 15, pod_suffix_regex='-[0-9a-z-]+') }}
+{{ monitor_pod('multi-platform-controller', 'multi-platform-controller', 15, pod_suffix_regex='-[0-9a-z-]+') }}
+{{ monitor_pod('multi-platform-controller', 'multi-platform-otp-server', 15, pod_suffix_regex='-[0-9a-z-]+') }}
+{{ monitor_pod('notification-controller', 'notification-controller-controller-manager', 15, pod_suffix_regex='-[0-9a-z-]+') }}
 {{ monitor_pod('openshift-etcd', 'etcd', 15, pod_suffix_regex='-ip-.+') }}
+{{ monitor_pod('openshift-pipelines', 'pipeline-metrics-exporter', 15, '-[0-9a-z-]+') }}
+{{ monitor_pod('openshift-pipelines', 'pipelines-as-code-controller', 15, '-[0-9a-z-]+') }}
+{{ monitor_pod('openshift-pipelines', 'pipelines-as-code-watcher', 15, '-[0-9a-z-]+') }}
+{{ monitor_pod('openshift-pipelines', 'pipelines-as-code-webhook', 15, '-[0-9a-z-]+') }}
+{{ monitor_pod('openshift-pipelines', 'pipelines-console-plugin', 15, '-[0-9a-z-]+') }}
+{{ monitor_pod('openshift-pipelines', 'tekton-chains-controller', 15, '-[0-9a-z-]+') }}
+{{ monitor_pod('openshift-pipelines', 'tekton-events-controller', 15, '-[0-9a-z-]+') }}
+{{ monitor_pod('openshift-pipelines', 'tekton-operator-proxy-webhook', 15, '-[0-9a-z-]+') }}
+{{ monitor_pod('openshift-pipelines', 'tekton-pipelines-controller', 15, '-[0-9]+') }}
+{{ monitor_pod('openshift-pipelines', 'tekton-pipelines-remote-resolvers', 15, '-[0-9]+') }}
+{{ monitor_pod('openshift-pipelines', 'tekton-triggers-controller', 15, '-[0-9a-z-]+') }}
+{{ monitor_pod('openshift-pipelines', 'tekton-triggers-core-interceptors', 15, '-[0-9a-z-]+') }}
+{{ monitor_pod('openshift-pipelines', 'tekton-triggers-webhook', 15, '-[0-9a-z-]+') }}
+{{ monitor_pod('openshift-pipelines', 'tkn-cli-serve', 15, '-[0-9a-z-]+') }}
+{{ monitor_pod('project-controller', 'project-controller-controller-manager', 15, pod_suffix_regex='-[0-9a-z-]+') }}
+{{ monitor_pod('release-service', 'release-service-controller-manager', 15, pod_suffix_regex='-[0-9a-z-]+') }}
+{{ monitor_pod('release-service', 'release-service-monitor-deployment', 15, pod_suffix_regex='-[0-9a-z-]+') }}
+{{ monitor_pod('tekton-logging', 'vector-tekton-logs-collector', 15, '-.*') }}
+{{ monitor_pod('tekton-results', 'tekton-results-api', 15, '-.*') }}
+{{ monitor_pod('tekton-results', 'tekton-results-api-for-watcher', 15, '-.*') }}
+{{ monitor_pod('tekton-results', 'tekton-results-watcher', 15, '-.*') }}
 {{ monitor_pod_container('tekton-results', 'tekton-results-watcher', 'watcher', 1, '-.*') }}
