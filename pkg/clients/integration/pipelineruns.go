@@ -13,6 +13,7 @@ import (
 	integrationv1beta2 "github.com/konflux-ci/integration-service/api/v1beta2"
 	. "github.com/onsi/ginkgo/v2"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -20,6 +21,7 @@ import (
 	"knative.dev/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"github.com/konflux-ci/operator-toolkit/metadata"
 )
 
 // CreateIntegrationPipelineRun creates new integrationPipelineRun.
@@ -293,4 +295,22 @@ func (i *IntegrationController) WaitForBuildPipelineToBeFinished(testNamespace, 
 		}
 		return false, nil
 	})
+}
+
+func (i *IntegrationController) RemoveSnapshotAnnotationsFromPipelineRun(pipelineRun *pipeline.PipelineRun) error {
+	ctx := context.Background()
+	patch := client.MergeFrom(pipelineRun.DeepCopy())
+	kubeClient := i.KubeRest()
+	if err := metadata.DeleteAnnotation(&pipelineRun.ObjectMeta, constants.SnapshotCreationReportAnnotation); err != nil {
+		return err
+	}
+	if err := metadata.DeleteAnnotation(&pipelineRun.ObjectMeta, constants.BuildPipelineRunSnapshotAnnotation); err != nil {
+		return err
+	}
+	err := kubeClient.Patch(ctx, pipelineRun, patch)
+	if err != nil {
+		return fmt.Errorf("error occurred while patching the updated PipelineRun after annotation removal: %v", err)
+	}
+
+	return nil
 }
