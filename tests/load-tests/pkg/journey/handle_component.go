@@ -1,19 +1,25 @@
 package journey
 
-import "encoding/json"
-import "fmt"
-import "regexp"
-import "strconv"
-import "strings"
-import "time"
+import (
+	"encoding/json"
+	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
 
-import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+	logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
-import constants "github.com/konflux-ci/e2e-tests/pkg/constants"
-import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
-import utils "github.com/konflux-ci/e2e-tests/pkg/utils"
-import appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
-import pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	constants "github.com/konflux-ci/e2e-tests/pkg/constants"
+
+	framework "github.com/konflux-ci/e2e-tests/pkg/framework"
+
+	utils "github.com/konflux-ci/e2e-tests/pkg/utils"
+
+	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
+
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+)
 
 // Parse PR number out of PR url
 func getPRNumberFromPRUrl(prUrl string) (int, error) {
@@ -78,7 +84,7 @@ func getPaCPull(annotations map[string]string) (string, error) {
 
 func createComponent(f *framework.Framework, namespace, name, repoUrl, repoRevision, containerContext, containerFile, buildPipelineSelector, appName string, mintmakerDisabled bool) error {
 	// Prepare annotations to add to component
-	annotationsMap := constants.DefaultDockerBuildPipelineBundle
+	annotationsMap := constants.DefaultDockerBuildPipelineBundleAnnotation
 	if buildPipelineSelector != "" {
 		// Custom build pipeline selector
 		annotationsMap["build.appstudio.openshift.io/pipeline"] = fmt.Sprintf(`{"name": "docker-build", "bundle": "%s"}`, buildPipelineSelector)
@@ -236,7 +242,7 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 
 	// Delete pipeline run we do not care about
 	for file, sha := range *shaMap {
-		if ! strings.HasSuffix(file, "-push.yaml") {
+		if !strings.HasSuffix(file, "-push.yaml") {
 			err = listAndDeletePipelineRunsWithTimeout(f, namespace, appName, compName, sha, 1)
 			if err != nil {
 				return fmt.Errorf("Error deleting on-push merged PipelineRun in namespace %s: %v", namespace, err)
@@ -293,11 +299,11 @@ func HandleComponent(ctx *PerComponentContext) error {
 	if ctx.ParentContext.ParentContext.Opts.PipelineRepoTemplating {
 		// Placeholders for template multi-arch PaC pipeline files
 		placeholders := &map[string]string{
-			"NAMESPACE": ctx.ParentContext.ParentContext.Namespace,
-			"QUAY_REPO": ctx.ParentContext.ParentContext.Opts.QuayRepo,
+			"NAMESPACE":   ctx.ParentContext.ParentContext.Namespace,
+			"QUAY_REPO":   ctx.ParentContext.ParentContext.Opts.QuayRepo,
 			"APPLICATION": ctx.ParentContext.ApplicationName,
-			"COMPONENT": ctx.ComponentName,
-			"BRANCH": ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision,
+			"COMPONENT":   ctx.ComponentName,
+			"BRANCH":      ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision,
 		}
 
 		// Skip what we do not care about

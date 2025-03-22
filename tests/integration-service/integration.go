@@ -442,7 +442,7 @@ func createComponent(f framework.Framework, testNamespace, applicationName, comp
 	Expect(err).ShouldNot(HaveOccurred())
 
 	// get the build pipeline bundle annotation
-	buildPipelineAnnotation := build.GetDockerBuildPipelineBundle()
+	buildPipelineAnnotation := build.GetDockerBuildPipelineBundleAnnotation(constants.DockerBuild)
 
 	componentObj := appstudioApi.ComponentSpec{
 		ComponentName: componentName,
@@ -465,7 +465,7 @@ func createComponent(f framework.Framework, testNamespace, applicationName, comp
 
 func createComponentWithCustomBranch(f framework.Framework, testNamespace, applicationName, componentName, componentRepoURL string, toBranchName string, contextDir string) *appstudioApi.Component {
 	// get the build pipeline bundle annotation
-	buildPipelineAnnotation := build.GetDockerBuildPipelineBundle()
+	buildPipelineAnnotation := build.GetDockerBuildPipelineBundleAnnotation(constants.DockerBuild)
 	dockerFileURL := constants.DockerFilePath
 	if contextDir == "" {
 		dockerFileURL = "Dockerfile"
