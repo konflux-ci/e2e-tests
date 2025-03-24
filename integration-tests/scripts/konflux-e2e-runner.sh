@@ -88,6 +88,8 @@ post_actions() {
 sealights_scan() {
     local missing_vars=()
 
+    echo -e "[INFO] Sealights plugin enablement: ${ENABLE_SL_PLUGIN} - test selection enablement: ${SEALIGHTS_TEST_SELECTION}"
+
     for var in ENABLE_SL_PLUGIN SEALIGHTS_BUILD_SESSION_ID SEALIGHTS_TOKEN SEALIGHTS_TEST_STAGE SEALIGHTS_TEST_SELECTION; do
         [[ -z "${!var}" ]] && missing_vars+=("$var")
     done
@@ -95,7 +97,7 @@ sealights_scan() {
     if [[ ${#missing_vars[@]} -gt 0 ]]; then
         echo "[WARN] Sealights integration will not be enabled. Missing env: ${missing_vars[*]}"
     elif [[ "$ENABLE_SL_PLUGIN" == "true" ]]; then
-        echo "[INFO] Starting scanning - bsid ${SEALIGHTS_BUILD_SESSION_ID} test-stage ${SEALIGHTS_TEST_STAGE}"
+        echo "[INFO] Starting scanning - bsid ${SEALIGHTS_BUILD_SESSION_ID} test-stage ${SEALIGHTS_TEST_STAGE} test-selection enabled: ${SEALIGHTS_TEST_SELECTION} "
         slcli config init --lang go --token "${SEALIGHTS_TOKEN}"
         slcli scan --tests-runner --enable-ginkgo --workspacepath "./cmd" --path-to-scanner "$(which slgoagent)" --bsid "${SEALIGHTS_BUILD_SESSION_ID}"
     else
