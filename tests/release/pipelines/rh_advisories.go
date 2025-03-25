@@ -214,6 +214,14 @@ func createADVSReleasePlan(advsReleasePlanName string, devFw framework.Framework
 					"component": advsComponentName,
 				},
 			},
+			"issues": map[string]interface{}{
+				"fixed": []map[string]interface{}{
+					{
+						"id":     "RELEASE-1401",
+						"source": "issues.redhat.com",
+					},
+				},
+			},
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
