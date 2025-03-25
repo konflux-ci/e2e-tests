@@ -283,9 +283,10 @@ func CheckReleaseStatus(releaseCR *releaseApi.Release) error {
 	return nil
 }
 
-// CreateOpaqueSecret creates a k8s Secret in a workspace if it doesn't exist.
-// It populates the Secret data fields based on the mapping of fields to
-// environment variables containing the base64 encoded field data.
+// CreateOpaqueSecret creates a k8s Secret in a workspace if it doesn't exist
+// and updates it if a Secret with the same name exists. It populates the
+// Secret data fields based on the mapping of fields to environment variables
+// containing the base64 encoded field data.
 func CreateOpaqueSecret(
 	fw *framework.Framework,
 	namespace, secretName string,
@@ -303,18 +304,23 @@ func CreateOpaqueSecret(
 		secretData[field] = decodedValue
 	}
 
-	secret, err := fw.AsKubeAdmin.CommonController.GetSecret(namespace, secretName)
-	if secret == nil || errors.IsNotFound(err) {
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      secretName,
-				Namespace: namespace,
-			},
-			Type: corev1.SecretTypeOpaque,
-			Data: secretData,
-		}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: namespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: secretData,
+	}
 
+	_, err := fw.AsKubeAdmin.CommonController.GetSecret(namespace, secretName)
+	if errors.IsNotFound(err) {
 		_, err = fw.AsKubeAdmin.CommonController.CreateSecret(namespace, secret)
 		Expect(err).ToNot(HaveOccurred())
+		return
 	}
+	Expect(err).ToNot(HaveOccurred())
+
+	_, err = fw.AsKubeAdmin.CommonController.UpdateSecret(namespace, secret)
+	Expect(err).ToNot(HaveOccurred())
 }
