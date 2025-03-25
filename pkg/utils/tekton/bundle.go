@@ -11,6 +11,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/tektoncd/cli/pkg/bundle"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"github.com/tektoncd/pipeline/pkg/remote/oci"
@@ -31,12 +32,12 @@ type PipelineRef struct {
 }
 
 // ExtractTektonObjectFromBundle extracts specified Tekton object from specified bundle reference
-func ExtractTektonObjectFromBundle(bundleRef, kind, name string) (runtime.Object, error) {
+func ExtractTektonObjectFromBundle(bundleRef, kind string, name constants.BuildPipelineType) (runtime.Object, error) {
 	var obj runtime.Object
 	var err error
 
 	resolver := oci.NewResolver(bundleRef, authn.DefaultKeychain)
-	if obj, _, err = resolver.Get(context.Background(), kind, name); err != nil {
+	if obj, _, err = resolver.Get(context.Background(), kind, string(name)); err != nil {
 		return nil, fmt.Errorf("failed to fetch the tekton object %s with name %s: %v", kind, name, err)
 	}
 	return obj, nil
@@ -66,7 +67,7 @@ func GetBundleRef(pipelineRef *pipeline.PipelineRef) string {
 
 // GetDefaultPipelineBundleRef gets the specific Tekton pipeline bundle reference from a Build pipeline config
 // ConfigMap (in a YAML format) from a URL specified in the parameter
-func GetDefaultPipelineBundleRef(buildPipelineConfigConfigMapYamlURL, name string) (string, error) {
+func GetDefaultPipelineBundleRef(buildPipelineConfigConfigMapYamlURL string, name constants.BuildPipelineType) (string, error) {
 	request, err := http.NewRequest("GET", buildPipelineConfigConfigMapYamlURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("error creating GET request: %s", err)
@@ -95,7 +96,7 @@ func GetDefaultPipelineBundleRef(buildPipelineConfigConfigMapYamlURL, name strin
 
 	for i := range bpc.Pipelines {
 		pipeline := bpc.Pipelines[i]
-		if pipeline.Name == name {
+		if pipeline.Name == string(name) {
 			return pipeline.Bundle, nil
 		}
 	}

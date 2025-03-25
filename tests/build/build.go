@@ -91,7 +91,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 			gitClient, helloWorldComponentGitSourceURL, helloWorldRepository = setupGitProvider(f, gitProvider)
 			// get the build pipeline bundle annotation
-			buildPipelineAnnotation = build.GetDockerBuildPipelineBundle()
+			buildPipelineAnnotation = build.GetDockerBuildPipelineBundleAnnotation(constants.DockerBuild)
 
 			err = gitClient.CreateBranch(helloWorldRepository, helloWorldComponentDefaultBranch, helloWorldComponentRevision, componentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
@@ -673,7 +673,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			multiComponentPRBranchName = fmt.Sprintf("%s-%s", "pr-branch", util.GenerateRandomString(6))
 
 			// get the build pipeline bundle annotation
-			buildPipelineAnnotation = build.GetDockerBuildPipelineBundle()
+			buildPipelineAnnotation = build.GetDockerBuildPipelineBundleAnnotation(constants.DockerBuild)
 
 		})
 
@@ -920,7 +920,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 			// use custom bundle if env defined
 			// get the build pipeline bundle annotation
-			buildPipelineAnnotation = build.GetDockerBuildPipelineBundle()
+			buildPipelineAnnotation = build.GetDockerBuildPipelineBundleAnnotation(constants.DockerBuild)
 
 		})
 
@@ -1093,7 +1093,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			componentName = fmt.Sprintf("%s-%s", "test-annotations", util.GenerateRandomString(6))
 
 			// get the build pipeline bundle annotation
-			buildPipelineAnnotation = build.GetDockerBuildPipelineBundle()
+			buildPipelineAnnotation = build.GetDockerBuildPipelineBundleAnnotation(constants.DockerBuild)
 
 		})
 
@@ -1192,7 +1192,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// get the build pipeline bundle annotation
-			buildPipelineAnnotation = build.GetDockerBuildPipelineBundle()
+			buildPipelineAnnotation = build.GetDockerBuildPipelineBundleAnnotation(constants.DockerBuild)
 		})
 
 		AfterAll(func() {
@@ -1268,7 +1268,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// get the build pipeline bundle annotation
-			buildPipelineAnnotation = build.GetDockerBuildPipelineBundle()
+			buildPipelineAnnotation = build.GetDockerBuildPipelineBundleAnnotation(constants.DockerBuild)
 
 			componentObj := appservice.ComponentSpec{
 				ComponentName: componentName,
@@ -1445,7 +1445,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			Expect(err).NotTo(HaveOccurred())
 
 			// get the build pipeline bundle annotation
-			buildPipelineAnnotation = build.GetDockerBuildPipelineBundle()
+			buildPipelineAnnotation = build.GetDockerBuildPipelineBundleAnnotation(constants.DockerBuild)
 
 			if gitProvider == git.GitLabProvider {
 				gitlabToken := utils.GetEnv(constants.GITLAB_BOT_TOKEN_ENV, "")

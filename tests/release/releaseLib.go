@@ -6,21 +6,21 @@ import (
 	"os"
 	"time"
 
+	"github.com/devfile/library/v2/pkg/util"
+	ghub "github.com/google/go-github/v44/github"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
-	"github.com/devfile/library/v2/pkg/util"
-	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
-	ghub "github.com/google/go-github/v44/github"
-	"knative.dev/pkg/apis"
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/apis"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -95,8 +95,8 @@ func CreateComponentWithNewBranch(f framework.Framework, testNamespace, applicat
 	Expect(err).ShouldNot(HaveOccurred())
 
 	if buildPipelineBundle["build.appstudio.openshift.io/pipeline"] != string(`{"name": "fbc-builder", "bundle": "latest"}`) {
-		// deal with some custom pipeline bundle there 
-		buildPipelineAnnotation = build.GetDockerBuildPipelineBundle()
+		// deal with some custom pipeline bundle there
+		buildPipelineAnnotation = build.GetDockerBuildPipelineBundleAnnotation(constants.DockerBuild)
 	} else {
 		buildPipelineAnnotation = constants.DefaultFbcBuilderPipelineBundle
 	}
@@ -124,11 +124,11 @@ func CreateComponentWithNewBranch(f framework.Framework, testNamespace, applicat
 
 func CreatePushSnapshot(devWorkspace, devNamespace, appName, compRepoName, pacBranchName string, pipelineRun *pipeline.PipelineRun, component *appservice.Component) *appservice.Snapshot {
 	var (
-		prSHA string
+		prSHA       string
 		mergeResult *ghub.PullRequestMergeResult
-		prNumber int
-		err error
-		snapshot *appservice.Snapshot
+		prNumber    int
+		err         error
+		snapshot    *appservice.Snapshot
 	)
 
 	devFw := NewFramework(devWorkspace)
@@ -195,8 +195,8 @@ func CreatePushSnapshot(devWorkspace, devNamespace, appName, compRepoName, pacBr
 			return nil
 		} else {
 			if err = devFw.AsKubeDeveloper.TektonController.StorePipelineRun(component.GetName(), pipelineRun); err != nil {
-                                GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
-                        }
+				GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
+			}
 			prLogs := ""
 			if prLogs, err = tekton.GetFailedPipelineRunLogs(devFw.AsKubeAdmin.ReleaseController.KubeRest(),
 				devFw.AsKubeAdmin.ReleaseController.KubeInterface(), pipelineRun); err != nil {
