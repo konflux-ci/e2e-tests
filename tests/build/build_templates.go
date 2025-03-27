@@ -664,8 +664,14 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 							Expect(err).NotTo(HaveOccurred())
 						}(pr)
 
-						err = kubeadminClient.TektonController.AddFinalizerToPipelineRun(pr, constants.E2ETestFinalizerName)
-						Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error while adding finalizer %q to the pipelineRun %q", constants.E2ETestFinalizerName, pr.GetName()))
+						Eventually(func() bool {
+							// Refresh PipelineRun for latest results before add finalizer
+							pr, err = kubeadminClient.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
+							Expect(err).NotTo(HaveOccurred())
+							err = kubeadminClient.TektonController.AddFinalizerToPipelineRun(pr, constants.E2ETestFinalizerName)
+							Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error while adding finalizer %q to the pipelineRun %q", constants.E2ETestFinalizerName, pr.GetName()))
+							return errors.IsNotFound(err)
+						}, time.Minute*5, time.Second*30).Should(BeTrue(), fmt.Sprintf("timed out when adding finalizer %q to the pipelineRun %q", constants.E2ETestFinalizerName, pr.GetName()))
 
 						Expect(kubeadminClient.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(Succeed())
 
@@ -675,15 +681,13 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						GinkgoWriter.Printf("The PipelineRun %s in namespace %s has status.conditions: \n%#v\n", pr.Name, pr.Namespace, pr.Status.Conditions)
 
 						// The UI uses this label to display additional information.
-						// Enable this check, when the issue is fixed: https://issues.redhat.com/browse/KONFLUX-5787
-						// Expect(pr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
+						Expect(pr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
 
 						// The UI uses this label to display additional information.
 						tr, err := kubeadminClient.TektonController.GetTaskRunFromPipelineRun(kubeadminClient.CommonController.KubeRest(), pr, "verify")
 						Expect(err).NotTo(HaveOccurred())
 						GinkgoWriter.Printf("The TaskRun %s of PipelineRun %s  has status.conditions: \n%#v\n", tr.Name, pr.Name, tr.Status.Conditions)
-						// Enable this check, when the issue is fixed: https://issues.redhat.com/browse/KONFLUX-5787
-						// Expect(tr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
+						Expect(tr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
 
 						logs, err := kubeadminClient.TektonController.GetTaskRunLogs(pr.Name, "verify", pr.Namespace)
 						Expect(err).NotTo(HaveOccurred())
