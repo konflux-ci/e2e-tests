@@ -25,6 +25,11 @@ func (s *SuiteController) GetSecret(ns string, name string) (*corev1.Secret, err
 	return s.KubeInterface().CoreV1().Secrets(ns).Get(context.Background(), name, metav1.GetOptions{})
 }
 
+// Update a secret in a specified namespace
+func (s *SuiteController) UpdateSecret(ns string, secret *corev1.Secret) (*corev1.Secret, error) {
+	return s.KubeInterface().CoreV1().Secrets(ns).Update(context.Background(), secret, metav1.UpdateOptions{})
+}
+
 // Deleted a secret in a specified namespace
 func (s *SuiteController) DeleteSecret(ns string, name string) error {
 	return s.KubeInterface().CoreV1().Secrets(ns).Delete(context.Background(), name, metav1.DeleteOptions{})
