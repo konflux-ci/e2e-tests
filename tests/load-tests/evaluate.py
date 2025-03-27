@@ -121,6 +121,10 @@ def main():
     kpi_errors = 0
 
     for m in METRICS:
+        if m not in stats_raw:
+            print(f"ERROR: Metric {m} missing in raw stats data")
+            continue
+
         stats[m] = {"pass": {}, "fail": {}}
         stats[m]["pass"]["duration"] = count_stats(stats_raw[m]["pass"]["duration"])
         stats[m]["fail"]["duration"] = count_stats(stats_raw[m]["fail"]["duration"])
