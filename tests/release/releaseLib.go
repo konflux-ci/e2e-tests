@@ -96,7 +96,7 @@ func CreateComponentWithNewBranch(f framework.Framework, testNamespace, applicat
 
 	if buildPipelineBundle["build.appstudio.openshift.io/pipeline"] != string(`{"name": "fbc-builder", "bundle": "latest"}`) {
 		// deal with some custom pipeline bundle there
-		buildPipelineAnnotation = build.GetDockerBuildPipelineBundleAnnotation(constants.DockerBuild)
+		buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(constants.DockerBuild)
 	} else {
 		buildPipelineAnnotation = constants.DefaultFbcBuilderPipelineBundle
 	}

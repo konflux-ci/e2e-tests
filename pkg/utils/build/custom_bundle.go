@@ -24,7 +24,7 @@ const (
 	testBundle   = "quay.io/konflux-ci/tekton-catalog/task-buildah-min:0.4"
 )
 
-func GetDockerBuildPipelineBundleAnnotation(buildPipelineName constants.BuildPipelineType) map[string]string {
+func GetBuildPipelineBundleAnnotation(buildPipelineName constants.BuildPipelineType) map[string]string {
 	var bundleVersion string
 
 	switch buildPipelineName {

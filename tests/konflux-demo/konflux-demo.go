@@ -123,7 +123,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 				createReleaseConfig(kubeadminClient, managedNamespace, userNamespace, appSpec.ComponentSpec.Name, appSpec.ApplicationName, sharedSecret.Data[".dockerconfigjson"])
 
 				// get the build pipeline bundle annotation
-				buildPipelineAnnotation = build.GetDockerBuildPipelineBundleAnnotation(appSpec.ComponentSpec.BuildPipelineType)
+				buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(appSpec.ComponentSpec.BuildPipelineType)
 
 			})
 
