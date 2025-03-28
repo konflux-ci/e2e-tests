@@ -41,30 +41,34 @@ type Options struct {
 }
 
 // check options are valid or not
-func CheckOptions(optionsArr []Options) (bool, error) {
+func CheckOptions(optionsArr []Options) (bool, bool, error) {
 	if len(optionsArr) == 0 {
-		return false, nil
+		return false, false, nil
 	}
 
 	if len(optionsArr) > 1 {
-		return true, fmt.Errorf("options array contains more than 1 object")
+		return true, false, fmt.Errorf("options array contains more than 1 object")
 	}
 
 	options := optionsArr[0]
 
 	if options.ToolchainApiUrl == "" {
-		return true, fmt.Errorf("ToolchainApiUrl field is empty")
+		return true, false, fmt.Errorf("ToolchainApiUrl field is empty")
 	}
 
 	if options.KeycloakUrl == "" {
-		return true, fmt.Errorf("KeycloakUrl field is empty")
+		return true, false, fmt.Errorf("KeycloakUrl field is empty")
 	}
 
 	if options.OfflineToken == "" {
-		return true, fmt.Errorf("OfflineToken field is empty")
+		return true, false, fmt.Errorf("OfflineToken field is empty")
 	}
 
-	return true, nil
+	if options.KeycloakUrl == "DIRECT" {
+		return true, true, nil
+	} else {
+		return true, false, nil
+	}
 }
 
 // CheckIfEnvironmentExists return true/false if the environment variable exists
