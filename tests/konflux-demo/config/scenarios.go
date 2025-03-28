@@ -20,7 +20,7 @@ var ApplicationSpecs = []ApplicationSpec{
 			GitSourceContext:           "",
 			GitSourceDefaultBranchName: "main",
 			DockerFilePath:             "Dockerfile",
-
+			BuildPipelineType:          constants.DockerBuildOciTA,
 			IntegrationTestScenario: IntegrationTestScenarioSpec{
 				GitURL:      "https://github.com/konflux-ci/integration-examples.git",
 				GitRevision: "843f455fe87a6d7f68c238f95a8f3eb304e65ac5",
@@ -31,18 +31,19 @@ var ApplicationSpecs = []ApplicationSpec{
 }
 var UpstreamAppSpecs = []ApplicationSpec{
 	{
-		Name:            "Test local instance of konflux-ci",
-		ApplicationName: "konflux-ci-upstream",
+		Name:            "Test local instance of konflux-ci - docker-build-oci-ta pipeline",
+		ApplicationName: "konflux-ci-upstream-docker-build-oci-ta",
 		Skip:            false,
 		ComponentSpec: ComponentSpec{
 			Name:                       "konflux-ci-upstream",
 			GitSourceUrl:               fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), "testrepo"),
-			GitSourceRevision:          "ba3f8828d061a539ef774229d2f5c8651d854d7e",
+			GitSourceRevision:          "d451fb5563c40be05e299f74f4ea7dc9221a0280",
 			GitSourceDefaultBranchName: "main",
 			DockerFilePath:             "Dockerfile",
+			BuildPipelineType:          constants.DockerBuildOciTA,
 			IntegrationTestScenario: IntegrationTestScenarioSpec{
 				GitURL:      fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), "testrepo"),
-				GitRevision: "ba3f8828d061a539ef774229d2f5c8651d854d7e",
+				GitRevision: "d451fb5563c40be05e299f74f4ea7dc9221a0280",
 				TestPath:    "integration-tests/testrepo-integration.yaml",
 			},
 		},
