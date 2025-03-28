@@ -647,7 +647,6 @@ func SetupBundleForBuildTasksDockerfilesRepo(source_build, sbom_utility, icm_inj
 		// Update build-source-image param value to true
 		for i := range dockerPipelineObject.PipelineSpec().Params {
 			if dockerPipelineObject.PipelineSpec().Params[i].Name == "build-source-image" {
-				//fmt.Printf("Current build-source-image param default value: %q\n", dockerPipelineObject.PipelineSpec().Params[i].Default.StringVal)
 				dockerPipelineObject.PipelineSpec().Params[i].Default.StringVal = "true"
 			}
 		}
@@ -663,7 +662,6 @@ func SetupBundleForBuildTasksDockerfilesRepo(source_build, sbom_utility, icm_inj
 					lastBundle = &t.TaskRef.Params[i]
 				} else if param.Name == "name" && param.Value.StringVal == "source-build" {
 					sourceTask = true
-					//Change the image in the bundle
 				}
 			}
 			if sourceTask {
