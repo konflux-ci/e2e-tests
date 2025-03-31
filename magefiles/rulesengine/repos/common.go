@@ -84,6 +84,7 @@ func ExecuteTestAction(rctx *rulesengine.RuleCtx) error {
 	if err != nil {
 		klog.Error(err)
 	}
+	argsToRun = append(argsToRun, "-vv")
 	argsToRun = append(argsToRun, "./cmd", "--")
 	return sh.RunV("ginkgo", argsToRun...)
 

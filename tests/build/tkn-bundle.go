@@ -32,7 +32,8 @@ import (
   - kubectl patch serviceaccount appstudio-pipeline -p '{"imagePullSecrets": [{"name": "docker-config"}], "secrets": [{"name": "docker-config"}]}'
 */
 
-var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templates"), func() {
+// Re-enable the test when https://issues.redhat.com/browse/KONFLUX-7413 is fixed
+var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templates"), Pending, func() {
 
 	defer GinkgoRecover()
 
@@ -161,7 +162,7 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templat
 			GinkgoWriter.Printf("Fetching bundle image: %s\n", bundle)
 
 			Eventually(func() error {
-			    return fetchImage(bundle, visitor)
+				return fetchImage(bundle, visitor)
 			}, time.Minute*2, 2*time.Second).Should(Succeed(), "failed to fetch image %q", bundle)
 
 		},
