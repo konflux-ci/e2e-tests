@@ -28,7 +28,7 @@ import (
 
 const (
 	advsServiceAccountName = "release-service-account"
-	advsCatalogPathInRepo  = "pipelines/managed/rh-advisories/rh-advisories.yaml"
+	advsCatalogPathInRepo  = "pipelines/managed/rh-advisories/rh-advisories-oci-ta.yaml"
 	advsGitSourceURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic-release"
 	advsGitSrcSHA          = "33ff89edf85fb01a37d3d652d317080223069fc7"
 )
@@ -63,6 +63,13 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
 			managedNamespace = managedFw.UserNamespace
+
+//			releaseFw := releasecommon.NewFramework("release-service")
+//			rsc, err := releaseFw.AsKubeAdmin.ReleaseController.GetReleaseServiceConfig("release-service")
+
+//			rsc, err := managedFw.AsKubeDeveloper.ReleaseController.GetReleaseServiceConfig("release-service")
+//			Expect(err).ToNot(HaveOccurred())
+//			GinkgoWriter.Println("rsc.Name :", rsc.Name)
 
 			pyxisFieldEnvMap := map[string]string{
 				"key":  constants.PYXIS_STAGE_KEY_ENV,

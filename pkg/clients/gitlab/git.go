@@ -66,7 +66,7 @@ func (gc *GitlabClient) CreateGitlabNewBranch(projectID, branchName, sha, baseBr
 
 	// If sha is not provided, get the latest commit from the base branch
 	if sha == "" {
-		commit, _, err := gc.client.Commits.GetCommit(projectID, baseBranch)
+		commit, _, err := gc.client.Commits.GetCommit(projectID, baseBranch, &gitlab.GetCommitOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to get latest commit from base branch: %v", err)
 		}

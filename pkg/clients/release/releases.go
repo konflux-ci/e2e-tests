@@ -38,6 +38,31 @@ func (r *ReleaseController) CreateRelease(name, namespace, snapshot, releasePlan
 	return release, r.KubeRest().Create(context.Background(), release)
 }
 
+// CreateReleaseServiceConfig creates a new ReleaseServiceConfig using the given parameters.
+func (r *ReleaseController) CreateReleaseServiceConfig(name, namespace string, debug bool, defaultTimeouts *pipeline.TimeoutFields, emptyDirOverrides ...releaseApi.EmptyDirOverrides) (*releaseApi.ReleaseServiceConfig, error) {
+	rsc := &releaseApi.ReleaseServiceConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: releaseApi.ReleaseServiceConfigSpec{
+			Debug:             debug,
+			DefaultTimeouts:   *defaultTimeouts,
+			EmptyDirOverrides: emptyDirOverrides,
+		},
+	}
+
+	return rsc, r.KubeRest().Create(context.Background(), rsc)
+}
+
+// PatchReleaseServiceConfig patches the given ReleaseServiceConfig with an EmptyDirOverride CR.
+func (r *ReleaseController) PatchReleaseServiceConfig(oldReleaseServiceConfig *releaseApi.ReleaseServiceConfig, emptyDirOverrides *releaseApi.EmptyDirOverrides) error {
+	patch := client.MergeFrom(oldReleaseServiceConfig)
+	newReleaseServiceConfig := oldReleaseServiceConfig.DeepCopy()
+	newReleaseServiceConfig.Spec.EmptyDirOverrides = append(newReleaseServiceConfig.Spec.EmptyDirOverrides, *emptyDirOverrides)
+	return r.KubeRest().Patch(context.Background(), newReleaseServiceConfig, patch)
+}
+
 // CreateReleasePipelineRoleBindingForServiceAccount creates a RoleBinding for the passed serviceAccount to enable
 // retrieving the necessary CRs from the passed namespace.
 func (r *ReleaseController) CreateReleasePipelineRoleBindingForServiceAccount(namespace string, serviceAccount *corev1.ServiceAccount) (*rbac.RoleBinding, error) {
@@ -91,6 +116,20 @@ func (r *ReleaseController) GetRelease(releaseName, snapshotName, namespace stri
 		}
 	}
 	return nil, fmt.Errorf("could not find Release CR based on associated Snapshot '%s' in '%s' namespace", snapshotName, namespace)
+}
+
+// GetReleaseServiceConfig returns the ReleaseServiceConfig in namespace if exist, else will return nil
+func (r *ReleaseController) GetReleaseServiceConfig(namespace string) (*releaseApi.ReleaseServiceConfig, error) {
+	rscList := &releaseApi.ReleaseServiceConfigList{}
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+	err := r.KubeRest().List(context.Background(), rscList, opts...)
+
+	if err == nil && len(rscList.Items) > 0 {
+		return &rscList.Items[0], nil
+	}
+	return nil, err
 }
 
 // GetReleases returns the list of Release CR in the given namespace.
