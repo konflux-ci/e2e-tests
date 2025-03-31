@@ -1,6 +1,6 @@
 #!/bin/bash
 
-COUNT=1000
+COUNT=3000
 CONCURRENCY=20
 
 function create_stuff() {
