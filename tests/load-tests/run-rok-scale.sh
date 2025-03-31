@@ -5,6 +5,7 @@ CONCURRENCY=20
 
 function create_stuff() {
     local u_seq="${1}"
+    local failures=0
 
     USERNAME="test${u_seq}"
     USEREMAIL="jhutar+${USERNAME}@redhat.com"
@@ -49,12 +50,12 @@ EOF
             echo "$( date --utc -Ins ) WARNING Failed to create ${NAMESPACE} namespace in time, giving up"
             return
         fi
-        oc get "namespace/${NAMESPACE}" -o name && break
+        oc get "namespace/${NAMESPACE}" -o name 2>/dev/null && break
         sleep 3
     done
 
     # Create some secret
-    oc apply -f - <<EOF
+    oc apply -f - <<EOF || (( failures+=1 ))
 apiVersion: v1
 kind: Secret
 metadata:
@@ -65,11 +66,11 @@ metadata:
     appstudio.redhat.com/scm.host: gitlab.cee.redhat.com
 type: kubernetes.io/basic-auth
 stringData:
-  password: ...
+  password: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 EOF
 
     # Create application
-    oc apply -f - <<EOF
+    oc apply -f - <<EOF || (( failures+=1 ))
 apiVersion: appstudio.redhat.com/v1alpha1
 kind: Application
 metadata:
@@ -80,7 +81,7 @@ spec:
 EOF
 
     # Create component
-    oc apply -f - <<EOF
+    oc apply -f - <<EOF || (( failures+=1 ))
 apiVersion: appstudio.redhat.com/v1alpha1
 kind: Component
 metadata:
@@ -103,7 +104,7 @@ spec:
 EOF
 
     # Create image repository
-    oc apply -f - <<EOF
+    oc apply -f - <<EOF || (( failures+=1 ))
 apiVersion: appstudio.redhat.com/v1alpha1
 kind: ImageRepository
 metadata:
@@ -127,7 +128,7 @@ spec:
 EOF
 
     # Create integration test scenario
-    oc apply -f - <<EOF
+    oc apply -f - <<EOF || (( failures+=1 ))
 apiVersion: appstudio.redhat.com/v1beta2
 kind: IntegrationTestScenario
 metadata:
@@ -153,7 +154,7 @@ EOF
 
     # Create 10 release plans
     for rp_seq in $( seq 0 9); do
-        oc apply -f - <<EOF
+        oc apply -f - <<EOF || (( failures+=1 ))
 apiVersion: appstudio.redhat.com/v1alpha1
 kind: ReleasePlan
 metadata:
@@ -184,7 +185,7 @@ EOF
     done
 
     end=$( date +%s )
-    echo "$( date --utc -Ins ) DEBUG Created user ${USERNAME} in $(( end - start )) seconds"
+    echo "$( date --utc -Ins ) DEBUG Created user ${USERNAME} in $(( end - start )) seconds with ${failures} failures"
 }
 
 
