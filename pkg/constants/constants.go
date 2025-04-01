@@ -2,6 +2,8 @@ package constants
 
 import "time"
 
+type BuildPipelineType string
+
 // Global constants
 const (
 	// A github token is required to run the tests. The token need to have permissions to the given github organization. By default the e2e use redhat-appstudio-qe github organization.
@@ -236,6 +238,11 @@ const (
 	CheckrunConclusionSuccess = "success"
 	CheckrunConclusionFailure = "failure"
 	CheckrunStatusCompleted   = "completed"
+
+	DockerBuild                   BuildPipelineType = "docker-build"
+	DockerBuildOciTA              BuildPipelineType = "docker-build-oci-ta"
+	DockerBuildMultiPlatformOciTa BuildPipelineType = "docker-build-multi-platform-oci-ta"
+	FbcBuilder                    BuildPipelineType = "fbc-builder"
 )
 
 var (
@@ -244,7 +251,7 @@ var (
 	ImageControllerAnnotationRequestPublicRepo  = map[string]string{"image.redhat.com/generate": `{"visibility": "public"}`}
 	ImageControllerAnnotationRequestPrivateRepo = map[string]string{"image.redhat.com/generate": `{"visibility": "private"}`}
 	IntegrationTestScenarioDefaultLabels        = map[string]string{"test.appstudio.openshift.io/optional": "false"}
-	DefaultDockerBuildPipelineBundle            = map[string]string{"build.appstudio.openshift.io/pipeline": `{"name": "docker-build", "bundle": "latest"}`}
+	DefaultDockerBuildPipelineBundleAnnotation  = map[string]string{"build.appstudio.openshift.io/pipeline": `{"name": "docker-build", "bundle": "latest"}`}
 	DefaultFbcBuilderPipelineBundle             = map[string]string{"build.appstudio.openshift.io/pipeline": `{"name": "fbc-builder", "bundle": "latest"}`}
 	ComponentMintmakerDisabledAnnotation        = map[string]string{"mintmaker.appstudio.redhat.com/disabled": "true"}
 )
