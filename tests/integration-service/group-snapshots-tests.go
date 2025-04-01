@@ -41,9 +41,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 
 	Describe("with status reporting of Integration tests in CheckRuns", Ordered, func() {
 		BeforeAll(func() {
-			prNumbers = make(map[string]int)
-			prHeadShas = make(map[string]string)
-
 			if os.Getenv(constants.SKIP_PAC_TESTS_ENV) == "true" {
 				Skip("Skipping this test due to configuration issue with Spray proxy")
 			}
@@ -58,16 +55,17 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 
 			applicationName = createApp(*f, testNamespace)
 
-			// Create base branches for multi-component definitions
+			// The base branch or a ToBranch where all multi-component definitions will live
 			multiComponentBaseBranchName = fmt.Sprintf("multi-repo-%s", util.GenerateRandomString(6))
 			err = f.AsKubeAdmin.CommonController.Github.CreateRef(multiComponentRepoNameForGroupSnapshot, multiComponentDefaultBranch, multiComponentGitRevision, multiComponentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
 
+			// The base branch or ToBranch where different repo component definition will live
 			err = f.AsKubeAdmin.CommonController.Github.CreateRef(componentRepoNameForGeneralIntegration, multiComponentDefaultBranch, multiRepoComponentGitRevision, multiComponentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			// PR Branch creation
-			multiComponentPRBranchName = fmt.Sprintf("pr-branch-%s", util.GenerateRandomString(6))
+			// Branch for creating pull request
+			multiComponentPRBranchName = fmt.Sprintf("%s-%s", "pr-branch", util.GenerateRandomString(6))
 
 			// Create Integration Test Scenario
 			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, []string{})
@@ -84,7 +82,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 				cleanup(*f, testNamespace, applicationName, componentNames[0], snapshot)
 			}
 
-			// Cleanup branches created by PaC
+			// Delete new branches created by PaC and a testing branch used as a component's base branch
 			for _, pacBranchName := range pacBranchNames {
 				err = f.AsKubeAdmin.CommonController.Github.DeleteRef(multiComponentRepoNameForGroupSnapshot, pacBranchName)
 				if err != nil {
@@ -96,19 +94,25 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 				}
 			}
 
-			// Cleanup base and PR branches
+			// Delete the created base branch
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(multiComponentRepoNameForGroupSnapshot, multiComponentBaseBranchName)
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring(referenceDoesntExist))
 			}
+
+			// Delete the created base branch for multi-repo
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepoNameForGeneralIntegration, multiComponentBaseBranchName)
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring(referenceDoesntExist))
 			}
+
+			//Delete the created pr branch
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(multiComponentRepoNameForGroupSnapshot, multiComponentPRBranchName)
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring(referenceDoesntExist))
 			}
+
+			//Delete the created pr branch for multi-repo
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepoNameForGeneralIntegration, multiComponentPRBranchName)
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring(referenceDoesntExist))
