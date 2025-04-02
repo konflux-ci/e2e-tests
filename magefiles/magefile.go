@@ -601,22 +601,38 @@ func SetupMultiPlatformTests() error {
 	return nil
 }
 
-func SetupSourceBuild() {
+func SetupBundleForBuildTasksDockerfilesRepo(source_build, sbom_utility, icm_injection bool) {
 	var err error
 	var defaultBundleRef string
 	var tektonObj runtime.Object
 	var newPipelineYaml []byte
-	klog.Info("creating new tekton bundle for the purpose of testing build-task-dockerfiles PR")
+	var sourceImage, sbomUtilityImage, icmInjectionImage string
+	klog.Info("creating new tekton bundle for the purpose of testing build-task-dockerfiles group PR")
 
-	sourceImage := utils.GetEnv("SOURCE_IMAGE", "")
-	if sourceImage == "" {
-		klog.Error("SOURCE_IMAGE env is not set")
-		return
+	if source_build {
+		sourceImage = utils.GetEnv("SOURCE_BUILD_IMAGE", "")
+		if sourceImage == "" {
+			klog.Error("SOURCE_BUILD_IMAGE env is not set")
+			return
+		}
 	}
-	// if err = utils.CreateDockerConfigFile(os.Getenv("QUAY_TOKEN")); err != nil {
-	// 	klog.Errorf("failed to create docker config file: %+v", err)
-	// 	return
-	// }
+
+	if sbom_utility {
+		sbomUtilityImage = utils.GetEnv("SBOM_UTILITY_SCRIPTS_IMAGE", "")
+		if sbomUtilityImage == "" {
+			klog.Error("SBOM_UTILITY_SCRIPTS_IMAGE env is not set")
+			return
+		}
+	}
+
+	if icm_injection {
+		icmInjectionImage = utils.GetEnv("ICM_INJECTION_SCRIPTS_IMAGE", "")
+		if icmInjectionImage == "" {
+			klog.Error("ICM_INJECTION_SCRIPTS_IMAGE env is not set")
+			return
+		}
+	}
+
 	if defaultBundleRef, err = tekton.GetDefaultPipelineBundleRef(constants.BuildPipelineConfigConfigMapYamlURL, "docker-build"); err != nil {
 		klog.Errorf("failed to get the pipeline bundle ref: %+v", err)
 		return
@@ -627,41 +643,100 @@ func SetupSourceBuild() {
 	}
 	dockerPipelineObject := tektonObj.(*tektonapi.Pipeline)
 
-	// Update build-source-image param value to true
-	for i := range dockerPipelineObject.PipelineSpec().Params {
-		if dockerPipelineObject.PipelineSpec().Params[i].Name == "build-source-image" {
-			//fmt.Printf("Current build-source-image param default value: %q\n", dockerPipelineObject.PipelineSpec().Params[i].Default.StringVal)
-			dockerPipelineObject.PipelineSpec().Params[i].Default.StringVal = "true"
-		}
-	}
-	// Update the source-build task image reference to SOURCE_IMAGE
-	var currentSourceTaskBundle string
-	for i := range dockerPipelineObject.PipelineSpec().Tasks {
-		t := &dockerPipelineObject.PipelineSpec().Tasks[i]
-		params := t.TaskRef.Params
-		var lastBundle *tektonapi.Param
-		sourceTask := false
-		for i, param := range params {
-			if param.Name == "bundle" {
-				lastBundle = &t.TaskRef.Params[i]
-			} else if param.Name == "name" && param.Value.StringVal == "source-build" {
-				sourceTask = true
-				//Change the image in the bundle
+	if source_build {
+		// Update build-source-image param value to true
+		for i := range dockerPipelineObject.PipelineSpec().Params {
+			if dockerPipelineObject.PipelineSpec().Params[i].Name == "build-source-image" {
+				dockerPipelineObject.PipelineSpec().Params[i].Default.StringVal = "true"
 			}
 		}
-		if sourceTask {
-			currentSourceTaskBundle = lastBundle.Value.StringVal
-			klog.Infof("found current source build task bundle: %s", currentSourceTaskBundle)
-			newSourceTaskBundle := createNewTaskBundleAndPush(currentSourceTaskBundle, sourceImage)
-			klog.Infof("created new source build task bundle: %s", newSourceTaskBundle)
-			lastBundle.Value = *tektonapi.NewStructuredValues(newSourceTaskBundle)
-			break
+		// Update the source-build task image reference to SOURCE_BUILD_IMAGE
+		var currentSourceTaskBundle string
+		for i := range dockerPipelineObject.PipelineSpec().Tasks {
+			t := &dockerPipelineObject.PipelineSpec().Tasks[i]
+			params := t.TaskRef.Params
+			var lastBundle *tektonapi.Param
+			sourceTask := false
+			for i, param := range params {
+				if param.Name == "bundle" {
+					lastBundle = &t.TaskRef.Params[i]
+				} else if param.Name == "name" && param.Value.StringVal == "source-build" {
+					sourceTask = true
+				}
+			}
+			if sourceTask {
+				currentSourceTaskBundle = lastBundle.Value.StringVal
+				klog.Infof("found current source build task bundle: %s", currentSourceTaskBundle)
+				newSourceTaskBundle := createNewTaskBundleAndPush(currentSourceTaskBundle, "source-build", "build", sourceImage)
+				klog.Infof("created new source build task bundle: %s", newSourceTaskBundle)
+				lastBundle.Value = *tektonapi.NewStructuredValues(newSourceTaskBundle)
+				break
+			}
+		}
+		if currentSourceTaskBundle == "" {
+			klog.Errorf("failed to extract the Source Build Task from bundle: %+v", err)
+			return
 		}
 	}
-	if currentSourceTaskBundle == "" {
-		klog.Errorf("failed to extract the Tekton Task from bundle: %+v", err)
-		return
+
+	if sbom_utility {
+		var currentBuildahTaskBundle string
+		for i := range dockerPipelineObject.PipelineSpec().Tasks {
+			t := &dockerPipelineObject.PipelineSpec().Tasks[i]
+			params := t.TaskRef.Params
+			var lastBundle *tektonapi.Param
+			buildahTask := false
+			for i, param := range params {
+				if param.Name == "bundle" {
+					lastBundle = &t.TaskRef.Params[i]
+				} else if param.Name == "name" && param.Value.StringVal == "buildah" {
+					buildahTask = true
+				}
+			}
+			if buildahTask {
+				currentBuildahTaskBundle = lastBundle.Value.StringVal
+				klog.Infof("found current buildah task bundle: %s", currentBuildahTaskBundle)
+				newBuildahTaskBundle := createNewTaskBundleAndPush(currentBuildahTaskBundle, "buildah", "prepare-sboms", sbomUtilityImage)
+				klog.Infof("created new buildah task bundle with sbom-utility image: %s", newBuildahTaskBundle)
+				lastBundle.Value = *tektonapi.NewStructuredValues(newBuildahTaskBundle)
+				break
+			}
+		}
+		if currentBuildahTaskBundle == "" {
+			klog.Errorf("failed to extract the Buildah Task from bundle: %+v", err)
+			return
+		}
 	}
+
+	if icm_injection {
+		var currentBuildahTaskBundle string
+		for i := range dockerPipelineObject.PipelineSpec().Tasks {
+			t := &dockerPipelineObject.PipelineSpec().Tasks[i]
+			params := t.TaskRef.Params
+			var lastBundle *tektonapi.Param
+			buildahTask := false
+			for i, param := range params {
+				if param.Name == "bundle" {
+					lastBundle = &t.TaskRef.Params[i]
+				} else if param.Name == "name" && param.Value.StringVal == "buildah" {
+					buildahTask = true
+				}
+			}
+			if buildahTask {
+				currentBuildahTaskBundle = lastBundle.Value.StringVal
+				klog.Infof("found current buildah task bundle: %s", currentBuildahTaskBundle)
+				newBuildahTaskBundle := createNewTaskBundleAndPush(currentBuildahTaskBundle, "buildah", "icm", icmInjectionImage)
+				klog.Infof("created new buildah task bundle with icm-injection image: %s", newBuildahTaskBundle)
+				lastBundle.Value = *tektonapi.NewStructuredValues(newBuildahTaskBundle)
+				break
+			}
+		}
+		if currentBuildahTaskBundle == "" {
+			klog.Errorf("failed to extract the Buildah Task from bundle: %+v", err)
+			return
+		}
+	}
+
 	if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
 		klog.Errorf("error when marshalling a new pipeline to YAML: %v", err)
 		return
@@ -679,25 +754,25 @@ func SetupSourceBuild() {
 		return
 	}
 	// This output is consumed by the integration pipeline of build-task-dockerfiles repo, not printing it will break the CI
-	fmt.Printf("custom_source_image_bundle=%s\n", newSourceBuildPipeline.String())
+	fmt.Printf("custom_pipeline_bundle=%s\n", newSourceBuildPipeline.String())
 }
 
-func createNewTaskBundleAndPush(currentSourceTaskBundle, sourceImage string) string {
+func createNewTaskBundleAndPush(currentBuildahTaskBundle, taskName, stepName, stepImage string) string {
 	var newTaskYaml []byte
-	tektonObj, err := tekton.ExtractTektonObjectFromBundle(currentSourceTaskBundle, "task", "source-build")
+	tektonObj, err := tekton.ExtractTektonObjectFromBundle(currentBuildahTaskBundle, "task", constants.BuildPipelineType(taskName))
 	if err != nil {
 		klog.Errorf("failed to extract the Tekton Task from bundle: %+v", err)
 		return ""
 	}
-	sourceTaskObject := tektonObj.(*tektonapi.Task)
-	for i := range sourceTaskObject.Spec.Steps {
-		if sourceTaskObject.Spec.Steps[i].Name == "build" {
-			klog.Infof("current source build task image: %v", sourceTaskObject.Spec.Steps[i].Image)
-			sourceTaskObject.Spec.Steps[i].Image = sourceImage
+	taskObject := tektonObj.(*tektonapi.Task)
+	for i := range taskObject.Spec.Steps {
+		if taskObject.Spec.Steps[i].Name == stepName {
+			klog.Infof("current %q task in step %q has step image: %q", taskName, stepName, taskObject.Spec.Steps[i].Image)
+			taskObject.Spec.Steps[i].Image = stepImage
 		}
 	}
 
-	if newTaskYaml, err = yaml.Marshal(sourceTaskObject); err != nil {
+	if newTaskYaml, err = yaml.Marshal(taskObject); err != nil {
 		klog.Errorf("error when marshalling a new pipeline to YAML: %v", err)
 		return ""
 	}
@@ -707,14 +782,14 @@ func createNewTaskBundleAndPush(currentSourceTaskBundle, sourceImage string) str
 
 	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
 	quayOrg := utils.GetEnv(constants.DEFAULT_QUAY_ORG_ENV, constants.DefaultQuayOrg)
-	newSourceBuildTaskImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
-	var newSourceBuildTask, _ = name.ParseReference(fmt.Sprintf("%s:task-bundle-%s", newSourceBuildTaskImg, tag))
+	newTaskImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
+	var newTask, _ = name.ParseReference(fmt.Sprintf("%s:task-bundle-%s", newTaskImg, tag))
 
-	if err = tekton.BuildAndPushTektonBundle(newTaskYaml, newSourceBuildTask, authOption); err != nil {
+	if err = tekton.BuildAndPushTektonBundle(newTaskYaml, newTask, authOption); err != nil {
 		klog.Errorf("error when building/pushing a tekton task bundle: %v", err)
 		return ""
 	}
-	return newSourceBuildTask.String()
+	return newTask.String()
 }
 
 func BootstrapCluster() error {

@@ -127,11 +127,11 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 		},
 	}
 
-	if os.Getenv(constants.CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE_ENV) != "" {
-		customSourceBuildBundle := os.Getenv(constants.CUSTOM_SOURCE_BUILD_PIPELINE_BUNDLE_ENV)
-		Expect(customSourceBuildBundle).ShouldNot(BeEmpty())
+	if os.Getenv(constants.CUSTOM_BUILD_PIPELINE_BUNDLE_ENV) != "" {
+		customBuildBundle := os.Getenv(constants.CUSTOM_BUILD_PIPELINE_BUNDLE_ENV)
+		Expect(customBuildBundle).ShouldNot(BeEmpty())
 		buildPipelineAnnotation = map[string]string{
-			"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"%s", "bundle": "%s"}`, pipelineBundleName, customSourceBuildBundle),
+			"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"%s", "bundle": "%s"}`, pipelineBundleName, customBuildBundle),
 		}
 	}
 	c, err := ctrl.CreateComponent(componentObj, namespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, buildPipelineAnnotation))
