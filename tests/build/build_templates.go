@@ -70,6 +70,14 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 			return
 		}
 	}
+	if scenario.ManifestMediaType == "docker" {
+		// Update the pipeline bundle with updating BUILDAH_FORMAT value to "docker"
+		customBuildBundle, err = enableDockerMediaTypeInPipelineBundle(customBuildBundle, pipelineBundleName, "docker")
+		if err != nil {
+			GinkgoWriter.Printf("failed to update BUILDAH_FORMAT in the pipeline bundle with: %v\n", err)
+			return
+		}
+	}
 
 	if scenario.CheckAdditionalTags {
 		//Update the pipeline bundle to apply additional tags
@@ -249,7 +257,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			for componentName, scenario := range components {
 				CreateComponent(kubeadminClient.CommonController, kubeadminClient.HasController, applicationName, componentName, testNamespace, scenario)
 			}
-
 			// Create the symlink component
 			CreateComponent(kubeadminClient.CommonController, kubeadminClient.HasController, applicationName, symlinkComponentName, testNamespace, symlinkScenario)
 
@@ -384,7 +391,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				}
 			})
 
-			It("floating tags are created successfully", func() {
+			It("floating tags are created successfully", Label(buildTemplatesTestLabel), func() {
 				if !scenario.CheckAdditionalTags {
 					Skip(fmt.Sprintf("floating tag validation is not needed for: %s", scenario.GitURL))
 				}
@@ -398,6 +405,27 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					Expect(err).ShouldNot(HaveOccurred(),
 						fmt.Sprintf("failed to get tag %s from image repo", tagName),
 					)
+				}
+			})
+
+			It("image manifest mediaType is correct", Label(buildTemplatesTestLabel), func() {
+				builtImage := build.GetBinaryImage(pr)
+				if scenario.ManifestMediaType == "docker" {
+					if pipelineBundleName == constants.FbcBuilder || pipelineBundleName == constants.DockerBuildMultiPlatformOciTa {
+						// Check for docker.manifest.list mediaType
+						Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(Equal(build.MediaTypeDockerManifestList), "mediaType of the image manifest is not of type docker.manifest.list")
+					} else {
+						// Check for docker.manifest mediaType
+						Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(Equal(build.MediaTypeDockerManifest), "mediaType of the image manifest is not of type docker.manifest")
+					}
+				} else {
+					if pipelineBundleName == constants.FbcBuilder || pipelineBundleName == constants.DockerBuildMultiPlatformOciTa {
+						// Check for oci image index mediaType
+						Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(Equal(build.MediaTypeOciImageIndex), "mediaType of the image manifest is not of type oci.image.index")
+					} else {
+						// Check for oci image manifest mediaType
+						Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(Equal(build.MediaTypeOciManifest), "mediaType of the image is not of type oci.image.manifest")
+					}
 				}
 			})
 
@@ -793,6 +821,41 @@ func enableHermeticBuildInPipelineBundle(customDockerBuildBundle string, pipelin
 		return "", fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
 	}
 	return newDockerBuildPipeline.String(), nil
+}
+
+// this function takes a bundle and mediaType value as inputs and creates a bundle with param BUILDAH_FORMAT=<mediaType>
+// and then push the bundle to quay using format: quay.io/<QUAY_E2E_ORGANIZATION>/test-images:<generated_tag>
+func enableDockerMediaTypeInPipelineBundle(customDockerBuildBundle string, pipelineBundleName constants.BuildPipelineType, mediaType string) (string, error) {
+	var tektonObj runtime.Object
+	var err error
+	var newPipelineYaml []byte
+	// Extract docker-build pipeline as tekton object from the bundle
+	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(customDockerBuildBundle, "pipeline", pipelineBundleName); err != nil {
+		return "", fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
+	}
+	dockerPipelineObject := tektonObj.(*tektonpipeline.Pipeline)
+	// Update BUILDAH_FORMAT params value to <mediaType> (received as a function input) only for the required tasks
+	for i := range dockerPipelineObject.PipelineSpec().Tasks {
+		t := &dockerPipelineObject.PipelineSpec().Tasks[i]
+		if t.Name == "build-container" || t.Name == "build-image-index" || t.Name == "sast-coverity-check" || t.Name == "build-images" {
+			t.Params = append(t.Params, tektonpipeline.Param{Name: "BUILDAH_FORMAT", Value: *tektonpipeline.NewStructuredValues(mediaType)})
+		}
+	}
+	if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
+		return "", fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
+	}
+	keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
+	authOption := remoteimg.WithAuthFromKeychain(keychain)
+	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
+	quayOrg := utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, constants.DefaultQuayOrg)
+	newDockerBuildPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
+	var newDockerBuildPipeline, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newDockerBuildPipelineImg, tag))
+	// Build and Push the tekton bundle
+	if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newDockerBuildPipeline, authOption); err != nil {
+		return "", fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
+	}
+	return newDockerBuildPipeline.String(), nil
+
 }
 
 // this function takes a bundle and additonalTags string slice as inputs
