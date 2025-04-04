@@ -27,7 +27,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 
 	var prNumber int
 	var timeout, interval time.Duration
-	var prHeadSha, mergeResultSha, mergeMultiResultSha string
+	var prHeadSha, mergeResultSha, mergeMultiResultSha, secondFileSha string
 	var pacBranchNames []string
 	var componentNames []string
 	var snapshot *appstudioApi.Snapshot
@@ -35,6 +35,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 	var componentB *appstudioApi.Component
 	var componentC *appstudioApi.Component
 	var groupSnapshots *appstudioApi.SnapshotList
+	var componentSnapshots *[]appstudioApi.Snapshot
 	var mergeResult *github.PullRequestMergeResult
 	var pipelineRun, testPipelinerun *pipeline.PipelineRun
 	var integrationTestScenarioPass *integrationv1beta2.IntegrationTestScenario
@@ -495,7 +496,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			It("wait for the last components build to finish", func() {
 				componentNames = []string{componentA.Name, componentB.Name, componentC.Name}
 				for _, component := range componentNames {
-					Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineToBeFinished(testNamespace, applicationName, component)).To(Succeed())
+					Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineToBeFinished(testNamespace, applicationName, component, "")).To(Succeed())
 				}
 			})
 
@@ -536,6 +537,76 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						Expect(annotation).To(ContainSubstring(pipelineRun.Name))
 					}
 				}
+			})
+		})
+
+		When("Older snapshot and integration pipelinerun should be cancelled once new snapshot is created", func() {
+			It("make change to the multiple-repo to trigger a new cycle of testing", func() {
+				newFile, err := f.AsKubeAdmin.HasController.Github.CreateFile(multiComponentRepoNameForGroupSnapshot, util.GenerateRandomString(5), "test", multiComponentPRBranchName)
+				secondFileSha = newFile.GetSHA()
+				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error while creating file in multirepo: %s", secondFileSha))
+			})
+
+			It("wait for the components A and B build to finish", func() {
+				GinkgoWriter.Println("Waiting for build pipelineRun created yet for app %s/%s, sha: %s", testNamespace, applicationName, secondFileSha)
+				componentNames = []string{componentA.Name, componentB.Name}
+				for _, component := range componentNames {
+					Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineToBeFinished(testNamespace, applicationName, component, secondFileSha)).To(Succeed())
+				}
+			})
+
+			It("get all component snapshots for component A and check if older snapshot has been cancelled", func() {
+				// get all component snapshots for component A
+				Eventually(func() error {
+					componentSnapshots, err = f.AsKubeAdmin.HasController.GetAllComponentSnapshotsForApplicationAndComponent(applicationName, testNamespace, componentA.Name)
+
+					if componentSnapshots == nil {
+						GinkgoWriter.Println("No component snapshot exists at the moment: %v", err)
+						return err
+					}
+					if err != nil {
+						GinkgoWriter.Println("failed to get all component snapshots: %v", err)
+						return err
+					}
+					if len(*componentSnapshots) < 2 {
+						return fmt.Errorf("The length of component snapshot is %d, less than expected 2", len(*componentSnapshots))
+					}
+					isCancelled, err := f.AsKubeAdmin.IntegrationController.IsOlderSnapshotAndIntegrationPlrCancelled(*componentSnapshots, integrationTestScenarioPass.Name)
+					if err != nil {
+						return err
+					}
+					if !isCancelled {
+						return fmt.Errorf("older component snasphot/integration test has not been cancelled")
+					}
+					return nil
+				}, time.Minute*20, constants.PipelineRunPollingInterval).Should(Succeed(), "timeout while waiting for component snapshot and integration pipelinerun to be cancelled")
+			})
+
+			It("get all group snapshots and check if older group snapshot is cancelled", func() {
+				// get all group snapshots
+				Eventually(func() error {
+					groupSnapshots, err = f.AsKubeAdmin.HasController.GetAllGroupSnapshotsForApplication(applicationName, testNamespace)
+
+					if groupSnapshots == nil {
+						GinkgoWriter.Println("No group snapshot exists at the moment: %v", err)
+						return err
+					}
+					if err != nil {
+						GinkgoWriter.Println("failed to get all group snapshots: %v", err)
+						return err
+					}
+					if len(groupSnapshots.Items) < 2 {
+						return fmt.Errorf("The length of group snapshot is %d, less than expected 2", len(groupSnapshots.Items))
+					}
+					isCancelled, err := f.AsKubeAdmin.IntegrationController.IsOlderSnapshotAndIntegrationPlrCancelled(groupSnapshots.Items, integrationTestScenarioPass.Name)
+					if err != nil {
+						return err
+					}
+					if !isCancelled {
+						return fmt.Errorf("older group snasphot/integration test has not been cancelled")
+					}
+					return nil
+				}, time.Minute*20, constants.PipelineRunPollingInterval).Should(Succeed(), "timeout while waiting for group snapshot and integration pipelinerun to be cancelled")
 			})
 		})
 	})

@@ -270,11 +270,11 @@ func (i *IntegrationController) WaitForBuildPipelineRunToGetAnnotated(testNamesp
 
 // WaitForBuildPipelineToBeFinished wait for given build pipeline to finish.
 // It exposes the error message from the failed task to the end user when the pipelineRun failed.
-func (i *IntegrationController) WaitForBuildPipelineToBeFinished(testNamespace, applicationName, componentName string) error {
+func (i *IntegrationController) WaitForBuildPipelineToBeFinished(testNamespace, applicationName, componentName, sha string) error {
 	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 15*time.Minute, true, func(ctx context.Context) (done bool, err error) {
-		pipelineRun, err := i.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
+		pipelineRun, err := i.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, sha)
 		if err != nil {
-			GinkgoWriter.Println("Build pipelineRun has not been created yet for app %s/%s", testNamespace, applicationName)
+			GinkgoWriter.Println("Build pipelineRun has not been created yet for app %s/%s, and component %s", testNamespace, applicationName, componentName)
 			return false, nil
 		}
 		for _, condition := range pipelineRun.Status.Conditions {
@@ -293,4 +293,15 @@ func (i *IntegrationController) WaitForBuildPipelineToBeFinished(testNamespace, 
 		}
 		return false, nil
 	})
+}
+
+func (i *IntegrationController) IsIntegrationPipelinerunCancelled(integrationTestScenarioName string, snapshot *appstudioApi.Snapshot) (bool, error) {
+	pipelinerun, err := i.GetIntegrationPipelineRun(integrationTestScenarioName, snapshot.Name, snapshot.Namespace)
+	if err != nil {
+		return false, err
+	}
+	if !pipelinerun.Status.GetCondition(apis.ConditionSucceeded).IsUnknown() || pipelinerun.Spec.Status == tektonv1.PipelineRunSpecStatusCancelledRunFinally {
+		return true, nil
+	}
+	return true, nil
 }
