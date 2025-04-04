@@ -33,7 +33,7 @@ import (
 */
 
 // Re-enable the test when https://issues.redhat.com/browse/KONFLUX-7413 is fixed
-var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templates"), Pending, func() {
+var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templates"), func() {
 
 	defer GinkgoRecover()
 
@@ -287,7 +287,7 @@ func setupTestData(pvcName string) (*corev1.Pod, error) {
 					Command: []string{
 						"bash",
 						"-c",
-						"mkdir -p /source/sub; echo $TASK1_JSON > /source/task1.yaml; echo $TASK2_JSON > /source/task2.yaml; echo $TASK3_JSON > /source/sub/task3.yaml",
+						"mkdir -p source/source/sub; echo $TASK1_JSON > source/source/task1.yaml; echo $TASK2_JSON > source/source/task2.yaml; echo $TASK3_JSON > source/source/sub/task3.yaml",
 					},
 					Image: "registry.access.redhat.com/ubi9/ubi-minimal:latest",
 					Name:  "setup-pod",
