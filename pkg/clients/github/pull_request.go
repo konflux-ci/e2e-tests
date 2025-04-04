@@ -136,3 +136,69 @@ func (g *Github) GetCheckRunConclusion(checkRunName, repoName, prHeadSha string,
 	}
 	return checkRun.GetConclusion(), nil
 }
+
+// GetCheckRunStatus fetches a specific CheckRun within a given repo
+// by matching the CheckRun's name with the given checkRunName, and
+// then returns the CheckRun status
+func (g *Github) GetCheckRunStatus(checkRunName, repoName, prHeadSha string, prNumber int) (string, error) {
+	var errMsgSuffix = fmt.Sprintf("repository: %s, PR number: %d, PR head SHA: %s, checkRun name: %s\n", repoName, prNumber, prHeadSha, checkRunName)
+
+	var checkRun *github.CheckRun
+	var timeout time.Duration
+	var err error
+
+	timeout = time.Minute * 5
+
+	err = utils.WaitUntil(func() (done bool, err error) {
+		checkRuns, err := g.ListCheckRuns(repoName, prHeadSha)
+		if err != nil {
+			ginkgo.GinkgoWriter.Printf("got error when listing CheckRuns: %+v\n", err)
+			return false, nil
+		}
+		for _, cr := range checkRuns {
+			if strings.Contains(cr.GetName(), checkRunName) {
+				checkRun = cr
+				return true, nil
+			}
+		}
+		return false, nil
+	}, timeout)
+	if err != nil {
+		return "", fmt.Errorf("timed out when waiting for the PaC CheckRun to appear for %s", errMsgSuffix)
+	}
+
+	return checkRun.GetStatus(), nil
+}
+
+// GetCheckRunText fetches a specific CheckRun within a given repo
+// by matching the CheckRun's name with the given checkRunName, and
+// then returns the CheckRun text
+func (g *Github) GetCheckRunText(checkRunName, repoName, prHeadSha string, prNumber int) (string, error) {
+	var errMsgSuffix = fmt.Sprintf("repository: %s, PR number: %d, PR head SHA: %s, checkRun name: %s\n", repoName, prNumber, prHeadSha, checkRunName)
+
+	var checkRun *github.CheckRun
+	var timeout time.Duration
+	var err error
+
+	timeout = time.Minute * 5
+
+	err = utils.WaitUntil(func() (done bool, err error) {
+		checkRuns, err := g.ListCheckRuns(repoName, prHeadSha)
+		if err != nil {
+			ginkgo.GinkgoWriter.Printf("got error when listing CheckRuns: %+v\n", err)
+			return false, nil
+		}
+		for _, cr := range checkRuns {
+			if strings.Contains(cr.GetName(), checkRunName) {
+				checkRun = cr
+				return true, nil
+			}
+		}
+		return false, nil
+	}, timeout)
+	if err != nil {
+		return "", fmt.Errorf("timed out when waiting for the PaC CheckRun to appear for %s", errMsgSuffix)
+	}
+
+	return checkRun.GetOutput().GetText(), nil
+}
