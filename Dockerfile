@@ -27,7 +27,7 @@ COPY pkg/ pkg/
 COPY tests/ tests/
 
 RUN go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo
-RUN ginkgo build ./cmd
+RUN CGO_ENABLED=0 ginkgo build ./cmd
 
 RUN curl -L "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${OC_VERSION}/openshift-client-linux.tar.gz" -o /tmp/openshift-client-linux.tar.gz && \
     tar --no-same-owner -xzf /tmp/openshift-client-linux.tar.gz && \

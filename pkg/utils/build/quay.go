@@ -1,6 +1,7 @@
 package build
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -14,6 +15,15 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/openshift/library-go/pkg/image/reference"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/containers/image/v5/image"
+	"github.com/containers/image/v5/transports/alltransports"
+	"github.com/containers/image/v5/types"
+)
+
+const (
+	mimeTypeOci    = "application/vnd.oci.image.layer.v1.tar+gzip"
+	mimeTypeDocker = "application/vnd.docker.image.rootfs.diff.tar.gzip"
 )
 
 var (
@@ -157,4 +167,53 @@ func GetImageTag(organization, repository, tagName string) (quay.Tag, error) {
 			return quay.Tag{}, fmt.Errorf("%s", fmt.Sprintf("cannot find tag %s", tagName))
 		}
 	}
+}
+
+func ValidateMediaTypeInImage(imageUrl, mediaType string) (bool, error) {
+
+	imagePath := "docker://" + imageUrl
+
+	ctx := context.Background()
+	var sys *types.SystemContext
+	var err error
+
+	ref, err := alltransports.ParseImageName(imagePath)
+	if err != nil {
+		return false, fmt.Errorf("Error parsing image name: %w", err)
+	}
+
+	src, err := ref.NewImageSource(ctx, sys)
+	if err != nil {
+		return false, fmt.Errorf("Error getting new image source: %w", err)
+	}
+
+	unparsedInstance := image.UnparsedInstance(src, nil)
+
+	img, err := image.FromUnparsedImage(ctx, sys, unparsedInstance)
+	if err != nil {
+		return false, fmt.Errorf("Error parsing manifest for image: %w", err)
+	}
+
+	imgInspect, err := img.Inspect(ctx)
+	if err != nil {
+		return false, fmt.Errorf("Error inspecting the image: %w", err)
+	}
+
+	if mediaType == "oci" {
+		for _, layerData := range imgInspect.LayersData {
+			if layerData.MIMEType != mimeTypeOci {
+				return false, fmt.Errorf("MediaType expected %q and got %q", mediaType, layerData.MIMEType)
+			}
+		}
+		return true, nil
+	}
+	if mediaType == "docker" {
+		for _, layerData := range imgInspect.LayersData {
+			if layerData.MIMEType != mimeTypeDocker {
+				return false, fmt.Errorf("MediaType expected %q and got %q", mediaType, layerData.MIMEType)
+			}
+		}
+		return true, nil
+	}
+	return false, nil
 }
