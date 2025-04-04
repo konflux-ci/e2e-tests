@@ -9,13 +9,12 @@ source "$( dirname $0 )/../utils.sh"
 echo "[$(date --utc -Ins)] Collecting load test results"
 
 # Setup directories
-ARTIFACT_DIR=${ARTIFACT_DIR:-.artifacts}
-CONCURRENCY="${1:-1}"
+ARTIFACT_DIR=${ARTIFACT_DIR:-artifacts}
 mkdir -p ${ARTIFACT_DIR}
 pushd "${2:-./tests/load-tests}"
 
-# Construct $PROMETHEUS_HOST by extracting BASE_URL from $STAGE_MEMBER_CLUSTER
-BASE_URL=$(echo $STAGE_MEMBER_CLUSTER | grep -oP 'https://api\.\K[^:]+')
+# Construct $PROMETHEUS_HOST by extracting BASE_URL from $MEMBER_CLUSTER
+BASE_URL=$(echo $MEMBER_CLUSTER | grep -oP 'https://api\.\K[^:]+')
 PROMETHEUS_HOST="thanos-querier-openshift-monitoring.apps.$BASE_URL"
 TOKEN=${OCP_PROMETHEUS_TOKEN}
 
@@ -72,40 +71,5 @@ status_data.py \
     &>"${ARTIFACT_DIR}/monitoring-collection.log"
 
 deactivate
-
-echo "[$(date --utc -Ins)] Collecting additional info"
-if ! [ -r users.json ]; then
-    echo "ERROR: Missing file with user creds"
-else
-    mkdir -p $ARTIFACT_DIR/collected-data
-    login_log_stub="${ARTIFACT_DIR}/collected-data/collected-oc_login"
-    application_stub="${ARTIFACT_DIR}/collected-data/collected-applications.appstudio.redhat.com"
-    component_stub="${ARTIFACT_DIR}/collected-data/collected-components.appstudio.redhat.com"
-
-    for uid in $( seq 1 $CONCURRENCY ); do
-        username="test-rhtap-$uid"
-        offline_token=$( cat users.json | jq --raw-output '.[] | select(.username == "'$username'").token' )
-        api_server=$( cat users.json | jq --raw-output '.[] | select(.username == "'$username'").apiurl' )
-        sso_server=$( cat users.json | jq --raw-output '.[] | select(.username == "'$username'").ssourl' )
-        access_token=$( curl \
-                          --silent \
-                          --header "Accept: application/json" \
-                          --header "Content-Type: application/x-www-form-urlencoded" \
-                          --data-urlencode "grant_type=refresh_token" \
-                          --data-urlencode "client_id=cloud-services" \
-                          --data-urlencode "refresh_token=${offline_token}" \
-                          "${sso_server}" \
-                        | jq --raw-output ".access_token" )
-        login_log="${login_log_stub}-${username}.log"
-        echo "Logging in as $username..."
-        if ! oc login --token="$access_token" --server="$api_server" &>$login_log; then
-            echo "ERROR: Login as $username failed:"
-            cat "$login_log"
-            continue
-        fi
-        tenant="${username}-tenant"
-
-    done
-fi
 
 popd
