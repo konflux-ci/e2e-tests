@@ -17,6 +17,8 @@ jobs:
         with:
           args: --timeout=10m
           version: v1.61
+        env:
+          CGO_ENABLED: 0
       - name: Run Gosec Security Scanner
         uses: securego/gosec@v2.20.0
         with:

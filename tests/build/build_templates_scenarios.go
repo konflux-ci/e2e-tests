@@ -37,23 +37,23 @@ func (s ComponentScenarioSpec) DeepCopy() ComponentScenarioSpec {
 
 var componentScenarios = []ComponentScenarioSpec{
 	{
-		GitURL:               "https://github.com/konflux-qe-bd/devfile-sample-python-basic",
-		Revision:             "47fc22092005aabebce233a9b6eab994a8152bbd",
+		GitURL:              "https://github.com/konflux-qe-bd/devfile-sample-python-basic",
+		Revision:            "47fc22092005aabebce233a9b6eab994a8152bbd",
+		ContextDir:          ".",
+		DockerFilePath:      constants.DockerFilePath,
+		PipelineBundleNames: []constants.BuildPipelineType{constants.DockerBuild, constants.DockerBuildOciTA},
+		EnableHermetic:      false,
+		PrefetchInput:       "",
+	},
+	{
+		GitURL:               "https://github.com/konflux-qe-bd/multiarch-sample-repo",
+		Revision:             "bc0452861279eb59da685ba86918938c6c9d8310",
 		ContextDir:           ".",
-		DockerFilePath:       constants.DockerFilePath,
-		PipelineBundleNames:  []constants.BuildPipelineType{constants.DockerBuild, constants.DockerBuildOciTA},
+		DockerFilePath:       "Dockerfile",
+		PipelineBundleNames:  []constants.BuildPipelineType{constants.DockerBuildMultiPlatformOciTa},
 		EnableHermetic:       false,
 		PrefetchInput:        "",
 		CheckDockerMediaType: true,
-	},
-	{
-		GitURL:              "https://github.com/konflux-qe-bd/multiarch-sample-repo",
-		Revision:            "bc0452861279eb59da685ba86918938c6c9d8310",
-		ContextDir:          ".",
-		DockerFilePath:      "Dockerfile",
-		PipelineBundleNames: []constants.BuildPipelineType{constants.DockerBuildMultiPlatformOciTa},
-		EnableHermetic:      false,
-		PrefetchInput:       "",
 	},
 	{
 		GitURL:              "https://github.com/konflux-qe-bd/retrodep",
