@@ -68,7 +68,7 @@ func (h *HasController) GetComponentPipelineRun(componentName string, applicatio
 
 // GetComponentPipelineRunWithType returns first pipeline run for a given component labels with pipeline type within label "pipelines.appstudio.openshift.io/type" ("build", "test")
 func (h *HasController) GetComponentPipelineRunWithType(componentName string, applicationName string, namespace, pipelineType string, sha string) (*pipeline.PipelineRun, error) {
-	prs, err := h.GetComponentPipelineRunsWithType(componentName, applicationName, namespace, "", sha)
+	prs, err := h.GetComponentPipelineRunsWithType(componentName, applicationName, namespace, pipelineType, sha)
 	if err != nil {
 		return nil, err
 	} else {
@@ -141,6 +141,24 @@ func (h *HasController) GetAllGroupSnapshotsForApplication(applicationName, name
 	}
 
 	return nil, fmt.Errorf("no snapshot found for application %s", applicationName)
+}
+
+// GetAllComponentSnapshotsForApplicationAndComponent returns the component Snapshots for a given application and component in the namespace
+func (h *HasController) GetAllComponentSnapshotsForApplicationAndComponent(applicationName, namespace, componentName string) (*[]appservice.Snapshot, error) {
+	snapshotLabels := map[string]string{"appstudio.openshift.io/application": applicationName, "test.appstudio.openshift.io/type": "component", "appstudio.openshift.io/component": componentName}
+
+	list := &appservice.SnapshotList{}
+	err := h.KubeRest().List(context.Background(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(snapshotLabels), Namespace: namespace})
+
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error listing snapshots in %s namespace: %v", namespace, err)
+	}
+
+	if len(list.Items) > 0 {
+		return &list.Items, nil
+	}
+
+	return nil, fmt.Errorf("no snapshot found for application %s and component %s", applicationName, componentName)
 }
 
 // Set of options to retrigger pipelineRuns in CI to fight against flakynes
