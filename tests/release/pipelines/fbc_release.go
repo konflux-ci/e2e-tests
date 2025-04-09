@@ -42,7 +42,11 @@ var (
 	managedFw *framework.Framework
 	snapshot *appservice.Snapshot
 	releaseCR *releaseapi.Release
-	pipelineRun *pipeline.PipelineRun
+	managedPipelineRun *pipeline.PipelineRun
+	buildPipelineRun *pipeline.PipelineRun
+	preGAPipelineRun *pipeline.PipelineRun
+	hotfixPipelineRun *pipeline.PipelineRun
+	stagedPipelineRun *pipeline.PipelineRun
 	fbcComponent *appservice.Component
 	err error
 
@@ -53,6 +57,7 @@ var (
 
 var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-pipelines", "fbc-tests"), func() {
 	defer GinkgoRecover()
+
 
 	var (
 		devNamespace = devWorkspace + "-tenant"
@@ -129,7 +134,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			})
 
 			It("Creates a push snapshot for a release", func() {
-				snapshot = releasecommon.CreatePushSnapshot(devWorkspace, devNamespace, fbcApplicationName, fbcCompRepoName, fbcPacBranchName, pipelineRun, fbcComponent)
+				snapshot = releasecommon.CreatePushSnapshot(devWorkspace, devNamespace, fbcApplicationName, fbcCompRepoName, fbcPacBranchName, buildPipelineRun, fbcComponent)
 			})
 
 			It("verifies the fbc release pipelinerun is running and succeeds", func() {
@@ -178,7 +183,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			})
 
 			It("Creates a push snapshot for a release", func() {
-				snapshot = releasecommon.CreatePushSnapshot(devWorkspace, devNamespace, fbcStagedAppName, fbcCompRepoName, fbcPacBranchName, pipelineRun, fbcComponent)
+				snapshot = releasecommon.CreatePushSnapshot(devWorkspace, devNamespace, fbcStagedAppName, fbcCompRepoName, fbcPacBranchName, stagedPipelineRun, fbcComponent)
 			})
 
 			It("verifies the fbc release pipelinerun is running and succeeds", func() {
@@ -227,7 +232,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			})
 
 			It("Creates a push snapshot for a release", func() {
-				snapshot = releasecommon.CreatePushSnapshot(devWorkspace, devNamespace, fbcHotfixAppName, fbcCompRepoName, fbcPacBranchName, pipelineRun, fbcComponent)
+				snapshot = releasecommon.CreatePushSnapshot(devWorkspace, devNamespace, fbcHotfixAppName, fbcCompRepoName, fbcPacBranchName, hotfixPipelineRun, fbcComponent)
 			})
 
 			It("verifies the fbc release pipelinerun is running and succeeds", func() {
@@ -274,7 +279,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			})
 
 			It("Creates a push snapshot for a release", func() {
-				snapshot = releasecommon.CreatePushSnapshot(devWorkspace, devNamespace, fbcPreGAAppName, fbcCompRepoName, fbcPacBranchName, pipelineRun, fbcComponent)
+				snapshot = releasecommon.CreatePushSnapshot(devWorkspace, devNamespace, fbcPreGAAppName, fbcCompRepoName, fbcPacBranchName, preGAPipelineRun, fbcComponent)
 			})
 
 			It("verifies the fbc release pipelinerun is running and succeeds", func() {
@@ -303,31 +308,31 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw *framework.Framework, de
 	}, 5*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for Release being created")
 
 	Eventually(func() error {
-		pipelineRun, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
+		managedPipelineRun, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 		if err != nil {
 			return fmt.Errorf("PipelineRun has not been created yet for release %s/%s", releaseCR.GetNamespace(), releaseCR.GetName())
 		}
 
-		for _, condition := range pipelineRun.Status.Conditions {
-			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
+		for _, condition := range managedPipelineRun.Status.Conditions {
+			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", managedPipelineRun.Name, condition.Reason)
 		}
 
-		if !pipelineRun.IsDone() {
-			return fmt.Errorf("PipelineRun %s has still not finished yet", pipelineRun.Name)
+		if !managedPipelineRun.IsDone() {
+			return fmt.Errorf("PipelineRun %s has still not finished yet", managedPipelineRun.Name)
 		}
 
-		if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
+		if managedPipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
 			return nil
 		} else {
 			storeCRsIntoLog()
 			prLogs := ""
-			if prLogs, err = tekton.GetFailedPipelineRunLogs(managedFw.AsKubeAdmin.ReleaseController.KubeRest(), managedFw.AsKubeAdmin.ReleaseController.KubeInterface(), pipelineRun); err != nil {
+			if prLogs, err = tekton.GetFailedPipelineRunLogs(managedFw.AsKubeAdmin.ReleaseController.KubeRest(), managedFw.AsKubeAdmin.ReleaseController.KubeInterface(), managedPipelineRun); err != nil {
 				GinkgoWriter.Printf("failed to get PLR logs: %+v", err)
 				Expect(err).ShouldNot(HaveOccurred())
 				return nil
 			}
 			GinkgoWriter.Printf("logs: %s", prLogs)
-			Expect(prLogs).To(Equal(""), fmt.Sprintf("PipelineRun %s failed", pipelineRun.Name))
+			Expect(prLogs).To(Equal(""), fmt.Sprintf("PipelineRun %s failed", managedPipelineRun.Name))
 			return nil
 		}
 	}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
@@ -414,12 +419,12 @@ func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framew
 
 func storeCRsIntoLog() {
 	managedFw = releasecommon.NewFramework(managedWorkspace)
-	// store pipelineRun and Release CR
-	if err = managedFw.AsKubeDeveloper.TektonController.StorePipelineRun(pipelineRun.Name, pipelineRun); err != nil {
-		GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
+	// store managedPipelineRun and Release CR
+	if err = managedFw.AsKubeDeveloper.TektonController.StorePipelineRun(managedPipelineRun.Name, managedPipelineRun); err != nil {
+		GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", managedPipelineRun.GetNamespace(), managedPipelineRun.GetName(), err.Error())
 	}
-	if err = managedFw.AsKubeDeveloper.TektonController.StoreTaskRunsForPipelineRun(managedFw.AsKubeDeveloper.CommonController.KubeRest(), pipelineRun); err != nil {
-		GinkgoWriter.Printf("failed to store TaskRuns for PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
+	if err = managedFw.AsKubeDeveloper.TektonController.StoreTaskRunsForPipelineRun(managedFw.AsKubeDeveloper.CommonController.KubeRest(), managedPipelineRun); err != nil {
+		GinkgoWriter.Printf("failed to store TaskRuns for PipelineRun %s:%s: %s\n", managedPipelineRun.GetNamespace(), managedPipelineRun.GetName(), err.Error())
 	}
 }
 
