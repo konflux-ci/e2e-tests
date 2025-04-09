@@ -817,7 +817,7 @@ func enableDockerMediaTypeInPipelineBundle(customDockerBuildBundle string, pipel
 	// Update hermetic params value to true and also update prefetch-input param value
 	for i := range dockerPipelineObject.PipelineSpec().Tasks {
 		t := &dockerPipelineObject.PipelineSpec().Tasks[i]
-		if t.Name == "build-container" || t.Name == "build-image-index" || t.Name == "sast-coverity-check" {
+		if t.Name == "build-container" || t.Name == "build-image-index" || t.Name == "sast-coverity-check" || t.Name == "buildah-remote-oci-ta" || t.Name == "sast-coverity-check-oci-ta" {
 			t.Params = append(t.Params, tektonpipeline.Param{Name: "BUILDAH_FORMAT", Value: *tektonpipeline.NewStructuredValues(mediaType)})
 		}
 	}
