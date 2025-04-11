@@ -304,6 +304,7 @@ func HandleComponent(ctx *PerComponentContext) error {
 			"APPLICATION": ctx.ParentContext.ApplicationName,
 			"COMPONENT":   ctx.ComponentName,
 			"BRANCH":      ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision,
+			"REPOURL":     ctx.ParentContext.ParentContext.ComponentRepoUrl,
 		}
 
 		// Skip what we do not care about
