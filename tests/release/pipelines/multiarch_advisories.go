@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	multiarchCatalogPathInRepo = "pipelines/managed/rh-advisories/rh-advisories.yaml"
+	multiarchCatalogPathInRepo = "pipelines/managed/rh-advisories/rh-advisories-oci-ta.yaml"
 	multiarchGitSourceURL      = "https://github.com/redhat-appstudio-qe/multi-platform-test-prod"
 	multiarchGitSrcSHA         = "fd4b6c28329ab3df77e7ad7beebac1829836561d"
 )
