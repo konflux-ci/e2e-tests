@@ -8,28 +8,30 @@ import (
 )
 
 type ComponentScenarioSpec struct {
-	GitURL              string
-	Revision            string
-	ContextDir          string
-	DockerFilePath      string
-	PipelineBundleNames []constants.BuildPipelineType
-	EnableHermetic      bool
-	PrefetchInput       string
-	CheckAdditionalTags bool
+	GitURL               string
+	Revision             string
+	ContextDir           string
+	DockerFilePath       string
+	PipelineBundleNames  []constants.BuildPipelineType
+	EnableHermetic       bool
+	PrefetchInput        string
+	CheckAdditionalTags  bool
+	CheckDockerMediaType bool
 }
 
 func (s ComponentScenarioSpec) DeepCopy() ComponentScenarioSpec {
 	pipelineBundleNames := make([]constants.BuildPipelineType, len(s.PipelineBundleNames))
 	copy(pipelineBundleNames, s.PipelineBundleNames)
 	return ComponentScenarioSpec{
-		GitURL:              s.GitURL,
-		Revision:            s.Revision,
-		ContextDir:          s.ContextDir,
-		DockerFilePath:      s.DockerFilePath,
-		PipelineBundleNames: pipelineBundleNames,
-		EnableHermetic:      s.EnableHermetic,
-		PrefetchInput:       s.PrefetchInput,
-		CheckAdditionalTags: s.CheckAdditionalTags,
+		GitURL:               s.GitURL,
+		Revision:             s.Revision,
+		ContextDir:           s.ContextDir,
+		DockerFilePath:       s.DockerFilePath,
+		PipelineBundleNames:  pipelineBundleNames,
+		EnableHermetic:       s.EnableHermetic,
+		PrefetchInput:        s.PrefetchInput,
+		CheckAdditionalTags:  s.CheckAdditionalTags,
+		CheckDockerMediaType: s.CheckDockerMediaType,
 	}
 }
 
@@ -44,13 +46,14 @@ var componentScenarios = []ComponentScenarioSpec{
 		PrefetchInput:       "",
 	},
 	{
-		GitURL:              "https://github.com/konflux-qe-bd/multiarch-sample-repo",
-		Revision:            "bc0452861279eb59da685ba86918938c6c9d8310",
-		ContextDir:          ".",
-		DockerFilePath:      "Dockerfile",
-		PipelineBundleNames: []constants.BuildPipelineType{constants.DockerBuildMultiPlatformOciTa},
-		EnableHermetic:      false,
-		PrefetchInput:       "",
+		GitURL:               "https://github.com/konflux-qe-bd/multiarch-sample-repo",
+		Revision:             "bc0452861279eb59da685ba86918938c6c9d8310",
+		ContextDir:           ".",
+		DockerFilePath:       "Dockerfile",
+		PipelineBundleNames:  []constants.BuildPipelineType{constants.DockerBuildMultiPlatformOciTa},
+		EnableHermetic:       false,
+		PrefetchInput:        "",
+		CheckDockerMediaType: true,
 	},
 	{
 		GitURL:              "https://github.com/konflux-qe-bd/retrodep",
