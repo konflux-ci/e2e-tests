@@ -19,6 +19,7 @@ func getRepoNameFromRepoUrl(repoUrl string) (string, error) {
 	//   repoUrl: https://github.com/XXXXXXXXXXXXXXX/nodejs-devfile-sample.git, match[1]: nodejs-devfile-sample
 	//   repoUrl: https://github.com/XXXXXXXXXXXXXXX/nodejs-devfile-sample/, match[1]: nodejs-devfile-sample
 	//   repoUrl: https://github.com/XXXXXXXXXXXXXXX/nodejs-devfile-sample, match[1]: nodejs-devfile-sample
+	//   repoUrl: https://gitlab.example.com/XXXXXXXXXXXXXXX/nodejs-devfile-sample, match[1]: nodejs-devfile-sample
 	regex := regexp.MustCompile(`/([^/]+?)(.git)?/?$`)
 	match := regex.FindStringSubmatch(repoUrl)
 	if match != nil {
@@ -28,9 +29,9 @@ func getRepoNameFromRepoUrl(repoUrl string) (string, error) {
 	}
 }
 
-// Template file from '.template/...' to '.tekton/...', expanding placeholders (even in file name)
+// Template file from '.template/...' to '.tekton/...', expanding placeholders (even in file name) using Github API
 // Returns SHA of the commit
-func templateRepoFile(f *framework.Framework, repoName, repoRevision, fileName string, placeholders *map[string]string) (string, error) {
+func templateRepoFileGithub(f *framework.Framework, repoName, repoRevision, fileName string, placeholders *map[string]string) (string, error) {
 	var fileResponse *github.RepositoryContent
 	var fileContent string
 	var repoContentResponse *github.RepositoryContentResponse
@@ -64,6 +65,13 @@ func templateRepoFile(f *framework.Framework, repoName, repoRevision, fileName s
 	return *repoContentResponse.Commit.SHA, nil
 }
 
+// Template file from '.template/...' to '.tekton/...', expanding placeholders (even in file name) using Gitlab API
+// Returns SHA of the commit
+func templateRepoFileGitlab(f *framework.Framework, repoName, repoRevision, fileName string, placeholders *map[string]string) (string, error) {
+	return "", fmt.Errorf("Templating via Gitlab API not implemented yet %s", repoName)
+}
+
+// Fork repository and return forked repo URL
 func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username string) (string, error) {
 	// For PaC testing, let's template repo and return forked repo name
 	var forkRepo *github.Repository
@@ -78,21 +86,32 @@ func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username string) (s
 	}
 	targetName = fmt.Sprintf("%s-%s", sourceName, username)
 
-	// Cleanup if it already exists
-	err = f.AsKubeAdmin.CommonController.Github.DeleteRepositoryIfExists(targetName)
-	if err != nil {
-		return "", err
-	}
+	if strings.Contains(repoUrl, "gitlab.") {
+		logging.Logger.Debug("Forking Gitlab repository %s", repoUrl)
 
-	// Create fork and make sure it appears
-	forkRepo, err = f.AsKubeAdmin.CommonController.Github.ForkRepository(sourceName, targetName)
-	if err != nil {
-		return "", err
-	}
+		logging.Logger.Warning("Forking Gitlab repository not implemented yet, this will only work with 1 concurrent user")   // TODO
 
-	return forkRepo.GetHTMLURL(), nil
+		return repoUrl, nil
+	} else {
+		logging.Logger.Debug("Forking Github repository %s", repoUrl)
+
+		// Cleanup if it already exists
+		err = f.AsKubeAdmin.CommonController.Github.DeleteRepositoryIfExists(targetName)
+		if err != nil {
+			return "", err
+		}
+
+		// Create fork and make sure it appears
+		forkRepo, err = f.AsKubeAdmin.CommonController.Github.ForkRepository(sourceName, targetName)
+		if err != nil {
+			return "", err
+		}
+
+		return forkRepo.GetHTMLURL(), nil
+	}
 }
 
+// Template PaC files
 func templateFiles(f *framework.Framework, repoUrl, repoRevision string, placeholders *map[string]string) (*map[string]string, error) {
 	var sha string
 
@@ -105,7 +124,11 @@ func templateFiles(f *framework.Framework, repoUrl, repoRevision string, placeho
 	// Template files we care about
 	shaMap := &map[string]string{}
 	for _, file := range fileList {
-		sha, err = templateRepoFile(f, repoName, repoRevision, file, placeholders)
+		if strings.Contains(repoUrl, "gitlab.") {
+			sha, err = templateRepoFileGitlab(f, repoName, repoRevision, file, placeholders)
+		} else {
+			sha, err = templateRepoFileGithub(f, repoName, repoRevision, file, placeholders)
+		}
 		if err != nil {
 			return nil, err
 		}
