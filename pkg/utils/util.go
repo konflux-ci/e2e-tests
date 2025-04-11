@@ -219,6 +219,7 @@ func CreateDockerConfigFile(base64EncodedString string) error {
 func GetContainerLogs(ki kubernetes.Interface, podName, containerName, namespace string) (string, error) {
 	podLogOpts := corev1.PodLogOptions{
 		Container: containerName,
+		Timestamps: true,
 	}
 
 	req := ki.CoreV1().Pods(namespace).GetLogs(podName, &podLogOpts)
