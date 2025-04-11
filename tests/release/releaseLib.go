@@ -129,6 +129,7 @@ func CreatePushSnapshot(devWorkspace, devNamespace, appName, compRepoName, pacBr
 		prNumber    int
 		err         error
 		snapshot    *appservice.Snapshot
+		pacPipelineRun *pipeline.PipelineRun
 	)
 
 	devFw := NewFramework(devWorkspace)
@@ -150,9 +151,9 @@ func CreatePushSnapshot(devWorkspace, devNamespace, appName, compRepoName, pacBr
 
 	// We don't need the PipelineRun from a PaC 'pull-request' event to finish, so we can delete it
 	Eventually(func() error {
-		pipelineRun, err = devFw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appName, devNamespace, prSHA)
+		pacPipelineRun, err = devFw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appName, devNamespace, prSHA)
 		if err == nil {
-			Expect(devFw.AsKubeAdmin.TektonController.DeletePipelineRun(pipelineRun.Name, pipelineRun.Namespace)).To(Succeed())
+			Expect(devFw.AsKubeAdmin.TektonController.DeletePipelineRun(pacPipelineRun.Name, pacPipelineRun.Namespace)).To(Succeed())
 			return nil
 		}
 		return err
