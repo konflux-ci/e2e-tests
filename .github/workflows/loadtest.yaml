@@ -41,6 +41,17 @@ jobs:
         STAGING_USERS_8: ${{ secrets.STAGING_USERS_8 }}
       run: ./ci-scripts/merge-json.sh $STAGING_USERS_1 $STAGING_USERS_2 $STAGING_USERS_3 $STAGING_USERS_4 $STAGING_USERS_5 $STAGING_USERS_6 $STAGING_USERS_7 $STAGING_USERS_8
 
+    - name: Select specific users from users.json
+      working-directory: ./tests/load-tests
+      env:
+        SCENARIO: ${{ github.event.inputs.scenario }}
+      run: |
+        export $SCENARIO
+        export USER_START_INDEX=${USER_START_INDEX:-0}
+        export CONCURRENCY=${CONCURRENCY:-1}
+        export USER_END_INDEX=$((USER_START_INDEX + CONCURRENCY))
+        jq --argjson start "$USER_START_INDEX" --argjson end "$USER_END_INDEX" '.[$start:$end]' users.json > tmp_users.json && mv tmp_users.json users.json
+
     - name: Run Load Test
       working-directory: ./tests/load-tests
       env:
