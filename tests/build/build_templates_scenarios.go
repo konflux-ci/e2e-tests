@@ -8,28 +8,30 @@ import (
 )
 
 type ComponentScenarioSpec struct {
-	GitURL              string
-	Revision            string
-	ContextDir          string
-	DockerFilePath      string
-	PipelineBundleNames []constants.BuildPipelineType
-	EnableHermetic      bool
-	PrefetchInput       string
-	CheckAdditionalTags bool
+	GitURL                           string
+	Revision                         string
+	ContextDir                       string
+	DockerFilePath                   string
+	PipelineBundleNames              []constants.BuildPipelineType
+	EnableHermetic                   bool
+	PrefetchInput                    string
+	CheckAdditionalTags              bool
+	CheckDockerManifestListMediaType bool
 }
 
 func (s ComponentScenarioSpec) DeepCopy() ComponentScenarioSpec {
 	pipelineBundleNames := make([]constants.BuildPipelineType, len(s.PipelineBundleNames))
 	copy(pipelineBundleNames, s.PipelineBundleNames)
 	return ComponentScenarioSpec{
-		GitURL:              s.GitURL,
-		Revision:            s.Revision,
-		ContextDir:          s.ContextDir,
-		DockerFilePath:      s.DockerFilePath,
-		PipelineBundleNames: pipelineBundleNames,
-		EnableHermetic:      s.EnableHermetic,
-		PrefetchInput:       s.PrefetchInput,
-		CheckAdditionalTags: s.CheckAdditionalTags,
+		GitURL:                           s.GitURL,
+		Revision:                         s.Revision,
+		ContextDir:                       s.ContextDir,
+		DockerFilePath:                   s.DockerFilePath,
+		PipelineBundleNames:              pipelineBundleNames,
+		EnableHermetic:                   s.EnableHermetic,
+		PrefetchInput:                    s.PrefetchInput,
+		CheckAdditionalTags:              s.CheckAdditionalTags,
+		CheckDockerManifestListMediaType: s.CheckDockerManifestListMediaType,
 	}
 }
 
@@ -79,6 +81,16 @@ var componentScenarios = []ComponentScenarioSpec{
 		PipelineBundleNames: []constants.BuildPipelineType{constants.FbcBuilder},
 		EnableHermetic:      false,
 		PrefetchInput:       "",
+	},
+	{
+		GitURL:                           "https://github.com/konflux-qe-bd/fbc-sample-repo-clone",
+		Revision:                         "8e374e107fecf03f3c64c528bb53798039661414",
+		ContextDir:                       "4.13",
+		DockerFilePath:                   "catalog.Dockerfile",
+		PipelineBundleNames:              []constants.BuildPipelineType{constants.FbcBuilder},
+		EnableHermetic:                   false,
+		PrefetchInput:                    "",
+		CheckDockerManifestListMediaType: true,
 	},
 	{
 		GitURL:              "https://github.com/konflux-qe-bd/docker-file-from-scratch",
