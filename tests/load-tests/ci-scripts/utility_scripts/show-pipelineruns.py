@@ -14,6 +14,7 @@ import sys
 import yaml
 import time
 import re
+import csv
 
 import matplotlib.pyplot
 import matplotlib.colors
@@ -65,7 +66,6 @@ class Something:
         self.data_pipelineruns = {}
         self.data_taskruns = []
         self.data_pods = []
-        self.data_taskruns = []
         self.data_dir = data_dir
         self.pr_lanes = []
 
@@ -79,12 +79,15 @@ class Something:
         self.pod_skips = 0  # how many Pods we skipped
         self.pr_duration = datetime.timedelta(0)  # total time of all PipelineRuns
         self.tr_duration = datetime.timedelta(0)  # total time of all TaskRuns
+        self.pod_duration = datetime.timedelta(0)  # total time of all Pods running
+        self.pod_pending_duration = datetime.timedelta(0)  # total time of all Pods pending
         self.pr_idle_duration = datetime.timedelta(
             0
         )  # total time in PipelineRuns when no TaskRun was running
         self.pr_conditions = collections.defaultdict(lambda: 0)
         self.tr_conditions = collections.defaultdict(lambda: 0)
         self.tr_statuses = collections.defaultdict(lambda: 0)
+        self.pod_conditions = collections.defaultdict(lambda: 0)
 
         self._populate(self.data_dir)
         self._merge_taskruns()
@@ -146,6 +149,10 @@ class Something:
             self.data_pipelineruns[pod["pipelinerun"]]["taskRuns"][pod["task"]]["node_name"] = pod[
                 "node_name"
             ]
+
+            self.data_pipelineruns[pod["pipelinerun"]]["taskRuns"][pod["task"]]["pod_start_time"] = pod["start_time"]
+            self.data_pipelineruns[pod["pipelinerun"]]["taskRuns"][pod["task"]]["pod_creation_timestamp"] = pod["creation_timestamp"]
+            self.data_pipelineruns[pod["pipelinerun"]]["taskRuns"][pod["task"]]["pod_finished_time"] = pod["finished_time"]
 
         self.data_pods = []
 
@@ -347,18 +354,65 @@ class Something:
             self.pod_skips += 1
             return
 
+        try:
+            pod_creation_timestamp = pod["metadata"]["creationTimestamp"]
+        except KeyError as e:
+            logging.info(f"Pod {pod_name} missing creationTimestamp, skipping: {e}")
+            self.pod_skips += 1
+            return
+
+        try:
+            pod_start_time = pod["status"]["startTime"]
+        except KeyError as e:
+            logging.info(f"Pod {pod_name} missing startTime, skipping: {e}")
+            self.pod_skips += 1
+            return
+
+        try:
+            pod_finished_time = None
+            for container in pod["status"]["containerStatuses"]:
+                if pod_finished_time is None:
+                    pod_finished_time = container["state"]["terminated"]["finishedAt"]
+                elif pod_finished_time < container["state"]["terminated"]["finishedAt"]:
+                    pod_finished_time = container["state"]["terminated"]["finishedAt"]
+        except KeyError as e:
+            logging.info(f"Pod {pod_name} missing finishedAt timestamp for container, skipping: {e}")
+            self.pod_skips += 1
+            return
+
+        try:
+            pod_conditions = pod["status"]["conditions"]
+        except KeyError as e:
+            logging.info(f"Pod {pod_name} missing conditions, skipping: {e}")
+            self.pod_skips += 1
+            return
+
         self.data_pods.append(
             {
                 "name": pod_name,
                 "pipelinerun": pod_pipelinerun,
                 "task": pod_task,
                 "node_name": pod_node_name,
+                "creation_timestamp": pod_creation_timestamp,
+                "start_time": pod_start_time,
+                "finished_time": pod_finished_time,
             }
         )
+
+        for condition in pod_conditions:
+            c_type = condition["type"]
+            c_status = condition["status"]
+            c_reason = condition["reason"] if "reason" in condition else None
+            self.pod_conditions[f"{c_type} / {c_status} / {c_reason}"] += 1
 
     def _dump_json(self, data, path):
         with open(path, "w") as fp:
             json.dump(data, fp, cls=DateTimeEncoder, sort_keys=True, indent=4)
+
+    def _dump_csv(self, data, path):
+        with open(path, "w") as fp:
+            writer = csv.writer(fp)
+            writer.writerows(data)
 
     def _load_json(self, path):
         with open(path, "r") as fp:
@@ -474,6 +528,7 @@ class Something:
                 for i in self.data_pipelineruns.values()
             ]
         )
+        tr_without_pod_times = 0
 
         for pr_name, pr_times in self.data_pipelineruns.items():
             pr_duration = pr_times[end] - pr_times[start]
@@ -484,6 +539,11 @@ class Something:
             for tr_name, tr_times in pr_times["taskRuns"].items():
                 self.tr_duration += tr_times[end] - tr_times[start]
                 add_time_interval(trs, tr_times)
+                if "pod_finished_time" in tr_times and "pod_start_time" in tr_times and "pod_creation_timestamp" in tr_times:
+                    self.pod_duration += tr_times["pod_finished_time"] - tr_times["pod_start_time"]
+                    self.pod_pending_duration += tr_times["pod_start_time"] - tr_times["pod_creation_timestamp"]
+                else:
+                    tr_without_pod_times += 1
 
             # Combine new intervals so they do not overlap
             trs_no_overlap = []
@@ -504,7 +564,7 @@ class Something:
             f"There was {self.pr_count} PipelineRuns and {self.tr_count} TaskRuns and {self.pod_count} Pods."
         )
         print(
-            f"In total PipelineRuns took {self.pr_duration} and TaskRuns took {self.tr_duration}, PipelineRuns were idle for {self.pr_idle_duration}"
+            f"In total PipelineRuns took {self.pr_duration} and TaskRuns took {self.tr_duration}, Pods were pending for {self.pod_pending_duration} and running for {self.pod_duration} (having {tr_without_pod_times} TRs without pod times), PipelineRuns were idle for {self.pr_idle_duration}"
         )
         pr_duration_avg = (
             (self.pr_duration / self.pr_count).total_seconds()
@@ -613,6 +673,7 @@ class Something:
                 headers=["Condition message", "Count"],
             )
         )
+        self._dump_csv([["Condition message", "Count"]] + list(self.pr_conditions.items()), os.path.join(self.data_dir, "show-pipelineruns-pipelinerun-conditions.csv"))
         print("\nTaskRuns conditions frequency")
         print(
             tabulate.tabulate(
@@ -620,6 +681,7 @@ class Something:
                 headers=["Condition message", "Count"],
             )
         )
+        self._dump_csv([["Condition message", "Count"]] + list(self.tr_conditions.items()), os.path.join(self.data_dir, "show-pipelineruns-taskrun-conditions.csv"))
         print("\nTaskRuns status messages frequency")
         print(
             tabulate.tabulate(
@@ -627,6 +689,14 @@ class Something:
                 headers=["Status message", "Count"],
             )
         )
+        print("\nPods conditions frequency")
+        print(
+            tabulate.tabulate(
+                self.pod_conditions.items(),
+                headers=["Condition description", "Count"],
+            )
+        )
+        self._dump_csv([["Condition description", "Count"]] + list(self.pod_conditions.items()), os.path.join(self.data_dir, "show-pipelineruns-pod-conditions.csv"))
 
     def _plot_graph(self):
         """
