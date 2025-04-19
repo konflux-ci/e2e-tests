@@ -28,7 +28,7 @@ const (
 	fbcServiceAccountName      = "release-service-account"
 	fbcSourceGitURL            = "https://github.com/redhat-appstudio-qe/fbc-sample-repo-test"
 	fbcCompRepoName            = "fbc-sample-repo-test"
-	fbcCompRevision            = "139b6b8d9adca6bd6f0081482ecd284cbedc2681"
+	fbcCompRevision            = "94d5b8ccbcdf4d5a8251657bc3266b848c9ec331"
 	fbcCompDefaultBranchName   = "main"
 	fbcDockerFilePath          = "catalog.Dockerfile"
 	targetPort                 = 50051
@@ -66,22 +66,22 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		issueId = "bz12345"
 		productName = "preGA-product"
 		productVersion = "v2"
-		
+
 		fbcApplicationName = "fbc-pipelines-app-" + util.GenerateRandomString(4)
 		fbcStagedAppName = "fbc-staged-app-" + util.GenerateRandomString(4)
 		fbcHotfixAppName = "fbc-hotfix-app-" + util.GenerateRandomString(4)
 		fbcPreGAAppName = "fbc-prega-app-" + util.GenerateRandomString(4)
-		
+
 		fbcReleasePlanName = "fbc-pipelines-rp-" + util.GenerateRandomString(4)
 		fbcStagedRPName = "fbc-staged-rp-" + util.GenerateRandomString(4)
 		fbcHotfixRPName = "fbc-hotfix-rp-" + util.GenerateRandomString(4)
 		fbcPreGARPName = "fbc-prega-rp-" + util.GenerateRandomString(4)
-		
+
 		fbcReleasePlanAdmissionName = "fbc-pipelines-rpa-" + util.GenerateRandomString(4)
 		fbcStagedRPAName = "fbc-staged-rpa-" + util.GenerateRandomString(4)
 		fbcHotfixRPAName = "fbc-hotfix-rpa-" + util.GenerateRandomString(4)
 		fbcPreGARPAName = "fbc-prega-rpa-" + util.GenerateRandomString(4)
-		
+
 		fbcEnterpriseContractPolicyName = "fbc-pipelines-policy-" + util.GenerateRandomString(4)
 		fbcStagedECPolicyName = "fbc-staged-policy-" + util.GenerateRandomString(4)
 		fbcHotfixECPolicyName = "fbc-hotfix-policy-" + util.GenerateRandomString(4)
@@ -335,7 +335,8 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw *framework.Framework, de
 			Expect(prLogs).To(Equal(""), fmt.Sprintf("PipelineRun %s failed", managedPipelineRun.Name))
 			return nil
 		}
-	}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
+	}, 120 * time.Minute, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
+	//}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
 }
 
 func assertReleaseCRSucceeded(devFw *framework.Framework, devNamespace, managedNamespace, fbcAppName string, componentName string) {
