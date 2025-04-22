@@ -952,7 +952,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			}
 
 			// Delete created webhook from GitHub
-			Expect(build.CleanupWebhooks(f, secretLookupGitSourceRepoTwoName)).ShouldNot(HaveOccurred())
+			err = build.CleanupWebhooks(f, secretLookupGitSourceRepoTwoName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("404 Not Found"))
+			}
 
 		})
 		When("two secrets are created", func() {
