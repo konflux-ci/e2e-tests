@@ -8,6 +8,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	coreV1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/avast/retry-go/v4"
@@ -116,9 +117,12 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 		_, err := asAdmin.CommonController.GetConfigMap(cmName, cmNamespace)
 		if err != nil {
 			// if not found, create new one
-			if strings.Contains(err.Error(), "not found") {
-				newConfigMap := &coreV1.ConfigMap{}
-				newConfigMap.Name = cmName
+			if k8sErrors.IsNotFound(err) {
+				newConfigMap := &coreV1.ConfigMap{
+					ObjectMeta: v1.ObjectMeta{
+						Name: cmName,
+					},
+				}
 				_, err := asAdmin.CommonController.CreateConfigMap(newConfigMap, cmNamespace)
 				if err != nil {
 					return nil, fmt.Errorf("failed to create %s configMap with error: %v", cmName, err)
