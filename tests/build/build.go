@@ -1220,6 +1220,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 		var err error
 		var pr *pipeline.PipelineRun
 		var buildPipelineAnnotation map[string]string
+		var serviceAccountName, secretName string
 
 		BeforeAll(func() {
 
@@ -1227,39 +1228,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace
 
-			if err = f.AsKubeAdmin.CommonController.UnlinkSecretFromServiceAccount(testNamespace, constants.RegistryAuthSecretName, constants.DefaultPipelineServiceAccount, true); err != nil {
-				GinkgoWriter.Println(fmt.Sprintf("Failed to unlink registry auth secret from service account: %v\n", err))
-			}
-
-			if err = f.AsKubeAdmin.CommonController.DeleteSecret(testNamespace, constants.RegistryAuthSecretName); err != nil {
-				GinkgoWriter.Println(fmt.Sprintf("Failed to delete regitry auth secret from namespace: %s\n", err))
-			}
-
-			_, err := f.AsKubeAdmin.CommonController.GetSecret(testNamespace, constants.RegistryAuthSecretName)
-			if err != nil {
-				// If we have an error when getting RegistryAuthSecretName, it should be IsNotFound err
-				Expect(k8sErrors.IsNotFound(err)).To(BeTrue())
-			} else {
-				Skip("a registry auth secret is already created in testing namespace - skipping....")
-			}
-
 			applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
 
 			_, err = f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
 			timeout = time.Minute * 5
-
-			dummySecret := &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: constants.RegistryAuthSecretName},
-				Type:       v1.SecretTypeDockerConfigJson,
-				Data:       map[string][]byte{".dockerconfigjson": []byte("{\"auths\":{\"quay.io\":{\"username\":\"test\",\"password\":\"test\",\"auth\":\"dGVzdDp0ZXN0\",\"email\":\"\"}}}")},
-			}
-
-			_, err = f.AsKubeAdmin.CommonController.CreateSecret(testNamespace, dummySecret)
-			Expect(err).ToNot(HaveOccurred())
-			err = f.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(testNamespace, dummySecret.Name, constants.DefaultPipelineServiceAccount, false)
-			Expect(err).ToNot(HaveOccurred())
 
 			componentName = "build-suite-test-secret-overriding"
 			pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
@@ -1285,6 +1259,35 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			}
 			_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, buildPipelineAnnotation))
 			Expect(err).NotTo(HaveOccurred())
+
+			serviceAccountName = "build-pipeline-" + componentName
+			secretName = "imagerepository-for-" + applicationName + "-" + componentName + "-image-push"
+			// Unlink the ImageRepository Push Secret from component SA
+			Eventually(func() error {
+				err = f.AsKubeAdmin.CommonController.UnlinkSecretFromServiceAccount(testNamespace, secretName, serviceAccountName, true)
+				if err != nil {
+					GinkgoWriter.Printf("failed to unlink secret %s from service account %s\n", secretName, serviceAccountName)
+					return err
+				}
+				return nil
+			}, 2*time.Minute, 10*time.Second).Should(Succeed(), fmt.Sprintf("timed out when waiting for secret %s to unlink from service account %s", secretName, serviceAccountName))
+
+			// Delete the image repository push secret
+			if err = f.AsKubeAdmin.CommonController.DeleteSecret(testNamespace, secretName); err != nil {
+				Fail(fmt.Sprintf("Failed to delete image repository secret from namespace: %s\n", err))
+			}
+
+			// Create the dummy secret
+			dummySecret := &v1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "dummy-secret"},
+				Type:       v1.SecretTypeDockerConfigJson,
+				Data:       map[string][]byte{".dockerconfigjson": []byte("{\"auths\":{\"quay.io\":{\"username\":\"test\",\"password\":\"test\",\"auth\":\"dGVzdDp0ZXN0\",\"email\":\"\"}}}")},
+			}
+
+			_, err = f.AsKubeAdmin.CommonController.CreateSecret(testNamespace, dummySecret)
+			Expect(err).ToNot(HaveOccurred())
+			err = f.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(testNamespace, dummySecret.Name, serviceAccountName, false)
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		AfterAll(func() {
@@ -1307,7 +1310,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			Expect(build.CleanupWebhooks(f, helloWorldComponentGitSourceCloneRepoName)).ShouldNot(HaveOccurred())
 		})
 
-		It("should override the shared secret", func() {
+		It("pipeline should use the component sa", func() {
 			Eventually(func() error {
 				pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 				if err != nil {
@@ -1322,7 +1325,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 			pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(pr.Spec.Workspaces).To(HaveLen(2))
+			Expect(pr.Spec.TaskRunTemplate.ServiceAccountName).Should(Equal(serviceAccountName))
 		})
 
 		It("should not be possible to push to quay.io repo (PipelineRun should fail)", func() {
