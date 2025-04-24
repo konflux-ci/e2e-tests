@@ -3,20 +3,21 @@ package integration
 import (
 	"fmt"
 	"os"
-	"time"
 	"strings"
+	"time"
 
+	"github.com/devfile/library/v2/pkg/util"
+	"github.com/google/go-github/v44/github"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	"github.com/devfile/library/v2/pkg/util"
 
 	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 	integrationv1beta2 "github.com/konflux-ci/integration-service/api/v1beta2"
-	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -28,12 +29,13 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 
 	var prNumber int
 	var timeout, interval time.Duration
-	var prHeadSha string
+	var mergeResultSha, prHeadSha string
 	var snapshot *appstudioApi.Snapshot
 	var component *appstudioApi.Component
 	var pipelineRun, testPipelinerun, failedPipelineRun *tektonv1.PipelineRun
 	var integrationTestScenarioPass, integrationTestScenarioFail *integrationv1beta2.IntegrationTestScenario
 	var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace string
+	var mergeResult *github.PullRequestMergeResult
 	var labels, annotations map[string]string
 
 	AfterEach(framework.ReportFailure(&f))
@@ -75,6 +77,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the component %s/%s", testNamespace, componentName))
 			labels = pipelineRun.GetLabels()
 			annotations = pipelineRun.GetAnnotations()
+			fmt.Print(componentBaseBranchName)
 		})
 
 		AfterAll(func() {
@@ -137,7 +140,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 
 			It("eventually leads to the build PipelineRun's status reported at Checks tab", func() {
 				expectedCheckRunName := fmt.Sprintf("%s-%s", componentName, "on-pull-request")
-				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))		})
+				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
+			})
 		})
 
 		When("the PaC build pipelineRun run succeeded", func() {
@@ -198,6 +202,45 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			It("eventually leads to the status reported at Checks tab for the failed Integration PipelineRun", func() {
 				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(integrationTestScenarioFail.Name, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionFailure))
 			})
+
+			It("merging the PR, expected to succeed ", func() {
+				Eventually(func() error {
+					mergeResult, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(componentRepoNameForStatusReporting, prNumber)
+					return err
+				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, multiComponentRepoNameForGroupSnapshot))
+				mergeResultSha = mergeResult.GetSHA()
+				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
+			})
+
+			It("leads to triggering a push PipelineRun", func() {
+				timeout = time.Minute * 5
+				Eventually(func() error {
+					pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, mergeResultSha)
+					if err != nil {
+						GinkgoWriter.Printf("Push PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
+						return err
+					}
+					if !pipelineRun.HasStarted() {
+						return fmt.Errorf("push pipelinerun %s/%s hasn't started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
+					}
+					return nil
+				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
+
+			})
+
+			It("verifies that Push PipelineRuns completed", func() {
+				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioPass, snapshot, testNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
+				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioFail, snapshot, testNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
+			})
+
+			It("validates the Integration test scenario PipelineRun is reported to merge request CheckRuns, and it pass", func() {
+				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(integrationTestScenarioPass.Name, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
+
+			})
+
+			It("eventually leads to the status reported at Checks tab for the failed Integration PipelineRun", func() {
+				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(integrationTestScenarioFail.Name, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionFailure))
+			})
 		})
 
 		When("build pipelinerun fails", func() {
@@ -206,9 +249,9 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 				delete(annotations, snapshotCreationReport)
 				failedPipelineRun = &tektonv1.PipelineRun{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:	"failing-build-plr-"+util.GenerateRandomString(4),
-						Namespace: testNamespace,
-						Labels: labels,
+						Name:        "failing-build-plr-" + util.GenerateRandomString(4),
+						Namespace:   testNamespace,
+						Labels:      labels,
 						Annotations: annotations,
 					},
 					Spec: tektonv1.PipelineRunSpec{
@@ -217,15 +260,15 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 								Resolver: "git",
 								Params: tektonv1.Params{
 									{
-										Name: "url",
+										Name:  "url",
 										Value: tektonv1.ParamValue{Type: "string", StringVal: "https://github.com/konflux-ci/integration-examples.git"},
 									},
 									{
-										Name: "revision",
+										Name:  "revision",
 										Value: tektonv1.ParamValue{Type: "string", StringVal: "main"},
 									},
 									{
-										Name: "pathInRepo",
+										Name:  "pathInRepo",
 										Value: tektonv1.ParamValue{Type: "string", StringVal: "pipelines/integration_resolver_pipeline_pass.yaml"},
 									},
 								},
@@ -254,5 +297,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 				}, time.Minute*3, time.Second*5).Should(Succeed(), fmt.Sprintf("timed out when waiting for the failing checkrun for the component  %s/%s and integrationTestScenarioPass %s", testNamespace, componentName, integrationTestScenarioPass.Name))
 			})
 		})
+
 	})
 })
