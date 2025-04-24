@@ -69,3 +69,69 @@ func (g *Github) ExistsRef(repository, branchName string) (bool, error) {
 func (g *Github) UpdateGithubOrg(githubOrg string) {
 	g.organization = githubOrg
 }
+
+// CreateCommit creates a new commit directly on the specified branch
+func (g *Github) CreateCommit(repository, branch, path string, content []byte, message string) (string, error) {
+	ctx := context.Background()
+
+	// Get the reference to the branch
+	ref, _, err := g.client.Git.GetRef(ctx, g.organization, repository, fmt.Sprintf(HEADS, branch))
+	if err != nil {
+		return "", fmt.Errorf("error getting ref for branch %s: %v", branch, err)
+	}
+
+	// Get the tree for the given reference
+	tree, _, err := g.client.Git.GetTree(ctx, g.organization, repository, *ref.Object.SHA, false)
+	if err != nil {
+		return "", fmt.Errorf("error getting tree: %v", err)
+	}
+
+	// Create a blob with the file content
+	blob := &github.Blob{
+		Content:  github.String(string(content)),
+		Encoding: github.String("utf-8"),
+	}
+	blob, _, err = g.client.Git.CreateBlob(ctx, g.organization, repository, blob)
+	if err != nil {
+		return "", fmt.Errorf("error creating blob: %v", err)
+	}
+
+	// Create a new tree with the new file
+	entries := []*github.TreeEntry{
+		{
+			Path: github.String(path),
+			Mode: github.String("100644"),
+			Type: github.String("blob"),
+			SHA:  blob.SHA,
+		},
+	}
+	newTree, _, err := g.client.Git.CreateTree(ctx, g.organization, repository, *tree.SHA, entries)
+	if err != nil {
+		return "", fmt.Errorf("error creating tree: %v", err)
+	}
+
+	// Create the commit
+	parent, _, err := g.client.Git.GetCommit(ctx, g.organization, repository, *ref.Object.SHA)
+	if err != nil {
+		return "", fmt.Errorf("error getting parent commit: %v", err)
+	}
+
+	commit := &github.Commit{
+		Message: github.String(message),
+		Tree:    newTree,
+		Parents: []*github.Commit{parent},
+	}
+	newCommit, _, err := g.client.Git.CreateCommit(ctx, g.organization, repository, commit)
+	if err != nil {
+		return "", fmt.Errorf("error creating commit: %v", err)
+	}
+
+	// Update the reference
+	ref.Object.SHA = newCommit.SHA
+	_, _, err = g.client.Git.UpdateRef(ctx, g.organization, repository, ref, false)
+	if err != nil {
+		return "", fmt.Errorf("error updating ref: %v", err)
+	}
+
+	return *newCommit.SHA, nil
+}
