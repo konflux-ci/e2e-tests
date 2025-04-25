@@ -66,7 +66,7 @@ var ManagednamespaceSecret = []corev1.ObjectReference{
 // Pipelines variables
 var (
 	RelSvcCatalogURL      string = utils.GetEnv("RELEASE_SERVICE_CATALOG_URL", "https://github.com/konflux-ci/release-service-catalog")
-	RelSvcCatalogRevision string = utils.GetEnv("RELEASE_SERVICE_CATALOG_REVISION", "staging")
+	RelSvcCatalogRevision string = utils.GetEnv("RELEASE_SERVICE_CATALOG_REVISION", "development")
 	ReleasedImagePushRepo string = "quay.io/" + utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe") + "/dcmetromap"
 	AdditionalReleasedImagePushRepo string = "quay.io/" + utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe") + "/simplepython"
 )
