@@ -18,6 +18,7 @@ const (
 	targetReleaseNamespace         = "default"
 
 	componentRepoNameForGeneralIntegration    = "konflux-test-integration"
+	componentRepoNameForGroupIntegration      = "konflux-test-integration-clone"
 	componentRepoNameForIntegrationWithEnv    = "konflux-test-integration-with-env"
 	componentRepoNameForStatusReporting       = "konflux-test-integration-status-report"
 	multiComponentRepoNameForGroupSnapshot    = "group-snapshot-multi-component"
@@ -43,12 +44,14 @@ const (
 	testGroupSnapshotAnnotation              = "test.appstudio.openshift.io/group-test-info"
 	pipelinerunFinalizerByIntegrationService = "test.appstudio.openshift.io/pipelinerun"
 	snapshotRerunLabel                       = "test.appstudio.openshift.io/run"
+	snapshotCreationReport                   = "test.appstudio.openshift.io/snapshot-creation-report"
 
 	chainsSignedAnnotation = "chains.tekton.dev/signed"
 )
 
 var (
 	componentGitSourceURLForGeneralIntegration    = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), componentRepoNameForGeneralIntegration)
+	componentGitSourceURLForGroupIntegration      = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), componentRepoNameForGroupIntegration)
 	componentGitSourceURLForIntegrationWithEnv    = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), componentRepoNameForIntegrationWithEnv)
 	componentGitSourceURLForStatusReporting       = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), componentRepoNameForStatusReporting)
 	multiComponentGitSourceURLForGroupSnapshotA   = fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), multiComponentRepoNameForGroupSnapshot)

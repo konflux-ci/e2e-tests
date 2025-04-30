@@ -8,10 +8,10 @@ import (
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
-	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 	"github.com/devfile/library/v2/pkg/util"
@@ -158,24 +158,36 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 			})
 
 			It("verifies if the MR URL is valid", func() {
-				releasePR, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
+				releasePR, err = managedFw.AsKubeDeveloper.ReleaseController.GetPipelineRunInNamespace(managedFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 				Expect(err).NotTo(HaveOccurred())
 
-				trReleaseLogs, err := managedFw.AsKubeAdmin.TektonController.GetTaskRunLogs(releasePR.GetName(), "run-file-updates", releasePR.GetNamespace())
+				trReleaseLogs, err := managedFw.AsKubeDeveloper.TektonController.GetTaskRunLogs(releasePR.GetName(), "run-file-updates", releasePR.GetNamespace())
 				Expect(err).NotTo(HaveOccurred())
+
+				GinkgoWriter.Printf("Length of trReleaseLogs is: %d", len(trReleaseLogs))
 
 				var log, mrURL string
+				var matches []string
+				re := regexp.MustCompile(`MR Created: (.+)`)
 				for _, tasklog := range trReleaseLogs {
 					log = tasklog
+					matches = re.FindStringSubmatch(log)
+					if matches != nil {
+						break
+					}
 				}
 
-				re := regexp.MustCompile(`(?:MR Created: )(.+)`)
-				mrURL = re.FindStringSubmatch(log)[1]
-
-				pattern := `https?://[^/\s]+/[^/\s]+/[^/\s]+/+\-\/merge_requests\/(\d+)`
-				re, err = regexp.Compile(pattern)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(re.MatchString(mrURL)).To(BeTrue(), fmt.Sprintf("MR URL %s is not valid", mrURL))
+				if len(matches) > 1 {
+					mrURL = matches[1]
+					GinkgoWriter.Println("Extracted MR URL:", mrURL)
+					pattern := `https?://[^/\s]+/[^/\s]+/[^/\s]+/+\-\/merge_requests\/(\d+)`
+					re, err = regexp.Compile(pattern)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(re.MatchString(mrURL)).To(BeTrue(), fmt.Sprintf("MR URL %s is not valid", mrURL))
+				} else {
+					err = fmt.Errorf("no MR URL found in log from taskRun log: %s", log)
+					Expect(err).NotTo(HaveOccurred())
+				}
 			})
 		})
 	})

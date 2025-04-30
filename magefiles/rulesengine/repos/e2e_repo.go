@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
@@ -34,6 +35,7 @@ var NonTestFilesRuleWithReleasePipelines = rulesengine.Rule{Name: "E2E PR Test E
 			rulesengine.ConditionFunc(CheckMageFilesChanged),
 			rulesengine.ConditionFunc(CheckCmdFilesChanged),
 			rulesengine.ConditionFunc(CheckTektonFilesChanged),
+			&ReleaseTestHelperFilesChangeOnlyRule,
 		},
 		rulesengine.ConditionFunc(CheckReleasePipelinesTestsChanged),
 	},
@@ -56,7 +58,6 @@ var TestFilesOnlyRule = rulesengine.Rule{Name: "E2E PR Test File Diff Execution"
 			&BuildNonTestFileChangeRule,
 			&KonfluxDemoConfigsFileOnlyChangeRule,
 			&KonfluxDemoTestFileChangedRule,
-			&ReleaseTestHelperFilesChangeOnlyRule,
 			&ReleaseTestTestFilesChangeRule,
 			&IntegrationTestsConstFileChangeRule,
 			&IntegrationTestsFileChangeRule,
@@ -378,6 +379,7 @@ func ExecuteDefaultTestAction(rctx *rulesengine.RuleCtx) error {
 
 func ExecuteAllTestsExceptUpgradeTestSuite(rctx *rulesengine.RuleCtx) error {
 	rctx.LabelFilter = "!upgrade-create && !upgrade-verify && !upgrade-cleanup"
+	rctx.Timeout = 2*time.Hour + 30*time.Minute
 	return ExecuteTestAction(rctx)
 
 }

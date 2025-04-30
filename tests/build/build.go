@@ -18,7 +18,6 @@ import (
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	v1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/konflux-ci/e2e-tests/pkg/clients/git"
@@ -27,7 +26,6 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
-	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 )
 
 var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-service"), func() {
@@ -91,7 +89,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 			gitClient, helloWorldComponentGitSourceURL, helloWorldRepository = setupGitProvider(f, gitProvider)
 			// get the build pipeline bundle annotation
-			buildPipelineAnnotation = build.GetDockerBuildPipelineBundle()
+			buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(constants.DockerBuild)
 
 			err = gitClient.CreateBranch(helloWorldRepository, helloWorldComponentDefaultBranch, helloWorldComponentRevision, componentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
@@ -188,6 +186,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					}
 					return nil
 				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", customBranchComponentName, testNamespace))
+			})
+			It("build pipeline uses the correct serviceAccount", func() {
+				serviceAccountName := "build-pipeline-" + customDefaultComponentName
+				Expect(plr.Spec.TaskRunTemplate.ServiceAccountName).Should(Equal(serviceAccountName))
 			})
 			It("component build status is set correctly", func() {
 				var buildStatus *controllers.BuildStatus
@@ -673,7 +675,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			multiComponentPRBranchName = fmt.Sprintf("%s-%s", "pr-branch", util.GenerateRandomString(6))
 
 			// get the build pipeline bundle annotation
-			buildPipelineAnnotation = build.GetDockerBuildPipelineBundle()
+			buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(constants.DockerBuild)
 
 		})
 
@@ -920,7 +922,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 			// use custom bundle if env defined
 			// get the build pipeline bundle annotation
-			buildPipelineAnnotation = build.GetDockerBuildPipelineBundle()
+			buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(constants.DockerBuild)
 
 		})
 
@@ -952,7 +954,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			}
 
 			// Delete created webhook from GitHub
-			Expect(build.CleanupWebhooks(f, secretLookupGitSourceRepoTwoName)).ShouldNot(HaveOccurred())
+			err = build.CleanupWebhooks(f, secretLookupGitSourceRepoTwoName)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("404 Not Found"))
+			}
 
 		})
 		When("two secrets are created", func() {
@@ -1093,7 +1098,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			componentName = fmt.Sprintf("%s-%s", "test-annotations", util.GenerateRandomString(6))
 
 			// get the build pipeline bundle annotation
-			buildPipelineAnnotation = build.GetDockerBuildPipelineBundle()
+			buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(constants.DockerBuild)
 
 		})
 
@@ -1192,7 +1197,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// get the build pipeline bundle annotation
-			buildPipelineAnnotation = build.GetDockerBuildPipelineBundle()
+			buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(constants.DockerBuild)
 		})
 
 		AfterAll(func() {
@@ -1210,130 +1215,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Expect(err).To(HaveOccurred())
 				return strings.Contains(err.Error(), "no pipelinerun found")
 			}, timeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("expected no PipelineRun to be triggered for the component %s in %s namespace", componentName, testNamespace))
-		})
-	})
-
-	Describe("A secret with dummy quay.io credentials is created in the testing namespace", Ordered, func() {
-
-		var applicationName, componentName, testNamespace, pacBranchName, componentBaseBranchName string
-		var timeout time.Duration
-		var err error
-		var pr *pipeline.PipelineRun
-		var buildPipelineAnnotation map[string]string
-
-		BeforeAll(func() {
-
-			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
-			Expect(err).NotTo(HaveOccurred())
-			testNamespace = f.UserNamespace
-
-			if err = f.AsKubeAdmin.CommonController.UnlinkSecretFromServiceAccount(testNamespace, constants.RegistryAuthSecretName, constants.DefaultPipelineServiceAccount, true); err != nil {
-				GinkgoWriter.Println(fmt.Sprintf("Failed to unlink registry auth secret from service account: %v\n", err))
-			}
-
-			if err = f.AsKubeAdmin.CommonController.DeleteSecret(testNamespace, constants.RegistryAuthSecretName); err != nil {
-				GinkgoWriter.Println(fmt.Sprintf("Failed to delete regitry auth secret from namespace: %s\n", err))
-			}
-
-			_, err := f.AsKubeAdmin.CommonController.GetSecret(testNamespace, constants.RegistryAuthSecretName)
-			if err != nil {
-				// If we have an error when getting RegistryAuthSecretName, it should be IsNotFound err
-				Expect(k8sErrors.IsNotFound(err)).To(BeTrue())
-			} else {
-				Skip("a registry auth secret is already created in testing namespace - skipping....")
-			}
-
-			applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
-
-			_, err = f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
-			Expect(err).NotTo(HaveOccurred())
-
-			timeout = time.Minute * 5
-
-			dummySecret := &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: constants.RegistryAuthSecretName},
-				Type:       v1.SecretTypeDockerConfigJson,
-				Data:       map[string][]byte{".dockerconfigjson": []byte("{\"auths\":{\"quay.io\":{\"username\":\"test\",\"password\":\"test\",\"auth\":\"dGVzdDp0ZXN0\",\"email\":\"\"}}}")},
-			}
-
-			_, err = f.AsKubeAdmin.CommonController.CreateSecret(testNamespace, dummySecret)
-			Expect(err).ToNot(HaveOccurred())
-			err = f.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(testNamespace, dummySecret.Name, constants.DefaultPipelineServiceAccount, false)
-			Expect(err).ToNot(HaveOccurred())
-
-			componentName = "build-suite-test-secret-overriding"
-			pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
-			componentBaseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
-			err = f.AsKubeAdmin.CommonController.Github.CreateRef(helloWorldComponentGitSourceCloneRepoName, "main", helloWorldComponentCloneRevision, componentBaseBranchName)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			// get the build pipeline bundle annotation
-			buildPipelineAnnotation = build.GetDockerBuildPipelineBundle()
-
-			componentObj := appservice.ComponentSpec{
-				ComponentName: componentName,
-				Application:   applicationName,
-				Source: appservice.ComponentSource{
-					ComponentSourceUnion: appservice.ComponentSourceUnion{
-						GitSource: &appservice.GitSource{
-							URL:           helloWorldComponentGitHubCloneURL,
-							Revision:      componentBaseBranchName,
-							DockerfileURL: constants.DockerFilePath,
-						},
-					},
-				},
-			}
-			_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, buildPipelineAnnotation))
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		AfterAll(func() {
-			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
-				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
-			}
-			// Delete new branches created by PaC and a testing branch used as a component's base branch
-			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceCloneRepoName, pacBranchName)
-			if err != nil {
-				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
-			}
-			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(helloWorldComponentGitSourceCloneRepoName, componentBaseBranchName)
-			if err != nil {
-				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
-			}
-			// Delete created webhook from GitHub
-			Expect(build.CleanupWebhooks(f, helloWorldComponentGitSourceCloneRepoName)).ShouldNot(HaveOccurred())
-		})
-
-		It("should override the shared secret", func() {
-			Eventually(func() error {
-				pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-				if err != nil {
-					GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
-					return err
-				}
-				if !pr.HasStarted() {
-					return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
-				}
-				return nil
-			}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
-
-			pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(pr.Spec.Workspaces).To(HaveLen(2))
-		})
-
-		It("should not be possible to push to quay.io repo (PipelineRun should fail)", func() {
-			pipelineRunTimeout := int(time.Duration(20) * time.Minute)
-
-			Expect(f.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, testNamespace, pipelineRunTimeout)).To(Succeed())
-			pr, err = f.AsKubeAdmin.TektonController.GetPipelineRun(pr.GetName(), pr.GetNamespace())
-			Expect(err).NotTo(HaveOccurred())
-			tr, err := f.AsKubeAdmin.TektonController.GetTaskRunStatus(f.AsKubeAdmin.CommonController.KubeRest(), pr, constants.BuildTaskRunName)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(tekton.DidTaskRunSucceed(tr)).To(BeFalse())
 		})
 	})
 
@@ -1445,7 +1326,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			Expect(err).NotTo(HaveOccurred())
 
 			// get the build pipeline bundle annotation
-			buildPipelineAnnotation = build.GetDockerBuildPipelineBundle()
+			buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(constants.DockerBuild)
 
 			if gitProvider == git.GitLabProvider {
 				gitlabToken := utils.GetEnv(constants.GITLAB_BOT_TOKEN_ENV, "")

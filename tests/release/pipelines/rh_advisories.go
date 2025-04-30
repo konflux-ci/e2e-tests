@@ -8,10 +8,10 @@ import (
 
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
-	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 	"github.com/devfile/library/v2/pkg/util"
@@ -75,7 +75,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 				"sso_token":   constants.ATLAS_STAGE_TOKEN_ENV,
 			}
 			atlasAWSFieldEnvMap := map[string]string{
-				"atlas-aws-access-key-id": constants.ATLAS_AWS_ACCESS_KEY_ID_ENV,
+				"atlas-aws-access-key-id":     constants.ATLAS_AWS_ACCESS_KEY_ID_ENV,
 				"atlas-aws-secret-access-key": constants.ATLAS_AWS_ACCESS_SECRET_ENV,
 			}
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "atlas-staging-sso-secret", atlasFieldEnvMap)
@@ -169,7 +169,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 				releasePR, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 				Expect(err).NotTo(HaveOccurred())
 				advisoryURL := releasePR.Status.PipelineRunStatusFields.Results[0].Value.StringVal
-				pattern := `https?://[^/\s]+/[^/\s]+/[^/\s]+/+\-\/blob\/main\/data\/advisories\/[^\/]+\/[^\/]+\/[^\/]+\/advisory\.yaml`
+				pattern := `https://access\.redhat\.com/errata/(RHBA|RHSA|RHEA)-\d{4}:\d+`
 				re, err := regexp.Compile(pattern)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(re.MatchString(advisoryURL)).To(BeTrue(), fmt.Sprintf("Advisory_url %s is not valid", advisoryURL))
@@ -208,10 +208,18 @@ func createADVSReleasePlan(advsReleasePlanName string, devFw framework.Framework
 			"solution":    "some solution",
 			"synopsis":    "test synopsis",
 			"topic":       "test topic",
-			"cves":        []map[string]interface{}{
+			"cves": []map[string]interface{}{
 				{
-					"key":  "CVE-2024-8260",
-					"component" : advsComponentName,
+					"key":       "CVE-2024-8260",
+					"component": advsComponentName,
+				},
+			},
+			"issues": map[string]interface{}{
+				"fixed": []map[string]interface{}{
+					{
+						"id":     "RELEASE-1401",
+						"source": "issues.redhat.com",
+					},
 				},
 			},
 		},
@@ -248,7 +256,7 @@ func createADVSReleasePlanAdmission(advsRPAName string, managedFw framework.Fram
 		},
 		"releaseNotes": map[string]interface{}{
 			"cpe":             "cpe:/a:example.com",
-			"product_id":      555,
+			"product_id":      []int{555},
 			"product_name":    "test product",
 			"product_stream":  "rhtas-tp1",
 			"product_version": "v1.0",

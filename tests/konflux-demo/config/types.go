@@ -1,5 +1,7 @@
 package config
 
+import "github.com/konflux-ci/e2e-tests/pkg/constants"
+
 // Set of Applications to create and test in Konflux
 type ApplicationSpec struct {
 	// The test name corresponding to an application
@@ -52,6 +54,9 @@ type ComponentSpec struct {
 
 	// Relative path of the docker file in the repository
 	DockerFilePath string `yaml:"dockerFilePath,omitempty"`
+
+	// Type of build pipeline used for building the component (e.g. docker-build, docker-build-oci-ta etc.)
+	BuildPipelineType constants.BuildPipelineType
 
 	// Set k8s resource specific properties
 	K8sSpec *K8sSpec `yaml:"spec,omitempty"`
