@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
@@ -378,6 +379,7 @@ func ExecuteDefaultTestAction(rctx *rulesengine.RuleCtx) error {
 
 func ExecuteAllTestsExceptUpgradeTestSuite(rctx *rulesengine.RuleCtx) error {
 	rctx.LabelFilter = "!upgrade-create && !upgrade-verify && !upgrade-cleanup"
+	rctx.Timeout = 2*time.Hour + 30*time.Minute
 	return ExecuteTestAction(rctx)
 
 }

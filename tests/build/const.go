@@ -23,9 +23,6 @@ const (
 	helloWorldComponentDefaultBranch     = "default"
 	helloWorldComponentRevision          = "d2d03e69de912e3827c29b4c5b71ffe8bcb5dad8"
 
-	helloWorldComponentGitSourceCloneRepoName = "devfile-sample-hello-world-clone"
-	helloWorldComponentCloneRevision          = "bb1d243a9c030e715ac2a7829973d226816446c3"
-
 	multiComponentGitSourceRepoName = "sample-multi-component"
 	multiComponentDefaultBranch     = "main"
 	multiComponentGitRevision       = "0d1835404efb8ab7bb1ab5b5b82cda1ebfda4b25"
@@ -69,7 +66,6 @@ var (
 	multiComponentGitHubURL            = fmt.Sprintf(githubUrlFormat, githubOrg, multiComponentGitSourceRepoName)
 	multiComponentContextDirs          = []string{"go-component", "python-component"}
 	pythonComponentGitHubURL           = fmt.Sprintf(githubUrlFormat, githubOrg, pythonComponentRepoName)
-	helloWorldComponentGitHubCloneURL  = fmt.Sprintf(githubUrlFormat, githubOrg, helloWorldComponentGitSourceCloneRepoName)
 
 	secretLookupComponentOneGitSourceURL = fmt.Sprintf(githubUrlFormat, noAppOrgName, secretLookupGitSourceRepoOneName)
 	secretLookupComponentTwoGitSourceURL = fmt.Sprintf(githubUrlFormat, noAppOrgName, secretLookupGitSourceRepoTwoName)

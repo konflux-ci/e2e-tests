@@ -7,6 +7,8 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
+	coreV1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/avast/retry-go/v4"
@@ -108,8 +110,26 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 		if err != nil {
 			return nil, fmt.Errorf("error when initializing appstudio hub controllers for admin user: %v", err)
 		}
-		if err = asAdmin.CommonController.AddRegistryAuthSecretToSA("QUAY_TOKEN", k.UserNamespace); err != nil {
-			GinkgoWriter.Println(fmt.Sprintf("Failed to add registry auth secret to service account: %v\n", err))
+
+		// creating this empty configMap change is temporary, when we move to SA per component fully, it will be removed
+		cmName := "use-new-sa"
+		cmNamespace := "build-service"
+		_, err := asAdmin.CommonController.GetConfigMap(cmName, cmNamespace)
+		if err != nil {
+			// if not found, create new one
+			if k8sErrors.IsNotFound(err) {
+				newConfigMap := &coreV1.ConfigMap{
+					ObjectMeta: v1.ObjectMeta{
+						Name: cmName,
+					},
+				}
+				_, err := asAdmin.CommonController.CreateConfigMap(newConfigMap, cmNamespace)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create %s configMap with error: %v", cmName, err)
+				}
+			} else {
+				return nil, fmt.Errorf("failed to get config map with error: %v", err)
+			}
 		}
 	}
 

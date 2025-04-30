@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
 	"k8s.io/klog"
@@ -97,5 +98,6 @@ func ExecuteReleaseCatalogPairedAction(rctx *rulesengine.RuleCtx) error {
 
 func ExecuteReleaseCatalogAction(rctx *rulesengine.RuleCtx) error {
 	rctx.LabelFilter = "release-pipelines"
+	rctx.Timeout = 2*time.Hour + 30*time.Minute
 	return ExecuteTestAction(rctx)
 }
