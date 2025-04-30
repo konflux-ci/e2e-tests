@@ -210,7 +210,9 @@ func (p ECIntegrationTestScenario) Generate() (*pipeline.PipelineRun, error) {
 func GetFailedPipelineRunLogs(c crclient.Client, ki kubernetes.Interface, pipelineRun *pipeline.PipelineRun) (string, error) {
 	var d *FailedPipelineRunDetails
 	var err error
+
 	failMessage := fmt.Sprintf("Pipelinerun '%s' didn't succeed\n", pipelineRun.Name)
+
 	for _, cond := range pipelineRun.Status.Conditions {
 		if cond.Reason == "CouldntGetPipeline" {
 			failMessage += fmt.Sprintf("CouldntGetPipeline message: %s", cond.Message)
@@ -219,10 +221,23 @@ func GetFailedPipelineRunLogs(c crclient.Client, ki kubernetes.Interface, pipeli
 	if d, err = GetFailedPipelineRunDetails(c, pipelineRun); err != nil {
 		return "", err
 	}
-	if d.FailedContainerName != "" {
-		logs, _ := utils.GetContainerLogs(ki, d.PodName, d.FailedContainerName, pipelineRun.Namespace)
-		// Adding the FailedTaskRunName can help to know which task the container belongs to
-		failMessage += fmt.Sprintf("Logs from failed container '%s/%s': \n%s", d.FailedTaskRunName, d.FailedContainerName, logs)
+
+	if d != nil && d.FailedContainerName != "" {
+		logs, err := utils.GetContainerLogs(ki, d.PodName, d.FailedContainerName, pipelineRun.Namespace)
+
+		switch {
+		// Sometimes the log of failed container can't be caught in time, it's to avoid panic
+		case logs != "":
+			// Adding the FailedTaskRunName can help to know which task the container belongs to
+			failMessage += fmt.Sprintf("Logs from failed container '%s/%s': \n%s",
+				d.FailedTaskRunName, d.FailedContainerName, logs)
+		case err != nil:
+			failMessage += fmt.Sprintf("Failed to get logs for container '%s/%s': %v",
+				d.FailedTaskRunName, d.FailedContainerName, err)
+		default:
+			failMessage += fmt.Sprintf("Failed container '%s/%s' (no logs available)",
+				d.FailedTaskRunName, d.FailedContainerName)
+		}
 	}
 	return failMessage, nil
 }
