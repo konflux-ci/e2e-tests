@@ -57,7 +57,7 @@ spec:
       default: "false"
     - name: e2e-timeout
       description: "Timeout value for running E2E script (cluster bootstrap + E2E tests)"
-      default: "90m"
+      default: "150m"
     - name: enable-sl-plugin
       description: "Enable Sealights ginkgo plugin to scan the e2e tests that will report to Sealights."
       default: "false"
