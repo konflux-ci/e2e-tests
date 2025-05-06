@@ -194,7 +194,7 @@ const (
 	DefaultPipelineServiceAccountRoleBinding = "appstudio-pipelines-runner-rolebinding"
 	DefaultPipelineServiceAccountClusterRole = "appstudio-pipelines-runner"
 
-	PaCPullRequestBranchPrefix = "appstudio-"
+	PaCPullRequestBranchPrefix = "konflux-"
 
 	// Expiration for image tags
 	IMAGE_TAG_EXPIRATION_ENV  string = "IMAGE_TAG_EXPIRATION"
