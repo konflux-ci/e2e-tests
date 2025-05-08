@@ -3,20 +3,20 @@ package integration
 import (
 	"fmt"
 	"os"
-	"time"
 	"strings"
+	"time"
 
+	"github.com/devfile/library/v2/pkg/util"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	"github.com/devfile/library/v2/pkg/util"
 
 	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 	integrationv1beta2 "github.com/konflux-ci/integration-service/api/v1beta2"
-	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -35,6 +35,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 	var integrationTestScenarioPass, integrationTestScenarioFail *integrationv1beta2.IntegrationTestScenario
 	var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace string
 	var labels, annotations map[string]string
+
+	const (
+		mainBranch       = "main"
+		pushTestFilePath = ".konflux-ci/push-event-test.txt"
+	)
 
 	AfterEach(framework.ReportFailure(&f))
 
@@ -75,6 +80,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the component %s/%s", testNamespace, componentName))
 			labels = pipelineRun.GetLabels()
 			annotations = pipelineRun.GetAnnotations()
+			fmt.Print(componentBaseBranchName)
 		})
 
 		AfterAll(func() {
@@ -137,7 +143,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 
 			It("eventually leads to the build PipelineRun's status reported at Checks tab", func() {
 				expectedCheckRunName := fmt.Sprintf("%s-%s", componentName, "on-pull-request")
-				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))		})
+				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
+			})
 		})
 
 		When("the PaC build pipelineRun run succeeded", func() {
@@ -206,9 +213,9 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 				delete(annotations, snapshotCreationReport)
 				failedPipelineRun = &tektonv1.PipelineRun{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:	"failing-build-plr-"+util.GenerateRandomString(4),
-						Namespace: testNamespace,
-						Labels: labels,
+						Name:        "failing-build-plr-" + util.GenerateRandomString(4),
+						Namespace:   testNamespace,
+						Labels:      labels,
 						Annotations: annotations,
 					},
 					Spec: tektonv1.PipelineRunSpec{
@@ -217,15 +224,15 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 								Resolver: "git",
 								Params: tektonv1.Params{
 									{
-										Name: "url",
+										Name:  "url",
 										Value: tektonv1.ParamValue{Type: "string", StringVal: "https://github.com/konflux-ci/integration-examples.git"},
 									},
 									{
-										Name: "revision",
+										Name:  "revision",
 										Value: tektonv1.ParamValue{Type: "string", StringVal: "main"},
 									},
 									{
-										Name: "pathInRepo",
+										Name:  "pathInRepo",
 										Value: tektonv1.ParamValue{Type: "string", StringVal: "pipelines/integration_resolver_pipeline_pass.yaml"},
 									},
 								},
@@ -254,5 +261,106 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 				}, time.Minute*3, time.Second*5).Should(Succeed(), fmt.Sprintf("timed out when waiting for the failing checkrun for the component  %s/%s and integrationTestScenarioPass %s", testNamespace, componentName, integrationTestScenarioPass.Name))
 			})
 		})
+
+		When("a commit is pushed to main branch", Label("push-event"), func() {
+			var pushCommitSHA string
+
+			BeforeAll(func() {
+				// Create push event commit
+				content := []byte(fmt.Sprintf("test commit: %s", time.Now().String()))
+				var err error
+				pushCommitSHA, err = f.AsKubeAdmin.CommonController.Github.CreateCommit(
+					componentRepoNameForStatusReporting,
+					mainBranch,
+					pushTestFilePath,
+					content,
+					"test: trigger integration status reporting",
+				)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("triggers and completes build pipeline", func() {
+				Eventually(func() error {
+					pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(
+						componentName,
+						applicationName,
+						testNamespace,
+						pushCommitSHA,
+					)
+					if err != nil {
+						return err
+					}
+					return f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(
+						component,
+						pushCommitSHA,
+						f.AsKubeAdmin.TektonController,
+						&has.RetryOptions{Retries: 2, Always: true},
+						pipelineRun,
+					)
+				}, time.Second*600, time.Second*1).Should(Succeed())
+			})
+
+			It("reports integration test results to commit status checks", func() {
+				// Wait for integration tests to complete
+				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(
+					integrationTestScenarioPass,
+					snapshot,
+					testNamespace,
+				)).To(Succeed())
+
+				// Verify check run status for passing test
+				Eventually(func() error {
+					conclusion, err := f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(
+						integrationTestScenarioPass.Name,
+						componentRepoNameForStatusReporting,
+						pushCommitSHA,
+						0, // No PR number for push events
+					)
+					if err != nil {
+						return err
+					}
+					if conclusion != constants.CheckrunConclusionSuccess {
+						return fmt.Errorf("expected check run conclusion %s, got %s",
+							constants.CheckrunConclusionSuccess,
+							conclusion,
+						)
+					}
+					return nil
+				}, time.Second*300, time.Second*1).Should(Succeed())
+
+				// Verify check run status for failing test
+				Eventually(func() error {
+					conclusion, err := f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(
+						integrationTestScenarioFail.Name,
+						componentRepoNameForStatusReporting,
+						pushCommitSHA,
+						0,
+					)
+					if err != nil {
+						return err
+					}
+					if conclusion != constants.CheckrunConclusionFailure {
+						return fmt.Errorf("expected check run conclusion %s, got %s",
+							constants.CheckrunConclusionFailure,
+							conclusion,
+						)
+					}
+					return nil
+				}, time.Second*300, time.Second*1).Should(Succeed())
+			})
+
+			AfterAll(func() {
+				// Cleanup test file
+				err := f.AsKubeAdmin.CommonController.Github.DeleteFile(
+					componentRepoNameForStatusReporting, // repository
+					mainBranch,                          // branch
+					pushTestFilePath,                    // path
+				)
+				if err != nil {
+					GinkgoWriter.Printf("Failed to cleanup test file: %v\n", err)
+				}
+			})
+		})
+
 	})
 })
