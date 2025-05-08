@@ -57,7 +57,7 @@ load_test() {
         --concurrency "$threads" \
         --journey-duration "${JOURNEY_DURATION:-1h}" \
         --journey-repeats "${JOURNEY_REPEATS:-1}" \
-        --log-info \
+        --log-"${LOGGING_LEVEL:-info}" \
         --stage \
         --pipeline-repo-templating="${PIPELINE_REPO_TEMPLATING:-false}" \
         --output-dir "${workdir:-/tmp}" \

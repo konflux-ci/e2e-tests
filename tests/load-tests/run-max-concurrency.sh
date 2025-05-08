@@ -63,7 +63,7 @@ load_test() {
         --concurrency "$threads" \
         --journey-duration "${JOURNEY_DURATION:-1h}" \
         --journey-repeats "${JOURNEY_REPEATS:-1}" \
-        --log-info \
+        --log-"${LOGGING_LEVEL:-info}" \
         --pipeline-repo-templating="${PIPELINE_REPO_TEMPLATING:-false}" \
         --output-dir "${workdir:-/tmp}" \
         --purge="${PURGE:-true}" \
@@ -75,7 +75,7 @@ load_test() {
         --waitintegrationtestspipelines="${WAIT_INTEGRATION_TESTS:-true}" \
         --waitpipelines="${WAIT_PIPELINES:-true}" \
         2>&1 | tee "$workdir/load-test.log"
-    
+
     # Capture and exit if there are unexpected errors in loadtest.go
     LOADTEST_EXIT_STATUS=${PIPESTATUS[0]}
     if [ ${LOADTEST_EXIT_STATUS} -ne 0 ]; then
