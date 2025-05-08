@@ -104,8 +104,15 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 		return nil, fmt.Errorf("error when initializing kubernetes clients: %v", err)
 	}
 
+	asUser, err := InitControllerHub(k.AsKubeDeveloper)
+	if err != nil {
+		return nil, fmt.Errorf("error when initializing appstudio hub controllers for sandbox user: %v", err)
+	}
+
 	var asAdmin *ControllerHub
-	if !isStage {
+	if isStage {
+		asAdmin = asUser
+	} else {
 		asAdmin, err = InitControllerHub(k.AsKubeAdmin)
 		if err != nil {
 			return nil, fmt.Errorf("error when initializing appstudio hub controllers for admin user: %v", err)
@@ -131,18 +138,7 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 				return nil, fmt.Errorf("failed to get config map with error: %v", err)
 			}
 		}
-	}
 
-	asUser, err := InitControllerHub(k.AsKubeDeveloper)
-	if err != nil {
-		return nil, fmt.Errorf("error when initializing appstudio hub controllers for sandbox user: %v", err)
-	}
-
-	if isStage {
-		asAdmin = asUser
-	}
-
-	if !isStage {
 		if err = utils.WaitUntil(asAdmin.CommonController.ServiceAccountPresent(constants.DefaultPipelineServiceAccount, k.UserNamespace), timeout); err != nil {
 			return nil, fmt.Errorf("'%s' service account wasn't created in %s namespace: %+v", constants.DefaultPipelineServiceAccount, k.UserNamespace, err)
 		}
