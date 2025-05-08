@@ -82,8 +82,7 @@ else
     application_stub="${ARTIFACT_DIR}/collected-data/collected-applications.appstudio.redhat.com"
     component_stub="${ARTIFACT_DIR}/collected-data/collected-components.appstudio.redhat.com"
 
-    for uid in $( seq 1 $CONCURRENCY ); do
-        username="test-rhtap-$uid"
+    for username in $( jq --raw-output '.[] | .username' users.json | head -n "$CONCURRENCY" ); do
         offline_token=$( cat users.json | jq --raw-output '.[] | select(.username == "'$username'").token' )
         api_server=$( cat users.json | jq --raw-output '.[] | select(.username == "'$username'").apiurl' )
         sso_server=$( cat users.json | jq --raw-output '.[] | select(.username == "'$username'").ssourl' )
