@@ -220,7 +220,11 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 	if err != nil {
 		return fmt.Errorf("Failed parsing repo name: %v", err)
 	}
-	_, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(repoName, mergeReqNum)
+	if strings.Contains(repoUrl, "gitlab.") {
+		_, err = f.AsKubeAdmin.CommonController.Gitlab.AcceptMergeRequest(repoName, mergeReqNum)
+	} else {
+		_, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(repoName, mergeReqNum)
+	}
 	if err != nil {
 		return fmt.Errorf("Merging %d failed: %v", mergeReqNum, err)
 	}
