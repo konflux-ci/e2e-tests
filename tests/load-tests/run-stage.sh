@@ -14,7 +14,7 @@ go run loadtest.go \
     --concurrency "${CONCURRENCY:-1}" \
     --journey-duration "${JOURNEY_DURATION:-1h}" \
     --journey-repeats "${JOURNEY_REPEATS:-1}" \
-    --log-info \
+    --log-"${LOGGING_LEVEL:-info}" \
     --pipeline-repo-templating="${PIPELINE_REPO_TEMPLATING:-false}" \
     --output-dir "${OUTPUT_DIR:-.}" \
     --purge="${PURGE:-true}" \
