@@ -15,12 +15,17 @@ var fileList = []string{"COMPONENT-pull-request.yaml", "COMPONENT-push.yaml"}
 func getRepoNameFromRepoUrl(repoUrl string) (string, error) {
 	// Answer taken from https://stackoverflow.com/questions/7124778/how-can-i-match-anything-up-until-this-sequence-of-characters-in-a-regular-exp
 	// Tested with these input data:
-	//   repoUrl: https://github.com/XXXXXXXXXXXXXXX/nodejs-devfile-sample.git/, match[1]: nodejs-devfile-sample
-	//   repoUrl: https://github.com/XXXXXXXXXXXXXXX/nodejs-devfile-sample.git, match[1]: nodejs-devfile-sample
-	//   repoUrl: https://github.com/XXXXXXXXXXXXXXX/nodejs-devfile-sample/, match[1]: nodejs-devfile-sample
-	//   repoUrl: https://github.com/XXXXXXXXXXXXXXX/nodejs-devfile-sample, match[1]: nodejs-devfile-sample
-	//   repoUrl: https://gitlab.example.com/XXXXXXXXXXXXXXX/nodejs-devfile-sample, match[1]: nodejs-devfile-sample
-	regex := regexp.MustCompile(`/([^/]+?)(.git)?/?$`)
+	//   repoUrl: https://github.com/abc/nodejs-devfile-sample.git/, match[1]: nodejs-devfile-sample
+	//   repoUrl: https://github.com/abc/nodejs-devfile-sample.git, match[1]: nodejs-devfile-sample
+	//   repoUrl: https://github.com/abc/nodejs-devfile-sample/, match[1]: nodejs-devfile-sample
+	//   repoUrl: https://github.com/abc/nodejs-devfile-sample, match[1]: nodejs-devfile-sample
+	//   repoUrl: https://gitlab.example.com/abc/nodejs-devfile-sample, match[1]: abc/nodejs-devfile-sample
+	var regex *regexp.Regexp
+	if strings.Contains(repoUrl, "gitlab.") {
+		regex = regexp.MustCompile(`/([^/]+/[^/]+?)(.git)?/?$`)
+	} else {
+		regex = regexp.MustCompile(`/([^/]+?)(.git)?/?$`)
+	}
 	match := regex.FindStringSubmatch(repoUrl)
 	if match != nil {
 		return match[1], nil
@@ -68,7 +73,23 @@ func templateRepoFileGithub(f *framework.Framework, repoName, repoRevision, file
 // Template file from '.template/...' to '.tekton/...', expanding placeholders (even in file name) using Gitlab API
 // Returns SHA of the commit
 func templateRepoFileGitlab(f *framework.Framework, repoName, repoRevision, fileName string, placeholders *map[string]string) (string, error) {
-	return "", fmt.Errorf("Templating via Gitlab API not implemented yet %s", repoName)
+	fileContent, err := f.AsKubeAdmin.CommonController.Gitlab.GetFile(repoName, ".template/" + fileName, repoRevision)
+	if err != nil {
+		return "", fmt.Errorf("Failed to get file: %v", err)
+	}
+
+	for key, value := range *placeholders {
+		fileContent = strings.ReplaceAll(fileContent, key, value)
+		fileName = strings.ReplaceAll(fileName, key, value)
+	}
+
+	commitID, err := f.AsKubeAdmin.CommonController.Gitlab.UpdateFile(repoName, ".tekton/" + fileName, fileContent, repoRevision)
+	if err != nil {
+		return "", fmt.Errorf("Failed to update file: %v", err)
+	}
+
+	logging.Logger.Info("Templated file %s with commit %s", fileName, commitID)
+	return commitID, nil
 }
 
 // Fork repository and return forked repo URL
