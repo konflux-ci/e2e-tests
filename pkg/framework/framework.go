@@ -124,7 +124,7 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 					},
 				}
 				_, err := asAdmin.CommonController.CreateConfigMap(newConfigMap, cmNamespace)
-				if err != nil {
+				if err != nil && !k8sErrors.IsAlreadyExists(err) {
 					return nil, fmt.Errorf("failed to create %s configMap with error: %v", cmName, err)
 				}
 			} else {

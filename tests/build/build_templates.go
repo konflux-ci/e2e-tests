@@ -653,7 +653,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 							PipelineGitPathInRepo:       pathInRepo,
 							PipelinePolicyConfiguration: "ec-policy",
 						}
-						defaultECP, err = f.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+						defaultECP, err = kubeadminClient.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 						Expect(err).NotTo(HaveOccurred())
 						//exclude the slsa_source_correlated.source_code_reference_provided because snapshot doesn't get the info of source
 						policy := contract.PolicySpecWithSourceConfig(

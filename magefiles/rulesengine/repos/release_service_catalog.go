@@ -59,7 +59,11 @@ var ReleaseServiceCatalogRepoSetDefaultSettingsRule = rulesengine.Rule{Name: "Ge
 
 		//This is env variable is specified for release service catalog
 		os.Setenv(fmt.Sprintf("%s_CATALOG_URL", rctx.ComponentEnvVarPrefix), fmt.Sprintf("https://github.com/%s/%s", rctx.PrRemoteName, rctx.RepoName))
-		os.Setenv(fmt.Sprintf("%s_CATALOG_REVISION", rctx.ComponentEnvVarPrefix), rctx.PrCommitSha)
+		if rctx.PrRemoteName == "konflux-ci" {
+			os.Setenv(fmt.Sprintf("%s_CATALOG_REVISION", rctx.ComponentEnvVarPrefix), rctx.PrBranchName)
+		} else {
+			os.Setenv(fmt.Sprintf("%s_CATALOG_REVISION", rctx.ComponentEnvVarPrefix), rctx.PrCommitSha)
+		}
 		os.Setenv("DEPLOY_ONLY", "application-api dev-sso enterprise-contract has pipeline-service integration internal-services release")
 
 		if rctx.IsPaired && !strings.Contains(rctx.JobName, "rehearse") {
