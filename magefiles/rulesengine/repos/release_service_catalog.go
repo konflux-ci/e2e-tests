@@ -3,6 +3,7 @@ package repos
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -48,8 +49,14 @@ var ReleaseServiceCatalogRepoSetDefaultSettingsRule = rulesengine.Rule{Name: "Ge
 		IsReleaseServiceCatalogRepoPR,
 	},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
-		rctx.LabelFilter = "release-service-catalog"
-		klog.Info("setting 'release-service-catalog' test label")
+		testcases, err := selectReleasePipelinesTestCases(rctx.PrNum)
+		if  err != nil {
+			rctx.LabelFilter = "release-pipelines"
+			klog.Errorf("an error occurred in selectReleasePipelinesTestCases: %s", err)
+		} else {
+			rctx.LabelFilter = strings.ReplaceAll(testcases, " ", "||")
+		}
+		klog.Info("setting test label for release-pipelines: ", rctx.LabelFilter)
 
 		if rctx.DryRun {
 			klog.Info("setting up env vars for deploying component image")
@@ -96,12 +103,23 @@ var isPaired = func(rctx *rulesengine.RuleCtx) (bool, error) {
 }
 
 func ExecuteReleaseCatalogPairedAction(rctx *rulesengine.RuleCtx) error {
-	rctx.LabelFilter = "release-pipelines && !fbc-tests && !multiarch-advisories && !rh-advisories && !release-to-github && !rh-push-to-redhat-io && !rhtap-service-push"
+	rctx.LabelFilter +=  " && !fbc-release && !multiarch-advisories && !rh-advisories && !release-to-github && !rh-push-to-registry-redhat-io && !rhtap-service-push"
 	return ExecuteTestAction(rctx)
 }
 
 func ExecuteReleaseCatalogAction(rctx *rulesengine.RuleCtx) error {
-	rctx.LabelFilter = "release-pipelines"
 	rctx.Timeout = 2*time.Hour + 30*time.Minute
 	return ExecuteTestAction(rctx)
+}
+
+func selectReleasePipelinesTestCases(prNum int) (string, error) {
+	command := fmt.Sprintf("%s %s %d", "magefiles/rulesengine/scripts/find_release_pipelines_from_pr.sh", "konflux-ci/release-service-catalog", prNum)
+	cmd := exec.Command("bash", "-c", command)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		klog.Errorf("failed in selectReleasePipelinesTestCases function for PR: %d", prNum)
+		klog.Infof("the output from find_release_pipelines_from_pr: %s" , string(output))
+		return "", err
+	}
+	return string(output), nil
 }
