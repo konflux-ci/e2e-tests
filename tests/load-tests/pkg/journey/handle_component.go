@@ -220,7 +220,11 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 	if err != nil {
 		return fmt.Errorf("Failed parsing repo name: %v", err)
 	}
-	_, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(repoName, mergeReqNum)
+	if strings.Contains(repoUrl, "gitlab.") {
+		_, err = f.AsKubeAdmin.CommonController.Gitlab.AcceptMergeRequest(repoName, mergeReqNum)
+	} else {
+		_, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(repoName, mergeReqNum)
+	}
 	if err != nil {
 		return fmt.Errorf("Merging %d failed: %v", mergeReqNum, err)
 	}
@@ -295,7 +299,9 @@ func HandleComponent(ctx *PerComponentContext) error {
 		return logging.Logger.Fail(62, "Type assertion failed on pull: %+v", pullIface)
 	}
 
-	// If this is multi-arch build, we do not care about this build, we just merge it, update pipelines and trigger actual multi-arch build
+	// If this is supposed to be a multi-arch build, we do not care about
+	// current build, we just merge the PR, update pipelines and trigger
+	// actual multi-arch build
 	if ctx.ParentContext.ParentContext.Opts.PipelineRepoTemplating {
 		// Placeholders for template multi-arch PaC pipeline files
 		placeholders := &map[string]string{
@@ -307,7 +313,7 @@ func HandleComponent(ctx *PerComponentContext) error {
 			"REPOURL":     ctx.ParentContext.ParentContext.ComponentRepoUrl,
 		}
 
-		// Skip what we do not care about
+		// Skip what we do not care about, merge PR, graft pipeline yamls
 		_, err = logging.Measure(
 			utilityRepoTemplatingComponentCleanup,
 			ctx.Framework,

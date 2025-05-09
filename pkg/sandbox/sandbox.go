@@ -155,16 +155,21 @@ func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (res *http.Response,
 }
 
 // ReconcileUserCreation create a user in sandbox and return a valid kubeconfig for user to be used for the tests
-func (s *SandboxController) ReconcileUserCreationStage(userName, toolchainApiUrl, keycloakUrl, offlineToken string) (*SandboxUserAuthInfo, error) {
+func (s *SandboxController) ReconcileUserCreationStage(userName, toolchainApiUrl, keycloakUrl, offlineToken string, isSA bool) (*SandboxUserAuthInfo, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
 	kubeconfigPath := utils.GetEnv(constants.USER_KUBE_CONFIG_PATH_ENV, fmt.Sprintf("%s/tmp/%s.kubeconfig", wd, userName))
 
-	userToken, err := s.GetKeycloakTokenStage(userName, keycloakUrl, offlineToken)
-	if err != nil {
-		return nil, err
+	var userToken string
+	if isSA {
+		userToken = offlineToken
+	} else {
+		userToken, err = s.GetKeycloakTokenStage(userName, keycloakUrl, offlineToken)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return s.GetKubeconfigPathForSpecificUser(true, toolchainApiUrl, userName, kubeconfigPath, userToken)
@@ -206,8 +211,8 @@ func (s *SandboxController) ReconcileUserCreation(userName string) (*SandboxUser
 		return nil, err
 	}
 
-	if !s.KeycloakUserExists(DEFAULT_KEYCLOAK_TESTING_REALM, adminToken.AccessToken, userName) {
-		registerUser, err := s.RegisterKeycloakUser(userName, adminToken.AccessToken, DEFAULT_KEYCLOAK_TESTING_REALM)
+	if !s.KeycloakUserExists(DEFAULT_KEYCLOAK_TESTING_REALM, adminToken, userName) {
+		registerUser, err := s.RegisterKeycloakUser(userName, adminToken, DEFAULT_KEYCLOAK_TESTING_REALM)
 		if err != nil && registerUser.Username == "" {
 			return nil, fmt.Errorf("%s", "failed to register user in keycloak: "+err.Error())
 		}
@@ -221,7 +226,7 @@ func (s *SandboxController) ReconcileUserCreation(userName string) (*SandboxUser
 	return s.GetKubeconfigPathForSpecificUser(false, toolchainApiUrl, compliantUsername, kubeconfigPath, userToken)
 }
 
-func (s *SandboxController) GetKubeconfigPathForSpecificUser(isStage bool, toolchainApiUrl string, userName string, kubeconfigPath string, keycloakAuth *KeycloakAuth) (*SandboxUserAuthInfo, error) {
+func (s *SandboxController) GetKubeconfigPathForSpecificUser(isStage bool, toolchainApiUrl string, userName string, kubeconfigPath string, accessToken string) (*SandboxUserAuthInfo, error) {
 	kubeconfig := api.NewConfig()
 	kubeconfig.Clusters[toolchainApiUrl] = &api.Cluster{
 		Server:                toolchainApiUrl,
@@ -233,7 +238,7 @@ func (s *SandboxController) GetKubeconfigPathForSpecificUser(isStage bool, toolc
 		AuthInfo:  fmt.Sprintf("%s/%s", userName, toolchainApiUrl),
 	}
 	kubeconfig.AuthInfos[fmt.Sprintf("%s/%s", userName, toolchainApiUrl)] = &api.AuthInfo{
-		Token: keycloakAuth.AccessToken,
+		Token: accessToken,
 	}
 	kubeconfig.CurrentContext = fmt.Sprintf("%s/%s/%s", userName, toolchainApiUrl, userName)
 
@@ -256,7 +261,7 @@ func (s *SandboxController) GetKubeconfigPathForSpecificUser(isStage bool, toolc
 		UserNamespace:  ns,
 		KubeconfigPath: kubeconfigPath,
 		ProxyUrl:       toolchainApiUrl,
-		UserToken:      keycloakAuth.AccessToken,
+		UserToken:      accessToken,
 	}, nil
 }
 
