@@ -380,7 +380,8 @@ spec:
       - name: IMAGE
         value: $(tasks.build-container.results.IMAGE_URL)
       - name: ADDITIONAL_TAGS
-        value: ["latest"]
+        value:
+        - latest
       runAfter:
       - build-container
       taskRef:
@@ -417,20 +418,19 @@ spec:
       - name: workspace
         workspace: workspace
     - name: update-build-definitions-repo
+      params:
+      - name: ORIGIN_REPO
+        value: $(params.git-url)
+      - name: REVISION
+        value: $(params.revision)
+      - name: SCRIPT
+        value: $(params.build-definitions-update-script)
+      - name: TARGET_GH_REPO
+        value: konflux-ci/build-definitions
+      - name: GITHUB_APP_INSTALLATION_ID
+        value: "51073377"
       runAfter:
       - build-container
-      params:
-        - name: ORIGIN_REPO
-          value: $(params.git-url)
-        - name: REVISION
-          value: $(params.revision)
-        - name: SCRIPT
-          value: $(params.build-definitions-update-script)
-        - name: TARGET_GH_REPO
-          value: konflux-ci/build-definitions
-        # https://github.com/apps/rh-tap-build-team in https://github.com/konflux-ci
-        - name: GITHUB_APP_INSTALLATION_ID
-          value: "51073377"
       taskRef:
         params:
         - name: name
@@ -441,20 +441,19 @@ spec:
           value: task
         resolver: bundles
     - name: update-build-tasks-dockerfiles-repo
+      params:
+      - name: ORIGIN_REPO
+        value: $(params.git-url)
+      - name: REVISION
+        value: $(params.revision)
+      - name: SCRIPT
+        value: $(params.update-build-tasks-dockerfiles-script)
+      - name: TARGET_GH_REPO
+        value: konflux-ci/build-tasks-dockerfiles
+      - name: GITHUB_APP_INSTALLATION_ID
+        value: "51073377"
       runAfter:
       - build-container
-      params:
-        - name: ORIGIN_REPO
-          value: $(params.git-url)
-        - name: REVISION
-          value: $(params.revision)
-        - name: SCRIPT
-          value: $(params.update-build-tasks-dockerfiles-script)
-        - name: TARGET_GH_REPO
-          value: konflux-ci/build-tasks-dockerfiles
-        # https://github.com/apps/rh-tap-build-team in https://github.com/konflux-ci
-        - name: GITHUB_APP_INSTALLATION_ID
-          value: "51073377"
       taskRef:
         params:
         - name: name
@@ -470,7 +469,8 @@ spec:
       optional: true
     - name: netrc
       optional: true
-  taskRunTemplate: {}
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-konflux-e2e-tests
   workspaces:
   - name: workspace
     volumeClaimTemplate:
