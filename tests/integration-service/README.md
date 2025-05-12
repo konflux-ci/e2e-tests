@@ -63,6 +63,7 @@ Checkpoints:
 - Verifying that the Build PipelineRun is reflected correctly in the MR's CommitStatus.
 - Ensuring the successful Integration PipelineRun is reported as "Pass" in the MR's CommitStatus.
 - Ensuring that the MR notes show the successful status of the integration test.
+- Merge MR and repeat three tests above.
 
 ### 4. Happy Path Tests within `integration-with-env.go`
 Checkpoints:
@@ -104,6 +105,7 @@ Checkpoints:
 - Verifying that the failing Integration PipelineRun is reflected as "Fail" in the MR's CommitStatus.
 - Ensuring that MR notes show the failure status of the integration test.
 - Asserting that no releases are triggered if any integration test fails.
+- Merge MR and repeat three tests above.
 
 ### 4. Negative Test Cases within `integration-with-env.go`
 Checkpoints:

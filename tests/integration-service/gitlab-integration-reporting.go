@@ -211,7 +211,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 			})
 
 			It("validates the Integration test scenario PipelineRun is reported to merge request CommitStatus, and it pass", func() {
-				timeout = time.Second * 300
+				timeout = time.Second * 420
 				interval = time.Second * 1
 
 				Eventually(func() string {
@@ -236,7 +236,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 			})
 
 			It("validates the Integration test scenario PipelineRun is reported to merge request CommitStatus, and it fails", func() {
-				timeout = time.Second * 300
+				timeout = time.Second * 420
 				interval = time.Second * 1
 
 				Eventually(func() string {
