@@ -8,6 +8,7 @@ on:
 jobs:
   load_test:
     strategy:
+      fail-fast: false
       matrix:
         cluster:
           - label: stone-prd-rh01
@@ -15,16 +16,19 @@ jobs:
             member_cluster_secret: MEMBER_CLUSTER_STONE_PRD_RH01
             ocp_prometheus_token_secret: OCP_PROMETHEUS_TOKEN_STONE_PRD_RH01
             users_secret: USERS_STONE_PRD_RH01
+            should_fail: false
           - label: stone-stg-rh01
             repo: https://github.com/rhtap-perf-test/nodejs-devfile-sample2
             member_cluster_secret: MEMBER_CLUSTER_STONE_STG_RH01
             ocp_prometheus_token_secret: OCP_PROMETHEUS_TOKEN_STONE_STG_RH01
             users_secret: USERS_STONE_STG_RH01
+            should_fail: false
           - label: kflux-prd-rh02
             repo: https://github.com/rhtap-perf-test/nodejs-devfile-sample3
             member_cluster_secret: MEMBER_CLUSTER_KFLUX_PRD_RH02
             ocp_prometheus_token_secret: OCP_PROMETHEUS_TOKEN_KFLUX_PRD_RH02
             users_secret: USERS_KFLUX_PRD_RH02
+            should_fail: false
 
     runs-on: ubuntu-latest
     timeout-minutes: 120
