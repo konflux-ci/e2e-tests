@@ -263,7 +263,7 @@ func GetFailedPipelineRunDetails(c crclient.Client, pipelineRun *pipeline.Pipeli
 				d.FailedTaskRunName = taskRun.Name
 				d.PodName = taskRun.Status.PodName
 				for _, s := range taskRun.Status.TaskRunStatusFields.Steps {
-					if s.Terminated.Reason == "Error" || strings.Contains(s.Terminated.Reason, "Failed") {
+					if s.Terminated != nil && (s.Terminated.Reason == "Error" || strings.Contains(s.Terminated.Reason, "Failed")) {
 						d.FailedContainerName = s.Container
 						return d, nil
 					}
