@@ -31,7 +31,6 @@ import (
 )
 
 const (
-	sampServiceAccountName = "release-service-account"
 	sampSourceGitURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic"
 	sampGitSrcSHA          = "6b56d05ac8abb4c24d153e9689209a1018402aad"
 	sampRepoOwner          = "redhat-appstudio-qe"
@@ -94,10 +93,10 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioQESecret, constants.DefaultPipelineServiceAccount, true)
+			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioQESecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
 			Expect(err).ToNot(HaveOccurred())
 
-			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
+			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(sampApplicationName, devNamespace)
@@ -237,7 +236,7 @@ func createGHReleasePlanAdmission(sampRPAName string, managedFw framework.Framew
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(sampRPAName, managedNamespace, "", devNamespace, sampECPName, sampServiceAccountName, []string{sampAppName}, true, &tektonutils.PipelineRef{
+	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(sampRPAName, managedNamespace, "", devNamespace, sampECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{sampAppName}, true, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
 			{Name: "url", Value: releasecommon.RelSvcCatalogURL},

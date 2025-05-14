@@ -11,7 +11,6 @@ import (
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
-	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
@@ -56,7 +55,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(releasecommon.RedhatAppstudioUserSecret, managedNamespace, sourceAuthJson)
 		Expect(err).ToNot(HaveOccurred())
 
-		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
+		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
 		Expect(err).ToNot(HaveOccurred())
 
 		releasePublicKeyDecoded := []byte("-----BEGIN PUBLIC KEY-----\n" +
