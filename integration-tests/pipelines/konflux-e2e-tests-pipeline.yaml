@@ -74,6 +74,7 @@ spec:
         - name: test-name
           value: $(context.pipelineRun.name)
     - name: provision-rosa
+      timeout: 5s
       when:
         - input: "$(tasks.test-metadata.results.test-event-type)"
           operator: in
