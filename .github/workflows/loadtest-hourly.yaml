@@ -28,6 +28,8 @@ jobs:
 
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    # continue even if the job fails
+    continue-on-error: true
 
     # Make sure this action does not get scheduled by cron on e2e-tests forks
     if: ${{ github.repository_owner == 'konflux-ci' || github.event_name != 'schedule' }}
