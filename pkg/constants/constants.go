@@ -145,6 +145,9 @@ const (
 	// Test namespace's required labels
 	ArgoCDLabelKey   string = "argocd.argoproj.io/managed-by"
 	ArgoCDLabelValue string = "gitops-service-argocd"
+	// Label for marking a namespace as a tenant namespace
+	TenantLabelKey   string = "konflux-ci.dev/type"
+	TenantLabelValue string = "tenant"
 
 	BuildPipelinesConfigMapDefaultNamespace = "build-templates"
 
