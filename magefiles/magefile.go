@@ -137,6 +137,7 @@ func (ci CI) init() error {
 	rctx.PrRemoteName = pr.RemoteName
 	rctx.PrBranchName = pr.BranchName
 	rctx.PrCommitSha = pr.CommitSHA
+	rctx.PrNum = pr.Number
 
 	if konfluxCI == "true" {
 		rctx.TektonEventType = konfluxCiSpec.KonfluxGitRefs.EventType

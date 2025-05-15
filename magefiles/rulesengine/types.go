@@ -447,6 +447,7 @@ type RuleCtx struct {
 	PrRemoteName                  string
 	PrCommitSha                   string
 	PrBranchName                  string
+	PrNum                         int
 	TektonEventType               string
 	RequiresMultiPlatformTests    bool
 	RequiresSprayProxyRegistering bool
@@ -476,6 +477,7 @@ func NewRuleCtx() *RuleCtx {
 		"",
 		"",
 		"",
+		0,
 		"",
 		false,
 		false}
