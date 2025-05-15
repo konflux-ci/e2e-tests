@@ -122,7 +122,7 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 					Name: name,
 					Labels: map[string]string{
 						constants.ArgoCDLabelKey: constants.ArgoCDLabelValue,
-						constants.TenantLabelKey: constants.ArgoCDLabelValue,
+						constants.TenantLabelKey: constants.TenantLabelValue,
 					},
 				}}
 			ns, err = s.KubeInterface().CoreV1().Namespaces().Create(context.Background(), &nsTemplate, metav1.CreateOptions{})
