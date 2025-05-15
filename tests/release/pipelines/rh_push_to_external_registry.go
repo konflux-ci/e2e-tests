@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	kubeapi "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 	"os"
 	"time"
 
@@ -31,8 +32,11 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 	// Initialize the tests controllers
 	var fw *framework.Framework
 	AfterEach(framework.ReportFailure(&fw))
+	var kubeAdminClient *framework.ControllerHub
 	var err error
-	var devNamespace, managedNamespace, compName, additionalCompName string
+	var devNamespace = "push-pyxis"
+	var managedNamespace = "push-pyxis-managed"
+	var compName, additionalCompName string
 	var avgControllerQueryTimeout = 5 * time.Minute
 
 	var imageIDs []string
@@ -51,13 +55,25 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 	var snapshotPush *appservice.Snapshot
 	var releaseCR *releaseApi.Release
 
-	BeforeAll(func() {
-		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("push-pyxis"))
-		Expect(err).NotTo(HaveOccurred())
-		devNamespace = fw.UserNamespace
-		managedNamespace = utils.GetGeneratedNamespace("push-pyxis-managed")
+	var testEnvironment = utils.GetEnv("TEST_ENVIRONMENT", releasecommon.UpstreamTestEnvironment)
 
-		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
+	BeforeAll(func() {
+		if testEnvironment == releasecommon.DownstreamTestEnvironment {
+			fw, err = framework.NewFramework(utils.GetGeneratedNamespace(devNamespace))
+			Expect(err).NotTo(HaveOccurred())
+			devNamespace = fw.UserNamespace
+			managedNamespace = utils.GetGeneratedNamespace(managedNamespace)
+		} else {
+			var asAdminClient *kubeapi.CustomClient
+			asAdminClient, err = kubeapi.NewAdminKubernetesClient()
+			Expect(err).ShouldNot(HaveOccurred())
+			kubeAdminClient, err = framework.InitControllerHub(asAdminClient)
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = kubeAdminClient.CommonController.CreateTestNamespace(devNamespace)
+			Expect(err).ShouldNot(HaveOccurred())
+		}
+
+		_, err = kubeAdminClient.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating managedNamespace")
 
 		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
@@ -70,7 +86,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		Expect(certPyxisStage).ToNot(BeEmpty())
 
 		// Create secret for the release registry repo "hacbs-release-tests".
-		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(releasecommon.RedhatAppstudioUserSecret, managedNamespace, sourceAuthJson)
+		_, err = kubeAdminClient.CommonController.CreateRegistryAuthSecret(releasecommon.RedhatAppstudioUserSecret, managedNamespace, sourceAuthJson)
 		Expect(err).ToNot(HaveOccurred())
 
 		// Creating k8s secret to access Pyxis stage based on base64 decoded of key and cert
@@ -92,7 +108,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 			},
 		}
 
-		_, err = fw.AsKubeAdmin.CommonController.CreateSecret(managedNamespace, secret)
+		_, err = kubeAdminClient.CommonController.CreateSecret(managedNamespace, secret)
 		Expect(err).ToNot(HaveOccurred())
 
 		//temporarily usage
@@ -101,9 +117,9 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 			"CRnFUCg/fndZsXdz0IX5sfzIyspizaTbu4rapV85KirmSBU6XUaLY347xg==\n" +
 			"-----END PUBLIC KEY-----")
 
-		Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
+		Expect(kubeAdminClient.TektonController.CreateOrUpdateSigningSecret(
 			releasePublicKeyDecoded, releasecommon.PublicSecretNameAuth, managedNamespace)).To(Succeed())
-		defaultEcPolicy, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+		defaultEcPolicy, err := kubeAdminClient.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 		Expect(err).NotTo(HaveOccurred())
 		defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
 			Description: "Red Hat's enterprise requirements",
@@ -114,22 +130,22 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 				Exclude:     []string{"tests/release/pipelines/push_to_external_registry.go"},
 			},
 		}
-		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(ecPolicyName, managedNamespace, defaultEcPolicySpec)
+		_, err = kubeAdminClient.TektonController.CreateEnterpriseContractPolicy(ecPolicyName, managedNamespace, defaultEcPolicySpec)
 		Expect(err).NotTo(HaveOccurred())
 
-		managedServiceAccount, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(releasecommon.ReleasePipelineServiceAccountDefault, managedNamespace, releasecommon.ManagednamespaceSecret, nil)
+		managedServiceAccount, err := kubeAdminClient.CommonController.CreateServiceAccount(releasecommon.ReleasePipelineServiceAccountDefault, managedNamespace, releasecommon.ManagednamespaceSecret, nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
+		_, err = kubeAdminClient.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
+		err = kubeAdminClient.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
 		Expect(err).ToNot(HaveOccurred())
 
 		compName = releasecommon.ComponentName
 		additionalCompName = releasecommon.AdditionalComponentName
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, managedNamespace, "true", nil, nil, nil)
+		_, err = kubeAdminClient.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, managedNamespace, "true", nil, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		data, err := json.Marshal(map[string]interface{}{
@@ -157,7 +173,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, "", devNamespace, ecPolicyName, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationNameDefault}, true, &tektonutils.PipelineRef{
+		_, err = kubeAdminClient.ReleaseController.CreateReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, "", devNamespace, ecPolicyName, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationNameDefault}, true, &tektonutils.PipelineRef{
 			Resolver: "git",
 			Params: []tektonutils.Param{
 				{Name: "url", Value: releasecommon.RelSvcCatalogURL},
@@ -169,35 +185,37 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasecommon.ReleasePvcName, managedNamespace, corev1.ReadWriteOnce)
+		_, err = kubeAdminClient.TektonController.CreatePVCInAccessMode(releasecommon.ReleasePvcName, managedNamespace, corev1.ReadWriteOnce)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.CommonController.CreateRole("role-release-service-account", managedNamespace, map[string][]string{
+		_, err = kubeAdminClient.CommonController.CreateRole("role-release-service-account", managedNamespace, map[string][]string{
 			"apiGroupsList": {""},
 			"roleResources": {"secrets"},
 			"roleVerbs":     {"get", "list", "watch"},
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.CommonController.CreateRoleBinding("role-release-service-account-binding", managedNamespace, "ServiceAccount", releasecommon.ReleasePipelineServiceAccountDefault, managedNamespace, "Role", "role-release-service-account", "rbac.authorization.k8s.io")
+		_, err = kubeAdminClient.CommonController.CreateRoleBinding("role-release-service-account-binding", managedNamespace, "ServiceAccount", releasecommon.ReleasePipelineServiceAccountDefault, managedNamespace, "Role", "role-release-service-account", "rbac.authorization.k8s.io")
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
+		_, err = kubeAdminClient.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(*fw, releasecommon.ComponentName, releasecommon.ApplicationNameDefault, devNamespace, sampleImage, gitSourceURL, gitSourceRevision, releasecommon.AdditionalComponentName, additionalImage, gitAdditionSrcURL, gitAdditionSrcRevision)
+		snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(kubeAdminClient, releasecommon.ComponentName, releasecommon.ApplicationNameDefault, devNamespace, sampleImage, gitSourceURL, gitSourceRevision, releasecommon.AdditionalComponentName, additionalImage, gitAdditionSrcURL, gitAdditionSrcRevision)
 		GinkgoWriter.Println("snapshotPush.Name: %s", snapshotPush.GetName())
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterAll(func() {
-		err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(constants.StrategyConfigsRepo, scGitRevision)
+		err = kubeAdminClient.CommonController.Github.DeleteRef(constants.StrategyConfigsRepo, scGitRevision)
 		if err != nil {
 			Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 		}
 		if !CurrentSpecReport().Failed() {
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
+			Expect(kubeAdminClient.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+			if testEnvironment == releasecommon.DownstreamTestEnvironment {
+				Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
+			}
 		}
 	})
 
@@ -205,7 +223,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 
 		It("tests that Release CR is created for the Snapshot", func() {
 			Eventually(func() error {
-				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetRelease("", snapshotPush.GetName(), devNamespace)
+				releaseCR, err = kubeAdminClient.ReleaseController.GetRelease("", snapshotPush.GetName(), devNamespace)
 				if err != nil {
 					GinkgoWriter.Printf("cannot get the Release CR for snapshot %s/%s: %v\n", snapshotPush.GetNamespace(), releasecommon.ComponentName, err)
 					return err
@@ -215,18 +233,18 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		})
 
 		It("verifies a release PipelineRun is started and succeeded in managed namespace", func() {
-			releasePR, err = fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToGetStarted(releaseCR, managedNamespace)
+			releasePR, err = kubeAdminClient.ReleaseController.WaitForReleasePipelineToGetStarted(releaseCR, managedNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
+			Expect(kubeAdminClient.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
 		})
 
 		It("validate the result of task create-pyxis-image contains image ids", func() {
 			Eventually(func() []string {
-				trReleaseLogs, err := fw.AsKubeAdmin.TektonController.GetTaskRunLogs(releasePR.GetName(), "create-pyxis-image", releasePR.GetNamespace())
+				trReleaseLogs, err := kubeAdminClient.TektonController.GetTaskRunLogs(releasePR.GetName(), "create-pyxis-image", releasePR.GetNamespace())
 				Expect(err).NotTo(HaveOccurred())
 
-				trReleaseImageIDs, err := fw.AsKubeAdmin.ReleaseController.GetPyxisImageIDsFromCreatePyxisImageTaskLogs(trReleaseLogs)
+				trReleaseImageIDs, err := kubeAdminClient.ReleaseController.GetPyxisImageIDsFromCreatePyxisImageTaskLogs(trReleaseLogs)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(trReleaseImageIDs).NotTo(BeEmpty(), fmt.Sprintf("Invalid ImageID in results of task create-pyxis-image. TaskRun log: %+s", trReleaseLogs))
@@ -240,7 +258,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 			Eventually(func() error {
 				var errMsg string
 				for _, cr := range []*releaseApi.Release{releaseCR} {
-					cr, err = fw.AsKubeAdmin.ReleaseController.GetRelease("", cr.Spec.Snapshot, devNamespace)
+					cr, err = kubeAdminClient.ReleaseController.GetRelease("", cr.Spec.Snapshot, devNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
 					if !cr.IsReleased() {
 						errMsg += fmt.Sprintf("release %s/%s is not marked as finished yet", cr.GetNamespace(), cr.GetName())
@@ -256,7 +274,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		It("validates that imageIds from task create-pyxis-image exist in Pyxis.", func() {
 			for _, imageID := range imageIDs {
 				Eventually(func() error {
-					body, err := fw.AsKubeAdmin.ReleaseController.GetPyxisImageByImageID(releasecommon.PyxisStageImagesApiEndpoint, imageID,
+					body, err := kubeAdminClient.ReleaseController.GetPyxisImageByImageID(releasecommon.PyxisStageImagesApiEndpoint, imageID,
 						[]byte(pyxisCertDecoded), []byte(pyxisKeyDecoded))
 					Expect(err).NotTo(HaveOccurred(), "failed to get response body")
 

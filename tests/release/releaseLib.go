@@ -124,11 +124,11 @@ func CreateComponentWithNewBranch(f framework.Framework, testNamespace, applicat
 
 func CreatePushSnapshot(devWorkspace, devNamespace, appName, compRepoName, pacBranchName string, pipelineRun *pipeline.PipelineRun, component *appservice.Component) *appservice.Snapshot {
 	var (
-		prSHA       string
-		mergeResult *ghub.PullRequestMergeResult
-		prNumber    int
-		err         error
-		snapshot    *appservice.Snapshot
+		prSHA          string
+		mergeResult    *ghub.PullRequestMergeResult
+		prNumber       int
+		err            error
+		snapshot       *appservice.Snapshot
 		pacPipelineRun *pipeline.PipelineRun
 	)
 
@@ -222,7 +222,7 @@ func CreatePushSnapshot(devWorkspace, devNamespace, appName, compRepoName, pacBr
 }
 
 // CreateSnapshotWithImageSource creates a snapshot having two images and sources.
-func CreateSnapshotWithImageSource(fw framework.Framework, componentName, applicationName, namespace, containerImage, gitSourceURL, gitSourceRevision, componentName2, containerImage2, gitSourceURL2, gitSourceRevision2 string) (*appstudioApi.Snapshot, error) {
+func CreateSnapshotWithImageSource(fw *framework.ControllerHub, componentName, applicationName, namespace, containerImage, gitSourceURL, gitSourceRevision, componentName2, containerImage2, gitSourceURL2, gitSourceRevision2 string) (*appstudioApi.Snapshot, error) {
 	snapshotComponents := []appstudioApi.SnapshotComponent{
 		{
 			Name:           componentName,
@@ -256,7 +256,7 @@ func CreateSnapshotWithImageSource(fw framework.Framework, componentName, applic
 
 	snapshotName := "snapshot-sample-" + util.GenerateRandomString(4)
 
-	return fw.AsKubeAdmin.IntegrationController.CreateSnapshotWithComponents(snapshotName, componentName, applicationName, namespace, snapshotComponents)
+	return fw.IntegrationController.CreateSnapshotWithComponents(snapshotName, componentName, applicationName, namespace, snapshotComponents)
 }
 
 func CheckReleaseStatus(releaseCR *releaseApi.Release) error {
