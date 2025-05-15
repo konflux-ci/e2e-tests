@@ -82,7 +82,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 
 			createRHIOEnterpriseContractPolicy(rhioEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 
-			snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(*devFw, rhioComponentName, rhioApplicationName, devNamespace, sampleImage, rhioGitSourceURL, rhioGitSrcSHA, "", "", "", "")
+			snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(devFw.AsKubeAdmin, rhioComponentName, rhioApplicationName, devNamespace, sampleImage, rhioGitSourceURL, rhioGitSrcSHA, "", "", "", "")
 			GinkgoWriter.Println("snapshotPush.Name: %s", snapshotPush.GetName())
 			Expect(err).ShouldNot(HaveOccurred())
 		})

@@ -1,6 +1,7 @@
 package service
 
 import (
+	kubeapi "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 	"strings"
 
 	"github.com/konflux-ci/application-api/api/v1alpha1"
@@ -19,32 +20,44 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails whe
 	defer GinkgoRecover()
 
 	var fw *framework.Framework
+	var kubeAdminClient *framework.ControllerHub
 	var err error
 
-	var devNamespace, managedNamespace string
+	var devNamespace = "neg-rp-dev"
+	var managedNamespace = "neg-rp-managed"
 
 	var releaseCR *releaseApi.Release
 	var snapshotName = "snapshot"
 	var destinationReleasePlanAdmissionName = "sre-production"
 	var releaseName = "release"
 
+	var testEnvironment = utils.GetEnv("TEST_ENVIRONMENT", releasecommon.UpstreamTestEnvironment)
+
 	AfterEach(framework.ReportFailure(&fw))
 
 	BeforeAll(func() {
-		// Initialize the tests controllers
-		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("neg-rp-dev"))
-		Expect(err).NotTo(HaveOccurred())
-		devNamespace = fw.UserNamespace
+		if testEnvironment == releasecommon.DownstreamTestEnvironment {
+			fw, err = framework.NewFramework(utils.GetGeneratedNamespace(devNamespace))
+			Expect(err).NotTo(HaveOccurred())
+			devNamespace = fw.UserNamespace
+			managedNamespace = utils.GetGeneratedNamespace(managedNamespace)
+		} else {
+			var asAdminClient *kubeapi.CustomClient
+			asAdminClient, err = kubeapi.NewAdminKubernetesClient()
+			Expect(err).ShouldNot(HaveOccurred())
+			kubeAdminClient, err = framework.InitControllerHub(asAdminClient)
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = kubeAdminClient.CommonController.CreateTestNamespace(devNamespace)
+			Expect(err).ShouldNot(HaveOccurred())
+		}
 
-		// Create the managed namespace
-		managedNamespace = utils.GetGeneratedNamespace("neg-rp-managed")
-		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
+		_, err = kubeAdminClient.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", managedNamespace, err)
 
-		_, err = fw.AsKubeAdmin.IntegrationController.CreateSnapshotWithComponents(snapshotName, "", releasecommon.ApplicationName, devNamespace, []v1alpha1.SnapshotComponent{})
+		_, err = kubeAdminClient.IntegrationController.CreateSnapshotWithComponents(snapshotName, "", releasecommon.ApplicationName, devNamespace, []v1alpha1.SnapshotComponent{})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(destinationReleasePlanAdmissionName, managedNamespace, "", devNamespace, releasecommon.ReleaseStrategyPolicy, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationName}, true, &tektonutils.PipelineRef{
+		_, err = kubeAdminClient.ReleaseController.CreateReleasePlanAdmission(destinationReleasePlanAdmissionName, managedNamespace, "", devNamespace, releasecommon.ReleaseStrategyPolicy, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationName}, true, &tektonutils.PipelineRef{
 			Resolver: "git",
 			Params: []tektonutils.Param{
 				{Name: "url", Value: releasecommon.RelSvcCatalogURL},
@@ -53,21 +66,23 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails whe
 			},
 		}, nil)
 		Expect(err).NotTo(HaveOccurred())
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, releasecommon.SourceReleasePlanName)
+		_, err = kubeAdminClient.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, releasecommon.SourceReleasePlanName)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterAll(func() {
 		if !CurrentSpecReport().Failed() {
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
+			Expect(kubeAdminClient.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+			if testEnvironment == releasecommon.DownstreamTestEnvironment {
+				Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
+			}
 		}
 	})
 
 	var _ = Describe("post-release verification.", func() {
 		It("missing ReleasePlan makes a Release CR set as failed in both IsReleased and IsValid with a proper message to user.", func() {
 			Eventually(func() bool {
-				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetRelease(releaseName, "", devNamespace)
+				releaseCR, err = kubeAdminClient.ReleaseController.GetRelease(releaseName, "", devNamespace)
 				if releaseCR.HasReleaseFinished() {
 					return !(releaseCR.IsValid() && releaseCR.IsReleased()) &&
 						strings.Contains(releaseCR.Status.Conditions[0].Message, "Release validation failed")
@@ -76,9 +91,9 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails whe
 			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(BeTrue())
 		})
 		It("missing ReleasePlanAdmission makes a Release CR set as failed in both IsReleased and IsValid with a proper message to user.", func() {
-			Expect(fw.AsKubeAdmin.ReleaseController.DeleteReleasePlanAdmission(destinationReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
+			Expect(kubeAdminClient.ReleaseController.DeleteReleasePlanAdmission(destinationReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
 			Eventually(func() bool {
-				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetRelease(releaseName, "", devNamespace)
+				releaseCR, err = kubeAdminClient.ReleaseController.GetRelease(releaseName, "", devNamespace)
 				if releaseCR.HasReleaseFinished() {
 					return !(releaseCR.IsValid() && releaseCR.IsReleased()) &&
 						strings.Contains(releaseCR.Status.Conditions[0].Message, "Release validation failed")
