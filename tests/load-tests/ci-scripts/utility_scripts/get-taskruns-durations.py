@@ -160,6 +160,8 @@ class Something:
                         s_result = True
                     else:
                         s_result = False
+                    if s["terminated"]["startedAt"] is None or s["terminated"]["finishedAt"] is None:
+                        raise KeyError("Field terminated.startedAt and/or terminated.finishedAt is None")
                     tr_steps[s["container"]] = {
                         "started": str2date(s["terminated"]["startedAt"]),
                         "finished": str2date(s["terminated"]["finishedAt"]),
