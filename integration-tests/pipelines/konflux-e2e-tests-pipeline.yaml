@@ -144,6 +144,29 @@ spec:
         - name: e2e-timeout
           value: "90m"
   finally:
+    - name: store-pipeline-status
+      when:
+        - input: "$(tasks.test-metadata.results.test-event-type)"
+          operator: in
+          values: ["pull_request"]
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-ci/tekton-integration-catalog.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: tasks/store-pipeline-status/0.1/store-pipeline-status.yaml
+      params:
+        - name: oci-ref
+          value: "$(params.oci-container-repo):$(context.pipelineRun.name)"
+        - name: credentials-secret-name
+          value: "$(params.konflux-test-infra-secret)"
+        - name: pipelinerun-name
+          value: $(context.pipelineRun.name)
+        - name: pipeline-aggregate-status
+          value: $(tasks.status)
     - name: deprovision-rosa-collect-artifacts
       when:
         - input: "$(tasks.test-metadata.results.test-event-type)"
