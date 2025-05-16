@@ -8,17 +8,17 @@ import (
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline", Label("release-service", "tenant"), func() {
@@ -68,8 +68,8 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 		tenantPipeline := &tektonutils.ParameterizedPipeline{}
 		tenantPipeline.ServiceAccountName = constants.DefaultPipelineServiceAccount
 		tenantPipeline.Timeouts = tektonv1.TimeoutFields{
-                                Pipeline: &metav1.Duration{Duration: 1 * time.Hour},
-                        }
+			Pipeline: &metav1.Duration{Duration: 1 * time.Hour},
+		}
 
 		tenantPipeline.PipelineRef = tektonutils.PipelineRef{
 			Resolver: "git",
@@ -81,14 +81,14 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 		}
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, "", "", &runtime.RawExtension{
-                        Raw: data,
-                }, tenantPipeline, nil)
+			Raw: data,
+		}, tenantPipeline, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasecommon.ReleasePvcName, devNamespace, corev1.ReadWriteOnce)
 		Expect(err).NotTo(HaveOccurred())
 
-		snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(*fw, releasecommon.ComponentName, releasecommon.ApplicationNameDefault, devNamespace, sampleImage, gitSourceURL, gitSourceRevision, "", "", "", "")
+		snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(fw.AsKubeAdmin, releasecommon.ComponentName, releasecommon.ApplicationNameDefault, devNamespace, sampleImage, gitSourceURL, gitSourceRevision, "", "", "", "")
 		GinkgoWriter.Println("snapshotPush.Name: %s", snapshotPush.GetName())
 		Expect(err).ShouldNot(HaveOccurred())
 	})
