@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os/exec"
 	"regexp"
 	"strings"
 
@@ -16,12 +17,24 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const (
+	MediaTypeOciManifest        = "application/vnd.oci.image.manifest.v1+json"
+	MediaTypeOciImageIndex      = "application/vnd.oci.image.index.v1+json"
+	MediaTypeDockerManifestList = "application/vnd.docker.distribution.manifest.list.v2+json"
+	MediaTypeDockerManifest     = "application/vnd.docker.distribution.manifest.v2+json"
+)
+
 var (
 	quayApiUrl = "https://quay.io/api/v1"
 	quayOrg    = utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
 	quayToken  = utils.GetEnv("DEFAULT_QUAY_ORG_TOKEN", "")
 	quayClient = quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayToken, quayApiUrl)
 )
+
+type ImageInspectInfo struct {
+	SchemaVersion int
+	MediaType     string
+}
 
 func DoesImageRepoExistInQuay(quayImageRepoName string) (bool, error) {
 	exists, err := quayClient.DoesRepositoryExist(quayOrg, quayImageRepoName)
@@ -157,4 +170,21 @@ func GetImageTag(organization, repository, tagName string) (quay.Tag, error) {
 			return quay.Tag{}, fmt.Errorf("%s", fmt.Sprintf("cannot find tag %s", tagName))
 		}
 	}
+}
+
+func GetBuiltImageManifestMediaType(imageUrl string) (string, error) {
+
+	cmd := exec.Command("skopeo", "inspect", "--raw", "docker://"+imageUrl) // #nosec G204
+	fmt.Printf("Running command: %q\n", cmd.String())
+	outputBytes, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("error while running skopeo cmd: %v", err)
+	}
+	inspectOutput := ImageInspectInfo{}
+	err = json.Unmarshal(outputBytes, &inspectOutput)
+	if err != nil {
+		return "", fmt.Errorf("error while unmarshalling skopeo cmd output: %v", err)
+	}
+	fmt.Printf("IMAGE MANIFEST MEDIA_TYPE: %v\n", inspectOutput.MediaType)
+	return inspectOutput.MediaType, nil
 }
