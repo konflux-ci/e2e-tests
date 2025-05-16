@@ -192,14 +192,20 @@ func (g *Github) ForkRepository(sourceName, targetName string) (*github.Reposito
 			if resp.StatusCode == 403 {
 				// This catches error: "403 Repository is already being forked."
 				// This happens whem more than ~3 forks of one repo is ongoing in parallel
+				fmt.Printf("Warning, got 403: %s", resp.Body)
+				return false, nil
+			}
+			if resp.StatusCode == 500 {
+				// This catches error 500 seen few times
+				fmt.Printf("Warning, got 500: %s", resp.Body)
 				return false, nil
 			}
 			return false, fmt.Errorf("Error forking %s/%s: %v", g.organization, sourceName, err)
 		}
 		return true, nil
-	}, time.Second * 2, time.Minute * 30)
+	}, time.Second * 10, time.Minute * 30)
 	if err1 != nil {
-		return nil, fmt.Errorf("Failed waiting for repo %s/%s: %v", g.organization, sourceName, err1)
+		return nil, fmt.Errorf("Failed waiting for fork %s/%s: %v", g.organization, sourceName, err1)
 	}
 
 	err2 := utils.WaitUntilWithInterval(func() (done bool, err error) {
@@ -210,9 +216,9 @@ func (g *Github) ForkRepository(sourceName, targetName string) (*github.Reposito
 			return false, nil
 		}
 		return true, nil
-	}, time.Second * 2, time.Minute * 10)
+	}, time.Second * 10, time.Minute * 10)
 	if err2 != nil {
-		return nil, fmt.Errorf("Failed waiting for repo %s/%s: %v", g.organization, sourceName, err2)
+		return nil, fmt.Errorf("Failed waiting for commits %s/%s: %v", g.organization, sourceName, err2)
 	}
 
 	editedRepo := &github.Repository{
@@ -230,7 +236,7 @@ func (g *Github) ForkRepository(sourceName, targetName string) (*github.Reposito
 			return false, fmt.Errorf("Error renaming %s/%s to %s: %v\n", g.organization, fork.GetName(), targetName, err)
 		}
 		return true, nil
-	}, time.Second * 2, time.Minute * 10)
+	}, time.Second * 10, time.Minute * 10)
 	if err3 != nil {
 		return nil, fmt.Errorf("Failed waiting for renaming %s/%s: %v", g.organization, targetName, err3)
 	}

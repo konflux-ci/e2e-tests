@@ -25,6 +25,7 @@ type Opts struct {
 	OutputDir                     string
 	PipelineMintmakerDisabled     bool
 	PipelineRepoTemplating        bool
+	PipelineImagePullSecrets      []string
 	Purge                         bool
 	PurgeOnly                     bool
 	QuayRepo                      string

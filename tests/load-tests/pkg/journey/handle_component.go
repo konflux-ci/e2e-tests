@@ -157,6 +157,22 @@ func getPaCPullNumber(f *framework.Framework, namespace, name string) (int, erro
 	return pullNumber, err
 }
 
+// Link all pipeline imagePullSecrets (needed to pull images used by tasks) to build service account
+func configurePipelineImagePullSecrets(f *framework.Framework, namespace, component string, secrets []string) error {
+	logging.Logger.Debug("Configuring %d imagePullSecrets for component build task images for component %s", len(secrets), component)
+
+	component_sa := "build-pipeline-" + component
+	for _, secret := range secrets {
+		println("-", secret)
+		err := f.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(namespace, secret, component_sa, true)
+		if err != nil {
+			return fmt.Errorf("Unable to add secret %s to service account %s: %v", secret, component_sa, err)
+		}
+	}
+
+	return nil
+}
+
 func listPipelineRunsWithTimeout(f *framework.Framework, namespace, appName, compName, sha string, expectedCount int) (*[]pipeline.PipelineRun, error) {
 	var prs *[]pipeline.PipelineRun
 	var err error
@@ -220,7 +236,11 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 	if err != nil {
 		return fmt.Errorf("Failed parsing repo name: %v", err)
 	}
-	_, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(repoName, mergeReqNum)
+	if strings.Contains(repoUrl, "gitlab.") {
+		_, err = f.AsKubeAdmin.CommonController.Gitlab.AcceptMergeRequest(repoName, mergeReqNum)
+	} else {
+		_, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(repoName, mergeReqNum)
+	}
 	if err != nil {
 		return fmt.Errorf("Merging %d failed: %v", mergeReqNum, err)
 	}
@@ -295,7 +315,9 @@ func HandleComponent(ctx *PerComponentContext) error {
 		return logging.Logger.Fail(62, "Type assertion failed on pull: %+v", pullIface)
 	}
 
-	// If this is multi-arch build, we do not care about this build, we just merge it, update pipelines and trigger actual multi-arch build
+	// If this is supposed to be a multi-arch build, we do not care about
+	// current build, we just merge the PR, update pipelines and trigger
+	// actual multi-arch build
 	if ctx.ParentContext.ParentContext.Opts.PipelineRepoTemplating {
 		// Placeholders for template multi-arch PaC pipeline files
 		placeholders := &map[string]string{
@@ -307,7 +329,7 @@ func HandleComponent(ctx *PerComponentContext) error {
 			"REPOURL":     ctx.ParentContext.ParentContext.ComponentRepoUrl,
 		}
 
-		// Skip what we do not care about
+		// Skip what we do not care about, merge PR, graft pipeline yamls
 		_, err = logging.Measure(
 			utilityRepoTemplatingComponentCleanup,
 			ctx.Framework,
@@ -324,6 +346,21 @@ func HandleComponent(ctx *PerComponentContext) error {
 		}
 
 	}
+
+	// Configure imagePullSecrets needed for component build task images
+	if len(ctx.ParentContext.ParentContext.Opts.PipelineImagePullSecrets) > 0 {
+		_, err = logging.Measure(
+			configurePipelineImagePullSecrets,
+			ctx.Framework,
+			ctx.ParentContext.ParentContext.Namespace,
+			ctx.ComponentName,
+			ctx.ParentContext.ParentContext.Opts.PipelineImagePullSecrets,
+		)
+		if err != nil {
+			return logging.Logger.Fail(64, "Failed to configure pipeline imagePullSecrets: %v", err)
+		}
+	}
+
 
 	return nil
 }

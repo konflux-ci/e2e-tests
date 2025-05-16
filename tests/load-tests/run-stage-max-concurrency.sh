@@ -49,6 +49,9 @@ load_test() {
     rm -rvf "$workdir/load-test.json"
     rm -rvf "$workdir/load-test.log"
 
+    options=""
+    [[ -n "${PIPELINE_IMAGE_PULL_SECRETS:-}" ]] && options="$options --pipeline-image-pull-secrets $PIPELINE_IMAGE_PULL_SECRETS"
+
     date -Ins --utc >started
     go run loadtest.go \
         --applications-count "${APPLICATIONS_COUNT:-1}" \
@@ -57,7 +60,7 @@ load_test() {
         --concurrency "$threads" \
         --journey-duration "${JOURNEY_DURATION:-1h}" \
         --journey-repeats "${JOURNEY_REPEATS:-1}" \
-        --log-info \
+        --log-"${LOGGING_LEVEL:-info}" \
         --stage \
         --pipeline-repo-templating="${PIPELINE_REPO_TEMPLATING:-false}" \
         --output-dir "${workdir:-/tmp}" \
@@ -68,6 +71,7 @@ load_test() {
         --test-scenario-revision "${TEST_SCENARIO_REVISION:-main}" \
         --waitintegrationtestspipelines="${WAIT_INTEGRATION_TESTS:-true}" \
         --waitpipelines="${WAIT_PIPELINES:-true}" \
+        $options \
         2>&1 | tee "$workdir/load-test.log"
     
     # Capture and exit if there are unexpected errors in loadtest.go
