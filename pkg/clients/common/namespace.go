@@ -119,8 +119,11 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 			// Create the E2E test namespace if it doesn't exist
 			nsTemplate := corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:   name,
-					Labels: map[string]string{constants.ArgoCDLabelKey: constants.ArgoCDLabelValue},
+					Name: name,
+					Labels: map[string]string{
+						constants.ArgoCDLabelKey: constants.ArgoCDLabelValue,
+						constants.TenantLabelKey: constants.TenantLabelValue,
+					},
 				}}
 			ns, err = s.KubeInterface().CoreV1().Namespaces().Create(context.Background(), &nsTemplate, metav1.CreateOptions{})
 			if err != nil {
