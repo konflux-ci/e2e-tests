@@ -81,7 +81,7 @@ setup-multi-platform-tests:
 setup-bundle-for-build-tasks-dockerfiles-group-build:
 # whether to build bundle with changes for source-container-build, sbom-utility-scripts, icm-injection-scripts components
 # need to pass true/false as mage target arguments respectively
-	./mage -v SetupBundleForBuildTasksDockerfilesRepo true true true
+	./mage -v SetupBundleForBuildTasksDockerfilesRepo true true false
 
 setup-only-source-build:
 	./mage -v SetupBundleForBuildTasksDockerfilesRepo true false false
