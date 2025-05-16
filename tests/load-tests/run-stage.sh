@@ -4,6 +4,9 @@ set -o nounset
 set -o errexit
 set -o pipefail
 
+options=""
+[[ -n "${PIPELINE_IMAGE_PULL_SECRETS:-}" ]] && options="$options --pipeline-image-pull-secrets $PIPELINE_IMAGE_PULL_SECRETS"
+
 date -Ins --utc >started
 go run loadtest.go \
     --applications-count "${APPLICATIONS_COUNT:-1}" \
@@ -25,5 +28,6 @@ go run loadtest.go \
     --username "${USER_PREFIX:-undef}" \
     --waitintegrationtestspipelines="${WAIT_INTEGRATION_TESTS:-true}" \
     --waitpipelines="${WAIT_PIPELINES:-true}" \
+    $options \
     --stage
 date -Ins --utc >ended
