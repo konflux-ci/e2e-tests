@@ -38,6 +38,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 	var buildPipelineRun, testPipelinerun *pipeline.PipelineRun
 	var integrationTestScenarioPass, integrationTestScenarioFail *integrationv1beta2.IntegrationTestScenario
 	var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace string
+	var mergeResult *gitlab.MergeRequest
+	var mergeResultSha string
 
 	AfterEach(framework.ReportFailure(&f))
 
@@ -203,8 +205,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 		})
 
 		When("Integration PipelineRun is created", func() {
-			var mergeResult *gitlab.MergeRequest
-			var mergeResultSha string
+
 			It("should eventually complete successfully", func() {
 				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioPass, snapshot, testNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
 				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioFail, snapshot, testNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
@@ -284,7 +285,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 					return nil
 				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
 			})
-
+		})
+		When("Run integration tests after Merged MR", func() {
 			It("should eventually complete successfully", func() {
 				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioPass, snapshot, testNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
 				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioFail, snapshot, testNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
