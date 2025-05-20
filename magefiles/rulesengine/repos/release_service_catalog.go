@@ -71,7 +71,9 @@ var ReleaseServiceCatalogRepoSetDefaultSettingsRule = rulesengine.Rule{Name: "Ge
 		} else {
 			os.Setenv(fmt.Sprintf("%s_CATALOG_REVISION", rctx.ComponentEnvVarPrefix), rctx.PrCommitSha)
 		}
-		os.Setenv("DEPLOY_ONLY", "application-api dev-sso enterprise-contract has pipeline-service integration internal-services release")
+
+		// Failed at https://github.com/redhat-appstudio/infra-deployments/blob/2228e063a7fd8af4a95b24bb13ce7360cdc229f0/hack/preview.sh#L293C16-L293C38
+		//os.Setenv("DEPLOY_ONLY", "application-api dev-sso enterprise-contract has pipeline-service integration internal-services release")
 
 		if rctx.IsPaired && !strings.Contains(rctx.JobName, "rehearse") {
 			os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", rctx.ComponentEnvVarPrefix),
