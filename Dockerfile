@@ -59,6 +59,8 @@ WORKDIR /konflux-e2e
 ENV GOBIN=$GOPATH/bin
 ENV E2E_BIN_PATH=/konflux-e2e/konflux-e2e.test
 
+RUN dnf -y install skopeo
+
 COPY --from=builder /usr/local/bin/jq /usr/local/bin/jq
 COPY --from=builder /usr/local/bin/yq /usr/local/bin/yq
 COPY --from=builder /usr/local/bin/oc /usr/local/bin/oc
