@@ -302,6 +302,20 @@ func HandleComponent(ctx *PerComponentContext) error {
 		return logging.Logger.Fail(60, "Component failed creation: %v", err)
 	}
 
+	// Configure imagePullSecrets needed for component build task images
+	if len(ctx.ParentContext.ParentContext.Opts.PipelineImagePullSecrets) > 0 {
+		_, err = logging.Measure(
+			configurePipelineImagePullSecrets,
+			ctx.Framework,
+			ctx.ParentContext.ParentContext.Namespace,
+			ctx.ComponentName,
+			ctx.ParentContext.ParentContext.Opts.PipelineImagePullSecrets,
+		)
+		if err != nil {
+			return logging.Logger.Fail(61, "Failed to configure pipeline imagePullSecrets: %v", err)
+		}
+	}
+
 	var pullIface interface{}
 	pullIface, err = logging.Measure(
 		getPaCPullNumber,
@@ -310,14 +324,14 @@ func HandleComponent(ctx *PerComponentContext) error {
 		ctx.ComponentName,
 	)
 	if err != nil {
-		return logging.Logger.Fail(61, "Component failed validation: %v", err)
+		return logging.Logger.Fail(62, "Component failed validation: %v", err)
 	}
 
 	// Get merge request number
 	var ok bool
 	ctx.MergeRequestNumber, ok = pullIface.(int)
 	if !ok {
-		return logging.Logger.Fail(62, "Type assertion failed on pull: %+v", pullIface)
+		return logging.Logger.Fail(63, "Type assertion failed on pull: %+v", pullIface)
 	}
 
 	// If this is supposed to be a multi-arch build, we do not care about
@@ -347,23 +361,9 @@ func HandleComponent(ctx *PerComponentContext) error {
 			placeholders,
 		)
 		if err != nil {
-			return logging.Logger.Fail(63, "Repo-templating workflow component cleanup failed: %v", err)
+			return logging.Logger.Fail(64, "Repo-templating workflow component cleanup failed: %v", err)
 		}
 
-	}
-
-	// Configure imagePullSecrets needed for component build task images
-	if len(ctx.ParentContext.ParentContext.Opts.PipelineImagePullSecrets) > 0 {
-		_, err = logging.Measure(
-			configurePipelineImagePullSecrets,
-			ctx.Framework,
-			ctx.ParentContext.ParentContext.Namespace,
-			ctx.ComponentName,
-			ctx.ParentContext.ParentContext.Opts.PipelineImagePullSecrets,
-		)
-		if err != nil {
-			return logging.Logger.Fail(64, "Failed to configure pipeline imagePullSecrets: %v", err)
-		}
 	}
 
 	return nil
