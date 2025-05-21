@@ -52,7 +52,7 @@ func init() {
 	rootCmd.Flags().StringVar(&opts.JourneyDuration, "journey-duration", "1h", "repeat user journey until this timeout (either this or --journey-repeats)")
 	rootCmd.Flags().BoolVar(&opts.PipelineMintmakerDisabled, "pipeline-mintmaker-disabled", true, "if you want to stop Mintmaker to be creating update PRs for your component (default in loadtest different from Konflux default)")
 	rootCmd.Flags().BoolVar(&opts.PipelineRepoTemplating, "pipeline-repo-templating", false, "if we should use in repo template pipelines (merge PaC PR, template repo pipelines and ignore custom pipeline run, e.g. required for multi arch test)")
-	rootCmd.Flags().StringArrayVar(&opts.PipelineImagePullSecrets, "pipeline-image-pull-secrets", []string{}, "space separated secrets needed to pull task images")
+	rootCmd.Flags().StringArrayVar(&opts.PipelineImagePullSecrets, "pipeline-image-pull-secrets", []string{}, "secret needed to pull task images, can be used multiple times")
 	rootCmd.Flags().StringVarP(&opts.OutputDir, "output-dir", "o", ".", "directory where output files such as load-tests.log or load-tests.json are stored")
 	rootCmd.Flags().StringVar(&opts.BuildPipelineSelectorBundle, "build-pipeline-selector-bundle", "", "BuildPipelineSelector bundle to use when testing with build-definition PR")
 	rootCmd.Flags().BoolVarP(&opts.LogInfo, "log-info", "v", false, "log messages with info level and above")
