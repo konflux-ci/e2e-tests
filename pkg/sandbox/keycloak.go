@@ -51,7 +51,7 @@ func (k *SandboxController) MakeRequestKeyCloak(req *http.Request, userName stri
 }
 
 // Get Stage KeyCloak Token
-func (k *SandboxController) GetKeycloakTokenStage(userName, tokenURL, refreshToken string) (keycloakAuth *KeycloakAuth, err error) {
+func (k *SandboxController) GetKeycloakTokenStage(userName, tokenURL, refreshToken string) (token string, err error) {
 
 	// Prepare the form data
 	formData := url.Values{}
@@ -62,18 +62,23 @@ func (k *SandboxController) GetKeycloakTokenStage(userName, tokenURL, refreshTok
 	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(formData.Encode()))
 	if err != nil {
 		fmt.Println("Failed to create Access Token request:", err)
-		return nil, err
+		return "", err
 	}
 
 	// Set the headers
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
-	return k.MakeRequestKeyCloak(req, userName)
+	userToken, err := k.MakeRequestKeyCloak(req, userName)
+	if err != nil {
+		return "", err
+	}
+
+	return userToken.AccessToken, nil
 }
 
 // GetKeycloakToken return a token for admins
-func (k *SandboxController) GetKeycloakToken(clientID string, userName string, password string, realm string) (keycloakAuth *KeycloakAuth, err error) {
+func (k *SandboxController) GetKeycloakToken(clientID string, userName string, password string, realm string) (token string, err error) {
 	data := url.Values{
 		"client_id":  {clientID},
 		"username":   {userName},
@@ -81,15 +86,20 @@ func (k *SandboxController) GetKeycloakToken(clientID string, userName string, p
 		"grant_type": {"password"},
 	}
 
-	request, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/auth/realms/%s/protocol/openid-connect/token", k.KeycloakUrl, realm), strings.NewReader(data.Encode()))
-
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/auth/realms/%s/protocol/openid-connect/token", k.KeycloakUrl, realm), strings.NewReader(data.Encode()))
 	if err != nil {
 		klog.Errorf("failed to get token from keycloak: %v", err)
-		return nil, err
+		return "", err
 	}
-	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
-	return k.MakeRequestKeyCloak(request, userName)
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	userToken, err := k.MakeRequestKeyCloak(req, userName)
+	if err != nil {
+		return "", err
+	}
+
+	return userToken.AccessToken, nil
 }
 
 /*

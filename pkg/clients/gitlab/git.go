@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"encoding/base64"
 
 	. "github.com/onsi/gomega"
 	"github.com/xanzy/go-gitlab"
@@ -164,10 +165,47 @@ func (gc *GitlabClient) CreateFile(projectId, pathToFile, fileContent, branchNam
 	return file, nil
 }
 
+func (gc *GitlabClient) GetFile(projectId, pathToFile, branchName string) (string, error) {
+	file, _, err := gc.client.RepositoryFiles.GetFile(projectId, pathToFile, gitlab.Ptr(gitlab.GetFileOptions{Ref: gitlab.Ptr(branchName)}))
+	if err != nil {
+		return "", fmt.Errorf("Failed to get file: %v", err)
+	}
+
+	decodedContent, err := base64.StdEncoding.DecodeString(file.Content)
+	if err != nil {
+		return "", fmt.Errorf("Failed to decode file content: %v", err)
+	}
+	fileContentString := string(decodedContent)
+
+	return fileContentString, nil
+}
+
 func (gc *GitlabClient) GetFileMetaData(projectID, pathToFile, branchName string) (*gitlab.File, error) {
 	metadata, _, err := gc.client.RepositoryFiles.GetFileMetaData(projectID, pathToFile, gitlab.Ptr(gitlab.GetFileMetaDataOptions{Ref: gitlab.Ptr(branchName)}))
 	return metadata, err
 }
+
+func (gc *GitlabClient) UpdateFile(projectId, pathToFile, fileContent, branchName string) (string, error) {
+	updateOptions := &gitlab.UpdateFileOptions{
+		Branch:        gitlab.Ptr(branchName),
+		Content:       gitlab.Ptr(fileContent),
+		CommitMessage: gitlab.Ptr("e2e test commit message"),
+	}
+
+	_, _, err := gc.client.RepositoryFiles.UpdateFile(projectId, pathToFile, updateOptions)
+	if err != nil {
+		return "", fmt.Errorf("Failed to update/create file: %v", err)
+	}
+
+	// Well, this is not atomic, but best I figured.
+	file, _, err := gc.client.RepositoryFiles.GetFile(projectId, pathToFile, gitlab.Ptr(gitlab.GetFileOptions{Ref: gitlab.Ptr(branchName)}))
+	if err != nil {
+		return "", fmt.Errorf("Failed to get file: %v", err)
+	}
+
+	return file.CommitID, nil
+}
+
 
 func (gc *GitlabClient) AcceptMergeRequest(projectID string, mrID int) (*gitlab.MergeRequest, error) {
 	mr, _, err := gc.client.MergeRequests.AcceptMergeRequest(projectID, mrID, nil)

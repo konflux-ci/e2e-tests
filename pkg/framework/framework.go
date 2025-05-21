@@ -73,7 +73,7 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 	if userName == "" {
 		return nil, fmt.Errorf("userName cannot be empty when initializing a new framework instance")
 	}
-	isStage, err := utils.CheckOptions(options)
+	isStage, isSA, err := utils.CheckOptions(options)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 
 	err = retry.Do(
 		func() error {
-			if k, err = kubeCl.NewDevSandboxProxyClient(userName, isStage, option); err != nil {
+			if k, err = kubeCl.NewDevSandboxProxyClient(userName, isStage, isSA, option); err != nil {
 				GinkgoWriter.Printf("error when creating dev sandbox proxy client: %+v\n", err)
 			}
 			return err
@@ -104,8 +104,15 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 		return nil, fmt.Errorf("error when initializing kubernetes clients: %v", err)
 	}
 
+	asUser, err := InitControllerHub(k.AsKubeDeveloper)
+	if err != nil {
+		return nil, fmt.Errorf("error when initializing appstudio hub controllers for sandbox user: %v", err)
+	}
+
 	var asAdmin *ControllerHub
-	if !isStage {
+	if isStage {
+		asAdmin = asUser
+	} else {
 		asAdmin, err = InitControllerHub(k.AsKubeAdmin)
 		if err != nil {
 			return nil, fmt.Errorf("error when initializing appstudio hub controllers for admin user: %v", err)
@@ -131,18 +138,7 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 				return nil, fmt.Errorf("failed to get config map with error: %v", err)
 			}
 		}
-	}
 
-	asUser, err := InitControllerHub(k.AsKubeDeveloper)
-	if err != nil {
-		return nil, fmt.Errorf("error when initializing appstudio hub controllers for sandbox user: %v", err)
-	}
-
-	if isStage {
-		asAdmin = asUser
-	}
-
-	if !isStage {
 		if err = utils.WaitUntil(asAdmin.CommonController.ServiceAccountPresent(constants.DefaultPipelineServiceAccount, k.UserNamespace), timeout); err != nil {
 			return nil, fmt.Errorf("'%s' service account wasn't created in %s namespace: %+v", constants.DefaultPipelineServiceAccount, k.UserNamespace, err)
 		}
@@ -167,18 +163,18 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 }
 
 func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...utils.Options) (*Framework, error) {
-	isStage, err := utils.CheckOptions(options)
+	isStage, isSA, err := utils.CheckOptions(options)
 	if err != nil {
 		return nil, err
 	}
 
-	if isStage {
+	if isStage && !isSA {
 		options[0].ToolchainApiUrl = fmt.Sprintf("%s/workspaces/%s", options[0].ToolchainApiUrl, userName)
 	}
 
 	fw, err := newFrameworkWithTimeout(userName, timeout, options...)
 
-	if isStage {
+	if isStage && !isSA {
 		go refreshFrameworkStage(fw, userName, timeout, options...)
 	}
 

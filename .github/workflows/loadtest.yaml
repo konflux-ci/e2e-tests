@@ -66,10 +66,11 @@ jobs:
       working-directory: ./tests/load-tests
       env:
         SCENARIO: ${{ github.event.inputs.scenario }}
-        STAGE_MEMBER_CLUSTER: ${{ secrets.STAGE_MEMBER_CLUSTER }}
+        MEMBER_CLUSTER: ${{ secrets.STAGE_MEMBER_CLUSTER }}
         OCP_PROMETHEUS_TOKEN: ${{ secrets.OCP_PROMETHEUS_TOKEN }}
       run: |
         export $SCENARIO
+        export MEMBER_CLUSTER
         ./ci-scripts/stage/collect-results.sh ${CONCURRENCY:-1} .
 
     - name: List files in the artifact directory

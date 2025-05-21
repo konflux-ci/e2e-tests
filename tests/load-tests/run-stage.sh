@@ -1,3 +1,12 @@
+#!/bin/bash
+
+set -o nounset
+set -o errexit
+set -o pipefail
+
+options=""
+[[ -n "${PIPELINE_IMAGE_PULL_SECRETS:-}" ]] && options="$options --pipeline-image-pull-secrets $PIPELINE_IMAGE_PULL_SECRETS"
+
 date -Ins --utc >started
 go run loadtest.go \
     --applications-count "${APPLICATIONS_COUNT:-1}" \
@@ -8,7 +17,7 @@ go run loadtest.go \
     --concurrency "${CONCURRENCY:-1}" \
     --journey-duration "${JOURNEY_DURATION:-1h}" \
     --journey-repeats "${JOURNEY_REPEATS:-1}" \
-    --log-info \
+    --log-"${LOGGING_LEVEL:-info}" \
     --pipeline-repo-templating="${PIPELINE_REPO_TEMPLATING:-false}" \
     --output-dir "${OUTPUT_DIR:-.}" \
     --purge="${PURGE:-true}" \
@@ -16,8 +25,9 @@ go run loadtest.go \
     --test-scenario-git-url "${TEST_SCENARIO_GIT_URL:-https://github.com/konflux-ci/integration-examples.git}" \
     --test-scenario-path-in-repo "${TEST_SCENARIO_PATH_IN_REPO:-pipelines/integration_resolver_pipeline_pass.yaml}" \
     --test-scenario-revision "${TEST_SCENARIO_REVISION:-main}" \
-    --username "$USER_PREFIX" \
+    --username "${USER_PREFIX:-undef}" \
     --waitintegrationtestspipelines="${WAIT_INTEGRATION_TESTS:-true}" \
     --waitpipelines="${WAIT_PIPELINES:-true}" \
+    $options \
     --stage
 date -Ins --utc >ended

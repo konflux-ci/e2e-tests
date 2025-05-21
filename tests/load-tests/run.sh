@@ -60,6 +60,8 @@ if [ -n "$KUBE_SCHEDULER_LOG_LEVEL" ]; then
 fi
 
 ## Run the actual load test
+options=""
+[[ -n "${PIPELINE_IMAGE_PULL_SECRETS:-}" ]] && options="$options --pipeline-image-pull-secrets $PIPELINE_IMAGE_PULL_SECRETS"
 date -Ins --utc >started
 go run loadtest.go \
     --applications-count "${APPLICATIONS_COUNT:-1}" \
@@ -72,7 +74,7 @@ go run loadtest.go \
     --concurrency "${CONCURRENCY:-1}" \
     --journey-duration "${JOURNEY_DURATION:-1h}" \
     --journey-repeats "${JOURNEY_REPEATS:-1}" \
-    --log-info \
+    --log-"${LOGGING_LEVEL:-info}" \
     --pipeline-repo-templating="${PIPELINE_REPO_TEMPLATING:-false}" \
     --output-dir "${OUTPUT_DIR:-.}" \
     --purge="${PURGE:-true}" \
@@ -83,6 +85,7 @@ go run loadtest.go \
     --username "$USER_PREFIX" \
     --waitintegrationtestspipelines="${WAIT_INTEGRATION_TESTS:-true}" \
     --waitpipelines="${WAIT_PIPELINES:-true}" \
+    $options \
     2>&1 | tee load-test.log
 
 # Capture and exit if there are unexpected errors in loadtest.go
