@@ -70,7 +70,7 @@ find_release_pipelines_from_pr() {
   # Map internal pipelines to managed pipelines
   for pipeline_name in "${FOUND_INTERNAL_PIPELINENAMES[@]}"; do
     case "$pipeline_name" in
-      "create-advisory"|"check-embargoed-cves"|"get-advisory-severity")
+      "create-advisory"|"check-embargoed-cves"|"get-advisory-severity"|"filter-already-released-advisory-images")
         TEMP_MANAGED_PIPELINENAMES+=("rh-advisories")
         ;;
       "update-fbc-catalog"|"publish-index-image-pipeline")
