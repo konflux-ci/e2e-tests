@@ -1358,6 +1358,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				if err != nil {
 					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("Branch Not Found")))
 				}
+				// Cleanup webhooks
+				Expect(gitClient.CleanupWebhooks(repositories[i], f.ClusterAppDomain)).To(Succeed())
 			}
 		})
 
