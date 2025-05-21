@@ -168,7 +168,6 @@ func configurePipelineImagePullSecrets(f *framework.Framework, namespace, compon
 
 	component_sa := "build-pipeline-" + component
 	for _, secret := range secrets {
-		println("-", secret)
 		err := f.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(namespace, secret, component_sa, true)
 		if err != nil {
 			return fmt.Errorf("Unable to add secret %s to service account %s: %v", secret, component_sa, err)
