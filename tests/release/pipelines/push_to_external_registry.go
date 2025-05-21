@@ -11,6 +11,7 @@ import (
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
+	kubeapi "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
@@ -26,6 +27,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 
 	var fw *framework.Framework
 	AfterEach(framework.ReportFailure(&fw))
+	var kubeadminClient *framework.ControllerHub
 	var err error
 	var devNamespace, managedNamespace string
 
@@ -35,28 +37,42 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 	var gitSourceURL = releasecommon.GitSourceComponentUrl
 	var gitSourceRevision = "d49914874789147eb2de9bb6a12cd5d150bfff92"
 	var ecPolicyName = "ex-registry-policy-" + util.GenerateRandomString(4)
+	var testEnvironment = utils.GetEnv("TEST_ENVIRONMENT", releasecommon.UpstreamTestEnvironment)
 
 	BeforeAll(func() {
-		// Initialize the tests controllers
-		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("ex-registry"))
-		Expect(err).NotTo(HaveOccurred())
-		devNamespace = fw.UserNamespace
-		managedNamespace = utils.GetGeneratedNamespace("ex-registry-managed")
-		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
+		if testEnvironment == releasecommon.DownstreamTestEnvironment {
+			fw, err = framework.NewFramework(utils.GetGeneratedNamespace("ex-registry"))
+			Expect(err).NotTo(HaveOccurred())
+			devNamespace = fw.UserNamespace
+			managedNamespace = utils.GetGeneratedNamespace("ex-registry-managed")
+		} else {
+			var asAdminClient *kubeapi.CustomClient
+			asAdminClient, err = kubeapi.NewAdminKubernetesClient()
+			Expect(err).ShouldNot(HaveOccurred())
+			kubeadminClient, err = framework.InitControllerHub(asAdminClient)
+			Expect(err).ShouldNot(HaveOccurred())
+			devNamespace = "ex-registry"
+			_, err = kubeadminClient.CommonController.CreateTestNamespace(devNamespace)
+			Expect(err).ShouldNot(HaveOccurred())
+			managedNamespace = "ex-registry-managed"
+		}
+
+		_, err = kubeadminClient.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating managedNamespace: %v", err)
+		
 		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
 		Expect(sourceAuthJson).ToNot(BeEmpty())
 
-		managedServiceAccount, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(releasecommon.ReleasePipelineServiceAccountDefault, managedNamespace, releasecommon.ManagednamespaceSecret, nil)
+		managedServiceAccount, err := kubeadminClient.CommonController.CreateServiceAccount(releasecommon.ReleasePipelineServiceAccountDefault, managedNamespace, releasecommon.ManagednamespaceSecret, nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
+		_, err = kubeadminClient.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(releasecommon.RedhatAppstudioUserSecret, managedNamespace, sourceAuthJson)
+		_, err = kubeadminClient.CommonController.CreateRegistryAuthSecret(releasecommon.RedhatAppstudioUserSecret, managedNamespace, sourceAuthJson)
 		Expect(err).ToNot(HaveOccurred())
 
-		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
+		err = kubeadminClient.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
 		Expect(err).ToNot(HaveOccurred())
 
 		releasePublicKeyDecoded := []byte("-----BEGIN PUBLIC KEY-----\n" +
@@ -64,10 +80,10 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 			"CRnFUCg/fndZsXdz0IX5sfzIyspizaTbu4rapV85KirmSBU6XUaLY347xg==\n" +
 			"-----END PUBLIC KEY-----")
 
-		Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
+		Expect(kubeadminClient.TektonController.CreateOrUpdateSigningSecret(
 			releasePublicKeyDecoded, releasecommon.PublicSecretNameAuth, managedNamespace)).To(Succeed())
 
-		defaultEcPolicy, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+		defaultEcPolicy, err := kubeadminClient.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 		Expect(err).NotTo(HaveOccurred())
 		defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
 			Description: "Red Hat's enterprise requirements",
@@ -78,13 +94,13 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 				Exclude:     []string{"step_image_registries", "tasks.required_tasks_found:prefetch-dependencies"},
 			},
 		}
-		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(ecPolicyName, managedNamespace, defaultEcPolicySpec)
+		_, err = kubeadminClient.TektonController.CreateEnterpriseContractPolicy(ecPolicyName, managedNamespace, defaultEcPolicySpec)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
+		_, err = kubeadminClient.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, managedNamespace, "", nil, nil, nil)
+		_, err = kubeadminClient.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, managedNamespace, "", nil, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		data, err := json.Marshal(map[string]interface{}{
@@ -104,7 +120,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, "", devNamespace, ecPolicyName, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationNameDefault}, true, &tektonutils.PipelineRef{
+		_, err = kubeadminClient.ReleaseController.CreateReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, "", devNamespace, ecPolicyName, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationNameDefault}, true, &tektonutils.PipelineRef{
 			Resolver: "git",
 			Params: []tektonutils.Param{
 				{Name: "url", Value: releasecommon.RelSvcCatalogURL},
@@ -116,28 +132,30 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasecommon.ReleasePvcName, managedNamespace, corev1.ReadWriteOnce)
+		_, err = kubeadminClient.TektonController.CreatePVCInAccessMode(releasecommon.ReleasePvcName, managedNamespace, corev1.ReadWriteOnce)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.CommonController.CreateRole("role-release-service-account", managedNamespace, map[string][]string{
+		_, err = kubeadminClient.CommonController.CreateRole("role-release-service-account", managedNamespace, map[string][]string{
 			"apiGroupsList": {""},
 			"roleResources": {"secrets"},
 			"roleVerbs":     {"get", "list", "watch"},
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.CommonController.CreateRoleBinding("role-release-service-account-binding", managedNamespace, "ServiceAccount", releasecommon.ReleasePipelineServiceAccountDefault, managedNamespace, "Role", "role-release-service-account", "rbac.authorization.k8s.io")
+		_, err = kubeadminClient.CommonController.CreateRoleBinding("role-release-service-account-binding", managedNamespace, "ServiceAccount", releasecommon.ReleasePipelineServiceAccountDefault, managedNamespace, "Role", "role-release-service-account", "rbac.authorization.k8s.io")
 		Expect(err).NotTo(HaveOccurred())
 
-		snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(*fw, releasecommon.ComponentName, releasecommon.ApplicationNameDefault, devNamespace, sampleImage, gitSourceURL, gitSourceRevision, "", "", "", "")
+		snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(kubeadminClient, releasecommon.ComponentName, releasecommon.ApplicationNameDefault, devNamespace, sampleImage, gitSourceURL, gitSourceRevision, "", "", "", "")
 		GinkgoWriter.Println("snapshotPush.Name: %s", snapshotPush.GetName())
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterAll(func() {
 		if !CurrentSpecReport().Failed() {
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
+			Expect(kubeadminClient.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+			if testEnvironment == releasecommon.DownstreamTestEnvironment {
+				Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
+			}
 		}
 	})
 
@@ -145,13 +163,13 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 
 		It("verifies that a Release CR should have been created in the dev namespace", func() {
 			Eventually(func() error {
-				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
+				releaseCR, err = kubeadminClient.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				return err
 			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed())
 		})
 
 		It("verifies that Release PipelineRun should eventually succeed", func() {
-			Expect(fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
+			Expect(kubeadminClient.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
 		})
 
 		It("tests if the image was pushed to quay", func() {
@@ -163,7 +181,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 
 		It("verifies that a Release is marked as succeeded.", func() {
 			Eventually(func() error {
-				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
+				releaseCR, err = kubeadminClient.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				if err != nil {
 					return err
 				}
