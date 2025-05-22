@@ -75,7 +75,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch with r
 			}
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "atlas-staging-sso-secret", atlasFieldEnvMap)
 
-			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
+			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(multiarchApplicationName, devNamespace)

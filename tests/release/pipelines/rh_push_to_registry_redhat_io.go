@@ -27,7 +27,6 @@ import (
 )
 
 const (
-	rhioServiceAccountName = "release-service-account"
 	rhioCatalogPathInRepo  = "pipelines/managed/rh-push-to-registry-redhat-io/rh-push-to-registry-redhat-io.yaml"
 	rhioGitSourceURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic-release"
 	rhioGitSrcSHA          = "33ff89edf85fb01a37d3d652d317080223069fc7"
@@ -70,7 +69,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 			}
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
 
-			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
+			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(rhioApplicationName, devNamespace)
@@ -257,7 +256,7 @@ func createRHIOReleasePlanAdmission(rhioRPAName string, managedFw framework.Fram
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(rhioRPAName, managedNamespace, "", devNamespace, rhioECPName, rhioServiceAccountName, []string{rhioAppName}, true, &tektonutils.PipelineRef{
+	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(rhioRPAName, managedNamespace, "", devNamespace, rhioECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{rhioAppName}, true, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
 			{Name: "url", Value: releasecommon.RelSvcCatalogURL},

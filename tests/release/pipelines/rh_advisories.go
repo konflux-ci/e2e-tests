@@ -27,7 +27,6 @@ import (
 )
 
 const (
-	advsServiceAccountName = "release-service-account"
 	advsCatalogPathInRepo  = "pipelines/managed/rh-advisories/rh-advisories.yaml"
 	advsGitSourceURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic-release"
 	advsGitSrcSHA          = "33ff89edf85fb01a37d3d652d317080223069fc7"
@@ -81,7 +80,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "atlas-staging-sso-secret", atlasFieldEnvMap)
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "atlas-retry-s3-staging-secret", atlasAWSFieldEnvMap)
 
-			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
+			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(advsApplicationName, devNamespace)
@@ -269,7 +268,7 @@ func createADVSReleasePlanAdmission(advsRPAName string, managedFw framework.Fram
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(advsRPAName, managedNamespace, "", devNamespace, advsECPName, advsServiceAccountName, []string{advsAppName}, true, &tektonutils.PipelineRef{
+	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(advsRPAName, managedNamespace, "", devNamespace, advsECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{advsAppName}, true, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
 			{Name: "url", Value: releasecommon.RelSvcCatalogURL},

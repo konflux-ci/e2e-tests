@@ -32,7 +32,6 @@ import (
 )
 
 const (
-	rhtapServiceAccountName  = "release-service-account"
 	rhtapCatalogPathInRepo   = "pipelines/managed/rhtap-service-push/rhtap-service-push.yaml"
 	rhtapGitSourceURL        = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic-test2"
 	rhtapGitSrcSHA           = "f8ce9d92bfe65df108ac51c3d7429e5df08fe24d"
@@ -283,7 +282,7 @@ func createRHTAPReleasePlanAdmission(rhtapRPAName string, managedFw framework.Fr
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(rhtapRPAName, managedNamespace, "", devNamespace, rhtapECPName, rhtapServiceAccountName, []string{rhtapAppName}, true, &tektonutils.PipelineRef{
+	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(rhtapRPAName, managedNamespace, "", devNamespace, rhtapECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{rhtapAppName}, true, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
 			{Name: "url", Value: releasecommon.RelSvcCatalogURL},

@@ -12,7 +12,6 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -25,7 +24,6 @@ import (
 )
 
 const (
-	fbcServiceAccountName      = "release-service-account"
 	fbcSourceGitURL            = "https://github.com/redhat-appstudio-qe/fbc-sample-repo-test"
 	fbcCompRepoName            = "fbc-sample-repo-test"
 	fbcCompRevision            = "94d5b8ccbcdf4d5a8251657bc3266b848c9ec331"
@@ -99,17 +97,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcReleasePlanName, devNamespace, fbcApplicationName, managedNamespace, "true", nil, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
-
-			sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
-			Expect(sourceAuthJson).ToNot(BeEmpty())
-
-			secret, err := devFw.AsKubeAdmin.CommonController.GetSecret(devNamespace, releasecommon.QuayTokenSecret)
-			if secret == nil || errors.IsNotFound(err) {
-				_, err = devFw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(releasecommon.QuayTokenSecret, devNamespace, sourceAuthJson)
-				Expect(err).ToNot(HaveOccurred())
-				err = devFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, releasecommon.QuayTokenSecret, constants.DefaultPipelineServiceAccount, true)
-				Expect(err).ToNot(HaveOccurred())
-			}
 
 			createFBCReleasePlanAdmission(fbcReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, fbcApplicationName, fbcEnterpriseContractPolicyName, relSvcCatalogPathInRepo, false, "", false, "", "", false)
 			createFBCEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
@@ -403,7 +390,7 @@ func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framew
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(fbcRPAName, managedNamespace, "", devNamespace, fbcECPName, fbcServiceAccountName, []string{fbcAppName}, true, &tektonutils.PipelineRef{
+	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(fbcRPAName, managedNamespace, "", devNamespace, fbcECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{fbcAppName}, true, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
 			{Name: "url", Value: releasecommon.RelSvcCatalogURL},
