@@ -63,21 +63,24 @@ def main():
         lambda: 0
     )  # key: textual error reason, value: number of such errors
 
-    with open(input_file, "r") as fp:
-        csvreader = csv.reader(fp)
-        for row in csvreader:
-            if row == []:
-                continue
+    try:
+        with open(input_file, "r") as fp:
+            csvreader = csv.reader(fp)
+            for row in csvreader:
+                if row == []:
+                    continue
 
-            code = row[COLUMN_CODE]
-            message = row[COLUMN_MESSAGE]
+                code = row[COLUMN_CODE]
+                message = row[COLUMN_MESSAGE]
 
-            reason = message_to_reason(message)
+                reason = message_to_reason(message)
 
-            error_messages.append(message)
-            error_reasons.append(reason)
-            error_by_code[code] += 1
-            error_by_reason[reason] += 1
+                error_messages.append(message)
+                error_reasons.append(reason)
+                error_by_code[code] += 1
+                error_by_reason[reason] += 1
+    except FileNotFoundError:
+        print("No errors file found, good :-D")
 
     data = {
         "error_by_code": error_by_code,
