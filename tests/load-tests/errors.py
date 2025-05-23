@@ -57,7 +57,6 @@ def main():
     output_file = sys.argv[2]
 
     error_messages = []  # list of error messages
-    error_reasons = []  # list of textual error reasons
     error_by_code = collections.defaultdict(
         lambda: 0
     )  # key: numeric error code, value: number of such errors
@@ -78,7 +77,6 @@ def main():
                 reason = message_to_reason(message)
 
                 error_messages.append(message)
-                error_reasons.append(reason)
                 error_by_code[code] += 1
                 error_by_reason[reason] += 1
     except FileNotFoundError:
@@ -87,14 +85,14 @@ def main():
     data = {
         "error_by_code": error_by_code,
         "error_by_reason": error_by_reason,
-        "error_reasons_simple": "; ".join(error_reasons),
+        "error_reasons_simple": "; ".join([f"{v}x {k}" for k, v in error_by_reason.items()]),
         "error_messages": error_messages,
     }
 
     print(f"Errors detected: {len(error_messages)}")
     print("Errors by reason:")
     for k, v in error_by_reason.items():
-        print(f"   {v} x {k}")
+        print(f"   {v}x {k}")
 
     with open(output_file, "w") as fp:
         json.dump(data, fp, indent=4)
