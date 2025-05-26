@@ -1,0 +1,153 @@
+#!/bin/bash
+
+set -eu -o pipefail
+
+# Here we are using 'shovel.py' utility from OPL:
+#
+#   https://github.com/redhat-performance/opl/
+#
+# Example of some commands are:
+#
+#   shovel.py horreum --base-url https://horreum.corp.redhat.com/ --api-token "$HORREUM_API_TOKEN" schema-label-add --schema-uri "urn:rhtap-perf-team-load-test:1.0" --extractor-jsonpath "\$.xyz" --metrics --owner hybrid-cloud-experience-perfscale-team
+#
+#   shovel.py horreum --base-url https://horreum.corp.redhat.com/ --api-token "$HORREUM_API_TOKEN" schema-label-list --schema-uri "urn:rhtap-perf-team-load-test:1.0" | grep xyz
+#
+#   shovel.py horreum --base-url https://horreum.corp.redhat.com/ --api-token "$HORREUM_API_TOKEN" schema-label-add --schema-uri "urn:rhtap-perf-team-load-test:1.0" --extractor-jsonpath "\$.xyz" --metrics --owner hybrid-cloud-experience-perfscale-team --name something --update-by-id 999999
+#
+#   shovel.py horreum --base-url https://horreum.corp.redhat.com/ --api-token "$HORREUM_API_TOKEN" schema-label-delete --schema-uri "urn:rhtap-perf-team-load-test:1.0" --id 999999
+#
+# But here we are using just one that updates (or adds if label with the name is missing) labels for given extractor JSON path expressions:
+
+function horreum_schema_label_present() {
+    local extractor="$1"
+    shovel.py \
+        --verbose \
+        horreum \
+        --base-url https://horreum.corp.redhat.com/ \
+        --api-token "$HORREUM_API_TOKEN" \
+        schema-label-update \
+        --schema-uri "urn:rhtap-perf-team-load-test:1.0" \
+        --metrics \
+        --owner hybrid-cloud-experience-perfscale-team \
+        --update-by-name \
+        --add-if-missing \
+        --extractor-jsonpath "${extractor}"
+}
+
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/apply-tags".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/apply-tags".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/apply-tags".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/apply-tags".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/apply-tags".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/buildah".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/buildah".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/buildah".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/buildah".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/buildah".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/build-image-index".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/build-image-index".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/build-image-index".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/build-image-index".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/build-image-index".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/clair-scan".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/clair-scan".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/clair-scan".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/clair-scan".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/clair-scan".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/clamav-scan".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/clamav-scan".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/clamav-scan".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/clamav-scan".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/clamav-scan".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/coverity-availability-check".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/coverity-availability-check".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/coverity-availability-check".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/coverity-availability-check".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/coverity-availability-check".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/deprecated-image-check".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/deprecated-image-check".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/deprecated-image-check".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/deprecated-image-check".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/deprecated-image-check".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/ecosystem-cert-preflight-checks".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/ecosystem-cert-preflight-checks".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/ecosystem-cert-preflight-checks".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/ecosystem-cert-preflight-checks".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/ecosystem-cert-preflight-checks".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/git-clone".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/git-clone".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/git-clone".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/git-clone".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/git-clone".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/init".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/init".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/init".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/init".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/init".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/push-dockerfile".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/push-dockerfile".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/push-dockerfile".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/push-dockerfile".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/push-dockerfile".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/rpms-signature-scan".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/rpms-signature-scan".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/rpms-signature-scan".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/rpms-signature-scan".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/rpms-signature-scan".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/sast-shell-check".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/sast-shell-check".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/sast-shell-check".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/sast-shell-check".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/sast-shell-check".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/sast-snyk-check".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/sast-snyk-check".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/sast-snyk-check".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/sast-snyk-check".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/sast-snyk-check".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/sast-unicode-check".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/sast-unicode-check".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/sast-unicode-check".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/sast-unicode-check".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/sast-unicode-check".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/show-sbom".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/show-sbom".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/show-sbom".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/show-sbom".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/show-sbom".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/summary".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/summary".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/summary".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/summary".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."build/summary".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."test/test-output".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."test/test-output".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.taskruns."test/test-output".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."test/test-output".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.taskruns."test/test-output".passed.scheduled.mean'
+horreum_schema_label_present '$.results.errors.error_reasons_simple'
+horreum_schema_label_present '$.results.measurements.createApplication.error_rate'
+horreum_schema_label_present '$.results.measurements.createApplication.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.createComponent.error_rate'
+horreum_schema_label_present '$.results.measurements.createComponent.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.createIntegrationTestScenario.error_rate'
+horreum_schema_label_present '$.results.measurements.createIntegrationTestScenario.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.HandleUser.error_rate'
+horreum_schema_label_present '$.results.measurements.HandleUser.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.KPI.errors'
+horreum_schema_label_present '$.results.measurements.KPI.mean'
+horreum_schema_label_present '$.results.measurements.validateApplication.error_rate'
+horreum_schema_label_present '$.results.measurements.validateApplication.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.validateIntegrationTestScenario.error_rate'
+horreum_schema_label_present '$.results.measurements.validateIntegrationTestScenario.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.validatePipelineRunCondition.error_rate'
+horreum_schema_label_present '$.results.measurements.validatePipelineRunCondition.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.validatePipelineRunCreation.error_rate'
+horreum_schema_label_present '$.results.measurements.validatePipelineRunCreation.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.validatePipelineRunSignature.error_rate'
+horreum_schema_label_present '$.results.measurements.validatePipelineRunSignature.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.validateSnapshotCreation.error_rate'
+horreum_schema_label_present '$.results.measurements.validateSnapshotCreation.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.validateTestPipelineRunCondition.error_rate'
+horreum_schema_label_present '$.results.measurements.validateTestPipelineRunCondition.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.validateTestPipelineRunCreation.error_rate'
+horreum_schema_label_present '$.results.measurements.validateTestPipelineRunCreation.pass.duration.mean'
