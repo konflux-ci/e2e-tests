@@ -8,7 +8,6 @@ import (
 
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 
-	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
@@ -45,7 +44,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails whe
 		_, err = fw.AsKubeAdmin.IntegrationController.CreateSnapshotWithComponents(snapshotName, "", releasecommon.ApplicationName, devNamespace, []v1alpha1.SnapshotComponent{})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(destinationReleasePlanAdmissionName, managedNamespace, "", devNamespace, releasecommon.ReleaseStrategyPolicy, constants.DefaultPipelineServiceAccount, []string{releasecommon.ApplicationName}, true, &tektonutils.PipelineRef{
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(destinationReleasePlanAdmissionName, managedNamespace, "", devNamespace, releasecommon.ReleaseStrategyPolicy, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationName}, true, &tektonutils.PipelineRef{
 			Resolver: "git",
 			Params: []tektonutils.Param{
 				{Name: "url", Value: releasecommon.RelSvcCatalogURL},
