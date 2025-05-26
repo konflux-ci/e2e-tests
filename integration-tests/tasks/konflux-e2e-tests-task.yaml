@@ -10,9 +10,9 @@ spec:
     clones the repository, and executes the E2E tests, storing the artifacts in an OCI container registry
     using ORAS.
   params:
-    - name: ocp-login-command
+    - name: cluster-access-secret
       type: string
-      description: "Command to log in to the OpenShift cluster."
+      description: "The name of the secret containing the kubeconfig to access the target cluster."
     - name: test-name
       type: string
       description: "The name of the test being executed."
@@ -64,6 +64,14 @@ spec:
     - name: sealights-test-selection
       description: "Sealights test selection feature is disabled by default. This feature allow sealights ginkgo plugin to run only tests based on code changes."
       default: "false"
+    - name: test-environment
+      description: "WIP"
+      default: true
+    - name: create-test-resources
+      description: Indicates if a set of test resources should be installed
+      default: 'true'
+    - name: namespace
+      description: Namespace where the above Secret is located.
   volumes:
     - name: konflux-secret-volume
       secret:
@@ -71,7 +79,38 @@ spec:
     - name: konflux-test-infra-volume
       secret:
         secretName: konflux-test-infra
+    - name: workdir
+      emptyDir: {}
+  stepTemplate:
+    env:
+      - name: KUBECONFIG
+        value: /var/workdir/.kube/config
+    volumeMounts:
+      - mountPath: /var/workdir
+        name: workdir
+
   steps:
+    - name: get-kubeconfig
+      image: quay.io/konflux-ci/tekton-integration-catalog/utils:latest
+      workingDir: /var/workdir
+      script: |
+        #!/bin/bash
+        set -euo pipefail
+
+        echo "[INFO] Retrieving kubeconfig from secret: $(params.cluster-access-secret) in namespace: $(params.namespace)"
+        KUBECONFIG_B64=$(kubectl get secret "$(params.cluster-access-secret)" -n "$(params.namespace)" -o jsonpath='{.data.kubeconfig}' || true)
+
+        if [[ -z "$KUBECONFIG_B64" ]]; then
+          echo "[ERROR] Kubeconfig not found in secret $(params.cluster-access-secret) in namespace $(params.namespace)."
+          exit 1
+        fi
+
+        mkdir -p /var/workdir/.kube
+        echo "$KUBECONFIG_B64" | base64 -d > /var/workdir/.kube/config
+        chmod 400 /var/workdir/.kube/config
+
+        echo "[INFO] Verifying access to the target cluster..."
+        kubectl cluster-info
     - name: initialize-sealights-session
       when:
         - input: $(params.enable-sealights)
@@ -137,6 +176,8 @@ spec:
           value: $(params.test-stage)
         - name: SEALIGHTS_TEST_SELECTION
           value: $(params.sealights-test-selection)
+        - name: TEST_ENVIRONMENT
+          value: $(params.test-environment)
       onError: continue
       script: |
         #!/bin/bash
@@ -147,15 +188,6 @@ spec:
             echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [$1] $2"
         }
         export -f log
-
-        # Log into OpenShift cluster (the connection is sometimes flaky - give it more time)
-        timeout --foreground "10m" bash -c "
-        until $(params.ocp-login-command)
-        do
-            echo \"Waiting for 'oc login' command to succeed... Trying again in 10 seconds\"
-            sleep 10
-        done
-        "
 
         export GITHUB_TOKEN
 
@@ -191,7 +223,7 @@ spec:
         git config --global credential.helper "store --file $git_creds_path"
         echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > "$git_creds_path"
 
-        git clone --origin upstream --branch main "https://github.com/konflux-ci/e2e-tests.git" .
+        git clone --origin upstream --branch plr_test "https://github.com/konflux-ci/e2e-tests.git" .
         make ci/prepare/e2e-branch 2>&1 | tee "${ARTIFACT_DIR}"/e2e-branch.log
 
         /bin/bash -c "integration-tests/scripts/konflux-e2e-runner.sh"

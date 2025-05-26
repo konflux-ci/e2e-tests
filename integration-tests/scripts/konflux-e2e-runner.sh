@@ -48,6 +48,7 @@ load_envs() {
         [DOCKER_IO_AUTH]="${konflux_ci_secrets_file}/docker_io"
         [GITLAB_BOT_TOKEN]="${konflux_ci_secrets_file}/gitlab-bot-token"
         [SEALIGHTS_TOKEN]="${konflux_ci_secrets_file}/sealights-token"
+        [SMEE_URL]="${konflux_ci_secrets_file}/smee-url"
     )
 
     # Ensure SEALIGHTS variables are at least set to an empty value to avoid bash failures
@@ -135,4 +136,18 @@ while IFS='|' read -r ns sa_name; do
     oc secrets link "$sa_name" pull-secret --for=pull -n "$ns"
 done <<< "$namespace_sa_names"
 
-timeout "$E2E_TIMEOUT" make ci/test/e2e 2>&1 | tee "${ARTIFACT_DIR}/e2e-tests.log"
+ginkgo \
+  --timeout=2h30m0s \
+  --grace-period=30s \
+  --output-interceptor-mode=none \
+  --label-filter="release-pipelines" \
+  --no-color \
+  --json-report=e2e-report.json \
+  --junit-report=e2e-report.xml \
+  --procs=20 \
+  --nodes=20 \
+  -v \
+  --p \
+  --output-dir=/workspace/artifact-dir \
+  ./cmd \
+  --

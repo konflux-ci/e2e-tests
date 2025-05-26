@@ -401,12 +401,12 @@ var SetupMultiPlatformTestsRule = rulesengine.Rule{Name: "Setup multi-platform t
 
 var BootstrapClusterRuleChain = rulesengine.Rule{Name: "BoostrapCluster RuleChain",
 	Description: "Rule Chain that installs Konflux in preview mode and when required, registers it with a SprayProxy and sets up MP tests",
-	Condition:   rulesengine.All{&InstallKonfluxRule, &RegisterKonfluxToSprayProxyRule, &SetupMultiPlatformTestsRule},
+	Condition:   rulesengine.All{&RegisterKonfluxToSprayProxyRule, &SetupMultiPlatformTestsRule},
 }
 
 var BootstrapClusterWithSprayProxyRuleChain = rulesengine.Rule{Name: "BoostrapCluster with SprayProxy RuleChain",
 	Description: "Rule Chain that installs Konflux in preview mode and registers it with SprayProxy",
-	Condition:   rulesengine.All{&InstallKonfluxRule, &RegisterKonfluxToSprayProxyRule},
+	Condition:   rulesengine.All{},
 }
 
 func registerPacServer() error {

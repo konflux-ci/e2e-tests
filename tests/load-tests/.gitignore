@@ -1,8 +1,0 @@
-*.log
-*.pprof
-*.svg
-*.csv
-load-tests.json
-load-tests.*.json
-output.json
-users.json
