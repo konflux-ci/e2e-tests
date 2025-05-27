@@ -153,6 +153,12 @@ class Something:
             assert len(_tr_succeeded) == 1, f"TaskRun should have exactly one 'Succeeded' condition: {_tr_succeeded}"
             tr_result = _tr_succeeded[0]["status"] == "True"
 
+            tr_platform = None
+            if "params" in tr["spec"]:
+                for p in tr["spec"]["params"]:
+                    if p["name"] == "PLATFORM":
+                        tr_platform = p["value"]
+
             tr_steps = {}
             for s in tr["status"]["steps"]:
                 try:
@@ -184,6 +190,7 @@ class Something:
             "creation": tr_creation_time,
             "start": tr_start_time,
             "completion": tr_completion_time,
+            "platform": tr_platform,
             "steps": tr_steps,
         })
 
@@ -288,6 +295,7 @@ class Something:
                 "creation": tr["creation"],
                 "start": tr["start"],
                 "completion": tr["completion"],
+                "platform": tr["platform"],
                 "steps": tr["steps"],
             }
 
@@ -304,6 +312,8 @@ class Something:
             "pipelineruns": {
             },
             "taskruns": {
+            },
+            "platformtaskruns": {
             },
             "steps": {
             },
@@ -346,6 +356,7 @@ class Something:
 
             for tr_name, tr_data in pr_data["taskruns"].items():
                 tr_id = f"{pr_id}/{tr_data['task']}"
+                ptr_id = f"{pr_id}/{tr_data['task']}-{tr_data['platform']}"
                 logging.debug(f"Working on TaskRun {tr_id}")
 
                 if tr_id not in result["taskruns"]:
@@ -380,6 +391,27 @@ class Something:
                 result["taskruns"][tr_id][tr_result]["scheduled"].append(tr_scheduled)
                 result["taskruns"][tr_id][tr_result]["idle"].append(tr_idle)
 
+                if tr_data['platform'] is not None:
+                    if ptr_id not in result["platformtaskruns"]:
+                        result["platformtaskruns"][ptr_id] = {
+                            "passed": {
+                                "duration": [],
+                                "running": [],
+                                "scheduled": [],
+                                "idle": [],
+                            },
+                            "failed": {
+                                "duration": [],
+                                "running": [],
+                                "scheduled": [],
+                                "idle": [],
+                            },
+                        }
+                    result["platformtaskruns"][ptr_id][tr_result]["duration"].append(tr_duration)
+                    result["platformtaskruns"][ptr_id][tr_result]["running"].append(tr_running)
+                    result["platformtaskruns"][ptr_id][tr_result]["scheduled"].append(tr_scheduled)
+                    result["platformtaskruns"][ptr_id][tr_result]["idle"].append(tr_idle)
+
                 for s_name, s_data in tr_data["steps"].items():
                     s_id = f"{tr_id}/{s_name}"
                     logging.debug(f"Working on Step {s_id}")
@@ -400,7 +432,7 @@ class Something:
                     result["steps"][s_id][s_result]["duration"].append(s_duration)
 
         # Compute statistical data
-        for e in ("pipelineruns", "taskruns", "steps"):
+        for e in ("pipelineruns", "taskruns", "platformtaskruns", "steps"):
             for my_id, my_data1 in result[e].items():
                 for my_result, my_data2 in my_data1.items():
                     for my_stat, my_data3 in my_data2.items():
