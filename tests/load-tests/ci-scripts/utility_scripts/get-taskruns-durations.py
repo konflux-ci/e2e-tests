@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import argparse
-import collections
 import csv
 import datetime
 import json
@@ -11,11 +10,8 @@ import os.path
 import sys
 import yaml
 import time
-import operator
 import statistics
 import re
-
-import tabulate
 
 
 def str2date(date_str):
@@ -32,6 +28,7 @@ def str2date(date_str):
             # Convert simplified date
             return datetime.datetime.fromisoformat(date_str)
 
+
 class DateTimeDecoder(json.JSONDecoder):
     def __init__(self, *args, **kwargs):
         super().__init__(object_hook=self.object_hook, *args, **kwargs)
@@ -47,6 +44,7 @@ class DateTimeDecoder(json.JSONDecoder):
             else:
                 ret[key] = value
         return ret
+
 
 class Something:
     def __init__(self, data_dir, dump_json):
@@ -259,7 +257,6 @@ class Something:
         logging.info(f"Interval {self._format_interval(new)} does not collide with any member, adding it")
         return existing + [new]
 
-
     def doit(self):
         # Normalize data into the structure we will use and do some cross checks
         data = {}
@@ -469,6 +466,7 @@ class Something:
         print("PipelineRuns skipped:", self.pr_skips)
         print("TaskRuns skipped:", self.tr_skips)
         print("Steps skipped:", self.step_skips)
+
 
 def doit(args):
     something = Something(
