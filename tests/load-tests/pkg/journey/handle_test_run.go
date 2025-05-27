@@ -13,7 +13,7 @@ import pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 func validateSnapshotCreation(f *framework.Framework, namespace, compName string) (string, error) {
 	interval := time.Second * 20
-	timeout := time.Minute * 30
+	timeout := time.Minute * 5
 	var snap *appstudioApi.Snapshot
 
 	// TODO It would be much better to watch this resource for a condition
@@ -31,7 +31,7 @@ func validateSnapshotCreation(f *framework.Framework, namespace, compName string
 
 func validateTestPipelineRunCreation(f *framework.Framework, namespace, itsName, snapName string) error {
 	interval := time.Second * 20
-	timeout := time.Minute * 30
+	timeout := time.Minute * 5
 
 	// TODO It would be much better to watch this resource for a condition
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
@@ -48,7 +48,7 @@ func validateTestPipelineRunCreation(f *framework.Framework, namespace, itsName,
 
 func validateTestPipelineRunCondition(f *framework.Framework, namespace, itsName, snapName string) error {
 	interval := time.Second * 20
-	timeout := time.Minute * 60
+	timeout := time.Minute * 10
 	var pr *pipeline.PipelineRun
 
 	// TODO It would be much better to watch this resource for a condition
