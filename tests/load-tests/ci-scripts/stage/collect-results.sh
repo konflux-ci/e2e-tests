@@ -50,7 +50,7 @@ ci-scripts/utility_scripts/show-pipelineruns.py --data-dir "${ARTIFACT_DIR}" &>"
 mv "${ARTIFACT_DIR}/output.svg" "${ARTIFACT_DIR}/show-pipelines.svg" || true
 
 echo "[$(date --utc -Ins)] Computing duration of PRs, TRs and steps"
-ci-scripts/utility_scripts/get-taskruns-durations.py --data-dir "${ARTIFACT_DIR}" --dump-json "${ARTIFACT_DIR}/get-taskruns-durations.json" &>"${ARTIFACT_DIR}/get-taskruns-durations.log"
+ci-scripts/utility_scripts/get-taskruns-durations.py --debug --data-dir "${ARTIFACT_DIR}" --dump-json "${ARTIFACT_DIR}/get-taskruns-durations.json" &>"${ARTIFACT_DIR}/get-taskruns-durations.log"
 
 echo "[$(date --utc -Ins)] Creating main status data file"
 STATUS_DATA_FILE="${ARTIFACT_DIR}/load-test.json"
