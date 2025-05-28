@@ -176,7 +176,7 @@ class Something:
                     self.step_skips += 1
 
         except KeyError as e:
-            logging.info(f"TaskRun incomplete, skipping: {e}, {str(tr)[:200]}")
+            logging.warning(f"TaskRun incomplete, skipping: {e}, {str(tr)[:200]}")
             self.tr_skips += 1
             return
 
