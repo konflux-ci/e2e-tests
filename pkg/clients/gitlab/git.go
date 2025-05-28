@@ -233,45 +233,53 @@ func (gc *GitlabClient) ValidateNoteInMergeRequestComment(projectID, expectedNot
 }
 
 // DeleteRepositoryIfExists deletes a GitLab repository if it exists.
-// It returns an error if the deletion fails for any reason other than the project not being found (404).
+// Returns an error if the deletion fails except for project not being found (404).
 func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 	resp, err := gc.client.Projects.DeleteProject(projectID)
 
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			fmt.Printf("Project %s not found, no need to delete.\n", projectID)
-			return nil // Project not found, consider it a successful "deletion" in this context
+			return nil
 		}
-		return fmt.Errorf("error deleting project %s: %w", projectID, err)
+		return fmt.Errorf("Error deleting project %s: %w", projectID, err)
 	}
 
 	if resp.StatusCode != http.StatusAccepted {
-		return fmt.Errorf("unexpected status code when deleting project %s: %d", projectID, resp.StatusCode)
+		return fmt.Errorf("Unexpected status code when deleting project %s: %d", projectID, resp.StatusCode)
 	}
 
-	fmt.Printf("Project %s deleted successfully.\n", projectID)
 	return nil
 }
 
-// ForkRepository forks a source GitLab repository to a target project.
-// It returns the web URL of the newly forked repository and an error if the operation fails.
-func (gc *GitlabClient) ForkRepository(sourceProjectID, targetNamespace string) (string, error) {
+// ForkRepository forks a source GitLab repository to a target repository.
+// Returns the newly forked repository and an error if the operation fails.
+func (gc *GitlabClient) ForkRepository(sourceProjectID, targetProjectID string) (*gitlab.Project, error) {
+	targetSplit := strings.Split(targetProjectID,"/")
+	if len(targetSplit) != 2 {
+		return nil, fmt.Errorf("Failed to parse target repo %s to namespace and repo name", targetProjectID)
+	}
+
+	targetNamespace := targetSplit[0]
+	targetRepo := targetSplit[1]
+
 	opts := &gitlab.ForkProjectOptions{
-		Namespace: gitlab.Ptr(targetNamespace), // The target namespace (group or user) for the forked project
+		Name: gitlab.Ptr(targetRepo),
+		NamespacePath: gitlab.Ptr(targetNamespace),
+		Path: gitlab.Ptr(targetRepo),
 	}
 
 	forkedProject, resp, err := gc.client.Projects.ForkProject(sourceProjectID, opts)
 	if err != nil {
-		return "", fmt.Errorf("error forking project %s to namespace %s: %w", sourceProjectID, targetNamespace, err)
+		return nil, fmt.Errorf("Error forking project %s to namespace %s: %w", sourceProjectID, targetNamespace, err)
 	}
 
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusAccepted {
-		return "", fmt.Errorf("unexpected status code when forking project %s: %d", sourceProjectID, resp.StatusCode)
+		return nil, fmt.Errorf("Unexpected status code when forking project %s: %d", sourceProjectID, resp.StatusCode)
 	}
 
 	if forkedProject == nil || forkedProject.WebURL == "" {
-		return "", fmt.Errorf("forked project object or its web URL is nil")
+		return nil, fmt.Errorf("Forked project object not complete: %v", forkedProject)
 	}
 
-	return forkedProject.WebURL, nil
+	return forkedProject, nil
 }
