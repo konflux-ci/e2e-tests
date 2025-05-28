@@ -43,14 +43,14 @@ echo "[$(date --utc -Ins)] Create summary JSON with errors"
 ./errors.py "${ARTIFACT_DIR}/load-test-errors.csv" "${ARTIFACT_DIR}/load-test-errors.json"
 
 echo "[$(date --utc -Ins)] Counting PRs and TRs"
-ci-scripts/utility_scripts/count-multiarch-taskruns.py --data-dir "${ARTIFACT_DIR}" >"${ARTIFACT_DIR}/count-multiarch-taskruns.log"
+ci-scripts/utility_scripts/count-multiarch-taskruns.py --data-dir "${ARTIFACT_DIR}" &>"${ARTIFACT_DIR}/count-multiarch-taskruns.log"
 
 echo "[$(date --utc -Ins)] Graphing PRs and TRs"
-ci-scripts/utility_scripts/show-pipelineruns.py --data-dir "${ARTIFACT_DIR}" >"${ARTIFACT_DIR}/show-pipelineruns.log" || true
+ci-scripts/utility_scripts/show-pipelineruns.py --data-dir "${ARTIFACT_DIR}" &>"${ARTIFACT_DIR}/show-pipelineruns.log" || true
 mv "${ARTIFACT_DIR}/output.svg" "${ARTIFACT_DIR}/show-pipelines.svg" || true
 
 echo "[$(date --utc -Ins)] Computing duration of PRs, TRs and steps"
-ci-scripts/utility_scripts/get-taskruns-durations.py --data-dir "${ARTIFACT_DIR}" --dump-json "${ARTIFACT_DIR}/get-taskruns-durations.json" >"${ARTIFACT_DIR}/get-taskruns-durations.log"
+ci-scripts/utility_scripts/get-taskruns-durations.py --data-dir "${ARTIFACT_DIR}" --dump-json "${ARTIFACT_DIR}/get-taskruns-durations.json" &>"${ARTIFACT_DIR}/get-taskruns-durations.log"
 
 echo "[$(date --utc -Ins)] Creating main status data file"
 STATUS_DATA_FILE="${ARTIFACT_DIR}/load-test.json"
