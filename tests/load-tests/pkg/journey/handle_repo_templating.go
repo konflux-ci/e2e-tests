@@ -112,9 +112,16 @@ func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username string) (s
 	if strings.Contains(repoUrl, "gitlab.") {
 		logging.Logger.Debug("Forking Gitlab repository %s", repoUrl)
 
-		logging.Logger.Warning("Forking Gitlab repository not implemented yet, this will only work with 1 concurrent user")   // TODO
+		// Delete a repository
+		err = client.DeleteRepositoryIfExists(targetName)
+		if err != nil {
+			fmt.Printf("Failed to delete repository: %v\n", err)
+		}
 
-		return repoUrl, nil
+		// Fork a repository
+		forkedRepoURL, err := client.ForkRepository(sourceName, targetName)
+
+		return forkedRepoURL, nil
 	} else {
 		logging.Logger.Debug("Forking Github repository %s", repoUrl)
 
