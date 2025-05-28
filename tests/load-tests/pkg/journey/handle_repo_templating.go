@@ -112,16 +112,19 @@ func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username string) (s
 	if strings.Contains(repoUrl, "gitlab.") {
 		logging.Logger.Debug("Forking Gitlab repository %s", repoUrl)
 
-		// Delete a repository
-		err = client.DeleteRepositoryIfExists(targetName)
+		// Cleanup if it already exists
+		err = f.AsKubeAdmin.CommonController.Gitlab.DeleteRepositoryIfExists(targetName)
 		if err != nil {
-			fmt.Printf("Failed to delete repository: %v\n", err)
+			return "", err
 		}
 
-		// Fork a repository
-		forkedRepoURL, err := client.ForkRepository(sourceName, targetName)
+		// Create fork and make sure it appears
+		forkedRepoURL, err := f.AsKubeAdmin.CommonController.Gitlab.ForkRepository(sourceName, targetName)
+		if err != nil {
+			return "", err
+		}
 
-		return forkedRepoURL, nil
+		return forkedRepoURL.WebURL, nil
 	} else {
 		logging.Logger.Debug("Forking Github repository %s", repoUrl)
 
