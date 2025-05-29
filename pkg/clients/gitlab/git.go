@@ -268,6 +268,10 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 // ForkRepository forks a source GitLab repository to a target repository.
 // Returns the newly forked repository and an error if the operation fails.
 func (gc *GitlabClient) ForkRepository(sourceProjectID, targetProjectID string) (*gitlab.Project, error) {
+	var forkedProject *gitlab.Project
+	var resp *gitlab.Response
+	var err error
+
 	targetSplit := strings.Split(targetProjectID,"/")
 	if len(targetSplit) != 2 {
 		return nil, fmt.Errorf("Failed to parse target repo %s to namespace and repo name", targetProjectID)
@@ -282,7 +286,14 @@ func (gc *GitlabClient) ForkRepository(sourceProjectID, targetProjectID string) 
 		Path: gitlab.Ptr(targetRepo),
 	}
 
-	forkedProject, resp, err := gc.client.Projects.ForkProject(sourceProjectID, opts)
+	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
+		forkedProject, resp, err = gc.client.Projects.ForkProject(sourceProjectID, opts)
+		if err != nil {
+			fmt.Printf("Failed to fork, trying again: %v\n", err)
+			return false, nil
+		}
+		return true, nil
+	}, time.Second * 10, time.Minute * 5)
 	if err != nil {
 		return nil, fmt.Errorf("Error forking project %s to namespace %s: %w", sourceProjectID, targetNamespace, err)
 	}
