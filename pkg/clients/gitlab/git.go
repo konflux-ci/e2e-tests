@@ -312,8 +312,25 @@ func (gc *GitlabClient) ForkRepository(sourceProjectID, targetProjectID string) 
 		return nil, fmt.Errorf("Unexpected status code when forking project %s: %d", sourceProjectID, resp.StatusCode)
 	}
 
-	if forkedProject == nil || forkedProject.WebURL == "" {
-		return nil, fmt.Errorf("Forked project object not complete: %v", forkedProject)
+	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
+		var getErr error
+
+		forkedProject, _, getErr = gc.client.Projects.GetProject(forkedProject.ID, nil)
+		if getErr != nil {
+			return false, fmt.Errorf("Error getting forked project status for %s (ID: %d): %w", forkedProject.Name, forkedProject.ID, getErr)
+		}
+
+		if forkedProject.ImportStatus == "finished" {
+			return true, nil
+		} else if forkedProject.ImportStatus == "failed" || forkedProject.ImportStatus == "timeout" {
+			return false, fmt.Errorf("Forking of project %s (ID: %d) failed with import status: %s", forkedProject.Name, forkedProject.ID, forkedProject.ImportStatus)
+		}
+
+		return false, nil
+	}, time.Second * 10, time.Minute * 10)
+
+	if err != nil {
+		return nil, fmt.Errorf("Error waiting for project %s (ID: %d) fork to complete: %w", targetProjectID, forkedProject.ID, err)
 	}
 
 	return forkedProject, nil
