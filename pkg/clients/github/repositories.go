@@ -203,7 +203,7 @@ func (g *Github) ForkRepository(sourceName, targetName string) (*github.Reposito
 			return false, fmt.Errorf("Error forking %s/%s: %v", g.organization, sourceName, err)
 		}
 		return true, nil
-	}, time.Second * 2, time.Minute * 5)
+	}, time.Second * 10, time.Minute * 5)
 	if err1 != nil {
 		return nil, fmt.Errorf("Failed waiting for fork %s/%s: %v", g.organization, sourceName, err1)
 	}
