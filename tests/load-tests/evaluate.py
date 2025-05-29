@@ -115,11 +115,12 @@ def main():
     kpi_errors = 0
 
     for m in METRICS:
-        stats[m] = {"pass": {}, "fail": {}}
-        stats[m]["pass"]["duration"] = count_stats(stats_raw[m]["pass"]["duration"])
-        stats[m]["fail"]["duration"] = count_stats(stats_raw[m]["fail"]["duration"])
-        stats[m]["pass"]["when"] = count_stats_when(stats_raw[m]["pass"]["when"])
-        stats[m]["fail"]["when"] = count_stats_when(stats_raw[m]["fail"]["when"])
+        stats[m] = {"pass": {"duration": {"samples": 0}, "when": {}}, "fail": {"duration": {"samples": 0}, "when": {}}}
+        if m in stats_raw:
+            stats[m]["pass"]["duration"] = count_stats(stats_raw[m]["pass"]["duration"])
+            stats[m]["fail"]["duration"] = count_stats(stats_raw[m]["fail"]["duration"])
+            stats[m]["pass"]["when"] = count_stats_when(stats_raw[m]["pass"]["when"])
+            stats[m]["fail"]["when"] = count_stats_when(stats_raw[m]["fail"]["when"])
 
         if kpi_mean != -1:
             # If we had 0 measurements in some metric, that means not a single
