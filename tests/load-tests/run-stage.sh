@@ -7,6 +7,7 @@ set -o pipefail
 options=""
 [[ -n "${PIPELINE_IMAGE_PULL_SECRETS:-}" ]] && for s in $PIPELINE_IMAGE_PULL_SECRETS; do options="$options --pipeline-image-pull-secrets $s"; done
 
+trap "date -Ins --utc >ended" EXIT
 date -Ins --utc >started
 go run loadtest.go \
     --applications-count "${APPLICATIONS_COUNT:-1}" \
@@ -30,4 +31,3 @@ go run loadtest.go \
     --waitpipelines="${WAIT_PIPELINES:-true}" \
     $options \
     --stage
-date -Ins --utc >ended
