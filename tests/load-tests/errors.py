@@ -30,6 +30,7 @@ ERRORS = {
     "Failed to merge MR on CEE GitLab due to DNS error": r"Repo-templating workflow component cleanup failed: Merging [0-9]+ failed: [Pp][Uu][Tt] .*https://gitlab.cee.redhat.com/api/.*/merge_requests/[0-9]+/merge.*Temporary failure in name resolution",
     "Pipeline failed": r"Message:Tasks Completed: [0-9]+ \(Failed: [1-9]+,",
     "Post-test data collection failed": r"Failed to collect pipeline run JSONs",
+    "Repo forking failed as the target is still being deleted": r"Repo forking failed: Error forking project .* POST https://gitlab.cee.redhat.com/.* 409 .*Project namespace name has already been taken, The project is still being deleted.*",
     "Timeout getting pipeline": r"Message:.*resolver failed to get Pipeline.*resolution took longer than global timeout of .*",
     "Timeout getting task via git resolver from gitlab.cee": r"Message:.*Couldn't retrieve Task .*resolver type git.*https://gitlab.cee.redhat.com/.* resolution took longer than global timeout of .*",
 }
