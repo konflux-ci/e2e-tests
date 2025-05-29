@@ -38,7 +38,7 @@ const (
 	sampCatalogPathInRepo  = "pipelines/managed/release-to-github/release-to-github.yaml"
 )
 
-var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github pipeline", Pending, Label("release-pipelines", "release-to-github"), func() {
+var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github pipeline", Pending, Label("release-pipelines", "release-to-github"), Ordered, func() {
 	defer GinkgoRecover()
 
 	var devWorkspace = utils.GetEnv(constants.RELEASE_DEV_WORKSPACE_ENV, constants.DevReleaseTeam)
