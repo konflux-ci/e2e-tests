@@ -9,6 +9,8 @@ import (
 
 	. "github.com/onsi/gomega"
 	"github.com/xanzy/go-gitlab"
+
+	utils "github.com/konflux-ci/e2e-tests/pkg/utils"
 )
 
 // CreateBranch creates a new branch in a GitLab project with the given projectID and newBranchName
@@ -248,7 +250,19 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 		return fmt.Errorf("Unexpected status code when deleting project %s: %d", projectID, resp.StatusCode)
 	}
 
-	return nil
+	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
+		_, getResp, getErr := gc.client.Projects.GetProject(projectID, nil)
+		if getErr != nil {
+			if getResp != nil && getResp.StatusCode == http.StatusNotFound {
+				return true, nil
+			} else {
+				return false, getErr
+			}
+		}
+		return false, nil
+	}, time.Second * 10, time.Minute * 5)
+
+	return err
 }
 
 // ForkRepository forks a source GitLab repository to a target repository.
