@@ -117,6 +117,20 @@ func createComponent(f *framework.Framework, namespace, name, repoUrl, repoRevis
 	return nil
 }
 
+func validateComponentBuildSA(f *framework.Framework, namespace, name string) error {
+	interval := time.Second * 10
+	timeout := time.Minute * 5
+	component_sa := "build-pipeline-" + name
+
+	// TODO It would be much better to watch this resource instead querying it
+	err := utils.WaitUntilWithInterval(f.AsKubeDeveloper.CommonController.ServiceAccountPresent(component_sa, namespace), interval, timeout)
+	if err != nil {
+		return fmt.Errorf("Component build SA %s in namespace %s not created: %v", component_sa, namespace, err)
+	}
+
+	return nil
+}
+
 func getPaCPullNumber(f *framework.Framework, namespace, name string) (int, error) {
 	interval := time.Second * 20
 	timeout := time.Minute * 15
@@ -294,6 +308,17 @@ func HandleComponent(ctx *PerComponentContext) error {
 	)
 	if err != nil {
 		return logging.Logger.Fail(60, "Component failed creation: %v", err)
+	}
+
+	// Validate component build service account created
+	_, err = logging.Measure(
+		validateComponentBuildSA,
+		ctx.Framework,
+		ctx.ParentContext.ParentContext.Namespace,
+		ctx.ComponentName,
+	)
+	if err != nil {
+		return logging.Logger.Fail(65, "Component build SA failed creation: %v", err)
 	}
 
 	// Configure imagePullSecrets needed for component build task images
