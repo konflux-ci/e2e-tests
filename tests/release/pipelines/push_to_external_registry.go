@@ -20,7 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Label("release-pipelines", "push-to-external-registry"), func() {
+var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Label("release-pipelines", "push-to-external-registry"), Ordered, func() {
 	defer GinkgoRecover()
 
 	var fw *framework.Framework
