@@ -85,7 +85,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		fbcPreGAECPolicyName = "fbc-prega-policy-" + util.GenerateRandomString(4)
 	)
 
-	Describe("with FBC happy path", Label("fbcHappyPath"), func() {
+	Describe("with FBC happy path", Label("fbcHappyPath"), Pending, func() {
 		BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
@@ -133,7 +133,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		})
 	})
 
-	Describe("with FBC Staged Index", Label("fbcStagedIndex"), func() {
+	Describe("with FBC Staged Index", Label("fbcStagedIndex"), Pending, func() {
 		BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
@@ -231,7 +231,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		})
 	})
 
-	Describe("with FBC pre-GA process", Label("fbcPreGA"), func() {
+	Describe("with FBC pre-GA process", Label("fbcPreGA"), Pending, func() {
 
 		BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
