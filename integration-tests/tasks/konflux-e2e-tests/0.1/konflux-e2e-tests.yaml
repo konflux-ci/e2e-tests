@@ -2,7 +2,7 @@
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: konflux-e2e-runner
+  name: konflux-e2e-tests
 spec:
   description: |
     This task runs E2E tests for the Konflux project using specified parameters
