@@ -110,29 +110,5 @@ trap post_actions EXIT
 load_envs
 sealights_scan
 
-oc config view --minify --raw > /workspace/kubeconfig
-export KUBECONFIG=/workspace/kubeconfig
-
-# ROSA HCP workaround for Docker limits
-DOCKER_CONFIG_JSON_FILE=docker-config.json
-oc registry login --registry=docker.io --auth-basic="$DOCKER_IO_AUTH" --to=./$DOCKER_CONFIG_JSON_FILE
-
-namespace_sa_names=$(cat << 'EOF'
-minio-operator|console-sa
-minio-operator|minio-operator
-product-kubearchive|default
-tekton-logging|vector-tekton-logs-collector
-tekton-results|storage-sa
-tekton-results|postgres-postgresql
-EOF
-)
-while IFS='|' read -r ns sa_name; do
-    oc create namespace "$ns" --dry-run=client -o yaml | oc apply -f -
-    oc create sa "$sa_name" -n "$ns" --dry-run=client -o yaml | oc apply -f -
-    if ! oc get secret/pull-secret -n "$ns" &> /dev/null; then
-        oc create secret docker-registry pull-secret --from-file=.dockerconfigjson=./$DOCKER_CONFIG_JSON_FILE -n "$ns"
-    fi
-    oc secrets link "$sa_name" pull-secret --for=pull -n "$ns"
-done <<< "$namespace_sa_names"
 
 timeout "$E2E_TIMEOUT" make ci/test/e2e 2>&1 | tee "${ARTIFACT_DIR}/e2e-tests.log"

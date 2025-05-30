@@ -152,6 +152,8 @@ spec:
           value: $(params.test-environment)
         - name: KUBECONFIG
           value: /tmp/kubeconfig
+        - name: SKIP_BOOTSTRAP
+          value: "true"
       onError: continue
       script: |
         #!/bin/bash
