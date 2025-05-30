@@ -3,11 +3,13 @@ package journey
 import "fmt"
 import "strings"
 import "regexp"
+import "time"
 
 import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
 import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 import github "github.com/google/go-github/v44/github"
+import utils "github.com/konflux-ci/e2e-tests/pkg/utils"
 
 var fileList = []string{"COMPONENT-pull-request.yaml", "COMPONENT-push.yaml"}
 
@@ -110,9 +112,19 @@ func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username string) (s
 	if strings.Contains(repoUrl, "gitlab.") {
 		logging.Logger.Debug("Forking Gitlab repository %s", repoUrl)
 
-		logging.Logger.Warning("Forking Gitlab repository not implemented yet, this will only work with 1 concurrent user")   // TODO
+		// Cleanup if it already exists
+		err = f.AsKubeAdmin.CommonController.Gitlab.DeleteRepositoryIfExists(targetName)
+		if err != nil {
+			return "", err
+		}
 
-		return repoUrl, nil
+		// Create fork and make sure it appears
+		forkedRepoURL, err := f.AsKubeAdmin.CommonController.Gitlab.ForkRepository(sourceName, targetName)
+		if err != nil {
+			return "", err
+		}
+
+		return forkedRepoURL.WebURL, nil
 	} else {
 		logging.Logger.Debug("Forking Github repository %s", repoUrl)
 
@@ -123,7 +135,14 @@ func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username string) (s
 		}
 
 		// Create fork and make sure it appears
-		forkRepo, err = f.AsKubeAdmin.CommonController.Github.ForkRepository(sourceName, targetName)
+		err = utils.WaitUntilWithInterval(func() (done bool, err error) {
+			forkRepo, err = f.AsKubeAdmin.CommonController.Github.ForkRepository(sourceName, targetName)
+			if err != nil {
+				logging.Logger.Debug("Repo forking failed, trying again: %v", err)
+				return false, nil
+			}
+			return true, nil
+		}, time.Second * 20, time.Minute * 10)
 		if err != nil {
 			return "", err
 		}
