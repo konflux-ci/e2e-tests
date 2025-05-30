@@ -87,7 +87,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch with r
 
 			createMultiArchEnterpriseContractPolicy(multiarchEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 
-			snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(*devFw, multiarchComponentName, multiarchApplicationName, devNamespace, sampleImage, multiarchGitSourceURL, multiarchGitSrcSHA, "", "", "", "")
+			snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(devFw.AsKubeAdmin, multiarchComponentName, multiarchApplicationName, devNamespace, sampleImage, multiarchGitSourceURL, multiarchGitSrcSHA, "", "", "", "")
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 

@@ -3,22 +3,23 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	kubeapi "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 	"time"
 
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline", Label("release-service", "tenant"), func() {
@@ -26,45 +27,56 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 
 	var fw *framework.Framework
 	AfterEach(framework.ReportFailure(&fw))
+	var kubeAdminClient *framework.ControllerHub
 	var err error
-	var tenantNamespace string
+	var devNamespace = "tenant-dev"
 	var releasedImagePushRepo = "quay.io/redhat-appstudio-qe/dcmetromap"
 	var sampleImage = "quay.io/redhat-appstudio-qe/dcmetromap@sha256:544259be8bcd9e6a2066224b805d854d863064c9b64fa3a87bfcd03f5b0f28e6"
 	var gitSourceURL = "https://github.com/redhat-appstudio-qe/dc-metro-map-release"
 	var gitSourceRevision = "d49914874789147eb2de9bb6a12cd5d150bfff92"
 	var tenantServiceAccountName = "tenant-service-account"
-	var tenantPullSecretName="tenant-pull-secret"
+	var tenantPullSecretName = "tenant-pull-secret"
 
 	var releaseCR *releaseApi.Release
 	var snapshotPush *appservice.Snapshot
+	var testEnvironment = utils.GetEnv("TEST_ENVIRONMENT", releasecommon.UpstreamTestEnvironment)
 
 	BeforeAll(func() {
-		// Initialize the tests controllers
-		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("tenant-dev"))
-		Expect(err).NotTo(HaveOccurred())
-		tenantNamespace = fw.UserNamespace
+		if testEnvironment == releasecommon.DownstreamTestEnvironment {
+			fw, err = framework.NewFramework(utils.GetGeneratedNamespace(devNamespace))
+			Expect(err).NotTo(HaveOccurred())
+			devNamespace = fw.UserNamespace
+		} else {
+			var asAdminClient *kubeapi.CustomClient
+			asAdminClient, err = kubeapi.NewAdminKubernetesClient()
+			Expect(err).ShouldNot(HaveOccurred())
+			kubeAdminClient, err = framework.InitControllerHub(asAdminClient)
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = kubeAdminClient.CommonController.CreateTestNamespace(devNamespace)
+			Expect(err).ShouldNot(HaveOccurred())
+		}
 
 		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
 		Expect(sourceAuthJson).ToNot(BeEmpty())
 
-		_, err := fw.AsKubeAdmin.CommonController.GetSecret(tenantNamespace, tenantPullSecretName)
+		_, err := kubeAdminClient.CommonController.GetSecret(devNamespace, tenantPullSecretName)
 		if errors.IsNotFound(err) {
-			_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(tenantPullSecretName, tenantNamespace, sourceAuthJson)
+			_, err = kubeAdminClient.CommonController.CreateRegistryAuthSecret(tenantPullSecretName, devNamespace, sourceAuthJson)
 			Expect(err).ToNot(HaveOccurred())
 		}
 		Expect(err).ToNot(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.CommonController.CreateServiceAccount(tenantServiceAccountName, tenantNamespace, []corev1.ObjectReference{{Name: tenantPullSecretName}}, nil)
-                Expect(err).ToNot(HaveOccurred())
+		_, err = kubeAdminClient.CommonController.CreateServiceAccount(tenantServiceAccountName, devNamespace, []corev1.ObjectReference{{Name: tenantPullSecretName}}, nil)
+		Expect(err).ToNot(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releasecommon.ApplicationNameDefault, tenantNamespace)
+		_, err = kubeAdminClient.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
 		data, err := json.Marshal(map[string]interface{}{
 			"mapping": map[string]interface{}{
 				"components": []map[string]interface{}{
 					{
-						"component": releasecommon.ComponentName,
+						"component":  releasecommon.ComponentName,
 						"repository": releasedImagePushRepo,
 					},
 				},
@@ -73,10 +85,10 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 		Expect(err).NotTo(HaveOccurred())
 
 		tenantPipeline := &tektonutils.ParameterizedPipeline{}
-		tenantPipeline.ServiceAccountName = tenantServiceAccountName 
+		tenantPipeline.ServiceAccountName = tenantServiceAccountName
 		tenantPipeline.Timeouts = tektonv1.TimeoutFields{
-                                Pipeline: &metav1.Duration{Duration: 1 * time.Hour},
-                        }
+			Pipeline: &metav1.Duration{Duration: 1 * time.Hour},
+		}
 
 		tenantPipeline.PipelineRef = tektonutils.PipelineRef{
 			Resolver: "git",
@@ -87,21 +99,21 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 			},
 		}
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, tenantNamespace, releasecommon.ApplicationNameDefault, "", "", &runtime.RawExtension{
-                        Raw: data,
-                }, tenantPipeline, nil)
+		_, err = kubeAdminClient.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, "", "", &runtime.RawExtension{
+			Raw: data,
+		}, tenantPipeline, nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasecommon.ReleasePvcName, tenantNamespace, corev1.ReadWriteOnce)
+		_, err = kubeAdminClient.TektonController.CreatePVCInAccessMode(releasecommon.ReleasePvcName, devNamespace, corev1.ReadWriteOnce)
 		Expect(err).NotTo(HaveOccurred())
 
-		snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(*fw, releasecommon.ComponentName, releasecommon.ApplicationNameDefault, tenantNamespace, sampleImage, gitSourceURL, gitSourceRevision, "", "", "", "")
+		snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(kubeAdminClient, releasecommon.ComponentName, releasecommon.ApplicationNameDefault, devNamespace, sampleImage, gitSourceURL, gitSourceRevision, "", "", "", "")
 		Expect(err).ShouldNot(HaveOccurred())
 		GinkgoWriter.Println("snapshotPush.Name: %s", snapshotPush.GetName())
 	})
 
 	AfterAll(func() {
-		if !CurrentSpecReport().Failed() {
+		if !CurrentSpecReport().Failed() && testEnvironment == releasecommon.DownstreamTestEnvironment {
 			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 		}
 	})
@@ -110,18 +122,18 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 
 		It("verifies that a Release CR should have been created in the dev namespace", func() {
 			Eventually(func() error {
-				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(tenantNamespace)
+				releaseCR, err = kubeAdminClient.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				return err
 			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed())
 		})
 
 		It("verifies that Tenant PipelineRun is triggered", func() {
-			Expect(fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, tenantNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
+			Expect(kubeAdminClient.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, devNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
 		})
 
 		It("verifies that a Release is marked as succeeded.", func() {
 			Eventually(func() error {
-				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(tenantNamespace)
+				releaseCR, err = kubeAdminClient.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				if err != nil {
 					return err
 				}

@@ -23,7 +23,7 @@ var ReleaseServiceCatalogCIPairedRule = rulesengine.Rule{Name: "Release-service-
 		&ReleaseServiceCatalogRepoSetDefaultSettingsRule,
 		rulesengine.Any{&InfraDeploymentsPRPairingRule, rulesengine.None{&InfraDeploymentsPRPairingRule}},
 		&PreflightInstallGinkgoRule,
-		&InstallKonfluxRule,
+		rulesengine.Any{rulesengine.None{&InstallKonfluxRule}, &InstallKonfluxRule},
 	},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteReleaseCatalogPairedAction)},
 }
@@ -50,7 +50,7 @@ var ReleaseServiceCatalogRepoSetDefaultSettingsRule = rulesengine.Rule{Name: "Ge
 	},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 		testcases, err := selectReleasePipelinesTestCases(rctx.PrNum)
-		if  err != nil {
+		if err != nil {
 			rctx.LabelFilter = "release-pipelines"
 			klog.Errorf("an error occurred in selectReleasePipelinesTestCases: %s", err)
 		} else {
@@ -105,7 +105,7 @@ var isPaired = func(rctx *rulesengine.RuleCtx) (bool, error) {
 }
 
 func ExecuteReleaseCatalogPairedAction(rctx *rulesengine.RuleCtx) error {
-	rctx.LabelFilter +=  " && !fbc-release && !multiarch-advisories && !rh-advisories && !release-to-github && !rh-push-to-registry-redhat-io && !rhtap-service-push"
+	rctx.LabelFilter += " && !fbc-release && !multiarch-advisories && !rh-advisories && !release-to-github && !rh-push-to-registry-redhat-io && !rhtap-service-push"
 	return ExecuteTestAction(rctx)
 }
 
@@ -120,7 +120,7 @@ func selectReleasePipelinesTestCases(prNum int) (string, error) {
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		klog.Errorf("failed in selectReleasePipelinesTestCases function for PR: %d", prNum)
-		klog.Infof("the output from find_release_pipelines_from_pr: %s" , string(output))
+		klog.Infof("the output from find_release_pipelines_from_pr: %s", string(output))
 		return "", err
 	}
 	return string(output), nil
