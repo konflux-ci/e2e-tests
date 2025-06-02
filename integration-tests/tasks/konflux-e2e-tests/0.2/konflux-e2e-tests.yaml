@@ -2,7 +2,7 @@
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: konflux-e2e-runner
+  name: konflux-e2e-tests
 spec:
   description: |
     This task runs E2E tests for the Konflux project using specified parameters
@@ -10,9 +10,10 @@ spec:
     clones the repository, and executes the E2E tests, storing the artifacts in an OCI container registry
     using ORAS.
   params:
-    - name: ocp-login-command
+    - name: cluster-access-secret-name
       type: string
-      description: "Command to log in to the OpenShift cluster."
+      default: ""
+      description: "The name of the secret containing the kubeconfig to access the target cluster."
     - name: test-name
       type: string
       description: "The name of the test being executed."
@@ -64,13 +65,20 @@ spec:
     - name: sealights-test-selection
       description: "Sealights test selection feature is disabled by default. This feature allow sealights ginkgo plugin to run only tests based on code changes."
       default: "false"
+    - name: test-environment
+      type: string
+      description: "Name of the environment the testing should be performed in. Use 'downstream' for testing in OpenShift CI, or 'upstream' for testing in Kind cluster."
+      default: "downstream"
   volumes:
-    - name: konflux-secret-volume
+    - name: konflux-ci-secrets-volume
       secret:
         secretName: konflux-e2e-secrets
-    - name: konflux-test-infra-volume
+    - name: konflux-infra-secrets-volume
       secret:
         secretName: konflux-test-infra
+    - name: cluster-secret-volume
+      secret:
+        secretName: $(params.cluster-access-secret-name)
   steps:
     - name: initialize-sealights-session
       when:
@@ -101,10 +109,13 @@ spec:
           memory: "6Gi"
       image: $(params.container-image)
       volumeMounts:
-        - name: konflux-secret-volume
+        - name: konflux-ci-secrets-volume
           mountPath: /usr/local/konflux-ci-secrets
-        - name:  konflux-test-infra-volume
+        - name:  konflux-infra-secrets-volume
           mountPath: /usr/local/konflux-test-infra
+        - name: cluster-secret-volume
+          mountPath: /tmp/kubeconfig
+          subPath: kubeconfig
       workingDir: /workspace/e2e-tests
       env:
         - name: JOB_NAME
@@ -137,6 +148,12 @@ spec:
           value: $(params.test-stage)
         - name: SEALIGHTS_TEST_SELECTION
           value: $(params.sealights-test-selection)
+        - name: TEST_ENVIRONMENT
+          value: $(params.test-environment)
+        - name: KUBECONFIG
+          value: /tmp/kubeconfig
+        - name: SKIP_BOOTSTRAP
+          value: "true"
       onError: continue
       script: |
         #!/bin/bash
@@ -147,15 +164,6 @@ spec:
             echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [$1] $2"
         }
         export -f log
-
-        # Log into OpenShift cluster (the connection is sometimes flaky - give it more time)
-        timeout --foreground "10m" bash -c "
-        until $(params.ocp-login-command)
-        do
-            echo \"Waiting for 'oc login' command to succeed... Trying again in 10 seconds\"
-            sleep 10
-        done
-        "
 
         export GITHUB_TOKEN
 
@@ -194,7 +202,7 @@ spec:
         git clone --origin upstream --branch main "https://github.com/konflux-ci/e2e-tests.git" .
         make ci/prepare/e2e-branch 2>&1 | tee "${ARTIFACT_DIR}"/e2e-branch.log
 
-        /bin/bash -c "integration-tests/scripts/konflux-e2e/0.1/konflux-e2e.sh"
+        /bin/bash -c "integration-tests/scripts/konflux-e2e/0.2/konflux-e2e.sh"
     - name: sealights-reporter
       onError: continue
       when:
@@ -235,7 +243,7 @@ spec:
         - name: oci-ref
           value: $(params.oras-container)
         - name: credentials-volume-name
-          value: konflux-test-infra-volume
+          value: konflux-infra-secrets-volume
     - name: fail-if-any-step-failed
       ref:
         resolver: git
