@@ -137,7 +137,7 @@ find_release_pipelines_from_pr() {
   if (( ${#SELECTED_TESTCASES[@]} > 0 )); then
     echo -n "${SELECTED_TESTCASES[*]}"
   else
-    echo -n "happy-path"
+    echo -n "no-test-case"
   fi
    
   cleanup_workspace
