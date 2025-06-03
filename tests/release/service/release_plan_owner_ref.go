@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	kubeapi "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -17,26 +19,41 @@ import (
 var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2469]test-releaseplan-owner-ref-added", Label("release-service", "releaseplan-ownerref"), func() {
 	defer GinkgoRecover()
 	var fw *framework.Framework
+	var kubeAdminClient *framework.ControllerHub
 	var err error
-	var devNamespace string
+	var devNamespace = "rp-ownerref"
 	var releasePlan *releaseApi.ReleasePlan
 	var releasePlanOwnerReferencesTimeout = 1 * time.Minute
+
+	var testEnvironment = utils.GetEnv("TEST_ENVIRONMENT", releasecommon.UpstreamTestEnvironment)
+
 	AfterEach(framework.ReportFailure(&fw))
 
 	BeforeAll(func() {
-		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("rp-ownerref"))
-		Expect(err).NotTo(HaveOccurred())
-		devNamespace = fw.UserNamespace
+		if testEnvironment == releasecommon.DownstreamTestEnvironment {
+			fw, err = framework.NewFramework(utils.GetGeneratedNamespace(devNamespace))
+			Expect(err).NotTo(HaveOccurred())
+			devNamespace = fw.UserNamespace
+			kubeAdminClient = fw.AsKubeAdmin
+		} else {
+			var asAdminClient *kubeapi.CustomClient
+			asAdminClient, err = kubeapi.NewAdminKubernetesClient()
+			Expect(err).ShouldNot(HaveOccurred())
+			kubeAdminClient, err = framework.InitControllerHub(asAdminClient)
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = kubeAdminClient.CommonController.CreateTestNamespace(devNamespace)
+			Expect(err).ShouldNot(HaveOccurred())
+		}
 
-		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
+		_, err = kubeAdminClient.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, "managed", "true", nil, nil, nil)
+		_, err = kubeAdminClient.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, "managed", "true", nil, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterAll(func() {
-		if !CurrentSpecReport().Failed() {
+		if !CurrentSpecReport().Failed() && testEnvironment == releasecommon.DownstreamTestEnvironment {
 			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
 		}
 	})
@@ -44,7 +61,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2469]test-releaseplan-owne
 	var _ = Describe("ReleasePlan verification", Ordered, func() {
 		It("verifies that the ReleasePlan has an owner reference for the application", func() {
 			Eventually(func() error {
-				releasePlan, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releasecommon.SourceReleasePlanName, devNamespace)
+				releasePlan, err = kubeAdminClient.ReleaseController.GetReleasePlan(releasecommon.SourceReleasePlanName, devNamespace)
 				Expect(err).NotTo(HaveOccurred())
 
 				if len(releasePlan.OwnerReferences) != 1 {
@@ -60,9 +77,9 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2469]test-releaseplan-owne
 		})
 
 		It("verifies that the ReleasePlan is deleted if the application is deleted", func() {
-			Expect(fw.AsKubeAdmin.HasController.DeleteApplication(releasecommon.ApplicationNameDefault, devNamespace, true)).To(Succeed())
+			Expect(kubeAdminClient.HasController.DeleteApplication(releasecommon.ApplicationNameDefault, devNamespace, true)).To(Succeed())
 			Eventually(func() error {
-				releasePlan, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releasecommon.SourceReleasePlanName, devNamespace)
+				releasePlan, err = kubeAdminClient.ReleaseController.GetReleasePlan(releasecommon.SourceReleasePlanName, devNamespace)
 				if !errors.IsNotFound(err) {
 					return fmt.Errorf("ReleasePlan %s for application %s still not deleted\n", releasePlan.GetName(), releasecommon.ApplicationNameDefault)
 				}

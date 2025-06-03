@@ -16,7 +16,7 @@ var ReleaseServiceCIRule = rulesengine.Rule{Name: "Release-service repo CI Workf
 		&ReleaseServiceRepoSetDefaultSettingsRule,
 		rulesengine.Any{&InfraDeploymentsPRPairingRule, rulesengine.None{&InfraDeploymentsPRPairingRule}},
 		&PreflightInstallGinkgoRule,
-		&InstallKonfluxRule,
+		rulesengine.Any{rulesengine.None{&InstallKonfluxRule}, &InstallKonfluxRule},
 	},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteTestAction)},
 }
