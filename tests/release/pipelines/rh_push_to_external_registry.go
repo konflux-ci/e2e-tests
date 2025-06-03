@@ -4,9 +4,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	kubeapi "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 	"os"
 	"time"
+
+	kubeapi "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
@@ -63,6 +64,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 			Expect(err).NotTo(HaveOccurred())
 			devNamespace = fw.UserNamespace
 			managedNamespace = utils.GetGeneratedNamespace(managedNamespace)
+			kubeAdminClient = fw.AsKubeAdmin
 		} else {
 			var asAdminClient *kubeapi.CustomClient
 			asAdminClient, err = kubeapi.NewAdminKubernetesClient()

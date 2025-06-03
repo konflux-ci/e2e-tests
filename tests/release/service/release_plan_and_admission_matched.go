@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+
 	kubeapi "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
@@ -38,6 +39,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 			Expect(err).NotTo(HaveOccurred())
 			devNamespace = fw.UserNamespace
 			managedNamespace = utils.GetGeneratedNamespace(managedNamespace)
+			kubeAdminClient = fw.AsKubeAdmin
 		} else {
 			var asAdminClient *kubeapi.CustomClient
 			asAdminClient, err = kubeapi.NewAdminKubernetesClient()

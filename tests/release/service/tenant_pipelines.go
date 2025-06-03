@@ -3,8 +3,9 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	kubeapi "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 	"time"
+
+	kubeapi "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,6 +47,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 			fw, err = framework.NewFramework(utils.GetGeneratedNamespace(devNamespace))
 			Expect(err).NotTo(HaveOccurred())
 			devNamespace = fw.UserNamespace
+			kubeAdminClient = fw.AsKubeAdmin
 		} else {
 			var asAdminClient *kubeapi.CustomClient
 			asAdminClient, err = kubeapi.NewAdminKubernetesClient()

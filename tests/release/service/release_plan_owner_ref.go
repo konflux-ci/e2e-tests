@@ -2,8 +2,9 @@ package service
 
 import (
 	"fmt"
-	kubeapi "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 	"time"
+
+	kubeapi "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -33,6 +34,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2469]test-releaseplan-owne
 			fw, err = framework.NewFramework(utils.GetGeneratedNamespace(devNamespace))
 			Expect(err).NotTo(HaveOccurred())
 			devNamespace = fw.UserNamespace
+			kubeAdminClient = fw.AsKubeAdmin
 		} else {
 			var asAdminClient *kubeapi.CustomClient
 			asAdminClient, err = kubeapi.NewAdminKubernetesClient()

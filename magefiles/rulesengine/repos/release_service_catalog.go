@@ -38,7 +38,7 @@ var ReleaseServiceCatalogCIRule = rulesengine.Rule{Name: "Release-service-catalo
 		&ReleaseServiceCatalogRepoSetDefaultSettingsRule,
 		rulesengine.Any{&InfraDeploymentsPRPairingRule, rulesengine.None{&InfraDeploymentsPRPairingRule}},
 		&PreflightInstallGinkgoRule,
-		&InstallKonfluxRule,
+		rulesengine.Any{rulesengine.None{&InstallKonfluxRule}, &InstallKonfluxRule},
 	},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteReleaseCatalogAction)},
 }

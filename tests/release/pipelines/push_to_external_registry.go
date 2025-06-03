@@ -45,6 +45,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 			Expect(err).NotTo(HaveOccurred())
 			devNamespace = fw.UserNamespace
 			managedNamespace = utils.GetGeneratedNamespace(managedNamespace)
+			kubeAdminClient = fw.AsKubeAdmin
 		} else {
 			var asAdminClient *kubeapi.CustomClient
 			asAdminClient, err = kubeapi.NewAdminKubernetesClient()
