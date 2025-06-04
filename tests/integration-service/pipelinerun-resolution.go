@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
@@ -19,7 +20,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests ITS PipelineRun Resolution", Label("integration-service", "pipelinerun-resolution", "pipelinerun-resolution"), func() {
+var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests ITS PipelineRun Resolution", Label("integration-service", "pipelinerun-resolution"), func() {
 	defer GinkgoRecover()
 
 	var f *framework.Framework
@@ -27,13 +28,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 	var prHeadSha string
 	var integrationTestScenario *integrationv1beta2.IntegrationTestScenario
-	//var newIntegrationTestScenario *integrationv1beta2.IntegrationTestScenario
-	var skippedIntegrationTestScenario *integrationv1beta2.IntegrationTestScenario
+	var failingIntegrationTestScenario *integrationv1beta2.IntegrationTestScenario
 	var timeout, interval time.Duration
 	var originalComponent *appstudioApi.Component
 	var pipelineRun *pipeline.PipelineRun
 	var snapshot *appstudioApi.Snapshot
-	var snapshotPush *appstudioApi.Snapshot
 	var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace string
 
 	AfterEach(framework.ReportFailure(&f))
@@ -41,31 +40,32 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	Describe("with happy path for general flow of Integration service", Ordered, func() {
 		BeforeAll(func() {
 			// Initialize the tests controllers
-			f, err = framework.NewFramework(utils.GetGeneratedNamespace("integration1"))
+			f, err = framework.NewFramework(utils.GetGeneratedNamespace("resolution"))
 			Expect(err).NotTo(HaveOccurred())
 			testNamespace = f.UserNamespace
 
 			applicationName = createApp(*f, testNamespace)
-			originalComponent, componentName, pacBranchName, componentBaseBranchName = createComponent(*f, testNamespace, applicationName, componentRepoNameForGeneralIntegration, componentGitSourceURLForGeneralIntegration)
+			originalComponent, componentName, pacBranchName, componentBaseBranchName = createComponent(*f, testNamespace, applicationName, componentRepoNameForResolution, componentGitSourceURLForRosuResolution)
 
-			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, []string{"application"})
+			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPassPipelinerun, "pipelinerun", []string{"application"})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			skippedIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("skipped-its", applicationName, testNamespace, gitURL, revision, pathInRepoPass, []string{"push"})
+			failingIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoTask, "pipelinerun", []string{"application"})
 			Expect(err).ShouldNot(HaveOccurred())
+
 		})
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				cleanup(*f, testNamespace, applicationName, componentName, snapshotPush)
+				cleanup(*f, testNamespace, applicationName, componentName, snapshot)
 			}
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
-			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepoNameForGeneralIntegration, pacBranchName)
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepoNameForResolution, pacBranchName)
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring(referenceDoesntExist))
 			}
-			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepoNameForGeneralIntegration, componentBaseBranchName)
+			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepoNameForResolution, componentBaseBranchName)
 			if err != nil {
 				Expect(err.Error()).To(ContainSubstring(referenceDoesntExist))
 			}
@@ -99,7 +99,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				interval = time.Second * 1
 
 				Eventually(func() bool {
-					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepoNameForGeneralIntegration)
+					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepoNameForResolution)
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, pr := range prs {
@@ -125,6 +125,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			It("checks if the Snapshot is created", func() {
 				snapshot, err = f.AsKubeDeveloper.IntegrationController.WaitForSnapshotToGetCreated("", "", componentName, testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
+
 			})
 
 			It("checks if the Build PipelineRun got annotated with Snapshot name", func() {
@@ -158,6 +159,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					statusDetail, err := f.AsKubeDeveloper.IntegrationController.GetIntegrationTestStatusDetailFromSnapshot(snapshot, integrationTestScenario.Name)
 					Expect(err).ToNot(HaveOccurred())
 
+					fmt.Printf("statusDetail: %+v\n", statusDetail)
 					if statusDetail.Status != intgteststat.IntegrationTestStatusTestPassed {
 						return fmt.Errorf("test status for scenario: %s, doesn't have expected value %s, within the snapshot: %s", integrationTestScenario.Name, intgteststat.IntegrationTestStatusTestPassed, snapshot.Name)
 					}
@@ -165,148 +167,171 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				}, timeout, interval).Should(Succeed())
 			})
 
-			It("checks if the skipped integration test is absent from the Snapshot's status annotation", func() {
-				snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-
-				statusDetail, err := f.AsKubeDeveloper.IntegrationController.GetIntegrationTestStatusDetailFromSnapshot(snapshot, skippedIntegrationTestScenario.Name)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(skippedIntegrationTestScenario.Name))
-				Expect(statusDetail).To(BeNil())
-			})
-
 			It("checks if the finalizer was removed from all of the related Integration pipelineRuns", func() {
 				Expect(f.AsKubeDeveloper.IntegrationController.WaitForFinalizerToGetRemovedFromAllIntegrationPipelineRuns(testNamespace, applicationName, snapshot, []string{integrationTestScenario.Name})).To(Succeed())
 			})
 		})
 
-		It("creates a ReleasePlan", func() {
-			_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlan(autoReleasePlan, testNamespace, applicationName, targetReleaseNamespace, "", nil, nil, nil)
-			Expect(err).ShouldNot(HaveOccurred())
-			testScenarios, err := f.AsKubeAdmin.IntegrationController.GetIntegrationTestScenarios(applicationName, testNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
-			for _, testScenario := range *testScenarios {
-				GinkgoWriter.Printf("IntegrationTestScenario %s is found\n", testScenario.Name)
-			}
-		})
+		When("integration pipelineRun is created it passes, annotations and labels not overwritten by integration service", func() {
 
-		It("creates an snapshot of push event", func() {
-			sampleImage := "quay.io/redhat-appstudio/sample-image@sha256:841328df1b9f8c4087adbdcfec6cc99ac8308805dea83f6d415d6fb8d40227c1"
-			snapshotPush, err = f.AsKubeAdmin.IntegrationController.CreateSnapshotWithImage(componentName, applicationName, testNamespace, sampleImage)
-			Expect(err).ShouldNot(HaveOccurred())
-		})
-
-		When("An snapshot of push event is created", func() {
-			It("checks if the global candidate is updated after push event", func() {
-				timeout = time.Second * 600
-				interval = time.Second * 10
-				Eventually(func() error {
-					snapshotPush, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshotPush.Name, "", "", testNamespace)
-					Expect(err).ShouldNot(HaveOccurred())
-
-					component, err := f.AsKubeAdmin.HasController.GetComponentByApplicationName(applicationName, testNamespace)
-					Expect(err).ShouldNot(HaveOccurred())
-					Expect(component.Spec.ContainerImage).ToNot(Equal(originalComponent.Spec.ContainerImage))
-					return nil
-
-				}, timeout, interval).Should(Succeed(), fmt.Sprintf("time out when waiting for updating the global candidate in %s namespace", testNamespace))
+			It("checks integration pipelineRun passed", func() {
+				Expect(f.AsKubeDeveloper.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshot, []string{integrationTestScenario.Name})).To(Succeed())
 			})
 
-			It("checks if all of the integrationPipelineRuns created by push event passed", Label("slow"), func() {
-				Expect(f.AsKubeAdmin.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshotPush, []string{integrationTestScenario.Name})).To(Succeed(), "Error when waiting for one of the integration pipelines to finish in %s namespace", testNamespace)
+			It("verifies that existing labels and annotations are not overwritten by integration service", func() {
+				integrationPipelineRun, err := f.AsKubeDeveloper.IntegrationController.GetIntegrationPipelineRun(integrationTestScenario.Name, snapshot.Name, testNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				// Verify critical PipelinesAsCode annotations are preserved
+				expectedAnnotations := map[string]string{
+					"pipelinesascode.tekton.dev/on-target-branch": "[main]",
+					"pipelinesascode.tekton.dev/on-event":         "[push]",
+					"pipelinesascode.tekton.dev/max-keep-runs":    "5",
+				}
+
+				for key, expectedValue := range expectedAnnotations {
+					actualValue, exists := integrationPipelineRun.Annotations[key]
+					Expect(exists).To(BeTrue(), fmt.Sprintf("Expected annotation %s to exist", key))
+					Expect(actualValue).To(Equal(expectedValue), fmt.Sprintf("Expected annotation %s to have value %s, but got %s", key, expectedValue, actualValue))
+				}
+
+				// Verify critical labels are preserved
+				expectedLabels := map[string]string{
+					"pipelines.appstudio.openshift.io/type":   "test",
+					"test.appstudio.openshift.io/test":        "component",
+					"pipelinesascode.tekton.dev/event-type":   "push",
+					"pipelinesascode.tekton.dev/state":        "completed",
+					"pipelinesascode.tekton.dev/git-provider": "github",
+				}
+
+				for key, expectedValue := range expectedLabels {
+					actualValue, exists := integrationPipelineRun.Labels[key]
+					Expect(exists).To(BeTrue(), fmt.Sprintf("Expected label %s to exist", key))
+					Expect(actualValue).To(Equal(expectedValue), fmt.Sprintf("Expected label %s to have value %s, but got %s", key, expectedValue, actualValue))
+				}
+
+				// Verify that dynamic labels set by integration service are also present
+				dynamicLabels := []string{
+					"appstudio.openshift.io/snapshot",
+					"appstudio.openshift.io/component",
+					"appstudio.openshift.io/application",
+					"test.appstudio.openshift.io/scenario",
+				}
+
+				for _, labelKey := range dynamicLabels {
+					_, exists := integrationPipelineRun.Labels[labelKey]
+					Expect(exists).To(BeTrue(), fmt.Sprintf("Expected integration service label %s to exist", labelKey))
+				}
 			})
 
-			It("checks if a Release is created successfully", func() {
-				timeout = time.Second * 60
+			It("verifies that PipelinesAsCode specific annotations with dynamic values are preserved", func() {
+				integrationPipelineRun, err := f.AsKubeDeveloper.IntegrationController.GetIntegrationPipelineRun(integrationTestScenario.Name, snapshot.Name, testNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				// Verify PaC annotations with dynamic values exist (but don't check exact values since they're dynamic)
+				pacAnnotationsToCheck := []string{
+					"pipelinesascode.tekton.dev/repo-url",
+					"pipelinesascode.tekton.dev/sha-title",
+					"pipelinesascode.tekton.dev/sha-url",
+					"pipelinesascode.tekton.dev/git-auth-secret",
+					"pipelinesascode.tekton.dev/installation-id",
+				}
+
+				for _, annotation := range pacAnnotationsToCheck {
+					_, exists := integrationPipelineRun.Annotations[annotation]
+					Expect(exists).To(BeTrue(), fmt.Sprintf("Expected PaC annotation %s to be preserved", annotation))
+				}
+
+				// Verify PaC labels with dynamic values exist
+				pacLabelsToCheck := []string{
+					"pipelinesascode.tekton.dev/sender",
+					"pipelinesascode.tekton.dev/check-run-id",
+					"pipelinesascode.tekton.dev/branch",
+					"pipelinesascode.tekton.dev/url-org",
+					"pipelinesascode.tekton.dev/original-prname",
+					"pipelinesascode.tekton.dev/url-repository",
+					"pipelinesascode.tekton.dev/repository",
+					"pipelinesascode.tekton.dev/sha",
+				}
+
+				for _, label := range pacLabelsToCheck {
+					_, exists := integrationPipelineRun.Labels[label]
+					Expect(exists).To(BeTrue(), fmt.Sprintf("Expected PaC label %s to be preserved", label))
+				}
+			})
+
+			// TODO: After STONEINTG-1166 is done, we can remove the Pending label
+			It("verifies that ResolutionRequest is deleted after pipeline resolution", Pending, func() {
+				timeout = time.Second * 120
 				interval = time.Second * 5
+
 				Eventually(func() error {
-					_, err := f.AsKubeAdmin.ReleaseController.GetReleases(testNamespace)
-					return err
-				}, timeout, interval).Should(Succeed(), fmt.Sprintf("time out when waiting for release created for snapshot %s/%s", snapshotPush.GetNamespace(), snapshotPush.GetName()))
+					relatedResolutionRequests, err := f.AsKubeDeveloper.IntegrationController.GetRelatedResolutionRequests(testNamespace, integrationTestScenario)
+					if err != nil {
+						// If ResolutionRequest CRD doesn't exist, consider this as success since the feature might not be enabled
+						if strings.Contains(err.Error(), "ResolutionRequest CRD not available") {
+							return nil
+						}
+						return fmt.Errorf("failed to get related ResolutionRequests: %v", err)
+					}
+
+					if len(relatedResolutionRequests) > 0 {
+						names := f.AsKubeDeveloper.IntegrationController.GetResolutionRequestNames(relatedResolutionRequests)
+						return fmt.Errorf("found %d ResolutionRequest(s) still present in namespace %s for scenario %s: %v",
+							len(relatedResolutionRequests), testNamespace, integrationTestScenario.Name, names)
+					}
+
+					return nil
+				}, timeout, interval).Should(Succeed(), "ResolutionRequest objects should be cleaned up after pipeline resolution is complete")
 			})
+
+			// TODO: After STONEINTG-1166 is done, we can remove the Pending label
+			It("verifies that no orphaned ResolutionRequests remain in namespace after test completion", Pending, func() {
+				// Check for any ResolutionRequests that might have been left behind
+				relatedResolutionRequests, err := f.AsKubeDeveloper.IntegrationController.GetRelatedResolutionRequests(testNamespace, integrationTestScenario)
+				if err != nil {
+					// Skip if ResolutionRequest CRD is not available
+					if strings.Contains(err.Error(), "ResolutionRequest CRD not available") {
+						Skip("ResolutionRequest CRD not available in cluster, skipping orphan check")
+						return
+					}
+					Expect(err).NotTo(HaveOccurred(), "Failed to check for orphaned ResolutionRequests")
+				}
+
+				// Should be nil or empty at this point
+				if len(relatedResolutionRequests) > 0 {
+					names := f.AsKubeDeveloper.IntegrationController.GetResolutionRequestNames(relatedResolutionRequests)
+					// Log for debugging but only fail if these are old ResolutionRequests (older than 5 minutes)
+					fmt.Printf("Found %d ResolutionRequest(s) in namespace %s: %v\n", len(relatedResolutionRequests), testNamespace, names)
+
+					// Check if any are older than expected cleanup time
+					currentTime := time.Now()
+					oldResolutionRequests := []string{}
+
+					for _, rr := range relatedResolutionRequests {
+						creationTime := rr.GetCreationTimestamp()
+						if currentTime.Sub(creationTime.Time) > 5*time.Minute {
+							oldResolutionRequests = append(oldResolutionRequests, rr.GetName())
+						}
+					}
+
+					Expect(oldResolutionRequests).To(BeEmpty(), "Found old ResolutionRequest objects that should have been cleaned up")
+				}
+			})
+
+			It("validates that second integration pipelineRun failed due to resolution not pipelinerun", func() {
+				snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				statusDetail, err := f.AsKubeDeveloper.IntegrationController.GetIntegrationTestStatusDetailFromSnapshot(snapshot, failingIntegrationTestScenario.Name)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(statusDetail.Details).To(ContainSubstring("Creation of pipelineRun failed during creation due to: resolution for"))
+
+			})
+
 		})
+
 	})
 
 })
-
-// func createApp(f framework.Framework, testNamespace string) string {
-// 	applicationName := fmt.Sprintf("integ-app-%s", util.GenerateRandomString(4))
-
-// 	_, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
-// 	Expect(err).NotTo(HaveOccurred())
-
-// 	return applicationName
-// }
-
-// func createComponent(f framework.Framework, testNamespace, applicationName, componentRepoName, componentRepoURL string) (*appstudioApi.Component, string, string, string) {
-// 	componentName := fmt.Sprintf("%s-%s", "test-component-pac", util.GenerateRandomString(6))
-// 	pacBranchName := constants.PaCPullRequestBranchPrefix + componentName
-// 	componentBaseBranchName := fmt.Sprintf("base-%s", util.GenerateRandomString(6))
-
-// 	err := f.AsKubeAdmin.CommonController.Github.CreateRef(componentRepoName, componentDefaultBranch, componentRevision, componentBaseBranchName)
-// 	Expect(err).ShouldNot(HaveOccurred())
-
-// 	// get the build pipeline bundle annotation
-// 	buildPipelineAnnotation := build.GetDockerBuildPipelineBundle()
-
-// 	componentObj := appstudioApi.ComponentSpec{
-// 		ComponentName: componentName,
-// 		Application:   applicationName,
-// 		Source: appstudioApi.ComponentSource{
-// 			ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
-// 				GitSource: &appstudioApi.GitSource{
-// 					URL:      componentRepoURL,
-// 					Revision: componentBaseBranchName,
-// 				},
-// 			},
-// 		},
-// 	}
-
-// 	originalComponent, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
-// 	Expect(err).NotTo(HaveOccurred())
-
-// 	return originalComponent, componentName, pacBranchName, componentBaseBranchName
-// }
-
-// func createComponentWithCustomBranch(f framework.Framework, testNamespace, applicationName, componentName, componentRepoURL string, toBranchName string, contextDir string) *appstudioApi.Component {
-// 	// get the build pipeline bundle annotation
-// 	buildPipelineAnnotation := build.GetDockerBuildPipelineBundle()
-// 	dockerFileURL := constants.DockerFilePath
-// 	if contextDir == "" {
-// 		dockerFileURL = "Dockerfile"
-// 	}
-// 	componentObj := appstudioApi.ComponentSpec{
-// 		ComponentName: componentName,
-// 		Application:   applicationName,
-// 		Source: appstudioApi.ComponentSource{
-// 			ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
-// 				GitSource: &appstudioApi.GitSource{
-// 					URL:           componentRepoURL,
-// 					Revision:      toBranchName,
-// 					Context:       contextDir,
-// 					DockerfileURL: dockerFileURL,
-// 				},
-// 			},
-// 		},
-// 	}
-
-// 	originalComponent, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
-// 	Expect(err).NotTo(HaveOccurred())
-
-// 	return originalComponent
-// }
-
-// func cleanup(f framework.Framework, testNamespace, applicationName, componentName string, snapshot *appstudioApi.Snapshot) {
-// 	if !CurrentSpecReport().Failed() {
-// 		Expect(f.AsKubeAdmin.IntegrationController.DeleteSnapshot(snapshot, testNamespace)).To(Succeed())
-// 		integrationTestScenarios, err := f.AsKubeAdmin.IntegrationController.GetIntegrationTestScenarios(applicationName, testNamespace)
-// 		Expect(err).ShouldNot(HaveOccurred())
-
-// 		for _, testScenario := range *integrationTestScenarios {
-// 			Expect(f.AsKubeAdmin.IntegrationController.DeleteIntegrationTestScenario(&testScenario, testNamespace)).To(Succeed())
-// 		}
-// 		Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
-// 		Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-// 		Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
-// 	}
-// }
