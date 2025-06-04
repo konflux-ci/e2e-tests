@@ -3,6 +3,7 @@ package common
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
@@ -113,17 +114,18 @@ func (s *SuiteController) ListNamespaceScopedResourcesAsString(namespace string,
 func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, error) {
 	// Check if the E2E test namespace already exists
 	ns, err := s.KubeInterface().CoreV1().Namespaces().Get(context.Background(), name, metav1.GetOptions{})
+	requiredLabels := map[string]string{
+		constants.ArgoCDLabelKey: constants.ArgoCDLabelValue,
+		constants.TenantLabelKey: constants.TenantLabelValue,
+	}
 
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
 			// Create the E2E test namespace if it doesn't exist
 			nsTemplate := corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: name,
-					Labels: map[string]string{
-						constants.ArgoCDLabelKey: constants.ArgoCDLabelValue,
-						constants.TenantLabelKey: constants.TenantLabelValue,
-					},
+					Name:   name,
+					Labels: requiredLabels,
 				}}
 			ns, err = s.KubeInterface().CoreV1().Namespaces().Create(context.Background(), &nsTemplate, metav1.CreateOptions{})
 			if err != nil {
@@ -133,15 +135,12 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 			return nil, fmt.Errorf("error when getting the '%s' namespace: %v", name, err)
 		}
 	} else {
-		// Check whether the test namespace contains correct label
-		if val, ok := ns.Labels[constants.ArgoCDLabelKey]; ok && val == constants.ArgoCDLabelValue {
-			return ns, nil
-		}
-		// Update test namespace labels in case they are missing argoCD label
-		ns.Labels[constants.ArgoCDLabelKey] = constants.ArgoCDLabelValue
-		ns, err = s.KubeInterface().CoreV1().Namespaces().Update(context.Background(), ns, metav1.UpdateOptions{})
+		updated, err := s.ensureLabelsExist(ns, requiredLabels)
 		if err != nil {
-			return nil, fmt.Errorf("error when updating labels in '%s' namespace: %v", name, err)
+			return nil, err
+		}
+		if !updated {
+			return ns, nil
 		}
 	}
 
@@ -205,4 +204,26 @@ func (s *SuiteController) namespaceDoesNotExist(namespace string) wait.Condition
 // GetNamespace returns the requested Namespace object
 func (s *SuiteController) GetNamespace(namespace string) (*corev1.Namespace, error) {
 	return s.KubeInterface().CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
+}
+
+// Ensure that the labels provided in `requiredLabels` (including their values) exists on namespace `ns`
+// return true if the namespace was updated
+func (s *SuiteController) ensureLabelsExist(ns *corev1.Namespace, requiredLabels map[string]string) (bool, error) {
+	maps.DeleteFunc(requiredLabels, func(expectedKey, expectedValue string) bool {
+		existingValue, keyExists := ns.Labels[expectedKey]
+		return keyExists && expectedValue == existingValue
+	})
+
+	if len(requiredLabels) == 0 {
+		return false, nil
+	}
+
+	maps.Copy(ns.Labels, requiredLabels)
+
+	ns, err := s.KubeInterface().CoreV1().Namespaces().Update(context.Background(), ns, metav1.UpdateOptions{})
+	if err != nil {
+		return false, fmt.Errorf("error when updating labels in '%s' namespace: %v", ns.Name, err)
+	}
+
+	return true, nil
 }
