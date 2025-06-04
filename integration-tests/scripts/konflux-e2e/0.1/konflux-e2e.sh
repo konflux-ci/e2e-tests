@@ -18,6 +18,7 @@ load_envs() {
     declare -A load_envs_from_file=(
         [DEFAULT_QUAY_ORG_TOKEN]="${konflux_ci_secrets_file}/default-quay-org-token"
         [QUAY_TOKEN]="${konflux_ci_secrets_file}/quay-token"
+        [RELEASE_CATALOG_TA_QUAY_TOKEN]="${konflux_ci_secrets_file}/release-catalog-ta-quay-token"
         [QUAY_OAUTH_USER]="${konflux_ci_secrets_file}/quay-oauth-user"
         [QUAY_OAUTH_TOKEN]="${konflux_ci_secrets_file}/quay-oauth-token"
         [PYXIS_STAGE_KEY]="${konflux_ci_secrets_file}/pyxis-stage-key"

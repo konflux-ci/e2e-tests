@@ -81,6 +81,9 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
 		Expect(sourceAuthJson).ToNot(BeEmpty())
 
+		releaseCatalogTrustedArtifactsQuayAuthJson := utils.GetEnv("RELEASE_CATALOG_TA_QUAY_TOKEN", "")
+		Expect(releaseCatalogTrustedArtifactsQuayAuthJson).ToNot(BeEmpty())
+
 		keyPyxisStage := os.Getenv(constants.PYXIS_STAGE_KEY_ENV)
 		Expect(keyPyxisStage).ToNot(BeEmpty())
 
@@ -89,6 +92,10 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 
 		// Create secret for the release registry repo "hacbs-release-tests".
 		_, err = kubeAdminClient.CommonController.CreateRegistryAuthSecret(releasecommon.RedhatAppstudioUserSecret, managedNamespace, sourceAuthJson)
+		Expect(err).ToNot(HaveOccurred())
+
+		// Create secret for quay repo for trusted artifacts "quay.io/konflux-ci/release-service-trusted-artifacts".
+		_, err = kubeAdminClient.CommonController.CreateRegistryAuthSecret(releasecommon.ReleaseCatalogTAQuaySecret, managedNamespace, releaseCatalogTrustedArtifactsQuayAuthJson)
 		Expect(err).ToNot(HaveOccurred())
 
 		// Creating k8s secret to access Pyxis stage based on base64 decoded of key and cert

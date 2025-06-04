@@ -62,6 +62,10 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
 		Expect(sourceAuthJson).ToNot(BeEmpty())
 
+		// Create secret for quay repo for trusted artifacts "quay.io/konflux-ci/release-service-trusted-artifacts".
+		releaseCatalogTrustedArtifactsQuayAuthJson := utils.GetEnv("RELEASE_CATALOG_TA_QUAY_TOKEN", "")
+		Expect(releaseCatalogTrustedArtifactsQuayAuthJson).ToNot(BeEmpty())
+
 		managedServiceAccount, err := kubeAdminClient.CommonController.CreateServiceAccount(releasecommon.ReleasePipelineServiceAccountDefault, managedNamespace, releasecommon.ManagednamespaceSecret, nil)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -69,6 +73,10 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = kubeAdminClient.CommonController.CreateRegistryAuthSecret(releasecommon.RedhatAppstudioUserSecret, managedNamespace, sourceAuthJson)
+		Expect(err).ToNot(HaveOccurred())
+
+		// Create secret for quay repo for trusted artifacts "quay.io/konflux-ci/release-service-trusted-artifacts".
+		_, err = kubeAdminClient.CommonController.CreateRegistryAuthSecret(releasecommon.ReleaseCatalogTAQuaySecret, managedNamespace, releaseCatalogTrustedArtifactsQuayAuthJson)
 		Expect(err).ToNot(HaveOccurred())
 
 		err = kubeAdminClient.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
