@@ -59,6 +59,8 @@ WORKDIR /konflux-e2e
 ENV GOBIN=$HOME/bin
 ENV E2E_BIN_PATH=/konflux-e2e/konflux-e2e.test
 
+RUN chmod -R 775 $HOME
+
 RUN dnf -y install skopeo
 
 COPY --from=builder /usr/local/bin/jq /usr/local/bin/jq
