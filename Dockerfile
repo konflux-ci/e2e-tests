@@ -1,6 +1,6 @@
 FROM quay.io/konflux-ci/tekton-integration-catalog/sealights-go:latest as sealights-agents
 FROM registry.access.redhat.com/ubi9/go-toolset:1.22.9 AS builder
-ENV GOBIN=$GOPATH/bin
+ENV GOBIN=$HOME/bin
 
 USER root
 
@@ -56,7 +56,7 @@ USER root
 
 WORKDIR /konflux-e2e
 
-ENV GOBIN=$GOPATH/bin
+ENV GOBIN=$HOME/bin
 ENV E2E_BIN_PATH=/konflux-e2e/konflux-e2e.test
 
 RUN dnf -y install skopeo
