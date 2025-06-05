@@ -163,7 +163,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch with r
 				releasePR, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 				Expect(err).NotTo(HaveOccurred())
 				advisoryURL := releasePR.Status.PipelineRunStatusFields.Results[0].Value.StringVal
-				pattern := `https://access\.redhat\.com/errata/(RHBA|RHSA|RHEA)-\d{4}:\d+`
+				pattern := `https://access\.stage\.redhat\.com/errata/(RHBA|RHSA|RHEA)-\d{4}:\d+`
 				re, err := regexp.Compile(pattern)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(re.MatchString(advisoryURL)).To(BeTrue(), fmt.Sprintf("Advisory_url %s is not valid", advisoryURL))
