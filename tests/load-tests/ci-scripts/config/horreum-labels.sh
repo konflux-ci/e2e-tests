@@ -34,6 +34,8 @@ function horreum_schema_label_present() {
         --extractor-jsonpath "${extractor}"
 }
 
+horreum_schema_label_present '$.metadata.env.ARTIFACT_DIR'
+horreum_schema_label_present '$.metadata.env.BUILD_ID'
 horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/calculate-deps-linux/amd64".passed.duration.mean'
 horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/calculate-deps-linux/amd64".passed.duration.samples'
 horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/calculate-deps-linux/amd64".passed.idle.mean'
