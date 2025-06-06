@@ -55,6 +55,7 @@ FROM registry.access.redhat.com/ubi9/go-toolset:1.22.9
 USER root
 
 WORKDIR /konflux-e2e
+RUN chmod -R 775 /konflux-e2e
 
 ENV GOBIN=$HOME/bin
 ENV E2E_BIN_PATH=/konflux-e2e/konflux-e2e.test
