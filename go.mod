@@ -84,7 +84,7 @@ replace (
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.29.4
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.29.4
 	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.29.4
-	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20230308215209-15aac26d736a
+	k8s.io/kube-openapi => k8s.io/kube-openapi c8a335a9a2ff
 	k8s.io/kube-proxy => k8s.io/kube-proxy v0.29.4
 	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.29.4
 	k8s.io/kubectl => k8s.io/kubectl v0.29.4
@@ -298,7 +298,7 @@ require (
 	k8s.io/component-base v0.29.7 // indirect
 	k8s.io/component-helpers v0.29.4 // indirect
 	k8s.io/kube-aggregator v0.29.2 // indirect
-	k8s.io/kube-openapi v0.0.0-20240221221325-2ac9dc51f3f1 // indirect
+	k8s.io/kube-openapi c8a335a9a2ff // indirect
 	k8s.io/kubectl v0.29.2 // indirect
 	k8s.io/kubernetes v1.29.2 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
