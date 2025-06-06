@@ -21,6 +21,7 @@ const (
 
 	QuayTokenSecret                      string = "test-quay-token-secret"
 	RedhatAppstudioUserSecret            string = "hacbs-release-tests-token"
+	ReleaseCatalogTAQuaySecret           string = "release-catalog-trusted-artifacts-quay-secret"
 	RedhatAppstudioQESecret              string = "redhat-appstudio-qe-bot-token"
 	HacbsReleaseTestsTokenSecret         string = "redhat-appstudio-registry-pull-secret"
 	PublicSecretNameAuth                 string = "cosign-public-key"
@@ -67,6 +68,7 @@ const (
 
 var ManagednamespaceSecret = []corev1.ObjectReference{
 	{Name: RedhatAppstudioUserSecret},
+	{Name: ReleaseCatalogTAQuaySecret},
 }
 
 // Pipelines variables
