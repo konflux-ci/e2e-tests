@@ -96,6 +96,7 @@
 
 # Interesting CI environment variables
 {% for var in [
+  'ARTIFACT_DIR',
   'BUILD_ID',
   'BUILD_TAG',
   'BUILD_URL',
