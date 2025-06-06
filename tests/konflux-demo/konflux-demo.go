@@ -157,7 +157,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 			// Create an IntegrationTestScenario for the App
 			It("creates an IntegrationTestScenario for the app", Label(devEnvTestLabel, upstreamKonfluxTestLabel), func() {
 				its := appSpec.ComponentSpec.IntegrationTestScenario
-				integrationTestScenario, err = kubeadminClient.IntegrationController.CreateIntegrationTestScenario("", appSpec.ApplicationName, userNamespace, its.GitURL, its.GitRevision, its.TestPath, []string{})
+				integrationTestScenario, err = kubeadminClient.IntegrationController.CreateIntegrationTestScenario("", appSpec.ApplicationName, userNamespace, its.GitURL, its.GitRevision, its.TestPath, "", []string{})
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
