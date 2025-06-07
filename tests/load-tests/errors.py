@@ -37,6 +37,7 @@ ERRORS = {
     "Timeout getting build service account": r"Component build SA failed creation: Component build SA .* not created: context deadline exceeded",
     "Timeout getting pipeline": r"Message:.*resolver failed to get Pipeline.*resolution took longer than global timeout of .*",
     "Timeout getting task via git resolver from gitlab.cee": r"Message:.*Couldn't retrieve Task .*resolver type git.*https://gitlab.cee.redhat.com/.* resolution took longer than global timeout of .*",
+    "Timeout waiting for integration test scenario to finish": r"Integration test scenario failed validation: context deadline exceeded",
 }
 
 
