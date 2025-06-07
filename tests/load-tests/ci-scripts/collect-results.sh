@@ -16,6 +16,8 @@ ARTIFACT_DIR=${ARTIFACT_DIR:-artifacts}
 mkdir -p ${ARTIFACT_DIR}
 pushd "${2:-./tests/load-tests}"
 
+{
+
 echo "[$(date --utc -Ins)] Collecting artifacts"
 find . -maxdepth 1 -type f -name '*.log' -exec cp -vf {} "${ARTIFACT_DIR}" \;
 find . -maxdepth 1 -type f -name '*.csv' -exec cp -vf {} "${ARTIFACT_DIR}" \;
@@ -144,5 +146,7 @@ fi
 #
 #$tapa all "${pipelinerun_stub}.json" "${taskrun_stub}.json" "${pod_stub}.json" >"$tapa_tmp"
 #sort_csv "$tapa_tmp" "$tapa_all_csv"
+
+} 2>&1 | tee "${ARTIFACT_DIR}/collect-results.log"
 
 popd
