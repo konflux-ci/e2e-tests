@@ -16,6 +16,8 @@ ARTIFACT_DIR=${ARTIFACT_DIR:-artifacts}
 mkdir -p ${ARTIFACT_DIR}
 pushd "${2:-./tests/load-tests}"
 
+{
+
 echo "[$(date --utc -Ins)] Collecting artifacts"
 find . -maxdepth 1 -type f -name '*.log' -exec cp -vf {} "${ARTIFACT_DIR}" \;
 find . -maxdepth 1 -type f -name '*.csv' -exec cp -vf {} "${ARTIFACT_DIR}" \;
@@ -37,15 +39,12 @@ python3 -m pip install matplotlib
 echo "[$(date --utc -Ins)] Create summary JSON with timings"
 ./evaluate.py "${ARTIFACT_DIR}/load-test-timings.csv" "${ARTIFACT_DIR}/load-test-timings.json"
 
-echo "[$(date --utc -Ins)] Counting PRs and TRs"
-ci-scripts/utility_scripts/count-multiarch-taskruns.py --data-dir "${ARTIFACT_DIR}" >"${ARTIFACT_DIR}/count-multiarch-taskruns.log"
-
 echo "[$(date --utc -Ins)] Graphing PRs and TRs"
-ci-scripts/utility_scripts/show-pipelineruns.py --data-dir "${ARTIFACT_DIR}" >"${ARTIFACT_DIR}/show-pipelineruns.log"
+ci-scripts/utility_scripts/show-pipelineruns.py --data-dir "${ARTIFACT_DIR}" &>"${ARTIFACT_DIR}/show-pipelineruns.log"
 mv "${ARTIFACT_DIR}/output.svg" "${ARTIFACT_DIR}/show-pipelines.svg"
 
 echo "[$(date --utc -Ins)] Computing duration of PRs, TRs and steps"
-ci-scripts/utility_scripts/get-taskruns-durations.py --data-dir "${ARTIFACT_DIR}" --dump-json "${ARTIFACT_DIR}/get-taskruns-durations.json" >"${ARTIFACT_DIR}/get-taskruns-durations.log"
+ci-scripts/utility_scripts/get-taskruns-durations.py --debug --data-dir "${ARTIFACT_DIR}" --dump-json "${ARTIFACT_DIR}/get-taskruns-durations.json" &>"${ARTIFACT_DIR}/get-taskruns-durations.log"
 
 echo "[$(date --utc -Ins)] Creating main status data file"
 STATUS_DATA_FILE="${ARTIFACT_DIR}/load-test.json"
@@ -147,5 +146,7 @@ fi
 #
 #$tapa all "${pipelinerun_stub}.json" "${taskrun_stub}.json" "${pod_stub}.json" >"$tapa_tmp"
 #sort_csv "$tapa_tmp" "$tapa_all_csv"
+
+} 2>&1 | tee "${ARTIFACT_DIR}/collect-results.log"
 
 popd
