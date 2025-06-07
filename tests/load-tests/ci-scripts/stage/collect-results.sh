@@ -18,6 +18,8 @@ BASE_URL=$(echo $MEMBER_CLUSTER | grep -oP 'https://api\.\K[^:]+')
 PROMETHEUS_HOST="thanos-querier-openshift-monitoring.apps.$BASE_URL"
 TOKEN=${OCP_PROMETHEUS_TOKEN}
 
+{
+
 echo "[$(date --utc -Ins)] Collecting artifacts"
 find . -maxdepth 1 -type f -name '*.log' -exec cp -vf {} "${ARTIFACT_DIR}" \;
 find . -maxdepth 1 -type f -name '*.csv' -exec cp -vf {} "${ARTIFACT_DIR}" \;
@@ -74,5 +76,7 @@ status_data.py \
     &>"${ARTIFACT_DIR}/monitoring-collection.log"
 
 deactivate
+
+} 2>&1 | tee "${ARTIFACT_DIR}/collect-results.log"
 
 popd
