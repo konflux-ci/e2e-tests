@@ -9,6 +9,8 @@ import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
 import cobra "github.com/spf13/cobra"
 import klog "k8s.io/klog/v2"
+import klogr "k8s.io/klog/v2/klogr"
+import ctrl "sigs.k8s.io/controller-runtime"
 
 //import "os"
 //import "context"
@@ -62,6 +64,15 @@ func init() {
 
 func main() {
 	var err error
+
+	// Setup logging
+	klog.InitFlags(nil)
+	defer klog.Flush()
+	// Set the controller-runtime logger to use klogr.
+	// This makes controller-runtime logs go through klog.
+	// Hopefuly will help us to avoid these errors:
+	//   [controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+	ctrl.SetLogger(klogr.New())
 
 	// Setup argument parser
 	err = rootCmd.Execute()
