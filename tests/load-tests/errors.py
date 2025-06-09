@@ -39,6 +39,7 @@ ERRORS = {
     "Timeout getting pipeline": r"Message:.*resolver failed to get Pipeline.*resolution took longer than global timeout of .*",
     "Timeout getting task via git resolver from gitlab.cee": r"Message:.*Couldn't retrieve Task .*resolver type git.*https://gitlab.cee.redhat.com/.* resolution took longer than global timeout of .*",
     "Timeout waiting for integration test scenario to validate": r"Integration test scenario failed validation: context deadline exceeded",
+    "Timeout waiting for test pipeline to create": r"Test Pipeline Run failed creation: context deadline exceeded",
     "Timeout waiting for test pipeline to finish": r"Test Pipeline Run failed run: context deadline exceeded",
 }
 
