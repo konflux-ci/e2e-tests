@@ -231,7 +231,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 					return err
 				}
 				return nil
-			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed(), "timed out waiting for Release CRs to be created in %s namespace", devNamespace)
+			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for Release CR to be created for snapshot %s/%s", devNamespace, snapshotPush.Name)
 		})
 
 		It("verifies a release PipelineRun is started and succeeded in managed namespace", func() {

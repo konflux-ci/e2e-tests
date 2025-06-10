@@ -164,7 +164,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Lab
 			Eventually(func() error {
 				releaseCR, err = kubeAdminClient.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				return err
-			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed())
+			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for Release CR is created in Namespace %s", devNamespace)
 		})
 
 		It("verifies that Release PipelineRun should eventually succeed", func() {
