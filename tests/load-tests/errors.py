@@ -33,6 +33,7 @@ ERRORS = {
     "GitLab token used by test expired": r"Repo forking failed: Error deleting project .*: DELETE https://gitlab.cee.redhat.com/.*: 401 .*error: invalid_token.*error_description: Token is expired. You can either do re-authorization or token refresh",
     "Pipeline failed": r"Message:Tasks Completed: [0-9]+ \(Failed: [1-9]+,",
     "Post-test data collection failed": r"Failed to collect pipeline run JSONs",
+    "Repo forking failed as GitLab CEE says 401 Unauthorized": r"Repo forking failed: Error deleting project .*: DELETE https://gitlab.cee.redhat.com/.*: 401 .*message: 401 Unauthorized.*",
     "Repo forking failed as the target is still being deleted": r"Repo forking failed: Error forking project .* POST https://gitlab.cee.redhat.com.* 409 .*Project namespace name has already been taken, The project is still being deleted",
     "Repo forking failed when deleting target repo on gitlab.com (not CEE!) due unathorized": r"Repo forking failed: Error deleting project .* DELETE https://gitlab.com/.* 401 .* Unauthorized",
     "Timeout forking the repo before the actual test": r"Repo forking failed: Error forking project .*: context deadline exceeded",
