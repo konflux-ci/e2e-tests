@@ -36,48 +36,91 @@ func getRepoNameFromRepoUrl(repoUrl string) (string, error) {
 	}
 }
 
-// Template file from '.template/...' to '.tekton/...', expanding placeholders (even in file name) using Github API
-// Returns SHA of the commit
-func templateRepoFileGithub(f *framework.Framework, repoName, repoRevision, fileName string, placeholders *map[string]string) (string, error) {
-	var fileResponse *github.RepositoryContent
-	var fileContent string
-	var repoContentResponse *github.RepositoryContentResponse
-	var err error
-
-	fileResponse, err = f.AsKubeAdmin.CommonController.Github.GetFile(repoName, ".template/" + fileName, repoRevision)
-	if err != nil {
-		return "", err
+// Parse repo organization out of repo url
+func getRepoOrgFromRepoUrl(repoUrl string) (string, error) {
+	// Answer taken from https://stackoverflow.com/questions/7124778/how-can-i-match-anything-up-until-this-sequence-of-characters-in-a-regular-exp
+	// Tested with these input data:
+	//   repoUrl: https://github.com/abc/nodejs-devfile-sample.git/, match[1]: abc
+	//   repoUrl: https://github.com/abc/nodejs-devfile-sample.git, match[1]: abc
+	//   repoUrl: https://github.com/abc/nodejs-devfile-sample/, match[1]: abc
+	//   repoUrl: https://github.com/abc/nodejs-devfile-sample, match[1]: abc
+	//   repoUrl: https://gitlab.example.com/abc/nodejs-devfile-sample, match[1]: abc
+	var regex *regexp.Regexp
+	regex = regexp.MustCompile(`[^/]+://[^/]+/(.*)/.*$`)
+	match := regex.FindStringSubmatch(repoUrl)
+	if match != nil {
+		return match[1], nil
+	} else {
+		return "", fmt.Errorf("Failed to parse repo org out of url %s", repoUrl)
 	}
-
-	fileContent, err = fileResponse.GetContent()
-	if err != nil {
-		return "", err
-	}
-
-	for key, value := range *placeholders {
-		fileContent = strings.ReplaceAll(fileContent, key, value)
-		fileName = strings.ReplaceAll(fileName, key, value)
-	}
-
-	fileResponse, err = f.AsKubeAdmin.CommonController.Github.GetFile(repoName, ".tekton/" + fileName, repoRevision)
-	if err != nil {
-		return "", err
-	}
-
-	repoContentResponse, err = f.AsKubeAdmin.CommonController.Github.UpdateFile(repoName, ".tekton/" + fileName, fileContent, repoRevision, *fileResponse.SHA)
-	if err != nil {
-		return "", err
-	}
-
-	return *repoContentResponse.Commit.SHA, nil
 }
 
-// Template file from '.template/...' to '.tekton/...', expanding placeholders (even in file name) using Gitlab API
-// Returns SHA of the commit
-func templateRepoFileGitlab(f *framework.Framework, repoName, repoRevision, fileName string, placeholders *map[string]string) (string, error) {
-	fileContent, err := f.AsKubeAdmin.CommonController.Gitlab.GetFile(repoName, ".template/" + fileName, repoRevision)
+// Get file content from repository, no matter if on GitLab or GitHub
+func getRepoFileContent(f *framework.Framework, repoUrl, repoRevision, fileName string) (string, error) {
+	var fileContent string
+
+	repoName, err := getRepoNameFromRepoUrl(repoUrl)
 	if err != nil {
-		return "", fmt.Errorf("Failed to get file: %v", err)
+		return "", err
+	}
+
+	if strings.Contains(repoUrl, "gitlab.") {
+		fileContent, err = f.AsKubeAdmin.CommonController.Gitlab.GetFile(repoName, fileName, repoRevision)
+		if err != nil {
+			return "", fmt.Errorf("Failed to get file %s from repo %s revision %s: %v", fileName, repoName, repoRevision, err)
+		}
+	} else {
+		fileResponse, err := f.AsKubeAdmin.CommonController.Github.GetFile(repoName, fileName, repoRevision)
+		if err != nil {
+			return "", fmt.Errorf("Failed to get file %s from repo %s revision %s: %v", fileName, repoName, repoRevision, err)
+		}
+
+		fileContent, err = fileResponse.GetContent()
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return fileContent, nil
+}
+
+// Update file content in repository, no matter if on GitLab or GitHub
+func updateRepoFileContent(f *framework.Framework, repoUrl, repoRevision, fileName, fileContent string) (string, error) {
+	var commitSha string
+
+	repoName, err := getRepoNameFromRepoUrl(repoUrl)
+	if err != nil {
+		return "", err
+	}
+
+	if strings.Contains(repoUrl, "gitlab.") {
+		commitSha, err = f.AsKubeAdmin.CommonController.Gitlab.UpdateFile(repoName, fileName, fileContent, repoRevision)
+		if err != nil {
+			return "", fmt.Errorf("Failed to update file %s in repo %s revision %s: %v", fileName, repoName, repoRevision, err)
+		}
+	} else {
+		fileResponse, err := f.AsKubeAdmin.CommonController.Github.GetFile(repoName, fileName, repoRevision)
+		if err != nil {
+			return "", fmt.Errorf("Failed to get file %s from repo %s revision %s: %v", fileName, repoName, repoRevision, err)
+		}
+
+		repoContentResponse, err := f.AsKubeAdmin.CommonController.Github.UpdateFile(repoName, fileName, fileContent, repoRevision, *fileResponse.SHA)
+		if err != nil {
+			return "", fmt.Errorf("Failed to update file %s in repo %s revision %s: %v", fileName, repoName, repoRevision, err)
+		}
+
+		commitSha = *repoContentResponse.Commit.SHA
+	}
+
+	return commitSha, nil
+}
+
+// Template file from source repo and dir to '.tekton/...' in component repo, expanding placeholders (even in file name), no matter if on GitLab or GitHub
+// Returns SHA of the commit
+func templateRepoFile(f *framework.Framework, repoUrl, repoRevision, sourceRepo, sourceRepoDir, fileName string, placeholders *map[string]string) (string, error) {
+	fileContent, err := getRepoFileContent(f, sourceRepo, "main", sourceRepoDir + fileName)
+	if err != nil {
+		return "", err
 	}
 
 	for key, value := range *placeholders {
@@ -85,13 +128,12 @@ func templateRepoFileGitlab(f *framework.Framework, repoName, repoRevision, file
 		fileName = strings.ReplaceAll(fileName, key, value)
 	}
 
-	commitID, err := f.AsKubeAdmin.CommonController.Gitlab.UpdateFile(repoName, ".tekton/" + fileName, fileContent, repoRevision)
+	commitSha, err := updateRepoFileContent(f, repoUrl, repoRevision, ".tekton/" + fileName, fileContent)
 	if err != nil {
-		return "", fmt.Errorf("Failed to update file: %v", err)
+		return "", err
 	}
 
-	logging.Logger.Info("Templated file %s with commit %s", fileName, commitID)
-	return commitID, nil
+	return commitSha, nil
 }
 
 // Fork repository and return forked repo URL
@@ -99,11 +141,16 @@ func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username string) (s
 	// For PaC testing, let's template repo and return forked repo name
 	var forkRepo *github.Repository
 	var sourceName string
+	var sourceOrgName string
 	var targetName string
 	var err error
 
-	// Parse just repo name out of input repo url and construct target repo name
+	// Parse just repo name and org out of input repo url and construct target repo name
 	sourceName, err = getRepoNameFromRepoUrl(repoUrl)
+	if err != nil {
+		return "", err
+	}
+	sourceOrgName, err = getRepoOrgFromRepoUrl(repoUrl)
 	if err != nil {
 		return "", err
 	}
@@ -136,7 +183,7 @@ func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username string) (s
 
 		// Create fork and make sure it appears
 		err = utils.WaitUntilWithInterval(func() (done bool, err error) {
-			forkRepo, err = f.AsKubeAdmin.CommonController.Github.ForkRepository(sourceName, targetName)
+			forkRepo, err = f.AsKubeAdmin.CommonController.Github.ForkRepositoryFromOrg(sourceName, targetName, sourceOrgName)
 			if err != nil {
 				logging.Logger.Debug("Repo forking failed, trying again: %v", err)
 				return false, nil
@@ -152,26 +199,15 @@ func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username string) (s
 }
 
 // Template PaC files
-func templateFiles(f *framework.Framework, repoUrl, repoRevision string, placeholders *map[string]string) (*map[string]string, error) {
-	var sha string
-
-	// Get repo name from repo url
-	repoName, err := getRepoNameFromRepoUrl(repoUrl)
-	if err != nil {
-		return nil, err
-	}
-
+func templateFiles(f *framework.Framework, repoUrl, repoRevision, sourceRepo, sourceRepoDir string, placeholders *map[string]string) (*map[string]string, error) {
 	// Template files we care about
 	shaMap := &map[string]string{}
 	for _, file := range fileList {
-		if strings.Contains(repoUrl, "gitlab.") {
-			sha, err = templateRepoFileGitlab(f, repoName, repoRevision, file, placeholders)
-		} else {
-			sha, err = templateRepoFileGithub(f, repoName, repoRevision, file, placeholders)
-		}
+		sha, err := templateRepoFile(f, repoUrl, repoRevision, sourceRepo, sourceRepoDir, file, placeholders)
 		if err != nil {
 			return nil, err
 		}
+		logging.Logger.Debug("Templated file %s with commit %s", file, sha)
 		(*shaMap)[file] = sha
 	}
 

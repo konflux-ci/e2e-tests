@@ -76,6 +76,8 @@ go run loadtest.go \
     --journey-repeats "${JOURNEY_REPEATS:-1}" \
     --log-"${LOGGING_LEVEL:-info}" \
     --pipeline-repo-templating="${PIPELINE_REPO_TEMPLATING:-false}" \
+    --pipeline-repo-templating-source="${PIPELINE_REPO_TEMPLATING_SOURCE:-}" \
+    --pipeline-repo-templating-source-dir="${PIPELINE_REPO_TEMPLATING_SOURCE_DIR:-}" \
     --output-dir "${OUTPUT_DIR:-.}" \
     --purge="${PURGE:-true}" \
     --quay-repo "${QUAY_REPO:-stonesoup_perfscale}" \
