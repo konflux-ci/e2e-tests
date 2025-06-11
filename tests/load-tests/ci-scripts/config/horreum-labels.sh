@@ -201,6 +201,8 @@ horreum_schema_label_present '$.results.measurements.createApplication.error_rat
 horreum_schema_label_present '$.results.measurements.createApplication.pass.duration.mean'
 horreum_schema_label_present '$.results.measurements.createComponent.error_rate'
 horreum_schema_label_present '$.results.measurements.createComponent.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.getPaCPullNumber.error_rate'
+horreum_schema_label_present '$.results.measurements.getPaCPullNumber.pass.duration.mean'
 horreum_schema_label_present '$.results.measurements.createIntegrationTestScenario.error_rate'
 horreum_schema_label_present '$.results.measurements.createIntegrationTestScenario.pass.duration.mean'
 horreum_schema_label_present '$.results.measurements.HandleUser.error_rate'
