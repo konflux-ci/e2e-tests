@@ -23,6 +23,7 @@ METRICS = [
     "validateApplication",
     "createIntegrationTestScenario",
     "createComponent",
+    "getPaCPullNumber",
     "validateComponentBuildSA",
     "validatePipelineRunCreation",
     "validatePipelineRunCondition",
