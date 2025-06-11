@@ -233,7 +233,7 @@ func listAndDeletePipelineRunsWithTimeout(f *framework.Framework, namespace, app
 }
 
 // This handles post-component creation tasks for multi-arch PaC workflow
-func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, appName, compName, repoUrl, repoRev string, mergeReqNum int, placeholders *map[string]string) error {
+func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, appName, compName, repoUrl, repoRev, sourceRepo, sourceRepoDir string, mergeReqNum int, placeholders *map[string]string) error {
 	var repoName string
 	var err error
 
@@ -267,7 +267,7 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 	logging.Logger.Debug("Repo-templating workflow: Cleaned up (second cleanup) for %s/%s/%s", namespace, appName, compName)
 
 	// Template our multi-arch PaC files
-	shaMap, err := templateFiles(f, repoUrl, repoRev, placeholders)
+	shaMap, err := templateFiles(f, repoUrl, repoRev, sourceRepo, sourceRepoDir, placeholders)
 	if err != nil {
 		return fmt.Errorf("Error templating PaC files: %v", err)
 	}
@@ -376,6 +376,8 @@ func HandleComponent(ctx *PerComponentContext) error {
 			ctx.ComponentName,
 			ctx.ParentContext.ParentContext.ComponentRepoUrl,
 			ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision,
+			ctx.ParentContext.ParentContext.Opts.PipelineRepoTemplatingSource,
+			ctx.ParentContext.ParentContext.Opts.PipelineRepoTemplatingSourceDir,
 			ctx.MergeRequestNumber,
 			placeholders,
 		)
