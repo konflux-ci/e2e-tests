@@ -81,9 +81,9 @@ go run loadtest.go \
     --output-dir "${OUTPUT_DIR:-.}" \
     --purge="${PURGE:-true}" \
     --quay-repo "${QUAY_REPO:-stonesoup_perfscale}" \
-    --test-scenario-git-url "${TEST_SCENARIO_GIT_URL:-https://github.com/konflux-ci/integration-examples.git}" \
-    --test-scenario-path-in-repo "${TEST_SCENARIO_PATH_IN_REPO:-pipelines/integration_resolver_pipeline_pass.yaml}" \
-    --test-scenario-revision "${TEST_SCENARIO_REVISION:-main}" \
+    --test-scenario-git-url "${TEST_SCENARIO_GIT_URL-https://github.com/konflux-ci/integration-examples.git}" \
+    --test-scenario-path-in-repo "${TEST_SCENARIO_PATH_IN_REPO-pipelines/integration_resolver_pipeline_pass.yaml}" \
+    --test-scenario-revision "${TEST_SCENARIO_REVISION-main}" \
     --username "$USER_PREFIX" \
     --waitintegrationtestspipelines="${WAIT_INTEGRATION_TESTS:-true}" \
     --waitpipelines="${WAIT_PIPELINES:-true}" \

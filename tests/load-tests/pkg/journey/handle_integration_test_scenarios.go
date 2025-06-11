@@ -65,6 +65,11 @@ func validateIntegrationTestScenario(f *framework.Framework, namespace, name, ap
 }
 
 func HandleIntegrationTestScenario(ctx *PerApplicationContext) error {
+	if ctx.ParentContext.Opts.TestScenarioGitURL == "" {
+		logging.Logger.Debug("Integration Test Scenario GIT not provided, not creating it")
+		return nil
+	}
+
 	var err error
 
 	name := fmt.Sprintf("%s-its-%s", ctx.ParentContext.Username, util.GenerateRandomString(5))
