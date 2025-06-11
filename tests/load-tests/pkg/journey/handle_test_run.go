@@ -106,26 +106,30 @@ func HandleTest(ctx *PerComponentContext) error {
 		return logging.Logger.Fail(81, "Snapshot name type assertion failed")
 	}
 
-	_, err = logging.Measure(
-		validateTestPipelineRunCreation,
-		ctx.Framework,
-		ctx.ParentContext.ParentContext.Namespace,
-		ctx.ParentContext.IntegrationTestScenarioName,
-		ctx.SnapshotName,
-	)
-	if err != nil {
-		return logging.Logger.Fail(82, "Test Pipeline Run failed creation: %v", err)
-	}
+	if ctx.ParentContext.ParentContext.Opts.TestScenarioGitURL == "" {
+		logging.Logger.Debug("Integration Test Scenario GIT not provided, not waiting for it")
+	} else {
+		_, err = logging.Measure(
+			validateTestPipelineRunCreation,
+			ctx.Framework,
+			ctx.ParentContext.ParentContext.Namespace,
+			ctx.ParentContext.IntegrationTestScenarioName,
+			ctx.SnapshotName,
+		)
+		if err != nil {
+			return logging.Logger.Fail(82, "Test Pipeline Run failed creation: %v", err)
+		}
 
-	_, err = logging.Measure(
-		validateTestPipelineRunCondition,
-		ctx.Framework,
-		ctx.ParentContext.ParentContext.Namespace,
-		ctx.ParentContext.IntegrationTestScenarioName,
-		ctx.SnapshotName,
-	)
-	if err != nil {
-		return logging.Logger.Fail(83, "Test Pipeline Run failed run: %v", err)
+		_, err = logging.Measure(
+			validateTestPipelineRunCondition,
+			ctx.Framework,
+			ctx.ParentContext.ParentContext.Namespace,
+			ctx.ParentContext.IntegrationTestScenarioName,
+			ctx.SnapshotName,
+		)
+		if err != nil {
+			return logging.Logger.Fail(83, "Test Pipeline Run failed run: %v", err)
+		}
 	}
 
 	return nil
