@@ -4,38 +4,41 @@ import "encoding/json"
 import "fmt"
 import "os"
 import "time"
+import "strings"
 
 // Struct to hold command line options
 type Opts struct {
-	ApplicationsCount             int
-	BuildPipelineSelectorBundle   string
-	ComponentContainerContext     string
-	ComponentContainerFile        string
-	ComponentRepoRevision         string
-	ComponentRepoUrl              string
-	ComponentsCount               int
-	Concurrency                   int
-	FailFast                      bool
-	JourneyDuration               string
-	JourneyRepeats                int
-	JourneyUntil                  time.Time
-	LogDebug                      bool
-	LogTrace                      bool
-	LogInfo                       bool
-	OutputDir                     string
-	PipelineMintmakerDisabled     bool
-	PipelineRepoTemplating        bool
-	PipelineImagePullSecrets      []string
-	Purge                         bool
-	PurgeOnly                     bool
-	QuayRepo                      string
-	Stage                         bool
-	TestScenarioGitURL            string
-	TestScenarioPathInRepo        string
-	TestScenarioRevision          string
-	UsernamePrefix                string
-	WaitIntegrationTestsPipelines bool
-	WaitPipelines                 bool
+	ApplicationsCount               int
+	BuildPipelineSelectorBundle     string
+	ComponentContainerContext       string
+	ComponentContainerFile          string
+	ComponentRepoRevision           string
+	ComponentRepoUrl                string
+	ComponentsCount                 int
+	Concurrency                     int
+	FailFast                        bool
+	JourneyDuration                 string
+	JourneyRepeats                  int
+	JourneyUntil                    time.Time
+	LogDebug                        bool
+	LogTrace                        bool
+	LogInfo                         bool
+	OutputDir                       string
+	PipelineMintmakerDisabled       bool
+	PipelineRepoTemplating          bool
+	PipelineRepoTemplatingSource    string
+	PipelineRepoTemplatingSourceDir string
+	PipelineImagePullSecrets        []string
+	Purge                           bool
+	PurgeOnly                       bool
+	QuayRepo                        string
+	Stage                           bool
+	TestScenarioGitURL              string
+	TestScenarioPathInRepo          string
+	TestScenarioRevision            string
+	UsernamePrefix                  string
+	WaitIntegrationTestsPipelines   bool
+	WaitPipelines                   bool
 }
 
 // Pre-process load-test options before running the test
@@ -50,6 +53,19 @@ func (o *Opts) ProcessOptions() error {
 	// Option '--purge-only' implies '--purge'
 	if o.PurgeOnly {
 		o.Purge = true
+	}
+
+	// If we are templating, set default values for relevant options if empty
+	if o.PipelineRepoTemplating {
+		if o.PipelineRepoTemplatingSource == "" {
+			o.PipelineRepoTemplatingSource = o.ComponentRepoUrl
+		}
+		if o.PipelineRepoTemplatingSourceDir == "" {
+			o.PipelineRepoTemplatingSourceDir = ".template/"
+		}
+		if strings.HasSuffix(o.PipelineRepoTemplatingSourceDir, "/") != true {
+			o.PipelineRepoTemplatingSourceDir = o.PipelineRepoTemplatingSourceDir + "/"
+		}
 	}
 
 	// Convert options struct to pretty JSON
