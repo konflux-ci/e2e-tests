@@ -16,6 +16,9 @@ This suite verifies the reporting of integration test statuses to GitLab Merge R
 ### 4. E2E Tests within `integration-with-env.go`
 This suite tests the integration service's interaction with ephemeral environments, ensuring correct handling of pipelines, snapshots, and environment cleanup.
 
+### 5. E2E Tests within `pipelinerun-resolution.go`
+This suite tests the integration service's pipeline resolution functionality, focusing on ResolutionRequest lifecycle management and ensuring proper cleanup of resolution resources after pipeline execution.
+
 ---
 
 ## Happy Path Tests
@@ -84,6 +87,16 @@ Checkpoints:
 - Handling space requests in the namespace and ensuring they are created correctly.
 - Verifying proper cleanup after successful deletion of the Integration PipelineRun.
 
+### 5. Happy Path Tests within `pipelinerun-resolution.go`
+Checkpoints:
+- Testing for successful creation of applications and components with pipeline resolution.
+- Checking if the BuildPipelineRun is successfully triggered and completed with proper resolution.
+- Verifying that Integration PipelineRuns are resolved and executed successfully.
+- Validating that existing labels and annotations from PipelinesAsCode are preserved during resolution.
+- Ensuring that ResolutionRequest objects are properly cleaned up after pipeline resolution is complete.
+- Verifying that no orphaned ResolutionRequest objects remain in the namespace after test completion.
+- Testing integration service's ability to handle resolution failures gracefully.
+
 ---
 
 ## Negative Tests
@@ -125,6 +138,12 @@ Checkpoints:
 - Checking that snapshots are marked as 'failed' when Integration PipelineRuns do not finish successfully.
 - Ensuring that space requests are deleted correctly in failed scenarios.
 
+### 5. Negative Test Cases within `pipelinerun-resolution.go`
+Checkpoints:
+- Verifying that ResolutionRequest objects are not cleaned up properly after pipeline resolution.
+- Ensuring that orphaned ResolutionRequest objects are detected and cleaned up.
+- Testing integration service's ability to handle resolution failures gracefully.
+
 ---
 
 ## Running E2E Tests
@@ -135,4 +154,16 @@ Checkpoints:
 
 ```
  ./bin/e2e-appstudio --ginkgo.focus="integration-service-suite" –ginkgo.vv
+```
+
+- To run pipeline resolution E2E test suite: `pipelinerun-resolution.go`
+
+```bash
+./bin/e2e-appstudio --ginkgo.focus="pipelinerun-resolution" --ginkgo.vv
+```
+
+- To run all integration service tests including pipeline resolution:
+
+```bash
+./bin/e2e-appstudio --ginkgo.focus="integration-service" --ginkgo.vv
 ```
