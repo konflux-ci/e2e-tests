@@ -291,7 +291,7 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw *framework.Framework, de
 		}
 		GinkgoWriter.Println("Release CR: ", releaseCR.Name)
 		return nil
-	}, 5*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for Release being created")
+	}, 5*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for Release being created for snapshot %s/%s", devNamespace, snapshot.Name)
 
 	Eventually(func() error {
 		managedPipelineRun, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
