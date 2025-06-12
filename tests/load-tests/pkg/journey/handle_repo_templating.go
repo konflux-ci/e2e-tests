@@ -21,13 +21,10 @@ func getRepoNameFromRepoUrl(repoUrl string) (string, error) {
 	//   repoUrl: https://github.com/abc/nodejs-devfile-sample.git, match[1]: nodejs-devfile-sample
 	//   repoUrl: https://github.com/abc/nodejs-devfile-sample/, match[1]: nodejs-devfile-sample
 	//   repoUrl: https://github.com/abc/nodejs-devfile-sample, match[1]: nodejs-devfile-sample
-	//   repoUrl: https://gitlab.example.com/abc/nodejs-devfile-sample, match[1]: abc/nodejs-devfile-sample
+	//   repoUrl: https://gitlab.example.com/abc/nodejs-devfile-sample, match[1]: nodejs-devfile-sample
+	//   repoUrl: https://gitlab.example.com/abc/def/nodejs-devfile-sample, match[1]: nodejs-devfile-sample
 	var regex *regexp.Regexp
-	if strings.Contains(repoUrl, "gitlab.") {
-		regex = regexp.MustCompile(`/([^/]+/[^/]+?)(.git)?/?$`)
-	} else {
-		regex = regexp.MustCompile(`/([^/]+?)(.git)?/?$`)
-	}
+	regex = regexp.MustCompile(`/([^/]+?)(.git)?/?$`)
 	match := regex.FindStringSubmatch(repoUrl)
 	if match != nil {
 		return match[1], nil
@@ -45,14 +42,28 @@ func getRepoOrgFromRepoUrl(repoUrl string) (string, error) {
 	//   repoUrl: https://github.com/abc/nodejs-devfile-sample/, match[1]: abc
 	//   repoUrl: https://github.com/abc/nodejs-devfile-sample, match[1]: abc
 	//   repoUrl: https://gitlab.example.com/abc/nodejs-devfile-sample, match[1]: abc
+	//   repoUrl: https://gitlab.example.com/abc/def/nodejs-devfile-sample, match[1]: abc/def
 	var regex *regexp.Regexp
-	regex = regexp.MustCompile(`[^/]+://[^/]+/(.*)/.*$`)
+	regex = regexp.MustCompile(`^[^/]+://[^/]+/(.*)/.+(.git)?/?$`)
 	match := regex.FindStringSubmatch(repoUrl)
 	if match != nil {
 		return match[1], nil
 	} else {
 		return "", fmt.Errorf("Failed to parse repo org out of url %s", repoUrl)
 	}
+}
+
+// Parse repo ID (<organization>/<name>) out of repo url
+func getRepoIdFromRepoUrl(repoUrl string) (string, error) {
+	repoOrgName, err := getRepoOrgFromRepoUrl(repoUrl)
+	if err != nil {
+		return "", err
+	}
+	repoName, err := getRepoNameFromRepoUrl(repoUrl)
+	if err != nil {
+		return "", err
+	}
+	return repoOrgName + "/" + repoName, nil
 }
 
 // Get file content from repository, no matter if on GitLab or GitHub
@@ -63,11 +74,15 @@ func getRepoFileContent(f *framework.Framework, repoUrl, repoRevision, fileName 
 	if err != nil {
 		return "", err
 	}
+	repoOrgName, err := getRepoOrgFromRepoUrl(repoUrl)
+	if err != nil {
+		return "", err
+	}
 
 	if strings.Contains(repoUrl, "gitlab.") {
-		fileContent, err = f.AsKubeAdmin.CommonController.Gitlab.GetFile(repoName, fileName, repoRevision)
+		fileContent, err = f.AsKubeAdmin.CommonController.Gitlab.GetFile(repoOrgName + "/" + repoName, fileName, repoRevision)
 		if err != nil {
-			return "", fmt.Errorf("Failed to get file %s from repo %s revision %s: %v", fileName, repoName, repoRevision, err)
+			return "", fmt.Errorf("Failed to get file %s from repo %s revision %s: %v", fileName, repoOrgName + "/" + repoName, repoRevision, err)
 		}
 	} else {
 		fileResponse, err := f.AsKubeAdmin.CommonController.Github.GetFile(repoName, fileName, repoRevision)
@@ -92,11 +107,15 @@ func updateRepoFileContent(f *framework.Framework, repoUrl, repoRevision, fileNa
 	if err != nil {
 		return "", err
 	}
+	repoOrgName, err := getRepoOrgFromRepoUrl(repoUrl)
+	if err != nil {
+		return "", err
+	}
 
 	if strings.Contains(repoUrl, "gitlab.") {
-		commitSha, err = f.AsKubeAdmin.CommonController.Gitlab.UpdateFile(repoName, fileName, fileContent, repoRevision)
+		commitSha, err = f.AsKubeAdmin.CommonController.Gitlab.UpdateFile(repoOrgName + "/" + repoName, fileName, fileContent, repoRevision)
 		if err != nil {
-			return "", fmt.Errorf("Failed to update file %s in repo %s revision %s: %v", fileName, repoName, repoRevision, err)
+			return "", fmt.Errorf("Failed to update file %s in repo %s revision %s: %v", fileName, repoOrgName + "/" + repoName, repoRevision, err)
 		}
 	} else {
 		fileResponse, err := f.AsKubeAdmin.CommonController.Github.GetFile(repoName, fileName, repoRevision)
@@ -137,7 +156,7 @@ func templateRepoFile(f *framework.Framework, repoUrl, repoRevision, sourceRepo,
 }
 
 // Fork repository and return forked repo URL
-func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username string) (string, error) {
+func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username, targetOrgName string) (string, error) {
 	// For PaC testing, let's template repo and return forked repo name
 	var forkRepo *github.Repository
 	var sourceName string
@@ -154,19 +173,20 @@ func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username string) (s
 	if err != nil {
 		return "", err
 	}
+
 	targetName = fmt.Sprintf("%s-%s", sourceName, username)
 
 	if strings.Contains(repoUrl, "gitlab.") {
 		logging.Logger.Debug("Forking Gitlab repository %s", repoUrl)
 
 		// Cleanup if it already exists
-		err = f.AsKubeAdmin.CommonController.Gitlab.DeleteRepositoryIfExists(targetName)
+		err = f.AsKubeAdmin.CommonController.Gitlab.DeleteRepositoryIfExists(targetOrgName + "/" + targetName)
 		if err != nil {
 			return "", err
 		}
 
 		// Create fork and make sure it appears
-		forkedRepoURL, err := f.AsKubeAdmin.CommonController.Gitlab.ForkRepository(sourceName, targetName)
+		forkedRepoURL, err := f.AsKubeAdmin.CommonController.Gitlab.ForkRepository(sourceOrgName, sourceName, targetOrgName, targetName)
 		if err != nil {
 			return "", err
 		}
@@ -222,6 +242,7 @@ func HandleRepoForking(ctx *MainContext) error {
 		ctx.Opts.ComponentRepoUrl,
 		ctx.Opts.ComponentRepoRevision,
 		ctx.Username,
+		"jhutar",   // FIXME FIXME FIXME
 	)
 	if err != nil {
 		return logging.Logger.Fail(80, "Repo forking failed: %v", err)
