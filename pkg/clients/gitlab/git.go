@@ -267,35 +267,30 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 
 // ForkRepository forks a source GitLab repository to a target repository.
 // Returns the newly forked repository and an error if the operation fails.
-func (gc *GitlabClient) ForkRepository(sourceProjectID, targetProjectID string) (*gitlab.Project, error) {
+func (gc *GitlabClient) ForkRepository(sourceOrgName, sourceName, targetOrgName, targetName string) (*gitlab.Project, error) {
 	var forkedProject *gitlab.Project
 	var resp *gitlab.Response
 	var err error
 
-	targetSplit := strings.Split(targetProjectID,"/")
-	if len(targetSplit) != 2 {
-		return nil, fmt.Errorf("Failed to parse target repo %s to namespace and repo name", targetProjectID)
-	}
-
-	targetNamespace := targetSplit[0]
-	targetRepo := targetSplit[1]
+	sourceProjectID := sourceOrgName + "/" + sourceName
+	targetProjectID := targetOrgName + "/" + targetName
 
 	opts := &gitlab.ForkProjectOptions{
-		Name: gitlab.Ptr(targetRepo),
-		NamespacePath: gitlab.Ptr(targetNamespace),
-		Path: gitlab.Ptr(targetRepo),
+		Name: gitlab.Ptr(targetName),
+		NamespacePath: gitlab.Ptr(targetOrgName),
+		Path: gitlab.Ptr(targetName),
 	}
 
 	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
 		forkedProject, resp, err = gc.client.Projects.ForkProject(sourceProjectID, opts)
 		if err != nil {
-			fmt.Printf("Failed to fork, trying again: %v\n", err)
+			fmt.Printf("Failed to fork %s, trying again: %v\n", sourceProjectID, err)
 			return false, nil
 		}
 		return true, nil
 	}, time.Second * 10, time.Minute * 5)
 	if err != nil {
-		return nil, fmt.Errorf("Error forking project %s to namespace %s: %w", sourceProjectID, targetNamespace, err)
+		return nil, fmt.Errorf("Error forking project %s to %s: %w", sourceProjectID, targetProjectID, err)
 	}
 
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusAccepted {
