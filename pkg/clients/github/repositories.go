@@ -171,7 +171,7 @@ func (g *Github) DeleteRepositoryIfExists(name string) error {
 	return nil
 }
 
-func (g *Github) forkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName, targetName string) (*github.Repository, error) {
+func (g *Github) ForkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName, targetName string) (*github.Repository, error) {
 	var fork *github.Repository
 	var resp *github.Response
 	var repo *github.Repository
@@ -246,15 +246,15 @@ func (g *Github) forkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName
 
 // Fork repository in our organization
 func (g *Github) ForkRepository(sourceName, targetName string) (*github.Repository, error) {
-	return g.forkRepositoryWithOrgs(g.organization, sourceName, g.organization, targetName)
+	return g.ForkRepositoryWithOrgs(g.organization, sourceName, g.organization, targetName)
 }
 
 // For repozitory from our organization to another org
 func (g *Github) ForkRepositoryToOrg(sourceName, targetName, targetOrgName string) (*github.Repository, error) {
-	return g.forkRepositoryWithOrgs(g.organization, sourceName, targetOrgName, targetName)
+	return g.ForkRepositoryWithOrgs(g.organization, sourceName, targetOrgName, targetName)
 }
 
 // Fork repository from another organization to our org
 func (g *Github) ForkRepositoryFromOrg(sourceName, targetName, sourceOrgName string) (*github.Repository, error) {
-	return g.forkRepositoryWithOrgs(sourceOrgName, sourceName, g.organization, targetName)
+	return g.ForkRepositoryWithOrgs(sourceOrgName, sourceName, g.organization, targetName)
 }
