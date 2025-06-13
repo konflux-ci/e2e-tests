@@ -65,9 +65,19 @@ def message_to_reason(msg: str) -> str | None:
     return "UNKNOWN"
 
 
+def add_reason(error_messages, error_by_code, error_by_reason, message, reason="", code=0):
+    if reason == "":
+        reason = message
+    print("Added", message, reason, code)
+    error_messages.append(message)
+    error_by_code[code] += 1
+    error_by_reason[reason] += 1
+
+
 def main():
     input_file = sys.argv[1]
-    output_file = sys.argv[2]
+    timings_file = sys.argv[2]
+    output_file = sys.argv[3]
 
     error_messages = []  # list of error messages
     error_by_code = collections.defaultdict(
@@ -89,11 +99,25 @@ def main():
 
                 reason = message_to_reason(message)
 
-                error_messages.append(message)
-                error_by_code[code] += 1
-                error_by_reason[reason] += 1
+                add_reason(error_messages, error_by_code, error_by_reason, message, reason, code)
     except FileNotFoundError:
         print("No errors file found, good :-D")
+
+    timings = {}
+    try:
+        with open(timings_file, "r") as fp:
+            timings = json.load(fp)
+    except FileNotFoundError:
+        print("No timings file found, strange :-/")
+        error_messages.append("No timings file found")
+        add_reason(error_messages, error_by_code, error_by_reason, "No timings file found")
+
+    try:
+        if timings["KPI"]["mean"] == -1:
+            add_reason(error_messages, error_by_code, error_by_reason, "No test run finished")
+    except KeyError:
+        print("No KPI metrics in timings data, strange :-(")
+        add_reason(error_messages, error_by_code, error_by_reason, "No KPI metrics in timings data")
 
     data = {
         "error_by_code": error_by_code,
