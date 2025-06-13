@@ -239,7 +239,6 @@ func listAndDeletePipelineRunsWithTimeout(f *framework.Framework, namespace, app
 
 // This handles post-component creation tasks for multi-arch PaC workflow
 func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, appName, compName, repoUrl, repoRev, sourceRepo, sourceRepoDir string, mergeReqNum int, placeholders *map[string]string) error {
-	var repoId string
 	var err error
 
 	// Delete on-pull-request default pipeline run
@@ -250,19 +249,23 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 	logging.Logger.Debug("Repo-templating workflow: Cleaned up (first cleanup) for %s/%s/%s", namespace, appName, compName)
 
 	// Merge default PaC pipelines PR
-	repoId, err = getRepoIdFromRepoUrl(repoUrl)
-	if err != nil {
-		return fmt.Errorf("Failed parsing repo name: %v", err)
-	}
 	if strings.Contains(repoUrl, "gitlab.") {
+		repoId, err := getRepoIdFromRepoUrl(repoUrl)
+		if err != nil {
+			return fmt.Errorf("Failed parsing repo org/name: %v", err)
+		}
 		_, err = f.AsKubeAdmin.CommonController.Gitlab.AcceptMergeRequest(repoId, mergeReqNum)
 	} else {
-		_, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(repoId, mergeReqNum)
+		repoName, err := getRepoIdFromRepoUrl(repoUrl)
+		if err != nil {
+			return fmt.Errorf("Failed parsing repo name: %v", err)
+		}
+		_, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(repoName, mergeReqNum)
 	}
 	if err != nil {
 		return fmt.Errorf("Merging %d failed: %v", mergeReqNum, err)
 	}
-	logging.Logger.Debug("Repo-templating workflow: Merged PR %d in %s", mergeReqNum, repoId)
+	logging.Logger.Debug("Repo-templating workflow: Merged PR %d in %s", mergeReqNum, repoUrl)
 
 	// Delete all pipeline runs as we do not care about these
 	err = listAndDeletePipelineRunsWithTimeout(f, namespace, appName, compName, "", 1)
