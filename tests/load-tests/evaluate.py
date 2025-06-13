@@ -33,6 +33,14 @@ METRICS = [
     "validateTestPipelineRunCondition",
 ]
 
+# These metrics will be ignored if ITS was skipped
+METRICS_ITS = [
+    "createIntegrationTestScenario",
+    "validateIntegrationTestScenario",
+    "validateTestPipelineRunCreation",
+    "validateTestPipelineRunCondition",
+]
+
 
 def str2date(date_str):
     if isinstance(date_str, datetime.datetime):
@@ -81,8 +89,19 @@ def count_stats_when(data):
 
 
 def main():
-    input_file = sys.argv[1]
-    output_file = sys.argv[2]
+    options_file = sys.argv[1]
+    input_file = sys.argv[2]
+    output_file = sys.argv[3]
+
+    # Load test options
+    with open(options_file, "r") as fp:
+        options = json.load(fp)
+
+    # Determine what metrics we need to skip based on options
+    METRICS_to_skip = []
+    if options["TestScenarioGitURL"] == "":
+        print("NOTE: Ignoring ITS related metrics because they were disabled at test run")
+        METRICS_to_skip += METRICS_ITS
 
     stats_raw = {}
 
@@ -115,7 +134,7 @@ def main():
     kpi_mean = 0.0
     kpi_errors = 0
 
-    for m in METRICS:
+    for m in [m for m in METRICS if m not in METRICS_to_skip]:
         stats[m] = {"pass": {"duration": {"samples": 0}, "when": {}}, "fail": {"duration": {"samples": 0}, "when": {}}}
         if m in stats_raw:
             stats[m]["pass"]["duration"] = count_stats(stats_raw[m]["pass"]["duration"])

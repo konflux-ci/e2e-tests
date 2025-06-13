@@ -37,7 +37,7 @@ python3 -m pip install matplotlib
 } &>"${ARTIFACT_DIR}/monitoring-setup.log"
 
 echo "[$(date --utc -Ins)] Create summary JSON with timings"
-./evaluate.py "${ARTIFACT_DIR}/load-test-timings.csv" "${ARTIFACT_DIR}/load-test-timings.json"
+./evaluate.py "${ARTIFACT_DIR}/load-test-options.json" "${ARTIFACT_DIR}/load-test-timings.csv" "${ARTIFACT_DIR}/load-test-timings.json"
 
 echo "[$(date --utc -Ins)] Graphing PRs and TRs"
 ci-scripts/utility_scripts/show-pipelineruns.py --data-dir "${ARTIFACT_DIR}" &>"${ARTIFACT_DIR}/show-pipelineruns.log"
