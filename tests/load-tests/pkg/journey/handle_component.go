@@ -73,6 +73,7 @@ func getPaCPull(annotations map[string]string) (string, error) {
 
 		// Get "merge-url"
 		if data, ok = pac["merge-url"].(string); ok {
+			logging.Logger.Debug("Found PaC merge request URL: %s", data)
 			return data, nil
 		} else {
 			return "", fmt.Errorf("Failed parsing state: %s", buildStatusValue)
