@@ -17,6 +17,7 @@ type Opts struct {
 	ComponentsCount                 int
 	Concurrency                     int
 	FailFast                        bool
+	ForkTarget                      string
 	JourneyDuration                 string
 	JourneyRepeats                  int
 	JourneyUntil                    time.Time
@@ -65,6 +66,14 @@ func (o *Opts) ProcessOptions() error {
 		}
 		if strings.HasSuffix(o.PipelineRepoTemplatingSourceDir, "/") != true {
 			o.PipelineRepoTemplatingSourceDir = o.PipelineRepoTemplatingSourceDir + "/"
+		}
+	}
+
+	// If forking target directory was empty, use MY_GITHUB_ORG env variable
+	if o.ForkTarget == "" {
+		o.ForkTarget = os.Getenv("MY_GITHUB_ORG")
+		if o.ForkTarget == "" {
+			return fmt.Errorf("Was not able to get fork target")
 		}
 	}
 

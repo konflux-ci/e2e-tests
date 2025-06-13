@@ -177,8 +177,6 @@ func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username, targetOrg
 	targetName = fmt.Sprintf("%s-%s", sourceName, username)
 
 	if strings.Contains(repoUrl, "gitlab.") {
-		logging.Logger.Debug("Forking Gitlab repository %s", repoUrl)
-
 		// Cleanup if it already exists
 		err = f.AsKubeAdmin.CommonController.Gitlab.DeleteRepositoryIfExists(targetOrgName + "/" + targetName)
 		if err != nil {
@@ -193,8 +191,6 @@ func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username, targetOrg
 
 		return forkedRepoURL.WebURL, nil
 	} else {
-		logging.Logger.Debug("Forking Github repository %s", repoUrl)
-
 		// Cleanup if it already exists
 		err = f.AsKubeAdmin.CommonController.Github.DeleteRepositoryIfExists(targetName)
 		if err != nil {
@@ -242,11 +238,13 @@ func HandleRepoForking(ctx *MainContext) error {
 		ctx.Opts.ComponentRepoUrl,
 		ctx.Opts.ComponentRepoRevision,
 		ctx.Username,
-		"jhutar",   // FIXME FIXME FIXME
+		ctx.Opts.ForkTarget,
 	)
 	if err != nil {
 		return logging.Logger.Fail(80, "Repo forking failed: %v", err)
 	}
+
+	logging.Logger.Info("Forked %s to %s", ctx.Opts.ComponentRepoUrl, forkUrl)
 
 	ctx.ComponentRepoUrl = forkUrl
 
