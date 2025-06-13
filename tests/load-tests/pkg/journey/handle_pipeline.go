@@ -113,7 +113,7 @@ func HandlePipelineRun(ctx *PerComponentContext) error {
 
 	var err error
 
-	logging.Logger.Debug("Creating build pipeline run for component %s in namespace %s", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
+	logging.Logger.Debug("Waiting for build pipeline run for component %s in namespace %s", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 
 	_, err = logging.Measure(
 		validatePipelineRunCreation,
@@ -126,6 +126,8 @@ func HandlePipelineRun(ctx *PerComponentContext) error {
 		return logging.Logger.Fail(70, "Build Pipeline Run failed creation: %v", err)
 	}
 
+	logging.Logger.Debug("Build pipeline run for component %s in namespace %s created", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
+
 	_, err = logging.Measure(
 		validatePipelineRunCondition,
 		ctx.Framework,
@@ -137,6 +139,8 @@ func HandlePipelineRun(ctx *PerComponentContext) error {
 		return logging.Logger.Fail(71, "Build Pipeline Run failed run: %v", err)
 	}
 
+	logging.Logger.Debug("Build pipeline run for component %s in namespace %s succeeded", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
+
 	_, err = logging.Measure(
 		validatePipelineRunSignature,
 		ctx.Framework,
@@ -147,6 +151,8 @@ func HandlePipelineRun(ctx *PerComponentContext) error {
 	if err != nil {
 		return logging.Logger.Fail(72, "Build Pipeline Run failed signing: %v", err)
 	}
+
+	logging.Logger.Info("Build pipeline run for component %s in namespace %s OK", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 
 	return nil
 }
