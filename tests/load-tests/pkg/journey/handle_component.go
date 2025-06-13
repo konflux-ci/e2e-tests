@@ -257,7 +257,7 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 		}
 		_, err = f.AsKubeAdmin.CommonController.Gitlab.AcceptMergeRequest(repoId, mergeReqNum)
 	} else {
-		repoName, err := getRepoIdFromRepoUrl(repoUrl)
+		repoName, err := getRepoNameFromRepoUrl(repoUrl)
 		if err != nil {
 			return fmt.Errorf("Failed parsing repo name: %v", err)
 		}
