@@ -114,7 +114,8 @@ def main():
 
     try:
         if timings["KPI"]["mean"] == -1:
-            add_reason(error_messages, error_by_code, error_by_reason, "No test run finished")
+            if len(error_messages) == 0:
+                add_reason(error_messages, error_by_code, error_by_reason, "No test run finished")
     except KeyError:
         print("No KPI metrics in timings data, strange :-(")
         add_reason(error_messages, error_by_code, error_by_reason, "No KPI metrics in timings data")
