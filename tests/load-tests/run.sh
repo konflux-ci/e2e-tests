@@ -72,6 +72,7 @@ go run loadtest.go \
     --component-repo-revision "${COMPONENT_REPO_REVISION:-main}" \
     --components-count "${COMPONENTS_COUNT:-1}" \
     --concurrency "${CONCURRENCY:-1}" \
+    --fork-target "${FORK_TARGET:-}" \
     --journey-duration "${JOURNEY_DURATION:-1h}" \
     --journey-repeats "${JOURNEY_REPEATS:-1}" \
     --log-"${LOGGING_LEVEL:-info}" \

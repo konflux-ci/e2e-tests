@@ -38,6 +38,7 @@ func init() {
 	rootCmd.Flags().StringVar(&opts.ComponentRepoRevision, "component-repo-revision", "main", "the component repo revision, git branch")
 	rootCmd.Flags().StringVar(&opts.ComponentContainerFile, "component-repo-container-file", "Dockerfile", "the component repo container file to build")
 	rootCmd.Flags().StringVar(&opts.ComponentContainerContext, "component-repo-container-context", "/", "the context for image build")
+	rootCmd.Flags().StringVar(&opts.ForkTarget, "fork-target", "", "the target namespace (GitLab) or organization (GitHub) to fork component repository to (if empty, will use MY_GITHUB_ORG env variable)")
 	rootCmd.Flags().StringVar(&opts.QuayRepo, "quay-repo", "redhat-user-workloads-stage", "the target quay repo for PaC templated image pushes")
 	rootCmd.Flags().StringVar(&opts.UsernamePrefix, "username", "testuser", "the prefix used for usersignup names")
 	rootCmd.Flags().BoolVarP(&opts.Stage, "stage", "s", false, "is you want to run the test on stage")
