@@ -39,6 +39,9 @@ python3 -m pip install matplotlib
 echo "[$(date --utc -Ins)] Create summary JSON with timings"
 ./evaluate.py "${ARTIFACT_DIR}/load-test-options.json" "${ARTIFACT_DIR}/load-test-timings.csv" "${ARTIFACT_DIR}/load-test-timings.json"
 
+echo "[$(date --utc -Ins)] Create summary JSON with errors"
+./errors.py "${ARTIFACT_DIR}/load-test-errors.csv" "${ARTIFACT_DIR}/load-test-timings.json" "${ARTIFACT_DIR}/load-test-errors.json"
+
 echo "[$(date --utc -Ins)] Graphing PRs and TRs"
 ci-scripts/utility_scripts/show-pipelineruns.py --data-dir "${ARTIFACT_DIR}" &>"${ARTIFACT_DIR}/show-pipelineruns.log"
 mv "${ARTIFACT_DIR}/output.svg" "${ARTIFACT_DIR}/show-pipelines.svg"
@@ -51,7 +54,7 @@ STATUS_DATA_FILE="${ARTIFACT_DIR}/load-test.json"
 status_data.py \
     --status-data-file "${STATUS_DATA_FILE}" \
     --set "name=Konflux loadtest" "started=$( cat started )" "ended=$( cat ended )" \
-    --set-subtree-json "parameters.options=${ARTIFACT_DIR}/load-test-options.json" "results.measurements=${ARTIFACT_DIR}/load-test-timings.json" "results.durations=${ARTIFACT_DIR}/get-taskruns-durations.json"
+    --set-subtree-json "parameters.options=${ARTIFACT_DIR}/load-test-options.json" "results.measurements=${ARTIFACT_DIR}/load-test-timings.json"  "results.errors=${ARTIFACT_DIR}/load-test-errors.json" "results.durations=${ARTIFACT_DIR}/get-taskruns-durations.json"
 
 echo "[$(date --utc -Ins)] Adding monitoring data"
 mstarted="$( date -d "$( cat started )" --utc -Iseconds )"
