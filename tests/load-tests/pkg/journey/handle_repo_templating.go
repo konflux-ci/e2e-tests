@@ -156,7 +156,7 @@ func templateRepoFile(f *framework.Framework, repoUrl, repoRevision, sourceRepo,
 }
 
 // Fork repository and return forked repo URL
-func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username, targetOrgName string) (string, error) {
+func ForkRepo(f *framework.Framework, repoUrl, repoRevision, suffix, targetOrgName string) (string, error) {
 	// For PaC testing, let's template repo and return forked repo name
 	var forkRepo *github.Repository
 	var sourceName string
@@ -174,7 +174,7 @@ func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username, targetOrg
 		return "", err
 	}
 
-	targetName = fmt.Sprintf("%s-%s", sourceName, username)
+	targetName = fmt.Sprintf("%s-%s", sourceName, suffix)
 
 	if strings.Contains(repoUrl, "gitlab.") {
 		// Cleanup if it already exists
@@ -231,13 +231,19 @@ func templateFiles(f *framework.Framework, repoUrl, repoRevision, sourceRepo, so
 }
 
 func HandleRepoForking(ctx *MainContext) error {
-	logging.Logger.Debug("Forking repository %s for user %s", ctx.Opts.ComponentRepoUrl, ctx.Username)
+	var suffix string
+	if ctx.Opts.Stage {
+		suffix = ctx.Opts.UsernamePrefix + "-" + ctx.Username
+	} else {
+		suffix = ctx.Username
+	}
+	logging.Logger.Debug("Forking repository %s with suffix %s to %s", ctx.Opts.ComponentRepoUrl, suffix, ctx.Opts.ForkTarget)
 
 	forkUrl, err := ForkRepo(
 		ctx.Framework,
 		ctx.Opts.ComponentRepoUrl,
 		ctx.Opts.ComponentRepoRevision,
-		ctx.Username,
+		suffix,
 		ctx.Opts.ForkTarget,
 	)
 	if err != nil {
