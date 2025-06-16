@@ -31,11 +31,11 @@ import (
 )
 
 const (
-	sampSourceGitURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic"
-	sampGitSrcSHA          = "6b56d05ac8abb4c24d153e9689209a1018402aad"
-	sampRepoOwner          = "redhat-appstudio-qe"
-	sampRepo               = "devfile-sample-go-basic"
-	sampCatalogPathInRepo  = "pipelines/managed/release-to-github/release-to-github.yaml"
+	sampSourceGitURL      = "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic"
+	sampGitSrcSHA         = "6b56d05ac8abb4c24d153e9689209a1018402aad"
+	sampRepoOwner         = "redhat-appstudio-qe"
+	sampRepo              = "devfile-sample-go-basic"
+	sampCatalogPathInRepo = "pipelines/managed/release-to-github/release-to-github.yaml"
 )
 
 var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github pipeline", Pending, Label("release-pipelines", "release-to-github"), func() {
@@ -76,6 +76,9 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 			Expect(githubToken).ToNot(BeEmpty())
 			Expect(err).ToNot(HaveOccurred())
 
+			releaseCatalogTrustedArtifactsQuayAuthJson := utils.GetEnv("RELEASE_CATALOG_TA_QUAY_TOKEN", "")
+			Expect(releaseCatalogTrustedArtifactsQuayAuthJson).ToNot(BeEmpty())
+
 			_, err = managedFw.AsKubeAdmin.CommonController.GetSecret(managedNamespace, releasecommon.RedhatAppstudioQESecret)
 			if errors.IsNotFound(err) {
 				githubSecret := &corev1.Secret{
@@ -93,10 +96,17 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 			}
 			Expect(err).ToNot(HaveOccurred())
 
+			// Create secret for quay repo for trusted artifacts "quay.io/konflux-ci/release-service-trusted-artifacts".
+			_, err = managedFw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(releasecommon.ReleaseCatalogTAQuaySecret, managedNamespace, releaseCatalogTrustedArtifactsQuayAuthJson)
+			Expect(err).ToNot(HaveOccurred())
+
 			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioQESecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.ReleaseCatalogTAQuaySecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(sampApplicationName, devNamespace)
