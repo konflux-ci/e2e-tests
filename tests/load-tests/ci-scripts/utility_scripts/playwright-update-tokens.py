@@ -105,7 +105,8 @@ def main():
     users_allowlist = []  # keep empty to allow all
 
     for user in users:
-        if users_allowlist is not [] and user["username"] not in users_allowlist:
+        if users_allowlist != [] and user["username"] not in users_allowlist:
+            print(f"Skipping user {user['username']} as it is not in allow list")
             continue
         result_queue = multiprocessing.Queue()
         process = multiprocessing.Process(target=process_it, args=(result_queue, user))
