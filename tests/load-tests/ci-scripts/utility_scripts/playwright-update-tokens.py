@@ -2,7 +2,7 @@
 
 # Docs:
 #     This script uses credentials (username and password) from users.json
-#     to login to console.dev.redhat.com and generate new offline token. It
+#     to login to console.redhat.com and generate new offline token. It
 #     saves updated content to users-new.json.
 #
 # Setup:
@@ -55,8 +55,9 @@ def workload(user):
         playwright_lib.form_login(page, username, password)
 
         # Go to OpenShift Token page
-        page.goto("https://console.dev.redhat.com/openshift/token")
-        page.wait_for_url("https://console.dev.redhat.com/openshift/token**")
+        page.goto("https://console.redhat.com/openshift/token")
+        page.locator('//a[@href="/openshift/token"]').click()
+        page.wait_for_url("https://console.redhat.com/openshift/token**")
         page.wait_for_selector('//h2[text()="Connect with offline tokens"]')
 
         # Wait for token
