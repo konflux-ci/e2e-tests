@@ -147,15 +147,17 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 		})
 
 		var _ = Describe("Post-release verification", func() {
-			It("verifies the rhtap release pipelinerun is running and succeeds", func() {
+			It("verifies if the release CR is created", func() {
 				Eventually(func() error {
 					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 					if err != nil {
 						return err
 					}
 					return nil
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshot.Name) 
+			})
 
+			It("verifies the rhtap release pipelinerun is running and succeeds", func() {
 				Eventually(func() error {
 					pipelineRun, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 					if err != nil {

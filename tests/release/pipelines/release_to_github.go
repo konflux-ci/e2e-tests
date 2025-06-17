@@ -136,15 +136,17 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 
 		var _ = Describe("Post-release verification", func() {
 
-			It("verifies release pipelinerun is running and succeeds", func() {
+			It("verifies if release CR is created", func() {
 				Eventually(func() error {
 					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 					if err != nil {
 						return err
 					}
 					return nil
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshot.Name) 
+			})
 
+			It("verifies the release pipelinerun is running and succeeds", func() {
 				Eventually(func() error {
 					pipelineRun, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 					if err != nil {
