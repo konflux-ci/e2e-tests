@@ -15,6 +15,7 @@ COLUMN_MESSAGE = 2
 
 # Errors patterns we recognize (when newlines were removed)
 ERRORS = {
+    "Application creation timed out waiting for quota evaluation": r"Application failed creation: Unable to create the Application .*: Internal error occurred: resource quota evaluation timed out",
     "Component creation timed out waiting for image-controller annotations": r"Component failed creation: Unable to create the Component .* timed out when waiting for image-controller annotations to be updated on component",
     "Couldnt get pipeline via bundles resolver from quay.io due to 429": r"Message:Error retrieving pipeline for pipelinerun .*bundleresolver.* cannot retrieve the oci image: GET https://quay.io/v2/.*unexpected status code 429 Too Many Requests",
     "Couldnt get pipeline via git resolver from gitlab.cee due to 429": r"Message:.*resolver failed to get Pipeline.*error requesting remote resource.*Git.*https://gitlab.cee.redhat.com/.* status code: 429",
