@@ -36,6 +36,7 @@ ERRORS = {
     "Post-test data collection failed": r"Failed to collect pipeline run JSONs",
     "Repo forking failed as GitLab CEE says 401 Unauthorized": r"Repo forking failed: Error deleting project .*: DELETE https://gitlab.cee.redhat.com/.*: 401 .*message: 401 Unauthorized.*",
     "Repo forking failed as the target is still being deleted": r"Repo forking failed: Error forking project .* POST https://gitlab.cee.redhat.com.* 409 .*Project namespace name has already been taken, The project is still being deleted",
+    "Repo forking failed because gitlab.com returned 503": r"Repo forking failed: Error checking repository .*: GET https://api.github.com/repos/.*: 503 No server is currently available to service your request. Sorry about that. Please try resubmitting your request and contact us if the problem persists.*",
     "Repo forking failed when deleting target repo on gitlab.com (not CEE!) due unathorized": r"Repo forking failed: Error deleting project .* DELETE https://gitlab.com/.* 401 .* Unauthorized",
     "Timeout forking the repo before the actual test": r"Repo forking failed: Error forking project .*: context deadline exceeded",
     "Timeout getting build service account": r"Component build SA failed creation: Component build SA .* not created: context deadline exceeded",
