@@ -281,8 +281,8 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 	if err := h.KubeRest().Create(ctx, componentObject); err != nil {
 		return nil, err
 	}
-
-	if utils.WaitUntil(h.CheckImageRepositoryExists(namespace, componentSpec.ComponentName), time.Minute*5) != nil {
+	// Decrease the timeout to 5 mins, when the issue https://issues.redhat.com/browse/STONEBLD-3552 is fixed
+	if utils.WaitUntil(h.CheckImageRepositoryExists(namespace, componentSpec.ComponentName), time.Minute*15) != nil {
 		return nil, fmt.Errorf("timed out when waiting for image-controller annotations to be updated on component %s in namespace %s. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
 	}
 	return componentObject, nil
