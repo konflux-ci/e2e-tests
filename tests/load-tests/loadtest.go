@@ -9,6 +9,8 @@ import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
 import cobra "github.com/spf13/cobra"
 import klog "k8s.io/klog/v2"
+import klogr "k8s.io/klog/v2/klogr"
+import ctrl "sigs.k8s.io/controller-runtime"
 
 //import "os"
 //import "context"
@@ -36,12 +38,13 @@ func init() {
 	rootCmd.Flags().StringVar(&opts.ComponentRepoRevision, "component-repo-revision", "main", "the component repo revision, git branch")
 	rootCmd.Flags().StringVar(&opts.ComponentContainerFile, "component-repo-container-file", "Dockerfile", "the component repo container file to build")
 	rootCmd.Flags().StringVar(&opts.ComponentContainerContext, "component-repo-container-context", "/", "the context for image build")
+	rootCmd.Flags().StringVar(&opts.ForkTarget, "fork-target", "", "the target namespace (GitLab) or organization (GitHub) to fork component repository to (if empty, will use MY_GITHUB_ORG env variable)")
 	rootCmd.Flags().StringVar(&opts.QuayRepo, "quay-repo", "redhat-user-workloads-stage", "the target quay repo for PaC templated image pushes")
-	rootCmd.Flags().StringVar(&opts.UsernamePrefix, "username", "testuser", "the prefix used for usersignup names")
+	rootCmd.Flags().StringVar(&opts.UsernamePrefix, "username", "testuser", "identifier used for prefix of usersignup names and as suffix when forking repo")
 	rootCmd.Flags().BoolVarP(&opts.Stage, "stage", "s", false, "is you want to run the test on stage")
 	rootCmd.Flags().BoolVarP(&opts.Purge, "purge", "p", false, "purge all users or resources (on stage) after test is done")
 	rootCmd.Flags().BoolVarP(&opts.PurgeOnly, "purge-only", "u", false, "do not run test, only purge resources (this implies --purge)")
-	rootCmd.Flags().StringVar(&opts.TestScenarioGitURL, "test-scenario-git-url", "https://github.com/konflux-ci/integration-examples.git", "test scenario GIT URL")
+	rootCmd.Flags().StringVar(&opts.TestScenarioGitURL, "test-scenario-git-url", "https://github.com/konflux-ci/integration-examples.git", "test scenario GIT URL (set to \"\" to disable creating these)")
 	rootCmd.Flags().StringVar(&opts.TestScenarioRevision, "test-scenario-revision", "main", "test scenario GIT URL repo revision to use")
 	rootCmd.Flags().StringVar(&opts.TestScenarioPathInRepo, "test-scenario-path-in-repo", "pipelines/integration_resolver_pipeline_pass.yaml", "test scenario path in GIT repo")
 	rootCmd.Flags().BoolVarP(&opts.WaitPipelines, "waitpipelines", "w", false, "if you want to wait for pipelines to finish")
@@ -52,7 +55,9 @@ func init() {
 	rootCmd.Flags().StringVar(&opts.JourneyDuration, "journey-duration", "1h", "repeat user journey until this timeout (either this or --journey-repeats)")
 	rootCmd.Flags().BoolVar(&opts.PipelineMintmakerDisabled, "pipeline-mintmaker-disabled", true, "if you want to stop Mintmaker to be creating update PRs for your component (default in loadtest different from Konflux default)")
 	rootCmd.Flags().BoolVar(&opts.PipelineRepoTemplating, "pipeline-repo-templating", false, "if we should use in repo template pipelines (merge PaC PR, template repo pipelines and ignore custom pipeline run, e.g. required for multi arch test)")
-	rootCmd.Flags().StringArrayVar(&opts.PipelineImagePullSecrets, "pipeline-image-pull-secrets", []string{}, "space separated secrets needed to pull task images")
+	rootCmd.Flags().StringVar(&opts.PipelineRepoTemplatingSource, "pipeline-repo-templating-source", "", "when templating, take template source files from this repository (\"\" means we will get source files from current repo)")
+	rootCmd.Flags().StringVar(&opts.PipelineRepoTemplatingSourceDir, "pipeline-repo-templating-source-dir", "", "when templating from additional repository, take template source files from this directory (\"\" means default \".template/\" will ne used)")
+	rootCmd.Flags().StringArrayVar(&opts.PipelineImagePullSecrets, "pipeline-image-pull-secrets", []string{}, "secret needed to pull task images, can be used multiple times")
 	rootCmd.Flags().StringVarP(&opts.OutputDir, "output-dir", "o", ".", "directory where output files such as load-tests.log or load-tests.json are stored")
 	rootCmd.Flags().StringVar(&opts.BuildPipelineSelectorBundle, "build-pipeline-selector-bundle", "", "BuildPipelineSelector bundle to use when testing with build-definition PR")
 	rootCmd.Flags().BoolVarP(&opts.LogInfo, "log-info", "v", false, "log messages with info level and above")
@@ -62,6 +67,15 @@ func init() {
 
 func main() {
 	var err error
+
+	// Setup logging
+	klog.InitFlags(nil)
+	defer klog.Flush()
+	// Set the controller-runtime logger to use klogr.
+	// This makes controller-runtime logs go through klog.
+	// Hopefuly will help us to avoid these errors:
+	//   [controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+	ctrl.SetLogger(klogr.New())
 
 	// Setup argument parser
 	err = rootCmd.Execute()
