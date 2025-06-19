@@ -137,6 +137,10 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch with r
 					if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
 						return nil
 					} else {
+						// store pods for the pipeline
+						if err = managedFw.AsKubeDeveloper.CommonController.StorePodsForPipelineRun(managedNamespace, pipelineRun.GetName()); err != nil {
+							GinkgoWriter.Printf("failed to store pods for PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
+						}
 						prLogs := ""
 						if prLogs, err = tekton.GetFailedPipelineRunLogs(managedFw.AsKubeAdmin.ReleaseController.KubeRest(), managedFw.AsKubeAdmin.ReleaseController.KubeInterface(), pipelineRun); err != nil {
 							GinkgoWriter.Printf("failed to get PLR logs: %+v", err)
