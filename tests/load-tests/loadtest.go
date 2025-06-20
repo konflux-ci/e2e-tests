@@ -47,8 +47,14 @@ func init() {
 	rootCmd.Flags().StringVar(&opts.TestScenarioGitURL, "test-scenario-git-url", "https://github.com/konflux-ci/integration-examples.git", "test scenario GIT URL (set to \"\" to disable creating these)")
 	rootCmd.Flags().StringVar(&opts.TestScenarioRevision, "test-scenario-revision", "main", "test scenario GIT URL repo revision to use")
 	rootCmd.Flags().StringVar(&opts.TestScenarioPathInRepo, "test-scenario-path-in-repo", "pipelines/integration_resolver_pipeline_pass.yaml", "test scenario path in GIT repo")
+	rootCmd.Flags().StringVar(&opts.ReleasePolicy, "release-policy", "", "enterprise contract policy name to use, e.g. \"tmp-onboard-policy\" (keep empty to skip release testing)")
+	rootCmd.Flags().StringVar(&opts.ReleasePipelineUrl, "release-pipeline-url", "https://github.com/konflux-ci/release-service-catalog.git", "release pipeline URL suitable for git resolver")
+	rootCmd.Flags().StringVar(&opts.ReleasePipelineRevision, "release-pipeline-revision", "production", "release pipeline repo branch suitable for git resolver")
+	rootCmd.Flags().StringVar(&opts.ReleasePipelinePath, "release-pipeline-path", "pipelines/managed/e2e/e2e.yaml", "release pipeline file path suitable for git resolver")
+	rootCmd.Flags().StringVar(&opts.ReleasePipelineServiceAccount, "release-pipeline-service-account", "release-serviceaccount", "service account to use for release pipeline")
 	rootCmd.Flags().BoolVarP(&opts.WaitPipelines, "waitpipelines", "w", false, "if you want to wait for pipelines to finish")
 	rootCmd.Flags().BoolVarP(&opts.WaitIntegrationTestsPipelines, "waitintegrationtestspipelines", "i", false, "if you want to wait for IntegrationTests (Integration Test Scenario) pipelines to finish")
+	rootCmd.Flags().BoolVarP(&opts.WaitRelease, "waitrelease", "r", false, "if you want to wait for Release to finish")
 	rootCmd.Flags().BoolVar(&opts.FailFast, "fail-fast", false, "if you want the test to fail fast at first failure")
 	rootCmd.Flags().IntVarP(&opts.Concurrency, "concurrency", "c", 1, "number of concurrent threads to execute")
 	rootCmd.Flags().IntVar(&opts.JourneyRepeats, "journey-repeats", 1, "number of times to repeat user journey (either this or --journey-duration)")
@@ -260,11 +266,25 @@ func perApplicationThread(perApplicationCtx *journey.PerApplicationContext) {
 		return
 	}
 
+	// Create release plan and release plan admission
+	_, err = logging.Measure(journey.HandleReleaseSetup, perApplicationCtx)
+	if err != nil {
+		logging.Logger.Error("Thread failed: %v", err)
+		return
+	}
+
 	// Start given number of `perComponentThread()` threads using `journey.PerComponentSetup()` and wait for them to finish
 	_, err = logging.Measure(journey.PerComponentSetup, perComponentThread, perApplicationCtx)
 	if err != nil {
 		logging.Logger.Fatal("Per component threads setup failed: %v", err)
 	}
+
+	//// Wait for release to finish
+	//_, err = logging.Measure(journey.HandleReleaseRun, perApplicationCtx)
+	//if err != nil {
+	//	logging.Logger.Error("Thread failed: %v", err)
+	//	return
+	//}
 
 }
 
