@@ -22,17 +22,22 @@ type Opts struct {
 	JourneyRepeats                  int
 	JourneyUntil                    time.Time
 	LogDebug                        bool
-	LogTrace                        bool
 	LogInfo                         bool
+	LogTrace                        bool
 	OutputDir                       string
+	PipelineImagePullSecrets        []string
 	PipelineMintmakerDisabled       bool
 	PipelineRepoTemplating          bool
-	PipelineRepoTemplatingSource    string
 	PipelineRepoTemplatingSourceDir string
-	PipelineImagePullSecrets        []string
+	PipelineRepoTemplatingSource    string
 	Purge                           bool
 	PurgeOnly                       bool
 	QuayRepo                        string
+	ReleasePipelinePath             string
+	ReleasePipelineRevision         string
+	ReleasePipelineServiceAccount   string
+	ReleasePipelineUrl              string
+	ReleasePolicy                   string
 	Stage                           bool
 	TestScenarioGitURL              string
 	TestScenarioPathInRepo          string
@@ -40,6 +45,7 @@ type Opts struct {
 	UsernamePrefix                  string
 	WaitIntegrationTestsPipelines   bool
 	WaitPipelines                   bool
+	WaitRelease                     bool
 }
 
 // Pre-process load-test options before running the test
