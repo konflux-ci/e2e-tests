@@ -16,6 +16,7 @@ COLUMN_MESSAGE = 2
 # Errors patterns we recognize (when newlines were removed)
 ERRORS = {
     "Application creation timed out waiting for quota evaluation": r"Application failed creation: Unable to create the Application .*: Internal error occurred: resource quota evaluation timed out",
+    "Build Pipeline Run was cancelled" : r"Build Pipeline Run failed run: PipelineRun for component [\w-]+ in namespace [\w-]+ failed: .* Reason:Cancelled .* Message:PipelineRun .* was cancelled",
     "Component creation timed out waiting for image-controller annotations": r"Component failed creation: Unable to create the Component .* timed out when waiting for image-controller annotations to be updated on component",
     "Couldnt get pipeline via bundles resolver from quay.io due to 429": r"Message:Error retrieving pipeline for pipelinerun .*bundleresolver.* cannot retrieve the oci image: GET https://quay.io/v2/.*unexpected status code 429 Too Many Requests",
     "Couldnt get pipeline via git resolver from gitlab.cee due to 429": r"Message:.*resolver failed to get Pipeline.*error requesting remote resource.*Git.*https://gitlab.cee.redhat.com/.* status code: 429",
@@ -23,11 +24,11 @@ ERRORS = {
     "Couldnt get task via buldles resolver from quay.io due to 429": r"Message:.*Couldn't retrieve Task .*resolver type bundles.*https://quay.io/.* status code 429 Too Many Requests",
     "Couldnt get task via git resolver from gitlab.cee due to 429": r"Message:.*Couldn't retrieve Task .*resolver type git.*https://gitlab.cee.redhat.com/.* status code: 429",
     "Couldnt get task via http resolver from gitlab.cee": r"Message:.*Couldn't retrieve Task .*resolver type http.*error getting.*requested URL .*https://gitlab.cee.redhat.com/.* is not found",
+    "Failed Integration test scenario when calling dintegrationtestscenario.kb.io webhook": r"Integration test scenario failed creation: Unable to create the Integration Test Scenario .*: Internal error occurred: failed calling webhook .*dintegrationtestscenario.kb.io.*: failed to call webhook: Post .*https://integration-service-webhook-service.integration-service.svc:443/mutate-appstudio-redhat-com-v1beta2-integrationtestscenario.*: no endpoints available for service .*integration-service-webhook-service",
     "Failed application creation when calling mapplication.kb.io webhook": r"Application failed creation: Unable to create the Application .*: Internal error occurred: failed calling webhook .*mapplication.kb.io.*: failed to call webhook: Post .*https://application-service-webhook-service.application-service.svc:443/mutate-appstudio-redhat-com-v1alpha1-application.* no endpoints available for service .*application-service-webhook-service",
     "Failed component creation because resource quota evaluation timed out": r"Component failed creation: Unable to create the Component .*: Internal error occurred: resource quota evaluation timed out",
     "Failed component creation when calling mcomponent.kb.io webhook": r"Component failed creation: Unable to create the Component .*: Internal error occurred: failed calling webhook .*mcomponent.kb.io.*: failed to call webhook: Post .*https://application-service-webhook-service.application-service.svc:443/mutate-appstudio-redhat-com-v1alpha1-component.* no endpoints available for service .*application-service-webhook-service.*",
     "Failed creating integration test scenario because it already exists": r"Integration test scenario failed creation: Unable to create the Integration Test Scenario .* integrationtestscenarios.appstudio.redhat.com .* already exists",
-    "Failed Integration test scenario when calling dintegrationtestscenario.kb.io webhook": r"Integration test scenario failed creation: Unable to create the Integration Test Scenario .*: Internal error occurred: failed calling webhook .*dintegrationtestscenario.kb.io.*: failed to call webhook: Post .*https://integration-service-webhook-service.integration-service.svc:443/mutate-appstudio-redhat-com-v1beta2-integrationtestscenario.*: no endpoints available for service .*integration-service-webhook-service",
     "Failed to link pipeline image pull secret to build service account because SA was not found": r"Failed to configure pipeline imagePullSecrets: Unable to add secret .* to service account .*: serviceaccounts .* not found",
     "Failed to merge MR on CEE GitLab due to 405": r"Repo-templating workflow component cleanup failed: Merging [0-9]+ failed: [Pp][Uu][Tt] .*https://gitlab.cee.redhat.com/api/.*/merge_requests/[0-9]+/merge.*message: 405 Method Not Allowed",
     "Failed to merge MR on CEE GitLab due to DNS error": r"Repo-templating workflow component cleanup failed: Merging [0-9]+ failed: [Pp][Uu][Tt] .*https://gitlab.cee.redhat.com/api/.*/merge_requests/[0-9]+/merge.*Temporary failure in name resolution",
@@ -46,7 +47,6 @@ ERRORS = {
     "Timeout waiting for integration test scenario to validate": r"Integration test scenario failed validation: context deadline exceeded",
     "Timeout waiting for test pipeline to create": r"Test Pipeline Run failed creation: context deadline exceeded",
     "Timeout waiting for test pipeline to finish": r"Test Pipeline Run failed run: context deadline exceeded",
-    "Build Pipeline Run failed" : r" PipelineRun for component .* in namespace .* failed"
 }
 
 
