@@ -46,6 +46,7 @@ ERRORS = {
     "Timeout waiting for integration test scenario to validate": r"Integration test scenario failed validation: context deadline exceeded",
     "Timeout waiting for test pipeline to create": r"Test Pipeline Run failed creation: context deadline exceeded",
     "Timeout waiting for test pipeline to finish": r"Test Pipeline Run failed run: context deadline exceeded",
+    "Build Pipeline Run failed" : r" PipelineRun for component .* in namespace .* failed"
 }
 
 
