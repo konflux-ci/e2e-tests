@@ -15,7 +15,7 @@ var BuildServiceCIRule = rulesengine.Rule{Name: "build-service repo CI Workflow 
 		&BuildServiceRepoSetDefaultSettingsRule,
 		rulesengine.Any{&InfraDeploymentsPRPairingRule, rulesengine.None{&InfraDeploymentsPRPairingRule}},
 		&PreflightInstallGinkgoRule,
-		&BootstrapClusterWithSprayProxyRuleChain,
+		rulesengine.Any{rulesengine.None{&BootstrapClusterWithSprayProxyRuleChain}, &BootstrapClusterWithSprayProxyRuleChain},
 	},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteTestAction)},
 }
@@ -29,7 +29,7 @@ var BuildServiceRepoSetDefaultSettingsRule = rulesengine.Rule{Name: "General Req
 		rctx.RequiresSprayProxyRegistering = true
 		klog.Info("require sprayproxy registering is set to TRUE")
 
-		rctx.LabelFilter = "build-service"
+		rctx.LabelFilter = "HACBS"
 		klog.Info("setting 'build-service' test label")
 
 		if rctx.DryRun {

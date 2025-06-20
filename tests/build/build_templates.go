@@ -192,6 +192,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 	var err error
 	AfterEach(framework.ReportFailure(&f))
 
+	var testEnvironment = utils.GetEnv("TEST_ENVIRONMENT", constants.DownstreamTestEnvironment)
+
 	defer GinkgoRecover()
 	Describe("HACBS pipelines", Ordered, Label("pipeline"), func() {
 
@@ -226,7 +228,13 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			} else {
 				applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
 			}
+
 			testNamespace = os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV)
+
+			if testEnvironment == constants.UpstreamTestEnvironment {
+				testNamespace = utils.GetGeneratedNamespace("build-e2e")
+			}
+
 			if len(testNamespace) > 0 {
 				asAdminClient, err := kubeapi.NewAdminKubernetesClient()
 				Expect(err).ShouldNot(HaveOccurred())
