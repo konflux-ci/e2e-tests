@@ -279,13 +279,6 @@ func perApplicationThread(perApplicationCtx *journey.PerApplicationContext) {
 		logging.Logger.Fatal("Per component threads setup failed: %v", err)
 	}
 
-	//// Wait for release to finish
-	//_, err = logging.Measure(journey.HandleReleaseRun, perApplicationCtx)
-	//if err != nil {
-	//	logging.Logger.Error("Thread failed: %v", err)
-	//	return
-	//}
-
 }
 
 // Single component journey (there can be multiple parallel comps per app)
@@ -325,6 +318,13 @@ func perComponentThread(perComponentCtx *journey.PerComponentContext) {
 	_, err = logging.Measure(journey.HandleTest, perComponentCtx)
 	if err != nil {
 		logging.Logger.Error("Per component thread failed: %v", err)
+		return
+	}
+
+	// Wait for release to finish
+	_, err = logging.Measure(journey.HandleReleaseRun, perComponentCtx)
+	if err != nil {
+		logging.Logger.Error("Thread failed: %v", err)
 		return
 	}
 }
