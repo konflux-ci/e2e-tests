@@ -32,6 +32,14 @@ METRICS = [
     "validateSnapshotCreation",
     "validateTestPipelineRunCreation",
     "validateTestPipelineRunCondition",
+    "createReleasePlan",
+    "createReleasePlanAdmission",
+    "validateReleasePlan",
+    "validateReleasePlanAdmission",
+    "validateReleaseCreation",
+    "validateReleasePipelineRunCreation",
+    "validateReleasePipelineRunCondition",
+    "validateReleaseCondition",
 ]
 
 # These metrics will be ignored if ITS was skipped
@@ -40,6 +48,18 @@ METRICS_ITS = [
     "validateIntegrationTestScenario",
     "validateTestPipelineRunCreation",
     "validateTestPipelineRunCondition",
+]
+
+# These metrics will be ignored if Release was skipped
+METRICS_RELEASE = [
+    "createReleasePlan",
+    "createReleasePlanAdmission",
+    "validateReleasePlan",
+    "validateReleasePlanAdmission",
+    "validateReleaseCreation",
+    "validateReleasePipelineRunCreation",
+    "validateReleasePipelineRunCondition",
+    "validateReleaseCondition",
 ]
 
 
@@ -103,6 +123,9 @@ def main():
     if options["TestScenarioGitURL"] == "":
         print("NOTE: Ignoring ITS related metrics because they were disabled at test run")
         METRICS_to_skip += METRICS_ITS
+    if options["ReleasePolicy"] == "":
+        print("NOTE: Ignoring Release related metrics because they were disabled at test run")
+        METRICS_to_skip += METRICS_RELEASE
 
     stats_raw = {}
 
