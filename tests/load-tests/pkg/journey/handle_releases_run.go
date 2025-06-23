@@ -22,7 +22,7 @@ func validateReleaseCreation(f *framework.Framework, namespace, snapshotName str
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
 		release, err := f.AsKubeDeveloper.ReleaseController.GetRelease("", snapshotName, namespace)
 		if err != nil {
-			fmt.Printf("Can not get release for snapshot %s in namespace %s: %v", snapshotName, namespace, err)
+			fmt.Printf("Can not get release for snapshot %s in namespace %s: %v\n", snapshotName, namespace, err)
 			return false, nil
 		}
 
@@ -106,7 +106,7 @@ func validateReleaseCondition(f *framework.Framework, namespace, releaseName str
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
 		release, err := f.AsKubeDeveloper.ReleaseController.GetRelease(releaseName, "", namespace)
 		if err != nil {
-			fmt.Printf("Can not get release %s in namespace %s: %v", releaseName, namespace, err)
+			fmt.Printf("Can not get release %s in namespace %s: %v\n", releaseName, namespace, err)
 			return false, nil
 		}
 
