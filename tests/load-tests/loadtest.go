@@ -255,21 +255,21 @@ func perApplicationThread(perApplicationCtx *journey.PerApplicationContext) {
 	// Create application
 	_, err = logging.Measure(journey.HandleApplication, perApplicationCtx)
 	if err != nil {
-		logging.Logger.Error("Thread failed: %v", err)
+		logging.Logger.Error("Per application thread failed: %v", err)
 		return
 	}
 
 	// Create integration test scenario
 	_, err = logging.Measure(journey.HandleIntegrationTestScenario, perApplicationCtx)
 	if err != nil {
-		logging.Logger.Error("Thread failed: %v", err)
+		logging.Logger.Error("Per application thread failed: %v", err)
 		return
 	}
 
 	// Create release plan and release plan admission
 	_, err = logging.Measure(journey.HandleReleaseSetup, perApplicationCtx)
 	if err != nil {
-		logging.Logger.Error("Thread failed: %v", err)
+		logging.Logger.Error("Per application thread failed: %v", err)
 		return
 	}
 
@@ -324,7 +324,7 @@ func perComponentThread(perComponentCtx *journey.PerComponentContext) {
 	// Wait for release to finish
 	_, err = logging.Measure(journey.HandleReleaseRun, perComponentCtx)
 	if err != nil {
-		logging.Logger.Error("Thread failed: %v", err)
+		logging.Logger.Error("Per component thread failed: %v", err)
 		return
 	}
 }
