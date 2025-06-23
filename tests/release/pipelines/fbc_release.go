@@ -387,6 +387,10 @@ func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framew
 		"sign": map[string]interface{}{
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",
 		},
+		"pyxis": map[string]interface{}{
+			"server": "stage",
+			"secret": "pyxis",
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 
