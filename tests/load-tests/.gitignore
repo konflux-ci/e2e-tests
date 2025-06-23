@@ -5,4 +5,10 @@
 load-tests.json
 load-tests.*.json
 output.json
-users.json
+users*.json
+
+loadtest
+
+OLD/
+videos/
+collected-data/
