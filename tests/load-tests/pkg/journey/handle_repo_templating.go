@@ -199,7 +199,7 @@ func ForkRepo(f *framework.Framework, repoUrl, repoRevision, suffix, targetOrgNa
 
 		// Create fork and make sure it appears
 		err = utils.WaitUntilWithInterval(func() (done bool, err error) {
-			forkRepo, err = f.AsKubeAdmin.CommonController.Github.ForkRepositoryFromOrg(sourceName, targetName, sourceOrgName)
+			forkRepo, err = f.AsKubeAdmin.CommonController.Github.ForkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName, targetName)
 			if err != nil {
 				logging.Logger.Debug("Repo forking failed, trying again: %v", err)
 				return false, nil
