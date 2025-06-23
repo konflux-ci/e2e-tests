@@ -61,22 +61,22 @@ func validateReleasePlan(f *framework.Framework, namespace, name string) error {
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
 		releasePlan, err := f.AsKubeDeveloper.ReleaseController.GetReleasePlan(name, namespace)
 		if err != nil {
-			fmt.Printf("Unable to get ReleasePlan %s in %s: %v", name, namespace, err)
+			fmt.Printf("Unable to get ReleasePlan %s in %s: %v\n", name, namespace, err)
 			return false, nil
 		}
 
 		condition := meta.FindStatusCondition(releasePlan.Status.Conditions, releaseApi.MatchedConditionType.String())
 		if condition == nil {
-			fmt.Printf("MatchedConditon of %s is still not set", releasePlan.Name)
+			fmt.Printf("MatchedConditon of %s is still not set\n", releasePlan.Name)
 			return false, nil
 		}
 		// it may need a period of time for the ReleasePlanCR to be reconciled
 		if condition.Status == metav1.ConditionFalse {
-			fmt.Printf("MatchedConditon of %s has not reconciled yet", releasePlan.Name)
+			fmt.Printf("MatchedConditon of %s has not reconciled yet\n", releasePlan.Name)
 			return false, nil
 		}
 		if condition.Status != metav1.ConditionTrue {
-			fmt.Printf("MatchedConditon of %s is not true yet", releasePlan.Name)
+			fmt.Printf("MatchedConditon of %s is not true yet\n", releasePlan.Name)
 			return false, nil
 		}
 		if condition.Reason == releaseApi.MatchedReason.String() {
@@ -100,22 +100,22 @@ func validateReleasePlanAdmission(f *framework.Framework, namespace, name string
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
 		releasePlanAdmission, err := f.AsKubeDeveloper.ReleaseController.GetReleasePlanAdmission(name, namespace)
 		if err != nil {
-			fmt.Printf("Unable to get ReleasePlanAdmission %s in %s: %v", name, namespace, err)
+			fmt.Printf("Unable to get ReleasePlanAdmission %s in %s: %v\n", name, namespace, err)
 			return false, nil
 		}
 
 		condition := meta.FindStatusCondition(releasePlanAdmission.Status.Conditions, releaseApi.MatchedConditionType.String())
 		if condition == nil {
-			fmt.Printf("MatchedConditon of %s is still not set", releasePlanAdmission.Name)
+			fmt.Printf("MatchedConditon of %s is still not set\n", releasePlanAdmission.Name)
 			return false, nil
 		}
 		// it may need a period of time for the ReleasePlanCR to be reconciled
 		if condition.Status == metav1.ConditionFalse {
-			fmt.Printf("MatchedConditon of %s has not reconciled yet", releasePlanAdmission.Name)
+			fmt.Printf("MatchedConditon of %s has not reconciled yet\n", releasePlanAdmission.Name)
 			return false, nil
 		}
 		if condition.Status != metav1.ConditionTrue {
-			fmt.Printf("MatchedConditon of %s is not true yet", releasePlanAdmission.Name)
+			fmt.Printf("MatchedConditon of %s is not true yet\n", releasePlanAdmission.Name)
 			return false, nil
 		}
 		if condition.Reason == releaseApi.MatchedReason.String() {
