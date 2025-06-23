@@ -17,6 +17,11 @@ set -eu -o pipefail
 #   shovel.py horreum --base-url https://horreum.corp.redhat.com/ --api-token "$HORREUM_API_TOKEN" schema-label-delete --schema-uri "urn:rhtap-perf-team-load-test:1.0" --id 999999
 #
 # But here we are using just one that updates (or adds if label with the name is missing) labels for given extractor JSON path expressions:
+#
+# I'm using this helper to add new labels for new test phases when they are processed by evaluate.py and stored into load-test-timings.json:
+#
+#   jq -r '. | keys[]' load-test-timings.json | grep -v '^KPI$' | while read m; do echo "horreum_schema_label_present '\$.results.measurements.$m.error_rate'"; echo "horreum_schema_label_present '\$.results.measurements.$m.pass.duration.mean'"; done | LANG=C sort >/tmp/list.sh
+#   meld /tmp/list.sh ci-scripts/config/horreum-labels.sh
 
 function horreum_schema_label_present() {
     local extractor="$1"
@@ -197,18 +202,22 @@ horreum_schema_label_present '$.results.durations.stats.taskruns."test/test-outp
 horreum_schema_label_present '$.results.durations.stats.taskruns."test/test-output".passed.running.mean'
 horreum_schema_label_present '$.results.durations.stats.taskruns."test/test-output".passed.scheduled.mean'
 horreum_schema_label_present '$.results.errors.error_reasons_simple'
-horreum_schema_label_present '$.results.measurements.createApplication.error_rate'
-horreum_schema_label_present '$.results.measurements.createApplication.pass.duration.mean'
-horreum_schema_label_present '$.results.measurements.createComponent.error_rate'
-horreum_schema_label_present '$.results.measurements.createComponent.pass.duration.mean'
-horreum_schema_label_present '$.results.measurements.getPaCPullNumber.error_rate'
-horreum_schema_label_present '$.results.measurements.getPaCPullNumber.pass.duration.mean'
-horreum_schema_label_present '$.results.measurements.createIntegrationTestScenario.error_rate'
-horreum_schema_label_present '$.results.measurements.createIntegrationTestScenario.pass.duration.mean'
 horreum_schema_label_present '$.results.measurements.HandleUser.error_rate'
 horreum_schema_label_present '$.results.measurements.HandleUser.pass.duration.mean'
 horreum_schema_label_present '$.results.measurements.KPI.errors'
 horreum_schema_label_present '$.results.measurements.KPI.mean'
+horreum_schema_label_present '$.results.measurements.createApplication.error_rate'
+horreum_schema_label_present '$.results.measurements.createApplication.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.createComponent.error_rate'
+horreum_schema_label_present '$.results.measurements.createComponent.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.createIntegrationTestScenario.error_rate'
+horreum_schema_label_present '$.results.measurements.createIntegrationTestScenario.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.createReleasePlan.error_rate'
+horreum_schema_label_present '$.results.measurements.createReleasePlan.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.createReleasePlanAdmission.error_rate'
+horreum_schema_label_present '$.results.measurements.createReleasePlanAdmission.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.getPaCPullNumber.error_rate'
+horreum_schema_label_present '$.results.measurements.getPaCPullNumber.pass.duration.mean'
 horreum_schema_label_present '$.results.measurements.validateApplication.error_rate'
 horreum_schema_label_present '$.results.measurements.validateApplication.pass.duration.mean'
 horreum_schema_label_present '$.results.measurements.validateComponentBuildSA.error_rate'
@@ -221,6 +230,18 @@ horreum_schema_label_present '$.results.measurements.validatePipelineRunCreation
 horreum_schema_label_present '$.results.measurements.validatePipelineRunCreation.pass.duration.mean'
 horreum_schema_label_present '$.results.measurements.validatePipelineRunSignature.error_rate'
 horreum_schema_label_present '$.results.measurements.validatePipelineRunSignature.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.validateReleaseCondition.error_rate'
+horreum_schema_label_present '$.results.measurements.validateReleaseCondition.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.validateReleaseCreation.error_rate'
+horreum_schema_label_present '$.results.measurements.validateReleaseCreation.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.validateReleasePipelineRunCondition.error_rate'
+horreum_schema_label_present '$.results.measurements.validateReleasePipelineRunCondition.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.validateReleasePipelineRunCreation.error_rate'
+horreum_schema_label_present '$.results.measurements.validateReleasePipelineRunCreation.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.validateReleasePlan.error_rate'
+horreum_schema_label_present '$.results.measurements.validateReleasePlan.pass.duration.mean'
+horreum_schema_label_present '$.results.measurements.validateReleasePlanAdmission.error_rate'
+horreum_schema_label_present '$.results.measurements.validateReleasePlanAdmission.pass.duration.mean'
 horreum_schema_label_present '$.results.measurements.validateSnapshotCreation.error_rate'
 horreum_schema_label_present '$.results.measurements.validateSnapshotCreation.pass.duration.mean'
 horreum_schema_label_present '$.results.measurements.validateTestPipelineRunCondition.error_rate'
