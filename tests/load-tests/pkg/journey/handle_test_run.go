@@ -117,6 +117,8 @@ func HandleTest(ctx *PerComponentContext) error {
 	if ctx.ParentContext.ParentContext.Opts.TestScenarioGitURL == "" {
 		logging.Logger.Debug("Integration Test Scenario GIT not provided, not waiting for it")
 	} else {
+		logging.Logger.Debug("Waiting for test pipeline run for component %s in namespace %s to be created", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
+
 		_, err = logging.Measure(
 			validateTestPipelineRunCreation,
 			ctx.Framework,
@@ -127,6 +129,8 @@ func HandleTest(ctx *PerComponentContext) error {
 		if err != nil {
 			return logging.Logger.Fail(82, "Test Pipeline Run failed creation: %v", err)
 		}
+
+		logging.Logger.Debug("Waiting for test pipeline run for component %s in namespace %s to finish", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 
 		_, err = logging.Measure(
 			validateTestPipelineRunCondition,
