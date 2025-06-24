@@ -91,6 +91,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			managedFw = releasecommon.NewFramework(managedWorkspace)
 			managedNamespace = managedFw.UserNamespace
 
+			pyxisFieldEnvMap := map[string]string{
+				"key":  constants.PYXIS_STAGE_KEY_ENV,
+				"cert": constants.PYXIS_STAGE_CERT_ENV,
+			}
+			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
+
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcApplicationName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
 			GinkgoWriter.Println("created application :", fbcApplicationName)
@@ -140,6 +146,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 
 			managedNamespace = managedFw.UserNamespace
 
+			pyxisFieldEnvMap := map[string]string{
+				"key":  constants.PYXIS_STAGE_KEY_ENV,
+				"cert": constants.PYXIS_STAGE_CERT_ENV,
+			}
+			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
+
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcStagedAppName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
 			GinkgoWriter.Printf("Application %s is created", fbcStagedAppName)
@@ -187,6 +199,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
+
+			pyxisFieldEnvMap := map[string]string{
+				"key":  constants.PYXIS_STAGE_KEY_ENV,
+				"cert": constants.PYXIS_STAGE_CERT_ENV,
+			}
+			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcHotfixAppName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
@@ -236,6 +254,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
+
+			pyxisFieldEnvMap := map[string]string{
+				"key":  constants.PYXIS_STAGE_KEY_ENV,
+				"cert": constants.PYXIS_STAGE_CERT_ENV,
+			}
+			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcPreGAAppName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
@@ -386,6 +410,10 @@ func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framew
 		},
 		"sign": map[string]interface{}{
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",
+		},
+		"pyxis": map[string]interface{}{
+			"server": "stage",
+			"secret": "pyxis",
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
