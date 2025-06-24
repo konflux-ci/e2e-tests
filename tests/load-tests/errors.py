@@ -34,6 +34,7 @@ ERRORS = {
     "Failed to link pipeline image pull secret to build service account because SA was not found": r"Failed to configure pipeline imagePullSecrets: Unable to add secret .* to service account .*: serviceaccounts .* not found",
     "Failed to merge MR on CEE GitLab due to 405": r"Repo-templating workflow component cleanup failed: Merging [0-9]+ failed: [Pp][Uu][Tt] .*https://gitlab.cee.redhat.com/api/.*/merge_requests/[0-9]+/merge.*message: 405 Method Not Allowed",
     "Failed to merge MR on CEE GitLab due to DNS error": r"Repo-templating workflow component cleanup failed: Merging [0-9]+ failed: [Pp][Uu][Tt] .*https://gitlab.cee.redhat.com/api/.*/merge_requests/[0-9]+/merge.*Temporary failure in name resolution",
+    "Failed validating release condition": r"Release .* in namespace .* failed: .*Message:Release validation failed.*",
     "GitLab token used by test expired": r"Repo forking failed: Error deleting project .*: DELETE https://gitlab.cee.redhat.com/.*: 401 .*error: invalid_token.*error_description: Token is expired. You can either do re-authorization or token refresh",
     "Pipeline failed": r"Message:Tasks Completed: [0-9]+ \(Failed: [1-9]+,",
     "Post-test data collection failed": r"Failed to collect pipeline run JSONs",
