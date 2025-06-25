@@ -28,6 +28,10 @@ func validateSnapshotCreation(f *framework.Framework, namespace, compName string
 		return true, nil
 	}, interval, timeout)
 
+	if err != nil {
+		return "", err
+	}
+
 	return snap.Name, err
 }
 
