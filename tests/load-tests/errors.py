@@ -6,6 +6,8 @@ import json
 import re
 import sys
 import collections
+import os
+import time
 
 
 # Column indexes in input data
@@ -49,8 +51,16 @@ ERRORS = {
     "Timeout waiting for test pipeline to finish": r"Test Pipeline Run failed run: context deadline exceeded",
 }
 
+FAILED_PLR_ERRORS = {
+    "SKIP": r"Skipping step because a previous step failed",
+    "Error allocating host as provision TR already exists": r"Error allocating host: taskruns.tekton.dev \".*provision\" already exists",
+    "RPM build failed: bool cannot be defined via typedef": r"error: .bool. cannot be defined via .typedef..*error: Bad exit status from /var/tmp/rpm-tmp..* ..build.",
+    "Failed because registry.access.redhat.com returned 503 when reading manifest": r"source-build:ERROR:command execution failure, status: 1, stderr: time=.* level=fatal msg=.Error parsing image name .* reading manifest .* in registry.access.redhat.com/.* received unexpected HTTP status: 503 Service Unavailable",
+    "Failed because of quay.io returned 502": r"level=fatal msg=.Error parsing image name .*docker://quay.io/.* Requesting bearer token: invalid status code from registry 502 .Bad Gateway.",
+}
 
-def message_to_reason(msg: str) -> str | None:
+
+def message_to_reason(reasons_and_errors: dict, msg: str) -> str | None:
     """
     Classifies an error message using regular expressions and returns the error name.
 
@@ -61,7 +71,7 @@ def message_to_reason(msg: str) -> str | None:
       The name of the error if a pattern matches, otherwise string "UNKNOWN".
     """
     msg = msg.replace("\n", " ")  # Remove newlines
-    for error_name, pattern in ERRORS.items():
+    for error_name, pattern in reasons_and_errors.items():
         if re.search(pattern, msg):
             return error_name
     print(f"Unknown error: {msg}")
@@ -77,10 +87,124 @@ def add_reason(error_messages, error_by_code, error_by_reason, message, reason="
     error_by_reason[reason] += 1
 
 
+def load(datafile):
+    if datafile.endswith(".yaml") or datafile.endswith(".yml"):
+        try:
+            with open(datafile, "r") as fd:
+                data = yaml.safe_load(fd)
+        except json.decoder.JSONDecodeError:
+            raise Exception(f"File {datafile} is malfrmed YAML, skipping it")
+    elif datafile.endswith(".json"):
+        try:
+            with open(datafile, "r") as fp:
+                data = json.load(fp)
+        except json.decoder.JSONDecodeError:
+            raise Exception(f"File {datafile} is malfrmed JSON, skipping it")
+    else:
+        raise Exception("Unknown data file format")
+
+    return data
+
+
+def find_first_failed_build_plr(data_dir):
+    """ This function is intended for jobs where we only run one concurrent
+    builds, so no more than one can failed: our load test probes.
+
+    This is executed when test hits "Pipeline failed" error and this is
+    first step to identify task that failed so we can identify error in
+    the pod log.
+
+    It goes through given data directory (probably "collected-data/") and
+    loads all files named "collected-pipelinerun-*" and checks that PLR is
+    a "build" PLR and it is failed one.
+    """
+
+    for currentpath, folders, files in os.walk(data_dir):
+        for datafile in files:
+            if not datafile.startswith("collected-pipelinerun-"):
+                continue
+
+            datafile = os.path.join(currentpath, datafile)
+            data = load(datafile)
+
+            # Skip PLRs that are not "build" PLRs
+            try:
+                if data["metadata"]["labels"]["pipelines.appstudio.openshift.io/type"] != "build":
+                    continue
+            except KeyError:
+                continue
+
+            # Skip PLRs that did not failed
+            try:
+                succeeded = True
+                for c in data["status"]["conditions"]:
+                    if c["type"] == "Succeeded":
+                        if c["status"] == "False":
+                            succeeded = False
+                            break
+                if succeeded:
+                    continue
+            except KeyError:
+                continue
+
+            return data
+
+def find_trs(plr):
+    try:
+        for tr in plr["status"]["childReferences"]:
+            yield tr["name"]
+    except KeyError:
+        return
+
+def find_failed_containers(data_dir, ns, tr_name):
+    datafile = os.path.join(data_dir, ns, "1", "collected-taskrun-" + tr_name + ".json")
+    data = load(datafile)
+
+    try:
+        pod_name = data["status"]["podName"]
+        for sr in data["status"]["steps"]:
+            if sr["terminated"]["exitCode"] != 0:
+                yield (pod_name, sr["container"])
+    except KeyError:
+        return
+
+def load_container_log(data_dir, ns, pod_name, cont_name):
+    datafile = os.path.join(data_dir, ns, "1", "pod-" + pod_name + "-" + cont_name + ".log")
+    print(f"Checking errors in {datafile}")
+    with open(datafile, "r") as fd:
+        return fd.read()
+
+def investigate_failed_plr(dump_dir):
+    try:
+        reasons = []
+
+        plr = find_first_failed_build_plr(dump_dir)
+        if plr == None:
+            return ["SORRY PLR not found"]
+
+        plr_ns = plr["metadata"]["namespace"]
+
+        for tr_name in find_trs(plr):
+            for pod_name, cont_name in find_failed_containers(dump_dir, plr_ns, tr_name):
+                log_lines = load_container_log(dump_dir, plr_ns, pod_name, cont_name)
+                reason = message_to_reason(FAILED_PLR_ERRORS, log_lines)
+
+                if reason == "SKIP":
+                    continue
+
+                reasons.append(reason)
+
+        reasons = list(set(reasons))   # get unique reasons only
+        reasons.sort()   # sort reasons
+        return reasons
+    except Exception as e:
+        return ["SORRY " + str(e)]
+
 def main():
     input_file = sys.argv[1]
     timings_file = sys.argv[2]
     output_file = sys.argv[3]
+    dump_dir = sys.argv[4]
 
     error_messages = []  # list of error messages
     error_by_code = collections.defaultdict(
@@ -100,7 +224,11 @@ def main():
                 code = row[COLUMN_CODE]
                 message = row[COLUMN_MESSAGE]
 
-                reason = message_to_reason(message)
+                reason = message_to_reason(ERRORS, message)
+
+                if reason == "Pipeline failed":
+                    reasons2 = investigate_failed_plr(dump_dir)
+                    reason = reason + ": " + ", ".join(reasons2)
 
                 add_reason(error_messages, error_by_code, error_by_reason, message, reason, code)
     except FileNotFoundError:
