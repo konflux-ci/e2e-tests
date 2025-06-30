@@ -149,7 +149,7 @@ func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (res *http.Response,
 
 	// Handle the result.
 	if e != nil {
-		GinkgoWriter.Printf("Sandbox proxy error: %v", e)
+		GinkgoWriter.Printf("Sandbox proxy error: %v\n", e)
 	}
 	return res, e
 }
@@ -298,7 +298,7 @@ func (s *SandboxController) UpdateUserSignup(userSignupName string, modifyUserSi
 
 		modifyUserSignup(freshUserSignup)
 		if err := s.KubeRest.Update(context.Background(), freshUserSignup); err != nil {
-			GinkgoWriter.Printf("error updating UserSignup '%s': %s. Will retry again...", userSignupName, err.Error())
+			GinkgoWriter.Printf("error updating UserSignup '%s': %s. Will retry again...\n", userSignupName, err.Error())
 			return false, nil
 		}
 		userSignup = freshUserSignup
