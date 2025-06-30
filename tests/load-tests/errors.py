@@ -199,6 +199,9 @@ def investigate_failed_plr(dump_dir):
         reasons = list(set(reasons))   # get unique reasons only
         reasons.sort()   # sort reasons
         return reasons
+    except FileNotFoundError as e:
+        print(f"Failed to locate required files: {e}")
+        return ["SORRY, missing data"]
     except Exception as e:
         return ["SORRY " + str(e)]
 
