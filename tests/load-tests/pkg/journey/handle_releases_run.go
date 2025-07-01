@@ -46,7 +46,7 @@ func validateReleasePipelineRunCreation(f *framework.Framework, namespace, relea
 		_, err = f.AsKubeDeveloper.ReleaseController.GetPipelineRunInNamespace(namespace, releaseName, namespace)
 		if err != nil {
 			fmt.Printf("Pipelinerun for release %s in namespace %s not created yet: %v\n", releaseName, namespace, err)
-			return true, nil
+			return false, nil
 		}
 
 		return true, nil
@@ -67,7 +67,7 @@ func validateReleasePipelineRunCondition(f *framework.Framework, namespace, rele
 		pipelineRun, err := f.AsKubeDeveloper.ReleaseController.GetPipelineRunInNamespace(namespace, releaseName, namespace)
 		if err != nil {
 			fmt.Printf("PipelineRun for release %s in namespace %s not created yet: %v\n", releaseName, namespace, err)
-			return true, nil
+			return false, nil
 		}
 
 		// Check if there are some conditions
