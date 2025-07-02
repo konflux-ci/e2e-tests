@@ -58,6 +58,7 @@ ERRORS = {
 
 FAILED_PLR_ERRORS = {
     "SKIP": r"Skipping step because a previous step failed",
+    "Can not find chroot_scan.tar.gz file": r"tar: .*/chroot_scan.tar.gz: Cannot open: No such file or directory",
     "DNF failed to download repodata from Koji": r"ERROR Command returned error: Failed to download metadata (baseurl: \"https://kojipkgs.fedoraproject.org/repos/[^ ]*\") for repository \"build\": Usable URL not found",
     "Error allocating host as provision TR already exists": r"Error allocating host: taskruns.tekton.dev \".*provision\" already exists",
     "Failed because of quay.io returned 502": r"level=fatal msg=.Error parsing image name .*docker://quay.io/.* Requesting bearer token: invalid status code from registry 502 .Bad Gateway.",
