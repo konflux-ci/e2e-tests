@@ -49,12 +49,23 @@ var ReleaseServiceCatalogRepoSetDefaultSettingsRule = rulesengine.Rule{Name: "Ge
 		IsReleaseServiceCatalogRepoPR,
 	},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
-		testcases, err := selectReleasePipelinesTestCases(rctx.PrNum)
-		if err != nil {
-			rctx.LabelFilter = "release-pipelines"
-			klog.Errorf("an error occurred in selectReleasePipelinesTestCases: %s", err)
+		// The job may come from different ITS
+		if strings.Contains(rctx.JobName, "konflux-e2e-tests-catalog") {
+			testcases, err := selectReleasePipelinesTestCases(rctx.PrNum)
+			if err != nil {
+				rctx.LabelFilter = "release-pipelines"
+				klog.Errorf("an error occurred in selectReleasePipelinesTestCases: %s", err)
+			} else {
+				rctx.LabelFilter = strings.ReplaceAll(testcases, " ", "||")
+			}
 		} else {
-			rctx.LabelFilter = strings.ReplaceAll(testcases, " ", "||")
+			parts := strings.Split(rctx.JobName, "-e2e-test")
+			if len(parts) > 0 {
+				rctx.LabelFilter = parts[0]
+			} else {
+				rctx.LabelFilter = "no-test-case"
+				klog.Errorf("the JobName %s is not in the format of <its-name>-e2e-test-xxx", rctx.JobName)
+			}
 		}
 		klog.Info("setting test label for release-pipelines: ", rctx.LabelFilter)
 
