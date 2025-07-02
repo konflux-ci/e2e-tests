@@ -78,6 +78,7 @@ spec:
         secretName: konflux-test-infra
     - name: cluster-secret-volume
       secret:
+        optional: true
         secretName: $(params.cluster-access-secret-name)
   steps:
     - name: initialize-sealights-session
