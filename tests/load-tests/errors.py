@@ -50,6 +50,21 @@ ERRORS = {
     "Timeout getting build service account": r"Component build SA failed creation: Component build SA .* not created: context deadline exceeded",
     "Timeout getting pipeline": r"Message:.*resolver failed to get Pipeline.*resolution took longer than global timeout of .*",
     "Timeout getting task via git resolver from gitlab.cee": r"Message:.*Couldn't retrieve Task .*resolver type git.*https://gitlab.cee.redhat.com/.* resolution took longer than global timeout of .*",
+    # Last time I seen this we discussed it here:
+    #
+    #   https://redhat-internal.slack.com/archives/C04PZ7H0VA8/p1751530663606749
+    #
+    # And it manifested itself by check on initial PR failing with:
+    #
+    #   the namespace of the provided object does not match the namespace sent on the request
+    #
+    # And folks noticed this in the PaC controller logs:
+    #
+    #   There was an error starting the PipelineRun test-rhtap-1-app-ryliu-comp-0-on-pull-request-, creating pipelinerun
+    #   test-rhtap-1-app-ryliu-comp-0-on-pull-request- in namespace test-rhtap-1-tenant has failed. Tekton Controller has
+    #   reported this error: ```Internal error occurred: failed calling webhook "vpipelineruns.konflux-ci.dev": failed
+    #   to call webhook: Post "https://etcd-shield.etcd-shield.svc:443/validate-tekton-dev-v1-pipelinerun?timeout=10s":
+    #   context deadline exceeded```
     "Timeout listing pipeline runs": r"Repo-templating workflow component cleanup failed: Error deleting on-pull-request default PipelineRun in namespace .*: Unable to list PipelineRuns for component .* in namespace .*: context deadline exceeded",
     "Timeout waiting for build pipeline to be created": r"Build Pipeline Run failed creation: context deadline exceeded",
     "Timeout waiting for integration test scenario to validate": r"Integration test scenario failed validation: context deadline exceeded",
