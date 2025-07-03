@@ -81,6 +81,7 @@ FAILED_PLR_ERRORS = {
     "Error allocating host as provision TR already exists": r"Error allocating host: taskruns.tekton.dev \".*provision\" already exists",
     "Failed because of quay.io returned 502": r"level=fatal msg=.Error parsing image name .*docker://quay.io/.* Requesting bearer token: invalid status code from registry 502 .Bad Gateway.",
     "Failed because registry.access.redhat.com returned 503 when reading manifest": r"source-build:ERROR:command execution failure, status: 1, stderr: time=.* level=fatal msg=.Error parsing image name .* reading manifest .* in registry.access.redhat.com/.* received unexpected HTTP status: 503 Service Unavailable",
+    "Introspection failed because of incomplete .docker/config.json": r".* level=fatal msg=\"Error parsing image name .*: getting username and password: reading JSON file .*/tekton/home/.docker/config.json.*: unmarshaling JSON at .*: unexpected end of JSON input\"",
     "RPM build failed: bool cannot be defined via typedef": r"error: .bool. cannot be defined via .typedef..*error: Bad exit status from /var/tmp/rpm-tmp..* ..build.",
 }
 
