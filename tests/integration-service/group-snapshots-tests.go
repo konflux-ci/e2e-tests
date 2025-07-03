@@ -496,7 +496,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			It("wait for the last components build to finish", func() {
 				componentNames = []string{componentA.Name, componentB.Name, componentC.Name}
 				for _, component := range componentNames {
-					Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineToBeFinished(testNamespace, applicationName, component, "")).To(Succeed())
+					isPass, logs := f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineToBeFinished(testNamespace, applicationName, component, "")
+					Expect(isPass).Should(Succeed(), fmt.Sprintf("build pipelinerun fails for NameSpace/Application/Component %s/%s/%s with logs: %s", testNamespace, applicationName, component, logs))
 				}
 			})
 
@@ -551,7 +552,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 				GinkgoWriter.Println("Waiting for build pipelineRun created yet for app %s/%s, sha: %s", testNamespace, applicationName, secondFileSha)
 				componentNames = []string{componentA.Name, componentB.Name}
 				for _, component := range componentNames {
-					Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineToBeFinished(testNamespace, applicationName, component, secondFileSha)).To(Succeed())
+					isPass, logs := f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineToBeFinished(testNamespace, applicationName, component, secondFileSha)
+					Expect(isPass).Should(Succeed(), fmt.Sprintf("build pipelinerun fails for NameSpace/Application/Component/sha %s/%s/%s/%s with logs: %s", testNamespace, applicationName, component, secondFileSha, logs))
 				}
 			})
 
