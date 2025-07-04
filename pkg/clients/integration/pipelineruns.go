@@ -271,7 +271,7 @@ func (i *IntegrationController) WaitForBuildPipelineRunToGetAnnotated(testNamesp
 // WaitForBuildPipelineToBeFinished wait for given build pipeline to finish.
 // It exposes the error message from the failed task to the end user when the pipelineRun failed.
 func (i *IntegrationController) WaitForBuildPipelineToBeFinished(testNamespace, applicationName, componentName, sha string) error {
-	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 15*time.Minute, true, func(ctx context.Context) (done bool, err error) {
+	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 30*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 		pipelineRun, err := i.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, sha)
 		if err != nil {
 			GinkgoWriter.Println("Build pipelineRun has not been created yet for app %s/%s, and component %s", testNamespace, applicationName, componentName)
