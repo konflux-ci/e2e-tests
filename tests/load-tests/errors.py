@@ -74,7 +74,7 @@ ERRORS = {
 }
 
 FAILED_PLR_ERRORS = {
-    "SKIP": r"Skipping step because a previous step failed",
+    "SKIP": r"Skipping step because a previous step failed",   # This is a special "wildcard" error, let's keep it on top and do not change "SKIP" reason as it is used in the code
     "buildah build failed creating build container: registry.access.redhat.com returned 403": r"Error: creating build container: internal error: unable to copy from source docker://registry.access.redhat.com/.*: copying system image from manifest list: determining manifest MIME type for docker://registry.access.redhat.com/.*: reading manifest .* in registry.access.redhat.com/.*: StatusCode: 403",
     "Can not find chroot_scan.tar.gz file": r"tar: .*/chroot_scan.tar.gz: Cannot open: No such file or directory",
     "DNF failed to download repodata from Koji": r"ERROR Command returned error: Failed to download metadata (baseurl: \"https://kojipkgs.fedoraproject.org/repos/[^ ]*\") for repository \"build\": Usable URL not found",
