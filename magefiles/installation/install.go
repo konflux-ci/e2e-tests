@@ -39,7 +39,7 @@ const (
 	DEFAULT_LOCAL_FORK_ORGANIZATION  = "redhat-appstudio-qe"
 	DEFAULT_E2E_QUAY_ORG             = "redhat-appstudio-qe"
 
-	enableSchedulingOnMasterNodes = "true"
+	enableSchedulingOnMasterNodes = "false"
 )
 
 var (
