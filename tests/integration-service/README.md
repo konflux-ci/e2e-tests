@@ -102,7 +102,7 @@ Checkpoints:
 - Testing group snapshot creation when changes are made to multiple components.
 - Verifying that group snapshots contain proper annotations with component information.
 - Ensuring that group snapshots reference the correct build PipelineRuns for each component.
-- Testing snapshot cancellation when new snapshots are created (older snapshots and integration PipelineRuns should be cancelled).
+- **Verifying that older snapshots and their associated integration PipelineRuns are cancelled when new group snapshots are created.**
 
 ---
 
@@ -152,6 +152,6 @@ Checkpoints:
 
 - To run service-level E2E test suite: `integration.go`
 
-```bash
+```
  ./bin/e2e-appstudio --ginkgo.focus="integration-service-suite" –ginkgo.vv
- ```
+```
