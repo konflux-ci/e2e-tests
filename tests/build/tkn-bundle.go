@@ -41,7 +41,7 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templat
 	var kubeClient *framework.ControllerHub
 	var fwk *framework.Framework
 	var taskName string = "tkn-bundle"
-	var pathInRepo string = fmt.Sprintf("task/%s/0.1/%s.yaml", taskName, taskName)
+	var pathInRepo string = fmt.Sprintf("task/%s/0.2/%s.yaml", taskName, taskName)
 	var pvcName string = "source-pvc"
 	var pvcAccessMode corev1.PersistentVolumeAccessMode = "ReadWriteOnce"
 	var baseTaskRun *pipeline.TaskRun
@@ -107,6 +107,29 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templat
 		}
 		// get a new taskRun on each Entry
 		baseTaskRun = taskRunTemplate(taskName, pvcName, bundleImg, resolverRef)
+		baseTaskRun.Spec.Params	= []pipeline.Param{
+			{
+				Name: "URL",
+				Value: pipeline.ParamValue{
+					Type:      "string",
+					StringVal: gitURL,
+				},
+			},
+			{
+				Name: "REVISION",
+				Value: pipeline.ParamValue{
+					Type:      "string",
+					StringVal: gitRevision,
+				},
+			},
+			{
+				Name: "IMAGE",
+				Value: pipeline.ParamValue{
+					Type:      "string",
+					StringVal: qeBundleRepo,
+				},
+			},
+		}
 	})
 
 	DescribeTable("creates Tekton bundles with different params",
