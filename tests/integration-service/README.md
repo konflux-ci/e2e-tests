@@ -2,6 +2,8 @@
 
 The Integration Service manages the lifecycle, deployment, and integration testing of applications and components. It handles snapshots, environments, pipelines, and deployments, ensuring applications run efficiently and are deployed correctly.
 
+---
+
 ## Test Suites
 
 ### 1. Basic E2E Tests within `integration.go`
@@ -15,6 +17,9 @@ This suite verifies the reporting of integration test statuses to GitLab Merge R
 
 ### 4. E2E Tests within `integration-with-env.go`
 This suite tests the integration service's interaction with ephemeral environments, ensuring correct handling of pipelines, snapshots, and environment cleanup.
+
+### 5. E2E Tests within `group-snapshots-tests.go`
+This suite tests the creation of group snapshots for both monorepo and multiple repositories scenarios. It verifies the integration service's ability to handle multiple components across different repository structures, including proper group snapshot creation, component coordination, and snapshot lifecycle management.
 
 ---
 
@@ -62,6 +67,7 @@ Push Event Tests:
   * Success status for passing test scenario
   * Failure status for failing test scenario
 - Ensuring proper cleanup of test artifacts.
+
 ### 3. Happy Path Tests within `gitlab-integration-reporting.go`
 Checkpoints:
 - Creating two IntegrationTestScenarios: one expected to pass.
@@ -84,6 +90,20 @@ Checkpoints:
 - Handling space requests in the namespace and ensuring they are created correctly.
 - Verifying proper cleanup after successful deletion of the Integration PipelineRun.
 
+### 5. Happy Path Tests within `group-snapshots-tests.go`
+Checkpoints:
+- Creating multiple components (A, B, C) with different repository structures (monorepo and multi-repo).
+- Verifying that BuildPipelineRuns are triggered for each component and complete successfully.
+- Ensuring that PaC (Pipelines as Code) PRs are created for each component.
+- Validating that build pipeline statuses are correctly reported in GitHub CheckRuns.
+- Verifying successful creation of snapshots for each component.
+- Ensuring Integration PipelineRuns start and complete successfully for each component.
+- Validating successful merging of PaC PRs.
+- Testing group snapshot creation when changes are made to multiple components.
+- Verifying that group snapshots contain proper annotations with component information.
+- Ensuring that group snapshots reference the correct build PipelineRuns for each component.
+- Testing snapshot cancellation when new snapshots are created (older snapshots and integration PipelineRuns should be cancelled).
+
 ---
 
 ## Negative Tests
@@ -101,7 +121,6 @@ Checkpoints:
 - Ensuring proper status reporting for failed Integration PipelineRuns and snapshots in PRs (or GitLab MR's CommitStatus).
 
 ### 2. Negative Test Cases within `status-reporting-to-pullrequest.go`
-Checkpoints:
 Checkpoints:
 - Creating two IntegrationTestScenarios: one that should fail.
 - Verifying that failed Integration PipelineRuns are reported correctly in the PR's CheckRun.
@@ -133,6 +152,6 @@ Checkpoints:
 
 - To run service-level E2E test suite: `integration.go`
 
-```
+```bash
  ./bin/e2e-appstudio --ginkgo.focus="integration-service-suite" –ginkgo.vv
-```
+ ```
