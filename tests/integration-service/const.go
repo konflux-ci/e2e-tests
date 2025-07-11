@@ -10,7 +10,7 @@ import (
 const (
 	EnvironmentName                = "development"
 	gitURL                         = "https://github.com/konflux-ci/integration-examples.git"
-	revision                       = "ab868616ab02be79b6abdf85dcd2a3aef321ff14"
+	revision                       = "6a7c81802e785aa869f82301afe61f4e9775772b"
 	pathInRepoPass                 = "pipelines/integration_resolver_pipeline_pass.yaml"
 	pathIntegrationPipelineWithEnv = "pipelines/integration_resolver_pipeline_environment_pass.yaml"
 	pathInRepoFail                 = "pipelines/integration_resolver_pipeline_fail.yaml"
