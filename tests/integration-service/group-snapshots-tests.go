@@ -71,7 +71,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			//Branch for creating pull request
 			multiComponentPRBranchName = fmt.Sprintf("%s-%s", "pr-branch", util.GenerateRandomString(6))
 
-			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, []string{})
+			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, "", []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 

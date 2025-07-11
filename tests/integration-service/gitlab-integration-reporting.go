@@ -59,10 +59,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 
 			applicationName = createApp(*f, testNamespace)
 
-			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, []string{})
+			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, "", []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			integrationTestScenarioFail, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail, []string{})
+			integrationTestScenarioFail, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail, "", []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 
 			componentName = fmt.Sprintf("%s-%s", "test-comp-pac-gitlab", util.GenerateRandomString(6))
