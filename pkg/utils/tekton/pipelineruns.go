@@ -67,7 +67,7 @@ func (b BuildahDemo) Generate() (*pipeline.PipelineRun, error) {
 				},
 				{
 					Name:  "git-url",
-					Value: *pipeline.NewStructuredValues("https://github.com/enterprise-contract/golden-container.git"),
+					Value: *pipeline.NewStructuredValues("https://github.com/conforma/golden-container.git"),
 				},
 				{
 					Name:  "skip-checks",

@@ -23,7 +23,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-var _ = framework.EnterpriseContractSuiteDescribe("Enterprise Contract E2E tests", Label("ec"), func() {
+var _ = framework.EnterpriseContractSuiteDescribe("Conforma E2E tests", Label("ec"), func() {
 
 	defer GinkgoRecover()
 

@@ -1,10 +1,10 @@
-# Enterprise Contract
+# Conforma (formerly Enterprise Contract) 
 
-The Enterprise Contract is a set of tools for verifying the provenance of container images built in Red Hat Trusted Application Pipeline and validating them against a clearly defined policy.
+Conforma (formerly Enterprise Contract) is a set of tools for verifying the provenance of container images built in Red Hat Trusted Application Pipeline and validating them against a clearly defined policy.
 
-The Enterprise Contract policy is defined using the rego policy language and is described here in [Release Policy](https://enterprisecontract.dev/docs/ec-policies/release_policy.html) and [Pipeline Policy](https://enterprisecontract.dev/docs/ec-policies/pipeline_policy.html)
+The Conforma policy is defined using the rego policy language and is described here in [Release Policy](https://conforma.dev/docs/policy/release_policy.html) and [Pipeline Policy](https://conforma.dev/docs/policy/pipeline_policy.html)
 
-The enterprise-contract suite contains a set of tests that covers Enterprise Contract policies.
+The enterprise-contract suite contains a set of tests that covers Conforma policies.
 
 Steps to run 'enterprise-contract-suite':
 

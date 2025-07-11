@@ -35,7 +35,7 @@ It is possible to run this test against "downstream" (deployed via scripts in [i
       1. Secret with cosign-public-key (used for validating the built image by EC)
       1. Release plan for the targeted application and (user) namespace
       1. Release strategy, Release plan admission
-      1. Enterprise contract policy
+      1. Conforma policy
 1. Test scenario
    1. The application and component were created successfully
    1. Verify that the initial PaC pull request was created in the component's repo (this will also trigger the default build pipelinerun)
