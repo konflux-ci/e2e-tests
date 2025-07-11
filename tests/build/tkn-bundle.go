@@ -147,9 +147,10 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templat
 			Expect(err).NotTo(HaveOccurred())
 
 			// check for a success of the taskRun
-			status, err := kubeClient.TektonController.CheckTaskRunSucceeded(tr.Name, namespace)()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(status).To(BeTrue(), fmt.Sprintf("taskRun %q failed", tr.Name))
+			Eventually(func() bool {
+				status, err := kubeClient.TektonController.CheckTaskRunSucceeded(tr.Name, namespace)()
+				return err == nil && status
+			}, time.Minute*2, 2*time.Second).Should(BeTrue(), fmt.Sprintf("taskRun %q failed", tr.Name))
 
 			// verify taskRun results
 			imgUrl, err := kubeClient.TektonController.GetResultFromTaskRun(tr, "IMAGE_URL")
