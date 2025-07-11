@@ -24,12 +24,42 @@ METRICS = [
     "createIntegrationTestScenario",
     "validateIntegrationTestScenario",
     "createComponent",
+    "getPaCPullNumber",
+    "validateComponentBuildSA",
     "validatePipelineRunCreation",
     "validatePipelineRunCondition",
     "validatePipelineRunSignature",
     "validateSnapshotCreation",
     "validateTestPipelineRunCreation",
     "validateTestPipelineRunCondition",
+    "createReleasePlan",
+    "createReleasePlanAdmission",
+    "validateReleasePlan",
+    "validateReleasePlanAdmission",
+    "validateReleaseCreation",
+    "validateReleasePipelineRunCreation",
+    "validateReleasePipelineRunCondition",
+    "validateReleaseCondition",
+]
+
+# These metrics will be ignored if ITS was skipped
+METRICS_ITS = [
+    "createIntegrationTestScenario",
+    "validateIntegrationTestScenario",
+    "validateTestPipelineRunCreation",
+    "validateTestPipelineRunCondition",
+]
+
+# These metrics will be ignored if Release was skipped
+METRICS_RELEASE = [
+    "createReleasePlan",
+    "createReleasePlanAdmission",
+    "validateReleasePlan",
+    "validateReleasePlanAdmission",
+    "validateReleaseCreation",
+    "validateReleasePipelineRunCreation",
+    "validateReleasePipelineRunCondition",
+    "validateReleaseCondition",
 ]
 
 
@@ -51,13 +81,6 @@ def count_stats(data):
     if len(data) == 0:
         return {
             "samples": 0,
-        }
-    elif len(data) == 1:
-        return {
-            "samples": 1,
-            "min": data[0],
-            "mean": data[0],
-            "max": data[0],
         }
     else:
         return {
@@ -87,8 +110,22 @@ def count_stats_when(data):
 
 
 def main():
-    input_file = sys.argv[1]
-    output_file = sys.argv[2]
+    options_file = sys.argv[1]
+    input_file = sys.argv[2]
+    output_file = sys.argv[3]
+
+    # Load test options
+    with open(options_file, "r") as fp:
+        options = json.load(fp)
+
+    # Determine what metrics we need to skip based on options
+    METRICS_to_skip = []
+    if options["TestScenarioGitURL"] == "":
+        print("NOTE: Ignoring ITS related metrics because they were disabled at test run")
+        METRICS_to_skip += METRICS_ITS
+    if options["ReleasePolicy"] == "":
+        print("NOTE: Ignoring Release related metrics because they were disabled at test run")
+        METRICS_to_skip += METRICS_RELEASE
 
     stats_raw = {}
 
@@ -114,38 +151,48 @@ def main():
                     stats_raw[m]["fail" if error else "pass"]["duration"].append(duration)
                     stats_raw[m]["fail" if error else "pass"]["when"].append(when)
 
-    # print(f"Raw stats: {stats_raw}")
+    #print("Raw stats:")
+    #print(json.dumps(stats_raw, indent=4, default=lambda o: '<' + str(o) + '>'))
 
     stats = {}
-    kpi_sum = 0.0
+    kpi_mean = 0.0
     kpi_errors = 0
 
-    for m in METRICS:
-        stats[m] = {"pass": {}, "fail": {}}
-        stats[m]["pass"]["duration"] = count_stats(stats_raw[m]["pass"]["duration"])
-        stats[m]["fail"]["duration"] = count_stats(stats_raw[m]["fail"]["duration"])
-        stats[m]["pass"]["when"] = count_stats_when(stats_raw[m]["pass"]["when"])
-        stats[m]["fail"]["when"] = count_stats_when(stats_raw[m]["fail"]["when"])
+    for m in [m for m in METRICS if m not in METRICS_to_skip]:
+        stats[m] = {"pass": {"duration": {"samples": 0}, "when": {}}, "fail": {"duration": {"samples": 0}, "when": {}}}
+        if m in stats_raw:
+            stats[m]["pass"]["duration"] = count_stats(stats_raw[m]["pass"]["duration"])
+            stats[m]["fail"]["duration"] = count_stats(stats_raw[m]["fail"]["duration"])
+            stats[m]["pass"]["when"] = count_stats_when(stats_raw[m]["pass"]["when"])
+            stats[m]["fail"]["when"] = count_stats_when(stats_raw[m]["fail"]["when"])
+
+        if kpi_mean != -1:
+            # If we had 0 measurements in some metric, that means not a single
+            # build made it through this step, so kpi_mean metric does not make
+            # sense as it would not cover this part of the journey
+            if stats[m]["pass"]["duration"]["samples"] == 0:
+                kpi_mean = -1
+            else:
+                kpi_mean += stats[m]["pass"]["duration"]["mean"]
 
         if stats[m]["pass"]["duration"]["samples"] == 0:
-            # If we had 0 measurements in some metric, that means not a single
-            # build made it through all steps, so kpi_sum metric does not make
-            # sense as it would only cover part of the journey
-            kpi_sum = -1
+            if kpi_errors == 0:
+                kpi_errors += 1
         else:
-            if kpi_sum != -1:
-                kpi_sum += stats[m]["pass"]["duration"]["mean"]
-
-        s = stats[m]["pass"]["duration"]["samples"] + stats[m]["fail"]["duration"]["samples"]
-        if s == 0:
-            stats[m]["error_rate"] = None
-        else:
-            stats[m]["error_rate"] = stats[m]["fail"]["duration"]["samples"] / s
             kpi_errors += stats[m]["fail"]["duration"]["samples"]
 
+        runs = stats[m]["pass"]["duration"]["samples"] + stats[m]["fail"]["duration"]["samples"]
+        if runs == 0:
+            stats[m]["error_rate"] = None
+        else:
+            stats[m]["error_rate"] = stats[m]["fail"]["duration"]["samples"] / runs
+
     stats["KPI"] = {}
-    stats["KPI"]["mean"] = kpi_sum
+    stats["KPI"]["mean"] = kpi_mean
     stats["KPI"]["errors"] = kpi_errors
+
+    #print("Final stats:")
+    #print(json.dumps(stats, indent=4))
 
     print(f"KPI mean: {stats['KPI']['mean']}")
     print(f"KPI errors: {stats['KPI']['errors']}")
