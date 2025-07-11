@@ -1,14 +1,15 @@
 package gitlab
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
-	"encoding/base64"
 
 	. "github.com/onsi/gomega"
 	"github.com/xanzy/go-gitlab"
+	"k8s.io/klog/v2"
 )
 
 // CreateBranch creates a new branch in a GitLab project with the given projectID and newBranchName
@@ -109,6 +110,7 @@ func (gc *GitlabClient) CloseMergeRequest(projectID string, mergeRequestIID int)
 	// Get merge requests using Gitlab client
 	_, _, err := gc.client.MergeRequests.GetMergeRequest(projectID, mergeRequestIID, nil)
 	if err != nil {
+		klog.Infof("ERROR!: %+v", err)
 		return fmt.Errorf("failed to get MR of IID %d in projectID %s, %v", mergeRequestIID, projectID, err)
 	}
 
@@ -116,6 +118,7 @@ func (gc *GitlabClient) CloseMergeRequest(projectID string, mergeRequestIID int)
 		StateEvent: gitlab.Ptr("close"),
 	})
 	if err != nil {
+		klog.Infof("ERROR!: %+v", err)
 		return fmt.Errorf("failed to close MR of IID %d in projectID %s, %v", mergeRequestIID, projectID, err)
 	}
 
@@ -205,7 +208,6 @@ func (gc *GitlabClient) UpdateFile(projectId, pathToFile, fileContent, branchNam
 
 	return file.CommitID, nil
 }
-
 
 func (gc *GitlabClient) AcceptMergeRequest(projectID string, mrID int) (*gitlab.MergeRequest, error) {
 	mr, _, err := gc.client.MergeRequests.AcceptMergeRequest(projectID, mrID, nil)

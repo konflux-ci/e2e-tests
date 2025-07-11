@@ -43,7 +43,7 @@ const (
 )
 
 var (
-	previewInstallArgs = []string{"preview", "--keycloak", "--toolchain"}
+	previewInstallArgs = []string{"preview"}
 )
 
 type patchStringValue struct {

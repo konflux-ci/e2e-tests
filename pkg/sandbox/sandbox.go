@@ -316,12 +316,8 @@ func (s *SandboxController) RegisterSandboxUserUserWithSignUp(userName string, u
 		}
 	}
 
-	compliantUsername, err = s.CheckUserCreatedWithSignUp(userName, userSignup)
+	return s.CheckUserCreatedWithSignUp(userName, userSignup)
 
-	if err != nil {
-		return "", err
-	}
-	return compliantUsername, nil
 }
 
 func (s *SandboxController) CheckUserCreated(userName string) (compliantUsername string, err error) {
