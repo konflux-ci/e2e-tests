@@ -94,6 +94,24 @@ func (r *ReleaseController) GetRelease(releaseName, snapshotName, namespace stri
 }
 
 // GetReleases returns the list of Release CR in the given namespace.
+func (r *ReleaseController) GetReleasesBySnapshot(snapshotName, namespace string) (*releaseApi.ReleaseList, error) {
+	releaseList := &releaseApi.ReleaseList{}
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+	if err := r.KubeRest().List(context.Background(), releaseList, opts...); err != nil {
+		return nil, err
+	}
+	var filteredReleases []releaseApi.Release
+	for _, r := range releaseList.Items {
+		if len(snapshotName) > 0 && r.Spec.Snapshot == snapshotName {
+			filteredReleases = append(filteredReleases, r)
+		}
+	}
+	return &releaseApi.ReleaseList{Items: filteredReleases}, nil
+}
+
+// GetReleases returns the list of Release CR in the given namespace.
 func (r *ReleaseController) GetReleases(namespace string) (*releaseApi.ReleaseList, error) {
 	releaseList := &releaseApi.ReleaseList{}
 	opts := []client.ListOption{
