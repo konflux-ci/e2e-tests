@@ -1212,18 +1212,6 @@ func UpgradeTestsWorkflow() error {
 		return err
 	}
 
-	err = CreateWorkload()
-	if err != nil {
-		klog.Errorf("%s", err)
-		return err
-	}
-
-	err = VerifyWorkload()
-	if err != nil {
-		klog.Errorf("%s", err)
-		return err
-	}
-
 	err = UpgradeCluster()
 	if err != nil {
 		klog.Errorf("%s", err)
@@ -1231,18 +1219,6 @@ func UpgradeTestsWorkflow() error {
 	}
 
 	err = CheckClusterAfterUpgrade(ic)
-	if err != nil {
-		klog.Errorf("%s", err)
-		return err
-	}
-
-	err = VerifyWorkload()
-	if err != nil {
-		klog.Errorf("%s", err)
-		return err
-	}
-
-	err = CleanWorkload()
 	if err != nil {
 		klog.Errorf("%s", err)
 		return err

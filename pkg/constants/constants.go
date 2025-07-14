@@ -246,6 +246,10 @@ const (
 	DockerBuildOciTA              BuildPipelineType = "docker-build-oci-ta"
 	DockerBuildMultiPlatformOciTa BuildPipelineType = "docker-build-multi-platform-oci-ta"
 	FbcBuilder                    BuildPipelineType = "fbc-builder"
+
+	// Test environments
+	DownstreamTestEnvironment string = "downstream"
+	UpstreamTestEnvironment   string = "upstream"
 )
 
 var (

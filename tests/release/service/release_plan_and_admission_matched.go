@@ -3,8 +3,6 @@ package service
 import (
 	"fmt"
 
-	kubeapi "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
-
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/api/meta"
 
@@ -21,7 +19,6 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 	defer GinkgoRecover()
 
 	var fw *framework.Framework
-	var kubeAdminClient *framework.ControllerHub
 	var err error
 	var devNamespace = "rel-plan-admis"
 	var managedNamespace = "plan-and-admission-managed"
@@ -29,44 +26,28 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 	var releasePlanCR, secondReleasePlanCR *releaseApi.ReleasePlan
 	var releasePlanAdmissionCR *releaseApi.ReleasePlanAdmission
 
-	var testEnvironment = utils.GetEnv("TEST_ENVIRONMENT", releasecommon.UpstreamTestEnvironment)
-
 	AfterEach(framework.ReportFailure(&fw))
 
 	BeforeAll(func() {
-		if testEnvironment == releasecommon.DownstreamTestEnvironment {
-			fw, err = framework.NewFramework(utils.GetGeneratedNamespace(devNamespace))
-			Expect(err).NotTo(HaveOccurred())
-			devNamespace = fw.UserNamespace
-			managedNamespace = utils.GetGeneratedNamespace(managedNamespace)
-			kubeAdminClient = fw.AsKubeAdmin
-		} else {
-			var asAdminClient *kubeapi.CustomClient
-			asAdminClient, err = kubeapi.NewAdminKubernetesClient()
-			Expect(err).ShouldNot(HaveOccurred())
-			kubeAdminClient, err = framework.InitControllerHub(asAdminClient)
-			Expect(err).ShouldNot(HaveOccurred())
-			_, err = kubeAdminClient.CommonController.CreateTestNamespace(devNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
-		}
+		fw, err = framework.NewFramework(utils.GetGeneratedNamespace(devNamespace))
+		Expect(err).NotTo(HaveOccurred())
+		devNamespace = fw.UserNamespace
 
-		_, err = kubeAdminClient.CommonController.CreateTestNamespace(managedNamespace)
+		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating managedNamespace: %v", err)
 
-		_, err = kubeAdminClient.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
+		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
 		//Create ReleasePlan
-		_, err = kubeAdminClient.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, managedNamespace, "true", nil, nil, nil)
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, managedNamespace, "true", nil, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterAll(func() {
 		if !CurrentSpecReport().Failed() {
-			Expect(kubeAdminClient.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-			if testEnvironment == releasecommon.DownstreamTestEnvironment {
-				Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
-			}
+			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
+			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(fw.UserNamespace)).To(Succeed())
 		}
 	})
 
@@ -74,7 +55,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 		It("verifies that the ReleasePlan CR is unmatched in the beginning", func() {
 			var condition *metav1.Condition
 			Eventually(func() error {
-				releasePlanCR, err = kubeAdminClient.ReleaseController.GetReleasePlan(releasecommon.SourceReleasePlanName, devNamespace)
+				releasePlanCR, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releasecommon.SourceReleasePlanName, devNamespace)
 				Expect(err).NotTo(HaveOccurred())
 				condition = meta.FindStatusCondition(releasePlanCR.Status.Conditions, releaseApi.MatchedConditionType.String())
 				if condition == nil {
@@ -87,7 +68,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 		})
 
 		It("Creates ReleasePlanAdmission CR in corresponding managed namespace", func() {
-			_, err = kubeAdminClient.ReleaseController.CreateReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, "", devNamespace, releasecommon.ReleaseStrategyPolicyDefault, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationNameDefault}, true, &tektonutils.PipelineRef{
+			_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, "", devNamespace, releasecommon.ReleaseStrategyPolicyDefault, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationNameDefault}, true, &tektonutils.PipelineRef{
 				Resolver: "git",
 				Params: []tektonutils.Param{
 					{Name: "url", Value: releasecommon.RelSvcCatalogURL},
@@ -102,7 +83,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 			It("verifies that the ReleasePlan CR is set to matched", func() {
 				var condition *metav1.Condition
 				Eventually(func() error {
-					releasePlanCR, err = kubeAdminClient.ReleaseController.GetReleasePlan(releasecommon.SourceReleasePlanName, devNamespace)
+					releasePlanCR, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releasecommon.SourceReleasePlanName, devNamespace)
 					Expect(err).NotTo(HaveOccurred())
 					condition = meta.FindStatusCondition(releasePlanCR.Status.Conditions, releaseApi.MatchedConditionType.String())
 					if condition == nil {
@@ -122,7 +103,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 			It("verifies that the ReleasePlanAdmission CR is set to matched", func() {
 				var condition *metav1.Condition
 				Eventually(func() error {
-					releasePlanAdmissionCR, err = kubeAdminClient.ReleaseController.GetReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace)
+					releasePlanAdmissionCR, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace)
 					Expect(err).NotTo(HaveOccurred())
 					condition = meta.FindStatusCondition(releasePlanAdmissionCR.Status.Conditions, releaseApi.MatchedConditionType.String())
 					if condition.Status == metav1.ConditionFalse {
@@ -138,7 +119,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 		})
 
 		It("Creates a manual release ReleasePlan CR in devNamespace", func() {
-			_, err = kubeAdminClient.ReleaseController.CreateReleasePlan(releasecommon.SecondReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, managedNamespace, "false", nil, nil, nil)
+			_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SecondReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, managedNamespace, "false", nil, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -146,7 +127,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 			It("verifies that the second ReleasePlan CR is set to matched", func() {
 				var condition *metav1.Condition
 				Eventually(func() error {
-					secondReleasePlanCR, err = kubeAdminClient.ReleaseController.GetReleasePlan(releasecommon.SecondReleasePlanName, devNamespace)
+					secondReleasePlanCR, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releasecommon.SecondReleasePlanName, devNamespace)
 					Expect(err).NotTo(HaveOccurred())
 					condition = meta.FindStatusCondition(secondReleasePlanCR.Status.Conditions, releaseApi.MatchedConditionType.String())
 
@@ -166,7 +147,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 
 			It("verifies that the ReleasePlanAdmission CR has two matched ReleasePlan CRs", func() {
 				Eventually(func() error {
-					releasePlanAdmissionCR, err = kubeAdminClient.ReleaseController.GetReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace)
+					releasePlanAdmissionCR, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace)
 					Expect(err).NotTo(HaveOccurred())
 					condition := meta.FindStatusCondition(releasePlanAdmissionCR.Status.Conditions, releaseApi.MatchedConditionType.String())
 					if condition == nil {
@@ -186,14 +167,14 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 		})
 
 		It("deletes one ReleasePlan CR", func() {
-			err = kubeAdminClient.ReleaseController.DeleteReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, true)
+			err = fw.AsKubeAdmin.ReleaseController.DeleteReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, true)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		When("One ReleasePlan CR is deleted in managed namespace", func() {
 			It("verifies that the ReleasePlanAdmission CR has only one matching ReleasePlan", func() {
 				Eventually(func() error {
-					releasePlanAdmissionCR, err = kubeAdminClient.ReleaseController.GetReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace)
+					releasePlanAdmissionCR, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace)
 					Expect(err).NotTo(HaveOccurred())
 					condition := meta.FindStatusCondition(releasePlanAdmissionCR.Status.Conditions, releaseApi.MatchedConditionType.String())
 					if condition == nil {
@@ -213,14 +194,14 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 		})
 
 		It("deletes the ReleasePlanAdmission CR", func() {
-			err = kubeAdminClient.ReleaseController.DeleteReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, true)
+			err = fw.AsKubeAdmin.ReleaseController.DeleteReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, true)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		When("ReleasePlanAdmission CR is deleted in managed namespace", func() {
 			It("verifies that the ReleasePlan CR has no matched ReleasePlanAdmission", func() {
 				Eventually(func() error {
-					secondReleasePlanCR, err = kubeAdminClient.ReleaseController.GetReleasePlan(releasecommon.SecondReleasePlanName, devNamespace)
+					secondReleasePlanCR, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releasecommon.SecondReleasePlanName, devNamespace)
 					Expect(err).NotTo(HaveOccurred())
 					condition := meta.FindStatusCondition(secondReleasePlanCR.Status.Conditions, releaseApi.MatchedConditionType.String())
 					if condition == nil {

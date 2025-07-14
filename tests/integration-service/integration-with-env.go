@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
@@ -31,9 +30,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 	var integrationTestScenario *integrationv1beta2.IntegrationTestScenario
 	var timeout, interval time.Duration
 	var originalComponent *appstudioApi.Component
-	var pipelineRun, integrationPipelineRun *pipeline.PipelineRun
+	var pipelineRun *pipeline.PipelineRun
 	var snapshot *appstudioApi.Snapshot
-	var spaceRequest *v1alpha1.SpaceRequest
 	var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace string
 
 	AfterEach(framework.ReportFailure(&f))
@@ -53,7 +51,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
+				Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(f.UserNamespace)).To(Succeed())
 			}
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
@@ -157,15 +155,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				Expect(f.AsKubeDeveloper.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshot, []string{integrationTestScenario.Name})).To(Succeed())
 			})
 
-			It("checks if space request is created in namespace", func() {
-				spaceRequestsList, err := f.AsKubeAdmin.GitOpsController.GetSpaceRequests(testNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-
-				Expect(spaceRequestsList.Items).To(HaveLen(1), "Expected spaceRequestsList.Items to have at least one item")
-				spaceRequest = &spaceRequestsList.Items[0]
-				Expect(strings.Contains(spaceRequest.Name, spaceRequestNamePrefix)).Should(BeTrue())
-			})
-
 			It("checks if the passed status of integration test is reported in the Snapshot", func() {
 				timeout = time.Second * 240
 				interval = time.Second * 5
@@ -185,25 +174,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			It("checks if the finalizer was removed from all of the related Integration pipelineRuns", func() {
 				Expect(f.AsKubeDeveloper.IntegrationController.WaitForFinalizerToGetRemovedFromAllIntegrationPipelineRuns(testNamespace, applicationName, snapshot, []string{integrationTestScenario.Name})).To(Succeed())
-			})
-
-			It("checks that when deleting integration test scenario pipelineRun, spaceRequest is deleted too", func() {
-				integrationPipelineRun, err = f.AsKubeAdmin.IntegrationController.GetIntegrationPipelineRun(integrationTestScenario.Name, snapshot.Name, testNamespace)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(f.AsKubeDeveloper.TektonController.DeletePipelineRun(integrationPipelineRun.Name, integrationPipelineRun.Namespace)).To(Succeed())
-
-				timeout = time.Second * 200
-				interval = time.Second * 5
-				Eventually(func() error {
-					currentSpaceRequest, err := f.AsKubeAdmin.GitOpsController.GetSpaceRequest(testNamespace, spaceRequest.Name)
-					if err != nil {
-						if k8sErrors.IsNotFound(err) {
-							return nil
-						}
-						return fmt.Errorf("failed to get %s/%s spaceRequest: %+v", currentSpaceRequest.Namespace, currentSpaceRequest.Name, err)
-					}
-					return fmt.Errorf("spaceRequest %s/%s still exists", currentSpaceRequest.Namespace, currentSpaceRequest.Name)
-				}, timeout, interval).Should(Succeed())
 			})
 		})
 	})

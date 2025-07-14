@@ -28,7 +28,6 @@ load_envs() {
         [ATLAS_AWS_ACCESS_KEY_ID]="${konflux_ci_secrets_file}/atlas-aws-access-key-id"
         [ATLAS_AWS_ACCESS_SECRET]="${konflux_ci_secrets_file}/atlas-aws-secret-access-key"
         [OFFLINE_TOKEN]="${konflux_ci_secrets_file}/stage_offline_token"
-        [TOOLCHAIN_API_URL]="${konflux_ci_secrets_file}/stage_toolchain_api_url"
         [KEYLOAK_URL]="${konflux_ci_secrets_file}/stage_keyloak_url"
         [EXODUS_PROD_KEY]="${konflux_ci_secrets_file}/exodus_prod_key"
         [EXODUS_PROD_CERT]="${konflux_ci_secrets_file}/exodus_prod_cert"
