@@ -148,6 +148,8 @@ const (
 	// Label for marking a namespace as a tenant namespace
 	TenantLabelKey   string = "konflux-ci.dev/type"
 	TenantLabelValue string = "tenant"
+	// Label for marking a namespace with the workspace label
+	WorkspaceLabelKey string = "appstudio.redhat.com/workspace_name"
 
 	BuildPipelinesConfigMapDefaultNamespace = "build-templates"
 

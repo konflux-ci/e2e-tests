@@ -25,7 +25,6 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", Labe
 
 	var fw *framework.Framework
 	AfterEach(framework.ReportFailure(&fw))
-	var kubeAdminClient *framework.ControllerHub
 	var err error
 	var compName string
 	var devNamespace = "happy-path"
@@ -135,7 +134,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", Labe
 		_, err = fw.AsKubeAdmin.CommonController.CreateRoleBinding("role-release-service-account-binding", managedNamespace, "ServiceAccount", releasecommon.ReleasePipelineServiceAccountDefault, managedNamespace, "Role", "role-release-service-account", "rbac.authorization.k8s.io")
 		Expect(err).NotTo(HaveOccurred())
 
-		snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(kubeAdminClient, releasecommon.ComponentName, releasecommon.ApplicationNameDefault, devNamespace, sampleImage, gitSourceURL, gitSourceRevision, "", "", "", "")
+		snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(fw.AsKubeAdmin, releasecommon.ComponentName, releasecommon.ApplicationNameDefault, devNamespace, sampleImage, gitSourceURL, gitSourceRevision, "", "", "", "")
 		GinkgoWriter.Println("snapshotPush.Name: %s", snapshotPush.GetName())
 		Expect(err).ShouldNot(HaveOccurred())
 	})

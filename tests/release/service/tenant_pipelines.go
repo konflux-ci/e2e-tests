@@ -26,7 +26,6 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 
 	var fw *framework.Framework
 	AfterEach(framework.ReportFailure(&fw))
-	var kubeAdminClient *framework.ControllerHub
 	var err error
 	var devNamespace = "tenant-dev"
 	var releasedImagePushRepo = "quay.io/redhat-appstudio-qe/dcmetromap"
@@ -95,7 +94,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasecommon.ReleasePvcName, devNamespace, corev1.ReadWriteOnce)
 		Expect(err).NotTo(HaveOccurred())
 
-		snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(kubeAdminClient, releasecommon.ComponentName, releasecommon.ApplicationNameDefault, devNamespace, sampleImage, gitSourceURL, gitSourceRevision, "", "", "", "")
+		snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(fw.AsKubeAdmin, releasecommon.ComponentName, releasecommon.ApplicationNameDefault, devNamespace, sampleImage, gitSourceURL, gitSourceRevision, "", "", "", "")
 		Expect(err).ShouldNot(HaveOccurred())
 		GinkgoWriter.Println("snapshotPush.Name: %s", snapshotPush.GetName())
 	})

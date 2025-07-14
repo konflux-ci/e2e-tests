@@ -227,7 +227,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
 			Expect(err).NotTo(HaveOccurred())
-			testNamespace = f.UserNamespace
 			Expect(f.UserNamespace).NotTo(BeNil())
 			testNamespace = f.UserNamespace
 
