@@ -94,7 +94,6 @@ In that case, before you run the test, make sure you have
   * https://github.com/redhat-appstudio-qe/hacbs-test-project (for konflux-demo test)
   * https://github.com/redhat-appstudio-qe/strategy-configs (for konflux-demo test)
   * https://github.com/redhat-appstudio-qe/konflux-test-integration (for integration test)
-  * https://github.com/redhat-appstudio-qe/konflux-test-integration-with-env (for integration-with-env test)
   * https://github.com/redhat-appstudio-qe/group-snapshot-multi-component (for group-snapshots-tests test)
   * https://gitlab.com/konflux-qe/hacbs-test-project-integration (for gitlab-integration-reporting test)
   * https://github.com/redhat-appstudio-qe/konflux-test-integration-status-report (for status-reporting-to-pullrequest test)
