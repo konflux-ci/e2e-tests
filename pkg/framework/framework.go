@@ -84,10 +84,6 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 	} else {
 		option = utils.Options{}
 	}
-	// https://issues.redhat.com/browse/CRT-1670
-	if len(userName) > 20 {
-		GinkgoWriter.Printf("WARNING: username %q is longer than 20 characters - the tenant namespace prefix will be shortened to %s\n", userName, userName[:20])
-	}
 
 	var asAdmin *ControllerHub
 	if isStage {
@@ -132,9 +128,7 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 			if err != nil {
 				return nil, fmt.Errorf("failed to create test namespace %s: %+v", nsName, err)
 			}
-		}
 
-		if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) == "" {
 			// creating this empty configMap change is temporary, when we move to SA per component fully, it will be removed
 			cmName := "use-new-sa"
 			cmNamespace := "build-service"
