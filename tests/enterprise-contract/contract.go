@@ -408,7 +408,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Conforma E2E tests", Label("e
 						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["FAILURE"]`)),
 					))
 				})
-				It("verifies the release policy: Task bundles are in acceptable bundle list", func() {
+				It("verifies the release policy: Task are trusted", func() {
 					secretName := fmt.Sprintf("golden-image-public-key%s", util.GenerateRandomString(10))
 					GinkgoWriter.Println("Update public key to verify golden images")
 					goldenImagePublicKey := []byte("-----BEGIN PUBLIC KEY-----\n" +
@@ -421,8 +421,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Conforma E2E tests", Label("e
 						defaultECP.Spec,
 						ecp.SourceConfig{Include: []string{
 							// Account for "acceptable" to "trusted" renaming. Eventually remove "acceptable" from this list
-							"attestation_task_bundle.task_ref_bundles_acceptable",
-							"attestation_task_bundle.task_ref_bundles_trusted",
+							"trusted_task.trusted",
 						}},
 					)
 					Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
@@ -446,10 +445,10 @@ var _ = framework.EnterpriseContractSuiteDescribe("Conforma E2E tests", Label("e
 					reportLog, err := utils.GetContainerLogs(fwk.AsKubeAdmin.CommonController.KubeInterface(), tr.Status.PodName, "step-report-json", namespace)
 					GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, "step-report-json", reportLog)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(reportLog).Should(MatchRegexp(`Pipeline task .* uses an (?:untrusted|unacceptable) task bundle`))
+					Expect(reportLog).Should(MatchRegexp(`Pipeline task .* uses an untrusted task reference`))
 				})
 
-				It("verifies the release policy: Task bundle references pinned to digest", func() {
+				It("verifies the release policy: Task references are pinned", func() {
 					secretName := fmt.Sprintf("unpinned-task-bundle-public-key%s", util.GenerateRandomString(10))
 					unpinnedTaskPublicKey := []byte("-----BEGIN PUBLIC KEY-----\n" +
 						"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEPfwkY/ru2JRd6FSqIp7lT3gzjaEC\n" +
@@ -461,7 +460,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Conforma E2E tests", Label("e
 
 					policy := contract.PolicySpecWithSourceConfig(
 						defaultECP.Spec,
-						ecp.SourceConfig{Include: []string{"attestation_task_bundle.task_ref_bundles_pinned"}},
+						ecp.SourceConfig{Include: []string{"trusted_task.pinned"}},
 					)
 					Expect(fwk.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(namespace, policy)).To(Succeed())
 
@@ -484,7 +483,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Conforma E2E tests", Label("e
 					reportLog, err := utils.GetContainerLogs(fwk.AsKubeAdmin.CommonController.KubeInterface(), tr.Status.PodName, "step-report-json", namespace)
 					GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, "step-report-json", reportLog)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(reportLog).Should(MatchRegexp(`Pipeline task .* uses an unpinned task bundle reference`))
+					Expect(reportLog).Should(MatchRegexp(`Pipeline task .* uses an unpinned task reference`))
 				})
 			})
 		})
