@@ -502,6 +502,5 @@ func cleanup(f framework.Framework, testNamespace, applicationName, componentNam
 		}
 		Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
 		Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-		Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(f.UserNamespace)).To(Succeed())
 	}
 }

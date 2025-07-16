@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"time"
 
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -47,7 +48,8 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 	AfterAll(func() {
 		if !CurrentSpecReport().Failed() {
 			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(fw.UserNamespace)).To(Succeed())
+			Expect(fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(devNamespace, time.Minute*5)).To(Succeed())
+			Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(devNamespace, time.Minute*5)).To(Succeed())
 		}
 	})
 

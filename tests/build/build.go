@@ -97,7 +97,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
 			}
 
 			err = gitClient.DeleteBranch(helloWorldRepository, pacBranchName)
@@ -680,7 +681,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
 			}
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
@@ -857,7 +859,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 			AfterAll(func() {
 				if !CurrentSpecReport().Failed() {
-					Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(namespace)).To(Succeed())
+					Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+					Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
 				}
 			})
 
@@ -925,7 +928,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
 			}
 
 			// Delete new branches created by PaC
@@ -1100,7 +1104,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
 			}
 
 		})
@@ -1197,7 +1202,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
 			}
 		})
 
@@ -1342,7 +1348,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Expect(f.AsKubeAdmin.HasController.DeleteComponent(ParentComponentDef.componentName, testNamespace, true)).To(Succeed())
 				Expect(f.AsKubeAdmin.HasController.DeleteComponent(ChildComponentDef.componentName, testNamespace, true)).To(Succeed())
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
 			}
 			Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).ShouldNot(HaveOccurred())
 

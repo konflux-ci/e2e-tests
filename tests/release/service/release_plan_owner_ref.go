@@ -38,7 +38,8 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2469]test-releaseplan-owne
 
 	AfterAll(func() {
 		if !CurrentSpecReport().Failed() {
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(fw.UserNamespace)).To(Succeed())
+			Expect(fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(fw.UserNamespace, time.Minute*5)).To(Succeed())
+			Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(fw.UserNamespace, time.Minute*5)).To(Succeed())
 		}
 	})
 

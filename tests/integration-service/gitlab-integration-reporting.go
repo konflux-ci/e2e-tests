@@ -91,7 +91,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 			Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteWebhooks(projectID, f.ClusterAppDomain)).NotTo(HaveOccurred())
 
 			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
 			}
 
 		})

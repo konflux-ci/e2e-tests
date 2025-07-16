@@ -276,8 +276,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) != "" {
 					DeferCleanup(f.AsKubeAdmin.HasController.DeleteApplication, applicationName, testNamespace, false)
 				} else {
-					Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
-					Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(testNamespace)).To(Succeed())
+					Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+					Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
 				}
 			}
 			// Skip removing the branches, to help debug the issue: https://issues.redhat.com/browse/STONEBLD-2981
