@@ -407,7 +407,7 @@ spec:
         - name: name
           value: update-infra-deployments
         - name: bundle
-          value: quay.io/rh-ee-fmudry/tekton-catalog/update-infra-deployments:with-oc-cli-v3-without-pr-updates
+          value: quay.io/rh-ee-fmudry/tekton-catalog/update-infra-deployments:final-version-without-wait
         - name: kind
           value: task
         resolver: bundles
