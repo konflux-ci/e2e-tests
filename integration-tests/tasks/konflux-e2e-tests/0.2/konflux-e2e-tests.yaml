@@ -155,6 +155,8 @@ spec:
           value: /tmp/kubeconfig
         - name: SKIP_BOOTSTRAP
           value: "true"
+        - name: IMAGE_TAG_EXPIRATION
+          value: "5d"
       onError: continue
       script: |
         #!/bin/bash
