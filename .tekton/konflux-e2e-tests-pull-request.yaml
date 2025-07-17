@@ -407,7 +407,7 @@ spec:
         - name: name
           value: update-infra-deployments
         - name: bundle
-          value: quay.io/rh-ee-fmudry/tekton-catalog/update-infra-deployments:final-version-with-wait-12
+          value: quay.io/rh-ee-fmudry/tekton-catalog/update-infra-deployments:final-version-with-wait-13
         - name: kind
           value: task
         resolver: bundles
