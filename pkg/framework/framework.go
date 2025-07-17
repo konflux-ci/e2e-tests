@@ -102,7 +102,7 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 		if err != nil {
 			return nil, fmt.Errorf("error when initializing kubernetes clients: %v", err)
 		}
-		asUser, err := InitControllerHub(k.AsKubeDeveloper)
+		asUser, err = InitControllerHub(k.AsKubeDeveloper)
 		if err != nil {
 			return nil, fmt.Errorf("error when initializing appstudio hub controllers for sandbox user: %v", err)
 		}
