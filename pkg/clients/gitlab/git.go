@@ -1,11 +1,11 @@
 package gitlab
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
-	"encoding/base64"
 
 	. "github.com/onsi/gomega"
 	"github.com/xanzy/go-gitlab"
@@ -205,7 +205,6 @@ func (gc *GitlabClient) UpdateFile(projectId, pathToFile, fileContent, branchNam
 
 	return file.CommitID, nil
 }
-
 
 func (gc *GitlabClient) AcceptMergeRequest(projectID string, mrID int) (*gitlab.MergeRequest, error) {
 	mr, _, err := gc.client.MergeRequests.AcceptMergeRequest(projectID, mrID, nil)

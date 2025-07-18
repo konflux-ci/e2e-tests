@@ -3,6 +3,7 @@ package tekton
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,6 +12,9 @@ import (
 // GetTektonChainsPublicKey returns a TektonChains public key.
 func (t *TektonController) GetTektonChainsPublicKey() ([]byte, error) {
 	namespace := constants.TEKTON_CHAINS_NS
+	if os.Getenv("TEST_ENVIRONMENT") == "upstream" {
+		namespace = "tekton-pipelines"
+	}
 	secretName := "public-key"
 	dataKey := "cosign.pub"
 

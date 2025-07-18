@@ -15,10 +15,7 @@ This suite tests the status reporting of integration tests to GitHub Pull Reques
 ### 3. E2E Tests within `gitlab-integration-reporting.go`
 This suite verifies the reporting of integration test statuses to GitLab Merge Requests (MRs). It ensures the proper status updates for both successful and failed tests are reflected in the MR's CommitStatus.
 
-### 4. E2E Tests within `integration-with-env.go`
-This suite tests the integration service's interaction with ephemeral environments, ensuring correct handling of pipelines, snapshots, and environment cleanup.
-
-### 5. E2E Tests within `group-snapshots-tests.go`
+### 4. E2E Tests within `group-snapshots-tests.go`
 This suite tests the creation of group snapshots for both monorepo and multiple repositories scenarios. It verifies the integration service's ability to handle multiple components across different repository structures, including proper group snapshot creation, component coordination, and snapshot lifecycle management.
 
 ---
@@ -78,19 +75,7 @@ Checkpoints:
 - Ensuring that the MR notes show the successful status of the integration test.
 - Merge MR and repeat three tests above.
 
-### 4. Happy Path Tests within `integration-with-env.go`
-Checkpoints:
-- Creating an IntegrationTestScenario pointing to an integration pipeline with environment settings.
-- Successfully creating applications and components.
-- Verifying that BuildPipelineRuns are triggered, contain finalizers, and finish successfully.
-- Asserting the signing of the BuildPipelineRun and successful Snapshot creation.
-- Ensuring that the Integration PipelineRuns finish successfully and report status to the Snapshot.
-- Verifying that snapshots are marked as 'passed' after Integration PipelineRuns finish.
-- Ensuring that CronJobs such as "spacerequest-cleaner" exist.
-- Handling space requests in the namespace and ensuring they are created correctly.
-- Verifying proper cleanup after successful deletion of the Integration PipelineRun.
-
-### 5. Happy Path Tests within `group-snapshots-tests.go`
+### 4. Happy Path Tests within `group-snapshots-tests.go`
 Checkpoints:
 - Creating multiple components (A, B, C) with different repository structures (monorepo and multi-repo).
 - Verifying that BuildPipelineRuns are triggered for each component and complete successfully.
@@ -137,12 +122,6 @@ Checkpoints:
 - Ensuring that MR notes show the failure status of the integration test.
 - Asserting that no releases are triggered if any integration test fails.
 - Merge MR and repeat three tests above.
-
-### 4. Negative Test Cases within `integration-with-env.go`
-Checkpoints:
-- Verifying that integration pipelines are marked as failed when tests do not pass.
-- Checking that snapshots are marked as 'failed' when Integration PipelineRuns do not finish successfully.
-- Ensuring that space requests are deleted correctly in failed scenarios.
 
 ---
 

@@ -148,6 +148,8 @@ const (
 	// Label for marking a namespace as a tenant namespace
 	TenantLabelKey   string = "konflux-ci.dev/type"
 	TenantLabelValue string = "tenant"
+	// Label for marking a namespace with the workspace label
+	WorkspaceLabelKey string = "appstudio.redhat.com/workspace_name"
 
 	BuildPipelinesConfigMapDefaultNamespace = "build-templates"
 
@@ -246,6 +248,10 @@ const (
 	DockerBuildOciTA              BuildPipelineType = "docker-build-oci-ta"
 	DockerBuildMultiPlatformOciTa BuildPipelineType = "docker-build-multi-platform-oci-ta"
 	FbcBuilder                    BuildPipelineType = "fbc-builder"
+
+	// Test environments
+	DownstreamTestEnvironment string = "downstream"
+	UpstreamTestEnvironment   string = "upstream"
 )
 
 var (
