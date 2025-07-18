@@ -117,7 +117,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch with r
 						return err
 					}
 					return nil
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshotPush.Name) 
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshotPush.Name)
 			})
 
 			It("verifies the multiarch release pipelinerun is running and succeeds", func() {
@@ -251,7 +251,7 @@ func createMultiArchReleasePlanAdmission(multiarchRPAName string, managedFw fram
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(multiarchRPAName, managedNamespace, "", devNamespace, multiarchECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{multiarchAppName}, true, &tektonutils.PipelineRef{
+	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(multiarchRPAName, managedNamespace, "", devNamespace, multiarchECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{multiarchAppName}, false, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
 			{Name: "url", Value: releasecommon.RelSvcCatalogURL},
