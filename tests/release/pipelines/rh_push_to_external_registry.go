@@ -182,7 +182,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("[HACBS-1571]test-release-e2e-pu
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = kubeAdminClient.ReleaseController.CreateReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, "", devNamespace, ecPolicyName, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationNameDefault}, true, &tektonutils.PipelineRef{
+		_, err = kubeAdminClient.ReleaseController.CreateReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, "", devNamespace, ecPolicyName, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationNameDefault}, false, &tektonutils.PipelineRef{
 			Resolver: "git",
 			Params: []tektonutils.Param{
 				{Name: "url", Value: releasecommon.RelSvcCatalogURL},
