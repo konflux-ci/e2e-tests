@@ -154,7 +154,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 						return err
 					}
 					return nil
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshot.Name) 
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshot.Name)
 			})
 
 			It("verifies the rhtap release pipelinerun is running and succeeds", func() {
@@ -284,7 +284,7 @@ func createRHTAPReleasePlanAdmission(rhtapRPAName string, managedFw framework.Fr
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(rhtapRPAName, managedNamespace, "", devNamespace, rhtapECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{rhtapAppName}, true, &tektonutils.PipelineRef{
+	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(rhtapRPAName, managedNamespace, "", devNamespace, rhtapECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{rhtapAppName}, false, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
 			{Name: "url", Value: releasecommon.RelSvcCatalogURL},
