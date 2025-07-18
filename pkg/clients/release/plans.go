@@ -43,6 +43,36 @@ func (r *ReleaseController) CreateReleasePlan(name, namespace, application, targ
 	return releasePlan, r.KubeRest().Create(context.Background(), releasePlan)
 }
 
+// CreateReleasePlan creates a new ReleasePlan using the given parameters.
+func (r *ReleaseController) CreateReleasePlanWithRPA(name, namespace, application, targetNamespace, rpaName, autoReleaseLabel string, data *runtime.RawExtension, tenantPipeline *tektonutils.ParameterizedPipeline, finalPipeline *tektonutils.ParameterizedPipeline) (*releaseApi.ReleasePlan, error) {
+	var releasePlan *releaseApi.ReleasePlan = &releaseApi.ReleasePlan{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: name,
+			Name:         name,
+			Namespace:    namespace,
+			Labels: map[string]string{
+				releaseMetadata.AutoReleaseLabel: autoReleaseLabel,
+				releaseMetadata.AttributionLabel: "true",
+				releaseMetadata.ReleasePlanAdmissionLabel: rpaName,
+			},
+		},
+		Spec: releaseApi.ReleasePlanSpec{
+			Application:	application,
+			Data:		data,
+			TenantPipeline:	tenantPipeline,
+			FinalPipeline:	finalPipeline,
+			Target:		targetNamespace,
+		},
+	}
+	if autoReleaseLabel == "" || autoReleaseLabel == "true" {
+		releasePlan.ObjectMeta.Labels[releaseMetadata.AutoReleaseLabel] = "true"
+	} else {
+		releasePlan.ObjectMeta.Labels[releaseMetadata.AutoReleaseLabel] = "false"
+	}
+
+	return releasePlan, r.KubeRest().Create(context.Background(), releasePlan)
+}
+
 // CreateReleasePlanAdmission creates a new ReleasePlanAdmission using the given parameters.
 func (r *ReleaseController) CreateReleasePlanAdmission(name, namespace, environment, origin, policy, serviceAccountName string, applications []string, autoRelease bool, pipelineRef *tektonutils.PipelineRef, data *runtime.RawExtension) (*releaseApi.ReleasePlanAdmission, error) {
 	releasePlanAdmission := &releaseApi.ReleasePlanAdmission{
