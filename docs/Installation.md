@@ -8,7 +8,7 @@ Requirements for installing Konflux in E2E mode:
 
 * An OpenShift 4.12 or higher Environment (If you are using CRC/OpenShift Local please also review [optional-codeready-containers-post-bootstrap-configuration](https://github.com/redhat-appstudio/infra-deployments/blob/main/docs/development/deployment.md#optional-openshift-local-post-bootstrap-configuration))
 * A machine from which to run the install (usually your laptop) with required tools:
-  * A properly setup Go workspace using **Go 1.22 is required**
+  * A properly setup Go workspace using **Go 1.23 is required**
   * The OpenShift Command Line Tool (oc) **Use the version corresponding to the Openshift version**
   * [yq]((https://github.com/mikefarah/yq))
   * jq
@@ -35,7 +35,7 @@ Requirements for installing Konflux in E2E mode:
 ``` bash
 # Install dependencies
 $ go mod tidy
-# or go mod tidy -compat=1.22
+# or go mod tidy -compat=1.23
 ```
 
 4. By default the installation script will use the `redhat-appstudio-qe` GitHub organization for pushing changes to `infra-deployments` repository.
