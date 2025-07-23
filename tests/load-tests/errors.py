@@ -67,6 +67,7 @@ ERRORS = {
     #   to call webhook: Post "https://etcd-shield.etcd-shield.svc:443/validate-tekton-dev-v1-pipelinerun?timeout=10s":
     #   context deadline exceeded```
     "Timeout listing pipeline runs": r"Repo-templating workflow component cleanup failed: Error deleting on-pull-request default PipelineRun in namespace .*: Unable to list PipelineRuns for component .* in namespace .*: context deadline exceeded",
+    "Timeout listing pipeline runs": r"Repo-templating workflow component cleanup failed: Error deleting on-push merged PipelineRun in namespace .*: Unable to list PipelineRuns for component .* in namespace .*: context deadline exceeded",
     "Timeout waiting for build pipeline to be created": r"Build Pipeline Run failed creation: context deadline exceeded",
     "Timeout waiting for integration test scenario to validate": r"Integration test scenario failed validation: context deadline exceeded",
     "Timeout waiting for snapshot to be created": r"Snapshot failed creation: context deadline exceeded",
