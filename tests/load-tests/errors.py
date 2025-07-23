@@ -75,6 +75,7 @@ ERRORS = {
     "Timeout waiting for snapshot to be created": r"Snapshot failed creation: context deadline exceeded",
     "Timeout waiting for test pipeline to create": r"Test Pipeline Run failed creation: context deadline exceeded",
     "Timeout waiting for test pipeline to finish": r"Test Pipeline Run failed run: context deadline exceeded",
+    "Unable to connect to server": r"Error: Unable to connect to server",
 }
 
 FAILED_PLR_ERRORS = {
