@@ -31,11 +31,11 @@ import (
 )
 
 const (
-	sampSourceGitURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic"
-	sampGitSrcSHA          = "6b56d05ac8abb4c24d153e9689209a1018402aad"
-	sampRepoOwner          = "redhat-appstudio-qe"
-	sampRepo               = "devfile-sample-go-basic"
-	sampCatalogPathInRepo  = "pipelines/managed/release-to-github/release-to-github.yaml"
+	sampSourceGitURL      = "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic"
+	sampGitSrcSHA         = "6b56d05ac8abb4c24d153e9689209a1018402aad"
+	sampRepoOwner         = "redhat-appstudio-qe"
+	sampRepo              = "devfile-sample-go-basic"
+	sampCatalogPathInRepo = "pipelines/managed/release-to-github/release-to-github.yaml"
 )
 
 var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github pipeline", Pending, Label("release-pipelines", "release-to-github"), func() {
@@ -143,7 +143,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 						return err
 					}
 					return nil
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshot.Name) 
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshot.Name)
 			})
 
 			It("verifies the release pipelinerun is running and succeeds", func() {
@@ -238,7 +238,7 @@ func createGHReleasePlanAdmission(sampRPAName string, managedFw framework.Framew
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(sampRPAName, managedNamespace, "", devNamespace, sampECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{sampAppName}, true, &tektonutils.PipelineRef{
+	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(sampRPAName, managedNamespace, "", devNamespace, sampECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{sampAppName}, false, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
 			{Name: "url", Value: releasecommon.RelSvcCatalogURL},

@@ -433,7 +433,7 @@ func createReleaseConfig(kubeadminClient *framework.ControllerHub, managedNamesp
 	_, err = kubeadminClient.TektonController.CreateEnterpriseContractPolicy(ecPolicyName, managedNamespace, defaultEcPolicySpec)
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = kubeadminClient.ReleaseController.CreateReleasePlanAdmission("demo", managedNamespace, "", userNamespace, ecPolicyName, "release-service-account", []string{appName}, true, &tektonutils.PipelineRef{
+	_, err = kubeadminClient.ReleaseController.CreateReleasePlanAdmission("demo", managedNamespace, "", userNamespace, ecPolicyName, "release-service-account", []string{appName}, false, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
 			{Name: "url", Value: releasecommon.RelSvcCatalogURL},

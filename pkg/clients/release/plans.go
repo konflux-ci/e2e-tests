@@ -27,11 +27,11 @@ func (r *ReleaseController) CreateReleasePlan(name, namespace, application, targ
 			},
 		},
 		Spec: releaseApi.ReleasePlanSpec{
-			Application:	application,
-			Data:		data,
-			TenantPipeline:	tenantPipeline,
-			FinalPipeline:	finalPipeline,
-			Target:		targetNamespace,
+			Application:    application,
+			Data:           data,
+			TenantPipeline: tenantPipeline,
+			FinalPipeline:  finalPipeline,
+			Target:         targetNamespace,
 		},
 	}
 	if autoReleaseLabel == "" || autoReleaseLabel == "true" {
@@ -44,13 +44,13 @@ func (r *ReleaseController) CreateReleasePlan(name, namespace, application, targ
 }
 
 // CreateReleasePlanAdmission creates a new ReleasePlanAdmission using the given parameters.
-func (r *ReleaseController) CreateReleasePlanAdmission(name, namespace, environment, origin, policy, serviceAccountName string, applications []string, autoRelease bool, pipelineRef *tektonutils.PipelineRef, data *runtime.RawExtension) (*releaseApi.ReleasePlanAdmission, error) {
+func (r *ReleaseController) CreateReleasePlanAdmission(name, namespace, environment, origin, policy, serviceAccountName string, applications []string, blockReleases bool, pipelineRef *tektonutils.PipelineRef, data *runtime.RawExtension) (*releaseApi.ReleasePlanAdmission, error) {
 	releasePlanAdmission := &releaseApi.ReleasePlanAdmission{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
-				releaseMetadata.AutoReleaseLabel: strconv.FormatBool(autoRelease),
+				"releases.appstudio.openshift.io/block-releases": strconv.FormatBool(blockReleases), // TODO - replace with imported constant once release-service go module updated
 			},
 		},
 		Spec: releaseApi.ReleasePlanAdmissionSpec{
@@ -59,7 +59,7 @@ func (r *ReleaseController) CreateReleasePlanAdmission(name, namespace, environm
 			Environment:  environment,
 			Origin:       origin,
 			Pipeline: &tektonutils.Pipeline{
-				PipelineRef:    *pipelineRef,
+				PipelineRef:        *pipelineRef,
 				ServiceAccountName: serviceAccountName,
 			},
 			Policy: policy,
