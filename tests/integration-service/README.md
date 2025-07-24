@@ -18,6 +18,9 @@ This suite verifies the reporting of integration test statuses to GitLab Merge R
 ### 4. E2E Tests within `group-snapshots-tests.go`
 This suite tests the creation of group snapshots for both monorepo and multiple repositories scenarios. It verifies the integration service's ability to handle multiple components across different repository structures, including proper group snapshot creation, component coordination, and snapshot lifecycle management.
 
+### 5. E2E Tests within `pipelinerun-resolution.go`
+This suite tests the integration service's pipeline resolution functionality, focusing on ResolutionRequest lifecycle management and ensuring proper cleanup of resolution resources after pipeline execution.
+
 ---
 
 ## Happy Path Tests
@@ -89,6 +92,16 @@ Checkpoints:
 - Ensuring that group snapshots reference the correct build PipelineRuns for each component.
 - **Verifying that older snapshots and their associated integration PipelineRuns are cancelled when new group snapshots are created.**
 
+### 5. Happy Path Tests within `pipelinerun-resolution.go`
+Checkpoints:
+- Testing for successful creation of applications and components with pipeline resolution.
+- Checking if the BuildPipelineRun is successfully triggered and completed with proper resolution.
+- Verifying that Integration PipelineRuns are resolved and executed successfully.
+- Validating that existing labels and annotations from PipelinesAsCode are preserved during resolution.
+- Ensuring that ResolutionRequest objects are properly cleaned up after pipeline resolution is complete.
+- Verifying that no orphaned ResolutionRequest objects remain in the namespace after test completion.
+- Testing integration service's ability to handle resolution failures gracefully.
+
 ---
 
 ## Negative Tests
@@ -123,6 +136,13 @@ Checkpoints:
 - Asserting that no releases are triggered if any integration test fails.
 - Merge MR and repeat three tests above.
 
+
+### 5. Negative Test Cases within `pipelinerun-resolution.go`
+Checkpoints:
+- Verifying that ResolutionRequest objects are not cleaned up properly after pipeline resolution.
+- Ensuring that orphaned ResolutionRequest objects are detected and cleaned up.
+- Testing integration service's ability to handle resolution failures gracefully.
+
 ---
 
 ## Running E2E Tests
@@ -133,4 +153,16 @@ Checkpoints:
 
 ```
  ./bin/e2e-appstudio --ginkgo.focus="integration-service-suite" –ginkgo.vv
+```
+
+- To run pipeline resolution E2E test suite: `pipelinerun-resolution.go`
+
+```bash
+./bin/e2e-appstudio --ginkgo.focus="pipelinerun-resolution" --ginkgo.vv
+```
+
+- To run all integration service tests including pipeline resolution:
+
+```bash
+./bin/e2e-appstudio --ginkgo.focus="integration-service" --ginkgo.vv
 ```
