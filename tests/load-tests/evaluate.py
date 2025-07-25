@@ -22,7 +22,6 @@ METRICS = [
     "createApplication",
     "validateApplication",
     "createIntegrationTestScenario",
-    "validateIntegrationTestScenario",
     "createComponent",
     "getPaCPullNumber",
     "validateComponentBuildSA",
@@ -45,7 +44,6 @@ METRICS = [
 # These metrics will be ignored if ITS was skipped
 METRICS_ITS = [
     "createIntegrationTestScenario",
-    "validateIntegrationTestScenario",
     "validateTestPipelineRunCreation",
     "validateTestPipelineRunCondition",
 ]
