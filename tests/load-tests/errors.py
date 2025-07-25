@@ -81,7 +81,7 @@ ERRORS = {
 
 FAILED_PLR_ERRORS = {
     "SKIP": r"Skipping step because a previous step failed",   # This is a special "wildcard" error, let's keep it on top and do not change "SKIP" reason as it is used in the code
-    "Bad Gateway when pulling container image": r"Error: initializing source .* reading manifest .* in .* received unexpected HTTP status: 502 Bad Gateway ",
+    "Bad Gateway when pulling container image from quay.io": r"Error: initializing source docker://quay.io/[^ ]+: reading manifest [^ ]+ in quay.io/[^ ]+: received unexpected HTTP status: 502 Bad Gateway ",
     "buildah build failed creating build container: registry.access.redhat.com returned 403": r"Error: creating build container: internal error: unable to copy from source docker://registry.access.redhat.com/.*: copying system image from manifest list: determining manifest MIME type for docker://registry.access.redhat.com/.*: reading manifest .* in registry.access.redhat.com/.*: StatusCode: 403",
     "Can not find chroot_scan.tar.gz file": r"tar: .*/chroot_scan.tar.gz: Cannot open: No such file or directory",
     "Can not find Dockerfile": r"Cannot find Dockerfile Dockerfile",
@@ -93,6 +93,7 @@ FAILED_PLR_ERRORS = {
     "Failed because of quay.io returned 502": r"level=fatal msg=.Error parsing image name .*docker://quay.io/.* Requesting bearer token: invalid status code from registry 502 .Bad Gateway.",
     "Failed because registry.access.redhat.com returned 503 when reading manifest": r"source-build:ERROR:command execution failure, status: 1, stderr: time=.* level=fatal msg=.Error parsing image name .* reading manifest .* in registry.access.redhat.com/.* received unexpected HTTP status: 503 Service Unavailable",
     "Failed to pull container from registry.access.redhat.com because of DNS error": r"Error: initializing source docker://registry.access.redhat.com/.* pinging container registry registry.access.redhat.com: Get \"https://registry.access.redhat.com/v2/\": dial tcp: lookup registry.access.redhat.com: Temporary failure in name resolution",
+    "Gateway Time-out when pulling container image from quay.io": r"Error: initializing source docker://quay.io/[^ ]+: reading manifest [^ ]+ in quay.io/[^ ]+: received unexpected HTTP status: 504 Gateway Time-out",
     "Gateway Time-out when pulling container image": r"Error: copying system image from manifest list: parsing image configuration: fetching blob: received unexpected HTTP status: 504 Gateway Time-out",
     "Introspection failed because of incomplete .docker/config.json": r".* level=fatal msg=\"Error parsing image name .*: getting username and password: reading JSON file .*/tekton/home/.docker/config.json.*: unmarshaling JSON at .*: unexpected end of JSON input\"",
     "RPM build failed: bool cannot be defined via typedef": r"error: .bool. cannot be defined via .typedef..*error: Bad exit status from /var/tmp/rpm-tmp..* ..build.",
