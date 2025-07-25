@@ -131,7 +131,7 @@ func validateComponentBuildSA(f *framework.Framework, namespace, name string) er
 	// TODO It would be much better to watch this resource instead querying it
 	err := utils.WaitUntilWithInterval(f.AsKubeDeveloper.CommonController.ServiceAccountPresent(component_sa, namespace), interval, timeout)
 	if err != nil {
-		return fmt.Errorf("Component build SA %s in namespace %s not created: %v", component_sa, namespace, err)
+		return fmt.Errorf("Component build SA %s in namespace %s not present: %v", component_sa, namespace, err)
 	}
 
 	return nil
@@ -327,7 +327,7 @@ func HandleComponent(ctx *PerComponentContext) error {
 		ctx.ComponentName,
 	)
 	if err != nil {
-		return logging.Logger.Fail(65, "Component build SA failed creation: %v", err)
+		return logging.Logger.Fail(65, "Component build SA not present: %v", err)
 	}
 
 	// Configure imagePullSecrets needed for component build task images
