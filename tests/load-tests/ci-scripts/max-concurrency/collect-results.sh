@@ -138,8 +138,6 @@ ${csv_delim}ValidatePipelineRunSignatureAvgTime\
 ${csv_delim}ValidatePipelineRunSignatureMaxTime\
 ${csv_delim}CreateIntegrationTestScenarioAvgTime\
 ${csv_delim}CreateIntegrationTestScenarioMaxTime\
-${csv_delim}ValidateIntegrationTestScenarioAvgTime\
-${csv_delim}ValidateIntegrationTestScenarioMaxTime\
 ${csv_delim}ValidateTestPipelineRunConditionAvgTime\
 ${csv_delim}ValidateTestPipelineRunConditionMaxTime\
 ${csv_delim}ValidateTestPipelineRunCreationAvgTime\
@@ -204,8 +202,6 @@ ${csv_delim}NodeDiskIoTimeSecondsTotalAvg" \
                 + $csv_delim_quoted + (.results.measurements.validatePipelineRunSignature.pass.duration.max | tostring) \
                 + $csv_delim_quoted + (.results.measurements.createIntegrationTestScenario.pass.duration.mean | tostring) \
                 + $csv_delim_quoted + (.results.measurements.createIntegrationTestScenario.pass.duration.max | tostring) \
-                + $csv_delim_quoted + (.results.measurements.validateIntegrationTestScenario.pass.duration.mean | tostring) \
-                + $csv_delim_quoted + (.results.measurements.validateIntegrationTestScenario.pass.duration.max | tostring) \
                 + $csv_delim_quoted + (.results.measurements.validateTestPipelineRunCondition.pass.duration.mean | tostring) \
                 + $csv_delim_quoted + (.results.measurements.validateTestPipelineRunCondition.pass.duration.max | tostring) \
                 + $csv_delim_quoted + (.results.measurements.validateTestPipelineRunCreation.pass.duration.mean | tostring) \
