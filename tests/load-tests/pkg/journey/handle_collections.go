@@ -209,7 +209,7 @@ func HandlePerComponentCollection(ctx *PerComponentContext) error {
 
 	err = collectApplicationComponentJSONs(ctx.Framework, dirPath, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName)
 	if err != nil {
-		return logging.Logger.Fail(102, "Failed to collect Application and Component JSONs: %v", err)
+		return logging.Logger.Fail(103, "Failed to collect Application and Component JSONs: %v", err)
 	}
 
 	return nil
