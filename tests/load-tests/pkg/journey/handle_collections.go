@@ -87,11 +87,19 @@ func collectPodLogs(f *framework.Framework, dirPath, namespace, component string
 	return nil
 }
 
-func collectPipelineRunJSONs(f *framework.Framework, dirPath, namespace, application, component string) error {
+func collectPipelineRunJSONs(f *framework.Framework, dirPath, namespace, application, component, release string) error {
 	prs, err := f.AsKubeDeveloper.HasController.GetComponentPipelineRunsWithType(component, application, namespace, "", "", "")
 	if err != nil {
 		return fmt.Errorf("Failed to list PipelineRuns %s/%s/%s: %v", namespace, application, component, err)
 	}
+
+	pr_release, err := f.AsKubeDeveloper.ReleaseController.GetPipelineRunInNamespace(namespace, release, namespace)
+	if err != nil {
+		return fmt.Errorf("Failed to get Release PipelineRun %s/%s: %v", namespace, release, err)
+	}
+
+	// Make one list that contains them all
+	*prs = append(*prs, *pr_release)
 
 	for _, pr := range *prs {
 		prJSON, err := json.Marshal(pr)
@@ -194,7 +202,7 @@ func HandlePerComponentCollection(ctx *PerComponentContext) error {
 		return logging.Logger.Fail(101, "Failed to collect pod logs: %v", err)
 	}
 
-	err = collectPipelineRunJSONs(ctx.Framework, dirPath, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName)
+	err = collectPipelineRunJSONs(ctx.Framework, dirPath, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName, ctx.ReleaseName)
 	if err != nil {
 		return logging.Logger.Fail(102, "Failed to collect pipeline run JSONs: %v", err)
 	}

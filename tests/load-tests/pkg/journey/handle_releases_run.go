@@ -139,7 +139,6 @@ func HandleReleaseRun(ctx *PerComponentContext) error {
 		return nil
 	}
 
-	var releaseName string
 	var iface interface{}
 	var ok bool
 	var err error
@@ -154,7 +153,7 @@ func HandleReleaseRun(ctx *PerComponentContext) error {
 		return logging.Logger.Fail(90, "Release failed creation: %v", err)
 	}
 
-	releaseName, ok = iface.(string)
+	ctx.ReleaseName, ok = iface.(string)
 	if !ok {
 		return logging.Logger.Fail(91, "Type assertion failed on release name: %+v", iface)
 	}
@@ -163,7 +162,7 @@ func HandleReleaseRun(ctx *PerComponentContext) error {
 		validateReleasePipelineRunCreation,
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,
-		releaseName,
+		ctx.ReleaseName,
 	)
 	if err != nil {
 		return logging.Logger.Fail(92, "Release pipeline run failed creation: %v", err)
@@ -173,7 +172,7 @@ func HandleReleaseRun(ctx *PerComponentContext) error {
 		validateReleasePipelineRunCondition,
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,
-		releaseName,
+		ctx.ReleaseName,
 	)
 	if err != nil {
 		return logging.Logger.Fail(93, "Release pipeline run failed: %v", err)
@@ -183,13 +182,13 @@ func HandleReleaseRun(ctx *PerComponentContext) error {
 		validateReleaseCondition,
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,
-		releaseName,
+		ctx.ReleaseName,
 	)
 	if err != nil {
 		return logging.Logger.Fail(94, "Release failed: %v", err)
 	}
 
-	logging.Logger.Info("Release %s in namespace %s succeeded", releaseName, ctx.ParentContext.ParentContext.Namespace)
+	logging.Logger.Info("Release %s in namespace %s succeeded", ctx.ReleaseName, ctx.ParentContext.ParentContext.Namespace)
 
 	return nil
 }

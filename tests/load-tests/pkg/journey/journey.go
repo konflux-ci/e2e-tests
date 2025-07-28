@@ -150,6 +150,7 @@ type PerComponentContext struct {
 	ComponentName      string
 	SnapshotName       string
 	MergeRequestNumber int
+	ReleaseName        string
 }
 
 // Start all the threads to process all components per application
