@@ -15,7 +15,7 @@ var IntegrationServiceCIRule = rulesengine.Rule{Name: "Integration-service repo 
 		&IntegrationServiceRepoSetDefaultSettingsRule,
 		rulesengine.Any{&InfraDeploymentsPRPairingRule, rulesengine.None{&InfraDeploymentsPRPairingRule}},
 		&PreflightInstallGinkgoRule,
-		&BootstrapClusterWithSprayProxyRuleChain,
+		rulesengine.Any{rulesengine.None{&BootstrapClusterWithSprayProxyRuleChain}, &BootstrapClusterWithSprayProxyRuleChain},
 	},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteTestAction)},
 }

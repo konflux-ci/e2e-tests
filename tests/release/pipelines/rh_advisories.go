@@ -27,9 +27,9 @@ import (
 )
 
 const (
-	advsCatalogPathInRepo  = "pipelines/managed/rh-advisories/rh-advisories.yaml"
-	advsGitSourceURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic-release"
-	advsGitSrcSHA          = "33ff89edf85fb01a37d3d652d317080223069fc7"
+	advsCatalogPathInRepo = "pipelines/managed/rh-advisories/rh-advisories.yaml"
+	advsGitSourceURL      = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic-release"
+	advsGitSrcSHA         = "33ff89edf85fb01a37d3d652d317080223069fc7"
 )
 
 var advsComponentName = "advs-comp-" + util.GenerateRandomString(4)
@@ -122,7 +122,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 						return err
 					}
 					return nil
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshotPush.Name) 
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshotPush.Name)
 			})
 
 			It("verifies the advs release pipelinerun is running and succeeds", func() {
@@ -274,7 +274,7 @@ func createADVSReleasePlanAdmission(advsRPAName string, managedFw framework.Fram
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(advsRPAName, managedNamespace, "", devNamespace, advsECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{advsAppName}, true, &tektonutils.PipelineRef{
+	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(advsRPAName, managedNamespace, "", devNamespace, advsECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{advsAppName}, false, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
 			{Name: "url", Value: releasecommon.RelSvcCatalogURL},

@@ -9,7 +9,6 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
-	kubeapi "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
@@ -38,10 +37,9 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templat
 	defer GinkgoRecover()
 
 	var namespace string
-	var kubeClient *framework.ControllerHub
 	var fwk *framework.Framework
 	var taskName string = "tkn-bundle"
-	var pathInRepo string = fmt.Sprintf("task/%s/0.1/%s.yaml", taskName, taskName)
+	var pathInRepo string = fmt.Sprintf("task/%s/0.2/%s.yaml", taskName, taskName)
 	var pvcName string = "source-pvc"
 	var pvcAccessMode corev1.PersistentVolumeAccessMode = "ReadWriteOnce"
 	var baseTaskRun *pipeline.TaskRun
@@ -52,47 +50,33 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templat
 	AfterEach(framework.ReportFailure(&fwk))
 
 	BeforeAll(func() {
-		namespace = os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV)
-		if len(namespace) > 0 {
-			adminClient, err := kubeapi.NewAdminKubernetesClient()
-			Expect(err).ShouldNot(HaveOccurred())
-			kubeClient, err = framework.InitControllerHub(adminClient)
-			Expect(err).ShouldNot(HaveOccurred())
-			_, err = kubeClient.CommonController.CreateTestNamespace(namespace)
-			Expect(err).ShouldNot(HaveOccurred())
+		var err error
+		fwk, err = framework.NewFramework(utils.GetGeneratedNamespace("konflux-task-runner"))
+		Expect(err).NotTo(HaveOccurred())
+		namespace = fwk.UserNamespace
 
-			// set a custom bundle repo for the task
-			bundleImg = utils.GetEnv("TKN_BUNDLE_REPO", qeBundleRepo)
-		} else {
-			var err error
-			fwk, err = framework.NewFramework(utils.GetGeneratedNamespace("konflux-task-runner"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(fwk.UserNamespace).NotTo(BeNil(), "failed to create sandbox user")
-			namespace = fwk.UserNamespace
-			kubeClient = fwk.AsKubeAdmin
-
-			err = kubeClient.CommonController.CreateQuayRegistrySecret(namespace)
-			Expect(err).NotTo(HaveOccurred())
-			bundleImg = qeBundleRepo
+		if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) == "" {
+			Expect(fwk.AsKubeAdmin.CommonController.CreateQuayRegistrySecret(namespace)).To(Succeed())
 		}
 
+		bundleImg = utils.GetEnv("TKN_BUNDLE_REPO", qeBundleRepo)
+
 		// resolve the gitURL and gitRevision
-		var err error
 		gitURL, gitRevision, err = build.ResolveGitDetails(constants.TASK_REPO_URL_ENV, constants.TASK_REPO_REVISION_ENV)
 		Expect(err).NotTo(HaveOccurred())
 
 		// if pvc does not exist create it
-		if _, err := kubeClient.TektonController.GetPVC(pvcName, namespace); err != nil {
-			_, err = kubeClient.TektonController.CreatePVCInAccessMode(pvcName, namespace, pvcAccessMode)
+		if _, err := fwk.AsKubeAdmin.TektonController.GetPVC(pvcName, namespace); err != nil {
+			_, err = fwk.AsKubeAdmin.TektonController.CreatePVCInAccessMode(pvcName, namespace, pvcAccessMode)
 			Expect(err).NotTo(HaveOccurred())
 		}
 		// use a pod to copy test data to the pvc
 		testData, err := setupTestData(pvcName)
 		Expect(err).NotTo(HaveOccurred())
-		pod, err := kubeClient.CommonController.CreatePod(testData, namespace)
+		pod, err := fwk.AsKubeAdmin.CommonController.CreatePod(testData, namespace)
 		Expect(err).NotTo(HaveOccurred())
 		// wait for setup pod. make sure it's successful
-		err = kubeClient.CommonController.WaitForPod(kubeClient.CommonController.IsPodSuccessful(pod.Name, namespace), 300)
+		err = fwk.AsKubeAdmin.CommonController.WaitForPod(fwk.AsKubeAdmin.CommonController.IsPodSuccessful(pod.Name, namespace), 300)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -107,6 +91,29 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templat
 		}
 		// get a new taskRun on each Entry
 		baseTaskRun = taskRunTemplate(taskName, pvcName, bundleImg, resolverRef)
+		baseTaskRun.Spec.Params = []pipeline.Param{
+			{
+				Name: "URL",
+				Value: pipeline.ParamValue{
+					Type:      "string",
+					StringVal: gitURL,
+				},
+			},
+			{
+				Name: "REVISION",
+				Value: pipeline.ParamValue{
+					Type:      "string",
+					StringVal: gitRevision,
+				},
+			},
+			{
+				Name: "IMAGE",
+				Value: pipeline.ParamValue{
+					Type:      "string",
+					StringVal: qeBundleRepo,
+				},
+			},
+		}
 	})
 
 	DescribeTable("creates Tekton bundles with different params",
@@ -120,32 +127,33 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templat
 					},
 				})
 			}
-			tr, err := kubeClient.TektonController.RunTaskAndWait(baseTaskRun, namespace)
+			tr, err := fwk.AsKubeAdmin.TektonController.RunTaskAndWait(baseTaskRun, namespace)
 			Expect(err).NotTo(HaveOccurred())
 
 			// check for a success of the taskRun
-			status, err := kubeClient.TektonController.CheckTaskRunSucceeded(tr.Name, namespace)()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(status).To(BeTrue(), fmt.Sprintf("taskRun %q failed", tr.Name))
+			Eventually(func() bool {
+				status, err := fwk.AsKubeAdmin.TektonController.CheckTaskRunSucceeded(tr.Name, namespace)()
+				return err == nil && status
+			}, time.Minute*2, 2*time.Second).Should(BeTrue(), fmt.Sprintf("taskRun %q failed", tr.Name))
 
 			// verify taskRun results
-			imgUrl, err := kubeClient.TektonController.GetResultFromTaskRun(tr, "IMAGE_URL")
+			imgUrl, err := fwk.AsKubeAdmin.TektonController.GetResultFromTaskRun(tr, "IMAGE_URL")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(imgUrl).To(Equal(bundleImg))
 
-			imgDigest, err := kubeClient.TektonController.GetResultFromTaskRun(tr, "IMAGE_DIGEST")
+			imgDigest, err := fwk.AsKubeAdmin.TektonController.GetResultFromTaskRun(tr, "IMAGE_DIGEST")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(imgDigest).To(MatchRegexp(`^sha256:[a-fA-F0-9]{64}$`))
 
 			// verify taskRun log output
-			podLogs, err := kubeClient.CommonController.GetPodLogsByName(tr.Status.PodName, namespace)
+			podLogs, err := fwk.AsKubeAdmin.CommonController.GetPodLogsByName(tr.Status.PodName, namespace)
 			Expect(err).NotTo(HaveOccurred())
 			podLog := fmt.Sprintf("pod-%s-step-build.log", tr.Status.PodName)
 			matchOutput(podLogs[podLog], expectedOutput)
 			notMatchOutput(podLogs[podLog], notExpectedOutput)
 
 			// verify environment variables
-			envVar, err := kubeClient.TektonController.GetEnvVariable(tr, "HOME")
+			envVar, err := fwk.AsKubeAdmin.TektonController.GetEnvVariable(tr, "HOME")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(envVar).To(Equal(expectedHomeVar))
 

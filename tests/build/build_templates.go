@@ -14,7 +14,6 @@ import (
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/common"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
-	kubeapi "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/oras"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
@@ -197,7 +196,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 		var applicationName, symlinkPRunName, testNamespace string
 		components := make(map[string]ComponentScenarioSpec)
-		var kubeadminClient *framework.ControllerHub
 		var pipelineRunsWithE2eFinalizer []string
 
 		for _, gitUrl := range componentUrls {
@@ -226,53 +224,43 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			} else {
 				applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
 			}
-			testNamespace = os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV)
-			if len(testNamespace) > 0 {
-				asAdminClient, err := kubeapi.NewAdminKubernetesClient()
-				Expect(err).ShouldNot(HaveOccurred())
-				kubeadminClient, err = framework.InitControllerHub(asAdminClient)
-				Expect(err).ShouldNot(HaveOccurred())
-				_, err = kubeadminClient.CommonController.CreateTestNamespace(testNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-			} else {
-				f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
-				Expect(err).NotTo(HaveOccurred())
-				testNamespace = f.UserNamespace
-				Expect(f.UserNamespace).NotTo(BeNil())
-				kubeadminClient = f.AsKubeAdmin
-			}
 
-			_, err = kubeadminClient.HasController.GetApplication(applicationName, testNamespace)
+			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.UserNamespace).NotTo(BeNil())
+			testNamespace = f.UserNamespace
+
+			_, err = f.AsKubeAdmin.HasController.GetApplication(applicationName, testNamespace)
 			// In case the app with the same name exist in the selected namespace, delete it first
 			if err == nil {
-				Expect(kubeadminClient.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 				Eventually(func() bool {
-					_, err := kubeadminClient.HasController.GetApplication(applicationName, testNamespace)
+					_, err := f.AsKubeAdmin.HasController.GetApplication(applicationName, testNamespace)
 					return errors.IsNotFound(err)
 				}, time.Minute*5, time.Second*1).Should(BeTrue(), fmt.Sprintf("timed out when waiting for the app %s to be deleted in %s namespace", applicationName, testNamespace))
 			}
-			_, err = kubeadminClient.HasController.CreateApplication(applicationName, testNamespace)
+			_, err = f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
 			for componentName, scenario := range components {
-				CreateComponent(kubeadminClient.CommonController, kubeadminClient.HasController, applicationName, componentName, testNamespace, scenario)
+				CreateComponent(f.AsKubeAdmin.CommonController, f.AsKubeAdmin.HasController, applicationName, componentName, testNamespace, scenario)
 			}
 			// Create the symlink component
-			CreateComponent(kubeadminClient.CommonController, kubeadminClient.HasController, applicationName, symlinkComponentName, testNamespace, symlinkScenario)
+			CreateComponent(f.AsKubeAdmin.CommonController, f.AsKubeAdmin.HasController, applicationName, symlinkComponentName, testNamespace, symlinkScenario)
 
 		})
 
 		AfterAll(func() {
 			//Remove finalizers from pipelineruns
 			Eventually(func() error {
-				pipelineRuns, err := kubeadminClient.HasController.GetAllPipelineRunsForApplication(applicationName, testNamespace)
+				pipelineRuns, err := f.AsKubeAdmin.HasController.GetAllPipelineRunsForApplication(applicationName, testNamespace)
 				if err != nil {
 					GinkgoWriter.Printf("error while getting pipelineruns: %v\n", err)
 					return err
 				}
 				for i := 0; i < len(pipelineRuns.Items); i++ {
 					if utils.Contains(pipelineRunsWithE2eFinalizer, pipelineRuns.Items[i].GetName()) {
-						err = kubeadminClient.TektonController.RemoveFinalizerFromPipelineRun(&pipelineRuns.Items[i], constants.E2ETestFinalizerName)
+						err = f.AsKubeAdmin.TektonController.RemoveFinalizerFromPipelineRun(&pipelineRuns.Items[i], constants.E2ETestFinalizerName)
 						if err != nil {
 							GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pipelineRuns.Items[i].GetName(), err)
 							return err
@@ -286,20 +274,20 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				// Clean up only Application CR (Component and Pipelines are included) in case we are targeting specific namespace
 				// Used e.g. in build-definitions e2e tests, where we are targeting build-templates-e2e namespace
 				if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) != "" {
-					DeferCleanup(kubeadminClient.HasController.DeleteApplication, applicationName, testNamespace, false)
+					DeferCleanup(f.AsKubeAdmin.HasController.DeleteApplication, applicationName, testNamespace, false)
 				} else {
-					Expect(kubeadminClient.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
-					Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
+					Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+					Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
 				}
 			}
 			// Skip removing the branches, to help debug the issue: https://issues.redhat.com/browse/STONEBLD-2981
 			//Cleanup pac and base branches
 			// for _, branches := range pacAndBaseBranches {
-			// 	err = kubeadminClient.CommonController.Github.DeleteRef(branches.RepoName, branches.PacBranchName)
+			// 	err = f.AsKubeAdmin.CommonController.Github.DeleteRef(branches.RepoName, branches.PacBranchName)
 			// 	if err != nil {
 			// 		Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 			// 	}
-			// 	err = kubeadminClient.CommonController.Github.DeleteRef(branches.RepoName, branches.BaseBranchName)
+			// 	err = f.AsKubeAdmin.CommonController.Github.DeleteRef(branches.RepoName, branches.BaseBranchName)
 			// 	if err != nil {
 			// 		Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 			// 	}
@@ -315,7 +303,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		It(fmt.Sprintf("triggers PipelineRun for symlink component with source URL %s with component name %s", pythonComponentGitHubURL, symlinkComponentName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
 			// Increase the timeout to 20min to help debug the issue https://issues.redhat.com/browse/STONEBLD-2981, once issue is fixed, revert to 5min
 			timeout := time.Minute * 20
-			symlinkPRunName = WaitForPipelineRunStarts(kubeadminClient, applicationName, symlinkComponentName, testNamespace, timeout)
+			symlinkPRunName = WaitForPipelineRunStarts(f.AsKubeAdmin, applicationName, symlinkComponentName, testNamespace, timeout)
 			Expect(symlinkPRunName).ShouldNot(BeEmpty())
 			pipelineRunsWithE2eFinalizer = append(pipelineRunsWithE2eFinalizer, symlinkPRunName)
 		})
@@ -328,7 +316,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			It(fmt.Sprintf("triggers PipelineRun for component with source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
 				// Increase the timeout to 20min to help debug the issue https://issues.redhat.com/browse/STONEBLD-2981, once issue is fixed, revert to 5min
 				timeout := time.Minute * 20
-				prName := WaitForPipelineRunStarts(kubeadminClient, applicationName, componentName, testNamespace, timeout)
+				prName := WaitForPipelineRunStarts(f.AsKubeAdmin, applicationName, componentName, testNamespace, timeout)
 				Expect(prName).ShouldNot(BeEmpty())
 				pipelineRunsWithE2eFinalizer = append(pipelineRunsWithE2eFinalizer, prName)
 			})
@@ -342,18 +330,18 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			var pr *tektonpipeline.PipelineRun
 
 			It(fmt.Sprintf("should eventually finish successfully for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
-				component, err := kubeadminClient.HasController.GetComponent(componentName, testNamespace)
+				component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "",
-					kubeadminClient.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
+					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(Succeed())
 			})
 
 			It(fmt.Sprintf("should ensure SBOM is shown for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel), func() {
-				pr, err = kubeadminClient.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+				pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(pr).ToNot(BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentName))
 
-				logs, err := kubeadminClient.TektonController.GetTaskRunLogs(pr.GetName(), "show-sbom", testNamespace)
+				logs, err := f.AsKubeAdmin.TektonController.GetTaskRunLogs(pr.GetName(), "show-sbom", testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(logs).To(HaveLen(1))
 				var sbomTaskLog string
@@ -387,7 +375,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 			It("should push Dockerfile to registry", Label(buildTemplatesTestLabel), func() {
 				if pipelineBundleName != constants.FbcBuilder {
-					ensureOriginalDockerfileIsPushed(kubeadminClient, pr)
+					ensureOriginalDockerfileIsPushed(f.AsKubeAdmin, pr)
 				}
 			})
 
@@ -430,7 +418,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			})
 
 			It("check for source images if enabled in pipeline", Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
-				pr, err = kubeadminClient.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+				pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(pr).ToNot(BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentName))
 
@@ -473,27 +461,28 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				Expect(tagExists).To(BeTrue(),
 					fmt.Sprintf("cannot find source container image %s", srcImage))
 
-				CheckSourceImage(srcImage, scenario.GitURL, kubeadminClient, pr)
+				CheckSourceImage(srcImage, scenario.GitURL, f.AsKubeAdmin, pr)
 			})
 
-			When(fmt.Sprintf("Pipeline Results are stored for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label("pipeline"), func() {
+			// Temporarily disabled until https://issues.redhat.com/browse/KFLUXDP-373 is done
+			When(fmt.Sprintf("Pipeline Results are stored for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Pending, Label("pipeline"), func() {
 				var resultClient *pipeline.ResultClient
 				var pr *tektonpipeline.PipelineRun
 
 				BeforeAll(func() {
 					// create the proxyplugin for tekton-results
-					_, err = kubeadminClient.CommonController.CreateProxyPlugin("tekton-results", "toolchain-host-operator", "tekton-results", "tekton-results")
+					_, err = f.AsKubeAdmin.CommonController.CreateProxyPlugin("tekton-results", "toolchain-host-operator", "tekton-results", "tekton-results")
 					Expect(err).NotTo(HaveOccurred())
 
 					regProxyUrl := fmt.Sprintf("%s/plugins/tekton-results", f.ProxyUrl)
 					resultClient = pipeline.NewClient(regProxyUrl, f.UserToken)
 
-					pr, err = kubeadminClient.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+					pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 					Expect(err).ShouldNot(HaveOccurred())
 				})
 
 				AfterAll(func() {
-					Expect(kubeadminClient.CommonController.DeleteProxyPlugin("tekton-results", "toolchain-host-operator")).To(BeTrue())
+					Expect(f.AsKubeAdmin.CommonController.DeleteProxyPlugin("tekton-results", "toolchain-host-operator")).To(BeTrue())
 				})
 
 				It("should have Pipeline Records", func() {
@@ -539,9 +528,9 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			})
 
 			It(fmt.Sprintf("should validate tekton taskrun test results for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel), func() {
-				pr, err := kubeadminClient.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(build.ValidateBuildPipelineTestResults(pr, kubeadminClient.CommonController.KubeRest(), pipelineBundleName == constants.FbcBuilder)).To(Succeed())
+				Expect(build.ValidateBuildPipelineTestResults(pr, f.AsKubeAdmin.CommonController.KubeRest(), pipelineBundleName == constants.FbcBuilder)).To(Succeed())
 			})
 
 			When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", scenario.GitURL), Label("sbom", "slow"), func() {
@@ -550,35 +539,35 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 				BeforeAll(func() {
 					var err error
-					imageWithDigest, err = getImageWithDigest(kubeadminClient, componentName, applicationName, testNamespace)
+					imageWithDigest, err = getImageWithDigest(f.AsKubeAdmin, componentName, applicationName, testNamespace)
 					Expect(err).NotTo(HaveOccurred())
 				})
 				AfterAll(func() {
 					if !CurrentSpecReport().Failed() {
-						Expect(kubeadminClient.TektonController.DeletePipelineRun(pr.GetName(), pr.GetNamespace())).To(Succeed())
+						Expect(f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.GetName(), pr.GetNamespace())).To(Succeed())
 					}
 				})
 
 				It("verify-enterprise-contract check should pass", Label(buildTemplatesTestLabel), func() {
 					// If the Tekton Chains controller is busy, it may take longer than usual for it
 					// to sign and attest the image built in BeforeAll.
-					err = kubeadminClient.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)
+					err = f.AsKubeAdmin.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)
 					Expect(err).ToNot(HaveOccurred())
 
-					cm, err := kubeadminClient.CommonController.GetConfigMap("ec-defaults", "enterprise-contract-service")
+					cm, err := f.AsKubeAdmin.CommonController.GetConfigMap("ec-defaults", "enterprise-contract-service")
 					Expect(err).ToNot(HaveOccurred())
 
 					verifyECTaskBundle := cm.Data["verify_ec_task_bundle"]
 					Expect(verifyECTaskBundle).ToNot(BeEmpty())
 
 					publicSecretName := "cosign-public-key"
-					publicKey, err := kubeadminClient.TektonController.GetTektonChainsPublicKey()
+					publicKey, err := f.AsKubeAdmin.TektonController.GetTektonChainsPublicKey()
 					Expect(err).ToNot(HaveOccurred())
 
-					Expect(kubeadminClient.TektonController.CreateOrUpdateSigningSecret(
+					Expect(f.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
 						publicKey, publicSecretName, testNamespace)).To(Succeed())
 
-					defaultECP, err := kubeadminClient.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+					defaultECP, err := f.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 					Expect(err).NotTo(HaveOccurred())
 
 					policy := contract.PolicySpecWithSourceConfig(
@@ -588,9 +577,9 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 							Exclude: []string{"cve"},
 						},
 					)
-					Expect(kubeadminClient.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
+					Expect(f.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
 
-					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+					pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 					Expect(err).ToNot(HaveOccurred())
 
 					revision := pipelineRun.Annotations["build.appstudio.redhat.com/commit_sha"]
@@ -624,15 +613,15 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						IgnoreRekor:         true,
 					}
 
-					pr, err = kubeadminClient.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
+					pr, err = f.AsKubeAdmin.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(kubeadminClient.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(Succeed())
+					Expect(f.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(Succeed())
 
-					pr, err = kubeadminClient.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
+					pr, err = f.AsKubeAdmin.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
 					Expect(err).NotTo(HaveOccurred())
 
-					tr, err := kubeadminClient.TektonController.GetTaskRunStatus(kubeadminClient.CommonController.KubeRest(), pr, "verify-enterprise-contract")
+					tr, err := f.AsKubeAdmin.TektonController.GetTaskRunStatus(f.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(tekton.DidTaskRunSucceed(tr)).To(BeTrue())
 					Expect(tr.Status.TaskRunStatusFields.Results).Should(
@@ -658,15 +647,15 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					// Double check that the component has finished. There's an earlier test that
 					// verifies this so this should be a no-op. It is added here in order to avoid
 					// unnecessary coupling of unrelated tests.
-					component, err := kubeadminClient.HasController.GetComponent(componentName, testNamespace)
+					component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
-					Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(
-						component, "", kubeadminClient.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(Succeed())
+					Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(
+						component, "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(Succeed())
 
-					imageWithDigest, err = getImageWithDigest(kubeadminClient, componentName, applicationName, testNamespace)
+					imageWithDigest, err = getImageWithDigest(f.AsKubeAdmin, componentName, applicationName, testNamespace)
 					Expect(err).NotTo(HaveOccurred())
 
-					err = kubeadminClient.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)
+					err = f.AsKubeAdmin.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -681,7 +670,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 							PipelineGitPathInRepo:       pathInRepo,
 							PipelinePolicyConfiguration: "ec-policy",
 						}
-						defaultECP, err = kubeadminClient.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+						defaultECP, err = f.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 						Expect(err).NotTo(HaveOccurred())
 						//exclude the slsa_source_correlated.source_code_reference_provided because snapshot doesn't get the info of source
 						policy := contract.PolicySpecWithSourceConfig(
@@ -691,27 +680,27 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 								Exclude: []string{"slsa_source_correlated.source_code_reference_provided"},
 							},
 						)
-						Expect(kubeadminClient.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
+						Expect(f.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
 
-						pr, err := kubeadminClient.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
+						pr, err := f.AsKubeAdmin.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
 						Expect(err).NotTo(HaveOccurred())
 						defer func(pr *tektonpipeline.PipelineRun) {
-							err = kubeadminClient.TektonController.RemoveFinalizerFromPipelineRun(pr, constants.E2ETestFinalizerName)
+							err = f.AsKubeAdmin.TektonController.RemoveFinalizerFromPipelineRun(pr, constants.E2ETestFinalizerName)
 							if err != nil {
 								GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pr.GetName(), err)
 							}
 							// Avoid blowing up PipelineRun usage
-							err := kubeadminClient.TektonController.DeletePipelineRun(pr.Name, pr.Namespace)
+							err := f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.Name, pr.Namespace)
 							Expect(err).NotTo(HaveOccurred())
 						}(pr)
 
-						err = kubeadminClient.TektonController.AddFinalizerToPipelineRun(pr, constants.E2ETestFinalizerName)
+						err = f.AsKubeAdmin.TektonController.AddFinalizerToPipelineRun(pr, constants.E2ETestFinalizerName)
 						Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error while adding finalizer %q to the pipelineRun %q", constants.E2ETestFinalizerName, pr.GetName()))
 
-						Expect(kubeadminClient.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(Succeed())
+						Expect(f.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(Succeed())
 
 						// Refresh our copy of the PipelineRun for latest results
-						pr, err = kubeadminClient.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
+						pr, err = f.AsKubeAdmin.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
 						Expect(err).NotTo(HaveOccurred())
 						GinkgoWriter.Printf("The PipelineRun %s in namespace %s has status.conditions: \n%#v\n", pr.Name, pr.Namespace, pr.Status.Conditions)
 
@@ -719,12 +708,12 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						Expect(pr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
 
 						// The UI uses this label to display additional information.
-						tr, err := kubeadminClient.TektonController.GetTaskRunFromPipelineRun(kubeadminClient.CommonController.KubeRest(), pr, "verify")
+						tr, err := f.AsKubeAdmin.TektonController.GetTaskRunFromPipelineRun(f.AsKubeAdmin.CommonController.KubeRest(), pr, "verify")
 						Expect(err).NotTo(HaveOccurred())
 						GinkgoWriter.Printf("The TaskRun %s of PipelineRun %s  has status.conditions: \n%#v\n", tr.Name, pr.Name, tr.Status.Conditions)
 						Expect(tr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
 
-						logs, err := kubeadminClient.TektonController.GetTaskRunLogs(pr.Name, "verify", pr.Namespace)
+						logs, err := f.AsKubeAdmin.TektonController.GetTaskRunLogs(pr.Name, "verify", pr.Namespace)
 						Expect(err).NotTo(HaveOccurred())
 
 						// The logs from the report step are used by the UI to display validation
@@ -750,10 +739,10 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		}
 
 		It(fmt.Sprintf("pipelineRun should fail for symlink component with Git source URL %s with component name %s", pythonComponentGitHubURL, symlinkComponentName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
-			component, err := kubeadminClient.HasController.GetComponent(symlinkComponentName, testNamespace)
+			component, err := f.AsKubeAdmin.HasController.GetComponent(symlinkComponentName, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "",
-				kubeadminClient.TektonController, &has.RetryOptions{Retries: 0}, nil)).Should(MatchError(ContainSubstring("cloned repository contains symlink pointing outside of the cloned repository")))
+			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
+				f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 0}, nil)).Should(MatchError(ContainSubstring("cloned repository contains symlink pointing outside of the cloned repository")))
 		})
 
 	})

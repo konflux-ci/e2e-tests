@@ -1,11 +1,13 @@
 package journey
 
-import "fmt"
-import "time"
+import (
+	"fmt"
+	"time"
 
-import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+	logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
-import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
+	framework "github.com/konflux-ci/e2e-tests/pkg/framework"
+)
 
 func purgeStage(f *framework.Framework, namespace string) error {
 	var err error
@@ -35,14 +37,12 @@ func purgeStage(f *framework.Framework, namespace string) error {
 }
 
 func purgeCi(f *framework.Framework, username string) error {
-	var err error
-
-	_, err = f.SandboxController.DeleteUserSignup(username)
+	err := f.AsKubeAdmin.CommonController.DeleteNamespace(f.UserNamespace)
 	if err != nil {
-		return fmt.Errorf("Error when deleting user signup %s: %v", username, err)
+		return fmt.Errorf("error when deleting namespace %s for user %s: %v", f.UserNamespace, username, err)
 	}
 
-	logging.Logger.Debug("Finished purging user %s", username)
+	logging.Logger.Debug("Finished purging namespace %s for user %s", f.UserNamespace, username)
 	return nil
 }
 

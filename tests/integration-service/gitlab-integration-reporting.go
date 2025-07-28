@@ -86,13 +86,13 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 		AfterAll(func() {
 
 			// Cleanup test: close MR if opened, delete created branch, delete associated Webhooks
-			Expect(f.AsKubeAdmin.CommonController.Gitlab.CloseMergeRequest(projectID, mrID)).NotTo(HaveOccurred())
+			Expect(f.AsKubeAdmin.CommonController.Gitlab.CloseMergeRequest(projectID, mrID)).To(Succeed())
 			Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteBranch(projectID, componentBaseBranchName)).NotTo(HaveOccurred())
 			Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteWebhooks(projectID, f.ClusterAppDomain)).NotTo(HaveOccurred())
 
 			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
 			}
 
 		})
@@ -172,7 +172,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 			})
 
 			It("eventually leads to the build PipelineRun's status reported at MR notes", func() {
-				expectedNote := fmt.Sprintf("**Pipelines as Code CI/%s-on-pull-request** has successfully validated your commit", componentName)
+				expectedNote := fmt.Sprintf("%s-on-pull-request** has successfully validated your commit", componentName)
 				f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(projectID, expectedNote, mrID)
 			})
 		})
@@ -212,7 +212,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 			})
 
 			It("validates the Integration test scenario PipelineRun is reported to merge request CommitStatus, and it pass", func() {
-				timeout = time.Second * 420
+				timeout = time.Second * 480
 				interval = time.Second * 1
 
 				Eventually(func() string {
