@@ -1,4 +1,4 @@
-# Release pipelines e2e tests suite
+# Release pipelines e2e tests suite test
 
 This suite contains e2e-tests for testing release pipelines from repository [release-service-catalog](https://github.com/konflux-ci/release-service-catalog/tree/development).
 All tests must have the label `release-pipelines`.
