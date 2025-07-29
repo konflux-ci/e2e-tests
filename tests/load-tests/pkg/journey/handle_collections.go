@@ -99,7 +99,9 @@ func collectPipelineRunJSONs(f *framework.Framework, dirPath, namespace, applica
 	}
 
 	// Make one list that contains them all
-	*prs = append(*prs, *pr_release)
+	if pr_release != nil {
+		*prs = append(*prs, *pr_release)
+	}
 
 	for _, pr := range *prs {
 		prJSON, err := json.Marshal(pr)
