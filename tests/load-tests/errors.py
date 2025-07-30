@@ -17,47 +17,47 @@ COLUMN_MESSAGE = 2
 
 # Errors patterns we recognize (when newlines were removed)
 ERRORS = {
-    "Application creation failed because of TLS handshake timeout": r"Application failed creation: Unable to create the Application .*: failed to get API group resources: unable to retrieve the complete list of server APIs: appstudio.redhat.com/v1alpha1: Get .*: net/http: TLS handshake timeout",
-    "Application creation timed out waiting for quota evaluation": r"Application failed creation: Unable to create the Application .*: Internal error occurred: resource quota evaluation timed out",
-    "Build Pipeline Run was cancelled" : r"Build Pipeline Run failed run: PipelineRun for component .* in namespace .* failed: .* Reason:Cancelled.*Message:PipelineRun .* was cancelled",
-    "Component creation timed out waiting for image-controller annotations": r"Component failed creation: Unable to create the Component .* timed out when waiting for image-controller annotations to be updated on component",
-    "Couldnt get pipeline via bundles resolver from quay.io due to 429": r"Message:Error retrieving pipeline for pipelinerun .*bundleresolver.* cannot retrieve the oci image: GET https://quay.io/v2/.*unexpected status code 429 Too Many Requests",
-    "Couldnt get pipeline via git resolver from gitlab.cee due to 429": r"Message:.*resolver failed to get Pipeline.*error requesting remote resource.*Git.*https://gitlab.cee.redhat.com/.* status code: 429",
-    "Couldnt get pipeline via http resolver from gitlab.cee": r"Message:.*resolver failed to get Pipeline.*error requesting remote resource.*Http.*https://gitlab.cee.redhat.com/.* is not found",
-    "Couldnt get task via buldles resolver from quay.io due to 429": r"Message:.*Couldn't retrieve Task .*resolver type bundles.*https://quay.io/.* status code 429 Too Many Requests",
-    "Couldnt get task via bundles resolver from quay.io due to unexpected end of JSON input": r"Build Pipeline Run failed run: PipelineRun for component .* in namespace .* failed: .* Reason:CouldntGetTask Message:Pipeline .* can't be Run; it contains Tasks that don't exist: Couldn't retrieve Task .resolver type bundles.*name = .*: error requesting remote resource: error getting \"bundleresolver\" .*: cannot retrieve the oci image: unexpected end of JSON input",
-    "Couldnt get task via git resolver from gitlab.cee due to 429": r"Message:.*Couldn't retrieve Task .*resolver type git.*https://gitlab.cee.redhat.com/.* status code: 429",
-    "Couldnt get task via http resolver from gitlab.cee": r"Message:.*Couldn't retrieve Task .*resolver type http.*error getting.*requested URL .*https://gitlab.cee.redhat.com/.* is not found",
-    "Error deleting on-pull-request default PipelineRun": r"Repo-templating workflow component cleanup failed: Error deleting on-pull-request default PipelineRun in namespace .*: Unable to list PipelineRuns for component .* in namespace .*: context deadline exceeded",
-    "Failed application creation when calling mapplication.kb.io webhook": r"Application failed creation: Unable to create the Application .*: Internal error occurred: failed calling webhook .*mapplication.kb.io.*: failed to call webhook: Post .*https://application-service-webhook-service.application-service.svc:443/mutate-appstudio-redhat-com-v1alpha1-application.* no endpoints available for service .*application-service-webhook-service",
-    "Failed component creation because resource quota evaluation timed out": r"Component failed creation: Unable to create the Component .*: Internal error occurred: resource quota evaluation timed out",
-    "Failed component creation when calling mcomponent.kb.io webhook": r"Component failed creation: Unable to create the Component .*: Internal error occurred: failed calling webhook .*mcomponent.kb.io.*: failed to call webhook: Post .*https://application-service-webhook-service.application-service.svc:443/mutate-appstudio-redhat-com-v1alpha1-component.* no endpoints available for service .*application-service-webhook-service.*",
-    "Failed creating integration test scenario because cannot set blockOwnerDeletion if an ownerReference refers to a resource you can't set finalizers on": r"Integration test scenario failed creation: Unable to create the Integration Test Scenario .* integrationtestscenarios.appstudio.redhat.com .* is forbidden: cannot set blockOwnerDeletion if an ownerReference refers to a resource you can't set finalizers on",
-    "Failed creating integration test scenario because it already exists": r"Integration test scenario failed creation: Unable to create the Integration Test Scenario .* integrationtestscenarios.appstudio.redhat.com .* already exists",
-    "Failed getting PaC pull number because PaC public route does not exist": r"Component failed validation: Unable to get PaC pull number for component .* in namespace .*: PaC component .* in namespace .* failed on PR annotation: Incorrect state: .*\"error-message\":\"52: Pipelines as Code public route does not exist\"",
-    "Failed Integration test scenario when calling dintegrationtestscenario.kb.io webhook": r"Integration test scenario failed creation: Unable to create the Integration Test Scenario .*: Internal error occurred: failed calling webhook .*dintegrationtestscenario.kb.io.*: failed to call webhook: Post .*https://integration-service-webhook-service.integration-service.svc:443/mutate-appstudio-redhat-com-v1beta2-integrationtestscenario.*: no endpoints available for service .*integration-service-webhook-service",
-    "Failed to link pipeline image pull secret to build service account because SA was not found": r"Failed to configure pipeline imagePullSecrets: Unable to add secret .* to service account .*: serviceaccounts .* not found",
-    "Failed to merge MR on CEE GitLab due to 405": r"Repo-templating workflow component cleanup failed: Merging [0-9]+ failed: [Pp][Uu][Tt] .*https://gitlab.cee.redhat.com/api/.*/merge_requests/[0-9]+/merge.*message: 405 Method Not Allowed",
-    "Failed to merge MR on CEE GitLab due to DNS error": r"Repo-templating workflow component cleanup failed: Merging [0-9]+ failed: [Pp][Uu][Tt] .*https://gitlab.cee.redhat.com/api/.*/merge_requests/[0-9]+/merge.*Temporary failure in name resolution",
-    "Failed validating release condition": r"Release .* in namespace .* failed: .*Message:Release validation failed.*",
-    "GitLab token used by test expired": r"Repo forking failed: Error deleting project .*: DELETE https://gitlab.cee.redhat.com/.*: 401 .*error: invalid_token.*error_description: Token is expired. You can either do re-authorization or token refresh",
-    "Pipeline failed": r"Build Pipeline Run failed run:.*Message:Tasks Completed: [0-9]+ \(Failed: [1-9]+,",
-    "Post-test data collection failed": r"Failed to collect pipeline run JSONs",
-    "Release failed in progress without error given": r"Release failed: Release .* in namespace .* failed: .Type:Released Status:False .* Reason:Progressing Message:.$",
-    "Release failure: PipelineRun not created": r"couldn't find PipelineRun in managed namespace '%s' for a release '%s' in '%s' namespace",
-    "Release Pipeline failed": r"Release pipeline run failed:.*Message:Tasks Completed: [0-9]+ \(Failed: [1-9]+,",
-    "Repo forking failed as GitLab CEE says 401 Unauthorized": r"Repo forking failed: Error deleting project .*: DELETE https://gitlab.cee.redhat.com/.*: 401 .*message: 401 Unauthorized.*",
-    "Repo forking failed as the target is still being deleted": r"Repo forking failed: Error forking project .* POST https://gitlab.cee.redhat.com.* 409 .*Project namespace name has already been taken, The project is still being deleted",
-    "Repo forking failed as we got TLS handshake timeout talking to GitLab CEE": r"Repo forking failed: Error deleting project .*: Delete \"https://gitlab.cee.redhat.com/api/v4/projects/.*\": net/http: TLS handshake timeout",
-    "Repo forking failed because gitlab.com returned 503": r"Repo forking failed: Error checking repository .*: GET https://api.github.com/repos/.*: 503 No server is currently available to service your request. Sorry about that. Please try resubmitting your request and contact us if the problem persists.*",
-    "Repo forking failed when deleting target repo on github.com because 504": r"Repo forking failed: Error deleting repository .*: DELETE https://api.github.com/repos/.*: 504 We couldn't respond to your request in time. Sorry about that. Please try resubmitting your request and contact us if the problem persists.",
-    "Repo forking failed when deleting target repo on gitlab.com (not CEE!) due unathorized": r"Repo forking failed: Error deleting project .* DELETE https://gitlab.com/.* 401 .* Unauthorized",
-    "Test Pipeline failed": r"Test Pipeline Run failed run:.*Message:Tasks Completed: [0-9]+ \(Failed: [1-9]+,",
-    "Timeout forking the repo before the actual test": r"Repo forking failed: Error forking project .*: context deadline exceeded",
-    "Timeout getting build service account": r"Component build SA not present: Component build SA .* not present: context deadline exceeded",
-    "Timeout getting PaC pull number when validating component": r"Component failed validation: Unable to get PaC pull number for component .* in namespace .*: context deadline exceeded",
-    "Timeout getting pipeline": r"Message:.*resolver failed to get Pipeline.*resolution took longer than global timeout of .*",
-    "Timeout getting task via git resolver from gitlab.cee": r"Message:.*Couldn't retrieve Task .*resolver type git.*https://gitlab.cee.redhat.com/.* resolution took longer than global timeout of .*",
+    ("Application creation failed because of TLS handshake timeout", r"Application failed creation: Unable to create the Application .*: failed to get API group resources: unable to retrieve the complete list of server APIs: appstudio.redhat.com/v1alpha1: Get .*: net/http: TLS handshake timeout"),
+    ("Application creation timed out waiting for quota evaluation", r"Application failed creation: Unable to create the Application .*: Internal error occurred: resource quota evaluation timed out"),
+    ("Build Pipeline Run was cancelled", r"Build Pipeline Run failed run: PipelineRun for component .* in namespace .* failed: .* Reason:Cancelled.*Message:PipelineRun .* was cancelled"),
+    ("Component creation timed out waiting for image-controller annotations", r"Component failed creation: Unable to create the Component .* timed out when waiting for image-controller annotations to be updated on component"),
+    ("Couldnt get pipeline via bundles resolver from quay.io due to 429", r"Message:Error retrieving pipeline for pipelinerun .*bundleresolver.* cannot retrieve the oci image: GET https://quay.io/v2/.*unexpected status code 429 Too Many Requests"),
+    ("Couldnt get pipeline via git resolver from gitlab.cee due to 429", r"Message:.*resolver failed to get Pipeline.*error requesting remote resource.*Git.*https://gitlab.cee.redhat.com/.* status code: 429"),
+    ("Couldnt get pipeline via http resolver from gitlab.cee", r"Message:.*resolver failed to get Pipeline.*error requesting remote resource.*Http.*https://gitlab.cee.redhat.com/.* is not found"),
+    ("Couldnt get task via buldles resolver from quay.io due to 429", r"Message:.*Couldn't retrieve Task .*resolver type bundles.*https://quay.io/.* status code 429 Too Many Requests"),
+    ("Couldnt get task via bundles resolver from quay.io due to unexpected end of JSON input", r"Build Pipeline Run failed run: PipelineRun for component .* in namespace .* failed: .* Reason:CouldntGetTask Message:Pipeline .* can't be Run; it contains Tasks that don't exist: Couldn't retrieve Task .resolver type bundles.*name = .*: error requesting remote resource: error getting \"bundleresolver\" .*: cannot retrieve the oci image: unexpected end of JSON input"),
+    ("Couldnt get task via git resolver from gitlab.cee due to 429", r"Message:.*Couldn't retrieve Task .*resolver type git.*https://gitlab.cee.redhat.com/.* status code: 429"),
+    ("Couldnt get task via http resolver from gitlab.cee", r"Message:.*Couldn't retrieve Task .*resolver type http.*error getting.*requested URL .*https://gitlab.cee.redhat.com/.* is not found"),
+    ("Error deleting on-pull-request default PipelineRun", r"Repo-templating workflow component cleanup failed: Error deleting on-pull-request default PipelineRun in namespace .*: Unable to list PipelineRuns for component .* in namespace .*: context deadline exceeded"),
+    ("Failed application creation when calling mapplication.kb.io webhook", r"Application failed creation: Unable to create the Application .*: Internal error occurred: failed calling webhook .*mapplication.kb.io.*: failed to call webhook: Post .*https://application-service-webhook-service.application-service.svc:443/mutate-appstudio-redhat-com-v1alpha1-application.* no endpoints available for service .*application-service-webhook-service"),
+    ("Failed component creation because resource quota evaluation timed out", r"Component failed creation: Unable to create the Component .*: Internal error occurred: resource quota evaluation timed out"),
+    ("Failed component creation when calling mcomponent.kb.io webhook", r"Component failed creation: Unable to create the Component .*: Internal error occurred: failed calling webhook .*mcomponent.kb.io.*: failed to call webhook: Post .*https://application-service-webhook-service.application-service.svc:443/mutate-appstudio-redhat-com-v1alpha1-component.* no endpoints available for service .*application-service-webhook-service.*"),
+    ("Failed creating integration test scenario because cannot set blockOwnerDeletion if an ownerReference refers to a resource you can't set finalizers on", r"Integration test scenario failed creation: Unable to create the Integration Test Scenario .* integrationtestscenarios.appstudio.redhat.com .* is forbidden: cannot set blockOwnerDeletion if an ownerReference refers to a resource you can't set finalizers on"),
+    ("Failed creating integration test scenario because it already exists", r"Integration test scenario failed creation: Unable to create the Integration Test Scenario .* integrationtestscenarios.appstudio.redhat.com .* already exists"),
+    ("Failed getting PaC pull number because PaC public route does not exist", r"Component failed validation: Unable to get PaC pull number for component .* in namespace .*: PaC component .* in namespace .* failed on PR annotation: Incorrect state: .*\"error-message\":\"52: Pipelines as Code public route does not exist\""),
+    ("Failed Integration test scenario when calling dintegrationtestscenario.kb.io webhook", r"Integration test scenario failed creation: Unable to create the Integration Test Scenario .*: Internal error occurred: failed calling webhook .*dintegrationtestscenario.kb.io.*: failed to call webhook: Post .*https://integration-service-webhook-service.integration-service.svc:443/mutate-appstudio-redhat-com-v1beta2-integrationtestscenario.*: no endpoints available for service .*integration-service-webhook-service"),
+    ("Failed to link pipeline image pull secret to build service account because SA was not found", r"Failed to configure pipeline imagePullSecrets: Unable to add secret .* to service account .*: serviceaccounts .* not found"),
+    ("Failed to merge MR on CEE GitLab due to 405", r"Repo-templating workflow component cleanup failed: Merging [0-9]+ failed: [Pp][Uu][Tt] .*https://gitlab.cee.redhat.com/api/.*/merge_requests/[0-9]+/merge.*message: 405 Method Not Allowed"),
+    ("Failed to merge MR on CEE GitLab due to DNS error", r"Repo-templating workflow component cleanup failed: Merging [0-9]+ failed: [Pp][Uu][Tt] .*https://gitlab.cee.redhat.com/api/.*/merge_requests/[0-9]+/merge.*Temporary failure in name resolution"),
+    ("Failed validating release condition", r"Release .* in namespace .* failed: .*Message:Release validation failed.*"),
+    ("GitLab token used by test expired", r"Repo forking failed: Error deleting project .*: DELETE https://gitlab.cee.redhat.com/.*: 401 .*error: invalid_token.*error_description: Token is expired. You can either do re-authorization or token refresh"),
+    ("Pipeline failed", r"Build Pipeline Run failed run:.*Message:Tasks Completed: [0-9]+ \(Failed: [1-9]+,"),
+    ("Post-test data collection failed", r"Failed to collect pipeline run JSONs"),
+    ("Release failed in progress without error given", r"Release failed: Release .* in namespace .* failed: .Type:Released Status:False .* Reason:Progressing Message:.$"),
+    ("Release failure: PipelineRun not created", r"couldn't find PipelineRun in managed namespace '%s' for a release '%s' in '%s' namespace"),
+    ("Release Pipeline failed", r"Release pipeline run failed:.*Message:Tasks Completed: [0-9]+ \(Failed: [1-9]+,"),
+    ("Repo forking failed as GitLab CEE says 401 Unauthorized", r"Repo forking failed: Error deleting project .*: DELETE https://gitlab.cee.redhat.com/.*: 401 .*message: 401 Unauthorized.*"),
+    ("Repo forking failed as the target is still being deleted", r"Repo forking failed: Error forking project .* POST https://gitlab.cee.redhat.com.* 409 .*Project namespace name has already been taken, The project is still being deleted"),
+    ("Repo forking failed as we got TLS handshake timeout talking to GitLab CEE", r"Repo forking failed: Error deleting project .*: Delete \"https://gitlab.cee.redhat.com/api/v4/projects/.*\": net/http: TLS handshake timeout"),
+    ("Repo forking failed because gitlab.com returned 503", r"Repo forking failed: Error checking repository .*: GET https://api.github.com/repos/.*: 503 No server is currently available to service your request. Sorry about that. Please try resubmitting your request and contact us if the problem persists.*"),
+    ("Repo forking failed when deleting target repo on github.com because 504", r"Repo forking failed: Error deleting repository .*: DELETE https://api.github.com/repos/.*: 504 We couldn't respond to your request in time. Sorry about that. Please try resubmitting your request and contact us if the problem persists."),
+    ("Repo forking failed when deleting target repo on gitlab.com (not CEE!) due unathorized", r"Repo forking failed: Error deleting project .* DELETE https://gitlab.com/.* 401 .* Unauthorized"),
+    ("Test Pipeline failed", r"Test Pipeline Run failed run:.*Message:Tasks Completed: [0-9]+ \(Failed: [1-9]+,"),
+    ("Timeout forking the repo before the actual test", r"Repo forking failed: Error forking project .*: context deadline exceeded"),
+    ("Timeout getting build service account", r"Component build SA not present: Component build SA .* not present: context deadline exceeded"),
+    ("Timeout getting PaC pull number when validating component", r"Component failed validation: Unable to get PaC pull number for component .* in namespace .*: context deadline exceeded"),
+    ("Timeout getting pipeline", r"Message:.*resolver failed to get Pipeline.*resolution took longer than global timeout of .*"),
+    ("Timeout getting task via git resolver from gitlab.cee", r"Message:.*Couldn't retrieve Task .*resolver type git.*https://gitlab.cee.redhat.com/.* resolution took longer than global timeout of .*"),
     # Last time I seen this we discussed it here:
     #
     #   https://redhat-internal.slack.com/archives/C04PZ7H0VA8/p1751530663606749
@@ -73,46 +73,46 @@ ERRORS = {
     #   reported this error: ```Internal error occurred: failed calling webhook "vpipelineruns.konflux-ci.dev": failed
     #   to call webhook: Post "https://etcd-shield.etcd-shield.svc:443/validate-tekton-dev-v1-pipelinerun?timeout=10s":
     #   context deadline exceeded```
-    "Timeout listing pipeline runs": r"Repo-templating workflow component cleanup failed: Error deleting on-pull-request default PipelineRun in namespace .*: Unable to list PipelineRuns for component .* in namespace .*: context deadline exceeded",
-    "Timeout listing pipeline runs": r"Repo-templating workflow component cleanup failed: Error deleting on-push merged PipelineRun in namespace .*: Unable to list PipelineRuns for component .* in namespace .*: context deadline exceeded",
-    "Timeout waiting for build pipeline to be created": r"Build Pipeline Run failed creation: context deadline exceeded",
-    "Timeout waiting for integration test scenario to validate": r"Integration test scenario failed validation: context deadline exceeded",
-    "Timeout waiting for snapshot to be created": r"Snapshot failed creation: context deadline exceeded",
-    "Timeout waiting for test pipeline to create": r"Test Pipeline Run failed creation: context deadline exceeded",
-    "Timeout waiting for test pipeline to finish": r"Test Pipeline Run failed run: context deadline exceeded",
-    "Unable to connect to server": r"Error: Unable to connect to server",
+    ("Timeout listing pipeline runs", r"Repo-templating workflow component cleanup failed: Error deleting on-pull-request default PipelineRun in namespace .*: Unable to list PipelineRuns for component .* in namespace .*: context deadline exceeded"),
+    ("Timeout listing pipeline runs", r"Repo-templating workflow component cleanup failed: Error deleting on-push merged PipelineRun in namespace .*: Unable to list PipelineRuns for component .* in namespace .*: context deadline exceeded"),
+    ("Timeout waiting for build pipeline to be created", r"Build Pipeline Run failed creation: context deadline exceeded"),
+    ("Timeout waiting for integration test scenario to validate", r"Integration test scenario failed validation: context deadline exceeded"),
+    ("Timeout waiting for snapshot to be created", r"Snapshot failed creation: context deadline exceeded"),
+    ("Timeout waiting for test pipeline to create", r"Test Pipeline Run failed creation: context deadline exceeded"),
+    ("Timeout waiting for test pipeline to finish", r"Test Pipeline Run failed run: context deadline exceeded"),
+    ("Unable to connect to server", r"Error: Unable to connect to server"),
 }
 
 FAILED_PLR_ERRORS = {
-    "SKIP": r"Skipping step because a previous step failed",   # This is a special "wildcard" error, let's keep it on top and do not change "SKIP" reason as it is used in the code
-    "Bad Gateway when pulling container image from quay.io": r"Error: initializing source docker://quay.io/[^ ]+: reading manifest [^ ]+ in quay.io/[^ ]+: received unexpected HTTP status: 502 Bad Gateway ",
-    "buildah build failed creating build container: registry.access.redhat.com returned 403": r"Error: creating build container: internal error: unable to copy from source docker://registry.access.redhat.com/.*: copying system image from manifest list: determining manifest MIME type for docker://registry.access.redhat.com/.*: reading manifest .* in registry.access.redhat.com/.*: StatusCode: 403",
-    "Can not find chroot_scan.tar.gz file": r"tar: .*/chroot_scan.tar.gz: Cannot open: No such file or directory",
-    "Can not find Dockerfile": r"Cannot find Dockerfile Dockerfile",
-    "DNF failed to download repodata from Download Devel because could not resolve host": r"Errors during downloading metadata for repository '[^ ]+':   - Curl error .6.: Couldn't resolve host name for http://download.devel.redhat.com/brewroot/repos/[^ ]+ .Could not resolve host: download\.devel\.redhat\.com.",
-    "DNF failed to download repodata from Koji": r"ERROR Command returned error: Failed to download metadata (baseurl: \"https://kojipkgs.fedoraproject.org/repos/[^ ]*\") for repository \"build\": Usable URL not found",
-    "Error allocating host as provision TR already exists": r"Error allocating host: taskruns.tekton.dev \".*provision\" already exists",
-    "Error allocating host because of insufficient free addresses in subnet": r"Error allocating host: failed to launch EC2 instance for .* operation error EC2: RunInstances, https response error StatusCode: 400, RequestID: .*, api error InsufficientFreeAddressesInSubnet: There are not enough free addresses in subnet .* to satisfy the requested number of instances.",
-    "Error allocating host because of provisioning error": r"Error allocating host: failed to provision host",
-    "Failed because of quay.io returned 502": r"level=fatal msg=.Error parsing image name .*docker://quay.io/.* Requesting bearer token: invalid status code from registry 502 .Bad Gateway.",
-    "Failed because registry.access.redhat.com returned 503 when reading manifest": r"source-build:ERROR:command execution failure, status: 1, stderr: time=.* level=fatal msg=.Error parsing image name .* reading manifest .* in registry.access.redhat.com/.* received unexpected HTTP status: 503 Service Unavailable",
-    "Failed to pull container from quay.io because of DNS error": r"Error: copying system image from manifest list: reading blob .*: Get \"https://cdn[0-9]+.quay.io/.*\": dial tcp: lookup cdn[0-9]+.quay.io: Temporary failure in name resolution",
-    "Failed to pull container from registry.access.redhat.com because of DNS error": r"Error: initializing source docker://registry.access.redhat.com/.* pinging container registry registry.access.redhat.com: Get \"https://registry.access.redhat.com/v2/\": dial tcp: lookup registry.access.redhat.com: Temporary failure in name resolution",
-    "Gateway Time-out when pulling container image from quay.io": r"Error: initializing source docker://quay.io/[^ ]+: reading manifest [^ ]+ in quay.io/[^ ]+: received unexpected HTTP status: 504 Gateway Time-out",
-    "Gateway Time-out when pulling container image": r"Error: copying system image from manifest list: parsing image configuration: fetching blob: received unexpected HTTP status: 504 Gateway Time-out",
-    "Introspection failed because of incomplete .docker/config.json": r".* level=fatal msg=\"Error parsing image name .*: getting username and password: reading JSON file .*/tekton/home/.docker/config.json.*: unmarshaling JSON at .*: unexpected end of JSON input\"",
-    "RPM build failed: bool cannot be defined via typedef": r"error: .bool. cannot be defined via .typedef..*error: Bad exit status from /var/tmp/rpm-tmp..* ..build.",
+    ("SKIP", r"Skipping step because a previous step failed"),   # This is a special "wildcard" error, let's keep it on top and do not change "SKIP" reason as it is used in the code
+    ("Bad Gateway when pulling container image from quay.io", r"Error: initializing source docker://quay.io/[^ ]+: reading manifest [^ ]+ in quay.io/[^ ]+: received unexpected HTTP status: 502 Bad Gateway "),
+    ("buildah build failed creating build container: registry.access.redhat.com returned 403", r"Error: creating build container: internal error: unable to copy from source docker://registry.access.redhat.com/.*: copying system image from manifest list: determining manifest MIME type for docker://registry.access.redhat.com/.*: reading manifest .* in registry.access.redhat.com/.*: StatusCode: 403"),
+    ("Can not find chroot_scan.tar.gz file", r"tar: .*/chroot_scan.tar.gz: Cannot open: No such file or directory"),
+    ("Can not find Dockerfile", r"Cannot find Dockerfile Dockerfile"),
+    ("DNF failed to download repodata from Download Devel because could not resolve host", r"Errors during downloading metadata for repository '[^ ]+':   - Curl error .6.: Couldn't resolve host name for http://download.devel.redhat.com/brewroot/repos/[^ ]+ .Could not resolve host: download\.devel\.redhat\.com."),
+    ("DNF failed to download repodata from Koji", r"ERROR Command returned error: Failed to download metadata (baseurl: \"https://kojipkgs.fedoraproject.org/repos/[^ ]*\") for repository \"build\": Usable URL not found"),
+    ("Error allocating host as provision TR already exists", r"Error allocating host: taskruns.tekton.dev \".*provision\" already exists"),
+    ("Error allocating host because of insufficient free addresses in subnet", r"Error allocating host: failed to launch EC2 instance for .* operation error EC2: RunInstances, https response error StatusCode: 400, RequestID: .*, api error InsufficientFreeAddressesInSubnet: There are not enough free addresses in subnet .* to satisfy the requested number of instances."),
+    ("Error allocating host because of provisioning error", r"Error allocating host: failed to provision host"),
+    ("Failed because of quay.io returned 502", r"level=fatal msg=.Error parsing image name .*docker://quay.io/.* Requesting bearer token: invalid status code from registry 502 .Bad Gateway."),
+    ("Failed because registry.access.redhat.com returned 503 when reading manifest", r"source-build:ERROR:command execution failure, status: 1, stderr: time=.* level=fatal msg=.Error parsing image name .* reading manifest .* in registry.access.redhat.com/.* received unexpected HTTP status: 503 Service Unavailable"),
+    ("Failed to pull container from quay.io because of DNS error", r"Error: copying system image from manifest list: reading blob .*: Get \"https://cdn[0-9]+.quay.io/.*\": dial tcp: lookup cdn[0-9]+.quay.io: Temporary failure in name resolution"),
+    ("Failed to pull container from registry.access.redhat.com because of DNS error", r"Error: initializing source docker://registry.access.redhat.com/.* pinging container registry registry.access.redhat.com: Get \"https://registry.access.redhat.com/v2/\": dial tcp: lookup registry.access.redhat.com: Temporary failure in name resolution"),
+    ("Gateway Time-out when pulling container image from quay.io", r"Error: initializing source docker://quay.io/[^ ]+: reading manifest [^ ]+ in quay.io/[^ ]+: received unexpected HTTP status: 504 Gateway Time-out"),
+    ("Gateway Time-out when pulling container image", r"Error: copying system image from manifest list: parsing image configuration: fetching blob: received unexpected HTTP status: 504 Gateway Time-out"),
+    ("Introspection failed because of incomplete .docker/config.json", r".* level=fatal msg=\"Error parsing image name .*: getting username and password: reading JSON file .*/tekton/home/.docker/config.json.*: unmarshaling JSON at .*: unexpected end of JSON input\""),
+    ("RPM build failed: bool cannot be defined via typedef", r"error: .bool. cannot be defined via .typedef..*error: Bad exit status from /var/tmp/rpm-tmp..* ..build."),
 }
 
 FAILED_TR_ERRORS = {
-    "Missing expected fields in TaskRun": r"Missing expected fields in TaskRun",   # This is special error, meaning everithing failed basically
-    "SKIP": r"\"message\": \"All Steps have completed executing\"",   # Another special error to avoid printing 'Unknown error:' message
-    "SKIP": r"\"message\": \".* exited with code 1\"",   # Another special error to avoid printing 'Unknown error:' message
-    "Back-off pulling task run image from quay.io": r"the step .* in TaskRun .* failed to pull the image .*. The pod errored with the message: \"Back-off pulling image \"quay.io/.*\"",
-    "Failed to create task run pod because ISE on webhook proxy.operator.tekton.dev": r"failed to create task run pod .*: Internal error occurred: failed calling webhook \"proxy.operator.tekton.dev\": failed to call webhook: Post \"https://tekton-operator-proxy-webhook.openshift-pipelines.svc:443/defaulting.timeout=10s\": context deadline exceeded. Maybe missing or invalid Task .*",
+    ("Missing expected fields in TaskRun(", r"Missing expected fields in TaskRun"),   # This is special error, meaning everithing failed basically
+    ("SKIP", r"\"message\": \"All Steps have completed executing\""),   # Another special error to avoid printing 'Unknown error:' message
+    ("SKIP", r"\"message\": \".* exited with code 1\""),   # Another special error to avoid printing 'Unknown error:' message
+    ("Back-off pulling task run image from quay.io", r"the step .* in TaskRun .* failed to pull the image .*. The pod errored with the message: \"Back-off pulling image \"quay.io/.*\""),
+    ("Failed to create task run pod because ISE on webhook proxy.operator.tekton.dev", r"failed to create task run pod .*: Internal error occurred: failed calling webhook \"proxy.operator.tekton.dev\": failed to call webhook: Post \"https://tekton-operator-proxy-webhook.openshift-pipelines.svc:443/defaulting.timeout=10s\": context deadline exceeded. Maybe missing or invalid Task .*"),
 }
 
-def message_to_reason(reasons_and_errors: dict, msg: str) -> str | None:
+def message_to_reason(reasons_and_errors: set, msg: str) -> str | None:
     """
     Classifies an error message using regular expressions and returns the error name.
 
@@ -123,8 +123,7 @@ def message_to_reason(reasons_and_errors: dict, msg: str) -> str | None:
       The name of the error if a pattern matches, otherwise string "UNKNOWN".
     """
     msg = msg.replace("\n", " ")  # Remove newlines
-    for error_name, pattern in reasons_and_errors.items():
-        if error_name == "SKIP":
+    for error_name, pattern in reasons_and_errors:
         if re.search(pattern, msg):
             return error_name
     print(f"Unknown error: {msg}")
