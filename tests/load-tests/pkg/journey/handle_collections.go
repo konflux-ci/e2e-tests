@@ -235,42 +235,46 @@ func collectReleaseRelatedJSONs(f *framework.Framework, dirPath, namespace, appN
 	}
 
 	// Collect Snapshot JSON
-	snap, err := f.AsKubeDeveloper.IntegrationController.GetSnapshot(snapName, "", compName, namespace)
-	if err != nil {
-		if !k8s_api_errors.IsNotFound(err) {
-			return fmt.Errorf("Failed to get Snapshot %s: %v", snapName, err)
-		}
-	}
-
-	if err == nil {
-		snapJSON, err := json.Marshal(snap)
+	if len(snapName) > 0 {
+		snap, err := f.AsKubeDeveloper.IntegrationController.GetSnapshot(snapName, "", compName, namespace)
 		if err != nil {
-			return fmt.Errorf("Failed to dump Snapshot JSON: %v", err)
+			if !k8s_api_errors.IsNotFound(err) {
+				return fmt.Errorf("Failed to get Snapshot %s: %v", snapName, err)
+			}
 		}
 
-		err = writeToFile(dirPath, "collected-snapshot-" + snapName + ".json", snapJSON)
-		if err != nil {
-			return fmt.Errorf("Failed to write Snapshot: %v", err)
+		if err == nil {
+			snapJSON, err := json.Marshal(snap)
+			if err != nil {
+				return fmt.Errorf("Failed to dump Snapshot JSON: %v", err)
+			}
+
+			err = writeToFile(dirPath, "collected-snapshot-" + snapName + ".json", snapJSON)
+			if err != nil {
+				return fmt.Errorf("Failed to write Snapshot: %v", err)
+			}
 		}
 	}
 
 	// Collect Release JSON
-	rel, err := f.AsKubeDeveloper.ReleaseController.GetRelease(relName, "", namespace)
-	if err != nil {
-		if !k8s_api_errors.IsNotFound(err) {
-			return fmt.Errorf("Failed to get Release %s: %v", relName, err)
-		}
-	}
-
-	if err == nil {
-		relJSON, err := json.Marshal(rel)
+	if len(relName) > 0 {
+		rel, err := f.AsKubeDeveloper.ReleaseController.GetRelease(relName, "", namespace)
 		if err != nil {
-			return fmt.Errorf("Failed to dump Release JSON: %v", err)
+			if !k8s_api_errors.IsNotFound(err) {
+				return fmt.Errorf("Failed to get Release %s: %v", relName, err)
+			}
 		}
 
-		err = writeToFile(dirPath, "collected-release-" + relName + ".json", relJSON)
-		if err != nil {
-			return fmt.Errorf("Failed to write Release: %v", err)
+		if err == nil {
+			relJSON, err := json.Marshal(rel)
+			if err != nil {
+				return fmt.Errorf("Failed to dump Release JSON: %v", err)
+			}
+
+			err = writeToFile(dirPath, "collected-release-" + relName + ".json", relJSON)
+			if err != nil {
+				return fmt.Errorf("Failed to write Release: %v", err)
+			}
 		}
 	}
 
