@@ -124,6 +124,7 @@ def message_to_reason(reasons_and_errors: dict, msg: str) -> str | None:
     """
     msg = msg.replace("\n", " ")  # Remove newlines
     for error_name, pattern in reasons_and_errors.items():
+        if error_name == "SKIP":
         if re.search(pattern, msg):
             return error_name
     print(f"Unknown error: {msg}")
@@ -158,7 +159,7 @@ def load(datafile):
     return data
 
 
-def find_first_failed_build_plr(data_dir):
+def find_first_failed_build_plr(data_dir, plr_type):
     """ This function is intended for jobs where we only run one concurrent
     builds, so no more than one can failed: our load test probes.
 
@@ -179,9 +180,16 @@ def find_first_failed_build_plr(data_dir):
             datafile = os.path.join(currentpath, datafile)
             data = load(datafile)
 
-            # Skip PLRs that are not "build" PLRs
+            if plr_type == "build":
+                plr_type_label = "build"
+            elif plr_type == "release":
+                plr_type_label = "managed"
+            else:
+                raise Exception("Unknown PLR type")
+
+            # Skip PLRs that do not have expected type
             try:
-                if data["metadata"]["labels"]["pipelines.appstudio.openshift.io/type"] != "build":
+                if data["metadata"]["labels"]["pipelines.appstudio.openshift.io/type"] != plr_type_label:
                     continue
             except KeyError:
                 continue
@@ -244,11 +252,11 @@ def load_container_log(data_dir, ns, pod_name, cont_name):
     with open(datafile, "r") as fd:
         return fd.read()
 
-def investigate_failed_plr(dump_dir):
+def investigate_failed_plr(dump_dir, plr_type="build"):
     try:
         reasons = []
 
-        plr = find_first_failed_build_plr(dump_dir)
+        plr = find_first_failed_build_plr(dump_dir, plr_type)
         if plr == None:
             return ["SORRY PLR not found"]
 
@@ -268,7 +276,8 @@ def investigate_failed_plr(dump_dir):
                     reasons.append(reason)
 
             reason = message_to_reason(FAILED_TR_ERRORS, tr_message)
-            reasons.append(reason)
+            if reason != "SKIP":
+                reasons.append(reason)
 
         reasons = list(set(reasons))   # get unique reasons only
         reasons.sort()   # sort reasons
@@ -306,7 +315,11 @@ def main():
                 reason = message_to_reason(ERRORS, message)
 
                 if reason == "Pipeline failed":
-                    reasons2 = investigate_failed_plr(dump_dir)
+                    reasons2 = investigate_failed_plr(dump_dir, "build")
+                    reason = reason + ": " + ", ".join(reasons2)
+
+                if reason == "Release Pipeline failed":
+                    reasons2 = investigate_failed_plr(dump_dir, "release")
                     reason = reason + ": " + ", ".join(reasons2)
 
                 add_reason(error_messages, error_by_code, error_by_reason, message, reason, code)
