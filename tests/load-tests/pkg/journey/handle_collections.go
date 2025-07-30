@@ -188,6 +188,76 @@ func collectComponentJSONs(f *framework.Framework, dirPath, namespace, component
 	return nil
 }
 
+func collectReleaseRelatedJSONs(f *framework.Framework, dirPath, namespace, appName, compName, snapName, relName string) error {
+	// Collect ReleasePlan JSON
+	releasePlanName := appName + "-rp"
+	releasePlan, err := f.AsKubeDeveloper.ReleaseController.GetReleasePlan(releasePlanName, namespace)
+	if err != nil {
+		return fmt.Errorf("Failed to get Release Plan %s: %v", releasePlanName, err)
+	}
+
+	releasePlanJSON, err := json.Marshal(releasePlan)
+	if err != nil {
+		return fmt.Errorf("Failed to dump Release Plan JSON: %v", err)
+	}
+
+	err = writeToFile(dirPath, "collected-releaseplan-" + releasePlanName + ".json", releasePlanJSON)
+	if err != nil {
+		return fmt.Errorf("Failed to write Release Plan: %v", err)
+	}
+
+	// Collect ReleasePlanAdmission JSON
+	releasePlanAdmissionName := appName + "-rpa"
+	releasePlanAdmission, err := f.AsKubeDeveloper.ReleaseController.GetReleasePlanAdmission(releasePlanAdmissionName, namespace)
+	if err != nil {
+		return fmt.Errorf("Failed to get Release Plan Admission %s: %v", releasePlanAdmissionName, err)
+	}
+
+	releasePlanAdmissionJSON, err := json.Marshal(releasePlanAdmission)
+	if err != nil {
+		return fmt.Errorf("Failed to dump Release Plan Admission JSON: %v", err)
+	}
+
+	err = writeToFile(dirPath, "collected-releaseplanadmission-" + releasePlanAdmissionName + ".json", releasePlanAdmissionJSON)
+	if err != nil {
+		return fmt.Errorf("Failed to write Release Plan Admission: %v", err)
+	}
+
+	// Collect Snapshot JSON
+	snap, err := f.AsKubeDeveloper.IntegrationController.GetSnapshot(snapName, "", compName, namespace)
+	if err != nil {
+		return fmt.Errorf("Failed to get Snapshot %s: %v", snapName, err)
+	}
+
+	snapJSON, err := json.Marshal(snap)
+	if err != nil {
+		return fmt.Errorf("Failed to dump Snapshot JSON: %v", err)
+	}
+
+	err = writeToFile(dirPath, "collected-snapshot-" + snapName + ".json", snapJSON)
+	if err != nil {
+		return fmt.Errorf("Failed to write Snapshot: %v", err)
+	}
+
+	// Collect Release JSON
+	rel, err := f.AsKubeDeveloper.ReleaseController.GetRelease(relName, "", namespace)
+	if err != nil {
+		return fmt.Errorf("Failed to get Release %s: %v", relName, err)
+	}
+
+	relJSON, err := json.Marshal(rel)
+	if err != nil {
+		return fmt.Errorf("Failed to dump Release JSON: %v", err)
+	}
+
+	err = writeToFile(dirPath, "collected-release-" + relName + ".json", relJSON)
+	if err != nil {
+		return fmt.Errorf("Failed to write Release: %v", err)
+	}
+
+	return nil
+}
+
 func HandlePerApplicationCollection(ctx *PerApplicationContext) error {
 	if ctx.ApplicationName == "" {
 		logging.Logger.Debug("Application name not populated, so skipping per-application collections in %s", ctx.ParentContext.Namespace)
@@ -244,6 +314,11 @@ func HandlePerComponentCollection(ctx *PerComponentContext) error {
 	err = collectComponentJSONs(ctx.Framework, dirPath, ctx.ParentContext.ParentContext.Namespace, ctx.ComponentName)
 	if err != nil {
 		return logging.Logger.Fail(103, "Failed to collect component JSONs: %v", err)
+	}
+
+	err = collectReleaseRelatedJSONs(ctx.Framework, dirPath, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName, ctx.SnapshotName, ctx.ReleaseName)
+	if err != nil {
+		return logging.Logger.Fail(104, "Failed to collect release related JSONs: %v", err)
 	}
 
 	return nil
