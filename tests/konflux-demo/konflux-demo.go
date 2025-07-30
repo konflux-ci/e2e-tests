@@ -61,7 +61,6 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 	//secret := &corev1.Secret{}
 
 	fw := &framework.Framework{}
-	var kubeadminClient *framework.ControllerHub
 
 	var buildPipelineAnnotation map[string]string
 
@@ -85,22 +84,9 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 				if os.Getenv(constants.SKIP_PAC_TESTS_ENV) == "true" {
 					Skip("Skipping this test due to configuration issue with Spray proxy")
 				}
-				if !strings.Contains(GinkgoLabelFilter(), upstreamKonfluxTestLabel) {
-					// Namespace config
-					fw, err = framework.NewFramework(utils.GetGeneratedNamespace(devEnvTestLabel))
-					Expect(err).NotTo(HaveOccurred())
-					userNamespace = fw.UserNamespace
-					kubeadminClient = fw.AsKubeAdmin
-					Expect(err).ShouldNot(HaveOccurred())
-				} else {
-					var asAdminClient *kubeapi.CustomClient
-					userNamespace = os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV)
-					asAdminClient, err = kubeapi.NewAdminKubernetesClient()
-					Expect(err).ShouldNot(HaveOccurred())
-					kubeadminClient, err = framework.InitControllerHub(asAdminClient)
-					Expect(err).ShouldNot(HaveOccurred())
-					_, err = kubeadminClient.CommonController.CreateTestNamespace(userNamespace)
-				}
+				fw, err = framework.NewFramework(utils.GetGeneratedNamespace(devEnvTestLabel))
+				Expect(err).NotTo(HaveOccurred())
+				userNamespace = fw.UserNamespace
 				managedNamespace = userNamespace + "-managed"
 
 				// Component config
@@ -112,15 +98,15 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 				// https://issues.redhat.com/browse/KFLUXBUGS-1462 - creating SCM secret alongside with PaC
 				// leads to PLRs being duplicated
 				// secretDefinition := build.GetSecretDefForGitHub(namespace)
-				// secret, err = kubeadminClient.CommonController.CreateSecret(namespace, secretDefinition)
-				sharedSecret, err := kubeadminClient.CommonController.GetSecret(constants.QuayRepositorySecretNamespace, constants.QuayRepositorySecretName)
+				// secret, err = fw.AsKubeAdmin.CommonController.CreateSecret(namespace, secretDefinition)
+				sharedSecret, err := fw.AsKubeAdmin.CommonController.GetSecret(constants.QuayRepositorySecretNamespace, constants.QuayRepositorySecretName)
 				if err != nil && k8sErrors.IsNotFound(err) {
-					sharedSecret, err = CreateE2EQuaySecret(kubeadminClient.CommonController.CustomClient)
+					sharedSecret, err = CreateE2EQuaySecret(fw.AsKubeAdmin.CommonController.CustomClient)
 					Expect(err).ShouldNot(HaveOccurred())
 				}
 				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error when getting shared secret - make sure the secret %s in %s userNamespace is created", constants.QuayRepositorySecretName, constants.QuayRepositorySecretNamespace))
 
-				createReleaseConfig(kubeadminClient, managedNamespace, userNamespace, appSpec.ComponentSpec.Name, appSpec.ApplicationName, sharedSecret.Data[".dockerconfigjson"])
+				createReleaseConfig(fw.AsKubeAdmin, managedNamespace, userNamespace, appSpec.ComponentSpec.Name, appSpec.ApplicationName, sharedSecret.Data[".dockerconfigjson"])
 
 				// get the build pipeline bundle annotation
 				buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(appSpec.ComponentSpec.BuildPipelineType)
@@ -130,15 +116,15 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 			// Remove all resources created by the tests
 			AfterAll(func() {
 				if !(strings.EqualFold(os.Getenv("E2E_SKIP_CLEANUP"), "true")) && !CurrentSpecReport().Failed() && !strings.Contains(GinkgoLabelFilter(), upstreamKonfluxTestLabel) {
-					Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
-					Expect(kubeadminClient.CommonController.DeleteNamespace(managedNamespace)).To(Succeed())
+					Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(userNamespace)).To(Succeed())
+					Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).To(Succeed())
 
 					// Delete new branch created by PaC and a testing branch used as a component's base branch
-					err = kubeadminClient.CommonController.Github.DeleteRef(componentRepositoryName, pacBranchName)
+					err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, pacBranchName)
 					if err != nil {
 						Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 					}
-					err = kubeadminClient.CommonController.Github.DeleteRef(componentRepositoryName, componentNewBaseBranch)
+					err = fw.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepositoryName, componentNewBaseBranch)
 					if err != nil {
 						Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 					}
@@ -148,7 +134,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 
 			// Create an application in a specific namespace
 			It("creates an application", Label(devEnvTestLabel, upstreamKonfluxTestLabel), func() {
-				createdApplication, err := kubeadminClient.HasController.CreateApplication(appSpec.ApplicationName, userNamespace)
+				createdApplication, err := fw.AsKubeAdmin.HasController.CreateApplication(appSpec.ApplicationName, userNamespace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(createdApplication.Spec.DisplayName).To(Equal(appSpec.ApplicationName))
 				Expect(createdApplication.Namespace).To(Equal(userNamespace))
@@ -157,7 +143,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 			// Create an IntegrationTestScenario for the App
 			It("creates an IntegrationTestScenario for the app", Label(devEnvTestLabel, upstreamKonfluxTestLabel), func() {
 				its := appSpec.ComponentSpec.IntegrationTestScenario
-				integrationTestScenario, err = kubeadminClient.IntegrationController.CreateIntegrationTestScenario("", appSpec.ApplicationName, userNamespace, its.GitURL, its.GitRevision, its.TestPath, []string{})
+				integrationTestScenario, err = fw.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", appSpec.ApplicationName, userNamespace, its.GitURL, its.GitRevision, its.TestPath, []string{})
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -167,7 +153,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 				// can avoid polluting the default (main) branch
 				componentNewBaseBranch = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
 				gitRevision = componentNewBaseBranch
-				Expect(kubeadminClient.CommonController.Github.CreateRef(componentRepositoryName, appSpec.ComponentSpec.GitSourceDefaultBranchName, appSpec.ComponentSpec.GitSourceRevision, componentNewBaseBranch)).To(Succeed())
+				Expect(fw.AsKubeAdmin.CommonController.Github.CreateRef(componentRepositoryName, appSpec.ComponentSpec.GitSourceDefaultBranchName, appSpec.ComponentSpec.GitSourceRevision, componentNewBaseBranch)).To(Succeed())
 			})
 
 			// Component are imported from gitUrl
@@ -187,7 +173,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 					},
 				}
 
-				component, err = kubeadminClient.HasController.CreateComponent(componentObj, userNamespace, "", "", appSpec.ApplicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, buildPipelineAnnotation))
+				component, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj, userNamespace, "", "", appSpec.ApplicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -195,7 +181,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 				It("triggers creation of a PR in the sample repo", func() {
 					var prSHA string
 					Eventually(func() error {
-						prs, err := kubeadminClient.CommonController.Github.ListPullRequests(componentRepositoryName)
+						prs, err := fw.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepositoryName)
 						Expect(err).ShouldNot(HaveOccurred())
 						for _, pr := range prs {
 							if pr.Head.GetRef() == pacBranchName {
@@ -209,9 +195,9 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 
 					// We don't need the PipelineRun from a PaC 'pull-request' event to finish, so we can delete it
 					Eventually(func() error {
-						pipelineRun, err = kubeadminClient.HasController.GetComponentPipelineRun(component.GetName(), appSpec.ApplicationName, userNamespace, prSHA)
+						pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appSpec.ApplicationName, userNamespace, prSHA)
 						if err == nil {
-							Expect(kubeadminClient.TektonController.DeletePipelineRun(pipelineRun.Name, pipelineRun.Namespace)).To(Succeed())
+							Expect(fw.AsKubeAdmin.TektonController.DeletePipelineRun(pipelineRun.Name, pipelineRun.Namespace)).To(Succeed())
 							return nil
 						}
 						return err
@@ -221,7 +207,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 				It("verifies component build status", func() {
 					var buildStatus *buildcontrollers.BuildStatus
 					Eventually(func() (bool, error) {
-						component, err := kubeadminClient.HasController.GetComponent(component.GetName(), userNamespace)
+						component, err := fw.AsKubeAdmin.HasController.GetComponent(component.GetName(), userNamespace)
 						if err != nil {
 							return false, err
 						}
@@ -249,14 +235,14 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 
 				It("should eventually lead to triggering a 'push' event type PipelineRun after merging the PaC init branch ", func() {
 					Eventually(func() error {
-						mergeResult, err = kubeadminClient.CommonController.Github.MergePullRequest(componentRepositoryName, prNumber)
+						mergeResult, err = fw.AsKubeAdmin.CommonController.Github.MergePullRequest(componentRepositoryName, prNumber)
 						return err
 					}, mergePRTimeout).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request: %+v\n", err))
 
 					headSHA = mergeResult.GetSHA()
 
 					Eventually(func() error {
-						pipelineRun, err = kubeadminClient.HasController.GetComponentPipelineRun(component.GetName(), appSpec.ApplicationName, userNamespace, headSHA)
+						pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appSpec.ApplicationName, userNamespace, headSHA)
 						if err != nil {
 							GinkgoWriter.Printf("PipelineRun has not been created yet for component %s/%s\n", userNamespace, component.GetName())
 							return err
@@ -274,8 +260,8 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 					Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(""))
 				})
 				It("should eventually complete successfully", func() {
-					Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, headSHA,
-						kubeadminClient.TektonController, &has.RetryOptions{Retries: 5, Always: true}, pipelineRun)).To(Succeed())
+					Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, headSHA,
+						fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 5, Always: true}, pipelineRun)).To(Succeed())
 
 					// in case the first pipelineRun attempt has failed and was retried, we need to update the git branch head ref
 					headSHA = pipelineRun.Labels["pipelinesascode.tekton.dev/sha"]
@@ -285,14 +271,14 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 			When("Build PipelineRun completes successfully", func() {
 
 				It("should validate Tekton TaskRun test results successfully", func() {
-					pipelineRun, err = kubeadminClient.HasController.GetComponentPipelineRun(component.GetName(), appSpec.ApplicationName, userNamespace, headSHA)
+					pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appSpec.ApplicationName, userNamespace, headSHA)
 					Expect(err).ShouldNot(HaveOccurred())
-					Expect(build.ValidateBuildPipelineTestResults(pipelineRun, kubeadminClient.CommonController.KubeRest(), false)).To(Succeed())
+					Expect(build.ValidateBuildPipelineTestResults(pipelineRun, fw.AsKubeAdmin.CommonController.KubeRest(), false)).To(Succeed())
 				})
 
 				It("should validate that the build pipelineRun is signed", Label(upstreamKonfluxTestLabel), func() {
 					Eventually(func() error {
-						pipelineRun, err = kubeadminClient.HasController.GetComponentPipelineRun(component.GetName(), appSpec.ApplicationName, userNamespace, headSHA)
+						pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appSpec.ApplicationName, userNamespace, headSHA)
 						if err != nil {
 							return err
 						}
@@ -306,20 +292,20 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 
 				It("should find the related Snapshot CR", Label(upstreamKonfluxTestLabel), func() {
 					Eventually(func() error {
-						snapshot, err = kubeadminClient.IntegrationController.GetSnapshot("", pipelineRun.Name, "", userNamespace)
+						snapshot, err = fw.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", userNamespace)
 						return err
 					}, snapshotTimeout, snapshotPollingInterval).Should(Succeed(), "timed out when trying to check if the Snapshot exists for PipelineRun %s/%s", userNamespace, pipelineRun.GetName())
 				})
 
 				It("should validate that the build pipelineRun is annotated with the name of the Snapshot", Label(upstreamKonfluxTestLabel), func() {
-					pipelineRun, err = kubeadminClient.HasController.GetComponentPipelineRun(component.GetName(), appSpec.ApplicationName, userNamespace, headSHA)
+					pipelineRun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRun(component.GetName(), appSpec.ApplicationName, userNamespace, headSHA)
 					Expect(err).ShouldNot(HaveOccurred())
 					Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(snapshot.GetName()))
 				})
 
 				It("should find the related Integration Test PipelineRun", Label(upstreamKonfluxTestLabel), func() {
 					Eventually(func() error {
-						testPipelinerun, err = kubeadminClient.IntegrationController.GetIntegrationPipelineRun(integrationTestScenario.Name, snapshot.Name, userNamespace)
+						testPipelinerun, err = fw.AsKubeAdmin.IntegrationController.GetIntegrationPipelineRun(integrationTestScenario.Name, snapshot.Name, userNamespace)
 						if err != nil {
 							GinkgoWriter.Printf("failed to get Integration test PipelineRun for a snapshot '%s' in '%s' namespace: %+v\n", snapshot.Name, userNamespace, err)
 							return err
@@ -336,22 +322,22 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 
 			When("Integration Test PipelineRun is created", Label(upstreamKonfluxTestLabel), func() {
 				It("should eventually complete successfully", func() {
-					Expect(kubeadminClient.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenario, snapshot, userNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a integration pipeline for snapshot %s/%s to finish", userNamespace, snapshot.GetName()))
+					Expect(fw.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenario, snapshot, userNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a integration pipeline for snapshot %s/%s to finish", userNamespace, snapshot.GetName()))
 				})
 			})
 
 			When("Integration Test PipelineRun completes successfully", Label(upstreamKonfluxTestLabel), func() {
 				It("should lead to Snapshot CR being marked as passed", func() {
 					Eventually(func() bool {
-						snapshot, err = kubeadminClient.IntegrationController.GetSnapshot("", pipelineRun.Name, "", userNamespace)
+						snapshot, err = fw.AsKubeAdmin.IntegrationController.GetSnapshot("", pipelineRun.Name, "", userNamespace)
 						Expect(err).ShouldNot(HaveOccurred())
-						return kubeadminClient.CommonController.HaveTestsSucceeded(snapshot)
+						return fw.AsKubeAdmin.CommonController.HaveTestsSucceeded(snapshot)
 					}, time.Minute*5, defaultPollingInterval).Should(BeTrue(), fmt.Sprintf("tests have not succeeded for snapshot %s/%s", snapshot.GetNamespace(), snapshot.GetName()))
 				})
 
 				It("should trigger creation of Release CR", func() {
 					Eventually(func() error {
-						release, err = kubeadminClient.ReleaseController.GetRelease("", snapshot.Name, userNamespace)
+						release, err = fw.AsKubeAdmin.ReleaseController.GetRelease("", snapshot.Name, userNamespace)
 						return err
 					}, releaseTimeout, releasePollingInterval).Should(Succeed(), fmt.Sprintf("timed out when trying to check if the release exists for snapshot %s/%s", userNamespace, snapshot.GetName()))
 				})
@@ -360,7 +346,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 			When("Release CR is created", Label(upstreamKonfluxTestLabel), func() {
 				It("triggers creation of Release PipelineRun", func() {
 					Eventually(func() error {
-						pipelineRun, err = kubeadminClient.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
+						pipelineRun, err = fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
 						if err != nil {
 							GinkgoWriter.Printf("pipelineRun for component '%s' in namespace '%s' not created yet: %+v\n", component.GetName(), managedNamespace, err)
 							return err
@@ -376,7 +362,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 			When("Release PipelineRun is triggered", Label(upstreamKonfluxTestLabel), func() {
 				It("should eventually succeed", func() {
 					Eventually(func() error {
-						pr, err := kubeadminClient.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
+						pr, err := fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, release.Name, release.Namespace)
 						Expect(err).ShouldNot(HaveOccurred())
 						Expect(tekton.HasPipelineRunFailed(pr)).NotTo(BeTrue(), fmt.Sprintf("did not expect PipelineRun %s/%s to fail", pr.GetNamespace(), pr.GetName()))
 						if !pr.IsDone() {
@@ -391,7 +377,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 			When("Release PipelineRun is completed", Label(upstreamKonfluxTestLabel), func() {
 				It("should lead to Release CR being marked as succeeded", func() {
 					Eventually(func() error {
-						release, err = kubeadminClient.ReleaseController.GetRelease(release.Name, "", userNamespace)
+						release, err = fw.AsKubeAdmin.ReleaseController.GetRelease(release.Name, "", userNamespace)
 						Expect(err).ShouldNot(HaveOccurred())
 						if !release.IsReleased() {
 							return fmt.Errorf("release CR %s/%s is not marked as finished yet", release.GetNamespace(), release.GetName())
@@ -447,7 +433,7 @@ func createReleaseConfig(kubeadminClient *framework.ControllerHub, managedNamesp
 	_, err = kubeadminClient.TektonController.CreateEnterpriseContractPolicy(ecPolicyName, managedNamespace, defaultEcPolicySpec)
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = kubeadminClient.ReleaseController.CreateReleasePlanAdmission("demo", managedNamespace, "", userNamespace, ecPolicyName, "release-service-account", []string{appName}, true, &tektonutils.PipelineRef{
+	_, err = kubeadminClient.ReleaseController.CreateReleasePlanAdmission("demo", managedNamespace, "", userNamespace, ecPolicyName, "release-service-account", []string{appName}, false, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
 			{Name: "url", Value: releasecommon.RelSvcCatalogURL},
