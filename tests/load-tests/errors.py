@@ -103,6 +103,10 @@ FAILED_PLR_ERRORS = {
     "RPM build failed: bool cannot be defined via typedef": r"error: .bool. cannot be defined via .typedef..*error: Bad exit status from /var/tmp/rpm-tmp..* ..build.",
 }
 
+FAILED_TR_ERRORS = {
+    "Missing expected fields in TaskRun": r"Missing expected fields in TaskRun",   # This is special error, meaning everithing failed basically
+    "Failed to create task run pod because ISE on webhook proxy.operator.tekton.dev": r"failed to create task run pod .*: Internal error occurred: failed calling webhook \"proxy.operator.tekton.dev\": failed to call webhook: Post \"https://tekton-operator-proxy-webhook.openshift-pipelines.svc:443/defaulting.timeout=10s\": context deadline exceeded. Maybe missing or invalid Task .*",
+}
 
 def message_to_reason(reasons_and_errors: dict, msg: str) -> str | None:
     """
@@ -200,6 +204,24 @@ def find_trs(plr):
     except KeyError:
         return
 
+def check_failed_taskrun(data_dir, ns, tr_name):
+    datafile = os.path.join(data_dir, ns, "1", "collected-taskrun-" + tr_name + ".json")
+    data = load(datafile)
+
+    try:
+        pod_name = data["status"]["podName"]
+        for condition in data["status"]["conditions"]:
+            if condition["type"] == "Succeeded":
+                break
+    except KeyError:
+        return False, "Missing expected fields in TaskRun"
+    else:
+        if pod_name == "":
+            return False, json.dumps(condition, sort_keys=True)
+        else:
+            return True, None
+
+
 def find_failed_containers(data_dir, ns, tr_name):
     datafile = os.path.join(data_dir, ns, "1", "collected-taskrun-" + tr_name + ".json")
     data = load(datafile)
@@ -229,13 +251,19 @@ def investigate_failed_plr(dump_dir):
         plr_ns = plr["metadata"]["namespace"]
 
         for tr_name in find_trs(plr):
-            for pod_name, cont_name in find_failed_containers(dump_dir, plr_ns, tr_name):
-                log_lines = load_container_log(dump_dir, plr_ns, pod_name, cont_name)
-                reason = message_to_reason(FAILED_PLR_ERRORS, log_lines)
+            tr_ok, tr_message = check_failed_taskrun(dump_dir, plr_ns, tr_name)
 
-                if reason == "SKIP":
-                    continue
+            if tr_ok:
+                for pod_name, cont_name in find_failed_containers(dump_dir, plr_ns, tr_name):
+                    log_lines = load_container_log(dump_dir, plr_ns, pod_name, cont_name)
+                    reason = message_to_reason(FAILED_PLR_ERRORS, log_lines)
 
+                    if reason == "SKIP":
+                        continue
+
+                    reasons.append(reason)
+            else:
+                reason = message_to_reason(FAILED_TR_ERRORS, tr_message)
                 reasons.append(reason)
 
         reasons = list(set(reasons))   # get unique reasons only
