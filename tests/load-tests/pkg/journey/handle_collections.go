@@ -44,15 +44,15 @@ func writeToFile(dirPath, file string, contents []byte) error {
 	return nil
 }
 
-func collectPodLogs(f *framework.Framework, dirPath, namespace, component string) error {
+func collectPodLogs(f *framework.Framework, dirPath, namespace, application string) error {
 	podList, err := f.AsKubeAdmin.CommonController.ListPods(
 		namespace,
-		"appstudio.openshift.io/component",
-		component,
+		"appstudio.openshift.io/application",
+		application,
 		100,
 	)
 	if err != nil {
-		return fmt.Errorf("Failed to list pods in namespace %s for component %s: %v", namespace, component, err)
+		return fmt.Errorf("Failed to list pods in namespace %s for application %s: %v", namespace, application, err)
 	}
 
 	for _, pod := range podList.Items {
@@ -144,7 +144,7 @@ func collectPipelineRunJSONs(f *framework.Framework, dirPath, namespace, applica
 	return nil
 }
 
-func collectApplicationComponentJSONs(f *framework.Framework, dirPath, namespace, application, component string) error {
+func collectApplicationJSONs(f *framework.Framework, dirPath, namespace, application string) error {
 	appJsonFileName := "collected-application-" + application + ".json"
 	// Only save Application JSON if it has not already been collected (as HandlePerComponentCollection method is called for each component)
 	if _, err := os.Stat(filepath.Join(dirPath, appJsonFileName)); errors.Is(err, os.ErrNotExist) {
@@ -165,6 +165,10 @@ func collectApplicationComponentJSONs(f *framework.Framework, dirPath, namespace
 		}
 	}
 
+	return nil
+}
+
+func collectComponentJSONs(f *framework.Framework, dirPath, namespace, component string) error {
 	// Collect Component JSON
 	comp, err := f.AsKubeDeveloper.HasController.GetComponent(component, namespace)
 	if err != nil {
@@ -179,6 +183,34 @@ func collectApplicationComponentJSONs(f *framework.Framework, dirPath, namespace
 	err = writeToFile(dirPath, "collected-component-"+component+".json", compJSON)
 	if err != nil {
 		return fmt.Errorf("Failed to write Component: %v", err)
+	}
+
+	return nil
+}
+
+func HandlePerApplicationCollection(ctx *PerApplicationContext) error {
+	if ctx.ApplicationName == "" {
+		logging.Logger.Debug("Application name not populated, so skipping per-application collections in %s", ctx.ParentContext.Namespace)
+		return nil
+	}
+
+	var err error
+
+	journeyCounterStr := fmt.Sprintf("%d", ctx.ParentContext.JourneyRepeatsCounter)
+	dirPath := getDirName(ctx.ParentContext.Opts.OutputDir, ctx.ParentContext.Namespace, journeyCounterStr)
+	err = createDir(dirPath)
+	if err != nil {
+		return logging.Logger.Fail(105, "Failed to create dir: %v", err)
+	}
+
+	err = collectPodLogs(ctx.Framework, dirPath, ctx.ParentContext.Namespace, ctx.ApplicationName)
+	if err != nil {
+		return logging.Logger.Fail(106, "Failed to collect pod logs: %v", err)
+	}
+
+	err = collectApplicationJSONs(ctx.Framework, dirPath, ctx.ParentContext.Namespace, ctx.ApplicationName)
+	if err != nil {
+		return logging.Logger.Fail(107, "Failed to collect application JSONs: %v", err)
 	}
 
 	return nil
@@ -209,9 +241,9 @@ func HandlePerComponentCollection(ctx *PerComponentContext) error {
 		return logging.Logger.Fail(102, "Failed to collect pipeline run JSONs: %v", err)
 	}
 
-	err = collectApplicationComponentJSONs(ctx.Framework, dirPath, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName)
+	err = collectComponentJSONs(ctx.Framework, dirPath, ctx.ParentContext.ParentContext.Namespace, ctx.ComponentName)
 	if err != nil {
-		return logging.Logger.Fail(103, "Failed to collect Application and Component JSONs: %v", err)
+		return logging.Logger.Fail(103, "Failed to collect component JSONs: %v", err)
 	}
 
 	return nil
