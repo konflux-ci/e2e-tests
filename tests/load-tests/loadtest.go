@@ -242,6 +242,12 @@ func perUserThread(threadCtx *journey.MainContext) {
 // Single application journey (there can be multiple parallel apps per user)
 func perApplicationThread(perApplicationCtx *journey.PerApplicationContext) {
 	defer perApplicationCtx.PerApplicationWG.Done()
+	defer func() {
+		_, err := logging.Measure(journey.HandlePerApplicationCollection, perApplicationCtx)
+		if err != nil {
+			logging.Logger.Error("Per application thread failed: %v", err)
+		}
+	}()
 
 	var err error
 
