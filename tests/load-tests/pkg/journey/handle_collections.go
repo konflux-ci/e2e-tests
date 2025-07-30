@@ -12,6 +12,9 @@ import (
 	framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 )
 
+import k8s_api_errors "k8s.io/apimachinery/pkg/api/errors"
+
+
 func getDirName(baseDir, namespace, iteration string) string {
 	return filepath.Join(baseDir, "collected-data", namespace, iteration) + "/"
 }
@@ -193,66 +196,82 @@ func collectReleaseRelatedJSONs(f *framework.Framework, dirPath, namespace, appN
 	releasePlanName := appName + "-rp"
 	releasePlan, err := f.AsKubeDeveloper.ReleaseController.GetReleasePlan(releasePlanName, namespace)
 	if err != nil {
-		return fmt.Errorf("Failed to get Release Plan %s: %v", releasePlanName, err)
+		if !k8s_api_errors.IsNotFound(err) {
+			return fmt.Errorf("Failed to get Release Plan %s: %v", releasePlanName, err)
+		}
 	}
 
-	releasePlanJSON, err := json.Marshal(releasePlan)
-	if err != nil {
-		return fmt.Errorf("Failed to dump Release Plan JSON: %v", err)
-	}
+	if err == nil {
+		releasePlanJSON, err := json.Marshal(releasePlan)
+		if err != nil {
+			return fmt.Errorf("Failed to dump Release Plan JSON: %v", err)
+		}
 
-	err = writeToFile(dirPath, "collected-releaseplan-" + releasePlanName + ".json", releasePlanJSON)
-	if err != nil {
-		return fmt.Errorf("Failed to write Release Plan: %v", err)
+		err = writeToFile(dirPath, "collected-releaseplan-" + releasePlanName + ".json", releasePlanJSON)
+		if err != nil {
+			return fmt.Errorf("Failed to write Release Plan: %v", err)
+		}
 	}
 
 	// Collect ReleasePlanAdmission JSON
 	releasePlanAdmissionName := appName + "-rpa"
 	releasePlanAdmission, err := f.AsKubeDeveloper.ReleaseController.GetReleasePlanAdmission(releasePlanAdmissionName, namespace)
 	if err != nil {
-		return fmt.Errorf("Failed to get Release Plan Admission %s: %v", releasePlanAdmissionName, err)
+		if !k8s_api_errors.IsNotFound(err) {
+			return fmt.Errorf("Failed to get Release Plan Admission %s: %v", releasePlanAdmissionName, err)
+		}
 	}
 
-	releasePlanAdmissionJSON, err := json.Marshal(releasePlanAdmission)
-	if err != nil {
-		return fmt.Errorf("Failed to dump Release Plan Admission JSON: %v", err)
-	}
+	if err == nil {
+		releasePlanAdmissionJSON, err := json.Marshal(releasePlanAdmission)
+		if err != nil {
+			return fmt.Errorf("Failed to dump Release Plan Admission JSON: %v", err)
+		}
 
-	err = writeToFile(dirPath, "collected-releaseplanadmission-" + releasePlanAdmissionName + ".json", releasePlanAdmissionJSON)
-	if err != nil {
-		return fmt.Errorf("Failed to write Release Plan Admission: %v", err)
+		err = writeToFile(dirPath, "collected-releaseplanadmission-" + releasePlanAdmissionName + ".json", releasePlanAdmissionJSON)
+		if err != nil {
+			return fmt.Errorf("Failed to write Release Plan Admission: %v", err)
+		}
 	}
 
 	// Collect Snapshot JSON
 	snap, err := f.AsKubeDeveloper.IntegrationController.GetSnapshot(snapName, "", compName, namespace)
 	if err != nil {
-		return fmt.Errorf("Failed to get Snapshot %s: %v", snapName, err)
+		if !k8s_api_errors.IsNotFound(err) {
+			return fmt.Errorf("Failed to get Snapshot %s: %v", snapName, err)
+		}
 	}
 
-	snapJSON, err := json.Marshal(snap)
-	if err != nil {
-		return fmt.Errorf("Failed to dump Snapshot JSON: %v", err)
-	}
+	if err == nil {
+		snapJSON, err := json.Marshal(snap)
+		if err != nil {
+			return fmt.Errorf("Failed to dump Snapshot JSON: %v", err)
+		}
 
-	err = writeToFile(dirPath, "collected-snapshot-" + snapName + ".json", snapJSON)
-	if err != nil {
-		return fmt.Errorf("Failed to write Snapshot: %v", err)
+		err = writeToFile(dirPath, "collected-snapshot-" + snapName + ".json", snapJSON)
+		if err != nil {
+			return fmt.Errorf("Failed to write Snapshot: %v", err)
+		}
 	}
 
 	// Collect Release JSON
 	rel, err := f.AsKubeDeveloper.ReleaseController.GetRelease(relName, "", namespace)
 	if err != nil {
-		return fmt.Errorf("Failed to get Release %s: %v", relName, err)
+		if !k8s_api_errors.IsNotFound(err) {
+			return fmt.Errorf("Failed to get Release %s: %v", relName, err)
+		}
 	}
 
-	relJSON, err := json.Marshal(rel)
-	if err != nil {
-		return fmt.Errorf("Failed to dump Release JSON: %v", err)
-	}
+	if err == nil {
+		relJSON, err := json.Marshal(rel)
+		if err != nil {
+			return fmt.Errorf("Failed to dump Release JSON: %v", err)
+		}
 
-	err = writeToFile(dirPath, "collected-release-" + relName + ".json", relJSON)
-	if err != nil {
-		return fmt.Errorf("Failed to write Release: %v", err)
+		err = writeToFile(dirPath, "collected-release-" + relName + ".json", relJSON)
+		if err != nil {
+			return fmt.Errorf("Failed to write Release: %v", err)
+		}
 	}
 
 	return nil
