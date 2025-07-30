@@ -136,7 +136,7 @@ def load(datafile):
         try:
             with open(datafile, "r") as fd:
                 data = yaml.safe_load(fd)
-        except json.decoder.JSONDecodeError:
+        except yaml.scanner.ScannerError:
             raise Exception(f"File {datafile} is malfrmed YAML, skipping it")
     elif datafile.endswith(".json"):
         try:
