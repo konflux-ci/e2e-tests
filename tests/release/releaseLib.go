@@ -350,5 +350,5 @@ func VerifyAtlasURL(url string) {
 	uuidStr := strings.TrimPrefix(url, prefix)
 	u, err := uuid.Parse(uuidStr)
 	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Could not parse UUID %s uuidStr", uuidStr))
-	Expect(u.Version()).To(Equal(4), fmt.Sprintf("UUID %s is not version 4", uuidStr))
+	Expect(u.Version()).To(BeEquivalentTo(4), fmt.Sprintf("UUID %s is not version 4", uuidStr))
 }
