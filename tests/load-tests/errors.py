@@ -253,9 +253,9 @@ def load_container_log(data_dir, ns, pod_name, cont_name):
         return fd.read()
 
 def investigate_failed_plr(dump_dir, plr_type="build"):
-    try:
-        reasons = []
+    reasons = []
 
+    try:
         plr = find_first_failed_build_plr(dump_dir, plr_type)
         if plr == None:
             return ["SORRY PLR not found"]
@@ -266,27 +266,28 @@ def investigate_failed_plr(dump_dir, plr_type="build"):
             tr_ok, tr_message = check_failed_taskrun(dump_dir, plr_ns, tr_name)
 
             if tr_ok:
-                for pod_name, cont_name in find_failed_containers(dump_dir, plr_ns, tr_name):
-                    log_lines = load_container_log(dump_dir, plr_ns, pod_name, cont_name)
-                    reason = message_to_reason(FAILED_PLR_ERRORS, log_lines)
+                try:
+                    for pod_name, cont_name in find_failed_containers(dump_dir, plr_ns, tr_name):
+                        log_lines = load_container_log(dump_dir, plr_ns, pod_name, cont_name)
+                        reason = message_to_reason(FAILED_PLR_ERRORS, log_lines)
 
+                        if reason == "SKIP":
+                            continue
+
+                        reasons.append(reason)
+                except FileNotFoundError as e:
+                    print(f"Failed to locate required files: {e}")
+                    reason = message_to_reason(FAILED_TR_ERRORS, tr_message)
                     if reason == "SKIP":
-                        continue
-
-                    reasons.append(reason)
-
-            reason = message_to_reason(FAILED_TR_ERRORS, tr_message)
-            if reason != "SKIP":
-                reasons.append(reason)
-
-        reasons = list(set(reasons))   # get unique reasons only
-        reasons.sort()   # sort reasons
-        return reasons
-    except FileNotFoundError as e:
-        print(f"Failed to locate required files: {e}")
-        return ["SORRY, missing data"]
+                        reasons.append("SORRY, missing data")
+                    else:
+                        reasons.append(reason)
     except Exception as e:
         return ["SORRY " + str(e)]
+
+    reasons = list(set(reasons))   # get unique reasons only
+    reasons.sort()   # sort reasons
+    return reasons
 
 def main():
     input_file = sys.argv[1]
