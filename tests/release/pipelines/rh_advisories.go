@@ -183,13 +183,13 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 				err := json.Unmarshal(releaseCR.Status.Artifacts.Raw, &artifacts)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(len(artifacts.SBOMs.Product) == 1).To(BeTrue())
+				Expect(artifacts.SBOMs.Product).To(HaveLen(1))
 				for _, atlas_url := range artifacts.SBOMs.Product {
 					releasecommon.VerifyAtlasURL(atlas_url)
 				}
 
 				// expect two single-arch image SBOMs
-				Expect(len(artifacts.SBOMs.Component) == 2).To(BeTrue())
+				Expect(artifacts.SBOMs.Component).To(HaveLen(2))
 				for _, atlas_url := range artifacts.SBOMs.Component {
 					releasecommon.VerifyAtlasURL(atlas_url)
 				}
