@@ -111,7 +111,7 @@ FAILED_TR_ERRORS = {
     ("SKIP", r"\"message\": \".* exited with code 1\""),   # Another special error to avoid printing 'Unknown error:' message
     ("Back-off pulling task run image from quay.io", r"the step .* in TaskRun .* failed to pull the image .*. The pod errored with the message: \"Back-off pulling image \"quay.io/.*\""),
     ("Back-off pulling task run image from registry.access.redhat.com", r"the step .* in TaskRun .* failed to pull the image .*. The pod errored with the message: \"Back-off pulling image \"registry.access.redhat.com/.*\""),
-    ("Failed to create task run pod because ISE on webhook proxy.operator.tekton.dev", r"failed to create task run pod .*: Internal error occurred: failed calling webhook \"proxy.operator.tekton.dev\": failed to call webhook: Post \"https://tekton-operator-proxy-webhook.openshift-pipelines.svc:443/defaulting.timeout=10s\": context deadline exceeded. Maybe missing or invalid Task .*"),
+    ("Failed to create task run pod because ISE on webhook proxy.operator.tekton.dev", r"failed to create task run pod .*: Internal error occurred: failed calling webhook \\\"proxy.operator.tekton.dev\\\": failed to call webhook: Post \\\"https://tekton-operator-proxy-webhook.openshift-pipelines.svc:443/defaulting.timeout=10s\\\": context deadline exceeded. Maybe missing or invalid Task .*"),
 }
 
 def message_to_reason(reasons_and_errors: set, msg: str) -> str | None:
