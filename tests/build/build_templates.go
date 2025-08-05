@@ -544,7 +544,10 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				})
 				AfterAll(func() {
 					if !CurrentSpecReport().Failed() {
-						Expect(f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.GetName(), pr.GetNamespace())).To(Succeed())
+						err = f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.GetName(), pr.GetNamespace())
+						if err != nil {
+							Expect(err.Error()).To(ContainSubstring("not found"))
+						}
 					}
 				})
 
@@ -691,7 +694,9 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 							}
 							// Avoid blowing up PipelineRun usage
 							err := f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.Name, pr.Namespace)
-							Expect(err).NotTo(HaveOccurred())
+							if err != nil {
+								Expect(err.Error()).To(ContainSubstring("not found"))
+							}
 						}(pr)
 
 						err = f.AsKubeAdmin.TektonController.AddFinalizerToPipelineRun(pr, constants.E2ETestFinalizerName)
