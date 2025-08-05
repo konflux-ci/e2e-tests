@@ -418,7 +418,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Conforma E2E tests", Label("e
 					reportLog, err := utils.GetContainerLogs(fwk.AsKubeAdmin.CommonController.KubeInterface(), tr.Status.PodName, "step-report-json", namespace)
 					GinkgoWriter.Printf("*** Logs from pod '%s', container '%s':\n----- START -----%s----- END -----\n", tr.Status.PodName, "step-report-json", reportLog)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(reportLog).Should(MatchRegexp(`Pipeline task .* uses an untrusted task reference`))
+					Expect(reportLog).Should(MatchRegexp(`PipelineTask .* uses an untrusted task reference`))
 				})
 
 				It("verifies the release policy: Task references are pinned", func() {
