@@ -113,6 +113,7 @@ FAILED_TR_ERRORS = {
     ("SKIP", r"\"message\": \".* exited with code 1\""),   # Another special error to avoid printing 'Unknown error:' message
     ("Back-off pulling task run image from quay.io", r"the step .* in TaskRun .* failed to pull the image .*. The pod errored with the message: \"Back-off pulling image \"quay.io/.*\""),
     ("Back-off pulling task run image from registry.access.redhat.com", r"the step .* in TaskRun .* failed to pull the image .*. The pod errored with the message: \"Back-off pulling image \"registry.access.redhat.com/.*\""),
+    ("Build failed for unspecified reasons", r"build failed for unspecified reasons."),
     ("Failed to create task run pod because ISE on webhook proxy.operator.tekton.dev", r"failed to create task run pod .*: Internal error occurred: failed calling webhook \\\"proxy.operator.tekton.dev\\\": failed to call webhook: Post \\\"https://tekton-operator-proxy-webhook.openshift-pipelines.svc:443/defaulting.timeout=10s\\\": context deadline exceeded. Maybe missing or invalid Task .*"),
 }
 
@@ -280,11 +281,10 @@ def investigate_failed_plr(dump_dir, plr_type="build"):
                         reasons.append(reason)
                 except FileNotFoundError as e:
                     print(f"Failed to locate required files: {e}")
-                    reason = message_to_reason(FAILED_TR_ERRORS, tr_message)
-                    if reason == "SKIP":
-                        reasons.append("SORRY, missing data")
-                    else:
-                        reasons.append(reason)
+
+            reason = message_to_reason(FAILED_TR_ERRORS, tr_message)
+            if reason != "SKIP":
+                reasons.append(reason)
     except Exception as e:
         return ["SORRY " + str(e)]
 
