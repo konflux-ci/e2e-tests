@@ -96,6 +96,7 @@ FAILED_PLR_ERRORS = {
     ("Error allocating host as provision TR already exists", r"Error allocating host: taskruns.tekton.dev \".*provision\" already exists"),
     ("Error allocating host because of insufficient free addresses in subnet", r"Error allocating host: failed to launch EC2 instance for .* operation error EC2: RunInstances, https response error StatusCode: 400, RequestID: .*, api error InsufficientFreeAddressesInSubnet: There are not enough free addresses in subnet .* to satisfy the requested number of instances."),
     ("Error allocating host because of provisioning error", r"Error allocating host: failed to provision host"),
+    ("Failed because CPU is not x86-64-v4", r"ERROR: CPU is not x86-64-v4, aborting build."),
     ("Failed because of quay.io returned 502", r"level=fatal msg=.Error parsing image name .*docker://quay.io/.* Requesting bearer token: invalid status code from registry 502 .Bad Gateway."),
     ("Failed because registry.access.redhat.com returned 503 when reading manifest", r"source-build:ERROR:command execution failure, status: 1, stderr: time=.* level=fatal msg=.Error parsing image name .* reading manifest .* in registry.access.redhat.com/.* received unexpected HTTP status: 503 Service Unavailable"),
     ("Failed to pull container from quay.io because of DNS error", r"Error: copying system image from manifest list: reading blob .*: Get \"https://cdn[0-9]+.quay.io/.*\": dial tcp: lookup cdn[0-9]+.quay.io: Temporary failure in name resolution"),
