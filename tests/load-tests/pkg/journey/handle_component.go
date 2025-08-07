@@ -155,7 +155,8 @@ func getPaCPullNumber(f *framework.Framework, namespace, name string) (int, erro
 		// Check for right annotation
 		pull, err = getPaCPull(comp.Annotations)
 		if err != nil {
-			return false, fmt.Errorf("PaC component %s in namespace %s failed on PR annotation: %v", name, namespace, err)
+			logging.Logger.Debug("PaC component %s in namespace %s failed on PR annotation: %v", name, namespace, err)
+			return false, nil
 		}
 		if pull == "" {
 			logging.Logger.Debug("PaC component %s in namespace %s do not have PR yet", name, namespace)
