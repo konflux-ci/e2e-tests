@@ -97,6 +97,11 @@ func createComponent(f *framework.Framework, namespace, name, repoUrl, repoRevis
 		}
 	}
 
+	// Configure image-controller to configure PaC
+	for key, value := range constants.ComponentPaCRequestAnnotation {
+		annotationsMap[key] = value
+	}
+
 	componentObj := appstudioApi.ComponentSpec{
 		ComponentName: name,
 		Source: appstudioApi.ComponentSource{
