@@ -102,6 +102,7 @@ sealights_scan() {
 
 trap post_actions EXIT
 
+sleep 10000
 load_envs
 sealights_scan
 
