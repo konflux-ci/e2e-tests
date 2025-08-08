@@ -136,9 +136,9 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/konflux-ci/e2e-tests.git
+            value: https://github.com/psturc/e2e-tests.git
           - name: revision
-            value: main
+            value: KFLUXDP-316
           - name: pathInRepo
             value: integration-tests/tasks/konflux-e2e-tests/0.2/konflux-e2e-tests.yaml
       params:
