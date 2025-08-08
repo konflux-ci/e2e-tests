@@ -124,6 +124,7 @@ FAILED_TR_ERRORS = {
     ("Back-off pulling task run image from registry.access.redhat.com", r"the step .* in TaskRun .* failed to pull the image .*. The pod errored with the message: \"Back-off pulling image \"registry.access.redhat.com/.*\""),
     ("Build failed for unspecified reasons", r"build failed for unspecified reasons."),
     ("Failed to create task run pod because ISE on webhook proxy.operator.tekton.dev", r"failed to create task run pod .*: Internal error occurred: failed calling webhook \\\"proxy.operator.tekton.dev\\\": failed to call webhook: Post \\\"https://tekton-operator-proxy-webhook.openshift-pipelines.svc:443/defaulting.timeout=10s\\\": context deadline exceeded. Maybe missing or invalid Task .*"),
+    ("Script gather-rpms.py failed because of too many values to unpack", r"Handling archdir [^ ]+ Traceback.*File \"/usr/bin/gather-rpms.py\".*nvr, btime, size, sigmd5, _ = .*ValueError: too many values to unpack"),
 }
 
 def message_to_reason(reasons_and_errors: set, msg: str) -> str | None:
