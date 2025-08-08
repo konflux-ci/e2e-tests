@@ -12,8 +12,10 @@ import utils "github.com/konflux-ci/e2e-tests/pkg/utils"
 import pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 func validateSnapshotCreation(f *framework.Framework, namespace, compName string) (string, error) {
+	logging.Logger.Debug("Waiting for snapshot for component %s in namespace %s to be created", compName, namespace)
+
 	interval := time.Second * 20
-	timeout := time.Minute * 30
+	timeout := time.Minute * 5
 	var snap *appstudioApi.Snapshot
 
 	// TODO It would be much better to watch this resource for a condition
@@ -26,12 +28,18 @@ func validateSnapshotCreation(f *framework.Framework, namespace, compName string
 		return true, nil
 	}, interval, timeout)
 
+	if err != nil {
+		return "", err
+	}
+
 	return snap.Name, err
 }
 
 func validateTestPipelineRunCreation(f *framework.Framework, namespace, itsName, snapName string) error {
+	logging.Logger.Debug("Waiting for test pipeline run for ITS %s and snapshot %s in namespace %s to be created", itsName, snapName, namespace)
+
 	interval := time.Second * 20
-	timeout := time.Minute * 30
+	timeout := time.Minute * 5
 
 	// TODO It would be much better to watch this resource for a condition
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
@@ -47,8 +55,10 @@ func validateTestPipelineRunCreation(f *framework.Framework, namespace, itsName,
 }
 
 func validateTestPipelineRunCondition(f *framework.Framework, namespace, itsName, snapName string) error {
+	logging.Logger.Debug("Waiting for test pipeline run for ITS %s and snapshot %s in namespace %s to finish", itsName, snapName, namespace)
+
 	interval := time.Second * 20
-	timeout := time.Minute * 60
+	timeout := time.Minute * 10
 	var pr *pipeline.PipelineRun
 
 	// TODO It would be much better to watch this resource for a condition
@@ -90,8 +100,6 @@ func HandleTest(ctx *PerComponentContext) error {
 	var err error
 	var ok bool
 
-	logging.Logger.Debug("Creating test pipeline run for component %s in namespace %s", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
-
 	result1, err1 := logging.Measure(
 		validateSnapshotCreation,
 		ctx.Framework,
@@ -106,27 +114,37 @@ func HandleTest(ctx *PerComponentContext) error {
 		return logging.Logger.Fail(81, "Snapshot name type assertion failed")
 	}
 
-	_, err = logging.Measure(
-		validateTestPipelineRunCreation,
-		ctx.Framework,
-		ctx.ParentContext.ParentContext.Namespace,
-		ctx.ParentContext.IntegrationTestScenarioName,
-		ctx.SnapshotName,
-	)
-	if err != nil {
-		return logging.Logger.Fail(82, "Test Pipeline Run failed creation: %v", err)
+	if ctx.ParentContext.ParentContext.Opts.TestScenarioGitURL == "" {
+		logging.Logger.Debug("Integration Test Scenario GIT not provided, not waiting for it")
+	} else {
+		logging.Logger.Debug("Waiting for test pipeline run for component %s in namespace %s to be created", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
+
+		_, err = logging.Measure(
+			validateTestPipelineRunCreation,
+			ctx.Framework,
+			ctx.ParentContext.ParentContext.Namespace,
+			ctx.ParentContext.IntegrationTestScenarioName,
+			ctx.SnapshotName,
+		)
+		if err != nil {
+			return logging.Logger.Fail(82, "Test Pipeline Run failed creation: %v", err)
+		}
+
+		logging.Logger.Debug("Waiting for test pipeline run for component %s in namespace %s to finish", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
+
+		_, err = logging.Measure(
+			validateTestPipelineRunCondition,
+			ctx.Framework,
+			ctx.ParentContext.ParentContext.Namespace,
+			ctx.ParentContext.IntegrationTestScenarioName,
+			ctx.SnapshotName,
+		)
+		if err != nil {
+			return logging.Logger.Fail(83, "Test Pipeline Run failed run: %v", err)
+		}
 	}
 
-	_, err = logging.Measure(
-		validateTestPipelineRunCondition,
-		ctx.Framework,
-		ctx.ParentContext.ParentContext.Namespace,
-		ctx.ParentContext.IntegrationTestScenarioName,
-		ctx.SnapshotName,
-	)
-	if err != nil {
-		return logging.Logger.Fail(83, "Test Pipeline Run failed run: %v", err)
-	}
+	logging.Logger.Info("Integration Test Scenario for componet %s in namespace %s OK", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 
 	return nil
 }

@@ -10,6 +10,9 @@ import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
 import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 
+import k8s_api_errors "k8s.io/apimachinery/pkg/api/errors"
+
+
 func getDirName(baseDir, namespace, iteration string) string {
 	return filepath.Join(baseDir, "collected-data", namespace, iteration) + "/"
 }
@@ -42,15 +45,15 @@ func writeToFile(dirPath, file string, contents []byte) error {
 	return nil
 }
 
-func collectPodLogs(f *framework.Framework, dirPath, namespace, component string) error {
+func collectPodLogs(f *framework.Framework, dirPath, namespace, application string) error {
 	podList, err := f.AsKubeAdmin.CommonController.ListPods(
 		namespace,
-		"appstudio.openshift.io/component",
-		component,
+		"appstudio.openshift.io/application",
+		application,
 		100,
 	)
 	if err != nil {
-		return fmt.Errorf("Failed to list pods in namespace %s for component %s: %v", namespace, component, err)
+		return fmt.Errorf("Failed to list pods in namespace %s for application %s: %v", namespace, application, err)
 	}
 
 	for _, pod := range podList.Items {
@@ -85,10 +88,20 @@ func collectPodLogs(f *framework.Framework, dirPath, namespace, component string
 	return nil
 }
 
-func collectPipelineRunJSONs(f *framework.Framework, dirPath, namespace, application, component string) error {
+func collectPipelineRunJSONs(f *framework.Framework, dirPath, namespace, application, component, release string) error {
 	prs, err := f.AsKubeDeveloper.HasController.GetComponentPipelineRunsWithType(component, application, namespace, "", "")
 	if err != nil {
 		return fmt.Errorf("Failed to list PipelineRuns %s/%s/%s: %v", namespace, application, component, err)
+	}
+
+	pr_release, err := f.AsKubeDeveloper.ReleaseController.GetPipelineRunInNamespace(namespace, release, namespace)
+	if err != nil {
+		logging.Logger.Warning("Failed to get Release PipelineRun %s/%s: %v", namespace, release, err)
+	}
+
+	// Make one list that contains them all
+	if pr_release != nil {
+		*prs = append(*prs, *pr_release)
 	}
 
 	for _, pr := range *prs {
@@ -132,7 +145,7 @@ func collectPipelineRunJSONs(f *framework.Framework, dirPath, namespace, applica
 	return nil
 }
 
-func collectApplicationComponentJSONs(f *framework.Framework, dirPath, namespace, application, component string) error {
+func collectApplicationJSONs(f *framework.Framework, dirPath, namespace, application string) error {
 	appJsonFileName := "collected-application-" + application + ".json"
 	// Only save Application JSON if it has not already been collected (as HandlePerComponentCollection method is called for each component)
 	if _, err := os.Stat(filepath.Join(dirPath, appJsonFileName)); errors.Is(err, os.ErrNotExist) {
@@ -153,6 +166,10 @@ func collectApplicationComponentJSONs(f *framework.Framework, dirPath, namespace
 		}
 	}
 
+	return nil
+}
+
+func collectComponentJSONs(f *framework.Framework, dirPath, namespace, component string) error {
 	// Collect Component JSON
 	comp, err := f.AsKubeDeveloper.HasController.GetComponent(component, namespace)
 	if err != nil {
@@ -167,6 +184,124 @@ func collectApplicationComponentJSONs(f *framework.Framework, dirPath, namespace
 	err = writeToFile(dirPath, "collected-component-" + component + ".json", compJSON)
 	if err != nil {
 		return fmt.Errorf("Failed to write Component: %v", err)
+	}
+
+	return nil
+}
+
+func collectReleaseRelatedJSONs(f *framework.Framework, dirPath, namespace, appName, compName, snapName, relName string) error {
+	// Collect ReleasePlan JSON
+	releasePlanName := appName + "-rp"
+	releasePlan, err := f.AsKubeDeveloper.ReleaseController.GetReleasePlan(releasePlanName, namespace)
+	if err != nil {
+		if !k8s_api_errors.IsNotFound(err) {
+			return fmt.Errorf("Failed to get Release Plan %s: %v", releasePlanName, err)
+		}
+	}
+
+	if err == nil {
+		releasePlanJSON, err := json.Marshal(releasePlan)
+		if err != nil {
+			return fmt.Errorf("Failed to dump Release Plan JSON: %v", err)
+		}
+
+		err = writeToFile(dirPath, "collected-releaseplan-" + releasePlanName + ".json", releasePlanJSON)
+		if err != nil {
+			return fmt.Errorf("Failed to write Release Plan: %v", err)
+		}
+	}
+
+	// Collect ReleasePlanAdmission JSON
+	releasePlanAdmissionName := appName + "-rpa"
+	releasePlanAdmission, err := f.AsKubeDeveloper.ReleaseController.GetReleasePlanAdmission(releasePlanAdmissionName, namespace)
+	if err != nil {
+		if !k8s_api_errors.IsNotFound(err) {
+			return fmt.Errorf("Failed to get Release Plan Admission %s: %v", releasePlanAdmissionName, err)
+		}
+	}
+
+	if err == nil {
+		releasePlanAdmissionJSON, err := json.Marshal(releasePlanAdmission)
+		if err != nil {
+			return fmt.Errorf("Failed to dump Release Plan Admission JSON: %v", err)
+		}
+
+		err = writeToFile(dirPath, "collected-releaseplanadmission-" + releasePlanAdmissionName + ".json", releasePlanAdmissionJSON)
+		if err != nil {
+			return fmt.Errorf("Failed to write Release Plan Admission: %v", err)
+		}
+	}
+
+	// Collect Snapshot JSON
+	if len(snapName) > 0 {
+		snap, err := f.AsKubeDeveloper.IntegrationController.GetSnapshot(snapName, "", compName, namespace)
+		if err != nil {
+			if !k8s_api_errors.IsNotFound(err) {
+				return fmt.Errorf("Failed to get Snapshot %s: %v", snapName, err)
+			}
+		}
+
+		if err == nil {
+			snapJSON, err := json.Marshal(snap)
+			if err != nil {
+				return fmt.Errorf("Failed to dump Snapshot JSON: %v", err)
+			}
+
+			err = writeToFile(dirPath, "collected-snapshot-" + snapName + ".json", snapJSON)
+			if err != nil {
+				return fmt.Errorf("Failed to write Snapshot: %v", err)
+			}
+		}
+	}
+
+	// Collect Release JSON
+	if len(relName) > 0 {
+		rel, err := f.AsKubeDeveloper.ReleaseController.GetRelease(relName, "", namespace)
+		if err != nil {
+			if !k8s_api_errors.IsNotFound(err) {
+				return fmt.Errorf("Failed to get Release %s: %v", relName, err)
+			}
+		}
+
+		if err == nil {
+			relJSON, err := json.Marshal(rel)
+			if err != nil {
+				return fmt.Errorf("Failed to dump Release JSON: %v", err)
+			}
+
+			err = writeToFile(dirPath, "collected-release-" + relName + ".json", relJSON)
+			if err != nil {
+				return fmt.Errorf("Failed to write Release: %v", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func HandlePerApplicationCollection(ctx *PerApplicationContext) error {
+	if ctx.ApplicationName == "" {
+		logging.Logger.Debug("Application name not populated, so skipping per-application collections in %s", ctx.ParentContext.Namespace)
+		return nil
+	}
+
+	var err error
+
+	journeyCounterStr := fmt.Sprintf("%d", ctx.ParentContext.JourneyRepeatsCounter)
+	dirPath := getDirName(ctx.ParentContext.Opts.OutputDir, ctx.ParentContext.Namespace, journeyCounterStr)
+	err = createDir(dirPath)
+	if err != nil {
+		return logging.Logger.Fail(105, "Failed to create dir: %v", err)
+	}
+
+	err = collectPodLogs(ctx.Framework, dirPath, ctx.ParentContext.Namespace, ctx.ApplicationName)
+	if err != nil {
+		return logging.Logger.Fail(106, "Failed to collect pod logs: %v", err)
+	}
+
+	err = collectApplicationJSONs(ctx.Framework, dirPath, ctx.ParentContext.Namespace, ctx.ApplicationName)
+	if err != nil {
+		return logging.Logger.Fail(107, "Failed to collect application JSONs: %v", err)
 	}
 
 	return nil
@@ -192,14 +327,19 @@ func HandlePerComponentCollection(ctx *PerComponentContext) error {
 		return logging.Logger.Fail(101, "Failed to collect pod logs: %v", err)
 	}
 
-	err = collectPipelineRunJSONs(ctx.Framework, dirPath, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName)
+	err = collectPipelineRunJSONs(ctx.Framework, dirPath, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName, ctx.ReleaseName)
 	if err != nil {
 		return logging.Logger.Fail(102, "Failed to collect pipeline run JSONs: %v", err)
 	}
 
-	err = collectApplicationComponentJSONs(ctx.Framework, dirPath, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName)
+	err = collectComponentJSONs(ctx.Framework, dirPath, ctx.ParentContext.ParentContext.Namespace, ctx.ComponentName)
 	if err != nil {
-		return logging.Logger.Fail(102, "Failed to collect Application and Component JSONs: %v", err)
+		return logging.Logger.Fail(103, "Failed to collect component JSONs: %v", err)
+	}
+
+	err = collectReleaseRelatedJSONs(ctx.Framework, dirPath, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName, ctx.SnapshotName, ctx.ReleaseName)
+	if err != nil {
+		return logging.Logger.Fail(104, "Failed to collect release related JSONs: %v", err)
 	}
 
 	return nil
