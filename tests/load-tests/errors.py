@@ -85,6 +85,7 @@ ERRORS = {
     ("Timeout listing pipeline runs", r"Repo-templating workflow component cleanup failed: Error deleting on-push merged PipelineRun in namespace .*: Unable to list PipelineRuns for component .* in namespace .*: context deadline exceeded"),
     ("Timeout waiting for build pipeline to be created", r"Build Pipeline Run failed creation: context deadline exceeded"),
     ("Timeout waiting for integration test scenario to validate", r"Integration test scenario failed validation: context deadline exceeded"),
+    ("Timeout waiting for release pipeline to be created", r"Release pipeline run failed creation: context deadline exceeded"),
     ("Timeout waiting for snapshot to be created", r"Snapshot failed creation: context deadline exceeded"),
     ("Timeout waiting for test pipeline to create", r"Test Pipeline Run failed creation: context deadline exceeded"),
     ("Timeout waiting for test pipeline to finish", r"Test Pipeline Run failed run: context deadline exceeded"),
