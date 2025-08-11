@@ -507,7 +507,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Eventually(func() error {
 					mergeResult, err = gitClient.MergePullRequest(helloWorldRepository, prNumber)
 					return err
-				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, helloWorldComponentGitSourceRepoName))
+				}, time.Minute).Should(Succeed(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, helloWorldComponentGitSourceRepoName))
 
 				mergeResultSha = mergeResult.MergeCommitSHA
 				GinkgoWriter.Println("merged result sha:", mergeResultSha)
@@ -635,7 +635,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						}
 					}
 					return nil
-				}, timeout, interval).Should(BeNil())
+				}, timeout, interval).Should(Succeed())
 			})
 		})
 	},
@@ -774,7 +774,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					Eventually(func() error {
 						mergeResult, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(multiComponentGitSourceRepoName, prNumber)
 						return err
-					}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, multiComponentGitSourceRepoName))
+					}, time.Minute).Should(Succeed(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, multiComponentGitSourceRepoName))
 
 					mergeResultSha = mergeResult.GetSHA()
 					GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
@@ -1447,7 +1447,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Eventually(func() error {
 					mergeResult, err = gitClient.MergePullRequest(childRepository, prNumber)
 					return err
-				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, ChildComponentDef.repoName))
+				}, time.Minute).Should(Succeed(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, ChildComponentDef.repoName))
 
 				mergeResultSha = mergeResult.MergeCommitSHA
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
@@ -1510,7 +1510,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Eventually(func() error {
 					mergeResult, err = gitClient.MergePullRequest(parentRepository, prNumber)
 					return err
-				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, ParentComponentDef.repoName))
+				}, time.Minute).Should(Succeed(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, ParentComponentDef.repoName))
 
 				mergeResultSha = mergeResult.MergeCommitSHA
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
@@ -1564,7 +1564,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Eventually(func() error {
 					mergeResult, err = gitClient.MergePullRequest(componentDependenciesChildRepository, prNumber)
 					return err
-				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging nudge pull request #%d in repo %s", prNumber, componentDependenciesChildRepoName))
+				}, time.Minute).Should(Succeed(), fmt.Sprintf("error when merging nudge pull request #%d in repo %s", prNumber, componentDependenciesChildRepoName))
 
 				mergeResultSha = mergeResult.MergeCommitSHA
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
