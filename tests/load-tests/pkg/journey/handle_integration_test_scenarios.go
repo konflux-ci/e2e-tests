@@ -10,8 +10,8 @@ import (
 	util "github.com/devfile/library/v2/pkg/util"
 )
 
-func createIntegrationTestScenario(f *framework.Framework, namespace, name, appName, scenarioGitURL, scenarioRevision, scenarioPathInRepo string) error {
-	_, err := f.AsKubeDeveloper.IntegrationController.CreateIntegrationTestScenario(name, appName, namespace, scenarioGitURL, scenarioRevision, scenarioPathInRepo, []string{})
+func createIntegrationTestScenario(f *framework.Framework, namespace, name, appName, scenarioGitURL, scenarioRevision, scenarioPathInRepo, kind string) error {
+	_, err := f.AsKubeDeveloper.IntegrationController.CreateIntegrationTestScenario(name, appName, namespace, scenarioGitURL, scenarioRevision, scenarioPathInRepo, kind, []string{})
 	if err != nil {
 		return fmt.Errorf("Unable to create the Integration Test Scenario %s: %v", name, err)
 	}

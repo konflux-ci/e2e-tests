@@ -10,13 +10,13 @@ jobs:
       - name: Setup Golang
         uses: actions/setup-go@v4
         with:
-          go-version: '1.22'
+          go-version: '1.24'
       - run: go version
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           args: --timeout=10m
-          version: v1.61
+          version: v1.64
       - name: Run Gosec Security Scanner
         uses: securego/gosec@v2.20.0
         with:

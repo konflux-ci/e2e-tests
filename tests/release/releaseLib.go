@@ -164,7 +164,7 @@ func CreatePushSnapshot(devWorkspace, devNamespace, appName, compRepoName, pacBr
 	Eventually(func() error {
 		mergeResult, err = devFw.AsKubeAdmin.CommonController.Github.MergePullRequest(compRepoName, prNumber)
 		return err
-	}, MergePRTimeout).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request: %+v\n", err))
+	}, MergePRTimeout).Should(Succeed(), fmt.Sprintf("error when merging PaC pull request: %+v\n", err))
 
 	headSHA := mergeResult.GetSHA()
 

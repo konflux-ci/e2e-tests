@@ -143,7 +143,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 			// Create an IntegrationTestScenario for the App
 			It("creates an IntegrationTestScenario for the app", Label(devEnvTestLabel, upstreamKonfluxTestLabel), func() {
 				its := appSpec.ComponentSpec.IntegrationTestScenario
-				integrationTestScenario, err = fw.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", appSpec.ApplicationName, userNamespace, its.GitURL, its.GitRevision, its.TestPath, []string{})
+				integrationTestScenario, err = fw.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", appSpec.ApplicationName, userNamespace, its.GitURL, its.GitRevision, its.TestPath, "", []string{})
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -237,7 +237,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 					Eventually(func() error {
 						mergeResult, err = fw.AsKubeAdmin.CommonController.Github.MergePullRequest(componentRepositoryName, prNumber)
 						return err
-					}, mergePRTimeout).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request: %+v\n", err))
+					}, mergePRTimeout).Should(Succeed(), fmt.Sprintf("error when merging PaC pull request: %+v\n", err))
 
 					headSHA = mergeResult.GetSHA()
 
