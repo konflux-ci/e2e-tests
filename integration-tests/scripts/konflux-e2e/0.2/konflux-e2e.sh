@@ -101,7 +101,6 @@ sealights_scan() {
 }
 
 trap post_actions EXIT
-oc delete clusterpolicy --all
 load_envs
 sealights_scan
 
