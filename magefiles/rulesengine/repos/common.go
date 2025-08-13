@@ -538,7 +538,7 @@ func SetupMultiPlatformTests() error {
 }
 
 func SetEnvVarsForComponentImageDeployment(rctx *rulesengine.RuleCtx) error {
-	componentImage := os.Getenv("COMPONENT_IMAGE")
+	componentImage := os.Getenv("COMPONENT_CONTAINER_IMAGE")
 
 	tag := rctx.ComponentImageTag
 
