@@ -318,7 +318,7 @@ var E2ERepoCIRuleChain = rulesengine.Rule{Name: "E2E Repo CI Workflow Rule Chain
 		&E2ERepoSetDefaultSettingsRule,
 		rulesengine.Any{&InfraDeploymentsPRPairingRule, rulesengine.None{&InfraDeploymentsPRPairingRule}},
 		&PreflightInstallGinkgoRule,
-		&BootstrapClusterRuleChain,
+		rulesengine.Any{rulesengine.None{&BootstrapClusterWithSprayProxyRuleChain}, &BootstrapClusterWithSprayProxyRuleChain},
 		rulesengine.Any{&NonTestFilesRule, &NonTestFilesRuleWithReleasePipelines, &TestFilesOnlyRule}},
 }
 
@@ -372,7 +372,7 @@ func CheckCmdFilesChanged(rctx *rulesengine.RuleCtx) (bool, error) {
 }
 
 func ExecuteDefaultTestAction(rctx *rulesengine.RuleCtx) error {
-	rctx.LabelFilter = "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines"
+	rctx.LabelFilter = "ec"
 	return ExecuteTestAction(rctx)
 
 }
