@@ -11,7 +11,7 @@ import (
 )
 
 func createIntegrationTestScenario(f *framework.Framework, namespace, name, appName, scenarioGitURL, scenarioRevision, scenarioPathInRepo string) error {
-	_, err := f.AsKubeDeveloper.IntegrationController.CreateIntegrationTestScenario(name, appName, namespace, scenarioGitURL, scenarioRevision, scenarioPathInRepo, []string{})
+	_, err := f.AsKubeDeveloper.IntegrationController.CreateIntegrationTestScenario(name, appName, namespace, scenarioGitURL, scenarioRevision, scenarioPathInRepo, "", []string{})
 	if err != nil {
 		return fmt.Errorf("Unable to create the Integration Test Scenario %s: %v", name, err)
 	}
