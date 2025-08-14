@@ -64,6 +64,7 @@ ERRORS = {
     ("Repo forking failed when deleting target repo on gitlab.com (not CEE!) due unathorized", r"Repo forking failed: Error deleting project .* DELETE https://gitlab.com/.* 401 .* Unauthorized"),
     ("Test Pipeline failed", r"Test Pipeline Run failed run:.*Message:Tasks Completed: [0-9]+ \(Failed: [1-9]+,"),
     ("Timeout forking the repo before the actual test", r"Repo forking failed: Error forking project .*: context deadline exceeded"),
+    ("Timeout forking the repo before the actual test", r"Repo forking failed: Error waiting for project [^ ]+ .ID: [0-9]+. fork to complete: context deadline exceeded"),
     ("Timeout getting build service account", r"Component build SA not present: Component build SA .* not present: context deadline exceeded"),
     ("Timeout getting PaC pull number when validating component", r"Component failed validation: Unable to get PaC pull number for component .* in namespace .*: context deadline exceeded"),
     ("Timeout getting pipeline", r"Message:.*resolver failed to get Pipeline.*resolution took longer than global timeout of .*"),
