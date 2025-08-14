@@ -1,5 +1,5 @@
 FROM quay.io/konflux-ci/tekton-integration-catalog/sealights-go:latest as sealights-agents
-FROM registry.access.redhat.com/ubi9/go-toolset:1.22.9 AS builder
+FROM registry.access.redhat.com/ubi9/go-toolset:1.23.9 AS builder
 ENV GOBIN=$HOME/bin
 
 USER root
@@ -50,7 +50,7 @@ RUN curl -LO "https://github.com/oras-project/oras/releases/download/v${ORAS_VER
     rm -rf oras_${ORAS_VERSION}_*.tar.gz oras-install/ && \
     oras version
 
-FROM registry.access.redhat.com/ubi9/go-toolset:1.22.9
+FROM registry.access.redhat.com/ubi9/go-toolset:1.23.9
 
 USER root
 
