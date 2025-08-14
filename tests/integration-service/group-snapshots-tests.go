@@ -219,7 +219,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 				Eventually(func() error {
 					mergeResult, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(multiComponentRepoNameForGroupSnapshot, prNumber)
 					return err
-				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, multiComponentRepoNameForGroupSnapshot))
+				}, time.Minute).Should(Succeed(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, multiComponentRepoNameForGroupSnapshot))
 
 				mergeResultSha = mergeResult.GetSHA()
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
@@ -331,7 +331,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 				Eventually(func() error {
 					mergeResult, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(multiComponentRepoNameForGroupSnapshot, prNumber)
 					return err
-				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, multiComponentRepoNameForGroupSnapshot))
+				}, time.Minute).Should(Succeed(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, multiComponentRepoNameForGroupSnapshot))
 
 				mergeResultSha = mergeResult.GetSHA()
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
@@ -443,7 +443,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 				Eventually(func() error {
 					mergeResult, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(componentRepoNameForGroupIntegration, prNumber)
 					return err
-				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, componentRepoNameForGroupIntegration))
+				}, time.Minute).Should(Succeed(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, componentRepoNameForGroupIntegration))
 
 				mergeMultiResultSha = mergeResult.GetSHA()
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeMultiResultSha, prNumber)

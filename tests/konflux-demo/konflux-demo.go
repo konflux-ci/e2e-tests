@@ -237,7 +237,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 					Eventually(func() error {
 						mergeResult, err = fw.AsKubeAdmin.CommonController.Github.MergePullRequest(componentRepositoryName, prNumber)
 						return err
-					}, mergePRTimeout).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request: %+v\n", err))
+					}, mergePRTimeout).Should(Succeed(), fmt.Sprintf("error when merging PaC pull request: %+v\n", err))
 
 					headSHA = mergeResult.GetSHA()
 

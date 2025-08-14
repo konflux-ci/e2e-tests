@@ -265,7 +265,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 				Eventually(func() error {
 					mergeResult, err = f.AsKubeAdmin.CommonController.Gitlab.AcceptMergeRequest(projectID, mrID)
 					return err
-				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC merge request ID #%d in ProjectID %s", mrID, projectID))
+				}, time.Minute).Should(Succeed(), fmt.Sprintf("error when merging PaC merge request ID #%d in ProjectID %s", mrID, projectID))
 
 				mergeResultSha = mergeResult.SHA
 				GinkgoWriter.Printf("merged result sha: %s for MR #%d\n", mergeResultSha, mrID)
