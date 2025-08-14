@@ -10,6 +10,7 @@ import (
 
 	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/common"
@@ -335,7 +336,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
 					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(Succeed())
 			})
-
 			It("should push Dockerfile to registry", Label(buildTemplatesTestLabel), func() {
 				pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
@@ -540,13 +540,15 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					defaultECP, err := f.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
 					Expect(err).NotTo(HaveOccurred())
 
-					policy := contract.PolicySpecWithSourceConfig(
-						defaultECP.Spec,
-						ecp.SourceConfig{
-							Include: []string{"@slsa3"},
-							Exclude: []string{"cve"},
+					ecpSource := ecp.Source{
+						Config: &ecp.SourceConfig{
+							Include: []string{"@redhat"},
+							Exclude: []string{"cve", "hermetic_task", "labels", "trusted_task", "test", "tasks.pinned_task_refs", "tasks.required_tasks_found", "tasks.required_untrusted_task_found", "slsa_build_scripted_build.image_built_by_trusted_task", "source_image.exists", "sbom_spdx.allowed_package_sources:pkg:pypi/dockerfile-parse?checksum=sha256:36e4469abb0d96b0e3cd656284d5016e8a674cd57b8ebe5af64786fe63b8184d&download_url=https://github.com/containerbuildsystem/dockerfile-parse/archive/refs/tags/2.0.0.tar.gz"},
 						},
-					)
+						RuleData: &v1.JSON{Raw: []byte(`{"allowed_registry_prefixes": ["quay.io", "registry.access.redhat.com", "registry.redhat.io"], "allowed_olm_image_registry_prefixes": ["gcr.io/kubebuilder/", "quay.io"]}`)},
+					}
+					policy := contract.PolicySpecWithSource(defaultECP.Spec, ecpSource)
+
 					Expect(f.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
 
 					pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
@@ -593,7 +595,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 					tr, err := f.AsKubeAdmin.TektonController.GetTaskRunStatus(f.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 					Expect(err).NotTo(HaveOccurred())
-					Expect(tekton.DidTaskRunSucceed(tr)).To(BeTrue())
+					Expect(tekton.DidTaskRunSucceed(tr)).To(BeTrue(), fmt.Sprintf("%q pipeline failed", pr.Name))
 					Expect(tr.Status.TaskRunStatusFields.Results).Should(
 						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
 					)
