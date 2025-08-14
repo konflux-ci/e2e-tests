@@ -282,8 +282,8 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 		return nil, err
 	}
 	// Decrease the timeout to 5 mins, when the issue https://issues.redhat.com/browse/STONEBLD-3552 is fixed
-	if utils.WaitUntil(h.CheckImageRepositoryExists(namespace, componentSpec.ComponentName), time.Minute*15) != nil {
-		return nil, fmt.Errorf("timed out when waiting for image-controller annotations to be updated on component %s in namespace %s. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
+	if err := utils.WaitUntil(h.CheckImageRepositoryExists(namespace, componentSpec.ComponentName), time.Minute*15); err != nil {
+		return nil, fmt.Errorf("timed out waiting for image repository to be ready for component %s in namespace %s: %+v", componentSpec.ComponentName, namespace, err)
 	}
 	return componentObject, nil
 }
@@ -521,7 +521,17 @@ func (h *HasController) CheckImageRepositoryExists(namespace, componentName stri
 		if err != nil {
 			return false, err
 		}
-		return len(imageRepositoryList.Items) == 1 && imageRepositoryList.Items[0].Status.State == "ready", nil
+		if len(imageRepositoryList.Items) == 0 {
+			return false, nil
+		}
+		if len(imageRepositoryList.Items) > 1 {
+			return false, fmt.Errorf("more than one image repositories found for component %s", componentName)
+		}
+		if imageRepositoryList.Items[0].Status.State != "ready" {
+			GinkgoWriter.Printf("Image repository for component %s in namespace %s do not have right state ('%s' != 'ready') yet.\n", componentName, namespace, imageRepositoryList.Items[0].Status.State)
+			return false, nil
+		}
+		return true, nil
 	}
 }
 
