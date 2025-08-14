@@ -207,7 +207,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 				Eventually(func() error {
 					mergeResult, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(componentRepoNameForStatusReporting, prNumber)
 					return err
-				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, multiComponentRepoNameForGroupSnapshot))
+				}, time.Minute).Should(Succeed(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, multiComponentRepoNameForGroupSnapshot))
 				mergeResultSha = mergeResult.GetSHA()
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
 			})
