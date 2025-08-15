@@ -15,6 +15,7 @@ require (
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20220523142428-2558e76260fb
 	github.com/codeready-toolchain/toolchain-e2e v0.0.0-20220525131508-60876bfb99d3
 	github.com/devfile/library/v2 v2.2.1-0.20230418160146-e75481b7eebd
+	github.com/docker/cli v24.0.7+incompatible
 	github.com/enterprise-contract/enterprise-contract-controller/api v0.1.50
 	github.com/go-git/go-git/v5 v5.13.0
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572
@@ -147,7 +148,6 @@ require (
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/distribution/reference v0.5.0 // indirect
-	github.com/docker/cli v24.0.7+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker v24.0.7+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.0 // indirect

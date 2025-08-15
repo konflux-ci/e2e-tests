@@ -538,6 +538,7 @@ func SetupMultiPlatformTests() error {
 	var err error
 	var defaultBundleRef string
 	var tektonObj runtime.Object
+	var authenticator authn.Authenticator
 
 	for _, platformType := range platforms {
 		tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
@@ -591,8 +592,10 @@ func SetupMultiPlatformTests() error {
 			return fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
 		}
 
-		keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
-		authOption := remoteimg.WithAuthFromKeychain(keychain)
+		if authenticator, err = utils.GetAuthenticatorForImageRef(newRemotePipeline, os.Getenv("QUAY_TOKEN")); err != nil {
+			return fmt.Errorf("error when getting authenticator: %v", err)
+		}
+		authOption := remoteimg.WithAuth(authenticator)
 
 		if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newRemotePipeline, authOption); err != nil {
 			return fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
