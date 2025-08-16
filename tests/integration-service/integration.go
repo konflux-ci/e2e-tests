@@ -2,8 +2,13 @@ package integration
 
 import (
 	"fmt"
+	"net/http"
+	"os"
+	"regexp"
+	"strings"
 	"time"
 
+	"github.com/konflux-ci/image-controller/pkg/quay"
 	"github.com/konflux-ci/operator-toolkit/metadata"
 
 	"github.com/devfile/library/v2/pkg/util"
@@ -502,5 +507,49 @@ func cleanup(f framework.Framework, testNamespace, applicationName, componentNam
 		}
 		Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
 		Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
+		err = deleteQuayRepo(componentName, testNamespace)
+		Expect(err).NotTo(HaveOccurred())
 	}
+}
+
+func deleteQuayRepo(componentName string, testNamespace string) error {
+	quayOrgToken := os.Getenv("DEFAULT_QUAY_ORG_TOKEN")
+	if quayOrgToken == "" {
+		return fmt.Errorf("%s", "DEFAULT_QUAY_ORG_TOKEN env var was not found")
+	}
+	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
+
+	quayClient := quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayOrgToken, "https://quay.io/api/v1")
+
+	r, err := regexp.Compile(fmt.Sprintf(`^(%s)`, testNamespace))
+	if err != nil {
+		return err
+	}
+
+	repos, err := quayClient.GetAllRepositories(quayOrg)
+	if err != nil {
+		return err
+	}
+	// Key is the repo name without slashes which is the same as robot name
+	// Value is the repo name with slashes
+	reposMap := make(map[string]string)
+
+	for _, repo := range repos {
+		if r.MatchString(repo.Name) {
+			sanitizedRepoName := strings.ReplaceAll(repo.Name, "/", "") // repo name without slashes
+			reposMap[sanitizedRepoName] = repo.Name
+		}
+	}
+
+	sanitizedName := testNamespace + componentName
+	if repo, exists := reposMap[sanitizedName]; exists {
+		deleted, err := quayClient.DeleteRepository(quayOrg, repo)
+		if err != nil {
+			return fmt.Errorf("failed to delete repository %s, error: %s", repo, err)
+		}
+		if !deleted {
+			fmt.Printf("repository %s has already been deleted, skipping\n", repo)
+		}
+	}
+	return nil
 }

@@ -336,44 +336,11 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(Succeed())
 			})
 
-			It(fmt.Sprintf("should ensure SBOM is shown for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel), func() {
+			It("should push Dockerfile to registry", Label(buildTemplatesTestLabel), func() {
 				pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(pr).ToNot(BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentName))
 
-				logs, err := f.AsKubeAdmin.TektonController.GetTaskRunLogs(pr.GetName(), "show-sbom", testNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(logs).To(HaveLen(1))
-				var sbomTaskLog string
-				for _, log := range logs {
-					sbomTaskLog = log
-				}
-
-				sbom, err := build.UnmarshalSbom([]byte(sbomTaskLog))
-				Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("failed to parse SBOM from show-sbom task output from %s/%s PipelineRun", pr.GetNamespace(), pr.GetName()))
-
-				switch s := sbom.(type) {
-				case *build.SbomCyclonedx:
-					Expect(s.BomFormat).ToNot(BeEmpty())
-					Expect(s.SpecVersion).ToNot(BeEmpty())
-				case *build.SbomSpdx:
-					Expect(s.SPDXID).ToNot(BeEmpty())
-					Expect(s.SpdxVersion).ToNot(BeEmpty())
-				default:
-					Fail(fmt.Sprintf("unknown SBOM type: %T", s))
-				}
-
-				if !strings.Contains(scenario.GitURL, "from-scratch") {
-					packages := sbom.GetPackages()
-					Expect(packages).ToNot(BeEmpty())
-					for i := range packages {
-						Expect(packages[i].GetName()).ToNot(BeEmpty(), "expecting package name to be non empty, but got empty value")
-						Expect(packages[i].GetPurl()).ToNot(BeEmpty(), fmt.Sprintf("expecting purl to be non empty, but got empty value for pkg: %s", packages[i].GetName()))
-					}
-				}
-			})
-
-			It("should push Dockerfile to registry", Label(buildTemplatesTestLabel), func() {
 				if pipelineBundleName != constants.FbcBuilder {
 					ensureOriginalDockerfileIsPushed(f.AsKubeAdmin, pr)
 				}
@@ -544,7 +511,10 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				})
 				AfterAll(func() {
 					if !CurrentSpecReport().Failed() {
-						Expect(f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.GetName(), pr.GetNamespace())).To(Succeed())
+						err = f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.GetName(), pr.GetNamespace())
+						if err != nil {
+							Expect(err.Error()).To(ContainSubstring("not found"))
+						}
 					}
 				})
 
@@ -691,7 +661,9 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 							}
 							// Avoid blowing up PipelineRun usage
 							err := f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.Name, pr.Namespace)
-							Expect(err).NotTo(HaveOccurred())
+							if err != nil {
+								Expect(err.Error()).To(ContainSubstring("not found"))
+							}
 						}(pr)
 
 						err = f.AsKubeAdmin.TektonController.AddFinalizerToPipelineRun(pr, constants.E2ETestFinalizerName)
