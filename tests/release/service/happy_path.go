@@ -30,7 +30,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", Labe
 	var devNamespace = "happy-path"
 	var managedNamespace = "happy-path-managed"
 	var snapshotPush *appservice.Snapshot
-	var verifyEnterpriseContractTaskName = "verify-enterprise-contract"
+	var verifyConformaTaskName = "verify-conforma"
 	var releasedImagePushRepo = "quay.io/redhat-appstudio-qe/dcmetromap"
 	var sampleImage = "quay.io/hacbs-release-tests/dcmetromap@sha256:544259be8bcd9e6a2066224b805d854d863064c9b64fa3a87bfcd03f5b0f28e6"
 	var gitSourceURL = releasecommon.GitSourceComponentUrl
@@ -163,9 +163,9 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", Labe
 			Eventually(func() error {
 				pr, err := fw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 				Expect(err).ShouldNot(HaveOccurred())
-				ecTaskRunStatus, err := fw.AsKubeAdmin.TektonController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), pr, verifyEnterpriseContractTaskName)
+				ecTaskRunStatus, err := fw.AsKubeAdmin.TektonController.GetTaskRunStatus(fw.AsKubeAdmin.CommonController.KubeRest(), pr, verifyConformaTaskName)
 				Expect(err).ShouldNot(HaveOccurred())
-				GinkgoWriter.Printf("the status of the %s TaskRun on the release pipeline is: %v", verifyEnterpriseContractTaskName, ecTaskRunStatus.Status.Conditions)
+				GinkgoWriter.Printf("the status of the %s TaskRun on the release pipeline is: %v", verifyConformaTaskName, ecTaskRunStatus.Status.Conditions)
 				Expect(tekton.DidTaskSucceed(ecTaskRunStatus)).To(BeTrue())
 				return nil
 			}, releasecommon.ReleasePipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed())
