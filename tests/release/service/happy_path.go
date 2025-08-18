@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -156,6 +157,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", Labe
 		})
 
 		It("verifies that Release PipelineRun is triggered", func() {
+			time.Sleep(30 * time.Minute)
 			Expect(fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
 		})
 
