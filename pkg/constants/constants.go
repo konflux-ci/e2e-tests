@@ -142,6 +142,17 @@ const (
 	RELEASE_CATALOG_DEFAULT_URL      = "https://github.com/konflux-ci/release-service-catalog.git"
 	RELEASE_CATALOG_DEFAULT_REVISION = "staging"
 
+	// We are running tests against 2 types of test environments:
+	//
+	// * downstream - Konflux deployed from infra-deployments repo, typically on OCP or ROSA
+	//
+	// * upstream - Konflux deployed from konflux-ci repo, typically running on Kind cluster
+	//
+	// This env var is meant to be used in the framework to apply a different framework init
+	// or a test configuration based on the provided value
+	// By default it should use "downstream"
+	TEST_ENVIRONMENT_ENV = "TEST_ENVIRONMENT"
+
 	// Test namespace's required labels
 	ArgoCDLabelKey   string = "argocd.argoproj.io/managed-by"
 	ArgoCDLabelValue string = "gitops-service-argocd"
@@ -252,6 +263,14 @@ const (
 	// Test environments
 	DownstreamTestEnvironment string = "downstream"
 	UpstreamTestEnvironment   string = "upstream"
+
+	// A cluster role used to be bound to a user that has admin access to all Konflux resources in a specific namespace
+	// https://github.com/konflux-ci/konflux-ci/blob/2772e3b648ce1c1ae05f31e77732063c4103de09/konflux-ci/rbac/core/konflux-admin-user-actions.yaml
+	KonfluxAdminUserActionsClusterRoleName = "konflux-admin-user-actions"
+	// Default role binding name
+	DefaultKonfluxAdminRoleBindingName = "user2-konflux-admin"
+	// Default user name available after deploying upstream version of konflux-ci
+	DefaultKonfluxCIUserName = "user2@konflux.dev"
 )
 
 var (
