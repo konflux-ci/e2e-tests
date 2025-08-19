@@ -8,6 +8,7 @@ import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
 import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 import utils "github.com/konflux-ci/e2e-tests/pkg/utils"
+import pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 
 // Wait for Release CR to be created
@@ -39,16 +40,19 @@ func validateReleaseCreation(f *framework.Framework, namespace, snapshotName str
 func validateReleasePipelineRunCreation(f *framework.Framework, namespace, releaseName string) error {
 	logging.Logger.Debug("Waiting for release pipeline for release %s in namespace %s to be created", releaseName, namespace)
 
+	var pr *pipeline.PipelineRun
+
 	interval := time.Second * 10
 	timeout := time.Minute * 5
 
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
-		_, err = f.AsKubeDeveloper.ReleaseController.GetPipelineRunInNamespace(namespace, releaseName, namespace)
+		pr, err = f.AsKubeDeveloper.ReleaseController.GetPipelineRunInNamespace(namespace, releaseName, namespace)
 		if err != nil {
 			fmt.Printf("Pipelinerun for release %s in namespace %s not created yet: %v\n", releaseName, namespace, err)
 			return false, nil
 		}
 
+		logging.Logger.Debug("Release PipelineRun %s for release %s in namespace %s created", pr.GetName(), releaseName, namespace)
 		return true, nil
 	}, interval, timeout)
 

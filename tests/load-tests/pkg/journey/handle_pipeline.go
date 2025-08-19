@@ -17,14 +17,17 @@ import (
 func validatePipelineRunCreation(f *framework.Framework, namespace, appName, compName string) error {
 	interval := time.Second * 20
 	timeout := time.Minute * 30
+	var pr *pipeline.PipelineRun
 
 	// TODO It would be much better to watch this resource for a condition
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
-		_, err = f.AsKubeDeveloper.HasController.GetComponentPipelineRunWithType(compName, appName, namespace, "build", "", "")
+		pr, err = f.AsKubeDeveloper.HasController.GetComponentPipelineRunWithType(compName, appName, namespace, "build", "", "")
 		if err != nil {
 			logging.Logger.Debug("Unable to get created PipelineRun for component %s in namespace %s: %v", compName, namespace, err)
 			return false, nil
 		}
+
+		logging.Logger.Debug("Build PipelineRun %s for component %s in namespace %s created", pr.GetName(), compName, namespace)
 		return true, nil
 	}, interval, timeout)
 

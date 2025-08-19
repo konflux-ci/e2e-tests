@@ -40,14 +40,17 @@ func validateTestPipelineRunCreation(f *framework.Framework, namespace, itsName,
 
 	interval := time.Second * 20
 	timeout := time.Minute * 5
+	var pr *pipeline.PipelineRun
 
 	// TODO It would be much better to watch this resource for a condition
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
-		_, err = f.AsKubeDeveloper.IntegrationController.GetIntegrationPipelineRun(itsName, snapName, namespace)
+		pr, err = f.AsKubeDeveloper.IntegrationController.GetIntegrationPipelineRun(itsName, snapName, namespace)
 		if err != nil {
 			logging.Logger.Debug("Unable to get created test PipelineRun for integration test pipeline %s in namespace %s: %v", itsName, namespace, err)
 			return false, nil
 		}
+
+		logging.Logger.Debug("Test PipelineRun %s for its %s and snap %s in namespace %s created", pr.GetName(), itsName, snapName, namespace)
 		return true, nil
 	}, interval, timeout)
 
