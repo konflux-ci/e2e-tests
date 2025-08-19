@@ -158,14 +158,15 @@ func (g *Github) DeleteRepositoryIfExists(name string) error {
 
 	_, resp, err := g.client.Repositories.Get(ctx, g.organization, name)
 	if err != nil {
-		if resp.StatusCode != 404 {
-			return fmt.Errorf("Error checking repository %s/%s: %v\n", g.organization, name, err)
+		if resp != nil && resp.StatusCode == 404 {
+			return nil
 		}
-	} else {
-		_, deleteErr := g.client.Repositories.Delete(ctx, g.organization, name)
-		if deleteErr != nil {
-			return fmt.Errorf("Error deleting repository %s/%s: %v\n", g.organization, name, deleteErr)
-		}
+		return fmt.Errorf("Error checking repository %s/%s: %v\n", g.organization, name, err)
+	}
+
+	_, deleteErr := g.client.Repositories.Delete(ctx, g.organization, name)
+	if deleteErr != nil {
+		return fmt.Errorf("Error deleting repository %s/%s: %v\n", g.organization, name, deleteErr)
 	}
 
 	return nil
