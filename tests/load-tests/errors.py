@@ -137,7 +137,7 @@ FAILED_TR_ERRORS = {
     ("Failed to create task run pod because ISE on webhook proxy.operator.tekton.dev", r"failed to create task run pod .*: Internal error occurred: failed calling webhook \\\"proxy.operator.tekton.dev\\\": failed to call webhook: Post \\\"https://tekton-operator-proxy-webhook.openshift-pipelines.svc:443/defaulting.timeout=10s\\\": context deadline exceeded. Maybe missing or invalid Task .*"),
 }
 
-def message_to_reason(reasons_and_errors: set, msg: str) -> str | None:
+def message_to_reason(reasons_and_errors: set, msg: str) -> str:
     """
     Classifies an error message using regular expressions and returns the error name.
 
