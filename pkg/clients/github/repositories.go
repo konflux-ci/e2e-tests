@@ -161,12 +161,12 @@ func (g *Github) DeleteRepositoryIfExists(name string) error {
 		if resp != nil && resp.StatusCode == 404 {
 			return nil
 		}
-		return fmt.Errorf("Error checking repository %s/%s: %v\n", g.organization, name, err)
+		return fmt.Errorf("Error checking repository %s/%s: %v", g.organization, name, err)
 	}
 
 	_, deleteErr := g.client.Repositories.Delete(ctx, g.organization, name)
 	if deleteErr != nil {
-		return fmt.Errorf("Error deleting repository %s/%s: %v\n", g.organization, name, deleteErr)
+		return fmt.Errorf("Error deleting repository %s/%s: %v", g.organization, name, deleteErr)
 	}
 
 	return nil
@@ -234,7 +234,7 @@ func (g *Github) ForkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName
 				// Error we are getting: "422 Validation Failed [{Resource:Repository Field:name Code:custom Message:name a repository operation is already in progress}]"
 				return false, nil
 			}
-			return false, fmt.Errorf("Error renaming %s/%s to %s: %v\n", targetOrgName, fork.GetName(), targetName, err)
+			return false, fmt.Errorf("Error renaming %s/%s to %s: %v", targetOrgName, fork.GetName(), targetName, err)
 		}
 		return true, nil
 	}, time.Second * 10, time.Minute * 10)
