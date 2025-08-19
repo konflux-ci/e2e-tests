@@ -23,7 +23,7 @@ func validateReleaseCreation(f *framework.Framework, namespace, snapshotName str
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
 		release, err := f.AsKubeDeveloper.ReleaseController.GetRelease("", snapshotName, namespace)
 		if err != nil {
-			fmt.Printf("Can not get release for snapshot %s in namespace %s: %v\n", snapshotName, namespace, err)
+			logging.Logger.Debug("Can not get release for snapshot %s in namespace %s: %v\n", snapshotName, namespace, err)
 			return false, nil
 		}
 
@@ -48,7 +48,7 @@ func validateReleasePipelineRunCreation(f *framework.Framework, namespace, relea
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
 		pr, err = f.AsKubeDeveloper.ReleaseController.GetPipelineRunInNamespace(namespace, releaseName, namespace)
 		if err != nil {
-			fmt.Printf("Pipelinerun for release %s in namespace %s not created yet: %v\n", releaseName, namespace, err)
+			logging.Logger.Debug("Pipelinerun for release %s in namespace %s not created yet: %v\n", releaseName, namespace, err)
 			return false, nil
 		}
 
@@ -70,13 +70,13 @@ func validateReleasePipelineRunCondition(f *framework.Framework, namespace, rele
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
 		pipelineRun, err := f.AsKubeDeveloper.ReleaseController.GetPipelineRunInNamespace(namespace, releaseName, namespace)
 		if err != nil {
-			fmt.Printf("PipelineRun for release %s in namespace %s not created yet: %v\n", releaseName, namespace, err)
+			logging.Logger.Debug("PipelineRun for release %s in namespace %s not created yet: %v\n", releaseName, namespace, err)
 			return false, nil
 		}
 
 		// Check if there are some conditions
 		if len(pipelineRun.Status.Conditions) == 0 {
-			fmt.Printf("PipelineRun %s in namespace %s lacks status conditions\n", pipelineRun.GetName(), pipelineRun.GetNamespace())
+			logging.Logger.Debug("PipelineRun %s in namespace %s lacks status conditions\n", pipelineRun.GetName(), pipelineRun.GetNamespace())
 			return false, nil
 		}
 
@@ -110,13 +110,13 @@ func validateReleaseCondition(f *framework.Framework, namespace, releaseName str
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
 		release, err := f.AsKubeDeveloper.ReleaseController.GetRelease(releaseName, "", namespace)
 		if err != nil {
-			fmt.Printf("Can not get release %s in namespace %s: %v\n", releaseName, namespace, err)
+			logging.Logger.Debug("Can not get release %s in namespace %s: %v\n", releaseName, namespace, err)
 			return false, nil
 		}
 
 		// Check if there are some conditions
 		if len(release.Status.Conditions) == 0 {
-			fmt.Printf("Release %s in namespace %s lacks status conditions\n", releaseName, namespace)
+			logging.Logger.Debug("Release %s in namespace %s lacks status conditions\n", releaseName, namespace)
 			return false, nil
 		}
 
