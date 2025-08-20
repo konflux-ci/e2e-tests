@@ -96,14 +96,16 @@ func collectPipelineRunJSONs(f *framework.Framework, dirPath, namespace, applica
 		return fmt.Errorf("Failed to list PipelineRuns %s/%s/%s: %v", namespace, application, component, err)
 	}
 
-	pr_release, err := f.AsKubeDeveloper.ReleaseController.GetPipelineRunInNamespace(namespace, release, namespace)
-	if err != nil {
-		logging.Logger.Warning("Failed to get Release PipelineRun %s/%s: %v", namespace, release, err)
-	}
+	if release != "" {
+		pr_release, err := f.AsKubeDeveloper.ReleaseController.GetPipelineRunInNamespace(namespace, release, namespace)
+		if err != nil {
+			logging.Logger.Warning("Failed to get Release PipelineRun %s/%s: %v", namespace, release, err)
+		}
 
-	// Make one list that contains them all
-	if pr_release != nil {
-		*prs = append(*prs, *pr_release)
+		// Add release pipeline runs to the list
+		if pr_release != nil {
+			*prs = append(*prs, *pr_release)
+		}
 	}
 
 	for _, pr := range *prs {
