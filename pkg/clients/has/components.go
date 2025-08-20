@@ -304,7 +304,7 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 		return nil, err
 	}
 	// Decrease the timeout to 5 mins, when the issue https://issues.redhat.com/browse/STONEBLD-3552 is fixed
-	if err := utils.WaitUntilWithInterval(h.CheckImageRepositoryExists(namespace, componentSpec.ComponentName), time.Second*5, time.Minute*15); err != nil {
+	if err := utils.WaitUntilWithInterval(h.CheckImageRepositoryExists(namespace, componentSpec.ComponentName), time.Second*10, time.Minute*15); err != nil {
 		return nil, fmt.Errorf("timed out waiting for image repository to be ready for component %s in namespace %s: %+v", componentSpec.ComponentName, namespace, err)
 	}
 	return componentObject, nil
