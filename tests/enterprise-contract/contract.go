@@ -36,7 +36,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Conforma E2E tests", Label("e
 		Expect(fwk.UserNamespace).NotTo(BeEmpty(), "failed to create sandbox user")
 		namespace = fwk.UserNamespace
 
-		if os.Getenv("TEST_ENVIRONMENT") == "upstream" {
+		if os.Getenv(constants.TEST_ENVIRONMENT_ENV) == constants.UpstreamTestEnvironment {
 			tektonChainsNs = "tekton-pipelines"
 		}
 	})

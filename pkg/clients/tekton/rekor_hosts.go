@@ -12,7 +12,7 @@ import (
 func (t *TektonController) GetRekorHost() (rekorHost string, err error) {
 	var tektonChainsNs = constants.TEKTON_CHAINS_NS
 
-	if os.Getenv("TEST_ENVIRONMENT") == "upstream" {
+	if os.Getenv(constants.TEST_ENVIRONMENT_ENV) == constants.UpstreamTestEnvironment {
 		tektonChainsNs = "tekton-pipelines"
 	}
 	api := t.KubeInterface().CoreV1().ConfigMaps(tektonChainsNs)

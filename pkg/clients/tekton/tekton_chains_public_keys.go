@@ -12,7 +12,7 @@ import (
 // GetTektonChainsPublicKey returns a TektonChains public key.
 func (t *TektonController) GetTektonChainsPublicKey() ([]byte, error) {
 	namespace := constants.TEKTON_CHAINS_NS
-	if os.Getenv("TEST_ENVIRONMENT") == "upstream" {
+	if os.Getenv(constants.TEST_ENVIRONMENT_ENV) == constants.UpstreamTestEnvironment {
 		namespace = "tekton-pipelines"
 	}
 	secretName := "public-key"

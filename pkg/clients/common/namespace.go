@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"os"
 	"time"
 
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
@@ -187,6 +188,35 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 			}
 		} else {
 			return nil, fmt.Errorf("error when getting the '%s' roleBinding: %v", constants.DefaultPipelineServiceAccountRoleBinding, err)
+		}
+	}
+	// Create a rolebinding to allow default konflux-ci user
+	// to access test namespaces in konflux-ci cluster
+	if os.Getenv(constants.TEST_ENVIRONMENT_ENV) == constants.UpstreamTestEnvironment {
+		_, err = s.KubeInterface().RbacV1().RoleBindings(name).Get(context.Background(), constants.DefaultKonfluxAdminRoleBindingName, metav1.GetOptions{})
+		if err != nil {
+			if k8sErrors.IsNotFound(err) {
+				roleBindingTemplate := rbacv1.RoleBinding{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{Name: constants.DefaultKonfluxAdminRoleBindingName},
+					Subjects: []rbacv1.Subject{
+						{
+							Kind: "User",
+							Name: constants.DefaultKonfluxCIUserName,
+						},
+					},
+					RoleRef: rbacv1.RoleRef{
+						Kind: "ClusterRole",
+						Name: constants.KonfluxAdminUserActionsClusterRoleName,
+					},
+				}
+				_, err = s.KubeInterface().RbacV1().RoleBindings(name).Create(context.Background(), &roleBindingTemplate, metav1.CreateOptions{})
+				if err != nil {
+					return nil, fmt.Errorf("error when creating %s roleBinding: %v", constants.DefaultPipelineServiceAccountRoleBinding, err)
+				}
+			} else {
+				return nil, fmt.Errorf("error when getting the '%s' roleBinding: %v", constants.DefaultPipelineServiceAccountRoleBinding, err)
+			}
 		}
 	}
 	return ns, nil

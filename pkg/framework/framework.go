@@ -129,7 +129,7 @@ func newFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 
 		}
 
-		if os.Getenv("TEST_ENVIRONMENT") == "upstream" {
+		if os.Getenv(constants.TEST_ENVIRONMENT_ENV) == constants.UpstreamTestEnvironment {
 			// Get cluster domain (IP address) from kubeconfig
 			kubeconfig, err := config.GetConfig()
 			if err != nil {
