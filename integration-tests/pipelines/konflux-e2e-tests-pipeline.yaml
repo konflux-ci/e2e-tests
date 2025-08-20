@@ -70,7 +70,7 @@ spec:
           - name: url
             value: https://github.com/psturc/tekton-integration-catalog.git
           - name: revision
-            value: KFLUXDP-316
+            value: bump-mapt-version-v0.9.7
           - name: pathInRepo
             value: tasks/mapt-oci/kind-aws-spot/provision/0.2/kind-aws-provision.yaml
       params:
@@ -101,6 +101,8 @@ spec:
           value: 64
         - name: memory
           value: 128
+        - name: spot
+          value: 'false'
     - name: deploy-konflux
       runAfter:
         - provision-kind-cluster
