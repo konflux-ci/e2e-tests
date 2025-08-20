@@ -5,6 +5,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	. "github.com/onsi/ginkgo/v2"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -17,6 +18,7 @@ func (s *SuiteController) ServiceAccountPresent(saName, namespace string) wait.C
 	return func() (bool, error) {
 		_, err := s.GetServiceAccount(saName, namespace)
 		if err != nil {
+			GinkgoWriter.Printf("failed to get service account %s in namespace %s: %+v\n", saName, namespace, err)
 			return false, nil
 		}
 		return true, nil
